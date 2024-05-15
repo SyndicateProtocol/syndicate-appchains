@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.25;
 
+import {StructuredLinkedList} from "./LinkedList/StructuredLinkedList.sol";
+
 contract BasedSequencerChain {
     // We can adjust this as needed. Ideally epochs are as fast as possible to
     // allow a wide variety of based sequencers to participate.
@@ -75,6 +77,13 @@ contract BasedSequencerChain {
     // These are proposed batches that have not yet been finalized. This is also
     // utilized by the second-choice, third-choice, etc bidders in a batch
     mapping(uint256 epochNumber => mapping(address batchProposer => Batch batch)) proposedBatches;
+
+    // Mapping of epoch numbers to the top 5 bids for that epoch
+    // The top 5 bids are represented as a linked list. This allows us to easily
+    // add a new top bid by creating a new head and dropping the tail,
+    // preventing us from incurring gas costs on every item to adjust the bid
+    // order.
+    mapping(uint256 epochNumber => StructuredLinkedList.List bidsForEpoch) bids;
 
     constructor() {
         // NOTE: We explicitly do not start the epoch number at 0. The reason
