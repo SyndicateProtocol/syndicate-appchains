@@ -2,6 +2,7 @@
 pragma solidity ^0.8.25;
 
 import {StructuredLinkedList} from "./LinkedList/StructuredLinkedList.sol";
+import {SafeTransferLib} from "./SafeTransferLib/SafeTransferLib.sol";
 
 contract BasedSequencerChain {
     // We can adjust this as needed. Ideally epochs are as fast as possible to
@@ -26,6 +27,11 @@ contract BasedSequencerChain {
     // the same L2. This lets us unlock cross-chain atomicity, which is very
     // important and greatly enabled by consistent block numbers.
     uint256 public immutable INITIAL_EPOCH_NUMBER;
+
+    // The max bid list size is set to 5. This logic will eventually be
+    // modularized, so take it as more of a reference example than the final
+    // implementation.
+    uint256 public constant MAX_BID_LIST_SIZE = 5;
 
     // This value is necessary so that we can keep track of the previous parent
     // hashes. Otherwise, the parent hash would be the empty block.
@@ -84,6 +90,9 @@ contract BasedSequencerChain {
     // preventing us from incurring gas costs on every item to adjust the bid
     // order.
     mapping(uint256 epochNumber => StructuredLinkedList.List bidsForEpoch) bids;
+
+    error BidMustBeHighest();
+    error CannotBidZero();
 
     constructor() {
         // NOTE: We explicitly do not start the epoch number at 0. The reason
@@ -162,7 +171,38 @@ contract BasedSequencerChain {
     // about skipping epoch numbers
     // ANSWER: We'll offer both relative and absolute bidding via bidEpoch() and
     // bidNextEpoch()
-    function bidEpoch(uint256 epochNumber) public payable {}
+    function bidEpoch(uint256 epochNumber) public payable {
+        if (msg.value == 0) {
+            revert CannotBidZero();
+        }
+
+        StructuredLinkedList.List storage bidsForEpoch = bids[epochNumber];
+        uint256 bidAmount = msg.value;
+        address bidder = msg.sender;
+
+        // If no bids exist, we can add the bid as the head
+        if (StructuredLinkedList.sizeOf(bidsForEpoch) == 0) {
+            StructuredLinkedList.pushFront(bidsForEpoch, bidAmount, bidder);
+        } else if (StructuredLinkedList.sizeOf(bidsForEpoch) < MAX_BID_LIST_SIZE) {
+            // If there are fewer than 5 bids, we can add the bid as the head.
+            // It must be the new highest bid
+            if (bidAmount <= StructuredLinkedList.getHead(bidsForEpoch)) {
+                revert BidMustBeHighest();
+            }
+            StructuredLinkedList.pushFront(bidsForEpoch, bidAmount, bidder);
+        } else {
+            if (bidAmount <= StructuredLinkedList.getHead(bidsForEpoch)) {
+                revert BidMustBeHighest();
+            }
+            // If there are 5 or more bids, we need to add the bid as the head
+            // while also removing the tail
+            StructuredLinkedList.pushFront(bidsForEpoch, bidAmount, bidder);
+            (uint256 refundedBidAmount, address refundedBidAddress) = StructuredLinkedList.popBack(bidsForEpoch);
+
+            // We should refund the bidder who was popped off the back
+            SafeTransferLib.safeTransferETH(refundedBidAddress, refundedBidAmount);
+        }
+    }
 
     // A convenience function for the based sequencer to bid on the next epoch.
     // A user can pass in 0 to bid on the current epoch.
