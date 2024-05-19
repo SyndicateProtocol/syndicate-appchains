@@ -139,6 +139,9 @@ contract BasedSequencerChain {
         // Run requireAny checks
         requireAnyAllowed(msg.sender);
 
+        // Run mayAllow checks
+        checkMayAllow(msg.sender);
+
         Batch memory batch = Batch({
             parent_hash: userProvidedBatch.non_empty_parent_hash,
             parent_epoch_number: lastNonEmptyEpochNumber,
