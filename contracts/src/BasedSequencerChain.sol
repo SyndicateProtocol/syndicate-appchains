@@ -5,6 +5,8 @@ import {AddressStructuredLinkedList} from "./LinkedList/AddressStructuredLinkedL
 import {IsAllowed} from "./interfaces/IsAllowed.sol";
 
 interface IsAllowed {
+    // TODO: Evaluate whether this should be a view function or not. You could
+    // imagine isAllowed() checks that also modify some state
     function isAllowed() external view returns (bool);
 }
 
