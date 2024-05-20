@@ -1,9 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.25;
 
-import {StructuredLinkedList} from "./LinkedList/StructuredLinkedList.sol";
+import {AddressStructuredLinkedList} from "./LinkedList/AddressStructuredLinkedList.sol";
 import {SafeTransferLib} from "./SafeTransferLib/SafeTransferLib.sol";
 
+interface IsAllowed {
+    // TODO: Evaluate whether this should be a view function or not. You could
+    // imagine isAllowed() checks that also modify some state
+    function isAllowed() external view returns (bool);
+}
+
+// This is the core contract for sequencing chains
+// It uses a modular architecture to determine who is allowed to sequence,
+// allowing for rapid experimentation.
+// While this contract is immutable, it could always be swapped at specific
+// block numbers via client upgrades
 contract BasedSequencerChain {
     // We can adjust this as needed. Ideally epochs are as fast as possible to
     // allow a wide variety of based sequencers to participate.
@@ -37,6 +48,18 @@ contract BasedSequencerChain {
     // hashes. Otherwise, the parent hash would be the empty block.
     uint256 public lastNonEmptyEpochNumber;
 
+    // This is the data that the user will provide when they want to submit a
+    // batch. The rest of the batch struct will be auto-filled
+    struct UserProvidedBatch {
+        // The parent hash of the last non-empty block. We'll get the epoch
+        // number automatically, so users don't need to pass it in
+        bytes32 non_empty_parent_hash;
+        // The user-generated batch is a list of transactions that the user
+        // wants to submit. This is a list of transactions that the user wants
+        // to submit.
+        bytes[] transaction_list; // EIP-2718 encoded transactions
+    }
+
     // Based on the Optimism batch structure
     struct Batch {
         // parent_hash is a potential DOS vector, since a based sequencer could
@@ -54,6 +77,7 @@ contract BasedSequencerChain {
         // necessarily known upfront. I'd lean against this approach given the
         // implementation complexity that it adds.
         bytes32 parent_hash;
+        uint256 parent_epoch_number;
         // This is equivalent to a block number. Maybe we want to rename it for
         // clarity.
         // TODO: Consider cutting this since it's implicitly available in the
@@ -62,11 +86,6 @@ contract BasedSequencerChain {
         // This is the hash of the transaction_list. This also will be
         // referenced by the next block as the parent_hash.
         bytes32 epoch_hash;
-        // We will autofill this based on when the batch is submitted. This will
-        // not be provided by the based sequencer.
-        // TODO: Should the timestamp of the submitted batch be used by the
-        // based sequencer?
-        uint256 timestamp;
         // The ist of transactions in this batch.
         bytes[] transaction_list; // EIP-2718 encoded transactions
     }
@@ -80,19 +99,19 @@ contract BasedSequencerChain {
     // straightforward.
     mapping(uint256 epochNumber => Batch batch) public batches;
 
-    // These are proposed batches that have not yet been finalized. This is also
-    // utilized by the second-choice, third-choice, etc bidders in a batch
-    mapping(uint256 epochNumber => mapping(address batchProposer => Batch batch)) proposedBatches;
+    // A list of isAllowed checks that must pass before a batch can be sequenced
+    // For requireAll checks, all checks must pass for the batch to be sequenced
+    // This will fail early upon the first check that fails.
+    AddressStructuredLinkedList.List requireAllList;
+    // For requireAny checks, at least one check must pass for the batch to be
+    // sequenced. This will succeed early upon the first check that passes.
+    AddressStructuredLinkedList.List requireAnyList;
 
-    // Mapping of epoch numbers to the top 5 bids for that epoch
-    // The top 5 bids are represented as a linked list. This allows us to easily
-    // add a new top bid by creating a new head and dropping the tail,
-    // preventing us from incurring gas costs on every item to adjust the bid
-    // order.
-    mapping(uint256 epochNumber => StructuredLinkedList.List bidsForEpoch) bids;
-
-    error BidMustBeHighest();
-    error CannotBidZero();
+    error ParentHashDoesNotMatch(bytes32 expectedParentHash, bytes32 actualParentHash);
+    error RequireAllCheckFailed(address requireAllAddress, address batchSubmitter);
+    // There's no requireAnyAddress specified here, since this error means that
+    // all requireAny checks failed
+    error RequireAnyCheckFailed(address batchSubmitter);
 
     constructor() {
         // NOTE: We explicitly do not start the epoch number at 0. The reason
@@ -102,116 +121,126 @@ contract BasedSequencerChain {
         INITIAL_EPOCH_NUMBER = calculateCurrentEpochNumber();
     }
 
-    // A based sequencer must reserve a batch prior to being able to add a batch
-    // Note that based sequencers can pre-queue future batches based on the
-    // epoch number
-    // Note that the based sequencer can overwrite their proposed batch any time
-    // before finalization. This allows them to react to e.g. receiving better
-    // bids from block builders prior to finalization.
-    // QUESTION: What action should we take if a based sequencer does not submit
-    // to a batch that it's reserved?
-    // One option is to have the batch be missed. This would be an empty block.
-    // Maybe this is OK, but it reduces chain throughput so I'm not a fan of it.
-    // Another option here is to allow the batch to be submitted by anyone. This
-    // would be simple to implement, but is suboptimal since it leaves money on
-    // the table.
-    // A third option here is to have the batch go to the second highest bidder,
-    // and then the third highest bidder, etc. This could continue until some
-    // kind of expiration period, in which case anyone can submit a batch.
-    // One way to make finding alternative bidders easier is to have
-    // second-choice, third-choice, etc. bidders also be able to call
-    // addBatch(). This way, if the top bidder doesn't submit, the second bidder
-    // can finalize the batch.
-    // ANSWER: We will go with the third option. This allows us to maximize
-    // throughput, since blocks won't be missed if the top bidder does not
-    // submit.
-    function proposeBatch(uint256 epochNumber, Batch calldata batch) public {}
-
-    // This function is only necessary if we have alternative bidders available.
-    // If only the top bidder were able to submit, this function wouldn't be
-    // needed and the epoch would be missed instead.
-    // In this case, the top bidder has the batch reserved for X milliseconds, and
-    // then after Y milliseconds the second bidder can add, and then after Z milliseconds
-    // the third bidder can add, etc.
-    // This will only ever finalize the next batch, so there is no need to specify the epochNumber
-    function finalizeNextBatch() public {
-        // NOTE: We will need to reject batches that don't have the correct
+    // This will only ever sequence the next batch, so there is no need to specify the epochNumber
+    function sequenceNextBatch(UserProvidedBatch calldata userProvidedBatch) public {
+        // We will need to reject batches that don't have the correct
         // non-empty parent hash, since they may be created by nodes that are
         // missing data.
-        // If a based sequencer reserves a range of epochs, they could submit
-        // multiple proposals, since they know the parent hash of the prior
-        // epoch. Finalization would then work properly.
-    }
-
-    // Convenience function to add and finalize a batch in the same step. This is useful for two reasons:
-    // 1. It avoids revealing your batch until it's able to be included.
-    // 2. It guarantees that once you add a batch, it will also be finalized.
-    // This is desirable because you don't have to worry about network issues
-    // between adding and finalizing batches.
-    function proposeAndFinalizeNextBatch(Batch calldata batch) public {}
-
-    // QUESTION: Should bids be immutable? i.e. Once a bid is submitted, it
-    // cannot be removed. It can only be replaced by a higher bid.
-    // I am in favor of this approach, since adding spoof bids could be
-    // disruptive (you don't actually know what the price would be if bids could
-    // be removed)
-    // This also means that we can automatically allow the top bidder to
-    // finalize a batch, and then the next bidder, etc
-    // Bids are only accepted before the epoch starts. Once the epoch starts,
-    // further bidding is not allowed.
-    // ANSWER: Yes, bids should be immutable. This prevents auction manipulation
-    // and allows us to go to second-choice, third-choice, etc. bidders if the
-    // top bidder does not submit a batch.
-    // QUESTION: Should epoch bidding be relative or absolute? i.e. Should
-    // epochs be bid on based on time since the last epoch, or based on an
-    // absolute timestamp.
-    // Time since the last epoch is likely desirable here. It makes it harder to
-    // forecast when a future epoch number will be hit, but it's much more
-    // resilient to chain downtime or inactivity since you never have to worry
-    // about skipping epoch numbers
-    // ANSWER: We'll offer both relative and absolute bidding via bidEpoch() and
-    // bidNextEpoch()
-    function bidEpoch(uint256 epochNumber) public payable {
-        if (msg.value == 0) {
-            revert CannotBidZero();
+        // (As an aside, this is also why we set one second epochs! We want to
+        // ensure that network latency isn't a reason for missing a parent hash,
+        // and one second is a good target for it)
+        if (!checkParentHash(userProvidedBatch.non_empty_parent_hash)) {
+            revert ParentHashDoesNotMatch(
+                batches[lastNonEmptyEpochNumber].epoch_hash, userProvidedBatch.non_empty_parent_hash
+            );
         }
 
-        StructuredLinkedList.List storage bidsForEpoch = bids[epochNumber];
-        uint256 bidAmount = msg.value;
-        address bidder = msg.sender;
+        // Run requireAll checks
+        requireAllAllowed(msg.sender);
 
-        // If no bids exist, we can add the bid as the head
-        if (StructuredLinkedList.sizeOf(bidsForEpoch) == 0) {
-            StructuredLinkedList.pushFront(bidsForEpoch, bidAmount, bidder);
-        } else if (StructuredLinkedList.sizeOf(bidsForEpoch) < MAX_BID_LIST_SIZE) {
-            // If there are fewer than 5 bids, we can add the bid as the head.
-            // It must be the new highest bid
-            if (bidAmount <= StructuredLinkedList.getHead(bidsForEpoch)) {
-                revert BidMustBeHighest();
-            }
-            StructuredLinkedList.pushFront(bidsForEpoch, bidAmount, bidder);
-        } else {
-            if (bidAmount <= StructuredLinkedList.getHead(bidsForEpoch)) {
-                revert BidMustBeHighest();
-            }
-            // If there are 5 or more bids, we need to add the bid as the head
-            // while also removing the tail
-            StructuredLinkedList.pushFront(bidsForEpoch, bidAmount, bidder);
-            (uint256 refundedBidAmount, address refundedBidAddress) = StructuredLinkedList.popBack(bidsForEpoch);
+        // Run requireAny checks
+        requireAnyAllowed(msg.sender);
 
-            // We should refund the bidder who was popped off the back
-            SafeTransferLib.safeTransferETH(refundedBidAddress, refundedBidAmount);
+        Batch memory batch = Batch({
+            parent_hash: userProvidedBatch.non_empty_parent_hash,
+            parent_epoch_number: lastNonEmptyEpochNumber,
+            epoch_number: calculateCurrentEpochNumber(),
+            epoch_hash: keccak256(abi.encode(userProvidedBatch.transaction_list)),
+            transaction_list: userProvidedBatch.transaction_list
+        });
+
+        lastNonEmptyEpochNumber = batch.epoch_number;
+    }
+
+    // While this requires a revert, someone can always check the list item by
+    // item if they want to see whether they'll pass or fail a specific check.
+    // It's not terribly useful to know which address is the first one you'll
+    // fail, compared to being able to check each address individually
+    function requireAllAllowed(address batchSubmitter) public view {
+        address requireAllAddress = AddressStructuredLinkedList.getHead(requireAllList);
+        bool requireAllNextNodeExists;
+        address requireAllNextNodeAddress;
+
+        (requireAllNextNodeExists, requireAllNextNodeAddress) =
+            AddressStructuredLinkedList.getNextNode(requireAllList, requireAllAddress);
+
+        if (requireAllAddress != address(0)) {
+            // isAllowed check for head node
+            if (!IsAllowed(requireAllAddress).isAllowed()) {
+                revert RequireAllCheckFailed(requireAllAddress, batchSubmitter);
+            }
+
+            // isAllowed check for all subsequent nodes
+            while (requireAllNextNodeExists) {
+                // isAllowed check for node
+                if (!IsAllowed(requireAllAddress).isAllowed()) {
+                    revert RequireAllCheckFailed(requireAllAddress, batchSubmitter);
+                }
+
+                (requireAllNextNodeExists, requireAllAddress) =
+                    AddressStructuredLinkedList.getNextNode(requireAllList, requireAllAddress);
+            }
         }
     }
 
-    // A convenience function for the based sequencer to bid on the next epoch.
-    // A user can pass in 0 to bid on the current epoch.
-    // NOTE: Having the ability to bid via relative values is particularly
-    // useful for MEV. Relying only on the chain for these relative values
-    // (rather than needing to pass data in) helps ensure that bids are always
-    // focused on the current epoch
-    function bidNextEpoch(uint256 epochNumberFromCurrentEpoch) public payable {
-        bidEpoch(calculateCurrentEpochNumber() + epochNumberFromCurrentEpoch);
+    function requireAnyAllowed(address batchSubmitter) public view {
+        address requireAnyAddress = AddressStructuredLinkedList.getHead(requireAnyList);
+        bool requireAnyNextNodeExists;
+        address requireAnyNextNodeAddress;
+
+        (requireAnyNextNodeExists, requireAnyNextNodeAddress) =
+            AddressStructuredLinkedList.getNextNode(requireAnyList, requireAnyAddress);
+
+        if (requireAnyAddress != address(0)) {
+            // isAllowed check for head node
+            if (IsAllowed(requireAnyAddress).isAllowed()) {
+                return;
+            }
+
+            // isAllowed check for all subsequent nodes
+            while (requireAnyNextNodeExists) {
+                // isAllowed check for node
+                if (IsAllowed(requireAnyAddress).isAllowed()) {
+                    return;
+                }
+
+                (requireAnyNextNodeExists, requireAnyAddress) =
+                    AddressStructuredLinkedList.getNextNode(requireAnyList, requireAnyAddress);
+            }
+        }
+
+        // If we reach this point, then no requireAny checks passed
+        revert RequireAnyCheckFailed(batchSubmitter);
+    }
+
+    /// @notice Pass in true to get all requireAll checks, false to get all
+    /// requireAny checks
+    /// @dev This function isn't used within the contract logic itself. It's
+    /// primarily for nodes to check the sequencing criteria for a given chain
+    function getAllRequirements(bool requireAll) public view returns (address[] memory) {
+        AddressStructuredLinkedList.List storage allowList = requireAll ? requireAllList : requireAnyList;
+        address allowAddress = AddressStructuredLinkedList.getHead(allowList);
+        bool allowNextNodeExists;
+        address allowNextNodeAddress;
+
+        (allowNextNodeExists, allowNextNodeAddress) = AddressStructuredLinkedList.getNextNode(allowList, allowAddress);
+
+        address[] memory allChecks = new address[](AddressStructuredLinkedList.sizeOf(allowList));
+
+        if (allowAddress != address(0)) {
+            allChecks[0] = allowAddress;
+
+            uint256 i = 1;
+            while (allowNextNodeExists) {
+                allChecks[i] = allowNextNodeAddress;
+
+                (allowNextNodeExists, allowNextNodeAddress) =
+                    AddressStructuredLinkedList.getNextNode(allowList, allowNextNodeAddress);
+                i++;
+            }
+        }
+
+        return allChecks;
     }
 
     // Calculate the epoch number based on a given timestamp
@@ -225,5 +254,10 @@ contract BasedSequencerChain {
     // current block timestamp.
     function calculateCurrentEpochNumber() public view returns (uint256) {
         return calculateEpochNumber(block.timestamp);
+    }
+
+    // Check the parent hash against the last non-empty epoch number
+    function checkParentHash(bytes32 parentHash) public view returns (bool) {
+        return parentHash == batches[lastNonEmptyEpochNumber].epoch_hash;
     }
 }

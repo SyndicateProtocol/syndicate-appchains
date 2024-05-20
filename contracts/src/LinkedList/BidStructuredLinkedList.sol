@@ -11,7 +11,7 @@ pragma solidity ^0.8.12;
  * and
  * https://github.com/Layr-Labs/eigenlayer-contracts/blob/b087c530e002861818f0eb052eaa315b64cbf506/src/contracts/libraries/StructuredLinkedList.sol
  */
-library StructuredLinkedList {
+library BidStructuredLinkedList {
     uint256 private constant _NULL = 0;
     uint256 private constant _HEAD = 0;
 
