@@ -1,0 +1,44 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.25;
+
+import {IsAllowed} from "../interfaces/IsAllowed.sol";
+
+interface IERC20 {
+    function balanceOf(address account) external view returns (uint256);
+}
+
+/**
+ * @title TokenBalanceSequencingModule
+ * @dev This contract allows sequencing based on the caller's token balance.
+ * @dev Useful in case Syndicate releases a token and wants to allow only token holders to sequence.
+ */
+contract TokenBalanceSequencingModule is IsAllowed {
+    /// @notice The address of the ERC20 token contract.
+    address public immutable tokenAddress;
+    /// @notice The minimum token balance required to be allowed.
+    uint256 public immutable minimumBalance;
+
+    /**
+     * @dev Sets the token address and minimum balance required.
+     * @param _tokenAddress The address of the ERC20 token contract.
+     * @param _minimumBalance The minimum token balance required to be allowed.
+     */
+    constructor(address _tokenAddress, uint256 _minimumBalance) {
+        tokenAddress = _tokenAddress;
+        minimumBalance = _minimumBalance;
+    }
+
+    error InsufficientBalance();
+
+    /**
+     * @notice Checks if the caller is allowed based on their token balance.
+     * @return bool indicating if the caller is allowed.
+     */
+    function isAllowed() external view override returns (bool) {
+        IERC20 token = IERC20(tokenAddress);
+        if (token.balanceOf(msg.sender) < minimumBalance) {
+            revert InsufficientBalance();
+        }
+        return true;
+    }
+}
