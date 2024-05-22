@@ -102,10 +102,14 @@ contract BasedSequencerChain {
     // A list of isAllowed checks that must pass before a batch can be sequenced
     // For requireAll checks, all checks must pass for the batch to be sequenced
     // This will fail early upon the first check that fails.
-    AddressStructuredLinkedList.List requireAllList;
+    AddressStructuredLinkedList.List public requireAllList;
     // For requireAny checks, at least one check must pass for the batch to be
     // sequenced. This will succeed early upon the first check that passes.
-    AddressStructuredLinkedList.List requireAnyList;
+    AddressStructuredLinkedList.List public requireAnyList;
+
+    // The admin address is the only address that can add or remove from the
+    // requireAllList and requireAnyList
+    address public admin;
 
     error ParentHashDoesNotMatch(bytes32 expectedParentHash, bytes32 actualParentHash);
     error RequireAllCheckFailed(address requireAllAddress, address batchSubmitter);
@@ -119,6 +123,12 @@ contract BasedSequencerChain {
         // the same L2. This lets us unlock cross-chain atomicity, which is very
         // important and greatly enabled by consistent block numbers.
         INITIAL_EPOCH_NUMBER = calculateCurrentEpochNumber();
+        admin = msg.sender;
+    }
+
+    modifier onlyAdmin() {
+        require(msg.sender == admin, "Only admin can perform this action");
+        _;
     }
 
     // This will only ever sequence the next batch, so there is no need to specify the epochNumber
@@ -262,5 +272,47 @@ contract BasedSequencerChain {
     // Check the parent hash against the last non-empty epoch number
     function checkParentHash(bytes32 parentHash) public view returns (bool) {
         return parentHash == batches[lastNonEmptyEpochNumber].epoch_hash;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                            ADMIN FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    // Add an address to the requireAllList
+    function addRequireAllCheck(address _address) public onlyAdmin {
+        require(_address != address(0), "Invalid address");
+        require(
+            !AddressStructuredLinkedList.nodeExists(requireAllList, _address),
+            "Address already exists in requireAllList"
+        );
+        AddressStructuredLinkedList.pushBack(requireAllList, _address);
+    }
+
+    // Remove an address from the requireAllList
+    function removeRequireAllCheck(address _address) public onlyAdmin {
+        require(_address != address(0), "Invalid address");
+        require(
+            AddressStructuredLinkedList.nodeExists(requireAllList, _address), "Address does not exist in requireAllList"
+        );
+        AddressStructuredLinkedList.remove(requireAllList, _address);
+    }
+
+    // Add an address to the requireAnyList
+    function addRequireAnyCheck(address _address) public onlyAdmin {
+        require(_address != address(0), "Invalid address");
+        require(
+            !AddressStructuredLinkedList.nodeExists(requireAnyList, _address),
+            "Address already exists in requireAnyList"
+        );
+        AddressStructuredLinkedList.pushBack(requireAnyList, _address);
+    }
+
+    // Remove an address from the requireAnyList
+    function removeRequireAnyCheck(address _address) public onlyAdmin {
+        require(_address != address(0), "Invalid address");
+        require(
+            AddressStructuredLinkedList.nodeExists(requireAnyList, _address), "Address does not exist in requireAnyList"
+        );
+        AddressStructuredLinkedList.remove(requireAnyList, _address);
     }
 }
