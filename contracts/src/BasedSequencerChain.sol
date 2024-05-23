@@ -1,14 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.25;
+pragma solidity 0.8.25;
 
 import {AddressStructuredLinkedList} from "./LinkedList/AddressStructuredLinkedList.sol";
-import {SafeTransferLib} from "./SafeTransferLib/SafeTransferLib.sol";
-
-interface IsAllowed {
-    // TODO: Evaluate whether this should be a view function or not. You could
-    // imagine isAllowed() checks that also modify some state
-    function isAllowed() external view returns (bool);
-}
+import {IsAllowed} from "./interfaces/IsAllowed.sol";
 
 // This is the core contract for sequencing chains
 // It uses a modular architecture to determine who is allowed to sequence,
