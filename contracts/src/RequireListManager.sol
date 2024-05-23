@@ -3,12 +3,13 @@ pragma solidity 0.8.25;
 
 import {AddressStructuredLinkedList} from "./LinkedList/AddressStructuredLinkedList.sol";
 import {IsAllowed} from "./interfaces/IsAllowed.sol";
+import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /// @title RequireListManager
 /// @notice A contract that manages a list of addresses that must pass an
 /// isAllowed check before a batch can be sequenced
 /// @dev This contract is used by the BasedSequencerChain contract
-abstract contract RequireListManager {
+abstract contract RequireListManager is Ownable {
     /// @notice A list of isAllowed checks that must pass before a batch can be sequenced
     /// @dev For requireAll checks, all checks must pass for the batch to be sequenced
     /// This will fail early upon the first check that fails.
@@ -17,10 +18,6 @@ abstract contract RequireListManager {
     /// @notice A list of isAllowed checks where at least one check must pass for the batch to be sequenced
     /// @dev This will succeed early upon the first check that passes.
     AddressStructuredLinkedList.List public requireAnyList;
-
-    /// @notice The admin address is the only address that can add or remove from the
-    /// requireAllList and requireAnyList
-    address public admin;
 
     /// @dev Emitted when a requireAll check fails
     /// @param requireAllAddress The address of the failed requireAll check
@@ -31,17 +28,24 @@ abstract contract RequireListManager {
     /// @param batchSubmitter The address of the batch submitter
     error RequireAnyCheckFailed(address batchSubmitter);
 
+    /// @dev Emitted when trying to add an invalid address (zero address)
+    error InvalidAddress();
+
+    /// @dev Emitted when trying to add an address that already exists in the requireAllList
+    error AddressAlreadyExistsInRequireAllList();
+
+    /// @dev Emitted when trying to remove an address that does not exist in the requireAllList
+    error AddressDoesNotExistInRequireAllList();
+
+    /// @dev Emitted when trying to add an address that already exists in the requireAnyList
+    error AddressAlreadyExistsInRequireAnyList();
+
+    /// @dev Emitted when trying to remove an address that does not exist in the requireAnyList
+    error AddressDoesNotExistInRequireAnyList();
+
     /// @dev Constructor function
     /// @notice Sets the admin to the address that deploys the contract
-    constructor() {
-        admin = msg.sender;
-    }
-
-    /// @dev Modifier to restrict access to only the admin
-    modifier onlyAdmin() {
-        require(msg.sender == admin, "Only admin can perform this action");
-        _;
-    }
+    constructor() Ownable(msg.sender) {}
 
     /// @notice Checks if all requireAll checks pass for the given batch submitter
     /// @dev While this requires a revert, someone can always check the list item by
@@ -147,12 +151,13 @@ abstract contract RequireListManager {
     /// @dev Only the admin can call this function
     /// @param _address The address to add to the requireAllList
     /// @param addToHead A boolean indicating whether to add the address to the head (true) or tail (false) of the list
-    function addRequireAllCheck(address _address, bool addToHead) public onlyAdmin {
-        require(_address != address(0), "Invalid address");
-        require(
-            !AddressStructuredLinkedList.nodeExists(requireAllList, _address),
-            "Address already exists in requireAllList"
-        );
+    function addRequireAllCheck(address _address, bool addToHead) public onlyOwner {
+        if (_address == address(0)) {
+            revert InvalidAddress();
+        }
+        if (AddressStructuredLinkedList.nodeExists(requireAllList, _address)) {
+            revert AddressAlreadyExistsInRequireAllList();
+        }
         if (addToHead) {
             AddressStructuredLinkedList.pushFront(requireAllList, _address);
         } else {
@@ -163,11 +168,13 @@ abstract contract RequireListManager {
     /// @notice Removes an address from the requireAllList
     /// @dev Only the admin can call this function
     /// @param _address The address to remove from the requireAllList
-    function removeRequireAllCheck(address _address) public onlyAdmin {
-        require(_address != address(0), "Invalid address");
-        require(
-            AddressStructuredLinkedList.nodeExists(requireAllList, _address), "Address does not exist in requireAllList"
-        );
+    function removeRequireAllCheck(address _address) public onlyOwner {
+        if (_address == address(0)) {
+            revert InvalidAddress();
+        }
+        if (!AddressStructuredLinkedList.nodeExists(requireAllList, _address)) {
+            revert AddressDoesNotExistInRequireAllList();
+        }
         AddressStructuredLinkedList.remove(requireAllList, _address);
     }
 
@@ -175,12 +182,13 @@ abstract contract RequireListManager {
     /// @dev Only the admin can call this function
     /// @param _address The address to add to the requireAnyList
     /// @param addToHead A boolean indicating whether to add the address to the head (true) or tail (false) of the list
-    function addRequireAnyCheck(address _address, bool addToHead) public onlyAdmin {
-        require(_address != address(0), "Invalid address");
-        require(
-            !AddressStructuredLinkedList.nodeExists(requireAnyList, _address),
-            "Address already exists in requireAnyList"
-        );
+    function addRequireAnyCheck(address _address, bool addToHead) public onlyOwner {
+        if (_address == address(0)) {
+            revert InvalidAddress();
+        }
+        if (AddressStructuredLinkedList.nodeExists(requireAnyList, _address)) {
+            revert AddressAlreadyExistsInRequireAnyList();
+        }
         if (addToHead) {
             AddressStructuredLinkedList.pushFront(requireAnyList, _address);
         } else {
@@ -191,11 +199,13 @@ abstract contract RequireListManager {
     /// @notice Removes an address from the requireAnyList
     /// @dev Only the admin can call this function
     /// @param _address The address to remove from the requireAnyList
-    function removeRequireAnyCheck(address _address) public onlyAdmin {
-        require(_address != address(0), "Invalid address");
-        require(
-            AddressStructuredLinkedList.nodeExists(requireAnyList, _address), "Address does not exist in requireAnyList"
-        );
+    function removeRequireAnyCheck(address _address) public onlyOwner {
+        if (_address == address(0)) {
+            revert InvalidAddress();
+        }
+        if (!AddressStructuredLinkedList.nodeExists(requireAnyList, _address)) {
+            revert AddressDoesNotExistInRequireAnyList();
+        }
         AddressStructuredLinkedList.remove(requireAnyList, _address);
     }
 }

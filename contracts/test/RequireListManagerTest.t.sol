@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {RequireListManager, IsAllowed} from "src/RequireListManager.sol";
+import {RequireListManager, IsAllowed, Ownable} from "src/RequireListManager.sol";
 import {Test} from "forge-std/Test.sol";
 
 contract RequireListManagerMock is RequireListManager {
@@ -33,7 +33,7 @@ contract RequireListManagerTest is Test {
 
     function setUp() public {
         requireListManager = new RequireListManagerMock();
-        admin = requireListManager.admin();
+        admin = requireListManager.owner();
         nonAdmin = address(0x1);
     }
 
@@ -120,14 +120,14 @@ contract RequireListManagerTest is Test {
 
     function testAddRequireAllCheckNonAdmin() public {
         vm.prank(nonAdmin);
-        vm.expectRevert("Only admin can perform this action");
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonAdmin));
         requireListManager.addRequireAllCheck(address(0x1), true);
     }
 
     function testAddRequireAllCheckDuplicate() public {
         vm.startPrank(admin);
         requireListManager.addRequireAllCheck(address(0x1), true);
-        vm.expectRevert("Address already exists in requireAllList");
+        vm.expectRevert(RequireListManager.AddressAlreadyExistsInRequireAllList.selector);
         requireListManager.addRequireAllCheck(address(0x1), true);
         vm.stopPrank();
     }
@@ -143,13 +143,13 @@ contract RequireListManagerTest is Test {
 
     function testRemoveRequireAllCheckNonAdmin() public {
         vm.prank(nonAdmin);
-        vm.expectRevert("Only admin can perform this action");
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonAdmin));
         requireListManager.removeRequireAllCheck(address(0x1));
     }
 
     function testRemoveRequireAllCheckNonExistent() public {
         vm.prank(admin);
-        vm.expectRevert("Address does not exist in requireAllList");
+        vm.expectRevert(abi.encodeWithSelector(RequireListManager.AddressDoesNotExistInRequireAllList.selector));
         requireListManager.removeRequireAllCheck(address(0x1));
     }
 
@@ -163,14 +163,14 @@ contract RequireListManagerTest is Test {
 
     function testAddRequireAnyCheckNonAdmin() public {
         vm.prank(nonAdmin);
-        vm.expectRevert("Only admin can perform this action");
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonAdmin));
         requireListManager.addRequireAnyCheck(address(0x1), true);
     }
 
     function testAddRequireAnyCheckDuplicate() public {
         vm.startPrank(admin);
         requireListManager.addRequireAnyCheck(address(0x1), true);
-        vm.expectRevert("Address already exists in requireAnyList");
+        vm.expectRevert(abi.encodeWithSelector(RequireListManager.AddressAlreadyExistsInRequireAnyList.selector));
         requireListManager.addRequireAnyCheck(address(0x1), true);
         vm.stopPrank();
     }
@@ -186,13 +186,13 @@ contract RequireListManagerTest is Test {
 
     function testRemoveRequireAnyCheckNonAdmin() public {
         vm.prank(nonAdmin);
-        vm.expectRevert("Only admin can perform this action");
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonAdmin));
         requireListManager.removeRequireAnyCheck(address(0x1));
     }
 
     function testRemoveRequireAnyCheckNonExistent() public {
         vm.prank(admin);
-        vm.expectRevert("Address does not exist in requireAnyList");
+        vm.expectRevert(abi.encodeWithSelector(RequireListManager.AddressDoesNotExistInRequireAnyList.selector));
         requireListManager.removeRequireAnyCheck(address(0x1));
     }
 }
