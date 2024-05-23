@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {BasedSequencerChain, IsAllowed} from "src/BasedSequencerChain.sol";
+import {BasedSequencerChain, RequireListManager} from "src/BasedSequencerChain.sol";
+import {IsAllowed} from "src/interfaces/IsAllowed.sol";
 import {Test} from "forge-std/Test.sol";
+import {EMPTY_PARENT_HASH, INVALID_PARENT_HASH} from "./utils/Constants.sol";
 
 contract MockIsAllowed is IsAllowed {
     bool allowed;
@@ -57,11 +59,11 @@ contract BasedSequencerChainTest is BasedSequencerChainTestSetUp {
 
     function testCheckParentHash() public {
         vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)));
+        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         BasedSequencerChain.UserProvidedBatch memory userProvidedBatch = BasedSequencerChain.UserProvidedBatch({
-            non_empty_parent_hash: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            non_empty_parent_hash: EMPTY_PARENT_HASH,
             transaction_list: new bytes[](0)
         });
 
@@ -75,11 +77,11 @@ contract BasedSequencerChainTest is BasedSequencerChainTestSetUp {
 contract BasedSequencerChainBatchTest is BasedSequencerChainTestSetUp {
     function testSequenceNextBatch() public {
         vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)));
+        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         BasedSequencerChain.UserProvidedBatch memory userProvidedBatch = BasedSequencerChain.UserProvidedBatch({
-            non_empty_parent_hash: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            non_empty_parent_hash: EMPTY_PARENT_HASH,
             transaction_list: new bytes[](0)
         });
 
@@ -90,19 +92,17 @@ contract BasedSequencerChainBatchTest is BasedSequencerChainTestSetUp {
 
     function testSequenceNextBatchInvalidParentHash() public {
         vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)));
+        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         BasedSequencerChain.UserProvidedBatch memory userProvidedBatch = BasedSequencerChain.UserProvidedBatch({
-            non_empty_parent_hash: 0x1111111111111111111111111111111111111111111111111111111111111111,
+            non_empty_parent_hash: INVALID_PARENT_HASH,
             transaction_list: new bytes[](0)
         });
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                BasedSequencerChain.ParentHashDoesNotMatch.selector,
-                0x0000000000000000000000000000000000000000000000000000000000000000,
-                0x1111111111111111111111111111111111111111111111111111111111111111
+                BasedSequencerChain.ParentHashDoesNotMatch.selector, EMPTY_PARENT_HASH, INVALID_PARENT_HASH
             )
         );
         chain.sequenceNextBatch(userProvidedBatch);
@@ -111,17 +111,17 @@ contract BasedSequencerChainBatchTest is BasedSequencerChainTestSetUp {
     function testSequenceNextBatchRequireAllFailure() public {
         address mockRequireAny = address(new MockIsAllowed(false));
         vm.startPrank(admin);
-        chain.addRequireAllCheck(mockRequireAny);
+        chain.addRequireAllCheck(mockRequireAny, false);
         vm.stopPrank();
 
         BasedSequencerChain.UserProvidedBatch memory userProvidedBatch = BasedSequencerChain.UserProvidedBatch({
-            non_empty_parent_hash: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            non_empty_parent_hash: EMPTY_PARENT_HASH,
             transaction_list: new bytes[](0)
         });
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                BasedSequencerChain.RequireAllCheckFailed.selector, address(mockRequireAny), address(this)
+                RequireListManager.RequireAllCheckFailed.selector, address(mockRequireAny), address(this)
             )
         );
         chain.sequenceNextBatch(userProvidedBatch);
@@ -129,15 +129,15 @@ contract BasedSequencerChainBatchTest is BasedSequencerChainTestSetUp {
 
     function testSequenceNextBatchRequireAnyFailure() public {
         vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(false)));
+        chain.addRequireAnyCheck(address(new MockIsAllowed(false)), false);
         vm.stopPrank();
 
         BasedSequencerChain.UserProvidedBatch memory userProvidedBatch = BasedSequencerChain.UserProvidedBatch({
-            non_empty_parent_hash: 0x0000000000000000000000000000000000000000000000000000000000000000,
+            non_empty_parent_hash: EMPTY_PARENT_HASH,
             transaction_list: new bytes[](0)
         });
 
-        vm.expectRevert(abi.encodeWithSelector(BasedSequencerChain.RequireAnyCheckFailed.selector, address(this)));
+        vm.expectRevert(abi.encodeWithSelector(RequireListManager.RequireAnyCheckFailed.selector, address(this)));
         chain.sequenceNextBatch(userProvidedBatch);
     }
 }
@@ -156,10 +156,10 @@ contract BasedSequencerChainViewTest is BasedSequencerChainTestSetUp {
         mockRequireAny2 = new MockIsAllowed(true);
 
         vm.startPrank(admin);
-        chain.addRequireAllCheck(address(mockRequireAll1));
-        chain.addRequireAllCheck(address(mockRequireAll2));
-        chain.addRequireAnyCheck(address(mockRequireAny1));
-        chain.addRequireAnyCheck(address(mockRequireAny2));
+        chain.addRequireAllCheck(address(mockRequireAll1), false);
+        chain.addRequireAllCheck(address(mockRequireAll2), false);
+        chain.addRequireAnyCheck(address(mockRequireAny1), false);
+        chain.addRequireAnyCheck(address(mockRequireAny2), false);
         vm.stopPrank();
     }
 
@@ -175,69 +175,5 @@ contract BasedSequencerChainViewTest is BasedSequencerChainTestSetUp {
         assertEq(allChecks.length, 2);
         assertEq(allChecks[0], address(mockRequireAny1));
         assertEq(allChecks[1], address(mockRequireAny2));
-    }
-}
-
-contract BasedSequencerChainAdminFunctions is BasedSequencerChainTestSetUp {
-    function testAddRequireAllCheck() public {
-        MockIsAllowed mockRequireAll = new MockIsAllowed(true);
-
-        vm.startPrank(admin);
-        chain.addRequireAllCheck(address(mockRequireAll));
-        vm.stopPrank();
-
-        address[] memory allChecks = chain.getAllRequirements(true);
-        assertEq(allChecks.length, 1);
-        assertEq(allChecks[0], address(mockRequireAll));
-    }
-
-    function testAddRequireAnyCheck() public {
-        MockIsAllowed mockRequireAny = new MockIsAllowed(true);
-
-        vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(mockRequireAny));
-        vm.stopPrank();
-
-        address[] memory allChecks = chain.getAllRequirements(false);
-        assertEq(allChecks.length, 1);
-        assertEq(allChecks[0], address(mockRequireAny));
-    }
-
-    function testRemoveRequireAllCheck() public {
-        MockIsAllowed mockRequireAll = new MockIsAllowed(true);
-
-        vm.startPrank(admin);
-        chain.addRequireAllCheck(address(mockRequireAll));
-        vm.stopPrank();
-
-        address[] memory allChecks = chain.getAllRequirements(true);
-        assertEq(allChecks.length, 1);
-        assertEq(allChecks[0], address(mockRequireAll));
-
-        vm.startPrank(admin);
-        chain.removeRequireAllCheck(address(mockRequireAll));
-        vm.stopPrank();
-
-        allChecks = chain.getAllRequirements(true);
-        assertEq(allChecks.length, 0);
-    }
-
-    function testRemoveRequireAnyCheck() public {
-        MockIsAllowed mockRequireAny = new MockIsAllowed(true);
-
-        vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(mockRequireAny));
-        vm.stopPrank();
-
-        address[] memory allChecks = chain.getAllRequirements(false);
-        assertEq(allChecks.length, 1);
-        assertEq(allChecks[0], address(mockRequireAny));
-
-        vm.startPrank(admin);
-        chain.removeRequireAnyCheck(address(mockRequireAny));
-        vm.stopPrank();
-
-        allChecks = chain.getAllRequirements(false);
-        assertEq(allChecks.length, 0);
     }
 }
