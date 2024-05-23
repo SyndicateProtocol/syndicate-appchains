@@ -4,12 +4,6 @@ pragma solidity 0.8.25;
 import {AddressStructuredLinkedList} from "./LinkedList/AddressStructuredLinkedList.sol";
 import {IsAllowed} from "./interfaces/IsAllowed.sol";
 
-interface IsAllowed {
-    // TODO: Evaluate whether this should be a view function or not. You could
-    // imagine isAllowed() checks that also modify some state
-    function isAllowed() external view returns (bool);
-}
-
 // This is the core contract for sequencing chains
 // It uses a modular architecture to determine who is allowed to sequence,
 // allowing for rapid experimentation.
