@@ -31,10 +31,12 @@ contract RequireListManagerTest is Test {
     address public admin;
     address public nonAdmin;
 
+    address public mockModule = address(0x1);
+
     function setUp() public {
         requireListManager = new RequireListManagerMock();
         admin = requireListManager.owner();
-        nonAdmin = address(0x1);
+        nonAdmin = address(0x456);
     }
 
     function testRequireAllAllowed() public {
@@ -112,30 +114,30 @@ contract RequireListManagerTest is Test {
 
     function testAddRequireAllCheck() public {
         vm.prank(admin);
-        requireListManager.addRequireAllCheck(address(0x1), true);
+        requireListManager.addRequireAllCheck(mockModule, true);
         address[] memory requireAllChecks = requireListManager.getAllRequirements(true);
         assertEq(requireAllChecks.length, 1);
-        assertEq(requireAllChecks[0], address(0x1));
+        assertEq(requireAllChecks[0], mockModule);
     }
 
     function testAddRequireAllCheckNonAdmin() public {
         vm.prank(nonAdmin);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonAdmin));
-        requireListManager.addRequireAllCheck(address(0x1), true);
+        requireListManager.addRequireAllCheck(mockModule, true);
     }
 
     function testAddRequireAllCheckDuplicate() public {
         vm.startPrank(admin);
-        requireListManager.addRequireAllCheck(address(0x1), true);
+        requireListManager.addRequireAllCheck(mockModule, true);
         vm.expectRevert(RequireListManager.AddressAlreadyExistsInRequireAllList.selector);
-        requireListManager.addRequireAllCheck(address(0x1), true);
+        requireListManager.addRequireAllCheck(mockModule, true);
         vm.stopPrank();
     }
 
     function testRemoveRequireAllCheck() public {
         vm.startPrank(admin);
-        requireListManager.addRequireAllCheck(address(0x1), true);
-        requireListManager.removeRequireAllCheck(address(0x1));
+        requireListManager.addRequireAllCheck(mockModule, true);
+        requireListManager.removeRequireAllCheck(mockModule);
         address[] memory requireAllChecks = requireListManager.getAllRequirements(true);
         assertEq(requireAllChecks.length, 0);
         vm.stopPrank();
@@ -144,41 +146,41 @@ contract RequireListManagerTest is Test {
     function testRemoveRequireAllCheckNonAdmin() public {
         vm.prank(nonAdmin);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonAdmin));
-        requireListManager.removeRequireAllCheck(address(0x1));
+        requireListManager.removeRequireAllCheck(mockModule);
     }
 
     function testRemoveRequireAllCheckNonExistent() public {
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(RequireListManager.AddressDoesNotExistInRequireAllList.selector));
-        requireListManager.removeRequireAllCheck(address(0x1));
+        requireListManager.removeRequireAllCheck(mockModule);
     }
 
     function testAddRequireAnyCheck() public {
         vm.prank(admin);
-        requireListManager.addRequireAnyCheck(address(0x1), true);
+        requireListManager.addRequireAnyCheck(mockModule, true);
         address[] memory requireAnyChecks = requireListManager.getAllRequirements(false);
         assertEq(requireAnyChecks.length, 1);
-        assertEq(requireAnyChecks[0], address(0x1));
+        assertEq(requireAnyChecks[0], mockModule);
     }
 
     function testAddRequireAnyCheckNonAdmin() public {
         vm.prank(nonAdmin);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonAdmin));
-        requireListManager.addRequireAnyCheck(address(0x1), true);
+        requireListManager.addRequireAnyCheck(mockModule, true);
     }
 
     function testAddRequireAnyCheckDuplicate() public {
         vm.startPrank(admin);
-        requireListManager.addRequireAnyCheck(address(0x1), true);
+        requireListManager.addRequireAnyCheck(mockModule, true);
         vm.expectRevert(abi.encodeWithSelector(RequireListManager.AddressAlreadyExistsInRequireAnyList.selector));
-        requireListManager.addRequireAnyCheck(address(0x1), true);
+        requireListManager.addRequireAnyCheck(mockModule, true);
         vm.stopPrank();
     }
 
     function testRemoveRequireAnyCheck() public {
         vm.startPrank(admin);
-        requireListManager.addRequireAnyCheck(address(0x1), true);
-        requireListManager.removeRequireAnyCheck(address(0x1));
+        requireListManager.addRequireAnyCheck(mockModule, true);
+        requireListManager.removeRequireAnyCheck(mockModule);
         address[] memory requireAnyChecks = requireListManager.getAllRequirements(false);
         assertEq(requireAnyChecks.length, 0);
         vm.stopPrank();
@@ -187,12 +189,12 @@ contract RequireListManagerTest is Test {
     function testRemoveRequireAnyCheckNonAdmin() public {
         vm.prank(nonAdmin);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonAdmin));
-        requireListManager.removeRequireAnyCheck(address(0x1));
+        requireListManager.removeRequireAnyCheck(mockModule);
     }
 
     function testRemoveRequireAnyCheckNonExistent() public {
         vm.prank(admin);
         vm.expectRevert(abi.encodeWithSelector(RequireListManager.AddressDoesNotExistInRequireAnyList.selector));
-        requireListManager.removeRequireAnyCheck(address(0x1));
+        requireListManager.removeRequireAnyCheck(mockModule);
     }
 }
