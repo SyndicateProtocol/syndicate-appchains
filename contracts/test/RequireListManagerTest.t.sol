@@ -15,13 +15,13 @@ contract RequireListManagerMock is RequireListManager {
 }
 
 contract MockIsAllowedTrue is IsAllowed {
-    function isAllowed() external pure returns (bool) {
+    function isAllowed(address) external pure returns (bool) {
         return true;
     }
 }
 
 contract MockIsAllowedFalse is IsAllowed {
-    function isAllowed() external pure returns (bool) {
+    function isAllowed(address) external pure returns (bool) {
         return false;
     }
 }

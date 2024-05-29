@@ -51,11 +51,11 @@ contract AllowlistSequencingModuleTest is Test {
         vm.stopPrank();
 
         vm.prank(user1);
-        assertTrue(allowlistSequencer.isAllowed());
+        assertTrue(allowlistSequencer.isAllowed(user1));
     }
 
     function testIsNotAllowedForNonAllowedAddress() public {
         vm.expectRevert(AllowlistSequencingModule.AddressNotAllowed.selector);
-        allowlistSequencer.isAllowed();
+        allowlistSequencer.isAllowed(makeAddr("non-allowed"));
     }
 }

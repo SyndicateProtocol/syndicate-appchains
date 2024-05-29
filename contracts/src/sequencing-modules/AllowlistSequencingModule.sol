@@ -79,8 +79,8 @@ contract AllowlistSequencingModule is IsAllowed {
      * @notice Checks if the caller is allowed.
      * @return bool indicating if the caller is allowed.
      */
-    function isAllowed() external view override returns (bool) {
-        if (!allowlist[msg.sender]) {
+    function isAllowed(address proposer) external view override returns (bool) {
+        if (!allowlist[proposer]) {
             revert AddressNotAllowed();
         }
         return true;

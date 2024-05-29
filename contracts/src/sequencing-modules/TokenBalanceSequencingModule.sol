@@ -24,6 +24,9 @@ contract TokenBalanceSequencingModule is IsAllowed {
      * @param _minimumBalance The minimum token balance required to be allowed.
      */
     constructor(address _tokenAddress, uint256 _minimumBalance) {
+        require(_tokenAddress != address(0), "TokenBalanceSequencingModule: zero address");
+        require(_minimumBalance > 0, "TokenBalanceSequencingModule: zero balance");
+
         tokenAddress = _tokenAddress;
         minimumBalance = _minimumBalance;
     }
@@ -34,9 +37,9 @@ contract TokenBalanceSequencingModule is IsAllowed {
      * @notice Checks if the caller is allowed based on their token balance.
      * @return bool indicating if the caller is allowed.
      */
-    function isAllowed() external view override returns (bool) {
+    function isAllowed(address proposer) external view override returns (bool) {
         IERC20 token = IERC20(tokenAddress);
-        if (token.balanceOf(msg.sender) < minimumBalance) {
+        if (token.balanceOf(proposer) < minimumBalance) {
             revert InsufficientBalance();
         }
         return true;

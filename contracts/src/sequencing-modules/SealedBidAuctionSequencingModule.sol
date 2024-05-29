@@ -36,6 +36,7 @@ contract SealedBidAuctionSequencingModule is IsAllowed {
     error InvalidBidReveal();
     error NoFundsToWithdraw();
     error AuctionNotEnded();
+    error TransactionFailed();
 
     modifier onlyActive() {
         if (!auctionActive) revert AuctionNotActive();
@@ -72,7 +73,8 @@ contract SealedBidAuctionSequencingModule is IsAllowed {
         auctionActive = false;
         if (highestBidder != address(0)) {
             // solhint-disable-line avoid-low-level-calls
-            payable(treasury).call{value: highestBid}("");
+            (bool success,) = payable(treasury).call{value: highestBid}("");
+            if (!success) revert TransactionFailed();
         }
     }
 
@@ -126,7 +128,8 @@ contract SealedBidAuctionSequencingModule is IsAllowed {
         if (refund == 0) revert NoFundsToWithdraw();
         refunds[msg.sender] = 0;
         // solhint-disable-line avoid-low-level-calls
-        payable(msg.sender).call{value: refund}("");
+        (bool success,) = payable(msg.sender).call{value: refund}("");
+        if (!success) revert TransactionFailed();
     }
 
     /**
@@ -157,7 +160,7 @@ contract SealedBidAuctionSequencingModule is IsAllowed {
      * @notice Checks if the caller is allowed to sequence.
      * @return Boolean indicating if the caller is the highest bidder.
      */
-    function isAllowed() external view override returns (bool) {
-        return msg.sender == highestBidder;
+    function isAllowed(address proposer) external view override returns (bool) {
+        return proposer == highestBidder;
     }
 }
