@@ -8,6 +8,9 @@
 # deploy DeployBasedSequencerChain to SYNDICATE_FRAME
 deploy-based-sequencerchain-frame :; forge script script/DeployContractsForSequencerChain.s.sol:DeployBasedSequencerChain --rpc-url ${SYNDICATE_FRAME_RPC_URL}  --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
+# run AddModuleToBasedSequencerChain script on SYNDICATE_FRAME
+add-module-to-based-sequencerchain-frame :; forge script script/DeployContractsForSequencerChain.s.sol:AddModuleToBasedSequencerChain --rpc-url ${SYNDICATE_FRAME_RPC_URL}  --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+
 # deploy DeploySealedBidAuctionSequencingModule to SYNDICATE_FRAME
 deploy-sealed-bid-auction-sequencing-module-frame :; forge script script/DeployContractsForSequencerChain.s.sol:DeploySealedBidAuctionSequencingModule --rpc-url ${SYNDICATE_FRAME_RPC_URL}  --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
