@@ -7,7 +7,8 @@ interface IsAllowed {
 
     /**
      * @notice Checks if the caller is allowed.
+     * @param proposer The address of proposed to be checked.
      * @return bool indicating if the caller is allowed.
      */
-    function isAllowed() external view returns (bool);
+    function isAllowed(address proposer) external view returns (bool);
 }

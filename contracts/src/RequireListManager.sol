@@ -63,14 +63,14 @@ abstract contract RequireListManager is Ownable {
 
         if (requireAllAddress != address(0)) {
             // isAllowed check for head node
-            if (!IsAllowed(requireAllAddress).isAllowed()) {
+            if (!IsAllowed(requireAllAddress).isAllowed(batchSubmitter)) {
                 revert RequireAllCheckFailed(requireAllAddress, batchSubmitter);
             }
 
             // isAllowed check for all subsequent nodes
             while (requireAllNextNodeExists) {
                 // isAllowed check for node
-                if (!IsAllowed(requireAllAddress).isAllowed()) {
+                if (!IsAllowed(requireAllAddress).isAllowed(batchSubmitter)) {
                     revert RequireAllCheckFailed(requireAllAddress, batchSubmitter);
                 }
 
@@ -92,24 +92,24 @@ abstract contract RequireListManager is Ownable {
 
         if (requireAnyAddress != address(0)) {
             // isAllowed check for head node
-            if (IsAllowed(requireAnyAddress).isAllowed()) {
+            if (IsAllowed(requireAnyAddress).isAllowed(batchSubmitter)) {
                 return;
             }
 
             // isAllowed check for all subsequent nodes
             while (requireAnyNextNodeExists) {
                 // isAllowed check for node
-                if (IsAllowed(requireAnyAddress).isAllowed()) {
+                if (IsAllowed(requireAnyAddress).isAllowed(batchSubmitter)) {
                     return;
                 }
 
                 (requireAnyNextNodeExists, requireAnyAddress) =
                     AddressStructuredLinkedList.getNextNode(requireAnyList, requireAnyAddress);
             }
-        }
 
-        // If we reach this point, then no requireAny checks passed
-        revert RequireAnyCheckFailed(batchSubmitter);
+            // If we reach this point, then no requireAny checks passed
+            revert RequireAnyCheckFailed(batchSubmitter);
+        }
     }
 
     /// @notice Returns all requireAll checks if requireAll is true, or all requireAny checks if requireAll is false

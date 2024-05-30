@@ -31,25 +31,25 @@ contract TokenBalanceSequencingModuleTest is Test {
     function testIsAllowedWhenBalanceIsSufficient() public {
         token.mint(user1, minimumBalance);
         vm.prank(user1);
-        assertTrue(tokenBalanceSequencer.isAllowed());
+        assertTrue(tokenBalanceSequencer.isAllowed(user1));
     }
 
     function testIsNotAllowedWhenBalanceIsInsufficient() public {
         token.mint(user1, minimumBalance - 1);
         vm.prank(user1);
         vm.expectRevert(TokenBalanceSequencingModule.InsufficientBalance.selector);
-        tokenBalanceSequencer.isAllowed();
+        tokenBalanceSequencer.isAllowed(user1);
     }
 
     function testIsAllowedWhenBalanceEqualsMinimum() public {
         token.mint(user1, minimumBalance);
         vm.prank(user1);
-        assertTrue(tokenBalanceSequencer.isAllowed());
+        assertTrue(tokenBalanceSequencer.isAllowed(user1));
     }
 
     function testIsNotAllowedWhenBalanceIsZero() public {
         vm.prank(user1);
         vm.expectRevert(TokenBalanceSequencingModule.InsufficientBalance.selector);
-        tokenBalanceSequencer.isAllowed();
+        tokenBalanceSequencer.isAllowed(user1);
     }
 }

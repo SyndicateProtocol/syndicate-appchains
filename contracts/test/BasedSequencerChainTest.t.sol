@@ -13,7 +13,7 @@ contract MockIsAllowed is IsAllowed {
         allowed = _allowed;
     }
 
-    function isAllowed() external view override returns (bool) {
+    function isAllowed(address) external view override returns (bool) {
         return allowed;
     }
 }
