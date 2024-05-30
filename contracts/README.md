@@ -1,19 +1,4 @@
-## Foundry
-
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
-
-Foundry consists of:
-
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
-
-## Documentation
-
-https://book.getfoundry.sh/
-
-## Usage
+## Base Sequencer Chain Contracts
 
 ### Build
 
@@ -27,40 +12,20 @@ $ forge build
 $ forge test
 ```
 
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
 ### Deploy
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
+Look at Makefile for more details.
 
-### Cast
+Example:
 
 ```shell
-$ cast <subcommand>
+$ make deploy-based-sequencerchain-frame
 ```
 
-### Help
+### Deployed Contracts
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+#### Syndicate Frame Chain
+
+| Contract Name       | Address                                    |
+| ------------------- | ------------------------------------------ |
+| BasedSequencerChain | 0x8430FDed8bb66c6EA2f1f966E2abF9D481eEF418 |
