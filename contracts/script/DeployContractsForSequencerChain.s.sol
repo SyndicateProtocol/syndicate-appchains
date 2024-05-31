@@ -16,10 +16,32 @@ contract DeployBasedSequencerChain is Script {
         basedSequencerChain = new BasedSequencerChain();
         console.log("Deployed BasedSequencerChain", address(basedSequencerChain));
 
-        // // Example on how to add the modules to the requireAllList and/or requireAnyList of BasedSequencerChain
+        // Example on how to add/remove the modules to the requireAllList and/or requireAnyList of BasedSequencerChain
+
         // basedSequencerChain.addRequireAllCheck(address(sealedBidAuctionSequencingModule), true);
+        // basedSequencerChain.removeRequireAllCheck(address(sealedBidAuctionSequencingModule));
+
         // basedSequencerChain.addRequireAnyCheck(address(tokenBalanceSequencingModule), true);
-        // basedSequencerChain.addRequireAnyCheck(address(allowlistSequencingModule), true);
+        // basedSequencerChain.removeRequireAnyCheck(address(allowlistSequencingModule));
+
+        vm.stopBroadcast();
+    }
+}
+
+contract AddModuleToBasedSequencerChain is Script {
+    BasedSequencerChain public basedSequencerChain;
+
+    address public module;
+
+    function run() public {
+        vm.startBroadcast();
+        // BaseSequencerChain address on Syndicate Frame Chain
+        basedSequencerChain = BasedSequencerChain(0x8430FDed8bb66c6EA2f1f966E2abF9D481eEF418);
+        // AllowlistSequencingModule address on Syndicate Frame Chain
+        module = 0xA3d1304Afff72a8aD77F7c6A7B0c18d63629062d;
+
+        basedSequencerChain.addRequireAllCheck(module, true);
+        console.log("Added module to BasedSequencerChain", module);
 
         vm.stopBroadcast();
     }
@@ -70,7 +92,7 @@ contract DeployAllowlistSequencingModule is Script {
     function run() public {
         vm.startBroadcast();
 
-        admin = address(0); // TODO: Set the allowlist
+        admin = 0x45d6450fC59A6F8D9c753126cE1EFF6fa4D7e0fb; // deployer address
 
         allowlistSequencingModule = new AllowlistSequencingModule(admin);
         console.log("Deployed AllowlistSequencingModule", address(allowlistSequencingModule));
