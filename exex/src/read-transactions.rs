@@ -75,4 +75,6 @@ fn main() -> Result<()> {
 
     // next step - use Alloy contract to interact with on-chain contract
     // https://github.com/alloy-rs/alloy/tree/main/crates/contract
+
+    // https://alloy.rs/examples/sol-macro/contract.html
 }
