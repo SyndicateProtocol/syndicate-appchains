@@ -1,0 +1,32 @@
+[package]
+name = "block_filter_exex"
+version = "0.1.0"
+publish = false
+edition = "2021"
+
+[dependencies]
+reth = { git = "https://github.com/paradigmxyz/reth" }
+reth-exex = { git = "https://github.com/paradigmxyz/reth" }
+reth-node-api = { git = "https://github.com/paradigmxyz/reth" }
+reth-node-ethereum = { git = "https://github.com/paradigmxyz/reth" }
+reth-tracing = { git = "https://github.com/paradigmxyz/reth" }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth" }
+reth-provider = { git = "https://github.com/paradigmxyz/reth" }
+
+eyre = "0.6.12"
+futures = "0.3.30"
+rand = "0.8"
+
+[dev-dependencies]
+reth-exex-test-utils = { git = "https://github.com/paradigmxyz/reth" }
+reth-testing-utils = { git = "https://github.com/paradigmxyz/reth" }
+
+tokio-stream = "0.1.11"
+tokio = { version = "1.21", default-features = false }
+tokio-util = { version = "0.7.4", features = ["codec"] }
+
+[patch.crates-io]
+revm = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }
+revm-interpreter = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }
+revm-precompile = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }
+revm-primitives = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }

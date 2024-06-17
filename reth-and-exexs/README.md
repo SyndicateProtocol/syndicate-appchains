@@ -1,0 +1,15 @@
+# Syndicate Sequencing Chain ExExs
+
+## Test
+
+```bash
+$ cargo test
+```
+
+## Index of ExExs
+
+### ExEx Block Filter ExEx (exex_block_filter)
+
+This is ExEx checks for blocks that has at least a transaction targeting a specific address. The address is hardcoded in the ExEx and is set to BASED_SEQUENCER_CHAIN address on Op-Sepolia chain.
+
+This ExEx is for Op-Sepolia. Run the RETH node with the op-reth command.
