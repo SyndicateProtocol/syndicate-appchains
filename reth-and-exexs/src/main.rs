@@ -31,9 +31,12 @@ async fn filter_block_containing_based_sequencer_chain_address_txs<Node: FullNod
                             "Block {:?} contains txs to BasedSequencerChain address",
                             block.header.number
                         );
-                        ctx.events
-                            .send(ExExEvent::FinishedHeight(block.header.number))?;
                     }
+                }
+
+                if let Some(committed_chain) = notification.committed_chain() {
+                    ctx.events
+                        .send(ExExEvent::FinishedHeight(committed_chain.tip().number))?;
                 }
             }
             ExExNotification::ChainReorged { old, new } => {
