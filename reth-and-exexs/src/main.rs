@@ -28,7 +28,7 @@ async fn filter_block_containing_based_sequencer_chain_address_txs<Node: FullNod
                         .any(|tx| tx.to() == Some(BASED_SEQUENCER_CHAIN))
                     {
                         info!(
-                            "Block {:?} contains txs from/to BasedSequencerChain address",
+                            "Block {:?} contains txs to BasedSequencerChain address",
                             block.header.number
                         );
                         ctx.events
