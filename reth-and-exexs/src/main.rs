@@ -66,7 +66,6 @@ mod tests {
     use reth_primitives::{Block, Header, Transaction, TxEip4844};
     use reth_provider::{Chain, ExecutionOutcome};
     use reth_testing_utils::generators::sign_tx_with_random_key_pair;
-    // use reth_exex_test_utils::generators::sign_tx_with_random_key_pair;
     use std::pin::pin;
 
     #[tokio::test]
