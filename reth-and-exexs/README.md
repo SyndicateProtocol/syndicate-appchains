@@ -12,4 +12,4 @@ $ cargo test
 
 This ExEx checks for blocks that has at least a transaction targeting a specific address. The address is hardcoded in the ExEx and is set to BASED_SEQUENCER_CHAIN address on OP-Sepolia chain.
 
-This ExEx is for Op-Sepolia. Run the RETH node with the op-reth command.
+This ExEx is for OP-Sepolia. Run the RETH node with the op-reth command.
