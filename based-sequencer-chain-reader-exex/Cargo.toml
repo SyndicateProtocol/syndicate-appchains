@@ -1,13 +1,17 @@
 [package]
-name = "exex"
+name = "based-sequencer-chain-reader-exex"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-alloy = { git = "https://github.com/alloy-rs/alloy", version = "0.1.0", features = ["full"] }
+alloy = { git = "https://github.com/alloy-rs/alloy", version = "0.1.0", features = [
+  "full",
+  "node-bindings",
+] }
 tokio = { version = "1.38.0", features = ["rt-multi-thread"] }
 eyre = "0.6.12"
-alloy-contract = "0.0.0-reserved"
+dotenv = "0.15"
+
 
 [[bin]]
 name = "read-transactions"
