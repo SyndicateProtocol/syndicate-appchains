@@ -1,11 +1,11 @@
+mod read_from_based_sequencer_chain_contract;
+use dotenv::dotenv;
 use futures::Future;
 use reth_exex::{ExExContext, ExExEvent, ExExNotification};
 use reth_node_api::FullNodeComponents;
 use reth_node_ethereum::EthereumNode;
-use reth_primitives::{address, Address};
+use reth_primitives::Address;
 use reth_tracing::tracing::info;
-
-const BASED_SEQUENCER_CHAIN: Address = address!("61164FeB6e29682dEbcD1c9de07f6726838FDd4e");
 
 async fn exex_init<Node: FullNodeComponents>(
     ctx: ExExContext<Node>,
@@ -18,19 +18,27 @@ async fn exex_init<Node: FullNodeComponents>(
 async fn filter_block_containing_based_sequencer_chain_address_txs<Node: FullNodeComponents>(
     mut ctx: ExExContext<Node>,
 ) -> eyre::Result<()> {
+    dotenv().ok();
+
     while let Some(notification) = ctx.notifications.recv().await {
+        let settings = read_from_based_sequencer_chain_contract::Config::new()?;
+
+        let based_sequencer_address: Address = settings.contract_address.parse().unwrap();
+
         match &notification {
             ExExNotification::ChainCommitted { new } => {
                 for (_, block) in new.blocks().iter() {
                     if block
                         .body
                         .iter()
-                        .any(|tx| tx.to() == Some(BASED_SEQUENCER_CHAIN))
+                        .any(|tx| tx.to() == Some(based_sequencer_address))
                     {
                         info!(
                             "Block {:?} contains txs to BasedSequencerChain address",
                             block.header.number
                         );
+
+                        read_from_based_sequencer_chain_contract::run().await?;
                     }
                 }
 
@@ -70,14 +78,39 @@ mod tests {
     use reth_provider::{Chain, ExecutionOutcome};
     use reth_testing_utils::generators::sign_tx_with_random_key_pair;
     use std::pin::pin;
+    use tokio::time::{sleep, Duration};
+
+    // Mocking the read_from_based_sequencer_chain_contract module
+    #[allow(non_snake_case)]
+    mod read_from_based_sequencer_chain_contract {
+        use eyre::Result;
+
+        pub struct Config {
+            pub contract_address: String,
+        }
+
+        impl Config {
+            pub fn new() -> Result<Self> {
+                Ok(Config {
+                    contract_address: "0x0000000000000000000000000000000000000000".to_string(),
+                })
+            }
+        }
+    }
 
     #[tokio::test]
     async fn test_filter_block_containing_based_sequencer_chain_address_txs() -> eyre::Result<()> {
+        dotenv().ok();
+
         let (ctx, mut handle) = test_exex_context().await?;
         let head = ctx.head;
 
+        let settings = read_from_based_sequencer_chain_contract::Config::new()?;
+
+        let based_sequencer_address: Address = settings.contract_address.parse().unwrap();
+
         let transaction = Transaction::Eip4844(TxEip4844 {
-            to: BASED_SEQUENCER_CHAIN,
+            to: based_sequencer_address,
             ..Default::default()
         });
 
@@ -106,6 +139,9 @@ mod tests {
 
         let mut exex = pin!(super::exex_init(ctx).await?);
         handle.assert_events_empty();
+
+        // Wait a bit to ensure the notification is processed
+        sleep(Duration::from_millis(100)).await;
 
         exex.poll_once().await?;
         handle.assert_event_finished_height(head.number + 1)?;
