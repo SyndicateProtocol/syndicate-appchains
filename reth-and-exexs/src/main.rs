@@ -5,7 +5,8 @@ use reth_exex::{ExExContext, ExExEvent, ExExNotification};
 use reth_node_api::FullNodeComponents;
 use reth_node_ethereum::EthereumNode;
 use reth_primitives::Address;
-use reth_tracing::tracing::info;
+use reth_tracing::tracing::{debug, info, warn};
+use serde_json::json;
 
 async fn exex_init<Node: FullNodeComponents>(
     ctx: ExExContext<Node>,
@@ -19,39 +20,73 @@ async fn filter_block_containing_based_sequencer_chain_address_txs<Node: FullNod
     mut ctx: ExExContext<Node>,
 ) -> eyre::Result<()> {
     dotenv().ok();
-
     while let Some(notification) = ctx.notifications.recv().await {
         let settings = read_from_based_sequencer_chain_contract::Config::new()?;
-
         let based_sequencer_address: Address = settings.contract_address.parse().unwrap();
-
         match &notification {
             ExExNotification::ChainCommitted { new } => {
                 for (_, block) in new.blocks().iter() {
-                    if block
+                    let block_number = block.header.number;
+                    let contains_tx = block
                         .body
                         .iter()
-                        .any(|tx| tx.to() == Some(based_sequencer_address))
-                    {
+                        .any(|tx| tx.to() == Some(based_sequencer_address));
+
+                    if contains_tx {
                         info!(
-                            "Block {:?} contains txs to BasedSequencerChain address",
-                            block.header.number
+                            target: "based_sequencer_chain",
+                            event = "tx_found",
+                            block_number = ?block_number,
+                            address = ?based_sequencer_address,
+                            "Block contains txs to BasedSequencerChain address"
                         );
-
+                        // Read from BasedSequencerChain contract only if txs are found
                         read_from_based_sequencer_chain_contract::run().await?;
+                    } else {
+                        // We can avoid logging this in production since it will
+                        // be very high frequency. We can also get it implicitly
+                        // by looking at block numbers that do not have an
+                        // `info` log associated with them
+                        debug!(
+                            target: "based_sequencer_chain",
+                            event = "no_tx_found",
+                            block_number = ?block_number,
+                            address = ?based_sequencer_address,
+                            "Block does not contain txs to BasedSequencerChain address"
+                        );
                     }
-                }
 
+                    // Log stats in a structured format
+                    info!(
+                        target: "based_sequencer_chain_stats",
+                        json = json!({
+                            "block_number": block_number,
+                            "contains_tx": contains_tx,
+                            "address": based_sequencer_address,
+                        }).to_string()
+                    );
+                }
                 if let Some(committed_chain) = notification.committed_chain() {
                     ctx.events
                         .send(ExExEvent::FinishedHeight(committed_chain.tip().number))?;
                 }
             }
             ExExNotification::ChainReorged { old, new } => {
-                info!(from_chain = ?old.range(), to_chain = ?new.range(), "Reorg from {:?} to {:?}", old.range(), new.range());
+                warn!(
+                    target: "based_sequencer_chain",
+                    event = "chain_reorg",
+                    from_chain = ?old.range(),
+                    to_chain = ?new.range(),
+                    "Chain reorg occurred"
+                );
             }
             ExExNotification::ChainReverted { old } => {
-                info!("Reverted chain from {:?}", old.range());
+                warn!(
+                    target: "based_sequencer_chain",
+                    event = "chain_revert",
+                    reverted_chain = ?old.range(),
+                    "Chain reverted"
+                );
             }
         };
     }
@@ -65,7 +100,6 @@ fn main() -> eyre::Result<()> {
             .install_exex("BlockFilterExEx", exex_init)
             .launch()
             .await?;
-
         handle.wait_for_node_exit().await
     })
 }

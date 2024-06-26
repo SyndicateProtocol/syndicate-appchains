@@ -1527,6 +1527,7 @@ dependencies = [
  "reth-provider",
  "reth-testing-utils",
  "reth-tracing",
+ "serde_json",
  "tokio",
  "tokio-stream",
  "tokio-util",
