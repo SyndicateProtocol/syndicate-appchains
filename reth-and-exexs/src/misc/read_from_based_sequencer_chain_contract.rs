@@ -6,7 +6,7 @@ use std::env;
 sol!(
     #[sol(rpc)]
     BasedSequencerChain,
-    "../contracts/out/BasedSequencerChain.sol/BasedSequencerChain.json"
+    "../../contracts/out/BasedSequencerChain.sol/BasedSequencerChain.json"
 );
 
 pub struct Config {
