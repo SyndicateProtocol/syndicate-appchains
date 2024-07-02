@@ -1,5 +1,5 @@
 [package]
-name = "block_filter_exex"
+name = "op-reth-syn"
 version = "0.1.0"
 publish = false
 edition = "2021"
@@ -8,7 +8,7 @@ edition = "2021"
 reth = { git = "https://github.com/paradigmxyz/reth" }
 reth-exex = { git = "https://github.com/paradigmxyz/reth" }
 reth-node-api = { git = "https://github.com/paradigmxyz/reth" }
-reth-node-ethereum = { git = "https://github.com/paradigmxyz/reth" }
+reth-node-optimism = { git = "https://github.com/paradigmxyz/reth", features = ["optimism"] }
 reth-tracing = { git = "https://github.com/paradigmxyz/reth" }
 reth-primitives = { git = "https://github.com/paradigmxyz/reth" }
 reth-provider = { git = "https://github.com/paradigmxyz/reth" }
@@ -22,6 +22,7 @@ futures = "0.3.30"
 rand = "0.8"
 dotenv = "0.15"
 serde_json = "1.0"  # Added serde_json dependency
+clap_builder = "4.5.7"
 
 [dev-dependencies]
 reth-exex-test-utils = { git = "https://github.com/paradigmxyz/reth" }
