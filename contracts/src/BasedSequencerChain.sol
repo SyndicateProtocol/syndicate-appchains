@@ -48,7 +48,16 @@ contract BasedSequencerChain is RequireListManager {
 
     /// @notice Mapping from epoch number to batch.
     /// @dev If an epoch number has no corresponding batch, it is treated as an empty block.
-    mapping(uint256 => Batch) public batches;
+    mapping(uint256 epochNumber => Batch batch) public batches;
+
+    /// @notice Emitted when a new batch is sequenced.
+    event LatestBatchProcessed(
+        bytes32 parent_hash,
+        uint256 parent_epoch_number,
+        uint256 indexed epoch_number,
+        bytes32 epoch_hash,
+        bytes[] transaction_list
+    );
 
     /// @dev Emitted when the parent hash of a batch does not match the expected parent hash.
     /// @param expectedParentHash The expected parent hash.
@@ -81,7 +90,13 @@ contract BasedSequencerChain is RequireListManager {
             transaction_list: userProvidedBatch.transaction_list
         });
 
+        batches[batch.epoch_number] = batch;
+
         lastNonEmptyEpochNumber = batch.epoch_number;
+
+        emit LatestBatchProcessed(
+            batch.parent_hash, batch.parent_epoch_number, batch.epoch_number, batch.epoch_hash, batch.transaction_list
+        );
     }
 
     /// @notice Calculates the epoch number based on a given timestamp.

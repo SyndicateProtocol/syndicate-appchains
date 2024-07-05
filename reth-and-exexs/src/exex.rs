@@ -8,19 +8,30 @@ use reth_primitives::Address;
 use reth_tracing::tracing::{debug, info, warn};
 use serde_json::json;
 
+use crate::l3_block;
+use l3_block::L3BlockParser;
+
 pub async fn exex_init<Node: FullNodeComponents>(
     ctx: ExExContext<Node>,
 ) -> eyre::Result<impl Future<Output = eyre::Result<()>>> {
-    Ok(run(ctx))
+    Ok(filter_block_containing_based_sequencer_chain_address_txs(
+        ctx,
+    ))
 }
 
-async fn run<Node: FullNodeComponents>(mut ctx: ExExContext<Node>) -> eyre::Result<()> {
+async fn filter_block_containing_based_sequencer_chain_address_txs<Node: FullNodeComponents>(
+    mut ctx: ExExContext<Node>,
+) -> eyre::Result<()> {
     dotenv().ok();
+
+    const SEQUENCE_NEXT_BATCH_SELECTOR: [u8; 4] = [0x24, 0xfb, 0xef, 0x31]; // selector for sequenceNextBatch((bytes32,bytes[])) Should output: 0x24fbef31
 
     let based_sequencer_address = env::var("CONTRACT_ADDRESS")
         .unwrap_or("0x0000000000000000000000000000000000000000".to_string())
         .parse::<Address>()
         .unwrap();
+
+    let parser = L3BlockParser::new()?;
 
     while let Some(notification) = ctx.notifications.recv().await {
         match &notification {
@@ -30,7 +41,8 @@ async fn run<Node: FullNodeComponents>(mut ctx: ExExContext<Node>) -> eyre::Resu
                     let mut tx_found = false;
                     if let Some(tx) = block.transactions().find(|tx| {
                         tx.to() == Some(based_sequencer_address)
-                        // TODO: Add check against function signature as well
+                            && tx.input().len() >= 4
+                            && &tx.input()[..4] == SEQUENCE_NEXT_BATCH_SELECTOR
                     }) {
                         tx_found = true;
                         info!(
@@ -42,7 +54,9 @@ async fn run<Node: FullNodeComponents>(mut ctx: ExExContext<Node>) -> eyre::Resu
                             "Block contains a tx to the BasedSequencerChain address"
                         );
 
-                        // TODO [SEQ-28]: Parse L3 block from TX
+                        if let Ok(Some(l3_block)) = parser.parse_l3_block(tx.input()).await {
+                            info!("Found L3 block in transaction input: {:?}", l3_block);
+                        }
 
                         // TODO [SEQ-29]: L3 Block -> ExecutionPayload
 

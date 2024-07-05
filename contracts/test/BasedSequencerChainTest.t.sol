@@ -88,6 +88,14 @@ contract BasedSequencerChainBatchTest is BasedSequencerChainTestSetUp {
         chain.sequenceNextBatch(userProvidedBatch);
 
         assertEq(chain.lastNonEmptyEpochNumber(), chain.INITIAL_EPOCH_NUMBER());
+
+        (,, uint256 epoch_number,) = chain.batches(chain.INITIAL_EPOCH_NUMBER());
+
+        assertEq(
+            epoch_number,
+            chain.lastNonEmptyEpochNumber(),
+            "The epoch number the batch was added should be the lastNonEmptyEpochNumber"
+        );
     }
 
     function testSequenceNextBatchInvalidParentHash() public {
