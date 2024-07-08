@@ -30,9 +30,23 @@ help: ## Display this help.
 
 ##@ Build
 
-.PHONY: install
-install: ## Build and install the op-reth binary under `~/.cargo/bin`.
+.PHONY: build-op-reth-syn
+build-op-reth-syn: ## Build and install the op-reth binary under `~/.cargo/bin`.
 	cargo install --path . --bin op-reth-syn --force --locked \
 		--features "$(FEATURES)" \
 		--profile "$(PROFILE)" \
 		$(CARGO_INSTALL_EXTRA_FLAGS)
+
+.PHONY: build-contracts
+build-contracts: ## Build contracts using forge. Install Foundry if the forge command is not found or is corrupted.
+	@if [ -z "$$(which forge)" ]; then \
+		echo "Forge not found. Installing Foundry..."; \
+		curl -L https://foundry.paradigm.xyz | bash && bash -c "source ~/.bashrc && foundryup"; \
+	fi
+	@forge build --help > /dev/null 2>&1 || (echo "Forge is corrupted. Reinstalling Foundry..." && curl -L https://foundry.paradigm.xyz | bash && bash -c "source ~/.bashrc && foundryup")
+	cd ../contracts && forge build
+  echo "build-contracts Complete"
+##@ Custom Build
+
+.PHONY: install
+install: build-contracts build-op-reth-syn ## Run custom build steps.
