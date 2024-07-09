@@ -45,7 +45,7 @@ build-contracts: ## Build contracts using forge. Install Foundry if the forge co
 	fi
 	@forge build --help > /dev/null 2>&1 || (echo "Forge is corrupted. Reinstalling Foundry..." && curl -L https://foundry.paradigm.xyz | bash && bash -c "source ~/.bashrc && foundryup")
 	cd ../contracts && forge build
-  echo "build-contracts Complete"
+	@echo "Contract compilation complete"
 ##@ Custom Build
 
 .PHONY: install
