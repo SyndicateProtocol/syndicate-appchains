@@ -4,9 +4,10 @@ use reth_node_optimism::{args::RollupArgs, rpc::SequencerClient, OptimismNode};
 use std::sync::Arc;
 
 mod exex;
-use exex::exex_init;
-
+mod manager;
 mod l3_block;
+
+use exex::SynExEx;
 
 fn main() {
     reth::sigsegv_handler::install();
@@ -17,7 +18,6 @@ fn main() {
     }
 
     if let Err(err) = Cli::<RollupArgs>::parse().run(|builder, rollup_args| async move {
-        // Cli::<RollupArgs>::parse().run(|builder, rollup_args| async move {
         let handle = builder
             .node(OptimismNode::new(rollup_args.clone()))
             .extend_rpc_modules(move |ctx| {
@@ -31,7 +31,9 @@ fn main() {
 
                 Ok(())
             })
-            .install_exex("SynExEx", exex_init)
+            .install_exex("SynExEx", move |ctx| async {
+                Ok(SynExEx::new(ctx)?.start())
+            })
             .launch()
             .await?;
 

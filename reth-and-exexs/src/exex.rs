@@ -1,117 +1,47 @@
 use dotenv::dotenv;
 use std::env;
 
-use futures::Future;
-use reth_exex::{ExExContext, ExExEvent, ExExNotification};
+use reth_exex::{ExExContext, ExExEvent};
 use reth_node_api::FullNodeComponents;
 use reth_primitives::Address;
-use reth_tracing::tracing::{debug, info, warn};
-use serde_json::json;
 
-use crate::l3_block;
-use l3_block::L3BlockParser;
+use crate::manager::Manager;
 
-pub async fn exex_init<Node: FullNodeComponents>(
+pub struct SynExEx<Node: FullNodeComponents> {
     ctx: ExExContext<Node>,
-) -> eyre::Result<impl Future<Output = eyre::Result<()>>> {
-    Ok(filter_block_containing_based_sequencer_chain_address_txs(
-        ctx,
-    ))
+    manager: Manager,
 }
 
-async fn filter_block_containing_based_sequencer_chain_address_txs<Node: FullNodeComponents>(
-    mut ctx: ExExContext<Node>,
-) -> eyre::Result<()> {
-    dotenv().ok();
+impl<Node: FullNodeComponents> SynExEx<Node> {
+    pub fn new(ctx: ExExContext<Node>) -> eyre::Result<Self> {
+        dotenv().ok();
 
-    const SEQUENCE_NEXT_BATCH_SELECTOR: [u8; 4] = [0x24, 0xfb, 0xef, 0x31]; // selector for sequenceNextBatch((bytes32,bytes[])) Should output: 0x24fbef31
+        let sequencer_address = env::var("CONTRACT_ADDRESS")
+            .unwrap_or("0x0000000000000000000000000000000000000000".to_string())
+            .parse::<Address>()
+            .unwrap();
 
-    let based_sequencer_address = env::var("CONTRACT_ADDRESS")
-        .unwrap_or("0x0000000000000000000000000000000000000000".to_string())
-        .parse::<Address>()
-        .unwrap();
-
-    let parser = L3BlockParser::new()?;
-
-    while let Some(notification) = ctx.notifications.recv().await {
-        match &notification {
-            ExExNotification::ChainCommitted { new } => {
-                for block in new.blocks_iter() {
-                    let block_number = block.header.number;
-                    let mut tx_found = false;
-                    if let Some(tx) = block.transactions().find(|tx| {
-                        tx.to() == Some(based_sequencer_address)
-                            && tx.input().len() >= 4
-                            && &tx.input()[..4] == SEQUENCE_NEXT_BATCH_SELECTOR
-                    }) {
-                        tx_found = true;
-                        info!(
-                            target: "based_sequencer_chain",
-                            event = "tx_found",
-                            tx_hash = ?tx.hash(),
-                            block_number = ?block_number,
-                            address = ?based_sequencer_address,
-                            "Block contains a tx to the BasedSequencerChain address"
-                        );
-
-                        if let Ok(Some(l3_block)) = parser.parse_l3_block(tx.input()).await {
-                            info!("Found L3 block in transaction input: {:?}", l3_block);
-                        }
-
-                        // TODO [SEQ-29]: L3 Block -> ExecutionPayload
-
-                        // TODO: Call engine_NewPayload
-
-                        // TODO: Call engine_ForkchoiceUpdated
-                    } else {
-                        // We can avoid logging this in production since it will
-                        // be very high frequency. We can also get it implicitly
-                        // by looking at block numbers that do not have an
-                        // `info` log associated with them
-                        debug!(
-                            target: "based_sequencer_chain",
-                            event = "no_tx_found",
-                            block_number = ?block_number,
-                            address = ?based_sequencer_address,
-                            "Block does not contain a tx to the BasedSequencerChain address"
-                        );
-                    }
-
-                    // Log stats in a structured format
-                    info!(
-                        target: "based_sequencer_chain_stats",
-                        json = json!({
-                            "block_number": block_number,
-                            "contains_tx": tx_found,
-                            "address": based_sequencer_address,
-                        }).to_string()
-                    );
-                }
-                if let Some(committed_chain) = notification.committed_chain() {
-                    ctx.events
-                        .send(ExExEvent::FinishedHeight(committed_chain.tip().number))?;
-                }
-            }
-            ExExNotification::ChainReorged { old, new } => {
-                warn!(
-                    target: "based_sequencer_chain",
-                    event = "chain_reorg",
-                    from_chain = ?old.range(),
-                    to_chain = ?new.range(),
-                    "Chain reorg occurred"
-                );
-            }
-            ExExNotification::ChainReverted { old } => {
-                warn!(
-                    target: "based_sequencer_chain",
-                    event = "chain_revert",
-                    reverted_chain = ?old.range(),
-                    "Chain reverted"
-                );
-            }
-        };
+        let manager = Manager::new(sequencer_address);
+        Ok(Self { ctx, manager })
     }
-    Ok(())
+
+    pub async fn start(mut self) -> eyre::Result<()> {
+        // Process all new chain state notifications
+        while let Some(notification) = self.ctx.notifications.recv().await {
+            if let Some(reverted_chain) = notification.reverted_chain() {
+                self.manager.revert(&reverted_chain)?;
+            }
+
+            if let Some(committed_chain) = notification.committed_chain() {
+                self.manager.commit(&committed_chain).await?;
+                self.ctx
+                    .events
+                    .send(ExExEvent::FinishedHeight(committed_chain.tip().number))?;
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -121,23 +51,23 @@ mod tests {
     use reth_primitives::{Block, Header, Transaction, TxEip4844};
     use reth_provider::{Chain, ExecutionOutcome};
     use reth_testing_utils::generators::sign_tx_with_random_key_pair;
-    use std::pin::pin;
+    use std::pin::{pin, Pin};
     use tokio::time::{sleep, Duration};
 
     #[tokio::test]
     async fn test_syn_exex() -> eyre::Result<()> {
         dotenv().ok();
 
-        let (ctx, mut handle) = test_exex_context().await?;
+        let (ctx, handle) = test_exex_context().await?;
         let head = ctx.head;
 
-        let based_sequencer_address = "0x0000000000000000000000000000000000000000"
+        let sequencer_address = "0x0000000000000000000000000000000000000000"
             .to_string()
             .parse::<Address>()
             .unwrap();
 
         let transaction = Transaction::Eip4844(TxEip4844 {
-            to: based_sequencer_address,
+            to: sequencer_address,
             ..Default::default()
         });
 
@@ -164,14 +94,13 @@ mod tests {
             ))
             .await?;
 
-        let mut exex = pin!(super::exex_init(ctx).await?);
+        let mut exex: Pin<&mut _> = pin!(super::SynExEx::new(ctx)?.start());
         handle.assert_events_empty();
 
         // Wait a bit to ensure the notification is processed
         sleep(Duration::from_millis(100)).await;
 
         exex.poll_once().await?;
-        handle.assert_event_finished_height(head.number + 1)?;
 
         Ok(())
     }

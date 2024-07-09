@@ -1,13 +1,10 @@
 use alloy::{
     primitives::{Bytes, FixedBytes, U256},
-    providers::ProviderBuilder,
     sol,
     sol_types::SolCall,
 };
-use dotenv::dotenv;
-use eyre::{Context, Result};
+use eyre::Result;
 use reth_tracing::tracing::{error, warn};
-use std::env;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 sol!(
@@ -15,23 +12,6 @@ sol!(
     BasedSequencerChain,
     "../contracts/out/BasedSequencerChain.sol/BasedSequencerChain.json"
 );
-
-pub struct Config {
-    pub contract_address: String,
-    pub rpc_url: String,
-}
-
-impl Config {
-    pub fn new() -> Result<Self> {
-        let contract_address =
-            env::var("CONTRACT_ADDRESS").context("CONTRACT_ADDRESS env var is not set")?;
-        let rpc_url = env::var("RPC_URL").context("RPC_URL env var is not set")?;
-        Ok(Config {
-            contract_address,
-            rpc_url,
-        })
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct L3Block {
@@ -41,29 +21,8 @@ pub struct L3Block {
     pub transaction_list: Vec<Bytes>,
 }
 
-pub struct L3BlockParser {
-    #[allow(dead_code)]
-    contract: BasedSequencerChain::BasedSequencerChainInstance<
-        alloy::transports::http::Http<alloy::transports::http::Client>,
-        alloy::providers::RootProvider<
-            alloy::transports::http::Http<alloy::transports::http::Client>,
-        >,
-    >,
-}
-
-impl L3BlockParser {
-    pub fn new() -> Result<Self> {
-        dotenv().ok();
-
-        let settings = Config::new()?;
-        let provider = ProviderBuilder::new().on_http(settings.rpc_url.parse()?);
-
-        let contract = BasedSequencerChain::new(settings.contract_address.parse()?, provider);
-
-        Ok(Self { contract })
-    }
-
-    pub async fn parse_l3_block(&self, tx_data: &[u8]) -> Result<Option<L3Block>> {
+impl L3Block {
+    pub fn new(tx_data: &[u8]) -> Option<Self> {
         if let Ok(decoded) = BasedSequencerChain::sequenceNextBatchCall::abi_decode(tx_data, true) {
             let BasedSequencerChain::sequenceNextBatchCall { userProvidedBatch } = decoded;
 
@@ -76,16 +35,14 @@ impl L3BlockParser {
                 }
             };
 
-            let l3_block = L3Block {
+            Some(L3Block {
                 parent_hash: userProvidedBatch.non_empty_parent_hash,
                 epoch_number: U256::from(0), // This will be calculated in the contract
                 timestamp: U256::from(current_timestamp),
                 transaction_list: userProvidedBatch.transaction_list,
-            };
-
-            Ok(Some(l3_block))
+            })
         } else {
-            Ok(None)
+            None
         }
     }
 }
@@ -96,9 +53,6 @@ mod tests {
 
     #[tokio::test]
     async fn test_parse_l3_block() -> Result<()> {
-        // Create the parser with the deployed contract
-        let parser = L3BlockParser::new()?;
-
         // Create a sample transaction data
         let parent_hash = FixedBytes::from([1u8; 32]);
         let transaction_list = vec![Bytes::from(vec![1, 2, 3])];
@@ -112,7 +66,7 @@ mod tests {
         .abi_encode();
 
         // Parse the L3 block
-        let parsed_block = parser.parse_l3_block(&tx_data).await?;
+        let parsed_block = L3Block::new(&tx_data);
 
         // Assert that the block was parsed successfully
         assert!(parsed_block.is_some());
