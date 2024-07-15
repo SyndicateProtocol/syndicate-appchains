@@ -26,6 +26,12 @@ clap_builder = "4.5.7"
 alloy-primitives = "0.7.7"
 alloy-sol-types = "0.7.7"
 mockall = "0.12.1"
+serde = "1.0.204"
+reqwest = "0.12.5"
+jsonwebtoken = "9.3.0"
+async-trait = "0.1.81"
+again = "0.1.2"
+futures-timer = "0.3.0"
 
 [dev-dependencies]
 reth-exex-test-utils = { git = "https://github.com/paradigmxyz/reth" }

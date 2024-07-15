@@ -1,5 +1,3 @@
-//! This module was heavily inspired by [magi](https://github.com/a16z/magi).
-
 use async_trait::async_trait;
 use eyre::Result;
 

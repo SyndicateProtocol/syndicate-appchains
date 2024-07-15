@@ -1,4 +1,4 @@
-use alloy::primitives::{Bytes, FixedBytes, U256};
+use alloy::primitives::{Bytes, FixedBytes, U256, U64};
 use alloy_sol_types::{sol, SolEventInterface};
 use reth_primitives::{transaction::TransactionSigned, Address, SealedBlockWithSenders};
 use reth_provider::Chain;
@@ -13,7 +13,7 @@ use BasedSequencerChain::{BasedSequencerChainEvents, LatestBatchProcessed};
 pub struct L3Block {
     pub parent_hash: FixedBytes<32>,
     pub epoch_number: U256,
-    pub timestamp: U256,
+    pub timestamp: U64,
     pub transaction_list: Vec<Bytes>,
 }
 
@@ -22,7 +22,7 @@ impl From<LatestBatchProcessed> for L3Block {
         L3Block {
             parent_hash: batch.parent_hash,
             epoch_number: batch.epoch_number,
-            timestamp: U256::from(0),
+            timestamp: U64::from(0),
             transaction_list: batch.transaction_list,
         }
     }
@@ -73,10 +73,9 @@ pub fn process_chain_into_sequencer_l3blocks(
 mod tests {
     use super::*;
     use alloy_primitives::Uint;
-    use eyre::Result;
 
     #[tokio::test]
-    async fn test_parse_l3_block() -> Result<()> {
+    async fn test_parse_l3_block() {
         // Create a sample transaction data
         let parent_hash = FixedBytes::from([1u8; 32]);
         let epoch_hash = FixedBytes::from([1u8; 32]);
@@ -99,7 +98,5 @@ mod tests {
         assert_eq!(parsed_block.epoch_number, epoch_number);
         assert_eq!(parsed_block.transaction_list, transaction_list);
         assert_eq!(parsed_block.timestamp.to::<u64>(), 0);
-
-        Ok(())
     }
 }

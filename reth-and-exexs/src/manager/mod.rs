@@ -3,9 +3,7 @@ use reth_provider::Chain;
 use reth_tracing::tracing::{debug, info, warn};
 use serde_json::json;
 
-use l3_block::process_chain_into_sequencer_l3blocks;
-
-use crate::l3_block;
+use crate::l3_block::process_chain_into_sequencer_l3blocks;
 
 pub struct Manager {
     sequencer_address: Address,

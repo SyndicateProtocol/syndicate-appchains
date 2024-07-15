@@ -1,5 +1,3 @@
-//! This module was heavily inspired by [magi](https://github.com/a16z/magi).
-
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
 
@@ -8,7 +6,6 @@ use eyre::Result;
 use futures::prelude::*;
 use futures_timer::TryFutureExt;
 use reqwest::{header, Client};
-use reth_tracing::tracing::debug;
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -86,7 +83,6 @@ impl EngineApi {
 
     /// Creates an engine api from environment variables
     pub fn from_env() -> Self {
-        // TODO [SEQ-47]: Confirm the environment variables are correct
         let base_url = std::env::var("ENGINE_API_URL").unwrap_or_else(|_| {
             panic!(
                 "ENGINE_API_URL environment variable not set. \
@@ -97,7 +93,7 @@ impl EngineApi {
             panic!(
                 "JWT_SECRET environment variable not set. \
                 Please set this to the 256 bit hex-encoded secret key used to authenticate with the engine api. \
-                This should be the same as set in the `--auth.secret` flag when executing op-reth."
+                This should be the same as set in the `--auth.secret` flag when executing go-ethereum."
             )
         });
         let base_url = EngineApi::auth_url_from_addr(&base_url, None);
@@ -125,8 +121,8 @@ impl EngineApi {
         body.insert("method".to_string(), Value::String(method.to_string()));
         body.insert("params".to_string(), Value::Array(params));
 
-        debug!("Sending request to url: {:?}", self.base_url);
-        debug!("Sending request: {:?}", serde_json::to_string(&body));
+        tracing::trace!("Sending request to url: {:?}", self.base_url);
+        tracing::trace!("Sending request: {:?}", serde_json::to_string(&body));
 
         // Send the client request
         let client = self
@@ -255,10 +251,15 @@ struct GetPayloadResponse {
 
 #[cfg(test)]
 mod tests {
+    use std::time::SystemTime;
+
+    // use std::str::FromStr;
+    // use ethers_core::types::H256;
+
     use super::*;
 
     const AUTH_ADDR: &str = "0.0.0.0";
-    const SECRET: &str = "1a81b8d6100c07b9a5ab1c9c0a469661f262067ba002649b22c9621585bf502a";
+    const SECRET: &str = "f79ae8046bc11c9927afe911db7143c51a806c4a537cc08e0d37140b0192f430";
 
     #[tokio::test]
     async fn test_engine_get_payload() {
@@ -268,5 +269,39 @@ mod tests {
         let engine_api = EngineApi::new(&base_url, SECRET);
         assert_eq!(engine_api.base_url, "http://0.0.0.0:8551");
         assert_eq!(engine_api.port, 8551);
+
+        // Construct mock server params
+        let secret = JwtSecret::from_hex(SECRET).unwrap();
+        let claims = secret.generate_claims(Some(SystemTime::UNIX_EPOCH));
+        let jwt = secret.encode(&claims).unwrap();
+        assert_eq!(jwt, String::from("eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjAsImV4cCI6NjB9.rJv_krfkQefjWnZxrpnDimR1NN1UEUffK3hQzD1KInA"));
+        // let bearer = format!("Bearer {jwt}");
+        // let expected_body = r#"{"jsonrpc": "2.0", "method": "engine_getPayloadV1", "params": [""], "id": 1}"#;
+        // let mock_response = ExecutionPayloadResponse {
+        //     jsonrpc: "2.0".to_string(),
+        //     id: 1,
+        //     result: ExecutionPayload {
+        //         parent_hash: H256::from(
+        //     }
+        // };
+
+        // Create the mock server
+        // let server = ServerBuilder::default()
+        //     .set_id_provider(RandomStringIdProvider::new(16))
+        //     .set_middleware(middleware)
+        //     .build(addr.parse::<SocketAddr>().unwrap())
+        //     .await
+        //     .unwrap();
+
+        // Query the engine api client
+        // let execution_payload = engine_api.get_payload(PayloadId::default()).await.unwrap();
+        // let expected_block_hash =
+        //     H256::from_str("0xdc0818cf78f21a8e70579cb46a43643f78291264dda342ae31049421c82d21ae")
+        //         .unwrap();
+        // assert_eq!(expected_block_hash, execution_payload.block_hash);
+
+        // Stop the server
+        // server.stop().unwrap();
+        // server.stopped().await;
     }
 }

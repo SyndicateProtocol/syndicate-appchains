@@ -14,8 +14,8 @@ pub struct SynExEx<Node: FullNodeComponents> {
 
 impl<Node: FullNodeComponents> SynExEx<Node> {
     pub fn new(ctx: ExExContext<Node>) -> eyre::Result<Self> {
+        // TODO [SEQ-47]: Do this in a mire robust/smarter way
         dotenv().ok();
-
         let sequencer_address = env::var("CONTRACT_ADDRESS")
             .unwrap_or("0x0000000000000000000000000000000000000000".to_string())
             .parse::<Address>()

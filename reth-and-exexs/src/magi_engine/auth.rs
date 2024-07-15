@@ -1,8 +1,12 @@
-//! This module was heavily inspired by [magi](https://github.com/a16z/magi).
+#![allow(dead_code)]
 
-use alloy::primitives::hex;
+//! Authentication module for the Engine API.
+//!
+//! This module was built using [reth](https://github.com/paradigmxyz/reth).
+
 use eyre::Result;
 use jsonwebtoken::Algorithm;
+use rand::Rng;
 use serde::{Deserialize, Serialize};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
@@ -42,6 +46,13 @@ impl JwtSecret {
             let bytes = hex_bytes.try_into().expect("is expected len");
             Ok(JwtSecret(bytes))
         }
+    }
+
+    /// Generates a random [`JwtSecret`]
+    pub fn random() -> Self {
+        let random_bytes: [u8; 32] = rand::thread_rng().gen();
+        let secret = hex::encode(random_bytes);
+        JwtSecret::from_hex(secret).unwrap()
     }
 
     /// Returns if the provided JWT token is equal to the JWT secret.
@@ -103,7 +114,7 @@ mod tests {
     use super::*;
     use std::time::{SystemTime, UNIX_EPOCH};
 
-    const SECRET: &str = "1a81b8d6100c07b9a5ab1c9c0a469661f262067ba002649b22c9621585bf502a";
+    const SECRET: &str = "f79ae5046bc11c9927afe911db7143c51a806c4a537cc08e0d37140b0192f430";
 
     #[tokio::test]
     async fn construct_valid_raw_claims() {
