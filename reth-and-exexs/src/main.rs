@@ -4,8 +4,8 @@ use reth_node_optimism::{args::RollupArgs, rpc::SequencerClient, OptimismNode};
 use std::sync::Arc;
 
 mod exex;
-mod manager;
 mod l3_block;
+mod manager;
 
 use exex::SynExEx;
 

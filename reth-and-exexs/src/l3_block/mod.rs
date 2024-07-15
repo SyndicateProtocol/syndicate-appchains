@@ -1,17 +1,13 @@
-use alloy::{
-    primitives::{Bytes, FixedBytes, U256},
-    sol,
-    sol_types::SolCall,
-};
-use eyre::Result;
-use reth_tracing::tracing::{error, warn};
-use std::time::{SystemTime, UNIX_EPOCH};
+use alloy::primitives::{Bytes, FixedBytes, U256};
+use alloy_sol_types::{sol, SolEventInterface};
+use reth_primitives::{transaction::TransactionSigned, Address, SealedBlockWithSenders};
+use reth_provider::Chain;
 
 sol!(
-    #[sol(rpc)]
     BasedSequencerChain,
     "../contracts/out/BasedSequencerChain.sol/BasedSequencerChain.json"
 );
+use BasedSequencerChain::{BasedSequencerChainEvents, LatestBatchProcessed};
 
 #[derive(Debug, Clone)]
 pub struct L3Block {
@@ -21,71 +17,88 @@ pub struct L3Block {
     pub transaction_list: Vec<Bytes>,
 }
 
-impl L3Block {
-    pub fn new(tx_data: &[u8]) -> Option<Self> {
-        if let Ok(decoded) = BasedSequencerChain::sequenceNextBatchCall::abi_decode(tx_data, true) {
-            let BasedSequencerChain::sequenceNextBatchCall { userProvidedBatch } = decoded;
-
-            let current_timestamp = match SystemTime::now().duration_since(UNIX_EPOCH) {
-                Ok(duration) => duration.as_secs(),
-                Err(e) => {
-                    error!("Failed to get current timestamp: {}", e);
-                    warn!("Using UNIX_EPOCH as fallback timestamp");
-                    0 // Fallback to UNIX_EPOCH if we somehow got a time before it
-                }
-            };
-
-            Some(L3Block {
-                parent_hash: userProvidedBatch.non_empty_parent_hash,
-                epoch_number: U256::from(0), // This will be calculated in the contract
-                timestamp: U256::from(current_timestamp),
-                transaction_list: userProvidedBatch.transaction_list,
-            })
-        } else {
-            None
+impl From<LatestBatchProcessed> for L3Block {
+    fn from(batch: LatestBatchProcessed) -> Self {
+        L3Block {
+            parent_hash: batch.parent_hash,
+            epoch_number: batch.epoch_number,
+            timestamp: U256::from(0),
+            transaction_list: batch.transaction_list,
         }
     }
+}
+
+/// Process chain of blocks into a flattened list of receipt logs, filter only transactions to the
+/// sequencer contract, extract the sequencer event and parse into an [L3Block].
+pub fn process_chain_into_sequencer_l3blocks(
+    filter_address: Address,
+    chain: &Chain,
+) -> Vec<(&SealedBlockWithSenders, &TransactionSigned, L3Block)> {
+    chain
+        // Get all blocks and receipts
+        .blocks_and_receipts()
+        // Get all receipts
+        .flat_map(|(block, receipts)| {
+            block
+                .body
+                .iter()
+                .zip(receipts.iter().flatten())
+                .map(move |(tx, receipt)| (block, tx, receipt))
+        })
+        // Get all logs from sequencer contract
+        .flat_map(|(block, tx, receipt)| {
+            receipt
+                .logs
+                .iter()
+                .filter(|log| log.address == filter_address)
+                .map(move |log| (block, tx, log))
+        })
+        // Decode and filter sequencer events
+        .filter_map(|(block, tx, log)| {
+            BasedSequencerChainEvents::decode_raw_log(log.topics(), &log.data.data, true)
+                .ok()
+                .map(|event| (block, tx, event))
+        })
+        // Filter to LatestBatchProcessed event and pull out batch
+        .filter_map(|(block, tx, event)| match event {
+            BasedSequencerChainEvents::LatestBatchProcessed(batch) => {
+                Some((block, tx, L3Block::from(batch)))
+            }
+            _ => None,
+        })
+        .collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy_primitives::Uint;
+    use eyre::Result;
 
     #[tokio::test]
     async fn test_parse_l3_block() -> Result<()> {
         // Create a sample transaction data
         let parent_hash = FixedBytes::from([1u8; 32]);
+        let epoch_hash = FixedBytes::from([1u8; 32]);
+        let parent_epoch_number = Uint::from(1);
+        let epoch_number = Uint::from(2);
         let transaction_list = vec![Bytes::from(vec![1, 2, 3])];
-        let user_provided_batch = BasedSequencerChain::UserProvidedBatch {
-            non_empty_parent_hash: parent_hash,
+        let latest_batch = BasedSequencerChain::LatestBatchProcessed {
+            parent_hash,
+            parent_epoch_number,
+            epoch_number,
+            epoch_hash,
             transaction_list: transaction_list.clone(),
         };
-        let tx_data = BasedSequencerChain::sequenceNextBatchCall {
-            userProvidedBatch: user_provided_batch,
-        }
-        .abi_encode();
 
         // Parse the L3 block
-        let parsed_block = L3Block::new(&tx_data);
-
-        // Assert that the block was parsed successfully
-        assert!(parsed_block.is_some());
-        let parsed_block = parsed_block.unwrap();
+        let parsed_block = L3Block::from(latest_batch);
 
         // Check the parsed block fields
         assert_eq!(parsed_block.parent_hash, parent_hash);
-        assert_eq!(parsed_block.epoch_number, U256::from(0));
+        assert_eq!(parsed_block.epoch_number, epoch_number);
         assert_eq!(parsed_block.transaction_list, transaction_list);
-
-        // The timestamp should be close to the current time
-        let current_timestamp = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("Time went backwards")
-            .as_secs();
-        let parsed_timestamp = parsed_block.timestamp.to::<u64>();
-        assert!(
-            parsed_timestamp >= current_timestamp - 5 && parsed_timestamp <= current_timestamp + 5
-        );
+        assert_eq!(parsed_block.timestamp.to::<u64>(), 0);
 
         Ok(())
     }
