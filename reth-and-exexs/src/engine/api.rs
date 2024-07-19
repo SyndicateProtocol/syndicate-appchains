@@ -1,5 +1,3 @@
-//! This module was heavily inspired by [magi](https://github.com/a16z/magi).
-
 use std::collections::HashMap;
 use std::time::{Duration, SystemTime};
 

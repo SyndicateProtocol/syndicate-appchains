@@ -5,14 +5,17 @@ use reth_exex::{ExExContext, ExExEvent};
 use reth_node_api::FullNodeComponents;
 use reth_primitives::Address;
 
-use crate::manager::Manager;
+use crate::{
+    engine::{Engine, EngineApi},
+    manager::Manager,
+};
 
-pub struct SynExEx<Node: FullNodeComponents> {
+pub struct SynExEx<Node: FullNodeComponents, E: Engine> {
     ctx: ExExContext<Node>,
-    manager: Manager,
+    manager: Manager<E>,
 }
 
-impl<Node: FullNodeComponents> SynExEx<Node> {
+impl<Node: FullNodeComponents> SynExEx<Node, EngineApi> {
     pub fn new(ctx: ExExContext<Node>) -> eyre::Result<Self> {
         // TODO [SEQ-47]: Do this in a mire robust/smarter way
         dotenv().ok();

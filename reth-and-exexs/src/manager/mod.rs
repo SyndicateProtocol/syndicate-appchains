@@ -3,17 +3,26 @@ use reth_provider::Chain;
 use reth_tracing::tracing::{debug, info, warn};
 use serde_json::json;
 
-use crate::l3_block::process_chain_into_sequencer_l3blocks;
+use crate::{
+    chain_state::ChainState,
+    engine::{Engine, EngineApi},
+    l3_block::process_chain_into_sequencer_l3blocks,
+};
 
-pub struct Manager {
+pub struct Manager<E: Engine> {
     sequencer_address: Address,
+    chain_state: ChainState<E>,
     latest_sequencing_block: u64,
 }
 
-impl Manager {
+impl Manager<EngineApi> {
     pub fn new(sequencer_address: Address) -> Self {
+        let engine = EngineApi::from_env();
+        let chain_state = ChainState::new(engine);
+
         Manager {
             sequencer_address,
+            chain_state,
             latest_sequencing_block: 0,
         }
     }
@@ -36,12 +45,7 @@ impl Manager {
                 sequencer_address = ?self.sequencer_address,
                 "Block contains an event from processing a new batch on the BasedSequencerChain"
             );
-
-            // TODO [SEQ-29]: L3 Block -> ExecutionPayload
-
-            // TODO: Call engine_NewPayload
-
-            // TODO: Call engine_ForkchoiceUpdated
+            self.chain_state.add_block(seq_block).await?;
         }
 
         // Log stats in a structured format

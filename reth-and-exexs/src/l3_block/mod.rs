@@ -1,4 +1,4 @@
-use alloy::primitives::{Bytes, FixedBytes, U256, U64};
+use alloy::primitives::{Bytes, B256, U256, U64};
 use alloy_sol_types::{sol, SolEventInterface};
 use reth_primitives::{transaction::TransactionSigned, Address, SealedBlockWithSenders};
 use reth_provider::Chain;
@@ -11,7 +11,7 @@ use BasedSequencerChain::{BasedSequencerChainEvents, LatestBatchProcessed};
 
 #[derive(Debug, Clone)]
 pub struct L3Block {
-    pub parent_hash: FixedBytes<32>,
+    pub parent_hash: B256,
     pub epoch_number: U256,
     pub timestamp: U64,
     pub transaction_list: Vec<Bytes>,
@@ -77,8 +77,8 @@ mod tests {
     #[tokio::test]
     async fn test_parse_l3_block() {
         // Create a sample transaction data
-        let parent_hash = FixedBytes::from([1u8; 32]);
-        let epoch_hash = FixedBytes::from([1u8; 32]);
+        let parent_hash = B256::from([1u8; 32]);
+        let epoch_hash = B256::from([1u8; 32]);
         let parent_epoch_number = Uint::from(1);
         let epoch_number = Uint::from(2);
         let transaction_list = vec![Bytes::from(vec![1, 2, 3])];

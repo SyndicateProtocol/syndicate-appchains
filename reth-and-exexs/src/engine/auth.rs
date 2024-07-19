@@ -1,5 +1,3 @@
-//! This module was heavily inspired by [magi](https://github.com/a16z/magi).
-
 use alloy::primitives::hex;
 use eyre::Result;
 use jsonwebtoken::Algorithm;

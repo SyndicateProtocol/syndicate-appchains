@@ -1,5 +1,3 @@
-//! This module was heavily inspired by [magi](https://github.com/a16z/magi).
-
 use std::time::Duration;
 
 /// The default engine api authentication port.

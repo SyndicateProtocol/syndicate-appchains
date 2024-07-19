@@ -19,10 +19,22 @@ Ensure you have the following installed on your system:
 - Cargo: Comes with Rust installation
 - Dotenv: Used for managing environment variables
 
+Make sure your working directory is in "reth-andexexs"
+
+```bash
+$ cd reth-and-exexs
+```
+
 ### Install the dependencies:
 
 ```bash
   cargo build
+```
+
+### Copy .env file:
+
+```bash
+$ cp .env.example .env
 ```
 
 ### Test
