@@ -5,6 +5,7 @@ use serde_json::json;
 
 use crate::{
     chain_state::ChainState,
+    config::Config,
     engine::{Engine, EngineApi},
     l3_block::process_chain_into_sequencer_l3blocks,
 };
@@ -17,7 +18,8 @@ pub struct Manager<E: Engine> {
 
 impl Manager<EngineApi> {
     pub fn new(sequencer_address: Address) -> Self {
-        let engine = EngineApi::from_env();
+        let config = Config::from_env();
+        let engine = EngineApi::new(&config);
         let chain_state = ChainState::new(engine);
 
         Manager {
@@ -103,12 +105,26 @@ mod tests {
     use reth_testing_utils::generators::sign_tx_with_random_key_pair;
 
     use super::*;
+    use std::env;
 
     fn sequencer_address() -> Address {
         "0x0000000000000000000000000000000000000000"
             .to_string()
             .parse::<Address>()
             .unwrap()
+    }
+
+    fn setup_test_env() {
+        env::set_var("ENGINE_API_URL", "http://localhost:8545");
+        env::set_var(
+            "JWT_SECRET",
+            "1a81b8d6100c07b9a5ab1c9c0a469661f262067ba002649b22c9621585bf502a",
+        );
+        env::set_var(
+            "CONTRACT_ADDRESS",
+            "0x1234567890123456789012345678901234567890",
+        );
+        env::set_var("L2_RPC_URL", "http://localhost:8546");
     }
 
     async fn get_chain(head_num: Option<u64>, tx: Option<Transaction>) -> eyre::Result<Chain> {
@@ -151,6 +167,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_manager_revert() -> eyre::Result<()> {
+        setup_test_env();
         let chain = get_chain(Some(0), None).await?;
 
         let mut manager = Manager::new(sequencer_address());
@@ -161,6 +178,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_manager_commit_empty_chain() -> eyre::Result<()> {
+        setup_test_env();
         let chain = get_chain(None, None).await?;
         let mut manager = Manager::new(sequencer_address());
         manager.commit(&chain).await?;

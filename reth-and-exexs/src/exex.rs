@@ -1,11 +1,9 @@
-use dotenv::dotenv;
-use std::env;
-
 use reth_exex::{ExExContext, ExExEvent};
 use reth_node_api::FullNodeComponents;
 use reth_primitives::Address;
 
 use crate::{
+    config::Config,
     engine::{Engine, EngineApi},
     manager::Manager,
 };
@@ -17,12 +15,12 @@ pub struct SynExEx<Node: FullNodeComponents, E: Engine> {
 
 impl<Node: FullNodeComponents> SynExEx<Node, EngineApi> {
     pub fn new(ctx: ExExContext<Node>) -> eyre::Result<Self> {
-        // TODO [SEQ-47]: Do this in a mire robust/smarter way
-        dotenv().ok();
-        let sequencer_address = env::var("CONTRACT_ADDRESS")
-            .unwrap_or("0x0000000000000000000000000000000000000000".to_string())
+        let config = Config::from_env();
+
+        let sequencer_address = config
+            .sequencer_address
             .parse::<Address>()
-            .unwrap();
+            .map_err(|e| eyre::eyre!("Failed to parse sequencer address: {}", e))?;
 
         let manager = Manager::new(sequencer_address);
         Ok(Self { ctx, manager })
@@ -54,13 +52,26 @@ mod tests {
     use reth_primitives::{Block, Header, Transaction, TxEip4844};
     use reth_provider::{Chain, ExecutionOutcome};
     use reth_testing_utils::generators::sign_tx_with_random_key_pair;
+    use std::env;
     use std::pin::{pin, Pin};
     use tokio::time::{sleep, Duration};
 
+    pub fn setup_test_env() {
+        env::set_var("ENGINE_API_URL", "http://localhost:8545");
+        env::set_var(
+            "JWT_SECRET",
+            "1a81b8d6100c07b9a5ab1c9c0a469661f262067ba002649b22c9621585bf502a",
+        );
+        env::set_var(
+            "CONTRACT_ADDRESS",
+            "0x0000000000000000000000000000000000000000",
+        );
+        env::set_var("L2_RPC_URL", "http://localhost:8546");
+    }
+
     #[tokio::test]
     async fn test_syn_exex() -> eyre::Result<()> {
-        dotenv().ok();
-
+        setup_test_env();
         let (ctx, handle) = test_exex_context().await?;
         let head = ctx.head;
 
