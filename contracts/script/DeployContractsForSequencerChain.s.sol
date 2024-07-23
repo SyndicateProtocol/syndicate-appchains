@@ -7,6 +7,7 @@ import {BasedSequencerChain} from "src/BasedSequencerChain.sol";
 import {SealedBidAuctionSequencingModule} from "src/sequencing-modules/SealedBidAuctionSequencingModule.sol";
 import {TokenBalanceSequencingModule} from "src/sequencing-modules/TokenBalanceSequencingModule.sol";
 import {AllowlistSequencingModule} from "src/sequencing-modules/AllowlistSequencingModule.sol";
+import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.sol";
 
 contract DeployBasedSequencerChain is Script {
     BasedSequencerChain public basedSequencerChain;
@@ -35,10 +36,10 @@ contract AddModuleToBasedSequencerChain is Script {
 
     function run() public {
         vm.startBroadcast();
-        // BaseSequencerChain address on Syndicate Frame Chain
-        basedSequencerChain = BasedSequencerChain(0x8430FDed8bb66c6EA2f1f966E2abF9D481eEF418);
-        // AllowlistSequencingModule address on Syndicate Frame Chain
-        module = 0xA3d1304Afff72a8aD77F7c6A7B0c18d63629062d;
+        // BaseSequencerChain address on Base Sepolia
+        basedSequencerChain = BasedSequencerChain(0xdf4F1Be1fc0222Bb45c3a6B85F977AC89f49a9C5);
+        // AlwaysAllowedModule address on Base Sepolia
+        module = 0x0324b4d8F786e11206F82e016DD4480de2332cF3;
 
         basedSequencerChain.addRequireAllCheck(module, true);
         console.log("Added module to BasedSequencerChain", module);
@@ -96,6 +97,19 @@ contract DeployAllowlistSequencingModule is Script {
 
         allowlistSequencingModule = new AllowlistSequencingModule(admin);
         console.log("Deployed AllowlistSequencingModule", address(allowlistSequencingModule));
+
+        vm.stopBroadcast();
+    }
+}
+
+contract DeployAlwaysAllowedModule is Script {
+    AlwaysAllowedModule public alwaysAllowedModule;
+
+    function run() public {
+        vm.startBroadcast();
+
+        alwaysAllowedModule = new AlwaysAllowedModule();
+        console.log("Deployed AlwaysAllowedModule", address(alwaysAllowedModule));
 
         vm.stopBroadcast();
     }

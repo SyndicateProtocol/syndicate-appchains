@@ -6,16 +6,19 @@
 -include .env
 
 # deploy DeployBasedSequencerChain to Base Sepolia
-deploy-based-sequencerchain-frame :; forge script script/DeployContractsForSequencerChain.s.sol:DeployBasedSequencerChain --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+deploy-based-sequencerchain :; forge script script/DeployContractsForSequencerChain.s.sol:DeployBasedSequencerChain --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
 # run AddModuleToBasedSequencerChain script on Base Sepolia
-add-module-to-based-sequencerchain-frame :; forge script script/DeployContractsForSequencerChain.s.sol:AddModuleToBasedSequencerChain --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+add-module-to-based-sequencerchain :; forge script script/DeployContractsForSequencerChain.s.sol:AddModuleToBasedSequencerChain --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
 # deploy DeploySealedBidAuctionSequencingModule to Base Sepolia
-deploy-sealed-bid-auction-sequencing-module-frame :; forge script script/DeployContractsForSequencerChain.s.sol:DeploySealedBidAuctionSequencingModule --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+deploy-sealed-bid-auction-sequencing-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeploySealedBidAuctionSequencingModule --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
 # deploy DeployTokenBalanceSequencingModule to Base Sepolia
-deploy-token-balance-sequencing-module-frame :; forge script script/DeployContractsForSequencerChain.s.sol:DeployTokenBalanceSequencingModule --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+deploy-token-balance-sequencing-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeployTokenBalanceSequencingModule --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
 # deploy DeployAllowlistSequencingModule to Base Sepolia
-deploy-allowlist-sequencing-module-frame :; forge script script/DeployContractsForSequencerChain.s.sol:DeployAllowlistSequencingModule --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+deploy-allowlist-sequencing-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeployAllowlistSequencingModule --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+
+# deploy DeployAlwaysAllowedModule to Base Sepolia
+deploy-always-allowed-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeployAlwaysAllowedModule --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv

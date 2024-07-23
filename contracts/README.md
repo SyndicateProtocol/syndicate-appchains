@@ -36,3 +36,4 @@ $ make deploy-based-sequencerchain-frame
 | Contract Name       | Address                                    |
 | ------------------- | ------------------------------------------ |
 | BasedSequencerChain | 0xdf4F1Be1fc0222Bb45c3a6B85F977AC89f49a9C5 |
+| AlwaysAllowedModule | 0x0324b4d8F786e11206F82e016DD4480de2332cF3 |
