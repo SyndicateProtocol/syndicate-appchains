@@ -41,19 +41,19 @@ install-foundry: ## Install Foundry if the forge command is not found or is corr
 
 .PHONY: build-op-reth-syn
 build-op-reth-syn: ## Build and install the op-reth binary under `~/.cargo/bin`.
-	cargo install --path . --bin op-reth-syn --force --locked \
+	cd ./reth-and-exexs && cargo install --path . --bin op-reth-syn --force --locked \
 		--features "$(FEATURES)" \
 		--profile "$(PROFILE)" \
 		$(CARGO_INSTALL_EXTRA_FLAGS)
 
 .PHONY: build-contracts
 build-contracts: install-foundry ## Build contracts using forge.
-	cd ../contracts && forge build
+	cd ./contracts && forge build
 	@echo "Contract compilation complete"
 
 .PHONY: test
 test: build-contracts ## Run tests after building the contracts.
-	cargo test --all
+	cd ./reth-and-exexs && cargo test --all
 	@echo "Tests complete"
 
 ##@ Custom Build
