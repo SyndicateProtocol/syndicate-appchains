@@ -22,3 +22,9 @@ deploy-allowlist-sequencing-module :; forge script script/DeployContractsForSequ
 
 # deploy DeployAlwaysAllowedModule to Base Sepolia
 deploy-always-allowed-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeployAlwaysAllowedModule --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+
+# run AddBatchTransactionsToBasedSequencerChainContract script on Base Sepolia
+add-batch-transactions-to-based-sequencerchain :; forge script script/AddBatchTransactionsToBasedSequencerChainContract.s.sol:AddBatchTransactionsToBasedSequencerChainContract --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+
+# run AddBatchTransactionsToBasedSequencerChainContract script on localhost
+add-batch-transactions-to-based-sequencerchain-localhost :; forge script script/AddBatchTransactionsToBasedSequencerChainContract.s.sol:AddBatchTransactionsToBasedSequencerChainContract --rpc-url localhost --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
