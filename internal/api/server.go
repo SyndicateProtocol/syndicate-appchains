@@ -1,33 +1,99 @@
 package server
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 
-	"github.com/SyndicateProtocol/op-translator-proxy/internal/router"
+	config "github.com/SyndicateProtocol/op-translator/internal/config"
+	t "github.com/SyndicateProtocol/op-translator/internal/translator"
+
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/rs/zerolog/log"
 )
 
-func Init() {
-	// local client
-	clientPort := 8546
-	client, err := rpc.Dial(fmt.Sprintf("ws://127.0.0.1:%d", clientPort))
+func Init(cfg *config.Config, translator interface{}) (*http.ServeMux, error) {
+	// Setup proxy
+	url, err := url.Parse(cfg.SettlementChainAddr)
 	if err != nil {
-		log.Fatal().Err(err).Msg("Failed to connect to the local RPC client")
+		return nil, err
 	}
+	proxy := httputil.NewSingleHostReverseProxy(url)
 
-	server := rpc.NewServer()
-	service := &router.ProxyService{Client: client}
+	// Setup translator
+	translatorRpc := rpc.NewServer()
+	translatorRpc.RegisterName("eth", translator)
 
-	r := router.Routes(server, service)
-	serverPort := 8544
-	log.Debug().Msgf("Starting JSON-RPC server on port %d", serverPort)
-	// TODO probably more performant libs than `http` here
-	err = http.ListenAndServe(fmt.Sprintf(":%d", serverPort), r)
+	// Setup routing
+	router := http.NewServeMux()
+	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Parse out the method
+		method := parseMethod(r)
+		log.Debug().Msgf("Method: %s", method)
+		if t.ShouldTranslate(method) {
+			// Translate
+			translatorRpc.ServeHTTP(w, r)
+			return
+		}
+
+		// Proxy
+		r.URL.Host = url.Host
+		r.URL.Scheme = url.Scheme
+		r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
+		r.Host = url.Host
+		proxy.ServeHTTP(w, r)
+	})
+
+	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		log.Info().Msg("-- HIT /health")
+		status := "Healthy"
+		w.WriteHeader(http.StatusOK)
+		err := json.NewEncoder(w).Encode(map[string]string{"status": status})
+		if err != nil {
+			return
+		}
+	})
+
+	return router, nil
+}
+
+func Start(cfg *config.Config, router *http.ServeMux) {
+	log.Debug().Msgf("Starting JSON-RPC server on port %d", cfg.Port)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), router)
 	if err != nil {
 		log.Error().
 			Err(err).
 			Msg("RPC server error")
 	}
+}
+
+func parseMethod(request *http.Request) string {
+	// Read body to buffer
+	body, err := io.ReadAll(request.Body)
+	if err != nil {
+		log.Printf("Error reading body: %v", err)
+		panic(err)
+	}
+
+	request.Body = io.NopCloser(bytes.NewBuffer(body))
+
+	var result map[string]interface{}
+
+	// Unmarshal the JSON from the buffer into the map
+	if err := json.NewDecoder(bytes.NewBuffer(body)).Decode(&result); err != nil {
+		log.Warn().Msgf("Error decoding JSON: %v", err)
+		return ""
+	}
+
+	method, ok := result["method"].(string)
+	if !ok {
+		log.Warn().Msg("Invalid method type")
+		return ""
+	}
+
+	return method
 }
