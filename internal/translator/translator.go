@@ -3,30 +3,30 @@ package translator
 import (
 	"context"
 
-	config "github.com/SyndicateProtocol/op-translator/internal/config"
+	"github.com/SyndicateProtocol/op-translator/internal/config"
 
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/rs/zerolog/log"
 )
 
 type OpTranslator struct {
-	settlementChain *rpc.Client
-	sequencingChain *rpc.Client
+	settlementChain *rpc.Client //nolint:unused // TODO remove comment after implementing
+	sequencingChain *rpc.Client //nolint:gosec // TODO remove comment after implementing
 }
 
 func Init(cfg *config.Config) *OpTranslator {
 	return &OpTranslator{}
 }
 
-func (t *OpTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, fullTx bool) (map[string]interface{}, error) {
-	var result map[string]interface{}
+func (t *OpTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, fullTx bool) (map[string]any, error) {
+	var result map[string]any
 	log.Info().Msg("-- HIT eth_getBlockByNumber")
 	// err := t.settlementChain.CallContext(ctx, &result, "eth_getBlockByNumber", blockNumber, fullTx)
 	return result, nil
 }
 
-func (t *OpTranslator) GetBlockByHash(ctx context.Context, blockHash string, fullTx bool) (map[string]interface{}, error) {
-	var result map[string]interface{}
+func (t *OpTranslator) GetBlockByHash(ctx context.Context, blockHash string, fullTx bool) (map[string]any, error) {
+	var result map[string]any
 	log.Info().Msg("-- HIT eth_getBlockByHash")
 	// err := t.settlementChain.CallContext(ctx, &result, "eth_getBlockByHash", blockHash, fullTx)
 	return result, nil

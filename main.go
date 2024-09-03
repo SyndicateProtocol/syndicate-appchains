@@ -2,8 +2,8 @@ package main
 
 import (
 	server "github.com/SyndicateProtocol/op-translator/internal/api"
-	config "github.com/SyndicateProtocol/op-translator/internal/config"
-	translator "github.com/SyndicateProtocol/op-translator/internal/translator"
+	"github.com/SyndicateProtocol/op-translator/internal/config"
+	"github.com/SyndicateProtocol/op-translator/internal/translator"
 )
 
 func initService() {

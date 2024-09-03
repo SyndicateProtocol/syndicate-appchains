@@ -15,8 +15,8 @@ import (
 
 type MockTranslator struct{}
 
-func (mt *MockTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, fullTx bool) (map[string]interface{}, error) {
-	result := map[string]interface{}{"block": "0x123"}
+func (mt *MockTranslator) GetBlockByNumber(_ context.Context, _ string, _ bool) (map[string]any, error) {
+	result := map[string]any{"block": "0x123"}
 	return result, nil
 }
 
@@ -45,7 +45,7 @@ func TestParseMethod(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest("POST", "/", bytes.NewBufferString(tt.body))
+			req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(tt.body))
 			gotMethod := parseMethod(req)
 			assert.Equal(t, tt.wantMethod, gotMethod)
 		})
@@ -58,7 +58,7 @@ func TestHealthEndpoint(t *testing.T) {
 	router, err := Init(mockCfg, mockTranslator)
 	assert.NoError(t, err)
 
-	req := httptest.NewRequest("GET", "/health", nil)
+	req := httptest.NewRequest(http.MethodGet, "/health", http.NoBody)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
@@ -77,9 +77,10 @@ func TestHealthEndpoint(t *testing.T) {
 func TestProxyEndpoint(t *testing.T) {
 	mockCfg, mockTranslator := getMocks()
 
-	mockBackend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mockBackend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"result": "success"}`))
+		_, err := w.Write([]byte(`{"result": "success"}`))
+		assert.NoError(t, err)
 	}))
 	defer mockBackend.Close()
 
@@ -88,7 +89,7 @@ func TestProxyEndpoint(t *testing.T) {
 	router, err := Init(mockCfg, mockTranslator)
 	assert.NoError(t, err)
 
-	req := httptest.NewRequest("POST", "/", bytes.NewBufferString(`{"method": "eth_getTransactionReceipt"}`))
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{"method": "eth_getTransactionReceipt"}`))
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
@@ -98,7 +99,7 @@ func TestProxyEndpoint(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var response map[string]interface{}
+	var response map[string]any
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	assert.NoError(t, err)
 	assert.Equal(t, "success", response["result"])
@@ -110,7 +111,7 @@ func TestTranslatedEndpoint(t *testing.T) {
 	router, err := Init(mockCfg, mockTranslator)
 	assert.NoError(t, err)
 
-	req := httptest.NewRequest("POST", "/", bytes.NewBufferString(`{"id": 1, "jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["0x123", false]}`))
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{"id": 1, "jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["0x123", false]}`))
 	req.Header.Set("Content-Type", "application/json")
 
 	w := httptest.NewRecorder()
@@ -122,8 +123,8 @@ func TestTranslatedEndpoint(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var response map[string]interface{}
+	var response map[string]any
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x123", response["result"].(map[string]interface{})["block"])
+	assert.Equal(t, "0x123", response["result"].(map[string]any)["block"])
 }

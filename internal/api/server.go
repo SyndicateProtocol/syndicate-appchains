@@ -9,24 +9,27 @@ import (
 	"net/http/httputil"
 	"net/url"
 
-	config "github.com/SyndicateProtocol/op-translator/internal/config"
+	"github.com/SyndicateProtocol/op-translator/internal/config"
 	t "github.com/SyndicateProtocol/op-translator/internal/translator"
 
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/rs/zerolog/log"
 )
 
-func Init(cfg *config.Config, translator interface{}) (*http.ServeMux, error) {
+func Init(cfg *config.Config, translator any) (*http.ServeMux, error) {
 	// Setup proxy
-	url, err := url.Parse(cfg.SettlementChainAddr)
+	parsedURL, err := url.Parse(cfg.SettlementChainAddr)
 	if err != nil {
 		return nil, err
 	}
-	proxy := httputil.NewSingleHostReverseProxy(url)
+	proxy := httputil.NewSingleHostReverseProxy(parsedURL)
 
 	// Setup translator
-	translatorRpc := rpc.NewServer()
-	translatorRpc.RegisterName("eth", translator)
+	translatorRPC := rpc.NewServer()
+	err = translatorRPC.RegisterName("eth", translator)
+	if err != nil {
+		return nil, err
+	}
 
 	// Setup routing
 	router := http.NewServeMux()
@@ -36,19 +39,19 @@ func Init(cfg *config.Config, translator interface{}) (*http.ServeMux, error) {
 		log.Debug().Msgf("Method: %s", method)
 		if t.ShouldTranslate(method) {
 			// Translate
-			translatorRpc.ServeHTTP(w, r)
+			translatorRPC.ServeHTTP(w, r)
 			return
 		}
 
 		// Proxy
-		r.URL.Host = url.Host
-		r.URL.Scheme = url.Scheme
+		r.URL.Host = parsedURL.Host
+		r.URL.Scheme = parsedURL.Scheme
 		r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
-		r.Host = url.Host
+		r.Host = parsedURL.Host
 		proxy.ServeHTTP(w, r)
 	})
 
-	router.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		log.Info().Msg("-- HIT /health")
 		status := "Healthy"
 		w.WriteHeader(http.StatusOK)
@@ -63,7 +66,7 @@ func Init(cfg *config.Config, translator interface{}) (*http.ServeMux, error) {
 
 func Start(cfg *config.Config, router *http.ServeMux) {
 	log.Debug().Msgf("Starting JSON-RPC server on port %d", cfg.Port)
-	err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), router)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), router) //nolint:gosec // TODO refactor for performance anyway
 	if err != nil {
 		log.Error().
 			Err(err).
@@ -81,7 +84,7 @@ func parseMethod(request *http.Request) string {
 
 	request.Body = io.NopCloser(bytes.NewBuffer(body))
 
-	var result map[string]interface{}
+	var result map[string]any
 
 	// Unmarshal the JSON from the buffer into the map
 	if err := json.NewDecoder(bytes.NewBuffer(body)).Decode(&result); err != nil {
