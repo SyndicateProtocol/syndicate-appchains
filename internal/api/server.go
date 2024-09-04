@@ -34,6 +34,11 @@ func Init(cfg *config.Config, translator any) (*http.ServeMux, error) {
 	// Setup routing
 	router := http.NewServeMux()
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "Ethereum JSON-RPC uses POST requests", http.StatusMethodNotAllowed)
+			return
+		}
+
 		// Parse out the method
 		method := parseMethod(r)
 		log.Debug().Msgf("Method: %s", method)
