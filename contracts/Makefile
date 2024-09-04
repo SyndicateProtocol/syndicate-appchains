@@ -5,11 +5,11 @@
 # you're running into issues with fork tests
 -include .env
 
-# deploy DeployBasedSequencerChain to Base Sepolia
-deploy-based-sequencerchain :; forge script script/DeployContractsForSequencerChain.s.sol:DeployBasedSequencerChain --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+# deploy DeployMetabasedSequencerChain to Base Sepolia
+deploy-metabased-sequencerchain :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedSequencerChain --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
-# run AddModuleToBasedSequencerChain script on Base Sepolia
-add-module-to-based-sequencerchain :; forge script script/DeployContractsForSequencerChain.s.sol:AddModuleToBasedSequencerChain --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+# run AddModuleToMetabasedSequencerChain script on Base Sepolia
+add-module-to-metabased-sequencerchain :; forge script script/DeployContractsForSequencerChain.s.sol:AddModuleToMetabasedSequencerChain --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
 # deploy DeploySealedBidAuctionSequencingModule to Base Sepolia
 deploy-sealed-bid-auction-sequencing-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeploySealedBidAuctionSequencingModule --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
@@ -23,8 +23,8 @@ deploy-allowlist-sequencing-module :; forge script script/DeployContractsForSequ
 # deploy DeployAlwaysAllowedModule to Base Sepolia
 deploy-always-allowed-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeployAlwaysAllowedModule --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
-# run AddBatchTransactionsToBasedSequencerChainContract script on Base Sepolia
-add-batch-transactions-to-based-sequencerchain :; forge script script/AddBatchTransactionsToBasedSequencerChainContract.s.sol:AddBatchTransactionsToBasedSequencerChainContract --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+# run AddBatchTransactionsToMetabasedSequencerChainContract script on Base Sepolia
+add-batch-transactions-to-metabased-sequencerchain :; forge script script/AddBatchTransactionsToMetabasedSequencerChainContract.s.sol:AddBatchTransactionsToMetabasedSequencerChainContract --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
-# run AddBatchTransactionsToBasedSequencerChainContract script on localhost
-add-batch-transactions-to-based-sequencerchain-localhost :; forge script script/AddBatchTransactionsToBasedSequencerChainContract.s.sol:AddBatchTransactionsToBasedSequencerChainContract --rpc-url localhost --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+# run AddBatchTransactionsToMetabasedSequencerChainContract script on localhost
+add-batch-transactions-to-metabased-sequencerchain-localhost :; forge script script/AddBatchTransactionsToMetabasedSequencerChainContract.s.sol:AddBatchTransactionsToMetabasedSequencerChainContract --rpc-url localhost --private-key ${ETH_PRIVATE_KEY} --broadcast -vv

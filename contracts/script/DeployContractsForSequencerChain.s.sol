@@ -3,46 +3,46 @@ pragma solidity ^0.8.13;
 
 import {Script, console} from "forge-std/Script.sol";
 
-import {BasedSequencerChain} from "src/BasedSequencerChain.sol";
+import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
 import {SealedBidAuctionSequencingModule} from "src/sequencing-modules/SealedBidAuctionSequencingModule.sol";
 import {TokenBalanceSequencingModule} from "src/sequencing-modules/TokenBalanceSequencingModule.sol";
 import {AllowlistSequencingModule} from "src/sequencing-modules/AllowlistSequencingModule.sol";
 import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.sol";
 
-contract DeployBasedSequencerChain is Script {
-    BasedSequencerChain public basedSequencerChain;
+contract DeployMetabasedSequencerChain is Script {
+    MetabasedSequencerChain public metabasedSequencerChainContract;
 
     function run() public {
         vm.startBroadcast();
-        basedSequencerChain = new BasedSequencerChain();
-        console.log("Deployed BasedSequencerChain", address(basedSequencerChain));
+        metabasedSequencerChainContract = new MetabasedSequencerChain();
+        console.log("Deployed MetabasedSequencerChain", address(metabasedSequencerChainContract));
 
-        // Example on how to add/remove the modules to the requireAllList and/or requireAnyList of BasedSequencerChain
+        // Example on how to add/remove the modules to the requireAllList and/or requireAnyList of MetabasedSequencerChain
 
-        // basedSequencerChain.addRequireAllCheck(address(sealedBidAuctionSequencingModule), true);
-        // basedSequencerChain.removeRequireAllCheck(address(sealedBidAuctionSequencingModule));
+        // metabasedSequencerChainContract.addRequireAllCheck(address(sealedBidAuctionSequencingModule), true);
+        // metabasedSequencerChainContract.removeRequireAllCheck(address(sealedBidAuctionSequencingModule));
 
-        // basedSequencerChain.addRequireAnyCheck(address(tokenBalanceSequencingModule), true);
-        // basedSequencerChain.removeRequireAnyCheck(address(allowlistSequencingModule));
+        // metabasedSequencerChainContract.addRequireAnyCheck(address(tokenBalanceSequencingModule), true);
+        // metabasedSequencerChainContract.removeRequireAnyCheck(address(allowlistSequencingModule));
 
         vm.stopBroadcast();
     }
 }
 
-contract AddModuleToBasedSequencerChain is Script {
-    BasedSequencerChain public basedSequencerChain;
+contract AddModuleToMetabasedSequencerChain is Script {
+    MetabasedSequencerChain public metabasedSequencerChainContract;
 
     address public module;
 
     function run() public {
         vm.startBroadcast();
-        // BaseSequencerChain address on Base Sepolia
-        basedSequencerChain = BasedSequencerChain(0xdf4F1Be1fc0222Bb45c3a6B85F977AC89f49a9C5);
+        // MetabasedSequencerChain address on Base Sepolia
+        metabasedSequencerChainContract = MetabasedSequencerChain(0x73Ba7D784d13Ec0070a4Ea6F49Ff57dc007Bb48d);
         // AlwaysAllowedModule address on Base Sepolia
         module = 0x0324b4d8F786e11206F82e016DD4480de2332cF3;
 
-        basedSequencerChain.addRequireAllCheck(module, true);
-        console.log("Added module to BasedSequencerChain", module);
+        metabasedSequencerChainContract.addRequireAllCheck(module, true);
+        console.log("Added module to MetabasedSequencerChain", module);
 
         vm.stopBroadcast();
     }
