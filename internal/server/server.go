@@ -16,7 +16,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func Init(cfg *config.Config, translator any) (*http.ServeMux, error) {
+func TranslatorHandler(cfg *config.Config, translator any) (*http.ServeMux, error) {
 	// Setup proxy
 	parsedURL, err := url.Parse(cfg.SettlementChainAddr)
 	if err != nil {
@@ -32,6 +32,12 @@ func Init(cfg *config.Config, translator any) (*http.ServeMux, error) {
 	}
 
 	// Setup routing
+	router := TranslatorRouter(translatorRPC, parsedURL, proxy)
+
+	return router, nil
+}
+
+func TranslatorRouter(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *httputil.ReverseProxy) *http.ServeMux {
 	router := http.NewServeMux()
 	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -65,8 +71,7 @@ func Init(cfg *config.Config, translator any) (*http.ServeMux, error) {
 			return
 		}
 	})
-
-	return router, nil
+	return router
 }
 
 func Start(cfg *config.Config, router *http.ServeMux) {

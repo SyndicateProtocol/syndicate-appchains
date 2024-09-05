@@ -2,31 +2,23 @@ package server
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/SyndicateProtocol/op-translator/internal/config"
-
+	"github.com/SyndicateProtocol/op-translator/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
-type MockTranslator struct{}
-
-func (mt *MockTranslator) GetBlockByNumber(_ context.Context, _ string, _ bool) (map[string]any, error) {
-	result := map[string]any{"block": "0x123"}
-	return result, nil
-}
-
-func getMocks() (*config.Config, *MockTranslator) {
+func getMocks() (*config.Config, *mocks.Translator) {
 	mockCfg := &config.Config{
 		Port:                8080,
 		SettlementChainAddr: "http://localhost:8545",
 		SequencingChainAddr: "http://localhost:8545",
 	}
-	mockTranslator := &MockTranslator{}
+	mockTranslator := &mocks.Translator{}
 
 	return mockCfg, mockTranslator
 }
@@ -55,7 +47,7 @@ func TestParseMethod(t *testing.T) {
 func TestHealthEndpoint(t *testing.T) {
 	mockCfg, mockTranslator := getMocks()
 
-	router, err := Init(mockCfg, mockTranslator)
+	router, err := TranslatorHandler(mockCfg, mockTranslator)
 	assert.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", http.NoBody)
@@ -86,7 +78,7 @@ func TestProxyEndpoint(t *testing.T) {
 
 	mockCfg.SettlementChainAddr = mockBackend.URL
 
-	router, err := Init(mockCfg, mockTranslator)
+	router, err := TranslatorHandler(mockCfg, mockTranslator)
 	assert.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{"method": "eth_getTransactionReceipt"}`))
@@ -108,7 +100,7 @@ func TestProxyEndpoint(t *testing.T) {
 func TestTranslatedEndpoint(t *testing.T) {
 	mockCfg, mockTranslator := getMocks()
 
-	router, err := Init(mockCfg, mockTranslator)
+	router, err := TranslatorHandler(mockCfg, mockTranslator)
 	assert.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{"id": 1, "jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["0x123", false]}`))

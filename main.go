@@ -1,8 +1,8 @@
 package main
 
 import (
-	server "github.com/SyndicateProtocol/op-translator/internal/api"
 	"github.com/SyndicateProtocol/op-translator/internal/config"
+	"github.com/SyndicateProtocol/op-translator/internal/server"
 	"github.com/SyndicateProtocol/op-translator/internal/translator"
 )
 
@@ -10,7 +10,7 @@ func initService() {
 	cfg := config.Init()
 	opTranslator := translator.Init(cfg)
 
-	s, err := server.Init(cfg, opTranslator)
+	s, err := server.TranslatorHandler(cfg, opTranslator)
 	if err != nil {
 		panic(err)
 	}
