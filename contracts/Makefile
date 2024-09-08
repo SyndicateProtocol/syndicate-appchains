@@ -28,3 +28,8 @@ add-batch-transactions-to-metabased-sequencerchain :; forge script script/AddBat
 
 # run AddBatchTransactionsToMetabasedSequencerChainContract script on localhost
 add-batch-transactions-to-metabased-sequencerchain-localhost :; forge script script/AddBatchTransactionsToMetabasedSequencerChainContract.s.sol:AddBatchTransactionsToMetabasedSequencerChainContract --rpc-url localhost --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+
+# run tx limit test against OP Mainnet or Base Sepolia
+# and save output to file
+# need to change target network in the test file
+test-tx-limit :; forge test --match-contract MetabaseSequencerChainIntegrationTest -vv > test/integration/metabase-tx-limit-data/optimism_test_output_$(date +%Y%m%d_%H%M%S).log 2>&1
