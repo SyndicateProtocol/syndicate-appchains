@@ -1,0 +1,13 @@
+[package]
+name = "metabased-sequencer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+alloy = { version = "0.3.1", features = ["full"] }
+# TODO: Opt into specific features
+jsonrpsee = { version = "0.24.3", features = ["full"] }
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+serde_json = "1.0.128"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
