@@ -4,18 +4,34 @@ import (
 	"context"
 
 	"github.com/SyndicateProtocol/op-translator/internal/config"
+	rpcClient "github.com/SyndicateProtocol/op-translator/internal/rpc-clients"
 
-	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/rs/zerolog/log"
 )
 
 type OpTranslator struct {
-	settlementChain *rpc.Client //nolint:unused // TODO remove comment after implementing
-	sequencingChain *rpc.Client //nolint:gosec // TODO remove comment after implementing
+	settlementChain *rpcClient.SettlementClient
+	sequencingChain *rpcClient.SequencingClient
 }
 
 func Init(cfg *config.Config) *OpTranslator {
-	return &OpTranslator{}
+	settlementChain, err := rpcClient.NewSettlementClient(cfg.SettlementChainAddr)
+	if err != nil {
+		log.Panic().Err(err).Msg("Failed to initialize settlement chain")
+	}
+	defer settlementChain.Client.CloseConnection() // Close the client connection when done
+
+	sequencingChain, err := rpcClient.NewSequencingClient(cfg.SequencingChainAddr)
+	if err != nil {
+		log.Panic().Err(err).Msg("Failed to initialize sequencing chain")
+	}
+
+	defer sequencingChain.Client.CloseConnection() // Close the client connection when done
+
+	return &OpTranslator{
+		settlementChain: settlementChain,
+		sequencingChain: sequencingChain,
+	}
 }
 
 func (t *OpTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, fullTx bool) (map[string]any, error) {

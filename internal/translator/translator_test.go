@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/SyndicateProtocol/op-translator/internal/config"
+	"github.com/SyndicateProtocol/op-translator/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestInit(t *testing.T) {
-	cfg := &config.Config{}
+	cfg := mocks.ConfigMock
 	translator := Init(cfg)
 	assert.NotNil(t, translator)
 }

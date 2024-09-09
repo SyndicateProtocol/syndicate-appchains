@@ -13,14 +13,9 @@ import (
 )
 
 func getMocks() (*config.Config, *mocks.Translator) {
-	mockCfg := &config.Config{
-		Port:                8080,
-		SettlementChainAddr: "http://localhost:8545",
-		SequencingChainAddr: "http://localhost:8545",
-	}
 	mockTranslator := &mocks.Translator{}
 
-	return mockCfg, mockTranslator
+	return mocks.ConfigMock, mockTranslator
 }
 
 func TestParseMethod(t *testing.T) {
