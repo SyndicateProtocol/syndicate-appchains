@@ -9,7 +9,7 @@ type Config struct {
 }
 
 func Init() *Config {
-	// TODO: Load from env and validate
+	// TODO [SEQ-104]: Load from env and validate
 	return &Config{
 		Port: 8546, //nolint:mnd // TODO
 
