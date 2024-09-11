@@ -1,4 +1,4 @@
-package rpcclient
+package rpc
 
 type SequencingClient struct {
 	Client *RPCClient

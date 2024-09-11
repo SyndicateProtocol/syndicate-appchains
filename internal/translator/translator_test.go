@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/SyndicateProtocol/op-translator/mocks"
+	"github.com/ethereum-optimism/optimism/op-service/sources"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -15,29 +17,43 @@ func TestInit(t *testing.T) {
 }
 
 func TestGetBlockByNumber(t *testing.T) {
-	translator := &OpTranslator{}
-
+	mockClient := new(mocks.MockRPCClient)
+	expectedBlock := &sources.RPCBlock{}
 	ctx := context.Background()
-	blockNumber := "0x1"
-	fullTx := false
+	var number = "0xE730A8"
+	mockClient.On("GetBlockByNumber", ctx, number, true).Return(expectedBlock, nil)
 
-	result, err := translator.GetBlockByNumber(ctx, blockNumber, fullTx)
+	translator := &OPTranslator{
+		settlementChain: mockClient,
+		sequencingChain: mockClient,
+	}
+
+	block, err := translator.GetBlockByNumber(ctx, number, true)
 
 	assert.NoError(t, err)
-	assert.Nil(t, result)
+	assert.Equal(t, expectedBlock, block)
+	mockClient.AssertCalled(t, "GetBlockByNumber", ctx, number, true)
 }
 
 func TestGetBlockByHash(t *testing.T) {
-	translator := &OpTranslator{}
-
+	mockClient := new(mocks.MockRPCClient)
+	expectedBlock := &sources.RPCBlock{}
 	ctx := context.Background()
-	blockHash := "0xabc123"
-	fullTx := false
+	var hash common.Hash
+	copy(hash[:], "0xabc")
+	mockClient.On("GetBlockByHash", ctx, hash, true).Return(expectedBlock, nil)
 
-	result, err := translator.GetBlockByHash(ctx, blockHash, fullTx)
+	translator := &OPTranslator{
+		settlementChain: mockClient,
+		sequencingChain: mockClient,
+	}
+
+	block, err := translator.GetBlockByHash(ctx, hash, true)
 
 	assert.NoError(t, err)
-	assert.Nil(t, result)
+	assert.Equal(t, expectedBlock, block)
+
+	mockClient.AssertCalled(t, "GetBlockByHash", ctx, hash, true)
 }
 
 func TestShouldTranslate(t *testing.T) {

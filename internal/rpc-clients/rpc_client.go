@@ -1,13 +1,15 @@
-package rpcclient
+package rpc
 
 import (
 	"fmt"
 
+	"context"
+
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/rs/zerolog/log"
 )
 
-// RPCClient is a wrapper around the go-ethereum rpc.Client to add any additional methods we need.
 type RPCClient struct {
 	*rpc.Client
 }
@@ -21,7 +23,33 @@ func Connect(address string) (*RPCClient, error) {
 	return &RPCClient{Client: c}, nil
 }
 
+type IRPCClient interface {
+	CloseConnection()
+	GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (any, error)
+	GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (any, error)
+}
+
 func (c *RPCClient) CloseConnection() {
 	c.Close()
 	log.Debug().Msgf("RPC connection closed")
+}
+
+func (c *RPCClient) GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (any, error) {
+	// TODO (SEQ-137): Revisit block interface. Keeping it as flexible and simple as possible for now
+	var block any
+	err := c.CallContext(ctx, &block, "eth_getBlockByNumber", number, withTransactions)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
+}
+
+func (c *RPCClient) GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (any, error) {
+	// TODO (SEQ-137): Revisit block interface. Keeping it as flexible and simple as possible for now
+	var block any
+	err := c.CallContext(ctx, &block, "eth_getBlockByHash", hash, withTransactions)
+	if err != nil {
+		return nil, err
+	}
+	return block, nil
 }

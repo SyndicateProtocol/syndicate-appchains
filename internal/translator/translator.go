@@ -4,48 +4,55 @@ import (
 	"context"
 
 	"github.com/SyndicateProtocol/op-translator/internal/config"
-	rpcClient "github.com/SyndicateProtocol/op-translator/internal/rpc-clients"
+	"github.com/SyndicateProtocol/op-translator/internal/rpc-clients"
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/rs/zerolog/log"
 )
 
-type OpTranslator struct {
-	settlementChain *rpcClient.SettlementClient
-	sequencingChain *rpcClient.SequencingClient
+type OPTranslator struct {
+	settlementChain rpc.IRPCClient
+	sequencingChain rpc.IRPCClient
 }
 
-func Init(cfg *config.Config) *OpTranslator {
-	settlementChain, err := rpcClient.NewSettlementClient(cfg.SettlementChainAddr)
+func Init(cfg *config.Config) *OPTranslator {
+	settlementChain, err := rpc.NewSettlementClient(cfg.SettlementChainAddr)
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize settlement chain")
 	}
 	defer settlementChain.Client.CloseConnection() // Close the client connection when done
 
-	sequencingChain, err := rpcClient.NewSequencingClient(cfg.SequencingChainAddr)
+	sequencingChain, err := rpc.NewSequencingClient(cfg.SequencingChainAddr)
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize sequencing chain")
 	}
 
 	defer sequencingChain.Client.CloseConnection() // Close the client connection when done
 
-	return &OpTranslator{
-		settlementChain: settlementChain,
-		sequencingChain: sequencingChain,
+	return &OPTranslator{
+		settlementChain: settlementChain.Client,
+		sequencingChain: sequencingChain.Client,
 	}
 }
 
-func (t *OpTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, fullTx bool) (map[string]any, error) {
-	var result map[string]any
+func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, transactionDetailFlag bool) (any, error) {
 	log.Info().Msg("-- HIT eth_getBlockByNumber")
-	// err := t.settlementChain.CallContext(ctx, &result, "eth_getBlockByNumber", blockNumber, fullTx)
-	return result, nil
+	block, err := t.settlementChain.GetBlockByNumber(ctx, blockNumber, transactionDetailFlag)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get block by number")
+		return nil, err
+	}
+	return block, nil
 }
 
-func (t *OpTranslator) GetBlockByHash(ctx context.Context, blockHash string, fullTx bool) (map[string]any, error) {
-	var result map[string]any
+func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash, transactionDetailFlag bool) (any, error) {
 	log.Info().Msg("-- HIT eth_getBlockByHash")
-	// err := t.settlementChain.CallContext(ctx, &result, "eth_getBlockByHash", blockHash, fullTx)
-	return result, nil
+	block, err := t.settlementChain.GetBlockByHash(ctx, blockHash, transactionDetailFlag)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get block by hash")
+		return nil, err
+	}
+	return block, nil
 }
 
 func ShouldTranslate(method string) bool {

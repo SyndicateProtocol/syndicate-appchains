@@ -1,8 +1,10 @@
-package rpcclient
+package rpc
 
 import (
+	"context"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -46,5 +48,9 @@ func TestCloseConnection(t *testing.T) {
 	// method completes without panicking and include further checks.
 	assert.NotNil(t, client.Client, "Client should be non-nil before closing")
 
-	// TODO (SEQ-129): assert that client.someRPCMethod() @ the old address fails with a closed connection error
+	var hash common.Hash
+	copy(hash[:], "0xabc")
+
+	_, err = client.GetBlockByHash(context.Background(), hash, true)
+	assert.Error(t, err, "expected an error after closing the connection")
 }
