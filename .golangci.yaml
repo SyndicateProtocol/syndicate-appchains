@@ -4,7 +4,7 @@ linters-settings:
     check-type-assertions: true # Default: false
 
     # Report skipped checks:`num, _ := strconv.Atoi(numStr)`.
-    check-blank: true # Default: false
+    check-blank: false # Default: false
 
     # Function to skip.
     exclude-functions:

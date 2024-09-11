@@ -9,7 +9,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-// TODO: Move to config
+// TODO (SEQ-104): Move to config
 // Max possible frame size is 1,000,000
 // Documentation: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#frame-format
 const FrameSize = 1024
