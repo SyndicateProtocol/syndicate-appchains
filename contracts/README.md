@@ -44,3 +44,10 @@ $ make deploy-based-sequencerchain-frame
 | ----------------------- | ------------------------------------------ |
 | MetabasedSequencerChain | 0x7DEdabB3Db89310B316bA49D96Aa6517aFC44294 |
 | AlwaysAllowedModule     | 0x21e1C6bE46E53693381Cef9BECD3B0A947A590e4 |
+
+#### Metabased Testnet
+
+| Contract Name           | Address                                    |
+| ----------------------- | ------------------------------------------ |
+| MetabasedSequencerChain | 0xcFc46cEBB3eAEc9b5776e3FDe5879125B8BBA05d |
+| AlwaysAllowedModule     | 0x471584f0B8e35faEB2a618BD58A62316D8882d63 |

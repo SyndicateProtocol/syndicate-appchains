@@ -8,6 +8,9 @@
 # deploy DeployMetabasedSequencerChain to Base Sepolia
 deploy-metabased-sequencerchain :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedSequencerChain --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
+# deploy DeployMetabasedSequencerChainForTestnet to Metabased Testnet
+deploy-metabased-sequencerchain-testnet :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedSequencerChainForTestnet --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+
 # run AddModuleToMetabasedSequencerChain script on Base Sepolia
 add-module-to-metabased-sequencerchain :; forge script script/DeployContractsForSequencerChain.s.sol:AddModuleToMetabasedSequencerChain --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 

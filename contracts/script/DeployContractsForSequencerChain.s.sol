@@ -114,3 +114,21 @@ contract DeployAlwaysAllowedModule is Script {
         vm.stopBroadcast();
     }
 }
+
+contract DeployMetabasedSequencerChainForTestnet is Script {
+    MetabasedSequencerChain public metabasedSequencerChainContract;
+
+    function run() public {
+        vm.startBroadcast();
+        metabasedSequencerChainContract = new MetabasedSequencerChain();
+        console.log("Deployed MetabasedSequencerChain", address(metabasedSequencerChainContract));
+
+        AlwaysAllowedModule alwaysAllowedModule = new AlwaysAllowedModule();
+        console.log("Deployed AlwaysAllowedModule", address(alwaysAllowedModule));
+
+        metabasedSequencerChainContract.addRequireAllCheck(address(alwaysAllowedModule), true);
+        console.log("Added alwaysAllowedModule to MetabasedSequencerChain", address(alwaysAllowedModule));
+
+        vm.stopBroadcast();
+    }
+}
