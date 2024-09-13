@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/SyndicateProtocol/op-translator/internal/types"
 	"github.com/SyndicateProtocol/op-translator/mocks"
-	"github.com/ethereum-optimism/optimism/op-service/sources"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 )
@@ -20,7 +20,7 @@ func TestInit(t *testing.T) {
 
 func TestGetBlockByNumber(t *testing.T) {
 	mockClient := new(mocks.MockRPCClient)
-	expectedBlock := &sources.RPCBlock{}
+	expectedBlock := types.Block{}
 	ctx := context.Background()
 	var number = "0xE730A8"
 	mockClient.On("GetBlockByNumber", ctx, number, true).Return(expectedBlock, nil)
@@ -39,7 +39,7 @@ func TestGetBlockByNumber(t *testing.T) {
 
 func TestGetBlockByHash(t *testing.T) {
 	mockClient := new(mocks.MockRPCClient)
-	expectedBlock := &sources.RPCBlock{}
+	expectedBlock := types.Block{}
 	ctx := context.Background()
 	var hash common.Hash
 	copy(hash[:], "0xabc")

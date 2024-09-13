@@ -1,11 +1,10 @@
-package translator
+package types
 
 import (
 	"crypto/rand"
 	"io"
 	"testing"
 
-	"github.com/SyndicateProtocol/op-translator/mocks"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 )
@@ -66,9 +65,7 @@ func randData(size int) []byte {
 
 func TestToFrames_Public(t *testing.T) {
 	batch := mockBatch()
-	mockConfig := &mocks.MockConfig{}
-	mockConfig.On("FrameSize").Return(frameSizeTest)
-	_, err := batch.ToFrames(mockConfig)
+	_, err := batch.ToFrames(frameSizeTest)
 	assert.NoError(t, err)
 }
 

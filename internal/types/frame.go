@@ -1,7 +1,6 @@
-package translator
+package types
 
 import (
-	"bytes"
 	"crypto/rand"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
@@ -11,6 +10,7 @@ type Frame struct {
 	derive.Frame
 }
 
+// Boolean values for IsLast byte
 const IsLastByte = 0x01
 const IsNotLastByte = 0x00
 
@@ -33,15 +33,4 @@ func NewFrame(id derive.ChannelID, frameNumber uint16, data []byte, isLast bool)
 			IsLast:      isLast,
 		},
 	}
-}
-
-func (f *Frame) Encode() ([]byte, error) {
-	buf := new(bytes.Buffer)
-
-	err := f.MarshalBinary(buf)
-	if err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
 }

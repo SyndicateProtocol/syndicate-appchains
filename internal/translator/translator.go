@@ -5,6 +5,7 @@ import (
 
 	"github.com/SyndicateProtocol/op-translator/internal/config"
 	"github.com/SyndicateProtocol/op-translator/internal/rpc-clients"
+	"github.com/SyndicateProtocol/op-translator/internal/types"
 	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/rs/zerolog/log"
@@ -35,7 +36,7 @@ func Init(cfg config.IConfig) *OPTranslator {
 	}
 }
 
-func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, transactionDetailFlag bool) (any, error) {
+func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, transactionDetailFlag bool) (types.Block, error) {
 	log.Info().Msg("-- HIT eth_getBlockByNumber")
 	block, err := t.settlementChain.GetBlockByNumber(ctx, blockNumber, transactionDetailFlag)
 	if err != nil {
@@ -45,7 +46,7 @@ func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string,
 	return block, nil
 }
 
-func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash, transactionDetailFlag bool) (any, error) {
+func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash, transactionDetailFlag bool) (types.Block, error) {
 	log.Info().Msg("-- HIT eth_getBlockByHash")
 	block, err := t.settlementChain.GetBlockByHash(ctx, blockHash, transactionDetailFlag)
 	if err != nil {

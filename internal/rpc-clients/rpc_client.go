@@ -5,6 +5,7 @@ import (
 
 	"context"
 
+	"github.com/SyndicateProtocol/op-translator/internal/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/rs/zerolog/log"
@@ -25,8 +26,8 @@ func Connect(address string) (*RPCClient, error) {
 
 type IRPCClient interface {
 	CloseConnection()
-	GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (any, error)
-	GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (any, error)
+	GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error)
+	GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (types.Block, error)
 }
 
 func (c *RPCClient) CloseConnection() {
@@ -34,9 +35,9 @@ func (c *RPCClient) CloseConnection() {
 	log.Debug().Msgf("RPC connection closed")
 }
 
-func (c *RPCClient) GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (any, error) {
+func (c *RPCClient) GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error) {
 	// TODO (SEQ-137): Revisit block interface. Keeping it as flexible and simple as possible for now
-	var block any
+	var block types.Block
 	err := c.CallContext(ctx, &block, "eth_getBlockByNumber", number, withTransactions)
 	if err != nil {
 		return nil, err
@@ -44,9 +45,9 @@ func (c *RPCClient) GetBlockByNumber(ctx context.Context, number string, withTra
 	return block, nil
 }
 
-func (c *RPCClient) GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (any, error) {
+func (c *RPCClient) GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (types.Block, error) {
 	// TODO (SEQ-137): Revisit block interface. Keeping it as flexible and simple as possible for now
-	var block any
+	var block types.Block
 	err := c.CallContext(ctx, &block, "eth_getBlockByHash", hash, withTransactions)
 	if err != nil {
 		return nil, err

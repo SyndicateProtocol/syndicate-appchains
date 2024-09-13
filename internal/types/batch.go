@@ -1,18 +1,17 @@
-package translator
+package types
 
 import (
 	"bytes"
 	"compress/zlib"
 
-	"github.com/SyndicateProtocol/op-translator/internal/config"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-// Frame version byte is 0x00
-// Documentation: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#batcher-transaction-format
-const FrameVersionByte = 0x00
+// Batch version byte is 0x00
+// Documentation: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#batch-format
+const BatchVersionByte = 0x00
 
 type Batch struct { //nolint:govet // order is necessary for correct RLP encoding
 	ParentHash      common.Hash
@@ -35,7 +34,7 @@ func NewBatch(parentHash common.Hash, epochNumber uint64, epochHash common.Hash,
 func (b *Batch) encode() ([]byte, error) {
 	buf := new(bytes.Buffer)
 
-	err := buf.WriteByte(FrameVersionByte)
+	err := buf.WriteByte(BatchVersionByte)
 	if err != nil {
 		return nil, err
 	}
@@ -50,8 +49,7 @@ func (b *Batch) encode() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (b *Batch) ToFrames(cfg config.IConfig) ([]*Frame, error) {
-	frameSize := cfg.FrameSize()
+func (b *Batch) ToFrames(frameSize int) ([]*Frame, error) {
 	encodedBatch, err := b.encode()
 	if err != nil {
 		return nil, err
