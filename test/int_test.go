@@ -7,9 +7,9 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/SyndicateProtocol/op-translator/internal/config"
 	"github.com/SyndicateProtocol/op-translator/internal/server"
 	"github.com/SyndicateProtocol/op-translator/internal/translator"
+	"github.com/SyndicateProtocol/op-translator/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -25,13 +25,11 @@ func TestIntegrationSuite(t *testing.T) {
 // Simple test that includes the 2 RPC endpoints which OP-node will hit
 // TODO update this going forward
 func TestOPNodeCalls(t *testing.T) {
-	mockCfg := &config.Config{
-		Port:                8080,
-		SettlementChainAddr: "http://localhost:8545",
-		SequencingChainAddr: "http://localhost:8545",
-	}
-	opTranslator := translator.Init(mockCfg)
-	s, err := server.TranslatorHandler(mockCfg, opTranslator)
+	mockConfig := &mocks.MockConfig{}
+	mockConfig.On("SettlementChainAddr").Return("http://localhost:8545")
+	mockConfig.On("SequencingChainAddr").Return("http://localhost:8545")
+	opTranslator := translator.Init(mockConfig)
+	s, err := server.TranslatorHandler(mockConfig, opTranslator)
 	assert.NoError(t, err)
 
 	// eth_getBlockByNumber

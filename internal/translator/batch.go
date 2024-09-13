@@ -4,15 +4,11 @@ import (
 	"bytes"
 	"compress/zlib"
 
+	"github.com/SyndicateProtocol/op-translator/internal/config"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"
 )
-
-// TODO (SEQ-104): Move to config
-// Max possible frame size is 1,000,000
-// Documentation: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#frame-format
-const FrameSize = 1024
 
 // Frame version byte is 0x00
 // Documentation: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#batcher-transaction-format
@@ -54,7 +50,8 @@ func (b *Batch) encode() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (b *Batch) ToFrames() ([]*Frame, error) {
+func (b *Batch) ToFrames(cfg config.IConfig) ([]*Frame, error) {
+	frameSize := cfg.FrameSize()
 	encodedBatch, err := b.encode()
 	if err != nil {
 		return nil, err
@@ -65,7 +62,7 @@ func (b *Batch) ToFrames() ([]*Frame, error) {
 		return nil, err
 	}
 
-	return toFrames(channel)
+	return toFrames(channel, frameSize)
 }
 
 func toChannel(batch []byte) ([]byte, error) {
@@ -87,8 +84,8 @@ func toChannel(batch []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func toFrames(channel []byte) ([]*Frame, error) {
-	numFrames := (len(channel) + FrameSize - 1) / FrameSize
+func toFrames(channel []byte, frameSize int) ([]*Frame, error) {
+	numFrames := (len(channel) + frameSize - 1) / frameSize
 	frames := make([]*Frame, numFrames)
 
 	var frameNum uint16
@@ -99,8 +96,8 @@ func toFrames(channel []byte) ([]*Frame, error) {
 	}
 
 	frameNum = 0
-	for i := 0; i < len(channel); i += FrameSize {
-		end := i + FrameSize
+	for i := 0; i < len(channel); i += frameSize {
+		end := i + frameSize
 		if end > len(channel) {
 			end = len(channel)
 		}

@@ -11,14 +11,13 @@ import (
 
 	"github.com/SyndicateProtocol/op-translator/internal/config"
 	t "github.com/SyndicateProtocol/op-translator/internal/translator"
-
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/rs/zerolog/log"
 )
 
-func TranslatorHandler(cfg *config.Config, translator any) (*http.ServeMux, error) {
+func TranslatorHandler(cfg config.IConfig, translator any) (*http.ServeMux, error) {
 	// Setup proxy
-	parsedURL, err := url.Parse(cfg.SettlementChainAddr)
+	parsedURL, err := url.Parse(cfg.SettlementChainAddr())
 	if err != nil {
 		return nil, err
 	}
@@ -75,8 +74,8 @@ func TranslatorRouter(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *http
 }
 
 func Start(cfg *config.Config, router *http.ServeMux) {
-	log.Debug().Msgf("Starting JSON-RPC server on port %d", cfg.Port)
-	err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), router) //nolint:gosec // TODO refactor for performance anyway
+	log.Debug().Msgf("Starting JSON-RPC server on port %d", cfg.Port())
+	err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port()), router) //nolint:gosec // TODO refactor for performance anyway
 	if err != nil {
 		log.Error().
 			Err(err).

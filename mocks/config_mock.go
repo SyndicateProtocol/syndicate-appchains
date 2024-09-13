@@ -1,11 +1,32 @@
 package mocks
 
-import "github.com/SyndicateProtocol/op-translator/internal/config"
+import (
+	"github.com/stretchr/testify/mock"
+)
 
-const TESTINGPORT = 8080
+const TestingPort = 8080
+const TestingFrameSize = 1024
 
-var ConfigMock = &config.Config{
-	Port:                TESTINGPORT,
-	SettlementChainAddr: "http://localhost:8545",
-	SequencingChainAddr: "http://localhost:8545",
+type MockConfig struct {
+	mock.Mock
+}
+
+func (m *MockConfig) SettlementChainAddr() string {
+	args := m.Called()
+	return args.Get(0).(string)
+}
+func (m *MockConfig) SequencingChainAddr() string {
+	args := m.Called()
+	return args.Get(0).(string)
+}
+func (m *MockConfig) Port() int {
+	m.Called()
+	// return args.Get(0).(int) // bring this back for more sophisticated testing
+	return TestingPort
+}
+
+func (m *MockConfig) FrameSize() int {
+	m.Called()
+	// return args.Get(0).(int) // bring this back for more sophisticated testing
+	return TestingFrameSize
 }

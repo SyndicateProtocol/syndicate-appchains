@@ -7,15 +7,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/SyndicateProtocol/op-translator/internal/config"
 	"github.com/SyndicateProtocol/op-translator/mocks"
 	"github.com/stretchr/testify/assert"
 )
 
-func getMocks() (*config.Config, *mocks.Translator) {
-	mockTranslator := &mocks.Translator{}
-
-	return mocks.ConfigMock, mockTranslator
+func getMocks() (*mocks.MockConfig, *mocks.Translator) {
+	return &mocks.MockConfig{}, &mocks.Translator{}
 }
 
 func TestParseMethod(t *testing.T) {
@@ -41,6 +38,7 @@ func TestParseMethod(t *testing.T) {
 
 func TestHealthEndpoint(t *testing.T) {
 	mockCfg, mockTranslator := getMocks()
+	mockCfg.On("SettlementChainAddr").Return("http://localhost:8545")
 
 	router, err := TranslatorHandler(mockCfg, mockTranslator)
 	assert.NoError(t, err)
@@ -71,7 +69,7 @@ func TestProxyEndpoint(t *testing.T) {
 	}))
 	defer mockBackend.Close()
 
-	mockCfg.SettlementChainAddr = mockBackend.URL
+	mockCfg.On("SettlementChainAddr").Return(mockBackend.URL)
 
 	router, err := TranslatorHandler(mockCfg, mockTranslator)
 	assert.NoError(t, err)
@@ -94,6 +92,7 @@ func TestProxyEndpoint(t *testing.T) {
 
 func TestTranslatedEndpoint(t *testing.T) {
 	mockCfg, mockTranslator := getMocks()
+	mockCfg.On("SettlementChainAddr").Return("http://localhost:8545")
 
 	router, err := TranslatorHandler(mockCfg, mockTranslator)
 	assert.NoError(t, err)

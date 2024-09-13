@@ -11,8 +11,10 @@ import (
 )
 
 func TestInit(t *testing.T) {
-	cfg := mocks.ConfigMock
-	translator := Init(cfg)
+	mockConfig := mocks.MockConfig{}
+	mockConfig.On("SettlementChainAddr").Return("http://localhost:8545")
+	mockConfig.On("SequencingChainAddr").Return("http://localhost:8545")
+	translator := Init(&mockConfig)
 	assert.NotNil(t, translator)
 }
 

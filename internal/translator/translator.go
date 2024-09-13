@@ -15,14 +15,14 @@ type OPTranslator struct {
 	sequencingChain rpc.IRPCClient
 }
 
-func Init(cfg *config.Config) *OPTranslator {
-	settlementChain, err := rpc.NewSettlementClient(cfg.SettlementChainAddr)
+func Init(cfg config.IConfig) *OPTranslator {
+	settlementChain, err := rpc.NewSettlementClient(cfg.SettlementChainAddr())
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize settlement chain")
 	}
 	defer settlementChain.Client.CloseConnection() // Close the client connection when done
 
-	sequencingChain, err := rpc.NewSequencingClient(cfg.SequencingChainAddr)
+	sequencingChain, err := rpc.NewSequencingClient(cfg.SequencingChainAddr())
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize sequencing chain")
 	}

@@ -5,9 +5,12 @@ import (
 	"io"
 	"testing"
 
+	"github.com/SyndicateProtocol/op-translator/mocks"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 )
+
+const frameSizeTest = 1024
 
 func mockBatch() *Batch {
 	return &Batch{
@@ -57,15 +60,23 @@ func TestToChannel(t *testing.T) {
 
 func randData(size int) []byte {
 	bytes := make([]byte, size)
-	io.ReadFull(rand.Reader, bytes) //nolint:errcheck // random test data
+	_, _ = io.ReadFull(rand.Reader, bytes)
 	return bytes
 }
 
-func TestToFrames(t *testing.T) {
+func TestToFrames_Public(t *testing.T) {
+	batch := mockBatch()
+	mockConfig := &mocks.MockConfig{}
+	mockConfig.On("FrameSize").Return(frameSizeTest)
+	_, err := batch.ToFrames(mockConfig)
+	assert.NoError(t, err)
+}
+
+func TestToFrames_Private(t *testing.T) {
 	t.Run("1 frame data size", func(t *testing.T) {
 		data := []byte("data")
 
-		frames, err := toFrames(data)
+		frames, err := toFrames(data, frameSizeTest)
 		assert.NoError(t, err)
 
 		assert.Len(t, frames, 1)
@@ -78,9 +89,9 @@ func TestToFrames(t *testing.T) {
 	})
 
 	t.Run("2 frame data size", func(t *testing.T) {
-		data := randData(FrameSize + 1)
+		data := randData(frameSizeTest + 1)
 
-		frames, err := toFrames(data)
+		frames, err := toFrames(data, frameSizeTest)
 		assert.NoError(t, err)
 
 		assert.Len(t, frames, 2)
@@ -90,8 +101,8 @@ func TestToFrames(t *testing.T) {
 		assert.Equal(t, uint16(0), frames[0].FrameNumber)
 		assert.Equal(t, uint16(1), frames[1].FrameNumber)
 
-		assert.Equal(t, data[:FrameSize], frames[0].Data)
-		assert.Equal(t, data[FrameSize:], frames[1].Data)
+		assert.Equal(t, data[:frameSizeTest], frames[0].Data)
+		assert.Equal(t, data[frameSizeTest:], frames[1].Data)
 
 		assert.Equal(t, false, frames[0].IsLast)
 		assert.Equal(t, true, frames[1].IsLast)
