@@ -2,10 +2,10 @@ package config
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/SyndicateProtocol/op-translator/internal/constants"
 	"github.com/hashicorp/go-multierror"
 	"github.com/stretchr/testify/assert"
 )
@@ -23,6 +23,8 @@ func TestValidateConfigValues(t *testing.T) {
 				frameSize:           100,
 				sequencingChainAddr: "http://example.com",
 				settlementChainAddr: "https://example.org",
+				logLevel:            constants.Info.String(),
+				pretty:              false,
 			},
 			expectedErrors: nil,
 		},
@@ -33,6 +35,8 @@ func TestValidateConfigValues(t *testing.T) {
 				frameSize:           100,
 				sequencingChainAddr: "http://example.com",
 				settlementChainAddr: "https://example.org",
+				logLevel:            constants.Info.String(),
+				pretty:              false,
 			},
 			expectedErrors: []string{"port must be a positive number"},
 		},
@@ -43,6 +47,8 @@ func TestValidateConfigValues(t *testing.T) {
 				frameSize:           0,
 				sequencingChainAddr: "http://example.com",
 				settlementChainAddr: "https://example.org",
+				logLevel:            constants.Info.String(),
+				pretty:              false,
 			},
 			expectedErrors: []string{"frameSize must be a positive number"},
 		},
@@ -53,6 +59,8 @@ func TestValidateConfigValues(t *testing.T) {
 				frameSize:           100,
 				sequencingChainAddr: "not a valid url",
 				settlementChainAddr: "https://example.org",
+				logLevel:            constants.Info.String(),
+				pretty:              false,
 			},
 			expectedErrors: []string{"invalid URL for sequencing chain address"},
 		},
@@ -63,8 +71,22 @@ func TestValidateConfigValues(t *testing.T) {
 				frameSize:           100,
 				sequencingChainAddr: "http://example.com",
 				settlementChainAddr: "not a valid url",
+				logLevel:            constants.Info.String(),
+				pretty:              false,
 			},
 			expectedErrors: []string{"invalid URL for settlement chain address"},
+		},
+		{
+			name: "Invalid log level",
+			config: Config{
+				port:                1234,
+				frameSize:           100,
+				sequencingChainAddr: "http://example.com",
+				settlementChainAddr: "http://example.com2",
+				logLevel:            "OTHER",
+				pretty:              false,
+			},
+			expectedErrors: []string{"invalid log level"},
 		},
 		{
 			name: "Multiple invalid fields",
@@ -73,6 +95,8 @@ func TestValidateConfigValues(t *testing.T) {
 				frameSize:           0,
 				sequencingChainAddr: "invalid",
 				settlementChainAddr: "also invalid",
+				logLevel:            constants.Info.String(),
+				pretty:              false,
 			},
 			expectedErrors: []string{
 				"port must be a positive number",
@@ -100,10 +124,8 @@ func TestValidateConfigValues(t *testing.T) {
 					assert.Equal(t, len(tt.expectedErrors), len(merr.Errors), "Expected %d errors, but got %d", len(tt.expectedErrors), len(merr.Errors))
 
 					for _, expectedErr := range tt.expectedErrors {
-						fmt.Println(expectedErr)
 						found := false
 						for _, err := range merr.Errors {
-							fmt.Println(err.Error())
 							if strings.Contains(err.Error(), expectedErr) {
 								found = true
 								break

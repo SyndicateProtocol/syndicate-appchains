@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/SyndicateProtocol/op-translator/internal/constants"
 	"github.com/hashicorp/go-multierror"
 	"github.com/knadh/koanf/parsers/dotenv"
 	"github.com/knadh/koanf/providers/file"
@@ -28,15 +29,19 @@ var (
 type Config struct {
 	settlementChainAddr string `koanf:"settlement_chain_addr"`
 	sequencingChainAddr string `koanf:"sequencing_chain_addr"`
+	logLevel            string `koanf:"log_level"`
 	port                int    `koanf:"port"`
 	frameSize           int    `koanf:"frame_size"`
+	pretty              bool   `koanf:"pretty"`
 }
 
 type IConfig interface {
 	SettlementChainAddr() string
 	SequencingChainAddr() string
+	LogLevel() string
 	Port() int
 	FrameSize() int
+	Pretty() bool
 }
 
 // setCLIFlags sets all valid CLI flags for the app
@@ -44,14 +49,19 @@ func setCLIFlags(f *pflag.FlagSet) {
 	f.Int("port", defaultPort, "Server port number for the app")
 	f.String("settlement_chain_addr", "https://sepolia.base.org", "Settlement chain address")
 	f.String("sequencing_chain_addr", "https://sepolia.base.org", "Sequencing chain address")
+	f.String("log_level", constants.Info.String(), "Log level for the app")
 	f.Int("frame_size", defaultFrameSize, "Size of each frame in bytes. Max is 1,000,000")
+	f.Bool("pretty", false, "Pretty print JSON log responses")
 }
 
+// hydrateFromConfMap sets the Config values from the koanf conf map
 func hydrateFromConfMap(config *Config) {
 	config.port = k.Int("port")
 	config.settlementChainAddr = k.String("settlement_chain_addr")
 	config.sequencingChainAddr = k.String("sequencing_chain_addr")
 	config.frameSize = k.Int("frame_size")
+	config.logLevel = k.String("log_level")
+	config.pretty = k.Bool("pretty")
 }
 
 func Init() *Config {
@@ -82,6 +92,7 @@ func Init() *Config {
 		log.Error().Err(err).Msg("error loading default values")
 	}
 
+	// Set config values
 	var config Config
 	hydrateFromConfMap(&config)
 
@@ -114,6 +125,10 @@ func validateConfigValues(config Config) (result error) {
 	if err != nil {
 		result = multierror.Append(result, fmt.Errorf("invalid URL for settlement chain address: %w", err))
 	}
+	if !constants.IsValidLogLevel(config.logLevel) {
+		result = multierror.Append(result, errors.New("invalid log level"))
+	}
+
 	return result
 }
 
@@ -131,4 +146,10 @@ func (c *Config) Port() int {
 
 func (c *Config) FrameSize() int {
 	return c.frameSize
+}
+func (c *Config) LogLevel() string {
+	return c.logLevel
+}
+func (c *Config) Pretty() bool {
+	return c.pretty
 }

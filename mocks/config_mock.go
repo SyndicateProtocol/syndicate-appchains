@@ -24,9 +24,16 @@ func (m *MockConfig) Port() int {
 	// return args.Get(0).(int) // bring this back for more sophisticated testing
 	return TestingPort
 }
-
 func (m *MockConfig) FrameSize() int {
 	m.Called()
 	// return args.Get(0).(int) // bring this back for more sophisticated testing
 	return TestingFrameSize
+}
+func (m *MockConfig) LogLevel() string {
+	args := m.Called()
+	return args.Get(0).(string)
+}
+func (m *MockConfig) Pretty() bool {
+	args := m.Called()
+	return args.Get(0).(bool)
 }

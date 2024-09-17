@@ -10,6 +10,7 @@ import (
 	"net/url"
 
 	"github.com/SyndicateProtocol/op-translator/internal/config"
+	"github.com/SyndicateProtocol/op-translator/internal/constants"
 	t "github.com/SyndicateProtocol/op-translator/internal/translator"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/rs/zerolog/log"
@@ -31,14 +32,40 @@ func TranslatorHandler(cfg config.IConfig, translator any) (*http.ServeMux, erro
 	}
 
 	// Setup routing
-	router := TranslatorRouter(translatorRPC, parsedURL, proxy)
+	logLevel := constants.ToLogLevel(cfg.LogLevel())
+	router := TranslatorRouter(logLevel, translatorRPC, parsedURL, proxy)
 
 	return router, nil
 }
 
-func TranslatorRouter(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *httputil.ReverseProxy) *http.ServeMux {
+func TranslatorRouter(logLevel constants.LogLevel, translatorRPC *rpc.Server, parsedURL *url.URL, proxy *httputil.ReverseProxy) *http.ServeMux {
+	loggingMiddleware := NoOpMiddleware
+	if logLevel == constants.Debug {
+		loggingMiddleware = VerboseLoggingMiddleware
+	}
+
 	router := http.NewServeMux()
-	router.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/", loggingMiddleware(
+		rpcEndpointsHandler(translatorRPC, parsedURL, proxy)))
+	router.HandleFunc("/health", loggingMiddleware(
+		healthcheckHandler()))
+	return router
+}
+
+func healthcheckHandler() func(w http.ResponseWriter, _ *http.Request) {
+	return func(w http.ResponseWriter, _ *http.Request) {
+		log.Info().Msg("-- HIT /health")
+		status := "Healthy"
+		w.WriteHeader(http.StatusOK)
+		err := json.NewEncoder(w).Encode(map[string]string{"status": status})
+		if err != nil {
+			return
+		}
+	}
+}
+
+func rpcEndpointsHandler(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *httputil.ReverseProxy) func(w http.ResponseWriter, r *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Ethereum JSON-RPC uses POST requests", http.StatusMethodNotAllowed)
 			return
@@ -59,18 +86,7 @@ func TranslatorRouter(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *http
 		r.Header.Set("X-Forwarded-Host", r.Header.Get("Host"))
 		r.Host = parsedURL.Host
 		proxy.ServeHTTP(w, r)
-	})
-
-	router.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
-		log.Info().Msg("-- HIT /health")
-		status := "Healthy"
-		w.WriteHeader(http.StatusOK)
-		err := json.NewEncoder(w).Encode(map[string]string{"status": status})
-		if err != nil {
-			return
-		}
-	})
-	return router
+	}
 }
 
 func Start(cfg *config.Config, router *http.ServeMux) {

@@ -28,6 +28,7 @@ func TestOPNodeCalls(t *testing.T) {
 	mockConfig := &mocks.MockConfig{}
 	mockConfig.On("SettlementChainAddr").Return("http://localhost:8545")
 	mockConfig.On("SequencingChainAddr").Return("http://localhost:8545")
+	mockConfig.On("LogLevel").Return("info")
 	opTranslator := translator.Init(mockConfig)
 	s, err := server.TranslatorHandler(mockConfig, opTranslator)
 	assert.NoError(t, err)

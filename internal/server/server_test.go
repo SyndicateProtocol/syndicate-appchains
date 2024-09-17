@@ -39,6 +39,7 @@ func TestParseMethod(t *testing.T) {
 func TestHealthEndpoint(t *testing.T) {
 	mockCfg, mockTranslator := getMocks()
 	mockCfg.On("SettlementChainAddr").Return("http://localhost:8545")
+	mockCfg.On("LogLevel").Return("info")
 
 	router, err := TranslatorHandler(mockCfg, mockTranslator)
 	assert.NoError(t, err)
@@ -61,6 +62,7 @@ func TestHealthEndpoint(t *testing.T) {
 
 func TestProxyEndpoint(t *testing.T) {
 	mockCfg, mockTranslator := getMocks()
+	mockCfg.On("LogLevel").Return("info")
 
 	mockBackend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -92,6 +94,7 @@ func TestProxyEndpoint(t *testing.T) {
 
 func TestTranslatedEndpoint(t *testing.T) {
 	mockCfg, mockTranslator := getMocks()
+	mockCfg.On("LogLevel").Return("info")
 	mockCfg.On("SettlementChainAddr").Return("http://localhost:8545")
 
 	router, err := TranslatorHandler(mockCfg, mockTranslator)
