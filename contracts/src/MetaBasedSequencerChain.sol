@@ -12,6 +12,13 @@ contract MetabasedSequencerChain is RequireListManager {
     /// @dev Thrown when the transaction form is invalid.
     error InvalidTransactionForm();
 
+    /// @notice Emits a TransactionProcessed event without additional processing
+    /// @dev it assumes that the validation is done outise the contract, i.e. op-translator
+    /// @param encodedTxn The encoded transaction data
+    function emitTransactionProcessed(bytes calldata encodedTxn) public {
+        emit TransactionProcessed(msg.sender, encodedTxn);
+    }
+
     /// @notice Processes a single encoded transaction.
     /// @param encodedTxn The encoded transaction data.
     function processTransaction(bytes calldata encodedTxn) public {

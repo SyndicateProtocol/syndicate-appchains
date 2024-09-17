@@ -35,8 +35,8 @@ $ make deploy-based-sequencerchain-frame
 
 | Contract Name           | Address                                    |
 | ----------------------- | ------------------------------------------ |
-| MetabasedSequencerChain | 0x73Ba7D784d13Ec0070a4Ea6F49Ff57dc007Bb48d |
-| AlwaysAllowedModule     | 0x0324b4d8F786e11206F82e016DD4480de2332cF3 |
+| MetabasedSequencerChain | 0x0E3E7d53c6451D62CE9f86201743587419Dc88Be |
+| AlwaysAllowedModule     | 0x33aB24E0a47A7aAe869755420950A6326e3CB9F3 |
 
 #### Optimism
 
