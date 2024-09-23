@@ -51,3 +51,4 @@ $ make deploy-based-sequencerchain-frame
 | ----------------------- | ------------------------------------------ |
 | MetabasedSequencerChain | 0xcFc46cEBB3eAEc9b5776e3FDe5879125B8BBA05d |
 | AlwaysAllowedModule     | 0x471584f0B8e35faEB2a618BD58A62316D8882d63 |
+| L3BackfillData          | 0xA67d13E3227B68bFc96DB9f5AFe7197ca32F0033 |

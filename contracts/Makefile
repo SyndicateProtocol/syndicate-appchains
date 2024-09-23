@@ -35,6 +35,11 @@ add-batch-transactions-to-metabased-sequencerchain-localhost :; forge script scr
 # run tx limit test against OP Mainnet or Base Sepolia
 # and save output to file
 # need to change target network in the test file
+test-tx-limit :; forge test --match-contract MetabaseSequencerChainIntegrationTest -vv > test/integration/metabase-tx-limit-data/optimism_test_output_$(date +%Y%m%d_%H%M%S).log 2>&1
+
 test-tx-limit :; forge test --match-contract MetabaseSequencerChainIntegrationTest -vv > test/integration/metabase-tx-limit-data/optimism_test_output_$(date +%Y%m%d_%H%M%S).md 2>&1
 
 test-events-limit :; forge test --match-contract MetabaseSequencerChainEventLimitTest -vv > test/integration/metabase-events-limit-data/base_sepolia_test_output_$(date +%Y%m%d_%H%M%S).md 2>&1
+
+# deploy L3BackfillData to Metabased Testnet
+deploy-l3-backfill-data :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/L3BackfillData.sol:L3BackfillData --constructor-args ${ADMIN} ${MANAGER}
