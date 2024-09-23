@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // BatcherTransactionVersionByte 0x00 is the version for frames
@@ -11,6 +13,10 @@ import (
 const BatcherTransactionVersionByte = 0x00
 
 type Block map[string]any
+
+func (b Block) IsEmpty() bool {
+	return len(b) == 0
+}
 
 func (b Block) GetBlockHash() (string, error) {
 	blockHash, ok := b["hash"].(string)
@@ -30,10 +36,28 @@ func (b Block) GetBlockNumber() (string, error) {
 	return blockNum, nil
 }
 
-func (b Block) appendTransaction(txn any) error {
+func (b Block) GetBlockTimestamp() (string, error) {
+	timestamp, ok := b["timestamp"].(string)
+	if !ok {
+		return "", fmt.Errorf("parsing error: block number")
+	}
+
+	return timestamp, nil
+}
+
+func (b Block) GetTransactions() ([]any, error) {
 	transactions, ok := b["transactions"].([]any)
 	if !ok {
-		return fmt.Errorf("parsing error: transactions")
+		return nil, fmt.Errorf("parsing error: transactions")
+	}
+
+	return transactions, nil
+}
+
+func (b Block) appendTransaction(txn any) error {
+	transactions, err := b.GetTransactions()
+	if err != nil {
+		return fmt.Errorf("error appending txn to batch: %w", err)
 	}
 
 	transactions = append(transactions, txn)
@@ -42,9 +66,9 @@ func (b Block) appendTransaction(txn any) error {
 	return nil
 }
 
-func (b Block) AppendFrames(from, to string, frames []*Frame) error {
+func (b Block) AppendFrames(from, to common.Address, frames []*Frame) error {
 	if len(frames) == 0 {
-		return fmt.Errorf("no frames to append")
+		return nil
 	}
 
 	blockNum, err := b.GetBlockNumber()
@@ -65,11 +89,11 @@ func (b Block) AppendFrames(from, to string, frames []*Frame) error {
 	}
 	calldata := "0x" + hex.EncodeToString(buf.Bytes())
 
-	txn := NewBatcherTransaction(blockHash, blockNum, from, to, calldata)
+	txn := NewBatcherTransaction(blockHash, blockNum, from.String(), to.String(), calldata)
 
 	err = b.appendTransaction(txn)
 	if err != nil {
-		return fmt.Errorf("error appending txn to batch: %w", err)
+		return err
 	}
 
 	return nil

@@ -3,6 +3,7 @@ package types
 import (
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -52,7 +53,7 @@ func TestAppendTransactions_ParsingError(t *testing.T) {
 	err := block.appendTransaction(any(nil))
 
 	assert.Error(t, err)
-	assert.EqualError(t, err, "parsing error: transactions")
+	assert.EqualError(t, err, "error appending txn to batch: parsing error: transactions")
 }
 
 func TestAppendFramesToBlock_Success(t *testing.T) {
@@ -64,8 +65,8 @@ func TestAppendFramesToBlock_Success(t *testing.T) {
 		"transactions": []any(nil),
 	}
 
-	from := "0x123"
-	to := "0x456"
+	from := common.HexToAddress("0x123")
+	to := common.HexToAddress("0x456")
 
 	err := block.AppendFrames(from, to, frames)
 
@@ -86,12 +87,12 @@ func TestAppendFramesToBlock_EmptyFrames(t *testing.T) {
 		"transactions": []any(nil),
 	}
 
-	from := "0x123"
-	to := "0x456"
+	from := common.HexToAddress("0x123")
+	to := common.HexToAddress("0x456")
 	frames := []*Frame{}
 
 	err := block.AppendFrames(from, to, frames)
 
-	assert.Error(t, err)
-	assert.EqualError(t, err, "no frames to append")
+	assert.NoError(t, err)
+	assert.Nil(t, block["transactions"])
 }

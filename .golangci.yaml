@@ -34,8 +34,8 @@ linters-settings:
   #      - rangeValCopy
   gofmt:
     rewrite-rules:
-      - pattern: 'interface{}'
-        replacement: 'any'
+      - pattern: "interface{}"
+        replacement: "any"
   goimports:
     local-prefixes: github.com/golangci/golangci-lint
 
@@ -101,7 +101,6 @@ linters:
     - mnd
     - nakedret
     - nilerr
-    - nilnil
     - noctx
     - nolintlint
     - prealloc
@@ -123,6 +122,7 @@ linters:
     - usestdlibvars
     - wastedassign
   disable:
+    - nilnil
     - dupl
     - lll
     - whitespace

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 
+	"github.com/SyndicateProtocol/op-translator/internal/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -21,14 +22,27 @@ type Batch struct { //nolint:govet // order is necessary for correct RLP encodin
 	TransactionList []hexutil.Bytes
 }
 
-func NewBatch(parentHash common.Hash, epochNumber uint64, epochHash common.Hash, timestamp uint64, txs []hexutil.Bytes) *Batch {
+func NewBatch(parentHashStr, epochNumberStr, epochHashStr, timestampStr string, txs []hexutil.Bytes) (*Batch, error) {
+	parentHash := common.HexToHash(parentHashStr)
+	epochHash := common.HexToHash(epochHashStr)
+
+	epochNumber, err := utils.HexToUInt64(epochNumberStr)
+	if err != nil {
+		return nil, err
+	}
+
+	timestamp, err := utils.HexToUInt64(timestampStr)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Batch{
 		ParentHash:      parentHash,
 		EpochNumber:     epochNumber,
 		EpochHash:       epochHash,
 		Timestamp:       timestamp,
 		TransactionList: txs,
-	}
+	}, nil
 }
 
 func (b *Batch) encode() ([]byte, error) {

@@ -7,6 +7,7 @@ import (
 
 	"github.com/SyndicateProtocol/op-translator/internal/types"
 	"github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/rs/zerolog/log"
 )
@@ -28,6 +29,9 @@ type IRPCClient interface {
 	CloseConnection()
 	GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error)
 	GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (types.Block, error)
+	GetBlocksByNumbers(ctx context.Context, numbers []string, withTransactions bool) ([]types.Block, error)
+	GetReceiptsByHashes(ctx context.Context, hashes []common.Hash) ([]*ethtypes.Receipt, error)
+	GetReceiptByHash(ctx context.Context, hash common.Hash) (ethtypes.Receipt, error)
 }
 
 func (c *RPCClient) CloseConnection() {
@@ -53,4 +57,37 @@ func (c *RPCClient) GetBlockByHash(ctx context.Context, hash common.Hash, withTr
 		return nil, err
 	}
 	return block, nil
+}
+
+func (c *RPCClient) GetReceiptByHash(ctx context.Context, hash common.Hash) (ethtypes.Receipt, error) {
+	var receipt ethtypes.Receipt
+	err := c.CallContext(ctx, &receipt, "eth_getTransactionReceipt", hash)
+	if err != nil {
+		return ethtypes.Receipt{}, err
+	}
+	return receipt, nil
+}
+
+func (c *RPCClient) GetBlocksByNumbers(ctx context.Context, numbers []string, withTransactions bool) ([]types.Block, error) {
+	blocks := make([]types.Block, len(numbers))
+	for i, number := range numbers {
+		block, err := c.GetBlockByNumber(ctx, number, withTransactions)
+		if err != nil {
+			return nil, fmt.Errorf("failed on block number=%s, err: %w", number, err)
+		}
+		blocks[i] = block
+	}
+	return blocks, nil
+}
+
+func (c *RPCClient) GetReceiptsByHashes(ctx context.Context, hashes []common.Hash) ([]*ethtypes.Receipt, error) {
+	receipts := make([]*ethtypes.Receipt, len(hashes))
+	for i, hash := range hashes {
+		receipt, err := c.GetReceiptByHash(ctx, hash)
+		if err != nil {
+			return nil, fmt.Errorf("failed on hash=%s, err: %w", hash, err)
+		}
+		receipts[i] = &receipt
+	}
+	return receipts, nil
 }
