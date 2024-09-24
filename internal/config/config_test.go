@@ -10,214 +10,112 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TODO [SEQ-142]: Refactor this test to use shared valid config
+func validConfig() Config {
+	return Config{
+		port:                       1234,
+		frameSize:                  100,
+		sequencingChainAddr:        "http://example.com",
+		settlementChainAddr:        "https://example.org",
+		metaBasedChainAddr:         "https://example.io",
+		logLevel:                   constants.Info.String(),
+		pretty:                     false,
+		sequencingContractAddress:  "0x0000000000000000000000000000000000000000",
+		settlementStartBlock:       1,
+		sequencingStartBlock:       2,
+		sequencePerSettlementBlock: 2,
+	}
+}
+
 func TestValidateConfigValues(t *testing.T) {
 	tests := []struct {
-		name           string
-		expectedErrors []string
-		config         Config
+		configChangeUnderTest func(*Config)
+		name                  string
+		expectedErrors        []string
 	}{
 		{
-			name: "Valid config",
-			config: Config{
-				port:                       1234,
-				frameSize:                  100,
-				sequencingChainAddr:        "http://example.com",
-				settlementChainAddr:        "https://example.org",
-				metaBasedChainAddr:         "https://example.io",
-				logLevel:                   constants.Info.String(),
-				pretty:                     false,
-				sequencingContractAddress:  "0x0000000000000000000000000000000000000000",
-				settlementStartBlock:       1,
-				sequencingStartBlock:       2,
-				sequencePerSettlementBlock: 2,
-			},
-			expectedErrors: nil,
+			name:                  "Valid config",
+			configChangeUnderTest: func(c *Config) {},
+			expectedErrors:        nil,
 		},
 		{
 			name: "Invalid port",
-			config: Config{
-				port:                       0,
-				frameSize:                  100,
-				sequencingChainAddr:        "http://example.com",
-				settlementChainAddr:        "https://example.org",
-				metaBasedChainAddr:         "https://example.io",
-				logLevel:                   constants.Info.String(),
-				pretty:                     false,
-				sequencingContractAddress:  "0x0000000000000000000000000000000000000000",
-				settlementStartBlock:       1,
-				sequencingStartBlock:       2,
-				sequencePerSettlementBlock: 2,
+			configChangeUnderTest: func(c *Config) {
+				c.port = 0
 			},
 			expectedErrors: []string{"port must be a positive number"},
 		},
 		{
 			name: "Invalid frameSize",
-			config: Config{
-				port:                       1234,
-				frameSize:                  0,
-				sequencingChainAddr:        "http://example.com",
-				settlementChainAddr:        "https://example.org",
-				metaBasedChainAddr:         "https://example.io",
-				logLevel:                   constants.Info.String(),
-				pretty:                     false,
-				sequencingContractAddress:  "0x0000000000000000000000000000000000000000",
-				settlementStartBlock:       1,
-				sequencingStartBlock:       2,
-				sequencePerSettlementBlock: 2,
+			configChangeUnderTest: func(c *Config) {
+				c.frameSize = 0
 			},
 			expectedErrors: []string{"frameSize must be a positive number"},
 		},
 		{
 			name: "Invalid sequencingChainAddr",
-			config: Config{
-				port:                       1234,
-				frameSize:                  100,
-				sequencingChainAddr:        "not a valid url",
-				settlementChainAddr:        "https://example.org",
-				metaBasedChainAddr:         "https://example.io",
-				logLevel:                   constants.Info.String(),
-				pretty:                     false,
-				sequencingContractAddress:  "0x0000000000000000000000000000000000000000",
-				settlementStartBlock:       1,
-				sequencingStartBlock:       2,
-				sequencePerSettlementBlock: 2,
+			configChangeUnderTest: func(c *Config) {
+				c.sequencingChainAddr = "invalid sequencing chain address"
 			},
 			expectedErrors: []string{"invalid URL for sequencing chain address"},
 		},
 		{
 			name: "Invalid settlementChainAddr",
-			config: Config{
-				port:                       1234,
-				frameSize:                  100,
-				sequencingChainAddr:        "http://example.com",
-				settlementChainAddr:        "not a valid url",
-				metaBasedChainAddr:         "https://example.io",
-				logLevel:                   constants.Info.String(),
-				pretty:                     false,
-				sequencingContractAddress:  "0x0000000000000000000000000000000000000000",
-				settlementStartBlock:       1,
-				sequencingStartBlock:       2,
-				sequencePerSettlementBlock: 2,
+			configChangeUnderTest: func(c *Config) {
+				c.settlementChainAddr = "invalid settlement chain address"
 			},
 			expectedErrors: []string{"invalid URL for settlement chain address"},
 		},
 		{
 			name: "Invalid metaBasedChainAddr",
-			config: Config{
-				port:                       1234,
-				frameSize:                  100,
-				sequencingChainAddr:        "http://example.com",
-				settlementChainAddr:        "https://example.org",
-				metaBasedChainAddr:         "not a valid url",
-				logLevel:                   constants.Info.String(),
-				pretty:                     false,
-				sequencingContractAddress:  "0x0000000000000000000000000000000000000000",
-				settlementStartBlock:       1,
-				sequencingStartBlock:       2,
-				sequencePerSettlementBlock: 2,
+			configChangeUnderTest: func(c *Config) {
+				c.metaBasedChainAddr = "invalid meta based chain address"
 			},
 			expectedErrors: []string{"invalid URL for meta based chain address"},
 		},
 		{
 			name: "Invalid log level",
-			config: Config{
-				port:                       1234,
-				frameSize:                  100,
-				sequencingChainAddr:        "http://example.com",
-				settlementChainAddr:        "http://example.com2",
-				metaBasedChainAddr:         "https://example.io",
-				logLevel:                   "OTHER",
-				pretty:                     false,
-				sequencingContractAddress:  "0x0000000000000000000000000000000000000000",
-				settlementStartBlock:       1,
-				sequencingStartBlock:       2,
-				sequencePerSettlementBlock: 2,
+			configChangeUnderTest: func(c *Config) {
+				c.logLevel = "OTHER"
 			},
 			expectedErrors: []string{"invalid log level"},
 		},
 		{
 			name: "Invalid settlementStartBlock",
-			config: Config{
-				port:                       1234,
-				frameSize:                  100,
-				sequencingChainAddr:        "http://example.com",
-				settlementChainAddr:        "https://example.org",
-				metaBasedChainAddr:         "https://example.io",
-				logLevel:                   constants.Info.String(),
-				pretty:                     false,
-				sequencingContractAddress:  "0x0000000000000000000000000000000000000000",
-				settlementStartBlock:       0,
-				sequencingStartBlock:       2,
-				sequencePerSettlementBlock: 2,
+			configChangeUnderTest: func(c *Config) {
+				c.settlementStartBlock = 0
 			},
 			expectedErrors: []string{"settlementStartBlock must be a positive number"},
 		},
 		{
 			name: "Invalid sequencingStartBlock",
-			config: Config{
-				port:                       1234,
-				frameSize:                  100,
-				sequencingChainAddr:        "http://example.com",
-				settlementChainAddr:        "https://example.org",
-				metaBasedChainAddr:         "https://example.io",
-				logLevel:                   constants.Info.String(),
-				pretty:                     false,
-				sequencingContractAddress:  "0x0000000000000000000000000000000000000000",
-				settlementStartBlock:       1,
-				sequencingStartBlock:       0,
-				sequencePerSettlementBlock: 2,
+			configChangeUnderTest: func(c *Config) {
+				c.sequencingStartBlock = 0
 			},
 			expectedErrors: []string{"sequencingStartBlock must be a positive number"},
 		},
 		{
-			name: "Invalid ratio",
-			config: Config{
-				port:                       1234,
-				frameSize:                  100,
-				sequencingChainAddr:        "http://example.com",
-				settlementChainAddr:        "https://example.org",
-				metaBasedChainAddr:         "https://example.io",
-				logLevel:                   constants.Info.String(),
-				pretty:                     false,
-				sequencingContractAddress:  "0x0000000000000000000000000000000000000000",
-				settlementStartBlock:       1,
-				sequencingStartBlock:       2,
-				sequencePerSettlementBlock: 0,
+			name: "Invalid sequencePerSettlementBlock",
+			configChangeUnderTest: func(c *Config) {
+				c.sequencePerSettlementBlock = 0
 			},
 			expectedErrors: []string{"sequencePerSettlementBlock must be a positive number"},
 		},
 		{
 			name: "Invalid sequencingContractAddress",
-			config: Config{
-				port:                       1234,
-				frameSize:                  100,
-				sequencingChainAddr:        "http://example.com",
-				settlementChainAddr:        "https://example.org",
-				metaBasedChainAddr:         "https://example.io",
-				logLevel:                   constants.Info.String(),
-				pretty:                     false,
-				sequencingContractAddress:  "not a valid address",
-				settlementStartBlock:       1,
-				sequencingStartBlock:       2,
-				sequencePerSettlementBlock: 2,
+			configChangeUnderTest: func(c *Config) {
+				c.sequencingContractAddress = "not a valid address"
 			},
 			expectedErrors: []string{"sequencingContractAddress must be a valid hex address"},
 		},
 		{
 			name: "Multiple invalid fields",
-			config: Config{
-				port:                       -1,
-				frameSize:                  0,
-				sequencingChainAddr:        "invalid",
-				settlementChainAddr:        "also invalid",
-				metaBasedChainAddr:         "https://example.io",
-				logLevel:                   constants.Info.String(),
-				pretty:                     false,
-				sequencingContractAddress:  "0x0000000000000000000000000000000000000000",
-				settlementStartBlock:       1,
-				sequencingStartBlock:       2,
-				sequencePerSettlementBlock: 0,
+			configChangeUnderTest: func(c *Config) {
+				c.port = -1
+				c.frameSize = 0
+				c.sequencingChainAddr = "invalid"
+				c.settlementChainAddr = "also invalid"
+				c.metaBasedChainAddr = "https://example.io"
+				c.sequencePerSettlementBlock = 0
 			},
 			expectedErrors: []string{
 				"port must be a positive number",
@@ -231,7 +129,9 @@ func TestValidateConfigValues(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := validateConfigValues(&tt.config)
+			cfg := validConfig()
+			tt.configChangeUnderTest(&cfg)
+			result := validateConfigValues(&cfg)
 
 			if tt.expectedErrors == nil {
 				assert.NoError(t, result, "Expected no error, but got: %v", result)
