@@ -74,7 +74,7 @@ func (b *Batch) ToFrames(frameSize int) ([]*Frame, error) {
 		return nil, err
 	}
 
-	return toFrames(channel, frameSize)
+	return toFrames(channel, frameSize, b.EpochHash)
 }
 
 func toChannel(batch []byte) ([]byte, error) {
@@ -96,13 +96,13 @@ func toChannel(batch []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func toFrames(channel []byte, frameSize int) ([]*Frame, error) {
+func toFrames(channel []byte, frameSize int, blockHash common.Hash) ([]*Frame, error) {
 	numFrames := (len(channel) + frameSize - 1) / frameSize
 	frames := make([]*Frame, numFrames)
 
 	var frameNum uint16
 
-	id, err := NewChannelID()
+	id, err := NewChannelID(blockHash)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +115,6 @@ func toFrames(channel []byte, frameSize int) ([]*Frame, error) {
 		}
 
 		frame := NewFrame(id, frameNum, channel[i:end], end == len(channel))
-
 		frames[frameNum] = frame
 		frameNum++
 	}

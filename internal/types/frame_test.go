@@ -4,19 +4,27 @@ import (
 	"testing"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNewChannelID(t *testing.T) {
-	channelID, err := NewChannelID()
+	blockHash := common.HexToHash("0xabc")
+	channelID, err := NewChannelID(blockHash)
 
 	require.NoError(t, err)
 	require.Equal(t, derive.ChannelIDLength, len(channelID))
 	require.NotEqual(t, derive.ChannelID{}, channelID)
+
+	channelID2, err := NewChannelID(blockHash)
+	require.NoError(t, err)
+	// ChannelID is deterministic based on the block hash
+	require.Equal(t, channelID, channelID2)
 }
 
 func TestNewFrame(t *testing.T) {
-	channelID, err := NewChannelID()
+	blockHash := common.HexToHash("0xabc")
+	channelID, err := NewChannelID(blockHash)
 	require.NoError(t, err, "Failed to generate ChannelID")
 
 	frameNumber := uint16(1)
@@ -32,7 +40,8 @@ func TestNewFrame(t *testing.T) {
 }
 
 func TestNewFrameIsNotLast(t *testing.T) {
-	channelID, err := NewChannelID()
+	blockHash := common.HexToHash("0xabc")
+	channelID, err := NewChannelID(blockHash)
 	require.NoError(t, err, "Failed to generate ChannelID")
 
 	frameNumber := uint16(2)

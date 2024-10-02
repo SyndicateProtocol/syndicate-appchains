@@ -8,7 +8,7 @@ import (
 )
 
 func getTestFrames() []*Frame {
-	id, _ := NewChannelID()
+	id, _ := NewChannelID(common.HexToHash("0xabc"))
 	frame1 := NewFrame(id, 1, []byte("Hello World"), false)
 	frame2 := NewFrame(id, 2, []byte("Hello World"), true)
 

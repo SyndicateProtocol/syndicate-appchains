@@ -72,8 +72,8 @@ func TestToFrames_Public(t *testing.T) {
 func TestToFrames_Private(t *testing.T) {
 	t.Run("1 frame data size", func(t *testing.T) {
 		data := []byte("data")
-
-		frames, err := toFrames(data, frameSizeTest)
+		blockHash := common.HexToHash("0xabc")
+		frames, err := toFrames(data, frameSizeTest, blockHash)
 		assert.NoError(t, err)
 
 		assert.Len(t, frames, 1)
@@ -87,8 +87,8 @@ func TestToFrames_Private(t *testing.T) {
 
 	t.Run("2 frame data size", func(t *testing.T) {
 		data := randData(frameSizeTest + 1)
-
-		frames, err := toFrames(data, frameSizeTest)
+		blockHash := common.HexToHash("0xabc")
+		frames, err := toFrames(data, frameSizeTest, blockHash)
 		assert.NoError(t, err)
 
 		assert.Len(t, frames, 2)

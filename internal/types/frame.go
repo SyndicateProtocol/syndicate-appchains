@@ -1,9 +1,9 @@
 package types
 
 import (
-	"crypto/rand"
-
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 type Frame struct {
@@ -14,12 +14,11 @@ type Frame struct {
 const IsLastByte = 0x01
 const IsNotLastByte = 0x00
 
-func NewChannelID() (derive.ChannelID, error) {
+func NewChannelID(blockHash common.Hash) (derive.ChannelID, error) {
 	id := make([]byte, derive.ChannelIDLength)
-	_, err := rand.Read(id)
-	if err != nil {
-		return derive.ChannelID{}, err
-	}
+	// Make Channel id deterministic based on block hash
+	hashed := crypto.Keccak256(blockHash.Bytes())
+	copy(id, hashed[:derive.ChannelIDLength])
 
 	return derive.ChannelID(id), nil
 }
