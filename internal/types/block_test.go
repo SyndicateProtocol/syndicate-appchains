@@ -50,7 +50,7 @@ func TestAppendTransactions_ParsingError(t *testing.T) {
 		"transactions": "invalid", // Invalid type, should be []any
 	}
 
-	err := block.appendTransaction(any(nil))
+	err := block.appendTransaction(&BatcherTransaction{}, false)
 
 	assert.Error(t, err)
 	assert.EqualError(t, err, "error appending txn to batch: parsing error: transactions")
@@ -68,7 +68,7 @@ func TestAppendFramesToBlock_Success(t *testing.T) {
 	from := common.HexToAddress("0x123")
 	to := common.HexToAddress("0x456")
 
-	err := block.AppendFrames(from, to, frames)
+	err := block.AppendFrames(from, to, frames, false)
 
 	assert.NoError(t, err)
 	assert.Equal(t, "0x1", block["number"])
@@ -78,6 +78,32 @@ func TestAppendFramesToBlock_Success(t *testing.T) {
 
 	assert.True(t, ok)
 	assert.Len(t, transactions, 1)
+	assert.IsType(t, "", transactions[0])
+}
+
+func TestAppendFramesToBlockWithTransactionDetail_Success(t *testing.T) {
+	frames := getTestFrames()
+
+	block := Block{
+		"number":       "0x1",
+		"hash":         "0xabc",
+		"transactions": []any(nil),
+	}
+
+	from := common.HexToAddress("0x123")
+	to := common.HexToAddress("0x456")
+
+	err := block.AppendFrames(from, to, frames, true)
+
+	assert.NoError(t, err)
+	assert.Equal(t, "0x1", block["number"])
+	assert.Equal(t, "0xabc", block["hash"])
+
+	transactions, ok := block["transactions"].([]any)
+
+	assert.True(t, ok)
+	assert.Len(t, transactions, 1)
+	assert.IsType(t, BatcherTransaction{}, transactions[0])
 }
 
 func TestAppendFramesToBlock_EmptyFrames(t *testing.T) {
@@ -91,7 +117,7 @@ func TestAppendFramesToBlock_EmptyFrames(t *testing.T) {
 	to := common.HexToAddress("0x456")
 	frames := []*Frame{}
 
-	err := block.AppendFrames(from, to, frames)
+	err := block.AppendFrames(from, to, frames, false)
 
 	assert.NoError(t, err)
 	assert.Nil(t, block["transactions"])

@@ -54,19 +54,23 @@ func (b Block) GetTransactions() ([]any, error) {
 	return transactions, nil
 }
 
-func (b Block) appendTransaction(txn any) error {
+func (b Block) appendTransaction(txn *BatcherTransaction, transactionDetailFlag bool) error {
 	transactions, err := b.GetTransactions()
 	if err != nil {
 		return fmt.Errorf("error appending txn to batch: %w", err)
 	}
+	if transactionDetailFlag {
+		transactions = append(transactions, *txn)
+	} else {
+		transactions = append(transactions, txn.Hash)
+	}
 
-	transactions = append(transactions, txn)
 	b["transactions"] = transactions
 
 	return nil
 }
 
-func (b Block) AppendFrames(from, to common.Address, frames []*Frame) error {
+func (b Block) AppendFrames(from, to common.Address, frames []*Frame, transactionDetailFlag bool) error {
 	if len(frames) == 0 {
 		return nil
 	}
@@ -91,7 +95,7 @@ func (b Block) AppendFrames(from, to common.Address, frames []*Frame) error {
 
 	txn := NewBatcherTransaction(blockHash, blockNum, from.String(), to.String(), calldata)
 
-	err = b.appendTransaction(txn)
+	err = b.appendTransaction(txn, transactionDetailFlag)
 	if err != nil {
 		return err
 	}

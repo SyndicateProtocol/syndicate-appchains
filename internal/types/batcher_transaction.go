@@ -18,8 +18,8 @@ type BatcherTransaction struct {
 	S                string `json:"s"`
 }
 
-func NewBatcherTransaction(blockHash, blockNumber, from, to, input string) BatcherTransaction {
-	return BatcherTransaction{
+func NewBatcherTransaction(blockHash, blockNumber, from, to, input string) *BatcherTransaction {
+	return &BatcherTransaction{
 		BlockHash:        blockHash,
 		BlockNumber:      blockNumber,
 		From:             from,
