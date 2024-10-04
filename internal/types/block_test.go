@@ -42,7 +42,7 @@ func TestAppendTransactions_ParsingError(t *testing.T) {
 		"transactions": "invalid", // Invalid type, should be []any
 	}
 
-	err := block.AppendTransaction(&ethtypes.Transaction{}, false)
+	err := block.AppendTransaction(&ethtypes.Transaction{})
 
 	assert.Error(t, err)
 	assert.EqualError(t, err, "error appending txn to batch: parsing error: transactions")

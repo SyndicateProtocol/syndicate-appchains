@@ -35,7 +35,7 @@ func Init(cfg config.IConfig) *OPTranslator {
 	}
 }
 
-func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block, transactionDetailFlag bool) (types.Block, error) {
+func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (types.Block, error) {
 	if block.IsEmpty() {
 		return nil, nil
 	}
@@ -85,7 +85,7 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block, tr
 	}
 	log.Info().Msgf("Signed transaction: %v", signedTxn)
 
-	err = block.AppendTransaction(signedTxn, transactionDetailFlag)
+	err = block.AppendTransaction(signedTxn)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,10 @@ func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string,
 		log.Error().Err(err).Msg("Failed to get block by number")
 		return nil, err
 	}
-	return t.translateBlock(ctx, block, transactionDetailFlag)
+	if !transactionDetailFlag {
+		return block, nil
+	}
+	return t.translateBlock(ctx, block)
 }
 
 func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash, transactionDetailFlag bool) (types.Block, error) {
@@ -111,7 +114,10 @@ func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash
 		log.Error().Err(err).Msg("Failed to get block by hash")
 		return nil, err
 	}
-	return t.translateBlock(ctx, block, transactionDetailFlag)
+	if !transactionDetailFlag {
+		return block, nil
+	}
+	return t.translateBlock(ctx, block)
 }
 
 func (t *OPTranslator) Close() {

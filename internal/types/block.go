@@ -52,17 +52,12 @@ func (b Block) GetTransactions() ([]any, error) {
 	return transactions, nil
 }
 
-func (b Block) AppendTransaction(txn *ethtypes.Transaction, transactionDetailFlag bool) error {
+func (b Block) AppendTransaction(txn *ethtypes.Transaction) error {
 	transactions, err := b.GetTransactions()
 	if err != nil {
 		return fmt.Errorf("error appending txn to batch: %w", err)
 	}
-	if transactionDetailFlag {
-		transactions = append(transactions, txn)
-	} else {
-		transactions = append(transactions, txn.Hash)
-	}
-
+	transactions = append(transactions, txn)
 	b["transactions"] = transactions
 
 	return nil
