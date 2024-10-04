@@ -7,6 +7,7 @@ import (
 
 	"github.com/SyndicateProtocol/op-translator/contracts/l2"
 	"github.com/SyndicateProtocol/op-translator/internal/config"
+	"github.com/SyndicateProtocol/op-translator/internal/constants"
 	"github.com/SyndicateProtocol/op-translator/internal/rpc-clients"
 	"github.com/SyndicateProtocol/op-translator/internal/types"
 	"github.com/SyndicateProtocol/op-translator/internal/utils"
@@ -94,6 +95,7 @@ func (m *MetaBasedBatchProvider) getLinkedBlocks(blockNumStr string) ([]string, 
 
 // NOTE [SEQ-144]: THIS ASSUMES THAT THE L3 HAS THE SAME BLOCK TIME AS THE SETTLEMENT L2
 func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNumStr string) (string, error) {
+	log.Debug().Msgf("Getting parent block hash for block number %s", blockNumStr)
 	blockNum, err := utils.HexToInt(blockNumStr)
 	if err != nil {
 		return "", err
@@ -103,12 +105,25 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 		return "", errors.New("block number before start block")
 	}
 
+	if blockNum == m.settlementStartBlock {
+		return constants.ZeroHash, nil
+	}
+	log.Debug().Msgf("Settlement start block: %d", m.settlementStartBlock)
+
 	parentBlockNum := blockNum - m.settlementStartBlock - 1
 	parentBlockNumHex := utils.IntToHex(parentBlockNum)
 
+	log.Debug().Msgf("Getting block hash for block number %d", parentBlockNum)
+	log.Debug().Msgf("Getting block hash for block number %s", parentBlockNumHex)
 	previousBlock, err := m.metaBasedChain.GetBlockByNumber(ctx, parentBlockNumHex, false)
 	if err != nil {
 		return "", err
+	}
+	log.Debug().Msgf("Previous block: %v", previousBlock)
+
+	// TODO [SEQ-163]: MAYBE REMOVE??
+	if previousBlock.IsEmpty() {
+		return constants.ZeroHash, nil
 	}
 
 	previousBlockHash, err := previousBlock.GetBlockHash()

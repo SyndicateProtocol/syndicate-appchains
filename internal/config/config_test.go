@@ -20,6 +20,8 @@ func validConfig() Config {
 		logLevel:                   constants.Info.String(),
 		pretty:                     false,
 		sequencingContractAddress:  "0x0000000000000000000000000000000000000000",
+		batcherAddress:             "0x0000000000000000000000000000000000000000",
+		batchInboxAddress:          "0x0000000000000000000000000000000000000000",
 		settlementStartBlock:       1,
 		sequencingStartBlock:       2,
 		sequencePerSettlementBlock: 2,
@@ -103,9 +105,23 @@ func TestValidateConfigValues(t *testing.T) {
 		{
 			name: "Invalid sequencingContractAddress",
 			configChangeUnderTest: func(c *Config) {
-				c.sequencingContractAddress = "not a valid address"
+				c.sequencingContractAddress = "invalid sequencing contract address"
 			},
 			expectedErrors: []string{"sequencingContractAddress must be a valid hex address"},
+		},
+		{
+			name: "Invalid batcherAddress",
+			configChangeUnderTest: func(c *Config) {
+				c.batcherAddress = "invalid batcher address"
+			},
+			expectedErrors: []string{"batcherAddress must be a valid hex address"},
+		},
+		{
+			name: "Invalid batchInboxAddress",
+			configChangeUnderTest: func(c *Config) {
+				c.batchInboxAddress = "invalid batch inbox address"
+			},
+			expectedErrors: []string{"batchInboxAddress must be a valid hex address"},
 		},
 		{
 			name: "Multiple invalid fields",

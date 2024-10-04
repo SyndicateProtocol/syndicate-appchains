@@ -8,6 +8,8 @@ const TestingPort = 8080
 const TestingFrameSize = 1024
 
 const TestingSequencingContractAddress = "0x0000000000000000000000000000000000000000"
+const TestingBatcherAddress = "0x0000000000000000000000000000000000000000"
+const TestingBatchInboxAddress = "0x0000000000000000000000000000000000000000"
 const TestingSettlementStartBlock = 1
 const TestingSequencingStartBlock = 2
 const TestingSequencePerSettlementBlock = 2
@@ -50,6 +52,16 @@ func (m *MockConfig) Pretty() bool {
 func (m *MockConfig) SequencingContractAddress() string {
 	m.Called()
 	return TestingSequencingContractAddress
+}
+
+func (m *MockConfig) BatcherAddress() string {
+	m.Called()
+	return TestingBatcherAddress
+}
+
+func (m *MockConfig) BatchInboxAddress() string {
+	m.Called()
+	return TestingBatchInboxAddress
 }
 
 func (m *MockConfig) SettlementStartBlock() int {

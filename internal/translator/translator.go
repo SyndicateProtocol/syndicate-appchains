@@ -6,6 +6,7 @@ import (
 	"github.com/SyndicateProtocol/op-translator/internal/config"
 	"github.com/SyndicateProtocol/op-translator/internal/rpc-clients"
 	"github.com/SyndicateProtocol/op-translator/internal/types"
+	"github.com/SyndicateProtocol/op-translator/internal/utils"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
@@ -15,7 +16,7 @@ type OPTranslator struct {
 	batchProvider       BatchProvider
 	settlementChain     rpc.IRPCClient
 	batcherInboxAddress common.Address
-	sequencerAddress    common.Address
+	batcherAddress      common.Address
 }
 
 func Init(cfg config.IConfig) *OPTranslator {
@@ -28,8 +29,8 @@ func Init(cfg config.IConfig) *OPTranslator {
 
 	return &OPTranslator{
 		settlementChain:     settlementChain.Client,
-		batcherInboxAddress: common.HexToAddress(cfg.SequencingContractAddress()),
-		sequencerAddress:    common.HexToAddress(cfg.SequencingContractAddress()),
+		batcherInboxAddress: common.HexToAddress(cfg.BatchInboxAddress()),
+		batcherAddress:      common.HexToAddress(cfg.BatcherAddress()),
 		batchProvider:       metaBasedBatchProvider,
 	}
 }
@@ -39,11 +40,20 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block, tr
 		return nil, nil
 	}
 
+	num, _ := block.GetBlockNumber()
+	bn, err := utils.HexToUInt64(num)
+	if err != nil {
+		return nil, err
+	}
+	log.Info().Msgf("Block number: %d", bn)
+
 	batch, err := t.batchProvider.GetBatch(ctx, block)
 	if err != nil {
 		return nil, err
 	}
 	log.Debug().Msgf("Batch: %v", batch)
+
+	log.Info().Msgf("Adding batch: %v", batch)
 
 	frames, err := batch.ToFrames(config.MaxFrameSize)
 	if err != nil {
@@ -51,7 +61,31 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block, tr
 	}
 	log.Debug().Msgf("Frames: %v", frames)
 
-	err = block.AppendFrames(t.sequencerAddress, t.batcherInboxAddress, frames, transactionDetailFlag)
+	data, err := types.ToData(frames)
+	if err != nil {
+		return nil, err
+	}
+	log.Debug().Msgf("Data: %v", data)
+
+	blockNum, err := block.GetBlockNumber()
+	if err != nil {
+		return nil, err
+	}
+	blockHash, err := block.GetBlockHash()
+	if err != nil {
+		return nil, err
+	}
+
+	tx := types.NewBatcherTx(blockHash, blockNum, t.batcherAddress.String(), t.batcherInboxAddress.String(), data)
+
+	signer := NewSigner()
+	signedTxn, err := signer.Sign(&tx)
+	if err != nil {
+		return nil, err
+	}
+	log.Info().Msgf("Signed transaction: %v", signedTxn)
+
+	err = block.AppendTransaction(signedTxn, transactionDetailFlag)
 	if err != nil {
 		return nil, err
 	}
@@ -71,6 +105,7 @@ func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string,
 
 func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash, transactionDetailFlag bool) (types.Block, error) {
 	log.Debug().Msg("-- HIT eth_getBlockByHash")
+	log.Info().Msgf("Block number: %s", blockHash.String())
 	block, err := t.settlementChain.GetBlockByHash(ctx, blockHash, transactionDetailFlag)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get block by hash")

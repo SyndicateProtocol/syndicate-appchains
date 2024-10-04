@@ -17,6 +17,8 @@ func TestInit(t *testing.T) {
 	mockConfig.On("SequencingChainAddr").Return("http://localhost:8545")
 	mockConfig.On("MetaBasedChainAddr").Return("http://localhost:8545")
 	mockConfig.On("SequencingContractAddress").Return("0x0000000000000000000000000000000000000000")
+	mockConfig.On("BatcherAddress").Return("0x0000000000000000000000000000000000000000")
+	mockConfig.On("BatchInboxAddress").Return("0x0000000000000000000000000000000000000000")
 	mockConfig.On("SettlementStartBlock").Return("1")
 	mockConfig.On("SequencingStartBlock").Return("2")
 	mockConfig.On("SequencePerSettlementBlock").Return("2")

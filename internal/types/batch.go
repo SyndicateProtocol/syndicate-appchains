@@ -69,7 +69,13 @@ func (b *Batch) ToFrames(frameSize int) ([]*Frame, error) {
 		return nil, err
 	}
 
-	channel, err := toChannel(encodedBatch)
+	buff := bytes.NewBuffer(nil)
+	err = rlp.Encode(buff, encodedBatch)
+	if err != nil {
+		return nil, err
+	}
+
+	channel, err := toChannel(buff.Bytes())
 	if err != nil {
 		return nil, err
 	}

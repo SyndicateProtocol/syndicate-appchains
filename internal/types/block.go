@@ -1,11 +1,9 @@
 package types
 
 import (
-	"bytes"
-	"encoding/hex"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 )
 
 // BatcherTransactionVersionByte 0x00 is the version for frames
@@ -54,51 +52,18 @@ func (b Block) GetTransactions() ([]any, error) {
 	return transactions, nil
 }
 
-func (b Block) appendTransaction(txn *BatcherTransaction, transactionDetailFlag bool) error {
+func (b Block) AppendTransaction(txn *ethtypes.Transaction, transactionDetailFlag bool) error {
 	transactions, err := b.GetTransactions()
 	if err != nil {
 		return fmt.Errorf("error appending txn to batch: %w", err)
 	}
 	if transactionDetailFlag {
-		transactions = append(transactions, *txn)
+		transactions = append(transactions, txn)
 	} else {
 		transactions = append(transactions, txn.Hash)
 	}
 
 	b["transactions"] = transactions
-
-	return nil
-}
-
-func (b Block) AppendFrames(from, to common.Address, frames []*Frame, transactionDetailFlag bool) error {
-	if len(frames) == 0 {
-		return nil
-	}
-
-	blockNum, err := b.GetBlockNumber()
-	if err != nil {
-		return err
-	}
-	blockHash, err := b.GetBlockHash()
-	if err != nil {
-		return err
-	}
-
-	buf := bytes.NewBuffer([]byte{BatcherTransactionVersionByte})
-	for _, frame := range frames {
-		err = frame.MarshalBinary(buf)
-		if err != nil {
-			return fmt.Errorf("error marshaling frame with FrameNumber: %d, :%w", frame.FrameNumber, err)
-		}
-	}
-	calldata := "0x" + hex.EncodeToString(buf.Bytes())
-
-	txn := NewBatcherTransaction(blockHash, blockNum, from.String(), to.String(), calldata)
-
-	err = b.appendTransaction(txn, transactionDetailFlag)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }

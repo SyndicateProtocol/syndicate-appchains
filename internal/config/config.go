@@ -32,6 +32,8 @@ type Config struct {
 	sequencingChainAddr        string `koanf:"sequencing_chain_addr"`
 	metaBasedChainAddr         string `koanf:"meta_based_chain_addr"`
 	sequencingContractAddress  string `koanf:"sequencing_contract_address"`
+	batcherAddress             string `koanf:"batcher_address"`
+	batchInboxAddress          string `koanf:"batch_inbox_address"`
 	logLevel                   string `koanf:"log_level"`
 	settlementStartBlock       int    `koanf:"settlement_start_block"`
 	sequencingStartBlock       int    `koanf:"sequencing_start_block"`
@@ -51,6 +53,8 @@ type IConfig interface {
 	Pretty() bool
 
 	SequencingContractAddress() string
+	BatcherAddress() string
+	BatchInboxAddress() string
 	SettlementStartBlock() int
 	SequencingStartBlock() int
 	SequencePerSettlementBlock() int
@@ -66,6 +70,8 @@ func setCLIFlags(f *pflag.FlagSet) {
 	f.Int("frame_size", defaultFrameSize, "Size of each frame in bytes. Max is 1,000,000")
 	f.Bool("pretty", false, "Pretty print JSON log responses")
 	f.String("sequencing_contract_address", "0x123", "Sequencing contract address")
+	f.String("batcher_address", "0x123", "Batcher address")
+	f.String("batch_inbox_address", "0x123", "Batch inbox address")
 	f.Int("settlement_start_block", 0, "Settlement chain start block")
 	f.Int("sequencing_start_block", 0, "Sequencing chain start block")
 	f.Int("sequence_per_settlement_block", 0, "Number of sequencing blocks per settlement block")
@@ -82,6 +88,8 @@ func hydrateFromConfMap(config *Config) {
 	config.pretty = k.Bool("pretty")
 
 	config.sequencingContractAddress = k.String("sequencing_contract_address")
+	config.batcherAddress = k.String("batcher_address")
+	config.batchInboxAddress = k.String("batch_inbox_address")
 	config.settlementStartBlock = k.Int("settlement_start_block")
 	config.sequencingStartBlock = k.Int("sequencing_start_block")
 	config.sequencePerSettlementBlock = k.Int("sequence_per_settlement_block")
@@ -162,6 +170,14 @@ func validateConfigValues(config *Config) (result error) {
 		result = multierror.Append(result, errors.New("sequencingContractAddress must be a valid hex address"))
 	}
 
+	if !common.IsHexAddress(config.batcherAddress) {
+		result = multierror.Append(result, errors.New("batcherAddress must be a valid hex address"))
+	}
+
+	if !common.IsHexAddress(config.batchInboxAddress) {
+		result = multierror.Append(result, errors.New("batchInboxAddress must be a valid hex address"))
+	}
+
 	if config.sequencePerSettlementBlock <= 0 {
 		result = multierror.Append(result, fmt.Errorf("sequencePerSettlementBlock must be a positive number: %d", config.sequencePerSettlementBlock))
 	}
@@ -205,6 +221,14 @@ func (c *Config) Pretty() bool {
 
 func (c *Config) SequencingContractAddress() string {
 	return c.sequencingContractAddress
+}
+
+func (c *Config) BatcherAddress() string {
+	return c.batcherAddress
+}
+
+func (c *Config) BatchInboxAddress() string {
+	return c.batchInboxAddress
 }
 
 func (c *Config) SettlementStartBlock() int {

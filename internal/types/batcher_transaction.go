@@ -1,39 +1,46 @@
 package types
 
+import (
+	"math/big"
+
+	"github.com/SyndicateProtocol/op-translator/internal/constants"
+	"github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
+)
+
 type BatcherTransaction struct {
-	BlockHash        string `json:"blockHash"`
-	BlockNumber      string `json:"blockNumber"`
-	From             string `json:"from"`
-	To               string `json:"to"`
-	Input            string `json:"input"`
-	Hash             string `json:"hash"`
-	Gas              string `json:"gas"`
-	GasPrice         string `json:"gasPrice"`
-	Nonce            string `json:"nonce"`
-	TransactionIndex string `json:"transactionIndex"`
-	Value            string `json:"value"`
-	Type             string `json:"type"`
-	V                string `json:"v"`
-	R                string `json:"r"`
-	S                string `json:"s"`
+	BlockHash            string `json:"blockHash"`
+	BlockNumber          string `json:"blockNumber"`
+	From                 string `json:"from"`
+	To                   string `json:"to"`
+	Input                string `json:"input"`
+	Hash                 string `json:"hash"`
+	Gas                  string `json:"gas"`
+	GasPrice             string `json:"gasPrice"`
+	Nonce                string `json:"nonce"`
+	TransactionIndex     string `json:"transactionIndex"`
+	Value                string `json:"value"`
+	Type                 string `json:"type"`
+	V                    string `json:"v"`
+	R                    string `json:"r"`
+	S                    string `json:"s"`
+	YParity              string `json:"yParity"`
+	ChainID              string `json:"chainId"`
+	MaxPriorityFeePerGas string `json:"maxPriorityFeePerGas"`
+	MaxFeePerGas         string `json:"maxFeePerGas"`
 }
 
-func NewBatcherTransaction(blockHash, blockNumber, from, to, input string) *BatcherTransaction {
-	return &BatcherTransaction{
-		BlockHash:        blockHash,
-		BlockNumber:      blockNumber,
-		From:             from,
-		To:               to,
-		Input:            input,
-		Hash:             "0x0000000000000000000000000000000000000000000000000000000000000000",
-		Gas:              "0x0",
-		GasPrice:         "0x0",
-		Nonce:            "0x0",
-		TransactionIndex: "0x0",
-		Value:            "0x0",
-		Type:             "0x0",
-		V:                "0x0",
-		R:                "0x0",
-		S:                "0x0",
-	}
+func NewBatcherTx(blockHash, blockNumber, from, to string, input []byte) ethtypes.Transaction {
+	tx := ethtypes.DynamicFeeTx{}
+	tx.ChainID = big.NewInt(constants.ConfigChainID)
+	tx.Nonce = 0
+	tx.Gas = 0
+	tx.GasTipCap = big.NewInt(0)
+	tx.GasFeeCap = big.NewInt(0)
+	tx.Value = big.NewInt(0)
+	tx.Data = input
+	toAddr := common.HexToAddress(to)
+	tx.To = &toAddr
+
+	return *ethtypes.NewTx(&tx)
 }

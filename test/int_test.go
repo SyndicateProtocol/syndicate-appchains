@@ -31,6 +31,8 @@ func TestOPNodeCalls(t *testing.T) {
 	mockConfig.On("MetaBasedChainAddr").Return("http://localhost:8545")
 	mockConfig.On("LogLevel").Return("info")
 	mockConfig.On("SequencingContractAddress").Return("0x123")
+	mockConfig.On("BatcherAddress").Return("0x123")
+	mockConfig.On("BatchInboxAddress").Return("0x123")
 	mockConfig.On("SequencingStartBlock").Return(1)
 	mockConfig.On("SettlementStartBlock").Return(1)
 	mockConfig.On("SequencePerSettlementBlock").Return(1)

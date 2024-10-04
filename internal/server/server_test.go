@@ -76,7 +76,7 @@ func TestProxyEndpoint(t *testing.T) {
 	router, err := TranslatorHandler(mockCfg, mockTranslator)
 	assert.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{"method": "eth_getTransactionReceipt"}`))
+	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{"method": "eth_getBalance"}`))
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, req)
