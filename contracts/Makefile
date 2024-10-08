@@ -42,4 +42,8 @@ test-tx-limit :; forge test --match-contract MetabaseSequencerChainIntegrationTe
 test-events-limit :; forge test --match-contract MetabaseSequencerChainEventLimitTest -vv > test/integration/metabase-events-limit-data/base_sepolia_test_output_$(date +%Y%m%d_%H%M%S).md 2>&1
 
 # deploy L3BackfillData to Metabased Testnet
-deploy-l3-backfill-data :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/L3BackfillData.sol:L3BackfillData --constructor-args ${ADMIN} ${MANAGER}
+deploy-l3-backfill-data :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillData.sol:L3BackfillData --constructor-args ${ADMIN} ${MANAGER}
+
+deploy-l3-backfill-storage :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillStorage.sol:L3BackfillStorage --constructor-args ${ADMIN} ${MANAGER}
+
+deploy-l3-backfill-mapper :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillMapper.sol:L3BackfillMapper --constructor-args ${ADMIN} ${MANAGER}

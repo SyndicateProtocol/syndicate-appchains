@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {Test} from "forge-std/Test.sol";
-import {L3BackfillData} from "src/L3BackfillData.sol";
+import {L3BackfillData} from "src/backfill/L3BackfillData.sol";
 
 import {IAccessControl} from "openzeppelin-contracts/contracts/access/IAccessControl.sol";
 
