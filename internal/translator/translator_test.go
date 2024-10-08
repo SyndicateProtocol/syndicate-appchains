@@ -38,8 +38,8 @@ func TestGetBlockByNumber(t *testing.T) {
 
 	mockClient.On("GetBlockByNumber", ctx, number, true).Return(settlementBlock, nil)
 	translator := &OPTranslator{
-		settlementChain: mockClient,
-		batchProvider:   &mocks.MockBatchProvider{},
+		SettlementChain: mockClient,
+		BatchProvider:   &mocks.MockBatchProvider{},
 	}
 
 	block, err := translator.GetBlockByNumber(ctx, number, true)
@@ -73,8 +73,8 @@ func TestGetBlockByHash(t *testing.T) {
 
 	mockClient.On("GetBlockByHash", ctx, hash, true).Return(settlementBlock, nil)
 	translator := &OPTranslator{
-		settlementChain: mockClient,
-		batchProvider:   &mocks.MockBatchProvider{},
+		SettlementChain: mockClient,
+		BatchProvider:   &mocks.MockBatchProvider{},
 	}
 
 	block, err := translator.GetBlockByHash(ctx, hash, true)
