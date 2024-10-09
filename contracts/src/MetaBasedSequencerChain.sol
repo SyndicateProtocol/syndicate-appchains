@@ -6,11 +6,23 @@ import {RequireListManager} from "./RequireListManager.sol";
 /// @title MetabasedSequencerChain
 /// @notice The core contract for sequencing transactions using a modular architecture to determine who is allowed to sequence.
 contract MetabasedSequencerChain is RequireListManager {
+    /// @notice The ID of the L3 chain that this contract is sequencing transactions for.
+    uint256 public immutable l3ChainId;
+
     /// @notice Emitted when a new transaction is processed.
     event TransactionProcessed(address indexed sender, bytes encodedTxn);
 
     /// @dev Thrown when the transaction form is invalid.
     error InvalidTransactionForm();
+
+    /// @notice Constructs the MetabasedSequencerChain contract.
+    /// @param _l3ChainId The ID of the L3 chain that this contract is sequencing transactions for.
+    constructor(uint256 _l3ChainId) RequireListManager() {
+        // chain id zero has no replay protection : https://eips.ethereum.org/EIPS/eip-3788
+        require(_l3ChainId != 0, "L3 chain ID cannot be 0");
+
+        l3ChainId = _l3ChainId;
+    }
 
     /// @notice Emits a TransactionProcessed event without additional processing
     /// @dev it assumes that the validation is done outise the contract, i.e. op-translator

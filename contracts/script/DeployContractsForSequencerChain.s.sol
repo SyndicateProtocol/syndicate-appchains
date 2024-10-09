@@ -12,9 +12,13 @@ import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.so
 contract DeployMetabasedSequencerChain is Script {
     MetabasedSequencerChain public metabasedSequencerChainContract;
 
+    uint256 public l3ChainId;
+
     function run() public {
         vm.startBroadcast();
-        metabasedSequencerChainContract = new MetabasedSequencerChain();
+        l3ChainId = 0; // TODO: Set the L3 chain ID
+
+        metabasedSequencerChainContract = new MetabasedSequencerChain(l3ChainId);
         console.log("Deployed MetabasedSequencerChain", address(metabasedSequencerChainContract));
 
         // Example on how to add/remove the modules to the requireAllList and/or requireAnyList of MetabasedSequencerChain
@@ -118,9 +122,14 @@ contract DeployAlwaysAllowedModule is Script {
 contract DeployMetabasedSequencerChainForTestnet is Script {
     MetabasedSequencerChain public metabasedSequencerChainContract;
 
+    uint256 public l3ChainId;
+
     function run() public {
         vm.startBroadcast();
-        metabasedSequencerChainContract = new MetabasedSequencerChain();
+
+        l3ChainId = 0; // TODO: Set the L3 chain ID
+
+        metabasedSequencerChainContract = new MetabasedSequencerChain(l3ChainId);
         console.log("Deployed MetabasedSequencerChain", address(metabasedSequencerChainContract));
 
         AlwaysAllowedModule alwaysAllowedModule = new AlwaysAllowedModule();

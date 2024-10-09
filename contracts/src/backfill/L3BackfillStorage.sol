@@ -7,6 +7,8 @@ import {AccessControl} from "openzeppelin-contracts/contracts/access/AccessContr
 /// @notice This contract is used to emit events containing L3 chain block and transaction data
 /// @dev This contract uses AccessControl for managing permissions
 contract L3BackfillStorage is AccessControl {
+    uint256 public immutable l3ChainId;
+
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
     event Batch(uint256 indexed l1EpochBlockNumber, uint256 indexed l3BlockNumber, bytes batch);
@@ -14,9 +16,16 @@ contract L3BackfillStorage is AccessControl {
     /// @notice Constructor that sets up the default admin and manager roles
     /// @param admin The address that will be the default admin role
     /// @param manager The address that will be the manager role
-    constructor(address admin, address manager) {
+    /// @param l3ChainId_ The L3 chain ID
+    constructor(address admin, address manager, uint256 l3ChainId_) {
+        require(admin != address(0), "Admin address cannot be 0");
+        require(manager != address(0), "Manager address cannot be 0");
+        // chain id zero has no replay protection : https://eips.ethereum.org/EIPS/eip-3788
+        require(l3ChainId_ != 0, "L3 chain ID cannot be 0");
+
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MANAGER_ROLE, manager);
+        l3ChainId = l3ChainId_;
     }
 
     /// @notice Emits a Batch

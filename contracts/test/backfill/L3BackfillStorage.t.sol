@@ -12,7 +12,8 @@ contract L3BackfillStorageTest is Test {
     function setUp() public {
         manager = address(0x1);
         nonManager = address(0x2);
-        l3Storage = new L3BackfillStorage(manager, manager);
+        uint256 l3ChainId = 10042001;
+        l3Storage = new L3BackfillStorage(manager, manager, l3ChainId);
     }
 
     function testOnlyManagerCanSave() public {

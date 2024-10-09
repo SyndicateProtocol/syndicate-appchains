@@ -10,7 +10,9 @@ contract L3BackfillMapperTest is Test {
 
     function setUp() public {
         manager = address(0x1);
-        mapper = new L3BackfillMapper(manager, manager);
+
+        uint256 l3ChainId = 10042001;
+        mapper = new L3BackfillMapper(manager, manager, l3ChainId);
     }
 
     function testOnlyManagerCanIndex() public {

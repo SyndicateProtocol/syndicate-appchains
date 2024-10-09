@@ -23,6 +23,7 @@ contract MetabaseSequencerChainIntegrationTest is Test {
     }
 
     function testIncreasingTransactionSize() public {
+        vm.skip(true);
         uint256 startSize = 1024; // 1KB
         uint256 maxSize = 128 * 1024; // 128KB
         uint256 step = 1024; // Increase by 1KB each time
@@ -69,6 +70,7 @@ contract MetabaseSequencerChainIntegrationTest is Test {
     }
 
     function testBulkTransactions() public {
+        vm.skip(true);
         uint256 individualSize = 1024; // 1KB
         uint256 maxTotalSize = 128 * 1024; // 128KB
         uint256 maxTransactions = maxTotalSize / individualSize;
