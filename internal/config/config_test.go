@@ -25,6 +25,8 @@ func validConfig() Config {
 		settlementStartBlock:       1,
 		sequencingStartBlock:       2,
 		sequencePerSettlementBlock: 2,
+		batcherPrivateKey:          "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d",
+		settlementChainID:          84532,
 	}
 }
 
@@ -140,6 +142,20 @@ func TestValidateConfigValues(t *testing.T) {
 				"invalid URL for settlement chain address",
 				"sequencePerSettlementBlock must be a positive number",
 			},
+		},
+		{
+			name: "Invalid Batcher Private Key",
+			configChangeUnderTest: func(c *Config) {
+				c.batcherPrivateKey = ""
+			},
+			expectedErrors: []string{"batcherPrivateKey cannot be blank"},
+		},
+		{
+			name: "Invalid Settlement Chain ID",
+			configChangeUnderTest: func(c *Config) {
+				c.settlementChainID = 0
+			},
+			expectedErrors: []string{"settlementChainID must be a positive number: 0"},
 		},
 	}
 

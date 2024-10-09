@@ -34,7 +34,9 @@ type Config struct {
 	sequencingContractAddress  string `koanf:"sequencing_contract_address"`
 	batcherAddress             string `koanf:"batcher_address"`
 	batchInboxAddress          string `koanf:"batch_inbox_address"`
+	batcherPrivateKey          string `koanf:"batcher_private_key"`
 	logLevel                   string `koanf:"log_level"`
+	settlementChainID          int64  `koanf:"settlement_chain_id"`
 	settlementStartBlock       int    `koanf:"settlement_start_block"`
 	sequencingStartBlock       int    `koanf:"sequencing_start_block"`
 	sequencePerSettlementBlock int    `koanf:"sequence_per_settlement_block"`
@@ -55,6 +57,8 @@ type IConfig interface {
 	SequencingContractAddress() string
 	BatcherAddress() string
 	BatchInboxAddress() string
+	BatcherPrivateKey() string
+	SettlementChainID() int64
 	SettlementStartBlock() int
 	SequencingStartBlock() int
 	SequencePerSettlementBlock() int
@@ -75,6 +79,8 @@ func setCLIFlags(f *pflag.FlagSet) {
 	f.Int("settlement_start_block", 0, "Settlement chain start block")
 	f.Int("sequencing_start_block", 0, "Sequencing chain start block")
 	f.Int("sequence_per_settlement_block", 0, "Number of sequencing blocks per settlement block")
+	f.String("batcher_private_key", "", "Batcher private key")
+	f.Int("settlement_chain_id", 1, "Settlement chain id")
 }
 
 // hydrateFromConfMap sets the Config values from the koanf conf map
@@ -93,6 +99,8 @@ func hydrateFromConfMap(config *Config) {
 	config.settlementStartBlock = k.Int("settlement_start_block")
 	config.sequencingStartBlock = k.Int("sequencing_start_block")
 	config.sequencePerSettlementBlock = k.Int("sequence_per_settlement_block")
+	config.batcherPrivateKey = k.String("batcher_private_key")
+	config.settlementChainID = k.Int64("settlement_chain_id")
 }
 
 func Init() *Config {
@@ -190,6 +198,14 @@ func validateConfigValues(config *Config) (result error) {
 		result = multierror.Append(result, fmt.Errorf("sequencingStartBlock must be a positive number: %d", config.sequencingStartBlock))
 	}
 
+	if config.batcherPrivateKey == "" {
+		result = multierror.Append(result, fmt.Errorf("batcherPrivateKey cannot be blank"))
+	}
+
+	if config.settlementChainID <= 0 {
+		result = multierror.Append(result, fmt.Errorf("settlementChainID must be a positive number: %d", config.settlementChainID))
+	}
+
 	return result
 }
 
@@ -241,4 +257,12 @@ func (c *Config) SequencingStartBlock() int {
 
 func (c *Config) SequencePerSettlementBlock() int {
 	return c.sequencePerSettlementBlock
+}
+
+func (c *Config) BatcherPrivateKey() string {
+	return c.batcherPrivateKey
+}
+
+func (c *Config) SettlementChainID() int64 {
+	return c.settlementChainID
 }

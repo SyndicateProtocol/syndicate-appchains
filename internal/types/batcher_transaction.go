@@ -3,7 +3,6 @@ package types
 import (
 	"math/big"
 
-	"github.com/SyndicateProtocol/op-translator/internal/constants"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 )
@@ -30,17 +29,18 @@ type BatcherTransaction struct {
 	MaxFeePerGas         string `json:"maxFeePerGas"`
 }
 
-func NewBatcherTx(blockHash, blockNumber, from, to string, input []byte) ethtypes.Transaction {
-	tx := ethtypes.DynamicFeeTx{}
-	tx.ChainID = big.NewInt(constants.ConfigChainID)
-	tx.Nonce = 0
-	tx.Gas = 0
-	tx.GasTipCap = big.NewInt(0)
-	tx.GasFeeCap = big.NewInt(0)
-	tx.Value = big.NewInt(0)
-	tx.Data = input
+func NewBatcherTx(blockHash, blockNumber, from, to string, input []byte, chainID int64) ethtypes.Transaction {
 	toAddr := common.HexToAddress(to)
-	tx.To = &toAddr
+	tx := ethtypes.DynamicFeeTx{
+		ChainID:   big.NewInt(chainID),
+		Nonce:     0,
+		Gas:       0,
+		GasTipCap: big.NewInt(0),
+		GasFeeCap: big.NewInt(0),
+		Value:     big.NewInt(0),
+		Data:      input,
+		To:        &toAddr,
+	}
 
 	return *ethtypes.NewTx(&tx)
 }

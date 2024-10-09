@@ -2,11 +2,13 @@ package translator
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 
-	"github.com/SyndicateProtocol/op-translator/internal/constants"
+	"github.com/SyndicateProtocol/op-translator/internal/config"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/rs/zerolog/log"
 )
 
 type Signer struct {
@@ -14,23 +16,36 @@ type Signer struct {
 	signer     ethtypes.Signer
 }
 
-// TODO [SEQ-162]: Refactor this and put values in config, and use tests
-func NewSigner() *Signer {
-	key, _ := crypto.HexToECDSA("fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d")
+func NewSigner(cfg config.IConfig) *Signer {
+	key, err := crypto.HexToECDSA(cfg.BatcherPrivateKey())
 
+	if err != nil {
+		log.Panic().Err(err).Msg("Failed to initialize signer")
+	}
+
+	chainID := big.NewInt(cfg.SettlementChainID())
 	return &Signer{
-		signer:     ethtypes.NewCancunSigner(big.NewInt(constants.ConfigChainID)),
+		signer:     ethtypes.NewCancunSigner(chainID),
 		privateKey: key,
 	}
 }
 
 func (s *Signer) Sign(tx *ethtypes.Transaction) (*ethtypes.Transaction, error) {
+	if tx == nil {
+		return nil, fmt.Errorf("transaction is nil")
+	}
+
 	txHash := s.signer.Hash(tx)
 
 	signature, err := crypto.Sign(txHash.Bytes(), s.privateKey)
 	if err != nil {
+		log.Error().Err(err).Msg("Failed to sign the transaction")
 		return nil, err
 	}
 
 	return tx.WithSignature(s.signer, signature)
+}
+
+func (s *Signer) ChainID() int64 {
+	return s.signer.ChainID().Int64()
 }

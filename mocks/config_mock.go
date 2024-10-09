@@ -13,9 +13,26 @@ const TestingBatchInboxAddress = "0x0000000000000000000000000000000000000000"
 const TestingSettlementStartBlock = 1
 const TestingSequencingStartBlock = 2
 const TestingSequencePerSettlementBlock = 2
+const TestingBatcherPrivateKey = "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d"
+const TestingSettlementChainID = 84532
 
 type MockConfig struct {
 	mock.Mock
+}
+
+func InitMockConfig() *MockConfig {
+	mockConfig := &MockConfig{}
+	mockConfig.On("SettlementChainAddr").Return("http://localhost:8545")
+	mockConfig.On("SequencingChainAddr").Return("http://localhost:8545")
+	mockConfig.On("MetaBasedChainAddr").Return("http://localhost:8545")
+	mockConfig.On("LogLevel").Return("info")
+	mockConfig.On("SequencingContractAddress").Return(TestingSequencingContractAddress)
+	mockConfig.On("SequencingStartBlock").Return(TestingSequencingStartBlock)
+	mockConfig.On("SettlementStartBlock").Return(TestingSettlementStartBlock)
+	mockConfig.On("SequencePerSettlementBlock").Return(TestingSequencePerSettlementBlock)
+	mockConfig.On("BatcherPrivateKey").Return(TestingBatcherPrivateKey)
+	mockConfig.On("SettlementChainID").Return(TestingSettlementChainID)
+	return mockConfig
 }
 
 func (m *MockConfig) SettlementChainAddr() string {
@@ -77,4 +94,14 @@ func (m *MockConfig) SequencingStartBlock() int {
 func (m *MockConfig) SequencePerSettlementBlock() int {
 	m.Called()
 	return TestingSequencePerSettlementBlock
+}
+
+func (m *MockConfig) BatcherPrivateKey() string {
+	args := m.Called()
+	return args.String(0)
+}
+
+func (m *MockConfig) SettlementChainID() int64 {
+	m.Called()
+	return TestingSettlementChainID
 }

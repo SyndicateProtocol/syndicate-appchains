@@ -12,8 +12,9 @@ import (
 )
 
 type OPTranslator struct {
-	BatchProvider       BatchProvider
 	SettlementChain     rpc.IRPCClient
+	BatchProvider       BatchProvider
+	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
 }
@@ -25,12 +26,14 @@ func Init(cfg config.IConfig) *OPTranslator {
 	}
 
 	metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg)
+	signer := NewSigner(cfg)
 
 	return &OPTranslator{
 		SettlementChain:     settlementChain.Client,
 		BatcherInboxAddress: common.HexToAddress(cfg.BatchInboxAddress()),
 		BatcherAddress:      common.HexToAddress(cfg.BatcherAddress()),
 		BatchProvider:       metaBasedBatchProvider,
+		Signer:              *signer,
 	}
 }
 
@@ -64,10 +67,9 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, err
 	}
 
-	tx := types.NewBatcherTx(blockHash, blockNum, t.BatcherAddress.String(), t.BatcherInboxAddress.String(), data)
+	tx := types.NewBatcherTx(blockHash, blockNum, t.BatcherAddress.String(), t.BatcherInboxAddress.String(), data, t.Signer.ChainID())
 
-	signer := NewSigner()
-	signedTxn, err := signer.Sign(&tx)
+	signedTxn, err := t.Signer.Sign(&tx)
 	if err != nil {
 		return nil, err
 	}

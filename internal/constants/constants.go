@@ -31,6 +31,3 @@ func ToLogLevel(logLevel string) LogLevel {
 }
 
 const ZeroHash = "0x0000000000000000000000000000000000000000000000000000000000000000"
-
-// TODO [SEQ-162]: Make this configurable
-const ConfigChainID = 84532

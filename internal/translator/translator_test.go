@@ -22,11 +22,14 @@ func TestInit(t *testing.T) {
 	mockConfig.On("SettlementStartBlock").Return("1")
 	mockConfig.On("SequencingStartBlock").Return("2")
 	mockConfig.On("SequencePerSettlementBlock").Return("2")
+	mockConfig.On("BatcherPrivateKey").Return("fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d")
+	mockConfig.On("SettlementChainID").Return(84532)
 	translator := Init(&mockConfig)
 	assert.NotNil(t, translator)
 }
 
 func TestGetBlockByNumber(t *testing.T) {
+	mockConfig := mocks.InitMockConfig()
 	mockClient := new(mocks.MockRPCClient)
 	var number = "0x1"
 	settlementBlock := types.Block{
@@ -40,6 +43,7 @@ func TestGetBlockByNumber(t *testing.T) {
 	translator := &OPTranslator{
 		SettlementChain: mockClient,
 		BatchProvider:   &mocks.MockBatchProvider{},
+		Signer:          *NewSigner(mockConfig),
 	}
 
 	block, err := translator.GetBlockByNumber(ctx, number, true)
@@ -72,9 +76,11 @@ func TestGetBlockByHash(t *testing.T) {
 	hash := common.HexToHash("0xabc")
 
 	mockClient.On("GetBlockByHash", ctx, hash, true).Return(settlementBlock, nil)
+	mockConfig := mocks.InitMockConfig()
 	translator := &OPTranslator{
 		SettlementChain: mockClient,
 		BatchProvider:   &mocks.MockBatchProvider{},
+		Signer:          *NewSigner(mockConfig),
 	}
 
 	block, err := translator.GetBlockByHash(ctx, hash, true)

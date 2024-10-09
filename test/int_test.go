@@ -43,19 +43,6 @@ func postRequest(t *testing.T, s *http.ServeMux, req *http.Request) (map[string]
 	return response, err
 }
 
-func initMockConfig() *mocks.MockConfig {
-	mockConfig := &mocks.MockConfig{}
-	mockConfig.On("SettlementChainAddr").Return("http://localhost:8545")
-	mockConfig.On("SequencingChainAddr").Return("http://localhost:8545")
-	mockConfig.On("MetaBasedChainAddr").Return("http://localhost:8545")
-	mockConfig.On("LogLevel").Return("info")
-	mockConfig.On("SequencingContractAddress").Return("0x123")
-	mockConfig.On("SequencingStartBlock").Return(1)
-	mockConfig.On("SettlementStartBlock").Return(1)
-	mockConfig.On("SequencePerSettlementBlock").Return(1)
-	return mockConfig
-}
-
 func getMockClient() *mocks.MockRPCClient {
 	mockClient := new(mocks.MockRPCClient)
 
@@ -110,7 +97,7 @@ func getMockClient() *mocks.MockRPCClient {
 }
 
 func TestOPNodeCalls(t *testing.T) {
-	mockConfig := initMockConfig()
+	mockConfig := mocks.InitMockConfig()
 	testCases := []struct {
 		expectedResult types.Block
 		requestBody    string
@@ -163,6 +150,7 @@ func TestOPNodeCalls(t *testing.T) {
 			BatcherInboxAddress: common.HexToAddress("0x123"),
 			BatcherAddress:      common.HexToAddress("0x123"),
 			BatchProvider:       &mocks.MockBatchProvider{},
+			Signer:              *translator.NewSigner(mockConfig),
 		}
 
 		s, err := server.TranslatorHandler(mockConfig, opTranslator)
