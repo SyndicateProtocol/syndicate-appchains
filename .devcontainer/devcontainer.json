@@ -1,5 +1,5 @@
 {
-  "name": "Ubuntu Latest LTS Dev Container",
+  "name": "Metabased Dev Container",
   // From https://github.com/devcontainers/images/tree/main/src/base-ubuntu
   // The default image is pinned to Ubuntu Focal 20.04: https://github.com/devcontainers/images/blob/main/src/universal/.devcontainer/Dockerfile#L6
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
@@ -52,6 +52,11 @@
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
+
+  // Update package lists
+  // Without this, just won't be found
+  // After that, initialize the devnet
+  "postCreateCommand": "sudo apt update && sudo apt install -y just && just -f ${containerWorkspaceFolder}/.devcontainer/justfile all",
 
   // Configure tool-specific properties.
   "customizations": {
