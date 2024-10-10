@@ -20,7 +20,7 @@ type OPTranslator struct {
 }
 
 func Init(cfg config.IConfig) *OPTranslator {
-	settlementChain, err := rpc.NewSettlementClient(cfg.SettlementChainAddr())
+	settlementChain, err := rpc.Connect(cfg.SettlementChainAddr())
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize settlement chain")
 	}
@@ -29,7 +29,7 @@ func Init(cfg config.IConfig) *OPTranslator {
 	signer := NewSigner(cfg)
 
 	return &OPTranslator{
-		SettlementChain:     settlementChain.Client,
+		SettlementChain:     settlementChain,
 		BatcherInboxAddress: common.HexToAddress(cfg.BatchInboxAddress()),
 		BatcherAddress:      common.HexToAddress(cfg.BatcherAddress()),
 		BatchProvider:       metaBasedBatchProvider,

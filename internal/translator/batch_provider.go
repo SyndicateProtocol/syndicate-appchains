@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/SyndicateProtocol/op-translator/contracts/l2"
 	"github.com/SyndicateProtocol/op-translator/internal/config"
@@ -45,7 +46,7 @@ type MetaBasedBatchProvider struct {
 }
 
 func InitMetaBasedBatchProvider(cfg config.IConfig) *MetaBasedBatchProvider {
-	sequencingChain, err := rpc.NewSequencingClient(cfg.SequencingChainAddr())
+	sequencingChain, err := rpc.Connect(cfg.SequencingChainAddr())
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize sequencing chain")
 	}
@@ -57,7 +58,7 @@ func InitMetaBasedBatchProvider(cfg config.IConfig) *MetaBasedBatchProvider {
 
 	return &MetaBasedBatchProvider{
 		metaBasedChain:            metaBasedChain,
-		sequencingChain:           sequencingChain.Client,
+		sequencingChain:           sequencingChain,
 		sequencingContractAddress: common.HexToAddress(cfg.SequencingContractAddress()),
 
 		settlementStartBlock:       cfg.SettlementStartBlock(),
@@ -110,28 +111,21 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	}
 	log.Debug().Msgf("Settlement start block: %d", m.settlementStartBlock)
 
-	parentBlockNum := blockNum - m.settlementStartBlock - 1
-	parentBlockNumHex := utils.IntToHex(parentBlockNum)
+	parentBlockNum := uint64(blockNum - m.settlementStartBlock - 1)
 
 	log.Debug().Msgf("Getting block hash for block number %d", parentBlockNum)
-	log.Debug().Msgf("Getting block hash for block number %s", parentBlockNumHex)
-	previousBlock, err := m.metaBasedChain.GetBlockByNumber(ctx, parentBlockNumHex, false)
+	previousBlock, err := m.metaBasedChain.HeaderByNumber(ctx, new(big.Int).SetUint64(parentBlockNum))
 	if err != nil {
 		return "", err
 	}
 	log.Debug().Msgf("Previous block: %v", previousBlock)
 
 	// TODO [SEQ-163]: MAYBE REMOVE??
-	if previousBlock.IsEmpty() {
+	if previousBlock.EmptyBody() {
 		return constants.ZeroHash, nil
 	}
 
-	previousBlockHash, err := previousBlock.GetBlockHash()
-	if err != nil {
-		return "", err
-	}
-
-	return previousBlockHash, nil
+	return previousBlock.Hash().Hex(), nil
 }
 
 func parseTransactionProcessed(txLog *ethtypes.Log) (*l2.TransactionProcessed, error) {
@@ -178,30 +172,7 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 	}
 	log.Debug().Msgf("Translating block number %s and hash %s: linked block numbers: %s", blockNumber, blockHash, seqBlockNumbers)
 
-	seqBlocks, err := m.sequencingChain.GetBlocksByNumbers(ctx, seqBlockNumbers, false)
-	if err != nil {
-		return nil, err
-	}
-	log.Debug().Msgf("Translating block number %s and hash %s: linked blocks: %v", blockNumber, blockHash, seqBlocks)
-
-	var seqTxnHashes []common.Hash
-	for _, seqBlock := range seqBlocks {
-		if seqBlock.IsEmpty() {
-			return nil, nil
-		}
-
-		txnHashes, err2 := seqBlock.GetTransactions()
-		if err2 != nil {
-			return nil, err2
-		}
-
-		for _, txnHash := range txnHashes {
-			seqTxnHashes = append(seqTxnHashes, common.HexToHash(txnHash.(string)))
-		}
-	}
-	log.Debug().Msgf("Translating block number %s and hash %s: transaction hashes: %v", blockNumber, blockHash, seqTxnHashes)
-
-	receipts, err := m.sequencingChain.GetReceiptsByHashes(ctx, seqTxnHashes)
+	receipts, err := m.sequencingChain.BlocksReceiptsByNumbers(ctx, seqBlockNumbers)
 	if err != nil {
 		return nil, err
 	}

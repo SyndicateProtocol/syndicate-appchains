@@ -31,7 +31,7 @@ func TestInit(t *testing.T) {
 func TestGetBlockByNumber(t *testing.T) {
 	mockConfig := mocks.InitMockConfig()
 	mockClient := new(mocks.MockRPCClient)
-	var number = "0x1"
+	number := "0x1"
 	settlementBlock := types.Block{
 		"number":       number,
 		"hash":         "0xabc",
@@ -66,7 +66,7 @@ func TestGetBlockByNumber(t *testing.T) {
 
 func TestGetBlockByHash(t *testing.T) {
 	mockClient := new(mocks.MockRPCClient)
-	var number = "0x1"
+	number := "0x1"
 	settlementBlock := types.Block{
 		"number":       number,
 		"hash":         "0xabc",
