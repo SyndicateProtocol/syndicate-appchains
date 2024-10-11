@@ -1,4 +1,4 @@
-use crate::endpoint;
+use crate::presentation::jsonrpc;
 use jsonrpsee::server::{RpcServiceBuilder, Server, ServerHandle};
 use jsonrpsee::RpcModule;
 use std::net::SocketAddr;
@@ -18,6 +18,6 @@ pub async fn run(port: u16) -> anyhow::Result<(SocketAddr, ServerHandle)> {
 
 fn create_eth_module() -> anyhow::Result<RpcModule<()>> {
     let mut module = RpcModule::new(());
-    module.register_method("eth_sendRawTransaction", endpoint::send_raw_transaction)?;
+    module.register_method("eth_sendRawTransaction", jsonrpc::send_raw_transaction)?;
     Ok(module)
 }

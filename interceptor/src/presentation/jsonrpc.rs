@@ -1,6 +1,6 @@
-use crate::app;
-use crate::json_rpc_errors::JsonRpcErrorCode;
-use crate::json_rpc_errors::JsonRpcErrorCode::InvalidParams;
+use crate::application;
+use crate::presentation::json_rpc_errors::JsonRpcErrorCode;
+use crate::presentation::json_rpc_errors::JsonRpcErrorCode::InvalidParams;
 use alloy::hex;
 use alloy::hex::ToHexExt;
 use bytes::Bytes;
@@ -88,7 +88,7 @@ pub fn send_raw_transaction(
     let bytes = hex::decode(str)?;
     let bytes = Bytes::from(bytes);
 
-    Ok(app::send_raw_transaction(bytes)?.encode_hex_with_prefix())
+    Ok(application::send_raw_transaction(bytes)?.encode_hex_with_prefix())
 }
 
 pub fn rpc_error<S: Serialize>(

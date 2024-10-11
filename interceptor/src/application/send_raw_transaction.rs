@@ -1,7 +1,7 @@
-use crate::endpoint::{rpc_error, JsonRpcError};
-use crate::json_rpc_errors::JsonRpcErrorCode;
-use crate::json_rpc_errors::JsonRpcErrorCode::InvalidRequest;
-use crate::transaction;
+use crate::presentation::json_rpc_errors::JsonRpcErrorCode;
+use crate::presentation::json_rpc_errors::JsonRpcErrorCode::InvalidRequest;
+use crate::presentation::jsonrpc::{rpc_error, JsonRpcError};
+use crate::presentation::transaction;
 use alloy::consensus::{Transaction, TxEnvelope, TxType};
 use alloy::primitives::private::alloy_rlp::Decodable;
 use alloy::primitives::TxHash;
