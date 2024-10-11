@@ -1,0 +1,11 @@
+exclude: vendor|\.pb\.go
+
+repos:
+  - repo: https://github.com/Bahjat/pre-commit-golang
+    rev: v1.0.3
+    hooks:
+      - id: go-fmt-import
+      - id: go-vet
+      - id: go-lint
+      - id: golangci-lint # requires github.com/golangci/golangci-lint
+        args: [--config=.golangci.yaml --allow-parallel-runners]
