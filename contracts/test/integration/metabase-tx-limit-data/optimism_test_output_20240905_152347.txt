@@ -1,0 +1,191 @@
+Compiling 1 files with Solc 0.8.25
+Solc 0.8.25 finished in 1.05s
+Compiler run successful!
+
+Ran 2 tests for test/integration/MetabaseSequencerChainIntegrationTest.t.sol:MetabaseSequencerChainIntegrationTest
+[FAIL. Reason: EvmError: OutOfGas] testBulkTransactions() (gas: 1073720760)
+Logs:
+  Successfully processed bulk transactions. Count: 1 Total size: 1024 bytes. Gas used: 1073308110
+  Successfully processed bulk transactions. Count: 2 Total size: 2048 bytes. Gas used: 1072514946
+  Successfully processed bulk transactions. Count: 3 Total size: 3072 bytes. Gas used: 1071331694
+  Successfully processed bulk transactions. Count: 4 Total size: 4096 bytes. Gas used: 1069755790
+  Successfully processed bulk transactions. Count: 5 Total size: 5120 bytes. Gas used: 1067787162
+  Successfully processed bulk transactions. Count: 6 Total size: 6144 bytes. Gas used: 1065425721
+  Successfully processed bulk transactions. Count: 7 Total size: 7168 bytes. Gas used: 1062671365
+  Successfully processed bulk transactions. Count: 8 Total size: 8192 bytes. Gas used: 1059523978
+  Successfully processed bulk transactions. Count: 9 Total size: 9216 bytes. Gas used: 1055983434
+  Successfully processed bulk transactions. Count: 10 Total size: 10240 bytes. Gas used: 1052049446
+  Successfully processed bulk transactions. Count: 11 Total size: 11264 bytes. Gas used: 1047721908
+  Successfully processed bulk transactions. Count: 12 Total size: 12288 bytes. Gas used: 1043000751
+  Successfully processed bulk transactions. Count: 13 Total size: 13312 bytes. Gas used: 1037885782
+  Successfully processed bulk transactions. Count: 14 Total size: 14336 bytes. Gas used: 1032376803
+  Successfully processed bulk transactions. Count: 15 Total size: 15360 bytes. Gas used: 1026473604
+  Successfully processed bulk transactions. Count: 16 Total size: 16384 bytes. Gas used: 1020175961
+  Successfully processed bulk transactions. Count: 17 Total size: 17408 bytes. Gas used: 1013483609
+  Successfully processed bulk transactions. Count: 18 Total size: 18432 bytes. Gas used: 1006396349
+  Successfully processed bulk transactions. Count: 19 Total size: 19456 bytes. Gas used: 998913891
+  Successfully processed bulk transactions. Count: 20 Total size: 20480 bytes. Gas used: 991036138
+  Successfully processed bulk transactions. Count: 21 Total size: 21504 bytes. Gas used: 982762622
+  Successfully processed bulk transactions. Count: 22 Total size: 22528 bytes. Gas used: 974093041
+  Successfully processed bulk transactions. Count: 23 Total size: 23552 bytes. Gas used: 965027076
+  Successfully processed bulk transactions. Count: 24 Total size: 24576 bytes. Gas used: 955564396
+  Successfully processed bulk transactions. Count: 25 Total size: 25600 bytes. Gas used: 945704601
+  Successfully processed bulk transactions. Count: 26 Total size: 26624 bytes. Gas used: 935447434
+  Successfully processed bulk transactions. Count: 27 Total size: 27648 bytes. Gas used: 924792474
+  Successfully processed bulk transactions. Count: 28 Total size: 28672 bytes. Gas used: 913739334
+  Successfully processed bulk transactions. Count: 29 Total size: 29696 bytes. Gas used: 902287615
+  Successfully processed bulk transactions. Count: 30 Total size: 30720 bytes. Gas used: 890436904
+  Successfully processed bulk transactions. Count: 31 Total size: 31744 bytes. Gas used: 878186775
+  Successfully processed bulk transactions. Count: 32 Total size: 32768 bytes. Gas used: 865536786
+  Successfully processed bulk transactions. Count: 33 Total size: 33792 bytes. Gas used: 852486400
+  Successfully processed bulk transactions. Count: 34 Total size: 34816 bytes. Gas used: 839035313
+  Successfully processed bulk transactions. Count: 35 Total size: 35840 bytes. Gas used: 825182965
+  Successfully processed bulk transactions. Count: 36 Total size: 36864 bytes. Gas used: 810928861
+  Successfully processed bulk transactions. Count: 37 Total size: 37888 bytes. Gas used: 796272493
+  Successfully processed bulk transactions. Count: 38 Total size: 38912 bytes. Gas used: 781213339
+  Successfully processed bulk transactions. Count: 39 Total size: 39936 bytes. Gas used: 765750866
+  Successfully processed bulk transactions. Count: 40 Total size: 40960 bytes. Gas used: 749884522
+  Successfully processed bulk transactions. Count: 41 Total size: 41984 bytes. Gas used: 733613622
+  Successfully processed bulk transactions. Count: 42 Total size: 43008 bytes. Gas used: 716937834
+  Successfully processed bulk transactions. Count: 43 Total size: 44032 bytes. Gas used: 699856450
+  Successfully processed bulk transactions. Count: 44 Total size: 45056 bytes. Gas used: 682368866
+  Successfully processed bulk transactions. Count: 45 Total size: 46080 bytes. Gas used: 664474467
+  Successfully processed bulk transactions. Count: 46 Total size: 47104 bytes. Gas used: 646172621
+  Successfully processed bulk transactions. Count: 47 Total size: 48128 bytes. Gas used: 627462686
+  Successfully processed bulk transactions. Count: 48 Total size: 49152 bytes. Gas used: 608344006
+  Successfully processed bulk transactions. Count: 49 Total size: 50176 bytes. Gas used: 588815732
+  Successfully processed bulk transactions. Count: 50 Total size: 51200 bytes. Gas used: 568877527
+  Successfully processed bulk transactions. Count: 51 Total size: 52224 bytes. Gas used: 548528523
+  Successfully processed bulk transactions. Count: 52 Total size: 53248 bytes. Gas used: 527768009
+  Successfully processed bulk transactions. Count: 53 Total size: 54272 bytes. Gas used: 506595260
+  Successfully processed bulk transactions. Count: 54 Total size: 55296 bytes. Gas used: 485009538
+  Successfully processed bulk transactions. Count: 55 Total size: 56320 bytes. Gas used: 463010091
+  Successfully processed bulk transactions. Count: 56 Total size: 57344 bytes. Gas used: 440596155
+  Successfully processed bulk transactions. Count: 57 Total size: 58368 bytes. Gas used: 417766714
+  Successfully processed bulk transactions. Count: 58 Total size: 59392 bytes. Gas used: 394521438
+  Successfully processed bulk transactions. Count: 59 Total size: 60416 bytes. Gas used: 370859294
+  Successfully processed bulk transactions. Count: 60 Total size: 61440 bytes. Gas used: 346779462
+  Successfully processed bulk transactions. Count: 61 Total size: 62464 bytes. Gas used: 322281110
+  Successfully processed bulk transactions. Count: 62 Total size: 63488 bytes. Gas used: 297363391
+  Successfully processed bulk transactions. Count: 63 Total size: 64512 bytes. Gas used: 272025444
+  Successfully processed bulk transactions. Count: 64 Total size: 65536 bytes. Gas used: 246266396
+  Successfully processed bulk transactions. Count: 65 Total size: 66560 bytes. Gas used: 220085058
+  Successfully processed bulk transactions. Count: 66 Total size: 67584 bytes. Gas used: 193481123
+  Successfully processed bulk transactions. Count: 67 Total size: 68608 bytes. Gas used: 166453384
+  Successfully processed bulk transactions. Count: 68 Total size: 69632 bytes. Gas used: 139000912
+  Successfully processed bulk transactions. Count: 69 Total size: 70656 bytes. Gas used: 111122767
+  Successfully processed bulk transactions. Count: 70 Total size: 71680 bytes. Gas used: 82817993
+  Successfully processed bulk transactions. Count: 71 Total size: 72704 bytes. Gas used: 54085666
+  Successfully processed bulk transactions. Count: 72 Total size: 73728 bytes. Gas used: 24924758
+
+[FAIL. Reason: EvmError: OutOfGas] testIncreasingTransactionSize() (gas: 1073720760)
+Logs:
+  Successfully processed transaction of size: 1024 bytes. Gas used: 1073485803
+  Successfully processed transaction of size: 2048 bytes. Gas used: 1073053567
+  Successfully processed transaction of size: 3072 bytes. Gas used: 1072414354
+  Successfully processed transaction of size: 4096 bytes. Gas used: 1071565614
+  Successfully processed transaction of size: 5120 bytes. Gas used: 1070507269
+  Successfully processed transaction of size: 6144 bytes. Gas used: 1069239248
+  Successfully processed transaction of size: 7168 bytes. Gas used: 1067761445
+  Successfully processed transaction of size: 8192 bytes. Gas used: 1066073770
+  Successfully processed transaction of size: 9216 bytes. Gas used: 1064176087
+  Successfully processed transaction of size: 10240 bytes. Gas used: 1062068222
+  Successfully processed transaction of size: 11264 bytes. Gas used: 1059750077
+  Successfully processed transaction of size: 12288 bytes. Gas used: 1057221522
+  Successfully processed transaction of size: 13312 bytes. Gas used: 1054482365
+  Successfully processed transaction of size: 14336 bytes. Gas used: 1051532459
+  Successfully processed transaction of size: 15360 bytes. Gas used: 1048371580
+  Successfully processed transaction of size: 16384 bytes. Gas used: 1044999566
+  Successfully processed transaction of size: 17408 bytes. Gas used: 1041416159
+  Successfully processed transaction of size: 18432 bytes. Gas used: 1037621182
+  Successfully processed transaction of size: 19456 bytes. Gas used: 1033614345
+  Successfully processed transaction of size: 20480 bytes. Gas used: 1029395457
+  Successfully processed transaction of size: 21504 bytes. Gas used: 1024964192
+  Successfully processed transaction of size: 22528 bytes. Gas used: 1020320347
+  Successfully processed transaction of size: 23552 bytes. Gas used: 1015463560
+  Successfully processed transaction of size: 24576 bytes. Gas used: 1010393571
+  Successfully processed transaction of size: 25600 bytes. Gas used: 1005110118
+  Successfully processed transaction of size: 26624 bytes. Gas used: 999612786
+  Successfully processed transaction of size: 27648 bytes. Gas used: 993901418
+  Successfully processed transaction of size: 28672 bytes. Gas used: 987975486
+  Successfully processed transaction of size: 29696 bytes. Gas used: 981834746
+  Successfully processed transaction of size: 30720 bytes. Gas used: 975478707
+  Successfully processed transaction of size: 31744 bytes. Gas used: 968907117
+  Successfully processed transaction of size: 32768 bytes. Gas used: 962119445
+  Successfully processed transaction of size: 33792 bytes. Gas used: 955115431
+  Successfully processed transaction of size: 34816 bytes. Gas used: 947894504
+  Successfully processed transaction of size: 35840 bytes. Gas used: 940456398
+  Successfully processed transaction of size: 36864 bytes. Gas used: 932800498
+  Successfully processed transaction of size: 37888 bytes. Gas used: 924926532
+  Successfully processed transaction of size: 38912 bytes. Gas used: 916833845
+  Successfully processed transaction of size: 39936 bytes. Gas used: 908522160
+  Successfully processed transaction of size: 40960 bytes. Gas used: 899990776
+  Successfully processed transaction of size: 41984 bytes. Gas used: 891239413
+  Successfully processed transaction of size: 43008 bytes. Gas used: 882267326
+  Successfully processed transaction of size: 44032 bytes. Gas used: 873074232
+  Successfully processed transaction of size: 45056 bytes. Gas used: 863659341
+  Successfully processed transaction of size: 46080 bytes. Gas used: 854022366
+  Successfully processed transaction of size: 47104 bytes. Gas used: 844162471
+  Successfully processed transaction of size: 48128 bytes. Gas used: 834079370
+  Successfully processed transaction of size: 49152 bytes. Gas used: 823772179
+  Successfully processed transaction of size: 50176 bytes. Gas used: 813240610
+  Successfully processed transaction of size: 51200 bytes. Gas used: 802483732
+  Successfully processed transaction of size: 52224 bytes. Gas used: 791501258
+  Successfully processed transaction of size: 53248 bytes. Gas used: 780292207
+  Successfully processed transaction of size: 54272 bytes. Gas used: 768856295
+  Successfully processed transaction of size: 55296 bytes. Gas used: 757192489
+  Successfully processed transaction of size: 56320 bytes. Gas used: 745300508
+  Successfully processed transaction of size: 57344 bytes. Gas used: 733179269
+  Successfully processed transaction of size: 58368 bytes. Gas used: 720828495
+  Successfully processed transaction of size: 59392 bytes. Gas used: 708247049
+  Successfully processed transaction of size: 60416 bytes. Gas used: 695434660
+  Successfully processed transaction of size: 61440 bytes. Gas used: 682390137
+  Successfully processed transaction of size: 62464 bytes. Gas used: 669113215
+  Successfully processed transaction of size: 63488 bytes. Gas used: 655602649
+  Successfully processed transaction of size: 64512 bytes. Gas used: 641858182
+  Successfully processed transaction of size: 65536 bytes. Gas used: 627878511
+  Successfully processed transaction of size: 66560 bytes. Gas used: 613663387
+  Successfully processed transaction of size: 67584 bytes. Gas used: 599211453
+  Successfully processed transaction of size: 68608 bytes. Gas used: 584522469
+  Successfully processed transaction of size: 69632 bytes. Gas used: 569595018
+  Successfully processed transaction of size: 70656 bytes. Gas used: 554428871
+  Successfully processed transaction of size: 71680 bytes. Gas used: 539022553
+  Successfully processed transaction of size: 72704 bytes. Gas used: 523375846
+  Successfully processed transaction of size: 73728 bytes. Gas used: 507487216
+  Successfully processed transaction of size: 74752 bytes. Gas used: 491356455
+  Successfully processed transaction of size: 75776 bytes. Gas used: 474981969
+  Successfully processed transaction of size: 76800 bytes. Gas used: 458363566
+  Successfully processed transaction of size: 77824 bytes. Gas used: 441499587
+  Successfully processed transaction of size: 78848 bytes. Gas used: 424389855
+  Successfully processed transaction of size: 79872 bytes. Gas used: 407032649
+  Successfully processed transaction of size: 80896 bytes. Gas used: 389427807
+  Successfully processed transaction of size: 81920 bytes. Gas used: 371573544
+  Successfully processed transaction of size: 82944 bytes. Gas used: 353469714
+  Successfully processed transaction of size: 83968 bytes. Gas used: 335114468
+  Successfully processed transaction of size: 84992 bytes. Gas used: 316507678
+  Successfully processed transaction of size: 86016 bytes. Gas used: 297647427
+  Successfully processed transaction of size: 87040 bytes. Gas used: 278533606
+  Successfully processed transaction of size: 88064 bytes. Gas used: 259164232
+  Successfully processed transaction of size: 89088 bytes. Gas used: 239539214
+  Successfully processed transaction of size: 90112 bytes. Gas used: 219656504
+  Successfully processed transaction of size: 91136 bytes. Gas used: 199516029
+  Successfully processed transaction of size: 92160 bytes. Gas used: 179115671
+  Successfully processed transaction of size: 93184 bytes. Gas used: 158455381
+  Successfully processed transaction of size: 94208 bytes. Gas used: 137532971
+  Successfully processed transaction of size: 95232 bytes. Gas used: 116348412
+  Successfully processed transaction of size: 96256 bytes. Gas used: 94899446
+  Successfully processed transaction of size: 97280 bytes. Gas used: 73186112
+  Successfully processed transaction of size: 98304 bytes. Gas used: 51206037
+  Successfully processed transaction of size: 99328 bytes. Gas used: 28959240
+  Successfully processed transaction of size: 100352 bytes. Gas used: 6443868
+
+Suite result: FAILED. 0 passed; 2 failed; 0 skipped; finished in 4.23s (6.40s CPU time)
+
+Ran 1 test suite in 4.24s (4.23s CPU time): 0 tests passed, 2 failed, 0 skipped (2 total tests)
+
+Failing tests:
+Encountered 2 failing tests in test/integration/MetabaseSequencerChainIntegrationTest.t.sol:MetabaseSequencerChainIntegrationTest
+[FAIL. Reason: EvmError: OutOfGas] testBulkTransactions() (gas: 1073720760)
+[FAIL. Reason: EvmError: OutOfGas] testIncreasingTransactionSize() (gas: 1073720760)
+
+Encountered a total of 2 failing tests, 0 tests succeeded
