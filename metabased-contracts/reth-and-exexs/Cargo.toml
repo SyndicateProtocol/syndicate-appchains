@@ -1,0 +1,48 @@
+[package]
+name = "op-reth-syn"
+version = "0.1.0"
+publish = false
+edition = "2021"
+
+[dependencies]
+reth = { git = "https://github.com/paradigmxyz/reth", features = ["optimism"] }
+reth-exex = { git = "https://github.com/paradigmxyz/reth" }
+reth-node-api = { git = "https://github.com/paradigmxyz/reth"}
+reth-node-optimism = { git = "https://github.com/paradigmxyz/reth", features = ["optimism"] }
+reth-tracing = { git = "https://github.com/paradigmxyz/reth" }
+reth-primitives = { git = "https://github.com/paradigmxyz/reth", features = ["optimism"]  }
+reth-provider = { git = "https://github.com/paradigmxyz/reth", features = ["optimism"]  }
+alloy = { git = "https://github.com/alloy-rs/alloy", version = "0.1.0", features = [
+  "full",
+  "node-bindings",
+] }
+
+eyre = "0.6.12"
+futures = "0.3.30"
+rand = "0.8"
+dotenv = "0.15"
+serde_json = "1.0"  # Added serde_json dependency
+clap_builder = "4.5.7"
+alloy-primitives = "0.7.7"
+alloy-sol-types = "0.7.7"
+mockall = "0.12.1"
+serde = "1.0.204"
+reqwest = "0.12.5"
+jsonwebtoken = "9.3.0"
+async-trait = "0.1.81"
+again = "0.1.2"
+futures-timer = "0.3.0"
+
+[dev-dependencies]
+reth-exex-test-utils = { git = "https://github.com/paradigmxyz/reth" }
+reth-testing-utils = { git = "https://github.com/paradigmxyz/reth" }
+
+tokio-stream = "0.1.11"
+tokio = { version = "1.38.0", features = ["rt-multi-thread"] }
+tokio-util = { version = "0.7.4", features = ["codec"] }
+
+[patch.crates-io]
+revm = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }
+revm-interpreter = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }
+revm-precompile = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }
+revm-primitives = { git = "https://github.com/bluealloy/revm", rev = "a28a543" }
