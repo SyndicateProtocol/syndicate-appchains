@@ -36,7 +36,7 @@ jobs:
           version: v1.60.3
 
           # Optional: working directory, useful for monorepos
-          # working-directory: somedir
+          working-directory: op-translator
 
           # Optional: golangci-lint command line arguments.
           #
