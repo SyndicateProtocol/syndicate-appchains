@@ -1,4 +1,4 @@
-module github.com/SyndicateProtocol/op-translator
+module github.com/SyndicateProtocol/metabased-rollup/op-translator
 
 go 1.23.0
 
