@@ -8,13 +8,19 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+// BatcherTransactionVersionByte 0x00 is the version for frames
+// Documentation: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#batcher-transaction-format
+const BatcherTransactionVersionByte = 0x00
+
 type Frame struct {
 	derive.Frame
 }
 
 // Boolean values for IsLast byte
-const IsLastByte = 0x01
-const IsNotLastByte = 0x00
+const (
+	IsLastByte    = 0x01
+	IsNotLastByte = 0x00
+)
 
 func NewChannelID(blockHash common.Hash) (derive.ChannelID, error) {
 	id := make([]byte, derive.ChannelIDLength)

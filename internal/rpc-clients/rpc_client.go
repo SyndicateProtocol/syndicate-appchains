@@ -21,6 +21,7 @@ type IRPCClient interface {
 	GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (types.Block, error)
 	BlocksReceiptsByNumbers(ctx context.Context, numbers []string) ([]*ethtypes.Receipt, error)
 	TransactionReceipt(ctx context.Context, hash common.Hash) (*ethtypes.Receipt, error)
+	AsEthClient() *ethclient.Client
 }
 
 type RPCClient struct {
@@ -39,6 +40,10 @@ func Connect(address string) (*RPCClient, error) {
 	log.Debug().Msgf("RPC connection established: %s", address)
 	ethClient := ethclient.NewClient(c)
 	return &RPCClient{Client: ethClient, rawClient: c}, nil
+}
+
+func (c *RPCClient) AsEthClient() *ethclient.Client {
+	return c.Client
 }
 
 func (c *RPCClient) CloseConnection() {

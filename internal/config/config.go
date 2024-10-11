@@ -228,9 +228,11 @@ func (c *Config) Port() int {
 func (c *Config) FrameSize() int {
 	return c.frameSize
 }
+
 func (c *Config) LogLevel() string {
 	return c.logLevel
 }
+
 func (c *Config) Pretty() bool {
 	return c.pretty
 }

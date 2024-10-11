@@ -8,6 +8,7 @@ import (
 	"github.com/SyndicateProtocol/op-translator/internal/types"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -60,4 +61,8 @@ func (m *MockRPCClient) HeaderByNumber(ctx context.Context, number *big.Int) (*e
 func (m *MockRPCClient) TransactionReceipt(ctx context.Context, hash common.Hash) (*ethtypes.Receipt, error) {
 	args := m.Called(ctx, hash)
 	return args.Get(0).(*ethtypes.Receipt), args.Error(1)
+}
+
+func (m *MockRPCClient) AsEthClient() *ethclient.Client {
+	return nil
 }

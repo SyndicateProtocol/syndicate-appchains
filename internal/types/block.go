@@ -6,10 +6,6 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 )
 
-// BatcherTransactionVersionByte 0x00 is the version for frames
-// Documentation: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#batcher-transaction-format
-const BatcherTransactionVersionByte = 0x00
-
 type Block map[string]any
 
 func (b Block) IsEmpty() bool {
