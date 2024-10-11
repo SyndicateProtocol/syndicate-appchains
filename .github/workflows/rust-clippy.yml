@@ -4,11 +4,11 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "metabased-sequencer/**"
+    # paths:
+    # - "metabased-sequencer/**"
   pull_request:
-    paths:
-      - "metabased-sequencer/**"
+    # paths:
+    # - "metabased-sequencer/**"
 
 env:
   CARGO_TERM_COLOR: always

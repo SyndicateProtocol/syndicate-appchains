@@ -4,13 +4,13 @@ on:
     branches:
       - master
       - main
-    paths:
-      - "op-translator/**"
-      - "metabased-publisher/**"
+    # paths:
+    # - "op-translator/**"
+    # - "metabased-publisher/**"
   pull_request:
-    paths:
-      - "op-translator/**"
-      - "metabased-publisher/**"
+    # paths:
+    # - "op-translator/**"
+    # - "metabased-publisher/**"
 
 permissions:
   contents: read
