@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/SyndicateProtocol/op-translator/internal/config"
-	"github.com/SyndicateProtocol/op-translator/internal/logger"
-	"github.com/SyndicateProtocol/op-translator/internal/server"
-	"github.com/SyndicateProtocol/op-translator/internal/translator"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/logger"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/server"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/translator"
 )
 
 func main() {

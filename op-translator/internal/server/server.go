@@ -9,9 +9,9 @@ import (
 	"net/http/httputil"
 	"net/url"
 
-	"github.com/SyndicateProtocol/op-translator/internal/config"
-	"github.com/SyndicateProtocol/op-translator/internal/constants"
-	t "github.com/SyndicateProtocol/op-translator/internal/translator"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
+	t "github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/translator"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/rs/zerolog/log"
 )

@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/SyndicateProtocol/op-translator/internal/types"
-	"github.com/SyndicateProtocol/op-translator/mocks"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/types"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"

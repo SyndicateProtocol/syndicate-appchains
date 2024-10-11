@@ -4,8 +4,8 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/SyndicateProtocol/op-translator/internal/rpc-clients"
-	"github.com/SyndicateProtocol/op-translator/internal/types"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/rpc-clients"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/types"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"

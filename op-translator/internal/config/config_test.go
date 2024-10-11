@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/SyndicateProtocol/op-translator/internal/constants"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
 	"github.com/hashicorp/go-multierror"
 	"github.com/stretchr/testify/assert"
 )

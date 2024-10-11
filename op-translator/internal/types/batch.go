@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"compress/zlib"
 
-	"github.com/SyndicateProtocol/op-translator/internal/utils"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"

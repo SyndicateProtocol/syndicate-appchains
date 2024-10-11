@@ -6,12 +6,12 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/SyndicateProtocol/op-translator/contracts/l2"
-	"github.com/SyndicateProtocol/op-translator/internal/config"
-	"github.com/SyndicateProtocol/op-translator/internal/constants"
-	"github.com/SyndicateProtocol/op-translator/internal/rpc-clients"
-	"github.com/SyndicateProtocol/op-translator/internal/types"
-	"github.com/SyndicateProtocol/op-translator/internal/utils"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/contracts/l2"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/rpc-clients"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/types"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"

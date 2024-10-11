@@ -1,7 +1,7 @@
 package mocks
 
 import (
-	"github.com/SyndicateProtocol/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/stretchr/testify/mock"
 )
 

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/SyndicateProtocol/op-translator/metabased-publisher/flags"
+	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/flags"
 	"github.com/urfave/cli/v2"
 
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
