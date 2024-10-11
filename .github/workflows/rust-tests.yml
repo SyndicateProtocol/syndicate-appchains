@@ -13,6 +13,10 @@ on:
 env:
   CARGO_TERM_COLOR: always
 
+defaults:
+  run:
+    working-directory: metabased-sequencer
+
 jobs:
   test:
     name: Run Rust Tests
