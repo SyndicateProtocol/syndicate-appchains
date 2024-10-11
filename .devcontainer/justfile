@@ -1,0 +1,31 @@
+# Add Foundry's bin directory to the PATH for all recipes
+export PATH := env_var('PATH') + ":" + env_var('HOME') + "/.foundry/bin"
+
+# Clone the Optimism repository
+clone:
+    git clone https://github.com/ethereum-optimism/optimism.git ~/optimism
+
+# Install Foundry
+install-foundry:
+    just --working-directory ~/optimism install-foundry
+
+# Initialize op-devnet
+op-devnet-up:
+    make --directory ~/optimism op-devnet-up
+    @echo "OP Devnet initialized"
+
+# Shut down devnet
+op-devnet-down:
+    make --directory ~/optimism op-devnet-down
+    @echo "OP Devnet shut down"
+
+# Run all steps in sequence
+# OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
+all: clone install-foundry op-devnet-up op-devnet-down copy-justfile
+    @echo "Post-create script completed successfully"
+
+# Copy Justfile to ~/Metabased.justfile
+# This gives easy access to op-devnet commands after the container is created
+copy-justfile:
+    cp {{justfile()}} ~/metabased-devnet.justfile
+    @echo "Justfile copied to ~/metabased-devnet.justfile"

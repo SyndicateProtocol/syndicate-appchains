@@ -1,0 +1,77 @@
+{
+  "name": "Metabased Dev Container",
+  // From https://github.com/devcontainers/images/tree/main/src/base-ubuntu
+  // The default image is pinned to Ubuntu Focal 20.04: https://github.com/devcontainers/images/blob/main/src/universal/.devcontainer/Dockerfile#L6
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+
+  // Pulled from the Universal container: https://github.com/devcontainers/images/blob/main/src/universal/.devcontainer/devcontainer.json
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "20",
+      "additionalVersions": "18"
+    },
+    "ghcr.io/devcontainers/features/python:1": {
+      "version": "3.12.1",
+      "additionalVersions": "3.11.9",
+      "installJupyterlab": "true",
+      "configureJupyterlabAllowOrigin": "*",
+      "useOryxIfAvailable": "false"
+    },
+    "ghcr.io/devcontainers/features/sshd:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/git-lfs:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/go:1": {
+      "version": "latest"
+    },
+    // This line only is pulled from the Rust container: https://github.com/devcontainers/images/blob/main/src/rust/.devcontainer/devcontainer.json
+    "ghcr.io/devcontainers/features/rust:1": "latest"
+  },
+  "overrideFeatureInstallOrder": [
+    "ghcr.io/devcontainers/features/common-utils",
+    "ghcr.io/devcontainers/features/git",
+    "ghcr.io/devcontainers/features/node",
+    "ghcr.io/devcontainers/features/python",
+    "ghcr.io/devcontainers/features/sshd",
+    "ghcr.io/devcontainers/features/git-lfs",
+    "ghcr.io/devcontainers/features/github-cli",
+    "ghcr.io/devcontainers/features/docker-in-docker",
+    "ghcr.io/devcontainers/features/go",
+    "ghcr.io/devcontainers/features/rust"
+  ],
+  "remoteUser": "vscode",
+  "containerUser": "vscode",
+
+  // Use 'forwardPorts' to make a list of ports inside the container available locally.
+  // "forwardPorts": [],
+
+  // Update package lists
+  // Without this, just won't be found
+  // After that, initialize the devnet
+  "postCreateCommand": "sudo apt update && sudo apt install -y just && just -f ${containerWorkspaceFolder}/.devcontainer/justfile all",
+
+  // Configure tool-specific properties.
+  "customizations": {
+    // Configure properties specific to VS Code.
+    "vscode": {
+      // Set *default* container specific settings.json values on container create.
+      "settings": {
+        "go.toolsManagement.checkForUpdates": "local",
+        "go.useLanguageServer": true,
+        "go.gopath": "/go",
+        "python.defaultInterpreterPath": "/home/codespace/.python/current/bin/python3",
+        "lldb.executable": "/usr/bin/lldb"
+      },
+      // Add the IDs of extensions you want installed when the container is created.
+      "extensions": ["GitHub.vscode-pull-request-github"]
+    }
+  }
+}
