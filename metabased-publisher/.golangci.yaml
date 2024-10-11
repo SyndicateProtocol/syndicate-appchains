@@ -1,0 +1,149 @@
+linters-settings:
+  errcheck:
+    # Report `a := b.(MyStruct)` when `a, ok := ...` should be.
+    check-type-assertions: true # Default: false
+
+    # Report skipped checks:`num, _ := strconv.Atoi(numStr)`.
+    check-blank: false # Default: false
+
+    # Function to skip.
+    exclude-functions:
+      - io/ioutil.ReadFile
+      - io.Copy(*bytes.Buffer)
+      - io.Copy(os.Stdout)
+
+  goconst:
+    min-len: 2
+    min-occurrences: 3
+  gocritic:
+    enabled-tags:
+      - diagnostic
+      - experimental
+      - opinionated
+      - performance
+      - style
+    disabled-checks:
+      # conflicts with nolintlint
+      - whyNoLint
+      # fast moving project so comments are fine
+      - commentedOutCode
+  #      # These 3 will detect many cases, but they do sense
+  #      # if it's performance oriented code
+  #      - hugeParam
+  #      - rangeExprCopy
+  #      - rangeValCopy
+  gofmt:
+    rewrite-rules:
+      - pattern: "interface{}"
+        replacement: "any"
+  goimports:
+    local-prefixes: github.com/golangci/golangci-lint
+
+  govet:
+    settings:
+      printf:
+        funcs:
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Infof
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Warnf
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Errorf
+          - (github.com/golangci/golangci-lint/pkg/logutils.Log).Fatalf
+    enable-all: true
+  nakedret:
+    # No naked returns, ever.
+    max-func-lines: 1 # Default: 30
+
+  misspell:
+    locale: US
+  nolintlint:
+    allow-unused: true # should be true but GitHub Action has some issues with it
+    require-explanation: true # require an explanation for nolint directives
+    require-specific: false # don't require nolint directives to be specific about which linter is being skipped
+  revive:
+    rules:
+      - name: unexported-return
+        disabled: true
+      # fast-moving project so ignore for now
+      - name: unused-parameter
+        disabled: true
+  tagliatelle:
+    case:
+      rules:
+        json: camel
+        yaml: camel
+        xml: camel
+        bson: camel
+        avro: snake
+        mapstructure: kebab
+
+linters:
+  disable-all: false
+  enable:
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - dogsled
+    - durationcheck
+    - errcheck
+    - errorlint
+    - copyloopvar
+    - errname
+    - goconst
+    - gocritic
+    - gofmt
+    - goimports
+    - goprintffuncname
+    - gosec
+    - gosimple
+    - govet
+    - ineffassign
+    - misspell
+    - mnd
+    - nakedret
+    - nilerr
+    - noctx
+    - nolintlint
+    - prealloc
+    - predeclared
+    - reassign
+    - revive
+    - rowserrcheck
+    - sqlclosecheck
+    - staticcheck
+    - stylecheck
+    - tagliatelle
+    - tenv
+    - testableexamples
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - wastedassign
+  disable:
+    - nilnil
+    - dupl
+    - lll
+    - whitespace
+    - funlen
+    - gochecknoinits
+    - gochecknoglobals
+    - typecheck
+    - gocyclo
+
+issues:
+  # setting 0 to have all the results.
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  fix: false
+
+run:
+  concurrency: 8
+  timeout: 5m
+  issues-exit-code: 1
+  tests: true
+  # With the read-only mode linter will fail if the go.mod file is outdated.
+  modules-download-mode: readonly
+  # Keep this empty to use the Go version from the go.mod file.
+  go: ""
