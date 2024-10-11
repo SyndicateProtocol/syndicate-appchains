@@ -18,6 +18,9 @@ env:
 jobs:
   clippy_check:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: metabased-sequencer
     steps:
       - uses: actions/checkout@v4
 
@@ -25,6 +28,8 @@ jobs:
 
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "metabased-sequencer -> target"
 
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features
