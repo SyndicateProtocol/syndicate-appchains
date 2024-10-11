@@ -1,14 +1,53 @@
-use alloy::consensus::TxEnvelope;
+use crate::endpoint::{rpc_error, JsonRpcError};
+use crate::json_rpc_errors::JsonRpcErrorCode;
+use crate::json_rpc_errors::JsonRpcErrorCode::InvalidRequest;
+use crate::transaction;
+use alloy::consensus::{Transaction, TxEnvelope, TxType};
 use alloy::primitives::private::alloy_rlp::Decodable;
 use alloy::primitives::TxHash;
+use alloy_primitives::U256;
 use bytes::Bytes;
 
 /// Sends serialized and signed transaction `tx`.
-pub fn send_raw_transaction(tx: Bytes) -> anyhow::Result<TxHash> {
+pub fn send_raw_transaction(tx: Bytes) -> Result<TxHash, JsonRpcError<()>> {
+    // TODO remove or move up to function comment
+    // 1. Decoding
+    // 2. Validation
+    // 3. Submission/forwarding
+
+    // 1. Decoding:
     let mut slice: &[u8] = tx.as_ref();
     let tx = TxEnvelope::decode(&mut slice)?;
 
-    // TODO validate tx
+    // 2. Validation:
+    tx.recover_signer().map_err(|_e| {
+        rpc_error(
+            "Invalid signer on transaction",
+            JsonRpcErrorCode::InvalidParams,
+            None,
+        )
+    })?;
+
+    if tx.tx_type() == TxType::Legacy {
+        // TODO(SEQ-179): introduce optional global tx cap config. See op-geth's checkTxFee() + RPCTxFeeCap for equivalent
+        // skip check if unset
+        let tx_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
+        let gas_price = tx.gas_price().ok_or_else(|| {
+            rpc_error("Legacy transaction missing gas price", InvalidRequest, None)
+        })?;
+        transaction::check_tx_fee(
+            U256::try_from(gas_price)?,
+            U256::try_from(tx.gas_limit())?,
+            tx_cap_in_wei,
+        )
+        .map_err(|_e| {
+            rpc_error(
+                "Transaction fee exceeds the configured cap",
+                JsonRpcErrorCode::InvalidInput,
+                None,
+            )
+        })?;
+    }
 
     Ok(tx.tx_hash().to_owned())
 }

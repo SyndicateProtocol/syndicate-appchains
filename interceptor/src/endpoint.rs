@@ -1,7 +1,8 @@
 use crate::app;
+use crate::json_rpc_errors::JsonRpcErrorCode;
+use crate::json_rpc_errors::JsonRpcErrorCode::InvalidParams;
 use alloy::hex;
 use alloy::hex::ToHexExt;
-use anyhow::anyhow;
 use bytes::Bytes;
 use jsonrpsee::types::{ErrorObject, Params};
 use serde::Serialize;
@@ -56,19 +57,48 @@ pub fn send_raw_transaction(
     _ctx: &(),
     _ext: &http::Extensions,
 ) -> Result<String, JsonRpcError<()>> {
-    let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap())?;
-    let arr = json
-        .as_array_mut()
-        .ok_or(anyhow!("Unexpected parameter format"))?;
-    let item = arr.pop().ok_or(anyhow!("Missing parameter"))?;
-    if !arr.is_empty() {
-        Err(anyhow!("Expected 1 parameter, got {}", arr.len() + 1))?;
+    let mut json: serde_json::Value =
+        serde_json::from_str(params.as_str().unwrap()).map_err(|e| {
+            rpc_error(
+                &format!("failed to unmarshal params: {}", e),
+                InvalidParams,
+                None,
+            )
+        })?;
+    let arr = json.as_array_mut().ok_or(rpc_error(
+        "unexpected parameter format",
+        InvalidParams,
+        None,
+    ))?;
+    if arr.len() != 1 {
+        return Err(rpc_error(
+            &format!("Expected 1 parameter, got {}", arr.len()),
+            InvalidParams,
+            None,
+        ));
     }
-    let str = item
-        .as_str()
-        .ok_or(anyhow!("Expected hex encoded string"))?;
+    let item = arr
+        .pop()
+        .ok_or(rpc_error("Missing parameter", InvalidParams, None))?;
+    let str = item.as_str().ok_or(rpc_error(
+        "Expected hex encoded string",
+        InvalidParams,
+        None,
+    ))?;
     let bytes = hex::decode(str)?;
     let bytes = Bytes::from(bytes);
 
     Ok(app::send_raw_transaction(bytes)?.encode_hex_with_prefix())
+}
+
+pub fn rpc_error<S: Serialize>(
+    message: &str,
+    error_code: JsonRpcErrorCode,
+    data: Option<S>,
+) -> JsonRpcError<S> {
+    JsonRpcError {
+        code: error_code.code(),
+        message: message.to_string(),
+        data,
+    }
 }

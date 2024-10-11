@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-alloy = { version = "0.3.1", features = ["full"] }
+alloy = { version = "0.4.2", features = ["full"] }
 jsonrpsee = { version = "0.24.3", features = ["full"] }
 tokio = { version = "1.0", features = ["full"] }
 anyhow = "1.0"
@@ -29,3 +29,4 @@ httpdate = { version = "1.0" }
 reqwest = "0.12.7"
 serde = "1.0.210"
 hyper-util = "0.1.8"
+alloy-primitives = "0.8.7"

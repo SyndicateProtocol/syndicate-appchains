@@ -1,6 +1,8 @@
 mod app;
 mod endpoint;
+mod json_rpc_errors;
 mod server;
+mod transaction;
 
 use tracing_subscriber::EnvFilter;
 
