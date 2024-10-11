@@ -19,7 +19,7 @@ permissions:
 
 jobs:
   golangci-op-translator:
-    name: lint
+    name: go-lint-op-translator
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -61,7 +61,7 @@ jobs:
           # install-mode: "goinstall"
 
   golangci-metabased-publisher:
-    name: lint
+    name: go-lint-metabased-publisher
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
