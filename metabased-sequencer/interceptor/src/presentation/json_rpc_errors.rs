@@ -1,62 +1,104 @@
+use crate::presentation::transaction;
+use alloy::hex;
+use std::fmt;
+
 // Source: https://github.com/MetaMask/rpc-errors/blob/main/src/errors.ts
 #[derive(Debug, Clone, PartialEq)]
-pub enum JsonRpcErrorCode {
-    InvalidRequest = -32600,
-    MethodNotFound = -32601,
-    InvalidParams = -32602,
-    InternalError = -32603,
-    ParseError = -32700,
-    InvalidInput = -32000,
-    ResourceNotFound = -32001,
-    ResourceUnavailable = -32002,
-    TransactionRejected = -32003,
-    MethodNotSupported = -32004,
-    LimitExceeded = -32005,
-    ServerError = -32099, // We'll use this as the base for server errors
+pub enum Error {
+    InvalidRequest(String),
+    MethodNotFound(String),
+    InvalidParams(String),
+    Internal,
+    Parse,
+    InvalidInput(String),
+    ResourceNotFound(String),
+    ResourceUnavailable(String),
+    TransactionRejected(String),
+    MethodNotSupported(String),
+    LimitExceeded,
+    Server,
 }
 
-impl JsonRpcErrorCode {
-    // TODO - bring back if needed
-    // pub fn message(&self) -> &'static str {
-    //     match self {
-    //         Self::InvalidRequest => "Invalid request",
-    //         Self::MethodNotFound => "Method not found",
-    //         Self::InvalidParams => "Invalid params",
-    //         Self::InternalError => "Internal error",
-    //         Self::ParseError => "Parse error",
-    //         Self::InvalidInput => "Invalid input",
-    //         Self::ResourceNotFound => "Resource not found",
-    //         Self::ResourceUnavailable => "Resource unavailable",
-    //         Self::TransactionRejected => "Transaction rejected",
-    //         Self::MethodNotSupported => "Method not supported",
-    //         Self::LimitExceeded => "Limit exceeded",
-    //         Self::ServerError => "Server error",
-    //     }
-    // }
-}
-
-impl From<i32> for JsonRpcErrorCode {
-    fn from(value: i32) -> Self {
+impl From<Error> for i32 {
+    fn from(value: Error) -> Self {
         match value {
-            -32700 => Self::ParseError,
-            -32600 => Self::InvalidRequest,
-            -32601 => Self::MethodNotFound,
-            -32602 => Self::InvalidParams,
-            -32603 => Self::InternalError,
-            -32000 => Self::InvalidInput,
-            -32001 => Self::ResourceNotFound,
-            -32002 => Self::ResourceUnavailable,
-            -32003 => Self::TransactionRejected,
-            -32004 => Self::MethodNotSupported,
-            -32005 => Self::LimitExceeded,
-            _ if (-32099..=-32000).contains(&value) => Self::ServerError,
-            _ => Self::InternalError, // Default case
+            Error::InvalidRequest(_) => -32600,
+            Error::MethodNotFound(_) => -32601,
+            Error::InvalidParams(_) => -32602,
+            Error::Internal => -32603,
+            Error::Parse => -32700,
+            Error::InvalidInput(_) => -32000,
+            Error::ResourceNotFound(_) => -32001,
+            Error::ResourceUnavailable(_) => -32002,
+            Error::TransactionRejected(_) => -32003,
+            Error::MethodNotSupported(_) => -32004,
+            Error::LimitExceeded => -32005,
+            Error::Server => -32099,
         }
     }
 }
 
-impl JsonRpcErrorCode {
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::InvalidRequest(m) => write!(f, "Invalid request {}", m),
+            Error::MethodNotFound(m) => write!(f, "Method not found: {}", m),
+            Error::InvalidParams(m) => write!(f, "Invalid params: {}", m),
+            Error::Internal => write!(f, "Internal error"),
+            Error::Parse => write!(f, "Parse error"),
+            Error::InvalidInput(m) => write!(f, "Invalid input: {}", m),
+            Error::ResourceNotFound(m) => write!(f, "Resource not found: {}", m),
+            Error::ResourceUnavailable(m) => write!(f, "Resource unavailable: {}", m),
+            Error::TransactionRejected(m) => write!(f, "Transaction rejected: {}", m),
+            Error::MethodNotSupported(m) => write!(f, "Method not supported: {}", m),
+            Error::LimitExceeded => write!(f, "Limit exceeded"),
+            Error::Server => write!(f, "Server error"),
+        }
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(_: serde_json::Error) -> Self {
+        Error::InvalidInput("Invalid JSON".to_string())
+    }
+}
+
+impl From<hex::FromHexError> for Error {
+    fn from(_: hex::FromHexError) -> Self {
+        Error::InvalidParams("Invalid hex".to_string())
+    }
+}
+
+impl From<alloy_primitives::private::alloy_rlp::Error> for Error {
+    fn from(e: alloy_primitives::private::alloy_rlp::Error) -> Self {
+        Error::InvalidInput(e.to_string())
+    }
+}
+
+impl From<alloy_primitives::SignatureError> for Error {
+    fn from(_: alloy_primitives::SignatureError) -> Self {
+        Error::InvalidInput("Invalid transaction signature".to_string())
+    }
+}
+
+impl From<transaction::CheckTxFeeError> for Error {
+    fn from(e: transaction::CheckTxFeeError) -> Self {
+        Error::TransactionRejected(e.to_string())
+    }
+}
+
+impl<T> From<alloy_primitives::ruint::ToUintError<T>> for Error {
+    fn from(_: alloy_primitives::ruint::ToUintError<T>) -> Self {
+        Error::InvalidInput("Invalid uint".to_string())
+    }
+}
+
+impl Error {
     pub fn code(&self) -> i32 {
-        self.to_owned() as i32
+        self.clone().into()
+    }
+
+    pub fn message(&self) -> String {
+        self.to_string()
     }
 }

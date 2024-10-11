@@ -1,4 +1,25 @@
 use alloy_primitives::U256;
+use std::fmt;
+use std::fmt::Debug;
+
+#[derive(Debug, Clone)]
+pub enum CheckTxFeeError {
+    Overflow(String),
+    TransactionFeeTooHigh { fee_gwei: U256, cap_gwei: U256 },
+}
+
+impl fmt::Display for CheckTxFeeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            CheckTxFeeError::Overflow(msg) => write!(f, "overflow: {}", msg),
+            CheckTxFeeError::TransactionFeeTooHigh { fee_gwei, cap_gwei } => write!(
+                f,
+                "tx fee ({} gwei) exceeds the configured cap ({} gwei)",
+                fee_gwei, cap_gwei
+            ),
+        }
+    }
+}
 
 /// Ported from op-geth/ethapi/api.go
 /// Check if the transaction fee is reasonable (under the cap).
@@ -13,7 +34,7 @@ use alloy_primitives::U256;
 ///
 /// * `Ok(())` if the fee is under the cap, or if there is no cap.
 /// * `Err(String)` with an error message if the fee exceeds the cap.
-pub fn check_tx_fee(gas_price: U256, gas: U256, cap_in_wei: U256) -> Result<(), String> {
+pub fn check_tx_fee(gas_price: U256, gas: U256, cap_in_wei: U256) -> Result<(), CheckTxFeeError> {
     // Short circuit if there is no cap for transaction fee at all.
     if cap_in_wei.is_zero() {
         return Ok(());
@@ -21,16 +42,13 @@ pub fn check_tx_fee(gas_price: U256, gas: U256, cap_in_wei: U256) -> Result<(), 
 
     let fee_wei = gas_price
         .checked_mul(gas)
-        .ok_or_else(|| "fee calculation overflow".to_string())?;
+        .ok_or_else(|| CheckTxFeeError::Overflow("fee calculation".to_string()))?;
 
     if fee_wei > cap_in_wei {
         let gwei = U256::from(1_000_000_000u64); // 1 Gwei = 10^9 Wei
         let fee_gwei = fee_wei / gwei;
         let cap_gwei = cap_in_wei / gwei;
-        Err(format!(
-            "tx fee ({} gwei) exceeds the configured cap ({} gwei)",
-            fee_gwei, cap_gwei
-        ))
+        Err(CheckTxFeeError::TransactionFeeTooHigh { fee_gwei, cap_gwei })
     } else {
         Ok(())
     }
@@ -50,7 +68,7 @@ mod tests {
             U256::from(21000u64),
             U256::ZERO
         )
-        .is_ok());
+            .is_ok());
     }
 
     #[test]
@@ -75,6 +93,7 @@ mod tests {
         assert!(result.is_err());
         assert!(result
             .unwrap_err()
+            .to_string()
             .contains("tx fee (2615 gwei) exceeds the configured cap (1000 gwei)"));
     }
 
@@ -137,6 +156,7 @@ mod tests {
         assert!(result.is_err());
         assert!(result
             .unwrap_err()
+            .to_string()
             .contains("tx fee (160 gwei) exceeds the configured cap (150 gwei)"));
     }
 
@@ -147,6 +167,6 @@ mod tests {
         let cap = U256::MAX;
         let result = check_tx_fee(gas_price, gas, cap);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err(), "fee calculation overflow");
+        assert_eq!(result.unwrap_err().to_string(), "overflow: fee calculation");
     }
 }

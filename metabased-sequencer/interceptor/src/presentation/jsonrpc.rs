@@ -1,6 +1,6 @@
 use crate::application;
-use crate::presentation::json_rpc_errors::JsonRpcErrorCode;
-use crate::presentation::json_rpc_errors::JsonRpcErrorCode::InvalidParams;
+use crate::presentation::json_rpc_errors::Error;
+use crate::presentation::json_rpc_errors::Error::InvalidParams;
 use alloy::hex;
 use alloy::hex::ToHexExt;
 use bytes::Bytes;
@@ -45,6 +45,16 @@ impl<'error, S: Serialize> From<JsonRpcError<S>> for ErrorObject<'error> {
     }
 }
 
+impl From<Error> for JsonRpcError<()> {
+    fn from(value: Error) -> Self {
+        JsonRpcError {
+            code: value.code(),
+            message: value.to_string(),
+            data: None,
+        }
+    }
+}
+
 /// The JSON-RPC endpoint for `eth_sendRawTransaction`.
 ///
 /// # Parameters
@@ -57,48 +67,21 @@ pub fn send_raw_transaction(
     _ctx: &(),
     _ext: &http::Extensions,
 ) -> Result<String, JsonRpcError<()>> {
-    let mut json: serde_json::Value =
-        serde_json::from_str(params.as_str().unwrap()).map_err(|e| {
-            rpc_error(
-                &format!("failed to unmarshal params: {}", e),
-                InvalidParams,
-                None,
-            )
-        })?;
-    let arr = json.as_array_mut().ok_or(rpc_error(
-        "unexpected parameter format",
-        InvalidParams,
-        None,
-    ))?;
+    let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap())?;
+    let arr = json
+        .as_array_mut()
+        .ok_or(InvalidParams("unexpected parameter format".to_string()))?;
     if arr.len() != 1 {
-        return Err(rpc_error(
-            &format!("Expected 1 parameter, got {}", arr.len()),
-            InvalidParams,
-            None,
-        ));
+        InvalidParams(format!("expected 1 parameter, got {}", arr.len()));
     }
     let item = arr
         .pop()
-        .ok_or(rpc_error("Missing parameter", InvalidParams, None))?;
-    let str = item.as_str().ok_or(rpc_error(
-        "Expected hex encoded string",
-        InvalidParams,
-        None,
-    ))?;
+        .ok_or(InvalidParams("missing parameter".to_string()))?;
+    let str = item
+        .as_str()
+        .ok_or(InvalidParams("Expected hex encoded string".to_string()))?;
     let bytes = hex::decode(str)?;
     let bytes = Bytes::from(bytes);
 
     Ok(application::send_raw_transaction(bytes)?.encode_hex_with_prefix())
-}
-
-pub fn rpc_error<S: Serialize>(
-    message: &str,
-    error_code: JsonRpcErrorCode,
-    data: Option<S>,
-) -> JsonRpcError<S> {
-    JsonRpcError {
-        code: error_code.code(),
-        message: message.to_string(),
-        data,
-    }
 }
