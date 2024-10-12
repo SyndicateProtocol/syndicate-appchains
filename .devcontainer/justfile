@@ -6,6 +6,9 @@ clone:
     git clone https://github.com/ethereum-optimism/optimism.git ~/optimism
 
 # Install Foundry
+# The install can sometimes fail on the first attempt, so we try twice
+# Yes, this is what the official Optimism devnet docs recommend doing:
+# https://docs.optimism.io/chain/testing/dev-node#install-foundry-using-monorepo-tooling
 install-foundry:
     #!/bin/bash
     set -e
@@ -29,7 +32,7 @@ op-devnet-down:
     make --directory ~/optimism op-devnet-down
     @echo "OP Devnet shut down"
 
-# Create aliases for Justfile commands in both Bash and Zsh
+# Create aliases for devnet commands in both Bash and Zsh
 create-aliases:
     #!/bin/bash
     for rc_file in ~/.bashrc ~/.zshrc; do
@@ -45,6 +48,8 @@ create-aliases:
 
 # Run all steps in sequence
 # OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
+# We initialize and then spin down the devnet to get the initialization time out
+# of the way upfront
 all: clone install-foundry op-devnet-up op-devnet-down copy-justfile create-aliases
     @echo "Post-create script completed successfully"
 
