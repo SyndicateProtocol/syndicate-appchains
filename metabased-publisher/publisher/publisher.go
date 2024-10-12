@@ -5,9 +5,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/SyndicateProtocol/op-translator/internal/translator"
-	"github.com/SyndicateProtocol/op-translator/internal/types"
-	"github.com/SyndicateProtocol/op-translator/metabased-publisher/metrics"
+	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/metrics"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 	"github.com/ethereum/go-ethereum/common"

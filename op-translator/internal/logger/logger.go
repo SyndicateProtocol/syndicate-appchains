@@ -7,8 +7,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/SyndicateProtocol/op-translator/internal/config"
-	"github.com/SyndicateProtocol/op-translator/internal/constants"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"

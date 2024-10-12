@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/SyndicateProtocol/op-translator/internal/constants"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/hashicorp/go-multierror"
 	"github.com/knadh/koanf/parsers/dotenv"

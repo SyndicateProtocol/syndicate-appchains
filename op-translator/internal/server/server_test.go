@@ -7,7 +7,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/SyndicateProtocol/op-translator/mocks"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	"github.com/stretchr/testify/assert"
 )
 

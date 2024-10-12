@@ -4,7 +4,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/SyndicateProtocol/op-translator/mocks"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"

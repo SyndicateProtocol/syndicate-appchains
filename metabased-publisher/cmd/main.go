@@ -4,9 +4,9 @@ import (
 	"context"
 	"os"
 
-	"github.com/SyndicateProtocol/op-translator/metabased-publisher/flags"
-	"github.com/SyndicateProtocol/op-translator/metabased-publisher/metrics"
-	"github.com/SyndicateProtocol/op-translator/metabased-publisher/publisher"
+	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/flags"
+	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/metrics"
+	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/publisher"
 	"github.com/urfave/cli/v2"
 
 	opservice "github.com/ethereum-optimism/optimism/op-service"

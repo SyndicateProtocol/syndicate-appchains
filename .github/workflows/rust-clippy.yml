@@ -1,10 +1,15 @@
 name: Rust Clippy Check
 
 on:
+  # Run workflow on every push to main. This ensures that cross-service PRs that
+  # depend on metabased-sequencer are tested.
   push:
     branches:
       - main
+  # Only run on PRs that touch metabased-sequencer
   pull_request:
+    paths:
+      - "metabased-sequencer/**"
 
 env:
   CARGO_TERM_COLOR: always

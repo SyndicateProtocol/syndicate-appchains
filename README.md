@@ -1,2 +1,3 @@
-# metabased-dev-container
-Dev Container for Metabased dev environment setup
+# Metabased Rollup Monorepo
+
+The monorepo for the Metabased rollup stack. Containers the sequencer, smart contracts, RPC node, dev environments, and more!
