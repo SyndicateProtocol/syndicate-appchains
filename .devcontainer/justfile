@@ -17,12 +17,12 @@ update-foundry:
 
 # Initialize op-devnet
 op-devnet-up:
-    make --directory ~/optimism op-devnet-up
+    make --directory ~/optimism devnet-up
     @echo "OP Devnet initialized"
 
 # Shut down devnet
 op-devnet-down:
-    make --directory ~/optimism op-devnet-down
+    make --directory ~/optimism devnet-down
     @echo "OP Devnet shut down"
 
 # Create aliases for devnet commands in both Bash and Zsh
