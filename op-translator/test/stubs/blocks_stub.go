@@ -1,6 +1,6 @@
 package stubs
 
-import "github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/types"
+import "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 
 var MetabasedBlock0xE7309D = types.Block{
 	"hash":   "0x07003531c4a10122c5016a9e0f08e939b832cbc386c1ba9924defbe39a1a09ca",

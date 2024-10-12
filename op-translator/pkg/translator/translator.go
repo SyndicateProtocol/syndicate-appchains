@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/types"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
