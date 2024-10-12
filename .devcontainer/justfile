@@ -6,21 +6,14 @@ clone:
     git clone https://github.com/ethereum-optimism/optimism.git ~/optimism
 
 # Install Foundry
-# The install can sometimes fail on the first attempt, so we try twice
-# Yes, this is what the official Optimism devnet docs recommend doing:
-# https://docs.optimism.io/chain/testing/dev-node#install-foundry-using-monorepo-tooling
+# Based on https://book.getfoundry.sh/getting-started/installation
 install-foundry:
-    #!/bin/bash
-    set -e
-    cd ~/optimism
-    if ! just install-foundry; then
-        echo "First install-foundry attempt failed. Sourcing .bashrc and trying again."
-        source ~/.bashrc
-        just install-foundry
-    else
-        echo "install-foundry succeeded on first attempt."
-    fi
-    source ~/.bashrc
+    curl -L https://foundry.paradigm.xyz | bash
+
+# Update Foundry
+# Based on https://book.getfoundry.sh/getting-started/installation
+update-foundry:
+    foundryup
 
 # Initialize op-devnet
 op-devnet-up:
