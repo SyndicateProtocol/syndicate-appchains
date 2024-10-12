@@ -16,6 +16,10 @@ env:
   # Make sure CI fails on all warnings, including Clippy lints
   RUSTFLAGS: "-Dwarnings"
 
+defaults:
+  run:
+    working-directory: metabased-sequencer
+
 jobs:
   clippy_check:
     runs-on: ubuntu-latest
