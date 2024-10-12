@@ -30,6 +30,7 @@ op-devnet-down:
 
 # Create aliases for devnet commands in both Bash and Zsh
 create-aliases:
+    #!/bin/bash
     for rc_file in ~/.bashrc ~/.zshrc; do
         if [[ -f "$rc_file" ]]; then
             echo "# Foundry PATH" >> "$rc_file"
