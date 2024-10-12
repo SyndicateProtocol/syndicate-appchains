@@ -11,7 +11,7 @@ import (
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
-	t "github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/translator"
+	t "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/rs/zerolog/log"
 )

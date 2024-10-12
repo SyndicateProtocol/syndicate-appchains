@@ -10,8 +10,8 @@ import (
 
 	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/flags"
 	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/metrics"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/rpc-clients"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/translator"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	opservice "github.com/ethereum-optimism/optimism/op-service"
 	"github.com/ethereum-optimism/optimism/op-service/cliapp"
 	"github.com/ethereum-optimism/optimism/op-service/httputil"

@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/server"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/translator"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/types"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/test/stubs"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
