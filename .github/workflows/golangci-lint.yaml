@@ -8,9 +8,9 @@ on:
       - main
   # Only run on PRs that touch op-translator or metabased-publisher
   pull_request:
-    paths:
-      - "op-translator/**"
-      - "metabased-publisher/**"
+    # paths:
+    # - "op-translator/**"
+    # - "metabased-publisher/**"
 
 permissions:
   contents: read

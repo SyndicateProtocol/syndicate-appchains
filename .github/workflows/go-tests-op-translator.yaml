@@ -8,8 +8,8 @@ on:
       - main
   # Only run on PRs that touch op-translator
   pull_request:
-    paths:
-      - "op-translator/**"
+    # paths:
+    # - "op-translator/**"
 
 jobs:
   unit-tests:

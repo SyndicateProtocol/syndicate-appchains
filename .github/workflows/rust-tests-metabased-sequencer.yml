@@ -8,8 +8,8 @@ on:
       - main
   # Only run on PRs that touch metabased-sequencer
   pull_request:
-    paths:
-      - "metabased-sequencer/**"
+    # paths:
+    # - "metabased-sequencer/**"
 
 env:
   CARGO_TERM_COLOR: always
