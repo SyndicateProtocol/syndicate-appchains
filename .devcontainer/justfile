@@ -7,7 +7,17 @@ clone:
 
 # Install Foundry
 install-foundry:
-    just --working-directory ~/optimism install-foundry
+    #!/bin/bash
+    set -e
+    cd ~/optimism
+    if ! just install-foundry; then
+        echo "First install-foundry attempt failed. Sourcing .bashrc and trying again."
+        source ~/.bashrc
+        just install-foundry
+    else
+        echo "install-foundry succeeded on first attempt."
+    fi
+    source ~/.bashrc
 
 # Initialize op-devnet
 op-devnet-up:
