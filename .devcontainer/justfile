@@ -29,12 +29,26 @@ op-devnet-down:
     make --directory ~/optimism op-devnet-down
     @echo "OP Devnet shut down"
 
+# Create aliases for Justfile commands in both Bash and Zsh
+create-aliases:
+    #!/bin/bash
+    for rc_file in ~/.bashrc ~/.zshrc; do
+        if [[ -f "$rc_file" ]]; then
+            echo "# Metabased DevNet aliases" >> "$rc_file"
+            echo "alias op-up='just -f ~/metabased-devnet.justfile op-devnet-up'" >> "$rc_file"
+            echo "alias op-down='just -f ~/metabased-devnet.justfile op-devnet-down'" >> "$rc_file"
+            echo "Aliases created in $rc_file"
+        else
+            echo "Warning: $rc_file does not exist. Skipping."
+        fi
+    done
+
 # Run all steps in sequence
 # OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
-all: clone install-foundry op-devnet-up op-devnet-down copy-justfile
+all: clone install-foundry op-devnet-up op-devnet-down copy-justfile create-aliases
     @echo "Post-create script completed successfully"
 
-# Copy Justfile to ~/Metabased.justfile
+# Copy Justfile to ~/metabased-devnet.justfile
 # This gives easy access to op-devnet commands after the container is created
 copy-justfile:
     cp {{justfile()}} ~/metabased-devnet.justfile
