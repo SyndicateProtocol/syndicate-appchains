@@ -76,7 +76,7 @@ linters-settings:
         mapstructure: kebab
 
 linters:
-  disable-all: true # TEMPORARY TO UNBLOCK CI PIPELINE. TODO: CHANGE BACK TO FALSE WHEN FIXED
+  disable-all: false
   enable:
     - asasalint
     - asciicheck
