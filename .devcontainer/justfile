@@ -2,17 +2,17 @@
 export PATH := env_var('PATH') + ":" + env_var('HOME') + "/.foundry/bin"
 
 # Clone the Optimism repository
-clone:
+op-clone:
     git clone https://github.com/ethereum-optimism/optimism.git ~/optimism
 
 # Install Foundry
 # Based on https://book.getfoundry.sh/getting-started/installation
-install-foundry:
+foundry-install:
     curl -L https://foundry.paradigm.xyz | bash
 
 # Update Foundry
 # Based on https://book.getfoundry.sh/getting-started/installation
-update-foundry:
+foundry-update:
     foundryup
 
 # Initialize op-devnet
@@ -31,8 +31,8 @@ create-aliases:
     for rc_file in ~/.bashrc ~/.zshrc; do
         if [[ -f "$rc_file" ]]; then
             echo "# Foundry aliases" >> "$rc_file"
-            echo "alias install-foundry='just -f {{justfile()}} install-foundry'" >> "$rc_file"
-            echo "alias update-foundry='just -f {{justfile()}} update-foundry'" >> "$rc_file"
+            echo "alias foundry-install='just -f {{justfile()}} foundry-install'" >> "$rc_file"
+            echo "alias foundry-update='just -f {{justfile()}} foundry-update'" >> "$rc_file"
             echo "# Metabased DevNet aliases" >> "$rc_file"
             echo "alias op-up='just -f {{justfile()}} op-devnet-up'" >> "$rc_file"
             echo "alias op-down='just -f {{justfile()}} op-devnet-down'" >> "$rc_file"
@@ -46,11 +46,5 @@ create-aliases:
 # OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
 # We initialize and then spin down the devnet to get the initialization time out
 # of the way upfront
-all: clone install-foundry op-devnet-up op-devnet-down copy-justfile create-aliases
+all: op-clone foundry-install op-devnet-up op-devnet-down create-aliases
     @echo "Post-create script completed successfully"
-
-# Copy Justfile to ~/metabased-devnet.justfile
-# This gives easy access to op-devnet commands after the container is created
-copy-justfile:
-    cp {{justfile()}} ~/metabased-devnet.justfile
-    @echo "Justfile copied to ~/metabased-devnet.justfile"
