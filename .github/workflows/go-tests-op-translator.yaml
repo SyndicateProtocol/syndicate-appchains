@@ -1,4 +1,4 @@
-name: Go op-translator Tests
+name: Go Tests op-translator
 
 # Controls when the action will run.
 on:
