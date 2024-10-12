@@ -1,4 +1,4 @@
-name: Rust Metabased Sequencer Tests
+name: Rust metabased-sequencer Tests
 
 on:
   push:
