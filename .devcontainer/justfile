@@ -30,9 +30,12 @@ create-aliases:
     #!/bin/bash
     for rc_file in ~/.bashrc ~/.zshrc; do
         if [[ -f "$rc_file" ]]; then
+            echo "# Foundry aliases" >> "$rc_file"
+            echo "alias install-foundry='just -f {{justfile()}} install-foundry'" >> "$rc_file"
+            echo "alias update-foundry='just -f {{justfile()}} update-foundry'" >> "$rc_file"
             echo "# Metabased DevNet aliases" >> "$rc_file"
-            echo "alias op-up='just -f ~/metabased-devnet.justfile op-devnet-up'" >> "$rc_file"
-            echo "alias op-down='just -f ~/metabased-devnet.justfile op-devnet-down'" >> "$rc_file"
+            echo "alias op-up='just -f {{justfile()}} op-devnet-up'" >> "$rc_file"
+            echo "alias op-down='just -f {{justfile()}} op-devnet-down'" >> "$rc_file"
             echo "Aliases created in $rc_file"
         else
             echo "Warning: $rc_file does not exist. Skipping."
