@@ -1,14 +1,15 @@
 name: Rust Tests metabased-sequencer
 
 on:
+  # Run workflow on every push to main. This ensures that cross-service PRs that
+  # depend on metabased-sequencer are tested.
   push:
     branches:
       - main
-    # paths:
-    # - "metabased-sequencer/**"
+  # Only run on PRs that touch metabased-sequencer
   pull_request:
-    # paths:
-    # - "metabased-sequencer/**"
+    paths:
+      - "metabased-sequencer/**"
 
 env:
   CARGO_TERM_COLOR: always

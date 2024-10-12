@@ -1,16 +1,16 @@
 name: Go Lint
+
 on:
+  # Run workflow on every push to main. This ensures that cross-service PRs that
+  # depend on op-translator or metabased-publisher are tested.
   push:
     branches:
-      - master
       - main
-    # paths:
-    # - "op-translator/**"
-    # - "metabased-publisher/**"
+  # Only run on PRs that touch op-translator or metabased-publisher
   pull_request:
-    # paths:
-    # - "op-translator/**"
-    # - "metabased-publisher/**"
+    paths:
+      - "op-translator/**"
+      - "metabased-publisher/**"
 
 permissions:
   contents: read

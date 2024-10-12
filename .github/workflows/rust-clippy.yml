@@ -1,14 +1,15 @@
 name: Rust Clippy Check
 
 on:
+  # Run workflow on every push to main. This ensures that cross-service PRs that
+  # depend on metabased-sequencer are tested.
   push:
     branches:
       - main
-    # paths:
-    # - "metabased-sequencer/**"
+  # Only run on PRs that touch metabased-sequencer
   pull_request:
-    # paths:
-    # - "metabased-sequencer/**"
+    paths:
+      - "metabased-sequencer/**"
 
 env:
   CARGO_TERM_COLOR: always
@@ -18,9 +19,6 @@ env:
 jobs:
   clippy_check:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: metabased-sequencer
     steps:
       - uses: actions/checkout@v4
 
@@ -28,8 +26,6 @@ jobs:
 
       - name: Cache Cargo dependencies
         uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: "metabased-sequencer -> target"
 
       - name: Run Clippy
         run: cargo clippy --all-targets --all-features

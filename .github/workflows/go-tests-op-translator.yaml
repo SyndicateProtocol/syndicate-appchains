@@ -1,12 +1,15 @@
 name: Go Tests op-translator
 
-# Controls when the action will run.
 on:
-  # Triggers the workflow on pull request events but only for the main branch
+  # Run workflow on every push to main. This ensures that cross-service PRs that
+  # depend on op-translator are tested.
+  push:
+    branches:
+      - main
+  # Only run on PRs that touch op-translator
   pull_request:
-    branches: [main]
-    # paths:
-    # - "op-translator/**"
+    paths:
+      - "op-translator/**"
 
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
