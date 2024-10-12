@@ -2,7 +2,7 @@
 foundry_path := env_var('PATH') + ":" + env_var('HOME') + "/.foundry/bin"
 
 # Add Foundry's bin directory to the PATH for all recipes
-export PATH := {{foundry_path}}
+export PATH := foundry_path
 
 # Clone the Optimism repository
 op-clone:
@@ -34,7 +34,7 @@ create-aliases:
     for rc_file in ~/.bashrc ~/.zshrc; do
         if [[ -f "$rc_file" ]]; then
             echo "# Foundry PATH" >> "$rc_file"
-            echo "export PATH={{foundry_path}}" >> "$rc_file"
+            echo "export PATH=$(just --evaluate 'foundry_path')" >> "$rc_file"
             echo "# Foundry aliases" >> "$rc_file"
             echo "alias foundry-install='just -f {{justfile()}} foundry-install'" >> "$rc_file"
             echo "alias foundry-update='just -f {{justfile()}} foundry-update'" >> "$rc_file"
