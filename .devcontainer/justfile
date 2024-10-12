@@ -51,5 +51,5 @@ create-aliases:
 # OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
 # We initialize and then spin down the devnet to get the initialization time out
 # of the way upfront
-all: op-clone foundry-install op-devnet-up op-devnet-down create-aliases
+all: op-clone foundry-install foundry-update op-devnet-up op-devnet-down create-aliases
     @echo "Post-create script completed successfully"
