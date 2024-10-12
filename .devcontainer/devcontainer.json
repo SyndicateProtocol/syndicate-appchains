@@ -38,8 +38,8 @@
   "overrideFeatureInstallOrder": [
     "ghcr.io/devcontainers/features/common-utils",
     "ghcr.io/devcontainers/features/git",
-    "ghcr.io/devcontainers/features/node",
     "ghcr.io/devcontainers/features/python",
+    "ghcr.io/devcontainers/features/node",
     "ghcr.io/devcontainers/features/sshd",
     "ghcr.io/devcontainers/features/git-lfs",
     "ghcr.io/devcontainers/features/github-cli",
