@@ -133,11 +133,6 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	}
 	log.Debug().Msgf("Previous block: %v", previousBlock)
 
-	// TODO [SEQ-163]: MAYBE REMOVE??
-	if previousBlock.EmptyBody() {
-		return constants.ZeroHash, nil
-	}
-
 	return previousBlock.Hash().Hex(), nil
 }
 
