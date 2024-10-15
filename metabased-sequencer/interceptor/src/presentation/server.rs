@@ -3,24 +3,26 @@ use crate::domain::MetabasedSequencerChainService;
 use crate::infrastructure::SolMetabasedSequencerChainService;
 use crate::presentation::json_rpc_errors::Error;
 use crate::presentation::jsonrpc;
-use alloy::hex;
 use alloy::providers::ProviderBuilder;
 use jsonrpsee::server::{RpcServiceBuilder, Server, ServerHandle};
 use jsonrpsee::RpcModule;
 use std::net::SocketAddr;
 use url::Url;
 
-pub async fn run(port: u16) -> anyhow::Result<(SocketAddr, ServerHandle)> {
+pub async fn run(
+    port: u16,
+    chain_contract_address: Address,
+    chain_rpc_address: Url,
+) -> anyhow::Result<(SocketAddr, ServerHandle)> {
     let rpc_middleware = RpcServiceBuilder::new();
     let server = Server::builder()
         .set_rpc_middleware(rpc_middleware)
-        .build(format!("127.0.0.1:{}", port))
+        .build(format!("127.0.0.1:{port}"))
         .await?;
     let addr = server.local_addr()?;
-    let address = Address::new(hex!("0000000000000000000000000000000000000000"));
-    let rpc = ProviderBuilder::new().on_http(Url::parse("http://127.0.0.1").unwrap());
-    let writer = SolMetabasedSequencerChainService::new(address, rpc);
-    let services = Services { chain: writer };
+    let rpc = ProviderBuilder::new().on_http(chain_rpc_address);
+    let chain = SolMetabasedSequencerChainService::new(chain_contract_address, rpc);
+    let services = Services { chain };
     let module = create_eth_module(services)?;
     let handle = server.start(module);
 
