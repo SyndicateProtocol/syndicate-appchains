@@ -47,13 +47,28 @@ impl<'error, S: Serialize> From<JsonRpcError<S>> for ErrorObject<'error> {
 
 impl From<Error> for JsonRpcError<()> {
     fn from(value: Error) -> Self {
+        let code = match value {
+            Error::InvalidRequest(_) => -32600,
+            Error::MethodNotFound(_) => -32601,
+            Error::InvalidParams(_) => -32602,
+            Error::Internal => -32603,
+            Error::Parse => -32700,
+            Error::InvalidInput(_) => -32000,
+            Error::ResourceNotFound(_) => -32001,
+            Error::ResourceUnavailable(_) => -32002,
+            Error::TransactionRejected(_) => -32003,
+            Error::MethodNotSupported(_) => -32004,
+            Error::LimitExceeded => -32005,
+            Error::Server => -32099,
+        };
         JsonRpcError {
-            code: value.code(),
+            code,
             message: value.to_string(),
             data: None,
         }
     }
 }
+
 
 /// The JSON-RPC endpoint for `eth_sendRawTransaction`.
 ///

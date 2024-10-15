@@ -19,25 +19,6 @@ pub enum Error {
     Server,
 }
 
-impl From<Error> for i32 {
-    fn from(value: Error) -> Self {
-        match value {
-            Error::InvalidRequest(_) => -32600,
-            Error::MethodNotFound(_) => -32601,
-            Error::InvalidParams(_) => -32602,
-            Error::Internal => -32603,
-            Error::Parse => -32700,
-            Error::InvalidInput(_) => -32000,
-            Error::ResourceNotFound(_) => -32001,
-            Error::ResourceUnavailable(_) => -32002,
-            Error::TransactionRejected(_) => -32003,
-            Error::MethodNotSupported(_) => -32004,
-            Error::LimitExceeded => -32005,
-            Error::Server => -32099,
-        }
-    }
-}
-
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -81,8 +62,8 @@ impl From<alloy_primitives::SignatureError> for Error {
     }
 }
 
-impl From<transaction::CheckTxFeeError> for Error {
-    fn from(e: transaction::CheckTxFeeError) -> Self {
+impl From<transaction::TransactionFeeTooHigh> for Error {
+    fn from(e: transaction::TransactionFeeTooHigh) -> Self {
         Error::TransactionRejected(e.to_string())
     }
 }
@@ -90,15 +71,5 @@ impl From<transaction::CheckTxFeeError> for Error {
 impl<T> From<alloy_primitives::ruint::ToUintError<T>> for Error {
     fn from(_: alloy_primitives::ruint::ToUintError<T>) -> Self {
         Error::InvalidInput("Invalid uint".to_string())
-    }
-}
-
-impl Error {
-    pub fn code(&self) -> i32 {
-        self.clone().into()
-    }
-
-    pub fn message(&self) -> String {
-        self.to_string()
     }
 }
