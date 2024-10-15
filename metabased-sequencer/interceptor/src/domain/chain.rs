@@ -10,3 +10,39 @@ pub trait MetabasedSequencerChainService {
 
     async fn process_bulk_transactions(&self, tx: Vec<Bytes>) -> Result<(), Self::Error>;
 }
+
+#[cfg(test)]
+pub use tests::InMemoryMetabasedSequencerChain;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    #[derive(Debug)]
+    pub struct InMemoryMetabasedSequencerChain {
+        transactions: Arc<RwLock<Vec<Bytes>>>,
+    }
+
+    impl InMemoryMetabasedSequencerChain {
+        pub fn new(transactions: Arc<RwLock<Vec<Bytes>>>) -> Self {
+            Self { transactions }
+        }
+    }
+
+    #[async_trait]
+    impl MetabasedSequencerChainService for InMemoryMetabasedSequencerChain {
+        async fn process_transaction(&self, tx: Bytes) -> anyhow::Result<()> {
+            self.transactions.write().await.push(tx);
+
+            Ok(())
+        }
+
+        async fn process_bulk_transactions(&self, tx: Vec<Bytes>) -> anyhow::Result<()> {
+            self.transactions.write().await.extend(tx);
+
+            Ok(())
+        }
+    }
+}
