@@ -7,6 +7,8 @@ import (
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/sources"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -27,6 +29,7 @@ type IRPCClient interface {
 type RPCClient struct {
 	*ethclient.Client             // by embedding we get all the methods of the ethclient
 	rawClient         *rpc.Client // allows direct access to `CallContext`
+	receiptsFetcher   *sources.RPCReceiptsFetcher
 }
 
 // guarantees that the IRPCClient interface is implemented by RPCClient
@@ -39,7 +42,8 @@ func Connect(address string) (*RPCClient, error) {
 	}
 	log.Debug().Msgf("RPC connection established: %s", address)
 	ethClient := ethclient.NewClient(c)
-	return &RPCClient{Client: ethClient, rawClient: c}, nil
+	receiptsFetcher := sources.NewRPCReceiptsFetcher(c, nil, sources.RPCReceiptsConfig{})
+	return &RPCClient{Client: ethClient, rawClient: c, receiptsFetcher: receiptsFetcher}, nil
 }
 
 func (c *RPCClient) AsEthClient() *ethclient.Client {
@@ -78,10 +82,20 @@ func (c *RPCClient) BlocksReceiptsByNumbers(ctx context.Context, numbers []strin
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert block number to int, err: %w", err)
 		}
-		blockReceipts, err := c.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(numberInt)))
+		block, err := c.Client.BlockByNumber(ctx, big.NewInt(int64(numberInt)))
+		if err != nil {
+			return nil, fmt.Errorf("failed to get block by number, err: %w", err)
+		}
+		transactions := block.Transactions()
+		hashes := make([]common.Hash, transactions.Len())
+		for _, transaction := range transactions {
+			hashes = append(hashes, transaction.Hash())
+		}
+		blockReceipts, err := c.receiptsFetcher.FetchReceipts(ctx, eth.BlockToInfo(block), hashes)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get receipts for block number=%d, err: %w", numberInt, err)
 		}
+
 		receipts = append(receipts, blockReceipts...)
 	}
 	return receipts, nil
