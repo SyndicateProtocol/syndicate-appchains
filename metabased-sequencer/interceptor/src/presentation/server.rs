@@ -18,6 +18,6 @@ pub async fn run(port: u16) -> anyhow::Result<(SocketAddr, ServerHandle)> {
 
 fn create_eth_module() -> anyhow::Result<RpcModule<()>> {
     let mut module = RpcModule::new(());
-    module.register_method("eth_sendRawTransaction", jsonrpc::send_raw_transaction)?;
+    module.register_async_method("eth_sendRawTransaction", jsonrpc::send_raw_transaction)?;
     Ok(module)
 }

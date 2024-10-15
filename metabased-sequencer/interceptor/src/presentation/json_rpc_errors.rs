@@ -1,13 +1,15 @@
-use crate::presentation::transaction;
-use alloy::hex;
-use std::fmt;
-use alloy_primitives::private::alloy_rlp;
-use crate::presentation::json_rpc_errors::InvalidInputError::{InvalidJson, MissingGasPrice, InvalidTransactionSignature, InvalidUint, UnableToRLPDecode};
+use crate::presentation::json_rpc_errors::InvalidInputError::{
+    InvalidJson, InvalidTransactionSignature, InvalidUint, MissingGasPrice, UnableToRLPDecode,
+};
 use crate::presentation::json_rpc_errors::InvalidParamsError::InvalidHex;
 use crate::presentation::json_rpc_errors::Rejection::FeeTooHigh;
+use crate::presentation::transaction;
+use alloy::hex;
+use alloy_primitives::private::alloy_rlp;
+use std::fmt;
 
 // Source: https://github.com/MetaMask/rpc-errors/blob/main/src/errors.ts
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug)]
 pub enum Error {
     // Parent errors with a JSON-RPC error code mapping
     InvalidRequest,
@@ -22,6 +24,13 @@ pub enum Error {
     MethodNotSupported,
     LimitExceeded,
     Server,
+    Contract(alloy::contract::Error),
+}
+
+impl From<alloy::contract::Error> for Error {
+    fn from(value: alloy::contract::Error) -> Self {
+        Self::Contract(value)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -37,7 +46,7 @@ pub enum InvalidParamsError {
     NotAnArray,
     WrongParamCount(usize),
     MissingParam,
-    NotHexEncoded
+    NotHexEncoded,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -46,7 +55,7 @@ pub enum InvalidInputError {
     InvalidUint,
     InvalidTransactionSignature,
     MissingGasPrice,
-    UnableToRLPDecode
+    UnableToRLPDecode,
 }
 
 impl fmt::Display for InvalidParamsError {
@@ -84,12 +93,13 @@ impl fmt::Display for Error {
             Error::Internal => write!(f, "internal error"),
             Error::Parse => write!(f, "parse error"),
             Error::InvalidInput(m) => write!(f, "invalid input: {}", m),
-            Error::ResourceNotFound => write!(f, "resource not found", ),
+            Error::ResourceNotFound => write!(f, "resource not found",),
             Error::ResourceUnavailable => write!(f, "resource unavailable",),
             Error::TransactionRejected(m) => write!(f, "transaction rejected: {}", m),
             Error::MethodNotSupported => write!(f, "method not supported"),
             Error::LimitExceeded => write!(f, "limit exceeded"),
             Error::Server => write!(f, "server error"),
+            Error::Contract(error) => error.fmt(f),
         }
     }
 }
