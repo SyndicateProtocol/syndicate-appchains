@@ -17,6 +17,7 @@ pub use tests::InMemoryMetabasedSequencerChain;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::convert::Infallible;
     use std::sync::Arc;
     use tokio::sync::RwLock;
 
@@ -33,13 +34,15 @@ mod tests {
 
     #[async_trait]
     impl MetabasedSequencerChainService for InMemoryMetabasedSequencerChain {
-        async fn process_transaction(&self, tx: Bytes) -> anyhow::Result<()> {
+        type Error = Infallible;
+
+        async fn process_transaction(&self, tx: Bytes) -> Result<(), Infallible> {
             self.transactions.write().await.push(tx);
 
             Ok(())
         }
 
-        async fn process_bulk_transactions(&self, tx: Vec<Bytes>) -> anyhow::Result<()> {
+        async fn process_bulk_transactions(&self, tx: Vec<Bytes>) -> Result<(), Infallible> {
             self.transactions.write().await.extend(tx);
 
             Ok(())

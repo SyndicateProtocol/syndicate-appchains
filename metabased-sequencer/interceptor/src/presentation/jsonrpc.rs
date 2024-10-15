@@ -1,19 +1,18 @@
 use crate::application;
-use crate::domain::primitives::{Address, Bytes};
-use crate::infrastructure::SolMetabasedSequencerChainService;
+use crate::domain::primitives::Bytes;
+use crate::domain::MetabasedSequencerChainService;
 use crate::presentation::json_rpc_errors::Error;
 use crate::presentation::json_rpc_errors::Error::InvalidParams;
 use crate::presentation::json_rpc_errors::InvalidParamsError::{
     MissingParam, NotAnArray, NotHexEncoded, WrongParamCount,
 };
+use crate::presentation::server::Services;
 use alloy::hex;
 use alloy::hex::ToHexExt;
-use alloy::providers::ProviderBuilder;
 use jsonrpsee::types::{ErrorObject, Params};
 use serde::Serialize;
 use std::fmt::{Debug, Display, Formatter};
 use std::sync::Arc;
-use url::Url;
 
 /// An error type for JSON-RPC endpoints.
 ///
@@ -89,11 +88,15 @@ impl JsonRpcError<()> {
 ///
 /// * Data: hex encoded string that contains signed and serialized transaction with an optional `0x`
 ///   prefix.
-pub async fn send_raw_transaction(
+pub async fn send_raw_transaction<Chain>(
     params: Params<'static>,
-    _ctx: Arc<()>,
+    ctx: Arc<Services<Chain>>,
     _ext: http::Extensions,
-) -> Result<String, JsonRpcError<()>> {
+) -> Result<String, JsonRpcError<()>>
+where
+    Chain: MetabasedSequencerChainService,
+    Error: From<<Chain as MetabasedSequencerChainService>::Error>,
+{
     let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap())?;
     let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
     if arr.len() != 1 {
@@ -103,11 +106,9 @@ pub async fn send_raw_transaction(
     let str = item.as_str().ok_or(InvalidParams(NotHexEncoded))?;
     let bytes = hex::decode(str)?;
     let bytes = Bytes::from(bytes);
-    let address = Address::new(hex!("0000000000000000000000000000000000000000"));
-    let rpc = ProviderBuilder::new().on_http(Url::parse("http://127.0.0.1").unwrap());
-    let writer = SolMetabasedSequencerChainService::new(address, rpc);
+    let chain = ctx.chain_service();
 
-    Ok(application::send_raw_transaction(bytes, &writer)
+    Ok(application::send_raw_transaction(bytes, chain)
         .await?
         .encode_hex_with_prefix())
 }

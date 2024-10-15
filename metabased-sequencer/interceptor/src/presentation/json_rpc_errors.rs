@@ -6,6 +6,7 @@ use crate::presentation::json_rpc_errors::Rejection::FeeTooHigh;
 use crate::presentation::transaction;
 use alloy::hex;
 use alloy_primitives::private::alloy_rlp;
+use std::convert::Infallible;
 use std::fmt;
 
 // Source: https://github.com/MetaMask/rpc-errors/blob/main/src/errors.ts
@@ -25,12 +26,6 @@ pub enum Error {
     LimitExceeded,
     Server,
     Contract(alloy::contract::Error),
-}
-
-impl From<alloy::contract::Error> for Error {
-    fn from(value: alloy::contract::Error) -> Self {
-        Self::Contract(value)
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -145,5 +140,17 @@ impl From<transaction::TransactionFeeTooHigh> for Error {
 impl<T> From<alloy_primitives::ruint::ToUintError<T>> for Error {
     fn from(_: alloy_primitives::ruint::ToUintError<T>) -> Self {
         Error::InvalidInput(InvalidUint)
+    }
+}
+
+impl From<alloy::contract::Error> for Error {
+    fn from(value: alloy::contract::Error) -> Self {
+        Self::Contract(value)
+    }
+}
+
+impl From<Infallible> for Error {
+    fn from(_value: Infallible) -> Self {
+        unreachable!("Cannot instantiate infallible")
     }
 }
