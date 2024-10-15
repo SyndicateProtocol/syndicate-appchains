@@ -6,6 +6,7 @@ use alloy::primitives::private::alloy_rlp::Decodable;
 use alloy::primitives::TxHash;
 use alloy_primitives::U256;
 use bytes::Bytes;
+use crate::presentation::json_rpc_errors::InvalidInputError::MissingGasPrice;
 
 /// Sends serialized and signed transaction `tx`.
 pub fn send_raw_transaction(tx: Bytes) -> Result<TxHash, Error> {
@@ -27,7 +28,7 @@ pub fn send_raw_transaction(tx: Bytes) -> Result<TxHash, Error> {
         let tx_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
         let gas_price = tx
             .gas_price()
-            .ok_or_else(|| InvalidInput("Legacy transaction missing gas price".to_string()))?;
+            .ok_or_else(|| InvalidInput(MissingGasPrice))?;
         transaction::check_tx_fee(
             U256::try_from(gas_price)?,
             U256::try_from(tx.gas_limit())?,
