@@ -26,3 +26,8 @@ endif
 
 metabased-publisher:
 	env GO111MODULE=on GOOS=$(TARGETOS) GOARCH=$(TARGETARCH) CGO_ENABLED=0 go build -v $(LDFLAGS) -o ./bin/metabased-publisher ./cmd
+.PHONY: metabased-publisher
+
+test:
+	go test -v ./...
+.PHONY: test
