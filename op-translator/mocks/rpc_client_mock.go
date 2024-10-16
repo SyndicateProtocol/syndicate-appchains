@@ -17,7 +17,7 @@ type MockRPCClient struct {
 }
 
 // guarantees that the IRPCClient interface is implemented by MockRPCClient
-// var _ rpc.IRPCClient = (*MockRPCClient)(nil)
+var _ interfaces.IRPCClient = (*MockRPCClient)(nil)
 
 func (m *MockRPCClient) CloseConnection() {
 	m.Called()

@@ -20,8 +20,8 @@ import (
 )
 
 type RPCClient struct {
-	Client          interfaces.IETHClient
-	rawClient       *rpc.Client
+	client          interfaces.IETHClient
+	rawClient       interfaces.IRawRPCClient
 	receiptsFetcher interfaces.IReceiptsFetcher
 }
 
@@ -36,18 +36,18 @@ func Connect(address string) (*RPCClient, error) {
 	log.Debug().Msgf("RPC connection established: %s", address)
 
 	return &RPCClient{
-		Client:          ethclient.NewClient(c),
+		client:          ethclient.NewClient(c),
 		rawClient:       c,
 		receiptsFetcher: sources.NewRPCReceiptsFetcher(c, nil, sources.RPCReceiptsConfig{}),
 	}, nil
 }
 
 func (c *RPCClient) AsEthClient() interfaces.IETHClient {
-	return c.Client
+	return c.client
 }
 
 func (c *RPCClient) CloseConnection() {
-	c.Client.Close()
+	c.client.Close()
 	log.Debug().Msg("RPC connection closed")
 }
 
@@ -76,7 +76,7 @@ func (c *RPCClient) BlocksReceiptsByNumbers(ctx context.Context, numbers []strin
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert block number: %w", err)
 		}
-		block, err := c.Client.BlockByNumber(ctx, big.NewInt(int64(numberInt)))
+		block, err := c.client.BlockByNumber(ctx, big.NewInt(int64(numberInt)))
 		if err != nil {
 			return nil, fmt.Errorf("failed to get block by number: %w", err)
 		}
@@ -107,7 +107,7 @@ func (c *RPCClient) FetchReceipts(ctx context.Context, blockInfo eth.BlockInfo, 
 
 	switch m {
 	case sources.EthGetTransactionReceiptBatch:
-		result, err = c.Client.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(int64(block.Number)))) //nolint // overflow already checked
+		result, err = c.client.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(int64(block.Number)))) //nolint // overflow already checked
 	case sources.AlchemyGetTransactionReceipts:
 		var tmp receiptsWrapper
 		err = c.rawClient.CallContext(ctx, &tmp, "alchemy_getTransactionReceipts", blockHashParameter{BlockHash: block.Hash})
