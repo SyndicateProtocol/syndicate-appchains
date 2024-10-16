@@ -17,7 +17,3 @@ format:
 build:
 	go build ./...
 .PHONY: build
-
-metabased-publisher:
-	make -C ./metabased-publisher metabased-publisher
-.PHONY: metabased-publisher
