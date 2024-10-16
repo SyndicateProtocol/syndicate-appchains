@@ -1,62 +1,139 @@
+use crate::presentation::transaction;
+use alloy::hex;
+use std::fmt;
+use alloy_primitives::private::alloy_rlp;
+use crate::presentation::json_rpc_errors::InvalidInputError::{InvalidJson, MissingGasPrice, InvalidTransactionSignature, InvalidUint, UnableToRLPDecode};
+use crate::presentation::json_rpc_errors::InvalidParamsError::InvalidHex;
+use crate::presentation::json_rpc_errors::Rejection::FeeTooHigh;
+
 // Source: https://github.com/MetaMask/rpc-errors/blob/main/src/errors.ts
 #[derive(Debug, Clone, PartialEq)]
-pub enum JsonRpcErrorCode {
-    InvalidRequest = -32600,
-    MethodNotFound = -32601,
-    InvalidParams = -32602,
-    InternalError = -32603,
-    ParseError = -32700,
-    InvalidInput = -32000,
-    ResourceNotFound = -32001,
-    ResourceUnavailable = -32002,
-    TransactionRejected = -32003,
-    MethodNotSupported = -32004,
-    LimitExceeded = -32005,
-    ServerError = -32099, // We'll use this as the base for server errors
+pub enum Error {
+    // Parent errors with a JSON-RPC error code mapping
+    InvalidRequest,
+    MethodNotFound(String),
+    InvalidParams(InvalidParamsError),
+    Internal,
+    Parse,
+    InvalidInput(InvalidInputError),
+    ResourceNotFound,
+    ResourceUnavailable,
+    TransactionRejected(Rejection),
+    MethodNotSupported,
+    LimitExceeded,
+    Server,
 }
 
-impl JsonRpcErrorCode {
-    // TODO - bring back if needed
-    // pub fn message(&self) -> &'static str {
-    //     match self {
-    //         Self::InvalidRequest => "Invalid request",
-    //         Self::MethodNotFound => "Method not found",
-    //         Self::InvalidParams => "Invalid params",
-    //         Self::InternalError => "Internal error",
-    //         Self::ParseError => "Parse error",
-    //         Self::InvalidInput => "Invalid input",
-    //         Self::ResourceNotFound => "Resource not found",
-    //         Self::ResourceUnavailable => "Resource unavailable",
-    //         Self::TransactionRejected => "Transaction rejected",
-    //         Self::MethodNotSupported => "Method not supported",
-    //         Self::LimitExceeded => "Limit exceeded",
-    //         Self::ServerError => "Server error",
-    //     }
-    // }
+#[derive(Debug, Clone, PartialEq)]
+pub enum Rejection {
+    FeeTooHigh,
 }
 
-impl From<i32> for JsonRpcErrorCode {
-    fn from(value: i32) -> Self {
-        match value {
-            -32700 => Self::ParseError,
-            -32600 => Self::InvalidRequest,
-            -32601 => Self::MethodNotFound,
-            -32602 => Self::InvalidParams,
-            -32603 => Self::InternalError,
-            -32000 => Self::InvalidInput,
-            -32001 => Self::ResourceNotFound,
-            -32002 => Self::ResourceUnavailable,
-            -32003 => Self::TransactionRejected,
-            -32004 => Self::MethodNotSupported,
-            -32005 => Self::LimitExceeded,
-            _ if (-32099..=-32000).contains(&value) => Self::ServerError,
-            _ => Self::InternalError, // Default case
+#[derive(Debug, Clone, PartialEq)]
+pub enum InvalidParamsError {
+    BadSignature,
+    NonceTooLow,
+    InvalidHex,
+    NotAnArray,
+    WrongParamCount(usize),
+    MissingParam,
+    NotHexEncoded
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum InvalidInputError {
+    InvalidJson,
+    InvalidUint,
+    InvalidTransactionSignature,
+    MissingGasPrice,
+    UnableToRLPDecode
+}
+
+impl fmt::Display for InvalidParamsError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            InvalidParamsError::BadSignature => write!(f, "bad signature"),
+            InvalidParamsError::NonceTooLow => write!(f, "nonce too low"),
+            InvalidHex => write!(f, "invalid hex"),
+            InvalidParamsError::NotAnArray => write!(f, "params must be an array"),
+            InvalidParamsError::WrongParamCount(_) => write!(f, "wrong number of params"),
+            InvalidParamsError::MissingParam => write!(f, "missing param"),
+            InvalidParamsError::NotHexEncoded => write!(f, "not a hex encoded string"),
         }
     }
 }
 
-impl JsonRpcErrorCode {
-    pub fn code(&self) -> i32 {
-        self.to_owned() as i32
+impl fmt::Display for InvalidInputError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            InvalidJson => write!(f, "invalid JSON"),
+            InvalidUint => write!(f, "invalid uint"),
+            InvalidTransactionSignature => write!(f, "invalid transaction signature"),
+            MissingGasPrice => write!(f, "transaction missing gas price"),
+            UnableToRLPDecode => write!(f, "unable to RLP decode"),
+        }
+    }
+}
+
+impl fmt::Display for Error {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Error::InvalidRequest => write!(f, "invalid request",),
+            Error::MethodNotFound(m) => write!(f, "method not found: {}", m),
+            Error::InvalidParams(m) => write!(f, "invalid params: {}", m),
+            Error::Internal => write!(f, "internal error"),
+            Error::Parse => write!(f, "parse error"),
+            Error::InvalidInput(m) => write!(f, "invalid input: {}", m),
+            Error::ResourceNotFound => write!(f, "resource not found", ),
+            Error::ResourceUnavailable => write!(f, "resource unavailable",),
+            Error::TransactionRejected(m) => write!(f, "transaction rejected: {}", m),
+            Error::MethodNotSupported => write!(f, "method not supported"),
+            Error::LimitExceeded => write!(f, "limit exceeded"),
+            Error::Server => write!(f, "server error"),
+        }
+    }
+}
+
+impl fmt::Display for Rejection {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FeeTooHigh => write!(f, "transaction fee too high"),
+        }
+    }
+}
+
+impl From<serde_json::Error> for Error {
+    fn from(_: serde_json::Error) -> Self {
+        Error::InvalidInput(InvalidJson)
+    }
+}
+
+impl From<hex::FromHexError> for Error {
+    fn from(_: hex::FromHexError) -> Self {
+        Error::InvalidParams(InvalidHex)
+    }
+}
+
+impl From<alloy_rlp::Error> for Error {
+    fn from(_: alloy_rlp::Error) -> Self {
+        Error::InvalidInput(UnableToRLPDecode)
+    }
+}
+
+impl From<alloy_primitives::SignatureError> for Error {
+    fn from(_: alloy_primitives::SignatureError) -> Self {
+        Error::InvalidInput(InvalidTransactionSignature)
+    }
+}
+
+impl From<transaction::TransactionFeeTooHigh> for Error {
+    fn from(_: transaction::TransactionFeeTooHigh) -> Self {
+        Error::TransactionRejected(FeeTooHigh)
+    }
+}
+
+impl<T> From<alloy_primitives::ruint::ToUintError<T>> for Error {
+    fn from(_: alloy_primitives::ruint::ToUintError<T>) -> Self {
+        Error::InvalidInput(InvalidUint)
     }
 }
