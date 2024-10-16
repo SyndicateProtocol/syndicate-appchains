@@ -8,16 +8,16 @@
 # deploy MetabasedFactory to Base Sepolia
 deploy-metabased-sequencerchain :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedFactory --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
-# deploy DeployMetabasedSequencerChainPlusSetup to Metabased Testnet
-deploy-metabased-sequencerchain-plus-setup :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedSequencerChainPlusSetup --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+# deploy DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule to Metabased Testnet
+deploy-metabased-sequencerchain-plus-setup-with-always-allow-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
 # run AddBatchTransactionsToMetabasedSequencerChainContract script on Base Sepolia
 add-batch-transactions-to-metabased-sequencerchain :; forge script script/AddBatchTransactionsToMetabasedSequencerChainContract.s.sol:AddBatchTransactionsToMetabasedSequencerChainContract --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
 ## deploy Metafiller related contracts to Metabased Testnet
-deploy-l3-backfill-storage :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillStorage.sol:L3BackfillStorage --constructor-args ${ADMIN} ${MANAGER}
+deploy-l3-backfill-storage :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillStorage.sol:L3BackfillStorage --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
 
-deploy-l3-backfill-mapper :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillMapper.sol:L3BackfillMapper --constructor-args ${ADMIN} ${MANAGER}
+deploy-l3-backfill-mapper :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillMapper.sol:L3BackfillMapper --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
 
 
 ## Tx Limit Test
