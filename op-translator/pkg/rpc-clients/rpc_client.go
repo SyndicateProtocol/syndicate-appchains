@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"fmt"
-	"math"
 	"math/big"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/interfaces"
@@ -12,7 +11,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum-optimism/optimism/op-service/sources"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -84,52 +82,11 @@ func (c *RPCClient) BlocksReceiptsByNumbers(ctx context.Context, numbers []strin
 		for _, tx := range block.Transactions() {
 			hashes = append(hashes, tx.Hash())
 		}
-		blockReceipts, err := c.FetchReceipts(ctx, eth.BlockToInfo(block), hashes)
+		blockReceipts, err := c.receiptsFetcher.FetchReceipts(ctx, eth.BlockToInfo(block), hashes)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get receipts for block %d: %w", numberInt, err)
 		}
 		receipts = append(receipts, blockReceipts...)
 	}
 	return receipts, nil
-}
-
-func (c *RPCClient) FetchReceipts(ctx context.Context, blockInfo eth.BlockInfo, txHashes []common.Hash) (ethtypes.Receipts, error) {
-	m := c.receiptsFetcher.PickReceiptsMethod(len(txHashes))
-	block := eth.ToBlockID(blockInfo)
-
-	var result ethtypes.Receipts
-	var err error
-
-	blockNumber := block.Number
-	if blockNumber > math.MaxInt64 {
-		return nil, fmt.Errorf("block number exceeds int64 range: %d", blockNumber)
-	}
-
-	switch m {
-	case sources.EthGetTransactionReceiptBatch:
-		result, err = c.client.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(int64(block.Number)))) //nolint // overflow already checked
-	case sources.AlchemyGetTransactionReceipts:
-		var tmp receiptsWrapper
-		err = c.rawClient.CallContext(ctx, &tmp, "alchemy_getTransactionReceipts", blockHashParameter{BlockHash: block.Hash})
-		result = tmp.Receipts
-	case sources.DebugGetRawReceipts:
-		var rawReceipts []hexutil.Bytes
-		err = c.rawClient.CallContext(ctx, &rawReceipts, "debug_getRawReceipts", block.Hash)
-		if err == nil && len(rawReceipts) == len(txHashes) {
-			result, err = eth.DecodeRawReceipts(block, rawReceipts, txHashes)
-		} else {
-			err = fmt.Errorf("got %d raw receipts, expected %d", len(rawReceipts), len(txHashes))
-		}
-	case sources.ParityGetBlockReceipts, sources.EthGetBlockReceipts, sources.ErigonGetBlockReceiptsByBlockHash:
-		methodName := fmt.Sprintf("%d", m)
-		err = c.rawClient.CallContext(ctx, &result, methodName, block.Hash)
-	default:
-		err = fmt.Errorf("unknown receipt fetching method: %d", uint64(m))
-	}
-
-	if err != nil {
-		c.receiptsFetcher.OnReceiptsMethodErr(m, err)
-		return nil, err
-	}
-	return result, nil
 }

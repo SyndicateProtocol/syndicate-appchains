@@ -120,13 +120,7 @@ func TestRPCClient_FetchReceipts(t *testing.T) {
 				tt.setupMocks(mockFetcher, mockEthClient, mockRawClient)
 			}
 
-			rpcClient := &RPCClient{
-				receiptsFetcher: mockFetcher,
-				client:          mockEthClient,
-				rawClient:       mockRawClient,
-			}
-
-			result, err := rpcClient.FetchReceipts(context.Background(), eth.BlockToInfo(tt.block), tt.txHashes)
+			result, err := mockFetcher.FetchReceipts(context.Background(), eth.BlockToInfo(tt.block), tt.txHashes)
 
 			if tt.expectError {
 				assert.Error(t, err)
