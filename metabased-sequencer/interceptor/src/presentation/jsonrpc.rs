@@ -1,12 +1,13 @@
 use crate::application;
-use crate::presentation::json_rpc_errors::JsonRpcErrorCode;
-use crate::presentation::json_rpc_errors::JsonRpcErrorCode::InvalidParams;
+use crate::presentation::json_rpc_errors::Error;
+use crate::presentation::json_rpc_errors::Error::InvalidParams;
 use alloy::hex;
 use alloy::hex::ToHexExt;
 use bytes::Bytes;
 use jsonrpsee::types::{ErrorObject, Params};
 use serde::Serialize;
 use std::fmt::{Debug, Display, Formatter};
+use crate::presentation::json_rpc_errors::InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount};
 
 /// An error type for JSON-RPC endpoints.
 ///
@@ -45,6 +46,37 @@ impl<'error, S: Serialize> From<JsonRpcError<S>> for ErrorObject<'error> {
     }
 }
 
+impl From<Error> for JsonRpcError<()> {
+    fn from(value: Error) -> Self {
+        let code = Self::valid_eth_rpc_codes(&value);
+        JsonRpcError {
+            code,
+            message: value.to_string(),
+            data: None,
+        }
+    }
+}
+
+impl JsonRpcError<()> {
+    fn valid_eth_rpc_codes(value: &Error) -> i32 {
+        match value {
+            Error::InvalidRequest => -32600,
+            Error::MethodNotFound(_) => -32601,
+            Error::InvalidParams(_) => -32602,
+            Error::Internal => -32603,
+            Error::Parse => -32700,
+            Error::InvalidInput(_) => -32000,
+            Error::ResourceNotFound => -32001,
+            Error::ResourceUnavailable => -32002,
+            Error::TransactionRejected(_) => -32003,
+            Error::MethodNotSupported => -32004,
+            Error::LimitExceeded => -32005,
+            Error::Server => -32099,
+        }
+    }
+}
+
+
 /// The JSON-RPC endpoint for `eth_sendRawTransaction`.
 ///
 /// # Parameters
@@ -57,48 +89,21 @@ pub fn send_raw_transaction(
     _ctx: &(),
     _ext: &http::Extensions,
 ) -> Result<String, JsonRpcError<()>> {
-    let mut json: serde_json::Value =
-        serde_json::from_str(params.as_str().unwrap()).map_err(|e| {
-            rpc_error(
-                &format!("failed to unmarshal params: {}", e),
-                InvalidParams,
-                None,
-            )
-        })?;
-    let arr = json.as_array_mut().ok_or(rpc_error(
-        "unexpected parameter format",
-        InvalidParams,
-        None,
-    ))?;
+    let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap())?;
+    let arr = json
+        .as_array_mut()
+        .ok_or(InvalidParams(NotAnArray))?;
     if arr.len() != 1 {
-        return Err(rpc_error(
-            &format!("Expected 1 parameter, got {}", arr.len()),
-            InvalidParams,
-            None,
-        ));
+        return Err(InvalidParams(WrongParamCount(arr.len())).into());
     }
     let item = arr
         .pop()
-        .ok_or(rpc_error("Missing parameter", InvalidParams, None))?;
-    let str = item.as_str().ok_or(rpc_error(
-        "Expected hex encoded string",
-        InvalidParams,
-        None,
-    ))?;
+        .ok_or(InvalidParams(MissingParam))?; // should be impossible
+    let str = item
+        .as_str()
+        .ok_or(InvalidParams(NotHexEncoded))?;
     let bytes = hex::decode(str)?;
     let bytes = Bytes::from(bytes);
 
     Ok(application::send_raw_transaction(bytes)?.encode_hex_with_prefix())
-}
-
-pub fn rpc_error<S: Serialize>(
-    message: &str,
-    error_code: JsonRpcErrorCode,
-    data: Option<S>,
-) -> JsonRpcError<S> {
-    JsonRpcError {
-        code: error_code.code(),
-        message: message.to_string(),
-        data,
-    }
 }

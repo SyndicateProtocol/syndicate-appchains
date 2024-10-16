@@ -12,8 +12,14 @@ contract MetabasedSequencerChain is RequireListManager {
     /// @notice Emitted when a new transaction is processed.
     event TransactionProcessed(address indexed sender, bytes encodedTxn);
 
+    /// @notice Emitted when a chunk of transactions is processed.
+    event ChunkProcessed(uint256 indexed chunkId, uint256 transactionsProcessed);
+
     /// @dev Thrown when the transaction form is invalid.
     error InvalidTransactionForm();
+
+    /// @dev Thrown when an invalid chunk size is provided.
+    error InvalidChunkSize();
 
     /// @notice Constructs the MetabasedSequencerChain contract.
     /// @param _l3ChainId The ID of the L3 chain that this contract is sequencing transactions for.
@@ -56,6 +62,28 @@ contract MetabasedSequencerChain is RequireListManager {
         for (uint256 i = 0; i < txnCount; i++) {
             processTransaction(encodedTxns[i]);
         }
+    }
+
+    /// @notice Processes a chunk of transactions from a larger batch.
+    /// @param encodedTxns An array of encoded transaction data.
+    /// @param startIndex The starting index for this chunk in the overall batch.
+    /// @param chunkSize The number of transactions to process in this chunk.
+    /// @param chunkId A unique identifier for this chunk.
+    function processChunk(bytes[] calldata encodedTxns, uint256 startIndex, uint256 chunkSize, uint256 chunkId)
+        public
+    {
+        if (chunkSize == 0) {
+            revert InvalidChunkSize();
+        }
+
+        uint256 endIndex = startIndex + chunkSize;
+        require(endIndex <= encodedTxns.length, "Chunk exceeds batch size");
+
+        for (uint256 i = startIndex; i < endIndex; i++) {
+            processTransaction(encodedTxns[i]);
+        }
+
+        emit ChunkProcessed(chunkId, chunkSize);
     }
 
     /// @dev Validates the form of the encoded transaction.

@@ -1,11 +1,17 @@
-module github.com/SyndicateProtocol/metabased-rollup/metabased-publisher
+module github.com/SyndicateProtocol/metabased-rollup
 
 go 1.23.0
 
 require (
-	github.com/SyndicateProtocol/metabased-rollup/op-translator v0.0.0
 	github.com/ethereum-optimism/optimism v1.9.3
 	github.com/ethereum/go-ethereum v1.14.8
+	github.com/hashicorp/go-multierror v1.1.1
+	github.com/knadh/koanf/parsers/dotenv v1.0.0
+	github.com/knadh/koanf/providers/file v1.1.0
+	github.com/knadh/koanf/providers/posflag v0.1.0
+	github.com/knadh/koanf/v2 v2.1.1
+	github.com/rs/zerolog v1.33.0
+	github.com/spf13/pflag v1.0.5
 	github.com/stretchr/testify v1.9.0
 	github.com/urfave/cli/v2 v2.27.4
 )
@@ -42,6 +48,7 @@ require (
 	github.com/ethereum/c-kzg-4844 v1.0.0 // indirect
 	github.com/ethereum/go-verkle v0.1.1-0.20240306133620-7d920df305f0 // indirect
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
 	github.com/getsentry/sentry-go v0.27.0 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-viper/mapstructure/v2 v2.1.0 // indirect
@@ -53,7 +60,6 @@ require (
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-bexpr v0.1.11 // indirect
-	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/holiman/bloomfilter/v2 v2.0.3 // indirect
 	github.com/holiman/uint256 v1.3.1 // indirect
 	github.com/huin/goupnp v1.3.0 // indirect
@@ -61,10 +67,6 @@ require (
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.17.9 // indirect
 	github.com/knadh/koanf/maps v0.1.1 // indirect
-	github.com/knadh/koanf/parsers/dotenv v1.0.0 // indirect
-	github.com/knadh/koanf/providers/file v1.1.0 // indirect
-	github.com/knadh/koanf/providers/posflag v0.1.0 // indirect
-	github.com/knadh/koanf/v2 v2.1.1 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -86,10 +88,9 @@ require (
 	github.com/rivo/uniseg v0.4.4 // indirect
 	github.com/rogpeppe/go-internal v1.11.0 // indirect
 	github.com/rs/cors v1.11.0 // indirect
-	github.com/rs/zerolog v1.33.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
-	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/status-im/keycard-go v0.2.0 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
 	github.com/supranational/blst v0.3.11 // indirect
 	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a // indirect
@@ -112,5 +113,4 @@ require (
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
 
-// Local module replacement
-replace github.com/SyndicateProtocol/metabased-rollup/op-translator => ../op-translator
+replace github.com/ethereum/go-ethereum v1.14.8 => github.com/ethereum-optimism/op-geth v1.101408.0-rc.4.0.20240827042333-110c433a2469

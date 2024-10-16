@@ -1,63 +1,32 @@
-# Heavily inspired by Reth's Makefile: https://github.com/paradigmxyz/reth/blob/main/Makefile
-.DEFAULT_GOAL := help
+# include .env file and export its env vars
+# (-include to ignore error if it does not exist)
+# Note that any unset variables here will wipe the variables if they are set in
+# .zshrc or .bashrc. Make sure that the variables are set in .env, especially if
+# you're running into issues with fork tests
+-include .env
 
-BIN_DIR = "dist/bin"
+# deploy MetabasedFactory to Base Sepolia
+deploy-metabased-sequencerchain :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedFactory --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
-BUILD_PATH = "target"
+# deploy DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule to Metabased Testnet
+deploy-metabased-sequencerchain-plus-setup-with-always-allow-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
-# List of features to use when building. Can be overridden via the environment.
-# No jemalloc on Windows
-# ifeq ($(OS),Windows_NT)
-    FEATURES ?=
-# else
-#     FEATURES ?= jemalloc asm-keccak
-# endif
+# run AddBatchTransactionsToMetabasedSequencerChainContract script on Base Sepolia
+add-batch-transactions-to-metabased-sequencerchain :; forge script script/AddBatchTransactionsToMetabasedSequencerChainContract.s.sol:AddBatchTransactionsToMetabasedSequencerChainContract --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
-# Cargo profile for builds. Default is for local builds, CI uses an override.
-PROFILE ?= release
+## deploy Metafiller related contracts to Metabased Testnet
+deploy-l3-backfill-storage :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillStorage.sol:L3BackfillStorage --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
 
-# Extra flags for Cargo
-CARGO_INSTALL_EXTRA_FLAGS ?=
+deploy-l3-backfill-mapper :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillMapper.sol:L3BackfillMapper --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
 
-# Features in reth/op-reth binary crate other than "ethereum" and "optimism"
-BIN_OTHER_FEATURES := asm-keccak jemalloc jemalloc-prof min-error-logs min-warn-logs min-info-logs min-debug-logs min-trace-logs
 
-##@ Help
+## Tx Limit Test
+# run tx limit test against OP Mainnet or Base Sepolia
+# and save output to file
+# need to change target network in the test file
+test-tx-limit :; forge test --match-contract MetabaseSequencerChainIntegrationTest -vv > test/integration/metabase-tx-limit-data/optimism_test_output_$(date +%Y%m%d_%H%M%S).log 2>&1
 
-.PHONY: help
-help: ## Display this help.
-	@awk 'BEGIN {FS = ":.*##"; printf "Usage:\n  make \033[36m<target>\033[0m\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
+test-events-limit :; forge test --match-contract MetabaseSequencerChainEventLimitTest -vv > test/integration/metabase-events-limit-data/base_sepolia_test_output_$(date +%Y%m%d_%H%M%S).md 2>&1
 
-##@ Build
 
-.PHONY: install-foundry
-install-foundry: ## Install Foundry if the forge command is not found or is corrupted.
-	@if [ -z "$$(which forge)" ]; then \
-		echo "Forge not found. Installing Foundry..."; \
-		curl -L https://foundry.paradigm.xyz | bash && bash -c "source ~/.bashrc && foundryup"; \
-	fi
-	@forge build --help > /dev/null 2>&1 || (echo "Forge is corrupted. Reinstalling Foundry..." && curl -L https://foundry.paradigm.xyz | bash && bash -c "source ~/.bashrc && foundryup")
-	@echo "Foundry is installed and ready to use."
 
-.PHONY: build-op-reth-syn
-build-op-reth-syn: ## Build and install the op-reth binary under `~/.cargo/bin`.
-	cd ./reth-and-exexs && cargo install --path . --bin op-reth-syn --force --locked \
-		--features "$(FEATURES)" \
-		--profile "$(PROFILE)" \
-		$(CARGO_INSTALL_EXTRA_FLAGS)
-
-.PHONY: build-contracts
-build-contracts: install-foundry ## Build contracts using forge.
-	cd ./contracts && forge build
-	@echo "Contract compilation complete"
-
-.PHONY: test
-test: build-contracts ## Run tests after building the contracts.
-	cd ./reth-and-exexs && cargo test --all
-	@echo "Tests complete"
-
-##@ Custom Build
-
-.PHONY: install
-install: build-contracts build-op-reth-syn ## Run build steps.
-	@echo "Install complete. You can now run op-reth-syn from your terminal."
