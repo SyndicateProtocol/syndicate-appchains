@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/interfaces"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -11,14 +12,14 @@ import (
 )
 
 type OPTranslator struct {
-	SettlementChain     rpc.IRPCClient
-	BatchProvider       BatchProvider
+	SettlementChain     interfaces.IRPCClient
+	BatchProvider       interfaces.IBatchProvider
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
 }
 
-func Init(cfg config.IConfig) *OPTranslator {
+func Init(cfg interfaces.IConfig) *OPTranslator {
 	settlementChain, err := rpc.Connect(cfg.SettlementChainAddr())
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize settlement chain")

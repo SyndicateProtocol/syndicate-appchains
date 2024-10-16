@@ -7,14 +7,14 @@ import (
 	"os"
 	"strings"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/interfaces"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 )
 
-func Init(cfg config.IConfig) {
+func Init(cfg interfaces.IConfig) {
 	log.Debug().Msg("Logger initializing")
 	// Add these back if GCP logging is necessary
 	// zerolog.LevelFieldName = "severity"

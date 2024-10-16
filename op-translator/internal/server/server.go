@@ -11,12 +11,13 @@ import (
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/interfaces"
 	t "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/rs/zerolog/log"
 )
 
-func TranslatorHandler(cfg config.IConfig, translator any) (*http.ServeMux, error) {
+func TranslatorHandler(cfg interfaces.IConfig, translator any) (*http.ServeMux, error) {
 	// Setup proxy
 	parsedURL, err := url.Parse(cfg.SettlementChainAddr())
 	if err != nil {

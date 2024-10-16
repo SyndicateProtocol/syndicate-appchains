@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/interfaces"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog/log"
@@ -16,7 +16,7 @@ type Signer struct {
 	signer     ethtypes.Signer
 }
 
-func NewSigner(cfg config.IConfig) *Signer {
+func NewSigner(cfg interfaces.IConfig) *Signer {
 	key, err := crypto.HexToECDSA(cfg.BatcherPrivateKey())
 
 	if err != nil {

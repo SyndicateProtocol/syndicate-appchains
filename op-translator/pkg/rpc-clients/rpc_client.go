@@ -6,6 +6,7 @@ import (
 	"math"
 	"math/big"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/interfaces"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
@@ -18,24 +19,14 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type IRPCClient interface {
-	CloseConnection()
-	HeaderByNumber(ctx context.Context, number *big.Int) (*ethtypes.Header, error)
-	GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error)
-	GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (types.Block, error)
-	BlocksReceiptsByNumbers(ctx context.Context, numbers []string) ([]*ethtypes.Receipt, error)
-	TransactionReceipt(ctx context.Context, hash common.Hash) (*ethtypes.Receipt, error)
-	AsEthClient() *ethclient.Client
-}
-
 type RPCClient struct {
-	*ethclient.Client
+	Client          interfaces.IETHClient
 	rawClient       *rpc.Client
-	receiptsFetcher *sources.RPCReceiptsFetcher
+	receiptsFetcher interfaces.IReceiptsFetcher
 }
 
 // guarantees that the IRPCClient interface is implemented by RPCClient
-var _ IRPCClient = (*RPCClient)(nil)
+var _ interfaces.IRPCClient = (*RPCClient)(nil)
 
 func Connect(address string) (*RPCClient, error) {
 	c, err := rpc.Dial(address)
@@ -51,12 +42,12 @@ func Connect(address string) (*RPCClient, error) {
 	}, nil
 }
 
-func (c *RPCClient) AsEthClient() *ethclient.Client {
+func (c *RPCClient) AsEthClient() interfaces.IETHClient {
 	return c.Client
 }
 
 func (c *RPCClient) CloseConnection() {
-	c.Close()
+	c.Client.Close()
 	log.Debug().Msg("RPC connection closed")
 }
 
@@ -116,7 +107,7 @@ func (c *RPCClient) FetchReceipts(ctx context.Context, blockInfo eth.BlockInfo, 
 
 	switch m {
 	case sources.EthGetTransactionReceiptBatch:
-		result, err = c.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(int64(block.Number)))) //nolint // overflow already checked
+		result, err = c.Client.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(int64(block.Number)))) //nolint // overflow already checked
 	case sources.AlchemyGetTransactionReceipts:
 		var tmp receiptsWrapper
 		err = c.rawClient.CallContext(ctx, &tmp, "alchemy_getTransactionReceipts", blockHashParameter{BlockHash: block.Hash})
@@ -141,12 +132,4 @@ func (c *RPCClient) FetchReceipts(ctx context.Context, blockInfo eth.BlockInfo, 
 		return nil, err
 	}
 	return result, nil
-}
-
-// Some Nethermind and Alchemy RPC endpoints require an object to identify a block, instead of a string.
-type blockHashParameter struct {
-	BlockHash common.Hash `json:"blockHash"`
-}
-type receiptsWrapper struct {
-	Receipts []*ethtypes.Receipt `json:"receipts"`
 }

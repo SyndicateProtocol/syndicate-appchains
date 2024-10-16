@@ -7,8 +7,8 @@ import (
 	"math/big"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/contracts/l2"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/interfaces"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
@@ -22,11 +22,6 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type BatchProvider interface {
-	GetBatch(ctx context.Context, block types.Block) (*types.Batch, error)
-	Close()
-}
-
 var (
 	// ref: OP `crossdomain` package
 	AddressType, _              = abi.NewType("address", "", nil)
@@ -36,8 +31,8 @@ var (
 )
 
 type MetaBasedBatchProvider struct {
-	metaBasedChain            rpc.IRPCClient
-	sequencingChain           rpc.IRPCClient
+	metaBasedChain            interfaces.IRPCClient
+	sequencingChain           interfaces.IRPCClient
 	sequencingContractAddress common.Address
 
 	settlementStartBlock       int
@@ -45,7 +40,7 @@ type MetaBasedBatchProvider struct {
 	sequencePerSettlementBlock int
 }
 
-func InitMetaBasedBatchProvider(cfg config.IConfig) *MetaBasedBatchProvider {
+func InitMetaBasedBatchProvider(cfg interfaces.IConfig) *MetaBasedBatchProvider {
 	sequencingChain, err := rpc.Connect(cfg.SequencingChainAddr())
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize sequencing chain")
@@ -68,8 +63,8 @@ func InitMetaBasedBatchProvider(cfg config.IConfig) *MetaBasedBatchProvider {
 }
 
 func NewMetaBasedBatchProvider(
-	settlementChainClient rpc.IRPCClient,
-	sequencingChainClient rpc.IRPCClient,
+	settlementChainClient interfaces.IRPCClient,
+	sequencingChainClient interfaces.IRPCClient,
 	sequencingContractAddress common.Address,
 	settlementStartBlock int,
 	sequencingStartBlock int,
@@ -132,7 +127,7 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	parentBlockNum := int64(blockNum - m.settlementStartBlock - 1)
 
 	log.Debug().Msgf("Getting block hash for block number %d", parentBlockNum)
-	previousBlock, err := m.metaBasedChain.HeaderByNumber(ctx, big.NewInt(parentBlockNum))
+	previousBlock, err := m.metaBasedChain.AsEthClient().HeaderByNumber(ctx, big.NewInt(parentBlockNum))
 	if err != nil {
 		return "", err
 	}

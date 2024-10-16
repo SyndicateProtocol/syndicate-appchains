@@ -54,3 +54,83 @@ func TestCloseConnection(t *testing.T) {
 	_, err = client.GetBlockByHash(context.Background(), hash, true)
 	assert.Error(t, err, "expected an error after closing the connection")
 }
+
+// func TestRPCClient_FetchReceipts(t *testing.T) {
+// 	tests := []struct {
+// 		name             string
+// 		method           sources.ReceiptsFetchingMethod
+// 		block            *ethtypes.Block
+// 		txHashes         []common.Hash
+// 		setupMocks       func(*mocks.MockReceiptsFetcher, *mocks.MockEthClient) // Added mock for ethclient
+// 		expectedReceipts types.Receipts
+// 		expectError      bool
+// 	}{
+// 		{
+// 			name:   "EthGetTransactionReceiptBatch - success",
+// 			method: sources.EthGetTransactionReceiptBatch,
+// 			block: ethtypes.NewBlock(
+// 				&types.Header{Number: big.NewInt(10), ParentHash: common.HexToHash("0x123")},
+// 				&types.Body{},
+// 				nil,
+// 				nil,
+// 			),
+// 			txHashes: []common.Hash{common.HexToHash("0x456")},
+// 			setupMocks: func(mockFetcher *mocks.MockReceiptsFetcher, mockEthClient *mocks.MockEthClient) {
+// 				mockFetcher.On("PickReceiptsMethod", 1).Return(sources.EthGetTransactionReceiptBatch)
+// 				// Mock the BlockReceipts method to return a valid result
+// 				mockEthClient.On("BlockReceipts", mock.Anything, mock.Anything).Return(types.Receipts{&types.Receipt{Status: 1}}, nil)
+// 			},
+// 			expectedReceipts: types.Receipts{&types.Receipt{Status: 1}},
+// 			expectError:      false,
+// 		},
+// 		{
+// 			name:   "EthGetTransactionReceiptBatch - error fetching",
+// 			method: sources.EthGetTransactionReceiptBatch,
+// 			block: ethtypes.NewBlock(
+// 				&types.Header{Number: big.NewInt(10), ParentHash: common.HexToHash("0x123")},
+// 				&types.Body{},
+// 				nil,
+// 				nil,
+// 			),
+// 			txHashes: []common.Hash{common.HexToHash("0x456")},
+// 			setupMocks: func(mockFetcher *mocks.MockReceiptsFetcher, mockEthClient *mocks.MockEthClient) {
+// 				mockFetcher.On("PickReceiptsMethod", 1).Return(sources.EthGetTransactionReceiptBatch)
+// 				// Mock the BlockReceipts method to return an error
+// 				mockEthClient.On("BlockReceipts", mock.Anything, mock.Anything).Return(nil, errors.New("fetching error"))
+// 			},
+// 			expectedReceipts: nil,
+// 			expectError:      true,
+// 		},
+// 		// Additional test cases...
+// 	}
+
+// 	for _, tt := range tests {
+// 		t.Run(tt.name, func(t *testing.T) {
+// 			mockFetcher := new(mocks.MockReceiptsFetcher)
+// 			mockEthClient := new(mocks.MockEthClient) // Add mock ethclient
+
+// 			if tt.setupMocks != nil {
+// 				tt.setupMocks(mockFetcher, mockEthClient)
+// 			}
+
+// 			// Initialize the RPCClient with both the mock ethclient and receiptsFetcher
+// 			rpcClient := &RPCClient{
+// 				receiptsFetcher: mockFetcher,
+// 			}
+
+// 			result, err := rpcClient.FetchReceipts(context.Background(), eth.BlockToInfo(tt.block), tt.txHashes)
+
+// 			// Assertions
+// 			if tt.expectError {
+// 				assert.Error(t, err)
+// 				assert.Nil(t, result)
+// 			} else {
+// 				require.NoError(t, err)
+// 				assert.Equal(t, tt.expectedReceipts, result)
+// 			}
+
+// 			mockFetcher.AssertExpectations(t)
+// 			mockEthClient.AssertExpectations(t) // Assert the expectations for ethclient
+// 		})
+// 	}
+// }

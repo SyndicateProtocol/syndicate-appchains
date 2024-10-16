@@ -45,25 +45,6 @@ type Config struct {
 	pretty                     bool   `koanf:"pretty"`
 }
 
-type IConfig interface {
-	SettlementChainAddr() string
-	SequencingChainAddr() string
-	MetaBasedChainAddr() string
-	LogLevel() string
-	Port() int
-	FrameSize() int
-	Pretty() bool
-
-	SequencingContractAddress() string
-	BatcherAddress() string
-	BatchInboxAddress() string
-	BatcherPrivateKey() string
-	SettlementChainID() int64
-	SettlementStartBlock() int
-	SequencingStartBlock() int
-	SequencePerSettlementBlock() int
-}
-
 // setCLIFlags sets all valid CLI flags for the app
 func setCLIFlags(f *pflag.FlagSet) {
 	f.Int("port", defaultPort, "Server port number for the app")
