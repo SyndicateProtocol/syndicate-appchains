@@ -5,33 +5,22 @@
 # you're running into issues with fork tests
 -include .env
 
-# deploy DeployMetabasedSequencerChain to Base Sepolia
-deploy-metabased-sequencerchain :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedSequencerChain --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+# deploy MetabasedFactory to Base Sepolia
+deploy-metabased-sequencerchain :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedFactory --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
-# deploy DeployMetabasedSequencerChainForTestnet to Metabased Testnet
-deploy-metabased-sequencerchain-testnet :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedSequencerChainForTestnet --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
-
-# run AddModuleToMetabasedSequencerChain script on Base Sepolia
-add-module-to-metabased-sequencerchain :; forge script script/DeployContractsForSequencerChain.s.sol:AddModuleToMetabasedSequencerChain --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
-
-# deploy DeploySealedBidAuctionSequencingModule to Base Sepolia
-deploy-sealed-bid-auction-sequencing-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeploySealedBidAuctionSequencingModule --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
-
-# deploy DeployTokenBalanceSequencingModule to Base Sepolia
-deploy-token-balance-sequencing-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeployTokenBalanceSequencingModule --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
-
-# deploy DeployAllowlistSequencingModule to Base Sepolia
-deploy-allowlist-sequencing-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeployAllowlistSequencingModule --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
-
-# deploy DeployAlwaysAllowedModule to Base Sepolia
-deploy-always-allowed-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeployAlwaysAllowedModule --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+# deploy DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule to Metabased Testnet
+deploy-metabased-sequencerchain-plus-setup-with-always-allow-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
 # run AddBatchTransactionsToMetabasedSequencerChainContract script on Base Sepolia
 add-batch-transactions-to-metabased-sequencerchain :; forge script script/AddBatchTransactionsToMetabasedSequencerChainContract.s.sol:AddBatchTransactionsToMetabasedSequencerChainContract --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
-# run AddBatchTransactionsToMetabasedSequencerChainContract script on localhost
-add-batch-transactions-to-metabased-sequencerchain-localhost :; forge script script/AddBatchTransactionsToMetabasedSequencerChainContract.s.sol:AddBatchTransactionsToMetabasedSequencerChainContract --rpc-url localhost --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+## deploy Metafiller related contracts to Metabased Testnet
+deploy-l3-backfill-storage :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillStorage.sol:L3BackfillStorage --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
 
+deploy-l3-backfill-mapper :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillMapper.sol:L3BackfillMapper --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
+
+
+## Tx Limit Test
 # run tx limit test against OP Mainnet or Base Sepolia
 # and save output to file
 # need to change target network in the test file
@@ -39,9 +28,5 @@ test-tx-limit :; forge test --match-contract MetabaseSequencerChainIntegrationTe
 
 test-events-limit :; forge test --match-contract MetabaseSequencerChainEventLimitTest -vv > test/integration/metabase-events-limit-data/base_sepolia_test_output_$(date +%Y%m%d_%H%M%S).md 2>&1
 
-# deploy L3BackfillData to Metabased Testnet
-deploy-l3-backfill-data :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillData.sol:L3BackfillData --constructor-args ${ADMIN} ${MANAGER}
 
-deploy-l3-backfill-storage :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillStorage.sol:L3BackfillStorage --constructor-args ${ADMIN} ${MANAGER}
 
-deploy-l3-backfill-mapper :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillMapper.sol:L3BackfillMapper --constructor-args ${ADMIN} ${MANAGER}
