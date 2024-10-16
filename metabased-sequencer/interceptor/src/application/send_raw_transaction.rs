@@ -28,7 +28,7 @@ pub fn send_raw_transaction(tx: Bytes) -> Result<TxHash, Error> {
         let tx_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
         let gas_price = tx
             .gas_price()
-            .ok_or_else(|| InvalidInput(MissingGasPrice))?;
+            .ok_or(InvalidInput(MissingGasPrice))?;
         transaction::check_tx_fee(
             U256::try_from(gas_price)?,
             U256::try_from(tx.gas_limit())?,

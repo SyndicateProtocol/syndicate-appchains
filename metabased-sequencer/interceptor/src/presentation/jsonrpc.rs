@@ -94,7 +94,7 @@ pub fn send_raw_transaction(
         .as_array_mut()
         .ok_or(InvalidParams(NotAnArray))?;
     if arr.len() != 1 {
-        InvalidParams(WrongParamCount(arr.len()));
+        return Err(InvalidParams(WrongParamCount(arr.len())).into());
     }
     let item = arr
         .pop()
