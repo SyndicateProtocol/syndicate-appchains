@@ -85,7 +85,6 @@ func TestRPCClient_FetchReceipts(t *testing.T) {
 			txHashes: []common.Hash{common.HexToHash("0x456")},
 			setupMocks: func(mockFetcher *mocks.MockReceiptsFetcher, mockEthClient *mocks.MockEthClient, mockRawClient *mocks.MockRawRPCClient) {
 				mockFetcher.On("PickReceiptsMethod", 1).Return(sources.EthGetTransactionReceiptBatch)
-				// Mock the BlockReceipts method to return a valid result
 				mockEthClient.On("BlockReceipts", mock.Anything, mock.Anything).Return(ethtypes.Receipts{&ethtypes.Receipt{Status: 1}}, nil)
 			},
 			expectedReceipts: ethtypes.Receipts{&ethtypes.Receipt{Status: 1}},
