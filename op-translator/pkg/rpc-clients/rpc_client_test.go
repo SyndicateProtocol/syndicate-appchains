@@ -65,13 +65,13 @@ func TestCloseConnection(t *testing.T) {
 
 func TestRPCClient_FetchReceipts(t *testing.T) {
 	tests := []struct {
-		method           sources.ReceiptsFetchingMethod
 		block            *ethtypes.Block
-		txHashes         []common.Hash
 		setupMocks       func(*mocks.MockReceiptsFetcher, *mocks.MockEthClient, *mocks.MockRawRPCClient)
-		expectedReceipts ethtypes.Receipts
-		expectError      bool
 		name             string
+		txHashes         []common.Hash
+		expectedReceipts ethtypes.Receipts
+		method           sources.ReceiptsFetchingMethod
+		expectError      bool
 	}{
 		{
 			name:   "EthGetTransactionReceiptBatch - success",

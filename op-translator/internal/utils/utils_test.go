@@ -62,14 +62,14 @@ func TestHexToUInt64(t *testing.T) {
 }
 
 func TestIntToHex(t *testing.T) {
-	tests := []struct { //nolint:govet // Test struct
+	tests := []struct {
 		name  string
-		input int
 		want  string
+		input int
 	}{
-		{"Zero", 0, "0x0"},
-		{"Positive number", 26, "0x1a"},
-		{"Large number", 1000000, "0xf4240"},
+		{"Zero", "0x0", 0},
+		{"Positive number", "0x1a", 26},
+		{"Large number", "0xf4240", 1000000},
 	}
 
 	for _, tt := range tests {

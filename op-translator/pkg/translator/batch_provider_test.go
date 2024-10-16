@@ -27,17 +27,17 @@ func getBatchProvider() *MetaBasedBatchProvider {
 
 func TestGetLinkedBlocks(t *testing.T) {
 	metaBasedBatchProvider := getBatchProvider()
-	tests := []struct { //nolint:govet // Test struct
+	tests := []struct {
+		err      error
 		name     string
 		block    string
 		expected []string
-		err      error
 	}{
-		{"Start block", "0x1", []string{"0x1", "0x2"}, nil},
-		{"Block 10", "0xa", []string{"0x13", "0x14"}, nil},
-		{"Large block", "0xd431", []string{"0x1a861", "0x1a862"}, nil},
-		{"Block before start block", "0x0", []string(nil), errors.New("block number before start block")},
-		{"Invalid block number", "foo", []string(nil), errors.New("invalid hex string, must start with 0x")},
+		{nil, "Start block", "0x1", []string{"0x1", "0x2"}},
+		{nil, "Block 10", "0xa", []string{"0x13", "0x14"}},
+		{nil, "Large block", "0xd431", []string{"0x1a861", "0x1a862"}},
+		{errors.New("block number before start block"), "Block before start block", "0x0", []string(nil)},
+		{errors.New("invalid hex string, must start with 0x"), "Invalid block number", "foo", []string(nil)},
 	}
 
 	for _, tt := range tests {

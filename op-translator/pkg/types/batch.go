@@ -14,12 +14,12 @@ import (
 // Documentation: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#batch-format
 const BatchVersionByte = 0x00
 
-type Batch struct { //nolint:govet // order is necessary for correct RLP encoding
-	ParentHash      common.Hash
-	EpochNumber     uint64
-	EpochHash       common.Hash
-	Timestamp       uint64
+type Batch struct {
 	TransactionList []hexutil.Bytes
+	EpochNumber     uint64
+	Timestamp       uint64
+	ParentHash      common.Hash
+	EpochHash       common.Hash
 }
 
 func NewBatch(parentHashStr, epochNumberStr, epochHashStr, timestampStr string, txs []hexutil.Bytes) (*Batch, error) {
