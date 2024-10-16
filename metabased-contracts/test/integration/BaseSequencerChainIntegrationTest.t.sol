@@ -19,8 +19,7 @@ contract BasedSequencerChainIntegrationTest is Test {
     uint256 auctionDuration = 1 days;
 
     function setUp() public {
-        string memory syndicateFrameRPC = vm.envString("SYNDICATE_FRAME_RPC_URL");
-        vm.createSelectFork(syndicateFrameRPC);
+        vm.createSelectFork("syndicate_frame");
 
         admin = makeAddr("admin");
         treasury = makeAddr("treasury");
