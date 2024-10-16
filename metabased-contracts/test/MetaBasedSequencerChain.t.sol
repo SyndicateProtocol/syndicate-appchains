@@ -116,6 +116,55 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidTransactionForm.selector));
         chain.processBulkTransactions(txns);
     }
+
+    function testProcessChunk() public {
+        bytes[] memory validTxns = new bytes[](5);
+        for (uint256 i = 0; i < 5; i++) {
+            validTxns[i] = abi.encode(string(abi.encodePacked("transaction ", vm.toString(i + 1))));
+        }
+
+        vm.startPrank(admin);
+        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
+        vm.stopPrank();
+
+        for (uint256 i = 0; i < 3; i++) {
+            vm.expectEmit(true, false, false, true);
+            emit MetabasedSequencerChain.TransactionProcessed(address(this), validTxns[i]);
+        }
+
+        vm.expectEmit(true, true, false, true);
+        emit MetabasedSequencerChain.ChunkProcessed(1, 3);
+
+        chain.processChunk(validTxns, 0, 3, 1);
+    }
+
+    function testProcessChunkInvalidSize() public {
+        bytes[] memory validTxns = new bytes[](5);
+        for (uint256 i = 0; i < 5; i++) {
+            validTxns[i] = abi.encode(string(abi.encodePacked("transaction ", vm.toString(i + 1))));
+        }
+
+        vm.startPrank(admin);
+        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
+        vm.stopPrank();
+
+        vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidChunkSize.selector));
+        chain.processChunk(validTxns, 0, 0, 1);
+    }
+
+    function testProcessChunkExceedsBatchSize() public {
+        bytes[] memory validTxns = new bytes[](5);
+        for (uint256 i = 0; i < 5; i++) {
+            validTxns[i] = abi.encode(string(abi.encodePacked("transaction ", vm.toString(i + 1))));
+        }
+
+        vm.startPrank(admin);
+        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
+        vm.stopPrank();
+
+        vm.expectRevert("Chunk exceeds batch size");
+        chain.processChunk(validTxns, 3, 3, 1);
+    }
 }
 
 contract MetabasedSequencerChainViewTest is MetabasedSequencerChainTestSetUp {
