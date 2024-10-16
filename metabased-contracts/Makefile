@@ -11,7 +11,6 @@ deploy-metabased-sequencerchain :; forge script script/DeployContractsForSequenc
 # deploy DeployMetabasedSequencerChainPlusSetup to Metabased Testnet
 deploy-metabased-sequencerchain-plus-setup :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedSequencerChainPlusSetup --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
-
 # run AddBatchTransactionsToMetabasedSequencerChainContract script on Base Sepolia
 add-batch-transactions-to-metabased-sequencerchain :; forge script script/AddBatchTransactionsToMetabasedSequencerChainContract.s.sol:AddBatchTransactionsToMetabasedSequencerChainContract --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
