@@ -34,6 +34,7 @@ type RPCClient struct {
 	receiptsFetcher *sources.RPCReceiptsFetcher
 }
 
+// guarantees that the IRPCClient interface is implemented by RPCClient
 var _ IRPCClient = (*RPCClient)(nil)
 
 func Connect(address string) (*RPCClient, error) {
@@ -104,7 +105,6 @@ func (c *RPCClient) BlocksReceiptsByNumbers(ctx context.Context, numbers []strin
 func (c *RPCClient) FetchReceipts(ctx context.Context, blockInfo eth.BlockInfo, txHashes []common.Hash) (ethtypes.Receipts, error) {
 	m := c.receiptsFetcher.PickReceiptsMethod(len(txHashes))
 	block := eth.ToBlockID(blockInfo)
-	log.Debug().Msgf("FetchReceipts: block=%v, txHashes=%v, method=%v", block, txHashes, m)
 
 	var result ethtypes.Receipts
 	var err error
@@ -116,7 +116,7 @@ func (c *RPCClient) FetchReceipts(ctx context.Context, blockInfo eth.BlockInfo, 
 
 	switch m {
 	case sources.EthGetTransactionReceiptBatch:
-		result, err = c.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(block.Number)))
+		result, err = c.BlockReceipts(ctx, rpc.BlockNumberOrHashWithNumber(rpc.BlockNumber(int64(block.Number)))) //nolint // overflow already checked
 	case sources.AlchemyGetTransactionReceipts:
 		var tmp receiptsWrapper
 		err = c.rawClient.CallContext(ctx, &tmp, "alchemy_getTransactionReceipts", blockHashParameter{BlockHash: block.Hash})
