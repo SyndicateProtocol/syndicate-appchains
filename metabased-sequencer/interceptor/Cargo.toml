@@ -6,6 +6,8 @@ edition = "2021"
 [dependencies]
 async-trait = "0.1"
 alloy = { version = "0.4.2", features = ["full"] }
+dotenv = "0.15"
+figment = { version = "0.10", features = ["env"] }
 jsonrpsee = { version = "0.24.3", features = ["full"] }
 tokio = { version = "1.0", features = ["full"] }
 anyhow = "1.0"
@@ -31,4 +33,4 @@ reqwest = "0.12.7"
 serde = "1.0.210"
 hyper-util = "0.1.8"
 alloy-primitives = "0.8.7"
-url = "2.5.2"
+url = { version = "2", features = ["serde"] }

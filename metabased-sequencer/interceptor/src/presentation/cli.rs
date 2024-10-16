@@ -1,8 +1,13 @@
 use crate::domain::primitives::Address;
 use crate::presentation::server;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
+use figment::providers::{Env, Serialized};
+use figment::Figment;
+use serde::{Deserialize, Serialize};
 use tracing_subscriber::EnvFilter;
 use url::Url;
+
+const DEFAULT_PORT: u16 = 8456;
 
 pub fn init_tracing_subscriber() {
     tracing_subscriber::fmt()
@@ -12,7 +17,7 @@ pub fn init_tracing_subscriber() {
 }
 
 pub async fn run() -> anyhow::Result<()> {
-    let args = Args::parse();
+    let args = parse_args()?;
     let (addr, handle) = server::run(
         args.port,
         args.chain_contract_address,
@@ -28,11 +33,53 @@ pub async fn run() -> anyhow::Result<()> {
     Ok(())
 }
 
+fn parse_args() -> anyhow::Result<Args> {
+    let args = ProfileArgs::parse();
+
+    let _ = dotenv::dotenv();
+
+    if let Some(profile) = args.profile {
+        dotenv::from_filename(match profile {
+            Profile::Mainnet => "mainnet.env",
+            Profile::Testnet => "testnet.env",
+            Profile::Devnet => "devnet.env",
+        })?;
+    }
+
+    let args = Figment::new()
+        .merge(Serialized::default("port", DEFAULT_PORT))
+        .merge(Env::prefixed("METABASED_"));
+
+    let result = CliArgs::try_parse();
+
+    let args: CliArgs = match result {
+        Ok(cli_args) => args.merge(Serialized::defaults(cli_args)).extract()?,
+        Err(e) => args.extract().unwrap_or_else(|_| e.exit()),
+    };
+
+    Ok(args.into())
+}
+
+#[derive(ValueEnum, Debug, Clone, Serialize, Deserialize)]
+enum Profile {
+    Mainnet,
+    Testnet,
+    Devnet,
+}
+
+#[derive(Parser, Debug, Serialize, Deserialize)]
+#[command(version, about, long_about = None)]
+struct ProfileArgs {
+    /// Profile that chooses which .env file to load
+    #[arg(short = 'o', long)]
+    profile: Option<Profile>,
+}
+
 /// The Metabased sequencer is a server that exposes a JSON-RPC API that accepts incoming
 /// transactions to be run on a layer-3 blockchain.
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Serialize, Deserialize)]
 #[command(version, about, long_about = None)]
-struct Args {
+struct CliArgs {
     /// Address of the layer-2 Ethereum smart contract that processes the layer-3 transactions
     #[arg(short = 'c', long)]
     chain_contract_address: Address,
@@ -42,6 +89,26 @@ struct Args {
     chain_rpc_address: Url,
 
     /// Port to listen on
-    #[arg(short = 'p', long, default_value_t = 8456)]
+    #[arg(short = 'p', long)]
+    port: Option<u16>,
+
+    /// Profile that chooses which .env file to load
+    #[arg(short = 'o', long)]
+    profile: Option<Profile>,
+}
+
+struct Args {
+    chain_contract_address: Address,
+    chain_rpc_address: Url,
     port: u16,
+}
+
+impl From<CliArgs> for Args {
+    fn from(value: CliArgs) -> Self {
+        Self {
+            chain_contract_address: value.chain_contract_address,
+            chain_rpc_address: value.chain_rpc_address,
+            port: value.port.expect("port should be set by a default value"),
+        }
+    }
 }
