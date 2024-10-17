@@ -1,3 +1,4 @@
+use crate::application::Metrics;
 use crate::domain::primitives::Bytes;
 use crate::domain::MetabasedSequencerChainService;
 use crate::presentation::json_rpc_errors::Error;
@@ -10,11 +11,17 @@ use alloy::primitives::TxHash;
 use alloy::primitives::U256;
 
 /// Sends serialized and signed transaction `tx` using `chain`.
-pub async fn send_raw_transaction<Chain>(encoded: Bytes, chain: &Chain) -> Result<TxHash, Error>
+pub async fn send_raw_transaction<Chain, M: Metrics>(
+    encoded: Bytes,
+    chain: &Chain,
+    metrics: &M,
+) -> Result<TxHash, Error>
 where
     Chain: MetabasedSequencerChainService,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
 {
+    metrics.inc_send_raw_transaction();
+
     // TODO remove or move up to function comment
     // 1. Decoding
     // 2. Validation

@@ -108,7 +108,7 @@ where
     let bytes = Bytes::from(bytes);
     let chain = ctx.chain_service();
 
-    Ok(application::send_raw_transaction(bytes, chain)
+    Ok(application::send_raw_transaction(bytes, chain, &())
         .await?
         .encode_hex_with_prefix())
 }
