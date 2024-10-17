@@ -120,6 +120,68 @@ func TestBlocksReceiptsByNumbers(t *testing.T) {
 			expected:    nil,
 			expectError: true,
 		},
+		{
+			name:        "No block numbers provided",
+			blockNumber: []string{},
+			setupMocks:  nil,
+			expected:    []*ethtypes.Receipt(nil),
+			expectError: false,
+		},
+		{
+			name:        "Successful receipt fetching for multiple blocks",
+			blockNumber: []string{"0xA", "0xB"},
+			setupMocks: func(mockFetcher *mocks.MockReceiptsFetcher, mockEthClient *mocks.MockEthClient, mockRawClient *mocks.MockRawRPCClient) {
+				txA := ethtypes.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil)
+				blockA := ethtypes.NewBlock(
+					&ethtypes.Header{Number: big.NewInt(10), ParentHash: common.HexToHash("0x123")},
+					&ethtypes.Body{Transactions: []*ethtypes.Transaction{txA}, Uncles: []*ethtypes.Header{}, Withdrawals: []*ethtypes.Withdrawal{}},
+					[]*ethtypes.Receipt{},
+					trie.NewStackTrie(nil),
+				)
+				txB := ethtypes.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil)
+				blockB := ethtypes.NewBlock(
+					&ethtypes.Header{Number: big.NewInt(11), ParentHash: common.HexToHash("0x456")},
+					&ethtypes.Body{Transactions: []*ethtypes.Transaction{txB}, Uncles: []*ethtypes.Header{}, Withdrawals: []*ethtypes.Withdrawal{}},
+					[]*ethtypes.Receipt{},
+					trie.NewStackTrie(nil),
+				)
+
+				mockEthClient.On("BlockByNumber", mock.Anything, big.NewInt(10)).Return(blockA, nil)
+				txAHash := txA.Hash()
+				mockFetcher.On("FetchReceipts", mock.Anything, mock.Anything, []common.Hash{txAHash}).
+					Return(ethtypes.Receipts{&ethtypes.Receipt{Status: 1}}, nil)
+
+				mockEthClient.On("BlockByNumber", mock.Anything, big.NewInt(11)).Return(blockB, nil)
+				txBHash := txB.Hash()
+				mockFetcher.On("FetchReceipts", mock.Anything, mock.Anything, []common.Hash{txBHash}).
+					Return(ethtypes.Receipts{&ethtypes.Receipt{Status: 1}}, nil)
+			},
+			expected:    []*ethtypes.Receipt{{Status: 1}, {Status: 1}},
+			expectError: false,
+		},
+		{
+			name:        "Partial success - one block fetch fails",
+			blockNumber: []string{"0xA", "0xB"},
+			setupMocks: func(mockFetcher *mocks.MockReceiptsFetcher, mockEthClient *mocks.MockEthClient, mockRawClient *mocks.MockRawRPCClient) {
+				txA := ethtypes.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil)
+				blockA := ethtypes.NewBlock(
+					&ethtypes.Header{Number: big.NewInt(10), ParentHash: common.HexToHash("0x123")},
+					&ethtypes.Body{Transactions: []*ethtypes.Transaction{txA}, Uncles: []*ethtypes.Header{}, Withdrawals: []*ethtypes.Withdrawal{}},
+					[]*ethtypes.Receipt{},
+					trie.NewStackTrie(nil),
+				)
+
+				mockEthClient.On("BlockByNumber", mock.Anything, big.NewInt(10)).Return(blockA, nil)
+				txAHash := txA.Hash()
+				mockFetcher.On("FetchReceipts", mock.Anything, mock.Anything, []common.Hash{txAHash}).
+					Return(ethtypes.Receipts{&ethtypes.Receipt{Status: 1}}, nil)
+
+				mockEthClient.On("BlockByNumber", mock.Anything, big.NewInt(11)).
+					Return(&ethtypes.Block{}, errors.New("block fetching error"))
+			},
+			expected:    nil,
+			expectError: true,
+		},
 	}
 
 	for _, tt := range tests {
