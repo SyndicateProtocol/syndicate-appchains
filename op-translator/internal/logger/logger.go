@@ -14,7 +14,7 @@ import (
 	"github.com/rs/zerolog/pkgerrors"
 )
 
-func Init(cfg config.Config) {
+func Init(cfg *config.Config) {
 	log.Debug().Msg("Logger initializing")
 	// Add these back if GCP logging is necessary
 	// zerolog.LevelFieldName = "severity"

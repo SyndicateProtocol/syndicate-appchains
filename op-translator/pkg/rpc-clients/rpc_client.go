@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"sync"
@@ -83,15 +84,20 @@ func (c *RPCClient) GetBlockByHash(ctx context.Context, hash common.Hash, withTr
 	return block, nil
 }
 
-func (c *RPCClient) BlocksReceiptsByNumbers(ctx context.Context, numbers []string) ([]*ethtypes.Receipt, error) {
-	numbersLength := len(numbers)
-	receiptsChan := make(chan []*ethtypes.Receipt, numbersLength)
+func (c *RPCClient) BlocksReceiptsByNumbers(ctx context.Context, blockNumbers []string) ([]*ethtypes.Receipt, error) {
+	// WARNING: This function assumes that the block numbers are passed in order
+	numbersLength := len(blockNumbers)
+	type BlockReceipts struct {
+		blockNumber string
+		receipts    []*ethtypes.Receipt
+	}
+	receiptsChan := make(chan BlockReceipts, numbersLength)
 	errChan := make(chan error, numbersLength)
 
 	// Fetch block and its receipts concurrently
 	var wg sync.WaitGroup
 	wg.Add(numbersLength)
-	for _, number := range numbers {
+	for _, number := range blockNumbers {
 		go func(number string) {
 			defer wg.Done()
 
@@ -118,7 +124,10 @@ func (c *RPCClient) BlocksReceiptsByNumbers(ctx context.Context, numbers []strin
 				return
 			}
 
-			receiptsChan <- blockReceipts
+			receiptsChan <- BlockReceipts{
+				blockNumber: number,
+				receipts:    blockReceipts}
+
 		}(number)
 	}
 
@@ -128,13 +137,22 @@ func (c *RPCClient) BlocksReceiptsByNumbers(ctx context.Context, numbers []strin
 		close(errChan)
 	}()
 
-	var allReceipts []*ethtypes.Receipt
+	blockReciptsMap := make(map[string][]*ethtypes.Receipt, numbersLength)
 	for blockReceipts := range receiptsChan {
-		allReceipts = append(allReceipts, blockReceipts...)
+		blockReciptsMap[blockReceipts.blockNumber] = blockReceipts.receipts
+	}
+
+	var allReceipts []*ethtypes.Receipt
+	for _, blockNumber := range blockNumbers {
+		allReceipts = append(allReceipts, blockReciptsMap[blockNumber]...)
 	}
 
 	if len(errChan) > 0 {
-		return nil, <-errChan
+		var returnErr error
+		for err := range errChan {
+			returnErr = errors.Join(returnErr, err)
+		}
+		return nil, returnErr
 	}
 
 	return allReceipts, nil

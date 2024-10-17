@@ -24,13 +24,13 @@ func TestGetBlockByNumber(t *testing.T) {
 	ctx := context.Background()
 
 	mockClient.On("GetBlockByNumber", ctx, number, true).Return(settlementBlock, nil)
-	translator := &translator.OPTranslator{
+	translatorMock := &translator.OPTranslator{
 		SettlementChain: mockClient,
 		BatchProvider:   &mocks.MockBatchProvider{},
 		Signer:          *translator.NewSigner(mockConfig),
 	}
 
-	block, err := translator.GetBlockByNumber(ctx, number, true)
+	block, err := translatorMock.GetBlockByNumber(ctx, number, true)
 
 	assert.NoError(t, err)
 	blockNumber, err := block.GetBlockNumber()
@@ -60,13 +60,13 @@ func TestGetBlockByHash(t *testing.T) {
 	hash := common.HexToHash("0xabc")
 
 	mockClient.On("GetBlockByHash", ctx, hash, true).Return(settlementBlock, nil)
-	translator := &translator.OPTranslator{
+	translatorMock := &translator.OPTranslator{
 		SettlementChain: mockClient,
 		BatchProvider:   &mocks.MockBatchProvider{},
 		Signer:          *translator.NewSigner(mocks.DefaultTestingConfig),
 	}
 
-	block, err := translator.GetBlockByHash(ctx, hash, true)
+	block, err := translatorMock.GetBlockByHash(ctx, hash, true)
 
 	assert.NoError(t, err)
 	blockNumber, err := block.GetBlockNumber()

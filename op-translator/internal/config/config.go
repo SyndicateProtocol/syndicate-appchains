@@ -84,7 +84,7 @@ func hydrateFromConfMap(config *Config) {
 	config.SettlementChainID = k.Int64("settlement_chain_id")
 }
 
-func Init() Config {
+func Init() *Config {
 	// Load .env file and lowercase all keys
 	err := k.Load(file.Provider(".env"), dotenv.ParserEnv("", "", strings.ToLower))
 	if err != nil {
@@ -120,7 +120,7 @@ func Init() Config {
 	if err = validateConfigValues(&config); err != nil {
 		log.Panic().Err(err).Msg("error validating config")
 	}
-	return config
+	return &config
 }
 
 func validateConfigValues(config *Config) (result error) {

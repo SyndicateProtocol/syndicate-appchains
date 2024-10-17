@@ -35,7 +35,7 @@ type OPTranslator struct {
 	BatcherAddress      common.Address
 }
 
-func Init(cfg config.Config) *OPTranslator {
+func Init(cfg *config.Config) *OPTranslator {
 	settlementChain, err := rpc.Connect(cfg.SettlementChainAddr)
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize settlement chain")

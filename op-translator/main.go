@@ -20,5 +20,5 @@ func main() {
 
 	logger.Init(cfg)
 
-	server.Start(&cfg, s)
+	server.Start(cfg, s)
 }

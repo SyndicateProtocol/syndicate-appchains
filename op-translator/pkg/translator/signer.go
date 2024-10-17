@@ -16,7 +16,7 @@ type Signer struct {
 	signer     ethtypes.Signer
 }
 
-func NewSigner(cfg config.Config) *Signer {
+func NewSigner(cfg *config.Config) *Signer {
 	key, err := crypto.HexToECDSA(cfg.BatcherPrivateKey)
 
 	if err != nil {

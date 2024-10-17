@@ -21,7 +21,7 @@ type MockConfig struct {
 	mock.Mock
 }
 
-var DefaultTestingConfig = config.Config{
+var DefaultTestingConfig = &config.Config{
 	Port:                       TestingPort,
 	FrameSize:                  TestingFrameSize,
 	LogLevel:                   "info",

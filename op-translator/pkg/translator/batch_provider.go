@@ -40,7 +40,7 @@ type MetaBasedBatchProvider struct {
 	SequencePerSettlementBlock int
 }
 
-func InitMetaBasedBatchProvider(cfg config.Config) *MetaBasedBatchProvider {
+func InitMetaBasedBatchProvider(cfg *config.Config) *MetaBasedBatchProvider {
 	sequencingChain, err := rpc.Connect(cfg.SequencingChainAddr)
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize sequencing chain")

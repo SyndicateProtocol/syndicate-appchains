@@ -16,7 +16,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func TranslatorHandler(cfg config.Config, translator any) (*http.ServeMux, error) {
+func TranslatorHandler(cfg *config.Config, translator any) (*http.ServeMux, error) {
 	// Setup proxy
 	parsedURL, err := url.Parse(cfg.SettlementChainAddr)
 	if err != nil {
