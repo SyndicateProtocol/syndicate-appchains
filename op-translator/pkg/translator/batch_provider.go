@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/contracts/l2"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
@@ -23,11 +24,9 @@ import (
 )
 
 var (
-	// ref: OP `crossdomain` package
-	AddressType, _              = abi.NewType("address", "", nil)
-	indexedAddressTypeArgs      = abi.Arguments{{Name: "Sender", Type: AddressType, Indexed: true}}
-	TransactionProcessedABI     = l2.TransactionProcessedMetaData.ABI
-	TransactionProcessedABIHash = crypto.Keccak256Hash([]byte(TransactionProcessedABI))
+	TransactionProcessedABI     = `[{"anonymous":false,"inputs":[{"indexed":true,"name":"Sender","type":"address"},{"indexed":false,"name":"EncodedTxn","type":"bytes"}],"name":"TransactionProcessed","type":"event"}]`
+	TransactionProcessedSig     = "TransactionProcessed(address,bytes)"
+	TransactionProcessedSigHash = crypto.Keccak256Hash([]byte(TransactionProcessedSig))
 )
 
 type MetaBasedBatchProvider struct {
@@ -136,13 +135,21 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	return previousBlock.Hash().Hex(), nil
 }
 
-func ParseTransactionProcessed(txLog *ethtypes.Log) (*l2.TransactionProcessed, error) {
-	event := new(l2.TransactionProcessed)
-	if err := abi.ParseTopics(event, indexedAddressTypeArgs, txLog.Topics[1:]); err != nil {
-		return nil, err
+func parseTransactionProcessed(txLog *ethtypes.Log) (*l2.TransactionProcessed, error) {
+	contractABI, err := abi.JSON(strings.NewReader(TransactionProcessedABI))
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse ABI: %v", err)
 	}
-	event.EncodedTxn = txLog.Data
-	return event, nil
+
+	event := l2.TransactionProcessed{}
+	event.Sender = common.HexToAddress(txLog.Topics[1].Hex())
+
+	err = contractABI.UnpackIntoInterface(&event, "TransactionProcessed", txLog.Data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack log data: %v", err)
+	}
+
+	return &event, nil
 }
 
 func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) (txns []hexutil.Bytes, result error) {
@@ -150,9 +157,10 @@ func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) (t
 		if rec.Status != ethtypes.ReceiptStatusSuccessful {
 			continue
 		}
-		for j, log := range rec.Logs {
-			if log.Address == m.SequencingContractAddress && len(log.Topics) > 0 && log.Topics[0] == TransactionProcessedABIHash {
-				proc, err := ParseTransactionProcessed(log)
+
+		for j, txLog := range rec.Logs {
+			if txLog.Address == m.sequencingContractAddress && txLog.Topics[0] == TransactionProcessedSigHash {
+				proc, err := parseTransactionProcessed(txLog)
 				if err != nil {
 					result = multierror.Append(result, fmt.Errorf("malformatted l2 receipt log in receipt %d, log %d: %w", i, j, err))
 				} else {
