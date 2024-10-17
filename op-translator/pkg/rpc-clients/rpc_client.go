@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/interfaces"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
@@ -18,14 +17,35 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-type RPCClient struct {
-	client          interfaces.IETHClient
-	rawClient       interfaces.IRawRPCClient
-	receiptsFetcher interfaces.IReceiptsFetcher
+type IReceiptsFetcher interface {
+	FetchReceipts(ctx context.Context, blockInfo eth.BlockInfo, txHashes []common.Hash) (result ethtypes.Receipts, err error)
 }
 
-// guarantees that the IRPCClient interface is implemented by RPCClient
-var _ interfaces.IRPCClient = (*RPCClient)(nil)
+type IRawRPCClient interface {
+	CallContext(ctx context.Context, result any, method string, args ...any) error
+}
+
+type IETHClient interface {
+	BlockReceipts(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) ([]*ethtypes.Receipt, error)
+	BlockByNumber(ctx context.Context, number *big.Int) (*ethtypes.Block, error)
+	HeaderByNumber(ctx context.Context, number *big.Int) (*ethtypes.Header, error)
+	TransactionReceipt(ctx context.Context, hash common.Hash) (*ethtypes.Receipt, error)
+	Close()
+}
+
+type RPCClient struct {
+	client          IETHClient
+	rawClient       IRawRPCClient
+	receiptsFetcher IReceiptsFetcher
+}
+
+func NewRPCClient(client IETHClient, rawClient IRawRPCClient, receiptsFetcher IReceiptsFetcher) *RPCClient {
+	return &RPCClient{
+		client:          client,
+		rawClient:       rawClient,
+		receiptsFetcher: receiptsFetcher,
+	}
+}
 
 func Connect(address string) (*RPCClient, error) {
 	c, err := rpc.Dial(address)
@@ -33,15 +53,10 @@ func Connect(address string) (*RPCClient, error) {
 		return nil, fmt.Errorf("failed to dial address %s: %w", address, err)
 	}
 	log.Debug().Msgf("RPC connection established: %s", address)
-
-	return &RPCClient{
-		client:          ethclient.NewClient(c),
-		rawClient:       c,
-		receiptsFetcher: sources.NewRPCReceiptsFetcher(c, nil, sources.RPCReceiptsConfig{}),
-	}, nil
+	return NewRPCClient(ethclient.NewClient(c), c, sources.NewRPCReceiptsFetcher(c, nil, sources.RPCReceiptsConfig{})), nil
 }
 
-func (c *RPCClient) AsEthClient() interfaces.IETHClient {
+func (c *RPCClient) AsEthClient() IETHClient {
 	return c.client
 }
 

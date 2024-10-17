@@ -97,7 +97,7 @@ func getMockClient() *mocks.MockRPCClient {
 }
 
 func TestOPNodeCalls(t *testing.T) {
-	mockConfig := mocks.InitMockConfig()
+	mockConfig := mocks.DefaultTestingConfig
 	testCases := []struct {
 		expectedResult types.Block
 		requestBody    string

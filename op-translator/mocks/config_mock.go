@@ -1,6 +1,7 @@
 package mocks
 
 import (
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -20,88 +21,19 @@ type MockConfig struct {
 	mock.Mock
 }
 
-func InitMockConfig() *MockConfig {
-	mockConfig := &MockConfig{}
-	mockConfig.On("SettlementChainAddr").Return("http://localhost:8545")
-	mockConfig.On("SequencingChainAddr").Return("http://localhost:8545")
-	mockConfig.On("MetaBasedChainAddr").Return("http://localhost:8545")
-	mockConfig.On("LogLevel").Return("info")
-	mockConfig.On("SequencingContractAddress").Return(TestingSequencingContractAddress)
-	mockConfig.On("SequencingStartBlock").Return(TestingSequencingStartBlock)
-	mockConfig.On("SettlementStartBlock").Return(TestingSettlementStartBlock)
-	mockConfig.On("SequencePerSettlementBlock").Return(TestingSequencePerSettlementBlock)
-	mockConfig.On("BatcherPrivateKey").Return(TestingBatcherPrivateKey)
-	mockConfig.On("SettlementChainID").Return(TestingSettlementChainID)
-	return mockConfig
-}
-
-func (m *MockConfig) SettlementChainAddr() string {
-	args := m.Called()
-	return args.Get(0).(string)
-}
-func (m *MockConfig) SequencingChainAddr() string {
-	args := m.Called()
-	return args.Get(0).(string)
-}
-func (m *MockConfig) MetaBasedChainAddr() string {
-	args := m.Called()
-	return args.Get(0).(string)
-}
-func (m *MockConfig) Port() int {
-	m.Called()
-	// return args.Get(0).(int) // bring this back for more sophisticated testing
-	return TestingPort
-}
-func (m *MockConfig) FrameSize() int {
-	m.Called()
-	// return args.Get(0).(int) // bring this back for more sophisticated testing
-	return TestingFrameSize
-}
-func (m *MockConfig) LogLevel() string {
-	args := m.Called()
-	return args.Get(0).(string)
-}
-func (m *MockConfig) Pretty() bool {
-	args := m.Called()
-	return args.Get(0).(bool)
-}
-
-func (m *MockConfig) SequencingContractAddress() string {
-	m.Called()
-	return TestingSequencingContractAddress
-}
-
-func (m *MockConfig) BatcherAddress() string {
-	m.Called()
-	return TestingBatcherAddress
-}
-
-func (m *MockConfig) BatchInboxAddress() string {
-	m.Called()
-	return TestingBatchInboxAddress
-}
-
-func (m *MockConfig) SettlementStartBlock() int {
-	m.Called()
-	return TestingSettlementStartBlock
-}
-
-func (m *MockConfig) SequencingStartBlock() int {
-	m.Called()
-	return TestingSequencingStartBlock
-}
-
-func (m *MockConfig) SequencePerSettlementBlock() int {
-	m.Called()
-	return TestingSequencePerSettlementBlock
-}
-
-func (m *MockConfig) BatcherPrivateKey() string {
-	args := m.Called()
-	return args.String(0)
-}
-
-func (m *MockConfig) SettlementChainID() int64 {
-	m.Called()
-	return TestingSettlementChainID
+var DefaultTestingConfig = config.Config{
+	Port:                       TestingPort,
+	FrameSize:                  TestingFrameSize,
+	LogLevel:                   "info",
+	SequencingContractAddress:  TestingSequencingContractAddress,
+	SequencingStartBlock:       TestingSequencingStartBlock,
+	SettlementStartBlock:       TestingSettlementStartBlock,
+	SequencePerSettlementBlock: TestingSequencePerSettlementBlock,
+	BatcherPrivateKey:          TestingBatcherPrivateKey,
+	SettlementChainAddr:        "http://localhost:8545",
+	SequencingChainAddr:        "http://localhost:8545",
+	MetaBasedChainAddr:         "http://localhost:8545",
+	BatchInboxAddress:          TestingBatchInboxAddress,
+	BatcherAddress:             TestingBatcherAddress,
+	SettlementChainID:          TestingSettlementChainID,
 }

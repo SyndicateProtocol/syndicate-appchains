@@ -11,10 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func getMocks() (*mocks.MockConfig, *mocks.Translator) {
-	return &mocks.MockConfig{}, &mocks.Translator{}
-}
-
 func TestParseMethod(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -37,11 +33,9 @@ func TestParseMethod(t *testing.T) {
 }
 
 func TestHealthEndpoint(t *testing.T) {
-	mockCfg, mockTranslator := getMocks()
-	mockCfg.On("SettlementChainAddr").Return("http://localhost:8545")
-	mockCfg.On("LogLevel").Return("info")
+	mockTranslator := &mocks.Translator{}
 
-	router, err := TranslatorHandler(mockCfg, mockTranslator)
+	router, err := TranslatorHandler(mocks.DefaultTestingConfig, mockTranslator)
 	assert.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", http.NoBody)
@@ -61,8 +55,7 @@ func TestHealthEndpoint(t *testing.T) {
 }
 
 func TestProxyEndpoint(t *testing.T) {
-	mockCfg, mockTranslator := getMocks()
-	mockCfg.On("LogLevel").Return("info")
+	mockTranslator := &mocks.Translator{}
 
 	mockBackend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -71,9 +64,7 @@ func TestProxyEndpoint(t *testing.T) {
 	}))
 	defer mockBackend.Close()
 
-	mockCfg.On("SettlementChainAddr").Return(mockBackend.URL)
-
-	router, err := TranslatorHandler(mockCfg, mockTranslator)
+	router, err := TranslatorHandler(mocks.DefaultTestingConfig, mockTranslator)
 	assert.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{"method": "eth_getBalance"}`))
@@ -93,11 +84,8 @@ func TestProxyEndpoint(t *testing.T) {
 }
 
 func TestTranslatedEndpoint(t *testing.T) {
-	mockCfg, mockTranslator := getMocks()
-	mockCfg.On("LogLevel").Return("info")
-	mockCfg.On("SettlementChainAddr").Return("http://localhost:8545")
-
-	router, err := TranslatorHandler(mockCfg, mockTranslator)
+	mockTranslator := &mocks.Translator{}
+	router, err := TranslatorHandler(mocks.DefaultTestingConfig, mockTranslator)
 	assert.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{"id": 1, "jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["0x123", false]}`))

@@ -4,7 +4,8 @@ import (
 	"context"
 	"math/big"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/interfaces"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
@@ -17,7 +18,7 @@ type MockRPCClient struct {
 }
 
 // guarantees that the IRPCClient interface is implemented by MockRPCClient
-var _ interfaces.IRPCClient = (*MockRPCClient)(nil)
+var _ translator.IRPCClient = (*MockRPCClient)(nil)
 
 func (m *MockRPCClient) CloseConnection() {
 	m.Called()
@@ -63,7 +64,7 @@ func (m *MockRPCClient) TransactionReceipt(ctx context.Context, hash common.Hash
 	return args.Get(0).(*ethtypes.Receipt), args.Error(1)
 }
 
-func (m *MockRPCClient) AsEthClient() interfaces.IETHClient {
+func (m *MockRPCClient) AsEthClient() rpc.IETHClient {
 	return nil
 }
 

@@ -1,9 +1,10 @@
-package translator
+package translator_test
 
 import (
 	"errors"
 	"testing"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -15,13 +16,13 @@ var (
 	SomeOtherABIHash = crypto.Keccak256Hash([]byte("someOtherABI"))
 )
 
-func getBatchProvider() *MetaBasedBatchProvider {
-	return &MetaBasedBatchProvider{
-		settlementStartBlock:       1,
-		sequencingStartBlock:       2,
-		sequencePerSettlementBlock: 2,
-		sequencingContractAddress:  common.HexToAddress("0x1111111111111111111111111111111111111111"),
-		sequencingChain:            nil,
+func getBatchProvider() *translator.MetaBasedBatchProvider {
+	return &translator.MetaBasedBatchProvider{
+		SettlementStartBlock:       1,
+		SequencingStartBlock:       2,
+		SequencePerSettlementBlock: 2,
+		SequencingContractAddress:  common.HexToAddress("0x1111111111111111111111111111111111111111"),
+		SequencingChain:            nil,
 	}
 }
 
@@ -42,7 +43,7 @@ func TestGetLinkedBlocks(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := metaBasedBatchProvider.getLinkedBlocks(tt.block)
+			result, err := metaBasedBatchProvider.GetLinkedBlocks(tt.block)
 
 			assert.Equal(t, tt.err, err)
 			assert.Equal(t, tt.expected, result)
@@ -52,9 +53,9 @@ func TestGetLinkedBlocks(t *testing.T) {
 
 func TestGetLinkedBlocks_1to1(t *testing.T) {
 	metaBasedBatchProvider := getBatchProvider()
-	metaBasedBatchProvider.sequencePerSettlementBlock = 1
+	metaBasedBatchProvider.SequencePerSettlementBlock = 1
 
-	blocks, err := metaBasedBatchProvider.getLinkedBlocks("0x2")
+	blocks, err := metaBasedBatchProvider.GetLinkedBlocks("0x2")
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{"0x3"}, blocks)
@@ -62,10 +63,10 @@ func TestGetLinkedBlocks_1to1(t *testing.T) {
 
 func TestGetLinkedBlocks_4to1(t *testing.T) {
 	metaBasedBatchProvider := getBatchProvider()
-	metaBasedBatchProvider.sequencePerSettlementBlock = 4
-	metaBasedBatchProvider.sequencingStartBlock = 10
+	metaBasedBatchProvider.SequencePerSettlementBlock = 4
+	metaBasedBatchProvider.SequencingStartBlock = 10
 
-	blocks, err := metaBasedBatchProvider.getLinkedBlocks("0x2")
+	blocks, err := metaBasedBatchProvider.GetLinkedBlocks("0x2")
 
 	require.NoError(t, err)
 	assert.Equal(t, []string{"0xb", "0xc", "0xd", "0xe"}, blocks)
@@ -78,13 +79,13 @@ func TestParseTransactionProcessed(t *testing.T) {
 	log := &types.Log{
 		Address: common.HexToAddress("0x0000000000000000000000000000000000000000"),
 		Topics: []common.Hash{
-			TransactionProcessedABIHash,
+			translator.TransactionProcessedABIHash,
 			common.BytesToHash(senderAddr.Bytes()),
 		},
 		Data: encodedTxn,
 	}
 
-	event, err := parseTransactionProcessed(log)
+	event, err := translator.ParseTransactionProcessed(log)
 
 	require.NoError(t, err)
 	assert.Equal(t, senderAddr, event.Sender)
@@ -93,7 +94,7 @@ func TestParseTransactionProcessed(t *testing.T) {
 
 func TestFilterReceipts(t *testing.T) {
 	metaBasedBatchProvider := getBatchProvider()
-	sequencingContractAddress := metaBasedBatchProvider.sequencingContractAddress
+	sequencingContractAddress := metaBasedBatchProvider.SequencingContractAddress
 	senderAddr := common.HexToAddress("0x2222222222222222222222222222222222222222")
 	encodedTxn1 := []byte{1, 2, 3}
 	encodedTxn2 := []byte{4, 5, 6}
@@ -105,7 +106,7 @@ func TestFilterReceipts(t *testing.T) {
 				{
 					Address: sequencingContractAddress,
 					Topics: []common.Hash{
-						TransactionProcessedABIHash,
+						translator.TransactionProcessedABIHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
 					Data: encodedTxn1,
@@ -118,7 +119,7 @@ func TestFilterReceipts(t *testing.T) {
 				{
 					Address: sequencingContractAddress,
 					Topics: []common.Hash{
-						TransactionProcessedABIHash,
+						translator.TransactionProcessedABIHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
 					Data: encodedTxn2,
@@ -131,7 +132,7 @@ func TestFilterReceipts(t *testing.T) {
 		},
 	}
 
-	txns, err := metaBasedBatchProvider.filterReceipts(receipts)
+	txns, err := metaBasedBatchProvider.FilterReceipts(receipts)
 
 	require.NoError(t, err)
 	assert.Len(t, txns, 2)
@@ -141,7 +142,7 @@ func TestFilterReceipts(t *testing.T) {
 
 func TestFilterReceiptsWithExtraLog(t *testing.T) {
 	metaBasedBatchProvider := getBatchProvider()
-	sequencingContractAddress := metaBasedBatchProvider.sequencingContractAddress
+	sequencingContractAddress := metaBasedBatchProvider.SequencingContractAddress
 	senderAddr := common.HexToAddress("0x2222222222222222222222222222222222222222")
 	encodedTxn := []byte{1, 2, 3}
 
@@ -152,7 +153,7 @@ func TestFilterReceiptsWithExtraLog(t *testing.T) {
 				{
 					Address: sequencingContractAddress,
 					Topics: []common.Hash{
-						TransactionProcessedABIHash,
+						translator.TransactionProcessedABIHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
 					Data: encodedTxn,
@@ -169,7 +170,7 @@ func TestFilterReceiptsWithExtraLog(t *testing.T) {
 		},
 	}
 
-	txns, err := metaBasedBatchProvider.filterReceipts(receipts)
+	txns, err := metaBasedBatchProvider.FilterReceipts(receipts)
 
 	assert.NoError(t, err)
 	assert.Len(t, txns, 1)

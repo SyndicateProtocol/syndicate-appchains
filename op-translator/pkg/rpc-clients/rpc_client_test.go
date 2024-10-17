@@ -1,4 +1,4 @@
-package rpc
+package rpc_test
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/trie"
 
@@ -28,7 +29,7 @@ func TestConnect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := Connect(tt.address)
+			client, err := rpc.Connect(tt.address)
 
 			if tt.wantErr {
 				assert.Error(t, err, "expected an error but got none")
@@ -44,7 +45,7 @@ func TestConnect(t *testing.T) {
 }
 
 func TestCloseConnection(t *testing.T) {
-	client, err := Connect("http://localhost:8545")
+	client, err := rpc.Connect("http://localhost:8545")
 	require.NoError(t, err)
 	require.NotNil(t, client)
 
@@ -131,11 +132,8 @@ func TestBlocksReceiptsByNumbers(t *testing.T) {
 				tt.setupMocks(mockFetcher, mockEthClient, mockRawClient)
 			}
 
-			rpcClient := &RPCClient{
-				client:          mockEthClient,
-				receiptsFetcher: mockFetcher,
-				rawClient:       mockRawClient,
-			}
+			rpcClient := rpc.NewRPCClient(mockEthClient, mockRawClient, mockFetcher)
+
 			result, err := rpcClient.BlocksReceiptsByNumbers(context.Background(), tt.blockNumber)
 			if tt.expectError {
 				assert.Error(t, err)

@@ -11,15 +11,14 @@ import (
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/interfaces"
 	t "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/rs/zerolog/log"
 )
 
-func TranslatorHandler(cfg interfaces.IConfig, translator any) (*http.ServeMux, error) {
+func TranslatorHandler(cfg config.Config, translator any) (*http.ServeMux, error) {
 	// Setup proxy
-	parsedURL, err := url.Parse(cfg.SettlementChainAddr())
+	parsedURL, err := url.Parse(cfg.SettlementChainAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +32,7 @@ func TranslatorHandler(cfg interfaces.IConfig, translator any) (*http.ServeMux, 
 	}
 
 	// Setup routing
-	logLevel := constants.ToLogLevel(cfg.LogLevel())
+	logLevel := constants.ToLogLevel(cfg.LogLevel)
 	router := TranslatorRouter(logLevel, translatorRPC, parsedURL, proxy)
 
 	return router, nil
@@ -91,8 +90,8 @@ func rpcEndpointsHandler(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *h
 }
 
 func Start(cfg *config.Config, router *http.ServeMux) {
-	log.Debug().Msgf("Starting JSON-RPC server on port %d", cfg.Port())
-	err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port()), router) //nolint:gosec // TODO refactor for performance anyway
+	log.Debug().Msgf("Starting JSON-RPC server on port %d", cfg.Port)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), router) //nolint:gosec // TODO refactor for performance anyway
 	if err != nil {
 		log.Error().
 			Err(err).

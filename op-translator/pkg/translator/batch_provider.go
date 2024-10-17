@@ -7,8 +7,8 @@ import (
 	"math/big"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/contracts/l2"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/interfaces"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
@@ -31,75 +31,75 @@ var (
 )
 
 type MetaBasedBatchProvider struct {
-	metaBasedChain            interfaces.IRPCClient
-	sequencingChain           interfaces.IRPCClient
-	sequencingContractAddress common.Address
+	MetaBasedChain            IRPCClient
+	SequencingChain           IRPCClient
+	SequencingContractAddress common.Address
 
-	settlementStartBlock       int
-	sequencingStartBlock       int
-	sequencePerSettlementBlock int
+	SettlementStartBlock       int
+	SequencingStartBlock       int
+	SequencePerSettlementBlock int
 }
 
-func InitMetaBasedBatchProvider(cfg interfaces.IConfig) *MetaBasedBatchProvider {
-	sequencingChain, err := rpc.Connect(cfg.SequencingChainAddr())
+func InitMetaBasedBatchProvider(cfg config.Config) *MetaBasedBatchProvider {
+	sequencingChain, err := rpc.Connect(cfg.SequencingChainAddr)
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize sequencing chain")
 	}
 
-	metaBasedChain, err := rpc.Connect(cfg.MetaBasedChainAddr())
+	metaBasedChain, err := rpc.Connect(cfg.MetaBasedChainAddr)
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize metabased chain")
 	}
 
 	return &MetaBasedBatchProvider{
-		metaBasedChain:            metaBasedChain,
-		sequencingChain:           sequencingChain,
-		sequencingContractAddress: common.HexToAddress(cfg.SequencingContractAddress()),
+		MetaBasedChain:            metaBasedChain,
+		SequencingChain:           sequencingChain,
+		SequencingContractAddress: common.HexToAddress(cfg.SequencingContractAddress),
 
-		settlementStartBlock:       cfg.SettlementStartBlock(),
-		sequencingStartBlock:       cfg.SequencingStartBlock(),
-		sequencePerSettlementBlock: cfg.SequencePerSettlementBlock(),
+		SettlementStartBlock:       cfg.SettlementStartBlock,
+		SequencingStartBlock:       cfg.SequencingStartBlock,
+		SequencePerSettlementBlock: cfg.SequencePerSettlementBlock,
 	}
 }
 
 func NewMetaBasedBatchProvider(
-	settlementChainClient interfaces.IRPCClient,
-	sequencingChainClient interfaces.IRPCClient,
+	settlementChainClient IRPCClient,
+	sequencingChainClient IRPCClient,
 	sequencingContractAddress common.Address,
 	settlementStartBlock int,
 	sequencingStartBlock int,
 	sequencePerSettlementBlock int,
 ) *MetaBasedBatchProvider {
 	return &MetaBasedBatchProvider{
-		metaBasedChain:             settlementChainClient,
-		sequencingChain:            sequencingChainClient,
-		sequencingContractAddress:  sequencingContractAddress,
-		settlementStartBlock:       settlementStartBlock,
-		sequencingStartBlock:       sequencingStartBlock,
-		sequencePerSettlementBlock: sequencePerSettlementBlock,
+		MetaBasedChain:             settlementChainClient,
+		SequencingChain:            sequencingChainClient,
+		SequencingContractAddress:  sequencingContractAddress,
+		SettlementStartBlock:       settlementStartBlock,
+		SequencingStartBlock:       sequencingStartBlock,
+		SequencePerSettlementBlock: sequencePerSettlementBlock,
 	}
 }
 
 func (m *MetaBasedBatchProvider) Close() {
 	log.Debug().Msg("Closing MetaBasedBatchProvider")
-	m.sequencingChain.CloseConnection()
-	m.metaBasedChain.CloseConnection()
+	m.SequencingChain.CloseConnection()
+	m.MetaBasedChain.CloseConnection()
 }
 
-func (m *MetaBasedBatchProvider) getLinkedBlocks(blockNumStr string) ([]string, error) {
+func (m *MetaBasedBatchProvider) GetLinkedBlocks(blockNumStr string) ([]string, error) {
 	blockNum, err := utils.HexToInt(blockNumStr)
 	if err != nil {
 		return nil, err
 	}
 
-	if blockNum < m.settlementStartBlock {
+	if blockNum < m.SettlementStartBlock {
 		return nil, errors.New("block number before start block")
 	}
 
-	end := m.sequencingStartBlock + (blockNum-m.settlementStartBlock)*m.sequencePerSettlementBlock
-	start := end - m.sequencePerSettlementBlock + 1
+	end := m.SequencingStartBlock + (blockNum-m.SettlementStartBlock)*m.SequencePerSettlementBlock
+	start := end - m.SequencePerSettlementBlock + 1
 
-	ret := make([]string, m.sequencePerSettlementBlock)
+	ret := make([]string, m.SequencePerSettlementBlock)
 	for i := range ret {
 		ret[i] = utils.IntToHex(start + i)
 	}
@@ -115,19 +115,19 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 		return "", err
 	}
 
-	if blockNum < m.settlementStartBlock {
+	if blockNum < m.SettlementStartBlock {
 		return "", errors.New("block number before start block")
 	}
 
-	if blockNum == m.settlementStartBlock {
+	if blockNum == m.SettlementStartBlock {
 		return constants.ZeroHash, nil
 	}
-	log.Debug().Msgf("Settlement start block: %d", m.settlementStartBlock)
+	log.Debug().Msgf("Settlement start block: %d", m.SettlementStartBlock)
 
-	parentBlockNum := int64(blockNum - m.settlementStartBlock - 1)
+	parentBlockNum := int64(blockNum - m.SettlementStartBlock - 1)
 
 	log.Debug().Msgf("Getting block hash for block number %d", parentBlockNum)
-	previousBlock, err := m.metaBasedChain.AsEthClient().HeaderByNumber(ctx, big.NewInt(parentBlockNum))
+	previousBlock, err := m.MetaBasedChain.AsEthClient().HeaderByNumber(ctx, big.NewInt(parentBlockNum))
 	if err != nil {
 		return "", err
 	}
@@ -141,7 +141,7 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	return previousBlock.Hash().Hex(), nil
 }
 
-func parseTransactionProcessed(txLog *ethtypes.Log) (*l2.TransactionProcessed, error) {
+func ParseTransactionProcessed(txLog *ethtypes.Log) (*l2.TransactionProcessed, error) {
 	event := new(l2.TransactionProcessed)
 	if err := abi.ParseTopics(event, indexedAddressTypeArgs, txLog.Topics[1:]); err != nil {
 		return nil, err
@@ -150,14 +150,14 @@ func parseTransactionProcessed(txLog *ethtypes.Log) (*l2.TransactionProcessed, e
 	return event, nil
 }
 
-func (m *MetaBasedBatchProvider) filterReceipts(receipts []*ethtypes.Receipt) (txns []hexutil.Bytes, result error) {
+func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) (txns []hexutil.Bytes, result error) {
 	for i, rec := range receipts {
 		if rec.Status != ethtypes.ReceiptStatusSuccessful {
 			continue
 		}
 		for j, log := range rec.Logs {
-			if log.Address == m.sequencingContractAddress && len(log.Topics) > 0 && log.Topics[0] == TransactionProcessedABIHash {
-				proc, err := parseTransactionProcessed(log)
+			if log.Address == m.SequencingContractAddress && len(log.Topics) > 0 && log.Topics[0] == TransactionProcessedABIHash {
+				proc, err := ParseTransactionProcessed(log)
 				if err != nil {
 					result = multierror.Append(result, fmt.Errorf("malformatted l2 receipt log in receipt %d, log %d: %w", i, j, err))
 				} else {
@@ -179,19 +179,19 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 		return nil, err
 	}
 
-	seqBlockNumbers, err := m.getLinkedBlocks(blockNumber)
+	seqBlockNumbers, err := m.GetLinkedBlocks(blockNumber)
 	if err != nil {
 		return nil, err
 	}
 	log.Debug().Msgf("Translating block number %s and hash %s: linked block numbers: %s", blockNumber, blockHash, seqBlockNumbers)
 
-	receipts, err := m.sequencingChain.BlocksReceiptsByNumbers(ctx, seqBlockNumbers)
+	receipts, err := m.SequencingChain.BlocksReceiptsByNumbers(ctx, seqBlockNumbers)
 	if err != nil {
 		return nil, err
 	}
 	log.Debug().Msgf("Translating block number %s and hash %s: receipts: %v", blockNumber, blockHash, receipts)
 
-	txns, err := m.filterReceipts(receipts)
+	txns, err := m.FilterReceipts(receipts)
 	if err != nil {
 		return nil, err
 	}

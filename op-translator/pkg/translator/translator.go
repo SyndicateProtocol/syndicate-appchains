@@ -8,19 +8,31 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/rs/zerolog/log"
 )
 
+type IRPCClient interface {
+	CloseConnection()
+	GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error)
+	GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (types.Block, error)
+	BlocksReceiptsByNumbers(ctx context.Context, numbers []string) ([]*ethtypes.Receipt, error)
+	AsEthClient() rpc.IETHClient
+}
+
+// guarantees that the IRPCClient interface is implemented by RPCClient
+var _ IRPCClient = (*rpc.RPCClient)(nil)
+
 type OPTranslator struct {
-	SettlementChain     interfaces.IRPCClient
+	SettlementChain     IRPCClient
 	BatchProvider       interfaces.IBatchProvider
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
 }
 
-func Init(cfg interfaces.IConfig) *OPTranslator {
-	settlementChain, err := rpc.Connect(cfg.SettlementChainAddr())
+func Init(cfg config.Config) *OPTranslator {
+	settlementChain, err := rpc.Connect(cfg.SettlementChainAddr)
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize settlement chain")
 	}
@@ -30,8 +42,8 @@ func Init(cfg interfaces.IConfig) *OPTranslator {
 
 	return &OPTranslator{
 		SettlementChain:     settlementChain,
-		BatcherInboxAddress: common.HexToAddress(cfg.BatchInboxAddress()),
-		BatcherAddress:      common.HexToAddress(cfg.BatcherAddress()),
+		BatcherInboxAddress: common.HexToAddress(cfg.BatchInboxAddress),
+		BatcherAddress:      common.HexToAddress(cfg.BatcherAddress),
 		BatchProvider:       metaBasedBatchProvider,
 		Signer:              *signer,
 	}

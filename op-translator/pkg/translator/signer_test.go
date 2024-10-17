@@ -1,10 +1,11 @@
-package translator
+package translator_test
 
 import (
 	"math/big"
 	"testing"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -12,22 +13,14 @@ import (
 )
 
 func TestNewSigner(t *testing.T) {
-	mockConfig := mocks.InitMockConfig()
-	mockConfig.On("BatcherPrivateKey").Return("fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d")
-	mockConfig.On("SettlementChainID").Return(int64(84532))
-
-	signer := NewSigner(mockConfig)
+	signer := translator.NewSigner(mocks.DefaultTestingConfig)
 
 	assert.NotNil(t, signer, "Signer should be created successfully")
-	assert.NotNil(t, signer.privateKey, "Signer private key should be initialized")
-	assert.NotNil(t, signer.signer, "Signer instance should be initialized")
 	assert.Equal(t, int64(84532), signer.ChainID(), "Signer chain ID should be set correctly")
 }
 
 func TestSignSuccess(t *testing.T) {
-	mockConfig := mocks.InitMockConfig()
-
-	signer := NewSigner(mockConfig)
+	signer := translator.NewSigner(mocks.DefaultTestingConfig)
 
 	tx := types.NewTransaction(
 		0,
@@ -45,9 +38,7 @@ func TestSignSuccess(t *testing.T) {
 }
 
 func TestSignWithInvalidTransaction(t *testing.T) {
-	mockConfig := mocks.InitMockConfig()
-
-	signer := NewSigner(mockConfig)
+	signer := translator.NewSigner(mocks.DefaultTestingConfig)
 
 	var tx *types.Transaction = nil
 	signedTx, err := signer.Sign(tx)
