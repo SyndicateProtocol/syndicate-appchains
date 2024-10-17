@@ -1,4 +1,5 @@
 use crate::application;
+use crate::application::Metrics;
 use crate::domain::primitives::Bytes;
 use crate::domain::MetabasedSequencerChainService;
 use crate::presentation::json_rpc_errors::Error;
@@ -88,13 +89,14 @@ impl JsonRpcError<()> {
 ///
 /// * Data: hex encoded string that contains signed and serialized transaction with an optional `0x`
 ///   prefix.
-pub async fn send_raw_transaction<Chain>(
+pub async fn send_raw_transaction<Chain, M>(
     params: Params<'static>,
-    ctx: Arc<Services<Chain>>,
+    ctx: Arc<Services<Chain, M>>,
     _ext: http::Extensions,
 ) -> Result<String, JsonRpcError<()>>
 where
     Chain: MetabasedSequencerChainService,
+    M: Metrics,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
 {
     let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap())?;
@@ -107,8 +109,9 @@ where
     let bytes = hex::decode(str)?;
     let bytes = Bytes::from(bytes);
     let chain = ctx.chain_service();
+    let metrics = ctx.metrics_service();
 
-    Ok(application::send_raw_transaction(bytes, chain, &())
+    Ok(application::send_raw_transaction(bytes, chain, metrics)
         .await?
         .encode_hex_with_prefix())
 }

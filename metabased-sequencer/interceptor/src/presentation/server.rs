@@ -1,3 +1,4 @@
+use crate::application::{Metrics, PrometheusMetrics};
 use crate::domain::primitives::Address;
 use crate::domain::MetabasedSequencerChainService;
 use crate::infrastructure::SolMetabasedSequencerChainService;
@@ -22,16 +23,20 @@ pub async fn run(
     let addr = server.local_addr()?;
     let rpc = ProviderBuilder::new().on_http(chain_rpc_address);
     let chain = SolMetabasedSequencerChainService::new(chain_contract_address, rpc);
-    let services = Services { chain };
+    let metrics = PrometheusMetrics::new();
+    let services = Services { chain, metrics };
     let module = create_eth_module(services)?;
     let handle = server.start(module);
 
     Ok((addr, handle))
 }
 
-fn create_eth_module<Chain>(services: Services<Chain>) -> anyhow::Result<RpcModule<Services<Chain>>>
+fn create_eth_module<Chain, M>(
+    services: Services<Chain, M>,
+) -> anyhow::Result<RpcModule<Services<Chain, M>>>
 where
     Chain: MetabasedSequencerChainService + Send + Sync + 'static,
+    M: Metrics + Send + Sync + 'static,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
 {
     let mut module = RpcModule::new(services);
@@ -40,12 +45,17 @@ where
 }
 
 #[derive(Debug)]
-pub struct Services<Chain> {
+pub struct Services<Chain, M> {
     chain: Chain,
+    metrics: M,
 }
 
-impl<Chain: MetabasedSequencerChainService> Services<Chain> {
+impl<Chain: MetabasedSequencerChainService, M: Metrics> Services<Chain, M> {
     pub fn chain_service(&self) -> &Chain {
         &self.chain
+    }
+
+    pub fn metrics_service(&self) -> &M {
+        &self.metrics
     }
 }
