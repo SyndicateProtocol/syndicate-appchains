@@ -68,23 +68,23 @@ func (c *RPCClient) GetBlockByHash(ctx context.Context, hash common.Hash, withTr
 }
 
 func (c *RPCClient) BlocksReceiptsByNumbers(ctx context.Context, numbers []string) ([]*ethtypes.Receipt, error) {
-	fmt.Println("BlocksReceiptsByNumbers BlocksReceiptsByNumbers BlocksReceiptsByNumbers")
-	log.Debug().Msgf("numbers: %v", numbers)
 	var receipts []*ethtypes.Receipt
 	for _, number := range numbers {
 		numberInt, err := utils.HexToInt(number)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert block number: %w", err)
 		}
+
 		block, err := c.client.BlockByNumber(ctx, big.NewInt(int64(numberInt)))
-		log.Debug().Msgf("block nummmmm: %v", block)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get block by number: %w", err)
 		}
+
 		var hashes []common.Hash
 		for _, tx := range block.Transactions() {
 			hashes = append(hashes, tx.Hash())
 		}
+
 		blockReceipts, err := c.receiptsFetcher.FetchReceipts(ctx, eth.BlockToInfo(block), hashes)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get receipts for block %d: %w", numberInt, err)
