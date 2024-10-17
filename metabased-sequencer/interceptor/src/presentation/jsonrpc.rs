@@ -1,13 +1,18 @@
 use crate::application;
+use crate::domain::primitives::Bytes;
+use crate::domain::MetabasedSequencerChainService;
 use crate::presentation::json_rpc_errors::Error;
 use crate::presentation::json_rpc_errors::Error::InvalidParams;
+use crate::presentation::json_rpc_errors::InvalidParamsError::{
+    MissingParam, NotAnArray, NotHexEncoded, WrongParamCount,
+};
+use crate::presentation::server::Services;
 use alloy::hex;
 use alloy::hex::ToHexExt;
-use bytes::Bytes;
 use jsonrpsee::types::{ErrorObject, Params};
 use serde::Serialize;
 use std::fmt::{Debug, Display, Formatter};
-use crate::presentation::json_rpc_errors::InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount};
+use std::sync::Arc;
 
 /// An error type for JSON-RPC endpoints.
 ///
@@ -71,11 +76,10 @@ impl JsonRpcError<()> {
             Error::TransactionRejected(_) => -32003,
             Error::MethodNotSupported => -32004,
             Error::LimitExceeded => -32005,
-            Error::Server => -32099,
+            Error::Server | Error::Contract(_) => -32099,
         }
     }
 }
-
 
 /// The JSON-RPC endpoint for `eth_sendRawTransaction`.
 ///
@@ -84,26 +88,27 @@ impl JsonRpcError<()> {
 ///
 /// * Data: hex encoded string that contains signed and serialized transaction with an optional `0x`
 ///   prefix.
-pub fn send_raw_transaction(
-    params: Params,
-    _ctx: &(),
-    _ext: &http::Extensions,
-) -> Result<String, JsonRpcError<()>> {
+pub async fn send_raw_transaction<Chain>(
+    params: Params<'static>,
+    ctx: Arc<Services<Chain>>,
+    _ext: http::Extensions,
+) -> Result<String, JsonRpcError<()>>
+where
+    Chain: MetabasedSequencerChainService,
+    Error: From<<Chain as MetabasedSequencerChainService>::Error>,
+{
     let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap())?;
-    let arr = json
-        .as_array_mut()
-        .ok_or(InvalidParams(NotAnArray))?;
+    let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
     if arr.len() != 1 {
         return Err(InvalidParams(WrongParamCount(arr.len())).into());
     }
-    let item = arr
-        .pop()
-        .ok_or(InvalidParams(MissingParam))?; // should be impossible
-    let str = item
-        .as_str()
-        .ok_or(InvalidParams(NotHexEncoded))?;
+    let item = arr.pop().ok_or(InvalidParams(MissingParam))?; // should be impossible
+    let str = item.as_str().ok_or(InvalidParams(NotHexEncoded))?;
     let bytes = hex::decode(str)?;
     let bytes = Bytes::from(bytes);
+    let chain = ctx.chain_service();
 
-    Ok(application::send_raw_transaction(bytes)?.encode_hex_with_prefix())
+    Ok(application::send_raw_transaction(bytes, chain)
+        .await?
+        .encode_hex_with_prefix())
 }

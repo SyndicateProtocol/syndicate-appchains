@@ -11,8 +11,8 @@ pub struct TransactionFeeTooHigh {
 impl fmt::Display for TransactionFeeTooHigh {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
-                f,
-                "tx fee ({} gwei) exceeds the configured cap ({} gwei)",
+            f,
+            "tx fee ({} gwei) exceeds the configured cap ({} gwei)",
             self.fee_gwei, self.cap_gwei
         )
     }
@@ -31,14 +31,17 @@ impl fmt::Display for TransactionFeeTooHigh {
 ///
 /// * `Ok(())` if the fee is under the cap, or if there is no cap.
 /// * `TransactionFeeTooHigh` with an error message if the fee exceeds the cap.
-pub fn check_tx_fee(gas_price: U256, gas: U256, cap_in_wei: U256) -> Result<(), TransactionFeeTooHigh> {
+pub fn check_tx_fee(
+    gas_price: U256,
+    gas: U256,
+    cap_in_wei: U256,
+) -> Result<(), TransactionFeeTooHigh> {
     // Short circuit if there is no cap for transaction fee at all.
     if cap_in_wei.is_zero() {
         return Ok(());
     }
 
-    let fee_wei = gas_price
-        .saturating_mul(gas);
+    let fee_wei = gas_price.saturating_mul(gas);
 
     if fee_wei > cap_in_wei {
         let gwei = U256::from(1_000_000_000u64); // 1 Gwei = 10^9 Wei
@@ -64,7 +67,7 @@ mod tests {
             U256::from(21000u64),
             U256::ZERO
         )
-            .is_ok());
+        .is_ok());
     }
 
     #[test]
