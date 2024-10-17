@@ -2,6 +2,16 @@ pub use prometheus::PrometheusMetrics;
 
 use std::fmt::Write;
 
+pub fn metrics(metrics: &impl Metrics) -> String {
+    let mut response = String::new();
+
+    metrics
+        .encode(&mut response)
+        .expect("Formatting to string should be infallible");
+
+    response
+}
+
 pub trait Metrics {
     fn inc_send_raw_transaction(&self);
     fn encode(&self, writer: &mut impl Write) -> std::fmt::Result;

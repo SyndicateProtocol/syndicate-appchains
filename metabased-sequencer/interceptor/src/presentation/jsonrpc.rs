@@ -115,3 +115,17 @@ where
         .await?
         .encode_hex_with_prefix())
 }
+
+/// The JSON-RPC endpoint for Prometheus metrics scraper to collect data from.
+pub fn metrics<Chain, M>(
+    _params: Params,
+    ctx: &Services<Chain, M>,
+    _ext: &http::Extensions,
+) -> String
+where
+    Chain: MetabasedSequencerChainService,
+    M: Metrics,
+    Error: From<<Chain as MetabasedSequencerChainService>::Error>,
+{
+    application::metrics(ctx.metrics_service())
+}

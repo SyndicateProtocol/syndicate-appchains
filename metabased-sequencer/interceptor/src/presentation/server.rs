@@ -41,6 +41,7 @@ where
 {
     let mut module = RpcModule::new(services);
     module.register_async_method("eth_sendRawTransaction", jsonrpc::send_raw_transaction)?;
+    module.register_method("metrics", jsonrpc::metrics)?;
     Ok(module)
 }
 
