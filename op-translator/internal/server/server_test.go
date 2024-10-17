@@ -64,7 +64,9 @@ func TestProxyEndpoint(t *testing.T) {
 	}))
 	defer mockBackend.Close()
 
-	router, err := TranslatorHandler(mocks.DefaultTestingConfig, mockTranslator)
+	config := mocks.DefaultTestingConfig
+	config.SettlementChainAddr = mockBackend.URL
+	router, err := TranslatorHandler(config, mockTranslator)
 	assert.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{"method": "eth_getBalance"}`))
