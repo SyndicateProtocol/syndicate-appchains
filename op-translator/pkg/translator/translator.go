@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/interfaces"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -20,12 +19,17 @@ type IRPCClient interface {
 	AsEthClient() rpc.IETHClient
 }
 
+type IBatchProvider interface {
+	GetBatch(ctx context.Context, block types.Block) (*types.Batch, error)
+	Close()
+}
+
 // guarantees that the IRPCClient interface is implemented by RPCClient
 var _ IRPCClient = (*rpc.RPCClient)(nil)
 
 type OPTranslator struct {
 	SettlementChain     IRPCClient
-	BatchProvider       interfaces.IBatchProvider
+	BatchProvider       IBatchProvider
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
