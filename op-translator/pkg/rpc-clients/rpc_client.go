@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/interfaces"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
@@ -68,28 +69,58 @@ func (c *RPCClient) GetBlockByHash(ctx context.Context, hash common.Hash, withTr
 }
 
 func (c *RPCClient) BlocksReceiptsByNumbers(ctx context.Context, numbers []string) ([]*ethtypes.Receipt, error) {
-	var receipts []*ethtypes.Receipt
+	numbersLength := len(numbers)
+	receiptsChan := make(chan []*ethtypes.Receipt, numbersLength)
+	errChan := make(chan error, numbersLength)
+
+	// Fetch block and its receipts concurrently
+	var wg sync.WaitGroup
+	wg.Add(numbersLength)
 	for _, number := range numbers {
-		numberInt, err := utils.HexToInt(number)
-		if err != nil {
-			return nil, fmt.Errorf("failed to convert block number: %w", err)
-		}
+		go func(number string) {
+			defer wg.Done()
 
-		block, err := c.client.BlockByNumber(ctx, big.NewInt(int64(numberInt)))
-		if err != nil {
-			return nil, fmt.Errorf("failed to get block by number: %w", err)
-		}
+			numberInt, err := utils.HexToInt(number)
+			if err != nil {
+				errChan <- fmt.Errorf("failed to convert block number: %w", err)
+				return
+			}
 
-		var hashes []common.Hash
-		for _, tx := range block.Transactions() {
-			hashes = append(hashes, tx.Hash())
-		}
+			block, err := c.client.BlockByNumber(ctx, big.NewInt(int64(numberInt)))
+			if err != nil {
+				errChan <- fmt.Errorf("failed to get block by number: %w", err)
+				return
+			}
 
-		blockReceipts, err := c.receiptsFetcher.FetchReceipts(ctx, eth.BlockToInfo(block), hashes)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get receipts for block %d: %w", numberInt, err)
-		}
-		receipts = append(receipts, blockReceipts...)
+			hashes := make([]common.Hash, len(block.Transactions()))
+			for i, tx := range block.Transactions() {
+				hashes[i] = tx.Hash()
+			}
+
+			blockReceipts, err := c.receiptsFetcher.FetchReceipts(ctx, eth.BlockToInfo(block), hashes)
+			if err != nil {
+				errChan <- fmt.Errorf("failed to get receipts for block %d: %w", numberInt, err)
+				return
+			}
+
+			receiptsChan <- blockReceipts
+		}(number)
 	}
-	return receipts, nil
+
+	go func() {
+		wg.Wait()
+		close(receiptsChan)
+		close(errChan)
+	}()
+
+	var allReceipts []*ethtypes.Receipt
+	for blockReceipts := range receiptsChan {
+		allReceipts = append(allReceipts, blockReceipts...)
+	}
+
+	if len(errChan) > 0 {
+		return nil, <-errChan
+	}
+
+	return allReceipts, nil
 }
