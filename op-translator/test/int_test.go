@@ -83,7 +83,7 @@ func getMockClient() *mocks.MockRPCClient {
 			{
 				Address: common.HexToAddress("0x123"),
 				Topics: []common.Hash{
-					translator.TransactionProcessedABIHash,
+					translator.TransactionProcessedSigHash,
 					common.BytesToHash(senderAddr.Bytes()),
 				},
 				Data: encodedTxn,

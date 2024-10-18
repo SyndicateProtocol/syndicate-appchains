@@ -5,34 +5,24 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"strings"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/contracts/l2"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog/log"
 )
 
-var (
-	TransactionProcessedABI     = `[{"anonymous":false,"inputs":[{"indexed":true,"name":"Sender","type":"address"},{"indexed":false,"name":"EncodedTxn","type":"bytes"}],"name":"TransactionProcessed","type":"event"}]`
-	TransactionProcessedSig     = "TransactionProcessed(address,bytes)"
-	TransactionProcessedSigHash = crypto.Keccak256Hash([]byte(TransactionProcessedSig))
-)
-
 type MetaBasedBatchProvider struct {
-	MetaBasedChain            IRPCClient
-	SequencingChain           IRPCClient
-	SequencingContractAddress common.Address
+	MetaBasedChain    IRPCClient
+	SequencingChain   IRPCClient
+	TransactionParser *L3TransactionParser
 
 	SettlementStartBlock       int
 	SequencingStartBlock       int
@@ -51,9 +41,9 @@ func InitMetaBasedBatchProvider(cfg *config.Config) *MetaBasedBatchProvider {
 	}
 
 	return &MetaBasedBatchProvider{
-		MetaBasedChain:            metaBasedChain,
-		SequencingChain:           sequencingChain,
-		SequencingContractAddress: common.HexToAddress(cfg.SequencingContractAddress),
+		MetaBasedChain:    metaBasedChain,
+		SequencingChain:   sequencingChain,
+		TransactionParser: InitL3TransactionParser(cfg),
 
 		SettlementStartBlock:       cfg.SettlementStartBlock,
 		SequencingStartBlock:       cfg.SequencingStartBlock,
@@ -72,7 +62,7 @@ func NewMetaBasedBatchProvider(
 	return &MetaBasedBatchProvider{
 		MetaBasedChain:             settlementChainClient,
 		SequencingChain:            sequencingChainClient,
-		SequencingContractAddress:  sequencingContractAddress,
+		TransactionParser:          NewL3TransactionParser(sequencingContractAddress.String()),
 		SettlementStartBlock:       settlementStartBlock,
 		SequencingStartBlock:       sequencingStartBlock,
 		SequencePerSettlementBlock: sequencePerSettlementBlock,
@@ -135,23 +125,6 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	return previousBlock.Hash().Hex(), nil
 }
 
-func parseTransactionProcessed(txLog *ethtypes.Log) (*l2.TransactionProcessed, error) {
-	contractABI, err := abi.JSON(strings.NewReader(TransactionProcessedABI))
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse ABI: %v", err)
-	}
-
-	event := l2.TransactionProcessed{}
-	event.Sender = common.HexToAddress(txLog.Topics[1].Hex())
-
-	err = contractABI.UnpackIntoInterface(&event, "TransactionProcessed", txLog.Data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unpack log data: %v", err)
-	}
-
-	return &event, nil
-}
-
 func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) (txns []hexutil.Bytes, result error) {
 	for i, rec := range receipts {
 		if rec.Status != ethtypes.ReceiptStatusSuccessful {
@@ -159,8 +132,8 @@ func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) (t
 		}
 
 		for j, txLog := range rec.Logs {
-			if txLog.Address == m.sequencingContractAddress && txLog.Topics[0] == TransactionProcessedSigHash {
-				proc, err := parseTransactionProcessed(txLog)
+			if m.TransactionParser.IsLogTransactionProcessed(txLog) {
+				proc, err := m.TransactionParser.ParseTransactionProcessed(txLog)
 				if err != nil {
 					result = multierror.Append(result, fmt.Errorf("malformatted l2 receipt log in receipt %d, log %d: %w", i, j, err))
 				} else {
