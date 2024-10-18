@@ -38,5 +38,15 @@ contract L3BackfillBetterMapperTest is Test {
         mapper.simpleSave(1);
         uint256 gasUsed = gasStart - gasleft();
         console.log("Gas used for simpleSave:", gasUsed);
+
+        uint256 gasStart2 = gasleft();
+        mapper.simpleSave(10);
+        uint256 gasUsed2 = gasStart2 - gasleft();
+        console.log("Gas used for simpleSave:", gasUsed2);
+
+        uint256 gasStart3 = gasleft();
+        mapper.simpleSave(100);
+        uint256 gasUsed3 = gasStart3 - gasleft();
+        console.log("Gas used for simpleSave:", gasUsed3);
     }
 }
