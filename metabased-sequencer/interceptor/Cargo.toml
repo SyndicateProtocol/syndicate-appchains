@@ -34,4 +34,6 @@ serde = "1.0.210"
 hyper-util = "0.1.8"
 alloy-primitives = "0.8.7"
 url = { version = "2", features = ["serde"] }
+rand = "0.8.5"
+flate2 = "1.0.34"
 prometheus-client = "0.22"
