@@ -117,13 +117,13 @@ func Init() *Config {
 	hydrateFromConfMap(&config)
 
 	// Validate config
-	if err = validateConfigValues(&config); err != nil {
+	if err = ValidateConfigValues(&config); err != nil {
 		log.Panic().Err(err).Msg("error validating config")
 	}
 	return &config
 }
 
-func validateConfigValues(config *Config) (result error) {
+func ValidateConfigValues(config *Config) (result error) {
 	if config.Port <= 0 {
 		result = multierror.Append(result, errors.New("port must be a positive number"))
 	}

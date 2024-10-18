@@ -1,7 +1,9 @@
-package utils
+package utils_test
 
 import (
 	"testing"
+
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 )
 
 func TestHexToInt(t *testing.T) {
@@ -20,7 +22,7 @@ func TestHexToInt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := HexToInt(tt.input)
+			got, err := utils.HexToInt(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("HexToInt() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -49,7 +51,7 @@ func TestHexToUInt64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := HexToUInt64(tt.input)
+			got, err := utils.HexToUInt64(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("HexToUInt64() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -74,7 +76,7 @@ func TestIntToHex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IntToHex(tt.input); got != tt.want {
+			if got := utils.IntToHex(tt.input); got != tt.want {
 				t.Errorf("IntToHex() = %v, want %v", got, tt.want)
 			}
 		})

@@ -72,7 +72,7 @@ func rpcEndpointsHandler(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *h
 		}
 
 		// Parse out the method
-		method := parseMethod(r)
+		method := ParseMethod(r)
 		log.Debug().Msgf("Method: %s", method)
 		if t.ShouldTranslate(method) {
 			// Translate
@@ -99,7 +99,7 @@ func Start(cfg *config.Config, router *http.ServeMux) {
 	}
 }
 
-func parseMethod(request *http.Request) string {
+func ParseMethod(request *http.Request) string {
 	// Read body to buffer
 	body, err := io.ReadAll(request.Body)
 	if err != nil {

@@ -1,17 +1,18 @@
-package config
+package config_test
 
 import (
 	"errors"
 	"strings"
 	"testing"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
 	"github.com/hashicorp/go-multierror"
 	"github.com/stretchr/testify/assert"
 )
 
-func validConfig() Config {
-	return Config{
+func validConfig() config.Config {
+	return config.Config{
 		Port:                       1234,
 		FrameSize:                  100,
 		SequencingChainAddr:        "http://example.com",
@@ -32,102 +33,102 @@ func validConfig() Config {
 
 func TestValidateConfigValues(t *testing.T) {
 	tests := []struct {
-		configChangeUnderTest func(*Config)
+		configChangeUnderTest func(*config.Config)
 		name                  string
 		expectedErrors        []string
 	}{
 		{
 			name:                  "Valid config",
-			configChangeUnderTest: func(c *Config) {},
+			configChangeUnderTest: func(c *config.Config) {},
 			expectedErrors:        nil,
 		},
 		{
 			name: "Invalid port",
-			configChangeUnderTest: func(c *Config) {
+			configChangeUnderTest: func(c *config.Config) {
 				c.Port = 0
 			},
 			expectedErrors: []string{"port must be a positive number"},
 		},
 		{
 			name: "Invalid frameSize",
-			configChangeUnderTest: func(c *Config) {
+			configChangeUnderTest: func(c *config.Config) {
 				c.FrameSize = 0
 			},
 			expectedErrors: []string{"frameSize must be a positive number"},
 		},
 		{
 			name: "Invalid sequencingChainAddr",
-			configChangeUnderTest: func(c *Config) {
+			configChangeUnderTest: func(c *config.Config) {
 				c.SequencingChainAddr = "invalid sequencing chain address"
 			},
 			expectedErrors: []string{"invalid URL for sequencing chain address"},
 		},
 		{
 			name: "Invalid settlementChainAddr",
-			configChangeUnderTest: func(c *Config) {
+			configChangeUnderTest: func(c *config.Config) {
 				c.SettlementChainAddr = "invalid settlement chain address"
 			},
 			expectedErrors: []string{"invalid URL for settlement chain address"},
 		},
 		{
 			name: "Invalid metaBasedChainAddr",
-			configChangeUnderTest: func(c *Config) {
+			configChangeUnderTest: func(c *config.Config) {
 				c.MetaBasedChainAddr = "invalid meta based chain address"
 			},
 			expectedErrors: []string{"invalid URL for meta based chain address"},
 		},
 		{
 			name: "Invalid log level",
-			configChangeUnderTest: func(c *Config) {
+			configChangeUnderTest: func(c *config.Config) {
 				c.LogLevel = "OTHER"
 			},
 			expectedErrors: []string{"invalid log level"},
 		},
 		{
 			name: "Invalid settlementStartBlock",
-			configChangeUnderTest: func(c *Config) {
+			configChangeUnderTest: func(c *config.Config) {
 				c.SettlementStartBlock = 0
 			},
 			expectedErrors: []string{"settlementStartBlock must be a positive number"},
 		},
 		{
 			name: "Invalid sequencingStartBlock",
-			configChangeUnderTest: func(c *Config) {
+			configChangeUnderTest: func(c *config.Config) {
 				c.SequencingStartBlock = 0
 			},
 			expectedErrors: []string{"sequencingStartBlock must be a positive number"},
 		},
 		{
 			name: "Invalid sequencePerSettlementBlock",
-			configChangeUnderTest: func(c *Config) {
+			configChangeUnderTest: func(c *config.Config) {
 				c.SequencePerSettlementBlock = 0
 			},
 			expectedErrors: []string{"sequencePerSettlementBlock must be a positive number"},
 		},
 		{
 			name: "Invalid sequencingContractAddress",
-			configChangeUnderTest: func(c *Config) {
+			configChangeUnderTest: func(c *config.Config) {
 				c.SequencingContractAddress = "invalid sequencing contract address"
 			},
 			expectedErrors: []string{"sequencingContractAddress must be a valid hex address"},
 		},
 		{
 			name: "Invalid batcherAddress",
-			configChangeUnderTest: func(c *Config) {
+			configChangeUnderTest: func(c *config.Config) {
 				c.BatcherAddress = "invalid batcher address"
 			},
 			expectedErrors: []string{"batcherAddress must be a valid hex address"},
 		},
 		{
 			name: "Invalid batchInboxAddress",
-			configChangeUnderTest: func(c *Config) {
+			configChangeUnderTest: func(c *config.Config) {
 				c.BatchInboxAddress = "invalid batch inbox address"
 			},
 			expectedErrors: []string{"batchInboxAddress must be a valid hex address"},
 		},
 		{
 			name: "Multiple invalid fields",
-			configChangeUnderTest: func(c *Config) {
+			configChangeUnderTest: func(c *config.Config) {
 				c.Port = -1
 				c.FrameSize = 0
 				c.SequencingChainAddr = "invalid"
@@ -145,14 +146,14 @@ func TestValidateConfigValues(t *testing.T) {
 		},
 		{
 			name: "Invalid Batcher Private Key",
-			configChangeUnderTest: func(c *Config) {
+			configChangeUnderTest: func(c *config.Config) {
 				c.BatcherPrivateKey = ""
 			},
 			expectedErrors: []string{"batcherPrivateKey cannot be blank"},
 		},
 		{
 			name: "Invalid Settlement Chain ID",
-			configChangeUnderTest: func(c *Config) {
+			configChangeUnderTest: func(c *config.Config) {
 				c.SettlementChainID = 0
 			},
 			expectedErrors: []string{"settlementChainID must be a positive number: 0"},
@@ -163,7 +164,7 @@ func TestValidateConfigValues(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := validConfig()
 			tt.configChangeUnderTest(&cfg)
-			result := validateConfigValues(&cfg)
+			result := config.ValidateConfigValues(&cfg)
 
 			if tt.expectedErrors == nil {
 				assert.NoError(t, result, "Expected no error, but got: %v", result)

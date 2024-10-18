@@ -1,18 +1,19 @@
-package types
+package types_test
 
 import (
 	"crypto/rand"
 	"io"
 	"testing"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 )
 
 const frameSizeTest = 1024
 
-func mockBatch() *Batch {
-	return &Batch{
+func mockBatch() *types.Batch {
+	return &types.Batch{
 		ParentHash:      common.HexToHash("0x123"),
 		EpochNumber:     1,
 		EpochHash:       common.HexToHash("0x456"),
@@ -24,7 +25,7 @@ func mockBatch() *Batch {
 func TestBatchEncode(t *testing.T) {
 	batch := mockBatch()
 
-	encoded, err := batch.encode()
+	encoded, err := batch.Encode()
 	assert.Nil(t, err)
 
 	expected := []byte{0x0, 0xf8, 0x45, 0xa0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x23, 0x1, 0xa0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x4, 0x56, 0x2, 0xc0}
@@ -39,7 +40,7 @@ func TestToChannel(t *testing.T) {
 		input := []byte{}
 		expected := []byte{0x78, 0x1, 0x1, 0x0, 0x0, 0xff, 0xff, 0x0, 0x0, 0x0, 0x1}
 
-		output, err := toChannel(input)
+		output, err := types.ToChannel(input)
 
 		assert.NoError(t, err)
 		assert.Equal(t, expected, output)
@@ -48,7 +49,7 @@ func TestToChannel(t *testing.T) {
 	t.Run("Valid Input", func(t *testing.T) {
 		input := []byte{0x00, 0x01, 0x02, 0x03, 0x04}
 
-		output, err := toChannel(input)
+		output, err := types.ToChannel(input)
 
 		assert.NoError(t, err)
 		// First bytes equals NO_COMPRESSION flag for zlib
@@ -73,7 +74,7 @@ func TestToFrames_Private(t *testing.T) {
 	t.Run("1 frame data size", func(t *testing.T) {
 		data := []byte("data")
 		blockHash := common.HexToHash("0xabc")
-		frames, err := toFrames(data, frameSizeTest, blockHash)
+		frames, err := types.ToFrames(data, frameSizeTest, blockHash)
 		assert.NoError(t, err)
 
 		assert.Len(t, frames, 1)
@@ -88,7 +89,7 @@ func TestToFrames_Private(t *testing.T) {
 	t.Run("2 frame data size", func(t *testing.T) {
 		data := randData(frameSizeTest + 1)
 		blockHash := common.HexToHash("0xabc")
-		frames, err := toFrames(data, frameSizeTest, blockHash)
+		frames, err := types.ToFrames(data, frameSizeTest, blockHash)
 		assert.NoError(t, err)
 
 		assert.Len(t, frames, 2)
