@@ -65,7 +65,10 @@ contract L3BackfillStorageTest is Test {
 
         // Call the save function
         vm.prank(manager);
+        uint256 gasStart = gasleft();
         l3Storage.save(expectedL1EpochBlockNumber, expectedL3BlockNumber, expectedBatch);
+        uint256 gasUsed = gasStart - gasleft();
+        console.log("Gas used for addInterval:", gasUsed);
     }
 
     function testSaveForMany() public {
