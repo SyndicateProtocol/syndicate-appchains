@@ -16,14 +16,14 @@ type Signer struct {
 	signer     ethtypes.Signer
 }
 
-func NewSigner(cfg config.IConfig) *Signer {
-	key, err := crypto.HexToECDSA(cfg.BatcherPrivateKey())
+func NewSigner(cfg *config.Config) *Signer {
+	key, err := crypto.HexToECDSA(cfg.BatcherPrivateKey)
 
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize signer")
 	}
 
-	chainID := big.NewInt(cfg.SettlementChainID())
+	chainID := big.NewInt(cfg.SettlementChainID)
 	return &Signer{
 		signer:     ethtypes.NewCancunSigner(chainID),
 		privateKey: key,

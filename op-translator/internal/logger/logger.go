@@ -14,7 +14,7 @@ import (
 	"github.com/rs/zerolog/pkgerrors"
 )
 
-func Init(cfg config.IConfig) {
+func Init(cfg *config.Config) {
 	log.Debug().Msg("Logger initializing")
 	// Add these back if GCP logging is necessary
 	// zerolog.LevelFieldName = "severity"
@@ -24,14 +24,14 @@ func Init(cfg config.IConfig) {
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack //nolint:reassign // Appears to be working and recommended way to do this
 	// See https://github.com/rs/zerolog#error-logging-with-stacktrace
 
-	if cfg.LogLevel() == constants.Debug.String() {
+	if cfg.LogLevel == constants.Debug.String() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	} else {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
 	// Configure logger output
-	if cfg.Pretty() {
+	if cfg.Pretty {
 		output := &prettifiedJSONWriter{out: os.Stdout}
 		log.Logger = zerolog.New(output).With().Timestamp().Caller().Logger()
 	} else {

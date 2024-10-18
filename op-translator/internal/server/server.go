@@ -16,9 +16,9 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-func TranslatorHandler(cfg config.IConfig, translator any) (*http.ServeMux, error) {
+func TranslatorHandler(cfg *config.Config, translator any) (*http.ServeMux, error) {
 	// Setup proxy
-	parsedURL, err := url.Parse(cfg.SettlementChainAddr())
+	parsedURL, err := url.Parse(cfg.SettlementChainAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -32,7 +32,7 @@ func TranslatorHandler(cfg config.IConfig, translator any) (*http.ServeMux, erro
 	}
 
 	// Setup routing
-	logLevel := constants.ToLogLevel(cfg.LogLevel())
+	logLevel := constants.ToLogLevel(cfg.LogLevel)
 	router := TranslatorRouter(logLevel, translatorRPC, parsedURL, proxy)
 
 	return router, nil
@@ -72,7 +72,7 @@ func rpcEndpointsHandler(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *h
 		}
 
 		// Parse out the method
-		method := parseMethod(r)
+		method := ParseMethod(r)
 		log.Debug().Msgf("Method: %s", method)
 		if t.ShouldTranslate(method) {
 			// Translate
@@ -90,8 +90,8 @@ func rpcEndpointsHandler(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *h
 }
 
 func Start(cfg *config.Config, router *http.ServeMux) {
-	log.Debug().Msgf("Starting JSON-RPC server on port %d", cfg.Port())
-	err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port()), router) //nolint:gosec // TODO refactor for performance anyway
+	log.Debug().Msgf("Starting JSON-RPC server on port %d", cfg.Port)
+	err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), router) //nolint:gosec // TODO refactor for performance anyway
 	if err != nil {
 		log.Error().
 			Err(err).
@@ -99,7 +99,7 @@ func Start(cfg *config.Config, router *http.ServeMux) {
 	}
 }
 
-func parseMethod(request *http.Request) string {
+func ParseMethod(request *http.Request) string {
 	// Read body to buffer
 	body, err := io.ReadAll(request.Body)
 	if err != nil {

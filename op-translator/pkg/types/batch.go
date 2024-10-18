@@ -45,7 +45,7 @@ func NewBatch(parentHashStr, epochNumberStr, epochHashStr, timestampStr string, 
 	}, nil
 }
 
-func (b *Batch) encode() ([]byte, error) {
+func (b *Batch) Encode() ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	err := buf.WriteByte(BatchVersionByte)
@@ -64,7 +64,7 @@ func (b *Batch) encode() ([]byte, error) {
 }
 
 func (b *Batch) ToFrames(frameSize int) ([]*Frame, error) {
-	encodedBatch, err := b.encode()
+	encodedBatch, err := b.Encode()
 	if err != nil {
 		return nil, err
 	}
@@ -75,15 +75,15 @@ func (b *Batch) ToFrames(frameSize int) ([]*Frame, error) {
 		return nil, err
 	}
 
-	channel, err := toChannel(buff.Bytes())
+	channel, err := ToChannel(buff.Bytes())
 	if err != nil {
 		return nil, err
 	}
 
-	return toFrames(channel, frameSize, b.EpochHash)
+	return ToFrames(channel, frameSize, b.EpochHash)
 }
 
-func toChannel(batch []byte) ([]byte, error) {
+func ToChannel(batch []byte) ([]byte, error) {
 	var buf bytes.Buffer
 
 	writer, err := zlib.NewWriterLevel(&buf, zlib.NoCompression)
@@ -102,7 +102,7 @@ func toChannel(batch []byte) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func toFrames(channel []byte, frameSize int, blockHash common.Hash) ([]*Frame, error) {
+func ToFrames(channel []byte, frameSize int, blockHash common.Hash) ([]*Frame, error) {
 	numFrames := (len(channel) + frameSize - 1) / frameSize
 	frames := make([]*Frame, numFrames)
 

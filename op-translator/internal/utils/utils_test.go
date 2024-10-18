@@ -1,7 +1,9 @@
-package utils
+package utils_test
 
 import (
 	"testing"
+
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 )
 
 func TestHexToInt(t *testing.T) {
@@ -20,7 +22,7 @@ func TestHexToInt(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := HexToInt(tt.input)
+			got, err := utils.HexToInt(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("HexToInt() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -49,7 +51,7 @@ func TestHexToUInt64(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := HexToUInt64(tt.input)
+			got, err := utils.HexToUInt64(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("HexToUInt64() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -62,19 +64,19 @@ func TestHexToUInt64(t *testing.T) {
 }
 
 func TestIntToHex(t *testing.T) {
-	tests := []struct { //nolint:govet // Test struct
+	tests := []struct {
 		name  string
-		input int
 		want  string
+		input int
 	}{
-		{"Zero", 0, "0x0"},
-		{"Positive number", 26, "0x1a"},
-		{"Large number", 1000000, "0xf4240"},
+		{"Zero", "0x0", 0},
+		{"Positive number", "0x1a", 26},
+		{"Large number", "0xf4240", 1000000},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := IntToHex(tt.input); got != tt.want {
+			if got := utils.IntToHex(tt.input); got != tt.want {
 				t.Errorf("IntToHex() = %v, want %v", got, tt.want)
 			}
 		})

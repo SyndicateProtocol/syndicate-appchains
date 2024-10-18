@@ -1,14 +1,15 @@
-package types
+package types_test
 
 import (
 	"testing"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestGetBlockNumber_ParsingError(t *testing.T) {
-	block := Block{
+	block := types.Block{
 		"number":       123, // Invalid type, should be string
 		"hash":         "0xabc",
 		"transactions": []any(nil),
@@ -22,7 +23,7 @@ func TestGetBlockNumber_ParsingError(t *testing.T) {
 }
 
 func TestGetBlockHash_ParsingError(t *testing.T) {
-	block := Block{
+	block := types.Block{
 		"number":       "0x1",
 		"hash":         123, // Invalid type, should be string
 		"transactions": []any(nil),
@@ -36,7 +37,7 @@ func TestGetBlockHash_ParsingError(t *testing.T) {
 }
 
 func TestAppendTransactions_ParsingError(t *testing.T) {
-	block := Block{
+	block := types.Block{
 		"number":       "0x1",
 		"hash":         "0xabc",
 		"transactions": "invalid", // Invalid type, should be []any

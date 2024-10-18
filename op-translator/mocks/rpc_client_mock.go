@@ -5,10 +5,11 @@ import (
 	"math/big"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/mock"
 )
 
@@ -17,7 +18,7 @@ type MockRPCClient struct {
 }
 
 // guarantees that the IRPCClient interface is implemented by MockRPCClient
-var _ rpc.IRPCClient = (*MockRPCClient)(nil)
+var _ translator.IRPCClient = (*MockRPCClient)(nil)
 
 func (m *MockRPCClient) CloseConnection() {
 	m.Called()
@@ -63,6 +64,11 @@ func (m *MockRPCClient) TransactionReceipt(ctx context.Context, hash common.Hash
 	return args.Get(0).(*ethtypes.Receipt), args.Error(1)
 }
 
-func (m *MockRPCClient) AsEthClient() *ethclient.Client {
+func (m *MockRPCClient) AsEthClient() rpc.IETHClient {
 	return nil
+}
+
+func (m *MockRPCClient) FetchReceipts(ctx context.Context, blockInfo eth.BlockInfo, txHashes []common.Hash) (ethtypes.Receipts, error) {
+	args := m.Called(ctx, blockInfo, txHashes)
+	return args.Get(0).(ethtypes.Receipts), args.Error(1)
 }
