@@ -8,6 +8,7 @@ contract L3BackfillBetterMapper {
 
     Interval[] public intervals;
     uint256 public lastEnd;
+    uint256[] public things;
 
     function addInterval(uint256 end, uint224 value) public {
         require(end > lastEnd, "Intervals must be in order and non-overlapping");
@@ -38,5 +39,9 @@ contract L3BackfillBetterMapper {
 
     function getIntervalsCount() public view returns (uint256) {
         return intervals.length;
+    }
+
+    function simpleSave(uint256 value) public {
+        things.push(value);
     }
 }

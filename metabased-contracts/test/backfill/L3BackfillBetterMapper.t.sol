@@ -14,7 +14,7 @@ contract L3BackfillBetterMapperTest is Test {
 
     function test_addInterval() public {
         uint256 gasStart = gasleft();
-        mapper.addInterval(100, 1);
+        mapper.addInterval(10, 1);
         uint256 gasUsed = gasStart - gasleft();
         console.log("Gas used for addInterval:", gasUsed);
     }
@@ -31,5 +31,12 @@ contract L3BackfillBetterMapperTest is Test {
         mapper.addInterval(10001, 1);
         uint256 gasUsed = gasStart - gasleft();
         console.log("Gas used for addInterval:", gasUsed);
+    }
+
+    function test_simpleSave() public {
+        uint256 gasStart = gasleft();
+        mapper.simpleSave(1);
+        uint256 gasUsed = gasStart - gasleft();
+        console.log("Gas used for simpleSave:", gasUsed);
     }
 }
