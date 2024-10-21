@@ -31,6 +31,7 @@ type Config struct {
 	SettlementChainAddr        string `koanf:"settlement_chain_addr"`
 	SequencingChainAddr        string `koanf:"sequencing_chain_addr"`
 	MetaBasedChainAddr         string `koanf:"meta_based_chain_addr"`
+	MetafillerURL              string `koanf:"metafiller_url"`
 	SequencingContractAddress  string `koanf:"sequencing_contract_address"`
 	BatcherAddress             string `koanf:"batcher_address"`
 	BatchInboxAddress          string `koanf:"batch_inbox_address"`
@@ -51,6 +52,7 @@ func setCLIFlags(f *pflag.FlagSet) {
 	f.String("settlement_chain_addr", "https://sepolia.base.org", "Settlement chain address")
 	f.String("sequencing_chain_addr", "https://sepolia.base.org", "Sequencing chain address")
 	f.String("meta_based_chain_addr", "https://sepolia.base.org", "Meta based chain address")
+	f.String("metafiller_url", "http://localhost:8080", "Metafiller URL")
 	f.String("log_level", constants.Info.String(), "Log level for the app")
 	f.Int("frame_size", defaultFrameSize, "Size of each frame in bytes. Max is 1,000,000")
 	f.Bool("pretty", false, "Pretty print JSON log responses")
@@ -70,6 +72,7 @@ func hydrateFromConfMap(config *Config) {
 	config.SettlementChainAddr = k.String("settlement_chain_addr")
 	config.SequencingChainAddr = k.String("sequencing_chain_addr")
 	config.MetaBasedChainAddr = k.String("meta_based_chain_addr")
+	config.MetafillerURL = k.String("metafiller_url")
 	config.FrameSize = k.Int("frame_size")
 	config.LogLevel = k.String("log_level")
 	config.Pretty = k.Bool("pretty")
@@ -149,6 +152,11 @@ func ValidateConfigValues(config *Config) (result error) {
 	_, err = url.ParseRequestURI(config.MetaBasedChainAddr)
 	if err != nil {
 		result = multierror.Append(result, fmt.Errorf("invalid URL for meta based chain address: %w", err))
+	}
+
+	_, err = url.ParseRequestURI(config.MetafillerURL)
+	if err != nil {
+		result = multierror.Append(result, fmt.Errorf("invalid URL for metafiller: %w", err))
 	}
 
 	if !constants.IsValidLogLevel(config.LogLevel) {
