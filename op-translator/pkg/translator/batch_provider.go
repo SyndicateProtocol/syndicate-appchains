@@ -62,7 +62,7 @@ func NewMetaBasedBatchProvider(
 	return &MetaBasedBatchProvider{
 		MetaBasedChain:             settlementChainClient,
 		SequencingChain:            sequencingChainClient,
-		TransactionParser:          NewL3TransactionParser(sequencingContractAddress.String()),
+		TransactionParser:          NewL3TransactionParser(sequencingContractAddress),
 		SettlementStartBlock:       settlementStartBlock,
 		SequencingStartBlock:       sequencingStartBlock,
 		SequencePerSettlementBlock: sequencePerSettlementBlock,

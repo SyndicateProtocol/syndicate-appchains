@@ -13,7 +13,7 @@ var DummyEncodedTxn = common.Hex2Bytes("0000000000000000000000000000000000000000
 var DummyTxn = common.Hex2Bytes("02")
 
 func TestIsLogTransactionProcessed(t *testing.T) {
-	parser := NewL3TransactionParser("0x1234567890123456789012345678901234567890")
+	parser := NewL3TransactionParser(common.HexToAddress("0x1234567890123456789012345678901234567890"))
 
 	testCases := []struct {
 		log      *types.Log
@@ -55,7 +55,7 @@ func TestIsLogTransactionProcessed(t *testing.T) {
 }
 
 func TestParseTransactionProcessed(t *testing.T) {
-	parser := NewL3TransactionParser("0x1234567890123456789012345678901234567890")
+	parser := NewL3TransactionParser(common.HexToAddress("0x1234567890123456789012345678901234567890"))
 
 	senderAddr := common.HexToAddress("0xabcdef0123456789abcdef0123456789abcdef01")
 
@@ -76,7 +76,7 @@ func TestParseTransactionProcessed(t *testing.T) {
 }
 
 func TestParseTransactionProcessed_Error(t *testing.T) {
-	parser := NewL3TransactionParser("0x1234567890123456789012345678901234567890")
+	parser := NewL3TransactionParser(common.HexToAddress("0x1234567890123456789012345678901234567890"))
 
 	log := &types.Log{
 		Address: common.HexToAddress("0x1234567890123456789012345678901234567890"),

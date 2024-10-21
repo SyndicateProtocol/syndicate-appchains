@@ -16,12 +16,13 @@ type TransactionProcessed struct {
 	Sender     common.Address // indexed
 }
 
-var (
-	TransactionProcessedABI     = `[{"anonymous":false,"inputs":[{"indexed":true,"name":"Sender","type":"address"},{"indexed":false,"name":"EncodedTxn","type":"bytes"}],"name":"TransactionProcessed","type":"event"}]`
-	TransactionProcessedName    = "TransactionProcessed"
-	TransactionProcessedSig     = "TransactionProcessed(address,bytes)"
-	TransactionProcessedSigHash = crypto.Keccak256Hash([]byte(TransactionProcessedSig))
+const (
+	TransactionProcessedABI  = `[{"anonymous":false,"inputs":[{"indexed":true,"name":"Sender","type":"address"},{"indexed":false,"name":"EncodedTxn","type":"bytes"}],"name":"TransactionProcessed","type":"event"}]`
+	TransactionProcessedName = "TransactionProcessed"
+	TransactionProcessedSig  = "TransactionProcessed(address,bytes)"
 )
+
+var TransactionProcessedSigHash = crypto.Keccak256Hash([]byte(TransactionProcessedSig))
 
 type L3TransactionParser struct {
 	sequencingContractABI     abi.ABI
@@ -29,17 +30,17 @@ type L3TransactionParser struct {
 }
 
 func InitL3TransactionParser(cfg *config.Config) *L3TransactionParser {
-	return NewL3TransactionParser(cfg.SequencingContractAddress)
+	return NewL3TransactionParser(common.HexToAddress(cfg.SequencingContractAddress))
 }
 
-func NewL3TransactionParser(sequencingContractAddress string) *L3TransactionParser {
+func NewL3TransactionParser(sequencingContractAddress common.Address) *L3TransactionParser {
 	sequencingContractABI, err := abi.JSON(strings.NewReader(TransactionProcessedABI))
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize sequencing contract ABI")
 	}
 
 	return &L3TransactionParser{
-		sequencingContractAddress: common.HexToAddress(sequencingContractAddress),
+		sequencingContractAddress: sequencingContractAddress,
 		sequencingContractABI:     sequencingContractABI,
 	}
 }
