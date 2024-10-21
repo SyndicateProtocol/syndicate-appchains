@@ -1,0 +1,27 @@
+[config]
+default_to_workspace = false
+skip_core_tasks = true
+
+[env.RUST_LOG]
+value = "warn"
+
+[env.RUST_LOG.condition]
+env_not_set = ["RUST_LOG"]
+
+[env.PROFILE]
+source = "${CARGO_MAKE_PROFILE}"
+default_value = "localnet"
+
+[env.PROFILE.mapping]
+development = "localnet"
+production = "mainnet"
+localnet = "localnet"
+devnet = "devnet"
+testnet = "testnet"
+mainnet = "mainnet"
+
+[tasks.interceptor]
+cwd = "./metabased-sequencer/"
+command = "cargo"
+toolchain = "nightly"
+args = ["run", "-p", "interceptor", "--", "--profile", "${PROFILE}"]
