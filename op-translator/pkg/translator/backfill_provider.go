@@ -1,12 +1,14 @@
 package translator
 
 import (
+	"context"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type BackFillProvider struct {
@@ -21,23 +23,39 @@ func InitBackFillerProvider(cfg *config.Config) *BackFillProvider {
 	}
 }
 
-func (b *BackFillProvider) GetBackFillBatch(blockNumber string) (*types.Batch, error) {
-	fullURL := b.MetafillerURL + "/" + blockNumber
-	resp, err := b.Client.Get(fullURL)
+type BackFillData struct {
+	ChannelData string // Hex format
+	EpochHash   common.Hash
+}
+
+func (b *BackFillProvider) GetBackFillFrames(ctx context.Context, epochNumber string) ([]*types.Frame, error) {
+	fullURL := b.MetafillerURL + "/" + epochNumber
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, http.NoBody)
+	if err != nil {
+		return nil, err
+	}
+
+	resp, err := b.Client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	var batch types.Batch
-	if err := json.Unmarshal(body, &batch); err != nil {
+	var data BackFillData
+	err = json.Unmarshal(body, &data)
+	if err != nil {
 		return nil, err
 	}
 
-	return &batch, err
+	frames, err := types.ToFrames([]byte(data.ChannelData), config.MaxFrameSize, data.EpochHash)
+	if err != nil {
+		return nil, err
+	}
+
+	return frames, nil
 }

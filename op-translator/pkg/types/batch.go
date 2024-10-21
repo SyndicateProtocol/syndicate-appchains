@@ -63,7 +63,7 @@ func (b *Batch) Encode() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (b *Batch) ToFrames(frameSize int) ([]*Frame, error) {
+func (b *Batch) GetFrames(frameSize int) ([]*Frame, error) {
 	encodedBatch, err := b.Encode()
 	if err != nil {
 		return nil, err
@@ -76,7 +76,6 @@ func (b *Batch) ToFrames(frameSize int) ([]*Frame, error) {
 	}
 
 	channel, err := ToChannel(buff.Bytes())
-	// this is what we get from the metafiller (ish)
 	if err != nil {
 		return nil, err
 	}

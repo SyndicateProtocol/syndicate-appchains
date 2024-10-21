@@ -2,6 +2,7 @@ package translator
 
 import (
 	"context"
+	"strconv"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
@@ -30,9 +31,11 @@ var _ IRPCClient = (*rpc.RPCClient)(nil)
 type OPTranslator struct {
 	SettlementChain     IRPCClient
 	BatchProvider       IBatchProvider
+	BackFillProvider    *BackFillProvider
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
+	BackFillCutoffBlock int
 }
 
 func Init(cfg *config.Config) *OPTranslator {
@@ -43,13 +46,16 @@ func Init(cfg *config.Config) *OPTranslator {
 
 	metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg)
 	signer := NewSigner(cfg)
+	backFillProvider := InitBackFillerProvider(cfg)
 
 	return &OPTranslator{
 		SettlementChain:     settlementChain,
 		BatcherInboxAddress: common.HexToAddress(cfg.BatchInboxAddress),
 		BatcherAddress:      common.HexToAddress(cfg.BatcherAddress),
 		BatchProvider:       metaBasedBatchProvider,
+		BackFillProvider:    backFillProvider,
 		Signer:              *signer,
+		BackFillCutoffBlock: cfg.BackFillCutoffBlock,
 	}
 }
 
@@ -63,7 +69,22 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, err
 	}
 
-	frames, err := batch.ToFrames(config.MaxFrameSize)
+	blockNumberStr, err := block.GetBlockNumber()
+	if err != nil {
+		return nil, err
+	}
+	blockNumber, err := strconv.Atoi(blockNumberStr)
+	if err != nil {
+		return nil, err
+	}
+
+	var frames []*types.Frame
+	if blockNumber > t.BackFillCutoffBlock {
+		frames, err = batch.GetFrames(config.MaxFrameSize)
+	} else {
+		frames, err = t.BackFillProvider.GetBackFillFrames(ctx, blockNumberStr)
+	}
+
 	if err != nil {
 		return nil, err
 	}
