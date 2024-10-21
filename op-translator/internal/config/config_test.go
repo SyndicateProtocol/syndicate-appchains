@@ -18,6 +18,7 @@ func validConfig() config.Config {
 		SequencingChainRPCURL:      "http://example.com",
 		SettlementChainRPCURL:      "https://example.org",
 		MetaBasedChainRPCURL:       "https://example.io",
+		MetafillerURL:              "https://metafiller.io",
 		LogLevel:                   constants.Info.String(),
 		Pretty:                     false,
 		SequencingContractAddress:  "0x0000000000000000000000000000000000000000",
@@ -28,6 +29,7 @@ func validConfig() config.Config {
 		SequencePerSettlementBlock: 2,
 		BatcherPrivateKey:          "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d",
 		SettlementChainID:          84532,
+		BackFillCutoffBlock:        100,
 	}
 }
 

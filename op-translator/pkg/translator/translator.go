@@ -2,9 +2,9 @@ package translator
 
 import (
 	"context"
-	"strconv"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -73,7 +73,7 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 	if err != nil {
 		return nil, err
 	}
-	blockNumber, err := strconv.Atoi(blockNumberStr)
+	blockNumber, err := utils.HexToInt(blockNumberStr)
 	if err != nil {
 		return nil, err
 	}

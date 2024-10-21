@@ -25,9 +25,11 @@ func TestGetBlockByNumber(t *testing.T) {
 
 	mockClient.On("GetBlockByNumber", ctx, number, true).Return(settlementBlock, nil)
 	translatorMock := &translator.OPTranslator{
-		SettlementChain: mockClient,
-		BatchProvider:   &mocks.MockBatchProvider{},
-		Signer:          *translator.NewSigner(mockConfig),
+		SettlementChain:     mockClient,
+		BatchProvider:       &mocks.MockBatchProvider{},
+		Signer:              *translator.NewSigner(mockConfig),
+		BackFillProvider:    translator.InitBackFillerProvider(mockConfig),
+		BackFillCutoffBlock: mockConfig.BackFillCutoffBlock,
 	}
 
 	block, err := translatorMock.GetBlockByNumber(ctx, number, true)
@@ -50,6 +52,7 @@ func TestGetBlockByNumber(t *testing.T) {
 
 func TestGetBlockByHash(t *testing.T) {
 	mockClient := new(mocks.MockRPCClient)
+	mockConfig := mocks.DefaultTestingConfig
 	number := "0x1"
 	settlementBlock := types.Block{
 		"number":       number,
@@ -61,9 +64,11 @@ func TestGetBlockByHash(t *testing.T) {
 
 	mockClient.On("GetBlockByHash", ctx, hash, true).Return(settlementBlock, nil)
 	translatorMock := &translator.OPTranslator{
-		SettlementChain: mockClient,
-		BatchProvider:   &mocks.MockBatchProvider{},
-		Signer:          *translator.NewSigner(mocks.DefaultTestingConfig),
+		SettlementChain:     mockClient,
+		BatchProvider:       &mocks.MockBatchProvider{},
+		Signer:              *translator.NewSigner(mockConfig),
+		BackFillProvider:    translator.InitBackFillerProvider(mockConfig),
+		BackFillCutoffBlock: mockConfig.BackFillCutoffBlock,
 	}
 
 	block, err := translatorMock.GetBlockByHash(ctx, hash, true)

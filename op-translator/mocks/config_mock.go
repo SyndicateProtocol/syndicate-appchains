@@ -33,7 +33,9 @@ var DefaultTestingConfig = &config.Config{
 	SettlementChainRPCURL:      "http://localhost:8545",
 	SequencingChainRPCURL:      "http://localhost:8545",
 	MetaBasedChainRPCURL:       "http://localhost:8545",
+	MetafillerURL:              "http://localhost:8080",
 	BatchInboxAddress:          TestingBatchInboxAddress,
 	BatcherAddress:             TestingBatcherAddress,
 	SettlementChainID:          TestingSettlementChainID,
+	BackFillCutoffBlock:        0,
 }

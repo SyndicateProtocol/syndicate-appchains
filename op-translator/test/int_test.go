@@ -151,6 +151,8 @@ func TestOPNodeCalls(t *testing.T) {
 			BatcherAddress:      common.HexToAddress("0x123"),
 			BatchProvider:       &mocks.MockBatchProvider{},
 			Signer:              *translator.NewSigner(mockConfig),
+			BackFillProvider:    translator.InitBackFillerProvider(mockConfig),
+			BackFillCutoffBlock: mockConfig.BackFillCutoffBlock,
 		}
 
 		s, err := server.TranslatorHandler(mockConfig, opTranslator)
