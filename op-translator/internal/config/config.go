@@ -28,9 +28,9 @@ var (
 )
 
 type Config struct {
-	SettlementChainAddr        string `koanf:"settlement_chain_addr"`
-	SequencingChainAddr        string `koanf:"sequencing_chain_addr"`
-	MetaBasedChainAddr         string `koanf:"meta_based_chain_addr"`
+	SettlementChainRPCURL      string `koanf:"settlement_chain_rpc_url"`
+	SequencingChainRPCURL      string `koanf:"sequencing_chain_rpc_url"`
+	MetaBasedChainRPCURL       string `koanf:"meta_based_chain_rpc_url"`
 	SequencingContractAddress  string `koanf:"sequencing_contract_address"`
 	BatcherAddress             string `koanf:"batcher_address"`
 	BatchInboxAddress          string `koanf:"batch_inbox_address"`
@@ -48,9 +48,9 @@ type Config struct {
 // setCLIFlags sets all valid CLI flags for the app
 func setCLIFlags(f *pflag.FlagSet) {
 	f.Int("port", defaultPort, "Server port number for the app")
-	f.String("settlement_chain_addr", "https://sepolia.base.org", "Settlement chain address")
-	f.String("sequencing_chain_addr", "https://sepolia.base.org", "Sequencing chain address")
-	f.String("meta_based_chain_addr", "https://sepolia.base.org", "Meta based chain address")
+	f.String("settlement_chain_rpc_url", "https://sepolia.base.org", "Settlement chain address")
+	f.String("sequencing_chain_rpc_url", "https://sepolia.base.org", "Sequencing chain address")
+	f.String("meta_based_chain_rpc_url", "https://sepolia.base.org", "Meta based chain address")
 	f.String("log_level", constants.Info.String(), "Log level for the app")
 	f.Int("frame_size", defaultFrameSize, "Size of each frame in bytes. Max is 1,000,000")
 	f.Bool("pretty", false, "Pretty print JSON log responses")
@@ -67,9 +67,9 @@ func setCLIFlags(f *pflag.FlagSet) {
 // hydrateFromConfMap sets the Config values from the koanf conf map
 func hydrateFromConfMap(config *Config) {
 	config.Port = k.Int("port")
-	config.SettlementChainAddr = k.String("settlement_chain_addr")
-	config.SequencingChainAddr = k.String("sequencing_chain_addr")
-	config.MetaBasedChainAddr = k.String("meta_based_chain_addr")
+	config.SettlementChainRPCURL = k.String("settlement_chain_rpc_url")
+	config.SequencingChainRPCURL = k.String("sequencing_chain_rpc_url")
+	config.MetaBasedChainRPCURL = k.String("meta_based_chain_rpc_url")
 	config.FrameSize = k.Int("frame_size")
 	config.LogLevel = k.String("log_level")
 	config.Pretty = k.Bool("pretty")
@@ -136,17 +136,17 @@ func ValidateConfigValues(config *Config) (result error) {
 		result = multierror.Append(result, errors.New("frameSize must be less than maximum"))
 	}
 
-	_, err := url.ParseRequestURI(config.SequencingChainAddr)
+	_, err := url.ParseRequestURI(config.SequencingChainRPCURL)
 	if err != nil {
 		result = multierror.Append(result, fmt.Errorf("invalid URL for sequencing chain address: %w", err))
 	}
 
-	_, err = url.ParseRequestURI(config.SettlementChainAddr)
+	_, err = url.ParseRequestURI(config.SettlementChainRPCURL)
 	if err != nil {
 		result = multierror.Append(result, fmt.Errorf("invalid URL for settlement chain address: %w", err))
 	}
 
-	_, err = url.ParseRequestURI(config.MetaBasedChainAddr)
+	_, err = url.ParseRequestURI(config.MetaBasedChainRPCURL)
 	if err != nil {
 		result = multierror.Append(result, fmt.Errorf("invalid URL for meta based chain address: %w", err))
 	}
