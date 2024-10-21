@@ -41,12 +41,12 @@ type MetaBasedBatchProvider struct {
 }
 
 func InitMetaBasedBatchProvider(cfg *config.Config) *MetaBasedBatchProvider {
-	sequencingChain, err := rpc.Connect(cfg.SequencingChainURL)
+	sequencingChain, err := rpc.Connect(cfg.SequencingChainRPCURL)
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize sequencing chain")
 	}
 
-	metaBasedChain, err := rpc.Connect(cfg.MetaBasedChainURL)
+	metaBasedChain, err := rpc.Connect(cfg.MetaBasedChainRPCURL)
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize metabased chain")
 	}

@@ -18,7 +18,7 @@ import (
 
 func TranslatorHandler(cfg *config.Config, translator any) (*http.ServeMux, error) {
 	// Setup proxy
-	parsedURL, err := url.Parse(cfg.SettlementChainURL)
+	parsedURL, err := url.Parse(cfg.SettlementChainRPCURL)
 	if err != nil {
 		return nil, err
 	}

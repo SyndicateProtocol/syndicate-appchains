@@ -15,9 +15,9 @@ func validConfig() config.Config {
 	return config.Config{
 		Port:                       1234,
 		FrameSize:                  100,
-		SequencingChainURL:         "http://example.com",
-		SettlementChainURL:         "https://example.org",
-		MetaBasedChainURL:          "https://example.io",
+		SequencingChainRPCURL:      "http://example.com",
+		SettlementChainRPCURL:      "https://example.org",
+		MetaBasedChainRPCURL:       "https://example.io",
 		LogLevel:                   constants.Info.String(),
 		Pretty:                     false,
 		SequencingContractAddress:  "0x0000000000000000000000000000000000000000",
@@ -59,21 +59,21 @@ func TestValidateConfigValues(t *testing.T) {
 		{
 			name: "Invalid sequencingChainAddr",
 			configChangeUnderTest: func(c *config.Config) {
-				c.SequencingChainURL = "invalid sequencing chain address"
+				c.SequencingChainRPCURL = "invalid sequencing chain address"
 			},
 			expectedErrors: []string{"invalid URL for sequencing chain address"},
 		},
 		{
 			name: "Invalid settlementChainAddr",
 			configChangeUnderTest: func(c *config.Config) {
-				c.SettlementChainURL = "invalid settlement chain address"
+				c.SettlementChainRPCURL = "invalid settlement chain address"
 			},
 			expectedErrors: []string{"invalid URL for settlement chain address"},
 		},
 		{
 			name: "Invalid metaBasedChainAddr",
 			configChangeUnderTest: func(c *config.Config) {
-				c.MetaBasedChainURL = "invalid meta based chain address"
+				c.MetaBasedChainRPCURL = "invalid meta based chain address"
 			},
 			expectedErrors: []string{"invalid URL for meta based chain address"},
 		},
@@ -131,9 +131,9 @@ func TestValidateConfigValues(t *testing.T) {
 			configChangeUnderTest: func(c *config.Config) {
 				c.Port = -1
 				c.FrameSize = 0
-				c.SequencingChainURL = "invalid"
-				c.SettlementChainURL = "also invalid"
-				c.MetaBasedChainURL = "https://example.io"
+				c.SequencingChainRPCURL = "invalid"
+				c.SettlementChainRPCURL = "also invalid"
+				c.MetaBasedChainRPCURL = "https://example.io"
 				c.SequencePerSettlementBlock = 0
 			},
 			expectedErrors: []string{

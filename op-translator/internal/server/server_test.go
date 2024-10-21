@@ -66,7 +66,7 @@ func TestProxyEndpoint(t *testing.T) {
 	defer mockBackend.Close()
 
 	config := mocks.DefaultTestingConfig
-	config.SettlementChainURL = mockBackend.URL
+	config.SettlementChainRPCURL = mockBackend.URL
 	router, err := server.TranslatorHandler(config, mockTranslator)
 	assert.NoError(t, err)
 
