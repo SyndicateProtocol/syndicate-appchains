@@ -36,7 +36,7 @@ type OPTranslator struct {
 }
 
 func Init(cfg *config.Config) *OPTranslator {
-	settlementChain, err := rpc.Connect(cfg.SettlementChainAddr)
+	settlementChain, err := rpc.Connect(cfg.SettlementChainURL)
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize settlement chain")
 	}

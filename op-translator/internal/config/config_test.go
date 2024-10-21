@@ -15,9 +15,9 @@ func validConfig() config.Config {
 	return config.Config{
 		Port:                       1234,
 		FrameSize:                  100,
-		SequencingChainAddr:        "http://example.com",
-		SettlementChainAddr:        "https://example.org",
-		MetaBasedChainAddr:         "https://example.io",
+		SequencingChainURL:         "http://example.com",
+		SettlementChainURL:         "https://example.org",
+		MetaBasedChainURL:          "https://example.io",
 		LogLevel:                   constants.Info.String(),
 		Pretty:                     false,
 		SequencingContractAddress:  "0x0000000000000000000000000000000000000000",
@@ -59,21 +59,21 @@ func TestValidateConfigValues(t *testing.T) {
 		{
 			name: "Invalid sequencingChainAddr",
 			configChangeUnderTest: func(c *config.Config) {
-				c.SequencingChainAddr = "invalid sequencing chain address"
+				c.SequencingChainURL = "invalid sequencing chain address"
 			},
 			expectedErrors: []string{"invalid URL for sequencing chain address"},
 		},
 		{
 			name: "Invalid settlementChainAddr",
 			configChangeUnderTest: func(c *config.Config) {
-				c.SettlementChainAddr = "invalid settlement chain address"
+				c.SettlementChainURL = "invalid settlement chain address"
 			},
 			expectedErrors: []string{"invalid URL for settlement chain address"},
 		},
 		{
 			name: "Invalid metaBasedChainAddr",
 			configChangeUnderTest: func(c *config.Config) {
-				c.MetaBasedChainAddr = "invalid meta based chain address"
+				c.MetaBasedChainURL = "invalid meta based chain address"
 			},
 			expectedErrors: []string{"invalid URL for meta based chain address"},
 		},
@@ -131,9 +131,9 @@ func TestValidateConfigValues(t *testing.T) {
 			configChangeUnderTest: func(c *config.Config) {
 				c.Port = -1
 				c.FrameSize = 0
-				c.SequencingChainAddr = "invalid"
-				c.SettlementChainAddr = "also invalid"
-				c.MetaBasedChainAddr = "https://example.io"
+				c.SequencingChainURL = "invalid"
+				c.SettlementChainURL = "also invalid"
+				c.MetaBasedChainURL = "https://example.io"
 				c.SequencePerSettlementBlock = 0
 			},
 			expectedErrors: []string{
