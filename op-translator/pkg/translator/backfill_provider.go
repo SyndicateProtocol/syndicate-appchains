@@ -28,7 +28,7 @@ type BackFillData struct {
 	EpochHash   common.Hash
 }
 
-func (b *BackFillProvider) GetBackFillFrames(ctx context.Context, epochNumber string) ([]*types.Frame, error) {
+func (b *BackFillProvider) GetBackFillData(ctx context.Context, epochNumber string) (*BackFillData, error) {
 	fullURL := b.MetafillerURL + "/" + epochNumber
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, http.NoBody)
 	if err != nil {
@@ -46,8 +46,16 @@ func (b *BackFillProvider) GetBackFillFrames(ctx context.Context, epochNumber st
 		return nil, err
 	}
 
-	var data BackFillData
+	var data *BackFillData
 	err = json.Unmarshal(body, &data)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+func (b *BackFillProvider) GetBackFillFrames(ctx context.Context, epochNumber string) ([]*types.Frame, error) {
+	data, err := b.GetBackFillData(ctx, epochNumber)
 	if err != nil {
 		return nil, err
 	}
