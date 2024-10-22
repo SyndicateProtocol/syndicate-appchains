@@ -64,7 +64,6 @@ func setCLIFlags(f *pflag.FlagSet) {
 	f.Int("sequence_per_settlement_block", 0, "Number of sequencing blocks per settlement block")
 	f.String("batcher_private_key", "", "Batcher private key")
 	f.Int("settlement_chain_id", 1, "Settlement chain id")
-	f.Int("backfill_cutoff_block", 1, "Backfill cutoff block")
 }
 
 // hydrateFromConfMap sets the Config values from the koanf conf map
