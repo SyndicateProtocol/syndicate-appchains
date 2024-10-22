@@ -14,6 +14,8 @@ After creating the Dev Container, the following commands will be available:
 - `op-down`: Stop the Optimism devnet
 - `go-install`: Install all Go dependencies in the Dev Container
 
+If these aliases don't work immediately, you may need to open a new terminal in the Dev Container. If they still don't work, you can run `just --justfile /workspaces/metabased-rollup/.devcontainer/justfile create-aliases` to create them manually.
+
 ### Sharing git ssh credentials with the Dev Container
 
 You can share your local git ssh credentials with the Dev Container via the ssh-add command.
