@@ -6,34 +6,23 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/contracts/l2"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog/log"
 )
 
-var (
-	// ref: OP `crossdomain` package
-	AddressType, _              = abi.NewType("address", "", nil)
-	indexedAddressTypeArgs      = abi.Arguments{{Name: "Sender", Type: AddressType, Indexed: true}}
-	TransactionProcessedABI     = l2.TransactionProcessedMetaData.ABI
-	TransactionProcessedABIHash = crypto.Keccak256Hash([]byte(TransactionProcessedABI))
-)
-
 type MetaBasedBatchProvider struct {
-	MetaBasedChain            IRPCClient
-	SequencingChain           IRPCClient
-	SequencingContractAddress common.Address
+	MetaBasedChain    IRPCClient
+	SequencingChain   IRPCClient
+	TransactionParser *L3TransactionParser
 
 	SettlementStartBlock       int
 	SequencingStartBlock       int
@@ -52,9 +41,9 @@ func InitMetaBasedBatchProvider(cfg *config.Config) *MetaBasedBatchProvider {
 	}
 
 	return &MetaBasedBatchProvider{
-		MetaBasedChain:            metaBasedChain,
-		SequencingChain:           sequencingChain,
-		SequencingContractAddress: common.HexToAddress(cfg.SequencingContractAddress),
+		MetaBasedChain:    metaBasedChain,
+		SequencingChain:   sequencingChain,
+		TransactionParser: InitL3TransactionParser(cfg),
 
 		SettlementStartBlock:       cfg.SettlementStartBlock,
 		SequencingStartBlock:       cfg.SequencingStartBlock,
@@ -73,7 +62,7 @@ func NewMetaBasedBatchProvider(
 	return &MetaBasedBatchProvider{
 		MetaBasedChain:             settlementChainClient,
 		SequencingChain:            sequencingChainClient,
-		SequencingContractAddress:  sequencingContractAddress,
+		TransactionParser:          NewL3TransactionParser(sequencingContractAddress),
 		SettlementStartBlock:       settlementStartBlock,
 		SequencingStartBlock:       sequencingStartBlock,
 		SequencePerSettlementBlock: sequencePerSettlementBlock,
@@ -133,21 +122,7 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	}
 	log.Debug().Msgf("Previous block: %v", previousBlock)
 
-	// TODO [SEQ-163]: MAYBE REMOVE??
-	if previousBlock.EmptyBody() {
-		return constants.ZeroHash, nil
-	}
-
 	return previousBlock.Hash().Hex(), nil
-}
-
-func ParseTransactionProcessed(txLog *ethtypes.Log) (*l2.TransactionProcessed, error) {
-	event := new(l2.TransactionProcessed)
-	if err := abi.ParseTopics(event, indexedAddressTypeArgs, txLog.Topics[1:]); err != nil {
-		return nil, err
-	}
-	event.EncodedTxn = txLog.Data
-	return event, nil
 }
 
 func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) (txns []hexutil.Bytes, result error) {
@@ -155,9 +130,10 @@ func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) (t
 		if rec.Status != ethtypes.ReceiptStatusSuccessful {
 			continue
 		}
-		for j, log := range rec.Logs {
-			if log.Address == m.SequencingContractAddress && len(log.Topics) > 0 && log.Topics[0] == TransactionProcessedABIHash {
-				proc, err := ParseTransactionProcessed(log)
+
+		for j, txLog := range rec.Logs {
+			if m.TransactionParser.IsLogTransactionProcessed(txLog) {
+				proc, err := m.TransactionParser.ParseTransactionProcessed(txLog)
 				if err != nil {
 					result = multierror.Append(result, fmt.Errorf("malformatted l2 receipt log in receipt %d, log %d: %w", i, j, err))
 				} else {

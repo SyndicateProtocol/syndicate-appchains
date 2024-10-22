@@ -1,10 +1,9 @@
-package translator_test
+package translator
 
 import (
 	"errors"
 	"testing"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -16,14 +15,17 @@ var (
 	SomeOtherABIHash = crypto.Keccak256Hash([]byte("someOtherABI"))
 )
 
-func getBatchProvider() *translator.MetaBasedBatchProvider {
-	return &translator.MetaBasedBatchProvider{
-		SettlementStartBlock:       1,
-		SequencingStartBlock:       2,
-		SequencePerSettlementBlock: 2,
-		SequencingContractAddress:  common.HexToAddress("0x1111111111111111111111111111111111111111"),
-		SequencingChain:            nil,
-	}
+var SequencingContractAddress = common.HexToAddress("0x1111111111111111111111111111111111111111")
+
+func getBatchProvider() *MetaBasedBatchProvider {
+	return NewMetaBasedBatchProvider(
+		nil,
+		nil,
+		SequencingContractAddress,
+		1,
+		2,
+		2,
+	)
 }
 
 func TestGetLinkedBlocks(t *testing.T) {
@@ -72,32 +74,10 @@ func TestGetLinkedBlocks_4to1(t *testing.T) {
 	assert.Equal(t, []string{"0xb", "0xc", "0xd", "0xe"}, blocks)
 }
 
-func TestParseTransactionProcessed(t *testing.T) {
-	senderAddr := common.HexToAddress("0x1234567890123456789012345678901234567890")
-	encodedTxn := []byte{1, 2, 3, 4, 5}
-
-	log := &types.Log{
-		Address: common.HexToAddress("0x0000000000000000000000000000000000000000"),
-		Topics: []common.Hash{
-			translator.TransactionProcessedABIHash,
-			common.BytesToHash(senderAddr.Bytes()),
-		},
-		Data: encodedTxn,
-	}
-
-	event, err := translator.ParseTransactionProcessed(log)
-
-	require.NoError(t, err)
-	assert.Equal(t, senderAddr, event.Sender)
-	assert.Equal(t, encodedTxn, event.EncodedTxn)
-}
-
 func TestFilterReceipts(t *testing.T) {
 	metaBasedBatchProvider := getBatchProvider()
-	sequencingContractAddress := metaBasedBatchProvider.SequencingContractAddress
+	sequencingContractAddress := SequencingContractAddress
 	senderAddr := common.HexToAddress("0x2222222222222222222222222222222222222222")
-	encodedTxn1 := []byte{1, 2, 3}
-	encodedTxn2 := []byte{4, 5, 6}
 
 	receipts := []*types.Receipt{
 		{
@@ -106,10 +86,10 @@ func TestFilterReceipts(t *testing.T) {
 				{
 					Address: sequencingContractAddress,
 					Topics: []common.Hash{
-						translator.TransactionProcessedABIHash,
+						TransactionProcessedSigHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: encodedTxn1,
+					Data: DummyEncodedTxn,
 				},
 			},
 		},
@@ -119,10 +99,10 @@ func TestFilterReceipts(t *testing.T) {
 				{
 					Address: sequencingContractAddress,
 					Topics: []common.Hash{
-						translator.TransactionProcessedABIHash,
+						TransactionProcessedSigHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: encodedTxn2,
+					Data: DummyEncodedTxn,
 				},
 			},
 		},
@@ -136,15 +116,14 @@ func TestFilterReceipts(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Len(t, txns, 2)
-	assert.Equal(t, encodedTxn1, []byte(txns[0]))
-	assert.Equal(t, encodedTxn2, []byte(txns[1]))
+	assert.Equal(t, DummyTxn, []byte(txns[0]))
+	assert.Equal(t, DummyTxn, []byte(txns[1]))
 }
 
 func TestFilterReceiptsWithExtraLog(t *testing.T) {
 	metaBasedBatchProvider := getBatchProvider()
-	sequencingContractAddress := metaBasedBatchProvider.SequencingContractAddress
+	sequencingContractAddress := SequencingContractAddress
 	senderAddr := common.HexToAddress("0x2222222222222222222222222222222222222222")
-	encodedTxn := []byte{1, 2, 3}
 
 	receipts := []*types.Receipt{
 		{
@@ -153,10 +132,10 @@ func TestFilterReceiptsWithExtraLog(t *testing.T) {
 				{
 					Address: sequencingContractAddress,
 					Topics: []common.Hash{
-						translator.TransactionProcessedABIHash,
+						TransactionProcessedSigHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: encodedTxn,
+					Data: DummyEncodedTxn,
 				},
 				{
 					Address: sequencingContractAddress,
@@ -164,7 +143,7 @@ func TestFilterReceiptsWithExtraLog(t *testing.T) {
 						SomeOtherABIHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: encodedTxn,
+					Data: DummyEncodedTxn,
 				},
 			},
 		},
@@ -174,5 +153,5 @@ func TestFilterReceiptsWithExtraLog(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Len(t, txns, 1)
-	assert.Equal(t, encodedTxn, []byte(txns[0]))
+	assert.Equal(t, DummyTxn, []byte(txns[0]))
 }
