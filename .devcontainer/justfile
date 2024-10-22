@@ -6,8 +6,7 @@ export PATH := foundry_path
 
 # Clone the Optimism repository
 op-clone:
-    git clone https://github.com/ethereum-optimism/optimism.git ~/optimism || echo skipping clone 
-    git --git-dir ~/optimism/.git --work-tree ~/optimism checkout v1.9.4
+    git clone --branch v1.9.4 --single-branch --depth 1 https://github.com/ethereum-optimism/optimism.git ~/optimism || echo skipping clone 
 
 go-install:
     go install /workspaces/metabased-rollup/op-translator
