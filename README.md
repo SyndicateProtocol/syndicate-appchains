@@ -27,3 +27,5 @@ This will automatically make the key available in the Dev Container. To confirm 
 ### Running in GitHub Codespaces
 
 If you would like, you can run the Dev Container in GitHub Codespaces. This is useful for long-running tasks or development in a browser away from your local machine. To launch a Codespace, navigate to the branch you want to use, click the "Code" button (where repo cloning typically is) and then click "Create codespace on \[branch-name]".
+
+GitHub Codespaces are compatible with VS Code and JetBrains, but not Cursor. You don't need to handle ssh credentials in Codespaces, as GitHub Codespaces handles authentication for you.
