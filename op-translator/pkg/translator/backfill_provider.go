@@ -24,8 +24,8 @@ func InitBackFillerProvider(cfg *config.Config) *BackFillProvider {
 }
 
 type BackFillData struct {
-	ChannelData string // Hex format
-	EpochHash   common.Hash
+	Data      string      `json:"data"` // Hex format
+	EpochHash common.Hash `json:"epochHash"`
 }
 
 func (b *BackFillProvider) GetBackFillData(ctx context.Context, epochNumber string) (*BackFillData, error) {
@@ -55,12 +55,12 @@ func (b *BackFillProvider) GetBackFillData(ctx context.Context, epochNumber stri
 }
 
 func (b *BackFillProvider) GetBackFillFrames(ctx context.Context, epochNumber string) ([]*types.Frame, error) {
-	data, err := b.GetBackFillData(ctx, epochNumber)
+	backfillData, err := b.GetBackFillData(ctx, epochNumber)
 	if err != nil {
 		return nil, err
 	}
 
-	frames, err := types.ToFrames([]byte(data.ChannelData), config.MaxFrameSize, data.EpochHash)
+	frames, err := types.ToFrames([]byte(backfillData.Data), config.MaxFrameSize, backfillData.EpochHash)
 	if err != nil {
 		return nil, err
 	}
