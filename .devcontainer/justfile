@@ -7,8 +7,8 @@ export PATH := foundry_path
 # Clone the Optimism repository
 op-clone:
     # Version v.1.9.4 currently breaks with the error `t=2024-10-22T23:38:03+0000 lvl=crit msg="Application failed" message="failed to fetch startBlock from SystemConfig: failed to call startBlock: failed to unpack result: failed to unpack data: abi: attempting to unmarshal an empty string while arguments are expected"`
-    # Update to the latest release once this is fixed
-    git clone --branch v1.9.3 --single-branch --depth 1 https://github.com/ethereum-optimism/optimism.git ~/optimism || echo skipping clone 
+    # Update to the latest release once this is fixed, since the develop branch is not stable
+    git clone --branch develop --single-branch --depth 1 https://github.com/ethereum-optimism/optimism.git ~/optimism || echo skipping clone 
 
 op-clean:
     rm -rf ~/optimism
