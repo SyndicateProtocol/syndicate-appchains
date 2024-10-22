@@ -29,7 +29,6 @@ func validConfig() config.Config {
 		SequencePerSettlementBlock: 2,
 		BatcherPrivateKey:          "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d",
 		SettlementChainID:          84532,
-		BackFillCutoffBlock:        100,
 	}
 }
 

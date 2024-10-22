@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -35,7 +34,6 @@ type OPTranslator struct {
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
-	BackFillCutoffBlock int
 }
 
 func Init(cfg *config.Config) *OPTranslator {
@@ -55,7 +53,6 @@ func Init(cfg *config.Config) *OPTranslator {
 		BatchProvider:       metaBasedBatchProvider,
 		BackFillProvider:    backFillProvider,
 		Signer:              *signer,
-		BackFillCutoffBlock: cfg.BackFillCutoffBlock,
 	}
 }
 
@@ -69,21 +66,8 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, err
 	}
 
-	blockNumberStr, err := block.GetBlockNumber()
-	if err != nil {
-		return nil, err
-	}
-	blockNumber, err := utils.HexToInt(blockNumberStr)
-	if err != nil {
-		return nil, err
-	}
-
-	var frames []*types.Frame
-	if blockNumber > t.BackFillCutoffBlock {
-		frames, err = batch.GetFrames(config.MaxFrameSize)
-	} else {
-		frames, err = t.BackFillProvider.GetBackFillFrames(ctx, blockNumberStr)
-	}
+	// TODO SEQ-209: Write logic for switching between backfill and regular data fetching
+	frames, err := batch.GetFrames(config.MaxFrameSize)
 
 	if err != nil {
 		return nil, err

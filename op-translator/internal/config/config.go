@@ -43,7 +43,6 @@ type Config struct {
 	SequencePerSettlementBlock int    `koanf:"sequence_per_settlement_block"`
 	Port                       int    `koanf:"port"`
 	FrameSize                  int    `koanf:"frame_size"`
-	BackFillCutoffBlock        int    `koanf:"backfill_cutoff_block"`
 	Pretty                     bool   `koanf:"pretty"`
 }
 
@@ -87,7 +86,6 @@ func hydrateFromConfMap(config *Config) {
 	config.SequencePerSettlementBlock = k.Int("sequence_per_settlement_block")
 	config.BatcherPrivateKey = k.String("batcher_private_key")
 	config.SettlementChainID = k.Int64("settlement_chain_id")
-	config.BackFillCutoffBlock = k.Int("backfill_cutoff_block")
 }
 
 func Init() *Config {
@@ -196,10 +194,6 @@ func ValidateConfigValues(config *Config) (result error) {
 
 	if config.SettlementChainID <= 0 {
 		result = multierror.Append(result, fmt.Errorf("settlementChainID must be a positive number: %d", config.SettlementChainID))
-	}
-
-	if config.BackFillCutoffBlock <= 0 {
-		result = multierror.Append(result, fmt.Errorf("backFillCutoffBlock must be a positive number: %d", config.BackFillCutoffBlock))
 	}
 
 	return result

@@ -152,7 +152,6 @@ func TestOPNodeCalls(t *testing.T) {
 			BatchProvider:       &mocks.MockBatchProvider{},
 			Signer:              *translator.NewSigner(mockConfig),
 			BackFillProvider:    translator.InitBackFillerProvider(mockConfig),
-			BackFillCutoffBlock: mockConfig.BackFillCutoffBlock,
 		}
 
 		s, err := server.TranslatorHandler(mockConfig, opTranslator)

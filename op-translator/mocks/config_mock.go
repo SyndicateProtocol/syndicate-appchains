@@ -37,5 +37,4 @@ var DefaultTestingConfig = &config.Config{
 	BatchInboxAddress:          TestingBatchInboxAddress,
 	BatcherAddress:             TestingBatcherAddress,
 	SettlementChainID:          TestingSettlementChainID,
-	BackFillCutoffBlock:        0,
 }
