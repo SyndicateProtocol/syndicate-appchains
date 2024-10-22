@@ -9,6 +9,10 @@ op-clone:
     git clone https://github.com/ethereum-optimism/optimism.git ~/optimism || echo skipping clone 
     git --git-dir ~/optimism/.git --work-tree ~/optimism checkout v1.9.4
 
+go-install:
+    go install /workspaces/metabased-rollup/op-translator
+    # go install /workspaces/metabased-rollup/metabased-publisher/cmd
+
 # Install Foundry
 # Based on https://book.getfoundry.sh/getting-started/installation
 foundry-install:
