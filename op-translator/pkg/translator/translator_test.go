@@ -28,7 +28,7 @@ func TestGetBlockByNumber(t *testing.T) {
 		SettlementChain:  mockClient,
 		BatchProvider:    &mocks.MockBatchProvider{},
 		Signer:           *translator.NewSigner(mockConfig),
-		BackFillProvider: translator.InitBackFillerProvider(mockConfig),
+		BackFillProvider: translator.NewBackFillerProvider(mockConfig),
 	}
 
 	block, err := translatorMock.GetBlockByNumber(ctx, number, true)
@@ -66,7 +66,7 @@ func TestGetBlockByHash(t *testing.T) {
 		SettlementChain:  mockClient,
 		BatchProvider:    &mocks.MockBatchProvider{},
 		Signer:           *translator.NewSigner(mockConfig),
-		BackFillProvider: translator.InitBackFillerProvider(mockConfig),
+		BackFillProvider: translator.NewBackFillerProvider(mockConfig),
 	}
 
 	block, err := translatorMock.GetBlockByHash(ctx, hash, true)

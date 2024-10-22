@@ -16,7 +16,7 @@ type BackFillProvider struct {
 	MetafillerURL string
 }
 
-func InitBackFillerProvider(cfg *config.Config) *BackFillProvider {
+func NewBackFillerProvider(cfg *config.Config) *BackFillProvider {
 	return &BackFillProvider{
 		MetafillerURL: cfg.MetafillerURL,
 		Client:        &http.Client{},

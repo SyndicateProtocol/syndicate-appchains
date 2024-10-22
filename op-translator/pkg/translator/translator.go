@@ -44,7 +44,7 @@ func Init(cfg *config.Config) *OPTranslator {
 
 	metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg)
 	signer := NewSigner(cfg)
-	backFillProvider := InitBackFillerProvider(cfg)
+	backFillProvider := NewBackFillerProvider(cfg)
 
 	return &OPTranslator{
 		SettlementChain:     settlementChain,
