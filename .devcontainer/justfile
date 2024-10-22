@@ -45,6 +45,7 @@ create-aliases:
             echo "# Metabased DevNet aliases" >> "$rc_file"
             echo "alias op-up='just -f {{justfile()}} op-devnet-up'" >> "$rc_file"
             echo "alias op-down='just -f {{justfile()}} op-devnet-down'" >> "$rc_file"
+            echo "alias go-install='just -f {{justfile()}} go-install'" >> "$rc_file"
             echo "Aliases created in $rc_file"
         else
             echo "Warning: $rc_file does not exist. Skipping."
@@ -55,5 +56,5 @@ create-aliases:
 # OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
 # We initialize and then spin down the devnet to get the initialization time out
 # of the way upfront
-all: go-install op-clone foundry-install foundry-update create-aliases
+all: op-clone foundry-install foundry-update create-aliases
     @echo "Post-create script completed successfully"
