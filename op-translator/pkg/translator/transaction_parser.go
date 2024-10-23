@@ -17,6 +17,7 @@ const (
 	ZlibCM8            = 8
 	ZlibCM15           = 15
 	VersionBrotli byte = 0x1
+	NoCompression byte = 0x0
 )
 
 type TransactionProcessed struct {
@@ -78,7 +79,7 @@ func (l *L3TransactionParser) DecodeTransactionData(data []byte) ([]byte, error)
 	compressedData := data[1:] // skip the first byte (compressionType)
 
 	switch {
-	case compressionType == 0x0: // No compression
+	case compressionType == NoCompression:
 		return compressedData, nil
 
 	case compressionType&0x0F == ZlibCM8 || compressionType&0x0F == ZlibCM15:
