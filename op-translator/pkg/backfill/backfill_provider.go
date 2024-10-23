@@ -1,8 +1,9 @@
-package translator
+package backfill
 
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -11,8 +12,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+type HTTPClient interface {
+	Do(req *http.Request) (*http.Response, error)
+}
+
 type BackfillProvider struct {
-	Client        *http.Client
+	Client        HTTPClient
 	MetafillerURL string
 }
 
@@ -42,6 +47,7 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber stri
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
+	fmt.Println("BODY", body)
 	if err != nil {
 		return nil, err
 	}

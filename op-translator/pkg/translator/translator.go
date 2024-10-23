@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -30,7 +31,7 @@ var _ IRPCClient = (*rpc.RPCClient)(nil)
 type OPTranslator struct {
 	SettlementChain     IRPCClient
 	BatchProvider       IBatchProvider
-	BackfillProvider    *BackfillProvider
+	BackfillProvider    *backfill.BackfillProvider
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
@@ -44,7 +45,7 @@ func Init(cfg *config.Config) *OPTranslator {
 
 	metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg)
 	signer := NewSigner(cfg)
-	backfillProvider := NewBackfillerProvider(cfg)
+	backfillProvider := backfill.NewBackfillerProvider(cfg)
 
 	return &OPTranslator{
 		SettlementChain:     settlementChain,

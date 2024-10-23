@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 
@@ -28,7 +29,7 @@ func TestGetBlockByNumber(t *testing.T) {
 		SettlementChain:  mockClient,
 		BatchProvider:    &mocks.MockBatchProvider{},
 		Signer:           *translator.NewSigner(mockConfig),
-		BackfillProvider: translator.NewBackfillerProvider(mockConfig),
+		BackfillProvider: backfill.NewBackfillerProvider(mockConfig),
 	}
 
 	block, err := translatorMock.GetBlockByNumber(ctx, number, true)
@@ -66,7 +67,7 @@ func TestGetBlockByHash(t *testing.T) {
 		SettlementChain:  mockClient,
 		BatchProvider:    &mocks.MockBatchProvider{},
 		Signer:           *translator.NewSigner(mockConfig),
-		BackfillProvider: translator.NewBackfillerProvider(mockConfig),
+		BackfillProvider: backfill.NewBackfillerProvider(mockConfig),
 	}
 
 	block, err := translatorMock.GetBlockByHash(ctx, hash, true)
