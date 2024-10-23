@@ -12,6 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// TODO SEQ-141: spike: performant Go HTTP/JSON-RPC lib
 type HTTPClient interface {
 	Do(req *http.Request) (*http.Response, error)
 }
@@ -51,7 +52,7 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber stri
 	if err != nil {
 		return nil, err
 	}
-
+	// TODO SEQ-209: Think most optimal way to send/receive this data
 	var data *BackfillData
 	err = json.Unmarshal(body, &data)
 	if err != nil {
