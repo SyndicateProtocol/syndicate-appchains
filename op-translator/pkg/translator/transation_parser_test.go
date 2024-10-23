@@ -72,7 +72,7 @@ func TestParseTransactionProcessed(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, senderAddr, result.Sender)
-	assert.Equal(t, DummyTxn, result.EncodedTxn)
+	assert.Equal(t, DummyTxn, result.EncodedData)
 }
 
 func TestParseTransactionProcessed_Error(t *testing.T) {

@@ -1,9 +1,11 @@
 package translator
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -11,9 +13,15 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+const (
+	ZlibCM8            = 8
+	ZlibCM15           = 15
+	VersionBrotli byte = 0x1
+)
+
 type TransactionProcessed struct {
-	EncodedTxn []byte
-	Sender     common.Address // indexed
+	EncodedData []byte
+	Sender      common.Address // indexed
 }
 
 const (
@@ -59,4 +67,27 @@ func (l *L3TransactionParser) ParseTransactionProcessed(ethLog *ethtypes.Log) (*
 	}
 
 	return &event, nil
+}
+
+func (l *L3TransactionParser) DecodeTransactionData(data []byte) ([]byte, error) {
+	if len(data) == 0 {
+		return nil, fmt.Errorf("empty data provided")
+	}
+
+	compressionType := data[0]
+	compressedData := data[1:] // skip the first byte (compressionType)
+
+	switch {
+	case compressionType == 0x0: // No compression
+		return compressedData, nil
+
+	case compressionType&0x0F == ZlibCM8 || compressionType&0x0F == ZlibCM15:
+		return utils.DecompressZlib(data) // zlib needs the compression type byte
+
+	case compressionType == VersionBrotli:
+		return utils.DecompressBrotli(compressedData)
+
+	default:
+		return nil, fmt.Errorf("cannot distinguish the compression algo used given type byte %v", compressionType)
+	}
 }

@@ -11,11 +11,11 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
+	"github.com/hashicorp/go-multierror"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/hashicorp/go-multierror"
 	"github.com/rs/zerolog/log"
 )
 
@@ -125,24 +125,37 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	return previousBlock.Hash().Hex(), nil
 }
 
-func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) (txns []hexutil.Bytes, result error) {
+func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) (txns []hexutil.Bytes, err error) {
+	var multiErr error
 	for i, rec := range receipts {
 		if rec.Status != ethtypes.ReceiptStatusSuccessful {
 			continue
 		}
 
 		for j, txLog := range rec.Logs {
-			if m.TransactionParser.IsLogTransactionProcessed(txLog) {
-				proc, err := m.TransactionParser.ParseTransactionProcessed(txLog)
-				if err != nil {
-					result = multierror.Append(result, fmt.Errorf("malformatted l2 receipt log in receipt %d, log %d: %w", i, j, err))
-				} else {
-					txns = append(txns, proc.EncodedTxn)
-				}
+			if !m.TransactionParser.IsLogTransactionProcessed(txLog) {
+				continue
 			}
+			proc, parseErr := m.TransactionParser.ParseTransactionProcessed(txLog)
+			if parseErr != nil {
+				multiErr = multierror.Append(multiErr, fmt.Errorf("malformatted l2 receipt log in receipt %d, log %d: %w", i, j, parseErr))
+				continue
+			}
+
+			transaction, decodeErr := m.TransactionParser.DecodeTransactionData(proc.EncodedData)
+			if decodeErr != nil {
+				multiErr = multierror.Append(multiErr, fmt.Errorf("malformatted l2 receipt log in receipt %d, log %d: %w", i, j, decodeErr))
+				continue
+			}
+
+			txns = append(txns, transaction)
 		}
 	}
-	return txns, result
+	if multiErr != nil {
+		err = multiErr
+	}
+
+	return txns, err
 }
 
 func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block) (*types.Batch, error) {
