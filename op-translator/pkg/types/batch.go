@@ -63,7 +63,7 @@ func (b *Batch) Encode() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func (b *Batch) ToFrames(frameSize int) ([]*Frame, error) {
+func (b *Batch) GetFrames(frameSize int) ([]*Frame, error) {
 	encodedBatch, err := b.Encode()
 	if err != nil {
 		return nil, err

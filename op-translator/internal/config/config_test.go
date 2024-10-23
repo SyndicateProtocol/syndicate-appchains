@@ -18,6 +18,7 @@ func validConfig() config.Config {
 		SequencingChainRPCURL:      "http://example.com",
 		SettlementChainRPCURL:      "https://example.org",
 		MetaBasedChainRPCURL:       "https://example.io",
+		MetafillerURL:              "https://metafiller.io",
 		LogLevel:                   constants.Info.String(),
 		Pretty:                     false,
 		SequencingContractAddress:  "0x0000000000000000000000000000000000000000",

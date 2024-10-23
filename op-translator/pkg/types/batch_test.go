@@ -64,13 +64,13 @@ func randData(size int) []byte {
 	return bytes
 }
 
-func TestToFrames_Public(t *testing.T) {
+func TestGetFrames(t *testing.T) {
 	batch := mockBatch()
-	_, err := batch.ToFrames(frameSizeTest)
+	_, err := batch.GetFrames(frameSizeTest)
 	assert.NoError(t, err)
 }
 
-func TestToFrames_Private(t *testing.T) {
+func TestToFrames(t *testing.T) {
 	t.Run("1 frame data size", func(t *testing.T) {
 		data := []byte("data")
 		blockHash := common.HexToHash("0xabc")

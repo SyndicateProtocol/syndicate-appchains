@@ -9,6 +9,7 @@ import (
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/server"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/test/stubs"
@@ -151,6 +152,7 @@ func TestOPNodeCalls(t *testing.T) {
 			BatcherAddress:      common.HexToAddress("0x123"),
 			BatchProvider:       &mocks.MockBatchProvider{},
 			Signer:              *translator.NewSigner(mockConfig),
+			BackfillProvider:    backfill.NewBackfillerProvider(mockConfig),
 		}
 
 		s, err := server.TranslatorHandler(mockConfig, opTranslator)

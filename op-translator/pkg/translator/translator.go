@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -30,6 +31,7 @@ var _ IRPCClient = (*rpc.RPCClient)(nil)
 type OPTranslator struct {
 	SettlementChain     IRPCClient
 	BatchProvider       IBatchProvider
+	BackfillProvider    *backfill.BackfillProvider
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
@@ -43,12 +45,14 @@ func Init(cfg *config.Config) *OPTranslator {
 
 	metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg)
 	signer := NewSigner(cfg)
+	backfillProvider := backfill.NewBackfillerProvider(cfg)
 
 	return &OPTranslator{
 		SettlementChain:     settlementChain,
 		BatcherInboxAddress: common.HexToAddress(cfg.BatchInboxAddress),
 		BatcherAddress:      common.HexToAddress(cfg.BatcherAddress),
 		BatchProvider:       metaBasedBatchProvider,
+		BackfillProvider:    backfillProvider,
 		Signer:              *signer,
 	}
 }
@@ -63,7 +67,9 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, err
 	}
 
-	frames, err := batch.ToFrames(config.MaxFrameSize)
+	// TODO SEQ-209: Write logic for switching between backfill and regular data fetching
+	frames, err := batch.GetFrames(config.MaxFrameSize)
+
 	if err != nil {
 		return nil, err
 	}
