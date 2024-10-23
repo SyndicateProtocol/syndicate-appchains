@@ -4,6 +4,7 @@ use clap::{Parser, ValueEnum};
 use figment::providers::{Env, Serialized};
 use figment::Figment;
 use serde::{Deserialize, Serialize};
+use tracing::log;
 use tracing_subscriber::EnvFilter;
 use url::Url;
 
@@ -38,12 +39,14 @@ fn parse_args() -> anyhow::Result<Args> {
 
     let _ = dotenv::dotenv();
 
-    if let Some(profile) = args.profile {
-        dotenv::from_filename(match profile {
-            Profile::Mainnet => "mainnet.env",
-            Profile::Testnet => "testnet.env",
-            Profile::Devnet => "devnet.env",
-        })?;
+    if let Some(env_file) = args.profile.map(|profile| match profile {
+        Profile::Mainnet => "mainnet.env",
+        Profile::Testnet => "testnet.env",
+        Profile::Devnet => "devnet.env",
+        Profile::Localnet => "localnet.env",
+    }) {
+        let _ = dotenv::from_filename(env_file)
+            .inspect_err(|e| log::warn!("Cannot open {env_file}: {e}"));
     }
 
     let args = Figment::new()
@@ -65,6 +68,7 @@ enum Profile {
     Mainnet,
     Testnet,
     Devnet,
+    Localnet,
 }
 
 #[derive(Parser, Debug, Serialize, Deserialize)]
