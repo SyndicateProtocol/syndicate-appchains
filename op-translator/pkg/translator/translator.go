@@ -30,7 +30,7 @@ var _ IRPCClient = (*rpc.RPCClient)(nil)
 type OPTranslator struct {
 	SettlementChain     IRPCClient
 	BatchProvider       IBatchProvider
-	BackFillProvider    *BackFillProvider
+	BackfillProvider    *BackfillProvider
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
@@ -44,14 +44,14 @@ func Init(cfg *config.Config) *OPTranslator {
 
 	metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg)
 	signer := NewSigner(cfg)
-	backFillProvider := NewBackFillerProvider(cfg)
+	backfillProvider := NewBackfillerProvider(cfg)
 
 	return &OPTranslator{
 		SettlementChain:     settlementChain,
 		BatcherInboxAddress: common.HexToAddress(cfg.BatchInboxAddress),
 		BatcherAddress:      common.HexToAddress(cfg.BatcherAddress),
 		BatchProvider:       metaBasedBatchProvider,
-		BackFillProvider:    backFillProvider,
+		BackfillProvider:    backfillProvider,
 		Signer:              *signer,
 	}
 }

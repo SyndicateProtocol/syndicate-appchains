@@ -11,24 +11,24 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-type BackFillProvider struct {
+type BackfillProvider struct {
 	Client        *http.Client
 	MetafillerURL string
 }
 
-func NewBackFillerProvider(cfg *config.Config) *BackFillProvider {
-	return &BackFillProvider{
+func NewBackfillerProvider(cfg *config.Config) *BackfillProvider {
+	return &BackfillProvider{
 		MetafillerURL: cfg.MetafillerURL,
 		Client:        &http.Client{},
 	}
 }
 
-type BackFillData struct {
+type BackfillData struct {
 	Data      string      `json:"data"` // Hex format
 	EpochHash common.Hash `json:"epochHash"`
 }
 
-func (b *BackFillProvider) GetBackFillData(ctx context.Context, epochNumber string) (*BackFillData, error) {
+func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber string) (*BackfillData, error) {
 	fullURL := b.MetafillerURL + "/" + epochNumber
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, http.NoBody)
 	if err != nil {
@@ -46,7 +46,7 @@ func (b *BackFillProvider) GetBackFillData(ctx context.Context, epochNumber stri
 		return nil, err
 	}
 
-	var data *BackFillData
+	var data *BackfillData
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return nil, err
@@ -54,8 +54,8 @@ func (b *BackFillProvider) GetBackFillData(ctx context.Context, epochNumber stri
 	return data, nil
 }
 
-func (b *BackFillProvider) GetBackFillFrames(ctx context.Context, epochNumber string) ([]*types.Frame, error) {
-	backfillData, err := b.GetBackFillData(ctx, epochNumber)
+func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, epochNumber string) ([]*types.Frame, error) {
+	backfillData, err := b.GetBackfillData(ctx, epochNumber)
 	if err != nil {
 		return nil, err
 	}
