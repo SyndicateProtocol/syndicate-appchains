@@ -15,7 +15,7 @@ op-clone:
     git clone --branch develop --single-branch --depth 1 https://github.com/ethereum-optimism/optimism.git ~/optimism || echo skipping clone 
 
 op-clean:
-    just op-devnet-down
+    just op-down
     rm -rf ~/optimism
     just op-clone
     @echo "OP Devnet cleaned and re-cloned. Run op-up to continue."
@@ -35,12 +35,12 @@ foundry-update:
     foundryup
 
 # Initialize op-devnet
-op-devnet-up:
+op-up:
     PATH={{foundry_path}} make --directory ~/optimism devnet-up
     @echo "OP Devnet initialized"
 
 # Shut down devnet
-op-devnet-down:
+op-down:
     PATH={{foundry_path}} make --directory ~/optimism devnet-down
     @echo "OP Devnet shut down"
 
@@ -56,8 +56,8 @@ create-aliases:
             echo "alias foundry-install='just -f {{justfile()}} foundry-install'" >> "$rc_file"
             echo "alias foundry-update='just -f {{justfile()}} foundry-update'" >> "$rc_file"
             echo "# Local Devnet aliases" >> "$rc_file"
-            echo "alias op-up='just -f {{justfile()}} op-devnet-up'" >> "$rc_file"
-            echo "alias op-down='just -f {{justfile()}} op-devnet-down'" >> "$rc_file"
+            echo "alias op-up='just -f {{justfile()}} op-up'" >> "$rc_file"
+            echo "alias op-down='just -f {{justfile()}} op-down'" >> "$rc_file"
             echo "alias op-clean='just -f {{justfile()}} op-clean'" >> "$rc_file"
             echo "alias go-install='just -f {{justfile()}} go-install'" >> "$rc_file"
             echo "Aliases created in $rc_file"
