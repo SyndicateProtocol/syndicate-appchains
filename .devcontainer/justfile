@@ -1,6 +1,12 @@
 # Define the PATH variable to include Foundry's bin directory
 foundry_path := env_var('PATH') + ":" + env_var('HOME') + "/.foundry/bin"
 
+# Define fully qualified path to forge binary
+forge := env_var('HOME') + "/.foundry/bin/forge"
+
+# Minimum forge version (annoted by build date since we're using nightly build)
+forge_min_build_date := "2024-10-22"
+
 # Add Foundry's bin directory to the PATH for all recipes
 export PATH := foundry_path
 
@@ -12,12 +18,12 @@ op-clone:
 # Install Foundry
 # Based on https://book.getfoundry.sh/getting-started/installation
 foundry-install:
-    curl -L https://foundry.paradigm.xyz | bash
+    [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || curl -L https://foundry.paradigm.xyz | bash
 
 # Update Foundry
 # Based on https://book.getfoundry.sh/getting-started/installation
 foundry-update:
-    foundryup
+    [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || foundryup
 
 # Initialize op-devnet
 op-devnet-up:
