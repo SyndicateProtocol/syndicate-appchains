@@ -7,10 +7,12 @@ export PATH := foundry_path
 # Clone the Optimism repository
 op-clone:
     # The op-devnet sometimes breaks with the error `t=2024-10-22T23:38:03+0000 lvl=crit msg="Application failed" message="failed to fetch startBlock from SystemConfig: failed to call startBlock: failed to unpack result: failed to unpack data: abi: attempting to unmarshal an empty string while arguments are expected"`
-    # This is true across 1.9.3, 1.9.4, and develop, so we'll stick with the latest release
+    # This is true across 1.9.3, 1.9.4, and develop, but it appears to happen
+    # less frequently on develop. We'll change this to use the latest release
+    # once it's fixed
     # If you encounter this error, you can try running `op-clean` to clean up
     # and re-clone the repository
-    git clone --branch v1.9.4 --single-branch --depth 1 https://github.com/ethereum-optimism/optimism.git ~/optimism || echo skipping clone 
+    git clone --branch develop --single-branch --depth 1 https://github.com/ethereum-optimism/optimism.git ~/optimism || echo skipping clone 
 
 op-clean:
     just op-devnet-down
