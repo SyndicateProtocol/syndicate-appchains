@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
@@ -115,8 +116,8 @@ func TestFilterReceipts(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Len(t, txns, 2)
-	assert.Equal(t, DummyTxn, []byte(txns[0]))
-	assert.Equal(t, DummyTxn, []byte(txns[1]))
+	assert.Equal(t, hexutil.Bytes{DummyTxn[1]}, txns[0])
+	assert.Equal(t, hexutil.Bytes{DummyTxn[1]}, txns[1])
 }
 
 func TestFilterReceiptsWithExtraLog(t *testing.T) {
@@ -152,5 +153,5 @@ func TestFilterReceiptsWithExtraLog(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Len(t, txns, 1)
-	assert.Equal(t, DummyTxn, []byte(txns[0]))
+	assert.Equal(t, hexutil.Bytes{DummyTxn[1]}, txns[0])
 }
