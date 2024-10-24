@@ -3,15 +3,16 @@ pragma solidity 0.8.25;
 
 import {AccessControl} from "openzeppelin-contracts/contracts/access/AccessControl.sol";
 
-/// @title L3BackfillStorage
+/// @title MetafillerStorage
 /// @notice This contract is used to emit events containing L3 chain block and transaction data
 /// @dev This contract uses AccessControl for managing permissions
-contract L3BackfillStorage is AccessControl {
+contract MetafillerStorage is AccessControl {
     uint256 public immutable l3ChainId;
+    uint256 public indexFromBlock;
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
-    event Batch(uint256 indexed l1EpochBlockNumber, uint256 indexed l3BlockNumber, bytes batch);
+    event Batch(uint256 indexed epochNumber, bytes32 indexed epochHash, bytes batch);
 
     /// @notice Constructor that sets up the default admin and manager roles
     /// @param admin The address that will be the default admin role
@@ -28,29 +29,31 @@ contract L3BackfillStorage is AccessControl {
         l3ChainId = l3ChainId_;
     }
 
+    /// @notice Sets the index from block
+    /// @param blockNumber The block number to start indexing from
+    function setIndexFromBlock(uint256 blockNumber) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        indexFromBlock = blockNumber;
+    }
+
     /// @notice Emits a Batch
     /// @param batch: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#batch-format
-    function save(uint256 l1EpochBlockNumber, uint256 l3BlockNumber, bytes calldata batch)
-        external
-        onlyRole(MANAGER_ROLE)
-    {
-        emit Batch(l1EpochBlockNumber, l3BlockNumber, batch);
+    function save(uint256 epochNumber, bytes32 epochHash, bytes calldata batch) external onlyRole(MANAGER_ROLE) {
+        emit Batch(epochNumber, epochHash, batch);
     }
 
     /// @notice Emits many Batches
     /// @param batches: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#batch-format
-    function saveForMany(
-        uint256[] calldata l1EpochBlockNumbers,
-        uint256[] calldata l3BlockNumbers,
-        bytes[] calldata batches
-    ) external onlyRole(MANAGER_ROLE) {
+    function saveForMany(uint256[] calldata epochNumbers, bytes32[] calldata epochHashes, bytes[] calldata batches)
+        external
+        onlyRole(MANAGER_ROLE)
+    {
         require(
-            l1EpochBlockNumbers.length == l3BlockNumbers.length && l3BlockNumbers.length == batches.length,
+            epochNumbers.length == epochHashes.length && epochHashes.length == batches.length,
             "Array lengths must be equal"
         );
-        uint256 length = l1EpochBlockNumbers.length;
+        uint256 length = epochNumbers.length;
         for (uint256 i = 0; i < length; i++) {
-            emit Batch(l1EpochBlockNumbers[i], l3BlockNumbers[i], batches[i]);
+            emit Batch(epochNumbers[i], epochHashes[i], batches[i]);
         }
     }
 }
