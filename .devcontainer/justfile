@@ -15,10 +15,9 @@ op-clone:
     git clone --branch develop --single-branch --depth 1 https://github.com/ethereum-optimism/optimism.git ~/optimism || echo skipping clone 
 
 op-clean:
-    just op-down
     rm -rf ~/optimism
-    just op-clone
-    @echo "OP Devnet cleaned and re-cloned. Run op-up to continue."
+
+op-reclone: op-down op-clean op-clone
 
 go-install:
     go install /workspaces/metabased-rollup/op-translator
