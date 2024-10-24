@@ -11,11 +11,11 @@ contract MetabasedFactory {
     event MetabasedSequencerChainCreated(uint256 indexed l3ChainId, address indexed metabasedSequencerChainAddress);
 
     /// @notice Emitted when a new MetafillerStorage is created
-    event MetafillerStorageCreated(uint256 indexed l3ChainId, address indexed backfillStorageAddress);
+    event MetafillerStorageCreated(uint256 indexed l3ChainId, address indexed metafillerStorageAddress);
 
     /// @notice Emitted when all three contracts are created at once
     event AllContractsCreated(
-        uint256 l3ChainId, address indexed sequencerChainAddress, address indexed backfillStorageAddress
+        uint256 l3ChainId, address indexed sequencerChainAddress, address indexed metafillerStorageAddress
     );
 
     /// @notice Creates a new MetabasedSequencerChain contract
