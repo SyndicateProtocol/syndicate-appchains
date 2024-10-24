@@ -44,7 +44,7 @@ contract MetabasedFactory {
 
     /// @notice Creates all contracts: MetabasedSequencerChain and MetafillerStorage
     /// @param admin The address that will be the default admin role for MetafillerStorage
-    /// @param manager The address that will be the manager role for the MetafillerStorage
+    /// @param manager The address that will be the manager role for MetafillerStorage
     /// @param l3ChainId The L3 chain ID
     /// @return sequencerChain The address of the newly created MetabasedSequencerChain contract
     /// @return metafillerStorage The address of the newly created MetafillerStorage contract
