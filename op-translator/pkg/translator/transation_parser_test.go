@@ -1,8 +1,12 @@
 package translator
 
 import (
+	"bytes"
+	"compress/zlib"
 	"testing"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
+	"github.com/andybalholm/brotli"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/assert"
@@ -93,4 +97,71 @@ func TestParseTransactionProcessed_Error(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.Nil(t, result)
+}
+
+func compressZlib(data []byte, level int) []byte {
+	var buf bytes.Buffer
+	writer, _ := zlib.NewWriterLevel(&buf, level)
+	writer.Write(data) //nolint:errcheck //just used for testing
+	writer.Close()
+	return buf.Bytes()
+}
+
+func compressBrotli(data []byte) []byte {
+	var buf bytes.Buffer
+	writer := brotli.NewWriter(&buf)
+	writer.Write(data) //nolint:errcheck //just used for testing
+	writer.Close()
+	return buf.Bytes()
+}
+
+func TestDecodeTransactionData_NoCompression(t *testing.T) {
+	parser := &L3TransactionParser{}
+	data := append([]byte{utils.NoCompression}, []byte("mock_data")...)
+	decoded, err := parser.DecodeTransactionData(data)
+
+	require.NoError(t, err)
+	assert.Equal(t, []byte("mock_data"), decoded)
+}
+
+func TestDecodeTransactionData_ZlibCM8(t *testing.T) {
+	parser := &L3TransactionParser{}
+	originalData := []byte("original_data")
+	compressedData := compressZlib(originalData, zlib.BestCompression) // compress using zlib
+	decoded, err := parser.DecodeTransactionData(compressedData)
+
+	require.NoError(t, err)
+	assert.Equal(t, originalData, decoded)
+}
+
+func TestDecodeTransactionData_ZlibCM15(t *testing.T) {
+	parser := &L3TransactionParser{}
+	originalData := []byte("original_data")
+	compressedData := compressZlib(originalData, zlib.BestCompression) // compress using zlib
+	decoded, err := parser.DecodeTransactionData(compressedData)
+
+	require.NoError(t, err)
+	assert.Equal(t, originalData, decoded)
+}
+
+func TestDecodeTransactionData_Brotli(t *testing.T) {
+	parser := &L3TransactionParser{}
+	compressionType := utils.VersionBrotli
+	originalData := []byte("original_data")
+	compressedData := compressBrotli(originalData)
+	data := append([]byte{compressionType}, compressedData...)
+	decoded, err := parser.DecodeTransactionData(data)
+
+	require.NoError(t, err)
+	assert.Equal(t, originalData, decoded)
+}
+
+func TestDecodeTransactionData_UnknownCompressionType(t *testing.T) {
+	parser := &L3TransactionParser{}
+	data := []byte("mock_data")
+	decoded, err := parser.DecodeTransactionData(data)
+
+	require.Error(t, err)
+	assert.Nil(t, decoded)
+	assert.Contains(t, err.Error(), "cannot distinguish the compression algo used given type byte")
 }
