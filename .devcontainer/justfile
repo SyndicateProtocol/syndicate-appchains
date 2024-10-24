@@ -12,8 +12,22 @@ export PATH := foundry_path
 
 # Clone the Optimism repository
 op-clone:
-    git clone https://github.com/ethereum-optimism/optimism.git ~/optimism || echo skipping clone 
-    git --git-dir ~/optimism/.git --work-tree ~/optimism checkout v1.9.4
+    # The op-devnet sometimes breaks with the error `t=2024-10-22T23:38:03+0000 lvl=crit msg="Application failed" message="failed to fetch startBlock from SystemConfig: failed to call startBlock: failed to unpack result: failed to unpack data: abi: attempting to unmarshal an empty string while arguments are expected"`
+    # This is true across 1.9.3, 1.9.4, and develop, but it appears to happen
+    # less frequently on develop. We'll change this to use the latest release
+    # once it's fixed
+    # If you encounter this error, you can try running `op-clean` to clean up
+    # and re-clone the repository
+    git clone --branch develop --single-branch --depth 1 https://github.com/ethereum-optimism/optimism.git ~/optimism || echo skipping clone 
+
+op-clean:
+    rm -rf ~/optimism
+
+op-reclone: op-down op-clean op-clone
+
+go-install:
+    go install /workspaces/metabased-rollup/op-translator
+    # go install /workspaces/metabased-rollup/metabased-publisher/cmd
 
 # Install Foundry
 # Based on https://book.getfoundry.sh/getting-started/installation
@@ -26,12 +40,12 @@ foundry-update:
     [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || foundryup
 
 # Initialize op-devnet
-op-devnet-up:
+op-up:
     PATH={{foundry_path}} make --directory ~/optimism devnet-up
     @echo "OP Devnet initialized"
 
 # Shut down devnet
-op-devnet-down:
+op-down:
     PATH={{foundry_path}} make --directory ~/optimism devnet-down
     @echo "OP Devnet shut down"
 
@@ -40,14 +54,19 @@ create-aliases:
     #!/bin/bash
     for rc_file in ~/.bashrc ~/.zshrc; do
         if [[ -f "$rc_file" ]]; then
+            echo "# BEGIN Metabased Rollup Dev Container aliases" >> "$rc_file"
             echo "# Foundry PATH" >> "$rc_file"
             echo "export PATH=\"\$PATH:\$HOME/.foundry/bin\"" >> "$rc_file"
             echo "# Foundry aliases" >> "$rc_file"
             echo "alias foundry-install='just -f {{justfile()}} foundry-install'" >> "$rc_file"
             echo "alias foundry-update='just -f {{justfile()}} foundry-update'" >> "$rc_file"
-            echo "# Metabased DevNet aliases" >> "$rc_file"
-            echo "alias op-up='just -f {{justfile()}} op-devnet-up'" >> "$rc_file"
-            echo "alias op-down='just -f {{justfile()}} op-devnet-down'" >> "$rc_file"
+            echo "# Local Devnet aliases" >> "$rc_file"
+            echo "alias op-up='just -f {{justfile()}} op-up'" >> "$rc_file"
+            echo "alias op-down='just -f {{justfile()}} op-down'" >> "$rc_file"
+            echo "alias op-clean='just -f {{justfile()}} op-clean'" >> "$rc_file"
+            echo "alias op-reclone='just -f {{justfile()}} op-reclone'" >> "$rc_file"
+            echo "alias go-install='just -f {{justfile()}} go-install'" >> "$rc_file"
+            echo "# END Metabased Rollup Dev Container aliases" >> "$rc_file"
             echo "Aliases created in $rc_file"
         else
             echo "Warning: $rc_file does not exist. Skipping."
@@ -58,5 +77,5 @@ create-aliases:
 # OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
 # We initialize and then spin down the devnet to get the initialization time out
 # of the way upfront
-all: op-clone foundry-install foundry-update op-devnet-up create-aliases
+all: op-clone foundry-install foundry-update create-aliases
     @echo "Post-create script completed successfully"
