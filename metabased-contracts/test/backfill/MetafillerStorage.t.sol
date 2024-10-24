@@ -22,6 +22,18 @@ contract MetafillerStorageTest is Test {
         l3Storage.save(1, 0xd41f86be45e841b1791bf9ff78aa9c388d9c81384d8a063d480c71c7f8865502, "0x");
     }
 
+    function testOnlyManagerCanSetIndexFromBlock() public {
+        vm.expectRevert();
+        vm.prank(nonManager);
+        l3Storage.setIndexFromBlock(1);
+    }
+
+    function testManagerCanSetIndexFromBlock() public {
+        vm.prank(manager);
+        l3Storage.setIndexFromBlock(1);
+        assertEq(l3Storage.indexFromBlock(), 1);
+    }
+
     function testOnlyManagerCanSaveForMany() public {
         uint256[] memory epochNumbers = new uint256[](1);
         epochNumbers[0] = 1;

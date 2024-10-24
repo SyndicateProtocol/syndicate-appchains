@@ -8,6 +8,7 @@ import {AccessControl} from "openzeppelin-contracts/contracts/access/AccessContr
 /// @dev This contract uses AccessControl for managing permissions
 contract MetafillerStorage is AccessControl {
     uint256 public immutable l3ChainId;
+    uint256 public indexFromBlock;
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
@@ -26,6 +27,12 @@ contract MetafillerStorage is AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MANAGER_ROLE, manager);
         l3ChainId = l3ChainId_;
+    }
+
+    /// @notice Sets the index from block
+    /// @param blockNumber The block number to start indexing from
+    function setIndexFromBlock(uint256 blockNumber) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        indexFromBlock = blockNumber;
     }
 
     /// @notice Emits a Batch
