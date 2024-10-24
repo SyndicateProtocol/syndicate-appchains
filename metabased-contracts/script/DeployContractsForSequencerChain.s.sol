@@ -45,7 +45,9 @@ contract DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule is Script {
 
         l3ChainId = 0; // TODO: Set the L3 chain ID
 
-        metabasedSequencerChainContract = new MetabasedSequencerChain(l3ChainId);
+        address admin = vm.envOr("ADMIN_ADDR", msg.sender);
+
+        metabasedSequencerChainContract = new MetabasedSequencerChain(l3ChainId, admin);
         console.log("Deployed MetabasedSequencerChain", address(metabasedSequencerChainContract));
 
         AlwaysAllowedModule alwaysAllowedModule = new AlwaysAllowedModule();

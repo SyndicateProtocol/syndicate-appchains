@@ -20,9 +20,10 @@ contract MetabasedFactory {
 
     /// @notice Creates a new MetabasedSequencerChain contract
     /// @param l3ChainId the l3 chain the contract referes to
+    /// @param admin The address that will be the admin
     /// @return The address of the newly created MetabasedSequencerChain contract
-    function createMetabasedSequencerChain(uint256 l3ChainId) public returns (address) {
-        MetabasedSequencerChain newMetabasedSequencerChain = new MetabasedSequencerChain(l3ChainId);
+    function createMetabasedSequencerChain(uint256 l3ChainId, address admin) public returns (address) {
+        MetabasedSequencerChain newMetabasedSequencerChain = new MetabasedSequencerChain(l3ChainId, admin);
 
         emit MetabasedSequencerChainCreated(l3ChainId, address(newMetabasedSequencerChain));
 
@@ -52,7 +53,7 @@ contract MetabasedFactory {
         public
         returns (address sequencerChain, address metafillerStorage)
     {
-        sequencerChain = createMetabasedSequencerChain(l3ChainId);
+        sequencerChain = createMetabasedSequencerChain(l3ChainId, admin);
         metafillerStorage = createMetafillerStorage(admin, manager, l3ChainId);
 
         emit AllContractsCreated(l3ChainId, sequencerChain, metafillerStorage);

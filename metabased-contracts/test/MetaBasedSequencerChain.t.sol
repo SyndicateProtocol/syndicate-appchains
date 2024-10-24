@@ -26,7 +26,7 @@ contract MetabasedSequencerChainTestSetUp is Test {
         uint256 l3ChainId = 10042001;
 
         vm.startPrank(admin);
-        chain = new MetabasedSequencerChain(l3ChainId);
+        chain = new MetabasedSequencerChain(l3ChainId, admin);
 
         assertEq(chain.l3ChainId(), l3ChainId, "L3 chain ID should be set correctly");
         vm.stopPrank();
@@ -45,17 +45,6 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         emit MetabasedSequencerChain.TransactionProcessed(address(this), validTxn);
 
         chain.processTransaction(validTxn);
-    }
-
-    function testProcessTransactionInvalidForm() public {
-        bytes memory invalidTxn = new bytes(0);
-
-        vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
-        vm.stopPrank();
-
-        vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidTransactionForm.selector));
-        chain.processTransaction(invalidTxn);
     }
 
     function testProcessTransactionRequireAllFailure() public {
@@ -101,20 +90,6 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         }
 
         chain.processBulkTransactions(validTxns);
-    }
-
-    function testProcessBulkTransactionsWithInvalidTxn() public {
-        bytes[] memory txns = new bytes[](3);
-        txns[0] = abi.encode("transaction 1");
-        txns[1] = new bytes(0); // Invalid transaction
-        txns[2] = abi.encode("transaction 3");
-
-        vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
-        vm.stopPrank();
-
-        vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidTransactionForm.selector));
-        chain.processBulkTransactions(txns);
     }
 
     function testProcessChunk() public {

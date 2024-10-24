@@ -20,7 +20,7 @@ contract MetabasedFactoryTest is Test {
     }
 
     function testCreateSequencerChain() public {
-        address sequencerChainAddress = factory.createMetabasedSequencerChain(l3ChainId);
+        address sequencerChainAddress = factory.createMetabasedSequencerChain(l3ChainId, admin);
         assertTrue(sequencerChainAddress != address(0));
 
         MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);

@@ -5,6 +5,8 @@ import {RequireListManager, IsAllowed, Ownable} from "src/RequireListManager.sol
 import {Test} from "forge-std/Test.sol";
 
 contract RequireListManagerMock is RequireListManager {
+    constructor(address _admin) RequireListManager(_admin) {}
+
     function exposed_requireAllAllowed(address batchSubmitter) public view {
         requireAllAllowed(batchSubmitter);
     }
@@ -34,8 +36,8 @@ contract RequireListManagerTest is Test {
     address public mockModule = address(0x1);
 
     function setUp() public {
-        requireListManager = new RequireListManagerMock();
-        admin = requireListManager.owner();
+        admin = msg.sender;
+        requireListManager = new RequireListManagerMock(admin);
         nonAdmin = address(0x456);
     }
 
