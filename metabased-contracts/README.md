@@ -36,8 +36,8 @@ $ make deploy-based-sequencerchain-frame
 
 | Contract Name           | Address                                    |
 | ----------------------- | ------------------------------------------ |
-| MetabasedFactory        | 0x2f3CC13661A95DD616311a7bddB9cDB4bA67C4d2 |
-| MetabasedSequencerChain | 0x2945b20521A86Eb46D89e278B782ccAc26eEab57 |
+| MetabasedFactory        | 0xD1e50D5A203E6485e97E3bC8A951b49aaFC28603 |
+| MetabasedSequencerChain | 0xEFfCeaf782d14D7271B30C68e9667cD3B4218553 |
 | AlwaysAllowedModule     | 0x33aB24E0a47A7aAe869755420950A6326e3CB9F3 |
 | MetafillerStorage       | 0x745bdeFA5C879ADCf739075bB03FD4ecCd03cE22 |
 
@@ -45,9 +45,9 @@ $ make deploy-based-sequencerchain-frame
 
 | Contract Name    | Address                                    |
 | ---------------- | ------------------------------------------ |
-| MetabasedFactory | 0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba |
+| MetabasedFactory | 0xfE0a902d5E3bEe35B7E0D0c10214D0b04947F974 |
 
 Contracts for Testing with Dummy L3 Chain ID `42424242424242424242`
-| MetabasedSequencerChain | 0x81221231E4552Ac34c65DCc04EE9869767E65707 |
+| MetabasedSequencerChain | 0x5b6bB750222ADeE5B6031702a08D239f97F3b063 |
 | AlwaysAllowedModule | 0x471584f0B8e35faEB2a618BD58A62316D8882d63 |
 | MetafillerStorage | 0xC329B96c47271426B237bA85dF5504375C5cCB28 |

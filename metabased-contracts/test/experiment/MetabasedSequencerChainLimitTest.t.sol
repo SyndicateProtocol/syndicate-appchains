@@ -19,7 +19,7 @@ contract MetabaseSequencerChainLimitTest is Test {
         admin = address(0x1);
         vm.startPrank(admin);
         uint256 l3ChainId = 10042001;
-        chain = new MetabasedSequencerChain(l3ChainId);
+        chain = new MetabasedSequencerChain(l3ChainId, admin);
         chain.addRequireAnyCheck(address(new MockIsAllowed()), false);
         vm.stopPrank();
     }

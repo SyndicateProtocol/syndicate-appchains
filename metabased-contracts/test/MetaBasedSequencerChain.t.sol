@@ -26,7 +26,7 @@ contract MetabasedSequencerChainTestSetUp is Test {
         uint256 l3ChainId = 10042001;
 
         vm.startPrank(admin);
-        chain = new MetabasedSequencerChain(l3ChainId);
+        chain = new MetabasedSequencerChain(l3ChainId, admin);
 
         assertEq(chain.l3ChainId(), l3ChainId, "L3 chain ID should be set correctly");
         vm.stopPrank();
