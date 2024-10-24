@@ -48,7 +48,7 @@ create-aliases:
     #!/bin/bash
     for rc_file in ~/.bashrc ~/.zshrc; do
         if [[ -f "$rc_file" ]]; then
-            echo "# Metabased Rollup Dev Container aliases" >> "$rc_file"
+            echo "# BEGIN Metabased Rollup Dev Container aliases" >> "$rc_file"
             echo "# Foundry PATH" >> "$rc_file"
             echo "export PATH=\"\$PATH:\$HOME/.foundry/bin\"" >> "$rc_file"
             echo "# Foundry aliases" >> "$rc_file"
@@ -60,6 +60,7 @@ create-aliases:
             echo "alias op-clean='just -f {{justfile()}} op-clean'" >> "$rc_file"
             echo "alias op-reclone='just -f {{justfile()}} op-reclone'" >> "$rc_file"
             echo "alias go-install='just -f {{justfile()}} go-install'" >> "$rc_file"
+            echo "# END Metabased Rollup Dev Container aliases" >> "$rc_file"
             echo "Aliases created in $rc_file"
         else
             echo "Warning: $rc_file does not exist. Skipping."
