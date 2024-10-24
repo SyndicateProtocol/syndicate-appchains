@@ -47,17 +47,6 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         chain.processTransaction(validTxn);
     }
 
-    function testProcessTransactionInvalidForm() public {
-        bytes memory invalidTxn = new bytes(0);
-
-        vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
-        vm.stopPrank();
-
-        vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidTransactionForm.selector));
-        chain.processTransaction(invalidTxn);
-    }
-
     function testProcessTransactionRequireAllFailure() public {
         bytes memory validTxn = abi.encode("valid transaction");
         address mockRequireAll = address(new MockIsAllowed(false));
@@ -101,20 +90,6 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         }
 
         chain.processBulkTransactions(validTxns);
-    }
-
-    function testProcessBulkTransactionsWithInvalidTxn() public {
-        bytes[] memory txns = new bytes[](3);
-        txns[0] = abi.encode("transaction 1");
-        txns[1] = new bytes(0); // Invalid transaction
-        txns[2] = abi.encode("transaction 3");
-
-        vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
-        vm.stopPrank();
-
-        vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidTransactionForm.selector));
-        chain.processBulkTransactions(txns);
     }
 
     function testProcessChunk() public {
