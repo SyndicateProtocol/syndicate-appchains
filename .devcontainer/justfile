@@ -58,6 +58,7 @@ create-aliases:
             echo "alias op-up='just -f {{justfile()}} op-up'" >> "$rc_file"
             echo "alias op-down='just -f {{justfile()}} op-down'" >> "$rc_file"
             echo "alias op-clean='just -f {{justfile()}} op-clean'" >> "$rc_file"
+            echo "alias op-reclone='just -f {{justfile()}} op-reclone'" >> "$rc_file"
             echo "alias go-install='just -f {{justfile()}} go-install'" >> "$rc_file"
             echo "Aliases created in $rc_file"
         else
