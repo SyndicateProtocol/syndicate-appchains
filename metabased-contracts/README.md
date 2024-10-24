@@ -50,6 +50,9 @@ $ make deploy-based-sequencerchain-frame
 
 | Contract Name           | Address                                    |
 | ----------------------- | ------------------------------------------ |
-| MetabasedSequencerChain | 0xcFc46cEBB3eAEc9b5776e3FDe5879125B8BBA05d |
+| MetabasedFactory        | 0x2f3CC13661A95DD616311a7bddB9cDB4bA67C4d2 |
+
+Contracts for Testing with Dummy L3 Chain ID `42424242424242424242`
+| MetabasedSequencerChain | 0x2945b20521A86Eb46D89e278B782ccAc26eEab57 |
 | AlwaysAllowedModule     | 0x471584f0B8e35faEB2a618BD58A62316D8882d63 |
-| MetafillerStorage       | TODO |
+| MetafillerStorage       | 0x745bdeFA5C879ADCf739075bB03FD4ecCd03cE22 |
