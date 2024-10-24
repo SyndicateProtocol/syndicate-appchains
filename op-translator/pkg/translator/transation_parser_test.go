@@ -9,8 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var DummyEncodedTxn = common.Hex2Bytes("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000010200000000000000000000000000000000000000000000000000000000000000")
-var DummyTxn = common.Hex2Bytes("02")
+var (
+	DummyEncodedData = common.Hex2Bytes("000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000010200000000000000000000000000000000000000000000000000000000000000")
+	DummyTxn         = common.Hex2Bytes("000002")
+)
 
 func TestIsLogTransactionProcessed(t *testing.T) {
 	parser := NewL3TransactionParser(common.HexToAddress("0x1234567890123456789012345678901234567890"))
@@ -65,7 +67,7 @@ func TestParseTransactionProcessed(t *testing.T) {
 			TransactionProcessedSigHash,
 			common.BytesToHash(senderAddr.Bytes()),
 		},
-		Data: DummyEncodedTxn,
+		Data: DummyEncodedData,
 	}
 
 	result, err := parser.ParseTransactionProcessed(log)

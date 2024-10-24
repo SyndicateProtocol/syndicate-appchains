@@ -8,6 +8,13 @@ import (
 	"github.com/andybalholm/brotli"
 )
 
+const (
+	ZlibCM8            = 8
+	ZlibCM15           = 15
+	VersionBrotli byte = 0x1
+	NoCompression byte = 0x0
+)
+
 func DecompressZlib(compressedData []byte) ([]byte, error) {
 	reader, err := zlib.NewReader(bytes.NewReader(compressedData))
 	if err != nil {

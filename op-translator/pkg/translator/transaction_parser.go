@@ -13,20 +13,13 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
-const (
-	ZlibCM8            = 8
-	ZlibCM15           = 15
-	VersionBrotli byte = 0x1
-	NoCompression byte = 0x0
-)
-
 type TransactionProcessed struct {
 	EncodedData []byte
 	Sender      common.Address // indexed
 }
 
 const (
-	TransactionProcessedABI  = `[{"anonymous":false,"inputs":[{"indexed":true,"name":"Sender","type":"address"},{"indexed":false,"name":"EncodedTxn","type":"bytes"}],"name":"TransactionProcessed","type":"event"}]`
+	TransactionProcessedABI  = `[{"anonymous":false,"inputs":[{"indexed":true,"name":"Sender","type":"address"},{"indexed":false,"name":"EncodedData","type":"bytes"}],"name":"TransactionProcessed","type":"event"}]`
 	TransactionProcessedName = "TransactionProcessed"
 	TransactionProcessedSig  = "TransactionProcessed(address,bytes)"
 )
@@ -79,13 +72,13 @@ func (l *L3TransactionParser) DecodeTransactionData(data []byte) ([]byte, error)
 	compressedData := data[1:] // skip the first byte (compressionType)
 
 	switch {
-	case compressionType == NoCompression:
+	case compressionType == utils.NoCompression:
 		return compressedData, nil
 
-	case compressionType&0x0F == ZlibCM8 || compressionType&0x0F == ZlibCM15:
+	case compressionType&0x0F == utils.ZlibCM8 || compressionType&0x0F == utils.ZlibCM15:
 		return utils.DecompressZlib(data) // zlib needs the compression type byte
 
-	case compressionType == VersionBrotli:
+	case compressionType == utils.VersionBrotli:
 		return utils.DecompressBrotli(compressedData)
 
 	default:

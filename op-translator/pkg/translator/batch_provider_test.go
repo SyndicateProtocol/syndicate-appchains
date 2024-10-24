@@ -12,10 +12,9 @@ import (
 )
 
 var (
-	SomeOtherABIHash = crypto.Keccak256Hash([]byte("someOtherABI"))
+	SomeOtherABIHash          = crypto.Keccak256Hash([]byte("someOtherABI"))
+	SequencingContractAddress = common.HexToAddress("0x1111111111111111111111111111111111111111")
 )
-
-var SequencingContractAddress = common.HexToAddress("0x1111111111111111111111111111111111111111")
 
 func getBatchProvider() *MetaBasedBatchProvider {
 	return NewMetaBasedBatchProvider(
@@ -89,7 +88,7 @@ func TestFilterReceipts(t *testing.T) {
 						TransactionProcessedSigHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: DummyEncodedTxn,
+					Data: DummyEncodedData,
 				},
 			},
 		},
@@ -102,7 +101,7 @@ func TestFilterReceipts(t *testing.T) {
 						TransactionProcessedSigHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: DummyEncodedTxn,
+					Data: DummyEncodedData,
 				},
 			},
 		},
@@ -135,7 +134,7 @@ func TestFilterReceiptsWithExtraLog(t *testing.T) {
 						TransactionProcessedSigHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: DummyEncodedTxn,
+					Data: DummyEncodedData,
 				},
 				{
 					Address: sequencingContractAddress,
@@ -143,7 +142,7 @@ func TestFilterReceiptsWithExtraLog(t *testing.T) {
 						SomeOtherABIHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: DummyEncodedTxn,
+					Data: DummyEncodedData,
 				},
 			},
 		},

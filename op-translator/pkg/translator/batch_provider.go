@@ -144,7 +144,7 @@ func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) (t
 
 			transaction, decodeErr := m.TransactionParser.DecodeTransactionData(proc.EncodedData)
 			if decodeErr != nil {
-				multiErr = multierror.Append(multiErr, fmt.Errorf("malformatted l2 receipt log in receipt %d, log %d: %w", i, j, decodeErr))
+				multiErr = multierror.Append(multiErr, fmt.Errorf("malformatted l2 receipt compression. EncodedData %v. Error: %w", proc.EncodedData, decodeErr))
 				continue
 			}
 
