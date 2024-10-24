@@ -4,8 +4,7 @@ pragma solidity 0.8.25;
 import {Test} from "forge-std/Test.sol";
 import {MetabasedFactory} from "src/MetabasedFactory.sol";
 import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
-import {L3BackfillMapper} from "src/backfill/L3BackfillMapper.sol";
-import {L3BackfillStorage} from "src/backfill/L3BackfillStorage.sol";
+import {MetafillerStorage} from "src/backfill/MetafillerStorage.sol";
 
 contract MetabasedFactoryTest is Test {
     MetabasedFactory public factory;
@@ -28,45 +27,30 @@ contract MetabasedFactoryTest is Test {
         assertTrue(address(sequencerChain) == sequencerChainAddress);
     }
 
-    function testCreateBackfillMapper() public {
-        address backfillMapperAddress = factory.createBackfillMapper(admin, manager, l3ChainId);
-        assertTrue(backfillMapperAddress != address(0));
+    function testCreateMetafillerStorage() public {
+        address metafillerStorageAddress = factory.createMetafillerStorage(admin, manager, l3ChainId);
+        assertTrue(metafillerStorageAddress != address(0));
 
-        L3BackfillMapper backfillMapper = L3BackfillMapper(backfillMapperAddress);
-        assertTrue(address(backfillMapper) == backfillMapperAddress);
-        assertTrue(backfillMapper.hasRole(backfillMapper.DEFAULT_ADMIN_ROLE(), admin));
-        assertTrue(backfillMapper.hasRole(backfillMapper.MANAGER_ROLE(), manager));
-    }
-
-    function testCreateBackfillStorage() public {
-        address backfillStorageAddress = factory.createBackfillStorage(admin, manager, l3ChainId);
-        assertTrue(backfillStorageAddress != address(0));
-
-        L3BackfillStorage backfillStorage = L3BackfillStorage(backfillStorageAddress);
-        assertTrue(address(backfillStorage) == backfillStorageAddress);
-        assertTrue(backfillStorage.hasRole(backfillStorage.DEFAULT_ADMIN_ROLE(), admin));
-        assertTrue(backfillStorage.hasRole(backfillStorage.MANAGER_ROLE(), manager));
+        MetafillerStorage metafillerStorage = MetafillerStorage(metafillerStorageAddress);
+        assertTrue(address(metafillerStorage) == metafillerStorageAddress);
+        assertTrue(metafillerStorage.hasRole(metafillerStorage.DEFAULT_ADMIN_ROLE(), admin));
+        assertTrue(metafillerStorage.hasRole(metafillerStorage.MANAGER_ROLE(), manager));
     }
 
     function testCreateAllContracts() public {
-        (address sequencerChainAddress, address backfillMapperAddress, address backfillStorageAddress) =
+        (address sequencerChainAddress, address metafillerStorageAddress) =
             factory.createAllContracts(admin, manager, l3ChainId);
 
         assertTrue(sequencerChainAddress != address(0));
-        assertTrue(backfillMapperAddress != address(0));
-        assertTrue(backfillStorageAddress != address(0));
+        assertTrue(metafillerStorageAddress != address(0));
 
         MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);
-        L3BackfillMapper backfillMapper = L3BackfillMapper(backfillMapperAddress);
-        L3BackfillStorage backfillStorage = L3BackfillStorage(backfillStorageAddress);
+        MetafillerStorage metafillerStorage = MetafillerStorage(metafillerStorageAddress);
 
         assertTrue(address(sequencerChain) == sequencerChainAddress);
-        assertTrue(address(backfillMapper) == backfillMapperAddress);
-        assertTrue(address(backfillStorage) == backfillStorageAddress);
+        assertTrue(address(metafillerStorage) == metafillerStorageAddress);
 
-        assertTrue(backfillMapper.hasRole(backfillMapper.DEFAULT_ADMIN_ROLE(), admin));
-        assertTrue(backfillMapper.hasRole(backfillMapper.MANAGER_ROLE(), manager));
-        assertTrue(backfillStorage.hasRole(backfillStorage.DEFAULT_ADMIN_ROLE(), admin));
-        assertTrue(backfillStorage.hasRole(backfillStorage.MANAGER_ROLE(), manager));
+        assertTrue(metafillerStorage.hasRole(metafillerStorage.DEFAULT_ADMIN_ROLE(), admin));
+        assertTrue(metafillerStorage.hasRole(metafillerStorage.MANAGER_ROLE(), manager));
     }
 }
