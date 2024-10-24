@@ -9,15 +9,14 @@ contract MetabaseSequencerChainIntegrationTest is Test {
     using Strings for uint256;
 
     MetabasedSequencerChain public chain;
-    address public constant METABASE_SEQUENCER_CONTRACT_ADDRESS = 0x7DEdabB3Db89310B316bA49D96Aa6517aFC44294; // deployed to OPTIMISM_MAINNET
-    // address public constant METABASE_SEQUENCER_CONTRACT_ADDRESS = 0x73Ba7D784d13Ec0070a4Ea6F49Ff57dc007Bb48d; // deployed to base_sepolia
+
+    address public constant METABASE_SEQUENCER_CONTRACT_ADDRESS = 0x73Ba7D784d13Ec0070a4Ea6F49Ff57dc007Bb48d; // deployed to base_sepolia
 
     uint256 public constant OPTIMISM_BLOCK_GAS_LIMIT = 30_000_000; // Optimism block gas limit
     uint256 public constant TX_SIZE = 1024; // 1 KB transaction size
 
     function setUp() public {
-        vm.createSelectFork("optimism");
-        // vm.createSelectFork("base_sepolia");
+        vm.createSelectFork("base_sepolia");
 
         chain = MetabasedSequencerChain(METABASE_SEQUENCER_CONTRACT_ADDRESS);
     }

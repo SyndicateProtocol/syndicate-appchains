@@ -41,13 +41,6 @@ $ make deploy-based-sequencerchain-frame
 | AlwaysAllowedModule     | 0x33aB24E0a47A7aAe869755420950A6326e3CB9F3 |
 | MetafillerStorage       | 0x745bdeFA5C879ADCf739075bB03FD4ecCd03cE22 |
 
-#### Optimism
-
-| Contract Name           | Address                                    |
-| ----------------------- | ------------------------------------------ |
-| MetabasedSequencerChain | 0x7DEdabB3Db89310B316bA49D96Aa6517aFC44294 |
-| AlwaysAllowedModule     | 0x21e1C6bE46E53693381Cef9BECD3B0A947A590e4 |
-
 #### Metabased Testnet
 
 | Contract Name    | Address                                    |
