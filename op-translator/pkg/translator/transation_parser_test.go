@@ -115,53 +115,53 @@ func compressBrotli(data []byte) []byte {
 	return buf.Bytes()
 }
 
-func TestDecodeTransactionData_NoCompression(t *testing.T) {
-	parser := &L3TransactionParser{}
-	data := append([]byte{utils.NoCompression}, []byte("mock_data")...)
-	decoded, err := parser.DecodeTransactionData(data)
+func TestDecodeTransactionData(t *testing.T) {
+	tests := []struct {
+		name           string
+		expectedError  string
+		input          []byte
+		expectedOutput []byte
+	}{
+		{
+			name:           "No Compression",
+			input:          append([]byte{utils.NoCompression}, []byte("mock_data")...),
+			expectedOutput: []byte("mock_data"),
+		},
+		{
+			name:           "ZlibCM8",
+			input:          compressZlib([]byte("original_data"), zlib.BestCompression),
+			expectedOutput: []byte("original_data"),
+		},
+		{
+			name:           "ZlibCM15",
+			input:          compressZlib([]byte("original_data"), zlib.BestCompression),
+			expectedOutput: []byte("original_data"),
+		},
+		{
+			name:           "Brotli",
+			input:          append([]byte{utils.VersionBrotli}, compressBrotli([]byte("original_data"))...),
+			expectedOutput: []byte("original_data"),
+		},
+		{
+			name:          "Unknown Compression Type",
+			input:         []byte("mock_data"),
+			expectedError: "cannot distinguish the compression algo used given type byte",
+		},
+	}
 
-	require.NoError(t, err)
-	assert.Equal(t, []byte("mock_data"), decoded)
-}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			parser := &L3TransactionParser{}
+			decoded, err := parser.DecodeTransactionData(tt.input)
 
-func TestDecodeTransactionData_ZlibCM8(t *testing.T) {
-	parser := &L3TransactionParser{}
-	originalData := []byte("original_data")
-	compressedData := compressZlib(originalData, zlib.BestCompression) // compress using zlib
-	decoded, err := parser.DecodeTransactionData(compressedData)
-
-	require.NoError(t, err)
-	assert.Equal(t, originalData, decoded)
-}
-
-func TestDecodeTransactionData_ZlibCM15(t *testing.T) {
-	parser := &L3TransactionParser{}
-	originalData := []byte("original_data")
-	compressedData := compressZlib(originalData, zlib.BestCompression) // compress using zlib
-	decoded, err := parser.DecodeTransactionData(compressedData)
-
-	require.NoError(t, err)
-	assert.Equal(t, originalData, decoded)
-}
-
-func TestDecodeTransactionData_Brotli(t *testing.T) {
-	parser := &L3TransactionParser{}
-	compressionType := utils.VersionBrotli
-	originalData := []byte("original_data")
-	compressedData := compressBrotli(originalData)
-	data := append([]byte{compressionType}, compressedData...)
-	decoded, err := parser.DecodeTransactionData(data)
-
-	require.NoError(t, err)
-	assert.Equal(t, originalData, decoded)
-}
-
-func TestDecodeTransactionData_UnknownCompressionType(t *testing.T) {
-	parser := &L3TransactionParser{}
-	data := []byte("mock_data")
-	decoded, err := parser.DecodeTransactionData(data)
-
-	require.Error(t, err)
-	assert.Nil(t, decoded)
-	assert.Contains(t, err.Error(), "cannot distinguish the compression algo used given type byte")
+			if tt.expectedError != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+				assert.Nil(t, decoded)
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.expectedOutput, decoded)
+			}
+		})
+	}
 }

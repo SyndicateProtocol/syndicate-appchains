@@ -125,8 +125,9 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	return previousBlock.Hash().Hex(), nil
 }
 
-func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) (txns []hexutil.Bytes, err error) {
+func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) ([]hexutil.Bytes, error) {
 	var multiErr error
+	var txns []hexutil.Bytes
 	for i, rec := range receipts {
 		if rec.Status != ethtypes.ReceiptStatusSuccessful {
 			continue
@@ -151,11 +152,7 @@ func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) (t
 			txns = append(txns, transaction)
 		}
 	}
-	if multiErr != nil {
-		err = multiErr
-	}
-
-	return txns, err
+	return txns, multiErr
 }
 
 func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block) (*types.Batch, error) {

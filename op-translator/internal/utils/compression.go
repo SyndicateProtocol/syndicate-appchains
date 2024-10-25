@@ -21,19 +21,10 @@ func DecompressZlib(compressedData []byte) ([]byte, error) {
 		return nil, err
 	}
 	defer reader.Close()
-
-	decompressedData, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, err
-	}
-	return decompressedData, nil
+	return io.ReadAll(reader)
 }
 
 func DecompressBrotli(compressedData []byte) ([]byte, error) {
 	reader := brotli.NewReader(bytes.NewReader(compressedData))
-	decompressedData, err := io.ReadAll(reader)
-	if err != nil {
-		return nil, err
-	}
-	return decompressedData, nil
+	return io.ReadAll(reader)
 }
