@@ -1,6 +1,7 @@
 package translator
 
 import (
+	"encoding/binary"
 	"fmt"
 	"strings"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog/log"
@@ -22,6 +24,8 @@ const (
 	TransactionProcessedABI  = `[{"anonymous":false,"inputs":[{"indexed":true,"name":"Sender","type":"address"},{"indexed":false,"name":"EncodedData","type":"bytes"}],"name":"TransactionProcessed","type":"event"}]`
 	TransactionProcessedName = "TransactionProcessed"
 	TransactionProcessedSig  = "TransactionProcessed(address,bytes)"
+	NumTransactionsBytes     = 4
+	LengthTransactionBytes   = 4
 )
 
 var TransactionProcessedSigHash = crypto.Keccak256Hash([]byte(TransactionProcessedSig))
@@ -51,7 +55,7 @@ func (l *L3TransactionParser) IsLogTransactionProcessed(ethLog *ethtypes.Log) bo
 	return ethLog.Address == l.sequencingContractAddress && ethLog.Topics[0] == TransactionProcessedSigHash
 }
 
-func (l *L3TransactionParser) ParseTransactionProcessed(ethLog *ethtypes.Log) (*TransactionProcessed, error) {
+func (l *L3TransactionParser) GetEventTransactions(ethLog *ethtypes.Log) ([]hexutil.Bytes, error) {
 	event := TransactionProcessed{}
 	event.Sender = common.HexToAddress(ethLog.Topics[1].Hex())
 
@@ -60,28 +64,66 @@ func (l *L3TransactionParser) ParseTransactionProcessed(ethLog *ethtypes.Log) (*
 		return nil, err
 	}
 
-	return &event, nil
+	transactions, err := DecodeEventData(event.EncodedData)
+	if err != nil {
+		return nil, err
+	}
+
+	return transactions, nil
 }
 
-func (l *L3TransactionParser) DecodeTransactionData(data []byte) ([]byte, error) {
+func DecodeEventData(data []byte) ([]hexutil.Bytes, error) {
 	if len(data) == 0 {
-		return nil, fmt.Errorf("empty data provided")
+		return nil, fmt.Errorf("no data provided for decoding")
 	}
 
 	compressionType := data[0]
-	compressedData := data[1:] // skip the first byte (compressionType)
+	compressedData := data[1:]
+	var decompressedData []byte
+	var err error
 
 	switch {
 	case compressionType == utils.NoCompression:
-		return compressedData, nil
+		return []hexutil.Bytes{hexutil.Bytes(compressedData)}, nil // skip the first byte (compressionType)
 
 	case compressionType&0x0F == utils.ZlibCM8 || compressionType&0x0F == utils.ZlibCM15:
-		return utils.DecompressZlib(data) // zlib needs the compression type byte
+		decompressedData, err = utils.DecompressZlib(data) // zlib needs the compression type byte
 
 	case compressionType == utils.VersionBrotli:
-		return utils.DecompressBrotli(compressedData)
+		decompressedData, err = utils.DecompressBrotli(compressedData) // skip the first byte (compressionType)
 
 	default:
 		return nil, fmt.Errorf("cannot distinguish the compression algo used given type byte %v", compressionType)
 	}
+
+	if err != nil {
+		return nil, err
+	}
+	return ParseEventData(decompressedData)
+}
+
+func ParseEventData(data []byte) ([]hexutil.Bytes, error) {
+	if len(data) < NumTransactionsBytes+LengthTransactionBytes {
+		return nil, fmt.Errorf("insufficient data length to contain transaction details")
+	}
+
+	numTransactions := int(binary.BigEndian.Uint32(data[:NumTransactionsBytes+LengthTransactionBytes]))
+	pos := NumTransactionsBytes
+	transactions := make([]hexutil.Bytes, 0, numTransactions)
+
+	for i := 0; i < numTransactions; i++ {
+		if pos+LengthTransactionBytes-1 > len(data) {
+			return nil, fmt.Errorf("data truncated before expected transaction length")
+		}
+		lengthTransaction := int(binary.BigEndian.Uint32(data[pos : pos+LengthTransactionBytes]))
+		pos += LengthTransactionBytes
+
+		if pos+lengthTransaction > len(data) {
+			return nil, fmt.Errorf("transaction data length exceeds data boundary")
+		}
+
+		transactions = append(transactions, data[pos:pos+lengthTransaction])
+		pos += lengthTransaction
+	}
+	return transactions, nil
 }

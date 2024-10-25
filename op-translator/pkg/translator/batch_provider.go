@@ -127,7 +127,7 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 
 func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) ([]hexutil.Bytes, error) {
 	var multiErr error
-	var txns []hexutil.Bytes
+	var transactions []hexutil.Bytes
 	for i, rec := range receipts {
 		if rec.Status != ethtypes.ReceiptStatusSuccessful {
 			continue
@@ -137,22 +137,15 @@ func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) ([
 			if !m.TransactionParser.IsLogTransactionProcessed(txLog) {
 				continue
 			}
-			proc, parseErr := m.TransactionParser.ParseTransactionProcessed(txLog)
+			transactionsInEvent, parseErr := m.TransactionParser.GetEventTransactions(txLog)
 			if parseErr != nil {
 				multiErr = multierror.Append(multiErr, fmt.Errorf("malformatted l2 receipt log in receipt %d, log %d: %w", i, j, parseErr))
 				continue
 			}
-
-			transaction, decodeErr := m.TransactionParser.DecodeTransactionData(proc.EncodedData)
-			if decodeErr != nil {
-				multiErr = multierror.Append(multiErr, fmt.Errorf("malformatted l2 receipt compression. EncodedData %v. Error: %w", proc.EncodedData, decodeErr))
-				continue
-			}
-
-			txns = append(txns, transaction)
+			transactions = append(transactions, transactionsInEvent...)
 		}
 	}
-	return txns, multiErr
+	return transactions, multiErr
 }
 
 func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block) (*types.Batch, error) {
