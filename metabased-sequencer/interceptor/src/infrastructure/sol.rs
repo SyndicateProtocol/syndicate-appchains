@@ -2,25 +2,10 @@ use crate::domain::primitives::{Address, Bytes};
 use crate::domain::MetabasedSequencerChainService;
 use alloy::network::Network;
 use alloy::providers::Provider;
-use alloy::sol;
 use alloy::transports::Transport;
 use async_trait::async_trait;
 use std::marker::PhantomData;
-use crate::infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance;
-
-sol! {
-    #[derive(Debug, PartialEq, Eq)]
-    #[sol(rpc)]
-    contract MetabasedSequencerChain {
-        event TransactionProcessed(address indexed sender, bytes encodedTxn);
-        error InvalidTransactionForm();
-        function emitTransactionProcessed(bytes calldata encodedTxn) public;
-        function processTransaction(bytes calldata encodedTxn) public;
-        function processBulkTransactions(bytes[] calldata encodedTxns) public;
-        // TODO(SEQ-248): Contract needs to be updated
-        // function processBulkTransactionsCompressed(bytes calldata compressedTxns) public;
-    }
-}
+use crate::infrastructure::MetabasedSequencerChain::MetabasedSequencerChainInstance;
 
 #[derive(Debug)]
 pub struct SolMetabasedSequencerChainService<P: Provider<T, N>, T: Transport + Clone, N: Network> {
@@ -43,7 +28,7 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
     }
 
     pub fn contract(&self) -> MetabasedSequencerChainInstance<T, &P, N> {
-        MetabasedSequencerChain::new(self.account, &self.provider)
+        MetabasedSequencerChainInstance::new(self.account, &self.provider)
     }
 }
 
