@@ -127,7 +127,7 @@ func TestDecodeEventData(t *testing.T) {
 	})
 
 	t.Run("Truncated Data", func(t *testing.T) {
-		data := []byte{0x10} // Too short
+		data := []byte{0x10}
 		_, err := DecodeEventData(data)
 		assert.Error(t, err)
 	})
@@ -170,7 +170,7 @@ func TestParseEventData(t *testing.T) {
 			name: "data truncated before expected transaction length",
 			data: func() []byte {
 				data := make([]byte, NumTransactionsBytes+LengthTransactionBytes+1)
-				binary.BigEndian.PutUint32(data[NumTransactionsBytes:], 10) // Large length value
+				binary.BigEndian.PutUint32(data[NumTransactionsBytes:], 10)
 				return data
 			}(),
 			expectError:  true,
@@ -180,7 +180,7 @@ func TestParseEventData(t *testing.T) {
 			name: "transaction data length exceeds data boundary",
 			data: func() []byte {
 				data := make([]byte, NumTransactionsBytes+LengthTransactionBytes+4)
-				binary.BigEndian.PutUint32(data[NumTransactionsBytes:], 5) // Exceeding boundary
+				binary.BigEndian.PutUint32(data[NumTransactionsBytes:], 5)
 				return data
 			}(),
 			expectError:  true,
@@ -214,7 +214,7 @@ func compressZlib(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return buf.Bytes(), nil // prepend compression type
+	return buf.Bytes(), nil
 }
 
 func compressBrotli(data []byte) ([]byte, error) {
@@ -225,7 +225,7 @@ func compressBrotli(data []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return append([]byte{utils.VersionBrotli}, buf.Bytes()...), nil // prepend compression type
+	return append([]byte{utils.VersionBrotli}, buf.Bytes()...), nil
 }
 func createTestEventData(transactions [][]byte) []byte {
 	var data []byte
