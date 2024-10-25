@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHexToInt(t *testing.T) {
@@ -23,12 +24,11 @@ func TestHexToInt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := utils.HexToInt(tt.input)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("HexToInt() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("HexToInt() = %v, want %v", got, tt.want)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
 			}
 		})
 	}
@@ -52,12 +52,11 @@ func TestHexToUInt64(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := utils.HexToUInt64(tt.input)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("HexToUInt64() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("HexToUInt64() = %v, want %v", got, tt.want)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
 			}
 		})
 	}
@@ -76,9 +75,12 @@ func TestIntToHex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := utils.IntToHex(tt.input); got != tt.want {
-				t.Errorf("IntToHex() = %v, want %v", got, tt.want)
-			}
+			assert.Equal(t, tt.want, utils.IntToHex(tt.input))
 		})
 	}
+}
+
+func TestSecondsToMilliseconds(t *testing.T) {
+	assert.Equal(t, 1000, utils.SecondsToMilliseconds(1))
+	assert.Equal(t, 2000, utils.SecondsToMilliseconds(2))
 }
