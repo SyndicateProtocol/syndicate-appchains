@@ -6,6 +6,8 @@ import (
 	"strings"
 )
 
+const MillisecondsPerSecond = 1000
+
 func HexToInt(hexStr string) (int, error) {
 	if !strings.HasPrefix(hexStr, "0x") {
 		return 0, errors.New("invalid hex string, must start with 0x")
@@ -30,8 +32,6 @@ func HexToUInt64(hexStr string) (uint64, error) {
 func IntToHex(num int) string {
 	return "0x" + strconv.FormatInt(int64(num), 16)
 }
-
-var MillisecondsPerSecond = 1000
 
 func SecondsToMilliseconds(seconds int) int {
 	return seconds * MillisecondsPerSecond
