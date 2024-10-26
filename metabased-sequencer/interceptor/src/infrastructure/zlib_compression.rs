@@ -1,12 +1,12 @@
-use std::convert::Infallible;
-use bytes::{BytesMut};
+use crate::domain;
+use bytes::BytesMut;
 use domain::primitives::Bytes;
+use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
-use std::io::{self, Write};
-use crate::domain;
-use flate2::read::ZlibDecoder;
+use std::convert::Infallible;
 use std::io::Read;
+use std::io::{self, Write};
 
 // Valid Zlib CM bits
 const ZLIB_CM8: u8 = 0x08;
@@ -77,7 +77,7 @@ pub fn compress_transactions(transactions: &[Bytes]) -> Result<Bytes, IoError> {
 }
 
 /// Decompresses zlib compressed Ethereum transactions back into their original form
-pub fn decompress_transactions(compressed: &Bytes) -> Result<Vec<Bytes>, IoError>{
+pub fn decompress_transactions(compressed: &Bytes) -> Result<Vec<Bytes>, IoError> {
     is_valid_cm_bits_8_or_15(compressed)?;
 
     let mut decoder = ZlibDecoder::new(&compressed[..]);
@@ -89,7 +89,10 @@ pub fn decompress_transactions(compressed: &Bytes) -> Result<Vec<Bytes>, IoError
 
     // Read number of transactions
     if buffer.len() < 4 {
-        return Err(IoError(io::Error::new(io::ErrorKind::InvalidData, "Invalid compressed data")));
+        return Err(IoError(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Invalid compressed data",
+        )));
     }
     let num_transactions = u32::from_be_bytes(buffer[0..4].try_into().unwrap());
     pos += 4;
@@ -97,17 +100,23 @@ pub fn decompress_transactions(compressed: &Bytes) -> Result<Vec<Bytes>, IoError
     // Read each transaction
     for _ in 0..num_transactions {
         if pos + 4 > buffer.len() {
-            return Err(IoError(io::Error::new(io::ErrorKind::InvalidData,  "Truncated data")));
+            return Err(IoError(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Truncated data",
+            )));
         }
 
-        let tx_len = u32::from_be_bytes(buffer[pos..pos+4].try_into().unwrap()) as usize;
+        let tx_len = u32::from_be_bytes(buffer[pos..pos + 4].try_into().unwrap()) as usize;
         pos += 4;
 
         if pos + tx_len > buffer.len() {
-            return Err(IoError(io::Error::new(io::ErrorKind::InvalidData,  "Truncated transaction")));
+            return Err(IoError(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "Truncated transaction",
+            )));
         }
 
-        transactions.push(Bytes::copy_from_slice(&buffer[pos..pos+tx_len]));
+        transactions.push(Bytes::copy_from_slice(&buffer[pos..pos + tx_len]));
         pos += tx_len;
     }
 
@@ -115,18 +124,28 @@ pub fn decompress_transactions(compressed: &Bytes) -> Result<Vec<Bytes>, IoError
 }
 
 /// Validates CM bits in the zlib header against allowed values
-fn validate_cm_bits<T: AsRef<[u8]>>(compressed: T, allowed_values: &[u8], error_msg: &str) -> Result<(), IoError> {
+fn validate_cm_bits<T: AsRef<[u8]>>(
+    compressed: T,
+    allowed_values: &[u8],
+    error_msg: &str,
+) -> Result<(), IoError> {
     let compressed = compressed.as_ref();
 
     // Check for empty data first
     if compressed.is_empty() {
-        return Err(IoError(io::Error::new(io::ErrorKind::InvalidData, "Empty compressed data")))
+        return Err(IoError(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Empty compressed data",
+        )));
     }
 
     // Extract CM bits and check against allowed values
     let cm_bits = compressed[0] & CM_BITS_MASK;
     if !allowed_values.contains(&cm_bits) {
-        return Err(IoError(io::Error::new(io::ErrorKind::InvalidData, error_msg)))
+        return Err(IoError(io::Error::new(
+            io::ErrorKind::InvalidData,
+            error_msg,
+        )));
     }
 
     Ok(())
@@ -137,39 +156,39 @@ fn is_valid_cm_bits_8_only<T: AsRef<[u8]>>(compressed: T) -> Result<(), IoError>
     validate_cm_bits(
         compressed,
         &[ZLIB_CM8],
-        "Invalid CM bits in compressed data, expected ZLIB_CM8"
+        "Invalid CM bits in compressed data, expected ZLIB_CM8",
     )
 }
 
 /// Validates that CM bits are either 8 or 15
-fn is_valid_cm_bits_8_or_15<T: AsRef<[u8]>>(compressed: T) -> Result<(), IoError>  {
+fn is_valid_cm_bits_8_or_15<T: AsRef<[u8]>>(compressed: T) -> Result<(), IoError> {
     validate_cm_bits(
         compressed,
         &[ZLIB_CM8, ZLIB_CM15],
-        "Invalid CM bits in compressed data, expected ZLIB_CM8 or ZLIB_CM15"
+        "Invalid CM bits in compressed data, expected ZLIB_CM8 or ZLIB_CM15",
     )
 }
 
 #[cfg(test)]
 mod tests {
-    use std::time::Instant;
     use super::*;
     use alloy_primitives::hex_literal::hex;
+    use std::time::Instant;
 
     #[test]
     fn test_valid_cm_bits() {
         // Test CM8
-        let valid_cm8 = vec![0x08];  // CM bits = 8
+        let valid_cm8 = vec![0x08]; // CM bits = 8
         assert!(is_valid_cm_bits_8_only(&valid_cm8).is_ok());
         assert!(is_valid_cm_bits_8_or_15(valid_cm8).is_ok());
 
         // Test CM15
-        let valid_cm15 = vec![0x0F];  // CM bits = 15
+        let valid_cm15 = vec![0x0F]; // CM bits = 15
         assert!(is_valid_cm_bits_8_only(&valid_cm15).is_err());
         assert!(is_valid_cm_bits_8_or_15(valid_cm15).is_ok());
 
         // Test with compression info bits set
-        let valid_with_info = vec![0x78];  // CM bits = 8, info bits = 7
+        let valid_with_info = vec![0x78]; // CM bits = 8, info bits = 7
         assert!(is_valid_cm_bits_8_only(valid_with_info).is_ok());
     }
 
@@ -180,7 +199,7 @@ mod tests {
         assert!(is_valid_cm_bits_8_only(empty).is_err());
 
         // Test invalid CM bits
-        let invalid = vec![0x01];  // CM bits = 1
+        let invalid = vec![0x01]; // CM bits = 1
         assert!(is_valid_cm_bits_8_only(&invalid).is_err());
         assert!(is_valid_cm_bits_8_or_15(invalid).is_err());
     }
@@ -285,7 +304,7 @@ mod tests {
         let txs = vec![
             Bytes::copy_from_slice(&SAMPLE_TX_1),
             Bytes::copy_from_slice(&SAMPLE_TX_2[0..50]), // Partial TX
-            Bytes::copy_from_slice(&[1, 2, 3, 4, 5]), // Small TX
+            Bytes::copy_from_slice(&[1, 2, 3, 4, 5]),    // Small TX
             Bytes::copy_from_slice(&SAMPLE_TX_3),
             Bytes::copy_from_slice(&SAMPLE_TX_4),
         ];
@@ -300,13 +319,16 @@ mod tests {
         assert_eq!(txs, decompressed);
         assert_eq!(compressed[0] & CM_BITS_MASK, ZLIB_CM8); // Verify CM bits
 
-
         // Check compression ratio
         let original_size: usize = txs.iter().map(|tx| tx.len()).sum();
         let compressed_size: usize = compressed.len();
         let decompressed_size: usize = decompressed.iter().map(|tx| tx.len()).sum();
         let ratio = (1.0 - (compressed_size as f64 / original_size as f64)) * 100.0;
-        println!("Multiple TX (n={}) compression ratio: {:.2}%", txs.len(), ratio);
+        println!(
+            "Multiple TX (n={}) compression ratio: {:.2}%",
+            txs.len(),
+            ratio
+        );
         println!("Original size: {} bytes", original_size);
         println!("Compressed size: {} bytes", compressed_size);
         println!("Decompressed size: {} bytes", decompressed_size);
@@ -331,7 +353,9 @@ mod tests {
         assert!(decompress_transactions(&bytes_immutable).is_err());
 
         // Test 3: Truncated compressed data
-        let truncated = Bytes::copy_from_slice(&compress_transactions(&[Bytes::copy_from_slice(&SAMPLE_TX_1)]).unwrap()[0..5]);
+        let truncated = Bytes::copy_from_slice(
+            &compress_transactions(&[Bytes::copy_from_slice(&SAMPLE_TX_1)]).unwrap()[0..5],
+        );
         assert!(decompress_transactions(&truncated).is_err());
 
         // Test 4: Valid zlib header but invalid content
@@ -369,7 +393,11 @@ mod tests {
         let decompressed_size: usize = decompressed.iter().map(|tx| tx.len()).sum();
         let ratio = (1.0 - (compressed.len() as f64 / original_size as f64)) * 100.0;
 
-        println!("Large batch (n={}) compression ratio: {:.2}%", txs.len(), ratio);
+        println!(
+            "Large batch (n={}) compression ratio: {:.2}%",
+            txs.len(),
+            ratio
+        );
         println!("Original size: {} bytes", original_size);
         println!("Compressed size: {} bytes", compressed_size);
         println!("Decompressed size: {} bytes", decompressed_size);

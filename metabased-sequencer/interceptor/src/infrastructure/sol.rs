@@ -1,12 +1,13 @@
-use crate::domain::primitives::{Address, Bytes};
+use crate::domain::primitives::{Address, Bytes, TxHash};
 use crate::domain::MetabasedSequencerChainService;
+use crate::infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance;
 use alloy::network::Network;
 use alloy::providers::Provider;
 use alloy::sol;
 use alloy::transports::Transport;
 use async_trait::async_trait;
 use std::marker::PhantomData;
-use crate::infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance;
+use std::time::Duration;
 
 sol! {
     #[derive(Debug, PartialEq, Eq)]
@@ -53,15 +54,28 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
 {
     type Error = alloy::contract::Error;
 
-    async fn process_transaction(&self, tx: Bytes) -> Result<(), Self::Error> {
-        // Do not compress individual transaction, doesn't get smaller
-        self.contract().processTransaction(tx).call().await?;
-        Ok(())
+    async fn process_transaction(&self, tx: Bytes) -> Result<TxHash, Self::Error> {
+        Ok(self
+            .contract()
+            .processTransaction(tx)
+            .send()
+            .await?
+            .with_required_confirmations(2)
+            .with_timeout(Some(Duration::from_secs(60)))
+            .watch()
+            .await?)
     }
 
-    async fn process_bulk_transactions(&self, tx: Vec<Bytes>) -> Result<(), Self::Error> {
-        self.contract().processBulkTransactions(tx).call().await?;
-        Ok(())
+    async fn process_bulk_transactions(&self, tx: Vec<Bytes>) -> Result<TxHash, Self::Error> {
+        Ok(self
+            .contract()
+            .processBulkTransactions(tx)
+            .send()
+            .await?
+            .with_required_confirmations(2)
+            .with_timeout(Some(Duration::from_secs(60)))
+            .watch()
+            .await?)
     }
 
     // TODO (SEQ-248): Implement bulk transactions

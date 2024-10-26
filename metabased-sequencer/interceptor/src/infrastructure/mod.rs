@@ -3,4 +3,4 @@ mod sol;
 mod zlib_compression;
 
 pub use sol::SolMetabasedSequencerChainService;
-pub use zlib_compression::{compress_transactions};
+pub use zlib_compression::compress_transactions;
