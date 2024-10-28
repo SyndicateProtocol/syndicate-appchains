@@ -104,6 +104,21 @@ func DecodeEventData(data []byte) ([]hexutil.Bytes, error) {
 }
 
 func ParseEventData(data []byte) ([]hexutil.Bytes, error) {
+	/*
+		Data Format:
+		| NumTransactions (4 bytes) | LengthTransaction 1 (4 bytes) | Transaction 1 (variable length) | LengthTransaction | Transaction 2 | ... |
+
+		Explanation:
+		- The first 4 bytes represent the total number of transactions (NumTransactions).
+		- Each transaction is preceded by a 4-byte field indicating its length (LengthTransaction).
+		- Each transaction data segment follows its respective length field, with the length in bytes specified by LengthTransaction.
+		- This pattern repeats for the specified number of transactions.
+
+		Example:
+		| 00 00 00 02 | 00 00 00 05 | <Transaction 1 data> | 00 00 00 03 | <Transaction 2 data> |
+		- 2 transactions, with lengths 5 and 3 bytes respectively.
+	*/
+
 	if len(data) < NumTransactionsBytes+LengthTransactionBytes {
 		return nil, fmt.Errorf("insufficient data length to contain transaction details")
 	}
