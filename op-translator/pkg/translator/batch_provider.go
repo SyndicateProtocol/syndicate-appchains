@@ -3,7 +3,6 @@ package translator
 import (
 	"context"
 	"errors"
-	"fmt"
 	"math/big"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
@@ -11,7 +10,6 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
-	"github.com/hashicorp/go-multierror"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -125,8 +123,7 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	return previousBlock.Hash().Hex(), nil
 }
 
-func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) ([]hexutil.Bytes, error) {
-	var multiErr error
+func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) []hexutil.Bytes {
 	var transactions []hexutil.Bytes
 	for i, rec := range receipts {
 		if rec.Status != ethtypes.ReceiptStatusSuccessful {
@@ -139,13 +136,13 @@ func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) ([
 			}
 			transactionsInEvent, parseErr := m.TransactionParser.GetEventTransactions(txLog)
 			if parseErr != nil {
-				multiErr = multierror.Append(multiErr, fmt.Errorf("malformatted l2 receipt log in receipt %d, log %d: %w", i, j, parseErr))
+				log.Warn().Err(parseErr).Msgf("malformatted l2 receipt log in receipt %d, log %d", i, j)
 				continue
 			}
 			transactions = append(transactions, transactionsInEvent...)
 		}
 	}
-	return transactions, multiErr
+	return transactions
 }
 
 func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block) (*types.Batch, error) {
@@ -170,10 +167,7 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 	}
 	log.Debug().Msgf("Translating block number %s and hash %s: receipts: %v", blockNumber, blockHash, receipts)
 
-	txns, err := m.FilterReceipts(receipts)
-	if err != nil {
-		return nil, err
-	}
+	txns := m.FilterReceipts(receipts)
 	log.Debug().Msgf("Translating block number %s and hash %s: filtered transactions: %v", blockNumber, blockHash, txns)
 
 	parentHash, err := m.getParentBlockHash(ctx, blockNumber)

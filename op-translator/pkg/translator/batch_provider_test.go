@@ -112,9 +112,7 @@ func TestFilterReceipts(t *testing.T) {
 		},
 	}
 
-	txns, err := metaBasedBatchProvider.FilterReceipts(receipts)
-
-	require.NoError(t, err)
+	txns := metaBasedBatchProvider.FilterReceipts(receipts)
 	assert.Len(t, txns, 2)
 	assert.Equal(t, hexutil.Bytes{DummyTxn[1]}, txns[0])
 	assert.Equal(t, hexutil.Bytes{DummyTxn[1]}, txns[1])
@@ -149,9 +147,7 @@ func TestFilterReceiptsWithExtraLog(t *testing.T) {
 		},
 	}
 
-	txns, err := metaBasedBatchProvider.FilterReceipts(receipts)
-
-	assert.NoError(t, err)
+	txns := metaBasedBatchProvider.FilterReceipts(receipts)
 	assert.Len(t, txns, 1)
 	assert.Equal(t, hexutil.Bytes{DummyTxn[1]}, txns[0])
 }
