@@ -15,6 +15,15 @@ const (
 	NoCompression byte = 0x0
 )
 
+type CompressionType string
+
+const (
+	CompressionTypeZlib    CompressionType = "zlib"
+	CompressionTypeBrotli  CompressionType = "brotli"
+	CompressionTypeNone    CompressionType = "none"
+	CompressionTypeUnknown CompressionType = "unknown"
+)
+
 func DecompressZlib(compressedData []byte) ([]byte, error) {
 	reader, err := zlib.NewReader(bytes.NewReader(compressedData))
 	if err != nil {
@@ -27,4 +36,20 @@ func DecompressZlib(compressedData []byte) ([]byte, error) {
 func DecompressBrotli(compressedData []byte) ([]byte, error) {
 	reader := brotli.NewReader(bytes.NewReader(compressedData))
 	return io.ReadAll(reader)
+}
+
+func GetCompressionType(versionByte byte) CompressionType {
+	switch {
+	case versionByte == NoCompression:
+		return CompressionTypeNone
+
+	case versionByte&0x0F == ZlibCM8 || versionByte&0x0F == ZlibCM15:
+		return CompressionTypeZlib
+
+	case versionByte == VersionBrotli:
+		return CompressionTypeBrotli
+
+	default:
+		return CompressionTypeUnknown
+	}
 }

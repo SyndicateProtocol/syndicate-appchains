@@ -73,31 +73,34 @@ func (l *L3TransactionParser) GetEventTransactions(ethLog *ethtypes.Log) ([]hexu
 }
 
 func DecodeEventData(data []byte) ([]hexutil.Bytes, error) {
-	if len(data) == 0 {
+	if len(data) <= 1 {
 		return nil, fmt.Errorf("no data provided for decoding")
 	}
 
-	compressionType := data[0]
+	compressionType := utils.GetCompressionType(data[0])
 	compressedData := data[1:]
 	var decompressedData []byte
 	var err error
 
-	switch {
-	case compressionType == utils.NoCompression:
-		return []hexutil.Bytes{hexutil.Bytes(compressedData)}, nil // skip the first byte (compressionType)
+	switch compressionType {
+	case utils.CompressionTypeNone:
+		// No decompression needed
+		return []hexutil.Bytes{hexutil.Bytes(compressedData)}, nil
 
-	case compressionType&0x0F == utils.ZlibCM8 || compressionType&0x0F == utils.ZlibCM15:
-		decompressedData, err = utils.DecompressZlib(data) // zlib needs the compression type byte
+	case utils.CompressionTypeZlib:
+		// Zlib  expects the compression type byte included.
+		decompressedData, err = utils.DecompressZlib(data)
 
-	case compressionType == utils.VersionBrotli:
-		decompressedData, err = utils.DecompressBrotli(compressedData) // skip the first byte (compressionType)
+	case utils.CompressionTypeBrotli:
+		// skip the first byte (compressionType).
+		decompressedData, err = utils.DecompressBrotli(compressedData)
 
-	default:
-		return nil, fmt.Errorf("cannot distinguish the compression algo used given type byte %v", compressionType)
+	case utils.CompressionTypeUnknown:
+		return nil, fmt.Errorf("unknown compression type byte %v", compressionType)
 	}
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("decompression failed: %w", err)
 	}
 
 	return ParseEventData(decompressedData)
