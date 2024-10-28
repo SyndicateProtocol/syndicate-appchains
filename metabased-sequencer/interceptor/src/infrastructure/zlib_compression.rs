@@ -7,6 +7,7 @@ use std::io::{self, Write};
 use crate::domain;
 use flate2::read::ZlibDecoder;
 use std::io::Read;
+use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
 // Valid Zlib CM bits
 const ZLIB_CM8: u8 = 0x08;
@@ -24,6 +25,15 @@ pub fn compress_transaction(transaction: &[u8]) -> Result<Vec<u8>, IoError> {
     is_valid_cm_bits_8_only(&compressed)?;
 
     Ok(compressed)
+}
+
+// Compresses a single Ethereum transaction using zlib compression and encodes it in base64 for easier transport
+// Used as a utility to test de/compression
+pub fn compress_transaction_base64(transaction: &[u8]) -> Result<String, IoError> {
+    let vec = compress_transaction(transaction)?;
+    let base64_encoded = BASE64.encode(&vec);
+
+    Ok(base64_encoded)
 }
 
 /// Decompresses a single zlib compressed Ethereum transaction
@@ -221,6 +231,15 @@ mod tests {
         println!("Compression time: {:?}", compress_time);
         println!("Decompression time: {:?}", decompression_time);
         println!();
+    }
+
+    // Utility for transporting compressed data to other consumers, such as `op-translator` (written in Go)
+    #[test]
+    fn test_single_tx_compression_base64() {
+        let input = &SAMPLE_TX_1;
+        let compressed = compress_transaction_base64(input).unwrap();
+
+        assert_eq!(compressed, "eJwBbgCR/wL4a4MBSjQHgw9CQIMPRD6CUgiUTlJ0hllGlqdgf/M3niF0Zomj/W0UgMCAoFAuwecqpdjlLyVHw9y5c9YSk2SCjqVM/RZup0NQpgzUoC23C6ec+xikXWtBXliu2JR7tm78EVbCBn5Z1Opcac/LSEwzgg==");
     }
 
     #[test]
