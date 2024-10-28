@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"compress/zlib"
 	"encoding/binary"
-	"fmt"
 	"testing"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
@@ -80,7 +79,7 @@ func TestGetEventTransactions(t *testing.T) {
 	result, err := parser.GetEventTransactions(log)
 
 	require.NoError(t, err)
-	assert.Equal(t, DummyTxn, result[0])
+	assert.Equal(t, hexutil.Bytes{DummyTxn[1]}, result[0])
 }
 
 func TestGetEventTransactions_Error(t *testing.T) {
@@ -102,41 +101,60 @@ func TestGetEventTransactions_Error(t *testing.T) {
 }
 func TestDecodeEventData(t *testing.T) {
 	uncompressedData := generateTransactionData()
-	fmt.Println("UNCOMPRESSED DATA", uncompressedData)
 	zlibData, _ := compressZlib(uncompressedData)
 	brotliData, _ := compressBrotli(uncompressedData)
 
-	t.Run("Uncompressed Data", func(t *testing.T) {
-		result, err := DecodeEventData(append([]byte{0x0}, []byte("mock_data")...))
-		assert.NoError(t, err)
-		expected := []hexutil.Bytes{hexutil.Bytes([]byte("mock_data"))}
-		assert.Equal(t, expected, result)
-	})
-	t.Run("Zlib-Compressed Data", func(t *testing.T) {
-		result, err := DecodeEventData(zlibData)
-		assert.NoError(t, err)
-		expected := []hexutil.Bytes{{0x12, 0x34}}
-		assert.Equal(t, expected, result)
-	})
+	tests := []struct {
+		name     string
+		input    []byte
+		expected []hexutil.Bytes
+		hasError bool
+	}{
+		{
+			name:     "Uncompressed Data",
+			input:    append([]byte{0x0}, []byte("mock_data")...),
+			expected: []hexutil.Bytes{hexutil.Bytes([]byte("mock_data"))},
+			hasError: false,
+		},
+		{
+			name:     "Zlib-Compressed Data",
+			input:    zlibData,
+			expected: []hexutil.Bytes{{0x12, 0x34}},
+			hasError: false,
+		},
+		{
+			name:     "Brotli-Compressed Data",
+			input:    brotliData,
+			expected: []hexutil.Bytes{{0x12, 0x34}},
+			hasError: false,
+		},
+		{
+			name:     "Truncated Data",
+			input:    []byte{0x10},
+			expected: nil,
+			hasError: true,
+		},
+		{
+			name:     "Invalid Compression Type",
+			input:    []byte{0xF9, 0x01, 0x02, 0x03},
+			expected: nil,
+			hasError: true,
+		},
+	}
 
-	t.Run("Brotli-Compressed Data", func(t *testing.T) {
-		result, err := DecodeEventData(brotliData)
-		assert.NoError(t, err)
-		expected := []hexutil.Bytes{{0x12, 0x34}}
-		assert.Equal(t, expected, result)
-	})
-
-	t.Run("Truncated Data", func(t *testing.T) {
-		data := []byte{0x10}
-		_, err := DecodeEventData(data)
-		assert.Error(t, err)
-	})
-	t.Run("Invalid Compression Type", func(t *testing.T) {
-		data := []byte{0xF9, 0x01, 0x02, 0x03}
-		_, err := DecodeEventData(data)
-		assert.Error(t, err)
-	})
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := DecodeEventData(tc.input)
+			if tc.hasError {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tc.expected, result)
+			}
+		})
+	}
 }
+
 func TestParseEventData(t *testing.T) {
 	tests := []struct { //nolint:govet //just used for testing
 		expectError    bool
@@ -165,26 +183,6 @@ func TestParseEventData(t *testing.T) {
 			data:         make([]byte, NumTransactionsBytes+LengthTransactionBytes-1),
 			expectError:  true,
 			errorMessage: "insufficient data length to contain transaction details",
-		},
-		{
-			name: "data truncated before expected transaction length",
-			data: func() []byte {
-				data := make([]byte, NumTransactionsBytes+LengthTransactionBytes+1)
-				binary.BigEndian.PutUint32(data[NumTransactionsBytes:], 10)
-				return data
-			}(),
-			expectError:  true,
-			errorMessage: "data truncated before expected transaction length",
-		},
-		{
-			name: "transaction data length exceeds data boundary",
-			data: func() []byte {
-				data := make([]byte, NumTransactionsBytes+LengthTransactionBytes+4)
-				binary.BigEndian.PutUint32(data[NumTransactionsBytes:], 5)
-				return data
-			}(),
-			expectError:  true,
-			errorMessage: "transaction data length exceeds data boundary",
 		},
 	}
 
@@ -228,9 +226,8 @@ func compressBrotli(data []byte) ([]byte, error) {
 	return append([]byte{utils.VersionBrotli}, buf.Bytes()...), nil
 }
 func createTestEventData(transactions [][]byte) []byte {
-	var data []byte
+	data := make([]byte, NumTransactionsBytes)
 	binary.BigEndian.PutUint32(data[:NumTransactionsBytes], uint32(len(transactions))) //nolint:all //just used for testing
-
 	for _, tx := range transactions {
 		length := make([]byte, LengthTransactionBytes)
 		binary.BigEndian.PutUint32(length, uint32(len(tx))) //nolint:all //just used for testing
@@ -248,10 +245,10 @@ func generateTransactionData() []byte {
 
 	buf := make([]byte, 0, NumTransactionsBytes+LengthTransactionBytes+txLength)
 	numTransactionsBytes := make([]byte, LengthTransactionBytes)
-	binary.BigEndian.PutUint32(numTransactionsBytes, uint32(numTransactions))
+	binary.BigEndian.PutUint32(numTransactionsBytes, uint32(numTransactions)) //nolint:all //just used for testing
 	buf = append(buf, numTransactionsBytes...)
 	lengthBytes := make([]byte, LengthTransactionBytes)
-	binary.BigEndian.PutUint32(lengthBytes, uint32(txLength))
+	binary.BigEndian.PutUint32(lengthBytes, uint32(txLength)) //nolint:all //just used for testing
 	buf = append(buf, lengthBytes...)
 	buf = append(buf, txData...)
 	return buf

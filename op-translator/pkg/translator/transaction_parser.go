@@ -99,6 +99,7 @@ func DecodeEventData(data []byte) ([]hexutil.Bytes, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	return ParseEventData(decompressedData)
 }
 
