@@ -109,11 +109,11 @@ func (m *MetaBasedBatchProviderArb) FilterReceipts(receipts []*ethtypes.Receipt)
 
 		for j, txLog := range rec.Logs {
 			if m.TransactionParser.IsLogTransactionProcessed(txLog) {
-				proc, err := m.TransactionParser.ParseTransactionProcessed(txLog)
+				txn, err := m.TransactionParser.GetEventTransactions(txLog)
 				if err != nil {
 					result = multierror.Append(result, fmt.Errorf("malformatted l2 receipt log in receipt %d, log %d: %w", i, j, err))
 				} else {
-					txns = append(txns, proc.EncodedTxn)
+					txns = append(txns, txn...)
 				}
 			}
 		}
