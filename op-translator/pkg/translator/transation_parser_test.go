@@ -106,7 +106,7 @@ func TestDecodeEventData(t *testing.T) {
 	zlibData, _ := compressZlib(uncompressedData)
 	brotliData, _ := compressBrotli(uncompressedData)
 
-	// TODO (SEQ-XXX): Use shared input folder
+	// TODO (SEQ-250): Use shared input folder
 	// Real data from the metabased-sequencer
 	// Link: https://github.com/SyndicateProtocol/metabased-rollup/pull/38/files#diff-899764f1a0141b8b7d697a7267fca84a7ad749984a49050d44be069bbfe6130bR338
 	realZlibData, _ := base64.StdEncoding.DecodeString("eJylzTsIAXEAgPE/CYVEkpUykEdJTOQVJQlJrpBBSnIpNoWcFIOFTJLyuEGZPAflMRgky6UbrFK3WhRXjCaL3/71AQCoAACY+kgiFKeWgXAtJoRrM5Z8zKbbl61A9hYaLdz1HXE2Xu2RKUFxXex6VJubfIBf1VLH7rLMnPmNWKk+cJFCGLV6hmysq5yz0PZT1A8nzZHgGG/mZvCLF9jS8xBGhBKnw+dYPk79BPiyWNL2BvUE32RkNe+2MEpLFBrwS6Cq+6uHVpw3gaRL/g==")
