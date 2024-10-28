@@ -38,6 +38,7 @@ type Config struct {
 	BatcherPrivateKey          string `koanf:"batcher_private_key"`
 	LogLevel                   string `koanf:"log_level"`
 	SettlementChainID          int64  `koanf:"settlement_chain_id"`
+	SettlementChainBlockTime   int    `koanf:"settlement_chain_block_time"`
 	SettlementStartBlock       int    `koanf:"settlement_start_block"`
 	SequencingStartBlock       int    `koanf:"sequencing_start_block"`
 	SequencePerSettlementBlock int    `koanf:"sequence_per_settlement_block"`
@@ -64,6 +65,7 @@ func setCLIFlags(f *pflag.FlagSet) {
 	f.Int("sequence_per_settlement_block", 0, "Number of sequencing blocks per settlement block")
 	f.String("batcher_private_key", "", "Batcher private key")
 	f.Int("settlement_chain_id", 1, "Settlement chain id")
+	f.Int("settlement_chain_block_time", 1, "Settlement chain block time")
 }
 
 // hydrateFromConfMap sets the Config values from the koanf conf map
@@ -85,6 +87,7 @@ func hydrateFromConfMap(config *Config) {
 	config.SequencePerSettlementBlock = k.Int("sequence_per_settlement_block")
 	config.BatcherPrivateKey = k.String("batcher_private_key")
 	config.SettlementChainID = k.Int64("settlement_chain_id")
+	config.SettlementChainBlockTime = k.Int("settlement_chain_block_time")
 }
 
 func Init() *Config {
@@ -193,6 +196,10 @@ func ValidateConfigValues(config *Config) (result error) {
 
 	if config.SettlementChainID <= 0 {
 		result = multierror.Append(result, fmt.Errorf("settlementChainID must be a positive number: %d", config.SettlementChainID))
+	}
+
+	if config.SettlementChainBlockTime <= 0 {
+		result = multierror.Append(result, fmt.Errorf("settlementChainBlockTime must be a positive number: %d", config.SettlementChainBlockTime))
 	}
 
 	return result

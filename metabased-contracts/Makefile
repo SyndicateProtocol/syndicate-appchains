@@ -6,7 +6,7 @@
 -include .env
 
 # deploy MetabasedFactory to Base Sepolia
-deploy-metabased-sequencerchain :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedFactory --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+deploy-metabased-factory :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedFactory --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
 # deploy DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule to Metabased Testnet
 deploy-metabased-sequencerchain-plus-setup-with-always-allow-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
@@ -15,9 +15,7 @@ deploy-metabased-sequencerchain-plus-setup-with-always-allow-module :; forge scr
 add-batch-transactions-to-metabased-sequencerchain :; forge script script/AddBatchTransactionsToMetabasedSequencerChainContract.s.sol:AddBatchTransactionsToMetabasedSequencerChainContract --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
 ## deploy Metafiller related contracts to Metabased Testnet
-deploy-l3-backfill-storage :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillStorage.sol:L3BackfillStorage --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
-
-deploy-l3-backfill-mapper :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/L3BackfillMapper.sol:L3BackfillMapper --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
+deploy-metafiller-storage :; forge create --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} src/backfill/MetafillerStorage.sol:MetafillerStorage --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR} ${L3_CHAIN_ID}
 
 
 ## Tx Limit Test
@@ -27,6 +25,3 @@ deploy-l3-backfill-mapper :; forge create --rpc-url metabased_testnet --private-
 test-tx-limit :; forge test --match-contract MetabaseSequencerChainIntegrationTest -vv > test/integration/metabase-tx-limit-data/optimism_test_output_$(date +%Y%m%d_%H%M%S).log 2>&1
 
 test-events-limit :; forge test --match-contract MetabaseSequencerChainEventLimitTest -vv > test/integration/metabase-events-limit-data/base_sepolia_test_output_$(date +%Y%m%d_%H%M%S).md 2>&1
-
-
-

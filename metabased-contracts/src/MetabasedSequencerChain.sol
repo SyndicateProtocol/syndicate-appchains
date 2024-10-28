@@ -23,7 +23,8 @@ contract MetabasedSequencerChain is RequireListManager {
 
     /// @notice Constructs the MetabasedSequencerChain contract.
     /// @param _l3ChainId The ID of the L3 chain that this contract is sequencing transactions for.
-    constructor(uint256 _l3ChainId) RequireListManager() {
+    /// @param admin The address that will be set as the admin
+    constructor(uint256 _l3ChainId, address admin) RequireListManager(admin) {
         // chain id zero has no replay protection : https://eips.ethereum.org/EIPS/eip-3788
         require(_l3ChainId != 0, "L3 chain ID cannot be 0");
 
@@ -40,11 +41,6 @@ contract MetabasedSequencerChain is RequireListManager {
     /// @notice Processes a single encoded transaction.
     /// @param encodedTxn The encoded transaction data.
     function processTransaction(bytes calldata encodedTxn) public {
-        // Validate transaction form
-        if (!isValidTransactionForm(encodedTxn)) {
-            revert InvalidTransactionForm();
-        }
-
         // Check if msg.sender is allowed
         requireAllAllowed(msg.sender);
         requireAnyAllowed(msg.sender);
@@ -84,15 +80,5 @@ contract MetabasedSequencerChain is RequireListManager {
         }
 
         emit ChunkProcessed(chunkId, chunkSize);
-    }
-
-    /// @dev Validates the form of the encoded transaction.
-    /// @param encodedTxn The encoded transaction to validate.
-    /// @return bool True if the transaction form is valid, false otherwise.
-    function isValidTransactionForm(bytes calldata encodedTxn) internal pure returns (bool) {
-        // TODO: Implement transaction form validation logic here
-        // Linear task: https://linear.app/syndicate/issue/SEQ-80/implement-transaction-form-validation
-        // It should be replaced with actual validation
-        return encodedTxn.length > 0;
     }
 }

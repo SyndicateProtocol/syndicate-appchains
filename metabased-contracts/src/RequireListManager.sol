@@ -45,7 +45,8 @@ abstract contract RequireListManager is Ownable {
 
     /// @dev Constructor function
     /// @notice Sets the admin to the address that deploys the contract
-    constructor() Ownable(msg.sender) {}
+    /// @param admin The address that will be set as the admin
+    constructor(address admin) Ownable(admin) {}
 
     /// @notice Checks if all requireAll checks pass for the given batch submitter
     /// @dev While this requires a revert, someone can always check the list item by

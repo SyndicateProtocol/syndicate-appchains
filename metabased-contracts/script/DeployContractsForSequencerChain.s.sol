@@ -26,11 +26,10 @@ contract DeployMetabasedFactory is Script {
         console.log("Deployed MetabasedFactory", address(metabasedFactory));
 
         // create new MetabasedSequencerChain contracts
-        (address sequencerChain, address backfillMapper, address backfillStorage) =
+        (address sequencerChain, address metafillerStorage) =
             metabasedFactory.createAllContracts(admin, manager, l3ChainId);
         console.log("Deployed MetabasedSequencerChain", sequencerChain);
-        console.log("Deployed L3BackfillMapper", backfillMapper);
-        console.log("Deployed L3BackfillStorage", backfillStorage);
+        console.log("Deployed MetafillerStorage", metafillerStorage);
 
         vm.stopBroadcast();
     }
@@ -46,7 +45,9 @@ contract DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule is Script {
 
         l3ChainId = 0; // TODO: Set the L3 chain ID
 
-        metabasedSequencerChainContract = new MetabasedSequencerChain(l3ChainId);
+        address admin = vm.envOr("ADMIN_ADDR", msg.sender);
+
+        metabasedSequencerChainContract = new MetabasedSequencerChain(l3ChainId, admin);
         console.log("Deployed MetabasedSequencerChain", address(metabasedSequencerChainContract));
 
         AlwaysAllowedModule alwaysAllowedModule = new AlwaysAllowedModule();

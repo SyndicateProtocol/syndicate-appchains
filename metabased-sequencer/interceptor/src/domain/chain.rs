@@ -9,6 +9,9 @@ pub trait MetabasedSequencerChainService {
     async fn process_transaction(&self, tx: Bytes) -> Result<(), Self::Error>;
 
     async fn process_bulk_transactions(&self, tx: Vec<Bytes>) -> Result<(), Self::Error>;
+
+    // TODO (SEQ-248): Contract needs to be updated
+    // async fn process_bulk_transactions_compressed(&self, txns: Bytes) -> Result<(), Self::Error>; 
 }
 
 #[cfg(test)]
@@ -47,5 +50,12 @@ mod tests {
 
             Ok(())
         }
+        
+        // TODO SEQ-248: Implement bulk transactions
+        // async fn process_bulk_transactions_compressed(&self, txns: Bytes) -> Result<(), Infallible> {
+        //     self.transactions.write().await.push(txns);
+        // 
+        //     Ok(())
+        // }
     }
 }
