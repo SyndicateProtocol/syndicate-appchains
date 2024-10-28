@@ -3,7 +3,6 @@ package backfill
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 
@@ -48,7 +47,6 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber stri
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
-	fmt.Println("BODY", body)
 	if err != nil {
 		return nil, err
 	}
