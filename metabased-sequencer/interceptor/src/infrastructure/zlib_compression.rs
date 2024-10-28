@@ -27,15 +27,6 @@ pub fn compress_transaction(transaction: &[u8]) -> Result<Vec<u8>, IoError> {
     Ok(compressed)
 }
 
-// Compresses a single Ethereum transaction using zlib compression and encodes it in base64 for easier transport
-// Used as a utility to test de/compression
-pub fn compress_transaction_base64(transaction: &[u8]) -> Result<String, IoError> {
-    let vec = compress_transaction(transaction)?;
-    let base64_encoded = BASE64.encode(&vec);
-
-    Ok(base64_encoded)
-}
-
 /// Decompresses a single zlib compressed Ethereum transaction
 pub fn decompress_transaction(compressed: &[u8]) -> Result<Vec<u8>, IoError> {
     is_valid_cm_bits_8_or_15(compressed)?;
@@ -62,8 +53,8 @@ impl From<IoError> for Infallible {
     }
 }
 
-/// Compresses a slice of Ethereum transactions using zlib compression
-/// Each transaction is prefixed with its length to enable proper decompression
+/// Compresses a slice of Ethereum transactions using custom format + zlib compression
+/// Custom format: Each transaction is prefixed with its length to enable proper decompression
 pub fn compress_transactions(transactions: &[Bytes]) -> Result<Bytes, IoError> {
     let mut buffer = BytesMut::new();
 
@@ -84,6 +75,15 @@ pub fn compress_transactions(transactions: &[Bytes]) -> Result<Bytes, IoError> {
     is_valid_cm_bits_8_only(&compressed)?;
 
     Ok(Bytes::from(compressed))
+}
+
+// Compresses multiple Ethereum transactions using custom format + zlib compression and encodes it in base64 for easier transport
+// Used as a utility to test de/compression
+pub fn compress_transactions_base64(transactions: &[Bytes]) -> Result<String, IoError> {
+    let vec = compress_transactions(transactions)?;
+    let base64_encoded = BASE64.encode(&vec);
+
+    Ok(base64_encoded)
 }
 
 /// Decompresses zlib compressed Ethereum transactions back into their original form
@@ -233,15 +233,6 @@ mod tests {
         println!();
     }
 
-    // Utility for transporting compressed data to other consumers, such as `op-translator` (written in Go)
-    #[test]
-    fn test_single_tx_compression_base64() {
-        let input = &SAMPLE_TX_1;
-        let compressed = compress_transaction_base64(input).unwrap();
-
-        assert_eq!(compressed, "eJwBbgCR/wL4a4MBSjQHgw9CQIMPRD6CUgiUTlJ0hllGlqdgf/M3niF0Zomj/W0UgMCAoFAuwecqpdjlLyVHw9y5c9YSk2SCjqVM/RZup0NQpgzUoC23C6ec+xikXWtBXliu2JR7tm78EVbCBn5Z1Opcac/LSEwzgg==");
-    }
-
     #[test]
     fn test_single_tx_empty() {
         // Test compression of empty transaction
@@ -333,6 +324,20 @@ mod tests {
         println!("Decompression time: {:?}", decompression_time);
         println!();
     }
+
+    // Utility for transporting compressed data to other consumers, such as `op-translator` (written in Go)
+    #[test]
+    fn test_batch_tx_compression_base64() {
+        let txs = vec![
+            Bytes::copy_from_slice(&SAMPLE_TX_1),
+            Bytes::copy_from_slice(&SAMPLE_TX_2)
+        ];
+
+        let compressed = compress_transactions_base64(&txs).unwrap();
+
+        assert_eq!(compressed, "eJylzTsIAXEAgPE/CYVEkpUykEdJTOQVJQlJrpBBSnIpNoWcFIOFTJLyuEGZPAflMRgky6UbrFK3WhRXjCaL3/71AQCoAACY+kgiFKeWgXAtJoRrM5Z8zKbbl61A9hYaLdz1HXE2Xu2RKUFxXex6VJubfIBf1VLH7rLMnPmNWKk+cJFCGLV6hmysq5yz0PZT1A8nzZHgGG/mZvCLF9jS8xBGhBKnw+dYPk79BPiyWNL2BvUE32RkNe+2MEpLFBrwS6Cq+6uHVpw3gaRL/g==");
+    }
+
 
     #[test]
     fn test_batch_invalid_compressed() {
