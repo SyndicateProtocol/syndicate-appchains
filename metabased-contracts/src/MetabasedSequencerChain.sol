@@ -90,12 +90,7 @@ contract MetabasedSequencerChain is RequireListManager {
     /// @dev This helps op-translator identify uncompressed data
     /// @param encodedTxn The original encoded transaction data
     /// @return bytes The encoded transaction data with a prepended zero byte
-    function prependZeroByte(bytes calldata encodedTxn) private pure returns (bytes memory) {
-        bytes memory result = new bytes(encodedTxn.length + 1);
-        result[0] = 0x00; // Add zero byte at the beginning
-        for (uint256 i = 0; i < encodedTxn.length; i++) {
-            result[i + 1] = encodedTxn[i];
-        }
-        return result;
-    }
+function prependZeroByte(bytes calldata encodedTxn) private pure returns (bytes memory) {
+    return abi.encodePacked(bytes1(0x00), encodedTxn);
+}
 }
