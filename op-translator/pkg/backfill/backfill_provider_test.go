@@ -18,7 +18,7 @@ import (
 func TestGetBackfillFrames(t *testing.T) {
 	mockHTTPClient := new(mocks.HTTPClientMock)
 	jsonData, err := json.Marshal(backfill.BackfillData{
-		Data:      "data",
+		Data:      []string{"data"},
 		EpochHash: common.HexToHash("0x123"),
 	})
 	assert.NoError(t, err)

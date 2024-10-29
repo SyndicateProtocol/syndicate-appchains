@@ -3,6 +3,7 @@ package backfill
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -29,7 +30,7 @@ func NewBackfillerProvider(cfg *config.Config) *BackfillProvider {
 }
 
 type BackfillData struct {
-	Data      string      `json:"data"` // Hex format
+	Data      []string    `json:"data"` // Hex format
 	EpochHash common.Hash `json:"epochHash"`
 }
 
@@ -62,12 +63,16 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber stri
 func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, epochNumber string) ([]*types.Frame, error) {
 	backfillData, err := b.GetBackfillData(ctx, epochNumber)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get backfill data for epoch %s: %w", epochNumber, err)
 	}
 
-	frames, err := types.ToFrames([]byte(backfillData.Data), config.MaxFrameSize, backfillData.EpochHash)
-	if err != nil {
-		return nil, err
+	frames := make([]*types.Frame, 0, len(backfillData.Data))
+	for _, data := range backfillData.Data {
+		frame, err := types.ToFrames([]byte(data), config.MaxFrameSize, backfillData.EpochHash)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert data to frames for epoch %s: %w", epochNumber, err)
+		}
+		frames = append(frames, frame...)
 	}
 
 	return frames, nil
