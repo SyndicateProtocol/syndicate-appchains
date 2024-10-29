@@ -35,7 +35,7 @@ func TestGetBlockByNumber(t *testing.T) {
 	block, err := translatorMock.GetBlockByNumber(ctx, number, true)
 
 	assert.NoError(t, err)
-	blockNumber, err := block.GetBlockNumber()
+	blockNumber, err := block.GetBlockNumberHex()
 	assert.NoError(t, err)
 	assert.Equal(t, "0x1", blockNumber)
 
@@ -73,7 +73,7 @@ func TestGetBlockByHash(t *testing.T) {
 	block, err := translatorMock.GetBlockByHash(ctx, hash, true)
 
 	assert.NoError(t, err)
-	blockNumber, err := block.GetBlockNumber()
+	blockNumber, err := block.GetBlockNumberHex()
 	assert.NoError(t, err)
 	assert.Equal(t, "0x1", blockNumber)
 

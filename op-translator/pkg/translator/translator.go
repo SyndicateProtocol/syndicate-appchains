@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
@@ -45,7 +44,8 @@ func Init(cfg *config.Config) *OPTranslator {
 		log.Panic().Err(err).Msg("Failed to initialize settlement chain")
 	}
 
-	metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg)
+	// metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg)
+	metaBasedBatchProvider := InitMetaBasedBatchProviderArb(cfg)
 	signer := NewSigner(cfg)
 	backfillProvider := backfill.NewBackfillerProvider(cfg)
 
@@ -96,12 +96,8 @@ func (t *OPTranslator) getFrames(ctx context.Context, block types.Block) ([]*typ
 	if err != nil {
 		return nil, err
 	}
-	intBlockNumber, err := utils.HexToInt(blockNumber)
-	if err != nil {
-		return nil, err
-	}
 
-	if intBlockNumber < t.CutoverBlock {
+	if blockNumber < t.CutoverBlock {
 		return t.BackfillProvider.GetBackfillFrames(ctx, block)
 	} else {
 		batch, err := t.BatchProvider.GetBatch(ctx, block)
@@ -127,7 +123,7 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, err
 	}
 
-	blockNum, err := block.GetBlockNumber()
+	blockNum, err := block.GetBlockNumberHex()
 	if err != nil {
 		return nil, err
 	}

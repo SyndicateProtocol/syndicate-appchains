@@ -122,7 +122,7 @@ func (m *MetaBasedBatchProviderArb) FilterReceipts(receipts []*ethtypes.Receipt)
 }
 
 func (m *MetaBasedBatchProviderArb) GetBatch(ctx context.Context, block types.Block) (*types.Batch, error) {
-	blockNumber, err := block.GetBlockNumber()
+	blockNumber, err := block.GetBlockNumberHex()
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +151,7 @@ func (m *MetaBasedBatchProviderArb) GetBatch(ctx context.Context, block types.Bl
 		return nil, err
 	}
 
-	timestamp, err := block.GetBlockTimestamp()
+	timestamp, err := block.GetBlockTimestampHex()
 	if err != nil {
 		return nil, err
 	}
