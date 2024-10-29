@@ -46,7 +46,7 @@ func (s *SequencingBlockFetcher) GetSequencingBlocks(block types.Block) ([]*type
 
 const BinarySearchDivisor = 2
 
-// TODO []: Optimize this lookup
+// TODO [SEQ-254]: Optimize this lookup
 func (s *SequencingBlockFetcher) FindFirstBlockOnOrBeforeTime(time int) (int, error) {
 	// Get latest block from sequencing chain
 	latestBlock, err := s.SequencingChainClient.GetBlockByNumber(context.Background(), "latest", false)

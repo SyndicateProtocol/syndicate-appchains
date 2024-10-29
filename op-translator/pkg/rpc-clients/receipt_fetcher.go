@@ -16,7 +16,7 @@ func NewReceiptFetcher(client IRawRPCClient) *ReceiptFetcher {
 	return &ReceiptFetcher{client: client}
 }
 
-// TODO []: Implement fallbacks / alternatives for receipt fetching
+// TODO [SEQ-253]: Implement fallbacks / alternatives for receipt fetching
 func (f *ReceiptFetcher) FetchReceipts(ctx context.Context, block *types.Block, txHashes []common.Hash) (result ethtypes.Receipts, err error) {
 	hash, err := block.GetBlockHash()
 	if err != nil {
