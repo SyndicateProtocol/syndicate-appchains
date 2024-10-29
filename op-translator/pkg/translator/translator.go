@@ -60,16 +60,38 @@ func Init(cfg *config.Config) *OPTranslator {
 	}
 }
 
-func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (types.Block, error) {
-	if block.IsEmpty() {
-		return nil, nil
-	}
-
-	batch, err := t.BatchProvider.GetBatch(ctx, block)
+func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, transactionDetailFlag bool) (types.Block, error) {
+	log.Debug().Msg("-- HIT eth_getBlockByNumber")
+	block, err := t.SettlementChain.GetBlockByNumber(ctx, blockNumber, transactionDetailFlag)
 	if err != nil {
+		log.Error().Err(err).Msg("Failed to get block by number")
 		return nil, err
 	}
+	if !transactionDetailFlag {
+		return block, nil
+	}
+	return t.translateBlock(ctx, block)
+}
 
+func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash, transactionDetailFlag bool) (types.Block, error) {
+	log.Debug().Msg("-- HIT eth_getBlockByHash")
+	block, err := t.SettlementChain.GetBlockByHash(ctx, blockHash, transactionDetailFlag)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get block by hash")
+		return nil, err
+	}
+	if !transactionDetailFlag {
+		return block, nil
+	}
+	return t.translateBlock(ctx, block)
+}
+
+func (t *OPTranslator) Close() {
+	t.SettlementChain.CloseConnection()
+	t.BatchProvider.Close()
+}
+
+func (t *OPTranslator) getFrames(ctx context.Context, block types.Block) ([]*types.Frame, error) {
 	blockNumber, err := block.GetBlockNumber()
 	if err != nil {
 		return nil, err
@@ -79,15 +101,23 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, err
 	}
 
-	// TODO SEQ-209: Write logic for switching between backfill and regular data fetching
-	frames := make([]*types.Frame, 0)
-	// If the block number is less than the cutover block, we use backfill data.
 	if intBlockNumber < t.CutoverBlock {
-		frames, err = t.BackfillProvider.GetBackfillFrames(ctx, block)
+		return t.BackfillProvider.GetBackfillFrames(ctx, block)
 	} else {
-		frames, err = batch.GetFrames(config.MaxFrameSize)
+		batch, err := t.BatchProvider.GetBatch(ctx, block)
+		if err != nil {
+			return nil, err
+		}
+		return batch.GetFrames(config.MaxFrameSize)
+	}
+}
+
+func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (types.Block, error) {
+	if block.IsEmpty() {
+		return nil, nil
 	}
 
+	frames, err := t.getFrames(ctx, block)
 	if err != nil {
 		return nil, err
 	}
@@ -120,37 +150,6 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 	}
 
 	return block, nil
-}
-
-func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, transactionDetailFlag bool) (types.Block, error) {
-	log.Debug().Msg("-- HIT eth_getBlockByNumber")
-	block, err := t.SettlementChain.GetBlockByNumber(ctx, blockNumber, transactionDetailFlag)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get block by number")
-		return nil, err
-	}
-	if !transactionDetailFlag {
-		return block, nil
-	}
-	return t.translateBlock(ctx, block)
-}
-
-func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash, transactionDetailFlag bool) (types.Block, error) {
-	log.Debug().Msg("-- HIT eth_getBlockByHash")
-	block, err := t.SettlementChain.GetBlockByHash(ctx, blockHash, transactionDetailFlag)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get block by hash")
-		return nil, err
-	}
-	if !transactionDetailFlag {
-		return block, nil
-	}
-	return t.translateBlock(ctx, block)
-}
-
-func (t *OPTranslator) Close() {
-	t.SettlementChain.CloseConnection()
-	t.BatchProvider.Close()
 }
 
 func ShouldTranslate(method string) bool {
