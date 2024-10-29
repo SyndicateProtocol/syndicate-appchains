@@ -33,7 +33,8 @@ contract MetabaseSequencerChainLimitTest is Test {
         }
 
         uint256 gasStart = gasleft();
-        chain.processTransaction(largeTxn);
+        bool txIsCompressed = true;
+        chain.processTransaction(largeTxn, txIsCompressed);
         uint256 gasUsed = gasStart - gasleft();
 
         console.log("Gas used for 128KB transaction:", gasUsed);
@@ -44,6 +45,7 @@ contract MetabaseSequencerChainLimitTest is Test {
         uint256 individualSize = 32 * 1024; // 32KB
         uint256 count = 4; // 4 * 32KB = 128KB total
         bytes[] memory txns = new bytes[](count);
+        bool[] memory isCompressed = new bool[](count);
 
         for (uint256 i = 0; i < count; i++) {
             bytes memory txn = new bytes(individualSize);
@@ -51,10 +53,11 @@ contract MetabaseSequencerChainLimitTest is Test {
                 txn[j] = bytes1(uint8((i * individualSize + j) % 256));
             }
             txns[i] = txn;
+            isCompressed[i] = true;
         }
 
         uint256 gasStart = gasleft();
-        chain.processBulkTransactions(txns);
+        chain.processBulkTransactions(txns, isCompressed);
         uint256 gasUsed = gasStart - gasleft();
 
         console.log("Gas used for bulk transactions (4 * 32KB):", gasUsed);
@@ -67,6 +70,7 @@ contract MetabaseSequencerChainLimitTest is Test {
         uint256 individualSize = 1024; // 1KB
         uint256 count = 0;
         bytes[] memory txns = new bytes[](128); // Start with 128 transactions
+        bool[] memory isCompressed = new bool[](128);
 
         uint256 gasStart = gasleft();
         uint256 gasUsed = 0;
@@ -77,9 +81,10 @@ contract MetabaseSequencerChainLimitTest is Test {
                 txn[j] = bytes1(uint8((count * individualSize + j) % 256));
             }
             txns[count] = txn;
+            isCompressed[count] = true;
             count++;
 
-            try chain.processBulkTransactions(txns) {
+            try chain.processBulkTransactions(txns, isCompressed) {
                 gasUsed = gasStart - gasleft();
             } catch {
                 count--;

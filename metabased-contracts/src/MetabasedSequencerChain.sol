@@ -31,32 +31,31 @@ contract MetabasedSequencerChain is RequireListManager {
         l3ChainId = _l3ChainId;
     }
 
-    /// @notice Emits a TransactionProcessed event without additional processing
-    /// @dev it assumes that the validation is done outise the contract, i.e. op-translator
-    /// @param encodedTxn The encoded transaction data
-    function emitTransactionProcessed(bytes calldata encodedTxn) public {
-        emit TransactionProcessed(msg.sender, encodedTxn);
-    }
-
     /// @notice Processes a single encoded transaction.
     /// @param encodedTxn The encoded transaction data.
-    function processTransaction(bytes calldata encodedTxn) public {
+    /// @param isTxCompressed A flag to indicate if the transaction is compressed.
+    function processTransaction(bytes calldata encodedTxn, bool isTxCompressed) public {
         // Check if msg.sender is allowed
         requireAllAllowed(msg.sender);
         requireAnyAllowed(msg.sender);
 
         // Emit event with transaction details
-        emit TransactionProcessed(msg.sender, encodedTxn);
+        if (isTxCompressed) {
+            emit TransactionProcessed(msg.sender, encodedTxn);
+        } else {
+            emit TransactionProcessed(msg.sender, prependZeroByte(encodedTxn));
+        }
     }
 
     /// @notice Processes multiple encoded transactions in bulk.
     /// @param encodedTxns An array of encoded transaction data.
-    function processBulkTransactions(bytes[] calldata encodedTxns) public {
+    /// @param isTxsCompressed An array of flags to indicate if the transactions are compressed.
+    function processBulkTransactions(bytes[] calldata encodedTxns, bool[] calldata isTxsCompressed) public {
         uint256 txnCount = encodedTxns.length;
 
         // Process all transactions
         for (uint256 i = 0; i < txnCount; i++) {
-            processTransaction(encodedTxns[i]);
+            processTransaction(encodedTxns[i], isTxsCompressed[i]);
         }
     }
 
@@ -65,9 +64,14 @@ contract MetabasedSequencerChain is RequireListManager {
     /// @param startIndex The starting index for this chunk in the overall batch.
     /// @param chunkSize The number of transactions to process in this chunk.
     /// @param chunkId A unique identifier for this chunk.
-    function processChunk(bytes[] calldata encodedTxns, uint256 startIndex, uint256 chunkSize, uint256 chunkId)
-        public
-    {
+    /// @param isTxsCompressed A flag to indicate if the transactions are encoded.
+    function processChunk(
+        bytes[] calldata encodedTxns,
+        uint256 startIndex,
+        uint256 chunkSize,
+        uint256 chunkId,
+        bool isTxsCompressed
+    ) public {
         if (chunkSize == 0) {
             revert InvalidChunkSize();
         }
@@ -76,9 +80,22 @@ contract MetabasedSequencerChain is RequireListManager {
         require(endIndex <= encodedTxns.length, "Chunk exceeds batch size");
 
         for (uint256 i = startIndex; i < endIndex; i++) {
-            processTransaction(encodedTxns[i]);
+            processTransaction(encodedTxns[i], isTxsCompressed);
         }
 
         emit ChunkProcessed(chunkId, chunkSize);
+    }
+
+    /// @notice Prepends a zero byte to the encoded transaction data
+    /// @dev This helps op-translator identify uncompressed data
+    /// @param encodedTxn The original encoded transaction data
+    /// @return bytes The encoded transaction data with a prepended zero byte
+    function prependZeroByte(bytes calldata encodedTxn) private pure returns (bytes memory) {
+        bytes memory result = new bytes(encodedTxn.length + 1);
+        result[0] = 0x00; // Add zero byte at the beginning
+        for (uint256 i = 0; i < encodedTxn.length; i++) {
+            result[i + 1] = encodedTxn[i];
+        }
+        return result;
     }
 }
