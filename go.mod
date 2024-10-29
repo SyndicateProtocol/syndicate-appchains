@@ -3,6 +3,7 @@ module github.com/SyndicateProtocol/metabased-rollup
 go 1.23.0
 
 require (
+	github.com/andybalholm/brotli v1.1.0
 	github.com/ethereum-optimism/optimism v1.9.3
 	github.com/ethereum/go-ethereum v1.14.8
 	github.com/hashicorp/go-multierror v1.1.1
@@ -21,7 +22,6 @@ require (
 	github.com/DataDog/zstd v1.5.6-0.20230824185856-869dae002e5e // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/VictoriaMetrics/fastcache v1.12.2 // indirect
-	github.com/andybalholm/brotli v1.1.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/bits-and-blooms/bitset v1.10.0 // indirect
 	github.com/btcsuite/btcd v0.24.2 // indirect

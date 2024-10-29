@@ -7,6 +7,8 @@ use flate2::Compression;
 use std::convert::Infallible;
 use std::io::Read;
 use std::io::{self, Write};
+use alloy_rlp::{Encodable};
+use rand::prelude::*;
 
 // Valid Zlib CM bits
 const ZLIB_CM8: u8 = 0x08;
@@ -169,6 +171,71 @@ fn is_valid_cm_bits_8_or_15<T: AsRef<[u8]>>(compressed: T) -> Result<(), IoError
     )
 }
 
+#[derive(RlpEncodable, RlpDecodable)]
+struct Transaction {
+    chain_id: u64,
+    nonce: u64,
+    max_priority_fee_per_gas: U256,
+    gas_price: U256,
+    gas_limit: U256,
+    to: Address,
+    value: U256,
+    data: Bytes,
+    access_list: Vec<u8>,
+    v: u64,
+    r: B256,
+    s: B256,
+}
+
+/// Generates a random raw Ethereum transaction in hexadecimal format
+pub fn generate_random_raw_transaction_rlp() -> String {
+    let mut rng = rand::thread_rng();
+
+    // Generate random recipient address
+    let mut recipient_bytes = [0u8; 20];
+    rng.fill_bytes(&mut recipient_bytes);
+
+    // Generate random signature values
+    let mut r_bytes = [0u8; 32];
+    let mut s_bytes = [0u8; 32];
+    rng.fill_bytes(&mut r_bytes);
+    rng.fill_bytes(&mut s_bytes);
+
+    // Convert Gwei to Wei for gas prices (1 Gwei = 1e9 Wei)
+    let min_gas_price_gwei: u64 = 1;
+    let max_gas_price_gwei: u64 = 100;
+    let gas_price_gwei = rng.gen_range(min_gas_price_gwei..=max_gas_price_gwei);
+    let gas_price = U256::from(gas_price_gwei) * U256::from(1_000_000_000u64);
+
+    let min_priority_fee_gwei: u64 = 1;
+    let max_priority_fee_gwei: u64 = 50;
+    let priority_fee_gwei = rng.gen_range(min_priority_fee_gwei..=max_priority_fee_gwei);
+    let priority_fee = U256::from(priority_fee_gwei) * U256::from(1_000_000_000u64);
+
+    let tx = Transaction {
+        chain_id: 1, // mainnet
+        nonce: rng.gen_range(0..1_000_000),
+        max_priority_fee_per_gas: priority_fee,
+        gas_price,
+        gas_limit: U256::from(rng.gen_range(21_000..1_000_000)),
+        to: Address::from_slice(&recipient_bytes),
+        // Random value between 0 and 2 ETH (in Wei)
+        value: U256::from(rng.gen_range(0..=2_000_000_000_000_000_000u64)),
+        data: Bytes::default(),
+        access_list: vec![1],
+        v: 2 + 35 + rng.gen_range(0..2), // EIP-155 encoding
+        r: B256::from_slice(&r_bytes),
+        s: B256::from_slice(&s_bytes),
+    };
+
+    // Encode the transaction using RLP
+    let mut buf = Vec::new();
+    tx.encode(&mut buf);
+
+    // Convert to hex string with "0x" prefix
+    format!("0x02{}", hex::encode(&buf))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -204,6 +271,15 @@ mod tests {
         assert!(is_valid_cm_bits_8_or_15(invalid).is_err());
     }
 
+    #[test]
+    fn test_generate_transaction() {
+        let tx = generate_random_raw_transaction_rlp();
+        // Transaction should start with "0x02" and be a valid hex string
+        assert!(tx.starts_with("0x02"));
+        // Verify we can decode the hex string
+        assert!(hex::decode(&tx[4..]).is_ok());
+    }
+
     // Sample txn - from send_raw_transaction() on Latitude
     const SAMPLE_TX_1: [u8; 110] = hex!("02f86b83014a3407830f4240830f443e825208944e527486594696a7607ff3379e21746689a3fd6d1480c080a0502ec1e72aa5d8e52f2547c3dcb973d6129364828ea54cfd166ea74350a60cd4a02db70ba79cfb18a45d6b415e58aed8947bb66efc1156c2067e59d4ea5c69cfcb");
 
@@ -214,6 +290,7 @@ mod tests {
     const SAMPLE_TX_3: [u8; 68] = hex!("39509351000000000000000000000000dd2da9ba748722faea8629a215ea47dd15e852f90000000000000000000000000000000000000000000000000429d069189e0000");
     // https://sepolia.basescan.org/tx/0x5de957de7b67999cc14099b7b40919afb0592de64c20a658c6cd296624b34ba9
     const SAMPLE_TX_4: [u8; 132] = hex!("81813c8b0000000000000000000000000000000000000000000000000000000001026afc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016345785d8a000000000000000000000000000000000000000000000000000000000000671834d8");
+
 
     #[test]
     fn test_single_tx_compression() {
@@ -369,12 +446,10 @@ mod tests {
     fn test_large_batch() {
         // Test with a larger number of transactions
         let mut txs = Vec::new();
-        // TODO (SEQ-240): improve test with many unique transactions, not 4 repeated ones
-        for _ in 0..25 {
-            txs.push(Bytes::copy_from_slice(&SAMPLE_TX_1));
-            txs.push(Bytes::copy_from_slice(&SAMPLE_TX_2));
-            txs.push(Bytes::copy_from_slice(&SAMPLE_TX_3));
-            txs.push(Bytes::copy_from_slice(&SAMPLE_TX_4));
+
+        txs.push(Bytes::copy_from_slice(&SAMPLE_TX_1));
+        for _ in 0..100 {
+            txs.push(Bytes::copy_from_slice(generate_random_raw_transaction_rlp().as_ref()));
         }
 
         let start = Instant::now();
@@ -398,6 +473,41 @@ mod tests {
             txs.len(),
             ratio
         );
+        println!("Original size: {} bytes", original_size);
+        println!("Compressed size: {} bytes", compressed_size);
+        println!("Decompressed size: {} bytes", decompressed_size);
+        println!("Compression time: {:?}", compress_time);
+        println!("Decompression time: {:?}", decompression_time);
+        println!();
+    }
+
+    #[test]
+    fn test_larger_batch() {
+        // Test with a larger number of transactions
+        let mut txs = Vec::new();
+
+        txs.push(Bytes::copy_from_slice(&SAMPLE_TX_1));
+        for _ in 0..1000 {
+            txs.push(Bytes::copy_from_slice(generate_random_raw_transaction_rlp().as_ref()));
+        }
+
+        let start = Instant::now();
+        let compressed = compress_transactions(&txs).unwrap();
+        let compress_time = start.elapsed();
+        let start = Instant::now();
+        let decompressed = decompress_transactions(&compressed).unwrap();
+        let decompression_time = start.elapsed();
+
+        assert_eq!(txs, decompressed);
+        assert_eq!(compressed[0] & CM_BITS_MASK, ZLIB_CM8); // Verify CM bits
+
+        // Check compression ratio
+        let original_size: usize = txs.iter().map(|tx| tx.len()).sum();
+        let compressed_size: usize = compressed.len();
+        let decompressed_size: usize = decompressed.iter().map(|tx| tx.len()).sum();
+        let ratio = (1.0 - (compressed.len() as f64 / original_size as f64)) * 100.0;
+
+        println!("Very large batch (n={}) compression ratio: {:.2}%", txs.len(), ratio);
         println!("Original size: {} bytes", original_size);
         println!("Compressed size: {} bytes", compressed_size);
         println!("Decompressed size: {} bytes", decompressed_size);
