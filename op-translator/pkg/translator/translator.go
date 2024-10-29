@@ -16,7 +16,7 @@ type IRPCClient interface {
 	CloseConnection()
 	GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error)
 	GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (types.Block, error)
-	BlocksReceiptsByNumbers(ctx context.Context, numbers []string) ([]*ethtypes.Receipt, error)
+	GetReceiptsByBlocks(ctx context.Context, blocks []*types.Block) ([]*ethtypes.Receipt, error)
 	AsEthClient() rpc.IETHClient
 }
 
@@ -44,8 +44,7 @@ func Init(cfg *config.Config) *OPTranslator {
 		log.Panic().Err(err).Msg("Failed to initialize settlement chain")
 	}
 
-	// metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg)
-	metaBasedBatchProvider := InitMetaBasedBatchProviderArb(cfg)
+	metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg)
 	signer := NewSigner(cfg)
 	backfillProvider := backfill.NewBackfillerProvider(cfg)
 

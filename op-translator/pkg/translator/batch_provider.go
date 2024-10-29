@@ -18,13 +18,12 @@ import (
 )
 
 type MetaBasedBatchProvider struct {
-	MetaBasedChain    IRPCClient
-	SequencingChain   IRPCClient
-	TransactionParser *L3TransactionParser
+	MetaBasedChain         IRPCClient
+	SequencingChain        IRPCClient
+	TransactionParser      *L3TransactionParser
+	SequencingBlockFetcher *SequencingBlockFetcher
 
-	SettlementStartBlock       int
-	SequencingStartBlock       int
-	SequencePerSettlementBlock int
+	SettlementStartBlock int
 }
 
 func InitMetaBasedBatchProvider(cfg *config.Config) *MetaBasedBatchProvider {
@@ -39,13 +38,12 @@ func InitMetaBasedBatchProvider(cfg *config.Config) *MetaBasedBatchProvider {
 	}
 
 	return &MetaBasedBatchProvider{
-		MetaBasedChain:    metaBasedChain,
-		SequencingChain:   sequencingChain,
-		TransactionParser: InitL3TransactionParser(cfg),
+		MetaBasedChain:         metaBasedChain,
+		SequencingChain:        sequencingChain,
+		TransactionParser:      InitL3TransactionParser(cfg),
+		SequencingBlockFetcher: InitSequencingBlockFetcher(sequencingChain, cfg),
 
-		SettlementStartBlock:       cfg.SettlementStartBlock,
-		SequencingStartBlock:       cfg.SequencingStartBlock,
-		SequencePerSettlementBlock: cfg.SequencePerSettlementBlock,
+		SettlementStartBlock: cfg.SettlementStartBlock,
 	}
 }
 
@@ -54,44 +52,22 @@ func NewMetaBasedBatchProvider(
 	sequencingChainClient IRPCClient,
 	sequencingContractAddress common.Address,
 	settlementStartBlock int,
-	sequencingStartBlock int,
-	sequencePerSettlementBlock int,
+	settlementChainBlockTime int,
 ) *MetaBasedBatchProvider {
 	return &MetaBasedBatchProvider{
-		MetaBasedChain:             settlementChainClient,
-		SequencingChain:            sequencingChainClient,
-		TransactionParser:          NewL3TransactionParser(sequencingContractAddress),
-		SettlementStartBlock:       settlementStartBlock,
-		SequencingStartBlock:       sequencingStartBlock,
-		SequencePerSettlementBlock: sequencePerSettlementBlock,
+		MetaBasedChain:         settlementChainClient,
+		SequencingChain:        sequencingChainClient,
+		TransactionParser:      NewL3TransactionParser(sequencingContractAddress),
+		SequencingBlockFetcher: NewSequencingBlockFetcher(sequencingChainClient, settlementChainBlockTime),
+
+		SettlementStartBlock: settlementStartBlock,
 	}
 }
 
 func (m *MetaBasedBatchProvider) Close() {
-	log.Debug().Msg("Closing MetaBasedBatchProvider")
+	log.Debug().Msg("Closing Arbitrum MetaBasedBatchProvider")
 	m.SequencingChain.CloseConnection()
 	m.MetaBasedChain.CloseConnection()
-}
-
-func (m *MetaBasedBatchProvider) GetLinkedBlocks(blockNumStr string) ([]string, error) {
-	blockNum, err := utils.HexToInt(blockNumStr)
-	if err != nil {
-		return nil, err
-	}
-
-	if blockNum < m.SettlementStartBlock {
-		return nil, errors.New("block number before start block")
-	}
-
-	end := m.SequencingStartBlock + (blockNum-m.SettlementStartBlock)*m.SequencePerSettlementBlock
-	start := end - m.SequencePerSettlementBlock + 1
-
-	ret := make([]string, m.SequencePerSettlementBlock)
-	for i := range ret {
-		ret[i] = utils.IntToHex(start + i)
-	}
-
-	return ret, nil
 }
 
 // NOTE [SEQ-144]: THIS ASSUMES THAT THE L3 HAS THE SAME BLOCK TIME AS THE SETTLEMENT L2
@@ -155,13 +131,12 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 		return nil, err
 	}
 
-	seqBlockNumbers, err := m.GetLinkedBlocks(blockNumber)
+	seqBlocks, err := m.SequencingBlockFetcher.GetSequencingBlocks(block)
 	if err != nil {
 		return nil, err
 	}
-	log.Debug().Msgf("Translating block number %s and hash %s: linked block numbers: %s", blockNumber, blockHash, seqBlockNumbers)
 
-	receipts, err := m.SequencingChain.BlocksReceiptsByNumbers(ctx, seqBlockNumbers)
+	receipts, err := m.SequencingChain.GetReceiptsByBlocks(ctx, seqBlocks)
 	if err != nil {
 		return nil, err
 	}

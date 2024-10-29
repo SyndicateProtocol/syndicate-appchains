@@ -12,11 +12,11 @@ import (
 
 func TestFindFirstBlockOnOrBeforeTime(t *testing.T) {
 	tests := []struct {
-		setupMocks    func(mockClient *mocks.MockRPCClient)
-		expectedBlock types.Block
-		name          string
-		targetTime    int
-		expectError   bool
+		setupMocks          func(mockClient *mocks.MockRPCClient)
+		name                string
+		expectedBlockNumber int
+		targetTime          int
+		expectError         bool
 	}{
 		{
 			name:       "Successfully finds block before target time",
@@ -34,8 +34,8 @@ func TestFindFirstBlockOnOrBeforeTime(t *testing.T) {
 				mockClient.On("GetBlockByNumber", mock.Anything, "0xd", false).
 					Return(types.Block{"number": "0xd", "timestamp": "0x65"}, nil)
 			},
-			expectedBlock: types.Block{"number": "0xc", "timestamp": "0x63"},
-			expectError:   false,
+			expectedBlockNumber: 0xc,
+			expectError:         false,
 		},
 		{
 			name:       "Successfully finds block on target timee",
@@ -53,8 +53,8 @@ func TestFindFirstBlockOnOrBeforeTime(t *testing.T) {
 				mockClient.On("GetBlockByNumber", mock.Anything, "0x10", false).
 					Return(types.Block{"number": "0xc", "timestamp": "0x65"}, nil)
 			},
-			expectedBlock: types.Block{"number": "0xf", "timestamp": "0x64"},
-			expectError:   false,
+			expectedBlockNumber: 0xf,
+			expectError:         false,
 		},
 		{
 			name:       "Error getting latest block",
@@ -63,8 +63,8 @@ func TestFindFirstBlockOnOrBeforeTime(t *testing.T) {
 				mockClient.On("GetBlockByNumber", mock.Anything, "latest", false).
 					Return(types.Block{}, assert.AnError)
 			},
-			expectedBlock: nil,
-			expectError:   true,
+			expectedBlockNumber: 0,
+			expectError:         true,
 		},
 		{
 			name:       "Error during binary search",
@@ -75,8 +75,8 @@ func TestFindFirstBlockOnOrBeforeTime(t *testing.T) {
 				mockClient.On("GetBlockByNumber", mock.Anything, "0xa", false).
 					Return(types.Block{}, assert.AnError)
 			},
-			expectedBlock: nil,
-			expectError:   true,
+			expectedBlockNumber: 0,
+			expectError:         true,
 		},
 		{
 			name:       "No block found before target time",
@@ -93,8 +93,8 @@ func TestFindFirstBlockOnOrBeforeTime(t *testing.T) {
 				mockClient.On("GetBlockByNumber", mock.Anything, "0x1", false).
 					Return(types.Block{"number": "0x1", "timestamp": "0xa"}, nil)
 			},
-			expectedBlock: nil,
-			expectError:   true,
+			expectedBlockNumber: 0,
+			expectError:         true,
 		},
 	}
 
@@ -110,10 +110,10 @@ func TestFindFirstBlockOnOrBeforeTime(t *testing.T) {
 
 			if tt.expectError {
 				assert.Error(t, err)
-				assert.Nil(t, block)
+				assert.Zero(t, block)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, tt.expectedBlock, block)
+				assert.Equal(t, tt.expectedBlockNumber, block)
 			}
 
 			mockClient.AssertExpectations(t)
@@ -125,7 +125,7 @@ func TestGetSequencingBlocksByTimeWindow(t *testing.T) {
 	tests := []struct {
 		setupMocks            func(mockClient *mocks.MockRPCClient)
 		name                  string
-		expectedBlocks        []string
+		expectedBlocks        []*types.Block
 		timeWindowStart       int
 		timeWindowEnd         int
 		firstBlockBeforeStart int
@@ -148,7 +148,7 @@ func TestGetSequencingBlocksByTimeWindow(t *testing.T) {
 				mockClient.On("GetBlockByNumber", mock.Anything, "0xa", false).
 					Return(types.Block{"number": "0xa", "timestamp": "0xa0"}, nil)
 			},
-			expectedBlocks: []string{"0x6", "0x7", "0x8", "0x9"},
+			expectedBlocks: []*types.Block{{"number": "0x6", "timestamp": "0x60"}, {"number": "0x7", "timestamp": "0x70"}, {"number": "0x8", "timestamp": "0x80"}, {"number": "0x9", "timestamp": "0x90"}},
 			expectError:    false,
 		},
 		{
@@ -178,7 +178,7 @@ func TestGetSequencingBlocksByTimeWindow(t *testing.T) {
 				mockClient.On("GetBlockByNumber", mock.Anything, "0x6", false).
 					Return(types.Block{"number": "0x6", "timestamp": "0x70"}, nil)
 			},
-			expectedBlocks: []string(nil),
+			expectedBlocks: nil,
 			expectError:    false,
 		},
 		{

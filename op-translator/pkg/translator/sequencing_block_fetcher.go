@@ -29,77 +29,72 @@ func NewSequencingBlockFetcher(sequencingChainClient IRPCClient, settlementChain
 	}
 }
 
-func (s *SequencingBlockFetcher) GetSequencingBlocks(block types.Block) ([]string, error) {
+func (s *SequencingBlockFetcher) GetSequencingBlocks(block types.Block) ([]*types.Block, error) {
 	timeWindowEnd, err := block.GetBlockTimestamp()
 	if err != nil {
 		return nil, err
 	}
 	timeWindowStart := timeWindowEnd - s.SettlementChainBlockTime
 
-	firstBlockBeforeTime, err := s.FindFirstBlockOnOrBeforeTime(timeWindowStart)
+	firstBlockNumberBeforeTime, err := s.FindFirstBlockOnOrBeforeTime(timeWindowStart)
 	if err != nil {
 		return nil, err
 	}
 
-	firstBlockBeforeTimeNum, err := firstBlockBeforeTime.GetBlockNumber()
-	if err != nil {
-		return nil, err
-	}
-
-	return s.GetSequencingBlocksByTimeWindow(timeWindowStart, timeWindowEnd, firstBlockBeforeTimeNum)
+	return s.GetSequencingBlocksByTimeWindow(timeWindowStart, timeWindowEnd, firstBlockNumberBeforeTime)
 }
 
 const BinarySearchDivisor = 2
 
 // TODO []: Optimize this lookup
-func (s *SequencingBlockFetcher) FindFirstBlockOnOrBeforeTime(time int) (types.Block, error) {
+func (s *SequencingBlockFetcher) FindFirstBlockOnOrBeforeTime(time int) (int, error) {
 	// Get latest block from sequencing chain
 	latestBlock, err := s.SequencingChainClient.GetBlockByNumber(context.Background(), "latest", false)
 	if err != nil {
-		return nil, fmt.Errorf("error getting latest block: %w", err)
+		return 0, fmt.Errorf("error getting latest block: %w", err)
 	}
 
 	latestBlockNumber, err := latestBlock.GetBlockNumber()
 	if err != nil {
-		return nil, fmt.Errorf("error getting latest block timestamp: %w", err)
+		return 0, fmt.Errorf("error getting latest block number: %w", err)
 	}
 
 	// Initialize binary search boundaries
 	low := 1
 	high := latestBlockNumber
 
-	var result types.Block
+	var result int
 
 	for low <= high {
 		mid := (low + high) / BinarySearchDivisor
 
 		block, err := s.SequencingChainClient.GetBlockByNumber(context.Background(), utils.IntToHex(mid), false)
 		if err != nil {
-			return nil, fmt.Errorf("error getting block %d: %w", mid, err)
+			return 0, fmt.Errorf("error getting block %d: %w", mid, err)
 		}
 
 		timestamp, err := block.GetBlockTimestamp()
 		if err != nil {
-			return nil, fmt.Errorf("error getting timestamp for block %d: %w", mid, err)
+			return 0, fmt.Errorf("error getting block timestamp: %w", err)
 		}
 
 		if timestamp <= time {
-			result = block
+			result = mid
 			low = mid + 1 // Look for a potentially closer block
 		} else {
 			high = mid - 1 // Block is too new, look earlier
 		}
 	}
 
-	if result == nil {
-		return nil, fmt.Errorf("no block found before timestamp %d", time)
+	if result == 0 {
+		return 0, fmt.Errorf("no block found before timestamp %d", time)
 	}
 
 	return result, nil
 }
 
-func (s *SequencingBlockFetcher) GetSequencingBlocksByTimeWindow(timeWindowStart, timeWindowEnd, firstBlockBeforeStartTime int) ([]string, error) {
-	var blocks []string
+func (s *SequencingBlockFetcher) GetSequencingBlocksByTimeWindow(timeWindowStart, timeWindowEnd, firstBlockBeforeStartTime int) ([]*types.Block, error) {
+	var blocks []*types.Block
 	currentBlockNum := firstBlockBeforeStartTime + 1
 
 	for {
@@ -117,10 +112,9 @@ func (s *SequencingBlockFetcher) GetSequencingBlocksByTimeWindow(timeWindowStart
 			return nil, fmt.Errorf("block is nil")
 		}
 
-		// Get block timestamp
 		timestamp, err := block.GetBlockTimestamp()
 		if err != nil {
-			return nil, fmt.Errorf("error getting timestamp for block %d: %w", currentBlockNum, err)
+			return nil, fmt.Errorf("error getting block timestamp: %w", err)
 		}
 
 		// If we've passed the end of the time window, break
@@ -130,11 +124,7 @@ func (s *SequencingBlockFetcher) GetSequencingBlocksByTimeWindow(timeWindowStart
 
 		// If the block is within our time window, add it to the result
 		if timestamp > timeWindowStart {
-			blockNum, err := block.GetBlockNumber()
-			if err != nil {
-				return nil, fmt.Errorf("error getting block number for block %d: %w", currentBlockNum, err)
-			}
-			blocks = append(blocks, utils.IntToHex(blockNum))
+			blocks = append(blocks, &block)
 		} else {
 			return nil, fmt.Errorf("invalid block timestamp before time window: %d", timestamp)
 		}
