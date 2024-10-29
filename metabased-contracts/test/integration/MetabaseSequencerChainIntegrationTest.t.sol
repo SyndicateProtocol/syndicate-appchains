@@ -9,7 +9,6 @@ contract MetabaseSequencerChainIntegrationTest is Test {
     using Strings for uint256;
 
     MetabasedSequencerChain public chain;
-    bool public isTxCompressed = true;
 
     address public constant METABASE_SEQUENCER_CONTRACT_ADDRESS = 0x73Ba7D784d13Ec0070a4Ea6F49Ff57dc007Bb48d; // deployed to base_sepolia
 
@@ -34,7 +33,7 @@ contract MetabaseSequencerChainIntegrationTest is Test {
                 txn[i] = bytes1(uint8(i % 256));
             }
 
-            try chain.processTransaction(txn, isTxCompressed) {
+            try chain.processTransaction(txn) {
                 console.log(
                     string(
                         abi.encodePacked(
@@ -77,17 +76,15 @@ contract MetabaseSequencerChainIntegrationTest is Test {
 
         for (uint256 count = 1; count <= maxTransactions; count++) {
             bytes[] memory txns = new bytes[](count);
-            bool[] memory isTxsCompressed = new bool[](count);
             for (uint256 i = 0; i < count; i++) {
                 bytes memory txn = new bytes(individualSize);
                 for (uint256 j = 0; j < individualSize; j++) {
                     txn[j] = bytes1(uint8((i * individualSize + j) % 256));
                 }
                 txns[i] = txn;
-                isTxsCompressed[i] = true;
             }
 
-            try chain.processBulkTransactions(txns, isTxsCompressed) {
+            try chain.processBulkTransactions(txns) {
                 console.log(
                     string(
                         abi.encodePacked(
@@ -143,7 +140,7 @@ contract MetabaseSequencerChainIntegrationTest is Test {
             }
 
             uint256 gasBefore = gasleft();
-            try chain.processTransaction(txn, isTxCompressed) {
+            try chain.processTransaction(txn) {
                 uint256 gasUsed = gasBefore - gasleft();
                 totalGasUsed += gasUsed;
                 txCount++;

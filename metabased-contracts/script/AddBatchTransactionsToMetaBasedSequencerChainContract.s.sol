@@ -23,11 +23,7 @@ contract AddBatchTransactionsToMetabasedSequencerChainContract is Script {
         // send 2 wei to the MetabasedSequencerChain contract
         transactionList[1] = abi.encode(recipient, uint256(2));
 
-        bool[] memory isTxsCompressed = new bool[](2);
-        isTxsCompressed[0] = true;
-        isTxsCompressed[1] = true;
-
-        metabasedSequencerChainContract.processBulkTransactions(transactionList, isTxsCompressed);
+        metabasedSequencerChainContract.processBulkTransactions(transactionList);
 
         vm.stopBroadcast();
     }
