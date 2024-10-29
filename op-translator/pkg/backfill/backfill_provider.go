@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog/log"
 )
 
 // TODO SEQ-141: spike: performant Go HTTP/JSON-RPC lib
@@ -35,7 +38,13 @@ type BackfillData struct {
 }
 
 func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber string) (*BackfillData, error) {
-	fullURL := b.MetafillerURL + "/" + epochNumber
+	intEpochNumber, err := utils.HexToInt(epochNumber)
+	if err != nil {
+		return nil, err
+	}
+	fullURL := b.MetafillerURL + "/" + strconv.Itoa(intEpochNumber)
+	log.Debug().Msgf("Getting backfill data for epoch %s. Int epoch number: %d. Fetching from: %s", epochNumber, intEpochNumber, fullURL)
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, http.NoBody)
 	if err != nil {
 		return nil, err
@@ -51,12 +60,13 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber stri
 	if err != nil {
 		return nil, err
 	}
-	// TODO SEQ-209: Think most optimal way to send/receive this data
+
 	var data *BackfillData
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return nil, err
 	}
+	log.Debug().Msgf("Backfill data for epoch %d: %v", intEpochNumber, data)
 	return data, nil
 }
 
