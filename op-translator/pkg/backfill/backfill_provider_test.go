@@ -10,6 +10,7 @@ import (
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -33,8 +34,12 @@ func TestGetBackfillFrames(t *testing.T) {
 		Client:        mockHTTPClient,
 		MetafillerURL: "http://metafiller.io",
 	}
-	epoch := "0x1"
-	frames, err := backfillProvider.GetBackfillFrames(ctx, epoch)
+	block := types.Block{
+		"number":       "0x1",
+		"hash":         "0x123",
+		"transactions": []any{},
+	}
+	frames, err := backfillProvider.GetBackfillFrames(ctx, block)
 
 	assert.NoError(t, err)
 	assert.Len(t, frames, 1)
