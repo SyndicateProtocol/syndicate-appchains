@@ -21,8 +21,6 @@ contract MetabasedSequencerChainTestSetUp is Test {
     MetabasedSequencerChain public chain;
     address public admin;
 
-    bool txIsCompressed = true;
-
     function setUp() public virtual {
         admin = address(0x1);
         uint256 l3ChainId = 10042001;
@@ -46,7 +44,21 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.expectEmit(true, false, false, true);
         emit MetabasedSequencerChain.TransactionProcessed(address(this), validTxn);
 
-        chain.processTransaction(validTxn, txIsCompressed);
+        chain.processTransaction(validTxn);
+    }
+
+    function testProcessCompressedTransaction() public {
+        bytes memory compressedTx = abi.encode("compressed transaction");
+        bytes memory expectedTx = abi.encodePacked(bytes1(0x00), compressedTx);
+
+        vm.startPrank(admin);
+        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
+        vm.stopPrank();
+
+        vm.expectEmit(true, false, false, true);
+        emit MetabasedSequencerChain.TransactionProcessed(address(this), expectedTx);
+
+        chain.processCompressedTransaction(compressedTx);
     }
 
     function testProcessTransactionRequireAllFailure() public {
@@ -62,7 +74,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
                 RequireListManager.RequireAllCheckFailed.selector, address(mockRequireAll), address(this)
             )
         );
-        chain.processTransaction(validTxn, txIsCompressed);
+        chain.processTransaction(validTxn);
     }
 
     function testProcessTransactionRequireAnyFailure() public {
@@ -73,7 +85,27 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.stopPrank();
 
         vm.expectRevert(abi.encodeWithSelector(RequireListManager.RequireAnyCheckFailed.selector, address(this)));
-        chain.processTransaction(validTxn, txIsCompressed);
+        chain.processTransaction(validTxn);
+    }
+
+    function testProcessBulkCompressedTransactions() public {
+        bytes[] memory validTxns = new bytes[](3);
+        validTxns[0] = abi.encode("transaction 1");
+        validTxns[1] = abi.encode("transaction 2");
+        validTxns[2] = abi.encode("transaction 3");
+
+        vm.startPrank(admin);
+        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
+        vm.stopPrank();
+
+        for (uint256 i = 0; i < validTxns.length; i++) {
+            vm.expectEmit(true, false, false, true);
+            emit MetabasedSequencerChain.TransactionProcessed(
+                address(this), abi.encodePacked(bytes1(0x00), validTxns[i])
+            );
+        }
+
+        chain.processBulkCompressedTransactions(validTxns);
     }
 
     function testProcessBulkTransactions() public {
@@ -81,11 +113,6 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         validTxns[0] = abi.encode("transaction 1");
         validTxns[1] = abi.encode("transaction 2");
         validTxns[2] = abi.encode("transaction 3");
-
-        bool[] memory txsIsCompressed = new bool[](3);
-        txsIsCompressed[0] = true;
-        txsIsCompressed[1] = true;
-        txsIsCompressed[2] = true;
 
         vm.startPrank(admin);
         chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
@@ -96,7 +123,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
             emit MetabasedSequencerChain.TransactionProcessed(address(this), validTxns[i]);
         }
 
-        chain.processBulkTransactions(validTxns, txsIsCompressed);
+        chain.processBulkTransactions(validTxns);
     }
 
     function testProcessChunk() public {
@@ -117,7 +144,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.expectEmit(true, true, false, true);
         emit MetabasedSequencerChain.ChunkProcessed(1, 3);
 
-        chain.processChunk(validTxns, 0, 3, 1, txIsCompressed);
+        chain.processChunk(validTxns, 0, 3, 1);
     }
 
     function testProcessChunkInvalidSize() public {
@@ -131,7 +158,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.stopPrank();
 
         vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidChunkSize.selector));
-        chain.processChunk(validTxns, 0, 0, 1, txIsCompressed);
+        chain.processChunk(validTxns, 0, 0, 1);
     }
 
     function testProcessChunkExceedsBatchSize() public {
@@ -145,7 +172,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.stopPrank();
 
         vm.expectRevert("Chunk exceeds batch size");
-        chain.processChunk(validTxns, 3, 3, 1, txIsCompressed);
+        chain.processChunk(validTxns, 3, 3, 1);
     }
 }
 
