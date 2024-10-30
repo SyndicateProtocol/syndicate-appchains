@@ -106,7 +106,7 @@ func getMockClient() *mocks.MockRPCClient {
 	return mockClient
 }
 
-func getBackfillHttpMock() *mocks.HTTPClientMock {
+func getBackfillHTTPMock() *mocks.HTTPClientMock {
 	mockHTTPClient := new(mocks.HTTPClientMock)
 	jsonData, _ := json.Marshal(backfill.BackfillData{
 		Data:      []string{"data"},
@@ -184,7 +184,7 @@ func TestOPNodeCalls(t *testing.T) {
 
 	for _, tc := range testCases {
 		mockClient := getMockClient()
-		mockHTTPBackfillClient := getBackfillHttpMock()
+		mockHTTPBackfillClient := getBackfillHTTPMock()
 		opTranslator := &translator.OPTranslator{
 			SettlementChain:     mockClient,
 			BatcherInboxAddress: common.HexToAddress("0x123"),
