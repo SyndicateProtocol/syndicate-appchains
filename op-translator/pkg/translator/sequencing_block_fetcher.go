@@ -73,12 +73,12 @@ func (s *SequencingBlockFetcher) FindFirstBlockOnOrBeforeTime(time int) (int, er
 			return 0, fmt.Errorf("error getting block %d: %w", mid, err)
 		}
 
-		timestamp, err := block.GetBlockTimestamp()
+		blockTimestamp, err := block.GetBlockTimestamp()
 		if err != nil {
 			return 0, fmt.Errorf("error getting block timestamp: %w", err)
 		}
 
-		if timestamp <= time {
+		if blockTimestamp <= time {
 			result = mid
 			low = mid + 1 // Look for a potentially closer block
 		} else {
