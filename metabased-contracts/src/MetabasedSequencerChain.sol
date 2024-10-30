@@ -55,20 +55,20 @@ contract MetabasedSequencerChain is RequireListManager {
         }
     }
 
-    /// @notice process compressed transactions
-    /// @param compressedTx The compressed transaction data
-    function processCompressedTransaction(bytes calldata compressedTx) external onlyWhenAllowed(msg.sender) {
-        emit TransactionProcessed(msg.sender, prependZeroByte(compressedTx));
+    /// @notice process raw transactions
+    /// @param rawTx The raw transaction data
+    function processRawTransaction(bytes calldata rawTx) external onlyWhenAllowed(msg.sender) {
+        emit TransactionProcessed(msg.sender, prependZeroByte(rawTx));
     }
 
-    /// @notice Processes multiple compressed transactions in bulk.
-    /// @param compressedTxns An array of compressed transaction data.
-    function processBulkCompressedTransactions(bytes[] calldata compressedTxns) external onlyWhenAllowed(msg.sender) {
-        uint256 txnCount = compressedTxns.length;
+    /// @notice Processes multiple raw transactions in bulk.
+    /// @param rawTxns An array of raw transaction data.
+    function processBulkRawTransactions(bytes[] calldata rawTxns) external onlyWhenAllowed(msg.sender) {
+        uint256 txnCount = rawTxns.length;
 
         // Process all transactions
         for (uint256 i = 0; i < txnCount; i++) {
-            emit TransactionProcessed(msg.sender, prependZeroByte(compressedTxns[i]));
+            emit TransactionProcessed(msg.sender, prependZeroByte(rawTxns[i]));
         }
     }
 
@@ -95,11 +95,11 @@ contract MetabasedSequencerChain is RequireListManager {
         emit ChunkProcessed(chunkId, chunkSize);
     }
 
-    /// @notice Prepends a zero byte to the compressed transaction data
-    /// @dev This helps op-translator identify uncompressed data
-    /// @param compressedTx The original compressed transaction data
-    /// @return bytes The compressed transaction data with a prepended zero byte
-    function prependZeroByte(bytes calldata compressedTx) private pure returns (bytes memory) {
-        return abi.encodePacked(bytes1(0x00), compressedTx);
+    /// @notice Prepends a zero byte to the raw transaction data
+    /// @dev This helps op-translator identify unraw data
+    /// @param rawTx The original raw transaction data
+    /// @return bytes The raw transaction data with a prepended zero byte
+    function prependZeroByte(bytes calldata rawTx) private pure returns (bytes memory) {
+        return abi.encodePacked(bytes1(0x00), rawTx);
     }
 }

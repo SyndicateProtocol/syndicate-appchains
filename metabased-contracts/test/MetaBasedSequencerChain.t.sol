@@ -47,9 +47,9 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         chain.processTransaction(validTxn);
     }
 
-    function testProcessCompressedTransaction() public {
-        bytes memory compressedTx = abi.encode("compressed transaction");
-        bytes memory expectedTx = abi.encodePacked(bytes1(0x00), compressedTx);
+    function testProcessRawTransaction() public {
+        bytes memory rawTx = abi.encode("raw transaction");
+        bytes memory expectedTx = abi.encodePacked(bytes1(0x00), rawTx);
 
         vm.startPrank(admin);
         chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
@@ -58,7 +58,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.expectEmit(true, false, false, true);
         emit MetabasedSequencerChain.TransactionProcessed(address(this), expectedTx);
 
-        chain.processCompressedTransaction(compressedTx);
+        chain.processRawTransaction(rawTx);
     }
 
     function testProcessTransactionRequireAllFailure() public {
@@ -88,7 +88,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         chain.processTransaction(validTxn);
     }
 
-    function testProcessBulkCompressedTransactions() public {
+    function testProcessBulkRawTransactions() public {
         bytes[] memory validTxns = new bytes[](3);
         validTxns[0] = abi.encode("transaction 1");
         validTxns[1] = abi.encode("transaction 2");
@@ -105,7 +105,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
             );
         }
 
-        chain.processBulkCompressedTransactions(validTxns);
+        chain.processBulkRawTransactions(validTxns);
     }
 
     function testProcessBulkTransactions() public {
