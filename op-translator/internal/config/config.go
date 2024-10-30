@@ -28,24 +28,22 @@ var (
 )
 
 type Config struct {
-	SettlementChainRPCURL      string `koanf:"settlement_chain_rpc_url"`
-	SequencingChainRPCURL      string `koanf:"sequencing_chain_rpc_url"`
-	MetaBasedChainRPCURL       string `koanf:"meta_based_chain_rpc_url"`
-	MetafillerURL              string `koanf:"metafiller_url"`
-	SequencingContractAddress  string `koanf:"sequencing_contract_address"`
-	BatcherAddress             string `koanf:"batcher_address"`
-	BatchInboxAddress          string `koanf:"batch_inbox_address"`
-	BatcherPrivateKey          string `koanf:"batcher_private_key"`
-	LogLevel                   string `koanf:"log_level"`
-	SettlementChainID          int64  `koanf:"settlement_chain_id"`
-	SettlementChainBlockTime   int    `koanf:"settlement_chain_block_time"`
-	SettlementStartBlock       int    `koanf:"settlement_start_block"`
-	SequencingStartBlock       int    `koanf:"sequencing_start_block"`
-	SequencePerSettlementBlock int    `koanf:"sequence_per_settlement_block"`
-	Port                       int    `koanf:"port"`
-	FrameSize                  int    `koanf:"frame_size"`
-	CutoverBlock               int    `koanf:"cutover_block"`
-	Pretty                     bool   `koanf:"pretty"`
+	SettlementChainRPCURL     string `koanf:"settlement_chain_rpc_url"`
+	SequencingChainRPCURL     string `koanf:"sequencing_chain_rpc_url"`
+	MetaBasedChainRPCURL      string `koanf:"meta_based_chain_rpc_url"`
+	MetafillerURL             string `koanf:"metafiller_url"`
+	SequencingContractAddress string `koanf:"sequencing_contract_address"`
+	BatcherAddress            string `koanf:"batcher_address"`
+	BatchInboxAddress         string `koanf:"batch_inbox_address"`
+	BatcherPrivateKey         string `koanf:"batcher_private_key"`
+	LogLevel                  string `koanf:"log_level"`
+	SettlementChainID         int64  `koanf:"settlement_chain_id"`
+	SettlementChainBlockTime  int    `koanf:"settlement_chain_block_time"`
+	SettlementStartBlock      int    `koanf:"settlement_start_block"`
+	Port                      int    `koanf:"port"`
+	FrameSize                 int    `koanf:"frame_size"`
+	CutoverBlock              int    `koanf:"cutover_block"`
+	Pretty                    bool   `koanf:"pretty"`
 }
 
 // setCLIFlags sets all valid CLI flags for the app
@@ -62,8 +60,6 @@ func setCLIFlags(f *pflag.FlagSet) {
 	f.String("batcher_address", "0x123", "Batcher address")
 	f.String("batch_inbox_address", "0x123", "Batch inbox address")
 	f.Int("settlement_start_block", 0, "Settlement chain start block")
-	f.Int("sequencing_start_block", 0, "Sequencing chain start block")
-	f.Int("sequence_per_settlement_block", 0, "Number of sequencing blocks per settlement block")
 	f.String("batcher_private_key", "", "Batcher private key")
 	f.Int("settlement_chain_id", 1, "Settlement chain id")
 	f.Int("settlement_chain_block_time", 1, "Settlement chain block time")
@@ -85,8 +81,6 @@ func hydrateFromConfMap(config *Config) {
 	config.BatcherAddress = k.String("batcher_address")
 	config.BatchInboxAddress = k.String("batch_inbox_address")
 	config.SettlementStartBlock = k.Int("settlement_start_block")
-	config.SequencingStartBlock = k.Int("sequencing_start_block")
-	config.SequencePerSettlementBlock = k.Int("sequence_per_settlement_block")
 	config.BatcherPrivateKey = k.String("batcher_private_key")
 	config.SettlementChainID = k.Int64("settlement_chain_id")
 	config.SettlementChainBlockTime = k.Int("settlement_chain_block_time")
@@ -181,16 +175,8 @@ func ValidateConfigValues(config *Config) (result error) {
 		result = multierror.Append(result, errors.New("batchInboxAddress must be a valid hex address"))
 	}
 
-	if config.SequencePerSettlementBlock <= 0 {
-		result = multierror.Append(result, fmt.Errorf("sequencePerSettlementBlock must be a positive number: %d", config.SequencePerSettlementBlock))
-	}
-
 	if config.SettlementStartBlock <= 0 {
 		result = multierror.Append(result, fmt.Errorf("settlementStartBlock must be a positive number: %d", config.SettlementStartBlock))
-	}
-
-	if config.SequencingStartBlock <= 0 {
-		result = multierror.Append(result, fmt.Errorf("sequencingStartBlock must be a positive number: %d", config.SequencingStartBlock))
 	}
 
 	if config.BatcherPrivateKey == "" {
