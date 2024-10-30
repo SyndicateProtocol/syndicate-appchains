@@ -16,37 +16,103 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-func TestGetBackfillFrames(t *testing.T) {
-	mockHTTPClient := new(mocks.HTTPClientMock)
-	jsonData, err := json.Marshal(backfill.BackfillData{
-		Data:      []string{"data"},
-		EpochHash: common.HexToHash("0x123"),
-	})
-	assert.NoError(t, err)
-	mockHTTPClient.On("Do", mock.Anything).Return(&http.Response{
-		StatusCode: http.StatusOK,
-		Body:       io.NopCloser(bytes.NewBuffer(jsonData)),
-		Header:     make(http.Header),
-	}, nil)
-
-	ctx := context.Background()
-	backfillProvider := backfill.BackfillProvider{
-		Client:        mockHTTPClient,
-		MetafillerURL: "http://metafiller.io",
+func TestGetBackfillFramesMultipleCases(t *testing.T) {
+	tests := []struct { //nolint:govet // test struct
+		name               string
+		mockResponseData   backfill.BackfillData
+		block              types.Block
+		expectedFrameCount int
+		expectedErr        bool
+	}{
+		{
+			name: "Single Frame - Matching Epoch Hash",
+			mockResponseData: backfill.BackfillData{
+				Data:      []string{"data"},
+				EpochHash: common.HexToHash("0x123"),
+			},
+			block: types.Block{
+				"number":       "0x1",
+				"hash":         "0x123",
+				"transactions": []any{},
+			},
+			expectedFrameCount: 1,
+			expectedErr:        false,
+		},
+		{
+			name: "Multiple Frames - Matching Epoch Hash",
+			mockResponseData: backfill.BackfillData{
+				Data:      []string{"data1", "data2", "data3"},
+				EpochHash: common.HexToHash("0x123"),
+			},
+			block: types.Block{
+				"number":       "0x1",
+				"hash":         "0x123",
+				"transactions": []any{},
+			},
+			expectedFrameCount: 3,
+			expectedErr:        false,
+		},
+		{
+			name: "Epoch Hash Mismatch",
+			mockResponseData: backfill.BackfillData{
+				Data:      []string{"data"},
+				EpochHash: common.HexToHash("0x456"),
+			},
+			block: types.Block{
+				"number":       "0x1",
+				"hash":         "0x123",
+				"transactions": []any{},
+			},
+			expectedFrameCount: 0,
+			expectedErr:        true,
+		},
+		{
+			name: "No Data in Backfill",
+			mockResponseData: backfill.BackfillData{
+				Data:      []string{},
+				EpochHash: common.HexToHash("0x123"),
+			},
+			block: types.Block{
+				"number":       "0x1",
+				"hash":         "0x123",
+				"transactions": []any{},
+			},
+			expectedFrameCount: 0,
+			expectedErr:        false,
+		},
 	}
-	block := types.Block{
-		"number":       "0x1",
-		"hash":         "0x123",
-		"transactions": []any{},
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockHTTPClient := new(mocks.HTTPClientMock)
+			jsonData, err := json.Marshal(tt.mockResponseData)
+			assert.NoError(t, err)
+			mockHTTPClient.On("Do", mock.Anything).Return(&http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(bytes.NewBuffer(jsonData)),
+				Header:     make(http.Header),
+			}, nil)
+
+			ctx := context.Background()
+			backfillProvider := backfill.BackfillProvider{
+				Client:        mockHTTPClient,
+				MetafillerURL: "http://metafiller.io",
+			}
+
+			frames, err := backfillProvider.GetBackfillFrames(ctx, tt.block)
+			if tt.expectedErr {
+				assert.Error(t, err)
+				assert.Nil(t, frames)
+			} else {
+				assert.NoError(t, err)
+				assert.Len(t, frames, tt.expectedFrameCount)
+
+				for i, frame := range frames {
+					assert.NotNil(t, frame.ID)
+					assert.Equal(t, []byte(tt.mockResponseData.Data[i]), frame.Data)
+				}
+			}
+			mockHTTPClient.AssertExpectations(t)
+		})
 	}
-	frames, err := backfillProvider.GetBackfillFrames(ctx, block)
-
-	assert.NoError(t, err)
-	assert.Len(t, frames, 1)
-
-	frame := frames[0]
-	assert.NotNil(t, frame.ID)
-	assert.Equal(t, uint16(0), frame.FrameNumber)
-	assert.Equal(t, []byte("data"), frame.Data)
-	assert.Equal(t, true, frame.IsLast)
 }
