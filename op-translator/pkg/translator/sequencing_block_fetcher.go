@@ -112,21 +112,21 @@ func (s *SequencingBlockFetcher) GetSequencingBlocksByTimeWindow(timeWindowStart
 			return nil, fmt.Errorf("block is nil")
 		}
 
-		timestamp, err := block.GetBlockTimestamp()
+		blockTimestamp, err := block.GetBlockTimestamp()
 		if err != nil {
 			return nil, fmt.Errorf("error getting block timestamp: %w", err)
 		}
 
 		// If we've passed the end of the time window, break
-		if timestamp > timeWindowEnd {
+		if blockTimestamp > timeWindowEnd {
 			break
 		}
 
 		// If the block is within our time window, add it to the result
-		if timestamp > timeWindowStart {
+		if blockTimestamp > timeWindowStart {
 			blocks = append(blocks, &block)
 		} else {
-			return nil, fmt.Errorf("invalid block timestamp before time window: %d", timestamp)
+			return nil, fmt.Errorf("invalid block timestamp before time window: %d", blockTimestamp)
 		}
 
 		currentBlockNum++
