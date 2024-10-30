@@ -85,8 +85,8 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 	// WARNING: This function assumes that the block numbers are passed in order
 	numbersLength := len(blocks)
 	type BlockReceipts struct {
-		blockNumber string
-		receipts    []*ethtypes.Receipt
+		block    *types.Block
+		receipts []*ethtypes.Receipt
 	}
 	receiptsChan := make(chan BlockReceipts, numbersLength)
 	errChan := make(chan error, numbersLength)
@@ -122,8 +122,9 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 			}
 
 			receiptsChan <- BlockReceipts{
-				blockNumber: blockNumber,
-				receipts:    blockReceipts}
+				block:    block,
+				receipts: blockReceipts,
+			}
 
 		}(block)
 	}
@@ -134,18 +135,14 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 		close(errChan)
 	}()
 
-	blockReciptsMap := make(map[string][]*ethtypes.Receipt, numbersLength)
+	blockReciptsMap := make(map[*types.Block][]*ethtypes.Receipt, numbersLength)
 	for blockReceipts := range receiptsChan {
-		blockReciptsMap[blockReceipts.blockNumber] = blockReceipts.receipts
+		blockReciptsMap[blockReceipts.block] = blockReceipts.receipts
 	}
 
 	var allReceipts []*ethtypes.Receipt
 	for _, block := range blocks {
-		number, err := block.GetBlockNumberHex()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get block number: %w", err)
-		}
-		allReceipts = append(allReceipts, blockReciptsMap[number]...)
+		allReceipts = append(allReceipts, blockReciptsMap[block]...)
 	}
 
 	if len(errChan) > 0 {
