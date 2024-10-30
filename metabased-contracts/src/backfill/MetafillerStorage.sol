@@ -31,7 +31,7 @@ contract MetafillerStorage is AccessControl {
 
     /// @notice Sets the index from block
     /// @param blockNumber The block number to start indexing from
-    function setIndexFromBlock(uint256 blockNumber) external onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setIndexFromBlock(uint256 blockNumber) external onlyRole(MANAGER_ROLE) {
         indexFromBlock = blockNumber;
     }
 
