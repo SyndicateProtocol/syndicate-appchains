@@ -3,6 +3,7 @@ package test
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -59,6 +60,13 @@ func getMockClient() *mocks.MockRPCClient {
 		"number":       blockNumHex,
 		"transactions": stubs.TransactionsBlock0xe730a8Hashes,
 	}
+	backfillHash := common.HexToHash("0x123")
+	backfillBlockNumber := "0x1"
+	backfillBlock := types.Block{
+		"hash":         backfillHash.String(),
+		"number":       backfillBlockNumber,
+		"transactions": stubs.TransactionsBlock0xe730a8Full,
+	}
 	ctx := mock.Anything
 
 	// Mock settlement block
@@ -66,6 +74,7 @@ func getMockClient() *mocks.MockRPCClient {
 	mockClient.On("GetBlockByNumber", ctx, blockNumHex, false).Return(blockWithHashes, nil)
 	mockClient.On("GetBlockByHash", ctx, blockHash, true).Return(blockWithFullTxns, nil)
 	mockClient.On("GetBlockByHash", ctx, blockHash, false).Return(blockWithHashes, nil)
+	mockClient.On("GetBlockByNumber", ctx, backfillBlockNumber, true).Return(backfillBlock, nil)
 
 	// Mock sequencing block
 	seqBlockNumbers := []string{"0xe730a8"}
@@ -97,62 +106,96 @@ func getMockClient() *mocks.MockRPCClient {
 	return mockClient
 }
 
+func getBackfillHttpMock() *mocks.HTTPClientMock {
+	mockHTTPClient := new(mocks.HTTPClientMock)
+	jsonData, _ := json.Marshal(backfill.BackfillData{
+		Data:      []string{"data"},
+		EpochHash: common.HexToHash("0x123"),
+	})
+	mockHTTPClient.On("Do", mock.Anything).Return(&http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(bytes.NewBuffer(jsonData)),
+		Header:     make(http.Header),
+	}, nil)
+
+	return mockHTTPClient
+}
+
 func TestOPNodeCalls(t *testing.T) {
 	mockConfig := mocks.DefaultTestingConfig
 	testCases := []struct {
-		expectedResult types.Block
-		requestBody    string
-		name           string
-		expectedError  string
-		expectedStatus int
+		expectedResult   types.Block
+		requestBody      string
+		name             string
+		expectedError    string
+		expectedStatus   int
+		expectedBackfill bool
 	}{
 		{
-			name:           "eth_getBlockByNumber - Invalid request - missing params",
-			requestBody:    `{"method": "eth_getBlockByNumber"}`,
-			expectedStatus: http.StatusOK,
-			expectedError:  "invalid request",
+			name:             "eth_getBlockByNumber - Invalid request - missing params",
+			requestBody:      `{"method": "eth_getBlockByNumber"}`,
+			expectedStatus:   http.StatusOK,
+			expectedError:    "invalid request",
+			expectedBackfill: false,
 		},
 		{
-			name:           "eth_getBlockByNumber - Invalid request - missing params",
-			requestBody:    `{"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "id": 1}`,
-			expectedStatus: http.StatusOK,
-			expectedError:  "missing value for required argument 0",
+			name:             "eth_getBlockByNumber - Invalid request - missing params",
+			requestBody:      `{"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "id": 1}`,
+			expectedStatus:   http.StatusOK,
+			expectedError:    "missing value for required argument 0",
+			expectedBackfill: false,
 		},
 		{
-			name:           "eth_getBlockByNumber - Valid request - specific block number",
-			requestBody:    `{"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["0xe730a8", true], "id": 1}`,
-			expectedStatus: http.StatusOK,
-			expectedResult: stubs.ExpectedBlock0xE7309D,
+			name:             "eth_getBlockByNumber - Valid request - specific block number",
+			requestBody:      `{"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["0xe730a8", true], "id": 1}`,
+			expectedStatus:   http.StatusOK,
+			expectedResult:   stubs.ExpectedBlock0xE7309D,
+			expectedBackfill: false,
 		},
 		{
-			name:           "eth_getBlockByHash - Invalid request - missing params",
-			requestBody:    `{"method": "eth_getBlockByHash"}`,
-			expectedStatus: http.StatusOK,
-			expectedError:  "invalid request",
+			name:             "eth_getBlockByHash - Invalid request - missing params",
+			requestBody:      `{"method": "eth_getBlockByHash"}`,
+			expectedStatus:   http.StatusOK,
+			expectedError:    "invalid request",
+			expectedBackfill: false,
 		},
 		{
-			name:           "eth_getBlockByHash - Invalid request - missing params",
-			requestBody:    `{"jsonrpc": "2.0", "method": "eth_getBlockByHash", "id": 1}`,
-			expectedStatus: http.StatusOK,
-			expectedError:  "missing value for required argument 0",
+			name:             "eth_getBlockByHash - Invalid request - missing params",
+			requestBody:      `{"jsonrpc": "2.0", "method": "eth_getBlockByHash", "id": 1}`,
+			expectedStatus:   http.StatusOK,
+			expectedError:    "missing value for required argument 0",
+			expectedBackfill: false,
 		},
 		{
-			name:           "eth_getBlockByHash - Valid request - specific block hash",
-			requestBody:    `{"jsonrpc": "2.0", "method": "eth_getBlockByHash", "params": ["0x5214c19f0635af3e8c98ea12e3748d2cd8c20f933aa46b5de778f8a1ea6075c4", true], "id": 1}`,
-			expectedStatus: http.StatusOK,
-			expectedResult: stubs.ExpectedBlock0xE7309D,
+			name:             "eth_getBlockByHash - Valid request - specific block hash",
+			requestBody:      `{"jsonrpc": "2.0", "method": "eth_getBlockByHash", "params": ["0x5214c19f0635af3e8c98ea12e3748d2cd8c20f933aa46b5de778f8a1ea6075c4", true], "id": 1}`,
+			expectedStatus:   http.StatusOK,
+			expectedResult:   stubs.ExpectedBlock0xE7309D,
+			expectedBackfill: false,
+		},
+		{
+			name:             "eth_getBlockByNumber - Valid request - backfill",
+			requestBody:      `{"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["0x1", true], "id": 1}`,
+			expectedStatus:   http.StatusOK,
+			expectedResult:   stubs.ExpectedBackfillBlock,
+			expectedBackfill: true,
 		},
 	}
 
 	for _, tc := range testCases {
 		mockClient := getMockClient()
+		mockHTTPBackfillClient := getBackfillHttpMock()
 		opTranslator := &translator.OPTranslator{
 			SettlementChain:     mockClient,
 			BatcherInboxAddress: common.HexToAddress("0x123"),
 			BatcherAddress:      common.HexToAddress("0x123"),
 			BatchProvider:       &mocks.MockBatchProvider{},
 			Signer:              *translator.NewSigner(mockConfig),
-			BackfillProvider:    backfill.NewBackfillerProvider(mockConfig),
+			BackfillProvider: &backfill.BackfillProvider{
+				MetafillerURL: mockConfig.MetafillerURL,
+				Client:        mockHTTPBackfillClient,
+			},
+			CutoverBlock: mockConfig.CutoverBlock,
 		}
 
 		s, err := server.TranslatorHandler(mockConfig, opTranslator)
@@ -169,6 +212,7 @@ func TestOPNodeCalls(t *testing.T) {
 			if tc.expectedError != "" {
 				assert.Contains(t, response["error"].(map[string]any)["message"], tc.expectedError)
 			} else {
+				assert.Equal(t, tc.expectedBackfill, len(mockHTTPBackfillClient.Calls) > 0)
 				blockData, ok := response["result"].(map[string]any)
 				assert.True(t, ok, "result is not a map[string]any")
 				block := types.Block(blockData)
