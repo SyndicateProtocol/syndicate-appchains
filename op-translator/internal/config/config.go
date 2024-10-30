@@ -44,6 +44,7 @@ type Config struct {
 	SequencePerSettlementBlock int    `koanf:"sequence_per_settlement_block"`
 	Port                       int    `koanf:"port"`
 	FrameSize                  int    `koanf:"frame_size"`
+	CutoverBlock               int    `koanf:"cutover_block"`
 	Pretty                     bool   `koanf:"pretty"`
 }
 
@@ -66,6 +67,7 @@ func setCLIFlags(f *pflag.FlagSet) {
 	f.String("batcher_private_key", "", "Batcher private key")
 	f.Int("settlement_chain_id", 1, "Settlement chain id")
 	f.Int("settlement_chain_block_time", 1, "Settlement chain block time")
+	f.Int("cutover_block", 0, "Cutover block")
 }
 
 // hydrateFromConfMap sets the Config values from the koanf conf map
@@ -88,6 +90,7 @@ func hydrateFromConfMap(config *Config) {
 	config.BatcherPrivateKey = k.String("batcher_private_key")
 	config.SettlementChainID = k.Int64("settlement_chain_id")
 	config.SettlementChainBlockTime = k.Int("settlement_chain_block_time")
+	config.CutoverBlock = k.Int("cutover_block")
 }
 
 func Init() *Config {
@@ -200,6 +203,10 @@ func ValidateConfigValues(config *Config) (result error) {
 
 	if config.SettlementChainBlockTime <= 0 {
 		result = multierror.Append(result, fmt.Errorf("settlementChainBlockTime must be a positive number: %d", config.SettlementChainBlockTime))
+	}
+
+	if config.CutoverBlock < 0 {
+		result = multierror.Append(result, fmt.Errorf("cutoverBlock must be a non-negative number: %d", config.CutoverBlock))
 	}
 
 	return result

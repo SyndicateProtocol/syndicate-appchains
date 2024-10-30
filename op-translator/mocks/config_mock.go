@@ -16,6 +16,7 @@ const TestingSequencingStartBlock = 2
 const TestingSequencePerSettlementBlock = 2
 const TestingBatcherPrivateKey = "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d"
 const TestingSettlementChainID = 84532
+const TestingCutoverBlock = 10
 
 type MockConfig struct {
 	mock.Mock
@@ -37,4 +38,5 @@ var DefaultTestingConfig = &config.Config{
 	BatchInboxAddress:          TestingBatchInboxAddress,
 	BatcherAddress:             TestingBatcherAddress,
 	SettlementChainID:          TestingSettlementChainID,
+	CutoverBlock:               TestingCutoverBlock,
 }
