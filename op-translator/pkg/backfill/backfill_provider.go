@@ -71,7 +71,7 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber stri
 }
 
 func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Block) ([]*types.Frame, error) {
-	epochNumber, err := block.GetBlockNumber()
+	epochNumber, err := block.GetBlockNumberHex()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get backfill data - invalid block number: %w", err)
 	}

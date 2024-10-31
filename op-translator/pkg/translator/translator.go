@@ -96,7 +96,7 @@ func (t *OPTranslator) getFrames(ctx context.Context, block types.Block) ([]*typ
 		return nil, err
 	}
 
-	if blockNumber < t.CutoverBlock {
+	if blockNumber < uint64(t.CutoverBlock) {
 		return t.BackfillProvider.GetBackfillFrames(ctx, block)
 	} else {
 		batch, err := t.BatchProvider.GetBatch(ctx, block)
