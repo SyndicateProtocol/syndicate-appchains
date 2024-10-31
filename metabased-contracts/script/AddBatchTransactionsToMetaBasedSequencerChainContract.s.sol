@@ -13,7 +13,7 @@ contract AddBatchTransactionsToMetabasedSequencerChainContract is Script {
         // MetabasedSequencerChain address on Base Sepolia
         metabasedSequencerChainContract = MetabasedSequencerChain(0x73Ba7D784d13Ec0070a4Ea6F49Ff57dc007Bb48d);
 
-        // Example of adding multiple encoded transactions in bulk.
+        // Example of adding multiple transactions in bulk.
 
         // create transaction list
         bytes[] memory transactionList = new bytes[](2);
