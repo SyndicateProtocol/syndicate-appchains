@@ -1,5 +1,5 @@
 use crate::application;
-use crate::application::Metrics;
+use crate::application::{Metrics, Stopwatch};
 use crate::domain::primitives::Bytes;
 use crate::domain::MetabasedSequencerChainService;
 use crate::presentation::json_rpc_errors::Error;
@@ -89,15 +89,16 @@ impl JsonRpcError<()> {
 ///
 /// * Data: hex encoded string that contains signed and serialized transaction with an optional `0x`
 ///   prefix.
-pub async fn send_raw_transaction<Chain, M>(
+pub async fn send_raw_transaction<Chain, M, S>(
     params: Params<'static>,
-    ctx: Arc<Services<Chain, M>>,
+    ctx: Arc<Services<Chain, M, S>>,
     _ext: http::Extensions,
 ) -> Result<String, JsonRpcError<()>>
 where
     Chain: MetabasedSequencerChainService,
     M: Metrics,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
+    S: Stopwatch,
 {
     let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap())?;
     let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
@@ -110,22 +111,26 @@ where
     let bytes = Bytes::from(bytes);
     let chain = ctx.chain_service();
     let metrics = ctx.metrics_service();
+    let start = ctx.stopwatch_service().start();
 
-    Ok(application::send_raw_transaction(bytes, chain, metrics)
-        .await?
-        .encode_hex_with_prefix())
+    Ok(
+        application::send_raw_transaction(bytes, chain, metrics, &start)
+            .await?
+            .encode_hex_with_prefix(),
+    )
 }
 
 /// The JSON-RPC endpoint for Prometheus metrics scraper to collect data from.
-pub fn metrics<Chain, M>(
+pub fn metrics<Chain, M, S>(
     _params: Params,
-    ctx: &Services<Chain, M>,
+    ctx: &Services<Chain, M, S>,
     _ext: &http::Extensions,
 ) -> String
 where
     Chain: MetabasedSequencerChainService,
     M: Metrics,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
+    S: Stopwatch,
 {
     application::metrics(ctx.metrics_service())
 }

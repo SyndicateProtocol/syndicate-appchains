@@ -1,7 +1,7 @@
-use crate::application::{Metrics, PrometheusMetrics};
+use crate::application::{Metrics, PrometheusMetrics, RunningStopwatch, Stopwatch};
 use crate::domain::primitives::Address;
 use crate::domain::MetabasedSequencerChainService;
-use crate::infrastructure::SolMetabasedSequencerChainService;
+use crate::infrastructure::{SolMetabasedSequencerChainService, TokioStopwatch};
 use crate::presentation::json_rpc_errors::Error;
 use crate::presentation::jsonrpc;
 use alloy::network::{Ethereum, EthereumWallet};
@@ -40,7 +40,8 @@ pub async fn run(
 ) -> anyhow::Result<(SocketAddr, ServerHandle)> {
     let chain = create_chain_service(chain_contract_address, chain_rpc_address, private_key)?;
     let metrics = PrometheusMetrics::new();
-    let services = Services::new(chain, metrics);
+    let stopwatch = TokioStopwatch;
+    let services = Services::new(chain, metrics, stopwatch);
 
     let rpc_middleware = RpcServiceBuilder::new();
     let server = Server::builder()
@@ -81,13 +82,15 @@ fn create_chain_service(
     ))
 }
 
-fn create_eth_module<Chain, M>(
-    services: Services<Chain, M>,
-) -> anyhow::Result<RpcModule<Services<Chain, M>>>
+fn create_eth_module<Chain, M, S, S1>(
+    services: Services<Chain, M, S>,
+) -> anyhow::Result<RpcModule<Services<Chain, M, S>>>
 where
     Chain: MetabasedSequencerChainService + Send + Sync + 'static,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
     M: Metrics + Send + Sync + 'static,
+    S: Stopwatch<Running = S1> + Send + Sync + 'static,
+    S1: RunningStopwatch + Send + Sync + 'static,
 {
     let mut module = RpcModule::new(services);
     module.register_async_method("eth_sendRawTransaction", jsonrpc::send_raw_transaction)?;
@@ -96,14 +99,19 @@ where
 }
 
 #[derive(Debug)]
-pub struct Services<Chain, M> {
+pub struct Services<Chain, M, S> {
     chain: Chain,
     metrics: M,
+    stopwatch: S,
 }
 
-impl<Chain: MetabasedSequencerChainService, M: Metrics> Services<Chain, M> {
-    pub fn new(chain: Chain, metrics: M) -> Self {
-        Self { chain, metrics }
+impl<Chain: MetabasedSequencerChainService, M: Metrics, S: Stopwatch> Services<Chain, M, S> {
+    pub fn new(chain: Chain, metrics: M, stopwatch: S) -> Self {
+        Self {
+            chain,
+            metrics,
+            stopwatch,
+        }
     }
 
     pub fn chain_service(&self) -> &Chain {
@@ -112,5 +120,9 @@ impl<Chain: MetabasedSequencerChainService, M: Metrics> Services<Chain, M> {
 
     pub fn metrics_service(&self) -> &M {
         &self.metrics
+    }
+
+    pub fn stopwatch_service(&self) -> &S {
+        &self.stopwatch
     }
 }
