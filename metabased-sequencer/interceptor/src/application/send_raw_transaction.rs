@@ -46,7 +46,6 @@ where
         )?;
     }
 
-    chain.process_transaction(encoded).await?;
-
-    Ok(tx.tx_hash().to_owned())
+    // 3. Submission/forwarding:
+    Ok(chain.process_transaction(encoded).await?)
 }

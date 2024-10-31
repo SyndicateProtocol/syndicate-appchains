@@ -1,5 +1,6 @@
 use crate::domain::primitives::Address;
 use crate::presentation::server;
+use alloy_primitives::B256;
 use clap::{Parser, ValueEnum};
 use figment::providers::{Env, Serialized};
 use figment::Figment;
@@ -23,6 +24,7 @@ pub async fn run() -> anyhow::Result<()> {
         args.port,
         args.chain_contract_address,
         args.chain_rpc_address,
+        args.private_key,
     )
     .await?;
 
@@ -96,6 +98,10 @@ struct CliArgs {
     #[arg(short = 'p', long)]
     port: Option<u16>,
 
+    /// Private key for signing layer-2 transactions.
+    #[arg(short = 'k', long)]
+    private_key: B256,
+
     /// Profile that chooses which .env file to load
     #[arg(short = 'o', long)]
     profile: Option<Profile>,
@@ -104,6 +110,7 @@ struct CliArgs {
 struct Args {
     chain_contract_address: Address,
     chain_rpc_address: Url,
+    private_key: B256,
     port: u16,
 }
 
@@ -112,6 +119,7 @@ impl From<CliArgs> for Args {
         Self {
             chain_contract_address: value.chain_contract_address,
             chain_rpc_address: value.chain_rpc_address,
+            private_key: value.private_key,
             port: value.port.expect("port should be set by a default value"),
         }
     }

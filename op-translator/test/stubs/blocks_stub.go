@@ -51,3 +51,27 @@ var ExpectedBlock0xE7309D = types.Block{
 			"maxPriorityFeePerGas": "0x0",
 		}),
 }
+
+var ExpectedBackfillBlock = types.Block{
+	"hash":   "0x0000000000000000000000000000000000000000000000000000000000000123",
+	"number": "0x1",
+	"transactions": append(TransactionsBlock0xe730a8Full,
+		map[string]any{
+			"blockNumber":          "0x1",
+			"hash":                 "0xc11c0eadbb122280dcdb415f434f3781fa3ad650649b6c3677750218a2bde93b",
+			"from":                 "0x0000000000000000000000000000000000000123",
+			"to":                   "0x0000000000000000000000000000000000000123",
+			"input":                "0x0012b10845ba7ec0740be0cee0cb9f30800000000000587801004800b7ff00f845a0000000000000000000000000000000000000000000000000000000000000000080a0000000000000000000000000000000000000000000000000000000000000000080c0010000ffffacae043e01",
+			"nonce":                "0x0",
+			"gasPrice":             "0x0",
+			"r":                    "0x5dd10a5376b5288843059f39926cb2f34bd09f0da0b4d67a76512a04586fd022",
+			"s":                    "0x2d00a45922fd5151b8db9ab400fd465f0b763ca17523bd8eed21af77359988f5",
+			"v":                    "0x0",
+			"value":                "0x0",
+			"gas":                  "0x0",
+			"transactionIndex":     "0x0",
+			"type":                 "0x2",
+			"maxFeePerGas":         "0x0",
+			"maxPriorityFeePerGas": "0x0",
+		}),
+}

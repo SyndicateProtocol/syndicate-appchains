@@ -6,10 +6,13 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/rs/zerolog/log"
 )
 
 // TODO SEQ-141: spike: performant Go HTTP/JSON-RPC lib
@@ -30,12 +33,18 @@ func NewBackfillerProvider(cfg *config.Config) *BackfillProvider {
 }
 
 type BackfillData struct {
-	Data      string      `json:"data"` // Hex format
+	Data      []string    `json:"data"` // Hex format
 	EpochHash common.Hash `json:"epochHash"`
 }
 
 func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber string) (*BackfillData, error) {
-	fullURL := b.MetafillerURL + "/" + epochNumber
+	intEpochNumber, err := utils.HexToInt(epochNumber)
+	if err != nil {
+		return nil, err
+	}
+	fullURL := b.MetafillerURL + "/" + strconv.Itoa(intEpochNumber)
+	log.Debug().Msgf("Getting backfill data for epoch %s. Int epoch number: %d. Fetching from: %s", epochNumber, intEpochNumber, fullURL)
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, http.NoBody)
 	if err != nil {
 		return nil, err
@@ -48,28 +57,46 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber stri
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
-	fmt.Println("BODY", body)
 	if err != nil {
 		return nil, err
 	}
-	// TODO SEQ-209: Think most optimal way to send/receive this data
+
 	var data *BackfillData
 	err = json.Unmarshal(body, &data)
 	if err != nil {
 		return nil, err
 	}
+	log.Debug().Msgf("Backfill data for epoch %d: %v", intEpochNumber, data)
 	return data, nil
 }
 
-func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, epochNumber string) ([]*types.Frame, error) {
-	backfillData, err := b.GetBackfillData(ctx, epochNumber)
+func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Block) ([]*types.Frame, error) {
+	epochNumber, err := block.GetBlockNumber()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get backfill data - invalid block number: %w", err)
 	}
 
-	frames, err := types.ToFrames([]byte(backfillData.Data), config.MaxFrameSize, backfillData.EpochHash)
+	epochHash, err := block.GetBlockHash()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get backfill data - invalid block hash: %w", err)
+	}
+
+	backfillData, err := b.GetBackfillData(ctx, epochNumber)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get backfill data for epoch %s: %w", epochNumber, err)
+	}
+
+	if backfillData.EpochHash != common.HexToHash(epochHash) {
+		return nil, fmt.Errorf("epoch hash mismatch: %s != %s", backfillData.EpochHash, epochHash)
+	}
+
+	frames := make([]*types.Frame, 0, len(backfillData.Data))
+	for _, data := range backfillData.Data {
+		frame, err := types.ToFrames([]byte(data), config.MaxFrameSize, backfillData.EpochHash)
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert data to frames for epoch %s: %w", epochNumber, err)
+		}
+		frames = append(frames, frame...)
 	}
 
 	return frames, nil

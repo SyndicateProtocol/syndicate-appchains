@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
@@ -12,10 +13,9 @@ import (
 )
 
 var (
-	SomeOtherABIHash = crypto.Keccak256Hash([]byte("someOtherABI"))
+	SomeOtherABIHash          = crypto.Keccak256Hash([]byte("someOtherABI"))
+	SequencingContractAddress = common.HexToAddress("0x1111111111111111111111111111111111111111")
 )
-
-var SequencingContractAddress = common.HexToAddress("0x1111111111111111111111111111111111111111")
 
 func getBatchProvider() *MetaBasedBatchProvider {
 	return NewMetaBasedBatchProvider(
@@ -89,7 +89,7 @@ func TestFilterReceipts(t *testing.T) {
 						TransactionProcessedSigHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: DummyEncodedTxn,
+					Data: DummyEncodedData,
 				},
 			},
 		},
@@ -102,7 +102,7 @@ func TestFilterReceipts(t *testing.T) {
 						TransactionProcessedSigHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: DummyEncodedTxn,
+					Data: DummyEncodedData,
 				},
 			},
 		},
@@ -112,12 +112,10 @@ func TestFilterReceipts(t *testing.T) {
 		},
 	}
 
-	txns, err := metaBasedBatchProvider.FilterReceipts(receipts)
-
-	require.NoError(t, err)
+	txns := metaBasedBatchProvider.FilterReceipts(receipts)
 	assert.Len(t, txns, 2)
-	assert.Equal(t, DummyTxn, []byte(txns[0]))
-	assert.Equal(t, DummyTxn, []byte(txns[1]))
+	assert.Equal(t, hexutil.Bytes{DummyTxn[1]}, txns[0])
+	assert.Equal(t, hexutil.Bytes{DummyTxn[1]}, txns[1])
 }
 
 func TestFilterReceiptsWithExtraLog(t *testing.T) {
@@ -135,7 +133,7 @@ func TestFilterReceiptsWithExtraLog(t *testing.T) {
 						TransactionProcessedSigHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: DummyEncodedTxn,
+					Data: DummyEncodedData,
 				},
 				{
 					Address: sequencingContractAddress,
@@ -143,15 +141,13 @@ func TestFilterReceiptsWithExtraLog(t *testing.T) {
 						SomeOtherABIHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: DummyEncodedTxn,
+					Data: DummyEncodedData,
 				},
 			},
 		},
 	}
 
-	txns, err := metaBasedBatchProvider.FilterReceipts(receipts)
-
-	assert.NoError(t, err)
+	txns := metaBasedBatchProvider.FilterReceipts(receipts)
 	assert.Len(t, txns, 1)
-	assert.Equal(t, DummyTxn, []byte(txns[0]))
+	assert.Equal(t, hexutil.Bytes{DummyTxn[1]}, txns[0])
 }

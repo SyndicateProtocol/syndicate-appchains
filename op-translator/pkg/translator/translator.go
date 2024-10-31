@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
@@ -35,6 +36,7 @@ type OPTranslator struct {
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
+	CutoverBlock        int // At this block and above, regular data fetching will be used instead of backfill.
 }
 
 func Init(cfg *config.Config) *OPTranslator {
@@ -54,6 +56,59 @@ func Init(cfg *config.Config) *OPTranslator {
 		BatchProvider:       metaBasedBatchProvider,
 		BackfillProvider:    backfillProvider,
 		Signer:              *signer,
+		CutoverBlock:        cfg.CutoverBlock,
+	}
+}
+
+func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, transactionDetailFlag bool) (types.Block, error) {
+	log.Debug().Msg("-- HIT eth_getBlockByNumber")
+	block, err := t.SettlementChain.GetBlockByNumber(ctx, blockNumber, transactionDetailFlag)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get block by number")
+		return nil, err
+	}
+	if !transactionDetailFlag {
+		return block, nil
+	}
+	return t.translateBlock(ctx, block)
+}
+
+func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash, transactionDetailFlag bool) (types.Block, error) {
+	log.Debug().Msg("-- HIT eth_getBlockByHash")
+	block, err := t.SettlementChain.GetBlockByHash(ctx, blockHash, transactionDetailFlag)
+	if err != nil {
+		log.Error().Err(err).Msg("Failed to get block by hash")
+		return nil, err
+	}
+	if !transactionDetailFlag {
+		return block, nil
+	}
+	return t.translateBlock(ctx, block)
+}
+
+func (t *OPTranslator) Close() {
+	t.SettlementChain.CloseConnection()
+	t.BatchProvider.Close()
+}
+
+func (t *OPTranslator) getFrames(ctx context.Context, block types.Block) ([]*types.Frame, error) {
+	blockNumber, err := block.GetBlockNumber()
+	if err != nil {
+		return nil, err
+	}
+	intBlockNumber, err := utils.HexToInt(blockNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	if intBlockNumber < t.CutoverBlock {
+		return t.BackfillProvider.GetBackfillFrames(ctx, block)
+	} else {
+		batch, err := t.BatchProvider.GetBatch(ctx, block)
+		if err != nil {
+			return nil, err
+		}
+		return batch.GetFrames(config.MaxFrameSize)
 	}
 }
 
@@ -62,14 +117,7 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, nil
 	}
 
-	batch, err := t.BatchProvider.GetBatch(ctx, block)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO SEQ-209: Write logic for switching between backfill and regular data fetching
-	frames, err := batch.GetFrames(config.MaxFrameSize)
-
+	frames, err := t.getFrames(ctx, block)
 	if err != nil {
 		return nil, err
 	}
@@ -102,37 +150,6 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 	}
 
 	return block, nil
-}
-
-func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, transactionDetailFlag bool) (types.Block, error) {
-	log.Debug().Msg("-- HIT eth_getBlockByNumber")
-	block, err := t.SettlementChain.GetBlockByNumber(ctx, blockNumber, transactionDetailFlag)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get block by number")
-		return nil, err
-	}
-	if !transactionDetailFlag {
-		return block, nil
-	}
-	return t.translateBlock(ctx, block)
-}
-
-func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash, transactionDetailFlag bool) (types.Block, error) {
-	log.Debug().Msg("-- HIT eth_getBlockByHash")
-	block, err := t.SettlementChain.GetBlockByHash(ctx, blockHash, transactionDetailFlag)
-	if err != nil {
-		log.Error().Err(err).Msg("Failed to get block by hash")
-		return nil, err
-	}
-	if !transactionDetailFlag {
-		return block, nil
-	}
-	return t.translateBlock(ctx, block)
-}
-
-func (t *OPTranslator) Close() {
-	t.SettlementChain.CloseConnection()
-	t.BatchProvider.Close()
 }
 
 func ShouldTranslate(method string) bool {

@@ -1,9 +1,13 @@
 package utils_test
 
 import (
+	"bytes"
+	"compress/zlib"
 	"testing"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
+	"github.com/andybalholm/brotli"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHexToInt(t *testing.T) {
@@ -23,12 +27,11 @@ func TestHexToInt(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := utils.HexToInt(tt.input)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("HexToInt() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("HexToInt() = %v, want %v", got, tt.want)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
 			}
 		})
 	}
@@ -52,12 +55,11 @@ func TestHexToUInt64(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := utils.HexToUInt64(tt.input)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("HexToUInt64() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("HexToUInt64() = %v, want %v", got, tt.want)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.want, got)
 			}
 		})
 	}
@@ -76,9 +78,81 @@ func TestIntToHex(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := utils.IntToHex(tt.input); got != tt.want {
-				t.Errorf("IntToHex() = %v, want %v", got, tt.want)
+			assert.Equal(t, tt.want, utils.IntToHex(tt.input))
+		})
+	}
+}
+
+func TestSecondsToMilliseconds(t *testing.T) {
+	assert.Equal(t, 1000, utils.SecondsToMilliseconds(1))
+	assert.Equal(t, 2000, utils.SecondsToMilliseconds(2))
+}
+
+func TestGetCompressionType(t *testing.T) {
+	tests := []struct { //nolint:govet // test struct
+		name         string
+		versionByte  byte
+		expectedType utils.CompressionType
+	}{
+		{"NoCompression", utils.NoCompression, utils.CompressionTypeNone},
+		{"ZlibCM8", utils.ZlibCM8, utils.CompressionTypeZlib},
+		{"ZlibCM15", utils.ZlibCM15, utils.CompressionTypeZlib},
+		{"VersionBrotli", utils.VersionBrotli, utils.CompressionTypeBrotli},
+		{"UnknownCompressionType", 0x66, utils.CompressionTypeUnknown},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			compressionType := utils.GetCompressionType(tt.versionByte)
+			if compressionType != tt.expectedType {
+				t.Errorf("GetCompressionType(%v) = %v, want %v", tt.versionByte, compressionType, tt.expectedType)
 			}
 		})
 	}
+}
+
+func TestDecompressionFunctions(t *testing.T) {
+	originalData := []byte("test compression data")
+	invalidData := []byte("invalid data")
+
+	tests := []struct { //nolint:govet // test struct
+		name           string
+		compressedData []byte
+		expectedError  bool
+		decompressFunc func([]byte) ([]byte, error)
+	}{
+		{"ValidZlibData", compressZlib(originalData), false, utils.DecompressZlib},
+		{"InvalidZlibData", invalidData, true, utils.DecompressZlib},
+		{"ValidBrotliData", compressBrotli(originalData), false, utils.DecompressBrotli},
+		{"InvalidBrotliData", invalidData, true, utils.DecompressBrotli},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			decompressedData, err := tt.decompressFunc(tt.compressedData)
+			if (err != nil) != tt.expectedError {
+				t.Errorf("Expected error: %v, got: %v", tt.expectedError, err)
+			}
+			if !tt.expectedError && !bytes.Equal(decompressedData, originalData) {
+				t.Errorf("Expected decompressed data: %v, got: %v", originalData, decompressedData)
+			}
+		})
+	}
+}
+
+// Compression functions
+func compressZlib(data []byte) []byte {
+	var b bytes.Buffer
+	w := zlib.NewWriter(&b)
+	w.Write(data) //nolint:errcheck // just for testing
+	w.Close()
+	return b.Bytes()
+}
+
+func compressBrotli(data []byte) []byte {
+	var b bytes.Buffer
+	w := brotli.NewWriter(&b)
+	w.Write(data) //nolint:errcheck // just for testing
+	w.Close()
+	return b.Bytes()
 }

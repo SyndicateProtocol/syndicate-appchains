@@ -43,9 +43,14 @@ $ make deploy-based-sequencerchain-frame
 
 #### Metabased Testnet
 
-| Contract Name           | Address                                    |
-| ----------------------- | ------------------------------------------ |
-| MetabasedFactory        | 0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba |
+| Contract Name                             | Address                                    |
+| ----------------------------------------- | ------------------------------------------ |
+| MetabasedFactory                          | 0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba |
 | MetabasedSequencerChain (With dummy data) | 0x5b6bB750222ADeE5B6031702a08D239f97F3b063 |
-| AlwaysAllowedModule     | 0x471584f0B8e35faEB2a618BD58A62316D8882d63 |
-| MetafillerStorage       | 0xC329B96c47271426B237bA85dF5504375C5cCB28 |
+| AlwaysAllowedModule                       | 0x471584f0B8e35faEB2a618BD58A62316D8882d63 |
+| MetafillerStorage                         | 0xC329B96c47271426B237bA85dF5504375C5cCB28 |
+
+### Metabased Stratos
+
+| MetafillerStorage (Frame) | 0xFEA8A2BA8B760348ea95492516620ad45a299d53 |
+| MetafillerStorage (Ham) | 0x9cecA064CaB740E5F511b426c7dBD7820795fe13 |
