@@ -6,25 +6,25 @@ import {MetafillerStorage} from "../../src/backfill/MetafillerStorage.sol";
 
 contract MetafillerStorageTest is Test {
     address public manager;
-    address public nonManager;
+    address public admin;
     MetafillerStorage public l3Storage;
 
     function setUp() public {
         manager = address(0x1);
-        nonManager = address(0x2);
+        admin = address(0x2);
         uint256 l3ChainId = 10042001;
-        l3Storage = new MetafillerStorage(manager, manager, l3ChainId);
+        l3Storage = new MetafillerStorage(admin, manager, l3ChainId);
     }
 
     function testOnlyManagerCanSave() public {
         vm.expectRevert();
-        vm.prank(nonManager);
+        vm.prank(admin);
         l3Storage.save(1, 0xd41f86be45e841b1791bf9ff78aa9c388d9c81384d8a063d480c71c7f8865502, "0x");
     }
 
     function testOnlyManagerCanSetIndexFromBlock() public {
         vm.expectRevert();
-        vm.prank(nonManager);
+        vm.prank(admin);
         l3Storage.setIndexFromBlock(1);
     }
 
@@ -44,7 +44,7 @@ contract MetafillerStorageTest is Test {
         bytes[] memory batches = new bytes[](1);
         batches[0] = "0x1234";
 
-        vm.prank(nonManager);
+        vm.prank(admin);
         vm.expectRevert();
         l3Storage.saveForMany(epochNumbers, epochHashes, batches);
     }
