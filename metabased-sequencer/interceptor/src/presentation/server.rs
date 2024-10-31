@@ -16,6 +16,22 @@ use jsonrpsee::RpcModule;
 use std::net::SocketAddr;
 use url::Url;
 
+/// Combines `n` [filler]s into one [filler].
+///
+/// It achieves this by nesting [`JoinFill`] providers into a binary tree structure. In this tree,
+/// every node with 2 children is a [`JoinFill`] provider while every leaf node is a provider from
+/// the given arguments.
+///
+/// [filler]: alloy::providers::fillers::TxFiller
+macro_rules! join_fill {
+    ($x:expr, $($y:tt)+) => {
+        JoinFill::new($x, join_fill!($($y)+))
+    };
+    ($x:expr $(,)?) => {
+        $x
+    };
+}
+
 pub async fn run(
     port: u16,
     chain_contract_address: Address,
@@ -50,12 +66,11 @@ fn create_chain_service(
     let wallet = EthereumWallet::from(signer);
     // Fillers automatically set some attributes for every transaction sent using this provider.
     // See https://alloy.rs/building-with-alloy/understanding-fillers.html
-    let filler = JoinFill::new(
+    let filler = join_fill!(
         NonceFiller::new(CachedNonceManager::default()),
-        JoinFill::new(
-            WalletFiller::new(wallet),
-            JoinFill::new(GasFiller, ChainIdFiller::new(None)),
-        ),
+        WalletFiller::new(wallet),
+        GasFiller,
+        ChainIdFiller::new(None),
     );
     let rpc: RootProvider<_, Ethereum> = ReqwestProvider::new_http(chain_rpc_address);
     let rpc = FillProvider::new(rpc, filler);
