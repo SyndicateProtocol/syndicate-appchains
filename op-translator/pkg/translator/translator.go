@@ -35,7 +35,7 @@ type OPTranslator struct {
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
-	CutoverBlock        int // At this block and above, regular data fetching will be used instead of backfill.
+	CutoverBlock        uint64 // At this block and above, regular data fetching will be used instead of backfill.
 }
 
 func Init(cfg *config.Config) *OPTranslator {
@@ -55,7 +55,7 @@ func Init(cfg *config.Config) *OPTranslator {
 		BatchProvider:       metaBasedBatchProvider,
 		BackfillProvider:    backfillProvider,
 		Signer:              *signer,
-		CutoverBlock:        cfg.CutoverBlock,
+		CutoverBlock:        uint64(cfg.CutoverBlock), //nolint:gosec // We validate the cutover block in the config package
 	}
 }
 
@@ -96,7 +96,7 @@ func (t *OPTranslator) getFrames(ctx context.Context, block types.Block) ([]*typ
 		return nil, err
 	}
 
-	if blockNumber < uint64(t.CutoverBlock) {
+	if blockNumber < t.CutoverBlock {
 		return t.BackfillProvider.GetBackfillFrames(ctx, block)
 	} else {
 		batch, err := t.BatchProvider.GetBatch(ctx, block)

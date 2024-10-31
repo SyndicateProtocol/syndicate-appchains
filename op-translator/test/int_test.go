@@ -195,7 +195,7 @@ func TestOPNodeCalls(t *testing.T) {
 				MetafillerURL: mockConfig.MetafillerURL,
 				Client:        mockHTTPBackfillClient,
 			},
-			CutoverBlock: mockConfig.CutoverBlock,
+			CutoverBlock: uint64(mockConfig.CutoverBlock), //nolint:gosec // We validate the cutover block in the config package
 		}
 
 		s, err := server.TranslatorHandler(mockConfig, opTranslator)

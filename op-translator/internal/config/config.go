@@ -38,11 +38,11 @@ type Config struct {
 	BatcherPrivateKey         string `koanf:"batcher_private_key"`
 	LogLevel                  string `koanf:"log_level"`
 	SettlementChainID         int64  `koanf:"settlement_chain_id"`
+	CutoverBlock              int64  `koanf:"cutover_block"`
 	SettlementChainBlockTime  int    `koanf:"settlement_chain_block_time"`
 	SettlementStartBlock      int    `koanf:"settlement_start_block"`
 	Port                      int    `koanf:"port"`
 	FrameSize                 int    `koanf:"frame_size"`
-	CutoverBlock              int    `koanf:"cutover_block"`
 	Pretty                    bool   `koanf:"pretty"`
 }
 
@@ -84,7 +84,7 @@ func hydrateFromConfMap(config *Config) {
 	config.BatcherPrivateKey = k.String("batcher_private_key")
 	config.SettlementChainID = k.Int64("settlement_chain_id")
 	config.SettlementChainBlockTime = k.Int("settlement_chain_block_time")
-	config.CutoverBlock = k.Int("cutover_block")
+	config.CutoverBlock = k.Int64("cutover_block")
 }
 
 func Init() *Config {
