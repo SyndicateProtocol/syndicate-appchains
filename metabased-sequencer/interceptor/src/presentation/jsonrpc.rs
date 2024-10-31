@@ -1,5 +1,5 @@
 use crate::application;
-use crate::application::{Metrics, Stopwatch};
+use crate::application::{Metrics, RunningStopwatch, Stopwatch};
 use crate::domain::primitives::Bytes;
 use crate::domain::MetabasedSequencerChainService;
 use crate::presentation::json_rpc_errors::Error;
@@ -113,11 +113,11 @@ where
     let metrics = ctx.metrics_service();
     let start = ctx.stopwatch_service().start();
 
-    Ok(
-        application::send_raw_transaction(bytes, chain, metrics, &start)
-            .await?
-            .encode_hex_with_prefix(),
-    )
+    let result = application::send_raw_transaction(bytes, chain).await;
+
+    metrics.append_send_raw_transaction_with_duration(start.elapsed());
+
+    Ok(result?.encode_hex_with_prefix())
 }
 
 /// The JSON-RPC endpoint for Prometheus metrics scraper to collect data from.
