@@ -32,3 +32,7 @@ func HexToUInt64(hexStr string) (uint64, error) {
 func IntToHex(num int) string {
 	return "0x" + strconv.FormatInt(int64(num), 16)
 }
+
+func UInt64ToHex(num uint64) string {
+	return "0x" + strconv.FormatUint(num, 16)
+}

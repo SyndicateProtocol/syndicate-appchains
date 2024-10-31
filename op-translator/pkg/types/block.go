@@ -31,12 +31,12 @@ func (b Block) GetBlockNumberHex() (string, error) {
 	return blockNum, nil
 }
 
-func (b Block) GetBlockNumber() (int, error) {
+func (b Block) GetBlockNumber() (uint64, error) {
 	blockNumHex, err := b.GetBlockNumberHex()
 	if err != nil {
 		return 0, err
 	}
-	return utils.HexToInt(blockNumHex)
+	return utils.HexToUInt64(blockNumHex)
 }
 
 func (b Block) GetBlockTimestampHex() (string, error) {

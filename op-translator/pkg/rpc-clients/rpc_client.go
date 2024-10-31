@@ -84,6 +84,11 @@ func (c *RPCClient) GetBlockByHash(ctx context.Context, hash common.Hash, withTr
 func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Block) ([]*ethtypes.Receipt, error) {
 	// WARNING: This function assumes that the block numbers are passed in order
 	numbersLength := len(blocks)
+	if numbersLength == 0 {
+		return nil, nil
+	}
+
+	// Struct to hold a block and its receipts
 	type BlockReceipts struct {
 		block    *types.Block
 		receipts []*ethtypes.Receipt

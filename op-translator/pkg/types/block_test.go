@@ -47,7 +47,7 @@ func TestGetBlockNumber_ParsingError(t *testing.T) {
 
 	assert.Error(t, err)
 	assert.EqualError(t, err, "parsing error: block number")
-	assert.Equal(t, number, 0)
+	assert.Equal(t, number, uint64(0))
 }
 
 func TestGetBlockNumberHex_ParsingError(t *testing.T) {

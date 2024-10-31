@@ -14,7 +14,7 @@ func TestFindFirstBlockOnOrBeforeTime(t *testing.T) {
 	tests := []struct {
 		setupMocks          func(mockClient *mocks.MockRPCClient)
 		name                string
-		expectedBlockNumber int
+		expectedBlockNumber uint64
 		targetTime          int
 		expectError         bool
 	}{
@@ -128,7 +128,7 @@ func TestGetSequencingBlocksByTimeWindow(t *testing.T) {
 		expectedBlocks        []*types.Block
 		timeWindowStart       int
 		timeWindowEnd         int
-		firstBlockBeforeStart int
+		firstBlockBeforeStart uint64
 		expectError           bool
 	}{
 		{

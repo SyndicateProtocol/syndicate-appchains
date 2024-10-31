@@ -44,10 +44,10 @@ func (s *SequencingBlockFetcher) GetSequencingBlocks(block types.Block) ([]*type
 	return s.GetSequencingBlocksByTimeWindow(timeWindowStart, timeWindowEnd, firstBlockNumberBeforeTime)
 }
 
-const BinarySearchDivisor = 2
+const BinarySearchDivisor = uint64(2)
 
 // TODO [SEQ-254]: Optimize this lookup
-func (s *SequencingBlockFetcher) FindFirstBlockOnOrBeforeTime(time int) (int, error) {
+func (s *SequencingBlockFetcher) FindFirstBlockOnOrBeforeTime(time int) (uint64, error) {
 	// Get latest block from sequencing chain
 	latestBlock, err := s.SequencingChainClient.GetBlockByNumber(context.Background(), "latest", false)
 	if err != nil {
@@ -60,15 +60,15 @@ func (s *SequencingBlockFetcher) FindFirstBlockOnOrBeforeTime(time int) (int, er
 	}
 
 	// Initialize binary search boundaries
-	low := 1
+	low := uint64(1)
 	high := latestBlockNumber
 
-	var result int
+	var result uint64
 
 	for low <= high {
 		mid := (low + high) / BinarySearchDivisor
 
-		block, err := s.SequencingChainClient.GetBlockByNumber(context.Background(), utils.IntToHex(mid), false)
+		block, err := s.SequencingChainClient.GetBlockByNumber(context.Background(), utils.UInt64ToHex(mid), false)
 		if err != nil {
 			return 0, fmt.Errorf("error getting block %d: %w", mid, err)
 		}
@@ -93,7 +93,7 @@ func (s *SequencingBlockFetcher) FindFirstBlockOnOrBeforeTime(time int) (int, er
 	return result, nil
 }
 
-func (s *SequencingBlockFetcher) GetSequencingBlocksByTimeWindow(timeWindowStart, timeWindowEnd, firstBlockBeforeStartTime int) ([]*types.Block, error) {
+func (s *SequencingBlockFetcher) GetSequencingBlocksByTimeWindow(timeWindowStart, timeWindowEnd int, firstBlockBeforeStartTime uint64) ([]*types.Block, error) {
 	var blocks []*types.Block
 	currentBlockNum := firstBlockBeforeStartTime + 1
 
@@ -101,7 +101,7 @@ func (s *SequencingBlockFetcher) GetSequencingBlocksByTimeWindow(timeWindowStart
 		// Get the current block
 		block, err := s.SequencingChainClient.GetBlockByNumber(
 			context.Background(),
-			utils.IntToHex(currentBlockNum),
+			utils.UInt64ToHex(currentBlockNum),
 			false,
 		)
 		if err != nil {
@@ -109,7 +109,7 @@ func (s *SequencingBlockFetcher) GetSequencingBlocksByTimeWindow(timeWindowStart
 		}
 
 		if block == nil {
-			return nil, fmt.Errorf("block is nil")
+			return nil, fmt.Errorf("block %d is nil", currentBlockNum)
 		}
 
 		blockTimestamp, err := block.GetBlockTimestamp()
