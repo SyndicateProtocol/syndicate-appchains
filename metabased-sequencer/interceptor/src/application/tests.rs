@@ -38,7 +38,7 @@ async fn test_send_raw_transaction_writes_tx_to_metabased_chain() {
     let transactions = Arc::new(RwLock::new(Vec::new()));
     let chain = InMemoryMetabasedSequencerChain::new(transactions.clone());
 
-    super::send_raw_transaction(encoded_tx.clone(), &chain, &())
+    super::send_raw_transaction(encoded_tx.clone(), &chain, &(), &())
         .await
         .unwrap();
 
