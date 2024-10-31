@@ -122,7 +122,7 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, err
 	}
 
-	blockNum, err := block.GetBlockNumberHex()
+	blockNumHex, err := block.GetBlockNumberHex()
 	if err != nil {
 		return nil, err
 	}
@@ -132,7 +132,7 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, err
 	}
 
-	tx := types.NewBatcherTx(blockHash, blockNum, t.BatcherAddress.String(), t.BatcherInboxAddress.String(), data, t.Signer.ChainID())
+	tx := types.NewBatcherTx(blockHash, blockNumHex, t.BatcherAddress.String(), t.BatcherInboxAddress.String(), data, t.Signer.ChainID())
 
 	signedTxn, err := t.Signer.Sign(&tx)
 	if err != nil {
