@@ -126,3 +126,130 @@ impl<Chain: MetabasedSequencerChainService, M: Metrics, S: Stopwatch> Services<C
         &self.stopwatch
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy::providers::fillers::{FillerControlFlow, TxFiller};
+    use alloy::providers::{Network, SendableTx};
+    use alloy::rpc::types::TransactionRequest;
+    use alloy::transports::TransportResult;
+
+    #[derive(Clone, Copy, Debug)]
+    pub struct DummyGasFiller;
+
+    impl TxFiller<Ethereum> for DummyGasFiller {
+        type Fillable = ();
+
+        fn status(&self, _tx: &<Ethereum as Network>::TransactionRequest) -> FillerControlFlow {
+            FillerControlFlow::Finished
+        }
+
+        fn fill_sync(&self, tx: &mut SendableTx<Ethereum>) {
+            if let SendableTx::Builder(tx) = tx {
+                tx.gas.replace(1);
+            }
+        }
+
+        async fn prepare<P, T>(
+            &self,
+            _provider: &P,
+            _tx: &<Ethereum as Network>::TransactionRequest,
+        ) -> TransportResult<Self::Fillable> {
+            Ok(())
+        }
+
+        async fn fill(
+            &self,
+            _to_fill: Self::Fillable,
+            tx: SendableTx<Ethereum>,
+        ) -> TransportResult<SendableTx<Ethereum>> {
+            Ok(tx)
+        }
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    pub struct DummyChainIdFiller;
+
+    impl TxFiller<Ethereum> for DummyChainIdFiller {
+        type Fillable = ();
+
+        fn status(&self, _tx: &<Ethereum as Network>::TransactionRequest) -> FillerControlFlow {
+            FillerControlFlow::Finished
+        }
+
+        fn fill_sync(&self, tx: &mut SendableTx<Ethereum>) {
+            if let SendableTx::Builder(tx) = tx {
+                tx.chain_id.replace(2);
+            }
+        }
+
+        async fn prepare<P, T>(
+            &self,
+            _provider: &P,
+            _tx: &<Ethereum as Network>::TransactionRequest,
+        ) -> TransportResult<Self::Fillable> {
+            Ok(())
+        }
+
+        async fn fill(
+            &self,
+            _to_fill: Self::Fillable,
+            tx: SendableTx<Ethereum>,
+        ) -> TransportResult<SendableTx<Ethereum>> {
+            Ok(tx)
+        }
+    }
+
+    #[derive(Clone, Copy, Debug)]
+    pub struct DummyNonceFiller;
+
+    impl TxFiller<Ethereum> for DummyNonceFiller {
+        type Fillable = ();
+
+        fn status(&self, _tx: &<Ethereum as Network>::TransactionRequest) -> FillerControlFlow {
+            FillerControlFlow::Finished
+        }
+
+        fn fill_sync(&self, tx: &mut SendableTx<Ethereum>) {
+            if let SendableTx::Builder(tx) = tx {
+                tx.nonce.replace(3);
+            }
+        }
+
+        async fn prepare<P, T>(
+            &self,
+            _provider: &P,
+            _tx: &<Ethereum as Network>::TransactionRequest,
+        ) -> TransportResult<Self::Fillable> {
+            Ok(())
+        }
+
+        async fn fill(
+            &self,
+            _to_fill: Self::Fillable,
+            tx: SendableTx<Ethereum>,
+        ) -> TransportResult<SendableTx<Ethereum>> {
+            Ok(tx)
+        }
+    }
+
+    #[test]
+    fn test_join_fill_creates_filler_that_applies_all_given_fillers_on_transaction() {
+        let tx_request = TransactionRequest::default();
+        let mut actual_tx = SendableTx::Builder(tx_request);
+
+        let filler = join_fill!(DummyChainIdFiller, DummyGasFiller, DummyNonceFiller);
+        filler.fill_sync(&mut actual_tx);
+
+        let actual_tx = actual_tx.as_builder().unwrap();
+        let expected_tx = &TransactionRequest {
+            nonce: Some(3),
+            chain_id: Some(2),
+            gas: Some(1),
+            ..Default::default()
+        };
+
+        assert_eq!(actual_tx, expected_tx);
+    }
+}
