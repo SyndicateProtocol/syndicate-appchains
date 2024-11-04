@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
@@ -17,7 +16,7 @@ type IRPCClient interface {
 	CloseConnection()
 	GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error)
 	GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (types.Block, error)
-	BlocksReceiptsByNumbers(ctx context.Context, numbers []string) ([]*ethtypes.Receipt, error)
+	GetReceiptsByBlocks(ctx context.Context, blocks []*types.Block) ([]*ethtypes.Receipt, error)
 	AsEthClient() rpc.IETHClient
 }
 
@@ -36,7 +35,7 @@ type OPTranslator struct {
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
-	CutoverBlock        int // At this block and above, regular data fetching will be used instead of backfill.
+	CutoverBlock        uint64 // At this block and above, regular data fetching will be used instead of backfill.
 }
 
 func Init(cfg *config.Config) *OPTranslator {
@@ -56,7 +55,7 @@ func Init(cfg *config.Config) *OPTranslator {
 		BatchProvider:       metaBasedBatchProvider,
 		BackfillProvider:    backfillProvider,
 		Signer:              *signer,
-		CutoverBlock:        cfg.CutoverBlock,
+		CutoverBlock:        uint64(cfg.CutoverBlock), //nolint:gosec // We validate the cutover block in the config package
 	}
 }
 
@@ -96,12 +95,8 @@ func (t *OPTranslator) getFrames(ctx context.Context, block types.Block) ([]*typ
 	if err != nil {
 		return nil, err
 	}
-	intBlockNumber, err := utils.HexToInt(blockNumber)
-	if err != nil {
-		return nil, err
-	}
 
-	if intBlockNumber < t.CutoverBlock {
+	if blockNumber < t.CutoverBlock {
 		return t.BackfillProvider.GetBackfillFrames(ctx, block)
 	} else {
 		batch, err := t.BatchProvider.GetBatch(ctx, block)
@@ -127,7 +122,7 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, err
 	}
 
-	blockNum, err := block.GetBlockNumber()
+	blockNumHex, err := block.GetBlockNumberHex()
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +132,7 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, err
 	}
 
-	tx := types.NewBatcherTx(blockHash, blockNum, t.BatcherAddress.String(), t.BatcherInboxAddress.String(), data, t.Signer.ChainID())
+	tx := types.NewBatcherTx(blockHash, blockNumHex, t.BatcherAddress.String(), t.BatcherInboxAddress.String(), data, t.Signer.ChainID())
 
 	signedTxn, err := t.Signer.Sign(&tx)
 	if err != nil {

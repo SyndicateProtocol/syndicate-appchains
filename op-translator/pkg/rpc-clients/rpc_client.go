@@ -7,10 +7,7 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
-	"github.com/ethereum-optimism/optimism/op-service/eth"
-	"github.com/ethereum-optimism/optimism/op-service/sources"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -19,7 +16,7 @@ import (
 )
 
 type IReceiptsFetcher interface {
-	FetchReceipts(ctx context.Context, blockInfo eth.BlockInfo, txHashes []common.Hash) (result ethtypes.Receipts, err error)
+	FetchReceipts(ctx context.Context, block *types.Block, txHashes []common.Hash) (result ethtypes.Receipts, err error)
 }
 
 type IRawRPCClient interface {
@@ -54,7 +51,7 @@ func Connect(address string) (*RPCClient, error) {
 		return nil, fmt.Errorf("failed to dial address %s: %w", address, err)
 	}
 	log.Debug().Msgf("RPC connection established: %s", address)
-	return NewRPCClient(ethclient.NewClient(c), c, sources.NewRPCReceiptsFetcher(c, nil, sources.RPCReceiptsConfig{})), nil
+	return NewRPCClient(ethclient.NewClient(c), c, NewReceiptFetcher(c)), nil
 }
 
 func (c *RPCClient) AsEthClient() IETHClient {
@@ -84,12 +81,17 @@ func (c *RPCClient) GetBlockByHash(ctx context.Context, hash common.Hash, withTr
 	return block, nil
 }
 
-func (c *RPCClient) BlocksReceiptsByNumbers(ctx context.Context, blockNumbers []string) ([]*ethtypes.Receipt, error) {
+func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Block) ([]*ethtypes.Receipt, error) {
 	// WARNING: This function assumes that the block numbers are passed in order
-	numbersLength := len(blockNumbers)
+	numbersLength := len(blocks)
+	if numbersLength == 0 {
+		return nil, nil
+	}
+
+	// Struct to hold a block and its receipts
 	type BlockReceipts struct {
-		blockNumber string
-		receipts    []*ethtypes.Receipt
+		block    *types.Block
+		receipts []*ethtypes.Receipt
 	}
 	receiptsChan := make(chan BlockReceipts, numbersLength)
 	errChan := make(chan error, numbersLength)
@@ -97,55 +99,44 @@ func (c *RPCClient) BlocksReceiptsByNumbers(ctx context.Context, blockNumbers []
 	// Fetch block and its receipts concurrently
 	var wg sync.WaitGroup
 	wg.Add(numbersLength)
-	for _, number := range blockNumbers {
-		go func(number string) {
+	for _, block := range blocks {
+		go func(block *types.Block) {
 			defer wg.Done()
 
-			numberInt, err := utils.HexToInt(number)
+			transactions, err := block.GetTransactions()
 			if err != nil {
-				errChan <- fmt.Errorf("failed to convert block number: %w", err)
+				errChan <- fmt.Errorf("failed to get transactions: %w", err)
 				return
 			}
 
-			block, err := c.client.BlockByNumber(ctx, big.NewInt(int64(numberInt)))
+			hashes := make([]common.Hash, len(transactions))
+			for i, tx := range transactions {
+				hashes[i] = common.HexToHash(tx.(string))
+			}
+
+			blockNumber, err := block.GetBlockNumberHex()
 			if err != nil {
-				errChan <- fmt.Errorf("failed to get block by number: %w", err)
+				errChan <- fmt.Errorf("failed to get block number: %w", err)
 				return
 			}
 
-			hashes := make([]common.Hash, len(block.Transactions()))
-			for i, tx := range block.Transactions() {
-				hashes[i] = tx.Hash()
-			}
-
-			blockReceipts, err := c.receiptsFetcher.FetchReceipts(ctx, eth.BlockToInfo(block), hashes)
+			blockReceipts, err := c.receiptsFetcher.FetchReceipts(ctx, block, hashes)
 			if err != nil {
-				errChan <- fmt.Errorf("failed to get receipts for block %d: %w", numberInt, err)
+				errChan <- fmt.Errorf("failed to get receipts for block %s: %w", blockNumber, err)
 				return
 			}
 
 			receiptsChan <- BlockReceipts{
-				blockNumber: number,
-				receipts:    blockReceipts}
+				block:    block,
+				receipts: blockReceipts,
+			}
 
-		}(number)
+		}(block)
 	}
 
-	go func() {
-		wg.Wait()
-		close(receiptsChan)
-		close(errChan)
-	}()
-
-	blockReciptsMap := make(map[string][]*ethtypes.Receipt, numbersLength)
-	for blockReceipts := range receiptsChan {
-		blockReciptsMap[blockReceipts.blockNumber] = blockReceipts.receipts
-	}
-
-	var allReceipts []*ethtypes.Receipt
-	for _, blockNumber := range blockNumbers {
-		allReceipts = append(allReceipts, blockReciptsMap[blockNumber]...)
-	}
+	wg.Wait()
+	close(receiptsChan)
+	close(errChan)
 
 	if len(errChan) > 0 {
 		var returnErr error
@@ -155,5 +146,14 @@ func (c *RPCClient) BlocksReceiptsByNumbers(ctx context.Context, blockNumbers []
 		return nil, returnErr
 	}
 
+	blockReciptsMap := make(map[*types.Block][]*ethtypes.Receipt, numbersLength)
+	for blockReceipts := range receiptsChan {
+		blockReciptsMap[blockReceipts.block] = blockReceipts.receipts
+	}
+
+	var allReceipts []*ethtypes.Receipt
+	for _, block := range blocks {
+		allReceipts = append(allReceipts, blockReciptsMap[block]...)
+	}
 	return allReceipts, nil
 }

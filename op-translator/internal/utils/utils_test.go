@@ -83,11 +83,6 @@ func TestIntToHex(t *testing.T) {
 	}
 }
 
-func TestSecondsToMilliseconds(t *testing.T) {
-	assert.Equal(t, 1000, utils.SecondsToMilliseconds(1))
-	assert.Equal(t, 2000, utils.SecondsToMilliseconds(2))
-}
-
 func TestGetCompressionType(t *testing.T) {
 	tests := []struct { //nolint:govet // test struct
 		name         string

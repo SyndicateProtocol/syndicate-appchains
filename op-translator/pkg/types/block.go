@@ -3,6 +3,7 @@ package types
 import (
 	"fmt"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -21,7 +22,7 @@ func (b Block) GetBlockHash() (string, error) {
 	return blockHash, nil
 }
 
-func (b Block) GetBlockNumber() (string, error) {
+func (b Block) GetBlockNumberHex() (string, error) {
 	blockNum, ok := b["number"].(string)
 	if !ok {
 		return "", fmt.Errorf("parsing error: block number")
@@ -30,13 +31,29 @@ func (b Block) GetBlockNumber() (string, error) {
 	return blockNum, nil
 }
 
-func (b Block) GetBlockTimestamp() (string, error) {
+func (b Block) GetBlockNumber() (uint64, error) {
+	blockNumHex, err := b.GetBlockNumberHex()
+	if err != nil {
+		return 0, err
+	}
+	return utils.HexToUInt64(blockNumHex)
+}
+
+func (b Block) GetBlockTimestampHex() (string, error) {
 	timestamp, ok := b["timestamp"].(string)
 	if !ok {
-		return "", fmt.Errorf("parsing error: block number")
+		return "", fmt.Errorf("parsing error: block timestamp")
 	}
 
 	return timestamp, nil
+}
+
+func (b Block) GetBlockTimestamp() (int, error) {
+	timestampHex, err := b.GetBlockTimestampHex()
+	if err != nil {
+		return 0, err
+	}
+	return utils.HexToInt(timestampHex)
 }
 
 func (b Block) GetTransactions() ([]any, error) {
