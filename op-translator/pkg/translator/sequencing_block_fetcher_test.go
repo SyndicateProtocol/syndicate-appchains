@@ -1,6 +1,7 @@
 package translator_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
@@ -9,6 +10,93 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
+
+func TestGetLastUsedBlockNumber(t *testing.T) {
+	tests := []struct {
+		setupMocks       func(mockClient *mocks.MockRPCClient)
+		lastUsedBlock    *types.Block
+		name             string
+		expectedBlockNum uint64
+		startTime        int
+	}{
+		{
+			name:             "Returns 0 when LastUsedBlock is nil",
+			setupMocks:       func(mockClient *mocks.MockRPCClient) {},
+			lastUsedBlock:    nil,
+			startTime:        100,
+			expectedBlockNum: 0,
+		},
+		{
+			name:             "Returns 0 when LastUsedBlock number cannot be parsed",
+			setupMocks:       func(mockClient *mocks.MockRPCClient) {},
+			lastUsedBlock:    &types.Block{"number": "invalid"},
+			startTime:        100,
+			expectedBlockNum: 0,
+		},
+		{
+			name:             "Returns 0 when LastUsedBlock timestamp cannot be parsed",
+			setupMocks:       func(mockClient *mocks.MockRPCClient) {},
+			lastUsedBlock:    &types.Block{"number": "0xa", "timestamp": "invalid"},
+			startTime:        100,
+			expectedBlockNum: 0,
+		},
+		{
+			name: "Returns 0 when error getting next block",
+			setupMocks: func(mockClient *mocks.MockRPCClient) {
+				mockClient.On("GetBlockByNumber", mock.Anything, "0xb", false).
+					Return(types.Block{}, fmt.Errorf("rpc error"))
+			},
+			lastUsedBlock:    &types.Block{"number": "0xa", "timestamp": "0x64"},
+			startTime:        100,
+			expectedBlockNum: 0,
+		},
+		{
+			name: "Returns 0 when next block timestamp cannot be parsed",
+			setupMocks: func(mockClient *mocks.MockRPCClient) {
+				mockClient.On("GetBlockByNumber", mock.Anything, "0xb", false).
+					Return(types.Block{"timestamp": "invalid"}, nil)
+			},
+			lastUsedBlock:    &types.Block{"number": "0xa", "timestamp": "0x64"},
+			startTime:        100,
+			expectedBlockNum: 0,
+		},
+		{
+			name: "Returns block number when it spans start time",
+			setupMocks: func(mockClient *mocks.MockRPCClient) {
+				mockClient.On("GetBlockByNumber", mock.Anything, "0xb", false).
+					Return(types.Block{"timestamp": "0x65"}, nil)
+			},
+			lastUsedBlock:    &types.Block{"number": "0xa", "timestamp": "0x64"},
+			startTime:        100,
+			expectedBlockNum: 10,
+		},
+		{
+			name: "Returns 0 when block timestamps don't span start time",
+			setupMocks: func(mockClient *mocks.MockRPCClient) {
+				mockClient.On("GetBlockByNumber", mock.Anything, "0xb", false).
+					Return(types.Block{"timestamp": "0x63"}, nil)
+			},
+			lastUsedBlock:    &types.Block{"number": "0xa", "timestamp": "0x62"},
+			startTime:        100,
+			expectedBlockNum: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockClient := new(mocks.MockRPCClient)
+			if tt.setupMocks != nil {
+				tt.setupMocks(mockClient)
+			}
+
+			fetcher := translator.NewSequencingBlockFetcher(mockClient, 12)
+			fetcher.LastUsedBlock = tt.lastUsedBlock
+
+			result := fetcher.GetLastUsedBlockNumber(tt.startTime)
+			assert.Equal(t, tt.expectedBlockNum, result)
+		})
+	}
+}
 
 func TestFindFirstBlockOnOrBeforeTime(t *testing.T) {
 	tests := []struct {

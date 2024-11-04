@@ -7,14 +7,13 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
+	"github.com/rs/zerolog/log"
 )
 
 type SequencingBlockFetcher struct {
-	SequencingChainClient IRPCClient
-
+	LastUsedBlock            *types.Block
+	SequencingChainClient    IRPCClient
 	SettlementChainBlockTime int
-
-	// TODO [SEQ-243]: Add cache to track previous requested sequencing blocks
 }
 
 func InitSequencingBlockFetcher(sequencingChainClient IRPCClient, cfg *config.Config) *SequencingBlockFetcher {
@@ -23,10 +22,49 @@ func InitSequencingBlockFetcher(sequencingChainClient IRPCClient, cfg *config.Co
 
 func NewSequencingBlockFetcher(sequencingChainClient IRPCClient, settlementChainBlockTime int) *SequencingBlockFetcher {
 	return &SequencingBlockFetcher{
-		SequencingChainClient: sequencingChainClient,
-
+		SequencingChainClient:    sequencingChainClient,
 		SettlementChainBlockTime: settlementChainBlockTime,
 	}
+}
+
+func (s *SequencingBlockFetcher) GetLastUsedBlockNumber(startTime int) uint64 {
+	if s.LastUsedBlock == nil {
+		log.Debug().Msg("No last used block found")
+		return 0
+	}
+
+	blockNumber, err := s.LastUsedBlock.GetBlockNumber()
+	if err != nil {
+		log.Error().Err(err).Msg("Error getting last used block number")
+		return 0
+	}
+
+	blockTimestamp, err := s.LastUsedBlock.GetBlockTimestamp()
+	if err != nil {
+		log.Error().Err(err).Msg("Error getting last used block timestamp")
+		return 0
+	}
+
+	nextBlock, err := s.SequencingChainClient.GetBlockByNumber(context.Background(), utils.UInt64ToHex(blockNumber+1), false)
+	if err != nil {
+		log.Error().Err(err).Msg("Error getting next block")
+		return 0
+	}
+
+	nextBlockTimestamp, err := nextBlock.GetBlockTimestamp()
+	if err != nil {
+		log.Error().Err(err).Msg("Error getting next block timestamp")
+		return 0
+	}
+
+	// Return cached block if it's timestamp is equal to or greater than the timewindow start time
+	// and the next block's timestamp is strictly greater than the start time
+	if nextBlockTimestamp > startTime && blockTimestamp <= startTime {
+		return blockNumber
+	}
+
+	log.Debug().Msg("Last used block is not valid, returning 0")
+	return 0
 }
 
 func (s *SequencingBlockFetcher) GetSequencingBlocks(block types.Block) ([]*types.Block, error) {
@@ -36,12 +74,25 @@ func (s *SequencingBlockFetcher) GetSequencingBlocks(block types.Block) ([]*type
 	}
 	timeWindowStart := timeWindowEnd - s.SettlementChainBlockTime
 
-	firstBlockNumberBeforeTime, err := s.FindFirstBlockOnOrBeforeTime(timeWindowStart)
+	var firstBlockNumberBeforeTime uint64
+
+	firstBlockNumberBeforeTime = s.GetLastUsedBlockNumber(timeWindowStart)
+	if firstBlockNumberBeforeTime == 0 {
+		firstBlockNumberBeforeTime, err = s.FindFirstBlockOnOrBeforeTime(timeWindowStart)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	blocks, err := s.GetSequencingBlocksByTimeWindow(timeWindowStart, timeWindowEnd, firstBlockNumberBeforeTime)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.GetSequencingBlocksByTimeWindow(timeWindowStart, timeWindowEnd, firstBlockNumberBeforeTime)
+	// Save the last used block
+	s.LastUsedBlock = blocks[len(blocks)-1]
+
+	return blocks, nil
 }
 
 const BinarySearchDivisor = uint64(2)
