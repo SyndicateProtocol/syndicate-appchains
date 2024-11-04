@@ -57,6 +57,8 @@ func (s *SequencingBlockFetcher) GetLastUsedBlockNumber(startTime int) uint64 {
 		return 0
 	}
 
+	// Return cached block if it's timestamp is equal to or greater than the timewindow start time
+	// and the next block's timestamp is strictly greater than the start time
 	if nextBlockTimestamp > startTime && blockTimestamp <= startTime {
 		return blockNumber
 	}
