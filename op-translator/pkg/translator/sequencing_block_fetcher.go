@@ -74,10 +74,8 @@ func (s *SequencingBlockFetcher) GetSequencingBlocks(block types.Block) ([]*type
 
 	var firstBlockNumberBeforeTime uint64
 
-	lastUsedBlockNumber := s.GetLastUsedBlockNumber(timeWindowStart)
-	if lastUsedBlockNumber != 0 {
-		firstBlockNumberBeforeTime = lastUsedBlockNumber
-	} else {
+	firstBlockNumberBeforeTime = s.GetLastUsedBlockNumber(timeWindowStart)
+	if firstBlockNumberBeforeTime == 0 {
 		firstBlockNumberBeforeTime, err = s.FindFirstBlockOnOrBeforeTime(timeWindowStart)
 		if err != nil {
 			return nil, err
