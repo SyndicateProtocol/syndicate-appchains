@@ -28,7 +28,7 @@ arb_orbit_l2_chain_id := "412346"
 # Default localnet port
 arb_orbit_port := "8547"
 
-arb_orbit_l2_rpc_url := "http://127.0.0.1:8547"
+arb_orbit_l2_rpc_url := "http://127.0.0.1:" + arb_orbit_port
 
 metabased_sequencer_url := "http://127.0.0.1:8456"
 
@@ -67,7 +67,7 @@ op-clone:
     git clone --branch develop --single-branch --depth 1 https://github.com/ethereum-optimism/optimism.git ~/optimism || echo skipping clone
 
 # Starts arbitrum node listening at 8547
-arbitrum-run-devnode-script:
+arb-up:
     chmod +x ./run-arb-nitro-dev-node.sh && ARB_ORBIT_PORT={{ arb_orbit_port }} ARB_ORBIT_L2_RPC_URL={{ arb_orbit_l2_rpc_url }} ./run-arb-nitro-dev-node.sh
 
 op-clean:
@@ -99,7 +99,7 @@ op-clean-chain:
 arb-clean-chain:
     rm -rf {{ arb_contract_deploy_file }}
 
-# Puts contract address to localnet ENV file
+# Puts contract address into localnet ENV file
 op-update-chain-address: op-deploy-chain op-create-localenv
     cat {{ localenv_file }} | grep -v METABASED_CHAIN_CONTRACT_ADDRESS= > {{ localenv_file }}.tmp
     echo METABASED_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ op_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ localenv_file }}.tmp
@@ -113,7 +113,7 @@ op-create-localenv:
 arb-create-localenv:
     [ -f {{ localenv_file }} ] || echo "METABASED_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}\nMETABASED_PRIVATE_KEY={{ arb_orbit_private_key }}" > {{ localenv_file }}
 
-# Puts arb contract address to localnet ENV file
+# Puts arb contract address into localnet ENV file
 arb-update-chain-address: arb-deploy-chain arb-create-localenv
     cat {{ localenv_file }} | grep -v METABASED_CHAIN_CONTRACT_ADDRESS= > {{ localenv_file }}.tmp
     echo METABASED_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ localenv_file }}.tmp
@@ -161,7 +161,7 @@ create-aliases:
             echo "alias op-reclone='just -f {{justfile()}} op-reclone'" >> "$rc_file"
             echo "alias go-install='just -f {{justfile()}} go-install'" >> "$rc_file"
             echo "alias op-deploy-chain='just -f {{justfile()}} op-deploy-chain'" >> "$rc_file"
-            echo "alias arbitrum-run-devnode-script='just -f {{justfile()}} arbitrum-run-devnode-script'" >> "$rc_file"
+            echo "alias arb-up='just -f {{justfile()}} arb-up'" >> "$rc_file"
             echo "alias arb-deploy-chain='just -f {{justfile()}} arb-deploy-chain'" >> "$rc_file"
             echo "alias run-metabased-sequencer='just -f {{justfile()}} run-metabased-sequencer'" >> "$rc_file"
             echo "# END Metabased Rollup Dev Container aliases" >> "$rc_file"
@@ -178,10 +178,12 @@ create-aliases:
 op-all: op-clone foundry-install foundry-update create-aliases
     @echo "Post-create OP script completed successfully"
 
-#
-arb-all-1: foundry-install foundry-update create-aliases arbitrum-run-devnode-script
 
-arb-all-2: arb-deploy-chain arb-update-chain-address run-metabased-sequencer
+arb-network-setup: foundry-install foundry-update create-aliases
+    @echo "Post-setup Arbitrum script completed successfully. Ready to run bring up the Arbitrum devnet."
+
+arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabased-sequencer
+    @echo "Arbitrum Sequencer setup completed successfully. Running sequencer."
 
 arb-health-check:
     curl -s -X POST -H "Content-Type: application/json" \
