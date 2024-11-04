@@ -134,11 +134,17 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 		}(block)
 	}
 
-	go func() {
-		wg.Wait()
-		close(receiptsChan)
-		close(errChan)
-	}()
+	wg.Wait()
+	close(receiptsChan)
+	close(errChan)
+
+	if len(errChan) > 0 {
+		var returnErr error
+		for err := range errChan {
+			returnErr = errors.Join(returnErr, err)
+		}
+		return nil, returnErr
+	}
 
 	blockReciptsMap := make(map[*types.Block][]*ethtypes.Receipt, numbersLength)
 	for blockReceipts := range receiptsChan {
@@ -149,14 +155,5 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 	for _, block := range blocks {
 		allReceipts = append(allReceipts, blockReciptsMap[block]...)
 	}
-
-	if len(errChan) > 0 {
-		var returnErr error
-		for err := range errChan {
-			returnErr = errors.Join(returnErr, err)
-		}
-		return nil, returnErr
-	}
-
 	return allReceipts, nil
 }
