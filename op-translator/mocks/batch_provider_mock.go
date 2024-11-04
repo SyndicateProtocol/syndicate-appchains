@@ -23,3 +23,7 @@ func (m *MockBatchProvider) GetBatch(ctx context.Context, block types.Block) (*t
 
 	return batch, nil
 }
+
+func (m *MockBatchProvider) FilterInvalidTransactions(ctx context.Context, batch *types.Batch) (*types.Batch, error) {
+	return batch, nil
+}

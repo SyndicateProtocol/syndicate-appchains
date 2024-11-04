@@ -31,6 +31,7 @@ var _ IRPCClient = (*rpc.RPCClient)(nil)
 
 type OPTranslator struct {
 	SettlementChain     IRPCClient
+	MetaBasedChain      IRPCClient
 	BatchProvider       IBatchProvider
 	BackfillProvider    *backfill.BackfillProvider
 	Signer              Signer
@@ -42,7 +43,12 @@ type OPTranslator struct {
 func Init(cfg *config.Config) *OPTranslator {
 	settlementChain, err := rpc.Connect(cfg.SettlementChainRPCURL)
 	if err != nil {
-		log.Panic().Err(err).Msg("Failed to initialize settlement chain")
+		log.Panic().Err(err).Msg("Failed to initialize settlement chain client")
+	}
+
+	metaBasedChain, err := rpc.Connect(cfg.MetaBasedChainRPCURL)
+	if err != nil {
+		log.Panic().Err(err).Msg("Failed to initialize metabased chain client")
 	}
 
 	metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg)
@@ -51,6 +57,7 @@ func Init(cfg *config.Config) *OPTranslator {
 
 	return &OPTranslator{
 		SettlementChain:     settlementChain,
+		MetaBasedChain:      metaBasedChain,
 		BatcherInboxAddress: common.HexToAddress(cfg.BatchInboxAddress),
 		BatcherAddress:      common.HexToAddress(cfg.BatcherAddress),
 		BatchProvider:       metaBasedBatchProvider,
@@ -86,6 +93,10 @@ func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash
 	return t.translateBlock(ctx, block)
 }
 
+	// Fetch the batch from the settlement chain
+	batch, err := t.BatchProvider.GetBatch(ctx, block)
+	if err != nil {
+		return nil, err
 func (t *OPTranslator) Close() {
 	t.SettlementChain.CloseConnection()
 	t.BatchProvider.Close()
@@ -112,6 +123,21 @@ func (t *OPTranslator) getFrames(ctx context.Context, block types.Block) ([]*typ
 	}
 }
 
+	// Validate each of the transactions of the Batch locally
+	batch, err = t.BatchProvider.FilterInvalidTransactions(ctx, batch)
+	if err != nil {
+		return nil, err
+	}
+
+	// Simulate Batch using the MetaBasedChain RPC client
+	// TODO: Fix Batch by removing offending transactions
+	// batch, err := t.SimulateBatch(ctx, batch)
+	// if err != nil {
+	// 		return nil, err
+	// }
+
+	// TODO SEQ-209: Write logic for switching between backfill and regular data fetching
+	frames, err := batch.GetFrames(config.MaxFrameSize)
 func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (types.Block, error) {
 	if block.IsEmpty() {
 		return nil, nil

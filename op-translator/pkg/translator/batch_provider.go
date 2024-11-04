@@ -145,6 +145,21 @@ func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) []
 	return transactions
 }
 
+func isValidTransaction(tx hexutil.Bytes) bool {
+	// TODO: individual transaction validation
+	return true
+}
+
+func (m *MetaBasedBatchProvider) FilterInvalidTransactions(ctx context.Context, batch *types.Batch) (*types.Batch, error) {
+	var validTransactions = make([]hexutil.Bytes, len(batch.TransactionList))
+	for _, tx := range batch.TransactionList {
+		if isValidTransaction(tx) {
+			validTransactions = append(validTransactions, tx)
+		}
+	}
+	return batch, nil
+}
+
 func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block) (*types.Batch, error) {
 	blockNumber, err := block.GetBlockNumber()
 	if err != nil {
