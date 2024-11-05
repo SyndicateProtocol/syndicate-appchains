@@ -63,13 +63,13 @@ func main() {
 	// Create a new L3 raw transaction
 	rawTx := types.NewTx(&types.DynamicFeeTx{
 		ChainID:   l3ChainIDBig,
-		Nonce:     uint64(3),
+		Nonce:     uint64(3), //nolint:mnd // test value
 		To:        &toAddress,
-		Value:     big.NewInt(1e18),
-		Gas:       uint64(50000), // gasLimit
+		Value:     big.NewInt(1e18), //nolint:mnd // test value
+		Gas:       uint64(50000),    //nolint:mnd // test value
 		Data:      []byte{},
-		GasFeeCap: big.NewInt(10e9), // maxFeePerGas
-		GasTipCap: big.NewInt(10e9), // maxPriorityFeePerGas
+		GasFeeCap: big.NewInt(10e9), //nolint:mnd // test value // maxFeePerGas
+		GasTipCap: big.NewInt(10e9), //nolint:mnd // test value // maxPriorityFeePerGas
 	})
 
 	// Sign the L3 raw transaction
@@ -107,8 +107,8 @@ func main() {
 	}
 
 	// Send the transaction with the packed data to the sequencing contract
-	gasPriceL2 := big.NewInt(10e9)
-	gasLimitL2 := uint64(5000000)
+	gasPriceL2 := big.NewInt(10e9) //nolint:mnd // test value
+	gasLimitL2 := uint64(5000000)  //nolint:mnd // test value
 	nonceL2 := uint64(1)
 	tx := types.NewTransaction(nonceL2, sequencingContractAddress, big.NewInt(0), gasLimitL2, gasPriceL2, inputData)
 	signedTx, err := auth.Signer(auth.From, tx)
