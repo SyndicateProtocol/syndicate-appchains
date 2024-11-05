@@ -1,3 +1,3 @@
-send-l3-txn:
+send_l3_txn:
 	go run send_l3_txn.go
-.PHONY: send-l3-txn
+.PHONY: send_l3_txn
