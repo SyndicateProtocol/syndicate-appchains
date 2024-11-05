@@ -200,7 +200,7 @@ op-all: op-clone foundry-install foundry-update create-aliases
 
 # Run all Arbitrum setup steps in sequence necessary for `arb-up`
 arb-network-setup: foundry-install foundry-update create-aliases
-    @echo "Post-setup Arbitrum script completed successfully. Ready to run bring up the Arbitrum devnet."
+    @echo "Post-setup Arbitrum script completed successfully. Ready to bring up the Arbitrum devnet."
 
 arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabased-sequencer
     @echo "Arbitrum Sequencer setup completed successfully. Running sequencer."
