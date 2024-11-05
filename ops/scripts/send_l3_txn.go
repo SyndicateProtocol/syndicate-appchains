@@ -54,12 +54,6 @@ func main() {
 	l3ChainIDBig := big.NewInt(l3ChainID)
 	toAddress := common.HexToAddress("0x52A4380F691E71ff0015352AB1a450a1dfb689b9")
 
-	// Load the private key for signing from environment variable
-	privateKeyL3, err := crypto.HexToECDSA(l3PrivateKey[2:])
-	if err != nil {
-		log.Fatalf("Invalid private key: %v", err)
-	}
-
 	// Create a new L3 raw transaction
 	rawTx := types.NewTx(&types.DynamicFeeTx{
 		ChainID:   l3ChainIDBig,
@@ -71,6 +65,12 @@ func main() {
 		GasFeeCap: big.NewInt(10e9), //nolint:mnd // test value // maxFeePerGas
 		GasTipCap: big.NewInt(10e9), //nolint:mnd // test value // maxPriorityFeePerGas
 	})
+
+	// Load the private key for signing from environment variable
+	privateKeyL3, err := crypto.HexToECDSA(l3PrivateKey[2:])
+	if err != nil {
+		log.Fatalf("Invalid private key: %v", err)
+	}
 
 	// Sign the L3 raw transaction
 	signedRawTx, err := types.SignTx(rawTx, types.NewLondonSigner(l3ChainIDBig), privateKeyL3)
