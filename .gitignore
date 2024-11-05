@@ -17,6 +17,7 @@
 # Local environment
 .env
 localnet.env
+.idea
 
 # Build files
 bin/
