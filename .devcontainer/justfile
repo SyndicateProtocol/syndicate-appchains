@@ -70,6 +70,22 @@ op-clone:
 arb-up:
     chmod +x ./run-arb-nitro-dev-node.sh && ARB_ORBIT_PORT={{ arb_orbit_port }} ARB_ORBIT_L2_RPC_URL={{ arb_orbit_l2_rpc_url }} ./run-arb-nitro-dev-node.sh
 
+# Stops Arbitrum docker container created by script above
+arb-down:
+    @echo "Stopping Arbitrum node..."
+    docker stop nitro-dev
+    @echo "Arbitrum node stopped."
+
+# Removes all Docker infra assocaited with the Arbitrum, returning to a blank slate
+arb-teardown: arb-down
+    @echo "Removing Arbitrum container..."
+    @docker rm nitro-dev 2>/dev/null || true
+    @echo "Removing associated volumes..."
+    @docker volume rm $(docker volume ls -q -f name=nitro-dev) 2>/dev/null || true
+    @echo "Removing associated networks..."
+    @docker network rm $(docker network ls -q -f name=nitro-dev) 2>/dev/null || true
+    @echo "Arbitrum node infrastructure removed."
+
 op-clean:
     rm -rf ~/optimism
 
@@ -77,13 +93,13 @@ op-reclone: op-down op-clean op-clone
 
 # Deploy MetabasedSequencerChain smart contract to Optimism devnet
 op-deploy-chain:
-    cat {{ contracts_root }}/script/DeployContractsForSequencerChain.s.sol | sed 's/l3ChainId = 0;[^\n]*/l3ChainId = {{ l3_chain_id }};/' > {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
+    cat {{ contracts_root }}/script/DeployContractsForSequencerChain.s.sol | sed -E 's/(l3ChainId = )0;/\1{{ l3_chain_id }};/' > {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
     [ -f {{ op_contract_deploy_file }} ] || forge script --root {{ contracts_root }} {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url {{ op_devnet_l2_rpc_url }} --private-key {{ op_devnet_private_key }} --broadcast -vvvv
     rm {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
 
 # Deploy MetabasedSequencerChain smart contract to Arbitrum Orbit devnet
 arb-deploy-chain:
-    cat {{ contracts_root }}/script/DeployContractsForSequencerChain.s.sol | sed 's/l3ChainId = 0;[^\n]*/l3ChainId = {{ l3_chain_id }};/' > {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
+    cat {{ contracts_root }}/script/DeployContractsForSequencerChain.s.sol | sed -E 's/(l3ChainId = )0;/\1{{ l3_chain_id }};/' > {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
     [ -f {{ arb_contract_deploy_file }} ] || forge script --root {{ contracts_root }} {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url {{ arb_orbit_l2_rpc_url }} --private-key {{ arb_orbit_private_key }} --broadcast --skip-simulation -vvvv
     rm {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
 
@@ -107,11 +123,11 @@ op-update-chain-address: op-deploy-chain op-create-localenv
 
 # Creates localnet ENV file with values fit for Optimism devnet
 op-create-localenv:
-    [ -f {{ localenv_file }} ] || echo -e "METABASED_CHAIN_RPC_ADDRESS={{ op_devnet_l2_rpc_url }}\nMETABASED_PRIVATE_KEY={{ op_devnet_private_key }}" > {{ localenv_file }}
+    [ -f {{ localenv_file }} ] || printf "METABASED_CHAIN_RPC_ADDRESS={{ op_devnet_l2_rpc_url }}\nMETABASED_PRIVATE_KEY={{ op_devnet_private_key }}" > {{ localenv_file }}
 
 # Creates localnet ENV file with values fit for Arbitrum devnet
 arb-create-localenv:
-    [ -f {{ localenv_file }} ] || echo "METABASED_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}\nMETABASED_PRIVATE_KEY={{ arb_orbit_private_key }}" > {{ localenv_file }}
+    [ -f {{ localenv_file }} ] || printf "METABASED_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}\nMETABASED_PRIVATE_KEY={{ arb_orbit_private_key }}" > {{ localenv_file }}
 
 # Puts arb contract address into localnet ENV file
 arb-update-chain-address: arb-deploy-chain arb-create-localenv
@@ -162,7 +178,11 @@ create-aliases:
             echo "alias go-install='just -f {{justfile()}} go-install'" >> "$rc_file"
             echo "alias op-deploy-chain='just -f {{justfile()}} op-deploy-chain'" >> "$rc_file"
             echo "alias arb-up='just -f {{justfile()}} arb-up'" >> "$rc_file"
+            echo "alias arb-down='just -f {{justfile()}} arb-down'" >> "$rc_file"
+            echo "alias arb-teardown='just -f {{justfile()}} arb-teardown'" >> "$rc_file"
             echo "alias arb-deploy-chain='just -f {{justfile()}} arb-deploy-chain'" >> "$rc_file"
+            echo "alias arb-update-chain-address='just -f {{justfile()}} arb-update-chain-address'" >> "$rc_file"
+            echo "alias arb-health-check='just -f {{justfile()}} arb-health-check'" >> "$rc_file"
             echo "alias run-metabased-sequencer='just -f {{justfile()}} run-metabased-sequencer'" >> "$rc_file"
             echo "# END Metabased Rollup Dev Container aliases" >> "$rc_file"
             echo "Aliases created in $rc_file"
@@ -171,14 +191,14 @@ create-aliases:
         fi
     done
 
-# Run all steps in sequence
+# Run all OP steps in sequence
 # OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
 # We initialize and then spin down the devnet to get the initialization time out
 # of the way upfront
 op-all: op-clone foundry-install foundry-update create-aliases
     @echo "Post-create OP script completed successfully"
 
-
+# Run all Arbitrum setup steps in sequence necessary for `arb-up`
 arb-network-setup: foundry-install foundry-update create-aliases
     @echo "Post-setup Arbitrum script completed successfully. Ready to run bring up the Arbitrum devnet."
 
@@ -187,8 +207,8 @@ arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabase
 
 arb-health-check:
     curl -s -X POST -H "Content-Type: application/json" \
-        --data '{"jsonrpc":"2.0","method":"net_version","id":1}' \
-        {{ arb_orbit_l2_rpc_url }} || echo "RPC endpoint not responding"
+    --data '{"jsonrpc":"2.0","method":"net_version","id":1}' \
+    {{ arb_orbit_l2_rpc_url }} || echo "RPC endpoint not responding"
 
 arb-test-sendRawTransaction: arb-health-check
     curl --location {{ metabased_sequencer_url }} \
