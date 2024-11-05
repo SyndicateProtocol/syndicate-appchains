@@ -8,11 +8,13 @@ You can use the Dev Container in your IDE to get started. Clone the repo and cho
 
 The Dev Container will auto-install all needed tooling. This includes Go, Rust, Foundry, Optimism tools, and more.
 
-After creating the Dev Container, the following commands will be available:
+After creating the Dev Container, several commands will be available, including:
 
 - `op-up`: Start the Optimism devnet
 - `op-down`: Stop the Optimism devnet
 - `go-install`: Install all Go dependencies in the Dev Container
+- `arb-up`: Start the Arbitrum devnet
+- `arb-down`: Stop the Arbitrum devnet
 
 If these aliases don't work immediately, you may need to open a new terminal in the Dev Container. If they still don't work, you can run `just --justfile /workspaces/metabased-rollup/.devcontainer/justfile create-aliases` to create them manually.
 
