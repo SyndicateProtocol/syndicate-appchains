@@ -90,7 +90,9 @@ func (s *SequencingBlockFetcher) GetSequencingBlocks(block types.Block) ([]*type
 	}
 
 	// Save the last used block
-	s.LastUsedBlock = blocks[len(blocks)-1]
+	if len(blocks) > 0 {
+		s.LastUsedBlock = blocks[len(blocks)-1]
+	}
 
 	return blocks, nil
 }
