@@ -117,16 +117,13 @@ func (s *SequencingBlockFetcher) FindFirstBlockOnOrBeforeTime(time int) (uint64,
 	low := uint64(1)
 	high := latestBlockNumber
 
-	fmt.Println("low", low)
-	fmt.Println("high", high)
-
 	var result uint64
 
 	for low <= high {
 		mid := (low + high) / BinarySearchDivisor
-		fmt.Println("mid", mid)
 
 		block, err := s.SequencingChainClient.GetBlockByNumber(context.Background(), utils.UInt64ToHex(mid), false)
+
 		if err != nil {
 			return 0, fmt.Errorf("error getting block %d: %w", mid, err)
 		}
@@ -147,8 +144,6 @@ func (s *SequencingBlockFetcher) FindFirstBlockOnOrBeforeTime(time int) (uint64,
 	if result == 0 {
 		return 0, fmt.Errorf("no block found before timestamp %d", time)
 	}
-
-	fmt.Println("result", result)
 
 	return result, nil
 }
