@@ -89,9 +89,12 @@ func (s *SequencingBlockFetcher) GetSequencingBlocks(block types.Block) ([]*type
 		return nil, err
 	}
 
-	// Save the last used block
-	s.LastUsedBlock = blocks[len(blocks)-1]
+	// Save the last used block if any blocks were found
+	if len(blocks) > 0 {
+		s.LastUsedBlock = blocks[len(blocks)-1]
+	}
 
+	// Returns empty array if no blocks were found
 	return blocks, nil
 }
 
@@ -120,6 +123,7 @@ func (s *SequencingBlockFetcher) FindFirstBlockOnOrBeforeTime(time int) (uint64,
 		mid := (low + high) / BinarySearchDivisor
 
 		block, err := s.SequencingChainClient.GetBlockByNumber(context.Background(), utils.UInt64ToHex(mid), false)
+
 		if err != nil {
 			return 0, fmt.Errorf("error getting block %d: %w", mid, err)
 		}
