@@ -142,7 +142,7 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	return previousBlock, previousBlock.Hash().Hex(), nil
 }
 
-func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt, head *ethtypes.Header) []hexutil.Bytes {
+func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) []hexutil.Bytes {
 	var transactions []hexutil.Bytes
 	for i, rec := range receipts {
 		if rec.Status != ethtypes.ReceiptStatusSuccessful {
@@ -159,23 +159,38 @@ func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt, he
 				continue
 			}
 
-			// SEQ-205: make sure the blocks being produced are valid
-			// In the case we have an invalid transaction, it should not be included in the block
-			for _, rawTx := range transactionsInEvent {
-				var tx *ethtypes.Transaction
-				tx.UnmarshalBinary(rawTx)
-				validationErr := ValidateTransaction(tx, head)
-				if validationErr != nil {
-					log.Warn().Err(validationErr).Msgf("skipping invalid transaction: %q", tx)
-					continue
-				}
-
-			}
-
 			transactions = append(transactions, transactionsInEvent...)
 		}
 	}
 	return transactions
+}
+
+// SEQ-205: make sure the blocks being produced are valid
+// In the case we have an invalid transaction, it should not be included in the block
+// This filters transactions using a local stateless validation, i.e. gas, nonces
+// and chain-specific configs such as activated hardforks are *not* validated at this point
+// State-dependent validations can only be performed by the NetaBased chain itself
+func (m *MetaBasedBatchProvider) FilterTransactions(txs []hexutil.Bytes, header *ethtypes.Header) ([]hexutil.Bytes, int) {
+	filtered := make([]hexutil.Bytes, len(txs))
+	removedCount := 0
+	for _, rawTx := range txs {
+		var tx *ethtypes.Transaction
+		unmarshalErr := tx.UnmarshalBinary(rawTx)
+		if unmarshalErr != nil {
+			log.Warn().Err(unmarshalErr).Msgf("can't unmarshall transaction: %q", tx)
+			removedCount++
+			continue
+		}
+		validationErr := ValidateTransaction(tx, header)
+		if validationErr != nil {
+			log.Warn().Err(validationErr).Msgf("skipping invalid transaction: %q", tx)
+			removedCount++
+			continue
+		}
+		filtered = append(filtered, rawTx)
+	}
+
+	return filtered, removedCount
 }
 
 // This is a lightweight stateless L3 tx validation
@@ -256,8 +271,13 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 		return nil, err
 	}
 
-	txns := m.FilterReceipts(receipts, header)
+	txns := m.FilterReceipts(receipts)
 	log.Debug().Msgf("Translating block number %s and hash %s: filtered transactions: %v", blockNumber, blockHash, txns)
+
+	txns, removedCount := m.FilterTransactions(txns, header)
+	if removedCount > 0 {
+		log.Debug().Msgf("Transactions got filtered by stateless validation: %d", removedCount)
+	}
 
 	timestamp, err := block.GetBlockTimestamp()
 	if err != nil {
