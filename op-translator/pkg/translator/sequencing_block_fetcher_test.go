@@ -329,3 +329,137 @@ func TestGetSequencingBlocksByTimeWindow(t *testing.T) {
 		})
 	}
 }
+
+func TestGetSequencingBlocks(t *testing.T) {
+	tests := []struct {
+		name                  string
+		block                 types.Block
+		timeWindowStart       int
+		timeWindowEnd         int
+		firstBlockBeforeStart uint64
+		setupMocks            func(mockClient *mocks.MockRPCClient)
+		expectedBlocks        []*types.Block
+		expectError           bool
+	}{
+		{
+			name: "Successful fetch with blocks in time window",
+			block: types.Block{
+				"timestamp": "0x6",
+			},
+			setupMocks: func(mockClient *mocks.MockRPCClient) {
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x1", false).
+					Return(types.Block{"number": "0x1", "timestamp": "0x1"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x2", false).
+					Return(types.Block{"number": "0x2", "timestamp": "0x2"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x3", false).
+					Return(types.Block{"number": "0x3", "timestamp": "0x3"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x4", false).
+					Return(types.Block{"number": "0x4", "timestamp": "0x4"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x5", false).
+					Return(types.Block{"number": "0x5", "timestamp": "0x5"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x6", false).
+					Return(types.Block{"number": "0x6", "timestamp": "0x6"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x7", false).
+					Return(types.Block{"number": "0x7", "timestamp": "0x7"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "latest", false).
+					Return(types.Block{"number": "0x6", "timestamp": "0x6"}, nil)
+			},
+			expectedBlocks: []*types.Block{
+				{"number": "0x5", "timestamp": "0x5"},
+				{"number": "0x6", "timestamp": "0x6"},
+			},
+			expectError: false,
+		},
+		{
+			name: "Error fetching block timestamp",
+			block: types.Block{
+				"timestamp": nil,
+			},
+			setupMocks: func(mockClient *mocks.MockRPCClient) {
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x6", false).
+					Return(types.Block{}, assert.AnError)
+			},
+			expectedBlocks: nil,
+			expectError:    true,
+		},
+		{
+			name: "No blocks found within time window",
+			block: types.Block{
+				"timestamp": "0x6",
+			},
+			setupMocks: func(mockClient *mocks.MockRPCClient) {
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x3", false).
+					Return(types.Block{"number": "0x3", "timestamp": "0x3"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x1", false).
+					Return(types.Block{"number": "0x1", "timestamp": "0x1"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x2", false).
+					Return(types.Block{"number": "0x2", "timestamp": "0x2"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x4", false).
+					Return(types.Block{"number": "0x4", "timestamp": "0x4"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x5", false).
+					Return(types.Block{"number": "0x5", "timestamp": "0x5"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x6", false).
+					Return(types.Block{"number": "0x6", "timestamp": "0x2"}, nil) // Outside time window due to shorter block time
+				mockClient.On("GetBlockByNumber", mock.Anything, "latest", false).
+					Return(types.Block{"number": "0x5", "timestamp": "0x1"}, nil)
+			},
+			expectedBlocks: nil,
+			expectError:    false,
+		},
+		{
+			name: "Error during block fetch",
+			block: types.Block{
+				"timestamp": "0x6",
+			},
+			setupMocks: func(mockClient *mocks.MockRPCClient) {
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x3", false).
+					Return(types.Block{"number": "0x3", "timestamp": "0x3"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x1", false).
+					Return(types.Block{"number": "0x1", "timestamp": "0x1"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x2", false).
+					Return(types.Block{"number": "0x2", "timestamp": "0x2"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x4", false).
+					Return(types.Block{"number": "0x4", "timestamp": "0x4"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x5", false).
+					Return(types.Block{"number": "0x5", "timestamp": "0x5"}, nil)
+				mockClient.On("GetBlockByNumber", mock.Anything, "0x6", false).
+					Return(types.Block{}, assert.AnError)
+				mockClient.On("GetBlockByNumber", mock.Anything, "latest", false).
+					Return(types.Block{"number": "0x5", "timestamp": "0x1"}, nil)
+			},
+			expectedBlocks: nil,
+			expectError:    true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Initialize mock client
+			mockClient := new(mocks.MockRPCClient)
+			if tt.setupMocks != nil {
+				tt.setupMocks(mockClient)
+			}
+
+			// Create the SequencingBlockFetcher with block time set to 2
+			fetcher := translator.NewSequencingBlockFetcher(mockClient, 2)
+
+			// Run GetSequencingBlocks
+			blocks, err := fetcher.GetSequencingBlocks(tt.block)
+
+			// Validate results
+			if tt.expectError {
+				assert.Error(t, err)
+				assert.Nil(t, blocks)
+			} else {
+				assert.NoError(t, err)
+				// n, _ := blocks[0].GetBlockNumber()
+				// n2, _ := blocks[1].GetBlockNumber()
+				// fmt.Println("blocks", n, n2)
+				assert.Equal(t, tt.expectedBlocks, blocks)
+			}
+
+			// Verify all expectations
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
