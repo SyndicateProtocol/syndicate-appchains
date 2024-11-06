@@ -196,11 +196,11 @@ create-aliases:
 # We initialize and then spin down the devnet to get the initialization time out
 # of the way upfront
 op-all: op-clone foundry-install foundry-update create-aliases
-    @echo "Post-setup OP script completed successfully. Ready to bring up the OP devnet with op-up."
+    @echo "Post-setup OP script completed successfully. Ready to bring up the OP Stack devnet with op-up."
 
 # Run all Arbitrum setup steps in sequence necessary for `arb-up`
 arb-network-setup: foundry-install foundry-update create-aliases
-    @echo "Post-setup Arbitrum script completed successfully. Ready to bring up the Arbitrum devnet with arb-up."
+    @echo "Post-setup Arbitrum script completed successfully. Ready to bring up the Arbitrum Orbit devnet with arb-up."
 
 arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabased-sequencer
     @echo "Arbitrum Sequencer setup completed successfully. Running sequencer."
