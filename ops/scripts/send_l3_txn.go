@@ -84,6 +84,8 @@ func main() {
 		log.Fatalf("Failed to encode signed transaction: %v", err)
 	}
 
+	fmt.Println("signedTxData", hex.EncodeToString(signedTxData))
+
 	// ABI encode the function call with the signed transaction as input
 	contractABI, err := abi.JSON(strings.NewReader(`[{"inputs":[{"internalType":"bytes","name":"transaction","type":"bytes"}],"name":"processTransaction","outputs":[],"stateMutability":"nonpayable","type":"function"}]`))
 	if err != nil {
@@ -112,7 +114,7 @@ func main() {
 	nonceL2 := uint64(1)
 	tx := types.NewTransaction(nonceL2, sequencingContractAddress, big.NewInt(0), gasLimitL2, gasPriceL2, inputData)
 	signedTx, err := auth.Signer(auth.From, tx)
-	log.Printf("Signed tx data: %s", hex.EncodeToString(signedTxData))
+	log.Printf("Hex encoded signed tx data: %s", hex.EncodeToString(signedTxData))
 	if err != nil {
 		log.Fatalf("Failed to sign transaction: %v", err)
 	}
