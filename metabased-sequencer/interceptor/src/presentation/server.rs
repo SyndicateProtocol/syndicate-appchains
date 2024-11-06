@@ -1,7 +1,7 @@
-use crate::application::{Metrics, PrometheusMetrics, RunningStopwatch, Stopwatch};
+use crate::application::{Metrics, RunningStopwatch, Stopwatch};
 use crate::domain::primitives::Address;
 use crate::domain::MetabasedSequencerChainService;
-use crate::infrastructure::{SolMetabasedSequencerChainService, TokioStopwatch};
+use crate::infrastructure::{PrometheusMetrics, SolMetabasedSequencerChainService, TokioStopwatch};
 use crate::presentation::json_rpc_errors::Error;
 use crate::presentation::jsonrpc;
 use alloy::network::{Ethereum, EthereumWallet};
