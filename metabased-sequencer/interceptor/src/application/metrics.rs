@@ -1,87 +1,71 @@
-pub use prometheus::PrometheusMetrics;
+//! A module concerned with the orchestration of measurements and properties regarding application
+//! usage.
+//!
+//! The metrics module contains:
+//! * A query for collecting [`metrics`].
+//! * A service that defines taking [`Metrics`].
+//! * A generic [`Stopwatch`].
 
-use std::fmt::Write;
+use std::fmt::{Display, Write};
+use std::time::Duration;
 
+/// Queries all collected metrics into textual representation and returns as a string.
 pub fn metrics(metrics: &impl Metrics) -> String {
-    let mut response = String::new();
-
-    metrics
-        .encode(&mut response)
-        .expect("Formatting to string should be infallible");
-
-    response
+    metrics.to_string()
 }
 
-pub trait Metrics {
-    fn inc_send_raw_transaction(&self);
+/// A service for collecting measurements of properties describing the application usage.
+pub trait Metrics: Display {
+    /// Increases the count of calls to `eth_sendRawTransaction` with response latency measurement.
+    fn append_send_raw_transaction_with_duration(&self, duration: Duration);
+
+    /// Encodes all the collected metrics into textual representation and outputs using `writer`.
     fn encode(&self, writer: &mut impl Write) -> std::fmt::Result;
 }
 
-mod noop {
-    use super::*;
-
-    impl Metrics for () {
-        fn inc_send_raw_transaction(&self) {}
-
-        fn encode(&self, _writer: &mut impl Write) -> std::fmt::Result {
-            Ok(())
-        }
-    }
+/// The `RunningStopwatch` trait is a monotonically non-decreasing clock that measures time since
+/// started.
+pub trait RunningStopwatch {
+    /// Returns a [`Duration`] since starting this [`RunningStopwatch`].
+    fn elapsed(&self) -> Duration;
 }
 
-mod prometheus {
+/// The `Stopwatch` trait creates [`RunningStopwatch`] by calling [`Stopwatch::start`].
+pub trait Stopwatch {
+    /// The associated [`RunningStopwatch`] type.
+    type Running: RunningStopwatch;
+
+    /// Creates a running stopwatch that measures time since created using this function call.
+    fn start(&self) -> Self::Running;
+}
+
+#[cfg(test)]
+mod tests {
     use super::*;
-    use prometheus_client::encoding::text::encode;
-    use prometheus_client::encoding::EncodeLabelSet;
-    use prometheus_client::metrics::counter::Counter;
-    use prometheus_client::metrics::family::Family;
-    use prometheus_client::registry::Registry;
+    use std::fmt::Formatter;
 
-    #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
-    pub struct Labels {
-        rpc_method: &'static str,
-    }
+    struct DummyMetrics(&'static str);
 
-    #[derive(Debug)]
-    pub struct PrometheusMetrics {
-        registry: Registry,
-        rpc_calls: Family<Labels, Counter>,
-    }
-
-    impl Default for PrometheusMetrics {
-        fn default() -> Self {
-            Self::new()
+    impl Display for DummyMetrics {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            self.encode(f)
         }
     }
 
-    impl PrometheusMetrics {
-        pub fn new() -> Self {
-            let mut registry = <Registry>::default();
-            let rpc_calls = Family::<Labels, Counter>::default();
-            registry.register(
-                "rpc_calls",
-                "Number of RPC method calls received",
-                rpc_calls.clone(),
-            );
-
-            Self {
-                registry,
-                rpc_calls,
-            }
-        }
-    }
-
-    impl Metrics for PrometheusMetrics {
-        fn inc_send_raw_transaction(&self) {
-            self.rpc_calls
-                .get_or_create(&Labels {
-                    rpc_method: "eth_sendRawTransaction",
-                })
-                .inc();
-        }
+    impl Metrics for DummyMetrics {
+        fn append_send_raw_transaction_with_duration(&self, _duration: Duration) {}
 
         fn encode(&self, writer: &mut impl Write) -> std::fmt::Result {
-            encode(writer, &self.registry)
+            writer.write_str(self.0)
         }
+    }
+
+    #[test]
+    fn test_metrics_query_collects_output_from_service() {
+        let data = "test";
+        let actual_metrics = metrics(&DummyMetrics(data));
+        let expected_metrics = data.to_owned();
+
+        assert_eq!(actual_metrics, expected_metrics);
     }
 }

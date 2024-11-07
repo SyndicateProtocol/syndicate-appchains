@@ -9,7 +9,6 @@ import (
 	"strconv"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
@@ -37,13 +36,9 @@ type BackfillData struct {
 	EpochHash common.Hash `json:"epochHash"`
 }
 
-func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber string) (*BackfillData, error) {
-	intEpochNumber, err := utils.HexToInt(epochNumber)
-	if err != nil {
-		return nil, err
-	}
-	fullURL := b.MetafillerURL + "/" + strconv.Itoa(intEpochNumber)
-	log.Debug().Msgf("Getting backfill data for epoch %s. Int epoch number: %d. Fetching from: %s", epochNumber, intEpochNumber, fullURL)
+func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint64) (*BackfillData, error) {
+	fullURL := b.MetafillerURL + "/" + strconv.FormatUint(epochNumber, 10)
+	log.Debug().Msgf("Getting backfill data for epoch number: %d. Fetching from: %s", epochNumber, fullURL)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, http.NoBody)
 	if err != nil {
@@ -66,7 +61,7 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber stri
 	if err != nil {
 		return nil, err
 	}
-	log.Debug().Msgf("Backfill data for epoch %d: %v", intEpochNumber, data)
+	log.Debug().Msgf("Backfill data for epoch %d: %v", epochNumber, data)
 	return data, nil
 }
 
@@ -83,7 +78,7 @@ func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Bl
 
 	backfillData, err := b.GetBackfillData(ctx, epochNumber)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get backfill data for epoch %s: %w", epochNumber, err)
+		return nil, fmt.Errorf("failed to get backfill data for epoch %d: %w", epochNumber, err)
 	}
 
 	if backfillData.EpochHash != common.HexToHash(epochHash) {
@@ -94,7 +89,7 @@ func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Bl
 	for _, data := range backfillData.Data {
 		frame, err := types.ToFrames([]byte(data), config.MaxFrameSize, backfillData.EpochHash)
 		if err != nil {
-			return nil, fmt.Errorf("failed to convert data to frames for epoch %s: %w", epochNumber, err)
+			return nil, fmt.Errorf("failed to convert data to frames for epoch %d: %w", epochNumber, err)
 		}
 		frames = append(frames, frame...)
 	}

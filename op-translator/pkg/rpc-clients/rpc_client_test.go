@@ -3,13 +3,12 @@ package rpc_test
 import (
 	"context"
 	"errors"
-	"math/big"
 	"testing"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/trie"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
@@ -63,27 +62,19 @@ func TestCloseConnection(t *testing.T) {
 	assert.Error(t, err, "expected an error after closing the connection")
 }
 
-func TestBlocksReceiptsByNumbers(t *testing.T) {
+func TestGetReceiptsByBlocks(t *testing.T) {
 	tests := []struct { //nolint:govet // test struct
 		setupMocks  func(*mocks.MockReceiptsFetcher, *mocks.MockEthClient, *mocks.MockRawRPCClient)
 		expected    []*ethtypes.Receipt
-		blockNumber []string
+		blocks      []*types.Block
 		name        string
 		expectError bool
 	}{
 		{
-			name:        "Successful receipt fetching",
-			blockNumber: []string{"0xA"},
+			name:   "Successful receipt fetching",
+			blocks: []*types.Block{{"number": "0xA", "transactions": []any{"0x123"}}},
 			setupMocks: func(mockFetcher *mocks.MockReceiptsFetcher, mockEthClient *mocks.MockEthClient, mockRawClient *mocks.MockRawRPCClient) {
-				tx := ethtypes.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil)
-				block := ethtypes.NewBlock(
-					&ethtypes.Header{Number: big.NewInt(10), ParentHash: common.HexToHash("0x123")},
-					&ethtypes.Body{Transactions: []*ethtypes.Transaction{tx}, Uncles: []*ethtypes.Header{}, Withdrawals: []*ethtypes.Withdrawal{}},
-					[]*ethtypes.Receipt{},
-					trie.NewStackTrie(nil),
-				)
-				mockEthClient.On("BlockByNumber", mock.Anything, big.NewInt(10)).Return(block, nil)
-				txHash := tx.Hash()
+				txHash := common.HexToHash("0x123")
 				mockFetcher.On("FetchReceipts", mock.Anything, mock.Anything, []common.Hash{txHash}).
 					Return(ethtypes.Receipts{&ethtypes.Receipt{Status: 1}}, nil)
 			},
@@ -91,29 +82,24 @@ func TestBlocksReceiptsByNumbers(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:        "Error in BlockByNumber",
-			blockNumber: []string{"0xA"},
-			setupMocks: func(mockFetcher *mocks.MockReceiptsFetcher, mockEthClient *mocks.MockEthClient, mockRawClient *mocks.MockRawRPCClient) {
-				// Mock an error in BlockByNumber
-				mockEthClient.On("BlockByNumber", mock.Anything, big.NewInt(10)).
-					Return(&ethtypes.Block{}, errors.New("block fetching error"))
-			},
+			name:        "Error getting block number",
+			blocks:      []*types.Block{{"transactions": []any{"0x123"}}},
+			setupMocks:  nil,
 			expected:    nil,
 			expectError: true,
 		},
 		{
-			name:        "Error in FetchReceipts",
-			blockNumber: []string{"0xA"},
+			name:        "Error getting block transactions",
+			blocks:      []*types.Block{{"number": "0xA"}},
+			setupMocks:  nil,
+			expected:    nil,
+			expectError: true,
+		},
+		{
+			name:   "Error in FetchReceipts",
+			blocks: []*types.Block{{"number": "0xA", "transactions": []any{"0x123"}}},
 			setupMocks: func(mockFetcher *mocks.MockReceiptsFetcher, mockEthClient *mocks.MockEthClient, mockRawClient *mocks.MockRawRPCClient) {
-				tx := ethtypes.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil)
-				block := ethtypes.NewBlock(
-					&ethtypes.Header{Number: big.NewInt(10), ParentHash: common.HexToHash("0x123")},
-					&ethtypes.Body{Transactions: []*ethtypes.Transaction{tx}, Uncles: []*ethtypes.Header{}, Withdrawals: []*ethtypes.Withdrawal{}},
-					[]*ethtypes.Receipt{},
-					trie.NewStackTrie(nil),
-				)
-				mockEthClient.On("BlockByNumber", mock.Anything, big.NewInt(10)).Return(block, nil)
-				txHash := tx.Hash()
+				txHash := common.HexToHash("0x123")
 				mockFetcher.On("FetchReceipts", mock.Anything, mock.Anything, []common.Hash{txHash}).
 					Return(ethtypes.Receipts{}, errors.New("receipts fetching error"))
 			},
@@ -121,38 +107,21 @@ func TestBlocksReceiptsByNumbers(t *testing.T) {
 			expectError: true,
 		},
 		{
-			name:        "No block numbers provided",
-			blockNumber: []string{},
+			name:        "No blocks provided",
+			blocks:      []*types.Block{},
 			setupMocks:  nil,
 			expected:    []*ethtypes.Receipt(nil),
 			expectError: false,
 		},
 		{
-			name:        "Successful receipt fetching for multiple blocks",
-			blockNumber: []string{"0xA", "0xB"},
+			name:   "Successful receipt fetching for multiple blocks",
+			blocks: []*types.Block{{"number": "0xA", "transactions": []any{"0x123"}}, {"number": "0xB", "transactions": []any{"0x456"}}},
 			setupMocks: func(mockFetcher *mocks.MockReceiptsFetcher, mockEthClient *mocks.MockEthClient, mockRawClient *mocks.MockRawRPCClient) {
-				txA := ethtypes.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil)
-				blockA := ethtypes.NewBlock(
-					&ethtypes.Header{Number: big.NewInt(10), ParentHash: common.HexToHash("0x123")},
-					&ethtypes.Body{Transactions: []*ethtypes.Transaction{txA}, Uncles: []*ethtypes.Header{}, Withdrawals: []*ethtypes.Withdrawal{}},
-					[]*ethtypes.Receipt{},
-					trie.NewStackTrie(nil),
-				)
-				txB := ethtypes.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil)
-				blockB := ethtypes.NewBlock(
-					&ethtypes.Header{Number: big.NewInt(11), ParentHash: common.HexToHash("0x456")},
-					&ethtypes.Body{Transactions: []*ethtypes.Transaction{txB}, Uncles: []*ethtypes.Header{}, Withdrawals: []*ethtypes.Withdrawal{}},
-					[]*ethtypes.Receipt{},
-					trie.NewStackTrie(nil),
-				)
-
-				mockEthClient.On("BlockByNumber", mock.Anything, big.NewInt(10)).Return(blockA, nil)
-				txAHash := txA.Hash()
+				txAHash := common.HexToHash("0x123")
 				mockFetcher.On("FetchReceipts", mock.Anything, mock.Anything, []common.Hash{txAHash}).
 					Return(ethtypes.Receipts{&ethtypes.Receipt{Status: 1}}, nil)
 
-				mockEthClient.On("BlockByNumber", mock.Anything, big.NewInt(11)).Return(blockB, nil)
-				txBHash := txB.Hash()
+				txBHash := common.HexToHash("0x456")
 				mockFetcher.On("FetchReceipts", mock.Anything, mock.Anything, []common.Hash{txBHash}).
 					Return(ethtypes.Receipts{&ethtypes.Receipt{Status: 1}}, nil)
 			},
@@ -160,24 +129,16 @@ func TestBlocksReceiptsByNumbers(t *testing.T) {
 			expectError: false,
 		},
 		{
-			name:        "Partial success - one block fetch fails",
-			blockNumber: []string{"0xA", "0xB"},
+			name:   "Partial success - one receipt fetch fails",
+			blocks: []*types.Block{{"number": "0xA", "transactions": []any{"0x123"}}, {"number": "0xB", "transactions": []any{"0x456"}}},
 			setupMocks: func(mockFetcher *mocks.MockReceiptsFetcher, mockEthClient *mocks.MockEthClient, mockRawClient *mocks.MockRawRPCClient) {
-				txA := ethtypes.NewTransaction(0, common.Address{}, big.NewInt(0), 0, big.NewInt(0), nil)
-				blockA := ethtypes.NewBlock(
-					&ethtypes.Header{Number: big.NewInt(10), ParentHash: common.HexToHash("0x123")},
-					&ethtypes.Body{Transactions: []*ethtypes.Transaction{txA}, Uncles: []*ethtypes.Header{}, Withdrawals: []*ethtypes.Withdrawal{}},
-					[]*ethtypes.Receipt{},
-					trie.NewStackTrie(nil),
-				)
-
-				mockEthClient.On("BlockByNumber", mock.Anything, big.NewInt(10)).Return(blockA, nil)
-				txAHash := txA.Hash()
+				txAHash := common.HexToHash("0x123")
 				mockFetcher.On("FetchReceipts", mock.Anything, mock.Anything, []common.Hash{txAHash}).
 					Return(ethtypes.Receipts{&ethtypes.Receipt{Status: 1}}, nil)
 
-				mockEthClient.On("BlockByNumber", mock.Anything, big.NewInt(11)).
-					Return(&ethtypes.Block{}, errors.New("block fetching error"))
+				txBHash := common.HexToHash("0x456")
+				mockFetcher.On("FetchReceipts", mock.Anything, mock.Anything, []common.Hash{txBHash}).
+					Return(ethtypes.Receipts{}, errors.New("receipts fetching error"))
 			},
 			expected:    nil,
 			expectError: true,
@@ -196,7 +157,7 @@ func TestBlocksReceiptsByNumbers(t *testing.T) {
 
 			rpcClient := rpc.NewRPCClient(mockEthClient, mockRawClient, mockFetcher)
 
-			result, err := rpcClient.BlocksReceiptsByNumbers(context.Background(), tt.blockNumber)
+			result, err := rpcClient.GetReceiptsByBlocks(context.Background(), tt.blocks)
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Nil(t, result)
