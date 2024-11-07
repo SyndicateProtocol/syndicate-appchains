@@ -29,7 +29,7 @@ jobs:
           imageTag: pr-${{ github.event.pull_request.number }}
           # Enable caching
           push: always
-          #Pull cached images from both PR and main branch
+          # Pull cached images from both PR and main branch
           cacheFrom: |
             ghcr.io/syndicateprotocol/metabased-rollup:cache-main
             ghcr.io/syndicateprotocol/metabased-rollup:cache-${{ github.ref_name }}
