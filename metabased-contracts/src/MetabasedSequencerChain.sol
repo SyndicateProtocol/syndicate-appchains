@@ -13,7 +13,7 @@ contract MetabasedSequencerChain is RequireListManager {
     event TransactionProcessed(address indexed sender, bytes tx);
 
     /// @notice Emitted when a chunk of transactions is processed.
-    event TransactionChunkProcessed(bytes txChunk, uint256 startIndex, uint256 totalChunks, bytes32 txHashForChunk);
+    event TransactionChunkProcessed(bytes txChunk, uint256 index, uint256 totalChunks, bytes32 txHashForParent);
 
     /// @dev Thrown when the transaction form is invalid.
     error InvalidTransactionForm();
@@ -65,9 +65,9 @@ contract MetabasedSequencerChain is RequireListManager {
 
     /// @notice Processes a chunk of transactions from a larger batch.
     /// @param txChunk the compressed chunked transaction data.
-    /// @param startIndex The starting index for this chunk in the overall batch.
+    /// @param index The starting index for this chunk in the overall batch.
     /// @param totalChunks The number of transactions to process in this chunk.
-    /// @param txHashForChunk A unique identifier for this chunk.
+    /// @param txHashForParent The hash of the parent transaction.
     function processChunk(bytes calldata txChunk, uint256 index, uint256 totalChunks, bytes32 txHashForParent)
         external
         onlyWhenAllowed(msg.sender)
@@ -78,7 +78,7 @@ contract MetabasedSequencerChain is RequireListManager {
 
         emit TransactionProcessed(msg.sender, txChunk);
 
-        emit TransactionChunkProcessed(txChunk, startIndex, totalChunks, txHashForChunk);
+        emit TransactionChunkProcessed(txChunk, index, totalChunks, txHashForParent);
     }
 
     /// @notice Prepends a zero byte to the transaction data

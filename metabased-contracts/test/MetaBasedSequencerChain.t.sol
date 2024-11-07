@@ -125,11 +125,11 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         emit MetabasedSequencerChain.TransactionChunkProcessed(
             /* txChunk */
             compressedTxChunk,
-            /* startIndex */
+            /* index */
             0,
             /* totalChunks */
             3,
-            /* txHashForChunk */
+            /* txHashForParent */
             txHash
         );
 
