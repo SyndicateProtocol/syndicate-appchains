@@ -38,21 +38,21 @@ contract MetabasedSequencerChain is RequireListManager {
         _;
     }
 
-    /// @notice Processes a single transaction.
-    /// @param txn The transaction data.
+    /// @notice Processes a single compressed transaction.
+    /// @param txn The compressed transaction data.
     function processTransactionRaw(bytes calldata txn) external onlyWhenAllowed(msg.sender) {
         emit TransactionProcessed(msg.sender, txn);
     }
 
     /// @notice process transactions
-    /// @dev It prepends a zero byte to the transaction data
+    /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
     /// @param txn The transaction data
     function processTransaction(bytes calldata txn) external onlyWhenAllowed(msg.sender) {
         emit TransactionProcessed(msg.sender, prependZeroByte(txn));
     }
 
     /// @notice Processes multiple transactions in bulk.
-    /// @dev It prepends a zero byte to the transaction data
+    /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
     /// @param txns An array of  transaction data.
     function processBulkTransactions(bytes[] calldata txns) external onlyWhenAllowed(msg.sender) {
         uint256 txnCount = txns.length;
@@ -64,7 +64,7 @@ contract MetabasedSequencerChain is RequireListManager {
     }
 
     /// @notice Processes a chunk of transactions from a larger batch.
-    /// @param txs An array of  transaction data.
+    /// @param txs An array of transaction data.
     /// @param startIndex The starting index for this chunk in the overall batch.
     /// @param chunkSize The number of transactions to process in this chunk.
     /// @param chunkId A unique identifier for this chunk.
@@ -87,7 +87,7 @@ contract MetabasedSequencerChain is RequireListManager {
     }
 
     /// @notice Prepends a zero byte to the transaction data
-    /// @dev This helps op-translator identify un data
+    /// @dev This helps op-translator identify uncompressed data
     /// @param _tx The original transaction data
     /// @return bytes The transaction data
     function prependZeroByte(bytes calldata _tx) private pure returns (bytes memory) {
