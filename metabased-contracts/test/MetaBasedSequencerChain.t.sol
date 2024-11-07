@@ -44,7 +44,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.expectEmit(true, false, false, true);
         emit MetabasedSequencerChain.TransactionProcessed(address(this), validTxn);
 
-        chain.processRawData(validTxn);
+        chain.processTransactionRaw(validTxn);
     }
 
     function testProcessTransactionRequireAllFailure() public {
@@ -60,7 +60,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
                 RequireListManager.RequireAllCheckFailed.selector, address(mockRequireAll), address(this)
             )
         );
-        chain.processRawData(validTxn);
+        chain.processTransactionRaw(validTxn);
     }
 
     function testProcessTransactionRequireAnyFailure() public {
@@ -71,7 +71,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.stopPrank();
 
         vm.expectRevert(abi.encodeWithSelector(RequireListManager.RequireAnyCheckFailed.selector, address(this)));
-        chain.processRawData(validTxn);
+        chain.processTransactionRaw(validTxn);
     }
 
     function testProcessBulkRawTransactions() public {
