@@ -9,6 +9,7 @@ import (
 	"strconv"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
@@ -87,7 +88,11 @@ func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Bl
 
 	frames := make([]*types.Frame, 0, len(backfillData.Data))
 	for _, data := range backfillData.Data {
-		frame, err := types.ToFrames([]byte(data), config.MaxFrameSize, backfillData.EpochHash)
+		byteData, err := utils.DecodeHexString(data)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode hex string: %s. error: %w", data, err)
+		}
+		frame, err := types.ToFrames(byteData, config.MaxFrameSize, backfillData.EpochHash)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert data to frames for epoch %d: %w", epochNumber, err)
 		}
