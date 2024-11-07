@@ -74,24 +74,6 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         chain.processTransactionRaw(validTxn);
     }
 
-    function testProcessBulkRawTransactions() public {
-        bytes[] memory validTxns = new bytes[](3);
-        validTxns[0] = abi.encode("transaction 1");
-        validTxns[1] = abi.encode("transaction 2");
-        validTxns[2] = abi.encode("transaction 3");
-
-        vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
-        vm.stopPrank();
-
-        for (uint256 i = 0; i < validTxns.length; i++) {
-            vm.expectEmit(true, false, false, true);
-            emit MetabasedSequencerChain.TransactionProcessed(address(this), validTxns[i]);
-        }
-
-        chain.processBulkRawTransactions(validTxns);
-    }
-
     function testProcessTransaction() public {
         bytes memory _tx = abi.encode("raw transaction");
         bytes memory expectedTx = abi.encodePacked(bytes1(0x00), _tx);
