@@ -13,7 +13,7 @@ contract MetabasedSequencerChain is RequireListManager {
     event TransactionProcessed(address indexed sender, bytes tx);
 
     /// @notice Emitted when a chunk of transactions is processed.
-    event ChunkProcessed(uint256 indexed chunkId, uint256 transactionsProcessed);
+    event TransactionChunkProcessed(bytes txChunk, uint256 index, uint256 totalChunks, bytes32 txHashForParent);
 
     /// @dev Thrown when the transaction form is invalid.
     error InvalidTransactionForm();
@@ -64,26 +64,21 @@ contract MetabasedSequencerChain is RequireListManager {
     }
 
     /// @notice Processes a chunk of transactions from a larger batch.
-    /// @param txs An array of transaction data.
-    /// @param startIndex The starting index for this chunk in the overall batch.
-    /// @param chunkSize The number of transactions to process in this chunk.
-    /// @param chunkId A unique identifier for this chunk.
-    function processChunk(bytes[] calldata txs, uint256 startIndex, uint256 chunkSize, uint256 chunkId)
+    /// @param txChunk the compressed chunked transaction data.
+    /// @param index The starting index for this chunk in the overall batch.
+    /// @param totalChunks The number of transactions to process in this chunk.
+    /// @param txHashForParent The hash of the parent transaction.
+    function processChunk(bytes calldata txChunk, uint256 index, uint256 totalChunks, bytes32 txHashForParent)
         external
         onlyWhenAllowed(msg.sender)
     {
-        if (chunkSize == 0) {
+        if (totalChunks == 0) {
             revert InvalidChunkSize();
         }
 
-        uint256 endIndex = startIndex + chunkSize;
-        require(endIndex <= txs.length, "Chunk exceeds batch size");
+        emit TransactionProcessed(msg.sender, txChunk);
 
-        for (uint256 i = startIndex; i < endIndex; i++) {
-            emit TransactionProcessed(msg.sender, txs[i]);
-        }
-
-        emit ChunkProcessed(chunkId, chunkSize);
+        emit TransactionChunkProcessed(txChunk, index, totalChunks, txHashForParent);
     }
 
     /// @notice Prepends a zero byte to the transaction data

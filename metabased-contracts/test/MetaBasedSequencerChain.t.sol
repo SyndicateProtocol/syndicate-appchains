@@ -110,52 +110,42 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
     }
 
     function testProcessChunk() public {
-        bytes[] memory validTxns = new bytes[](5);
-        for (uint256 i = 0; i < 5; i++) {
-            validTxns[i] = abi.encode(string(abi.encodePacked("transaction ", vm.toString(i + 1))));
-        }
+        bytes memory compressedTxChunk = abi.encode("compressed_transaction_data");
+        bytes32 txHash = bytes32(keccak256(compressedTxChunk)); // Generate a hash for the chunk
 
         vm.startPrank(admin);
         chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
-        for (uint256 i = 0; i < 3; i++) {
-            vm.expectEmit(true, false, false, true);
-            emit MetabasedSequencerChain.TransactionProcessed(address(this), validTxns[i]);
-        }
+        vm.expectEmit(true, false, false, true);
+        emit MetabasedSequencerChain.TransactionProcessed(address(this), compressedTxChunk);
 
-        vm.expectEmit(true, true, false, true);
-        emit MetabasedSequencerChain.ChunkProcessed(1, 3);
+        // Expect TransactionChunkProcessed event with correct parameter types
+        vm.expectEmit(true, true, true, true);
+        emit MetabasedSequencerChain.TransactionChunkProcessed(
+            /* txChunk */
+            compressedTxChunk,
+            /* index */
+            0,
+            /* totalChunks */
+            3,
+            /* txHashForParent */
+            txHash
+        );
 
-        chain.processChunk(validTxns, 0, 3, 1);
+        chain.processChunk(compressedTxChunk, 0, 3, txHash);
     }
 
     function testProcessChunkInvalidSize() public {
-        bytes[] memory validTxns = new bytes[](5);
-        for (uint256 i = 0; i < 5; i++) {
-            validTxns[i] = abi.encode(string(abi.encodePacked("transaction ", vm.toString(i + 1))));
-        }
+        bytes memory compressedTxChunk = abi.encode("compressed_transaction_data");
+        bytes32 txHash = bytes32(keccak256(compressedTxChunk));
 
         vm.startPrank(admin);
         chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidChunkSize.selector));
-        chain.processChunk(validTxns, 0, 0, 1);
-    }
-
-    function testProcessChunkExceedsBatchSize() public {
-        bytes[] memory validTxns = new bytes[](5);
-        for (uint256 i = 0; i < 5; i++) {
-            validTxns[i] = abi.encode(string(abi.encodePacked("transaction ", vm.toString(i + 1))));
-        }
-
-        vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
-        vm.stopPrank();
-
-        vm.expectRevert("Chunk exceeds batch size");
-        chain.processChunk(validTxns, 3, 3, 1);
+        chain.processChunk(compressedTxChunk, 0, 0, txHash);
     }
 }
 
