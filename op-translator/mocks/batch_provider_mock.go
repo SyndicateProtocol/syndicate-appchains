@@ -25,5 +25,6 @@ func (m *MockBatchProvider) GetBatch(ctx context.Context, block types.Block) (*t
 }
 
 func (m *MockBatchProvider) FilterInvalidTransactions(ctx context.Context, batch *types.Batch) (*types.Batch, error) {
+	// TODO: implement cases for stateless validation
 	return batch, nil
 }

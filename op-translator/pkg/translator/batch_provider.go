@@ -37,8 +37,8 @@ const (
 )
 
 type MetaBasedBatchProvider struct {
-	MetaBasedChain    IRPCClient
-	SequencingChain   IRPCClient
+	SettlementChain   IRPCClient // underlying chain
+	SequencingChain   IRPCClient // a.k.a Syndicate Chain
 	TransactionParser *L3TransactionParser
 
 	SettlementStartBlock       int
@@ -58,7 +58,7 @@ func InitMetaBasedBatchProvider(cfg *config.Config) *MetaBasedBatchProvider {
 	}
 
 	return &MetaBasedBatchProvider{
-		MetaBasedChain:    metaBasedChain,
+		SettlementChain:   metaBasedChain,
 		SequencingChain:   sequencingChain,
 		TransactionParser: InitL3TransactionParser(cfg),
 
@@ -77,7 +77,7 @@ func NewMetaBasedBatchProvider(
 	sequencePerSettlementBlock int,
 ) *MetaBasedBatchProvider {
 	return &MetaBasedBatchProvider{
-		MetaBasedChain:             settlementChainClient,
+		SettlementChain:            metabasedChainClient,
 		SequencingChain:            sequencingChainClient,
 		TransactionParser:          NewL3TransactionParser(sequencingContractAddress),
 		SettlementStartBlock:       settlementStartBlock,
@@ -89,7 +89,7 @@ func NewMetaBasedBatchProvider(
 func (m *MetaBasedBatchProvider) Close() {
 	log.Debug().Msg("Closing MetaBasedBatchProvider")
 	m.SequencingChain.CloseConnection()
-	m.MetaBasedChain.CloseConnection()
+	m.SettlementChain.CloseConnection()
 }
 
 func (m *MetaBasedBatchProvider) GetLinkedBlocks(blockNumStr string) ([]string, error) {
@@ -133,7 +133,7 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	parentBlockNum := int64(blockNum - m.SettlementStartBlock - 1)
 
 	log.Debug().Msgf("Getting block hash for block number %d", parentBlockNum)
-	previousBlock, err := m.MetaBasedChain.AsEthClient().HeaderByNumber(ctx, big.NewInt(parentBlockNum))
+	previousBlock, err := m.SettlementChain.AsEthClient().HeaderByNumber(ctx, big.NewInt(parentBlockNum))
 	if err != nil {
 		return nil, "", err
 	}
@@ -166,11 +166,31 @@ func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) []
 }
 
 // SEQ-205: make sure the blocks being produced are valid
+// We do validation in two phases:
+//   - Stateless (inexpensive): locally filter transactions
+//   - Statefull (expensive): use simulate RPC to check if the block to-be produced is valid
+func (m *MetaBasedBatchProvider) FilterTransactions(txs []hexutil.Bytes, header *ethtypes.Header) ([]hexutil.Bytes, int) {
+	// First phase validation: stateless
+	txs, removedCountStateless := m.FilterTransactionsStateless(txs, header)
+	if removedCountStateless > 0 {
+		log.Debug().Msgf("Transactions got filtered by stateless validation: %d", removedCountStateless)
+	}
+
+	// Second phase validation: state full
+	txs, removedCountStateful := m.FilterTransactionsStateful(txs, header)
+	if removedCountStateful > 0 {
+		log.Debug().Msgf("Transactions got filtered by stateful validation: %d", removedCountStateful)
+	}
+
+	return txs, (removedCountStateless + removedCountStateful)
+}
+
+// SEQ-205: make sure the blocks being produced are valid
 // In the case we have an invalid transaction, it should not be included in the block
 // This filters transactions using a local stateless validation, i.e. gas, nonces
 // and chain-specific configs such as activated hardforks are *not* validated at this point
 // State-dependent validations can only be performed by the NetaBased chain itself
-func (m *MetaBasedBatchProvider) FilterTransactions(txs []hexutil.Bytes, header *ethtypes.Header) ([]hexutil.Bytes, int) {
+func (m *MetaBasedBatchProvider) FilterTransactionsStateless(txs []hexutil.Bytes, header *ethtypes.Header) ([]hexutil.Bytes, int) {
 	filtered := make([]hexutil.Bytes, len(txs))
 	removedCount := 0
 	for _, rawTx := range txs {
@@ -181,7 +201,7 @@ func (m *MetaBasedBatchProvider) FilterTransactions(txs []hexutil.Bytes, header 
 			removedCount++
 			continue
 		}
-		validationErr := ValidateTransaction(tx, header)
+		validationErr := m.ValidateTransactionStateless(tx, header)
 		if validationErr != nil {
 			log.Warn().Err(validationErr).Msgf("skipping invalid transaction: %q", tx)
 			removedCount++
@@ -195,10 +215,13 @@ func (m *MetaBasedBatchProvider) FilterTransactions(txs []hexutil.Bytes, header 
 
 // This is a lightweight stateless L3 tx validation
 // And should not be used a general validation for non-L3
-func ValidateTransaction(tx *ethtypes.Transaction, head *ethtypes.Header) error {
+func (m *MetaBasedBatchProvider) ValidateTransactionStateless(tx *ethtypes.Transaction, head *ethtypes.Header) error {
 	acceptedTypes := []uint8{
-		ethtypes.LegacyTxType,     // Berlin
-		ethtypes.DynamicFeeTxType, // London
+		ethtypes.LegacyTxType,     // supported since Berlin hardfork activation
+		ethtypes.DynamicFeeTxType, // supported since London hardfork activation
+		// currently not supported by off-the-shelf L2:
+		// ethtypes.AccessListTxType
+		// ethtypes.BlobTxType
 	}
 	if !slices.Contains(acceptedTypes, tx.Type()) {
 		return fmt.Errorf("%w: tx type %v not supported by this pool", core.ErrTxTypeNotSupported, tx.Type())
@@ -244,6 +267,19 @@ func ValidateTransaction(tx *ethtypes.Transaction, head *ethtypes.Header) error 
 	return nil
 }
 
+// The stateful validation depends on the state of the chain to get access to
+// gas parameters, limits of the mempool, account state for nonces
+// so we delegate this to the MetaBased chain for now until op-translator
+// is now aware of the chain state
+func (m *MetaBasedBatchProvider) FilterTransactionsStateful(txs []hexutil.Bytes, header *ethtypes.Header) ([]hexutil.Bytes, int) {
+	filtered := make([]hexutil.Bytes, len(txs))
+	removedCount := 0
+
+	m.SettlementChain.GetBlockByHash()
+
+	return filtered
+}
+
 func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block) (*types.Batch, error) {
 	blockNumber, err := block.GetBlockNumber()
 	if err != nil {
@@ -276,7 +312,7 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 
 	txns, removedCount := m.FilterTransactions(txns, header)
 	if removedCount > 0 {
-		log.Debug().Msgf("Transactions got filtered by stateless validation: %d", removedCount)
+		log.Debug().Msgf("Transactions got filtered by validation: %d", removedCount)
 	}
 
 	timestamp, err := block.GetBlockTimestamp()

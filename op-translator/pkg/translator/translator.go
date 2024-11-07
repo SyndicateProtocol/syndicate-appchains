@@ -17,6 +17,8 @@ type IRPCClient interface {
 	GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error)
 	GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (types.Block, error)
 	BlocksReceiptsByNumbers(ctx context.Context, numbers []string) ([]*ethtypes.Receipt, error)
+	// TODO: implement this from geth as we'll use to do statefull validation
+	// SimulateV1(ctx context.Context)
 	AsEthClient() rpc.IETHClient
 }
 
@@ -29,8 +31,8 @@ type IBatchProvider interface {
 var _ IRPCClient = (*rpc.RPCClient)(nil)
 
 type OPTranslator struct {
-	SettlementChain     IRPCClient
-	MetaBasedChain      IRPCClient
+	SettlementChain     IRPCClient // underlying chain
+	MetaBasedChain      IRPCClient // a.k.a. L3
 	BatchProvider       IBatchProvider
 	BackfillProvider    *backfill.BackfillProvider
 	Signer              Signer
