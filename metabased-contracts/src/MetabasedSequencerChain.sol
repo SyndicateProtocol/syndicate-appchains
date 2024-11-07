@@ -79,7 +79,7 @@ contract MetabasedSequencerChain is RequireListManager {
     /// @param startIndex The starting index for this chunk in the overall batch.
     /// @param totalChunks The number of transactions to process in this chunk.
     /// @param txHashForChunk A unique identifier for this chunk.
-    function processChunk(bytes calldata txChunk, uint256 startIndex, uint256 totalChunks, bytes32 txHashForChunk)
+    function processChunk(bytes calldata txChunk, uint256 index, uint256 totalChunks, bytes32 txHashForParent)
         external
         onlyWhenAllowed(msg.sender)
     {
