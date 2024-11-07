@@ -1,7 +1,7 @@
 name: Update Dev Container Image Cache
 
 on:
-  push:
+  pull_request:
     branches: [ main ]
 
 jobs:
@@ -25,5 +25,5 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           imageName: ghcr.io/syndicateprotocol/metabased-rollup
-          imageTag: cache-main
+          imageTag: cache-main-TESTING-PR
           push: always
