@@ -1,12 +1,17 @@
 package utils
 
 import (
+	"encoding/hex"
 	"errors"
 	"strconv"
 	"strings"
 )
 
 const MillisecondsPerSecond = 1000
+
+func DecodeHexString(hexStr string) ([]byte, error) {
+	return hex.DecodeString(strings.TrimPrefix(hexStr, "0x"))
+}
 
 func HexToInt(hexStr string) (int, error) {
 	if !strings.HasPrefix(hexStr, "0x") {
