@@ -42,7 +42,7 @@ jobs:
             # Start Arbitrum node in background
             just -f .devcontainer/justfile arb-up &
 
-            # Wait for Arbitrum node to be ready by checking health
+            # Wait for Arbitrum node to be ready via health check
             echo "[STATUS] Waiting for Arbitrum node to be ready..."
             until just -f .devcontainer/justfile arb-health-check | grep -q "result"; do
               sleep 10
@@ -52,7 +52,7 @@ jobs:
             # Run sequencer setup
             just -f .devcontainer/justfile arb-sequencer-plus-setup &
             
-            # Wait for sequencer setup completion message
+            # Wait for sequencer setup completion via health check
             echo "[STATUS] Waiting for sequencer setup to complete..."
             until just -f .devcontainer/justfile sequencer-health-check | grep -q "result"; do
               sleep 10
