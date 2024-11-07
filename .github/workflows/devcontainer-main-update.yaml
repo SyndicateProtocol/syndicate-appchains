@@ -1,7 +1,7 @@
 name: Update Dev Container Image Cache
 
 on:
-  pull_request:
+  push:
     branches: [ main ]
 
 jobs:
