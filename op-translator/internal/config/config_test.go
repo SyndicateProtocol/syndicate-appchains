@@ -13,23 +13,21 @@ import (
 
 func validConfig() config.Config {
 	return config.Config{
-		Port:                       1234,
-		FrameSize:                  100,
-		SequencingChainRPCURL:      "http://example.com",
-		SettlementChainRPCURL:      "https://example.org",
-		MetaBasedChainRPCURL:       "https://example.io",
-		MetafillerURL:              "https://metafiller.io",
-		LogLevel:                   constants.Info.String(),
-		Pretty:                     false,
-		SequencingContractAddress:  "0x0000000000000000000000000000000000000000",
-		BatcherAddress:             "0x0000000000000000000000000000000000000000",
-		BatchInboxAddress:          "0x0000000000000000000000000000000000000000",
-		SettlementStartBlock:       1,
-		SequencingStartBlock:       2,
-		SequencePerSettlementBlock: 2,
-		BatcherPrivateKey:          "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d",
-		SettlementChainID:          84532,
-		SettlementChainBlockTime:   2,
+		Port:                      1234,
+		FrameSize:                 100,
+		SequencingChainRPCURL:     "http://example.com",
+		SettlementChainRPCURL:     "https://example.org",
+		MetaBasedChainRPCURL:      "https://example.io",
+		MetafillerURL:             "https://metafiller.io",
+		LogLevel:                  constants.Info.String(),
+		Pretty:                    false,
+		SequencingContractAddress: "0x0000000000000000000000000000000000000000",
+		BatcherAddress:            "0x0000000000000000000000000000000000000000",
+		BatchInboxAddress:         "0x0000000000000000000000000000000000000000",
+		SettlementStartBlock:      1,
+		BatcherPrivateKey:         "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d",
+		SettlementChainID:         84532,
+		SettlementChainBlockTime:  2,
 	}
 }
 
@@ -94,20 +92,6 @@ func TestValidateConfigValues(t *testing.T) {
 			expectedErrors: []string{"settlementStartBlock must be a positive number"},
 		},
 		{
-			name: "Invalid sequencingStartBlock",
-			configChangeUnderTest: func(c *config.Config) {
-				c.SequencingStartBlock = 0
-			},
-			expectedErrors: []string{"sequencingStartBlock must be a positive number"},
-		},
-		{
-			name: "Invalid sequencePerSettlementBlock",
-			configChangeUnderTest: func(c *config.Config) {
-				c.SequencePerSettlementBlock = 0
-			},
-			expectedErrors: []string{"sequencePerSettlementBlock must be a positive number"},
-		},
-		{
 			name: "Invalid sequencingContractAddress",
 			configChangeUnderTest: func(c *config.Config) {
 				c.SequencingContractAddress = "invalid sequencing contract address"
@@ -136,14 +120,12 @@ func TestValidateConfigValues(t *testing.T) {
 				c.SequencingChainRPCURL = "invalid"
 				c.SettlementChainRPCURL = "also invalid"
 				c.MetaBasedChainRPCURL = "https://example.io"
-				c.SequencePerSettlementBlock = 0
 			},
 			expectedErrors: []string{
 				"port must be a positive number",
 				"frameSize must be a positive number",
 				"invalid URL for sequencing chain address",
 				"invalid URL for settlement chain address",
-				"sequencePerSettlementBlock must be a positive number",
 			},
 		},
 		{

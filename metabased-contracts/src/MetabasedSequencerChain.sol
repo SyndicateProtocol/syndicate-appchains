@@ -40,19 +40,8 @@ contract MetabasedSequencerChain is RequireListManager {
 
     /// @notice Processes a single transaction.
     /// @param txn The transaction data.
-    function processRawData(bytes calldata txn) external onlyWhenAllowed(msg.sender) {
+    function processTransactionRaw(bytes calldata txn) external onlyWhenAllowed(msg.sender) {
         emit TransactionProcessed(msg.sender, txn);
-    }
-
-    /// @notice Processes multiple transactions in bulk.
-    /// @param txs An array of transaction data.
-    function processBulkRawTransactions(bytes[] calldata txs) external onlyWhenAllowed(msg.sender) {
-        uint256 txnCount = txs.length;
-
-        // Process all transactions
-        for (uint256 i = 0; i < txnCount; i++) {
-            emit TransactionProcessed(msg.sender, txs[i]);
-        }
     }
 
     /// @notice process transactions

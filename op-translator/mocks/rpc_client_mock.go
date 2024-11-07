@@ -49,8 +49,8 @@ func (m *MockRPCClient) GetReceiptByHash(ctx context.Context, hash common.Hash) 
 	return args.Get(0).(ethtypes.Receipt), args.Error(1)
 }
 
-func (m *MockRPCClient) BlocksReceiptsByNumbers(ctx context.Context, numbers []string) ([]*ethtypes.Receipt, error) {
-	args := m.Called(ctx, numbers)
+func (m *MockRPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Block) ([]*ethtypes.Receipt, error) {
+	args := m.Called(ctx, blocks)
 	return args.Get(0).([]*ethtypes.Receipt), args.Error(1)
 }
 

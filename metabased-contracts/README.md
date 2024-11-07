@@ -41,7 +41,7 @@ $ make deploy-based-sequencerchain-frame
 | AlwaysAllowedModule     | 0x33aB24E0a47A7aAe869755420950A6326e3CB9F3 |
 | MetafillerStorage       | 0x745bdeFA5C879ADCf739075bB03FD4ecCd03cE22 |
 
-#### Metabased Testnet
+#### Metabased Testnet (Private Devnet)
 
 | Contract Name                             | Address                                    |
 | ----------------------------------------- | ------------------------------------------ |
@@ -51,6 +51,15 @@ $ make deploy-based-sequencerchain-frame
 | MetafillerStorage                         | 0xC329B96c47271426B237bA85dF5504375C5cCB28 |
 
 ### Metabased Stratos
+
+| Contract Name                   | Address                                    |
+| ------------------------------- | ------------------------------------------ |
+| MetabasedFactory                | 0xc75954B9B4Bb4B80883Cf645744612138b7e4870 |
+| AlwaysAllowedModule             | 0x471584f0B8e35faEB2a618BD58A62316D8882d63 |
+| MetabasedSequencerChain (Frame) | 0x2d45AA77567618C031b8C8AFD3296ED724793B01 |
+| MetabsedSequencerChain (Ham)    | 0x869eE769d6ab3221894Cc555792e8c6467953bE1 |
+| MetafillerStorage (Frame)       | 0xFEA8A2BA8B760348ea95492516620ad45a299d53 |
+| MetafillerStorage (Ham)         | 0x9cecA064CaB740E5F511b426c7dBD7820795fe13 |
 
 | MetafillerStorage (Frame) | 0xFEA8A2BA8B760348ea95492516620ad45a299d53 |
 | MetafillerStorage (Ham) | 0x9cecA064CaB740E5F511b426c7dBD7820795fe13 |

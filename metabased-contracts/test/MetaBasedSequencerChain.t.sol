@@ -34,7 +34,7 @@ contract MetabasedSequencerChainTestSetUp is Test {
 }
 
 contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
-    function testProcessTransaction() public {
+    function testProcessRawTransaction() public {
         bytes memory validTxn = abi.encode("valid transaction");
 
         vm.startPrank(admin);
@@ -44,21 +44,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.expectEmit(true, false, false, true);
         emit MetabasedSequencerChain.TransactionProcessed(address(this), validTxn);
 
-        chain.processRawData(validTxn);
-    }
-
-    function testProcessRawTransaction() public {
-        bytes memory _tx = abi.encode("raw transaction");
-        bytes memory expectedTx = abi.encodePacked(bytes1(0x00), _tx);
-
-        vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
-        vm.stopPrank();
-
-        vm.expectEmit(true, false, false, true);
-        emit MetabasedSequencerChain.TransactionProcessed(address(this), expectedTx);
-
-        chain.processTransaction(_tx);
+        chain.processTransactionRaw(validTxn);
     }
 
     function testProcessTransactionRequireAllFailure() public {
@@ -74,7 +60,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
                 RequireListManager.RequireAllCheckFailed.selector, address(mockRequireAll), address(this)
             )
         );
-        chain.processRawData(validTxn);
+        chain.processTransactionRaw(validTxn);
     }
 
     function testProcessTransactionRequireAnyFailure() public {
@@ -85,25 +71,21 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.stopPrank();
 
         vm.expectRevert(abi.encodeWithSelector(RequireListManager.RequireAnyCheckFailed.selector, address(this)));
-        chain.processRawData(validTxn);
+        chain.processTransactionRaw(validTxn);
     }
 
-    function testProcessBulkRawTransactions() public {
-        bytes[] memory validTxns = new bytes[](3);
-        validTxns[0] = abi.encode("transaction 1");
-        validTxns[1] = abi.encode("transaction 2");
-        validTxns[2] = abi.encode("transaction 3");
+    function testProcessTransaction() public {
+        bytes memory _tx = abi.encode("raw transaction");
+        bytes memory expectedTx = abi.encodePacked(bytes1(0x00), _tx);
 
         vm.startPrank(admin);
         chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
-        for (uint256 i = 0; i < validTxns.length; i++) {
-            vm.expectEmit(true, false, false, true);
-            emit MetabasedSequencerChain.TransactionProcessed(address(this), validTxns[i]);
-        }
+        vm.expectEmit(true, false, false, true);
+        emit MetabasedSequencerChain.TransactionProcessed(address(this), expectedTx);
 
-        chain.processBulkRawTransactions(validTxns);
+        chain.processTransaction(_tx);
     }
 
     function testProcessBulkTransactions() public {

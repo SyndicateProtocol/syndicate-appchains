@@ -33,6 +33,6 @@ func IntToHex(num int) string {
 	return "0x" + strconv.FormatInt(int64(num), 16)
 }
 
-func SecondsToMilliseconds(seconds int) int {
-	return seconds * MillisecondsPerSecond
+func UInt64ToHex(num uint64) string {
+	return "0x" + strconv.FormatUint(num, 16)
 }
