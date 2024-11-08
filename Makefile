@@ -25,3 +25,5 @@ op-translator:
 metabased-publisher:
 	make -C ./metabased-publisher metabased-publisher
 .PHONY: metabased-publisher
+
+curl --location 'http://127.0.0.1:8555' --header 'Content-Type: application/json' --header 'Cookie: lb1=edge-proxyd-proxyd-ankr-http' --data '{"id":1,"jsonrpc":"2.0","method":"eth_chainId","params":[]}'
