@@ -112,6 +112,16 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, nil
 	}
 
+	blockNumber, err := block.GetBlockNumber()
+	if err != nil {
+		return nil, err
+	}
+
+	if blockNumber == 10289263 {
+		log.Debug().Msg("Block number is 10289263, not translating")
+		return block, nil
+	}
+
 	frames, err := t.getFrames(ctx, block)
 	if err != nil {
 		return nil, err
