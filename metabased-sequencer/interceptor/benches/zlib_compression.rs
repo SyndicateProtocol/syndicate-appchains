@@ -14,7 +14,9 @@ const SAMPLE_TX_2: [u8; 132] = hex!("cdb554ea000000000000000000000000b8b904c73d2
 const SAMPLE_TX_3: [u8; 68] = hex!("39509351000000000000000000000000dd2da9ba748722faea8629a215ea47dd15e852f90000000000000000000000000000000000000000000000000429d069189e0000");
 const SAMPLE_TX_4: [u8; 132] = hex!("81813c8b0000000000000000000000000000000000000000000000000000000001026afc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016345785d8a000000000000000000000000000000000000000000000000000000000000671834d8");
 
-fn print_compression_stats(name: &str, original_size: usize, compressed_size: usize, decompressed_size: usize, compress_time: std::time::Duration, decompress_time: std::time::Duration) {
+fn print_compression_stats(name: &str, original_size: usize, compressed_size: usize,
+                           decompressed_size: usize, compress_time: std::time::Duration,
+                           decompress_time: std::time::Duration) {
     let ratio = (1.0 - (compressed_size as f64 / original_size as f64)) * 100.0;
     println!("\n{}", name);
     println!("Compression ratio: {:.2}%", ratio);
@@ -28,6 +30,13 @@ fn print_compression_stats(name: &str, original_size: usize, compressed_size: us
 fn bench_single_tx(c: &mut Criterion) {
     let input = &SAMPLE_TX_1;
 
+    // Pre-calculate sizes
+    let compressed = compress_transaction(input).unwrap();
+    let decompressed = decompress_transaction(&compressed).unwrap();
+    let compressed_size = compressed.len();
+    let decompressed_size = decompressed.len();
+
+    // Run the benchmark
     c.bench_function("single_tx_compression", |b| {
         b.iter(|| {
             let start = Instant::now();
@@ -38,18 +47,33 @@ fn bench_single_tx(c: &mut Criterion) {
             let decompressed = decompress_transaction(&compressed).unwrap();
             let decompression_time = start.elapsed();
 
-            print_compression_stats(
-                "Single TX compression",
-                input.len(),
-                compressed.len(),
-                decompressed.len(),
-                compress_time,
-                decompression_time
-            );
-
             assert_eq!(input[..], decompressed[..]);
+            (compress_time, decompression_time)
         })
     });
+
+    // Get example timings for stats (outside the benchmark)
+    let (example_compress_time, example_decompress_time) = {
+        let start = Instant::now();
+        let compressed = compress_transaction(input).unwrap();
+        let compress_time = start.elapsed();
+
+        let start = Instant::now();
+        let _decompressed = decompress_transaction(&compressed).unwrap();
+        let decompress_time = start.elapsed();
+
+        (compress_time, decompress_time)
+    };
+
+    // Print stats once after everything
+    print_compression_stats(
+        "Single TX compression",
+        input.len(),
+        compressed_size,
+        decompressed_size,
+        example_compress_time,
+        example_decompress_time
+    );
 }
 
 #[derive(RlpEncodable, RlpDecodable)]
@@ -135,6 +159,14 @@ fn bench_batch_multiple_tx(c: &mut Criterion) {
         Bytes::copy_from_slice(&SAMPLE_TX_4),
     ];
 
+    // Get initial statistics once before benchmarking
+    let compressed = compress_transactions(&txs).unwrap();
+    let original_size: usize = txs.iter().map(|tx| tx.len()).sum();
+    let decompressed = decompress_transactions(&compressed).unwrap();
+    let compressed_size = compressed.len();
+    let decompressed_size = decompressed.iter().map(|tx| tx.len()).sum();
+
+    // Run the actual benchmark
     c.bench_function("batch_multiple_tx", |b| {
         b.iter(|| {
             let start = Instant::now();
@@ -145,20 +177,34 @@ fn bench_batch_multiple_tx(c: &mut Criterion) {
             let decompressed = decompress_transactions(&compressed).unwrap();
             let decompression_time = start.elapsed();
 
-            let original_size: usize = txs.iter().map(|tx| tx.len()).sum();
-
-            print_compression_stats(
-                "Multiple TX compression",
-                original_size,
-                compressed.len(),
-                decompressed.iter().map(|tx| tx.len()).sum(),
-                compress_time,
-                decompression_time
-            );
-
             assert_eq!(txs, decompressed);
+
+            (compress_time, decompression_time)
         })
     });
+
+    // Print stats once after benchmarking
+    // Using the pre-calculated sizes and example timing from one run
+    let (example_compress_time, example_decompress_time) = {
+        let start = Instant::now();
+        let compressed = compress_transactions(&txs).unwrap();
+        let compress_time = start.elapsed();
+
+        let start = Instant::now();
+        let _decompressed = decompress_transactions(&compressed).unwrap();
+        let decompress_time = start.elapsed();
+
+        (compress_time, decompress_time)
+    };
+
+    print_compression_stats(
+        "Multiple TX compression",
+        original_size,
+        compressed_size,
+        decompressed_size,
+        example_compress_time,
+        example_decompress_time
+    );
 }
 
 fn bench_batch_sizes(c: &mut Criterion) {
@@ -171,7 +217,14 @@ fn bench_batch_sizes(c: &mut Criterion) {
             txs.push(Bytes::copy_from_slice(generate_random_raw_transaction_rlp().as_ref()));
         }
 
-        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
+        // Pre-calculate sizes
+        let compressed = compress_transactions(&txs).unwrap();
+        let original_size: usize = txs.iter().map(|tx| tx.len()).sum();
+        let decompressed = decompress_transactions(&compressed).unwrap();
+        let compressed_size = compressed.len();
+        let decompressed_size = decompressed.iter().map(|tx| tx.len()).sum();
+
+        group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &_size| {
             b.iter(|| {
                 let start = Instant::now();
                 let compressed = compress_transactions(&txs).unwrap();
@@ -181,20 +234,32 @@ fn bench_batch_sizes(c: &mut Criterion) {
                 let decompressed = decompress_transactions(&compressed).unwrap();
                 let decompression_time = start.elapsed();
 
-                let original_size: usize = txs.iter().map(|tx| tx.len()).sum();
-
-                print_compression_stats(
-                    &format!("Batch compression (n={})", size),
-                    original_size,
-                    compressed.len(),
-                    decompressed.iter().map(|tx| tx.len()).sum(),
-                    compress_time,
-                    decompression_time
-                );
-
                 assert_eq!(txs, decompressed);
+                (compress_time, decompression_time)
             })
         });
+
+        // Print stats once after each batch size benchmark
+        let (example_compress_time, example_decompress_time) = {
+            let start = Instant::now();
+            let compressed = compress_transactions(&txs).unwrap();
+            let compress_time = start.elapsed();
+
+            let start = Instant::now();
+            let _decompressed = decompress_transactions(&compressed).unwrap();
+            let decompress_time = start.elapsed();
+
+            (compress_time, decompress_time)
+        };
+
+        print_compression_stats(
+            &format!("Batch compression (n={})", size),
+            original_size,
+            compressed_size,
+            decompressed_size,
+            example_compress_time,
+            example_decompress_time
+        );
     }
     group.finish();
 }
