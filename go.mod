@@ -3,7 +3,6 @@ module github.com/SyndicateProtocol/metabased-rollup
 go 1.23.0
 
 require (
-	github.com/andybalholm/brotli v1.1.0
 	github.com/ethereum-optimism/optimism v1.9.3
 	github.com/ethereum/go-ethereum v1.14.8
 	github.com/hashicorp/go-multierror v1.1.1
