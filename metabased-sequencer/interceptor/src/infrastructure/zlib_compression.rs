@@ -7,8 +7,9 @@ use flate2::Compression;
 use std::convert::Infallible;
 use std::io::Read;
 use std::io::{self, Write};
-use alloy_rlp::{Encodable};
 use rand::prelude::*;
+use alloy_primitives::{Address, B256, U256};
+use alloy_rlp::{RlpEncodable, RlpDecodable, Encodable};
 
 // Valid Zlib CM bits
 const ZLIB_CM8: u8 = 0x08;

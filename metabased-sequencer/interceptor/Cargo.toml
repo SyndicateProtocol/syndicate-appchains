@@ -37,6 +37,8 @@ url = { version = "2", features = ["serde"] }
 rand = "0.8.5"
 flate2 = "1.0.34"
 prometheus-client = "0.22"
+hex = "0.4.3"
+alloy-rlp = "0.3.9"
 
 [dev-dependencies]
 test-case = "3"
