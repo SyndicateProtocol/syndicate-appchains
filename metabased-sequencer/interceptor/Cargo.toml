@@ -40,3 +40,4 @@ prometheus-client = "0.22"
 
 [dev-dependencies]
 test-case = "3"
+const_format = "0.2"
