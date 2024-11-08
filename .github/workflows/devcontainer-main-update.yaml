@@ -24,6 +24,6 @@ jobs:
       - name: Build and cache dev container
         uses: devcontainers/ci@v0.3
         with:
-          imageName: ghcr.io/syndicateprotocol/metabased-rollup
-          imageTag: cache-main-TESTING-PR
+          imageName: ghcr.io/syndicateprotocol/metabased-devcontainer
+          imageTag: cache-main
           push: always
