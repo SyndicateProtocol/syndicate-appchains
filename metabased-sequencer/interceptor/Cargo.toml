@@ -43,3 +43,9 @@ alloy-rlp = "0.3.9"
 [dev-dependencies]
 test-case = "3"
 const_format = "0.2"
+criterion = "0.5"
+
+[[bench]]
+name = "zlib_compression"
+harness = false
+path = "benches/zlib_compression.rs"
