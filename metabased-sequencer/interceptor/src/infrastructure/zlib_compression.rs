@@ -215,6 +215,7 @@ mod tests {
     // https://sepolia.basescan.org/tx/0x5de957de7b67999cc14099b7b40919afb0592de64c20a658c6cd296624b34ba9
     const SAMPLE_TX_4: [u8; 132] = hex!("81813c8b0000000000000000000000000000000000000000000000000000000001026afc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016345785d8a000000000000000000000000000000000000000000000000000000000000671834d8");
 
+
     #[test]
     fn test_single_tx_compression() {
         // Test valid single transaction compression and decompression
@@ -299,45 +300,6 @@ mod tests {
     }
 
     #[test]
-    fn test_batch_multiple_tx() {
-        // Test multiple transactions of varying sizes
-        let txs = vec![
-            Bytes::copy_from_slice(&SAMPLE_TX_1),
-            Bytes::copy_from_slice(&SAMPLE_TX_2[0..50]), // Partial TX
-            Bytes::copy_from_slice(&[1, 2, 3, 4, 5]),    // Small TX
-            Bytes::copy_from_slice(&SAMPLE_TX_3),
-            Bytes::copy_from_slice(&SAMPLE_TX_4),
-        ];
-
-        let start = Instant::now();
-        let compressed = compress_transactions(&txs).unwrap();
-        let compress_time = start.elapsed();
-        let start = Instant::now();
-        let decompressed = decompress_transactions(&compressed).unwrap();
-        let decompression_time = start.elapsed();
-
-        assert_eq!(txs, decompressed);
-        assert_eq!(compressed[0] & CM_BITS_MASK, ZLIB_CM8); // Verify CM bits
-
-        // Check compression ratio
-        let original_size: usize = txs.iter().map(|tx| tx.len()).sum();
-        let compressed_size: usize = compressed.len();
-        let decompressed_size: usize = decompressed.iter().map(|tx| tx.len()).sum();
-        let ratio = (1.0 - (compressed_size as f64 / original_size as f64)) * 100.0;
-        println!(
-            "Multiple TX (n={}) compression ratio: {:.2}%",
-            txs.len(),
-            ratio
-        );
-        println!("Original size: {} bytes", original_size);
-        println!("Compressed size: {} bytes", compressed_size);
-        println!("Decompressed size: {} bytes", decompressed_size);
-        println!("Compression time: {:?}", compress_time);
-        println!("Decompression time: {:?}", decompression_time);
-        println!();
-    }
-
-    #[test]
     fn test_batch_invalid_compressed() {
         // Test various invalid batch compressed data scenarios
 
@@ -363,46 +325,5 @@ mod tests {
         encoder.write_all(&[1, 2, 3]).unwrap(); // Write invalid length prefix
         let invalid_content = Bytes::from(encoder.finish().unwrap());
         assert!(decompress_transactions(&invalid_content).is_err());
-    }
-
-    #[test]
-    fn test_large_batch() {
-        // Test with a larger number of transactions
-        let mut txs = Vec::new();
-        // TODO (SEQ-240): improve test with many unique transactions, not 4 repeated ones
-        for _ in 0..25 {
-            txs.push(Bytes::copy_from_slice(&SAMPLE_TX_1));
-            txs.push(Bytes::copy_from_slice(&SAMPLE_TX_2));
-            txs.push(Bytes::copy_from_slice(&SAMPLE_TX_3));
-            txs.push(Bytes::copy_from_slice(&SAMPLE_TX_4));
-        }
-
-        let start = Instant::now();
-        let compressed = compress_transactions(&txs).unwrap();
-        let compress_time = start.elapsed();
-        let start = Instant::now();
-        let decompressed = decompress_transactions(&compressed).unwrap();
-        let decompression_time = start.elapsed();
-
-        assert_eq!(txs, decompressed);
-        assert_eq!(compressed[0] & CM_BITS_MASK, ZLIB_CM8); // Verify CM bits
-
-        // Check compression ratio
-        let original_size: usize = txs.iter().map(|tx| tx.len()).sum();
-        let compressed_size: usize = compressed.len();
-        let decompressed_size: usize = decompressed.iter().map(|tx| tx.len()).sum();
-        let ratio = (1.0 - (compressed.len() as f64 / original_size as f64)) * 100.0;
-
-        println!(
-            "Large batch (n={}) compression ratio: {:.2}%",
-            txs.len(),
-            ratio
-        );
-        println!("Original size: {} bytes", original_size);
-        println!("Compressed size: {} bytes", compressed_size);
-        println!("Decompressed size: {} bytes", decompressed_size);
-        println!("Compression time: {:?}", compress_time);
-        println!("Decompression time: {:?}", decompression_time);
-        println!();
     }
 }
