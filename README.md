@@ -26,8 +26,19 @@ On the host machine, run: `ssh-add ~/.ssh/id_ed25519` (or the path to your ssh k
 
 This will automatically make the key available in the Dev Container. To confirm that the key is available, on the Dev Container, run: `ssh-add -l`
 
+Note that this will not persist across restarts of the host machine. To persist across restarts, you can add the following to your `~/.ssh/config` file:
+
+```
+Host *
+    # This should go below any other content in this entry
+    AddKeysToAgent yes
+    IdentityFile ~/.ssh/id_ed25519
+```
+
+Adding ssh keys via the ssh-add command is not necessary in GitHub Codespace or GitHub Actions, as GitHub handles authentication for you.
+
 ### Running in GitHub Codespaces
 
 If you would like, you can run the Dev Container in GitHub Codespaces. This is useful for long-running tasks or development in a browser away from your local machine. To launch a Codespace, navigate to the branch you want to use, click the "Code" button (where repo cloning typically is) and then click "Create codespace on \[branch-name]".
 
-GitHub Codespaces are compatible with VS Code and JetBrains, but not Cursor. You don't need to handle ssh credentials in Codespaces, as GitHub Codespaces handles authentication for you.
+GitHub Codespaces are compatible with VS Code and JetBrains, but not Cursor. You don't need to handle ssh credentials in Codespaces, since they are automatically installed by GitHub.
