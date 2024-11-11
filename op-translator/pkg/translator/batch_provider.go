@@ -150,6 +150,9 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 		return nil, err
 	}
 
+	// Filter out invalid transactions
+	txns = m.GetValidTransactions(txns)
+
 	timestamp, err := block.GetBlockTimestampHex()
 	if err != nil {
 		return nil, err
@@ -162,4 +165,23 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 	log.Debug().Msgf("Translating block number %s and hash %s: batch: %v", blockNumber, blockHash, batch)
 
 	return batch, nil
+}
+
+// GetValidTransactions do validation in two phases:
+//   - Stateless (inexpensive): locally filter transactions
+//   - Stateful (expensive): use simulate RPC to check if the block to-be produced is valid
+func (m *MetaBasedBatchProvider) GetValidTransactions(rawTxs []hexutil.Bytes) []hexutil.Bytes {
+	// First phase validation: stateless
+	rawFilteredTxStateless, parsedFilteredTxStateless, removedCountStateless := FilterTransactionsStateless(rawTxs)
+	if removedCountStateless > 0 {
+		log.Debug().Msgf("Transactions got filtered by stateless validation: %d", removedCountStateless)
+	}
+
+	// Second phase validation: stateful
+	rawFilteredTxsStateful, _, removedCountStateful := m.FilterTransactionsStateful(rawFilteredTxStateless, parsedFilteredTxStateless)
+	if removedCountStateful > 0 {
+		log.Debug().Msgf("Transactions got filtered by stateful validation: %d", removedCountStateful)
+	}
+
+	return rawFilteredTxsStateful
 }
