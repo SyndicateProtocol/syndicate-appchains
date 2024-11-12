@@ -134,3 +134,18 @@ where
 {
     application::metrics(ctx.metrics_service())
 }
+
+/// The JSON-RPC endpoint for health check.
+pub fn health<Chain, M, S>(
+    _params: Params,
+    _ctx: &Services<Chain, M, S>,
+    _ext: &http::Extensions,
+) -> Result<String, JsonRpcError<()>>
+where
+    Chain: MetabasedSequencerChainService,
+    M: Metrics,
+    Error: From<<Chain as MetabasedSequencerChainService>::Error>,
+    S: Stopwatch,
+{
+    Ok("ok".to_string())
+}
