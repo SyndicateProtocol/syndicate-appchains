@@ -35,7 +35,6 @@ type OPTranslator struct {
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
-	CutoverBlock        uint64 // At this block and above, regular data fetching will be used instead of backfill.
 }
 
 func Init(cfg *config.Config) *OPTranslator {
@@ -55,7 +54,6 @@ func Init(cfg *config.Config) *OPTranslator {
 		BatchProvider:       metaBasedBatchProvider,
 		BackfillProvider:    backfillProvider,
 		Signer:              *signer,
-		CutoverBlock:        uint64(cfg.CutoverBlock), //nolint:gosec // We validate the cutover block in the config package
 	}
 }
 
@@ -91,12 +89,7 @@ func (t *OPTranslator) Close() {
 }
 
 func (t *OPTranslator) getFrames(ctx context.Context, block types.Block) ([]*types.Frame, error) {
-	blockNumber, err := block.GetBlockNumber()
-	if err != nil {
-		return nil, err
-	}
-
-	if blockNumber < t.CutoverBlock {
+	if t.BackfillProvider.IsBlockInBackfillingWindow(block) {
 		return t.BackfillProvider.GetBackfillFrames(ctx, block)
 	} else {
 		batch, err := t.BatchProvider.GetBatch(ctx, block)
@@ -117,12 +110,17 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, err
 	}
 
-	data, err := types.ToData(frames)
+	blockNumHex, err := block.GetBlockNumberHex()
 	if err != nil {
 		return nil, err
 	}
 
-	blockNumHex, err := block.GetBlockNumberHex()
+	if len(frames) == 0 {
+		log.Debug().Msgf("No frames to translate, block number (hex): %s", blockNumHex)
+		return block, nil
+	}
+
+	data, err := types.ToData(frames)
 	if err != nil {
 		return nil, err
 	}
