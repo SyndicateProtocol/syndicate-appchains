@@ -99,6 +99,9 @@ func (t *OPTranslator) getFrames(ctx context.Context, block types.Block) ([]*typ
 	}
 
 	if blockNumber < t.CutoverEpochBlock {
+		if blockNumber == t.GenesisEpochBlock {
+			return []*types.Frame{}, nil
+		}
 		return t.BackfillProvider.GetBackfillFrames(ctx, block)
 	} else {
 		batch, err := t.BatchProvider.GetBatch(ctx, block)
@@ -114,19 +117,13 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, nil
 	}
 
-	blockNumber, err := block.GetBlockNumber()
-	if err != nil {
-		return nil, err
-	}
-
-	if blockNumber == t.GenesisEpochBlock {
-		log.Debug().Msgf("Block number is genesis block, not translating, %d", blockNumber)
-		return block, nil
-	}
-
 	frames, err := t.getFrames(ctx, block)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(frames) == 0 {
+		return block, nil
 	}
 
 	data, err := types.ToData(frames)
