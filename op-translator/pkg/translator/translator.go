@@ -110,22 +110,17 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, err
 	}
 
-	blockNumber, err := block.GetBlockNumber()
+	blockNumHex, err := block.GetBlockNumberHex()
 	if err != nil {
 		return nil, err
 	}
 
 	if len(frames) == 0 {
-		log.Debug().Msgf("No frames to translate, block number: %d", blockNumber)
+		log.Debug().Msgf("No frames to translate, block number (hex): %s", blockNumHex)
 		return block, nil
 	}
 
 	data, err := types.ToData(frames)
-	if err != nil {
-		return nil, err
-	}
-
-	blockNumHex, err := block.GetBlockNumberHex()
 	if err != nil {
 		return nil, err
 	}
