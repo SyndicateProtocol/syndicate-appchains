@@ -26,11 +26,10 @@ func TestGetBlockByNumber(t *testing.T) {
 
 	mockClient.On("GetBlockByNumber", ctx, number, true).Return(settlementBlock, nil)
 	translatorMock := &translator.OPTranslator{
-		SettlementChain:   mockClient,
-		BatchProvider:     &mocks.MockBatchProvider{},
-		Signer:            *translator.NewSigner(mockConfig),
-		BackfillProvider:  backfill.NewBackfillerProvider(mockConfig),
-		GenesisEpochBlock: uint64(mockConfig.SettlementStartBlock),
+		SettlementChain:  mockClient,
+		BatchProvider:    &mocks.MockBatchProvider{},
+		Signer:           *translator.NewSigner(mockConfig),
+		BackfillProvider: backfill.NewBackfillerProvider(mockConfig),
 	}
 
 	block, err := translatorMock.GetBlockByNumber(ctx, number, true)
