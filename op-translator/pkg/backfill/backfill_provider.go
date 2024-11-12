@@ -24,13 +24,15 @@ type BackfillProvider struct {
 	Client            HTTPClient
 	MetafillerURL     string
 	GenesisEpochBlock uint64
+	CutoverEpochBlock uint64
 }
 
 func NewBackfillerProvider(cfg *config.Config) *BackfillProvider {
 	return &BackfillProvider{
 		MetafillerURL:     cfg.MetafillerURL,
 		Client:            &http.Client{},
-		GenesisEpochBlock: uint64(cfg.SettlementStartBlock), //nolint:gosec // We validate the cutover block in the config package
+		GenesisEpochBlock: uint64(cfg.SettlementStartBlock), //nolint:gosec // We validate the genesis block in the config package
+		CutoverEpochBlock: uint64(cfg.CutoverEpochBlock),    //nolint:gosec // We validate the cutover block in the config package
 	}
 }
 
@@ -66,6 +68,14 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 	}
 	log.Debug().Msgf("Backfill data for epoch %d: %v", epochNumber, data)
 	return data, nil
+}
+
+func (b *BackfillProvider) IsBlockInBackfillingWindow(block types.Block) bool {
+	epochNumber, err := block.GetBlockNumber()
+	if err != nil {
+		return false
+	}
+	return epochNumber < b.CutoverEpochBlock
 }
 
 func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Block) ([]*types.Frame, error) {

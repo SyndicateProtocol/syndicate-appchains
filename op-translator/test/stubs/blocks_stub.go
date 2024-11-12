@@ -54,10 +54,10 @@ var ExpectedBlock0xE7309D = types.Block{
 
 var ExpectedBackfillBlock = types.Block{
 	"hash":   "0x0000000000000000000000000000000000000000000000000000000000000123",
-	"number": "0x1",
+	"number": "0x2",
 	"transactions": append(TransactionsBlock0xe730a8Full,
 		map[string]any{
-			"blockNumber":          "0x1",
+			"blockNumber":          "0x2",
 			"hash":                 "0x168aec3a1d17fa011533e47dd5f4db878c620a3c38e8adf2c624064cac966be6",
 			"from":                 "0x0000000000000000000000000000000000000123",
 			"to":                   "0x0000000000000000000000000000000000000123",

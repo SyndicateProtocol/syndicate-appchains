@@ -61,7 +61,7 @@ func getMockClient() *mocks.MockRPCClient {
 		"transactions": stubs.TransactionsBlock0xe730a8Hashes,
 	}
 	backfillHash := common.HexToHash("0x123")
-	backfillBlockNumber := "0x1"
+	backfillBlockNumber := "0x2"
 	backfillBlock := types.Block{
 		"hash":         backfillHash.String(),
 		"number":       backfillBlockNumber,
@@ -175,7 +175,7 @@ func TestOPNodeCalls(t *testing.T) {
 		},
 		{
 			name:             "eth_getBlockByNumber - Valid request - backfill",
-			requestBody:      `{"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["0x1", true], "id": 1}`,
+			requestBody:      `{"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["0x2", true], "id": 1}`,
 			expectedStatus:   http.StatusOK,
 			expectedResult:   stubs.ExpectedBackfillBlock,
 			expectedBackfill: true,
@@ -192,10 +192,11 @@ func TestOPNodeCalls(t *testing.T) {
 			BatchProvider:       &mocks.MockBatchProvider{},
 			Signer:              *translator.NewSigner(mockConfig),
 			BackfillProvider: &backfill.BackfillProvider{
-				MetafillerURL: mockConfig.MetafillerURL,
-				Client:        mockHTTPBackfillClient,
+				MetafillerURL:     mockConfig.MetafillerURL,
+				Client:            mockHTTPBackfillClient,
+				GenesisEpochBlock: uint64(mockConfig.SettlementStartBlock),
+				CutoverEpochBlock: uint64(mockConfig.CutoverEpochBlock),
 			},
-			CutoverEpochBlock: uint64(mockConfig.CutoverEpochBlock), //nolint:gosec // We validate the cutover block in the config package
 		}
 
 		s, err := server.TranslatorHandler(mockConfig, opTranslator)

@@ -16,7 +16,7 @@ import (
 func TestGetBlockByNumber(t *testing.T) {
 	mockConfig := mocks.DefaultTestingConfig
 	mockClient := new(mocks.MockRPCClient)
-	number := "0x2"
+	number := "0x21"
 	settlementBlock := types.Block{
 		"number":       number,
 		"hash":         "0xabc",
@@ -37,7 +37,7 @@ func TestGetBlockByNumber(t *testing.T) {
 	assert.NoError(t, err)
 	blockNumber, err := block.GetBlockNumberHex()
 	assert.NoError(t, err)
-	assert.Equal(t, "0x2", blockNumber)
+	assert.Equal(t, "0x21", blockNumber)
 
 	blockHash, err := block.GetBlockHash()
 	assert.NoError(t, err)
@@ -53,7 +53,7 @@ func TestGetBlockByNumber(t *testing.T) {
 func TestGetBlockByHash(t *testing.T) {
 	mockClient := new(mocks.MockRPCClient)
 	mockConfig := mocks.DefaultTestingConfig
-	number := "0x1"
+	number := "0x21"
 	settlementBlock := types.Block{
 		"number":       number,
 		"hash":         "0xabc",
@@ -75,7 +75,7 @@ func TestGetBlockByHash(t *testing.T) {
 	assert.NoError(t, err)
 	blockNumber, err := block.GetBlockNumberHex()
 	assert.NoError(t, err)
-	assert.Equal(t, "0x1", blockNumber)
+	assert.Equal(t, "0x21", blockNumber)
 
 	blockHash, err := block.GetBlockHash()
 	assert.NoError(t, err)
