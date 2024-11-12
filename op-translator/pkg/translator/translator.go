@@ -128,7 +128,7 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 	}
 
 	if len(frames) == 0 {
-		log.Debug().Msgf("No frames to translate, block number: %w", blockNumber)
+		log.Debug().Msgf("No frames to translate, block number: %d", blockNumber)
 		return block, nil
 	}
 
