@@ -35,8 +35,8 @@ type OPTranslator struct {
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
-	GenesisBlock        uint64 // The settlement chain block number at which the rollup started
-	CutoverBlock        uint64 // At this block and above, regular data fetching will be used instead of backfill.
+	GenesisEpochBlock   uint64 // The settlement chain block number at which the rollup started
+	CutoverEpochBlock   uint64 // At this block and above, regular data fetching will be used instead of backfill.
 }
 
 func Init(cfg *config.Config) *OPTranslator {
@@ -56,8 +56,8 @@ func Init(cfg *config.Config) *OPTranslator {
 		BatchProvider:       metaBasedBatchProvider,
 		BackfillProvider:    backfillProvider,
 		Signer:              *signer,
-		GenesisBlock:        uint64(cfg.SettlementStartBlock), //nolint:gosec // We validate the cutover block in the config package
-		CutoverBlock:        uint64(cfg.CutoverBlock),         //nolint:gosec // We validate the cutover block in the config package
+		GenesisEpochBlock:   uint64(cfg.SettlementStartBlock), //nolint:gosec // We validate the cutover block in the config package
+		CutoverEpochBlock:   uint64(cfg.CutoverEpochBlock),    //nolint:gosec // We validate the cutover block in the config package
 	}
 }
 
@@ -98,7 +98,7 @@ func (t *OPTranslator) getFrames(ctx context.Context, block types.Block) ([]*typ
 		return nil, err
 	}
 
-	if blockNumber < t.CutoverBlock {
+	if blockNumber < t.CutoverEpochBlock {
 		return t.BackfillProvider.GetBackfillFrames(ctx, block)
 	} else {
 		batch, err := t.BatchProvider.GetBatch(ctx, block)
@@ -119,7 +119,7 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, err
 	}
 
-	if blockNumber == t.GenesisBlock {
+	if blockNumber == t.GenesisEpochBlock {
 		log.Debug().Msgf("Block number is genesis block, not translating, %d", blockNumber)
 		return block, nil
 	}
