@@ -16,7 +16,7 @@ import (
 func TestGetBlockByNumber(t *testing.T) {
 	mockConfig := mocks.DefaultTestingConfig
 	mockClient := new(mocks.MockRPCClient)
-	number := "0x1"
+	number := "0x2"
 	settlementBlock := types.Block{
 		"number":       number,
 		"hash":         "0xabc",
@@ -30,6 +30,7 @@ func TestGetBlockByNumber(t *testing.T) {
 		BatchProvider:    &mocks.MockBatchProvider{},
 		Signer:           *translator.NewSigner(mockConfig),
 		BackfillProvider: backfill.NewBackfillerProvider(mockConfig),
+		GenesisBlock:     uint64(mockConfig.SettlementStartBlock),
 	}
 
 	block, err := translatorMock.GetBlockByNumber(ctx, number, true)
@@ -37,7 +38,7 @@ func TestGetBlockByNumber(t *testing.T) {
 	assert.NoError(t, err)
 	blockNumber, err := block.GetBlockNumberHex()
 	assert.NoError(t, err)
-	assert.Equal(t, "0x1", blockNumber)
+	assert.Equal(t, "0x2", blockNumber)
 
 	blockHash, err := block.GetBlockHash()
 	assert.NoError(t, err)
