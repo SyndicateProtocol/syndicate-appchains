@@ -178,7 +178,7 @@ func (m *MetaBasedBatchProvider) GetValidTransactions(rawTxs []hexutil.Bytes) []
 	}
 
 	// Second phase validation: stateful
-	rawFilteredTxsStateful, _, removedCountStateful := m.FilterTransactionsStateful(rawFilteredTxStateless, parsedFilteredTxStateless)
+	rawFilteredTxsStateful, removedCountStateful := m.FilterTransactionsStateful(rawFilteredTxStateless, parsedFilteredTxStateless)
 	if removedCountStateful > 0 {
 		log.Debug().Msgf("Transactions got filtered by stateful validation: %d", removedCountStateful)
 	}

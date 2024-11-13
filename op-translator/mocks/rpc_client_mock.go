@@ -64,6 +64,11 @@ func (m *MockRPCClient) TransactionReceipt(ctx context.Context, hash common.Hash
 	return args.Get(0).(*ethtypes.Receipt), args.Error(1)
 }
 
+func (m *MockRPCClient) SimulateTransactions(ctx context.Context, simulationRequest rpc.SimulationRequest, blockParameter string) error {
+	args := m.Called(ctx, simulationRequest, blockParameter)
+	return args.Error(0)
+}
+
 func (m *MockRPCClient) AsEthClient() rpc.IETHClient {
 	return nil
 }

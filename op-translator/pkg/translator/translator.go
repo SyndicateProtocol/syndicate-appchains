@@ -17,6 +17,7 @@ type IRPCClient interface {
 	GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error)
 	GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (types.Block, error)
 	GetReceiptsByBlocks(ctx context.Context, blocks []*types.Block) ([]*ethtypes.Receipt, error)
+	SimulateTransactions(ctx context.Context, simulationRequest rpc.SimulationRequest, blockParameter string) error
 	AsEthClient() rpc.IETHClient
 }
 

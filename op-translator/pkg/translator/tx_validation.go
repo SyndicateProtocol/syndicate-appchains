@@ -1,9 +1,13 @@
 package translator
 
 import (
+	"context"
 	"fmt"
+	"regexp"
 	"slices"
+	"strconv"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/txpool"
@@ -108,18 +112,69 @@ func ValidateTransactionStateless(tx *ethtypes.Transaction) error {
 	return nil
 }
 
+func (m *MetaBasedBatchProvider) ValidateTransactionStateful(txs []*ethtypes.Transaction) error {
+	return m.MetaBasedChain.SimulateTransactions(context.Background(), rpc.SimulationRequest{
+		BlockStateCalls: []rpc.BlockStateCall{
+			{
+				Calls: txs,
+			},
+		},
+		Validation: true,
+	}, "latest")
+}
+
+func ExtractTxIndexFromError(errorMessage string) (int, error) {
+	// Define a regex pattern to find the "tx: <index>" substring
+	pattern := `tx: (\d+)`
+	re := regexp.MustCompile(pattern)
+
+	// Find the first match
+	match := re.FindStringSubmatch(errorMessage)
+	if len(match) < 2 {
+		return 0, fmt.Errorf("transaction index not found in error message")
+	}
+
+	txIndex, err := strconv.Atoi(match[1])
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse transaction index: %w", err)
+	}
+
+	return txIndex, nil
+}
+
 // FilterTransactionsStateful depends on the state of the chain to get access to
 // gas parameters, limits of the mempool, account state for nonces
 // so we delegate this to the MetaBased chain for now until op-translator
 // is not aware of the chain state
-func (m *MetaBasedBatchProvider) FilterTransactionsStateful(rawTx []hexutil.Bytes, parsedTxs []*ethtypes.Transaction) (rawFilteredTxStateful []hexutil.Bytes, parsedFilteredTxsStateful []*ethtypes.Transaction, removedCountStateful int) {
-	// TODO: to be implemented in SEQ-278: Stateful transaction validation
-	// https://linear.app/syndicate/issue/SEQ-278/stateful-transaction-validation
-
-	// Everytime a transaction is filtered, it should be removed from both slices
-	rawFilteredTxStateful = rawTx
-	parsedFilteredTxsStateful = parsedTxs
+func (m *MetaBasedBatchProvider) FilterTransactionsStateful(rawTxs []hexutil.Bytes, parsedTxs []*ethtypes.Transaction) (rawFilteredTxStateful []hexutil.Bytes, removedCountStateful int) {
+	rawFilteredTxStateful = make([]hexutil.Bytes, 0, len(rawTxs))
 	removedCountStateful = 0
 
-	return rawFilteredTxStateful, parsedFilteredTxsStateful, removedCountStateful
+	for {
+		// Run validation on the current set of parsed transactions
+		validationErr := m.ValidateTransactionStateful(parsedTxs)
+		if validationErr == nil {
+			// No validation errors, break out of the loop
+			rawFilteredTxStateful = append(rawFilteredTxStateful, rawTxs...)
+			break
+		}
+
+		// Extract the transaction index from the error
+		txIndex, err := ExtractTxIndexFromError(validationErr.Error())
+		if err != nil || txIndex < 0 || txIndex >= len(parsedTxs) {
+			// If the extraction fails or the index is out of range, break the loop
+			fmt.Println("Failed to extract valid transaction index from error:", err)
+			break
+		}
+
+		// Remove the invalid transaction from both slices
+		rawTxs = append(rawTxs[:txIndex], rawTxs[txIndex+1:]...)
+		parsedTxs = append(parsedTxs[:txIndex], parsedTxs[txIndex+1:]...)
+		removedCountStateful++
+
+		// Reset rawFilteredTxStateful for the next iteration, as we're modifying rawTxs
+		rawFilteredTxStateful = rawFilteredTxStateful[:0]
+	}
+
+	return rawFilteredTxStateful, removedCountStateful
 }

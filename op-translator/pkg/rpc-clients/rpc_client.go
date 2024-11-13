@@ -157,3 +157,21 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 	}
 	return allReceipts, nil
 }
+
+type BlockStateCall struct {
+	Calls []*ethtypes.Transaction `json:"calls"`
+}
+
+type SimulationRequest struct {
+	Validation      bool             `json:"validation,omitempty"`
+	BlockStateCalls []BlockStateCall `json:"blockStateCalls"`
+}
+
+func (c *RPCClient) SimulateTransactions(ctx context.Context, simulationRequest SimulationRequest, blockParameter string) error {
+	var response any
+	err := c.rawClient.CallContext(ctx, &response, "eth_simulateV1", simulationRequest, blockParameter)
+	if err != nil {
+		return err
+	}
+	return nil
+}
