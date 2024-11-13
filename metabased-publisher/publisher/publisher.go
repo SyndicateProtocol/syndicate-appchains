@@ -22,7 +22,7 @@ const MaxFrameSize = 120_000 - 1
 type Publisher struct {
 	log                        gethlog.Logger
 	txManager                  txmgr.TxManager
-	metabasedBatchProvider     translator.BatchProvider
+	metabasedBatchProvider     translator.IBatchProvider
 	ctx                        context.Context
 	cancel                     context.CancelFunc
 	metrics                    metrics.Metricer
@@ -45,7 +45,7 @@ func NewPublisher(
 	sequencingChainClient *ethclient.Client,
 	sequencingContractAddress *common.Address,
 	l3ChainClient *ethclient.Client,
-	metabasedBatchProvider translator.BatchProvider,
+	metabasedBatchProvider translator.IBatchProvider,
 	pollInterval time.Duration,
 	txManager txmgr.TxManager,
 	log gethlog.Logger,
@@ -131,7 +131,7 @@ func (p *Publisher) processBlock(block uint64) {
 		p.log.Error("failed to get batch", "error", err, "block", block)
 		return
 	}
-	frames, err := batch.ToFrames(MaxFrameSize)
+	frames, err := batch.GetFrames(MaxFrameSize)
 	if err != nil {
 		p.log.Error("failed to convert batch to frames", "error", err)
 		return

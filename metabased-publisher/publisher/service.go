@@ -20,6 +20,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/oppprof"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/urfave/cli/v2"
 )
@@ -49,9 +50,9 @@ var ErrAlreadyStopped = errors.New("already stopped")
 
 type PublisherService struct {
 	metrics                   metrics.Metricer
-	settlementChainClient     rpc.IRPCClient
-	l3Client                  rpc.IRPCClient
-	sequencingChainClient     rpc.IRPCClient
+	settlementChainClient     translator.IRPCClient
+	l3Client                  translator.IRPCClient
+	sequencingChainClient     translator.IRPCClient
 	balanceMetricer           io.Closer
 	txManager                 txmgr.TxManager
 	log                       gethlog.Logger
@@ -210,7 +211,7 @@ func (p *PublisherService) initMetricsServer(cfg *CLIConfig) error {
 // initBalanceMonitor depends on Metrics, L1Client and TxManager to start background-monitoring of the batcher balance.
 func (p *PublisherService) initBalanceMonitor(cfg *CLIConfig) {
 	if cfg.MetricsConfig.Enabled {
-		p.balanceMetricer = p.metrics.StartBalanceMetrics(p.log, p.settlementChainClient.AsEthClient(), p.txManager.From())
+		p.balanceMetricer = p.metrics.StartBalanceMetrics(p.log, p.settlementChainClient.AsEthClient().(*ethclient.Client), p.txManager.From())
 	}
 }
 
@@ -220,16 +221,15 @@ func (p *PublisherService) initPublisher() {
 		p.sequencingChainClient,
 		*p.sequencingContractAddress,
 		0, // TODO (SEQ-194): SettlementStartBlock
-		0, // TODO (SEQ-194): SequencingStartBlock
-		1, // TODO (SEQ-194): SequencePerSettlementBlock
+		0, // TODO (SEQ-194): SettlementChainBlockTime
 	)
 
 	p.publisher = NewPublisher(
-		p.settlementChainClient.AsEthClient(),
+		p.settlementChainClient.AsEthClient().(*ethclient.Client),
 		p.batchInboxAddress,
-		p.sequencingChainClient.AsEthClient(),
+		p.sequencingChainClient.AsEthClient().(*ethclient.Client),
 		p.sequencingContractAddress,
-		p.l3Client.AsEthClient(),
+		p.l3Client.AsEthClient().(*ethclient.Client),
 		metabasedBatchProvider,
 		p.pollInterval,
 		p.txManager,
