@@ -4,7 +4,8 @@ pragma solidity 0.8.25;
 import {RequireListManager} from "./RequireListManager.sol";
 
 /// @title MetabasedSequencerChain
-/// @notice The core contract for sequencing transactions using a modular architecture to determine who is allowed to sequence.
+/// @notice The core contract for sequencing transactions using a modular architecture
+/// to determine who is allowed to sequence.
 contract MetabasedSequencerChain is RequireListManager {
     /// @notice The ID of the L3 chain that this contract is sequencing transactions for.
     uint256 public immutable l3ChainId;
@@ -15,27 +16,17 @@ contract MetabasedSequencerChain is RequireListManager {
     /// @notice Emitted when a chunk of transactions is processed.
     event ChunkProcessed(uint256 indexed chunkId, uint256 transactionsProcessed);
 
-    /// @dev Thrown when the transaction form is invalid.
-    error InvalidTransactionForm();
-
     /// @dev Thrown when an invalid chunk size is provided.
     error InvalidChunkSize();
 
     /// @notice Constructs the MetabasedSequencerChain contract.
     /// @param _l3ChainId The ID of the L3 chain that this contract is sequencing transactions for.
     /// @param admin The address that will be set as the admin
-    constructor(uint256 _l3ChainId, address admin) RequireListManager(admin) {
+    /// @param masterModule The address of the master permission module
+    constructor(uint256 _l3ChainId, address admin, address masterModule) RequireListManager(admin, masterModule) {
         // chain id zero has no replay protection : https://eips.ethereum.org/EIPS/eip-3788
         require(_l3ChainId != 0, "L3 chain ID cannot be 0");
-
         l3ChainId = _l3ChainId;
-    }
-
-    modifier onlyWhenAllowed(address sender) {
-        // Check if msg.sender is allowed
-        requireAllAllowed(msg.sender);
-        requireAnyAllowed(msg.sender);
-        _;
     }
 
     /// @notice Processes a single compressed transaction.
@@ -53,7 +44,7 @@ contract MetabasedSequencerChain is RequireListManager {
 
     /// @notice Processes multiple transactions in bulk.
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
-    /// @param txns An array of  transaction data.
+    /// @param txns An array of transaction data.
     function processBulkTransactions(bytes[] calldata txns) external onlyWhenAllowed(msg.sender) {
         uint256 txnCount = txns.length;
 

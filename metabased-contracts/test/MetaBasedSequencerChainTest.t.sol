@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {MetabasedSequencerChain, RequireListManager} from "src/MetabasedSequencerChain.sol";
+import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
+import {MasterPermissionModule} from "src/MasterPermissionModule.sol";
 import {IsAllowed} from "src/interfaces/IsAllowed.sol";
 import {Test} from "forge-std/Test.sol";
 
@@ -19,6 +20,7 @@ contract MockIsAllowed is IsAllowed {
 
 contract MetabasedSequencerChainTestSetUp is Test {
     MetabasedSequencerChain public chain;
+    MasterPermissionModule public permissionModule;
     address public admin;
 
     function setUp() public virtual {
@@ -26,9 +28,8 @@ contract MetabasedSequencerChainTestSetUp is Test {
         uint256 l3ChainId = 10042001;
 
         vm.startPrank(admin);
-        chain = new MetabasedSequencerChain(l3ChainId, admin);
-
-        assertEq(chain.l3ChainId(), l3ChainId, "L3 chain ID should be set correctly");
+        permissionModule = new MasterPermissionModule(admin);
+        chain = new MetabasedSequencerChain(l3ChainId, admin, address(permissionModule));
         vm.stopPrank();
     }
 }
@@ -38,7 +39,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         bytes memory validTxn = abi.encode("valid transaction");
 
         vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
+        permissionModule.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
@@ -52,13 +53,11 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         address mockRequireAll = address(new MockIsAllowed(false));
 
         vm.startPrank(admin);
-        chain.addRequireAllCheck(mockRequireAll, false);
+        permissionModule.addRequireAllCheck(mockRequireAll, false);
         vm.stopPrank();
 
         vm.expectRevert(
-            abi.encodeWithSelector(
-                RequireListManager.RequireAllCheckFailed.selector, address(mockRequireAll), address(this)
-            )
+            abi.encodeWithSelector(MasterPermissionModule.RequireAllCheckFailed.selector, mockRequireAll, address(this))
         );
         chain.processTransactionRaw(validTxn);
     }
@@ -67,10 +66,10 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         bytes memory validTxn = abi.encode("valid transaction");
 
         vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(false)), false);
+        permissionModule.addRequireAnyCheck(address(new MockIsAllowed(false)), false);
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(RequireListManager.RequireAnyCheckFailed.selector, address(this)));
+        vm.expectRevert(abi.encodeWithSelector(MasterPermissionModule.RequireAnyCheckFailed.selector, address(this)));
         chain.processTransactionRaw(validTxn);
     }
 
@@ -79,7 +78,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         bytes memory expectedTx = abi.encodePacked(bytes1(0x00), _tx);
 
         vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
+        permissionModule.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
@@ -95,7 +94,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         validTxns[2] = abi.encode("transaction 3");
 
         vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
+        permissionModule.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         for (uint256 i = 0; i < validTxns.length; i++) {
@@ -116,7 +115,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         }
 
         vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
+        permissionModule.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         for (uint256 i = 0; i < 3; i++) {
@@ -137,7 +136,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         }
 
         vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
+        permissionModule.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidChunkSize.selector));
@@ -151,7 +150,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         }
 
         vm.startPrank(admin);
-        chain.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
+        permissionModule.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         vm.expectRevert("Chunk exceeds batch size");
@@ -173,22 +172,22 @@ contract MetabasedSequencerChainViewTest is MetabasedSequencerChainTestSetUp {
         mockRequireAny2 = new MockIsAllowed(true);
 
         vm.startPrank(admin);
-        chain.addRequireAllCheck(address(mockRequireAll1), false);
-        chain.addRequireAllCheck(address(mockRequireAll2), false);
-        chain.addRequireAnyCheck(address(mockRequireAny1), false);
-        chain.addRequireAnyCheck(address(mockRequireAny2), false);
+        permissionModule.addRequireAllCheck(address(mockRequireAll1), false);
+        permissionModule.addRequireAllCheck(address(mockRequireAll2), false);
+        permissionModule.addRequireAnyCheck(address(mockRequireAny1), false);
+        permissionModule.addRequireAnyCheck(address(mockRequireAny2), false);
         vm.stopPrank();
     }
 
     function testGetAllRequirementsRequireAll() public view {
-        address[] memory allChecks = chain.getAllRequirements(true);
+        address[] memory allChecks = permissionModule.getAllRequirements(true);
         assertEq(allChecks.length, 2);
         assertEq(allChecks[0], address(mockRequireAll1));
         assertEq(allChecks[1], address(mockRequireAll2));
     }
 
     function testGetAllRequirementsRequireAny() public view {
-        address[] memory allChecks = chain.getAllRequirements(false);
+        address[] memory allChecks = permissionModule.getAllRequirements(false);
         assertEq(allChecks.length, 2);
         assertEq(allChecks[0], address(mockRequireAny1));
         assertEq(allChecks[1], address(mockRequireAny2));
