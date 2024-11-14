@@ -37,7 +37,7 @@ type OPTranslator struct {
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
-	metrics             metrics.Metrics
+	Metrics             metrics.Metrics
 }
 
 func Init(cfg *config.Config) *OPTranslator {
@@ -58,7 +58,7 @@ func Init(cfg *config.Config) *OPTranslator {
 		BatchProvider:       metaBasedBatchProvider,
 		BackfillProvider:    backfillProvider,
 		Signer:              *signer,
-		metrics:             metrics,
+		Metrics:             metrics,
 	}
 }
 
@@ -67,15 +67,15 @@ func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string,
 
 	start := time.Now()
 	defer func() {
-		t.metrics.RecordTranslationLatency("eth_getBlockByNumber", time.Since(start).Seconds())
+		t.Metrics.RecordTranslationLatency("eth_getBlockByNumber", time.Since(start).Seconds())
 	}()
 
-	t.metrics.RecordRPCRequest("eth_getBlockByNumber")
+	t.Metrics.RecordRPCRequest("eth_getBlockByNumber")
 
 	block, err := t.SettlementChain.GetBlockByNumber(ctx, blockNumber, transactionDetailFlag)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get block by number")
-		t.metrics.RecordError("eth_getBlockByNumber", "block_fetch_error")
+		t.Metrics.RecordError("eth_getBlockByNumber", "block_fetch_error")
 		return nil, err
 	}
 	if !transactionDetailFlag {
@@ -89,15 +89,15 @@ func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash
 
 	start := time.Now()
 	defer func() {
-		t.metrics.RecordTranslationLatency("eth_getBlockByHash", time.Since(start).Seconds())
+		t.Metrics.RecordTranslationLatency("eth_getBlockByHash", time.Since(start).Seconds())
 	}()
 
-	t.metrics.RecordRPCRequest("eth_getBlockByHash")
+	t.Metrics.RecordRPCRequest("eth_getBlockByHash")
 
 	block, err := t.SettlementChain.GetBlockByHash(ctx, blockHash, transactionDetailFlag)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get block by hash")
-		t.metrics.RecordError("eth_getBlockByHash", "block_fetch_error")
+		t.Metrics.RecordError("eth_getBlockByHash", "block_fetch_error")
 		return nil, err
 	}
 	if !transactionDetailFlag {
@@ -130,13 +130,13 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 
 	frames, err := t.getFrames(ctx, block)
 	if err != nil {
-		t.metrics.RecordError("translate_block", "frame_fetch_error")
+		t.Metrics.RecordError("translate_block", "frame_fetch_error")
 		return nil, err
 	}
 
 	blockNumHex, err := block.GetBlockNumberHex()
 	if err != nil {
-		t.metrics.RecordError("translate_block", "block_number_error")
+		t.Metrics.RecordError("translate_block", "block_number_error")
 		return nil, err
 	}
 
@@ -145,17 +145,17 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return block, nil
 	}
 
-	t.metrics.RecordBatchSize(len(frames))
+	t.Metrics.RecordBatchSize(len(frames))
 
 	data, err := types.ToData(frames)
 	if err != nil {
-		t.metrics.RecordError("translate_block", "frame_conversion_error")
+		t.Metrics.RecordError("translate_block", "frame_conversion_error")
 		return nil, err
 	}
 
 	blockHash, err := block.GetBlockHash()
 	if err != nil {
-		t.metrics.RecordError("translate_block", "block_hash_error")
+		t.Metrics.RecordError("translate_block", "block_hash_error")
 		return nil, err
 	}
 
@@ -163,13 +163,13 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 
 	signedTxn, err := t.Signer.Sign(&tx)
 	if err != nil {
-		t.metrics.RecordError("translate_block", "transaction_signing_error")
+		t.Metrics.RecordError("translate_block", "transaction_signing_error")
 		return nil, err
 	}
 
 	err = block.AppendTransaction(signedTxn)
 	if err != nil {
-		t.metrics.RecordError("translate_block", "transaction_append_error")
+		t.Metrics.RecordError("translate_block", "transaction_append_error")
 		return nil, err
 	}
 

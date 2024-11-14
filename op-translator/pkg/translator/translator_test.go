@@ -4,6 +4,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/metrics"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
@@ -13,9 +14,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+var metricsInstance = metrics.NewMetrics()
+
 func TestGetBlockByNumber(t *testing.T) {
 	mockConfig := mocks.DefaultTestingConfig
 	mockClient := new(mocks.MockRPCClient)
+
 	number := "0x21"
 	settlementBlock := types.Block{
 		"number":       number,
@@ -30,6 +34,7 @@ func TestGetBlockByNumber(t *testing.T) {
 		BatchProvider:    &mocks.MockBatchProvider{},
 		Signer:           *translator.NewSigner(mockConfig),
 		BackfillProvider: backfill.NewBackfillerProvider(mockConfig),
+		Metrics:          metricsInstance,
 	}
 
 	block, err := translatorMock.GetBlockByNumber(ctx, number, true)
@@ -53,6 +58,7 @@ func TestGetBlockByNumber(t *testing.T) {
 func TestGetBlockByHash(t *testing.T) {
 	mockClient := new(mocks.MockRPCClient)
 	mockConfig := mocks.DefaultTestingConfig
+
 	number := "0x21"
 	settlementBlock := types.Block{
 		"number":       number,
@@ -68,6 +74,7 @@ func TestGetBlockByHash(t *testing.T) {
 		BatchProvider:    &mocks.MockBatchProvider{},
 		Signer:           *translator.NewSigner(mockConfig),
 		BackfillProvider: backfill.NewBackfillerProvider(mockConfig),
+		Metrics:          metricsInstance,
 	}
 
 	block, err := translatorMock.GetBlockByHash(ctx, hash, true)

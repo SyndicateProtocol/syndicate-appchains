@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/metrics"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/server"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
@@ -182,9 +183,12 @@ func TestOPNodeCalls(t *testing.T) {
 		},
 	}
 
+	metricsInstance := metrics.NewMetrics()
+
 	for _, tc := range testCases {
 		mockClient := getMockClient()
 		mockHTTPBackfillClient := getBackfillHTTPMock()
+
 		opTranslator := &translator.OPTranslator{
 			SettlementChain:     mockClient,
 			BatcherInboxAddress: common.HexToAddress("0x123"),
@@ -197,6 +201,7 @@ func TestOPNodeCalls(t *testing.T) {
 				GenesisEpochBlock: uint64(mockConfig.SettlementStartBlock),
 				CutoverEpochBlock: uint64(mockConfig.CutoverEpochBlock),
 			},
+			Metrics: metricsInstance,
 		}
 
 		s, err := server.TranslatorHandler(mockConfig, opTranslator)
