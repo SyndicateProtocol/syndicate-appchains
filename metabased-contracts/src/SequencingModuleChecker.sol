@@ -6,7 +6,7 @@ import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /// @title SequencingModuleChecker
 /// @notice A simplified contract that delegates permission checks to a master module
-abstract contract SequencingModuleChecker is Ownable {
+abstract contract SequencingModuleChecker is Ownable, IsAllowed {
     /// @notice The master permission module that handles all checks
     IsAllowed public masterPermissionModule;
 
@@ -33,7 +33,14 @@ abstract contract SequencingModuleChecker is Ownable {
     /// @notice Checks if an address is allowed to submit batches
     /// @param batchSubmitter The address to check
     modifier onlyWhenAllowed(address batchSubmitter) {
-        masterPermissionModule.isAllowed(batchSubmitter);
+        isAllowed(batchSubmitter);
         _;
+    }
+
+    /// @notice Implementation of the IsAllowed interface
+    /// @param proposer The address to check permissions for
+    /// @return bool indicating if the address is allowed
+    function isAllowed(address proposer) public view virtual override returns (bool) {
+        return masterPermissionModule.isAllowed(proposer);
     }
 }
