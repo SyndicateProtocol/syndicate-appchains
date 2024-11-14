@@ -14,7 +14,7 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
     event TransactionProcessed(address indexed sender, bytes data);
 
     /// @notice Emitted when a chunk of transactions is processed.
-    event ChunkProcessed(uint256 indexed chunkId, uint256 transactionsProcessed);
+    event TransactionChunkProcessed(bytes txChunk, uint256 index, uint256 totalChunks, bytes32 txHashForParent);
 
     /// @dev Thrown when an invalid chunk size is provided.
     error InvalidChunkSize();
@@ -63,7 +63,7 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
         external
         onlyWhenAllowed(msg.sender)
     {
-        if (chunkSize == 0) {
+        if (totalChunks == 0) {
             revert InvalidChunkSize();
         }
 
@@ -74,7 +74,12 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
             emit TransactionProcessed(msg.sender, data[i]);
         }
 
-        emit ChunkProcessed(chunkId, chunkSize);
+    /// @notice Prepends a zero byte to the transaction data
+    /// @dev This helps op-translator identify uncompressed data
+    /// @param _tx The original transaction data
+    /// @return bytes The transaction data
+    function prependZeroByte(bytes calldata _tx) private pure returns (bytes memory) {
+        return abi.encodePacked(bytes1(0x00), _tx);
     }
 
     /// @notice Prepends a zero byte to the transaction data

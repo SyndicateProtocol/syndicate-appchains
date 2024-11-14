@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
@@ -27,7 +28,7 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 		{
 			name: "Single Frame - Matching Epoch Hash",
 			mockResponseData: backfill.BackfillData{
-				Data:      []string{"data"},
+				Data:      []string{"0x1234"},
 				EpochHash: common.HexToHash("0x123"),
 			},
 			block: types.Block{
@@ -41,7 +42,7 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 		{
 			name: "Multiple Frames - Matching Epoch Hash",
 			mockResponseData: backfill.BackfillData{
-				Data:      []string{"data1", "data2", "data3"},
+				Data:      []string{"0x1234", "0x1234", "0x1234"},
 				EpochHash: common.HexToHash("0x123"),
 			},
 			block: types.Block{
@@ -109,7 +110,9 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 
 				for i, frame := range frames {
 					assert.NotNil(t, frame.ID)
-					assert.Equal(t, []byte(tt.mockResponseData.Data[i]), frame.Data)
+					mockDataBytes, err := utils.DecodeHexString(tt.mockResponseData.Data[i])
+					assert.NoError(t, err)
+					assert.Equal(t, mockDataBytes, frame.Data)
 				}
 			}
 			mockHTTPClient.AssertExpectations(t)

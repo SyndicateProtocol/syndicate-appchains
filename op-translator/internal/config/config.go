@@ -38,7 +38,7 @@ type Config struct {
 	BatcherPrivateKey         string `koanf:"batcher_private_key"`
 	LogLevel                  string `koanf:"log_level"`
 	SettlementChainID         int64  `koanf:"settlement_chain_id"`
-	CutoverBlock              int64  `koanf:"cutover_block"`
+	CutoverEpochBlock         int64  `koanf:"cutover_epoch_block"`
 	SettlementChainBlockTime  int    `koanf:"settlement_chain_block_time"`
 	SettlementStartBlock      int    `koanf:"settlement_start_block"`
 	Port                      int    `koanf:"port"`
@@ -63,7 +63,7 @@ func setCLIFlags(f *pflag.FlagSet) {
 	f.String("batcher_private_key", "", "Batcher private key")
 	f.Int("settlement_chain_id", 1, "Settlement chain id")
 	f.Int("settlement_chain_block_time", 1, "Settlement chain block time")
-	f.Int("cutover_block", 0, "Cutover block")
+	f.Int("cutover_epoch_block", 0, "Cutover epoch block")
 }
 
 // hydrateFromConfMap sets the Config values from the koanf conf map
@@ -84,7 +84,7 @@ func hydrateFromConfMap(config *Config) {
 	config.BatcherPrivateKey = k.String("batcher_private_key")
 	config.SettlementChainID = k.Int64("settlement_chain_id")
 	config.SettlementChainBlockTime = k.Int("settlement_chain_block_time")
-	config.CutoverBlock = k.Int64("cutover_block")
+	config.CutoverEpochBlock = k.Int64("cutover_epoch_block")
 }
 
 func Init() *Config {
@@ -191,8 +191,8 @@ func ValidateConfigValues(config *Config) (result error) {
 		result = multierror.Append(result, fmt.Errorf("settlementChainBlockTime must be a positive number: %d", config.SettlementChainBlockTime))
 	}
 
-	if config.CutoverBlock < 0 {
-		result = multierror.Append(result, fmt.Errorf("cutoverBlock must be a non-negative number: %d", config.CutoverBlock))
+	if config.CutoverEpochBlock < 0 {
+		result = multierror.Append(result, fmt.Errorf("cutoverEpochBlock must be a non-negative number: %d", config.CutoverEpochBlock))
 	}
 
 	return result

@@ -61,7 +61,7 @@ func getMockClient() *mocks.MockRPCClient {
 		"transactions": stubs.TransactionsBlock0xe730a8Hashes,
 	}
 	backfillHash := common.HexToHash("0x123")
-	backfillBlockNumber := "0x1"
+	backfillBlockNumber := "0x2"
 	backfillBlock := types.Block{
 		"hash":         backfillHash.String(),
 		"number":       backfillBlockNumber,
@@ -109,7 +109,7 @@ func getMockClient() *mocks.MockRPCClient {
 func getBackfillHTTPMock() *mocks.HTTPClientMock {
 	mockHTTPClient := new(mocks.HTTPClientMock)
 	jsonData, _ := json.Marshal(backfill.BackfillData{
-		Data:      []string{"data"},
+		Data:      []string{"0x789c015100aeffb84f00f84ca0fea5a65ee8a5e073600da29f4651e0f631594f85b2b1e1ff3eb30b6716e1d4ec839d0070a0a423d903194b28bff3bf0949c9721a1c1cd1fda79d972ba7f9da94a674bf7bc38465c45dc3c0e86c2b7e"},
 		EpochHash: common.HexToHash("0x123"),
 	})
 	mockHTTPClient.On("Do", mock.Anything).Return(&http.Response{
@@ -175,7 +175,7 @@ func TestOPNodeCalls(t *testing.T) {
 		},
 		{
 			name:             "eth_getBlockByNumber - Valid request - backfill",
-			requestBody:      `{"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["0x1", true], "id": 1}`,
+			requestBody:      `{"jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["0x2", true], "id": 1}`,
 			expectedStatus:   http.StatusOK,
 			expectedResult:   stubs.ExpectedBackfillBlock,
 			expectedBackfill: true,
@@ -192,10 +192,11 @@ func TestOPNodeCalls(t *testing.T) {
 			BatchProvider:       &mocks.MockBatchProvider{},
 			Signer:              *translator.NewSigner(mockConfig),
 			BackfillProvider: &backfill.BackfillProvider{
-				MetafillerURL: mockConfig.MetafillerURL,
-				Client:        mockHTTPBackfillClient,
+				MetafillerURL:     mockConfig.MetafillerURL,
+				Client:            mockHTTPBackfillClient,
+				GenesisEpochBlock: uint64(mockConfig.SettlementStartBlock),
+				CutoverEpochBlock: uint64(mockConfig.CutoverEpochBlock),
 			},
-			CutoverBlock: uint64(mockConfig.CutoverBlock), //nolint:gosec // We validate the cutover block in the config package
 		}
 
 		s, err := server.TranslatorHandler(mockConfig, opTranslator)

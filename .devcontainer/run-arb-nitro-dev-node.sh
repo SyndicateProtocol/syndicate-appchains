@@ -74,6 +74,6 @@ if [[ "$registration_output" == *"error"* ]]; then
 fi
 
 # If no errors, print success message
-echo "Cache Manager deployed and registered successfully. Nitro node is running..."
+echo "Cache Manager deployed and registered successfully. Nitro node is ready..."
 wait  # Keep the script alive and the node running
 
