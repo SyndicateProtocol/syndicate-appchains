@@ -3,7 +3,7 @@ pragma solidity 0.8.25;
 
 import {MetabasedSequencerChain} from "./MetabasedSequencerChain.sol";
 import {MetafillerStorage} from "./backfill/MetafillerStorage.sol";
-import {MasterPermissionModule} from "./MasterPermissionModule.sol";
+import {RequirementChainModule} from "./RequirementChainModule.sol";
 
 /// @title MetabasedFactory
 /// @notice Factory contract for creating MetabasedSequencerChain and related contracts
@@ -30,12 +30,12 @@ contract MetabasedFactory {
     /// @param l3ChainId the l3 chain the contract refers to
     /// @param admin The address that will be the admin
     /// @return sequencerChain The address of the newly created MetabasedSequencerChain
-    /// @return permissionModule The address of the newly created MasterPermissionModule
+    /// @return permissionModule The address of the newly created RequirementChainModule
     function createMetabasedSequencerChain(uint256 l3ChainId, address admin)
         public
         returns (address sequencerChain, address permissionModule)
     {
-        MasterPermissionModule newPermissionModule = new MasterPermissionModule(admin);
+        RequirementChainModule newPermissionModule = new RequirementChainModule(admin);
         MetabasedSequencerChain newSequencerChain =
             new MetabasedSequencerChain(l3ChainId, admin, address(newPermissionModule));
 
@@ -55,13 +55,13 @@ contract MetabasedFactory {
         return address(newMetafillerStorage);
     }
 
-    /// @notice Creates all contracts: MetabasedSequencerChain, MasterPermissionModule, and MetafillerStorage
+    /// @notice Creates all contracts: MetabasedSequencerChain, RequirementChainModule, and MetafillerStorage
     /// @param admin The address that will be the default admin role
     /// @param manager The address that will be the manager role for MetafillerStorage
     /// @param l3ChainId The L3 chain ID
     /// @return sequencerChain The address of the newly created MetabasedSequencerChain
     /// @return metafillerStorage The address of the newly created MetafillerStorage
-    /// @return permissionModule The address of the newly created MasterPermissionModule
+    /// @return permissionModule The address of the newly created RequirementChainModule
     function createAllContracts(address admin, address manager, uint256 l3ChainId)
         public
         returns (address sequencerChain, address metafillerStorage, address permissionModule)

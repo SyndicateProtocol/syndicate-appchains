@@ -6,11 +6,11 @@ import {IsAllowed} from "./interfaces/IsAllowed.sol";
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /**
- * @title MasterPermissionModule
+ * @title RequirementChainModule
  * @notice A module that handles all permission checks for the sequencer
  * @dev Implements the core permission logic previously in SequencingModuleChecker
  */
-contract MasterPermissionModule is IsAllowed, Ownable {
+contract RequirementChainModule is IsAllowed, Ownable {
     /// @notice A list of isAllowed checks that must pass before a batch can be sequenced
     AddressStructuredLinkedList.List public requireAllList;
 

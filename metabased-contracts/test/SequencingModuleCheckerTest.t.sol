@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {SequencingModuleChecker, Ownable} from "src/SequencingModuleChecker.sol";
-import {MasterPermissionModule} from "src/MasterPermissionModule.sol";
+import {RequirementChainModule} from "src/RequirementChainModule.sol";
 import {Test} from "forge-std/Test.sol";
 
 contract SequencingModuleCheckerMock is SequencingModuleChecker {
@@ -11,7 +11,7 @@ contract SequencingModuleCheckerMock is SequencingModuleChecker {
 
 contract SequencingModuleCheckerTest is Test {
     SequencingModuleChecker public manager;
-    MasterPermissionModule public masterModule;
+    RequirementChainModule public masterModule;
     address public admin;
     address public nonAdmin;
 
@@ -19,21 +19,21 @@ contract SequencingModuleCheckerTest is Test {
         admin = msg.sender;
         nonAdmin = address(0x456);
 
-        masterModule = new MasterPermissionModule(admin);
+        masterModule = new RequirementChainModule(admin);
         manager = new SequencingModuleCheckerMock(admin, address(masterModule));
     }
 
     function testUpdateMasterModule() public {
-        address newModule = address(new MasterPermissionModule(admin));
+        address newModule = address(new RequirementChainModule(admin));
 
         vm.prank(admin);
         manager.updateMasterModule(newModule);
 
-        assertEq(address(manager.masterPermissionModule()), newModule);
+        assertEq(address(manager.requirementChainModule()), newModule);
     }
 
     function testUpdateMasterModuleNonAdmin() public {
-        address newModule = address(new MasterPermissionModule(admin));
+        address newModule = address(new RequirementChainModule(admin));
 
         vm.prank(nonAdmin);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonAdmin));

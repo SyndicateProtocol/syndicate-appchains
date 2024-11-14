@@ -11,7 +11,7 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
     uint256 public immutable l3ChainId;
 
     /// @notice Emitted when a new transaction is processed.
-    event TransactionProcessed(address indexed sender, bytes tx);
+    event TransactionProcessed(address indexed sender, bytes data);
 
     /// @notice Emitted when a chunk of transactions is processed.
     event ChunkProcessed(uint256 indexed chunkId, uint256 transactionsProcessed);
@@ -30,36 +30,36 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
     }
 
     /// @notice Processes a single compressed transaction.
-    /// @param txn The compressed transaction data.
-    function processTransactionRaw(bytes calldata txn) external onlyWhenAllowed(msg.sender) {
-        emit TransactionProcessed(msg.sender, txn);
+    /// @param data The compressed transaction data.
+    function processTransactionRaw(bytes calldata data) external onlyWhenAllowed(msg.sender) {
+        emit TransactionProcessed(msg.sender, data);
     }
 
     /// @notice process transactions
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
-    /// @param txn The transaction data
-    function processTransaction(bytes calldata txn) external onlyWhenAllowed(msg.sender) {
-        emit TransactionProcessed(msg.sender, prependZeroByte(txn));
+    /// @param data The transaction data
+    function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender) {
+        emit TransactionProcessed(msg.sender, prependZeroByte(data));
     }
 
     /// @notice Processes multiple transactions in bulk.
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
-    /// @param txns An array of transaction data.
-    function processBulkTransactions(bytes[] calldata txns) external onlyWhenAllowed(msg.sender) {
-        uint256 txnCount = txns.length;
+    /// @param datas An array of transaction data.
+    function processBulkTransactions(bytes[] calldata datas) external onlyWhenAllowed(msg.sender) {
+        uint256 dataCount = datas.length;
 
         // Process all transactions
-        for (uint256 i = 0; i < txnCount; i++) {
-            emit TransactionProcessed(msg.sender, prependZeroByte(txns[i]));
+        for (uint256 i = 0; i < dataCount; i++) {
+            emit TransactionProcessed(msg.sender, prependZeroByte(datas[i]));
         }
     }
 
     /// @notice Processes a chunk of transactions from a larger batch.
-    /// @param txs An array of transaction data.
+    /// @param data An array of transaction data.
     /// @param startIndex The starting index for this chunk in the overall batch.
     /// @param chunkSize The number of transactions to process in this chunk.
     /// @param chunkId A unique identifier for this chunk.
-    function processChunk(bytes[] calldata txs, uint256 startIndex, uint256 chunkSize, uint256 chunkId)
+    function processChunk(bytes[] calldata data, uint256 startIndex, uint256 chunkSize, uint256 chunkId)
         external
         onlyWhenAllowed(msg.sender)
     {
@@ -68,10 +68,10 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
         }
 
         uint256 endIndex = startIndex + chunkSize;
-        require(endIndex <= txs.length, "Chunk exceeds batch size");
+        require(endIndex <= data.length, "Chunk exceeds batch size");
 
         for (uint256 i = startIndex; i < endIndex; i++) {
-            emit TransactionProcessed(msg.sender, txs[i]);
+            emit TransactionProcessed(msg.sender, data[i]);
         }
 
         emit ChunkProcessed(chunkId, chunkSize);
@@ -79,9 +79,9 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
 
     /// @notice Prepends a zero byte to the transaction data
     /// @dev This helps op-translator identify uncompressed data
-    /// @param _tx The original transaction data
+    /// @param _data The original transaction data
     /// @return bytes The transaction data
-    function prependZeroByte(bytes calldata _tx) private pure returns (bytes memory) {
-        return abi.encodePacked(bytes1(0x00), _tx);
+    function prependZeroByte(bytes calldata _data) private pure returns (bytes memory) {
+        return abi.encodePacked(bytes1(0x00), _data);
     }
 }

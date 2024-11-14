@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
-import {MasterPermissionModule} from "src/MasterPermissionModule.sol";
+import {RequirementChainModule} from "src/RequirementChainModule.sol";
 import {IsAllowed} from "src/interfaces/IsAllowed.sol";
 import {Test} from "forge-std/Test.sol";
 
@@ -20,7 +20,7 @@ contract MockIsAllowed is IsAllowed {
 
 contract MetabasedSequencerChainTestSetUp is Test {
     MetabasedSequencerChain public chain;
-    MasterPermissionModule public permissionModule;
+    RequirementChainModule public permissionModule;
     address public admin;
 
     function setUp() public virtual {
@@ -28,7 +28,7 @@ contract MetabasedSequencerChainTestSetUp is Test {
         uint256 l3ChainId = 10042001;
 
         vm.startPrank(admin);
-        permissionModule = new MasterPermissionModule(admin);
+        permissionModule = new RequirementChainModule(admin);
         chain = new MetabasedSequencerChain(l3ChainId, admin, address(permissionModule));
         vm.stopPrank();
     }
@@ -57,7 +57,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.stopPrank();
 
         vm.expectRevert(
-            abi.encodeWithSelector(MasterPermissionModule.RequireAllCheckFailed.selector, mockRequireAll, address(this))
+            abi.encodeWithSelector(RequirementChainModule.RequireAllCheckFailed.selector, mockRequireAll, address(this))
         );
         chain.processTransactionRaw(validTxn);
     }
@@ -69,13 +69,13 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         permissionModule.addRequireAnyCheck(address(new MockIsAllowed(false)), false);
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(MasterPermissionModule.RequireAnyCheckFailed.selector, address(this)));
+        vm.expectRevert(abi.encodeWithSelector(RequirementChainModule.RequireAnyCheckFailed.selector, address(this)));
         chain.processTransactionRaw(validTxn);
     }
 
     function testProcessTransaction() public {
-        bytes memory _tx = abi.encode("raw transaction");
-        bytes memory expectedTx = abi.encodePacked(bytes1(0x00), _tx);
+        bytes memory _data = abi.encode("raw transaction");
+        bytes memory expectedTx = abi.encodePacked(bytes1(0x00), _data);
 
         vm.startPrank(admin);
         permissionModule.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
@@ -84,7 +84,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.expectEmit(true, false, false, true);
         emit MetabasedSequencerChain.TransactionProcessed(address(this), expectedTx);
 
-        chain.processTransaction(_tx);
+        chain.processTransaction(_data);
     }
 
     function testProcessBulkTransactions() public {

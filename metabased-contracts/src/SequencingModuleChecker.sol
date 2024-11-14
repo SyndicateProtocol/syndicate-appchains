@@ -5,10 +5,10 @@ import {IsAllowed} from "./interfaces/IsAllowed.sol";
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /// @title SequencingModuleChecker
-/// @notice A simplified contract that delegates permission checks to a master module
+/// @notice A simplified contract that delegates permission checks to modules
 abstract contract SequencingModuleChecker is Ownable, IsAllowed {
-    /// @notice The master permission module that handles all checks
-    IsAllowed public masterPermissionModule;
+    /// @notice The requirement chain module that handles all checks
+    IsAllowed public requirementChainModule;
 
     event MasterModuleUpdated(address indexed newModule);
 
@@ -16,17 +16,17 @@ abstract contract SequencingModuleChecker is Ownable, IsAllowed {
 
     /// @dev Constructor function
     /// @param admin The address that will be set as the admin
-    /// @param _masterModule The address of the master permission module
-    constructor(address admin, address _masterModule) Ownable(admin) {
-        if (_masterModule == address(0)) revert InvalidModuleAddress();
-        masterPermissionModule = IsAllowed(_masterModule);
+    /// @param _requirementChainModule The address of the requirement chain module
+    constructor(address admin, address _requirementChainModule) Ownable(admin) {
+        if (_requirementChainModule == address(0)) revert InvalidModuleAddress();
+        requirementChainModule = IsAllowed(_requirementChainModule);
     }
 
-    /// @notice Updates the master permission module
-    /// @param _newModule The address of the new master module
+    /// @notice Updates the requirement chain module
+    /// @param _newModule The address of the new  module
     function updateMasterModule(address _newModule) external onlyOwner {
         if (_newModule == address(0)) revert InvalidModuleAddress();
-        masterPermissionModule = IsAllowed(_newModule);
+        requirementChainModule = IsAllowed(_newModule);
         emit MasterModuleUpdated(_newModule);
     }
 
@@ -41,6 +41,6 @@ abstract contract SequencingModuleChecker is Ownable, IsAllowed {
     /// @param proposer The address to check permissions for
     /// @return bool indicating if the address is allowed
     function isAllowed(address proposer) public view virtual override returns (bool) {
-        return masterPermissionModule.isAllowed(proposer);
+        return requirementChainModule.isAllowed(proposer);
     }
 }

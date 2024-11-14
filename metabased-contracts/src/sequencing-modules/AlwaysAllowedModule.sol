@@ -5,7 +5,7 @@ import {IsAllowed} from "../interfaces/IsAllowed.sol";
 
 /**
  * @title AlwaysAllowedModule
- * @dev Module used for testing and experimentations. It allows any proposer to send batch txs.
+ * @dev Module used for testing and experimentations. It allows any proposer to send batch data.
  */
 contract AlwaysAllowedModule is IsAllowed {
     /**

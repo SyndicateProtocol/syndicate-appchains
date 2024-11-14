@@ -4,9 +4,8 @@ pragma solidity 0.8.25;
 import {Test} from "forge-std/Test.sol";
 import {MetabasedFactory} from "src/MetabasedFactory.sol";
 import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
-import {MasterPermissionModule} from "src/MasterPermissionModule.sol";
+import {RequirementChainModule} from "src/RequirementChainModule.sol";
 import {MetafillerStorage} from "src/backfill/MetafillerStorage.sol";
-import {IsAllowed} from "src/interfaces/IsAllowed.sol";
 
 contract MetabasedFactoryTest is Test {
     MetabasedFactory public factory;
@@ -28,14 +27,14 @@ contract MetabasedFactoryTest is Test {
         assertTrue(permissionModuleAddress != address(0));
 
         MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);
-        MasterPermissionModule permissionModule = MasterPermissionModule(permissionModuleAddress);
+        RequirementChainModule permissionModule = RequirementChainModule(permissionModuleAddress);
 
         // Verify sequencer setup
         assertTrue(address(sequencerChain) == sequencerChainAddress);
         assertEq(sequencerChain.l3ChainId(), l3ChainId);
 
         // Verify permission module setup
-        assertTrue(address(sequencerChain.masterPermissionModule()) == permissionModuleAddress);
+        assertTrue(address(sequencerChain.requirementChainModule()) == permissionModuleAddress);
         assertTrue(permissionModule.owner() == admin);
     }
 
@@ -59,7 +58,7 @@ contract MetabasedFactoryTest is Test {
 
         MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);
         MetafillerStorage metafillerStorage = MetafillerStorage(metafillerStorageAddress);
-        MasterPermissionModule permissionModule = MasterPermissionModule(permissionModuleAddress);
+        RequirementChainModule permissionModule = RequirementChainModule(permissionModuleAddress);
 
         // Verify sequencer setup
         assertTrue(address(sequencerChain) == sequencerChainAddress);
@@ -71,7 +70,7 @@ contract MetabasedFactoryTest is Test {
         assertTrue(metafillerStorage.hasRole(metafillerStorage.MANAGER_ROLE(), manager));
 
         // Verify permission module setup
-        assertTrue(address(sequencerChain.masterPermissionModule()) == permissionModuleAddress);
+        assertTrue(address(sequencerChain.requirementChainModule()) == permissionModuleAddress);
         assertTrue(permissionModule.owner() == admin);
     }
 }

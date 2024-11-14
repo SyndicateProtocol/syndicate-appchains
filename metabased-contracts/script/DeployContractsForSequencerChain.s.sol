@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {Script, console} from "forge-std/Script.sol";
 
 import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
-import {MasterPermissionModule} from "src/MasterPermissionModule.sol";
+import {RequirementChainModule} from "src/RequirementChainModule.sol";
 import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.sol";
 import {MetabasedFactory} from "src/MetabasedFactory.sol";
 
@@ -30,7 +30,7 @@ contract DeployMetabasedFactory is Script {
 
         console.log("Deployed MetabasedSequencerChain", sequencerChain);
         console.log("Deployed MetafillerStorage", metafillerStorage);
-        console.log("Deployed MasterPermissionModule", permissionModule);
+        console.log("Deployed RequirementChainModule", permissionModule);
 
         vm.stopBroadcast();
     }
@@ -38,7 +38,7 @@ contract DeployMetabasedFactory is Script {
 
 contract DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule is Script {
     MetabasedSequencerChain public sequencerChain;
-    MasterPermissionModule public permissionModule;
+    RequirementChainModule public permissionModule;
     uint256 public l3ChainId;
 
     function run() public {
@@ -48,8 +48,8 @@ contract DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule is Script {
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
 
         // Deploy permission module first
-        permissionModule = new MasterPermissionModule(admin);
-        console.log("Deployed MasterPermissionModule", address(permissionModule));
+        permissionModule = new RequirementChainModule(admin);
+        console.log("Deployed RequirementChainModule", address(permissionModule));
 
         // Deploy sequencer with permission module
         sequencerChain = new MetabasedSequencerChain(l3ChainId, admin, address(permissionModule));

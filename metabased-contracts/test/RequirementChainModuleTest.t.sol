@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {MasterPermissionModule} from "src/MasterPermissionModule.sol";
+import {RequirementChainModule} from "src/RequirementChainModule.sol";
 import {IsAllowed} from "src/interfaces/IsAllowed.sol";
 import {Test} from "forge-std/Test.sol";
 
@@ -17,15 +17,15 @@ contract MockIsAllowedFalse is IsAllowed {
     }
 }
 
-contract MasterPermissionModuleTest is Test {
-    MasterPermissionModule public module;
+contract RequirementChainModuleTest is Test {
+    RequirementChainModule public module;
     address public admin;
     address public nonAdmin;
 
     function setUp() public {
         admin = address(this);
         nonAdmin = address(0x456);
-        module = new MasterPermissionModule(admin);
+        module = new RequirementChainModule(admin);
     }
 
     function testIsAllowedWithRequireAll() public {
@@ -46,7 +46,7 @@ contract MasterPermissionModuleTest is Test {
         vm.stopPrank();
 
         vm.expectRevert(
-            abi.encodeWithSelector(MasterPermissionModule.RequireAllCheckFailed.selector, checker, address(this))
+            abi.encodeWithSelector(RequirementChainModule.RequireAllCheckFailed.selector, checker, address(this))
         );
         module.isAllowed(address(this));
     }
@@ -68,7 +68,7 @@ contract MasterPermissionModuleTest is Test {
         module.addRequireAnyCheck(checker, true);
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(MasterPermissionModule.RequireAnyCheckFailed.selector, address(this)));
+        vm.expectRevert(abi.encodeWithSelector(RequirementChainModule.RequireAnyCheckFailed.selector, address(this)));
         module.isAllowed(address(this));
     }
 
@@ -110,7 +110,7 @@ contract MasterPermissionModuleTest is Test {
         vm.startPrank(admin);
         module.addRequireAllCheck(checker, true);
 
-        vm.expectRevert(MasterPermissionModule.AddressAlreadyExistsInRequireAllList.selector);
+        vm.expectRevert(RequirementChainModule.AddressAlreadyExistsInRequireAllList.selector);
         module.addRequireAllCheck(checker, true);
         vm.stopPrank();
     }
@@ -121,7 +121,7 @@ contract MasterPermissionModuleTest is Test {
         vm.startPrank(admin);
         module.addRequireAnyCheck(checker, true);
 
-        vm.expectRevert(MasterPermissionModule.AddressAlreadyExistsInRequireAnyList.selector);
+        vm.expectRevert(RequirementChainModule.AddressAlreadyExistsInRequireAnyList.selector);
         module.addRequireAnyCheck(checker, true);
         vm.stopPrank();
     }
@@ -130,7 +130,7 @@ contract MasterPermissionModuleTest is Test {
         address checker = address(new MockIsAllowedTrue());
 
         vm.startPrank(admin);
-        vm.expectRevert(MasterPermissionModule.AddressDoesNotExistInRequireAllList.selector);
+        vm.expectRevert(RequirementChainModule.AddressDoesNotExistInRequireAllList.selector);
         module.removeRequireAllCheck(checker);
         vm.stopPrank();
     }
@@ -139,7 +139,7 @@ contract MasterPermissionModuleTest is Test {
         address checker = address(new MockIsAllowedTrue());
 
         vm.startPrank(admin);
-        vm.expectRevert(MasterPermissionModule.AddressDoesNotExistInRequireAnyList.selector);
+        vm.expectRevert(RequirementChainModule.AddressDoesNotExistInRequireAnyList.selector);
         module.removeRequireAnyCheck(checker);
         vm.stopPrank();
     }
