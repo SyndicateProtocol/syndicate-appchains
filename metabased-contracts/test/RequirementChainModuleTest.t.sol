@@ -2,16 +2,16 @@
 pragma solidity 0.8.25;
 
 import {RequirementChainModule} from "src/RequirementChainModule.sol";
-import {IsAllowed} from "src/interfaces/IsAllowed.sol";
+import {PermissionModule} from "src/interfaces/PermissionModule.sol";
 import {Test} from "forge-std/Test.sol";
 
-contract MockIsAllowedTrue is IsAllowed {
+contract MockIsAllowedTrue is PermissionModule {
     function isAllowed(address) external pure returns (bool) {
         return true;
     }
 }
 
-contract MockIsAllowedFalse is IsAllowed {
+contract MockIsAllowedFalse is PermissionModule {
     function isAllowed(address) external pure returns (bool) {
         return false;
     }

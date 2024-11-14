@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {AddressStructuredLinkedList} from "./LinkedList/AddressStructuredLinkedList.sol";
-import {IsAllowed} from "./interfaces/IsAllowed.sol";
+import {PermissionModule} from "./interfaces/PermissionModule.sol";
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /**
@@ -10,7 +10,7 @@ import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
  * @notice A module that handles all permission checks for the sequencer
  * @dev Implements the core permission logic previously in SequencingModuleChecker
  */
-contract RequirementChainModule is IsAllowed, Ownable {
+contract RequirementChainModule is PermissionModule, Ownable {
     /// @notice A list of isAllowed checks that must pass before a batch can be sequenced
     AddressStructuredLinkedList.List public requireAllList;
 
@@ -34,7 +34,7 @@ contract RequirementChainModule is IsAllowed, Ownable {
 
     constructor(address admin) Ownable(admin) {}
 
-    /// @notice Implementation of the IsAllowed interface
+    /// @notice Implementation of the PermissionModule interface
     /// @param proposer The address to check permissions for
     /// @return bool indicating if the address is allowed
     function isAllowed(address proposer) external view override returns (bool) {
@@ -48,13 +48,13 @@ contract RequirementChainModule is IsAllowed, Ownable {
                 AddressStructuredLinkedList.getNextNode(requireAllList, requireAllAddress);
 
             // Check head node
-            if (!IsAllowed(requireAllAddress).isAllowed(proposer)) {
+            if (!PermissionModule(requireAllAddress).isAllowed(proposer)) {
                 revert RequireAllCheckFailed(requireAllAddress, proposer);
             }
 
             // Check subsequent nodes
             while (requireAllNextNodeExists) {
-                if (!IsAllowed(requireAllAddress).isAllowed(proposer)) {
+                if (!PermissionModule(requireAllAddress).isAllowed(proposer)) {
                     revert RequireAllCheckFailed(requireAllAddress, proposer);
                 }
 
@@ -73,13 +73,13 @@ contract RequirementChainModule is IsAllowed, Ownable {
                 AddressStructuredLinkedList.getNextNode(requireAnyList, requireAnyAddress);
 
             // Check head node
-            if (IsAllowed(requireAnyAddress).isAllowed(proposer)) {
+            if (PermissionModule(requireAnyAddress).isAllowed(proposer)) {
                 return true;
             }
 
             // Check subsequent nodes
             while (requireAnyNextNodeExists) {
-                if (IsAllowed(requireAnyAddress).isAllowed(proposer)) {
+                if (PermissionModule(requireAnyAddress).isAllowed(proposer)) {
                     return true;
                 }
 

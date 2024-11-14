@@ -3,10 +3,10 @@ pragma solidity 0.8.25;
 
 import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
 import {RequirementChainModule} from "src/RequirementChainModule.sol";
-import {IsAllowed} from "src/interfaces/IsAllowed.sol";
+import {PermissionModule} from "src/interfaces/PermissionModule.sol";
 import {Test} from "forge-std/Test.sol";
 
-contract MockIsAllowed is IsAllowed {
+contract MockIsAllowed is PermissionModule {
     bool allowed;
 
     constructor(bool _allowed) {

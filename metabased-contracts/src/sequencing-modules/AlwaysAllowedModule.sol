@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {IsAllowed} from "../interfaces/IsAllowed.sol";
+import {PermissionModule} from "../interfaces/PermissionModule.sol";
 
 /**
  * @title AlwaysAllowedModule
  * @dev Module used for testing and experimentations. It allows any proposer to send batch data.
  */
-contract AlwaysAllowedModule is IsAllowed {
+contract AlwaysAllowedModule is PermissionModule {
     /**
      * @notice caller is allowed.
      * @return bool indicating if the caller is allowed.
