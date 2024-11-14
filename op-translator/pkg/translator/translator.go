@@ -57,8 +57,12 @@ func Init(cfg *config.Config) *OPTranslator {
 	}
 }
 
+// GetBlockByNumber returns a block from the settlement chain
+
 func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, transactionDetailFlag bool) (types.Block, error) {
 	log.Debug().Msg("-- HIT eth_getBlockByNumber")
+	// latency of this call
+	// block number returned here
 	block, err := t.SettlementChain.GetBlockByNumber(ctx, blockNumber, transactionDetailFlag)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get block by number")
@@ -67,11 +71,14 @@ func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string,
 	if !transactionDetailFlag {
 		return block, nil
 	}
+	// duration of this call
 	return t.translateBlock(ctx, block)
 }
 
 func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash, transactionDetailFlag bool) (types.Block, error) {
 	log.Debug().Msg("-- HIT eth_getBlockByHash")
+	// latency of this call
+	// block number returned here
 	block, err := t.SettlementChain.GetBlockByHash(ctx, blockHash, transactionDetailFlag)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get block by hash")
@@ -80,6 +87,7 @@ func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash
 	if !transactionDetailFlag {
 		return block, nil
 	}
+	// duration of this call
 	return t.translateBlock(ctx, block)
 }
 
@@ -89,6 +97,7 @@ func (t *OPTranslator) Close() {
 }
 
 func (t *OPTranslator) getFrames(ctx context.Context, block types.Block) ([]*types.Frame, error) {
+	// backfilling vs live
 	if t.BackfillProvider.IsBlockInBackfillingWindow(block) {
 		return t.BackfillProvider.GetBackfillFrames(ctx, block)
 	} else {
@@ -105,6 +114,7 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return nil, nil
 	}
 
+	// duration of this call
 	frames, err := t.getFrames(ctx, block)
 	if err != nil {
 		return nil, err

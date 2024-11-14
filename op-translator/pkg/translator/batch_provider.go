@@ -131,26 +131,33 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 		return nil, err
 	}
 
+	// latency of this call
+	// number of blocks returned here, 0 or more
 	seqBlocks, err := m.SequencingBlockFetcher.GetSequencingBlocks(block)
 	if err != nil {
 		return nil, err
 	}
 
+	// latency of this call
+	// number of receipts returned here, 0 or more MORE
 	receipts, err := m.SequencingChain.GetReceiptsByBlocks(ctx, seqBlocks)
 	if err != nil {
 		return nil, err
 	}
 	log.Debug().Msgf("Translating block number %s and hash %s: receipts: %v", blockNumber, blockHash, receipts)
 
+	// length of txns here, after filtering out shit we dont care about
 	txns := m.FilterReceipts(receipts)
 	log.Debug().Msgf("Translating block number %s and hash %s: filtered transactions: %v", blockNumber, blockHash, txns)
 
+	// latency of this call
 	parentHash, err := m.getParentBlockHash(ctx, blockNumber)
 	if err != nil {
 		return nil, err
 	}
 
 	// Filter out invalid transactions
+	// maybe duration of this call
 	txns = m.GetValidTransactions(txns)
 
 	timestamp, err := block.GetBlockTimestampHex()
@@ -172,12 +179,14 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 //   - Stateful (expensive): use simulate RPC to check if the block to-be produced is valid
 func (m *MetaBasedBatchProvider) GetValidTransactions(rawTxs []hexutil.Bytes) []hexutil.Bytes {
 	// First phase validation: stateless
+	// removedCountStateless
 	rawFilteredTxStateless, parsedFilteredTxStateless, removedCountStateless := FilterTransactionsStateless(rawTxs)
 	if removedCountStateless > 0 {
 		log.Debug().Msgf("Transactions got filtered by stateless validation: %d", removedCountStateless)
 	}
 
 	// Second phase validation: stateful
+	// removedCountStateful
 	rawFilteredTxsStateful, _, removedCountStateful := m.FilterTransactionsStateful(rawFilteredTxStateless, parsedFilteredTxStateless)
 	if removedCountStateful > 0 {
 		log.Debug().Msgf("Transactions got filtered by stateful validation: %d", removedCountStateful)

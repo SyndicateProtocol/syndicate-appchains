@@ -50,6 +50,7 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 		return nil, err
 	}
 
+	// metafiller response status
 	resp, err := b.Client.Do(req)
 	if err != nil {
 		return nil, err
@@ -94,6 +95,7 @@ func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Bl
 		return nil, fmt.Errorf("failed to get backfill data - invalid block hash: %w", err)
 	}
 
+	// metafiller latency
 	backfillData, err := b.GetBackfillData(ctx, epochNumber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get backfill data for epoch %d: %w", epochNumber, err)
