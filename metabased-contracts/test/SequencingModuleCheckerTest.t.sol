@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {RequireListManager, Ownable} from "src/RequireListManager.sol";
+import {SequencingModuleChecker, Ownable} from "src/SequencingModuleChecker.sol";
 import {MasterPermissionModule} from "src/MasterPermissionModule.sol";
 import {Test} from "forge-std/Test.sol";
 
-contract RequireListManagerMock is RequireListManager {
-    constructor(address _admin, address _masterModule) RequireListManager(_admin, _masterModule) {}
+contract SequencingModuleCheckerMock is SequencingModuleChecker {
+    constructor(address _admin, address _masterModule) SequencingModuleChecker(_admin, _masterModule) {}
 }
 
-contract RequireListManagerTest is Test {
-    RequireListManager public manager;
+contract SequencingModuleCheckerTest is Test {
+    SequencingModuleChecker public manager;
     MasterPermissionModule public masterModule;
     address public admin;
     address public nonAdmin;
@@ -20,7 +20,7 @@ contract RequireListManagerTest is Test {
         nonAdmin = address(0x456);
 
         masterModule = new MasterPermissionModule(admin);
-        manager = new RequireListManagerMock(admin, address(masterModule));
+        manager = new SequencingModuleCheckerMock(admin, address(masterModule));
     }
 
     function testUpdateMasterModule() public {
@@ -42,7 +42,7 @@ contract RequireListManagerTest is Test {
 
     function testUpdateMasterModuleZeroAddress() public {
         vm.prank(admin);
-        vm.expectRevert(RequireListManager.InvalidModuleAddress.selector);
+        vm.expectRevert(SequencingModuleChecker.InvalidModuleAddress.selector);
         manager.updateMasterModule(address(0));
     }
 }

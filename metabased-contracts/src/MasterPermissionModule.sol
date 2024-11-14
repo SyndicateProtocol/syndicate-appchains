@@ -8,7 +8,7 @@ import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 /**
  * @title MasterPermissionModule
  * @notice A module that handles all permission checks for the sequencer
- * @dev Implements the core permission logic previously in RequireListManager
+ * @dev Implements the core permission logic previously in SequencingModuleChecker
  */
 contract MasterPermissionModule is IsAllowed, Ownable {
     /// @notice A list of isAllowed checks that must pass before a batch can be sequenced
@@ -171,8 +171,7 @@ contract MasterPermissionModule is IsAllowed, Ownable {
         bool allowNextNodeExists;
         address allowNextNodeAddress;
 
-        (allowNextNodeExists, allowNextNodeAddress) =
-            AddressStructuredLinkedList.getNextNode(allowList, allowAddress);
+        (allowNextNodeExists, allowNextNodeAddress) = AddressStructuredLinkedList.getNextNode(allowList, allowAddress);
 
         address[] memory allChecks = new address[](AddressStructuredLinkedList.sizeOf(allowList));
 

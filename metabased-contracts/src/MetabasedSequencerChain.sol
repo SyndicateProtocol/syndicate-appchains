@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {RequireListManager} from "./RequireListManager.sol";
+import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 
 /// @title MetabasedSequencerChain
 /// @notice The core contract for sequencing transactions using a modular architecture
 /// to determine who is allowed to sequence.
-contract MetabasedSequencerChain is RequireListManager {
+contract MetabasedSequencerChain is SequencingModuleChecker {
     /// @notice The ID of the L3 chain that this contract is sequencing transactions for.
     uint256 public immutable l3ChainId;
 
@@ -23,7 +23,7 @@ contract MetabasedSequencerChain is RequireListManager {
     /// @param _l3ChainId The ID of the L3 chain that this contract is sequencing transactions for.
     /// @param admin The address that will be set as the admin
     /// @param masterModule The address of the master permission module
-    constructor(uint256 _l3ChainId, address admin, address masterModule) RequireListManager(admin, masterModule) {
+    constructor(uint256 _l3ChainId, address admin, address masterModule) SequencingModuleChecker(admin, masterModule) {
         // chain id zero has no replay protection : https://eips.ethereum.org/EIPS/eip-3788
         require(_l3ChainId != 0, "L3 chain ID cannot be 0");
         l3ChainId = _l3ChainId;

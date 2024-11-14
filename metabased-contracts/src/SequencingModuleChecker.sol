@@ -4,9 +4,9 @@ pragma solidity 0.8.25;
 import {IsAllowed} from "./interfaces/IsAllowed.sol";
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
-/// @title RequireListManager
+/// @title SequencingModuleChecker
 /// @notice A simplified contract that delegates permission checks to a master module
-abstract contract RequireListManager is Ownable {
+abstract contract SequencingModuleChecker is Ownable {
     /// @notice The master permission module that handles all checks
     IsAllowed public masterPermissionModule;
 
