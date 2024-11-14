@@ -13,6 +13,7 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
 	t "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/ethereum/go-ethereum/rpc"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
 )
 
@@ -45,6 +46,7 @@ func TranslatorRouter(logLevel constants.LogLevel, translatorRPC *rpc.Server, pa
 	}
 
 	router := http.NewServeMux()
+	router.Handle("/metrics", promhttp.Handler())
 	router.HandleFunc("/", loggingMiddleware(
 		rpcEndpointsHandler(translatorRPC, parsedURL, proxy)))
 	router.HandleFunc("/health", loggingMiddleware(
