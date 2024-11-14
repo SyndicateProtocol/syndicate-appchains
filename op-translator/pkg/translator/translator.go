@@ -40,7 +40,7 @@ type OPTranslator struct {
 	metrics             metrics.Metrics
 }
 
-func Init(cfg *config.Config, metrics *metrics.PrometheusMetrics) *OPTranslator {
+func Init(cfg *config.Config) *OPTranslator {
 	settlementChain, err := rpc.Connect(cfg.SettlementChainRPCURL)
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize settlement chain")
@@ -49,6 +49,7 @@ func Init(cfg *config.Config, metrics *metrics.PrometheusMetrics) *OPTranslator 
 	metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg)
 	signer := NewSigner(cfg)
 	backfillProvider := backfill.NewBackfillerProvider(cfg)
+	metrics := metrics.NewMetrics()
 
 	return &OPTranslator{
 		SettlementChain:     settlementChain,
@@ -57,6 +58,7 @@ func Init(cfg *config.Config, metrics *metrics.PrometheusMetrics) *OPTranslator 
 		BatchProvider:       metaBasedBatchProvider,
 		BackfillProvider:    backfillProvider,
 		Signer:              *signer,
+		metrics:             metrics,
 	}
 }
 
