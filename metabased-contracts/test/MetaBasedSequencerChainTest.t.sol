@@ -144,21 +144,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.stopPrank();
 
         vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidChunkSize.selector));
-        chain.processChunk(validTxns, 0, 0, 1);
-    }
-
-    function testProcessChunkExceedsBatchSize() public {
-        bytes[] memory validTxns = new bytes[](5);
-        for (uint256 i = 0; i < 5; i++) {
-            validTxns[i] = abi.encode(string(abi.encodePacked("transaction ", vm.toString(i + 1))));
-        }
-
-        vm.startPrank(admin);
-        permissionModule.addRequireAnyCheck(address(new MockIsAllowed(true)), false);
-        vm.stopPrank();
-
-        vm.expectRevert("Chunk exceeds batch size");
-        chain.processChunk(validTxns, 3, 3, 1);
+        chain.processChunk(compressedTxChunk, 0, 0, txHash);
     }
 }
 

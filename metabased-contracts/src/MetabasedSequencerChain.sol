@@ -44,22 +44,22 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
 
     /// @notice Processes multiple transactions in bulk.
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
-    /// @param datas An array of transaction data.
-    function processBulkTransactions(bytes[] calldata datas) external onlyWhenAllowed(msg.sender) {
-        uint256 dataCount = datas.length;
+    /// @param data An array of transaction data.
+    function processBulkTransactions(bytes[] calldata data) external onlyWhenAllowed(msg.sender) {
+        uint256 dataCount = data.length;
 
         // Process all transactions
         for (uint256 i = 0; i < dataCount; i++) {
-            emit TransactionProcessed(msg.sender, prependZeroByte(datas[i]));
+            emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
         }
     }
 
     /// @notice Processes a chunk of transactions from a larger batch.
-    /// @param data An array of transaction data.
-    /// @param startIndex The starting index for this chunk in the overall batch.
-    /// @param chunkSize The number of transactions to process in this chunk.
-    /// @param chunkId A unique identifier for this chunk.
-    function processChunk(bytes[] calldata data, uint256 startIndex, uint256 chunkSize, uint256 chunkId)
+    /// @param txChunk the compressed chunked transaction data.
+    /// @param index The starting index for this chunk in the overall batch.
+    /// @param totalChunks The number of transactions to process in this chunk.
+    /// @param txHashForParent The hash of the parent transaction.
+    function processChunk(bytes calldata txChunk, uint256 index, uint256 totalChunks, bytes32 txHashForParent)
         external
         onlyWhenAllowed(msg.sender)
     {
@@ -67,19 +67,9 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
             revert InvalidChunkSize();
         }
 
-        uint256 endIndex = startIndex + chunkSize;
-        require(endIndex <= data.length, "Chunk exceeds batch size");
+        emit TransactionProcessed(msg.sender, txChunk);
 
-        for (uint256 i = startIndex; i < endIndex; i++) {
-            emit TransactionProcessed(msg.sender, data[i]);
-        }
-
-    /// @notice Prepends a zero byte to the transaction data
-    /// @dev This helps op-translator identify uncompressed data
-    /// @param _tx The original transaction data
-    /// @return bytes The transaction data
-    function prependZeroByte(bytes calldata _tx) private pure returns (bytes memory) {
-        return abi.encodePacked(bytes1(0x00), _tx);
+        emit TransactionChunkProcessed(txChunk, index, totalChunks, txHashForParent);
     }
 
     /// @notice Prepends a zero byte to the transaction data
