@@ -14,12 +14,12 @@ import (
 )
 
 type CLIConfig struct {
-	PprofConfig               oppprof.CLIConfig
 	SettlementChainRPCURL     string
-	BatchInboxAddress         string
 	SequencingChainRPCURL     string
 	SequencingContractAddress string
 	L3RPCURL                  string
+	AltDAURL                  string
+	PprofConfig               oppprof.CLIConfig
 	LogConfig                 oplog.CLIConfig
 	MetricsConfig             opmetrics.CLIConfig
 	TxMgrConfig               txmgr.CLIConfig
@@ -30,9 +30,6 @@ func (c *CLIConfig) Check() error {
 	// settlement chain
 	if c.SettlementChainRPCURL == "" {
 		return errors.New("empty settlement chain RPC URL")
-	}
-	if c.BatchInboxAddress == "" {
-		return errors.New("empty BatchInbox address")
 	}
 
 	// sequencing chain
@@ -46,6 +43,11 @@ func (c *CLIConfig) Check() error {
 	// L3 metabased chain
 	if c.L3RPCURL == "" {
 		return errors.New("empty L3 RPC URL")
+	}
+
+	// AltDA
+	if c.AltDAURL == "" {
+		return errors.New("empty AltDA URL")
 	}
 
 	// operational configuration
@@ -76,7 +78,6 @@ func NewConfig(ctx *cli.Context) *CLIConfig {
 	return &CLIConfig{
 		// settlement chain
 		SettlementChainRPCURL: settlementChainRPCURL,
-		BatchInboxAddress:     ctx.String(flags.BatchInboxAddress.Name),
 
 		// sequencing chain
 		SequencingChainRPCURL:     ctx.String(flags.SequencingChainRPCURL.Name),
@@ -84,6 +85,9 @@ func NewConfig(ctx *cli.Context) *CLIConfig {
 
 		// L3 metabased chain
 		L3RPCURL: ctx.String(flags.L3RPCURL.Name),
+
+		// AltDA
+		AltDAURL: ctx.String(flags.AltDAURL.Name),
 
 		// operational configuration
 		PollInterval: ctx.Duration(flags.PollInterval.Name),

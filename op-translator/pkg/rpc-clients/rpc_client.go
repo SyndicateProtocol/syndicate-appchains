@@ -24,6 +24,7 @@ type IRawRPCClient interface {
 }
 
 type IETHClient interface {
+	BlockNumber(ctx context.Context) (uint64, error)
 	BlockReceipts(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) ([]*ethtypes.Receipt, error)
 	BlockByNumber(ctx context.Context, number *big.Int) (*ethtypes.Block, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*ethtypes.Header, error)
@@ -130,7 +131,6 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 				block:    block,
 				receipts: blockReceipts,
 			}
-
 		}(block)
 	}
 

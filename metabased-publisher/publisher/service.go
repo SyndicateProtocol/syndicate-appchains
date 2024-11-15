@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"sync/atomic"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/metrics"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
+	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	opservice "github.com/ethereum-optimism/optimism/op-service"
 	"github.com/ethereum-optimism/optimism/op-service/cliapp"
 	"github.com/ethereum-optimism/optimism/op-service/httputil"
@@ -20,7 +20,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/oppprof"
 	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/urfave/cli/v2"
 )
@@ -49,15 +48,14 @@ func Main(version string) cliapp.LifecycleAction {
 var ErrAlreadyStopped = errors.New("already stopped")
 
 type PublisherService struct {
-	metrics                   metrics.Metricer
 	settlementChainClient     translator.IRPCClient
-	l3Client                  translator.IRPCClient
 	sequencingChainClient     translator.IRPCClient
-	balanceMetricer           io.Closer
+	l3Client                  translator.IRPCClient
+	altDAClient               *altda.DAClient
+	metrics                   metrics.Metricer
 	txManager                 txmgr.TxManager
 	log                       gethlog.Logger
 	sequencingContractAddress *common.Address
-	batchInboxAddress         *common.Address
 	metricsServer             *httputil.HTTPServer
 	pprofService              *oppprof.Service
 	publisher                 *Publisher
@@ -72,12 +70,6 @@ func (p *PublisherService) initFromCLIConfig(_ context.Context, version string, 
 
 	p.initMetrics(cfg)
 
-	// settlement chain
-	if err := p.initBatchInboxAddress(cfg); err != nil {
-		return fmt.Errorf("failed to init batch inbox address: %w", err)
-	}
-
-	// sequencing chain
 	if err := p.initSequencingContractAddress(cfg); err != nil {
 		return fmt.Errorf("failed to init batch inbox address: %w", err)
 	}
@@ -88,7 +80,6 @@ func (p *PublisherService) initFromCLIConfig(_ context.Context, version string, 
 	if err := p.initTxManager(cfg); err != nil {
 		return fmt.Errorf("failed to init Tx manager: %w", err)
 	}
-	p.initBalanceMonitor(cfg)
 	if err := p.initMetricsServer(cfg); err != nil {
 		return fmt.Errorf("failed to start metrics server: %w", err)
 	}
@@ -96,12 +87,10 @@ func (p *PublisherService) initFromCLIConfig(_ context.Context, version string, 
 		return fmt.Errorf("failed to init profiling: %w", err)
 	}
 
-	// TODO (SEQ-193): serve admin API with start/stop publishing and a "txManager" (see `initRPCServer` on op-batcher)
-	// if err := p.initRPCServer(cfg); err != nil {
-	// 	return fmt.Errorf("failed to start RPC server: %w", err)
-	// }
-
 	p.pollInterval = cfg.PollInterval
+	// NOTE: we set `verify` to false because we will only be writing to the DA
+	// NOTE: we set `precompute` to false because we will use `GenericCommitments` and let the da proxy generate the commitments for us
+	p.altDAClient = altda.NewDAClient(cfg.AltDAURL, false, false)
 	p.initPublisher()
 
 	p.metrics.RecordInfo(p.version)
@@ -137,18 +126,6 @@ func (p *PublisherService) initRPCClients(cfg *CLIConfig) error {
 		return fmt.Errorf("failed to dial L3 chain RPC: %w", err)
 	}
 	p.l3Client = l3Client
-	return nil
-}
-
-func (p *PublisherService) initBatchInboxAddress(cfg *CLIConfig) error {
-	if cfg.BatchInboxAddress == "" {
-		return errors.New("empty batch inbox address")
-	}
-	batchInboxAddress, err := opservice.ParseAddress(cfg.BatchInboxAddress)
-	if err != nil {
-		return err
-	}
-	p.batchInboxAddress = &batchInboxAddress
 	return nil
 }
 
@@ -208,13 +185,6 @@ func (p *PublisherService) initMetricsServer(cfg *CLIConfig) error {
 	return nil
 }
 
-// initBalanceMonitor depends on Metrics, L1Client and TxManager to start background-monitoring of the batcher balance.
-func (p *PublisherService) initBalanceMonitor(cfg *CLIConfig) {
-	if cfg.MetricsConfig.Enabled {
-		p.balanceMetricer = p.metrics.StartBalanceMetrics(p.log, p.settlementChainClient.AsEthClient().(*ethclient.Client), p.txManager.From())
-	}
-}
-
 func (p *PublisherService) initPublisher() {
 	metabasedBatchProvider := translator.NewMetaBasedBatchProvider(
 		p.settlementChainClient,
@@ -225,14 +195,10 @@ func (p *PublisherService) initPublisher() {
 	)
 
 	p.publisher = NewPublisher(
-		p.settlementChainClient.AsEthClient().(*ethclient.Client),
-		p.batchInboxAddress,
-		p.sequencingChainClient.AsEthClient().(*ethclient.Client),
-		p.sequencingContractAddress,
-		p.l3Client.AsEthClient().(*ethclient.Client),
+		p.l3Client.AsEthClient(),
 		metabasedBatchProvider,
+		p.altDAClient,
 		p.pollInterval,
-		p.txManager,
 		p.log,
 		p.metrics,
 	)
@@ -259,21 +225,9 @@ func (p *PublisherService) Stop(ctx context.Context) error {
 		}
 	}
 
-	// TODO (SEQ-193): stop the RPC admin API
-	// if p.rpcServer != nil {
-	// 	// TODO(7685): the op-service RPC server is not built on top of op-service httputil Server, and has poor shutdown
-	// 	if err := p.rpcServer.Stop(); err != nil {
-	// 		result = errors.Join(result, fmt.Errorf("failed to stop RPC server: %w", err))
-	// 	}
-	// }
 	if p.pprofService != nil {
 		if err := p.pprofService.Stop(ctx); err != nil {
 			result = errors.Join(result, fmt.Errorf("failed to stop PProf server: %w", err))
-		}
-	}
-	if p.balanceMetricer != nil {
-		if err := p.balanceMetricer.Close(); err != nil {
-			result = errors.Join(result, fmt.Errorf("failed to close balance metricer: %w", err))
 		}
 	}
 

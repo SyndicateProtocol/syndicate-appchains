@@ -29,35 +29,6 @@ var (
 		Usage:   "JSON-RPC URL for the settlement chain",
 		EnvVars: []string{"SETTLEMENT_CHAIN_ADDR"},
 	}
-	// state commitments
-	// L2OutputOracleAddr = &cli.StringFlag{
-	// 	Name:    "l2-output-oracle-address",
-	// 	Usage:   "Address of the L2OutputOracle contract",
-	// 	EnvVars: prefixEnvVars("L2_OUTPUT_ORACLE_ADDRESS"),
-	// }
-	// DisputeGameFactoryAddress = &cli.StringFlag{
-	// 	Name:    "game-factory-address",
-	// 	Usage:   "Address of the DisputeGameFactory contract",
-	// 	EnvVars: prefixEnvVars("GAME_FACTORY_ADDRESS"),
-	// }
-	// ProposalInterval = &cli.DurationFlag{
-	// 	Name:    "proposal-interval",
-	// 	Usage:   "Interval between submitting L3 output proposals when the dispute game factory address is set",
-	// 	EnvVars: prefixEnvVars("PROPOSAL_INTERVAL"),
-	// }
-	// DisputeGameType = &cli.UintFlag{
-	// 	Name:    "game-type",
-	// 	Usage:   "Dispute game type to create via the configured DisputeGameFactory",
-	// 	Value:   0,
-	// 	EnvVars: prefixEnvVars("GAME_TYPE"),
-	// }
-
-	// DA commitments
-	BatchInboxAddress = &cli.StringFlag{
-		Name:    "batch-inbox-address",
-		Usage:   "Address of the BatchInbox contract",
-		EnvVars: []string{"BATCH_INBOX_ADDRESS"},
-	}
 
 	// sequencing chain
 	SequencingChainRPCURL = &cli.StringFlag{
@@ -78,6 +49,13 @@ var (
 		EnvVars: []string{"META_BASED_CHAIN_ADDR"},
 	}
 
+	// AltDA
+	AltDAURL = &cli.StringFlag{
+		Name:    "alt-da-url",
+		Usage:   "URL for the AltDA service",
+		EnvVars: []string{"ALT_DA_URL"},
+	}
+
 	//////////////////////////
 	// Optional flags
 	//////////////////////////
@@ -87,23 +65,14 @@ var (
 		Usage:   "Interval at which the service will poll the source chains for new data",
 		EnvVars: prefixEnvVars("POLL_INTERVAL"),
 	}
-
-// TODO add if necessary
-//
-//	MaxPendingTransactions = &cli.Uint64Flag{
-//		Name:    "max-pending-tx",
-//		Usage:   "The maximum number of pending transactions. 0 for no limit.",
-//		Value:   1,
-//		EnvVars: prefixEnvVars("MAX_PENDING_TX"),
-//	}
 )
 
 var requiredFlags = []cli.Flag{
 	SettlementChainRPCURL,
-	BatchInboxAddress,
 	SequencingChainRPCURL,
 	SequencingContractAddress,
 	L3RPCURL,
+	AltDAURL,
 }
 
 var optionalFlags = []cli.Flag{

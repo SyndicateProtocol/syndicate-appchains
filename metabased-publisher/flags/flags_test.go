@@ -58,10 +58,10 @@ func TestEnvVarFormat(t *testing.T) {
 			txmgr.TxSendTimeoutFlagName,
 			txmgr.TxNotInMempoolTimeoutFlagName,
 			SettlementChainRPCURL.Name,
-			BatchInboxAddress.Name,
 			SequencingChainRPCURL.Name,
 			SequencingContractAddress.Name,
 			L3RPCURL.Name,
+			AltDAURL.Name,
 		}
 
 		t.Run(flagName, func(t *testing.T) {

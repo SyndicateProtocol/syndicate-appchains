@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 
+	optranslator_rpc "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -13,6 +14,8 @@ import (
 type MockEthClient struct {
 	mock.Mock
 }
+
+var _ optranslator_rpc.IETHClient = (*MockEthClient)(nil)
 
 func (m *MockEthClient) BlockReceipts(ctx context.Context, blockHashOrNumber rpc.BlockNumberOrHash) ([]*ethtypes.Receipt, error) {
 	args := m.Called(ctx, blockHashOrNumber)
@@ -36,4 +39,9 @@ func (m *MockEthClient) TransactionReceipt(ctx context.Context, hash common.Hash
 
 func (m *MockEthClient) Close() {
 	m.Called()
+}
+
+func (m *MockEthClient) BlockNumber(ctx context.Context) (uint64, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(uint64), args.Error(1)
 }
