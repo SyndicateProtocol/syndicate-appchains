@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
+	rpc "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/txpool"
@@ -112,15 +112,18 @@ func ValidateTransactionStateless(tx *ethtypes.Transaction) error {
 	return nil
 }
 
-func (m *MetaBasedBatchProvider) ValidateTransactionStateful(txs []*ethtypes.Transaction) error {
-	return m.MetaBasedChain.SimulateTransactions(context.Background(), rpc.SimulationRequest{
+func (m *MetaBasedBatchProvider) ValidateTransactionStateful(txs []rpc.Transaction) error {
+	log.Debug().Msgf("ValidateTransactionStateful txs: %v", txs)
+	request := rpc.SimulationRequest{
 		BlockStateCalls: []rpc.BlockStateCall{
 			{
 				Calls: txs,
 			},
 		},
 		Validation: true,
-	}, "latest")
+	}
+	log.Debug().Interface("request", request).Msg("Simulation request")
+	return m.MetaBasedChain.SimulateTransactions(context.Background(), request, "latest")
 }
 
 func ExtractTxIndexFromError(errorMessage string) (int, error) {
@@ -146,20 +149,24 @@ func ExtractTxIndexFromError(errorMessage string) (int, error) {
 // gas parameters, limits of the mempool, account state for nonces
 // so we delegate this to the MetaBased chain for now until op-translator
 // is not aware of the chain state
-func (m *MetaBasedBatchProvider) FilterTransactionsStateful(rawTxs []hexutil.Bytes, parsedTxs []*ethtypes.Transaction) (rawFilteredTxStateful []hexutil.Bytes, removedCountStateful int) {
+func (m *MetaBasedBatchProvider) FilterTransactionsStateful(rawTxs []hexutil.Bytes, parsedTxs []rpc.Transaction) (rawFilteredTxStateful []hexutil.Bytes, removedCountStateful int) {
 	rawFilteredTxStateful = make([]hexutil.Bytes, 0, len(rawTxs))
 	removedCountStateful = 0
 
 	for {
+		log.Debug().Msgf("rawTxs: %v, parsedTxs: %v", rawTxs, parsedTxs)
 		// Run validation on the current set of parsed transactions
 		validationErr := m.ValidateTransactionStateful(parsedTxs)
 		if validationErr == nil {
+			log.Debug().Msgf("no validation errors, breaking")
 			// No validation errors, break out of the loop
 			rawFilteredTxStateful = append(rawFilteredTxStateful, rawTxs...)
 			break
 		}
 
 		// Extract the transaction index from the error
+		log.Error().Msgf("validation error: %v", validationErr)
+		log.Error().Msgf("validation error.Error(): %v", validationErr.Error())
 		txIndex, err := ExtractTxIndexFromError(validationErr.Error())
 		if err != nil || txIndex < 0 || txIndex >= len(parsedTxs) {
 			// If the extraction fails or the index is out of range, break the loop

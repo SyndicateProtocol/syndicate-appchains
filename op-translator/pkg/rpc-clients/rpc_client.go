@@ -158,8 +158,38 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 	return allReceipts, nil
 }
 
+type Transaction struct {
+	From                 string
+	To                   string
+	Value                string
+	Data                 string
+	Nonce                string
+	Gas                  string
+	MaxFeePerGas         string
+	MaxPriorityFeePerGas string
+}
+
+type BlockStateValidation struct {
+	BaseFeePerGas string
+	GasLimit      string
+}
+
+type TransactionStateValidation struct {
+	Nonce   string
+	Balance string
+}
+
+type ValidationState struct {
+	TransactionStateValidation map[string]TransactionStateValidation // Maps from address to transaction state validation
+	BlockStateValidation       BlockStateValidation
+}
+
+func ValidateTransactionState(txs []Transaction, state ValidationState) []Transaction {
+	return txs
+}
+
 type BlockStateCall struct {
-	Calls []*ethtypes.Transaction `json:"calls"`
+	Calls []Transaction `json:"calls"`
 }
 
 type SimulationRequest struct {
@@ -170,6 +200,7 @@ type SimulationRequest struct {
 func (c *RPCClient) SimulateTransactions(ctx context.Context, simulationRequest SimulationRequest, blockParameter string) error {
 	var response any
 	err := c.rawClient.CallContext(ctx, &response, "eth_simulateV1", simulationRequest, blockParameter)
+	log.Debug().Interface("response", response).Msg("Simulation response")
 	if err != nil {
 		return err
 	}
