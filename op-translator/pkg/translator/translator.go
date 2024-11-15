@@ -8,7 +8,6 @@ import (
 	rpc "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/rs/zerolog/log"
 )
@@ -18,13 +17,13 @@ type IRPCClient interface {
 	GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error)
 	GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (types.Block, error)
 	GetReceiptsByBlocks(ctx context.Context, blocks []*types.Block) ([]*ethtypes.Receipt, error)
-	SimulateTransactions(ctx context.Context, simulationRequest rpc.SimulationRequest, blockParameter string) error
+	SimulateTransactions(ctx context.Context, simulationRequest rpc.SimulationRequest, blockParameter string) (any, error)
 	AsEthClient() rpc.IETHClient
 }
 
 type IBatchProvider interface {
 	GetBatch(ctx context.Context, block types.Block) (*types.Batch, error)
-	FilterTransactionsStateful(rawTxs []hexutil.Bytes, parsedTxs []rpc.Transaction) (rawFilteredTxStateful []hexutil.Bytes, removedCountStateful int)
+	// FilterTransactionsStateful(rawTxs []hexutil.Bytes, parsedTxs []rpc.ParsedTransaction) (rawFilteredTxStateful []hexutil.Bytes, removedCountStateful int)
 	Close()
 }
 
