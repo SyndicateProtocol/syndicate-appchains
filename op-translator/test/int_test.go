@@ -185,7 +185,6 @@ func TestOPNodeCalls(t *testing.T) {
 	mockMetrics := new(mocks.MockMetrics)
 	mockMetrics.On("RecordRPCRequest", mock.Anything).Return()
 	mockMetrics.On("RecordTranslationLatency", mock.Anything, mock.Anything).Return()
-	mockMetrics.On("RecordError", mock.Anything, mock.Anything).Return()
 
 	for _, tc := range testCases {
 		mockClient := getMockClient()
