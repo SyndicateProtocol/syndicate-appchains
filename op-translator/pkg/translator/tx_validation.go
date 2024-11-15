@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 	"math/big"
-	"regexp"
 	"slices"
 	"strconv"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	rpc "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
@@ -29,13 +29,13 @@ const (
 )
 
 type BlockStateValidation struct {
-	BaseFeePerGas *big.Float // All MaxFeePerGas values in the block have to be at least this value
-	GasLimit      *big.Float // Sum of all gas values in the block have to be at most this value
+	BaseFeePerGas *big.Int // All MaxFeePerGas values in the block have to be at least this value
+	GasLimit      *big.Int // Sum of all gas values in the block have to be at most this value
 }
 
 type WalletStateValidation struct {
-	Nonce   *big.Int   // Always greater than the nonce of the previous transaction with the same from address
-	Balance *big.Float // Higher than SUM(MaxFeePerGas * Gas) for all transactions with the same from address
+	Nonce   *big.Int // Always greater than the nonce of the previous transaction with the same from address
+	Balance *big.Int // Higher than SUM(MaxFeePerGas * Gas) for all transactions with the same from address
 }
 
 type ValidationState struct {
@@ -48,9 +48,9 @@ type ValidationState struct {
 // This filters transactions using a local stateless validation, i.e. gas, nonces
 // and chain-specific configs such as activated hardforks are *not* validated at this point
 // State-dependent validations can only be performed by the MetaBased chain itself
-func FilterTransactionsStateless(txs []hexutil.Bytes) (filteredTxsStateless []hexutil.Bytes, parsedFilteredTxStateless []*ethtypes.Transaction, removedCountStateless int) {
-	filteredTxsStateless = make([]hexutil.Bytes, 0, len(txs))
-	parsedFilteredTxStateless = make([]*ethtypes.Transaction, 0, len(txs))
+func ParseRawTransactions(txs []hexutil.Bytes) (rawTxns []hexutil.Bytes, parsedTxns []*rpc.ParsedTransaction, removedCountStateless int) {
+	rawTxns = make([]hexutil.Bytes, 0, len(txs))
+	parsedTxns = make([]*rpc.ParsedTransaction, 0, len(txs))
 	removedCountStateless = 0
 
 	for _, rawTx := range txs {
@@ -61,22 +61,43 @@ func FilterTransactionsStateless(txs []hexutil.Bytes) (filteredTxsStateless []he
 			removedCountStateless++
 			continue
 		}
-		validationErr := ValidateTransactionStateless(tx)
+
+		// Validate transaction locally
+		validationErr := ValidateTransactionInternal(tx)
 		if validationErr != nil {
 			log.Warn().Err(validationErr).Msgf("skipping invalid transaction: %+v", tx)
 			removedCountStateless++
 			continue
 		}
-		filteredTxsStateless = append(filteredTxsStateless, rawTx)
-		parsedFilteredTxStateless = append(parsedFilteredTxStateless, tx)
-	}
 
-	return filteredTxsStateless, parsedFilteredTxStateless, removedCountStateless
+		// Derive from address from the sender
+		from, err := ethtypes.Sender(ethtypes.NewEIP155Signer(tx.ChainId()), tx)
+		if err != nil {
+			log.Warn().Err(err).Msgf("can't derive from address from the sender: %+v", tx)
+			removedCountStateless++
+			continue
+		}
+
+		simTx := &rpc.ParsedTransaction{
+			From:                 from.Hex(),
+			To:                   tx.To().Hex(),
+			Value:                tx.Value().String(),
+			Data:                 hexutil.Encode(tx.Data()),
+			Nonce:                strconv.FormatUint(tx.Nonce(), 10),
+			Gas:                  strconv.FormatUint(tx.Gas(), 10),
+			MaxFeePerGas:         tx.GasPrice().String(),
+			MaxPriorityFeePerGas: tx.GasTipCap().String(),
+		}
+
+		rawTxns = append(rawTxns, rawTx)
+		parsedTxns = append(parsedTxns, simTx)
+	}
+	return rawTxns, parsedTxns, removedCountStateless
 }
 
-// ValidateTransactionStateless is a lightweight stateless MetaBased tx validation
+// ValidateTransactionInternal is a lightweight stateless MetaBased tx validation
 // And should not be used a general validation for non-MB
-func ValidateTransactionStateless(tx *ethtypes.Transaction) error {
+func ValidateTransactionInternal(tx *ethtypes.Transaction) error {
 	acceptedTypes := []uint8{
 		ethtypes.LegacyTxType,     // supported since Berlin hardfork activation
 		ethtypes.DynamicFeeTxType, // supported since London hardfork activation
@@ -128,92 +149,78 @@ func ValidateTransactionStateless(tx *ethtypes.Transaction) error {
 	return nil
 }
 
-func (m *MetaBasedBatchProvider) ValidateTransactionStateful(txs []rpc.Transaction) error {
-	log.Debug().Msgf("ValidateTransactionStateful txs: %v", txs)
-	request := rpc.SimulationRequest{
-		BlockStateCalls: []rpc.BlockStateCall{
-			{
-				Calls: txs,
-			},
-		},
-		Validation: true,
-	}
-	log.Debug().Interface("request", request).Msg("Simulation request")
-	return m.MetaBasedChain.SimulateTransactions(context.Background(), request, "latest")
-}
+func (m *MetaBasedBatchProvider) ValidateTransactionBlock(rawTxns []hexutil.Bytes, txns []rpc.ParsedTransaction) []hexutil.Bytes {
+	// Step 1: Create empty state
+	// var validationState = rpc.ValidationState{
+	// 	TransactionStateValidation: make(map[string]rpc.TransactionStateValidation),
+	// 	BlockStateValidation:       rpc.BlockStateValidation{},
+	// }
 
-func ExtractTxIndexFromError(errorMessage string) (int, error) {
-	// Define a regex pattern to find the "tx: <index>" substring
-	pattern := `tx: (\d+)`
-	re := regexp.MustCompile(pattern)
-
-	// Find the first match
-	match := re.FindStringSubmatch(errorMessage)
-	if len(match) < 2 {
-		return 0, fmt.Errorf("transaction index not found in error message")
-	}
-
-	txIndex, err := strconv.Atoi(match[1])
-	if err != nil {
-		return 0, fmt.Errorf("failed to parse transaction index: %w", err)
-	}
-
-	return txIndex, nil
-}
-
-// FilterTransactionsStateful depends on the state of the chain to get access to
-// gas parameters, limits of the mempool, account state for nonces
-// so we delegate this to the MetaBased chain for now until op-translator
-// is not aware of the chain state
-func (m *MetaBasedBatchProvider) FilterTransactionsStateful(rawTxs []hexutil.Bytes, parsedTxs []rpc.Transaction) (rawFilteredTxStateful []hexutil.Bytes, removedCountStateful int) {
-	rawFilteredTxStateful = make([]hexutil.Bytes, 0, len(rawTxs))
-	removedCountStateful = 0
+	validTxs := make([]hexutil.Bytes, len(rawTxns))
 
 	for {
-		log.Debug().Msgf("rawTxs: %v, parsedTxs: %v", rawTxs, parsedTxs)
-		// Run validation on the current set of parsed transactions
-		validationErr := m.ValidateTransactionStateful(parsedTxs)
-		if validationErr == nil {
-			log.Debug().Msgf("no validation errors, breaking")
-			// No validation errors, break out of the loop
-			rawFilteredTxStateful = append(rawFilteredTxStateful, rawTxs...)
-			break
+		// Step 2: Call internal ValidateTransactionBlock
+		// validTxs = rpc.ValidateTransactionState(txns, validationState)
+
+		// Step 3: Call external ValidateTransactionBlock
+		log.Debug().Msgf("ValidateTransactionStateful txs: %v", txns)
+		request := rpc.SimulationRequest{
+			BlockStateCalls: []rpc.BlockStateCall{
+				{
+					Calls: txns,
+				},
+			},
+			Validation: true,
 		}
+		log.Debug().Interface("request", request).Msg("Simulation request")
+		result, err := m.MetaBasedChain.SimulateTransactions(context.Background(), request, "latest")
+		log.Debug().Interface("result", result).Msg("Simulation result")
 
-		// Extract the transaction index from the error
-		log.Error().Msgf("validation error: %v", validationErr)
-		log.Error().Msgf("validation error.Error(): %v", validationErr.Error())
-		txIndex, err := ExtractTxIndexFromError(validationErr.Error())
-		if err != nil || txIndex < 0 || txIndex >= len(parsedTxs) {
-			// If the extraction fails or the index is out of range, break the loop
-			fmt.Println("Failed to extract valid transaction index from error:", err)
-			break
+		// If error: Pasre info into state loop
+		if err != nil {
+			// validationState.BlockStateValidation.Error = err.Error()
+			log.Debug().Err(err).Msg("Error in simulation")
+			continue
+		} else {
+			// If success: return
+			return validTxs
 		}
-
-		// Remove the invalid transaction from both slices
-		rawTxs = append(rawTxs[:txIndex], rawTxs[txIndex+1:]...)
-		parsedTxs = append(parsedTxs[:txIndex], parsedTxs[txIndex+1:]...)
-		removedCountStateful++
-
-		// Reset rawFilteredTxStateful for the next iteration, as we're modifying rawTxs
-		rawFilteredTxStateful = rawFilteredTxStateful[:0]
 	}
-
-	return rawFilteredTxStateful, removedCountStateful
 }
 
-func ValidateTransactionState(txs []rpc.Transaction, state ValidationState) []rpc.Transaction {
-	validTransactions := []rpc.Transaction{}
+func ValidateTransactionState(txs []rpc.ParsedTransaction, state ValidationState) []rpc.ParsedTransaction {
+	validTransactions := []rpc.ParsedTransaction{}
 	blockBaseFeePerGas := state.BlockStateValidation.BaseFeePerGas
 	blockGasLimit := state.BlockStateValidation.GasLimit
-	gasUsedInBlock := big.NewFloat(0)
+	gasUsedInBlock := big.NewInt(0)
 
 	for _, tx := range txs {
-		// Check tx.MaxFeePerGas < block BaseFeePerGas if available
-		if blockBaseFeePerGas != nil && blockBaseFeePerGas.Cmp(tx.MaxFeePerGas) < 1 {
+		txNonce, err := utils.HexToBigInt(tx.Nonce)
+		if err != nil {
+			log.Warn().Err(err).Msgf("can't convert nonce to big int: %v", tx.Nonce)
 			continue
 		}
-		newGasUsed := new(big.Float).Add(gasUsedInBlock, tx.Gas)
+
+		txMaxFeePerGas, err := utils.HexToBigInt(tx.MaxFeePerGas)
+		if err != nil {
+			log.Warn().Err(err).Msgf("can't convert maxFeePerGas to big int: %v", tx.MaxFeePerGas)
+		}
+
+		txGas, err := utils.HexToBigInt(tx.Gas)
+		if err != nil {
+			log.Warn().Err(err).Msgf("can't convert gas to big int: %v", tx.Gas)
+		}
+
+		txValue, err := utils.HexToBigInt(tx.Value)
+		if err != nil {
+			log.Warn().Err(err).Msgf("can't convert value to big int: %v", tx.Value)
+		}
+
+		// Check tx.MaxFeePerGas < block BaseFeePerGas if available
+		if blockBaseFeePerGas != nil && blockBaseFeePerGas.Cmp(txMaxFeePerGas) < 1 {
+			continue
+		}
+		newGasUsed := new(big.Int).Add(gasUsedInBlock, txGas)
 		if blockGasLimit != nil && blockGasLimit.Cmp(newGasUsed) < 1 {
 			continue
 		}
@@ -223,14 +230,14 @@ func ValidateTransactionState(txs []rpc.Transaction, state ValidationState) []rp
 		if exists {
 			// Validate nonce: tx.Nonce == state.WalletStateValidation[from].Nonce + 1
 			expectedNonce := new(big.Int).Add(walletState.Nonce, big.NewInt(1))
-			if tx.Nonce != expectedNonce {
+			if txNonce != expectedNonce {
 				continue
 			}
 
 			// Validate balance: txState.Balance >= tx.MaxFeePerGas * tx.Gas
 			if walletState.Balance != nil {
-				totalCost := new(big.Float).Mul(tx.MaxFeePerGas, tx.Gas)
-				totalCost.Add(totalCost, tx.Value)
+				totalCost := new(big.Int).Mul(txMaxFeePerGas, txGas)
+				totalCost.Add(totalCost, txValue)
 				if walletState.Balance.Cmp(totalCost) < 0 {
 					continue
 				}
@@ -245,7 +252,7 @@ func ValidateTransactionState(txs []rpc.Transaction, state ValidationState) []rp
 		} else {
 			// Update state with new transaction
 			state.WalletStateValidation[from] = WalletStateValidation{
-				Nonce: tx.Nonce,
+				Nonce: txNonce,
 			}
 		}
 

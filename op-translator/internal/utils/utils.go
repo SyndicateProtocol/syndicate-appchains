@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/hex"
 	"errors"
+	"math/big"
 	"strconv"
 	"strings"
 )
@@ -24,6 +25,14 @@ func HexToInt(hexStr string) (int, error) {
 	}
 
 	return int(result), nil
+}
+
+func HexToBigInt(hexStr string) (*big.Int, error) {
+	num, err := HexToInt(hexStr)
+	if err != nil {
+		return nil, err
+	}
+	return big.NewInt(int64(num)), nil
 }
 
 func HexToUInt64(hexStr string) (uint64, error) {
