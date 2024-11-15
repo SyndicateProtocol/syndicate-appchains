@@ -4,7 +4,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/metrics"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
@@ -14,11 +13,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var metricsInstance = metrics.NewMetrics()
-
 func TestGetBlockByNumber(t *testing.T) {
 	mockConfig := mocks.DefaultTestingConfig
 	mockClient := new(mocks.MockRPCClient)
+	mockMetrics := new(mocks.MockMetrics)
+	mockMetrics.On("RecordRPCRequest", "GetBlockByNumber").Return()
 
 	number := "0x21"
 	settlementBlock := types.Block{
@@ -34,7 +33,7 @@ func TestGetBlockByNumber(t *testing.T) {
 		BatchProvider:    &mocks.MockBatchProvider{},
 		Signer:           *translator.NewSigner(mockConfig),
 		BackfillProvider: backfill.NewBackfillerProvider(mockConfig),
-		Metrics:          metricsInstance,
+		Metrics:          mockMetrics,
 	}
 
 	block, err := translatorMock.GetBlockByNumber(ctx, number, true)
@@ -52,11 +51,15 @@ func TestGetBlockByNumber(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(transactions))
 
+	mockMetrics.AssertCalled(t, "RecordRPCRequest", "GetBlockByNumber")
+
 	mockClient.AssertExpectations(t)
 }
 
 func TestGetBlockByHash(t *testing.T) {
 	mockClient := new(mocks.MockRPCClient)
+	mockMetrics := new(mocks.MockMetrics)
+	mockMetrics.On("RecordRPCRequest", "GetBlockByNumber").Return()
 	mockConfig := mocks.DefaultTestingConfig
 
 	number := "0x21"
@@ -74,7 +77,7 @@ func TestGetBlockByHash(t *testing.T) {
 		BatchProvider:    &mocks.MockBatchProvider{},
 		Signer:           *translator.NewSigner(mockConfig),
 		BackfillProvider: backfill.NewBackfillerProvider(mockConfig),
-		Metrics:          metricsInstance,
+		Metrics:          mockMetrics,
 	}
 
 	block, err := translatorMock.GetBlockByHash(ctx, hash, true)
@@ -91,6 +94,8 @@ func TestGetBlockByHash(t *testing.T) {
 	transactions, err := block.GetTransactions()
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(transactions))
+
+	mockMetrics.AssertCalled(t, "RecordRPCRequest", "GetBlockByHash")
 
 	mockClient.AssertExpectations(t)
 }

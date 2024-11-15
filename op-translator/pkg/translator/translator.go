@@ -34,7 +34,7 @@ type OPTranslator struct {
 	SettlementChain     IRPCClient
 	BatchProvider       IBatchProvider
 	BackfillProvider    *backfill.BackfillProvider
-	Metrics             metrics.Metrics
+	Metrics             metrics.IMetrics
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address

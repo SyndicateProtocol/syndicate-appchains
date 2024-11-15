@@ -7,7 +7,7 @@ import (
 
 const Namespace = "op_translator"
 
-type Metrics interface {
+type IMetrics interface {
 	RecordRPCRequest(method string)
 	RecordTranslationLatency(method string, duration float64)
 	RecordBatchSize(size int)
