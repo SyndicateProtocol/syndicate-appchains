@@ -34,10 +34,10 @@ type OPTranslator struct {
 	SettlementChain     IRPCClient
 	BatchProvider       IBatchProvider
 	BackfillProvider    *backfill.BackfillProvider
+	Metrics             metrics.Metrics
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
-	Metrics             metrics.Metrics
 }
 
 func Init(cfg *config.Config) *OPTranslator {
