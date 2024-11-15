@@ -3,6 +3,7 @@ package translator
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"regexp"
 	"slices"
 	"strconv"
@@ -26,6 +27,21 @@ const (
 	// maxBigIntBitLen is the max length in bits for a BigInt
 	maxBigIntBitLen = 256
 )
+
+type BlockStateValidation struct {
+	BaseFeePerGas *big.Float // All MaxFeePerGas values in the block have to be at least this value
+	GasLimit      *big.Float // Sum of all gas values in the block have to be at most this value
+}
+
+type WalletStateValidation struct {
+	Nonce   *big.Int   // Always greater than the nonce of the previous transaction with the same from address
+	Balance *big.Float // Higher than SUM(MaxFeePerGas * Gas) for all transactions with the same from address
+}
+
+type ValidationState struct {
+	WalletStateValidation map[string]WalletStateValidation // Maps from address to transaction state validation
+	BlockStateValidation  BlockStateValidation
+}
 
 // FilterTransactionsStateless perform an inexpensive local validation
 // In the case we have an invalid transaction, it should not be included in the block
@@ -184,4 +200,57 @@ func (m *MetaBasedBatchProvider) FilterTransactionsStateful(rawTxs []hexutil.Byt
 	}
 
 	return rawFilteredTxStateful, removedCountStateful
+}
+
+func ValidateTransactionState(txs []rpc.Transaction, state ValidationState) []rpc.Transaction {
+	validTransactions := []rpc.Transaction{}
+	blockBaseFeePerGas := state.BlockStateValidation.BaseFeePerGas
+	blockGasLimit := state.BlockStateValidation.GasLimit
+	gasUsedInBlock := big.NewFloat(0)
+
+	for _, tx := range txs {
+		// Check tx.MaxFeePerGas < block BaseFeePerGas if available
+		if blockBaseFeePerGas != nil && blockBaseFeePerGas.Cmp(tx.MaxFeePerGas) < 1 {
+			continue
+		}
+		newGasUsed := new(big.Float).Add(gasUsedInBlock, tx.Gas)
+		if blockGasLimit != nil && blockGasLimit.Cmp(newGasUsed) < 1 {
+			continue
+		}
+
+		from := tx.From
+		walletState, exists := state.WalletStateValidation[from]
+		if exists {
+			// Validate nonce: tx.Nonce == state.WalletStateValidation[from].Nonce + 1
+			expectedNonce := new(big.Int).Add(walletState.Nonce, big.NewInt(1))
+			if tx.Nonce != expectedNonce {
+				continue
+			}
+
+			// Validate balance: txState.Balance >= tx.MaxFeePerGas * tx.Gas
+			if walletState.Balance != nil {
+				totalCost := new(big.Float).Mul(tx.MaxFeePerGas, tx.Gas)
+				totalCost.Add(totalCost, tx.Value)
+				if walletState.Balance.Cmp(totalCost) < 0 {
+					continue
+				}
+				// Update balance
+				walletState.Balance.Sub(walletState.Balance, totalCost)
+			}
+
+			// Update state
+			walletState.Nonce = expectedNonce
+			gasUsedInBlock = newGasUsed
+
+		} else {
+			// Update state with new transaction
+			state.WalletStateValidation[from] = WalletStateValidation{
+				Nonce: tx.Nonce,
+			}
+		}
+
+		// Add valid transaction to the list
+		validTransactions = append(validTransactions, tx)
+	}
+	return validTransactions
 }

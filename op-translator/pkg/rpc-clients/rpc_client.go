@@ -159,42 +159,22 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 }
 
 type Transaction struct {
+	Nonce                *big.Int
+	Value                *big.Float
+	Gas                  *big.Float
+	MaxFeePerGas         *big.Float
+	MaxPriorityFeePerGas *big.Float
 	From                 string
 	To                   string
-	Value                string
 	Data                 string
-	Nonce                string
-	Gas                  string
-	MaxFeePerGas         string
-	MaxPriorityFeePerGas string
 }
-
-type BlockStateValidation struct {
-	BaseFeePerGas string
-	GasLimit      string
-}
-
-type TransactionStateValidation struct {
-	Nonce   string
-	Balance string
-}
-
-type ValidationState struct {
-	TransactionStateValidation map[string]TransactionStateValidation // Maps from address to transaction state validation
-	BlockStateValidation       BlockStateValidation
-}
-
-func ValidateTransactionState(txs []Transaction, state ValidationState) []Transaction {
-	return txs
-}
-
 type BlockStateCall struct {
 	Calls []Transaction `json:"calls"`
 }
 
 type SimulationRequest struct {
-	Validation      bool             `json:"validation,omitempty"`
 	BlockStateCalls []BlockStateCall `json:"blockStateCalls"`
+	Validation      bool             `json:"validation,omitempty"`
 }
 
 func (c *RPCClient) SimulateTransactions(ctx context.Context, simulationRequest SimulationRequest, blockParameter string) error {
