@@ -11,13 +11,15 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 func TestGetBlockByNumber(t *testing.T) {
 	mockConfig := mocks.DefaultTestingConfig
 	mockClient := new(mocks.MockRPCClient)
 	mockMetrics := new(mocks.MockMetrics)
-	mockMetrics.On("RecordRPCRequest", "GetBlockByNumber").Return()
+	mockMetrics.On("RecordRPCRequest", "eth_getBlockByNumber").Return()
+	mockMetrics.On("RecordTranslationLatency", "eth_getBlockByNumber", mock.Anything).Return()
 
 	number := "0x21"
 	settlementBlock := types.Block{
@@ -51,7 +53,7 @@ func TestGetBlockByNumber(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(transactions))
 
-	mockMetrics.AssertCalled(t, "RecordRPCRequest", "GetBlockByNumber")
+	mockMetrics.AssertCalled(t, "RecordRPCRequest", "eth_getBlockByNumber")
 
 	mockClient.AssertExpectations(t)
 }
@@ -59,7 +61,8 @@ func TestGetBlockByNumber(t *testing.T) {
 func TestGetBlockByHash(t *testing.T) {
 	mockClient := new(mocks.MockRPCClient)
 	mockMetrics := new(mocks.MockMetrics)
-	mockMetrics.On("RecordRPCRequest", "GetBlockByNumber").Return()
+	mockMetrics.On("RecordRPCRequest", "eth_getBlockByHash").Return()
+	mockMetrics.On("RecordTranslationLatency", "eth_getBlockByHash", mock.Anything).Return()
 	mockConfig := mocks.DefaultTestingConfig
 
 	number := "0x21"
@@ -95,7 +98,7 @@ func TestGetBlockByHash(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(transactions))
 
-	mockMetrics.AssertCalled(t, "RecordRPCRequest", "GetBlockByHash")
+	mockMetrics.AssertCalled(t, "RecordRPCRequest", "eth_getBlockByHash")
 
 	mockClient.AssertExpectations(t)
 }

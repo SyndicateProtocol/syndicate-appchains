@@ -16,10 +16,6 @@ func (m *MockMetrics) RecordTranslationLatency(method string, duration float64) 
 	m.Called(method, duration)
 }
 
-func (m *MockMetrics) RecordBatchSize(size int) {
-	m.Called(size)
-}
-
 func (m *MockMetrics) RecordError(method, errorType string) {
 	m.Called(method, errorType)
 }

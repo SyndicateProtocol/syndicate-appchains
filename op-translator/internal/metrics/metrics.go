@@ -10,14 +10,12 @@ const Namespace = "op_translator"
 type IMetrics interface {
 	RecordRPCRequest(method string)
 	RecordTranslationLatency(method string, duration float64)
-	RecordBatchSize(size int)
 	RecordError(method, errorType string)
 }
 
 type PrometheusMetrics struct {
 	rpcRequests        *prometheus.CounterVec
 	translationLatency *prometheus.HistogramVec
-	batchSizes         prometheus.Histogram
 	errors             *prometheus.CounterVec
 }
 
@@ -40,14 +38,6 @@ func NewMetrics() *PrometheusMetrics {
 			},
 			[]string{"method"},
 		),
-		batchSizes: promauto.NewHistogram(
-			prometheus.HistogramOpts{
-				Namespace: Namespace,
-				Name:      "batch_size_bytes",
-				Help:      "Size of processed batches in bytes",
-				Buckets:   []float64{1000, 5000, 10000, 50000, 100000, 500000},
-			},
-		),
 		errors: promauto.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: Namespace,
@@ -67,11 +57,6 @@ func (m *PrometheusMetrics) RecordRPCRequest(method string) {
 // Translation operation latencies with distribution
 func (m *PrometheusMetrics) RecordTranslationLatency(method string, duration float64) {
 	m.translationLatency.WithLabelValues(method).Observe(duration)
-}
-
-// Batch size distributions
-func (m *PrometheusMetrics) RecordBatchSize(size int) {
-	m.batchSizes.Observe(float64(size))
 }
 
 // Error counts by method and type

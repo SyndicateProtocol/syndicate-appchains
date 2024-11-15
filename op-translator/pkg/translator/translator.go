@@ -145,8 +145,6 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 		return block, nil
 	}
 
-	t.Metrics.RecordBatchSize(len(frames))
-
 	data, err := types.ToData(frames)
 	if err != nil {
 		t.Metrics.RecordError("translate_block", "frame_conversion_error")
