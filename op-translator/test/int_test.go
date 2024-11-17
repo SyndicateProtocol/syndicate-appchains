@@ -182,9 +182,14 @@ func TestOPNodeCalls(t *testing.T) {
 		},
 	}
 
+	mockMetrics := new(mocks.MockMetrics)
+	mockMetrics.On("RecordRPCRequest", mock.Anything).Return()
+	mockMetrics.On("RecordTranslationLatency", mock.Anything, mock.Anything).Return()
+
 	for _, tc := range testCases {
 		mockClient := getMockClient()
 		mockHTTPBackfillClient := getBackfillHTTPMock()
+
 		opTranslator := &translator.OPTranslator{
 			SettlementChain:     mockClient,
 			BatcherInboxAddress: common.HexToAddress("0x123"),
@@ -197,6 +202,7 @@ func TestOPNodeCalls(t *testing.T) {
 				GenesisEpochBlock: uint64(mockConfig.SettlementStartBlock),
 				CutoverEpochBlock: uint64(mockConfig.CutoverEpochBlock),
 			},
+			Metrics: mockMetrics,
 		}
 
 		s, err := server.TranslatorHandler(mockConfig, opTranslator)
@@ -236,6 +242,9 @@ func TestOPNodeCalls(t *testing.T) {
 				expectedTransactions, _ := tc.expectedResult["transactions"].([]any)
 				actualTransactions, _ := block["transactions"].([]any)
 				assert.Equal(t, len(expectedTransactions), len(actualTransactions))
+
+				mockMetrics.AssertCalled(t, "RecordRPCRequest", "eth_getBlockByNumber")
+				mockMetrics.AssertCalled(t, "RecordTranslationLatency", "eth_getBlockByNumber", mock.Anything)
 
 				for i := range expectedTransactions {
 					expectedTx, _ := expectedTransactions[i].(map[string]any)

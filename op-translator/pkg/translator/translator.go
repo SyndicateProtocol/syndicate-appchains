@@ -2,8 +2,10 @@ package translator
 
 import (
 	"context"
+	"time"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/metrics"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
@@ -32,6 +34,7 @@ type OPTranslator struct {
 	SettlementChain     IRPCClient
 	BatchProvider       IBatchProvider
 	BackfillProvider    *backfill.BackfillProvider
+	Metrics             metrics.IMetrics
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
@@ -46,6 +49,7 @@ func Init(cfg *config.Config) *OPTranslator {
 	metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg)
 	signer := NewSigner(cfg)
 	backfillProvider := backfill.NewBackfillerProvider(cfg)
+	metricsCollector := metrics.NewMetrics()
 
 	return &OPTranslator{
 		SettlementChain:     settlementChain,
@@ -54,14 +58,24 @@ func Init(cfg *config.Config) *OPTranslator {
 		BatchProvider:       metaBasedBatchProvider,
 		BackfillProvider:    backfillProvider,
 		Signer:              *signer,
+		Metrics:             metricsCollector,
 	}
 }
 
 func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, transactionDetailFlag bool) (types.Block, error) {
 	log.Debug().Msg("-- HIT eth_getBlockByNumber")
+
+	start := time.Now()
+	defer func() {
+		t.Metrics.RecordTranslationLatency("eth_getBlockByNumber", time.Since(start).Seconds())
+	}()
+
+	t.Metrics.RecordRPCRequest("eth_getBlockByNumber")
+
 	block, err := t.SettlementChain.GetBlockByNumber(ctx, blockNumber, transactionDetailFlag)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get block by number")
+		t.Metrics.RecordError("eth_getBlockByNumber", "block_fetch_error")
 		return nil, err
 	}
 	if !transactionDetailFlag {
@@ -72,9 +86,18 @@ func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string,
 
 func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash, transactionDetailFlag bool) (types.Block, error) {
 	log.Debug().Msg("-- HIT eth_getBlockByHash")
+
+	start := time.Now()
+	defer func() {
+		t.Metrics.RecordTranslationLatency("eth_getBlockByHash", time.Since(start).Seconds())
+	}()
+
+	t.Metrics.RecordRPCRequest("eth_getBlockByHash")
+
 	block, err := t.SettlementChain.GetBlockByHash(ctx, blockHash, transactionDetailFlag)
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get block by hash")
+		t.Metrics.RecordError("eth_getBlockByHash", "block_fetch_error")
 		return nil, err
 	}
 	if !transactionDetailFlag {
@@ -107,11 +130,13 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 
 	frames, err := t.getFrames(ctx, block)
 	if err != nil {
+		t.Metrics.RecordError("translate_block", "frame_fetch_error")
 		return nil, err
 	}
 
 	blockNumHex, err := block.GetBlockNumberHex()
 	if err != nil {
+		t.Metrics.RecordError("translate_block", "block_number_error")
 		return nil, err
 	}
 
@@ -122,11 +147,13 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 
 	data, err := types.ToData(frames)
 	if err != nil {
+		t.Metrics.RecordError("translate_block", "frame_conversion_error")
 		return nil, err
 	}
 
 	blockHash, err := block.GetBlockHash()
 	if err != nil {
+		t.Metrics.RecordError("translate_block", "block_hash_error")
 		return nil, err
 	}
 
@@ -134,11 +161,13 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 
 	signedTxn, err := t.Signer.Sign(&tx)
 	if err != nil {
+		t.Metrics.RecordError("translate_block", "transaction_signing_error")
 		return nil, err
 	}
 
 	err = block.AppendTransaction(signedTxn)
 	if err != nil {
+		t.Metrics.RecordError("translate_block", "transaction_append_error")
 		return nil, err
 	}
 
