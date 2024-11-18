@@ -10,7 +10,6 @@ import (
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	"github.com/ethereum-optimism/optimism/op-service/oppprof"
-	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 )
 
 type CLIConfig struct {
@@ -22,7 +21,6 @@ type CLIConfig struct {
 	PprofConfig               oppprof.CLIConfig
 	LogConfig                 oplog.CLIConfig
 	MetricsConfig             opmetrics.CLIConfig
-	TxMgrConfig               txmgr.CLIConfig
 	PollInterval              time.Duration
 }
 
@@ -56,9 +54,6 @@ func (c *CLIConfig) Check() error {
 	}
 
 	// from op-stack
-	if err := c.TxMgrConfig.Check(); err != nil {
-		return err
-	}
 	if err := c.MetricsConfig.Check(); err != nil {
 		return err
 	}
@@ -70,14 +65,9 @@ func (c *CLIConfig) Check() error {
 
 // NewConfig parses the Config from the provided flags or environment variables.
 func NewConfig(ctx *cli.Context) *CLIConfig {
-	// override L1_RPC flag with the settlement chain RPC URL
-	settlementChainRPCURL := ctx.String(flags.SettlementChainRPCURL.Name)
-	txMgrConfig := txmgr.ReadCLIConfig(ctx)
-	txMgrConfig.L1RPCURL = settlementChainRPCURL
-
 	return &CLIConfig{
 		// settlement chain
-		SettlementChainRPCURL: settlementChainRPCURL,
+		SettlementChainRPCURL: ctx.String(flags.SettlementChainRPCURL.Name),
 
 		// sequencing chain
 		SequencingChainRPCURL:     ctx.String(flags.SequencingChainRPCURL.Name),
@@ -96,6 +86,5 @@ func NewConfig(ctx *cli.Context) *CLIConfig {
 		LogConfig:     oplog.ReadCLIConfig(ctx),
 		MetricsConfig: opmetrics.ReadCLIConfig(ctx),
 		PprofConfig:   oppprof.ReadCLIConfig(ctx),
-		TxMgrConfig:   txMgrConfig,
 	}
 }

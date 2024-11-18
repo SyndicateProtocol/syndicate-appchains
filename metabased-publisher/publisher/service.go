@@ -18,7 +18,6 @@ import (
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	"github.com/ethereum-optimism/optimism/op-service/oppprof"
-	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 	"github.com/ethereum/go-ethereum/common"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/urfave/cli/v2"
@@ -53,7 +52,6 @@ type PublisherService struct {
 	l3Client                  translator.IRPCClient
 	altDAClient               *altda.DAClient
 	metrics                   metrics.Metricer
-	txManager                 txmgr.TxManager
 	log                       gethlog.Logger
 	sequencingContractAddress *common.Address
 	metricsServer             *httputil.HTTPServer
@@ -76,9 +74,6 @@ func (p *PublisherService) initFromCLIConfig(_ context.Context, version string, 
 
 	if err := p.initRPCClients(cfg); err != nil {
 		return err
-	}
-	if err := p.initTxManager(cfg); err != nil {
-		return fmt.Errorf("failed to init Tx manager: %w", err)
 	}
 	if err := p.initMetricsServer(cfg); err != nil {
 		return fmt.Errorf("failed to start metrics server: %w", err)
@@ -138,15 +133,6 @@ func (p *PublisherService) initSequencingContractAddress(cfg *CLIConfig) error {
 		return err
 	}
 	p.sequencingContractAddress = &sequencingContractAddress
-	return nil
-}
-
-func (p *PublisherService) initTxManager(cfg *CLIConfig) error {
-	txManager, err := txmgr.NewSimpleTxManager("publisher", p.log, p.metrics, cfg.TxMgrConfig)
-	if err != nil {
-		return err
-	}
-	p.txManager = txManager
 	return nil
 }
 
