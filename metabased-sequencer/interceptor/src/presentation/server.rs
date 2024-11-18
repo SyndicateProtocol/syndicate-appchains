@@ -3,14 +3,18 @@ use crate::domain::primitives::Address;
 use crate::domain::MetabasedSequencerChainService;
 use crate::presentation::json_rpc_errors::Error;
 use crate::presentation::services::Services;
+use crate::presentation::tower::UnescapeJsonLayer;
 use crate::presentation::{jsonrpc, services};
 use alloy::primitives::B256;
+use http::Method;
+use jsonrpsee::server::middleware::http::ProxyGetRequestLayer;
 use jsonrpsee::server::{RpcServiceBuilder, Server, ServerHandle};
 use jsonrpsee::RpcModule;
 use std::net::SocketAddr;
 use url::Url;
 
 const METRICS_RPC: &str = "metrics";
+const METRICS_HTTP: &str = "/metrics";
 
 pub async fn run(
     port: u16,
@@ -19,8 +23,14 @@ pub async fn run(
     private_key: B256,
 ) -> anyhow::Result<(SocketAddr, ServerHandle)> {
     let rpc_middleware = RpcServiceBuilder::new();
+    let http_middleware = tower::ServiceBuilder::new()
+        .layer(UnescapeJsonLayer::new(|request| {
+            request.uri() == METRICS_HTTP && request.method() == Method::GET
+        }))
+        .layer(ProxyGetRequestLayer::new(METRICS_HTTP, METRICS_RPC)?);
 
     let server = Server::builder()
+        .set_http_middleware(http_middleware)
         .set_rpc_middleware(rpc_middleware)
         .build(format!("127.0.0.1:{port}"))
         .await?;

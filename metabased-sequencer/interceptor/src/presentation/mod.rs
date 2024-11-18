@@ -6,4 +6,5 @@ pub mod json_rpc_errors;
 pub mod jsonrpc;
 pub mod server;
 mod services;
+mod tower;
 pub mod transaction;
