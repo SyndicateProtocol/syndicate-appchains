@@ -64,7 +64,14 @@ var (
 		Name:    "poll-interval",
 		Usage:   "Interval at which the service will poll the source chains for new data",
 		EnvVars: prefixEnvVars("POLL_INTERVAL"),
-		Value:   time.Second * 10,
+		Value:   time.Second * 30, //nolint:mnd // default value
+	}
+
+	NetworkTimeout = &cli.DurationFlag{
+		Name:    "network-timeout",
+		Usage:   "Timeout for network operations",
+		EnvVars: prefixEnvVars("NETWORK_TIMEOUT"),
+		Value:   time.Second * 10, //nolint:mnd // default value
 	}
 )
 
@@ -78,6 +85,7 @@ var requiredFlags = []cli.Flag{
 
 var optionalFlags = []cli.Flag{
 	PollInterval,
+	NetworkTimeout,
 }
 
 func init() {
