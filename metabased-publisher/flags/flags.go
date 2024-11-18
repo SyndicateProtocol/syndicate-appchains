@@ -9,7 +9,6 @@ import (
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	"github.com/ethereum-optimism/optimism/op-service/oppprof"
-	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 )
 
 const EnvVarPrefix = "MB_PUBLISHER"
@@ -80,7 +79,6 @@ var optionalFlags = []cli.Flag{
 }
 
 func init() {
-	optionalFlags = append(optionalFlags, txmgr.CLIFlags(EnvVarPrefix)...)
 	optionalFlags = append(optionalFlags, oplog.CLIFlags(EnvVarPrefix)...)
 	optionalFlags = append(optionalFlags, opmetrics.CLIFlags(EnvVarPrefix)...)
 	optionalFlags = append(optionalFlags, oppprof.CLIFlags(EnvVarPrefix)...)
