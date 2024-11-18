@@ -69,7 +69,7 @@ func (p *PublisherService) initFromCLIConfig(_ context.Context, version string, 
 	p.initMetrics(cfg)
 
 	if err := p.initSequencingContractAddress(cfg); err != nil {
-		return fmt.Errorf("failed to init batch inbox address: %w", err)
+		return fmt.Errorf("failed to init sequencing contract address: %w", err)
 	}
 
 	if err := p.initRPCClients(cfg); err != nil {
