@@ -64,6 +64,8 @@ type PublisherService struct {
 }
 
 func (p *PublisherService) initFromCLIConfig(_ context.Context, version string, cfg *CLIConfig, log gethlog.Logger) error {
+	p.log.Info("init with the following config", "config", fmt.Sprintf("%+v", cfg))
+
 	p.version = version
 	p.log = log
 
