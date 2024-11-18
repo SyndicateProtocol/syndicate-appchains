@@ -61,7 +61,6 @@ func NewPublisher(
 }
 
 func (p *Publisher) Start(ctx context.Context) {
-	p.log.Info("starting publisher")
 	ctx, cancel := context.WithCancel(ctx)
 	p.ctx = ctx
 	p.cancel = cancel
@@ -69,7 +68,7 @@ func (p *Publisher) Start(ctx context.Context) {
 	// TODO (SEQ-187): wait for all 3 chains RPCs to be synced
 
 	// TODO (SEQ-194): determine the L3 metabased-sequencing starting block
-	l3StartingBlock := uint64(15195256)
+	l3StartingBlock := uint64(0)
 
 	// TODO (SEQ-188): `p.latestProcessedBlock` must be restored from somewhere, ideally we obtain it from upstream (altda)
 	if l3StartingBlock > p.latestProcessedBlock {
@@ -82,7 +81,6 @@ func (p *Publisher) Start(ctx context.Context) {
 }
 
 func (p *Publisher) Stop() error {
-	p.log.Info("stopping publisher")
 	p.cancel()
 	p.metabasedBatchProvider.Close()
 	p.wg.Wait()

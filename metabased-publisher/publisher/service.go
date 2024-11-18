@@ -64,10 +64,10 @@ type PublisherService struct {
 }
 
 func (p *PublisherService) initFromCLIConfig(_ context.Context, version string, cfg *CLIConfig, log gethlog.Logger) error {
-	p.log.Info("init with the following config", "config", fmt.Sprintf("%+v", cfg))
-
 	p.version = version
 	p.log = log
+
+	p.log.Info("Starting publisher with the following config", "config", fmt.Sprintf("%+v", *cfg))
 
 	p.initMetrics(cfg)
 
@@ -206,7 +206,7 @@ func (p *PublisherService) Stop(ctx context.Context) error {
 	if p.stopped.Load() {
 		return ErrAlreadyStopped
 	}
-	p.log.Info("Stopping batcher")
+	p.log.Info("Stopping publisher")
 
 	var result error
 
@@ -242,7 +242,7 @@ func (p *PublisherService) Stop(ctx context.Context) error {
 
 	if result == nil {
 		p.stopped.Store(true)
-		p.log.Info("Batch Submitter stopped")
+		p.log.Info("Publisher stopped")
 	}
 	return result
 }
