@@ -104,6 +104,7 @@ func (p *Publisher) loop() {
 				p.log.Error("failed to get latest block", "error", err)
 				continue
 			}
+			p.log.Info("polling for new blocks", "L3Block", currentBlock, "latestProcessedBlock", p.latestProcessedBlock)
 			for i := p.latestProcessedBlock + 1; i <= currentBlock; i++ {
 				if err := p.processBlock(i); err != nil {
 					p.log.Warn("stopped processing, will retry next interval", "lastProcessed", p.latestProcessedBlock, "failedBlock", i, "error", err)
