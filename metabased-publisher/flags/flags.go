@@ -2,6 +2,7 @@ package flags
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/urfave/cli/v2"
 
@@ -63,6 +64,7 @@ var (
 		Name:    "poll-interval",
 		Usage:   "Interval at which the service will poll the source chains for new data",
 		EnvVars: prefixEnvVars("POLL_INTERVAL"),
+		Value:   time.Second * 10,
 	}
 )
 
