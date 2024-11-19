@@ -3,7 +3,8 @@ pragma solidity 0.8.25;
 
 import {MetabasedSequencerChain} from "./MetabasedSequencerChain.sol";
 import {MetafillerStorage} from "./backfill/MetafillerStorage.sol";
-import {RequirementChainModule} from "./requirement-modules/RequirementChainModule.sol";
+import {RequireAllModule} from "./requirement-modules/RequireAllModule.sol";
+import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
 
 /// @title MetabasedFactory
 /// @notice Factory contract for creating MetabasedSequencerChain and related contracts
@@ -26,16 +27,34 @@ contract MetabasedFactory {
         address indexed permissionModuleAddress
     );
 
-    /// @notice Creates a new MetabasedSequencerChain contract with its permission module
+    /// @notice Creates a new MetabasedSequencerChain contract with RequireAllModule as permission module
     /// @param l3ChainId the l3 chain the contract refers to
     /// @param admin The address that will be the admin
     /// @return sequencerChain The address of the newly created MetabasedSequencerChain
-    /// @return permissionModule The address of the newly created RequirementChainModule
+    /// @return permissionModule The address of the newly created RequireAllModule
     function createMetabasedSequencerChain(uint256 l3ChainId, address admin)
         public
         returns (address sequencerChain, address permissionModule)
     {
-        RequirementChainModule newPermissionModule = new RequirementChainModule(admin);
+        RequireAllModule newPermissionModule = new RequireAllModule(admin);
+        MetabasedSequencerChain newSequencerChain =
+            new MetabasedSequencerChain(l3ChainId, admin, address(newPermissionModule));
+
+        emit MetabasedSequencerChainCreated(l3ChainId, address(newSequencerChain), address(newPermissionModule));
+
+        return (address(newSequencerChain), address(newPermissionModule));
+    }
+
+    /// @notice Creates a new MetabasedSequencerChain contract with RequireAnyModule as permission module
+    /// @param l3ChainId the l3 chain the contract refers to
+    /// @param admin The address that will be the admin
+    /// @return sequencerChain The address of the newly created MetabasedSequencerChain
+    /// @return permissionModule The address of the newly created RequireAnyModule
+    function createMetabasedSequencerChainWithRequireAnyModule(uint256 l3ChainId, address admin)
+        public
+        returns (address sequencerChain, address permissionModule)
+    {
+        RequireAnyModule newPermissionModule = new RequireAnyModule(admin);
         MetabasedSequencerChain newSequencerChain =
             new MetabasedSequencerChain(l3ChainId, admin, address(newPermissionModule));
 
@@ -55,18 +74,37 @@ contract MetabasedFactory {
         return address(newMetafillerStorage);
     }
 
-    /// @notice Creates all contracts: MetabasedSequencerChain, RequirementChainModule, and MetafillerStorage
+    /// @notice Creates all contracts: MetabasedSequencerChain, RequireAllModule, and MetafillerStorage
     /// @param admin The address that will be the default admin role
     /// @param manager The address that will be the manager role for MetafillerStorage
     /// @param l3ChainId The L3 chain ID
     /// @return sequencerChain The address of the newly created MetabasedSequencerChain
     /// @return metafillerStorage The address of the newly created MetafillerStorage
-    /// @return permissionModule The address of the newly created RequirementChainModule
+    /// @return permissionModule The address of the newly created RequireAllModule
     function createAllContracts(address admin, address manager, uint256 l3ChainId)
         public
         returns (address sequencerChain, address metafillerStorage, address permissionModule)
     {
         (sequencerChain, permissionModule) = createMetabasedSequencerChain(l3ChainId, admin);
+        metafillerStorage = createMetafillerStorage(admin, manager, l3ChainId);
+
+        emit AllContractsCreated(l3ChainId, sequencerChain, metafillerStorage, permissionModule);
+
+        return (sequencerChain, metafillerStorage, permissionModule);
+    }
+
+    /// @notice Creates all contracts: MetabasedSequencerChain, RequireAnyModule, and MetafillerStorage
+    /// @param admin The address that will be the default admin role
+    /// @param manager The address that will be the manager role for MetafillerStorage
+    /// @param l3ChainId The L3 chain ID
+    /// @return sequencerChain The address of the newly created MetabasedSequencerChain
+    /// @return metafillerStorage The address of the newly created MetafillerStorage
+    /// @return permissionModule The address of the newly created RequireAnyModule
+    function createAllContractsWithRequireAnyModule(address admin, address manager, uint256 l3ChainId)
+        public
+        returns (address sequencerChain, address metafillerStorage, address permissionModule)
+    {
+        (sequencerChain, permissionModule) = createMetabasedSequencerChainWithRequireAnyModule(l3ChainId, admin);
         metafillerStorage = createMetafillerStorage(admin, manager, l3ChainId);
 
         emit AllContractsCreated(l3ChainId, sequencerChain, metafillerStorage, permissionModule);
