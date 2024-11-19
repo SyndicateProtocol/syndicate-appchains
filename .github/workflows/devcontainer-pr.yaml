@@ -21,7 +21,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Infra and Run Tests
+      - name: Setup Arbitrum Infra and Run Tests
         timeout-minutes: 15
         uses: devcontainers/ci@v0.3
         with:
@@ -35,7 +35,7 @@ jobs:
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-pr-${{ github.event.pull_request.number }}
           runCmd: |
             # Wait for network setup to complete
-            while [ ! -f /tmp/postCreateOutput ] || ! grep -q "Ready to bring up the Arbitrum Orbit devnet" /tmp/postCreateOutput; do
+            while [ ! -f /tmp/postCreateOutput ] || ! grep -q "Ready to bring up the Arbitrum or Optimism devnet" /tmp/postCreateOutput; do
               sleep 10
             done
 
@@ -81,6 +81,94 @@ jobs:
               exit 1
             fi
             
+            echo "[STATUS] Test transaction completed successfully"
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: debug-logs
+          path: |
+            /tmp/sequencer.log
+            /tmp/postCreateOutput
+  op-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup OP Infra and Run Tests
+        timeout-minutes: 15
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/syndicateprotocol/metabased-devcontainer
+          imageTag: cache-pr-${{ github.event.pull_request.number }}
+          # Enable caching
+          push: always
+          # Pull cached images from both main branch and PR branch
+          cacheFrom: |
+            ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
+            ghcr.io/syndicateprotocol/metabased-devcontainer:cache-pr-${{ github.event.pull_request.number }}
+          runCmd: |
+            # Wait for network setup to complete
+            while [ ! -f /tmp/postCreateOutput ] || ! grep -q "Ready to bring up the Arbitrum or Optimism devnet" /tmp/postCreateOutput; do
+              sleep 10
+            done
+
+            ## TODO FIXME BELOW
+
+            # Start Optimism node in background
+            just -f .devcontainer/justfile op-up &
+
+            # Wait for Arbitrum node to be ready via health check
+            echo "[STATUS] Waiting for Arbitrum node to be ready..."
+            until just -f .devcontainer/justfile arb-health-check | grep -q "result"; do
+              sleep 10
+            done
+            echo "[STATUS] Arbitrum node is ready"
+
+            # Run sequencer setup
+            just -f .devcontainer/justfile arb-sequencer-plus-setup &
+
+            # Wait for sequencer setup completion via health check
+            echo "[STATUS] Waiting for sequencer setup to complete..."
+            until just -f .devcontainer/justfile sequencer-health-check | grep -q "result"; do
+              sleep 10
+            done
+            echo "[STATUS] Sequencer setup complete"
+
+            # Exit on error
+            set -e
+
+            # Run the test command and capture response
+            echo "[STATUS] Running test transaction..."
+            RESPONSE=$(just -f .devcontainer/justfile arb-test-sendRawTransaction)
+            echo "Response: $RESPONSE"
+
+            # Check if response contains an error
+            if echo "$RESPONSE" | grep -q '"error"'; then
+              echo "[ERROR] Transaction failed with error:"
+              echo "$RESPONSE"
+              exit 1
+            fi
+
+            # Check if response contains expected result
+            if ! echo "$RESPONSE" | grep -q '"result"'; then
+              echo "[ERROR] Transaction response missing result field:"
+              echo "$RESPONSE"
+              exit 1
+            fi
+
             echo "[STATUS] Test transaction completed successfully"
 
       - name: Upload logs on failure

@@ -20,6 +20,7 @@
   "overrideFeatureInstallOrder": [
     "ghcr.io/devcontainers/features/common-utils",
     "ghcr.io/devcontainers/features/git",
+    "ghcr.io/devcontainers/features/python",
     "ghcr.io/devcontainers/features/node",
     "ghcr.io/devcontainers/features/git-lfs",
     "ghcr.io/devcontainers/features/github-cli",
@@ -35,8 +36,8 @@
 
   // Update package lists
   // Without this, just won't be found
-  // After that, initialize the Arbitrum devnet
-  "postCreateCommand": "sudo apt update && sudo apt install -y just && just -f ${containerWorkspaceFolder}/.devcontainer/justfile arb-network-setup > /tmp/postCreateOutput 2>&1",
+  // After that, initialize the network-agnostic setup script
+  "postCreateCommand": "sudo apt update && sudo apt install -y just && just -f ${containerWorkspaceFolder}/.devcontainer/justfile network-setup > /tmp/postCreateOutput 2>&1",
 
   // Configure tool-specific properties.
   "customizations": {
@@ -47,6 +48,7 @@
         "go.toolsManagement.checkForUpdates": "local",
         "go.useLanguageServer": true,
         "go.gopath": "/go",
+        "python.defaultInterpreterPath": "/home/codespace/.python/current/bin/python3"
       },
       // Add the IDs of extensions you want installed when the container is created.
       "extensions": [
