@@ -126,7 +126,7 @@ pub fn metrics<Chain, M, S>(
     _params: Params,
     ctx: &Services<Chain, M, S>,
     _ext: &http::Extensions,
-) -> Response<String>
+) -> Result<String, JsonRpcError<()>>
 where
     Chain: MetabasedSequencerChainService,
     M: Metrics,
@@ -134,12 +134,13 @@ where
     S: Stopwatch,
 {
     let metrics_data = application::metrics(ctx.metrics_service());
-    
-    Response::builder()
-        .status(StatusCode::OK)
-        .header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
-        .body(metrics_data)
-        .unwrap()
+
+    let response = format!(
+        "Content-Type: text/plain; version=0.0.4; charset=utf-8\n\n{}",
+        metrics_data
+    );
+
+    Ok(response)
 }
 
 /// The JSON-RPC endpoint for health check.
