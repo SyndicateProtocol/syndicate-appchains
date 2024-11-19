@@ -3,7 +3,7 @@ pragma solidity 0.8.25;
 
 import {MetabasedSequencerChain} from "./MetabasedSequencerChain.sol";
 import {MetafillerStorage} from "./backfill/MetafillerStorage.sol";
-import {RequirementChainModule} from "./RequirementChainModule.sol";
+import {RequirementChainModule} from "./requirement-modules/RequirementChainModule.sol";
 
 /// @title MetabasedFactory
 /// @notice Factory contract for creating MetabasedSequencerChain and related contracts

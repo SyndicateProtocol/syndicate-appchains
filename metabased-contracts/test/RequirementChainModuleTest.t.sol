@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {RequirementChainModule} from "src/RequirementChainModule.sol";
+import {RequirementChainModule} from "src/requirement-modules/RequirementChainModule.sol";
 import {PermissionModule} from "src/interfaces/PermissionModule.sol";
 import {Test} from "forge-std/Test.sol";
 

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {AddressStructuredLinkedList} from "./LinkedList/AddressStructuredLinkedList.sol";
-import {PermissionModule} from "./interfaces/PermissionModule.sol";
+import {AddressStructuredLinkedList} from "src/LinkedList/AddressStructuredLinkedList.sol";
+import {PermissionModule} from "src/interfaces/PermissionModule.sol";
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
 
 /**

@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {Script, console} from "forge-std/Script.sol";
 
 import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
-import {RequirementChainModule} from "src/RequirementChainModule.sol";
+import {RequirementChainModule} from "src/requirement-modules/RequirementChainModule.sol";
 import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.sol";
 import {MetabasedFactory} from "src/MetabasedFactory.sol";
 

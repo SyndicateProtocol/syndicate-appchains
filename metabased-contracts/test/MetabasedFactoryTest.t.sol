@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 import {Test} from "forge-std/Test.sol";
 import {MetabasedFactory} from "src/MetabasedFactory.sol";
 import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
-import {RequirementChainModule} from "src/RequirementChainModule.sol";
+import {RequirementChainModule} from "src/requirement-modules/RequirementChainModule.sol";
 import {MetafillerStorage} from "src/backfill/MetafillerStorage.sol";
 
 contract MetabasedFactoryTest is Test {
@@ -34,7 +34,7 @@ contract MetabasedFactoryTest is Test {
         assertEq(sequencerChain.l3ChainId(), l3ChainId);
 
         // Verify permission module setup
-        assertTrue(address(sequencerChain.requirementChainModule()) == permissionModuleAddress);
+        assertTrue(address(sequencerChain.requirementModule()) == permissionModuleAddress);
         assertTrue(permissionModule.owner() == admin);
     }
 
@@ -70,7 +70,7 @@ contract MetabasedFactoryTest is Test {
         assertTrue(metafillerStorage.hasRole(metafillerStorage.MANAGER_ROLE(), manager));
 
         // Verify permission module setup
-        assertTrue(address(sequencerChain.requirementChainModule()) == permissionModuleAddress);
+        assertTrue(address(sequencerChain.requirementModule()) == permissionModuleAddress);
         assertTrue(permissionModule.owner() == admin);
     }
 }
