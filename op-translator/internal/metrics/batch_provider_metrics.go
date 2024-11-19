@@ -7,22 +7,22 @@ import (
 
 const batchProviderNamespace = "batch_provider"
 
-type IMetaBasedBatchProviderMetrics interface {
+type IBatchProviderMetrics interface {
 	RecordBatchProcessed(method string)
 	RecordBatchProcessingDuration(method string, duration float64)
 	RecordError(method, errorType string)
 	RecordInvalidTransactionsCount(state string, count int)
 }
 
-type MetaBasedBatchProviderMetrics struct {
+type BatchProviderMetrics struct {
 	batchProcessed           *prometheus.CounterVec
 	batchProcessingDuration  *prometheus.HistogramVec
 	errors                   *prometheus.CounterVec
 	invalidTransactionsCount *prometheus.CounterVec
 }
 
-func NewMetaBasedBatchProviderMetrics() *MetaBasedBatchProviderMetrics {
-	return &MetaBasedBatchProviderMetrics{
+func NewBatchProviderMetrics() *BatchProviderMetrics {
+	return &BatchProviderMetrics{
 		batchProcessed: promauto.NewCounterVec(
 			prometheus.CounterOpts{
 				Namespace: batchProviderNamespace,
@@ -59,18 +59,18 @@ func NewMetaBasedBatchProviderMetrics() *MetaBasedBatchProviderMetrics {
 	}
 }
 
-func (m *MetaBasedBatchProviderMetrics) RecordBatchProcessed(method string) {
+func (m *BatchProviderMetrics) RecordBatchProcessed(method string) {
 	m.batchProcessed.WithLabelValues(method).Inc()
 }
 
-func (m *MetaBasedBatchProviderMetrics) RecordBatchProcessingDuration(method string, duration float64) {
+func (m *BatchProviderMetrics) RecordBatchProcessingDuration(method string, duration float64) {
 	m.batchProcessingDuration.WithLabelValues(method).Observe(duration)
 }
 
-func (m *MetaBasedBatchProviderMetrics) RecordError(method, errorType string) {
+func (m *BatchProviderMetrics) RecordError(method, errorType string) {
 	m.errors.WithLabelValues(method, errorType).Inc()
 }
 
-func (m *MetaBasedBatchProviderMetrics) RecordInvalidTransactionsCount(state string, count int) {
+func (m *BatchProviderMetrics) RecordInvalidTransactionsCount(state string, count int) {
 	m.invalidTransactionsCount.WithLabelValues(state).Add(float64(count))
 }

@@ -24,7 +24,7 @@ type MetaBasedBatchProvider struct {
 	SequencingChain        IRPCClient
 	TransactionParser      *L3TransactionParser
 	SequencingBlockFetcher *SequencingBlockFetcher
-	Metrics                metrics.IMetaBasedBatchProviderMetrics
+	Metrics                metrics.IBatchProviderMetrics
 
 	SettlementStartBlock int
 }
@@ -45,7 +45,7 @@ func InitMetaBasedBatchProvider(cfg *config.Config) *MetaBasedBatchProvider {
 		SequencingChain:        sequencingChain,
 		TransactionParser:      InitL3TransactionParser(cfg),
 		SequencingBlockFetcher: InitSequencingBlockFetcher(sequencingChain, cfg),
-		Metrics:                metrics.NewMetaBasedBatchProviderMetrics(),
+		Metrics:                metrics.NewBatchProviderMetrics(),
 
 		SettlementStartBlock: cfg.SettlementStartBlock,
 	}
@@ -57,7 +57,7 @@ func NewMetaBasedBatchProvider(
 	sequencingContractAddress common.Address,
 	settlementStartBlock int,
 	settlementChainBlockTime int,
-	bpMetrics metrics.IMetaBasedBatchProviderMetrics,
+	bpMetrics metrics.IBatchProviderMetrics,
 ) *MetaBasedBatchProvider {
 	return &MetaBasedBatchProvider{
 		MetaBasedChain:         settlementChainClient,
