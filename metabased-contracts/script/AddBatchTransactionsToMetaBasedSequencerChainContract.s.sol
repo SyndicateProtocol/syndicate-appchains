@@ -23,7 +23,12 @@ contract AddBatchTransactionsToMetabasedSequencerChainContract is Script {
         // send 2 wei to the MetabasedSequencerChain contract
         transactionList[1] = abi.encode(recipient, uint256(2));
 
-        metabasedSequencerChainContract.processBulkTransactions(transactionList);
+        // create priorities
+        uint256[] memory priorities = new uint256[](2);
+        priorities[0] = 1;
+        priorities[1] = 2;
+
+        metabasedSequencerChainContract.processBulkTransactions(transactionList, priorities);
 
         vm.stopBroadcast();
     }
