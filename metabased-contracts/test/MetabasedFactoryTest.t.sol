@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 import {Test} from "forge-std/Test.sol";
 import {MetabasedFactory} from "src/MetabasedFactory.sol";
 import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
-import {RequirementChainModule} from "src/requirement-modules/RequirementChainModule.sol";
+import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
 import {MetafillerStorage} from "src/backfill/MetafillerStorage.sol";
 
 contract MetabasedFactoryTest is Test {
@@ -27,7 +27,7 @@ contract MetabasedFactoryTest is Test {
         assertTrue(permissionModuleAddress != address(0));
 
         MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);
-        RequirementChainModule permissionModule = RequirementChainModule(permissionModuleAddress);
+        RequireAllModule permissionModule = RequireAllModule(permissionModuleAddress);
 
         // Verify sequencer setup
         assertTrue(address(sequencerChain) == sequencerChainAddress);
@@ -58,7 +58,7 @@ contract MetabasedFactoryTest is Test {
 
         MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);
         MetafillerStorage metafillerStorage = MetafillerStorage(metafillerStorageAddress);
-        RequirementChainModule permissionModule = RequirementChainModule(permissionModuleAddress);
+        RequireAllModule permissionModule = RequireAllModule(permissionModuleAddress);
 
         // Verify sequencer setup
         assertTrue(address(sequencerChain) == sequencerChainAddress);

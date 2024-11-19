@@ -45,7 +45,7 @@ contract RequireAnyModuleTest is Test {
         module.addCheck(checker, true);
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.AllChecksFailed.selector, address(this)));
+        vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.CheckFailed.selector, address(this)));
         module.isAllowed(address(this));
     }
 
@@ -106,7 +106,7 @@ contract RequireAnyModuleTest is Test {
         module.addCheck(checker2, false);
         vm.stopPrank();
 
-        vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.AllChecksFailed.selector, address(this)));
+        vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.CheckFailed.selector, address(this)));
         module.isAllowed(address(this));
     }
 

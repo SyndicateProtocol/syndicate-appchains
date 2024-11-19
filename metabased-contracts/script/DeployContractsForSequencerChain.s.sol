@@ -4,7 +4,7 @@ pragma solidity ^0.8.13;
 import {Script, console} from "forge-std/Script.sol";
 
 import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
-import {RequirementChainModule} from "src/requirement-modules/RequirementChainModule.sol";
+import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
 import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.sol";
 import {MetabasedFactory} from "src/MetabasedFactory.sol";
 
@@ -30,7 +30,7 @@ contract DeployMetabasedFactory is Script {
 
         console.log("Deployed MetabasedSequencerChain", sequencerChain);
         console.log("Deployed MetafillerStorage", metafillerStorage);
-        console.log("Deployed RequirementChainModule", permissionModule);
+        console.log("Deployed RequireAllModule", permissionModule);
 
         vm.stopBroadcast();
     }
@@ -38,7 +38,7 @@ contract DeployMetabasedFactory is Script {
 
 contract DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule is Script {
     MetabasedSequencerChain public sequencerChain;
-    RequirementChainModule public permissionModule;
+    RequireAllModule public permissionModule;
     uint256 public l3ChainId;
 
     function run() public {
@@ -48,8 +48,8 @@ contract DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule is Script {
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
 
         // Deploy permission module first
-        permissionModule = new RequirementChainModule(admin);
-        console.log("Deployed RequirementChainModule", address(permissionModule));
+        permissionModule = new RequireAllModule(admin);
+        console.log("Deployed RequireAllModule", address(permissionModule));
 
         // Deploy sequencer with permission module
         sequencerChain = new MetabasedSequencerChain(l3ChainId, admin, address(permissionModule));
@@ -59,7 +59,7 @@ contract DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule is Script {
         AlwaysAllowedModule alwaysAllowedModule = new AlwaysAllowedModule();
         console.log("Deployed AlwaysAllowedModule", address(alwaysAllowedModule));
 
-        permissionModule.addRequireAllCheck(address(alwaysAllowedModule), true);
+        permissionModule.addCheck(address(alwaysAllowedModule), true);
         console.log("Added alwaysAllowedModule to permission checks", address(alwaysAllowedModule));
 
         vm.stopBroadcast();

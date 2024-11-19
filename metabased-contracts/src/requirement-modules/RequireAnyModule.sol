@@ -17,7 +17,7 @@ contract RequireAnyModule is IRequirementModule, Ownable {
     event CheckRemoved(address indexed check);
 
     // Errors
-    error AllChecksFailed(address batchSubmitter);
+    error CheckFailed(address batchSubmitter);
     error InvalidAddress();
     error AddressAlreadyExists();
     error AddressDoesNotExist();
@@ -40,7 +40,7 @@ contract RequireAnyModule is IRequirementModule, Ownable {
             currentCheck = nextCheck;
         }
 
-        revert AllChecksFailed(proposer);
+        revert CheckFailed(proposer);
     }
 
     function addCheck(address _address, bool addToHead) external override onlyOwner {
