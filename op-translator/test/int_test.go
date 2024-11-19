@@ -182,7 +182,7 @@ func TestOPNodeCalls(t *testing.T) {
 		},
 	}
 
-	mockMetrics := new(mocks.MockMetrics)
+	mockMetrics := new(mocks.MockOpTranslatorMetrics)
 	mockMetrics.On("RecordRPCRequest", mock.Anything).Return()
 	mockMetrics.On("RecordTranslationLatency", mock.Anything, mock.Anything).Return()
 

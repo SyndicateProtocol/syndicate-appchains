@@ -57,14 +57,15 @@ func NewMetaBasedBatchProvider(
 	sequencingContractAddress common.Address,
 	settlementStartBlock int,
 	settlementChainBlockTime int,
+	bpMetrics metrics.IMetaBasedBatchProviderMetrics,
 ) *MetaBasedBatchProvider {
 	return &MetaBasedBatchProvider{
 		MetaBasedChain:         settlementChainClient,
 		SequencingChain:        sequencingChainClient,
 		TransactionParser:      NewL3TransactionParser(sequencingContractAddress),
 		SequencingBlockFetcher: NewSequencingBlockFetcher(sequencingChainClient, settlementChainBlockTime),
-
-		SettlementStartBlock: settlementStartBlock,
+		Metrics:                bpMetrics,
+		SettlementStartBlock:   settlementStartBlock,
 	}
 }
 
