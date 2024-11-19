@@ -234,7 +234,7 @@ func ValidateTransactionState(txs []rpc.ParsedTransaction, state ValidationState
 				continue
 			}
 
-			// Validate balance: txState.Balance >= tx.MaxFeePerGas * tx.Gas
+			// Validate balance: txState.Balance >= tx.MaxFeePerGas * tx.Gas + tx.Value
 			if walletState.Balance != nil {
 				totalCost := new(big.Int).Mul(txMaxFeePerGas, txGas)
 				totalCost.Add(totalCost, txValue)
