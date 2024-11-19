@@ -1,4 +1,5 @@
-use http::Response;
+use http::header::CONTENT_TYPE;
+use http::{HeaderValue, Response};
 use http_body_util::BodyExt;
 use jsonrpsee::server::{HttpRequest, HttpResponse};
 use std::error::Error;
@@ -104,7 +105,14 @@ where
             let string = String::from_utf8(bytes).unwrap();
             let string: String = serde_json::from_str(string.as_str()).unwrap();
 
-            Ok(Response::new(string.into()))
+            let mut response = Response::new(string.into());
+
+            response.headers_mut().insert(
+                CONTENT_TYPE,
+                HeaderValue::from_static("text/plain; version=0.0.4; charset=utf-8"),
+            );
+
+            Ok(response)
         };
 
         Box::pin(res_fut)
