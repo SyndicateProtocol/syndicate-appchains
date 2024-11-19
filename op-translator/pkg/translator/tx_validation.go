@@ -146,7 +146,7 @@ func ValidateTransactionInternal(tx *ethtypes.Transaction) error {
 	return nil
 }
 
-func (m *MetaBasedBatchProvider) ValidateTransactionsBlock(rawTxns []hexutil.Bytes, txns []*rpc.ParsedTransaction) []hexutil.Bytes {
+func (m *MetaBasedBatchProvider) ValidateTransactionsBlock(rawTxns []hexutil.Bytes, txns []*rpc.ParsedTransaction) ([]hexutil.Bytes, error) {
 	// Step 1: Create empty state
 	validationState := ValidationState{
 		WalletStateValidation: make(map[string]WalletStateValidation),
@@ -161,18 +161,20 @@ func (m *MetaBasedBatchProvider) ValidateTransactionsBlock(rawTxns []hexutil.Byt
 		validRawTxns, validParsedTxns = ValidateBlockState(validRawTxns, validParsedTxns, validationState)
 
 		// Step 3: Call external SimulateTransactions
-		log.Debug().Msgf("SimulateTransactions txs: %v", txns)
 		result, err := m.MetaBasedChain.SimulateTransactions(context.Background(), txns, "latest")
 		log.Debug().Interface("result", result).Msg("Simulation result")
 
-		// If error: Parse info into state loop
+		// If simulation error, parse error and update state
 		if err != nil {
 			log.Debug().Err(err).Msg("Error in SimulateTransactions")
-			validationState = ParseValidationError(err, validationState)
+			validationState, err = ParseValidationError(err, validationState)
+			if err != nil {
+				log.Error().Err(err).Msg("Error in ParseValidationError")
+				return []hexutil.Bytes{}, err
+			}
 			continue
 		} else {
-			// If success: return
-			return validRawTxns
+			return validRawTxns, nil
 		}
 	}
 }
@@ -256,7 +258,7 @@ func ValidateBlockState(rawTransactions []hexutil.Bytes, parsedTransactions []*r
 	return validRawTransactions, validTransactions
 }
 
-func ParseValidationError(err error, state ValidationState) ValidationState {
+func ParseValidationError(err error, state ValidationState) (ValidationState, error) {
 	// TODO SEQ-316: Parse error and update state
-	return state
+	return state, nil
 }
