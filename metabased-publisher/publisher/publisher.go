@@ -135,7 +135,7 @@ func (p *Publisher) callDataForBlock(block uint64) ([]byte, error) {
 	}
 	frames, err := batch.GetFrames(MaxFrameSize)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get batch")
+		return nil, errors.Wrap(err, "failed to get frames from batch")
 	}
 	callData, err := types.ToData(frames)
 	if err != nil {

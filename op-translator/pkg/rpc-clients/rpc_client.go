@@ -112,7 +112,7 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 
 			hashes := make([]common.Hash, len(transactions))
 			for i, tx := range transactions {
-				hashes[i] = common.HexToHash(tx.(string))
+				hashes[i] = common.HexToHash(tx.(string)) //nolint:errcheck // safe to cast to string
 			}
 
 			blockNumber, err := block.GetBlockNumberHex()

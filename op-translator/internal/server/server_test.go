@@ -106,5 +106,7 @@ func TestTranslatedEndpoint(t *testing.T) {
 	var response map[string]any
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x123", response["result"].(map[string]any)["block"])
+	blockResult, ok := response["result"].(map[string]any)
+	assert.True(t, ok)
+	assert.Equal(t, "0x123", blockResult["block"])
 }

@@ -21,7 +21,15 @@ func TestBasic(t *testing.T) {
 	mockL3 := &mockL3{}
 	mockedBatchProvider := &mockBatchProvider{}
 	mockAltDAProvider := &mockAltDAProvider{}
-	publisher := NewPublisher(mockL3, mockedBatchProvider, mockAltDAProvider, 10*time.Millisecond, log, metrics.NoopMetrics)
+	publisher := NewPublisher(
+		mockL3,
+		mockedBatchProvider,
+		mockAltDAProvider,
+		10*time.Millisecond,
+		10*time.Millisecond,
+		log,
+		metrics.NoopMetrics,
+	)
 
 	// no L3 blocks
 	mockedL3Call := mockL3.On("BlockNumber", mock.Anything).
@@ -57,7 +65,7 @@ var _ L3RPCAPI = (*mockL3)(nil)
 
 func (m *mockL3) BlockNumber(ctx context.Context) (uint64, error) {
 	args := m.Called(ctx)
-	return args.Get(0).(uint64), args.Error(1)
+	return args.Get(0).(uint64), args.Error(1) //nolint:errcheck // mock safe cast
 }
 
 // Mocked Batch Provider
@@ -67,7 +75,7 @@ var _ translator.IBatchProvider = (*mockBatchProvider)(nil)
 
 func (m *mockBatchProvider) GetBatch(ctx context.Context, block types.Block) (*types.Batch, error) {
 	args := m.Called(ctx, block)
-	return args.Get(0).(*types.Batch), args.Error(1)
+	return args.Get(0).(*types.Batch), args.Error(1) //nolint:errcheck // mock safe cast
 }
 
 func (m *mockBatchProvider) Close() {
@@ -80,10 +88,10 @@ var _ AltDAProvider = (*mockAltDAProvider)(nil)
 
 func (m *mockAltDAProvider) GetInput(ctx context.Context, comm altda.CommitmentData) ([]byte, error) {
 	args := m.Called(ctx, comm)
-	return args.Get(0).([]byte), args.Error(1)
+	return args.Get(0).([]byte), args.Error(1) //nolint:errcheck // mock safe cast
 }
 
 func (m *mockAltDAProvider) SetInput(ctx context.Context, img []byte) (altda.CommitmentData, error) {
 	args := m.Called(ctx, img)
-	return args.Get(0).(altda.CommitmentData), args.Error(1)
+	return args.Get(0).(altda.CommitmentData), args.Error(1) //nolint:errcheck // mock safe cast
 }
