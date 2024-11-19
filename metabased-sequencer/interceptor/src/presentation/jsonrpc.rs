@@ -14,7 +14,6 @@ use jsonrpsee::types::{ErrorObject, Params};
 use serde::Serialize;
 use std::fmt::{Debug, Display, Formatter};
 use std::sync::Arc;
-use http::{Response, StatusCode};
 
 /// An error type for JSON-RPC endpoints.
 ///
