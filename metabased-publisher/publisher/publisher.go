@@ -7,11 +7,9 @@ import (
 	"time"
 
 	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/metrics"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
-	translator_types "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
@@ -20,9 +18,10 @@ import (
 // TODO (SEQ-186): this should not be configurable - it is dangerous if the value is changed along the way
 const MaxFrameSize = 120_000 - 1
 
-type L3RPCAPI interface {
+type RPCAPI interface {
 	BlockNumber(ctx context.Context) (uint64, error)
 	BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error)
+	ChainID(ctx context.Context) (*big.Int, error)
 }
 
 type AltDAProvider interface {
@@ -31,36 +30,40 @@ type AltDAProvider interface {
 }
 
 type Publisher struct {
-	log                    gethlog.Logger
-	metabasedBatchProvider translator.IBatchProvider
-	ctx                    context.Context
-	cancel                 context.CancelFunc
-	metrics                metrics.Metricer
-	l3                     L3RPCAPI
-	altDA                  AltDAProvider
-	wg                     sync.WaitGroup
-	networkTimeout         time.Duration
-	latestProcessedBlock   uint64
-	pollInterval           time.Duration
+	translatedBlockSigner types.Signer
+	altDA                 AltDAProvider
+	log                   gethlog.Logger
+	ctx                   context.Context
+	metrics               metrics.Metricer
+	opTranslatorClient    RPCAPI
+	cancel                context.CancelFunc
+	wg                    sync.WaitGroup
+	latestProcessedBlock  uint64
+	pollInterval          time.Duration
+	networkTimeout        time.Duration
+	batcherAddress        common.Address
+	batchInboxAddress     common.Address
 }
 
 func NewPublisher(
-	l3 L3RPCAPI,
-	metabasedBatchProvider translator.IBatchProvider,
+	opTranslatorCLient RPCAPI,
 	altDA AltDAProvider,
+	batcherAddress common.Address,
+	batchInboxAddress common.Address,
 	pollInterval time.Duration,
 	networkTimeout time.Duration,
 	log gethlog.Logger,
 	metr metrics.Metricer,
 ) *Publisher {
 	return &Publisher{
-		l3:                     l3,
-		metabasedBatchProvider: metabasedBatchProvider,
-		altDA:                  altDA,
-		pollInterval:           pollInterval,
-		networkTimeout:         networkTimeout,
-		log:                    log,
-		metrics:                metr,
+		opTranslatorClient: opTranslatorCLient,
+		altDA:              altDA,
+		batcherAddress:     batcherAddress,
+		batchInboxAddress:  batchInboxAddress,
+		pollInterval:       pollInterval,
+		networkTimeout:     networkTimeout,
+		log:                log,
+		metrics:            metr,
 	}
 }
 
@@ -71,13 +74,13 @@ func (p *Publisher) Start(ctx context.Context) {
 
 	// TODO (SEQ-187): wait for all 3 chains RPCs to be synced
 
-	// TODO (SEQ-194): determine the L3 metabased-sequencing starting block
-	l3StartingBlock := uint64(0)
+	// TODO (SEQ-194): determine the translated block starting block
+	startingBlock := uint64(0)
 
 	// TODO (SEQ-188): `p.latestProcessedBlock` must be restored from somewhere, ideally we obtain it from upstream (altda)
-	if l3StartingBlock > p.latestProcessedBlock {
+	if startingBlock > p.latestProcessedBlock {
 		// only start uploading to altDA after the L3 is metabased sequenced
-		p.latestProcessedBlock = l3StartingBlock
+		p.latestProcessedBlock = startingBlock
 	}
 
 	p.wg.Add(1)
@@ -86,7 +89,6 @@ func (p *Publisher) Start(ctx context.Context) {
 
 func (p *Publisher) Stop() error {
 	p.cancel()
-	p.metabasedBatchProvider.Close()
 	p.wg.Wait()
 	return nil
 }
@@ -100,13 +102,13 @@ func (p *Publisher) loop() {
 	for {
 		select {
 		case <-pollTicker.C:
-			// obtain new L3 blocks to process
+			// obtain new translated blocks to process
 			currentBlock, err := p.currentBlockNumber()
 			if err != nil {
 				p.log.Error("failed to get latest block", "error", err)
 				continue
 			}
-			p.log.Info("polling for new blocks", "L3Block", currentBlock, "latestProcessedBlock", p.latestProcessedBlock)
+			p.log.Info("polling for new blocks", "currentTranslatedBlock", currentBlock, "latestProcessedBlock", p.latestProcessedBlock)
 			for i := p.latestProcessedBlock + 1; i <= currentBlock; i++ {
 				if err := p.processBlock(i); err != nil {
 					p.log.Warn("stopped processing, will retry next interval", "lastProcessed", p.latestProcessedBlock, "failedBlock", i, "error", err)
@@ -120,41 +122,45 @@ func (p *Publisher) loop() {
 	}
 }
 
-// TODO (SEQ-190): we are using L3 blocks as the guiding principle to publish data (assumption seems okay, but must be discussed)
+// TODO (SEQ-190): we are using translated blocks as the guiding principle to publish data (assumption seems okay, but must be discussed)
 func (p *Publisher) currentBlockNumber() (uint64, error) {
 	contextWithTimeout, cancel := context.WithTimeout(p.ctx, p.networkTimeout)
 	defer cancel()
-	return p.l3.BlockNumber(contextWithTimeout)
+	return p.opTranslatorClient.BlockNumber(contextWithTimeout)
+}
+
+func (p *Publisher) signer() types.Signer {
+	if p.translatedBlockSigner != nil {
+		return p.translatedBlockSigner
+	}
+	contextWithTimeout, cancel := context.WithTimeout(p.ctx, p.networkTimeout)
+	defer cancel()
+	chainID, err := p.opTranslatorClient.ChainID(contextWithTimeout)
+	if err != nil {
+		return nil
+	}
+	return types.NewCancunSigner(chainID)
 }
 
 func (p *Publisher) callDataForBlock(blockNumber uint64) ([]byte, error) {
 	contextWithTimeout, cancel := context.WithTimeout(p.ctx, p.networkTimeout)
 	defer cancel()
-	block, err := p.l3.BlockByNumber(contextWithTimeout, new(big.Int).SetUint64(blockNumber))
+	block, err := p.opTranslatorClient.BlockByNumber(contextWithTimeout, new(big.Int).SetUint64(blockNumber))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get block from L3")
+		return nil, errors.Wrap(err, "failed to get translated block")
 	}
-
-	contextWithTimeout, cancel = context.WithTimeout(p.ctx, p.networkTimeout)
-	defer cancel()
-	p.log.Debug("processing block", "block", block)
-	// TODO (SEQ-304): the batch has already been built by the translator and is part of the L3 block. we should be able to just use it (thus removing all dependencies of the publisher except L3 RPC)
-	batch, err := p.metabasedBatchProvider.GetBatch(contextWithTimeout,
-		map[string]any{
-			"number": hexutil.EncodeUint64(block.NumberU64()),
-			"hash":   block.Hash().Hex(),
-		},
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get batch")
-	}
-	frames, err := batch.GetFrames(MaxFrameSize)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to get frames from batch")
-	}
-	callData, err := translator_types.ToData(frames)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to convert frames to calldata")
+	var callData []byte
+	for _, tx := range block.Transactions() {
+		// filter for transactions from the batcher address to the batch inbox contract
+		if tx.To() != nil && *tx.To() == p.batchInboxAddress {
+			from, err := types.Sender(p.signer(), tx)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to get sender from transaction")
+			}
+			if from == p.batcherAddress {
+				callData = append(callData, tx.Data()...) // TODO (SEQ-317) this will work for a single tx, but we might have to collect the data differently if many txs are used in a single block
+			}
+		}
 	}
 	return callData, nil
 }

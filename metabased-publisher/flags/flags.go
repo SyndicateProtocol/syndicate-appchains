@@ -23,30 +23,22 @@ var (
 	// Required flags
 	//////////////////////////
 
-	// settlement chain
-	SettlementChainRPCURL = &cli.StringFlag{
-		Name:    "settlement-chain-rpc",
-		Usage:   "JSON-RPC URL for the settlement chain",
-		EnvVars: []string{"SETTLEMENT_CHAIN_ADDR"},
+	// op-translator
+	OpTranslatorRPCURL = &cli.StringFlag{
+		Name:    "op-translator-rpc",
+		Usage:   "JSON-RPC URL for the op-translator service",
+		EnvVars: []string{"OP_TRANSLATOR_RPC_URL"},
 	}
 
-	// sequencing chain
-	SequencingChainRPCURL = &cli.StringFlag{
-		Name:    "sequencing-chain-rpc",
-		Usage:   "JSON-RPC URL for the Sequencing chain",
-		EnvVars: []string{"SEQUENCING_CHAIN_ADDR"},
+	BatcherAddress = &cli.StringFlag{
+		Name:    "batcher-address",
+		Usage:   "Address of the Batcher",
+		EnvVars: []string{"BATHER_ADDRESS"},
 	}
-	SequencingContractAddress = &cli.StringFlag{
-		Name:    "sequencing-contract-address",
-		Usage:   "Address of the Sequencing contract",
-		EnvVars: []string{"SEQUENCING_CONTRACT_ADDRESS"},
-	}
-
-	// L3 Metabased Chain
-	L3RPCURL = &cli.StringFlag{
-		Name:    "l3-rpc",
-		Usage:   "JSON-RPC URL for the L3 Metabased Chain Execution Client",
-		EnvVars: []string{"META_BASED_CHAIN_ADDR"},
+	BatchInboxAddress = &cli.StringFlag{
+		Name:    "batch-inbox-address",
+		Usage:   "Address of the Batch Inbox",
+		EnvVars: []string{"BATCH_INBOX_ADDRESS"},
 	}
 
 	// AltDA
@@ -76,10 +68,9 @@ var (
 )
 
 var requiredFlags = []cli.Flag{
-	SettlementChainRPCURL,
-	SequencingChainRPCURL,
-	SequencingContractAddress,
-	L3RPCURL,
+	OpTranslatorRPCURL,
+	BatcherAddress,
+	BatchInboxAddress,
 	AltDAURL,
 }
 

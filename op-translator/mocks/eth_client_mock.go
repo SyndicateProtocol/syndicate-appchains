@@ -37,11 +37,16 @@ func (m *MockEthClient) TransactionReceipt(ctx context.Context, hash common.Hash
 	return args.Get(0).(*ethtypes.Receipt), args.Error(1) //nolint:errcheck // mock safe cast
 }
 
-func (m *MockEthClient) Close() {
-	m.Called()
-}
-
 func (m *MockEthClient) BlockNumber(ctx context.Context) (uint64, error) {
 	args := m.Called(ctx)
 	return args.Get(0).(uint64), args.Error(1) //nolint:errcheck // mock safe cast
+}
+
+func (m *MockEthClient) ChainID(ctx context.Context) (*big.Int, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(*big.Int), args.Error(1) //nolint:errcheck // mock safe cast
+}
+
+func (m *MockEthClient) Close() {
+	m.Called()
 }

@@ -53,10 +53,9 @@ func TestEnvVarFormat(t *testing.T) {
 		flagName := flag.Names()[0]
 
 		skippedFlags := []string{
-			SettlementChainRPCURL.Name,
-			SequencingChainRPCURL.Name,
-			SequencingContractAddress.Name,
-			L3RPCURL.Name,
+			BatcherAddress.Name,
+			BatchInboxAddress.Name,
+			OpTranslatorRPCURL.Name,
 			AltDAURL.Name,
 		}
 

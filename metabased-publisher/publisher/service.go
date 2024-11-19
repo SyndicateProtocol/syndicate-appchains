@@ -47,20 +47,19 @@ func Main(version string) cliapp.LifecycleAction {
 var ErrAlreadyStopped = errors.New("already stopped")
 
 type PublisherService struct {
-	settlementChainClient     translator.IRPCClient
-	sequencingChainClient     translator.IRPCClient
-	l3Client                  translator.IRPCClient
-	altDAClient               *altda.DAClient
-	metrics                   metrics.Metricer
-	log                       gethlog.Logger
-	sequencingContractAddress *common.Address
-	metricsServer             *httputil.HTTPServer
-	pprofService              *oppprof.Service
-	publisher                 *Publisher
-	version                   string
-	pollInterval              time.Duration
-	networkTimeout            time.Duration
-	stopped                   atomic.Bool
+	opTranslatorClient translator.IRPCClient
+	metrics            metrics.Metricer
+	log                gethlog.Logger
+	pprofService       *oppprof.Service
+	altDAClient        *altda.DAClient
+	publisher          *Publisher
+	metricsServer      *httputil.HTTPServer
+	version            string
+	pollInterval       time.Duration
+	networkTimeout     time.Duration
+	stopped            atomic.Bool
+	batchInboxAddress  common.Address
+	batcherAddress     common.Address
 }
 
 func (p *PublisherService) initFromCLIConfig(_ context.Context, version string, cfg *CLIConfig, log gethlog.Logger) error {
@@ -71,11 +70,10 @@ func (p *PublisherService) initFromCLIConfig(_ context.Context, version string, 
 
 	p.initMetrics(cfg)
 
-	if err := p.initSequencingContractAddress(cfg); err != nil {
+	if err := p.initAddresses(cfg); err != nil {
 		return fmt.Errorf("failed to init sequencing contract address: %w", err)
 	}
-
-	if err := p.initRPCClients(cfg); err != nil {
+	if err := p.initRPCClient(cfg); err != nil {
 		return err
 	}
 	if err := p.initMetricsServer(cfg); err != nil {
@@ -106,37 +104,28 @@ func (p *PublisherService) initMetrics(cfg *CLIConfig) {
 	}
 }
 
-// initRPCClients creates the RPC clients for the settlement, sequencing chains and L3 metabased chain
-func (p *PublisherService) initRPCClients(cfg *CLIConfig) error {
-	seqChainClient, err := rpc.Connect(cfg.SequencingChainRPCURL)
-	if err != nil {
-		return fmt.Errorf("failed to dial sequencing chain RPC: %w", err)
-	}
-	p.sequencingChainClient = seqChainClient
-
-	settlementChainClient, err := rpc.Connect(cfg.SettlementChainRPCURL)
-	if err != nil {
-		return fmt.Errorf("failed to dial settlement chain RPC: %w", err)
-	}
-	p.settlementChainClient = settlementChainClient
-
-	l3Client, err := rpc.Connect(cfg.L3RPCURL)
+// initRPCClient creates the RPC client for the op-translator
+func (p *PublisherService) initRPCClient(cfg *CLIConfig) error {
+	opTranslatorClient, err := rpc.Connect(cfg.OpTranslatorRPCURL)
 	if err != nil {
 		return fmt.Errorf("failed to dial L3 chain RPC: %w", err)
 	}
-	p.l3Client = l3Client
+	p.opTranslatorClient = opTranslatorClient
 	return nil
 }
 
-func (p *PublisherService) initSequencingContractAddress(cfg *CLIConfig) error {
-	if cfg.SequencingContractAddress == "" {
-		return errors.New("empty sequencing contract address")
-	}
-	sequencingContractAddress, err := opservice.ParseAddress(cfg.SequencingContractAddress)
+func (p *PublisherService) initAddresses(cfg *CLIConfig) error {
+	batcherAddress, err := opservice.ParseAddress(cfg.BatcherAddress)
 	if err != nil {
 		return err
 	}
-	p.sequencingContractAddress = &sequencingContractAddress
+	p.batcherAddress = batcherAddress
+
+	batchInboxAddress, err := opservice.ParseAddress(cfg.BatchInboxAddress)
+	if err != nil {
+		return err
+	}
+	p.batchInboxAddress = batchInboxAddress
 	return nil
 }
 
@@ -176,18 +165,11 @@ func (p *PublisherService) initMetricsServer(cfg *CLIConfig) error {
 }
 
 func (p *PublisherService) initPublisher() {
-	metabasedBatchProvider := translator.NewMetaBasedBatchProvider(
-		p.settlementChainClient,
-		p.sequencingChainClient,
-		*p.sequencingContractAddress,
-		0, // TODO (SEQ-194): SettlementStartBlock
-		0, // TODO (SEQ-194): SettlementChainBlockTime
-	)
-
 	p.publisher = NewPublisher(
-		p.l3Client.AsEthClient(),
-		metabasedBatchProvider,
+		p.opTranslatorClient.AsEthClient(),
 		p.altDAClient,
+		p.batcherAddress,
+		p.batchInboxAddress,
 		p.pollInterval,
 		p.networkTimeout,
 		p.log,
@@ -228,16 +210,8 @@ func (p *PublisherService) Stop(ctx context.Context) error {
 		}
 	}
 
-	if p.settlementChainClient != nil {
-		p.settlementChainClient.CloseConnection()
-	}
-
-	if p.sequencingChainClient != nil {
-		p.sequencingChainClient.CloseConnection()
-	}
-
-	if p.l3Client != nil {
-		p.l3Client.CloseConnection()
+	if p.opTranslatorClient != nil {
+		p.opTranslatorClient.CloseConnection()
 	}
 
 	if result == nil {

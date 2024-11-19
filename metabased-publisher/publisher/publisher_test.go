@@ -7,10 +7,9 @@ import (
 	"time"
 
 	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/metrics"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
-	translator_types "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/mock"
@@ -20,13 +19,13 @@ import (
 func TestBasic(t *testing.T) {
 	log := testlog.Logger(t, gethlog.LvlDebug)
 
-	mockL3 := &mockL3{}
-	mockedBatchProvider := &mockBatchProvider{}
+	mockL3 := &mockOpTranslatorRPC{}
 	mockAltDAProvider := &mockAltDAProvider{}
 	publisher := NewPublisher(
 		mockL3,
-		mockedBatchProvider,
 		mockAltDAProvider,
+		common.Address{},
+		common.Address{},
 		10*time.Millisecond,
 		10*time.Millisecond,
 		log,
@@ -36,8 +35,6 @@ func TestBasic(t *testing.T) {
 	// no L3 blocks
 	mockedL3Call := mockL3.On("BlockNumber", mock.Anything).
 		Return(uint64(0), nil)
-	mockedBatchProvider.On("GetBatch", mock.Anything, mock.Anything).
-		Return(&translator_types.Batch{}, nil)
 	mockAltDAProvider.On("SetInput", mock.Anything, mock.Anything).
 		Return(altda.GenericCommitment{}, nil)
 
@@ -63,31 +60,23 @@ func TestBasic(t *testing.T) {
 ////////////////////////////////////////////////////////////
 
 // Mocked L3 RPC API
-type mockL3 struct{ mock.Mock }
+type mockOpTranslatorRPC struct{ mock.Mock }
 
-var _ L3RPCAPI = (*mockL3)(nil)
+var _ RPCAPI = (*mockOpTranslatorRPC)(nil)
 
-func (m *mockL3) BlockNumber(ctx context.Context) (uint64, error) {
+func (m *mockOpTranslatorRPC) BlockNumber(ctx context.Context) (uint64, error) {
 	args := m.Called(ctx)
 	return args.Get(0).(uint64), args.Error(1) //nolint:errcheck // mock safe cast
 }
 
-func (m *mockL3) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+func (m *mockOpTranslatorRPC) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
 	args := m.Called(ctx)
 	return args.Get(0).(*types.Block), args.Error(1) //nolint:errcheck // mock safe cast
 }
 
-// Mocked Batch Provider
-type mockBatchProvider struct{ mock.Mock }
-
-var _ translator.IBatchProvider = (*mockBatchProvider)(nil)
-
-func (m *mockBatchProvider) GetBatch(ctx context.Context, block translator_types.Block) (*translator_types.Batch, error) {
-	args := m.Called(ctx, block)
-	return args.Get(0).(*translator_types.Batch), args.Error(1) //nolint:errcheck // mock safe cast
-}
-
-func (m *mockBatchProvider) Close() {
+func (m *mockOpTranslatorRPC) ChainID(ctx context.Context) (*big.Int, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(*big.Int), args.Error(1) //nolint:errcheck // mock safe cast
 }
 
 // Mocked AltDA Provider

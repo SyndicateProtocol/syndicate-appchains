@@ -29,6 +29,7 @@ type IETHClient interface {
 	BlockByNumber(ctx context.Context, number *big.Int) (*ethtypes.Block, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*ethtypes.Header, error)
 	TransactionReceipt(ctx context.Context, hash common.Hash) (*ethtypes.Receipt, error)
+	ChainID(ctx context.Context) (*big.Int, error)
 	Close()
 }
 

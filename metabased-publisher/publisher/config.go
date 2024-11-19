@@ -13,35 +13,28 @@ import (
 )
 
 type CLIConfig struct {
-	SettlementChainRPCURL     string
-	SequencingChainRPCURL     string
-	SequencingContractAddress string
-	L3RPCURL                  string
-	AltDAURL                  string
-	PprofConfig               oppprof.CLIConfig
-	LogConfig                 oplog.CLIConfig
-	MetricsConfig             opmetrics.CLIConfig
-	PollInterval              time.Duration
-	NetworkTimeout            time.Duration
+	BatcherAddress     string
+	BatchInboxAddress  string
+	OpTranslatorRPCURL string
+	AltDAURL           string
+	PprofConfig        oppprof.CLIConfig
+	LogConfig          oplog.CLIConfig
+	MetricsConfig      opmetrics.CLIConfig
+	PollInterval       time.Duration
+	NetworkTimeout     time.Duration
 }
 
 func (c *CLIConfig) Check() error {
-	// settlement chain
-	if c.SettlementChainRPCURL == "" {
-		return errors.New("empty settlement chain RPC URL")
+	// op-translator
+	if c.OpTranslatorRPCURL == "" {
+		return errors.New("empty op-translator RPC URL")
 	}
 
-	// sequencing chain
-	if c.SequencingChainRPCURL == "" {
-		return errors.New("empty sequencing chain RPC URL")
+	if c.BatcherAddress == "" {
+		return errors.New("empty batcher address")
 	}
-	if c.SequencingContractAddress == "" {
-		return errors.New("empty sequencing contract address")
-	}
-
-	// L3 metabased chain
-	if c.L3RPCURL == "" {
-		return errors.New("empty L3 RPC URL")
+	if c.BatchInboxAddress == "" {
+		return errors.New("empty batch inbox address")
 	}
 
 	// AltDA
@@ -67,15 +60,10 @@ func (c *CLIConfig) Check() error {
 // NewConfig parses the Config from the provided flags or environment variables.
 func NewConfig(ctx *cli.Context) *CLIConfig {
 	return &CLIConfig{
-		// settlement chain
-		SettlementChainRPCURL: ctx.String(flags.SettlementChainRPCURL.Name),
-
-		// sequencing chain
-		SequencingChainRPCURL:     ctx.String(flags.SequencingChainRPCURL.Name),
-		SequencingContractAddress: ctx.String(flags.SequencingContractAddress.Name),
-
-		// L3 metabased chain
-		L3RPCURL: ctx.String(flags.L3RPCURL.Name),
+		// op-translator
+		OpTranslatorRPCURL: ctx.String(flags.OpTranslatorRPCURL.Name),
+		BatcherAddress:     ctx.String(flags.BatcherAddress.Name),
+		BatchInboxAddress:  ctx.String(flags.BatchInboxAddress.Name),
 
 		// AltDA
 		AltDAURL: ctx.String(flags.AltDAURL.Name),
