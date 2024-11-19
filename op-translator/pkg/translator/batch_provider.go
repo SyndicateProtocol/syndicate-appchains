@@ -172,16 +172,17 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 //   - Stateful (expensive): use simulate RPC to check if the block to-be produced is valid
 func (m *MetaBasedBatchProvider) GetValidTransactions(rawTxs []hexutil.Bytes) []hexutil.Bytes {
 	// First phase validation: stateless
-	// rawFilteredTxStateless, parsedFilteredTxStateless, removedCountStateless := FilterTransactionsStateless(rawTxs)
-	// if removedCountStateless > 0 {
-	// 	log.Debug().Msgf("Transactions got filtered by stateless validation: %d", removedCountStateless)
-	// }
+	rawFilteredTxStateless, parsedFilteredTxStateless := ParseRawTransactions(rawTxs)
+	removedCountStateless := len(rawTxs) - len(rawFilteredTxStateless)
+	if removedCountStateless > 0 {
+		log.Debug().Msgf("Transactions got filtered by stateless validation: %d", removedCountStateless)
+	}
 
 	// Second phase validation: stateful
-	// rawFilteredTxsStateful, removedCountStateful := m.FilterTransactionsStateful(rawFilteredTxStateless, parsedFilteredTxStateless)
-	// if removedCountStateful > 0 {
-	// 	log.Debug().Msgf("Transactions got filtered by stateful validation: %d", removedCountStateful)
-	// }
-
-	return []hexutil.Bytes{}
+	rawFilteredTxStateful := m.ValidateTransactionsBlock(rawFilteredTxStateless, parsedFilteredTxStateless)
+	removedCountStateful := len(rawFilteredTxStateless) - len(rawFilteredTxStateful)
+	if removedCountStateful > 0 {
+		log.Debug().Msgf("Transactions got filtered by stateful validation: %d", removedCountStateful)
+	}
+	return rawFilteredTxStateful
 }

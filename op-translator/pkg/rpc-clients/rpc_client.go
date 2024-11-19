@@ -9,6 +9,7 @@ import (
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
+
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -159,6 +160,7 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 }
 
 type ParsedTransaction struct {
+	Hash                 string
 	Nonce                string
 	Value                string
 	Gas                  string
@@ -170,7 +172,7 @@ type ParsedTransaction struct {
 }
 
 type BlockStateCall struct {
-	Calls []ParsedTransaction `json:"calls"`
+	Calls []*ParsedTransaction `json:"calls"`
 }
 
 type SimulationRequest struct {
@@ -178,9 +180,17 @@ type SimulationRequest struct {
 	Validation      bool             `json:"validation,omitempty"`
 }
 
-func (c *RPCClient) SimulateTransactions(ctx context.Context, simulationRequest SimulationRequest, blockParameter string) (any, error) {
+func (c *RPCClient) SimulateTransactions(ctx context.Context, transactions []*ParsedTransaction, blockParameter string) (any, error) {
 	var response any
-	err := c.rawClient.CallContext(ctx, &response, "eth_simulateV1", simulationRequest, blockParameter)
+	request := SimulationRequest{
+		BlockStateCalls: []BlockStateCall{
+			{
+				Calls: transactions,
+			},
+		},
+		Validation: true,
+	}
+	err := c.rawClient.CallContext(ctx, &response, "eth_simulateV1", request, blockParameter)
 	log.Debug().Interface("response", response).Msg("Simulation response")
 	if err != nil {
 		return nil, err

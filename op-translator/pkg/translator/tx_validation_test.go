@@ -31,7 +31,7 @@ var txValid2 = GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 })
 var rawTxValid2 = MustMarshalTransaction(txValid2)
 
-func TestFilterTransactionsStateless(t *testing.T) {
+func TestParseRawTransactions(t *testing.T) {
 	type args struct {
 		txs []hexutil.Bytes
 	}
@@ -40,41 +40,35 @@ func TestFilterTransactionsStateless(t *testing.T) {
 		args                          args
 		wantFilteredTxsStateless      []hexutil.Bytes
 		wantParsedFilteredTxStateless []*ethtypes.Transaction
-		wantRemovedCountStateless     int
 	}{
 		{"mix of valid and invalid, invalid at index 1",
 			args{[]hexutil.Bytes{rawTxValid1, rawTxIntrinsicGasTooLow}},
 			[]hexutil.Bytes{rawTxValid1},
 			[]*ethtypes.Transaction{txValid1},
-			1,
 		},
 		{"mix of valid and invalid, invalid at index 0",
 			args{[]hexutil.Bytes{rawTxIntrinsicGasTooLow, rawTxValid1}},
 			[]hexutil.Bytes{rawTxValid1},
 			[]*ethtypes.Transaction{txValid1},
-			1,
 		},
 		{"mix of valid and invalid, invalid at indexes 1, 2, 3",
 			args{[]hexutil.Bytes{rawTxValid1, rawTxIntrinsicGasTooLow, rawTxIntrinsicGasTooLow, rawTxIntrinsicGasTooLow, rawTxValid2}},
 			[]hexutil.Bytes{rawTxValid1, rawTxValid2},
 			[]*ethtypes.Transaction{txValid1, txValid2},
-			3,
 		},
 		{"unparseable",
 			args{[]hexutil.Bytes{{0x00}}},
 			[]hexutil.Bytes{},
 			[]*ethtypes.Transaction{},
-			1,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotFilteredTxsStateless, gotParsedFilteredTxStateless, gotRemovedCountStateless := FilterTransactionsStateless(tt.args.txs)
-			assert.Equalf(t, tt.wantFilteredTxsStateless, gotFilteredTxsStateless, "FilterTransactionsStateless(%v)", tt.args.txs)
-			assert.Equalf(t, tt.wantRemovedCountStateless, gotRemovedCountStateless, "FilterTransactionsStateless(%v)", tt.args.txs)
+			gotFilteredTxsStateless, gotParsedFilteredTxStateless := ParseRawTransactions(tt.args.txs)
+			assert.Equalf(t, tt.wantFilteredTxsStateless, gotFilteredTxsStateless, "ParseRawTransactions(%v)", tt.args.txs)
 			// parsed transactions are pointers, so we need to compare their contents one by one
 			for i, parsedTx := range gotParsedFilteredTxStateless {
-				assert.Equalf(t, tt.wantParsedFilteredTxStateless[i].Hash(), parsedTx.Hash(), "FilterTransactionsStateless(%v)", tt.args.txs)
+				assert.Equalf(t, tt.wantParsedFilteredTxStateless[i].Hash(), parsedTx.Hash, "ParseRawTransactions(%v)", tt.args.txs)
 			}
 		})
 	}
@@ -109,7 +103,7 @@ func MustMarshalTransaction(tx *ethtypes.Transaction) hexutil.Bytes {
 	return bytes
 }
 
-func TestValidateTransactionStateless(t *testing.T) {
+func TestValidateTransactionInternal(t *testing.T) {
 	// supported legacy transaction
 	txLegacyType := ethtypes.NewTx(&ethtypes.LegacyTx{
 		Gas: 53000,
@@ -236,7 +230,7 @@ func TestValidateTransactionStateless(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateTransactionStateless(tt.args.tx)
+			err := ValidateTransactionInternal(tt.args.tx)
 			if tt.wantErr && err == nil {
 				t.Errorf("an error is expected but got nil.")
 			}
