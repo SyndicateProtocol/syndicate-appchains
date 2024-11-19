@@ -126,10 +126,7 @@ mod tests {
         let services = Services::new((), metrics, ());
         let rpc_module = create_eth_module(services);
 
-        let expected_response = format!(
-            "Content-Type: text/plain; version=0.0.4; charset=utf-8\n\n{}",
-            metrics
-        );
+        let expected_response = metrics.to_string();
         let actual_response = rpc_module
             .unwrap()
             .call::<[(); 0], String>(METRICS_RPC, [])
@@ -145,10 +142,7 @@ mod tests {
         let services = Services::new((), metrics, ());
         let rpc_module = create_eth_module(services);
 
-        let expected_response = format!(
-            "Content-Type: text/plain; version=0.0.4; charset=utf-8\n\n{}",
-            metrics
-        );
+        let expected_response = metrics.to_string();
         let actual_response = rpc_module
             .unwrap()
             .call::<[i32; 1], String>(METRICS_RPC, [0])

@@ -14,6 +14,8 @@ use jsonrpsee::types::{ErrorObject, Params};
 use serde::Serialize;
 use std::fmt::{Debug, Display, Formatter};
 use std::sync::Arc;
+use jsonrpsee::core::RpcResult;
+use http::{Response, StatusCode};
 
 /// An error type for JSON-RPC endpoints.
 ///
@@ -125,7 +127,7 @@ pub fn metrics<Chain, M, S>(
     _params: Params,
     ctx: &Services<Chain, M, S>,
     _ext: &http::Extensions,
-) -> Result<String, JsonRpcError<()>>
+) -> RpcResult<String>
 where
     Chain: MetabasedSequencerChainService,
     M: Metrics,
@@ -134,12 +136,15 @@ where
 {
     let metrics_data = application::metrics(ctx.metrics_service());
 
-    let response = format!(
-        "Content-Type: text/plain; version=0.0.4; charset=utf-8\n\n{}",
-        metrics_data
-    );
+    // Create the response with the Content-Type header
+    let response = Response::builder()
+        .status(StatusCode::OK)
+        .header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+        .body(metrics_data)
+        .map_err(|e| JsonRpcError::from(e))?;
 
-    Ok(response)
+    // Return the response as a string
+    Ok(response.into_body())
 }
 
 /// The JSON-RPC endpoint for health check.
