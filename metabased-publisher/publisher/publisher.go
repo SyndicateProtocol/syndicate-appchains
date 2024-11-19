@@ -2,14 +2,17 @@ package publisher
 
 import (
 	"context"
+	"math/big"
 	"sync"
 	"time"
 
 	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/metrics"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
+	translator_types "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
+
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/core/types"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
 )
@@ -19,6 +22,7 @@ const MaxFrameSize = 120_000 - 1
 
 type L3RPCAPI interface {
 	BlockNumber(ctx context.Context) (uint64, error)
+	BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error)
 }
 
 type AltDAProvider interface {
@@ -97,7 +101,7 @@ func (p *Publisher) loop() {
 		select {
 		case <-pollTicker.C:
 			// obtain new L3 blocks to process
-			currentBlock, err := p.currentBlock()
+			currentBlock, err := p.currentBlockNumber()
 			if err != nil {
 				p.log.Error("failed to get latest block", "error", err)
 				continue
@@ -117,19 +121,30 @@ func (p *Publisher) loop() {
 }
 
 // TODO (SEQ-190): we are using L3 blocks as the guiding principle to publish data (assumption seems okay, but must be discussed)
-func (p *Publisher) currentBlock() (uint64, error) {
+func (p *Publisher) currentBlockNumber() (uint64, error) {
 	contextWithTimeout, cancel := context.WithTimeout(p.ctx, p.networkTimeout)
 	defer cancel()
-	blockNumber, err := p.l3.BlockNumber(contextWithTimeout)
-	return blockNumber, err
+	return p.l3.BlockNumber(contextWithTimeout)
 }
 
-func (p *Publisher) callDataForBlock(block uint64) ([]byte, error) {
+func (p *Publisher) callDataForBlock(blockNumber uint64) ([]byte, error) {
 	contextWithTimeout, cancel := context.WithTimeout(p.ctx, p.networkTimeout)
+	defer cancel()
+	block, err := p.l3.BlockByNumber(contextWithTimeout, new(big.Int).SetUint64(blockNumber))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get block from L3")
+	}
+
+	contextWithTimeout, cancel = context.WithTimeout(p.ctx, p.networkTimeout)
 	defer cancel()
 	p.log.Debug("processing block", "block", block)
 	// TODO (SEQ-304): the batch has already been built by the translator and is part of the L3 block. we should be able to just use it (thus removing all dependencies of the publisher except L3 RPC)
-	batch, err := p.metabasedBatchProvider.GetBatch(contextWithTimeout, map[string]any{"number": hexutil.EncodeUint64(block)})
+	batch, err := p.metabasedBatchProvider.GetBatch(contextWithTimeout,
+		map[string]any{
+			"number": hexutil.EncodeUint64(block.NumberU64()),
+			"hash":   block.Hash().Hex(),
+		},
+	)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get batch")
 	}
@@ -137,7 +152,7 @@ func (p *Publisher) callDataForBlock(block uint64) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get frames from batch")
 	}
-	callData, err := types.ToData(frames)
+	callData, err := translator_types.ToData(frames)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert frames to calldata")
 	}

@@ -2,14 +2,16 @@ package publisher
 
 import (
 	"context"
+	"math/big"
 	"testing"
 	"time"
 
 	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/metrics"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
+	translator_types "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
+	"github.com/ethereum/go-ethereum/core/types"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -35,7 +37,7 @@ func TestBasic(t *testing.T) {
 	mockedL3Call := mockL3.On("BlockNumber", mock.Anything).
 		Return(uint64(0), nil)
 	mockedBatchProvider.On("GetBatch", mock.Anything, mock.Anything).
-		Return(&types.Batch{}, nil)
+		Return(&translator_types.Batch{}, nil)
 	mockAltDAProvider.On("SetInput", mock.Anything, mock.Anything).
 		Return(altda.GenericCommitment{}, nil)
 
@@ -48,6 +50,8 @@ func TestBasic(t *testing.T) {
 	mockedL3Call.Unset()
 	mockL3.On("BlockNumber", mock.Anything).
 		Return(uint64(1), nil)
+	mockL3.On("BlockByNumber", mock.Anything, mock.Anything).
+		Return(types.NewBlock(&types.Header{Number: big.NewInt(1)}, nil, nil, nil), nil)
 
 	time.Sleep(20 * time.Millisecond) // wait for the publisher to process the batch (more time than the poll interval)
 	// assert the altDA provider was called once
@@ -68,14 +72,19 @@ func (m *mockL3) BlockNumber(ctx context.Context) (uint64, error) {
 	return args.Get(0).(uint64), args.Error(1) //nolint:errcheck // mock safe cast
 }
 
+func (m *mockL3) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(*types.Block), args.Error(1) //nolint:errcheck // mock safe cast
+}
+
 // Mocked Batch Provider
 type mockBatchProvider struct{ mock.Mock }
 
 var _ translator.IBatchProvider = (*mockBatchProvider)(nil)
 
-func (m *mockBatchProvider) GetBatch(ctx context.Context, block types.Block) (*types.Batch, error) {
+func (m *mockBatchProvider) GetBatch(ctx context.Context, block translator_types.Block) (*translator_types.Batch, error) {
 	args := m.Called(ctx, block)
-	return args.Get(0).(*types.Batch), args.Error(1) //nolint:errcheck // mock safe cast
+	return args.Get(0).(*translator_types.Batch), args.Error(1) //nolint:errcheck // mock safe cast
 }
 
 func (m *mockBatchProvider) Close() {
