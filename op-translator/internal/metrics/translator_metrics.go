@@ -5,25 +5,25 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 )
 
-const Namespace = "op_translator"
+const opTranslatorNamespace = "op_translator"
 
-type IMetrics interface {
+type IOPTranslatorMetrics interface {
 	RecordRPCRequest(method string)
 	RecordTranslationLatency(method string, duration float64)
 	RecordError(method, errorType string)
 }
 
-type PrometheusMetrics struct {
+type OPTranslatorMetrics struct {
 	rpcRequests        *prometheus.CounterVec
 	translationLatency *prometheus.HistogramVec
 	errors             *prometheus.CounterVec
 }
 
-func NewMetrics() *PrometheusMetrics {
-	return &PrometheusMetrics{
+func NewOPTranslatorMetrics() *OPTranslatorMetrics {
+	return &OPTranslatorMetrics{
 		rpcRequests: promauto.NewCounterVec(
 			prometheus.CounterOpts{
-				Namespace: Namespace,
+				Namespace: opTranslatorNamespace,
 				Name:      "rpc_requests_total",
 				Help:      "Total number of RPC requests processed",
 			},
@@ -31,7 +31,7 @@ func NewMetrics() *PrometheusMetrics {
 		),
 		translationLatency: promauto.NewHistogramVec(
 			prometheus.HistogramOpts{
-				Namespace: Namespace,
+				Namespace: opTranslatorNamespace,
 				Name:      "translation_duration_seconds",
 				Help:      "Time taken to translate blocks",
 				Buckets:   prometheus.DefBuckets,
@@ -40,7 +40,7 @@ func NewMetrics() *PrometheusMetrics {
 		),
 		errors: promauto.NewCounterVec(
 			prometheus.CounterOpts{
-				Namespace: Namespace,
+				Namespace: opTranslatorNamespace,
 				Name:      "errors_total",
 				Help:      "Total number of errors encountered",
 			},
@@ -49,17 +49,14 @@ func NewMetrics() *PrometheusMetrics {
 	}
 }
 
-// Total number of RPC requests by method
-func (m *PrometheusMetrics) RecordRPCRequest(method string) {
+func (m *OPTranslatorMetrics) RecordRPCRequest(method string) {
 	m.rpcRequests.WithLabelValues(method).Inc()
 }
 
-// Translation operation latencies with distribution
-func (m *PrometheusMetrics) RecordTranslationLatency(method string, duration float64) {
+func (m *OPTranslatorMetrics) RecordTranslationLatency(method string, duration float64) {
 	m.translationLatency.WithLabelValues(method).Observe(duration)
 }
 
-// Error counts by method and type
-func (m *PrometheusMetrics) RecordError(method, errorType string) {
+func (m *OPTranslatorMetrics) RecordError(method, errorType string) {
 	m.errors.WithLabelValues(method, errorType).Inc()
 }

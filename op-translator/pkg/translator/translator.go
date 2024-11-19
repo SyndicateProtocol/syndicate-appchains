@@ -34,7 +34,7 @@ type OPTranslator struct {
 	SettlementChain     IRPCClient
 	BatchProvider       IBatchProvider
 	BackfillProvider    *backfill.BackfillProvider
-	Metrics             metrics.IMetrics
+	Metrics             metrics.IOPTranslatorMetrics
 	Signer              Signer
 	BatcherInboxAddress common.Address
 	BatcherAddress      common.Address
@@ -49,7 +49,7 @@ func Init(cfg *config.Config) *OPTranslator {
 	metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg)
 	signer := NewSigner(cfg)
 	backfillProvider := backfill.NewBackfillerProvider(cfg)
-	metricsCollector := metrics.NewMetrics()
+	metricsCollector := metrics.NewOPTranslatorMetrics()
 
 	return &OPTranslator{
 		SettlementChain:     settlementChain,
@@ -117,6 +117,7 @@ func (t *OPTranslator) getFrames(ctx context.Context, block types.Block) ([]*typ
 	} else {
 		batch, err := t.BatchProvider.GetBatch(ctx, block)
 		if err != nil {
+			t.Metrics.RecordError("get_frames", "get_batch_error")
 			return nil, err
 		}
 		return batch.GetFrames(config.MaxFrameSize)
