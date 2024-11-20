@@ -56,14 +56,21 @@ var (
 		Name:    "poll-interval",
 		Usage:   "Interval at which the service will poll the source chains for new data",
 		EnvVars: prefixEnvVars("POLL_INTERVAL"),
-		Value:   time.Second * 30, //nolint:mnd // default value
+		Value:   time.Second * 60, //nolint:mnd // default value
 	}
 
 	NetworkTimeout = &cli.DurationFlag{
 		Name:    "network-timeout",
 		Usage:   "Timeout for network operations",
 		EnvVars: prefixEnvVars("NETWORK_TIMEOUT"),
-		Value:   time.Second * 10, //nolint:mnd // default value
+		Value:   time.Second * 20, //nolint:mnd // default value
+	}
+
+	BlobUploadTimeout = &cli.DurationFlag{
+		Name:    "blob-upload-timeout",
+		Usage:   "Timeout for blob upload operations",
+		EnvVars: prefixEnvVars("BLOB_UPLOAD_TIMEOUT"),
+		Value:   time.Minute * 10, //nolint:mnd // default value
 	}
 )
 
@@ -77,6 +84,7 @@ var requiredFlags = []cli.Flag{
 var optionalFlags = []cli.Flag{
 	PollInterval,
 	NetworkTimeout,
+	BlobUploadTimeout,
 }
 
 func init() {

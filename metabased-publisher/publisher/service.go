@@ -57,6 +57,7 @@ type PublisherService struct {
 	version            string
 	pollInterval       time.Duration
 	networkTimeout     time.Duration
+	blobUploadTimeout  time.Duration
 	stopped            atomic.Bool
 	batchInboxAddress  common.Address
 	batcherAddress     common.Address
@@ -85,6 +86,7 @@ func (p *PublisherService) initFromCLIConfig(_ context.Context, version string, 
 
 	p.pollInterval = cfg.PollInterval
 	p.networkTimeout = cfg.NetworkTimeout
+	p.blobUploadTimeout = cfg.BlobUploadTimeout
 	// NOTE: we set `verify` to false because we will only be writing to the DA
 	// NOTE: we set `precompute` to false because we will use `GenericCommitments` and let the da proxy generate the commitments for us
 	p.altDAClient = altda.NewDAClient(cfg.AltDAURL, false, false)
@@ -172,6 +174,7 @@ func (p *PublisherService) initPublisher() {
 		p.batchInboxAddress,
 		p.pollInterval,
 		p.networkTimeout,
+		p.blobUploadTimeout,
 		p.log,
 		p.metrics,
 	)

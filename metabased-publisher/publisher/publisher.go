@@ -42,6 +42,7 @@ type Publisher struct {
 	latestProcessedBlock  uint64
 	pollInterval          time.Duration
 	networkTimeout        time.Duration
+	blobUploadTimeout     time.Duration
 	batcherAddress        common.Address
 	batchInboxAddress     common.Address
 }
@@ -53,6 +54,7 @@ func NewPublisher(
 	batchInboxAddress common.Address,
 	pollInterval time.Duration,
 	networkTimeout time.Duration,
+	blobUploadTimeout time.Duration,
 	log gethlog.Logger,
 	metr metrics.Metricer,
 ) *Publisher {
@@ -63,6 +65,7 @@ func NewPublisher(
 		batchInboxAddress:  batchInboxAddress,
 		pollInterval:       pollInterval,
 		networkTimeout:     networkTimeout,
+		blobUploadTimeout:  blobUploadTimeout,
 		log:                log,
 		metrics:            metr,
 	}
@@ -173,7 +176,7 @@ func (p *Publisher) processBlock(block uint64) error {
 	if err != nil {
 		return err // something went wrong
 	}
-	contextWithTimeout, cancel := context.WithTimeout(p.ctx, p.networkTimeout)
+	contextWithTimeout, cancel := context.WithTimeout(p.ctx, p.blobUploadTimeout)
 	defer cancel()
 	commitment := altda.NewGenericCommitment(callData)
 	if _, err := p.altDA.SetInput(contextWithTimeout, commitment); err != nil {

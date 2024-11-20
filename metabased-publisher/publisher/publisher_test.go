@@ -28,6 +28,7 @@ func TestBasic(t *testing.T) {
 		common.Address{},
 		10*time.Millisecond,
 		10*time.Millisecond,
+		10*time.Millisecond,
 		log,
 		metrics.NoopMetrics,
 	)

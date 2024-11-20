@@ -22,6 +22,7 @@ type CLIConfig struct {
 	MetricsConfig      opmetrics.CLIConfig
 	PollInterval       time.Duration
 	NetworkTimeout     time.Duration
+	BlobUploadTimeout  time.Duration
 }
 
 func (c *CLIConfig) Check() error {
@@ -69,8 +70,9 @@ func NewConfig(ctx *cli.Context) *CLIConfig {
 		AltDAURL: ctx.String(flags.AltDAURL.Name),
 
 		// operational configuration
-		PollInterval:   ctx.Duration(flags.PollInterval.Name),
-		NetworkTimeout: ctx.Duration(flags.NetworkTimeout.Name),
+		PollInterval:      ctx.Duration(flags.PollInterval.Name),
+		NetworkTimeout:    ctx.Duration(flags.NetworkTimeout.Name),
+		BlobUploadTimeout: ctx.Duration(flags.BlobUploadTimeout.Name),
 
 		// from op-stack
 		LogConfig:     oplog.ReadCLIConfig(ctx),
