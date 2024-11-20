@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 import {Test} from "forge-std/Test.sol";
 import {MetabasedFactory} from "src/MetabasedFactory.sol";
 import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
-import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
+import {RequireAllModule, IRequirementModule} from "src/requirement-modules/RequireAllModule.sol";
 import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
 import {MetafillerStorage} from "src/backfill/MetafillerStorage.sol";
 
@@ -21,14 +21,15 @@ contract MetabasedFactoryTest is Test {
     }
 
     function testCreateSequencerChainWithRequireAll() public {
-        (address sequencerChainAddress, address permissionModuleAddress) =
-            factory.createMetabasedSequencerChain(l3ChainId, admin);
+        RequireAllModule permissionModule = new RequireAllModule(admin);
+        (address sequencerChainAddress) = factory.createMetabasedSequencerChain(l3ChainId, admin, permissionModule);
+
+        address permissionModuleAddress = address(permissionModule);
 
         assertTrue(sequencerChainAddress != address(0));
         assertTrue(permissionModuleAddress != address(0));
 
         MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);
-        RequireAllModule permissionModule = RequireAllModule(permissionModuleAddress);
 
         // Verify sequencer setup
         assertTrue(address(sequencerChain) == sequencerChainAddress);
@@ -40,14 +41,16 @@ contract MetabasedFactoryTest is Test {
     }
 
     function testCreateSequencerChainWithRequireAny() public {
-        (address sequencerChainAddress, address permissionModuleAddress) =
-            factory.createMetabasedSequencerChainWithRequireAnyModule(l3ChainId, admin);
+        RequireAnyModule permissionModule = new RequireAnyModule(admin);
+        (address sequencerChainAddress) =
+            factory.createMetabasedSequencerChain(l3ChainId, admin, IRequirementModule(permissionModule));
+
+        address permissionModuleAddress = address(permissionModule);
 
         assertTrue(sequencerChainAddress != address(0));
         assertTrue(permissionModuleAddress != address(0));
 
         MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);
-        RequireAnyModule permissionModule = RequireAnyModule(permissionModuleAddress);
 
         // Verify sequencer setup
         assertTrue(address(sequencerChain) == sequencerChainAddress);
@@ -69,16 +72,16 @@ contract MetabasedFactoryTest is Test {
     }
 
     function testCreateAllContractsWithRequireAll() public {
-        (address sequencerChainAddress, address metafillerStorageAddress, address permissionModuleAddress) =
-            factory.createAllContracts(admin, manager, l3ChainId);
+        (address sequencerChainAddress, address metafillerStorageAddress, IRequirementModule permissionModuleAddress) =
+            factory.createAllContractsWithRequireAllModule(admin, manager, l3ChainId);
 
         assertTrue(sequencerChainAddress != address(0));
         assertTrue(metafillerStorageAddress != address(0));
-        assertTrue(permissionModuleAddress != address(0));
+        assertTrue(address(permissionModuleAddress) != address(0));
 
         MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);
         MetafillerStorage metafillerStorage = MetafillerStorage(metafillerStorageAddress);
-        RequireAllModule permissionModule = RequireAllModule(permissionModuleAddress);
+        RequireAllModule permissionModule = RequireAllModule(address(permissionModuleAddress));
 
         // Verify sequencer setup
         assertTrue(address(sequencerChain) == sequencerChainAddress);
@@ -90,21 +93,21 @@ contract MetabasedFactoryTest is Test {
         assertTrue(metafillerStorage.hasRole(metafillerStorage.MANAGER_ROLE(), manager));
 
         // Verify permission module setup
-        assertTrue(address(sequencerChain.requirementModule()) == permissionModuleAddress);
+        assertTrue(address(sequencerChain.requirementModule()) == address(permissionModuleAddress));
         assertTrue(permissionModule.owner() == admin);
     }
 
     function testCreateAllContractsWithRequireAny() public {
-        (address sequencerChainAddress, address metafillerStorageAddress, address permissionModuleAddress) =
+        (address sequencerChainAddress, address metafillerStorageAddress, IRequirementModule permissionModuleAddress) =
             factory.createAllContractsWithRequireAnyModule(admin, manager, l3ChainId);
 
         assertTrue(sequencerChainAddress != address(0));
         assertTrue(metafillerStorageAddress != address(0));
-        assertTrue(permissionModuleAddress != address(0));
+        assertTrue(address(permissionModuleAddress) != address(0));
 
         MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);
         MetafillerStorage metafillerStorage = MetafillerStorage(metafillerStorageAddress);
-        RequireAnyModule permissionModule = RequireAnyModule(permissionModuleAddress);
+        RequireAnyModule permissionModule = RequireAnyModule(address(permissionModuleAddress));
 
         // Verify sequencer setup
         assertTrue(address(sequencerChain) == sequencerChainAddress);
@@ -116,28 +119,35 @@ contract MetabasedFactoryTest is Test {
         assertTrue(metafillerStorage.hasRole(metafillerStorage.MANAGER_ROLE(), manager));
 
         // Verify permission module setup
-        assertTrue(address(sequencerChain.requirementModule()) == permissionModuleAddress);
+        assertTrue(address(sequencerChain.requirementModule()) == address(permissionModuleAddress));
         assertTrue(permissionModule.owner() == admin);
     }
 
     function testCorrectL3ChainIdAssignment() public {
+        RequireAllModule permissionModule = new RequireAllModule(admin);
+        RequireAnyModule permissionModule2 = new RequireAnyModule(admin);
         uint256 differentChainId = 10042002;
-        (address sequencerChain1,) = factory.createMetabasedSequencerChain(l3ChainId, admin);
-        (address sequencerChain2,) = factory.createMetabasedSequencerChainWithRequireAnyModule(differentChainId, admin);
+        (address sequencerChain1) =
+            factory.createMetabasedSequencerChain(l3ChainId, admin, IRequirementModule(address(permissionModule)));
+        (address sequencerChain2) = factory.createMetabasedSequencerChain(
+            differentChainId, admin, IRequirementModule(address(permissionModule2))
+        );
 
         assertEq(MetabasedSequencerChain(sequencerChain1).l3ChainId(), l3ChainId);
         assertEq(MetabasedSequencerChain(sequencerChain2).l3ChainId(), differentChainId);
     }
 
     function testZeroAddressAdmin() public {
+        RequireAllModule permissionModule = new RequireAllModule(admin);
         vm.expectRevert();
-        factory.createMetabasedSequencerChain(l3ChainId, address(0));
+        factory.createMetabasedSequencerChain(l3ChainId, address(0), IRequirementModule(address(permissionModule)));
+
+        RequireAnyModule permissionModule2 = new RequireAnyModule(admin);
+        vm.expectRevert();
+        factory.createMetabasedSequencerChain(l3ChainId, address(0), IRequirementModule(address(permissionModule2)));
 
         vm.expectRevert();
-        factory.createMetabasedSequencerChainWithRequireAnyModule(l3ChainId, address(0));
-
-        vm.expectRevert();
-        factory.createAllContracts(address(0), manager, l3ChainId);
+        factory.createAllContractsWithRequireAllModule(address(0), manager, l3ChainId);
 
         vm.expectRevert();
         factory.createAllContractsWithRequireAnyModule(address(0), manager, l3ChainId);
@@ -148,7 +158,7 @@ contract MetabasedFactoryTest is Test {
         factory.createMetafillerStorage(admin, address(0), l3ChainId);
 
         vm.expectRevert();
-        factory.createAllContracts(admin, address(0), l3ChainId);
+        factory.createAllContractsWithRequireAllModule(admin, address(0), l3ChainId);
 
         vm.expectRevert();
         factory.createAllContractsWithRequireAnyModule(admin, address(0), l3ChainId);
