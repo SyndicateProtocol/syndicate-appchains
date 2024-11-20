@@ -2,6 +2,7 @@ package publisher
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -105,7 +106,7 @@ func (p *Publisher) loop() {
 			// obtain new translated blocks to process
 			currentBlock, err := p.currentBlockNumber()
 			if err != nil {
-				p.log.Error("failed to get latest block", "error", err)
+				p.log.Error("failed to get latest translated block number", "error", err)
 				continue
 			}
 			p.log.Info("polling for new blocks", "currentTranslatedBlock", currentBlock, "latestProcessedBlock", p.latestProcessedBlock)
@@ -147,7 +148,7 @@ func (p *Publisher) callDataForBlock(blockNumber uint64) ([]byte, error) {
 	defer cancel()
 	block, err := p.opTranslatorClient.BlockByNumber(contextWithTimeout, new(big.Int).SetUint64(blockNumber))
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get translated block")
+		return nil, errors.Wrap(err, fmt.Sprintf("failed to get translated block %d", blockNumber))
 	}
 	var callData []byte
 	for _, tx := range block.Transactions() {
