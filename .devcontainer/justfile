@@ -143,7 +143,7 @@ create-localenv-file:
     # Commented portion will skip overwriting if file already exists. As-is, localenv_file is always overwritten
     # if [ ! -f {{ localenv_file }} ]; then
         cat > {{ localenv_file }} << EOL
-    PORT= {{ op_translator_port }}
+    PORT={{ op_translator_port }}
     SETTLEMENT_CHAIN_RPC_URL={{ op_devnet_l2_rpc_url }}
     SEQUENCING_CHAIN_RPC_URL={{ arb_orbit_l2_rpc_url }}
     META_BASED_CHAIN_RPC_URL=http://localhost:8548
