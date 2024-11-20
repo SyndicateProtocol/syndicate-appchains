@@ -40,7 +40,7 @@ impl<'a> EnvFile<'a> {
     }
 
     fn path(&self) -> PathBuf {
-        self.path.clone().unwrap_or(PathBuf::from(".env"))
+        self.path.clone().unwrap_or(PathBuf::from("localnet.env"))
     }
 
     fn key(&self, k: String) -> String {

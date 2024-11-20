@@ -88,12 +88,12 @@ func hydrateFromConfMap(config *Config) {
 }
 
 func Init() *Config {
-	// Load .env file from parent directory and lowercase all keys
-	err := k.Load(file.Provider("../.env"), dotenv.ParserEnv("", "", strings.ToLower))
+	// Load localnet.env file from parent directory and lowercase all keys
+	err := k.Load(file.Provider("../localnet.env"), dotenv.ParserEnv("", "", strings.ToLower))
 	if err != nil {
 		log.Error().Err(err).Msg("error loading dotenv config")
 	} else {
-		log.Debug().Msg("Loaded .env")
+		log.Debug().Msg("Loaded localnet.env")
 	}
 
 	// Define CLI flags
