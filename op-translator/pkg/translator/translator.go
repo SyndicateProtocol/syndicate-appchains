@@ -49,7 +49,7 @@ func Init(cfg *config.Config) *OPTranslator {
 	metricsCollector := metrics.NewMetrics()
 	metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg, metricsCollector)
 	signer := NewSigner(cfg)
-	backfillProvider := backfill.NewBackfillerProvider(cfg)
+	backfillProvider := backfill.NewBackfillerProvider(cfg, metricsCollector)
 
 	return &OPTranslator{
 		SettlementChain:     settlementChain,
@@ -113,8 +113,10 @@ func (t *OPTranslator) Close() {
 
 func (t *OPTranslator) getFrames(ctx context.Context, block types.Block) ([]*types.Frame, error) {
 	if t.BackfillProvider.IsBlockInBackfillingWindow(block) {
+		t.Metrics.RecordBackfillProviderBackfillingWindow(true)
 		return t.BackfillProvider.GetBackfillFrames(ctx, block)
 	} else {
+		t.Metrics.RecordBackfillProviderBackfillingWindow(false)
 		batch, err := t.BatchProvider.GetBatch(ctx, block)
 		if err != nil {
 			t.Metrics.RecordOPTranslatorError("get_frames", "get_batch_error")

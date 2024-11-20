@@ -7,8 +7,10 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/metrics"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -22,17 +24,19 @@ type HTTPClient interface {
 
 type BackfillProvider struct {
 	Client            HTTPClient
+	Metrics           metrics.IMetrics
 	MetafillerURL     string
 	GenesisEpochBlock uint64
 	CutoverEpochBlock uint64
 }
 
-func NewBackfillerProvider(cfg *config.Config) *BackfillProvider {
+func NewBackfillerProvider(cfg *config.Config, metricsCollector metrics.IMetrics) *BackfillProvider {
 	return &BackfillProvider{
 		MetafillerURL:     cfg.MetafillerURL,
 		Client:            &http.Client{},
 		GenesisEpochBlock: uint64(cfg.SettlementStartBlock), //nolint:gosec // We validate the genesis block in the config package
 		CutoverEpochBlock: uint64(cfg.CutoverEpochBlock),    //nolint:gosec // We validate the cutover block in the config package
+		Metrics:           metricsCollector,
 	}
 }
 
@@ -42,6 +46,12 @@ type BackfillData struct {
 }
 
 func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint64) (*BackfillData, error) {
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start).Seconds()
+		b.Metrics.RecordBackfillProviderBackfillDuration("get_backfill_data", duration)
+	}()
+
 	fullURL := b.MetafillerURL + "/" + strconv.FormatUint(epochNumber, 10)
 	log.Debug().Msgf("Getting backfill data for epoch number: %d. Fetching from: %s", epochNumber, fullURL)
 
@@ -55,6 +65,11 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		b.Metrics.RecordBackfillProviderBackfillResponseStatus("get_backfill_data", resp.StatusCode)
+		log.Debug().Msgf("Received non-200 response from backfill data provider: %d", resp.StatusCode)
+	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
