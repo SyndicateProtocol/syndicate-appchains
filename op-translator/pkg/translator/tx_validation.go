@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math/big"
+	"regexp"
 	"slices"
 	"strconv"
 
@@ -158,22 +159,25 @@ func (m *MetaBasedBatchProvider) ValidateTransactionsBlock(rawTxns []hexutil.Byt
 
 	for {
 		// Step 2: Call internal ValidateBlockState
+		log.Debug().Interface("validParsedTxns", validParsedTxns).Msg("valid parsed txns 1")
 		validRawTxns, validParsedTxns = ValidateBlockState(validRawTxns, validParsedTxns, validationState)
+		log.Debug().Interface("validParsedTxns", validParsedTxns).Msg("valid parsed txns 2")
 
 		// Step 3: Call external SimulateTransactions
-		result, err := m.MetaBasedChain.SimulateTransactions(context.Background(), txns, "latest")
-		log.Debug().Interface("result", result).Msg("Simulation result")
-
+		_, err := m.MetaBasedChain.SimulateTransactions(context.Background(), validParsedTxns, "latest")
+		log.Debug().Msgf("error type: %v", getErrorType(err))
 		// If simulation error, parse error and update state
 		if err != nil {
 			log.Debug().Err(err).Msg("Error in SimulateTransactions")
-			validationState, err = ParseValidationError(err, validationState)
+			validationState, err = ParseValidationError(validationState, err)
+			log.Debug().Interface("validationState", validationState).Msg("state now")
 			if err != nil {
 				log.Error().Err(err).Msg("Error in ParseValidationError")
 				return []hexutil.Bytes{}, err
 			}
 			continue
 		} else {
+			log.Debug().Interface("validParsedTxns", validParsedTxns).Msg("valid parsed txns end")
 			return validRawTxns, nil
 		}
 	}
@@ -213,19 +217,21 @@ func ValidateBlockState(rawTransactions []hexutil.Bytes, parsedTransactions []*r
 
 		// Check tx.MaxFeePerGas < block BaseFeePerGas if available
 		if blockBaseFeePerGas != nil && blockBaseFeePerGas.Cmp(txMaxFeePerGas) < 1 {
+			log.Debug().Msgf("maxFeePerGas mismatch: %v < %v", txMaxFeePerGas, blockBaseFeePerGas)
 			continue
 		}
 		newGasUsed := new(big.Int).Add(gasUsedInBlock, txGas)
 		if blockGasLimit != nil && blockGasLimit.Cmp(newGasUsed) < 1 {
+			log.Debug().Msgf("gas limit mismatch: %v < %v", newGasUsed, blockGasLimit)
 			continue
 		}
 
 		from := parsedTransaction.From
 		walletState, exists := state.WalletStateValidation[from]
 		if exists {
-			// Validate nonce: tx.Nonce == state.WalletStateValidation[from].Nonce + 1
-			expectedNonce := new(big.Int).Add(walletState.Nonce, big.NewInt(1))
-			if txNonce != expectedNonce {
+			// Validate nonce: tx.Nonce == state.WalletStateValidation[from].Nonce
+			if txNonce != walletState.Nonce {
+				log.Debug().Msgf("nonce mismatch: %v != %v", txNonce, walletState.Nonce)
 				continue
 			}
 
@@ -234,6 +240,7 @@ func ValidateBlockState(rawTransactions []hexutil.Bytes, parsedTransactions []*r
 				totalCost := new(big.Int).Mul(txMaxFeePerGas, txGas)
 				totalCost.Add(totalCost, txValue)
 				if walletState.Balance.Cmp(totalCost) < 0 {
+					log.Debug().Msgf("balance mismatch: %v < %v", walletState.Balance, totalCost)
 					continue
 				}
 				// Update balance
@@ -241,13 +248,13 @@ func ValidateBlockState(rawTransactions []hexutil.Bytes, parsedTransactions []*r
 			}
 
 			// Update state
-			walletState.Nonce = expectedNonce
+			walletState.Nonce = new(big.Int).Add(walletState.Nonce, big.NewInt(1))
 			gasUsedInBlock = newGasUsed
 
 		} else {
 			// Update state with new transaction
 			state.WalletStateValidation[from] = WalletStateValidation{
-				Nonce: txNonce,
+				Nonce: new(big.Int).Add(txNonce, big.NewInt(1)),
 			}
 		}
 
@@ -258,7 +265,65 @@ func ValidateBlockState(rawTransactions []hexutil.Bytes, parsedTransactions []*r
 	return validRawTransactions, validTransactions
 }
 
-func ParseValidationError(err error, state ValidationState) (ValidationState, error) {
-	// TODO SEQ-316: Parse error and update state
-	return state, nil
+const (
+	NonceError   = "NonceError"
+	UnknownError = "UnknownError"
+)
+
+func ParseValidationError(validationState ValidationState, err error) (ValidationState, error) {
+	switch getErrorType(err) {
+	case NonceError:
+		return handleNonceError(validationState, err.Error())
+	case "insufficient funds for gas * price + value":
+		validationState = handleInsufficientFundsError(validationState, err)
+	case "transaction underpriced":
+		validationState = handleUnderpricedError(validationState, err)
+	default:
+		return validationState, fmt.Errorf("unknown validation error: %w", err)
+	}
+
+	return validationState, nil
+}
+
+func getErrorType(err error) string {
+	switch {
+	case regexp.MustCompile(`nonce too (low|high)`).MatchString(err.Error()):
+		return NonceError
+	default:
+		return UnknownError
+	}
+}
+
+func handleNonceError(validationState ValidationState, errorMessage string) (ValidationState, error) {
+	// error="err: nonce too high: address 0xBA401CdaC1A3b6AEeDe21c9C4a483be6C29F88C5, tx: 153 state: 89 (supplied gas 50000)"
+	// Regular expression to match address and state value
+	re := regexp.MustCompile(`address (0x[a-fA-F0-9]+), tx: \d+ state: (\d+)`)
+	matches := re.FindStringSubmatch(errorMessage)
+
+	// Validate matches
+	if len(matches) != 3 {
+		return validationState, fmt.Errorf("failed to parse nonce error: %s", errorMessage)
+	}
+
+	address := matches[1]
+	currentNonce, ok := new(big.Int).SetString(matches[2], 10)
+	if !ok {
+		return validationState, fmt.Errorf("invalid nonce number: %s", currentNonce)
+	}
+
+	validationState.WalletStateValidation[address] = WalletStateValidation{
+		Nonce: currentNonce,
+	}
+
+	return validationState, nil
+}
+
+func handleInsufficientFundsError(state ValidationState, err error) ValidationState {
+	// TODO SEQ-316: Implement insufficient funds error handling
+	return state
+}
+
+func handleUnderpricedError(state ValidationState, err error) ValidationState {
+	// TODO SEQ-316: Implement underpriced error handling
+	return state
 }

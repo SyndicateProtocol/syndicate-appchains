@@ -62,43 +62,43 @@ func Init(cfg *config.Config) *OPTranslator {
 }
 
 func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, transactionDetailFlag bool) (types.Block, error) {
-	// transactions := []rpc.Transaction{
-	// 	{
-	// 		From:                 "0xBA401CdaC1A3b6AEeDe21c9C4a483be6C29F88C5",
-	// 		To:                   "0x52A4380F691E71ff0015352AB1a450a1dfb689b9",
-	// 		Value:                "0xDE0B6B3A7640000",
-	// 		Data:                 "0x",
-	// 		Nonce:                "0x59",
-	// 		Gas:                  "0xC350",
-	// 		MaxFeePerGas:         "0x83F9398D9",
-	// 		MaxPriorityFeePerGas: "0x2540BE400",
-	// 	},
-	// 	{
-	// 		From:                 "0xBA401CdaC1A3b6AEeDe21c9C4a483be6C29F88C5",
-	// 		To:                   "0x52A4380F691E71ff0015352AB1a450a1dfb689b9",
-	// 		Value:                "0xDE0B6B3A7640000",
-	// 		Data:                 "0x",
-	// 		Nonce:                "0x59", //5A is valid nonce but
-	// 		Gas:                  "0xC350",
-	// 		MaxFeePerGas:         "0x83F9398D9", //"0x83F9398D9",
-	// 		MaxPriorityFeePerGas: "0x0",         //"0x2540BE400",
-	// 	},
-	// {
-	// 	From:                 "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-	// 	To:                   "0x52A4380F691E71ff0015352AB1a450a1dfb689b9",
-	// 	Value:                "0xDE0B6B3A7640000",
-	// 	Data:                 "0x",
-	// 	Nonce:                "0x1",
-	// 	Gas:                  "0xC350",
-	// 	MaxFeePerGas:         "0x2540BE400",
-	// 	MaxPriorityFeePerGas: "0x2540BE400",
-	// },
-	// }
+	transactions := []*rpc.ParsedTransaction{
+		{
+			From:                 "0xBA401CdaC1A3b6AEeDe21c9C4a483be6C29F88C5",
+			To:                   "0x52A4380F691E71ff0015352AB1a450a1dfb689b9",
+			Value:                "0xDE0B6B3A7640000",
+			Data:                 "0x",
+			Nonce:                "0x59",
+			Gas:                  "0xC350",
+			MaxFeePerGas:         "0x83F9398D9",
+			MaxPriorityFeePerGas: "0x2540BE400",
+		},
+		{
+			From:                 "0xBA401CdaC1A3b6AEeDe21c9C4a483be6C29F88C5",
+			To:                   "0x52A4380F691E71ff0015352AB1a450a1dfb689b9",
+			Value:                "0xDE0B6B3A7640000",
+			Data:                 "0x",
+			Nonce:                "0x69", // 5A is valid nonce but
+			Gas:                  "0xC350",
+			MaxFeePerGas:         "0x83F9398D9", // "0x83F9398D9",
+			MaxPriorityFeePerGas: "0x0",         // "0x2540BE400",
+		},
+		{
+			From:                 "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+			To:                   "0x52A4380F691E71ff0015352AB1a450a1dfb689b9",
+			Value:                "0xDE0B6B3A7640000",
+			Data:                 "0x",
+			Nonce:                "0x1",
+			Gas:                  "0xC350",
+			MaxFeePerGas:         "0x2540BE400",
+			MaxPriorityFeePerGas: "0x2540BE400",
+		},
+	}
 
-	// rawTxns := []hexutil.Bytes{hexutil.Bytes("rawtx1"), hexutil.Bytes("rawtx2")}
-	// , hexutil.Bytes("rawtx2"), hexutil.Bytes("rawtx3")}
-	// raw, removed := t.BatchProvider.FilterTransactionsStateful(rawTxns, transactions)
-	// log.Debug().Msgf("raw: %v, removed: %v", raw, removed)
+	rawTxns := []hexutil.Bytes{hexutil.Bytes("rawtx1"), hexutil.Bytes("rawtx2"), hexutil.Bytes("rawtx2"), hexutil.Bytes("rawtx3")}
+	raw, err := t.BatchProvider.ValidateTransactionsBlock(rawTxns, transactions)
+
+	log.Debug().Msgf("raw: %v, error: %v", raw, err)
 
 	log.Debug().Msg("-- HIT eth_getBlockByNumber")
 	block, err := t.SettlementChain.GetBlockByNumber(ctx, blockNumber, transactionDetailFlag)
