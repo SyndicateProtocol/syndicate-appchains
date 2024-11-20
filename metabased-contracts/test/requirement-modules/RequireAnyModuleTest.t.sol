@@ -110,7 +110,7 @@ contract RequireAnyModuleTest is Test {
         module.isAllowed(address(this));
     }
 
-    function testNoChecksAllow() public {
+    function testNoChecksAllow() public view {
         // When no checks are added, isAllowed should return true
         assertTrue(module.isAllowed(address(this)));
     }

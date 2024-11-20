@@ -7,6 +7,7 @@ import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
 import {AlwaysAllowedModule} from "src/sequencing-modules/AlwaysAllowedModule.sol";
 import {MetabasedFactory} from "src/MetabasedFactory.sol";
+import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
 
 contract DeployMetabasedFactory is Script {
     MetabasedFactory public metabasedFactory;
@@ -25,12 +26,12 @@ contract DeployMetabasedFactory is Script {
         console.log("Deployed MetabasedFactory", address(metabasedFactory));
 
         // create new contracts
-        (address sequencerChain, address metafillerStorage, address permissionModule) =
-            metabasedFactory.createAllContracts(admin, manager, l3ChainId);
+        (address sequencerChain, address metafillerStorage, IRequirementModule permissionModule) =
+            metabasedFactory.createAllContractsWithRequireAllModule(admin, manager, l3ChainId);
 
         console.log("Deployed MetabasedSequencerChain", sequencerChain);
         console.log("Deployed MetafillerStorage", metafillerStorage);
-        console.log("Deployed RequireAllModule", permissionModule);
+        console.log("Deployed RequireAllModule", address(permissionModule));
 
         vm.stopBroadcast();
     }

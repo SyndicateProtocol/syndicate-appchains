@@ -50,9 +50,11 @@ contract RequireAnyModule is IRequirementModule, Ownable {
         }
 
         if (addToHead) {
-            AddressStructuredLinkedList.pushFront(checks, _address);
+            bool success = AddressStructuredLinkedList.pushFront(checks, _address);
+            require(success, "Address not added");
         } else {
-            AddressStructuredLinkedList.pushBack(checks, _address);
+            bool success = AddressStructuredLinkedList.pushBack(checks, _address);
+            require(success, "Address not added");
         }
 
         emit CheckAdded(_address);
@@ -64,7 +66,9 @@ contract RequireAnyModule is IRequirementModule, Ownable {
             revert AddressDoesNotExist();
         }
 
-        AddressStructuredLinkedList.remove(checks, _address);
+        address returnedAddress = AddressStructuredLinkedList.remove(checks, _address);
+        require(returnedAddress == _address, "Address not removed");
+
         emit CheckRemoved(_address);
     }
 
