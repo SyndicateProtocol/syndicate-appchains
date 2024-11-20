@@ -29,7 +29,7 @@ type MetaBasedBatchProvider struct {
 	SettlementStartBlock int
 }
 
-func InitMetaBasedBatchProvider(cfg *config.Config) *MetaBasedBatchProvider {
+func InitMetaBasedBatchProvider(cfg *config.Config, metricsCollector metrics.IMetrics) *MetaBasedBatchProvider {
 	sequencingChain, err := rpc.Connect(cfg.SequencingChainRPCURL)
 	if err != nil {
 		log.Panic().Err(err).Msg("Failed to initialize sequencing chain")
@@ -45,7 +45,7 @@ func InitMetaBasedBatchProvider(cfg *config.Config) *MetaBasedBatchProvider {
 		SequencingChain:        sequencingChain,
 		TransactionParser:      InitL3TransactionParser(cfg),
 		SequencingBlockFetcher: InitSequencingBlockFetcher(sequencingChain, cfg),
-		Metrics:                cfg.Metrics,
+		Metrics:                metricsCollector,
 
 		SettlementStartBlock: cfg.SettlementStartBlock,
 	}

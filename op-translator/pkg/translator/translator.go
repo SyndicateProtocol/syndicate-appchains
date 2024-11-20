@@ -46,7 +46,8 @@ func Init(cfg *config.Config) *OPTranslator {
 		log.Panic().Err(err).Msg("Failed to initialize settlement chain")
 	}
 
-	metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg)
+	metricsCollector := metrics.NewMetrics()
+	metaBasedBatchProvider := InitMetaBasedBatchProvider(cfg, metricsCollector)
 	signer := NewSigner(cfg)
 	backfillProvider := backfill.NewBackfillerProvider(cfg)
 
@@ -57,7 +58,7 @@ func Init(cfg *config.Config) *OPTranslator {
 		BatchProvider:       metaBasedBatchProvider,
 		BackfillProvider:    backfillProvider,
 		Signer:              *signer,
-		Metrics:             cfg.Metrics,
+		Metrics:             metricsCollector,
 	}
 }
 
