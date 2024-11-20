@@ -101,4 +101,3 @@ jobs:
           path: |
             /tmp/sequencer.log
             /tmp/postCreateOutput
-  op-translator-test:
