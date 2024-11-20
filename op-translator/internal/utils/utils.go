@@ -3,12 +3,14 @@ package utils
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
 )
 
 const MillisecondsPerSecond = 1000
+const HexBase = 16
 
 func DecodeHexString(hexStr string) ([]byte, error) {
 	return hex.DecodeString(strings.TrimPrefix(hexStr, "0x"))
@@ -19,7 +21,7 @@ func HexToInt(hexStr string) (int, error) {
 		return 0, errors.New("invalid hex string, must start with 0x")
 	}
 	hexStr = strings.TrimPrefix(hexStr, "0x")
-	result, err := strconv.ParseInt(hexStr, 16, 64)
+	result, err := strconv.ParseInt(hexStr, HexBase, 64)
 	if err != nil {
 		return 0, err
 	}
@@ -28,11 +30,19 @@ func HexToInt(hexStr string) (int, error) {
 }
 
 func HexToBigInt(hexStr string) (*big.Int, error) {
-	num, err := HexToInt(hexStr)
-	if err != nil {
-		return nil, err
+	num := new(big.Int)
+	if !strings.HasPrefix(hexStr, "0x") {
+		return nil, errors.New("invalid hex string, must start with 0x")
 	}
-	return big.NewInt(int64(num)), nil
+	if hexStr == "0x" {
+		return big.NewInt(0), nil
+	}
+	hexStr = strings.TrimPrefix(hexStr, "0x")
+	_, ok := num.SetString(hexStr, HexBase)
+	if !ok {
+		return nil, fmt.Errorf("invalid hexadecimal value: %s", hexStr)
+	}
+	return num, nil
 }
 
 func HexToUInt64(hexStr string) (uint64, error) {
@@ -40,13 +50,13 @@ func HexToUInt64(hexStr string) (uint64, error) {
 		return 0, errors.New("invalid hex string, must start with 0x")
 	}
 	hexStr = strings.TrimPrefix(hexStr, "0x")
-	return strconv.ParseUint(hexStr, 16, 64)
+	return strconv.ParseUint(hexStr, HexBase, 64)
 }
 
 func IntToHex(num int) string {
-	return "0x" + strconv.FormatInt(int64(num), 16)
+	return "0x" + strconv.FormatInt(int64(num), HexBase)
 }
 
 func UInt64ToHex(num uint64) string {
-	return "0x" + strconv.FormatUint(num, 16)
+	return "0x" + strconv.FormatUint(num, HexBase)
 }

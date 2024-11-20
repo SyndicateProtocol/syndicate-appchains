@@ -66,7 +66,7 @@ func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string,
 		{
 			From:                 "0xBA401CdaC1A3b6AEeDe21c9C4a483be6C29F88C5",
 			To:                   "0x52A4380F691E71ff0015352AB1a450a1dfb689b9",
-			Value:                "0xDE0B6B3A7640000",
+			Value:                "0x0",
 			Data:                 "0x",
 			Nonce:                "0x59",
 			Gas:                  "0xC350",
@@ -105,7 +105,7 @@ func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string,
 		},
 	}
 
-	rawTxns := []hexutil.Bytes{hexutil.Bytes("rawtx1"), hexutil.Bytes("rawtx2"), hexutil.Bytes("rawtx2"), hexutil.Bytes("rawtx3")}
+	rawTxns := []hexutil.Bytes{hexutil.Bytes("rawtx1"), hexutil.Bytes("rawtx2"), hexutil.Bytes("rawtx3"), hexutil.Bytes("rawtx4")}
 	raw, err := t.BatchProvider.ValidateTransactionsBlock(rawTxns, transactions)
 
 	log.Debug().Msgf("raw: %v, error: %v", raw, err)
