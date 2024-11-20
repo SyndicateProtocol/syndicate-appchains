@@ -191,7 +191,6 @@ func (c *RPCClient) SimulateTransactions(ctx context.Context, transactions []*Pa
 		Validation: true,
 	}
 	err := c.rawClient.CallContext(ctx, &response, "eth_simulateV1", request, blockParameter)
-	log.Debug().Interface("response", response).Msg("Simulation response")
 	if err != nil {
 		return nil, err
 	}
