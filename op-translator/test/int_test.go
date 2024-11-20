@@ -182,9 +182,9 @@ func TestOPNodeCalls(t *testing.T) {
 		},
 	}
 
-	mockMetrics := new(mocks.MockOpTranslatorMetrics)
-	mockMetrics.On("RecordRPCRequest", mock.Anything).Return()
-	mockMetrics.On("RecordTranslationLatency", mock.Anything, mock.Anything).Return()
+	mockMetrics := new(mocks.MockMetrics)
+	mockMetrics.On("RecordOPTranslatorRPCRequest", mock.Anything).Return()
+	mockMetrics.On("RecordOPTranslatorTranslationLatency", mock.Anything, mock.Anything).Return()
 
 	for _, tc := range testCases {
 		mockClient := getMockClient()
@@ -243,8 +243,8 @@ func TestOPNodeCalls(t *testing.T) {
 				actualTransactions, _ := block["transactions"].([]any)
 				assert.Equal(t, len(expectedTransactions), len(actualTransactions))
 
-				mockMetrics.AssertCalled(t, "RecordRPCRequest", "eth_getBlockByNumber")
-				mockMetrics.AssertCalled(t, "RecordTranslationLatency", "eth_getBlockByNumber", mock.Anything)
+				mockMetrics.AssertCalled(t, "RecordOPTranslatorRPCRequest", "eth_getBlockByNumber")
+				mockMetrics.AssertCalled(t, "RecordOPTranslatorTranslationLatency", "eth_getBlockByNumber", mock.Anything)
 
 				for i := range expectedTransactions {
 					expectedTx, _ := expectedTransactions[i].(map[string]any)

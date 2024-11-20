@@ -14,6 +14,7 @@ import (
 	"github.com/knadh/koanf/providers/file"
 	"github.com/rs/zerolog/log"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/metrics"
 	"github.com/knadh/koanf/providers/posflag"
 	"github.com/knadh/koanf/v2"
 	"github.com/spf13/pflag"
@@ -28,6 +29,7 @@ var (
 )
 
 type Config struct {
+	Metrics                   *metrics.Metrics
 	SettlementChainRPCURL     string `koanf:"settlement_chain_rpc_url"`
 	SequencingChainRPCURL     string `koanf:"sequencing_chain_rpc_url"`
 	MetaBasedChainRPCURL      string `koanf:"meta_based_chain_rpc_url"`
@@ -118,6 +120,9 @@ func Init() *Config {
 	// Set config values
 	var config Config
 	hydrateFromConfMap(&config)
+
+	// Initialize metrics
+	config.Metrics = metrics.NewMetrics()
 
 	// Validate config
 	if err = ValidateConfigValues(&config); err != nil {

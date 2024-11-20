@@ -17,9 +17,9 @@ import (
 func TestGetBlockByNumber(t *testing.T) {
 	mockConfig := mocks.DefaultTestingConfig
 	mockClient := new(mocks.MockRPCClient)
-	mockMetrics := new(mocks.MockOpTranslatorMetrics)
-	mockMetrics.On("RecordRPCRequest", "eth_getBlockByNumber").Return()
-	mockMetrics.On("RecordTranslationLatency", "eth_getBlockByNumber", mock.Anything).Return()
+	mockMetrics := new(mocks.MockMetrics)
+	mockMetrics.On("RecordOPTranslatorRPCRequest", "eth_getBlockByNumber").Return()
+	mockMetrics.On("RecordOPTranslatorTranslationLatency", "eth_getBlockByNumber", mock.Anything).Return()
 
 	number := "0x21"
 	settlementBlock := types.Block{
@@ -53,16 +53,16 @@ func TestGetBlockByNumber(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(transactions))
 
-	mockMetrics.AssertCalled(t, "RecordRPCRequest", "eth_getBlockByNumber")
+	mockMetrics.AssertCalled(t, "RecordOPTranslatorRPCRequest", "eth_getBlockByNumber")
 
 	mockClient.AssertExpectations(t)
 }
 
 func TestGetBlockByHash(t *testing.T) {
 	mockClient := new(mocks.MockRPCClient)
-	mockMetrics := new(mocks.MockOpTranslatorMetrics)
-	mockMetrics.On("RecordRPCRequest", "eth_getBlockByHash").Return()
-	mockMetrics.On("RecordTranslationLatency", "eth_getBlockByHash", mock.Anything).Return()
+	mockMetrics := new(mocks.MockMetrics)
+	mockMetrics.On("RecordOPTranslatorRPCRequest", "eth_getBlockByHash").Return()
+	mockMetrics.On("RecordOPTranslatorTranslationLatency", "eth_getBlockByHash", mock.Anything).Return()
 	mockConfig := mocks.DefaultTestingConfig
 
 	number := "0x21"
@@ -98,7 +98,7 @@ func TestGetBlockByHash(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(transactions))
 
-	mockMetrics.AssertCalled(t, "RecordRPCRequest", "eth_getBlockByHash")
+	mockMetrics.AssertCalled(t, "RecordOPTranslatorRPCRequest", "eth_getBlockByHash")
 
 	mockClient.AssertExpectations(t)
 }

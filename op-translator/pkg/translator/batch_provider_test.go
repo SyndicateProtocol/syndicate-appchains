@@ -19,7 +19,7 @@ var (
 )
 
 func getBatchProvider() *translator.MetaBasedBatchProvider {
-	mockMetrics := new(mocks.MockBatchProviderMetrics)
+	mockMetrics := new(mocks.MockMetrics)
 	return translator.NewMetaBasedBatchProvider(
 		nil,
 		nil,
