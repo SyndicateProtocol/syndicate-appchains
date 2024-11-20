@@ -38,9 +38,19 @@ jobs:
             while [ ! -f /tmp/postCreateOutput ] || ! grep -q "Ready to bring up the Arbitrum Orbit devnet" /tmp/postCreateOutput; do
               sleep 10
             done
+            
+            # Start OP-Translator in background in parallel
+            just -f .devcontainer/justfile run-op-translator &
 
-            # Start Arbitrum node in background
+            # Start Arbitrum node in background in parallel
             just -f .devcontainer/justfile arb-up &
+            
+            # Wait for OP-translator to be ready via health check
+            echo "[STATUS] Waiting for OP-translator to be ready..."
+            until just -f .devcontainer/justfile op-translator-health-check | grep -q "result"; do
+              sleep 10
+            done
+            echo "[STATUS] op-translator is ready"
 
             # Wait for Arbitrum node to be ready via health check
             echo "[STATUS] Waiting for Arbitrum node to be ready..."
@@ -91,3 +101,4 @@ jobs:
           path: |
             /tmp/sequencer.log
             /tmp/postCreateOutput
+  op-translator-test:
