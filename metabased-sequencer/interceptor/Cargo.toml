@@ -39,6 +39,9 @@ flate2 = "1.0.34"
 prometheus-client = "0.22"
 hex = "0.4.3"
 alloy-rlp = "0.3.9"
+tower = "=0.4"
+tower-layer = "0.3.3"
+tower-service = "0.3.3"
 
 [dev-dependencies]
 test-case = "3"
