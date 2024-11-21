@@ -60,3 +60,10 @@ func IntToHex(num int) string {
 func UInt64ToHex(num uint64) string {
 	return "0x" + strconv.FormatUint(num, HexBase)
 }
+
+func CloneBigIntPtr(value *big.Int) *big.Int {
+	if value == nil {
+		return nil
+	}
+	return new(big.Int).Set(value)
+}

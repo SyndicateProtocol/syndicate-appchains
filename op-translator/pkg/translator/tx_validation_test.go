@@ -1,6 +1,7 @@
 package translator
 
 import (
+	"errors"
 	"math/big"
 	"testing"
 
@@ -262,6 +263,186 @@ func TestValidateTransactionInternal(t *testing.T) {
 			}
 			if tt.wantErr && err != nil && err.Error() != tt.errString {
 				t.Errorf("expected error: %v, but got %v", tt.errString, err)
+			}
+		})
+	}
+}
+
+func TestParseValidationError(t *testing.T) {
+	validationState := ValidationState{
+		WalletStateValidation: make(map[string]WalletStateValidation),
+		BlockStateValidation:  BlockStateValidation{},
+	}
+
+	tests := []struct { //nolint:govet // test struct
+		name         string
+		err          error
+		expectedType string
+		shouldError  bool
+	}{
+		{"Nonce too low", errors.New("nonce too low: address 0x123456, tx: 5 state: 3"), NonceError, false},
+		{"Nonce too high", errors.New("nonce too high: address 0x123456, tx: 10 state: 7"), NonceError, false},
+		{"Malformed nonce error", errors.New("nonce error without proper format"), NonceError, true},
+		{"Insufficient funds", errors.New("insufficient funds for gas: address 0x123456 have 5000"), BalanceError, false},
+		{"Malformed balance error", errors.New("balance error without address"), BalanceError, true},
+		{"Max fee less than base fee", errors.New("max fee per gas less than block base fee: address 0x123456, maxFeePerGas: 100, baseFee: 200"), BaseFeeError, false},
+		{"Malformed base fee error", errors.New("max fee error with missing values"), BaseFeeError, true},
+		{"Gas limit reached", errors.New("gas limit reached: 30000000 >= 15000000"), BlockGasLimitError, false},
+		{"Malformed gas limit error", errors.New("gas limit error with missing values"), BlockGasLimitError, true},
+		{"Unknown error", errors.New("random unexpected error"), UnknownError, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := ParseValidationError(validationState, tt.err)
+			if (err != nil) != tt.shouldError {
+				t.Errorf("expected error: %v, got: %v", tt.shouldError, err)
+			}
+		})
+	}
+}
+
+func TestHandleNonceError(t *testing.T) {
+	validationState := ValidationState{
+		WalletStateValidation: make(map[string]WalletStateValidation),
+	}
+
+	tests := []struct { //nolint:govet // test struct
+		name          string
+		errorMessage  string
+		expectError   bool
+		expectedNonce *big.Int
+	}{
+		{"Valid nonce error", "nonce too high: address 0x123456, tx: 5 state: 3", false, big.NewInt(3)},
+		{"Malformed nonce error", "nonce too high: address missing fields", true, nil},
+		{"Invalid nonce format", "nonce too high: address 0x123456, tx: 5 state: abc", true, nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			updatedState, err := handleNonceError(validationState, tt.errorMessage)
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("expected error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error, got: %v", err)
+				}
+
+				address := "0x123456"
+				if updatedState.WalletStateValidation[address].Nonce.Cmp(tt.expectedNonce) != 0 {
+					t.Errorf("expected nonce: %v, got: %v", tt.expectedNonce, updatedState.WalletStateValidation[address].Nonce)
+				}
+			}
+		})
+	}
+}
+
+func TestHandleBalanceError(t *testing.T) {
+	validationState := ValidationState{
+		WalletStateValidation: make(map[string]WalletStateValidation),
+	}
+
+	tests := []struct { //nolint:govet // test struct
+		name            string
+		errorMessage    string
+		expectError     bool
+		expectedBalance *big.Int
+	}{
+		{"Valid balance error", "insufficient funds for gas: address 0x123456 have 5000", false, big.NewInt(5000)},
+		{"Malformed balance error", "insufficient funds error missing fields", true, nil},
+		{"Invalid balance format", "insufficient funds for gas: address 0x123456 have abc", true, nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			updatedState, err := handleBalanceError(validationState, tt.errorMessage)
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("expected error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error, got: %v", err)
+				}
+
+				address := "0x123456"
+				if updatedState.WalletStateValidation[address].Balance.Cmp(tt.expectedBalance) != 0 {
+					t.Errorf("expected balance: %v, got: %v", tt.expectedBalance, updatedState.WalletStateValidation[address].Balance)
+				}
+			}
+		})
+	}
+}
+
+func TestHandleBaseFeeError(t *testing.T) {
+	validationState := ValidationState{
+		BlockStateValidation: BlockStateValidation{},
+	}
+
+	tests := []struct { //nolint:govet // test struct
+		name            string
+		errorMessage    string
+		expectError     bool
+		expectedBaseFee *big.Int
+	}{
+		{"Valid base fee error", "max fee per gas less than block base fee: address 0x123456, maxFeePerGas: 100, baseFee: 200", false, big.NewInt(200)},
+		{"Malformed base fee error", "base fee error missing fields", true, nil},
+		{"Invalid base fee format", "max fee per gas less than block base fee: address 0x123456, maxFeePerGas: 100, baseFee: abc", true, nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			updatedState, err := handleBaseFeeError(validationState, tt.errorMessage)
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("expected error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error, got: %v", err)
+				}
+
+				if updatedState.BlockStateValidation.BaseFeePerGas.Cmp(tt.expectedBaseFee) != 0 {
+					t.Errorf("expected base fee: %v, got: %v", tt.expectedBaseFee, updatedState.BlockStateValidation.BaseFeePerGas)
+				}
+			}
+		})
+	}
+}
+
+func TestHandleBlockGasLimitError(t *testing.T) {
+	validationState := ValidationState{
+		BlockStateValidation: BlockStateValidation{},
+	}
+
+	tests := []struct { //nolint:govet // test struct
+		name             string
+		errorMessage     string
+		expectError      bool
+		expectedGasLimit *big.Int
+	}{
+		{"Valid gas limit error", "gas limit reached: 30000000 >= 15000000", false, big.NewInt(15000000)},
+		{"Malformed gas limit error", "gas limit error missing fields", true, nil},
+		{"Invalid gas limit format", "gas limit reached: 30000000 >= abc", true, nil},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			updatedState, err := handleBlockGasLimitError(validationState, tt.errorMessage)
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("expected error but got none")
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error, got: %v", err)
+				}
+
+				if updatedState.BlockStateValidation.GasLimit.Cmp(tt.expectedGasLimit) != 0 {
+					t.Errorf("expected gas limit: %v, got: %v", tt.expectedGasLimit, updatedState.BlockStateValidation.GasLimit)
+				}
 			}
 		})
 	}

@@ -276,14 +276,14 @@ func cloneValidationState(state ValidationState) ValidationState {
 	walletValidations := make(map[string]WalletStateValidation, len(state.WalletStateValidation))
 
 	blockValidation := BlockStateValidation{
-		BaseFeePerGas: cloneBigIntPtr(state.BlockStateValidation.BaseFeePerGas),
-		GasLimit:      cloneBigIntPtr(state.BlockStateValidation.GasLimit),
+		BaseFeePerGas: utils.CloneBigIntPtr(state.BlockStateValidation.BaseFeePerGas),
+		GasLimit:      utils.CloneBigIntPtr(state.BlockStateValidation.GasLimit),
 	}
 
 	for addr, walletState := range state.WalletStateValidation {
 		walletValidations[addr] = WalletStateValidation{
-			Nonce:   cloneBigIntPtr(walletState.Nonce),
-			Balance: cloneBigIntPtr(walletState.Balance),
+			Nonce:   utils.CloneBigIntPtr(walletState.Nonce),
+			Balance: utils.CloneBigIntPtr(walletState.Balance),
 		}
 	}
 
@@ -291,13 +291,6 @@ func cloneValidationState(state ValidationState) ValidationState {
 		WalletStateValidation: walletValidations,
 		BlockStateValidation:  blockValidation,
 	}
-}
-
-func cloneBigIntPtr(value *big.Int) *big.Int {
-	if value == nil {
-		return nil
-	}
-	return new(big.Int).Set(value)
 }
 
 func ParseValidationError(validationState ValidationState, err error) (ValidationState, error) {
