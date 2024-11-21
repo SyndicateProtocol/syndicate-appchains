@@ -6,11 +6,9 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/metrics"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -25,37 +23,14 @@ type MetaBasedBatchProvider struct {
 	TransactionParser      *L3TransactionParser
 	SequencingBlockFetcher *SequencingBlockFetcher
 	Metrics                metrics.IMetrics
-
-	SettlementStartBlock int
-}
-
-func InitMetaBasedBatchProvider(cfg *config.Config, metricsCollector metrics.IMetrics) *MetaBasedBatchProvider {
-	sequencingChain, err := rpc.Connect(cfg.SequencingChainRPCURL)
-	if err != nil {
-		log.Panic().Err(err).Msg("Failed to initialize sequencing chain")
-	}
-
-	metaBasedChain, err := rpc.Connect(cfg.MetaBasedChainRPCURL)
-	if err != nil {
-		log.Panic().Err(err).Msg("Failed to initialize metabased chain")
-	}
-
-	return &MetaBasedBatchProvider{
-		MetaBasedChain:         metaBasedChain,
-		SequencingChain:        sequencingChain,
-		TransactionParser:      InitL3TransactionParser(cfg),
-		SequencingBlockFetcher: InitSequencingBlockFetcher(sequencingChain, cfg),
-		Metrics:                metricsCollector,
-
-		SettlementStartBlock: cfg.SettlementStartBlock,
-	}
+	SettlementStartBlock   uint64
 }
 
 func NewMetaBasedBatchProvider(
 	settlementChainClient IRPCClient,
 	sequencingChainClient IRPCClient,
 	sequencingContractAddress common.Address,
-	settlementStartBlock int,
+	settlementStartBlock uint64,
 	settlementChainBlockTime int,
 	bpMetrics metrics.IMetrics,
 ) *MetaBasedBatchProvider {
@@ -69,12 +44,6 @@ func NewMetaBasedBatchProvider(
 	}
 }
 
-func (m *MetaBasedBatchProvider) Close() {
-	log.Debug().Msg("Closing Arbitrum MetaBasedBatchProvider")
-	m.SequencingChain.CloseConnection()
-	m.MetaBasedChain.CloseConnection()
-}
-
 // NOTE [SEQ-144]: THIS ASSUMES THAT THE L3 HAS THE SAME BLOCK TIME AS THE SETTLEMENT L2
 func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNumStr string) (string, error) {
 	start := time.Now()
@@ -84,7 +53,7 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	}()
 
 	log.Debug().Msgf("Getting parent block hash for block number %s", blockNumStr)
-	blockNum, err := utils.HexToInt(blockNumStr)
+	blockNum, err := utils.HexToUInt64(blockNumStr)
 	if err != nil {
 		return "", err
 	}
@@ -98,10 +67,10 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	}
 	log.Debug().Msgf("Settlement start block: %d", m.SettlementStartBlock)
 
-	parentBlockNum := int64(blockNum - m.SettlementStartBlock - 1)
+	parentBlockNum := blockNum - m.SettlementStartBlock - 1
 
 	log.Debug().Msgf("Getting block hash for block number %d", parentBlockNum)
-	previousBlock, err := m.MetaBasedChain.AsEthClient().HeaderByNumber(ctx, big.NewInt(parentBlockNum))
+	previousBlock, err := m.MetaBasedChain.AsEthClient().HeaderByNumber(ctx, new(big.Int).SetUint64(parentBlockNum))
 	if err != nil {
 		return "", err
 	}

@@ -42,25 +42,29 @@ func TestFilterTransactionsStateless(t *testing.T) {
 		wantParsedFilteredTxStateless []*ethtypes.Transaction
 		wantRemovedCountStateless     int
 	}{
-		{"mix of valid and invalid, invalid at index 1",
+		{
+			"mix of valid and invalid, invalid at index 1",
 			args{[]hexutil.Bytes{rawTxValid1, rawTxIntrinsicGasTooLow}},
 			[]hexutil.Bytes{rawTxValid1},
 			[]*ethtypes.Transaction{txValid1},
 			1,
 		},
-		{"mix of valid and invalid, invalid at index 0",
+		{
+			"mix of valid and invalid, invalid at index 0",
 			args{[]hexutil.Bytes{rawTxIntrinsicGasTooLow, rawTxValid1}},
 			[]hexutil.Bytes{rawTxValid1},
 			[]*ethtypes.Transaction{txValid1},
 			1,
 		},
-		{"mix of valid and invalid, invalid at indexes 1, 2, 3",
+		{
+			"mix of valid and invalid, invalid at indexes 1, 2, 3",
 			args{[]hexutil.Bytes{rawTxValid1, rawTxIntrinsicGasTooLow, rawTxIntrinsicGasTooLow, rawTxIntrinsicGasTooLow, rawTxValid2}},
 			[]hexutil.Bytes{rawTxValid1, rawTxValid2},
 			[]*ethtypes.Transaction{txValid1, txValid2},
 			3,
 		},
-		{"unparseable",
+		{
+			"unparseable",
 			args{[]hexutil.Bytes{{0x00}}},
 			[]hexutil.Bytes{},
 			[]*ethtypes.Transaction{},
@@ -173,62 +177,74 @@ func TestValidateTransactionStateless(t *testing.T) {
 		wantErr   bool
 		errString string
 	}{
-		{"valid - tx type dynamic",
+		{
+			"valid - tx type dynamic",
 			args{txValid1},
 			false,
 			"",
 		},
-		{"valid - tx type legacy",
+		{
+			"valid - tx type legacy",
 			args{txLegacyType},
 			false,
 			"",
 		},
-		{"invalid - non supported tx type deposit",
+		{
+			"invalid - non supported tx type deposit",
 			args{txDepositType},
 			true,
 			"transaction type not supported: tx type 126 not supported by this pool",
 		},
-		{"invalid - non supported tx type access list",
+		{
+			"invalid - non supported tx type access list",
 			args{txAccessListType},
 			true,
 			"transaction type not supported: tx type 1 not supported by this pool",
 		},
-		{"invalid - non supported tx type blob",
+		{
+			"invalid - non supported tx type blob",
 			args{txBlobType},
 			true,
 			"transaction type not supported: tx type 3 not supported by this pool",
 		},
-		{"invalid - contract creation too big",
+		{
+			"invalid - contract creation too big",
 			args{txContractCreationTooBig},
 			true,
 			"max initcode size exceeded: code size 49153, limit 49152",
 		},
-		{"invalid - too big",
+		{
+			"invalid - too big",
 			args{txTooBig},
 			true,
 			"oversized data: transaction size 92202, limit 92160",
 		},
-		{"invalid - intrinsic gas too low",
+		{
+			"invalid - intrinsic gas too low",
 			args{txIntrinsicGasTooLow},
 			true,
 			"intrinsic gas too low: gas 0, minimum needed 53000",
 		},
-		{"invalid - negative value",
+		{
+			"invalid - negative value",
 			args{txNegativeValue},
 			true,
 			"negative value",
 		},
-		{"invalid - too big gas fee cap",
+		{
+			"invalid - too big gas fee cap",
 			args{txTooBigGasFeeCap},
 			true,
 			"max fee per gas higher than 2^256-1",
 		},
-		{"invalid - too big gas tip cap",
+		{
+			"invalid - too big gas tip cap",
 			args{txTooBigGasTipCap},
 			true,
 			"max priority fee per gas higher than 2^256-1",
 		},
-		{"invalid - gas tip cap higher than gas fee cap",
+		{
+			"invalid - gas tip cap higher than gas fee cap",
 			args{txGasTipCapHigherThanGasFeeCap},
 			true,
 			"max priority fee per gas higher than max fee per gas",

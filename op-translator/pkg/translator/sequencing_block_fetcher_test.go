@@ -331,14 +331,14 @@ func TestGetSequencingBlocksByTimeWindow(t *testing.T) {
 }
 
 func TestGetSequencingBlocks(t *testing.T) {
-	tests := []struct { //nolint:govet // Test struct
-		name                  string
+	tests := []struct {
 		block                 types.Block
+		setupMocks            func(mockClient *mocks.MockRPCClient)
+		name                  string
+		expectedBlocks        []*types.Block
 		timeWindowStart       int
 		timeWindowEnd         int
 		firstBlockBeforeStart uint64
-		setupMocks            func(mockClient *mocks.MockRPCClient)
-		expectedBlocks        []*types.Block
 		expectError           bool
 	}{
 		{

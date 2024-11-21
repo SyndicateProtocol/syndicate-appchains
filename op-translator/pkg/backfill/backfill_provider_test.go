@@ -96,11 +96,13 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 			}, nil)
 
 			ctx := context.Background()
-			backfillProvider := backfill.BackfillProvider{
-				Client:        mockHTTPClient,
-				MetafillerURL: "http://metafiller.io",
-				Metrics:       mockMetrics,
-			}
+			backfillProvider := backfill.NewBackfillerProvider(
+				"http://metafiller.io",
+				0,
+				0,
+				mockHTTPClient,
+				mockMetrics,
+			)
 
 			frames, err := backfillProvider.GetBackfillFrames(ctx, tt.block)
 			if tt.expectedErr {

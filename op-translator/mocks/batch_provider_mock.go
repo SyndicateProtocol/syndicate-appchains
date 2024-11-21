@@ -10,8 +10,6 @@ import (
 
 type MockBatchProvider struct{}
 
-func (m *MockBatchProvider) Close() {}
-
 func (m *MockBatchProvider) GetBatch(ctx context.Context, block types.Block) (*types.Batch, error) {
 	batch := &types.Batch{
 		ParentHash:      common.Hash{},

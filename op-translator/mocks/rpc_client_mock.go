@@ -20,10 +20,6 @@ type MockRPCClient struct {
 // guarantees that the IRPCClient interface is implemented by MockRPCClient
 var _ translator.IRPCClient = (*MockRPCClient)(nil)
 
-func (m *MockRPCClient) CloseConnection() {
-	m.Called()
-}
-
 func (m *MockRPCClient) GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error) {
 	args := m.Called(ctx, number, withTransactions)
 	return args.Get(0).(types.Block), args.Error(1)

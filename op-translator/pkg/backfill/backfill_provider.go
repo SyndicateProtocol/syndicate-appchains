@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/metrics"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/flags"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/rs/zerolog/log"
@@ -23,20 +23,26 @@ type HTTPClient interface {
 }
 
 type BackfillProvider struct {
-	Client            HTTPClient
-	Metrics           metrics.IMetrics
-	MetafillerURL     string
-	GenesisEpochBlock uint64
-	CutoverEpochBlock uint64
+	client            HTTPClient
+	metrics           metrics.IMetrics
+	metafillerURL     string
+	genesisEpochBlock uint64
+	cutoverEpochBlock uint64
 }
 
-func NewBackfillerProvider(cfg *config.Config, metricsCollector metrics.IMetrics) *BackfillProvider {
+func NewBackfillerProvider(
+	metafillerURL string,
+	genesisEpochBlock uint64, // SettlementStartBlock (?)
+	cutoverEpochBlock uint64,
+	client HTTPClient,
+	metricsCollector metrics.IMetrics,
+) *BackfillProvider {
 	return &BackfillProvider{
-		MetafillerURL:     cfg.MetafillerURL,
-		Client:            &http.Client{},
-		GenesisEpochBlock: uint64(cfg.SettlementStartBlock), //nolint:gosec // We validate the genesis block in the config package
-		CutoverEpochBlock: uint64(cfg.CutoverEpochBlock),    //nolint:gosec // We validate the cutover block in the config package
-		Metrics:           metricsCollector,
+		metafillerURL:     metafillerURL,
+		client:            client,
+		genesisEpochBlock: genesisEpochBlock,
+		cutoverEpochBlock: cutoverEpochBlock,
+		metrics:           metricsCollector,
 	}
 }
 
@@ -49,10 +55,10 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 	start := time.Now()
 	defer func() {
 		duration := time.Since(start).Seconds()
-		b.Metrics.RecordBackfillProviderBackfillDuration("get_backfill_data", duration)
+		b.metrics.RecordBackfillProviderBackfillDuration("get_backfill_data", duration)
 	}()
 
-	fullURL := b.MetafillerURL + "/" + strconv.FormatUint(epochNumber, 10)
+	fullURL := b.metafillerURL + "/" + strconv.FormatUint(epochNumber, 10)
 	log.Debug().Msgf("Getting backfill data for epoch number: %d. Fetching from: %s", epochNumber, fullURL)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, http.NoBody)
@@ -60,14 +66,14 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 		return nil, err
 	}
 
-	resp, err := b.Client.Do(req)
+	resp, err := b.client.Do(req)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b.Metrics.RecordBackfillProviderBackfillResponseStatus("get_backfill_data", resp.StatusCode)
+		b.metrics.RecordBackfillProviderBackfillResponseStatus("get_backfill_data", resp.StatusCode)
 		log.Debug().Msgf("Received non-200 response from backfill data provider: %d", resp.StatusCode)
 	}
 
@@ -90,7 +96,7 @@ func (b *BackfillProvider) IsBlockInBackfillingWindow(block types.Block) bool {
 	if err != nil {
 		return false
 	}
-	return epochNumber < b.CutoverEpochBlock
+	return epochNumber < b.cutoverEpochBlock
 }
 
 func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Block) ([]*types.Frame, error) {
@@ -99,7 +105,7 @@ func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Bl
 		return nil, fmt.Errorf("failed to get backfill data - invalid block number: %w", err)
 	}
 
-	if epochNumber == b.GenesisEpochBlock {
+	if epochNumber == b.genesisEpochBlock {
 		log.Debug().Msgf("Block number is genesis block, not backfilling, %d", epochNumber)
 		return []*types.Frame{}, nil
 	}
@@ -124,7 +130,7 @@ func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Bl
 		if err != nil {
 			return nil, fmt.Errorf("failed to decode hex string: %s. error: %w", data, err)
 		}
-		frame, err := types.ToFrames(byteData, config.MaxFrameSize, backfillData.EpochHash)
+		frame, err := types.ToFrames(byteData, flags.MaxFrameSize, backfillData.EpochHash)
 		if err != nil {
 			return nil, fmt.Errorf("failed to convert data to frames for epoch %d: %w", epochNumber, err)
 		}
