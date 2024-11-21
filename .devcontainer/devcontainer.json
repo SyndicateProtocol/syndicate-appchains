@@ -36,8 +36,7 @@
   // Update package list. Without this, Just won't be found
   // Check that Justfile exists
   // Perform setup in advance of initializing Arbitrum localnet
-  "postCreateCommand": "sudo apt update && sudo apt install -y just && just -f ${containerWorkspaceFolder}/.devcontainer/justfile arb-network-setup > /tmp/postCreateOutput 2>&1",
-
+  "postCreateCommand": "sudo apt update && sudo apt install -y just && echo 'Just installed successfully' && ls -la /workspaces/metabased-rollup/.devcontainer/justfile && echo 'Justfile exists, running setup...' && just -f /workspaces/metabased-rollup/.devcontainer/justfile arb-network-setup",
   // Configure tool-specific properties.
   "customizations": {
     // Configure properties specific to VS Code.
