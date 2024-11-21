@@ -139,7 +139,7 @@ arb-clean-chain:
 ## TODO Change METABASED_CHAIN_RPC_ADDRESS -> SEQUENCING_CHAIN_RPC_URL
 # Create or update /localnet.env file. This is a single source of truth for all localnet services
 create-localenv-file:
-    #!/usr/bin/env bash
+    #!/bin/bash
     # Commented portion will skip overwriting if file already exists. As-is, localenv_file is always overwritten
     # if [ ! -f {{ localenv_file }} ]; then
         cat > {{ localenv_file }} << EOL
@@ -185,7 +185,7 @@ arb-update-chain-address: arb-deploy-chain create-localenv-file
 # Puts arb contract address into localnet ENV file
 #update-chain-address: arb-deploy-chain op-deploy-chain create-localenv-file ## TODO - OP chain RPC URL needs to be working for this
 #update-chain-address: arb-deploy-chain create-localenv-file
-#    #!/usr/bin/env bash
+#    #!/bin/bash
 #    # Get the contract address from arb deployment file
 #    contract_address=$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq)
 #    # Remove both old addresses and create temp file
