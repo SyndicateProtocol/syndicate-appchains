@@ -80,7 +80,7 @@ func ParseRawTransactions(txs []hexutil.Bytes) (rawTxns []hexutil.Bytes, parsedT
 		}
 
 		// Derive from address from the sender
-		from, err := ethtypes.Sender(ethtypes.NewEIP155Signer(tx.ChainId()), tx)
+		from, err := ethtypes.Sender(ethtypes.NewLondonSigner(tx.ChainId()), tx)
 		if err != nil {
 			log.Warn().Err(err).Msgf("can't derive from address from the sender: %+v", tx)
 			continue
