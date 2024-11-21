@@ -12,11 +12,11 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var chainId = new(big.Int).SetInt64(1)
+var chainID = new(big.Int).SetInt64(1)
 
 var txIntrinsicGasTooLow = GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 	tx.Gas = 0
-	tx.ChainID = chainId
+	tx.ChainID = chainID
 })
 var rawTxIntrinsicGasTooLow = MustMarshalTransaction(txIntrinsicGasTooLow)
 
@@ -24,7 +24,7 @@ var txValid1 = GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 	to := common.HexToAddress("0x1234567890123456789012345678901234567001")
 	tx.To = &to
 	tx.Gas = 21000
-	tx.ChainID = chainId
+	tx.ChainID = chainID
 })
 var rawTxValid1 = MustMarshalTransaction(txValid1)
 
@@ -33,7 +33,7 @@ var txValid2 = GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 	to := common.HexToAddress("0x1234567890123456789012345678901234567002")
 	tx.To = &to
 	tx.Gas = 21000
-	tx.ChainID = chainId
+	tx.ChainID = chainID
 })
 var rawTxValid2 = MustMarshalTransaction(txValid2)
 
@@ -138,20 +138,20 @@ func TestValidateTransactionInternal(t *testing.T) {
 		tx.To = &to
 		tx.Gas = 21000
 		tx.Data = dataWithLimit
-		tx.ChainID = chainId
+		tx.ChainID = chainID
 	})
 
 	contractCreationWithLimit := make([]byte, params.MaxInitCodeSize+1)
 	txContractCreationTooBig := GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 		tx.Gas = 21000
 		tx.Data = contractCreationWithLimit
-		tx.ChainID = chainId
+		tx.ChainID = chainID
 	})
 
 	txNegativeValue := GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 		tx.Gas = 21000
 		tx.Value = new(big.Int).SetInt64(-1)
-		tx.ChainID = chainId
+		tx.ChainID = chainID
 	})
 
 	bigIntTooLarge := new(big.Int).SetBytes([]byte{
@@ -165,20 +165,20 @@ func TestValidateTransactionInternal(t *testing.T) {
 	txTooBigGasFeeCap := GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 		tx.Gas = 21000
 		tx.GasFeeCap = bigIntTooLarge
-		tx.ChainID = chainId
+		tx.ChainID = chainID
 	})
 
 	txTooBigGasTipCap := GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 		tx.Gas = 21000
 		tx.GasTipCap = bigIntTooLarge
-		tx.ChainID = chainId
+		tx.ChainID = chainID
 	})
 
 	txGasTipCapHigherThanGasFeeCap := GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 		tx.Gas = 21000
 		tx.GasTipCap = new(big.Int).SetInt64(10)
 		tx.GasFeeCap = new(big.Int).SetInt64(9)
-		tx.ChainID = chainId
+		tx.ChainID = chainID
 	})
 
 	type args struct {
