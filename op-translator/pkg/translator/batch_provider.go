@@ -203,9 +203,9 @@ func (m *MetaBasedBatchProvider) GetValidTransactions(rawTxs []hexutil.Bytes) ([
 	// First phase validation: stateless
 	rawFilteredTxStateless, parsedFilteredTxStateless := ParseRawTransactions(rawTxs)
 	removedCountStateless := len(rawTxs) - len(rawFilteredTxStateless)
+	m.Metrics.RecordBatchProviderInvalidTransactionsCount("stateless", removedCountStateless)
 	if removedCountStateless > 0 {
 		log.Debug().Msgf("Transactions got filtered by stateless validation: %d", removedCountStateless)
-		m.Metrics.RecordBatchProviderInvalidTransactionsCount("stateless", removedCountStateless)
 	}
 
 	// Second phase validation: stateful
@@ -214,9 +214,9 @@ func (m *MetaBasedBatchProvider) GetValidTransactions(rawTxs []hexutil.Bytes) ([
 		return nil, err
 	}
 	removedCountStateful := len(rawFilteredTxStateless) - len(rawFilteredTxStateful)
+	m.Metrics.RecordBatchProviderInvalidTransactionsCount("stateful", removedCountStateful)
 	if removedCountStateful > 0 {
 		log.Debug().Msgf("Transactions got filtered by stateful validation: %d", removedCountStateful)
-		m.Metrics.RecordBatchProviderInvalidTransactionsCount("stateful", removedCountStateful)
 	}
 	return rawFilteredTxStateful, nil
 }
