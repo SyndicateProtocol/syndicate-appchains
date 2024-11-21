@@ -40,7 +40,7 @@
     "sudo apt update &&",
     "sudo apt install -y just &&",
     "ls -la ${containerWorkspaceFolder}/.devcontainer/justfile &&",
-    "just -f ${containerWorkspaceFolder}/.devcontainer/justfile arb-network-setup"
+    "just -f ${containerWorkspaceFolder}/.devcontainer/justfile arb-network-setup > /tmp/postCreateOutput 2>&1"
   ],
   // Configure tool-specific properties.
   "customizations": {
