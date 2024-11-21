@@ -16,6 +16,8 @@ import (
 func TestGetBlockByNumber(t *testing.T) {
 	mockConfig := mocks.DefaultTestingConfig
 	mockClient := new(mocks.MockRPCClient)
+	mockMetrics := mocks.NewMockMetrics()
+
 	number := "0x21"
 	settlementBlock := types.Block{
 		"number":       number,
@@ -29,7 +31,8 @@ func TestGetBlockByNumber(t *testing.T) {
 		SettlementChain:  mockClient,
 		BatchProvider:    &mocks.MockBatchProvider{},
 		Signer:           *translator.NewSigner(mockConfig),
-		BackfillProvider: backfill.NewBackfillerProvider(mockConfig),
+		BackfillProvider: backfill.NewBackfillerProvider(mockConfig, mockMetrics),
+		Metrics:          mockMetrics,
 	}
 
 	block, err := translatorMock.GetBlockByNumber(ctx, number, true)
@@ -47,12 +50,16 @@ func TestGetBlockByNumber(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(transactions))
 
+	mockMetrics.AssertCalled(t, "RecordOPTranslatorRPCRequest", "eth_getBlockByNumber")
+
 	mockClient.AssertExpectations(t)
 }
 
 func TestGetBlockByHash(t *testing.T) {
 	mockClient := new(mocks.MockRPCClient)
+	mockMetrics := mocks.NewMockMetrics()
 	mockConfig := mocks.DefaultTestingConfig
+
 	number := "0x21"
 	settlementBlock := types.Block{
 		"number":       number,
@@ -67,7 +74,8 @@ func TestGetBlockByHash(t *testing.T) {
 		SettlementChain:  mockClient,
 		BatchProvider:    &mocks.MockBatchProvider{},
 		Signer:           *translator.NewSigner(mockConfig),
-		BackfillProvider: backfill.NewBackfillerProvider(mockConfig),
+		BackfillProvider: backfill.NewBackfillerProvider(mockConfig, mockMetrics),
+		Metrics:          mockMetrics,
 	}
 
 	block, err := translatorMock.GetBlockByHash(ctx, hash, true)
@@ -84,6 +92,8 @@ func TestGetBlockByHash(t *testing.T) {
 	transactions, err := block.GetTransactions()
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(transactions))
+
+	mockMetrics.AssertCalled(t, "RecordOPTranslatorRPCRequest", "eth_getBlockByHash")
 
 	mockClient.AssertExpectations(t)
 }

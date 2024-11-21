@@ -185,6 +185,8 @@ func TestOPNodeCalls(t *testing.T) {
 	for _, tc := range testCases {
 		mockClient := getMockClient()
 		mockHTTPBackfillClient := getBackfillHTTPMock()
+		mockMetrics := mocks.NewMockMetrics()
+
 		opTranslator := &translator.OPTranslator{
 			SettlementChain:     mockClient,
 			BatcherInboxAddress: common.HexToAddress("0x123"),
@@ -196,7 +198,9 @@ func TestOPNodeCalls(t *testing.T) {
 				Client:            mockHTTPBackfillClient,
 				GenesisEpochBlock: uint64(mockConfig.SettlementStartBlock), //nolint:gosec // precision loss is known
 				CutoverEpochBlock: uint64(mockConfig.CutoverEpochBlock),    //nolint:gosec // precision loss is known
+				Metrics:           mockMetrics,
 			},
+			Metrics: mockMetrics,
 		}
 
 		s, err := server.TranslatorHandler(mockConfig, opTranslator)
