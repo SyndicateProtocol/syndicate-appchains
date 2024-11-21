@@ -32,7 +32,11 @@ arb_orbit_port := "8547"
 
 arb_orbit_l2_rpc_url := "http://127.0.0.1:" + arb_orbit_port
 
-metabased_sequencer_url := "http://127.0.0.1:8456"
+metabased_sequencer_l3_rpc_url := "http://127.0.0.1:" + metabased_sequencer_port
+
+metabased_sequencer_port := "8456"
+
+metabased_sequencer_url := "http://127.0.0.1:" + metabased_sequencer_port
 
 op_translator_port := "9999"
 
@@ -159,7 +163,7 @@ create-localenv-file:
     BATCHER_ADDRESS=0x063D87A885a9323831A688645647eD7d0e859C5d
     CUTOVER_BLOCK=0
     # Vars below are used by metabased-sequencer. TODO: refactor duplicates
-    METABASED_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}
+    METABASED_CHAIN_RPC_ADDRESS={{ metabased_sequencer_url }}
     METABASED_PRIVATE_KEY={{ arb_orbit_private_key }}
     METABASED_CHAIN_CONTRACT_ADDRESS=[METABASED_CHAIN_CONTRACT_ADDRESS]
     EOL
