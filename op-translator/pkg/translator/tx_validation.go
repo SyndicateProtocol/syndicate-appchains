@@ -28,6 +28,8 @@ const (
 
 	// maxBigIntBitLen is the max length in bits for a BigInt
 	maxBigIntBitLen = 256
+
+	decimalBase = 10
 )
 
 const (
@@ -90,8 +92,8 @@ func ParseRawTransactions(txs []hexutil.Bytes) (rawTxns []hexutil.Bytes, parsedT
 			To:                   tx.To().Hex(),
 			Value:                tx.Value().String(),
 			Data:                 hexutil.Encode(tx.Data()),
-			Nonce:                strconv.FormatUint(tx.Nonce(), 10),
-			Gas:                  strconv.FormatUint(tx.Gas(), 10),
+			Nonce:                strconv.FormatUint(tx.Nonce(), decimalBase),
+			Gas:                  strconv.FormatUint(tx.Gas(), decimalBase),
 			MaxFeePerGas:         tx.GasPrice().String(),
 			MaxPriorityFeePerGas: tx.GasTipCap().String(),
 		}
@@ -333,15 +335,16 @@ func handleNonceError(validationState ValidationState, errorMessage string) (Val
 	// err: nonce too high: address 0xBA401CdaC1A3b6AEeDe21c9C4a483be6C29F88C5, tx: 153 state: 89 (supplied gas 50000)
 	// Regular expression to match address and state value
 	re := regexp.MustCompile(`address (0x[a-fA-F0-9]+), tx: \d+ state: (\d+)`)
+	expectedMatches := 3
 	matches := re.FindStringSubmatch(errorMessage)
 
 	// Validate matches
-	if len(matches) != 3 {
+	if len(matches) != expectedMatches {
 		return validationState, fmt.Errorf("failed to parse nonce error: %s", errorMessage)
 	}
 
 	address := matches[1]
-	currentNonce, ok := new(big.Int).SetString(matches[2], 10)
+	currentNonce, ok := new(big.Int).SetString(matches[2], decimalBase)
 	if !ok {
 		return validationState, fmt.Errorf("invalid nonce number: %s", currentNonce)
 	}
@@ -358,14 +361,14 @@ func handleBalanceError(validationState ValidationState, errorMessage string) (V
 	// Regular expression to extract address, current balance, and required balance
 	re := regexp.MustCompile(`address (0x[a-fA-F0-9]+) have (\d+)`)
 	matches := re.FindStringSubmatch(errorMessage)
-
+	expectedMatches := 3
 	// Validate matches
-	if len(matches) != 3 {
+	if len(matches) != expectedMatches {
 		return validationState, fmt.Errorf("failed to parse balance error: %s", errorMessage)
 	}
 
 	address := matches[1]
-	currentBalance, ok := new(big.Int).SetString(matches[2], 10)
+	currentBalance, ok := new(big.Int).SetString(matches[2], decimalBase)
 	if !ok {
 		return validationState, fmt.Errorf("invalid current balance value: %s", matches[2])
 	}
@@ -388,13 +391,14 @@ func handleBaseFeeError(validationState ValidationState, errorMessage string) (V
 	// Regular expression to extract address, maxFeePerGas, and baseFee
 	re := regexp.MustCompile(`address (0x[a-fA-F0-9]+), maxFeePerGas: (\d+), baseFee: (\d+)`)
 	matches := re.FindStringSubmatch(errorMessage)
+	expectedMatches := 4
 
 	// Validate matches
-	if len(matches) != 4 {
+	if len(matches) != expectedMatches {
 		return validationState, fmt.Errorf("failed to parse fee error: %s", errorMessage)
 	}
 
-	baseFee, ok := new(big.Int).SetString(matches[3], 10)
+	baseFee, ok := new(big.Int).SetString(matches[3], decimalBase)
 	if !ok {
 		return validationState, fmt.Errorf("invalid baseFee value: %s", matches[3])
 	}
@@ -409,14 +413,15 @@ func handleBlockGasLimitError(validationState ValidationState, errorMessage stri
 	// err: block gas limit reached: 826486073456 >= 30000000
 	// Regular expression to extract the current gas used and the block gas limit
 	re := regexp.MustCompile(`gas limit reached: (\d+) >= (\d+)`)
+	expectedMatches := 3
 	matches := re.FindStringSubmatch(errorMessage)
 
 	// Validate matches
-	if len(matches) != 3 {
+	if len(matches) != expectedMatches {
 		return validationState, fmt.Errorf("failed to parse block gas limit error: %s", errorMessage)
 	}
 
-	blockGasLimit, ok := new(big.Int).SetString(matches[2], 10)
+	blockGasLimit, ok := new(big.Int).SetString(matches[2], decimalBase)
 	if !ok {
 		return validationState, fmt.Errorf("invalid block gas limit value: %s", matches[2])
 	}
