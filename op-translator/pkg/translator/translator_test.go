@@ -11,15 +11,12 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 func TestGetBlockByNumber(t *testing.T) {
 	mockConfig := mocks.DefaultTestingConfig
 	mockClient := new(mocks.MockRPCClient)
-	mockMetrics := new(mocks.MockMetrics)
-	mockMetrics.On("RecordOPTranslatorRPCRequest", "eth_getBlockByNumber").Return()
-	mockMetrics.On("RecordOPTranslatorTranslationLatency", "eth_getBlockByNumber", mock.Anything).Return()
+	mockMetrics := mocks.NewMockMetrics()
 
 	number := "0x21"
 	settlementBlock := types.Block{
@@ -34,7 +31,7 @@ func TestGetBlockByNumber(t *testing.T) {
 		SettlementChain:  mockClient,
 		BatchProvider:    &mocks.MockBatchProvider{},
 		Signer:           *translator.NewSigner(mockConfig),
-		BackfillProvider: backfill.NewBackfillerProvider(mockConfig),
+		BackfillProvider: backfill.NewBackfillerProvider(mockConfig, mockMetrics),
 		Metrics:          mockMetrics,
 	}
 
@@ -60,9 +57,7 @@ func TestGetBlockByNumber(t *testing.T) {
 
 func TestGetBlockByHash(t *testing.T) {
 	mockClient := new(mocks.MockRPCClient)
-	mockMetrics := new(mocks.MockMetrics)
-	mockMetrics.On("RecordOPTranslatorRPCRequest", "eth_getBlockByHash").Return()
-	mockMetrics.On("RecordOPTranslatorTranslationLatency", "eth_getBlockByHash", mock.Anything).Return()
+	mockMetrics := mocks.NewMockMetrics()
 	mockConfig := mocks.DefaultTestingConfig
 
 	number := "0x21"
@@ -79,7 +74,7 @@ func TestGetBlockByHash(t *testing.T) {
 		SettlementChain:  mockClient,
 		BatchProvider:    &mocks.MockBatchProvider{},
 		Signer:           *translator.NewSigner(mockConfig),
-		BackfillProvider: backfill.NewBackfillerProvider(mockConfig),
+		BackfillProvider: backfill.NewBackfillerProvider(mockConfig, mockMetrics),
 		Metrics:          mockMetrics,
 	}
 

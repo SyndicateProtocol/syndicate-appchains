@@ -7,8 +7,9 @@ import (
 
 // Namespaces are prepended to all metric names in prometheus
 const (
-	opTranslatorNamespace  = "op_translator"
-	batchProviderNamespace = "batch_provider"
+	opTranslatorNamespace     = "op_translator"
+	batchProviderNamespace    = "batch_provider"
+	backfillProviderNamespace = "backfill_provider"
 )
 
 type IMetrics interface {
@@ -22,6 +23,11 @@ type IMetrics interface {
 	RecordBatchProviderBatchProcessingDuration(method string, duration float64)
 	RecordBatchProviderError(method, errorType string)
 	RecordBatchProviderInvalidTransactionsCount(state string, count int)
+
+	// Backfill Provider
+	RecordBackfillProviderBackfillDuration(method string, duration float64)
+	RecordBackfillProviderBackfillResponseStatus(method string, status int)
+	RecordBackfillProviderBackfillingWindow(inWindow bool)
 }
 
 type Metrics struct {
@@ -35,6 +41,11 @@ type Metrics struct {
 	batchProviderBatchProcessingDuration  *prometheus.HistogramVec
 	batchProviderErrors                   *prometheus.CounterVec
 	batchProviderInvalidTransactionsCount *prometheus.CounterVec
+
+	// Backfill Provider
+	backfillProviderBackfillDuration       *prometheus.HistogramVec
+	backfillProviderBackfillResponseStatus *prometheus.CounterVec
+	backfillProviderBackfillingWindow      prometheus.Gauge
 }
 
 func NewMetrics() *Metrics {
@@ -100,6 +111,30 @@ func NewMetrics() *Metrics {
 			},
 			[]string{"state"},
 		),
+
+		// Backfill Provider
+		backfillProviderBackfillDuration: promauto.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Namespace: backfillProviderNamespace,
+				Name:      "backfill_duration_seconds",
+				Help:      "Duration of backfill processing",
+				Buckets:   prometheus.DefBuckets,
+			},
+			[]string{"method"},
+		),
+		backfillProviderBackfillResponseStatus: promauto.NewCounterVec(
+			prometheus.CounterOpts{
+				Namespace: backfillProviderNamespace,
+				Name:      "backfill_response_status",
+				Help:      "Response status of the backfill provider (metafiller)",
+			},
+			[]string{"method"},
+		),
+		backfillProviderBackfillingWindow: promauto.NewGauge(prometheus.GaugeOpts{
+			Namespace: backfillProviderNamespace,
+			Name:      "backfilling_window",
+			Help:      "Whether we are backfilling (1) or processing live blocks (0)",
+		}),
 	}
 }
 
@@ -133,4 +168,22 @@ func (m *Metrics) RecordBatchProviderError(method, errorType string) {
 
 func (m *Metrics) RecordBatchProviderInvalidTransactionsCount(state string, count int) {
 	m.batchProviderInvalidTransactionsCount.WithLabelValues(state).Add(float64(count))
+}
+
+// Backfill Provider
+
+func (m *Metrics) RecordBackfillProviderBackfillDuration(method string, duration float64) {
+	m.backfillProviderBackfillDuration.WithLabelValues(method).Observe(duration)
+}
+
+func (m *Metrics) RecordBackfillProviderBackfillResponseStatus(method string, status int) {
+	m.backfillProviderBackfillResponseStatus.WithLabelValues(method).Add(float64(status))
+}
+
+func (m *Metrics) RecordBackfillProviderBackfillingWindow(inWindow bool) {
+	if inWindow {
+		m.backfillProviderBackfillingWindow.Set(1)
+	} else {
+		m.backfillProviderBackfillingWindow.Set(0)
+	}
 }

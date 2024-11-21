@@ -18,6 +18,8 @@ import (
 )
 
 func TestGetBackfillFramesMultipleCases(t *testing.T) {
+	mockMetrics := mocks.NewMockMetrics()
+
 	tests := []struct { //nolint:govet // test struct
 		name               string
 		mockResponseData   backfill.BackfillData
@@ -82,7 +84,6 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 			expectedErr:        false,
 		},
 	}
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockHTTPClient := new(mocks.HTTPClientMock)
@@ -98,6 +99,7 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 			backfillProvider := backfill.BackfillProvider{
 				Client:        mockHTTPClient,
 				MetafillerURL: "http://metafiller.io",
+				Metrics:       mockMetrics,
 			}
 
 			frames, err := backfillProvider.GetBackfillFrames(ctx, tt.block)
