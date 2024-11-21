@@ -175,24 +175,25 @@ create-localenv-file:
 #    [ -f {{ localenv_file }} ] || printf "METABASED_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}\nMETABASED_PRIVATE_KEY={{ arb_orbit_private_key }}" > {{ localenv_file }}
 
 # Puts arb contract address into localnet ENV file
-#arb-update-chain-address: arb-deploy-chain create-localenv-file
-#    cat {{ localenv_file }} | grep -v METABASED_CHAIN_CONTRACT_ADDRESS= > {{ localenv_file }}.tmp
-#    echo METABASED_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ localenv_file }}.tmp
-#    mv {{ localenv_file }}.tmp {{ localenv_file }}
+arb-update-chain-address: arb-deploy-chain create-localenv-file
+    cat {{ localenv_file }} | grep -v METABASED_CHAIN_CONTRACT_ADDRESS= > {{ localenv_file }}.tmp
+    echo METABASED_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ localenv_file }}.tmp
+    mv {{ localenv_file }}.tmp {{ localenv_file }}
 
 # TODO - refactor duplicate vars
+# TODO - address has to be different, this command fails
 # Puts arb contract address into localnet ENV file
 #update-chain-address: arb-deploy-chain op-deploy-chain create-localenv-file ## TODO - OP chain RPC URL needs to be working for this
-update-chain-address: arb-deploy-chain create-localenv-file
-    #!/usr/bin/env bash
-    # Get the contract address from arb deployment file
-    contract_address=$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq)
-    # Remove both old addresses and create temp file
-    cat {{ localenv_file }} | grep -v METABASED_CHAIN_CONTRACT_ADDRESS= | grep -v SEQUENCING_CONTRACT_ADDRESS= > {{ localenv_file }}.tmp
-    # Add both new addresses
-    echo "METABASED_CHAIN_CONTRACT_ADDRESS=0x${contract_address}" >> {{ localenv_file }}.tmp
-    echo "SEQUENCING_CONTRACT_ADDRESS=0x${contract_address}" >> {{ localenv_file }}.tmp
-    mv {{ localenv_file }}.tmp {{ localenv_file }}
+#update-chain-address: arb-deploy-chain create-localenv-file
+#    #!/usr/bin/env bash
+#    # Get the contract address from arb deployment file
+#    contract_address=$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq)
+#    # Remove both old addresses and create temp file
+#    cat {{ localenv_file }} | grep -v METABASED_CHAIN_CONTRACT_ADDRESS= | grep -v SEQUENCING_CONTRACT_ADDRESS= > {{ localenv_file }}.tmp
+#    # Add both new addresses
+#    echo "METABASED_CHAIN_CONTRACT_ADDRESS=0x${contract_address}" >> {{ localenv_file }}.tmp
+#    echo "SEQUENCING_CONTRACT_ADDRESS=0x${contract_address}" >> {{ localenv_file }}.tmp
+#    mv {{ localenv_file }}.tmp {{ localenv_file }}
 
 go-install:
     go install /workspaces/metabased-rollup/op-translator
@@ -267,7 +268,7 @@ arb-network-setup: foundry-install foundry-update create-aliases
 network-setup: foundry-install foundry-update create-aliases
     @echo "Post-setup Arbitrum script completed successfully. Ready to bring up the Arbitrum Orbit devnet with arb-up."
 
-arb-sequencer-plus-setup: update-chain-address run-metabased-sequencer
+arb-sequencer-plus-setup: arb-update-chain-address run-metabased-sequencer
     @echo "Arbitrum Sequencer setup completed successfully. Running sequencer."
 
 arb-health-check:
