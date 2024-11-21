@@ -82,6 +82,16 @@ jobs:
             fi
             echo "[STATUS] Test L3 -> Arbitrum L2 transaction completed successfully"
 
+#            # Start OP-translator in background
+#            just -f .devcontainer/justfile run-op-translator &
+#
+#            # Wait for OP-translator to be ready via health check
+#            echo "[STATUS] Waiting for OP-translator to be ready..."
+#            until just -f .devcontainer/justfile op-translator-health-check | grep -q "result"; do
+#              sleep 10
+#            done
+#            echo "[STATUS] op-translator is ready"
+
       - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v3
