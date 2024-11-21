@@ -33,11 +33,15 @@
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // "forwardPorts": [],
 
-  // Update package lists
-  // Without this, just won't be found
-  // After that, initialize the Arbitrum devnet
-  "postCreateCommand": "sudo apt update && sudo apt install -y just && just -f ${containerWorkspaceFolder}/.devcontainer/justfile arb-network-setup > /tmp/postCreateOutput 2>&1",
-
+  // Update package list. Without this, Just won't be found
+  // Check that Justfile exists
+  // Perform setup in advance of initializing Arbitrum localnet
+  "postCreateCommand": [
+    "sudo apt update",
+    "sudo apt install -y just",
+    "ls -la ${containerWorkspaceFolder}/.devcontainer/justfile",
+    "just -f ${containerWorkspaceFolder}/.devcontainer/justfile arb-network-setup"
+  ],
   // Configure tool-specific properties.
   "customizations": {
     // Configure properties specific to VS Code.
