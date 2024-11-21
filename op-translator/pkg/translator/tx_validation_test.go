@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -443,6 +444,136 @@ func TestHandleBlockGasLimitError(t *testing.T) {
 				if updatedState.BlockStateValidation.GasLimit.Cmp(tt.expectedGasLimit) != 0 {
 					t.Errorf("expected gas limit: %v, got: %v", tt.expectedGasLimit, updatedState.BlockStateValidation.GasLimit)
 				}
+			}
+		})
+	}
+}
+
+func TestCloneValidationState(t *testing.T) {
+	originalState := ValidationState{
+		WalletStateValidation: map[string]WalletStateValidation{
+			"0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef": {
+				Nonce:   big.NewInt(1),
+				Balance: big.NewInt(100000000000),
+			},
+		},
+		BlockStateValidation: BlockStateValidation{
+			BaseFeePerGas: big.NewInt(10000000000),
+			GasLimit:      big.NewInt(30000000),
+		},
+	}
+
+	clonedState := cloneValidationState(originalState)
+
+	// Modify the cloned state and ensure original is not affected
+	walletState := clonedState.WalletStateValidation["0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef"]
+	walletState.Nonce = big.NewInt(2)
+	clonedState.WalletStateValidation["0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef"] = walletState
+
+	assert.Equal(t, big.NewInt(1), originalState.WalletStateValidation["0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef"].Nonce)
+	assert.Equal(t, big.NewInt(2), clonedState.WalletStateValidation["0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef"].Nonce)
+}
+
+func TestValidateBlockState(t *testing.T) {
+	rawTxns := []hexutil.Bytes{
+		hexutil.MustDecode("0xf86a0180850b8447060082520894868c2f4324ddddf07ebeb3605b5a0dc3bfc918a80b844a9059cbb00000000000000000000000033e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef00000000000000000000000000000000000000000000000000000000000000001"),
+		hexutil.MustDecode("0xf86b0180850b8447060082520894868c2f4324ddddf07ebeb3605b5a0dc3bfc918a80b844a9059cbb00000000000000000000000033e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef00000000000000000000000000000000000000000000000000000000000000002"),
+	}
+	txns := []*rpc.ParsedTransaction{
+		{
+			Nonce:        "0x1",
+			Value:        "0x0",
+			Gas:          "0x5208",
+			MaxFeePerGas: "0xb84470600",
+			From:         "0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef",
+			To:           "0x868c2f4324ddddd07ebeb3605b5a0dc3bfc918a8",
+		},
+		{
+			Nonce:        "0x2",
+			Value:        "0x0",
+			Gas:          "0x5208",
+			MaxFeePerGas: "0xb84470600",
+			From:         "0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef",
+			To:           "0x868c2f4324ddddd07ebeb3605b5a0dc3bfc918a8",
+		},
+	}
+
+	tests := []struct {
+		name          string
+		state         ValidationState
+		expectedValid int
+	}{
+		{
+			name: "All valid transactions",
+			state: ValidationState{
+				WalletStateValidation: map[string]WalletStateValidation{
+					"0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef": {
+						Nonce:   big.NewInt(1),
+						Balance: big.NewInt(2000000000000000),
+					},
+				},
+				BlockStateValidation: BlockStateValidation{
+					BaseFeePerGas: big.NewInt(10000000000),
+					GasLimit:      big.NewInt(30000000),
+				},
+			},
+			expectedValid: 2,
+		},
+		{
+			name: "Invalid nonce",
+			state: ValidationState{
+				WalletStateValidation: map[string]WalletStateValidation{
+					"0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef": {
+						Nonce:   big.NewInt(3),
+						Balance: big.NewInt(2000000000000000),
+					},
+				},
+				BlockStateValidation: BlockStateValidation{
+					BaseFeePerGas: big.NewInt(10000000000),
+					GasLimit:      big.NewInt(30000000),
+				},
+			},
+			expectedValid: 0,
+		},
+		{
+			name: "Insufficient balance",
+			state: ValidationState{
+				WalletStateValidation: map[string]WalletStateValidation{
+					"0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef": {
+						Nonce:   big.NewInt(1),
+						Balance: big.NewInt(5000),
+					},
+				},
+				BlockStateValidation: BlockStateValidation{
+					BaseFeePerGas: big.NewInt(10000000000),
+					GasLimit:      big.NewInt(30000000),
+				},
+			},
+			expectedValid: 0,
+		},
+		{
+			name: "Exceeds block gas limit",
+			state: ValidationState{
+				WalletStateValidation: map[string]WalletStateValidation{
+					"0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef": {
+						Nonce:   big.NewInt(1),
+						Balance: big.NewInt(2000000000000000),
+					},
+				},
+				BlockStateValidation: BlockStateValidation{
+					BaseFeePerGas: big.NewInt(10000000000),
+					GasLimit:      big.NewInt(10000),
+				},
+			},
+			expectedValid: 0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			validRawTxns, validTxns := ValidateBlockState(rawTxns, txns, tt.state)
+			if len(validRawTxns) != tt.expectedValid || len(validTxns) != tt.expectedValid {
+				t.Errorf("expected %d valid transactions, got %d valid raw txns and %d valid txns", tt.expectedValid, len(validRawTxns), len(validTxns))
 			}
 		})
 	}

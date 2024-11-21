@@ -7,6 +7,8 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
+
+	"github.com/rs/zerolog/log"
 )
 
 const MillisecondsPerSecond = 1000
@@ -43,6 +45,15 @@ func HexToBigInt(hexStr string) (*big.Int, error) {
 		return nil, fmt.Errorf("invalid hexadecimal value: %s", hexStr)
 	}
 	return num, nil
+}
+
+func MustHexToBigInt(hexStr string) *big.Int {
+	value, err := HexToBigInt(hexStr)
+	if err != nil {
+		log.Warn().Err(err).Msgf("Failed to convert hex to big int: %v", hexStr)
+		return big.NewInt(0)
+	}
+	return value
 }
 
 func HexToUInt64(hexStr string) (uint64, error) {

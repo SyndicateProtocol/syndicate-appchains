@@ -192,84 +192,92 @@ func (m *MetaBasedBatchProvider) ValidateTransactionsBlock(rawTxns []hexutil.Byt
 func ValidateBlockState(rawTransactions []hexutil.Bytes, parsedTransactions []*rpc.ParsedTransaction, state ValidationState) ([]hexutil.Bytes, []*rpc.ParsedTransaction) {
 	validTransactions := []*rpc.ParsedTransaction{}
 	validRawTransactions := []hexutil.Bytes{}
-	tempState := cloneValidationState(state) // Create a temporary copy of the state
 
-	blockBaseFeePerGas := tempState.BlockStateValidation.BaseFeePerGas
-	blockGasLimit := tempState.BlockStateValidation.GasLimit
+	tempState := cloneValidationState(state) // Create a temporary copy of the state
 	gasUsedInBlock := big.NewInt(0)
 
-	for i, parsedTransaction := range parsedTransactions {
-		txNonce, err := utils.HexToBigInt(parsedTransaction.Nonce)
-		if err != nil {
-			log.Warn().Err(err).Msgf("can't convert nonce to big int: %v", parsedTransaction.Nonce)
-			continue
-		}
-
-		txMaxFeePerGas, err := utils.HexToBigInt(parsedTransaction.MaxFeePerGas)
-		if err != nil {
-			log.Warn().Err(err).Msgf("can't convert maxFeePerGas to big int: %v", parsedTransaction.MaxFeePerGas)
-			continue
-		}
-
-		txGas, err := utils.HexToBigInt(parsedTransaction.Gas)
-		if err != nil {
-			log.Warn().Err(err).Msgf("can't convert gas to big int: %v", parsedTransaction.Gas)
-			continue
-		}
-
-		txValue, err := utils.HexToBigInt(parsedTransaction.Value)
-		if err != nil {
-			log.Warn().Err(err).Msgf("can't convert value to big int: %v", parsedTransaction.Value)
-			continue
-		}
-
-		// Check tx.MaxFeePerGas < block BaseFeePerGas if available
-		if blockBaseFeePerGas != nil && blockBaseFeePerGas.Cmp(txMaxFeePerGas) > 0 {
-			log.Debug().Interface("parsedTransaction", parsedTransaction).Msgf("maxFeePerGas mismatch: %v < %v", txMaxFeePerGas, blockBaseFeePerGas)
-			continue
-		}
-		newGasUsed := new(big.Int).Add(gasUsedInBlock, txGas)
-		if blockGasLimit != nil && blockGasLimit.Cmp(newGasUsed) < 0 {
-			log.Debug().Interface("parsedTransaction", parsedTransaction).Msgf("gas limit mismatch: %v < %v", newGasUsed, blockGasLimit)
-			continue
-		}
-
-		from := parsedTransaction.From
-		walletState, exists := tempState.WalletStateValidation[from]
-		if exists {
-			// Validate nonce: tx.Nonce == tempState.WalletStateValidation[from].Nonce
-			if walletState.Nonce != nil && txNonce.Cmp(walletState.Nonce) != 0 {
-				log.Debug().Interface("parsedTransaction", parsedTransaction).Msgf("nonce mismatch: %v != %v", txNonce, walletState.Nonce)
-				continue
+	for i, tx := range parsedTransactions {
+		if isValid, err := validateTransaction(tx, tempState, gasUsedInBlock); !isValid {
+			if err != nil {
+				log.Debug().Interface("parsedTransaction", tx).Err(err).Msg("Transaction validation failed")
 			}
-
-			// Validate balance: txState.Balance >= tx.MaxFeePerGas * tx.Gas + tx.Value
-			if walletState.Balance != nil {
-				totalCost := new(big.Int).Mul(txMaxFeePerGas, txGas)
-				totalCost.Add(totalCost, txValue)
-				if walletState.Balance.Cmp(totalCost) < 0 {
-					log.Debug().Interface("parsedTransaction", parsedTransaction).Msgf("balance mismatch: %v < %v", walletState.Balance, totalCost)
-					continue
-				}
-				// Update balance
-				walletState.Balance.Sub(walletState.Balance, totalCost)
-			}
-
-			// Update state
-			walletState.Nonce = new(big.Int).Add(txNonce, big.NewInt(1))
-			gasUsedInBlock = newGasUsed
-		} else {
-			// Update state with new transaction
-			tempState.WalletStateValidation[from] = WalletStateValidation{
-				Nonce: new(big.Int).Add(txNonce, big.NewInt(1)),
-			}
+			continue
 		}
 
-		// Add valid transaction to the list
-		validTransactions = append(validTransactions, parsedTransaction)
+		// Update gas usage and state after successful validation
+		txGas, err := utils.HexToBigInt(tx.Gas)
+		if err != nil {
+			log.Error().Err(err).Msg("can't convert gas to big int")
+			continue
+		}
+		gasUsedInBlock.Add(gasUsedInBlock, txGas)
+		updateStateForTransaction(tx, tempState)
+
+		// Add the valid transaction to the results
+		validTransactions = append(validTransactions, tx)
 		validRawTransactions = append(validRawTransactions, rawTransactions[i])
 	}
 	return validRawTransactions, validTransactions
+}
+
+// validateTransaction checks if a transaction is valid according to the block and wallet state
+func validateTransaction(tx *rpc.ParsedTransaction, state ValidationState, gasUsedInBlock *big.Int) (bool, error) {
+	txNonce := utils.MustHexToBigInt(tx.Nonce)
+	txMaxFeePerGas := utils.MustHexToBigInt(tx.MaxFeePerGas)
+	txGas := utils.MustHexToBigInt(tx.Gas)
+	txValue := utils.MustHexToBigInt(tx.Value)
+
+	// Validate Base Fee
+	if state.BlockStateValidation.BaseFeePerGas != nil && state.BlockStateValidation.BaseFeePerGas.Cmp(txMaxFeePerGas) > 0 {
+		return false, fmt.Errorf("maxFeePerGas mismatch: %v < %v", txMaxFeePerGas, state.BlockStateValidation.BaseFeePerGas)
+	}
+
+	// Validate Gas Limit
+	newGasUsed := new(big.Int).Add(gasUsedInBlock, txGas)
+	if state.BlockStateValidation.GasLimit != nil && state.BlockStateValidation.GasLimit.Cmp(newGasUsed) < 0 {
+		return false, fmt.Errorf("gas limit mismatch: %v < %v", newGasUsed, state.BlockStateValidation.GasLimit)
+	}
+
+	// Validate Wallet State
+	walletState, exists := state.WalletStateValidation[tx.From]
+	if exists {
+		// Validate Nonce
+		if walletState.Nonce != nil && txNonce.Cmp(walletState.Nonce) != 0 {
+			return false, fmt.Errorf("nonce mismatch: %v != %v", txNonce, walletState.Nonce)
+		}
+
+		// Validate Balance
+		totalCost := calculateTransactionCost(txMaxFeePerGas, txGas, txValue)
+		if walletState.Balance != nil && walletState.Balance.Cmp(totalCost) < 0 {
+			return false, fmt.Errorf("balance mismatch: %v < %v", walletState.Balance, totalCost)
+		}
+	}
+
+	return true, nil
+}
+
+func updateStateForTransaction(tx *rpc.ParsedTransaction, state ValidationState) {
+	txNonce := utils.MustHexToBigInt(tx.Nonce)
+	txMaxFeePerGas := utils.MustHexToBigInt(tx.MaxFeePerGas)
+	txGas := utils.MustHexToBigInt(tx.Gas)
+	txValue := utils.MustHexToBigInt(tx.Value)
+
+	from := tx.From
+	state.WalletStateValidation[from] = WalletStateValidation{
+		Nonce: new(big.Int).Add(txNonce, big.NewInt(1)),
+	}
+	walletState := state.WalletStateValidation[from]
+
+	// Update Balance
+	if walletState.Balance != nil {
+		totalCost := calculateTransactionCost(txMaxFeePerGas, txGas, txValue)
+		walletState.Balance.Sub(walletState.Balance, totalCost)
+	}
+}
+
+func calculateTransactionCost(maxFeePerGas, gas, value *big.Int) *big.Int {
+	totalCost := new(big.Int).Mul(maxFeePerGas, gas)
+	return totalCost.Add(totalCost, value)
 }
 
 func cloneValidationState(state ValidationState) ValidationState {
