@@ -139,7 +139,7 @@ arb-clean-chain:
 #    echo METABASED_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ op_contract_deploy_file }} | grep MetabaedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ localenv_file }}.tmp
 #    mv {{ localenv_file }}.tmp {{ localenv_file }}
 
-## TODO change PORT -> OP_TRANSLATOR_PORT. This affects sequencer too
+## TODO change PORT -> OP_TRANSLATOR_PORT. This affects sequencer to
 ## TODO Change METABASED_CHAIN_RPC_ADDRESS -> SEQUENCING_CHAIN_RPC_URL
 # Create or update /localnet.env file. This is a single source of truth for all localnet services
 create-localenv-file:
@@ -290,7 +290,7 @@ op-translator-health-check:
     --header 'Content-Type: application/json' \
     --data '{"jsonrpc":"2.0","method":"health","id":1}'
 
-arb-test-sendRawTransaction: arb-health-check sequencer-health-check
+arb-test-sendRawTransaction:
     curl --location {{ metabased_sequencer_url }} \
     --header 'Content-Type: application/json' \
     --data '{"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["0xb85902f85682038501808088ffffffffffffffff808080c001a0d555dc3a308d5bde3d5bc665796f9e7d7125c1554667325533fe237c1aa120b5a07d97dae06082d3eb7fa8966b33f6ce51d7127dcddd5da3d8be9c448a72150a90"],"id":1}'
