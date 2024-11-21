@@ -171,7 +171,7 @@ func (p *Publisher) callDataForBlock(blockNumber uint64) ([]byte, error) {
 
 // TODO (SEQ-191): add more tests
 func (p *Publisher) processBlock(block uint64) error {
-	p.log.Debug("processing block", "block", block)
+	p.log.Info("processing block", "block", block)
 	callData, err := p.callDataForBlock(block)
 	if err != nil {
 		return err // something went wrong
@@ -182,6 +182,6 @@ func (p *Publisher) processBlock(block uint64) error {
 	if _, err := p.altDA.SetInput(contextWithTimeout, commitment); err != nil {
 		return errors.Wrap(err, "unable to upload commitment to altDA")
 	}
-	p.log.Debug("successfully published DA for block", "block", block)
+	p.log.Info("successfully published DA for block", "block", block)
 	return nil
 }
