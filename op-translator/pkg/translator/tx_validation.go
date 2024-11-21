@@ -159,6 +159,14 @@ func ValidateTransactionInternal(tx *ethtypes.Transaction) error {
 }
 
 func (m *MetaBasedBatchProvider) ValidateTransactionsBlock(rawTxns []hexutil.Bytes, txns []*rpc.ParsedTransaction) ([]hexutil.Bytes, error) {
+	if len(rawTxns) != len(txns) {
+		log.Error().Msgf("rawTxns and txns have different lengths: %v != %v", len(rawTxns), len(txns))
+		return []hexutil.Bytes{}, fmt.Errorf("rawTxns and txns have different lengths")
+	}
+	if len(rawTxns) == 0 {
+		log.Debug().Msg("No transactions provided")
+		return []hexutil.Bytes{}, nil
+	}
 	// Create empty state
 	validationState := ValidationState{
 		WalletStateValidation: make(map[string]WalletStateValidation),
@@ -193,7 +201,7 @@ func ValidateBlockState(rawTransactions []hexutil.Bytes, parsedTransactions []*r
 	validTransactions := []*rpc.ParsedTransaction{}
 	validRawTransactions := []hexutil.Bytes{}
 
-	tempState := cloneValidationState(state) // Create a temporary copy of the state
+	tempState := CloneValidationState(state) // Create a temporary copy of the state
 	gasUsedInBlock := big.NewInt(0)
 
 	for i, tx := range parsedTransactions {
@@ -280,7 +288,7 @@ func calculateTransactionCost(maxFeePerGas, gas, value *big.Int) *big.Int {
 	return totalCost.Add(totalCost, value)
 }
 
-func cloneValidationState(state ValidationState) ValidationState {
+func CloneValidationState(state ValidationState) ValidationState {
 	walletValidations := make(map[string]WalletStateValidation, len(state.WalletStateValidation))
 
 	blockValidation := BlockStateValidation{
@@ -302,22 +310,22 @@ func cloneValidationState(state ValidationState) ValidationState {
 }
 
 func ParseValidationError(validationState ValidationState, err error) (ValidationState, error) {
-	switch getErrorType(err) {
+	switch GetErrorType(err) {
 	case NonceError:
-		return handleNonceError(validationState, err.Error())
+		return HandleNonceError(validationState, err.Error())
 	case BalanceError:
-		return handleBalanceError(validationState, err.Error())
+		return HandleBalanceError(validationState, err.Error())
 	case BaseFeeError:
-		return handleBaseFeeError(validationState, err.Error())
+		return HandleBaseFeeError(validationState, err.Error())
 	case BlockGasLimitError:
-		return handleBlockGasLimitError(validationState, err.Error())
+		return HandleBlockGasLimitError(validationState, err.Error())
 	case UnknownError:
 		return validationState, errors.New("unknown error to parse")
 	}
 	return validationState, nil
 }
 
-func getErrorType(err error) string {
+func GetErrorType(err error) string {
 	switch {
 	case regexp.MustCompile(`nonce too (low|high)`).MatchString(err.Error()):
 		return NonceError
@@ -332,7 +340,7 @@ func getErrorType(err error) string {
 	}
 }
 
-func handleNonceError(validationState ValidationState, errorMessage string) (ValidationState, error) {
+func HandleNonceError(validationState ValidationState, errorMessage string) (ValidationState, error) {
 	// err: nonce too high: address 0xBA401CdaC1A3b6AEeDe21c9C4a483be6C29F88C5, tx: 153 state: 89 (supplied gas 50000)
 	// Regular expression to match address and state value
 	re := regexp.MustCompile(`address (0x[a-fA-F0-9]+), tx: \d+ state: (\d+)`)
@@ -357,7 +365,7 @@ func handleNonceError(validationState ValidationState, errorMessage string) (Val
 	return validationState, nil
 }
 
-func handleBalanceError(validationState ValidationState, errorMessage string) (ValidationState, error) {
+func HandleBalanceError(validationState ValidationState, errorMessage string) (ValidationState, error) {
 	// err: insufficient funds for gas * price + value: address 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266 have 16940 want 1001771318794850000 (supplied gas 50000)
 	// Regular expression to extract address, current balance, and required balance
 	re := regexp.MustCompile(`address (0x[a-fA-F0-9]+) have (\d+)`)
@@ -387,7 +395,7 @@ func handleBalanceError(validationState ValidationState, errorMessage string) (V
 	return validationState, nil
 }
 
-func handleBaseFeeError(validationState ValidationState, errorMessage string) (ValidationState, error) {
+func HandleBaseFeeError(validationState ValidationState, errorMessage string) (ValidationState, error) {
 	// err: max fee per gas less than block base fee: address 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266, maxFeePerGas: 10000000000, baseFee: 19810336964 (supplied gas 50000)
 	// Regular expression to extract address, maxFeePerGas, and baseFee
 	re := regexp.MustCompile(`address (0x[a-fA-F0-9]+), maxFeePerGas: (\d+), baseFee: (\d+)`)
@@ -410,7 +418,7 @@ func handleBaseFeeError(validationState ValidationState, errorMessage string) (V
 	return validationState, nil
 }
 
-func handleBlockGasLimitError(validationState ValidationState, errorMessage string) (ValidationState, error) {
+func HandleBlockGasLimitError(validationState ValidationState, errorMessage string) (ValidationState, error) {
 	// err: block gas limit reached: 826486073456 >= 30000000
 	// Regular expression to extract the current gas used and the block gas limit
 	re := regexp.MustCompile(`gas limit reached: (\d+) >= (\d+)`)
