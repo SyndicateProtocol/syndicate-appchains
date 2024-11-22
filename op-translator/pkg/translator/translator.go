@@ -26,7 +26,7 @@ type IRPCClient interface {
 
 type IBatchProvider interface {
 	GetBatch(ctx context.Context, block types.Block) (*types.Batch, error)
-	ValidateTransactionsBlock(rawTxns []hexutil.Bytes, txns []*rpc.ParsedTransaction) ([]hexutil.Bytes, error)
+	ValidateBlock(rawTxns []hexutil.Bytes, txns []*rpc.ParsedTransaction) ([]hexutil.Bytes, error)
 	Close()
 }
 

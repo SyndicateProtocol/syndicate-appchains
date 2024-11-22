@@ -208,8 +208,8 @@ func (m *MetaBasedBatchProvider) GetValidTransactions(rawTxs []hexutil.Bytes) ([
 		log.Debug().Msgf("Transactions got filtered by stateless validation: %d", removedCountStateless)
 	}
 
-	// Second phase validation: stateful
-	rawFilteredTxStateful, err := m.ValidateTransactionsBlock(rawFilteredTxStateless, parsedFilteredTxStateless)
+	// Second phase validation: validate block
+	rawFilteredTxStateful, err := m.ValidateBlock(rawFilteredTxStateless, parsedFilteredTxStateless)
 	if err != nil {
 		return nil, err
 	}
