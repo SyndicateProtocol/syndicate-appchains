@@ -34,11 +34,18 @@ jobs:
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-pr-${{ github.event.pull_request.number }}
           runCmd: |
+            # Set up network
+            RESPONSE=$(just -f .devcontainer/justfile arb-network-setup)
+            echo "Network setup: $RESPONSE"
+            
             # Wait for network setup to complete
-            while [ ! -f /tmp/postCreateOutput ] || ! grep -q "Ready to bring up the Arbitrum Orbit devnet" /tmp/postCreateOutput; do
-              sleep 10
-            done
-
+            if echo "$RESPONSE" || ! grep -q "Ready to bring up the Arbitrum Orbit devnet"; then
+              echo "[✓] Network setup succeeded"
+            else
+              echo "[✗] Network setup failed"
+              exit 1
+            fi
+            
             # Start Arbitrum node in background
             just -f .devcontainer/justfile arb-up &
 
