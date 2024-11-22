@@ -142,8 +142,8 @@ op-update-chain-address: op-deploy-chain create-localenv
     echo METABASED_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ op_contract_deploy_file }} | grep MetabaedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ localenv_file }}.tmp
     mv {{ localenv_file }}.tmp {{ localenv_file }}
 
-## TODO change PORT -> OP_TRANSLATOR_PORT
-## TODO Change METABASED_CHAIN_RPC_ADDRESS -> SEQUENCING_CHAIN_RPC_URL
+## TODO [SEQ-323]: change PORT -> separate ports for op-translator and sequencer
+## TODO Merge METABASED_CHAIN_RPC_ADDRESS -> SEQUENCING_CHAIN_RPC_URL
 # Create or update localnet .env file
 create-localenv:
     #!/usr/bin/env bash
