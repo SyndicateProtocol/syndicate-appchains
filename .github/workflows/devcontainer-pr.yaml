@@ -21,7 +21,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Infra and Run Tests
+      - name: Setup Infra + Run Arbitrum L2 + Run Metabased Sequencer + Test transaction
         timeout-minutes: 15
         uses: devcontainers/ci@v0.3
         with:
@@ -59,6 +59,9 @@ jobs:
             # Run sequencer setup
             just -f .devcontainer/justfile arb-sequencer-plus-setup &
             
+            # Some time for Rust build to compile. Refactor this to look for completion string
+            sleep 60
+            
             # Wait for sequencer setup completion via health check
             echo "[STATUS] Waiting for sequencer setup to complete..."
             until just -f .devcontainer/justfile sequencer-health-check | grep -q "result"; do
@@ -87,8 +90,31 @@ jobs:
               echo "$RESPONSE"
               exit 1
             fi
+            echo "[STATUS] Test L3 -> Arbitrum L2 transaction completed successfully"
+
+      - name: Run OP-Translator
+        timeout-minutes: 5
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/syndicateprotocol/metabased-devcontainer
+          imageTag: cache-pr-${{ github.event.pull_request.number }}
+          # Enable caching
+          push: always
+          # Pull cached images from both main branch and PR branch
+          cacheFrom: |
+            ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
+            ghcr.io/syndicateprotocol/metabased-devcontainer:cache-pr-${{ github.event.pull_request.number }}
+          runCmd: |
+            # Start OP-translator in background
+            just -f .devcontainer/justfile run-op-translator &
             
-            echo "[STATUS] Test transaction completed successfully"
+            # Wait for OP-translator to be ready via health check
+            echo "[STATUS] Waiting for OP-translator to be ready..."
+            until just -f .devcontainer/justfile op-translator-health-check | grep -q "result"; do
+              sleep 10
+            done
+            echo "[STATUS] op-translator is ready"
+
 
       - name: Upload logs on failure
         if: failure()
