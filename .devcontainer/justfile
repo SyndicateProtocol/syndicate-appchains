@@ -147,7 +147,6 @@ op-update-chain-address: op-deploy-chain create-localenv
 # Create or update localnet .env file
 create-localenv:
     #!/usr/bin/env bash
-    if [ ! -f {{ localenv_file }} ]; then
         cat > {{ localenv_file }} << EOL
     PORT={{ op_translator_port }}
     SETTLEMENT_CHAIN_RPC_URL={{ op_devnet_l2_rpc_url }}
@@ -169,7 +168,6 @@ create-localenv:
     METABASED_PRIVATE_KEY={{ arb_orbit_private_key }}
     METABASED_CHAIN_CONTRACT_ADDRESS=[METABASED_CHAIN_CONTRACT_ADDRESS]
     EOL
-        fi
 
 # TODO - for OP localnet, not op-translator
 # Creates localnet ENV file with values fit for Optimism devnet
