@@ -104,7 +104,7 @@ var (
 	Port = &cli.IntFlag{
 		Name:    "port",
 		Usage:   "Server port number for the app",
-		EnvVars: []string{"PORT"},
+		EnvVars: prefixEnvVars("PORT"),
 		Value:   8546, //nolint:mnd // default
 	}
 
