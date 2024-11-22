@@ -81,7 +81,7 @@ func (m *MetaBasedBatchProvider) ValidateBlock(rawTxns []hexutil.Bytes, txns []*
 }
 
 func createInitialBlockState() ValidationState {
-	// TODO (SEQ-322): Pull block state values from config/rollup.json
+	// TODO (SEQ-322): Generate initial validation state values from config/rollup.json values and one single rpc call
 	return ValidationState{
 		WalletStateValidation: make(map[string]WalletStateValidation),
 		BlockStateValidation:  BlockStateValidation{},
