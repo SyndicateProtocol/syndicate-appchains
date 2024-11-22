@@ -139,7 +139,7 @@ arb-clean-chain:
 # Puts contract address into localnet ENV file
 op-update-chain-address: op-deploy-chain create-localenv
     cat {{ localenv_file }} | grep -v METABASED_CHAIN_CONTRACT_ADDRESS= > {{ localenv_file }}.tmp
-    echo METABASED_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ op_contract_deploy_file }} | grep MetabaedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ localenv_file }}.tmp
+    echo METABASED_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ op_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ localenv_file }}.tmp
     mv {{ localenv_file }}.tmp {{ localenv_file }}
 
 ## TODO [SEQ-323]: change PORT -> separate ports for op-translator and sequencer
