@@ -43,6 +43,8 @@ type ValidationState struct {
 	BlockStateValidation  BlockStateValidation
 }
 
+// TODO (SEQ-322): Geth block validation improvement
+// This function will get updated for an easier and more efficient block validation once we have made some improvements in the geth repo
 func (m *MetaBasedBatchProvider) ValidateBlock(rawTxns []hexutil.Bytes, txns []*rpc.ParsedTransaction) ([]hexutil.Bytes, error) {
 	if len(rawTxns) != len(txns) {
 		log.Error().Msgf("rawTxns and txns have different lengths: %v != %v", len(rawTxns), len(txns))
@@ -52,11 +54,7 @@ func (m *MetaBasedBatchProvider) ValidateBlock(rawTxns []hexutil.Bytes, txns []*
 		log.Debug().Msg("No transactions provided")
 		return []hexutil.Bytes{}, nil
 	}
-	// Create empty state
-	validationState := ValidationState{
-		WalletStateValidation: make(map[string]WalletStateValidation),
-		BlockStateValidation:  BlockStateValidation{},
-	}
+	validationState := createInitialBlockState()
 
 	validParsedTxns := txns
 	validRawTxns := rawTxns
@@ -79,6 +77,14 @@ func (m *MetaBasedBatchProvider) ValidateBlock(rawTxns []hexutil.Bytes, txns []*
 		// Finalize the state after all transactions are validated
 		log.Debug().Interface("validParsedTxns", validParsedTxns).Msg("ValidateBlock end")
 		return validRawTxns, nil
+	}
+}
+
+func createInitialBlockState() ValidationState {
+	// TODO (SEQ-322): Pull block state values from config/rollup.json
+	return ValidationState{
+		WalletStateValidation: make(map[string]WalletStateValidation),
+		BlockStateValidation:  BlockStateValidation{},
 	}
 }
 
