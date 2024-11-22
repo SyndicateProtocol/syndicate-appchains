@@ -3,12 +3,9 @@ package utils
 import (
 	"encoding/hex"
 	"errors"
-	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
-
-	"github.com/rs/zerolog/log"
 )
 
 const MillisecondsPerSecond = 1000
@@ -29,31 +26,6 @@ func HexToInt(hexStr string) (int, error) {
 	}
 
 	return int(result), nil
-}
-
-func HexToBigInt(hexStr string) (*big.Int, error) {
-	num := new(big.Int)
-	if !strings.HasPrefix(hexStr, "0x") {
-		return nil, errors.New("invalid hex string, must start with 0x")
-	}
-	if hexStr == "0x" {
-		return big.NewInt(0), nil
-	}
-	hexStr = strings.TrimPrefix(hexStr, "0x")
-	_, ok := num.SetString(hexStr, HexBase)
-	if !ok {
-		return nil, fmt.Errorf("invalid hexadecimal value: %s", hexStr)
-	}
-	return num, nil
-}
-
-func MustHexToBigInt(hexStr string) *big.Int {
-	value, err := HexToBigInt(hexStr)
-	if err != nil {
-		log.Warn().Err(err).Msgf("Failed to convert hex to big int: %v", hexStr)
-		return big.NewInt(0)
-	}
-	return value
 }
 
 func HexToUInt64(hexStr string) (uint64, error) {

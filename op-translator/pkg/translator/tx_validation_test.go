@@ -272,7 +272,7 @@ func TestValidateTransactionInternal(t *testing.T) {
 	}
 }
 
-func TestParseValidationError(t *testing.T) {
+func TestParseValidationErrorAndUpdateState(t *testing.T) {
 	validationState := translator.ValidationState{
 		WalletStateValidation: make(map[string]translator.WalletStateValidation),
 		BlockStateValidation:  translator.BlockStateValidation{},
@@ -298,7 +298,7 @@ func TestParseValidationError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := translator.ParseValidationError(validationState, tt.err)
+			_, err := translator.ParseValidationErrorAndUpdateState(validationState, tt.err)
 			if (err != nil) != tt.shouldError {
 				t.Errorf("expected error: %v, got: %v", tt.shouldError, err)
 			}
@@ -466,7 +466,7 @@ func TestCloneValidationState(t *testing.T) {
 		},
 	}
 
-	clonedState := translator.CloneValidationState(originalState)
+	clonedState := originalState.Clone()
 
 	// Modify the cloned state and ensure original is not affected
 	walletState := clonedState.WalletStateValidation["0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef"]

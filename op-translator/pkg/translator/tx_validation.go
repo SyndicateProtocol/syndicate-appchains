@@ -33,11 +33,18 @@ const (
 )
 
 const (
-	NonceError         = "NonceError"         // nonce too (low|high
+	NonceError         = "NonceError"         // nonce too low|high
 	BalanceError       = "BalanceError"       // insufficient funds for gas * price + value
 	BaseFeeError       = "BaseFeeError"       // max fee per gas less than block base fee
 	BlockGasLimitError = "BlockGasLimitError" // gas limit reached
 	UnknownError       = "UnknownError"
+)
+
+var (
+	nonceErrorRegex         = regexp.MustCompile(`nonce too (low|high)`)
+	balanceErrorRegex       = regexp.MustCompile(`insufficient funds for`)
+	baseFeeErrorRegex       = regexp.MustCompile(`max fee per gas less than block base fee`)
+	blockGasLimitErrorRegex = regexp.MustCompile(`gas limit reached`)
 )
 
 type BlockStateValidation struct {
@@ -182,7 +189,7 @@ func (m *MetaBasedBatchProvider) ValidateTransactionsBlock(rawTxns []hexutil.Byt
 		// If simulation error, parse error and update state
 		if err != nil {
 			log.Warn().Err(err).Msg("Error in SimulateTransactions")
-			validationState, err = ParseValidationError(validationState, err)
+			validationState, err = ParseValidationErrorAndUpdateState(validationState, err)
 			if err != nil {
 				log.Error().Err(err).Msg("Error in ParseValidationError")
 				return []hexutil.Bytes{}, err
@@ -201,7 +208,7 @@ func ValidateBlockState(rawTransactions []hexutil.Bytes, parsedTransactions []*r
 	validTransactions := []*rpc.ParsedTransaction{}
 	validRawTransactions := []hexutil.Bytes{}
 
-	tempState := CloneValidationState(state) // Create a temporary copy of the state
+	tempState := state.Clone() // Create a temporary copy of the state
 	gasUsedInBlock := big.NewInt(0)
 
 	for i, tx := range parsedTransactions {
@@ -213,7 +220,7 @@ func ValidateBlockState(rawTransactions []hexutil.Bytes, parsedTransactions []*r
 		}
 
 		// Update gas usage and state after successful validation
-		txGas, err := utils.HexToBigInt(tx.Gas)
+		txGas, err := hexutil.DecodeBig(tx.Gas)
 		if err != nil {
 			log.Error().Err(err).Msg("can't convert gas to big int")
 			continue
@@ -230,10 +237,10 @@ func ValidateBlockState(rawTransactions []hexutil.Bytes, parsedTransactions []*r
 
 // validateTransaction checks if a transaction is valid according to the block and wallet state
 func validateTransaction(tx *rpc.ParsedTransaction, state ValidationState, gasUsedInBlock *big.Int) (bool, error) {
-	txNonce := utils.MustHexToBigInt(tx.Nonce)
-	txMaxFeePerGas := utils.MustHexToBigInt(tx.MaxFeePerGas)
-	txGas := utils.MustHexToBigInt(tx.Gas)
-	txValue := utils.MustHexToBigInt(tx.Value)
+	txNonce := hexutil.MustDecodeBig(tx.Nonce)
+	txMaxFeePerGas := hexutil.MustDecodeBig(tx.MaxFeePerGas)
+	txGas := hexutil.MustDecodeBig(tx.Gas)
+	txValue := hexutil.MustDecodeBig(tx.Value)
 
 	// Validate Base Fee
 	if state.BlockStateValidation.BaseFeePerGas != nil && state.BlockStateValidation.BaseFeePerGas.Cmp(txMaxFeePerGas) > 0 {
@@ -265,10 +272,10 @@ func validateTransaction(tx *rpc.ParsedTransaction, state ValidationState, gasUs
 }
 
 func updateStateForTransaction(tx *rpc.ParsedTransaction, state ValidationState) {
-	txNonce := utils.MustHexToBigInt(tx.Nonce)
-	txMaxFeePerGas := utils.MustHexToBigInt(tx.MaxFeePerGas)
-	txGas := utils.MustHexToBigInt(tx.Gas)
-	txValue := utils.MustHexToBigInt(tx.Value)
+	txNonce := hexutil.MustDecodeBig(tx.Nonce)
+	txMaxFeePerGas := hexutil.MustDecodeBig(tx.MaxFeePerGas)
+	txGas := hexutil.MustDecodeBig(tx.Gas)
+	txValue := hexutil.MustDecodeBig(tx.Value)
 
 	from := tx.From
 	state.WalletStateValidation[from] = WalletStateValidation{
@@ -288,7 +295,7 @@ func calculateTransactionCost(maxFeePerGas, gas, value *big.Int) *big.Int {
 	return totalCost.Add(totalCost, value)
 }
 
-func CloneValidationState(state ValidationState) ValidationState {
+func (state ValidationState) Clone() ValidationState {
 	walletValidations := make(map[string]WalletStateValidation, len(state.WalletStateValidation))
 
 	blockValidation := BlockStateValidation{
@@ -309,7 +316,7 @@ func CloneValidationState(state ValidationState) ValidationState {
 	}
 }
 
-func ParseValidationError(validationState ValidationState, err error) (ValidationState, error) {
+func ParseValidationErrorAndUpdateState(validationState ValidationState, err error) (ValidationState, error) {
 	switch GetErrorType(err) {
 	case NonceError:
 		return HandleNonceError(validationState, err.Error())
@@ -327,13 +334,13 @@ func ParseValidationError(validationState ValidationState, err error) (Validatio
 
 func GetErrorType(err error) string {
 	switch {
-	case regexp.MustCompile(`nonce too (low|high)`).MatchString(err.Error()):
+	case nonceErrorRegex.MatchString(err.Error()):
 		return NonceError
-	case regexp.MustCompile(`insufficient funds for`).MatchString(err.Error()):
+	case balanceErrorRegex.MatchString(err.Error()):
 		return BalanceError
-	case regexp.MustCompile(`max fee per gas less than block base fee`).MatchString(err.Error()):
+	case baseFeeErrorRegex.MatchString(err.Error()):
 		return BaseFeeError
-	case regexp.MustCompile(`gas limit reached`).MatchString(err.Error()):
+	case blockGasLimitErrorRegex.MatchString(err.Error()):
 		return BlockGasLimitError
 	default:
 		return UnknownError
