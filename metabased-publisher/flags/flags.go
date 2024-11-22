@@ -33,7 +33,7 @@ var (
 	BatcherAddress = &cli.StringFlag{
 		Name:    "batcher-address",
 		Usage:   "Address of the Batcher",
-		EnvVars: []string{"BATHER_ADDRESS"},
+		EnvVars: []string{"BATCHER_ADDRESS"},
 	}
 	BatchInboxAddress = &cli.StringFlag{
 		Name:    "batch-inbox-address",
