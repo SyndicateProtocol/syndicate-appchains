@@ -21,7 +21,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Infra and Run Tests
+      - name: Setup Infra + Run Arbitrum L2 + Run Metabased Sequencer + Test transaction
         timeout-minutes: 15
         uses: devcontainers/ci@v0.3
         with:
@@ -34,11 +34,18 @@ jobs:
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-pr-${{ github.event.pull_request.number }}
           runCmd: |
+            # Set up network
+            RESPONSE=$(just -f .devcontainer/justfile arb-network-setup)
+            echo "Network setup: $RESPONSE"
+            
             # Wait for network setup to complete
-            while [ ! -f /tmp/postCreateOutput ] || ! grep -q "Ready to bring up the Arbitrum Orbit devnet" /tmp/postCreateOutput; do
-              sleep 10
-            done
-
+            if echo "$RESPONSE" || ! grep -q "Ready to bring up the Arbitrum Orbit devnet"; then
+              echo "[✓] Network setup succeeded"
+            else
+              echo "[✗] Network setup failed"
+              exit 1
+            fi
+            
             # Start Arbitrum node in background
             just -f .devcontainer/justfile arb-up &
 
@@ -52,10 +59,13 @@ jobs:
             # Run sequencer setup
             just -f .devcontainer/justfile arb-sequencer-plus-setup &
             
+            # Some time for Rust build to compile. Refactor this to look for completion string
+            sleep 60
+            
             # Wait for sequencer setup completion via health check
             echo "[STATUS] Waiting for sequencer setup to complete..."
             until just -f .devcontainer/justfile sequencer-health-check | grep -q "result"; do
-              sleep 10
+              sleep 20
             done
             echo "[STATUS] Sequencer setup complete"
 
@@ -80,8 +90,32 @@ jobs:
               echo "$RESPONSE"
               exit 1
             fi
+            echo "[STATUS] Test L3 -> Arbitrum L2 transaction completed successfully"
+
+#       TODO [SEQ-323]: Can combine this with the above job
+      - name: Run OP-Translator
+        timeout-minutes: 10
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/syndicateprotocol/metabased-devcontainer
+          imageTag: cache-pr-${{ github.event.pull_request.number }}
+          # Enable caching
+          push: always
+          # Pull cached images from both main branch and PR branch
+          cacheFrom: |
+            ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
+            ghcr.io/syndicateprotocol/metabased-devcontainer:cache-pr-${{ github.event.pull_request.number }}
+          runCmd: |
+            # Start OP-translator in background
+            just -f .devcontainer/justfile run-op-translator &
             
-            echo "[STATUS] Test transaction completed successfully"
+            # TODO - requires OP L2 to run first
+#            # Wait for OP-translator to be ready via health check
+#            echo "[STATUS] Waiting for OP-translator to be ready..."
+#            until just -f .devcontainer/justfile op-translator-health-check | grep -q "result"; do
+#              sleep 10
+#            done
+#            echo "[STATUS] op-translator is ready"
 
       - name: Upload logs on failure
         if: failure()
