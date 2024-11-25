@@ -7,14 +7,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/rs/zerolog/pkgerrors"
 )
 
-func Init(cfg *config.Config) {
+func Init(logLevel string, pretty bool) {
 	log.Debug().Msg("Logger initializing")
 	// Add these back if GCP logging is necessary
 	// zerolog.LevelFieldName = "severity"
@@ -24,14 +23,14 @@ func Init(cfg *config.Config) {
 	zerolog.ErrorStackMarshaler = pkgerrors.MarshalStack //nolint:reassign // Appears to be working and recommended way to do this
 	// See https://github.com/rs/zerolog#error-logging-with-stacktrace
 
-	if cfg.LogLevel == constants.Debug.String() {
+	if logLevel == constants.Debug.String() {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	} else {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
 	// Configure logger output
-	if cfg.Pretty {
+	if pretty {
 		output := &prettifiedJSONWriter{out: os.Stdout}
 		log.Logger = zerolog.New(output).With().Timestamp().Caller().Logger()
 	} else {

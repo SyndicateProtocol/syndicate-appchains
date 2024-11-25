@@ -13,14 +13,16 @@ import (
 )
 
 func TestNewSigner(t *testing.T) {
-	signer := translator.NewSigner(mocks.DefaultTestingConfig)
+	signer, err := translator.NewSigner(mocks.TestingBatcherPrivateKey, big.NewInt(mocks.TestingSettlementChainID))
+	assert.NoError(t, err)
 
 	assert.NotNil(t, signer, "Signer should be created successfully")
 	assert.Equal(t, int64(84532), signer.ChainID(), "Signer chain ID should be set correctly")
 }
 
 func TestSignSuccess(t *testing.T) {
-	signer := translator.NewSigner(mocks.DefaultTestingConfig)
+	signer, err := translator.NewSigner(mocks.TestingBatcherPrivateKey, big.NewInt(mocks.TestingSettlementChainID))
+	assert.NoError(t, err)
 
 	tx := types.NewTransaction(
 		0,
@@ -38,7 +40,8 @@ func TestSignSuccess(t *testing.T) {
 }
 
 func TestSignWithInvalidTransaction(t *testing.T) {
-	signer := translator.NewSigner(mocks.DefaultTestingConfig)
+	signer, err := translator.NewSigner(mocks.TestingBatcherPrivateKey, big.NewInt(mocks.TestingSettlementChainID))
+	assert.NoError(t, err)
 
 	var tx *types.Transaction = nil
 	signedTx, err := signer.Sign(tx)

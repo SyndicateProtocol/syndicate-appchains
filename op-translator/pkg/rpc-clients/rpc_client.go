@@ -131,7 +131,6 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 				block:    block,
 				receipts: blockReceipts,
 			}
-
 		}(block)
 	}
 
