@@ -4,11 +4,11 @@ import (
 	"context"
 	"errors"
 	"math/big"
+	"time"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/metrics"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -22,58 +22,38 @@ type MetaBasedBatchProvider struct {
 	SequencingChain        IRPCClient
 	TransactionParser      *L3TransactionParser
 	SequencingBlockFetcher *SequencingBlockFetcher
-
-	SettlementStartBlock int
-}
-
-func InitMetaBasedBatchProvider(cfg *config.Config) *MetaBasedBatchProvider {
-	sequencingChain, err := rpc.Connect(cfg.SequencingChainRPCURL)
-	if err != nil {
-		log.Panic().Err(err).Msg("Failed to initialize sequencing chain")
-	}
-
-	metaBasedChain, err := rpc.Connect(cfg.MetaBasedChainRPCURL)
-	if err != nil {
-		log.Panic().Err(err).Msg("Failed to initialize metabased chain")
-	}
-
-	return &MetaBasedBatchProvider{
-		MetaBasedChain:         metaBasedChain,
-		SequencingChain:        sequencingChain,
-		TransactionParser:      InitL3TransactionParser(cfg),
-		SequencingBlockFetcher: InitSequencingBlockFetcher(sequencingChain, cfg),
-
-		SettlementStartBlock: cfg.SettlementStartBlock,
-	}
+	Metrics                metrics.IMetrics
+	SettlementStartBlock   uint64
 }
 
 func NewMetaBasedBatchProvider(
 	settlementChainClient IRPCClient,
 	sequencingChainClient IRPCClient,
 	sequencingContractAddress common.Address,
-	settlementStartBlock int,
+	settlementStartBlock uint64,
 	settlementChainBlockTime int,
+	bpMetrics metrics.IMetrics,
 ) *MetaBasedBatchProvider {
 	return &MetaBasedBatchProvider{
 		MetaBasedChain:         settlementChainClient,
 		SequencingChain:        sequencingChainClient,
 		TransactionParser:      NewL3TransactionParser(sequencingContractAddress),
 		SequencingBlockFetcher: NewSequencingBlockFetcher(sequencingChainClient, settlementChainBlockTime),
-
-		SettlementStartBlock: settlementStartBlock,
+		Metrics:                bpMetrics,
+		SettlementStartBlock:   settlementStartBlock,
 	}
-}
-
-func (m *MetaBasedBatchProvider) Close() {
-	log.Debug().Msg("Closing Arbitrum MetaBasedBatchProvider")
-	m.SequencingChain.CloseConnection()
-	m.MetaBasedChain.CloseConnection()
 }
 
 // NOTE [SEQ-144]: THIS ASSUMES THAT THE L3 HAS THE SAME BLOCK TIME AS THE SETTLEMENT L2
 func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNumStr string) (string, error) {
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start).Seconds()
+		m.Metrics.RecordBatchProviderBatchProcessingDuration("get_parent_block_hash", duration)
+	}()
+
 	log.Debug().Msgf("Getting parent block hash for block number %s", blockNumStr)
-	blockNum, err := utils.HexToInt(blockNumStr)
+	blockNum, err := utils.HexToUInt64(blockNumStr)
 	if err != nil {
 		return "", err
 	}
@@ -87,10 +67,10 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	}
 	log.Debug().Msgf("Settlement start block: %d", m.SettlementStartBlock)
 
-	parentBlockNum := int64(blockNum - m.SettlementStartBlock - 1)
+	parentBlockNum := blockNum - m.SettlementStartBlock - 1
 
 	log.Debug().Msgf("Getting block hash for block number %d", parentBlockNum)
-	previousBlock, err := m.MetaBasedChain.AsEthClient().HeaderByNumber(ctx, big.NewInt(parentBlockNum))
+	previousBlock, err := m.MetaBasedChain.AsEthClient().HeaderByNumber(ctx, new(big.Int).SetUint64(parentBlockNum))
 	if err != nil {
 		return "", err
 	}
@@ -122,6 +102,13 @@ func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) []
 }
 
 func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block) (*types.Batch, error) {
+	start := time.Now()
+
+	defer func() {
+		duration := time.Since(start).Seconds()
+		m.Metrics.RecordBatchProviderBatchProcessingDuration("get_batch", duration)
+	}()
+
 	blockNumber, err := block.GetBlockNumberHex()
 	if err != nil {
 		return nil, err
@@ -151,7 +138,10 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 	}
 
 	// Filter out invalid transactions
-	txns = m.GetValidTransactions(txns)
+	txns, err = m.GetValidTransactions(txns)
+	if err != nil {
+		return nil, err
+	}
 
 	timestamp, err := block.GetBlockTimestampHex()
 	if err != nil {
@@ -164,24 +154,38 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 	}
 	log.Debug().Msgf("Translating block number %s and hash %s: batch: %v", blockNumber, blockHash, batch)
 
+	m.Metrics.RecordBatchProviderBatchProcessed("get_batch") // success count metric
+
 	return batch, nil
 }
 
 // GetValidTransactions do validation in two phases:
 //   - Stateless (inexpensive): locally filter transactions
 //   - Stateful (expensive): use simulate RPC to check if the block to-be produced is valid
-func (m *MetaBasedBatchProvider) GetValidTransactions(rawTxs []hexutil.Bytes) []hexutil.Bytes {
+func (m *MetaBasedBatchProvider) GetValidTransactions(rawTxs []hexutil.Bytes) ([]hexutil.Bytes, error) {
+	start := time.Now()
+	defer func() {
+		duration := time.Since(start).Seconds()
+		m.Metrics.RecordBatchProviderBatchProcessingDuration("get_valid_transactions", duration)
+	}()
+
 	// First phase validation: stateless
-	rawFilteredTxStateless, parsedFilteredTxStateless, removedCountStateless := FilterTransactionsStateless(rawTxs)
+	rawFilteredTxStateless, parsedFilteredTxStateless := ParseRawTransactions(rawTxs)
+	removedCountStateless := len(rawTxs) - len(rawFilteredTxStateless)
+	m.Metrics.RecordBatchProviderInvalidTransactionsCount("stateless", removedCountStateless)
 	if removedCountStateless > 0 {
 		log.Debug().Msgf("Transactions got filtered by stateless validation: %d", removedCountStateless)
 	}
 
-	// Second phase validation: stateful
-	rawFilteredTxsStateful, _, removedCountStateful := m.FilterTransactionsStateful(rawFilteredTxStateless, parsedFilteredTxStateless)
+	// Second phase validation: validate block
+	rawFilteredTxStateful, err := m.ValidateBlock(rawFilteredTxStateless, parsedFilteredTxStateless)
+	if err != nil {
+		return nil, err
+	}
+	removedCountStateful := len(rawFilteredTxStateless) - len(rawFilteredTxStateful)
+	m.Metrics.RecordBatchProviderInvalidTransactionsCount("stateful", removedCountStateful)
 	if removedCountStateful > 0 {
 		log.Debug().Msgf("Transactions got filtered by stateful validation: %d", removedCountStateful)
 	}
-
-	return rawFilteredTxsStateful
+	return rawFilteredTxStateful, nil
 }

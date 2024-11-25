@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/rs/zerolog/log"
@@ -14,10 +13,6 @@ type SequencingBlockFetcher struct {
 	LastUsedBlock            *types.Block
 	SequencingChainClient    IRPCClient
 	SettlementChainBlockTime int
-}
-
-func InitSequencingBlockFetcher(sequencingChainClient IRPCClient, cfg *config.Config) *SequencingBlockFetcher {
-	return NewSequencingBlockFetcher(sequencingChainClient, cfg.SettlementChainBlockTime)
 }
 
 func NewSequencingBlockFetcher(sequencingChainClient IRPCClient, settlementChainBlockTime int) *SequencingBlockFetcher {
@@ -123,7 +118,6 @@ func (s *SequencingBlockFetcher) FindFirstBlockOnOrBeforeTime(time int) (uint64,
 		mid := (low + high) / BinarySearchDivisor
 
 		block, err := s.SequencingChainClient.GetBlockByNumber(context.Background(), utils.UInt64ToHex(mid), false)
-
 		if err != nil {
 			return 0, fmt.Errorf("error getting block %d: %w", mid, err)
 		}

@@ -185,21 +185,25 @@ func TestOPNodeCalls(t *testing.T) {
 	for _, tc := range testCases {
 		mockClient := getMockClient()
 		mockHTTPBackfillClient := getBackfillHTTPMock()
-		opTranslator := &translator.OPTranslator{
-			SettlementChain:     mockClient,
-			BatcherInboxAddress: common.HexToAddress("0x123"),
-			BatcherAddress:      common.HexToAddress("0x123"),
-			BatchProvider:       &mocks.MockBatchProvider{},
-			Signer:              *translator.NewSigner(mockConfig),
-			BackfillProvider: &backfill.BackfillProvider{
-				MetafillerURL:     mockConfig.MetafillerURL,
-				Client:            mockHTTPBackfillClient,
-				GenesisEpochBlock: uint64(mockConfig.SettlementStartBlock),
-				CutoverEpochBlock: uint64(mockConfig.CutoverEpochBlock),
-			},
-		}
+		mockMetrics := mocks.NewMockMetrics()
 
-		s, err := server.TranslatorHandler(mockConfig, opTranslator)
+		batcherInboxAddress := common.HexToAddress("0x123")
+		opTranslator := translator.NewOPTranslator(
+			mockClient,
+			&mocks.MockBatchProvider{},
+			backfill.NewBackfillerProvider(
+				mockConfig.MetafillerURL,
+				mockConfig.SettlementStartBlock,
+				mockConfig.CutoverEpochBlock,
+				mockHTTPBackfillClient,
+				mockMetrics,
+			),
+			mocks.TestSigner(t),
+			&batcherInboxAddress,
+			mockMetrics,
+		)
+
+		s, err := server.TranslatorHandler(mockConfig.SettlementChainRPCURL, mockConfig.LogLevel, opTranslator)
 		assert.NoError(t, err)
 
 		t.Run(tc.name, func(t *testing.T) {

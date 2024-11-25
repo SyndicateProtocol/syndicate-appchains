@@ -9,6 +9,7 @@ import (
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
+
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -130,7 +131,6 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 				block:    block,
 				receipts: blockReceipts,
 			}
-
 		}(block)
 	}
 
@@ -156,4 +156,42 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 		allReceipts = append(allReceipts, blockReciptsMap[block]...)
 	}
 	return allReceipts, nil
+}
+
+type ParsedTransaction struct {
+	Hash                 string
+	Nonce                string
+	Value                string
+	Gas                  string
+	MaxFeePerGas         string
+	MaxPriorityFeePerGas string
+	From                 string
+	To                   string
+	Data                 string
+}
+
+type BlockStateCall struct {
+	Calls []*ParsedTransaction `json:"calls"`
+}
+
+type SimulationRequest struct {
+	BlockStateCalls []BlockStateCall `json:"blockStateCalls"`
+	Validation      bool             `json:"validation,omitempty"`
+}
+
+func (c *RPCClient) SimulateTransactions(ctx context.Context, transactions []*ParsedTransaction, blockParameter string) (any, error) {
+	var response any
+	request := SimulationRequest{
+		BlockStateCalls: []BlockStateCall{
+			{
+				Calls: transactions,
+			},
+		},
+		Validation: true,
+	}
+	err := c.rawClient.CallContext(ctx, &response, "eth_simulateV1", request, blockParameter)
+	if err != nil {
+		return nil, err
+	}
+	return response, nil
 }

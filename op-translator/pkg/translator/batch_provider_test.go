@@ -1,8 +1,11 @@
-package translator
+package translator_test
 
 import (
 	"testing"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
+
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -15,13 +18,15 @@ var (
 	SequencingContractAddress = common.HexToAddress("0x1111111111111111111111111111111111111111")
 )
 
-func getBatchProvider() *MetaBasedBatchProvider {
-	return NewMetaBasedBatchProvider(
+func getBatchProvider() *translator.MetaBasedBatchProvider {
+	mockMetrics := mocks.NewMockMetrics()
+	return translator.NewMetaBasedBatchProvider(
 		nil,
 		nil,
 		SequencingContractAddress,
 		1,
 		2,
+		mockMetrics,
 	)
 }
 
@@ -37,10 +42,10 @@ func TestFilterReceipts(t *testing.T) {
 				{
 					Address: sequencingContractAddress,
 					Topics: []common.Hash{
-						TransactionProcessedSigHash,
+						translator.TransactionProcessedSigHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: DummyEncodedData,
+					Data: translator.DummyEncodedData,
 				},
 			},
 		},
@@ -50,10 +55,10 @@ func TestFilterReceipts(t *testing.T) {
 				{
 					Address: sequencingContractAddress,
 					Topics: []common.Hash{
-						TransactionProcessedSigHash,
+						translator.TransactionProcessedSigHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: DummyEncodedData,
+					Data: translator.DummyEncodedData,
 				},
 			},
 		},
@@ -65,8 +70,8 @@ func TestFilterReceipts(t *testing.T) {
 
 	txns := metaBasedBatchProvider.FilterReceipts(receipts)
 	assert.Len(t, txns, 2)
-	assert.Equal(t, hexutil.Bytes{DummyTxn[1]}, txns[0])
-	assert.Equal(t, hexutil.Bytes{DummyTxn[1]}, txns[1])
+	assert.Equal(t, hexutil.Bytes{translator.DummyTxn[1]}, txns[0])
+	assert.Equal(t, hexutil.Bytes{translator.DummyTxn[1]}, txns[1])
 }
 
 func TestFilterReceiptsWithExtraLog(t *testing.T) {
@@ -81,10 +86,10 @@ func TestFilterReceiptsWithExtraLog(t *testing.T) {
 				{
 					Address: sequencingContractAddress,
 					Topics: []common.Hash{
-						TransactionProcessedSigHash,
+						translator.TransactionProcessedSigHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: DummyEncodedData,
+					Data: translator.DummyEncodedData,
 				},
 				{
 					Address: sequencingContractAddress,
@@ -92,7 +97,7 @@ func TestFilterReceiptsWithExtraLog(t *testing.T) {
 						SomeOtherABIHash,
 						common.BytesToHash(senderAddr.Bytes()),
 					},
-					Data: DummyEncodedData,
+					Data: translator.DummyEncodedData,
 				},
 			},
 		},
@@ -100,5 +105,5 @@ func TestFilterReceiptsWithExtraLog(t *testing.T) {
 
 	txns := metaBasedBatchProvider.FilterReceipts(receipts)
 	assert.Len(t, txns, 1)
-	assert.Equal(t, hexutil.Bytes{DummyTxn[1]}, txns[0])
+	assert.Equal(t, hexutil.Bytes{translator.DummyTxn[1]}, txns[0])
 }

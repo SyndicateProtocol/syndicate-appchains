@@ -2,6 +2,7 @@ package translator_test
 
 import (
 	"context"
+	"net/http"
 	"testing"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
@@ -16,6 +17,8 @@ import (
 func TestGetBlockByNumber(t *testing.T) {
 	mockConfig := mocks.DefaultTestingConfig
 	mockClient := new(mocks.MockRPCClient)
+	mockMetrics := mocks.NewMockMetrics()
+
 	number := "0x21"
 	settlementBlock := types.Block{
 		"number":       number,
@@ -25,12 +28,14 @@ func TestGetBlockByNumber(t *testing.T) {
 	ctx := context.Background()
 
 	mockClient.On("GetBlockByNumber", ctx, number, true).Return(settlementBlock, nil)
-	translatorMock := &translator.OPTranslator{
-		SettlementChain:  mockClient,
-		BatchProvider:    &mocks.MockBatchProvider{},
-		Signer:           *translator.NewSigner(mockConfig),
-		BackfillProvider: backfill.NewBackfillerProvider(mockConfig),
-	}
+	translatorMock := translator.NewOPTranslator(
+		mockClient,
+		&mocks.MockBatchProvider{},
+		backfill.NewBackfillerProvider(mockConfig.MetafillerURL, mockConfig.SettlementStartBlock, mockConfig.CutoverEpochBlock, &http.Client{}, mockMetrics),
+		mocks.TestSigner(t),
+		&common.Address{},
+		mockMetrics,
+	)
 
 	block, err := translatorMock.GetBlockByNumber(ctx, number, true)
 
@@ -47,12 +52,16 @@ func TestGetBlockByNumber(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(transactions))
 
+	mockMetrics.AssertCalled(t, "RecordOPTranslatorRPCRequest", "eth_getBlockByNumber")
+
 	mockClient.AssertExpectations(t)
 }
 
 func TestGetBlockByHash(t *testing.T) {
 	mockClient := new(mocks.MockRPCClient)
+	mockMetrics := mocks.NewMockMetrics()
 	mockConfig := mocks.DefaultTestingConfig
+
 	number := "0x21"
 	settlementBlock := types.Block{
 		"number":       number,
@@ -63,12 +72,14 @@ func TestGetBlockByHash(t *testing.T) {
 	hash := common.HexToHash("0xabc")
 
 	mockClient.On("GetBlockByHash", ctx, hash, true).Return(settlementBlock, nil)
-	translatorMock := &translator.OPTranslator{
-		SettlementChain:  mockClient,
-		BatchProvider:    &mocks.MockBatchProvider{},
-		Signer:           *translator.NewSigner(mockConfig),
-		BackfillProvider: backfill.NewBackfillerProvider(mockConfig),
-	}
+	translatorMock := translator.NewOPTranslator(
+		mockClient,
+		&mocks.MockBatchProvider{},
+		backfill.NewBackfillerProvider(mockConfig.MetafillerURL, mockConfig.SettlementStartBlock, mockConfig.CutoverEpochBlock, &http.Client{}, mockMetrics),
+		mocks.TestSigner(t),
+		&common.Address{},
+		mockMetrics,
+	)
 
 	block, err := translatorMock.GetBlockByHash(ctx, hash, true)
 
@@ -85,24 +96,7 @@ func TestGetBlockByHash(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, len(transactions))
 
+	mockMetrics.AssertCalled(t, "RecordOPTranslatorRPCRequest", "eth_getBlockByHash")
+
 	mockClient.AssertExpectations(t)
-}
-
-func TestShouldTranslate(t *testing.T) {
-	tests := []struct {
-		method   string
-		expected bool
-	}{
-		{"eth_getBlockByNumber", true},
-		{"eth_getBlockByHash", true},
-		{"eth_getTransactionByHash", false},
-		{"eth_blockNumber", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.method, func(t *testing.T) {
-			result := translator.ShouldTranslate(tt.method)
-			assert.Equal(t, tt.expected, result)
-		})
-	}
 }

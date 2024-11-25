@@ -7,7 +7,7 @@ use crate::presentation::json_rpc_errors::Error::InvalidParams;
 use crate::presentation::json_rpc_errors::InvalidParamsError::{
     MissingParam, NotAnArray, NotHexEncoded, WrongParamCount,
 };
-use crate::presentation::server::Services;
+use crate::presentation::services::Services;
 use alloy::hex;
 use alloy::hex::ToHexExt;
 use jsonrpsee::types::{ErrorObject, Params};
