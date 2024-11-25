@@ -1,22 +1,20 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {RequireListManager} from "./RequireListManager.sol";
+import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 
 /// @title MetabasedSequencerChain
-/// @notice The core contract for sequencing transactions using a modular architecture to determine who is allowed to sequence.
-contract MetabasedSequencerChain is RequireListManager {
+/// @notice The core contract for sequencing transactions using a modular architecture
+/// to determine who is allowed to sequence.
+contract MetabasedSequencerChain is SequencingModuleChecker {
     /// @notice The ID of the L3 chain that this contract is sequencing transactions for.
     uint256 public immutable l3ChainId;
 
     /// @notice Emitted when a new transaction is processed.
-    event TransactionProcessed(address indexed sender, bytes tx);
+    event TransactionProcessed(address indexed sender, bytes data);
 
     /// @notice Emitted when a chunk of transactions is processed.
     event TransactionChunkProcessed(bytes txChunk, uint256 index, uint256 totalChunks, bytes32 txHashForParent);
-
-    /// @dev Thrown when the transaction form is invalid.
-    error InvalidTransactionForm();
 
     /// @dev Thrown when an invalid chunk size is provided.
     error InvalidChunkSize();
@@ -24,42 +22,35 @@ contract MetabasedSequencerChain is RequireListManager {
     /// @notice Constructs the MetabasedSequencerChain contract.
     /// @param _l3ChainId The ID of the L3 chain that this contract is sequencing transactions for.
     /// @param admin The address that will be set as the admin
-    constructor(uint256 _l3ChainId, address admin) RequireListManager(admin) {
+    /// @param masterModule The address of the master permission module
+    constructor(uint256 _l3ChainId, address admin, address masterModule) SequencingModuleChecker(admin, masterModule) {
         // chain id zero has no replay protection : https://eips.ethereum.org/EIPS/eip-3788
         require(_l3ChainId != 0, "L3 chain ID cannot be 0");
-
         l3ChainId = _l3ChainId;
     }
 
-    modifier onlyWhenAllowed(address sender) {
-        // Check if msg.sender is allowed
-        requireAllAllowed(msg.sender);
-        requireAnyAllowed(msg.sender);
-        _;
-    }
-
     /// @notice Processes a single compressed transaction.
-    /// @param txn The compressed transaction data.
-    function processTransactionRaw(bytes calldata txn) external onlyWhenAllowed(msg.sender) {
-        emit TransactionProcessed(msg.sender, txn);
+    /// @param data The compressed transaction data.
+    function processTransactionRaw(bytes calldata data) external onlyWhenAllowed(msg.sender) {
+        emit TransactionProcessed(msg.sender, data);
     }
 
     /// @notice process transactions
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
-    /// @param txn The transaction data
-    function processTransaction(bytes calldata txn) external onlyWhenAllowed(msg.sender) {
-        emit TransactionProcessed(msg.sender, prependZeroByte(txn));
+    /// @param data The transaction data
+    function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender) {
+        emit TransactionProcessed(msg.sender, prependZeroByte(data));
     }
 
     /// @notice Processes multiple transactions in bulk.
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
-    /// @param txns An array of  transaction data.
-    function processBulkTransactions(bytes[] calldata txns) external onlyWhenAllowed(msg.sender) {
-        uint256 txnCount = txns.length;
+    /// @param data An array of transaction data.
+    function processBulkTransactions(bytes[] calldata data) external onlyWhenAllowed(msg.sender) {
+        uint256 dataCount = data.length;
 
         // Process all transactions
-        for (uint256 i = 0; i < txnCount; i++) {
-            emit TransactionProcessed(msg.sender, prependZeroByte(txns[i]));
+        for (uint256 i = 0; i < dataCount; i++) {
+            emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
         }
     }
 
@@ -83,9 +74,9 @@ contract MetabasedSequencerChain is RequireListManager {
 
     /// @notice Prepends a zero byte to the transaction data
     /// @dev This helps op-translator identify uncompressed data
-    /// @param _tx The original transaction data
+    /// @param _data The original transaction data
     /// @return bytes The transaction data
-    function prependZeroByte(bytes calldata _tx) private pure returns (bytes memory) {
-        return abi.encodePacked(bytes1(0x00), _tx);
+    function prependZeroByte(bytes calldata _data) private pure returns (bytes memory) {
+        return abi.encodePacked(bytes1(0x00), _data);
     }
 }
