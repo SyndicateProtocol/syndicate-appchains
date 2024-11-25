@@ -21,7 +21,7 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// Main is the entrypoint into the Batch Submitter.
+// Main is the entrypoint into the op-translator.
 // This method returns a cliapp.LifecycleAction, to create an op-service CLI-lifecycle-managed batch-submitter with.
 func Main(version string) cliapp.LifecycleAction {
 	return func(cliCtx *cli.Context, closeApp context.CancelCauseFunc) (cliapp.Lifecycle, error) {
@@ -33,7 +33,7 @@ func Main(version string) cliapp.LifecycleAction {
 			return nil, fmt.Errorf("invalid CLI flags: %w", err)
 		}
 
-		// TODO logger
+		// TODO [SEQ-329] logger
 		// l := oplog.NewLogger(oplog.AppOut(cliCtx), cfg.LogConfig)
 		// oplog.SetGlobalLogHandler(l.Handler())
 		// opservice.ValidateEnvVars(flags.EnvVarPrefix, flags.Flags, log)
@@ -72,7 +72,7 @@ var _ cliapp.Lifecycle = (*TranslatorService)(nil)
 
 func (t *TranslatorService) initFromCLIConfig(ctx context.Context, version string, cfg *CLIConfig) error {
 	t.version = version
-	logger.Init(cfg.LogLevel, cfg.Pretty) // TODO logger
+	logger.Init(cfg.LogLevel, cfg.Pretty) // TODO [SEQ-329] logger
 
 	if err := t.initRPCServers(ctx, cfg); err != nil {
 		return fmt.Errorf("failed to initialize RPC servers: %w", err)

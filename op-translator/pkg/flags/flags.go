@@ -122,7 +122,7 @@ var (
 		Value:   10 * time.Second, //nolint:mnd // default
 	}
 
-	// TODO logger
+	// TODO [SEQ-329] logger
 	LogLevel = &cli.StringFlag{
 		Name:    "log_level",
 		Usage:   "Log level",
