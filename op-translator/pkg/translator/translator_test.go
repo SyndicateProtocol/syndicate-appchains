@@ -2,6 +2,7 @@ package translator_test
 
 import (
 	"context"
+	"log/slog"
 	"net/http"
 	"testing"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
@@ -28,13 +30,15 @@ func TestGetBlockByNumber(t *testing.T) {
 	ctx := context.Background()
 
 	mockClient.On("GetBlockByNumber", ctx, number, true).Return(settlementBlock, nil)
+	testlogger := testlog.Logger(t, slog.LevelDebug)
 	translatorMock := translator.NewOPTranslator(
 		mockClient,
 		&mocks.MockBatchProvider{},
-		backfill.NewBackfillerProvider(mockConfig.MetafillerURL, mockConfig.SettlementStartBlock, mockConfig.CutoverEpochBlock, &http.Client{}, mockMetrics),
+		backfill.NewBackfillerProvider(mockConfig.MetafillerURL, mockConfig.SettlementStartBlock, mockConfig.CutoverEpochBlock, &http.Client{}, mockMetrics, testlogger),
 		mocks.TestSigner(t),
 		&common.Address{},
 		mockMetrics,
+		testlogger,
 	)
 
 	block, err := translatorMock.GetBlockByNumber(ctx, number, true)
@@ -72,13 +76,15 @@ func TestGetBlockByHash(t *testing.T) {
 	hash := common.HexToHash("0xabc")
 
 	mockClient.On("GetBlockByHash", ctx, hash, true).Return(settlementBlock, nil)
+	testlogger := testlog.Logger(t, slog.LevelDebug)
 	translatorMock := translator.NewOPTranslator(
 		mockClient,
 		&mocks.MockBatchProvider{},
-		backfill.NewBackfillerProvider(mockConfig.MetafillerURL, mockConfig.SettlementStartBlock, mockConfig.CutoverEpochBlock, &http.Client{}, mockMetrics),
+		backfill.NewBackfillerProvider(mockConfig.MetafillerURL, mockConfig.SettlementStartBlock, mockConfig.CutoverEpochBlock, &http.Client{}, mockMetrics, testlogger),
 		mocks.TestSigner(t),
 		&common.Address{},
 		mockMetrics,
+		testlogger,
 	)
 
 	block, err := translatorMock.GetBlockByHash(ctx, hash, true)

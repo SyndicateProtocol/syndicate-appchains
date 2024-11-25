@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
 	opservice "github.com/ethereum-optimism/optimism/op-service"
+	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	"github.com/urfave/cli/v2"
 )
 
@@ -121,21 +121,6 @@ var (
 		EnvVars: prefixEnvVars("SERVER_WRITE_TIMEOUT"),
 		Value:   10 * time.Second, //nolint:mnd // default
 	}
-
-	// TODO [SEQ-329] logger
-	LogLevel = &cli.StringFlag{
-		Name:    "log_level",
-		Usage:   "Log level",
-		EnvVars: prefixEnvVars("LOG_LEVEL"),
-		Value:   string(constants.Debug),
-	}
-
-	Pretty = &cli.BoolFlag{
-		Name:    "pretty",
-		Usage:   "Pretty print JSON log responses",
-		EnvVars: prefixEnvVars("PRETTY"),
-		Value:   false,
-	}
 )
 
 var requiredFlags = []cli.Flag{
@@ -157,11 +142,10 @@ var optionalFlags = []cli.Flag{
 	Port,
 	ReadTimeout,
 	WriteTimeout,
-	LogLevel,
-	Pretty,
 }
 
 func init() {
+	optionalFlags = append(optionalFlags, oplog.CLIFlags(EnvVarPrefix)...)
 	Flags = append(requiredFlags, optionalFlags...) //nolint:gocritic // false positive
 }
 

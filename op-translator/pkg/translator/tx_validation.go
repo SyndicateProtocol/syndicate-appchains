@@ -8,8 +8,8 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/txpool"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -28,7 +28,7 @@ const (
 // This filters transactions using a local stateless validation, i.e. gas, nonces
 // and chain-specific configs such as activated hardforks are *not* validated at this point
 // State-dependent validations can only be performed by the MetaBased chain itself
-func FilterTransactionsStateless(txs []hexutil.Bytes) (filteredTxsStateless []hexutil.Bytes, parsedFilteredTxStateless []*ethtypes.Transaction, removedCountStateless int) {
+func FilterTransactionsStateless(txs []hexutil.Bytes, log gethlog.Logger) (filteredTxsStateless []hexutil.Bytes, parsedFilteredTxStateless []*ethtypes.Transaction, removedCountStateless int) {
 	filteredTxsStateless = make([]hexutil.Bytes, 0, len(txs))
 	parsedFilteredTxStateless = make([]*ethtypes.Transaction, 0, len(txs))
 	removedCountStateless = 0
@@ -37,13 +37,13 @@ func FilterTransactionsStateless(txs []hexutil.Bytes) (filteredTxsStateless []he
 		tx := new(ethtypes.Transaction)
 		unmarshalErr := tx.UnmarshalBinary(rawTx)
 		if unmarshalErr != nil {
-			log.Warn().Err(unmarshalErr).Msgf("can't unmarshall transaction: %+v", tx)
+			log.Warn("can't unmarshall transaction", "error", unmarshalErr, "transaction", tx)
 			removedCountStateless++
 			continue
 		}
 		validationErr := ValidateTransactionStateless(tx)
 		if validationErr != nil {
-			log.Warn().Err(validationErr).Msgf("skipping invalid transaction: %+v", tx)
+			log.Warn("skipping invalid transaction", "error", validationErr, "transaction", tx)
 			removedCountStateless++
 			continue
 		}

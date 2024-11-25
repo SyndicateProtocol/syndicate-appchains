@@ -6,30 +6,29 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/flags"
+	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
 )
 
 type CLIConfig struct {
-	BatchInboxAddress         string
-	LogLevel                  string
 	SequencingChainRPCURL     string
 	MetaBasedChainRPCURL      string
 	MetafillerURL             string
 	SequencingContractAddress string
 	SettlementChainRPCURL     string
 	BatcherPrivateKey         string
+	BatchInboxAddress         string
+	LogConfig                 oplog.CLIConfig
 	SettlementChainID         uint64
-	CutoverEpochBlock         uint64
 	SettlementStartBlock      uint64
 	Port                      int
 	FrameSize                 int
 	SettlementChainBlockTime  time.Duration
 	ReadTimeout               time.Duration
 	WriteTimeout              time.Duration
-	Pretty                    bool
+	CutoverEpochBlock         uint64
 }
 
 func (c *CLIConfig) Check() error {
@@ -64,10 +63,6 @@ func (c *CLIConfig) Check() error {
 	_, err = url.ParseRequestURI(c.MetafillerURL)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("invalid URL for metafiller: %w", err))
-	}
-
-	if !constants.IsValidLogLevel(c.LogLevel) {
-		errs = append(errs, errors.New("invalid log level"))
 	}
 
 	if !common.IsHexAddress(c.SequencingContractAddress) {
@@ -117,7 +112,8 @@ func NewConfig(ctx *cli.Context) *CLIConfig {
 		FrameSize:    ctx.Int(flags.FrameSize.Name),
 		ReadTimeout:  ctx.Duration(flags.ReadTimeout.Name),
 		WriteTimeout: ctx.Duration(flags.WriteTimeout.Name),
-		Pretty:       ctx.Bool(flags.Pretty.Name),
-		LogLevel:     ctx.String(flags.LogLevel.Name),
+
+		// from op-stack
+		LogConfig: oplog.ReadCLIConfig(ctx),
 	}
 }

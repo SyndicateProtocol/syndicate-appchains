@@ -6,10 +6,12 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/hex"
+	"log/slog"
 	"testing"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/andybalholm/brotli"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -23,7 +25,7 @@ var (
 )
 
 func TestIsLogTransactionProcessed(t *testing.T) {
-	parser := NewL3TransactionParser(common.HexToAddress("0x1234567890123456789012345678901234567890"))
+	parser := MustNewL3TransactionParser(common.HexToAddress("0x1234567890123456789012345678901234567890"), testlog.Logger(t, slog.LevelDebug))
 
 	testCases := []struct {
 		log      *types.Log
@@ -65,7 +67,7 @@ func TestIsLogTransactionProcessed(t *testing.T) {
 }
 
 func TestGetEventTransactions(t *testing.T) {
-	parser := NewL3TransactionParser(common.HexToAddress("0x1234567890123456789012345678901234567890"))
+	parser := MustNewL3TransactionParser(common.HexToAddress("0x1234567890123456789012345678901234567890"), testlog.Logger(t, slog.LevelDebug))
 
 	senderAddr := common.HexToAddress("0xabcdef0123456789abcdef0123456789abcdef01")
 
@@ -85,7 +87,7 @@ func TestGetEventTransactions(t *testing.T) {
 }
 
 func TestGetEventTransactions_Error(t *testing.T) {
-	parser := NewL3TransactionParser(common.HexToAddress("0x1234567890123456789012345678901234567890"))
+	parser := MustNewL3TransactionParser(common.HexToAddress("0x1234567890123456789012345678901234567890"), testlog.Logger(t, slog.LevelDebug))
 
 	log := &types.Log{
 		Address: common.HexToAddress("0x1234567890123456789012345678901234567890"),
@@ -101,6 +103,7 @@ func TestGetEventTransactions_Error(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, result)
 }
+
 func TestDecodeEventData(t *testing.T) {
 	uncompressedData := generateTransactionData()
 	zlibData, _ := compressZlib(uncompressedData)
@@ -240,6 +243,7 @@ func compressBrotli(data []byte) ([]byte, error) {
 	}
 	return append([]byte{utils.VersionBrotli}, buf.Bytes()...), nil
 }
+
 func createTestEventData(transactions [][]byte) []byte {
 	data := make([]byte, NumTransactionsBytes)
 	binary.BigEndian.PutUint32(data[:NumTransactionsBytes], uint32(len(transactions))) //nolint:all //just used for testing

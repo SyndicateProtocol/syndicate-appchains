@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -13,13 +14,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
+	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/rs/zerolog/log"
 )
 
-func TranslatorHandler(settlementChainRPCURL, logLevel string, translator any) (*http.ServeMux, error) {
+func TranslatorHandler(settlementChainRPCURL string, translator any, log gethlog.Logger) (*http.ServeMux, error) {
 	// Setup proxy
 	parsedURL, err := url.Parse(settlementChainRPCURL)
 	if err != nil {
@@ -35,29 +35,37 @@ func TranslatorHandler(settlementChainRPCURL, logLevel string, translator any) (
 	}
 
 	// Setup routing
-	router := TranslatorRouter(constants.ToLogLevel(logLevel), translatorRPC, parsedURL, proxy)
+	router := TranslatorRouter(translatorRPC, parsedURL, proxy, log)
 
 	return router, nil
 }
 
-func TranslatorRouter(logLevel constants.LogLevel, translatorRPC *rpc.Server, parsedURL *url.URL, proxy *httputil.ReverseProxy) *http.ServeMux {
+func TranslatorRouter(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *httputil.ReverseProxy, log gethlog.Logger) *http.ServeMux {
 	loggingMiddleware := NoOpMiddleware
-	if logLevel == constants.Debug {
+	if log.Enabled(context.Background(), slog.LevelDebug) {
 		loggingMiddleware = VerboseLoggingMiddleware
 	}
 
 	router := http.NewServeMux()
 	router.Handle("/metrics", promhttp.Handler())
-	router.HandleFunc("/", loggingMiddleware(
-		rpcEndpointsHandler(translatorRPC, parsedURL, proxy)))
-	router.HandleFunc("/health", loggingMiddleware(
-		healthcheckHandler()))
+	router.HandleFunc("/",
+		loggingMiddleware(
+			rpcEndpointsHandler(translatorRPC, parsedURL, proxy, log),
+			log,
+		),
+	)
+	router.HandleFunc("/health",
+		loggingMiddleware(
+			healthcheckHandler(log),
+			log,
+		),
+	)
 	return router
 }
 
-func healthcheckHandler() func(w http.ResponseWriter, _ *http.Request) {
+func healthcheckHandler(log gethlog.Logger) func(w http.ResponseWriter, _ *http.Request) {
 	return func(w http.ResponseWriter, _ *http.Request) {
-		log.Info().Msg("-- HIT /health")
+		log.Info("-- HIT /health")
 		status := "Healthy"
 		w.WriteHeader(http.StatusOK)
 		err := json.NewEncoder(w).Encode(map[string]string{"status": status})
@@ -77,7 +85,7 @@ func ShouldTranslate(method string) bool {
 	return false
 }
 
-func rpcEndpointsHandler(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *httputil.ReverseProxy) func(w http.ResponseWriter, r *http.Request) {
+func rpcEndpointsHandler(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *httputil.ReverseProxy, log gethlog.Logger) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Ethereum JSON-RPC uses POST requests", http.StatusMethodNotAllowed)
@@ -85,8 +93,13 @@ func rpcEndpointsHandler(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *h
 		}
 
 		// Parse out the method
-		method := ParseMethod(r)
-		log.Debug().Msgf("Method: %s", method)
+		method, err := ParseMethod(r)
+		if err != nil {
+			log.Warn("parseMethod failed", "error", err)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		log.Debug("method to translate", "method", method)
 		if ShouldTranslate(method) {
 			// Translate
 			translatorRPC.ServeHTTP(w, r)
@@ -103,8 +116,9 @@ func rpcEndpointsHandler(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *h
 }
 
 type Server struct {
-	srv    *http.Server
 	ctx    context.Context
+	log    gethlog.Logger
+	srv    *http.Server
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
 }
@@ -115,9 +129,9 @@ func NewServer(
 	writeTimeout time.Duration,
 	settlementChainRPCURL string,
 	opTranslator any,
-	logLevel string,
+	log gethlog.Logger,
 ) (*Server, error) {
-	router, err := TranslatorHandler(settlementChainRPCURL, logLevel, opTranslator)
+	router, err := TranslatorHandler(settlementChainRPCURL, opTranslator, log)
 	if err != nil {
 		return nil, err
 	}
@@ -127,11 +141,11 @@ func NewServer(
 		ReadTimeout:  readTimeout,
 		WriteTimeout: writeTimeout,
 	}
-	return &Server{srv: srv}, nil
+	return &Server{srv: srv, log: log}, nil
 }
 
 func (s *Server) Start(ctx context.Context) {
-	log.Debug().Msgf("Starting JSON-RPC server on address %s", s.srv.Addr)
+	s.log.Debug("Starting JSON-RPC server", "address", s.srv.Addr)
 	ctx, cancel := context.WithCancel(ctx)
 	s.ctx = ctx
 	s.cancel = cancel
@@ -143,29 +157,28 @@ func (s *Server) Start(ctx context.Context) {
 		defer s.wg.Done()
 		// ErrServerClosed == Graceful shutdown
 		if err := s.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			log.Error().Err(err).Msg("RPC server error")
+			s.log.Error("RPC server error", "error", err)
 			panic(err)
 		}
 	}()
 }
 
 func (s *Server) Stop(ctx context.Context) {
-	log.Info().Msg("Stopping JSON-RPC server")
+	s.log.Info("Stopping JSON-RPC server")
 	s.cancel()
 	if err := s.srv.Shutdown(ctx); err != nil {
-		log.Error().Err(err).Msg("Failed to shutdown JSON-RPC server")
+		s.log.Error("failed to shutdown JSON-RPC server", "error", err)
 		panic(err)
 	}
 	s.wg.Wait()
-	log.Info().Msg("JSON-RPC server stopped")
+	s.log.Info("JSON-RPC server stopped")
 }
 
-func ParseMethod(request *http.Request) string {
+func ParseMethod(request *http.Request) (string, error) {
 	// Read body to buffer
 	body, err := io.ReadAll(request.Body)
 	if err != nil {
-		log.Printf("Error reading body: %v", err)
-		panic(err)
+		return "", fmt.Errorf("error reading body: %w", err)
 	}
 
 	request.Body = io.NopCloser(bytes.NewBuffer(body))
@@ -174,15 +187,13 @@ func ParseMethod(request *http.Request) string {
 
 	// Unmarshal the JSON from the buffer into the map
 	if err := json.NewDecoder(bytes.NewBuffer(body)).Decode(&result); err != nil {
-		log.Warn().Msgf("Error decoding JSON: %v", err)
-		return ""
+		return "", fmt.Errorf("error decoding JSON: %w", err)
 	}
 
 	method, ok := result["method"].(string)
 	if !ok {
-		log.Warn().Msg("Invalid method type")
-		return ""
+		return "", fmt.Errorf("invalid method type")
 	}
 
-	return method
+	return method, nil
 }

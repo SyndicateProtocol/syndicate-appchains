@@ -1,9 +1,11 @@
 package translator
 
 import (
+	"log/slog"
 	"math/big"
 	"testing"
 
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -73,7 +75,7 @@ func TestFilterTransactionsStateless(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotFilteredTxsStateless, gotParsedFilteredTxStateless, gotRemovedCountStateless := FilterTransactionsStateless(tt.args.txs)
+			gotFilteredTxsStateless, gotParsedFilteredTxStateless, gotRemovedCountStateless := FilterTransactionsStateless(tt.args.txs, testlog.Logger(t, slog.LevelDebug))
 			assert.Equalf(t, tt.wantFilteredTxsStateless, gotFilteredTxsStateless, "FilterTransactionsStateless(%v)", tt.args.txs)
 			assert.Equalf(t, tt.wantRemovedCountStateless, gotRemovedCountStateless, "FilterTransactionsStateless(%v)", tt.args.txs)
 			// parsed transactions are pointers, so we need to compare their contents one by one
@@ -171,83 +173,83 @@ func TestValidateTransactionStateless(t *testing.T) {
 	type args struct {
 		tx *ethtypes.Transaction
 	}
-	tests := []struct { //nolint:govet // test struct
-		name      string
+	tests := []struct {
 		args      args
-		wantErr   bool
+		name      string
 		errString string
+		wantErr   bool
 	}{
 		{
-			"valid - tx type dynamic",
 			args{txValid1},
-			false,
+			"valid - tx type dynamic",
 			"",
+			false,
 		},
 		{
-			"valid - tx type legacy",
 			args{txLegacyType},
-			false,
+			"valid - tx type legacy",
 			"",
+			false,
 		},
 		{
-			"invalid - non supported tx type deposit",
 			args{txDepositType},
-			true,
+			"invalid - non supported tx type deposit",
 			"transaction type not supported: tx type 126 not supported by this pool",
+			true,
 		},
 		{
-			"invalid - non supported tx type access list",
 			args{txAccessListType},
-			true,
+			"invalid - non supported tx type access list",
 			"transaction type not supported: tx type 1 not supported by this pool",
+			true,
 		},
 		{
-			"invalid - non supported tx type blob",
 			args{txBlobType},
-			true,
+			"invalid - non supported tx type blob",
 			"transaction type not supported: tx type 3 not supported by this pool",
+			true,
 		},
 		{
-			"invalid - contract creation too big",
 			args{txContractCreationTooBig},
-			true,
+			"invalid - contract creation too big",
 			"max initcode size exceeded: code size 49153, limit 49152",
+			true,
 		},
 		{
-			"invalid - too big",
 			args{txTooBig},
-			true,
+			"invalid - too big",
 			"oversized data: transaction size 92202, limit 92160",
+			true,
 		},
 		{
-			"invalid - intrinsic gas too low",
 			args{txIntrinsicGasTooLow},
-			true,
+			"invalid - intrinsic gas too low",
 			"intrinsic gas too low: gas 0, minimum needed 53000",
+			true,
 		},
 		{
-			"invalid - negative value",
 			args{txNegativeValue},
-			true,
+			"invalid - negative value",
 			"negative value",
+			true,
 		},
 		{
-			"invalid - too big gas fee cap",
 			args{txTooBigGasFeeCap},
-			true,
+			"invalid - too big gas fee cap",
 			"max fee per gas higher than 2^256-1",
+			true,
 		},
 		{
-			"invalid - too big gas tip cap",
 			args{txTooBigGasTipCap},
-			true,
+			"invalid - too big gas tip cap",
 			"max priority fee per gas higher than 2^256-1",
+			true,
 		},
 		{
-			"invalid - gas tip cap higher than gas fee cap",
 			args{txGasTipCapHigherThanGasFeeCap},
-			true,
+			"invalid - gas tip cap higher than gas fee cap",
 			"max priority fee per gas higher than max fee per gas",
+			true,
 		},
 	}
 	for _, tt := range tests {
