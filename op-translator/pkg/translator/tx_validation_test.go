@@ -1,18 +1,23 @@
-package translator
+package translator_test
 
 import (
 	"math/big"
 	"testing"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/assert"
 )
 
+var chainID = new(big.Int).SetInt64(1)
+
 var txIntrinsicGasTooLow = GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 	tx.Gas = 0
+	tx.ChainID = chainID
 })
 var rawTxIntrinsicGasTooLow = MustMarshalTransaction(txIntrinsicGasTooLow)
 
@@ -20,6 +25,7 @@ var txValid1 = GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 	to := common.HexToAddress("0x1234567890123456789012345678901234567001")
 	tx.To = &to
 	tx.Gas = 21000
+	tx.ChainID = chainID
 })
 var rawTxValid1 = MustMarshalTransaction(txValid1)
 
@@ -28,10 +34,11 @@ var txValid2 = GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 	to := common.HexToAddress("0x1234567890123456789012345678901234567002")
 	tx.To = &to
 	tx.Gas = 21000
+	tx.ChainID = chainID
 })
 var rawTxValid2 = MustMarshalTransaction(txValid2)
 
-func TestFilterTransactionsStateless(t *testing.T) {
+func TestParseRawTransactions(t *testing.T) {
 	type args struct {
 		txs []hexutil.Bytes
 	}
@@ -40,45 +47,39 @@ func TestFilterTransactionsStateless(t *testing.T) {
 		args                          args
 		wantFilteredTxsStateless      []hexutil.Bytes
 		wantParsedFilteredTxStateless []*ethtypes.Transaction
-		wantRemovedCountStateless     int
 	}{
 		{
 			"mix of valid and invalid, invalid at index 1",
 			args{[]hexutil.Bytes{rawTxValid1, rawTxIntrinsicGasTooLow}},
 			[]hexutil.Bytes{rawTxValid1},
 			[]*ethtypes.Transaction{txValid1},
-			1,
 		},
 		{
 			"mix of valid and invalid, invalid at index 0",
 			args{[]hexutil.Bytes{rawTxIntrinsicGasTooLow, rawTxValid1}},
 			[]hexutil.Bytes{rawTxValid1},
 			[]*ethtypes.Transaction{txValid1},
-			1,
 		},
 		{
 			"mix of valid and invalid, invalid at indexes 1, 2, 3",
 			args{[]hexutil.Bytes{rawTxValid1, rawTxIntrinsicGasTooLow, rawTxIntrinsicGasTooLow, rawTxIntrinsicGasTooLow, rawTxValid2}},
 			[]hexutil.Bytes{rawTxValid1, rawTxValid2},
 			[]*ethtypes.Transaction{txValid1, txValid2},
-			3,
 		},
 		{
 			"unparseable",
 			args{[]hexutil.Bytes{{0x00}}},
 			[]hexutil.Bytes{},
 			[]*ethtypes.Transaction{},
-			1,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotFilteredTxsStateless, gotParsedFilteredTxStateless, gotRemovedCountStateless := FilterTransactionsStateless(tt.args.txs)
-			assert.Equalf(t, tt.wantFilteredTxsStateless, gotFilteredTxsStateless, "FilterTransactionsStateless(%v)", tt.args.txs)
-			assert.Equalf(t, tt.wantRemovedCountStateless, gotRemovedCountStateless, "FilterTransactionsStateless(%v)", tt.args.txs)
+			gotFilteredTxsStateless, gotParsedFilteredTxStateless := translator.ParseRawTransactions(tt.args.txs)
+			assert.Equalf(t, tt.wantFilteredTxsStateless, gotFilteredTxsStateless, "ParseRawTransactions(%v)", tt.args.txs)
 			// parsed transactions are pointers, so we need to compare their contents one by one
 			for i, parsedTx := range gotParsedFilteredTxStateless {
-				assert.Equalf(t, tt.wantParsedFilteredTxStateless[i].Hash(), parsedTx.Hash(), "FilterTransactionsStateless(%v)", tt.args.txs)
+				assert.Equalf(t, tt.wantParsedFilteredTxStateless[i].Hash().String(), parsedTx.Hash, "ParseRawTransactions(%v)", tt.args.txs)
 			}
 		})
 	}
@@ -102,7 +103,18 @@ func GenerateDummyTx(customFunc func(tx *ethtypes.DynamicFeeTx)) *ethtypes.Trans
 
 	tx := ethtypes.NewTx(dynamicTx)
 
-	return tx
+	// Generate a private key for the sender
+	privateKey, _ := crypto.GenerateKey()
+	// senderAddress := crypto.PubkeyToAddress(privateKey.PublicKey)
+
+	// Sign the transaction
+	signer := ethtypes.NewLondonSigner(dynamicTx.ChainID)
+	signedTx, err := ethtypes.SignTx(tx, signer, privateKey)
+	if err != nil {
+		panic("failed to sign transaction")
+	}
+
+	return signedTx
 }
 
 func MustMarshalTransaction(tx *ethtypes.Transaction) hexutil.Bytes {
@@ -113,7 +125,7 @@ func MustMarshalTransaction(tx *ethtypes.Transaction) hexutil.Bytes {
 	return bytes
 }
 
-func TestValidateTransactionStateless(t *testing.T) {
+func TestValidateTransactionInternal(t *testing.T) {
 	// supported legacy transaction
 	txLegacyType := ethtypes.NewTx(&ethtypes.LegacyTx{
 		Gas: 53000,
@@ -131,17 +143,20 @@ func TestValidateTransactionStateless(t *testing.T) {
 		tx.To = &to
 		tx.Gas = 21000
 		tx.Data = dataWithLimit
+		tx.ChainID = chainID
 	})
 
 	contractCreationWithLimit := make([]byte, params.MaxInitCodeSize+1)
 	txContractCreationTooBig := GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 		tx.Gas = 21000
 		tx.Data = contractCreationWithLimit
+		tx.ChainID = chainID
 	})
 
 	txNegativeValue := GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 		tx.Gas = 21000
 		tx.Value = new(big.Int).SetInt64(-1)
+		tx.ChainID = chainID
 	})
 
 	bigIntTooLarge := new(big.Int).SetBytes([]byte{
@@ -155,17 +170,20 @@ func TestValidateTransactionStateless(t *testing.T) {
 	txTooBigGasFeeCap := GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 		tx.Gas = 21000
 		tx.GasFeeCap = bigIntTooLarge
+		tx.ChainID = chainID
 	})
 
 	txTooBigGasTipCap := GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 		tx.Gas = 21000
 		tx.GasTipCap = bigIntTooLarge
+		tx.ChainID = chainID
 	})
 
 	txGasTipCapHigherThanGasFeeCap := GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
 		tx.Gas = 21000
 		tx.GasTipCap = new(big.Int).SetInt64(10)
 		tx.GasFeeCap = new(big.Int).SetInt64(9)
+		tx.ChainID = chainID
 	})
 
 	type args struct {
@@ -217,7 +235,7 @@ func TestValidateTransactionStateless(t *testing.T) {
 			"invalid - too big",
 			args{txTooBig},
 			true,
-			"oversized data: transaction size 92202, limit 92160",
+			"oversized data: transaction size 92266, limit 92160",
 		},
 		{
 			"invalid - intrinsic gas too low",
@@ -252,7 +270,7 @@ func TestValidateTransactionStateless(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateTransactionStateless(tt.args.tx)
+			err := translator.ValidateTransactionInternal(tt.args.tx)
 			if tt.wantErr && err == nil {
 				t.Errorf("an error is expected but got nil.")
 			}
