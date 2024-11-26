@@ -83,9 +83,8 @@ func (t *TranslatorService) initFromCLIConfig(ctx context.Context, version strin
 	if err := t.initBatchSigner(cfg); err != nil {
 		return fmt.Errorf("failed to initialize batch signer: %w", err)
 	}
-
-	t.initBackfillProvider(cfg)
 	t.initMetrics()
+	t.initBackfillProvider(cfg)
 	t.initBatchProvider(cfg)
 	t.initOPTranslator()
 
