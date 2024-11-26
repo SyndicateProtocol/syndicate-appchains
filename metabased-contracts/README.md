@@ -54,12 +54,11 @@ $ make deploy-based-sequencerchain-frame
 
 | Contract Name                   | Address                                    |
 | ------------------------------- | ------------------------------------------ |
-| MetabasedFactory                | 0xc75954B9B4Bb4B80883Cf645744612138b7e4870 |
-| AlwaysAllowedModule             | 0x471584f0B8e35faEB2a618BD58A62316D8882d63 |
-| MetabasedSequencerChain (Frame) | 0x2d45AA77567618C031b8C8AFD3296ED724793B01 |
-| MetabsedSequencerChain (Ham)    | 0x869eE769d6ab3221894Cc555792e8c6467953bE1 |
-| MetafillerStorage (Frame)       | 0xFEA8A2BA8B760348ea95492516620ad45a299d53 |
-| MetafillerStorage (Ham)         | 0x9cecA064CaB740E5F511b426c7dBD7820795fe13 |
-
-| MetafillerStorage (Frame) | 0xFEA8A2BA8B760348ea95492516620ad45a299d53 |
-| MetafillerStorage (Ham) | 0x9cecA064CaB740E5F511b426c7dBD7820795fe13 |
+| MetabasedFactory                | 0x19aaf160dA8985c54bb97adAF9304B5aC7890421 |
+| AlwaysAllowedModule             | 0x87F4DE1886298255c5fce2adF15977fE44F48f68 |
+| MetabasedSequencerChain (Frame) | 0x56b2cd4fb8d6D6486b95Ff2DF5cDC30FE526FFaf |
+| MetabasedSequencerChain (Ham)   | 0x0e6A93458fEdaEFaAcb106f08441058c8E0b2b0F |
+| MetafillerStorage (Frame)       | 0x0D26034350193af5Fb3e7c206f3462A8fD25F289 |
+| MetafillerStorage (Ham)         | 0xE3c1d5335203066EB8c3212a6bda57Ff33133f54 |
+| RequiredAllModule (Ham)         | 0xAfeA8F68921242A90ae9e35f4DDF0d3769dE3150 |
+| RequiredAllModule (Frame)       | 0x7Bc475096B936Ad04Cfc544FB56aC54B3661beE6 |
