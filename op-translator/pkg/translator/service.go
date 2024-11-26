@@ -44,7 +44,7 @@ func Main(version string) cliapp.LifecycleAction {
 
 func TranslatorServiceFromCLIConfig(ctx context.Context, version string, cfg *CLIConfig, log gethlog.Logger) (*TranslatorService, error) {
 	var t TranslatorService
-	if err := t.initFromCLIConfig(ctx, version, cfg); err != nil {
+	if err := t.initFromCLIConfig(ctx, version, cfg, log); err != nil {
 		return nil, errors.Join(err, t.Stop(ctx)) // try to clean up our failed initialization attempt
 	}
 	return &t, nil
@@ -70,7 +70,8 @@ type TranslatorService struct {
 // guarantees that the cliapp.Lifecycle interface is implemented by TranslatorService
 var _ cliapp.Lifecycle = (*TranslatorService)(nil)
 
-func (t *TranslatorService) initFromCLIConfig(ctx context.Context, version string, cfg *CLIConfig) error {
+func (t *TranslatorService) initFromCLIConfig(ctx context.Context, version string, cfg *CLIConfig, log gethlog.Logger) error {
+	t.log = log
 	t.version = version
 
 	if err := t.initRPCServers(ctx, cfg); err != nil {

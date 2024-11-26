@@ -236,7 +236,7 @@ func TestValidateTransactionInternal(t *testing.T) {
 		{
 			args{txTooBig},
 			"invalid - too big",
-			"oversized data: transaction size 92202, limit 92160",
+			"oversized data: transaction size 92266, limit 92160",
 			true,
 		},
 		{
