@@ -112,7 +112,7 @@ func (p *Publisher) loop() {
 				p.log.Error("failed to get latest translated block number", "error", err)
 				continue
 			}
-			p.log.Info("polling for new blocks", "currentTranslatedBlock", currentBlock, "latestProcessedBlock", p.latestProcessedBlock)
+			p.log.Debug("polling for new blocks", "currentTranslatedBlock", currentBlock, "latestProcessedBlock", p.latestProcessedBlock)
 			for i := p.latestProcessedBlock + 1; i <= currentBlock; i++ {
 				if err := p.processBlock(i); err != nil {
 					p.log.Warn("stopped processing, will retry next interval", "lastProcessed", p.latestProcessedBlock, "failedBlock", i, "error", err)
@@ -174,7 +174,7 @@ func (p *Publisher) processBlock(block uint64) error {
 	p.log.Info("processing block", "block", block)
 	callData, err := p.callDataForBlock(block)
 	if err != nil {
-		return err // something went wrong
+		return err
 	}
 	contextWithTimeout, cancel := context.WithTimeout(p.ctx, p.blobUploadTimeout)
 	defer cancel()
