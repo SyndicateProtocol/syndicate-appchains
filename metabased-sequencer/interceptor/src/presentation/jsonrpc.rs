@@ -115,10 +115,8 @@ where
 
     let result = application::send_raw_transaction(bytes, chain).await;
 
-    if result.is_ok() {
-        metrics.append_send_raw_transaction_with_duration(start.elapsed());
-    }
-
+    // TODO (SEQ-352): differentiate on error
+    metrics.append_send_raw_transaction_with_duration(start.elapsed());
     Ok(result?.encode_hex_with_prefix())
 }
 
