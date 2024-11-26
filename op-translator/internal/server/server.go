@@ -2,24 +2,26 @@ package server
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"sync"
+	"time"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
-	t "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
 )
 
-func TranslatorHandler(cfg *config.Config, translator any) (*http.ServeMux, error) {
+func TranslatorHandler(settlementChainRPCURL, logLevel string, translator any) (*http.ServeMux, error) {
 	// Setup proxy
-	parsedURL, err := url.Parse(cfg.SettlementChainRPCURL)
+	parsedURL, err := url.Parse(settlementChainRPCURL)
 	if err != nil {
 		return nil, err
 	}
@@ -33,8 +35,7 @@ func TranslatorHandler(cfg *config.Config, translator any) (*http.ServeMux, erro
 	}
 
 	// Setup routing
-	logLevel := constants.ToLogLevel(cfg.LogLevel)
-	router := TranslatorRouter(logLevel, translatorRPC, parsedURL, proxy)
+	router := TranslatorRouter(constants.ToLogLevel(logLevel), translatorRPC, parsedURL, proxy)
 
 	return router, nil
 }
@@ -66,6 +67,16 @@ func healthcheckHandler() func(w http.ResponseWriter, _ *http.Request) {
 	}
 }
 
+func ShouldTranslate(method string) bool {
+	switch method {
+	case "eth_getBlockByNumber":
+		return true
+	case "eth_getBlockByHash":
+		return true
+	}
+	return false
+}
+
 func rpcEndpointsHandler(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *httputil.ReverseProxy) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -76,7 +87,7 @@ func rpcEndpointsHandler(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *h
 		// Parse out the method
 		method := ParseMethod(r)
 		log.Debug().Msgf("Method: %s", method)
-		if t.ShouldTranslate(method) {
+		if ShouldTranslate(method) {
 			// Translate
 			translatorRPC.ServeHTTP(w, r)
 			return
@@ -91,14 +102,62 @@ func rpcEndpointsHandler(translatorRPC *rpc.Server, parsedURL *url.URL, proxy *h
 	}
 }
 
-func Start(cfg *config.Config, router *http.ServeMux) {
-	log.Debug().Msgf("Starting JSON-RPC server on port %d", cfg.Port)
-	err := http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), router) //nolint:gosec // TODO refactor for performance anyway
+type Server struct {
+	srv    *http.Server
+	ctx    context.Context
+	cancel context.CancelFunc
+	wg     sync.WaitGroup
+}
+
+func NewServer(
+	port int,
+	readTimeout,
+	writeTimeout time.Duration,
+	settlementChainRPCURL string,
+	opTranslator any,
+	logLevel string,
+) (*Server, error) {
+	router, err := TranslatorHandler(settlementChainRPCURL, logLevel, opTranslator)
 	if err != nil {
-		log.Error().
-			Err(err).
-			Msg("RPC server error")
+		return nil, err
 	}
+	srv := &http.Server{
+		Addr:         fmt.Sprintf(":%d", port),
+		Handler:      router,
+		ReadTimeout:  readTimeout,
+		WriteTimeout: writeTimeout,
+	}
+	return &Server{srv: srv}, nil
+}
+
+func (s *Server) Start(ctx context.Context) {
+	log.Debug().Msgf("Starting JSON-RPC server on address %s", s.srv.Addr)
+	ctx, cancel := context.WithCancel(ctx)
+	s.ctx = ctx
+	s.cancel = cancel
+	s.srv.BaseContext = func(net.Listener) context.Context {
+		return s.ctx
+	}
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+		// ErrServerClosed == Graceful shutdown
+		if err := s.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Error().Err(err).Msg("RPC server error")
+			panic(err)
+		}
+	}()
+}
+
+func (s *Server) Stop(ctx context.Context) {
+	log.Info().Msg("Stopping JSON-RPC server")
+	s.cancel()
+	if err := s.srv.Shutdown(ctx); err != nil {
+		log.Error().Err(err).Msg("Failed to shutdown JSON-RPC server")
+		panic(err)
+	}
+	s.wg.Wait()
+	log.Info().Msg("JSON-RPC server stopped")
 }
 
 func ParseMethod(request *http.Request) string {

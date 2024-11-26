@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,10 +32,6 @@ var TransactionProcessedSigHash = crypto.Keccak256Hash([]byte(TransactionProcess
 type L3TransactionParser struct {
 	sequencingContractABI     abi.ABI
 	sequencingContractAddress common.Address
-}
-
-func InitL3TransactionParser(cfg *config.Config) *L3TransactionParser {
-	return NewL3TransactionParser(common.HexToAddress(cfg.SequencingContractAddress))
 }
 
 func NewL3TransactionParser(sequencingContractAddress common.Address) *L3TransactionParser {

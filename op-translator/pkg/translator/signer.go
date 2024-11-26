@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/config"
+	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/rs/zerolog/log"
@@ -16,18 +16,16 @@ type Signer struct {
 	signer     ethtypes.Signer
 }
 
-func NewSigner(cfg *config.Config) *Signer {
-	key, err := crypto.HexToECDSA(cfg.BatcherPrivateKey)
-
+func NewSigner(privateKey string, chainID *big.Int) (*Signer, error) {
+	key, err := crypto.HexToECDSA(privateKey)
 	if err != nil {
-		log.Panic().Err(err).Msg("Failed to initialize signer")
+		return nil, err
 	}
 
-	chainID := big.NewInt(cfg.SettlementChainID)
 	return &Signer{
 		signer:     ethtypes.NewCancunSigner(chainID),
 		privateKey: key,
-	}
+	}, nil
 }
 
 func (s *Signer) Sign(tx *ethtypes.Transaction) (*ethtypes.Transaction, error) {
@@ -48,4 +46,8 @@ func (s *Signer) Sign(tx *ethtypes.Transaction) (*ethtypes.Transaction, error) {
 
 func (s *Signer) ChainID() int64 {
 	return s.signer.ChainID().Int64()
+}
+
+func (s *Signer) Address() common.Address {
+	return crypto.PubkeyToAddress(s.privateKey.PublicKey)
 }

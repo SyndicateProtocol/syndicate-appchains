@@ -171,12 +171,12 @@ func TestDecodeEventData(t *testing.T) {
 }
 
 func TestParseEventData(t *testing.T) {
-	tests := []struct { //nolint:govet //just used for testing
-		expectError    bool
+	tests := []struct {
 		name           string
 		errorMessage   string
 		data           []byte
 		expectedResult []hexutil.Bytes
+		expectError    bool
 	}{
 		{
 			name:           "valid data with one transaction",

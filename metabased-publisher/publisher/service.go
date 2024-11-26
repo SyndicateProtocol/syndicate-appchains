@@ -10,7 +10,6 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/flags"
 	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/metrics"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	opservice "github.com/ethereum-optimism/optimism/op-service"
 	"github.com/ethereum-optimism/optimism/op-service/cliapp"
@@ -47,7 +46,7 @@ func Main(version string) cliapp.LifecycleAction {
 var ErrAlreadyStopped = errors.New("already stopped")
 
 type PublisherService struct {
-	opTranslatorClient translator.IRPCClient
+	opTranslatorClient *rpc.RPCClient
 	metrics            metrics.Metricer
 	log                gethlog.Logger
 	pprofService       *oppprof.Service

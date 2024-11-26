@@ -20,10 +20,6 @@ type MockRPCClient struct {
 // guarantees that the IRPCClient interface is implemented by MockRPCClient
 var _ translator.IRPCClient = (*MockRPCClient)(nil)
 
-func (m *MockRPCClient) CloseConnection() {
-	m.Called()
-}
-
 func (m *MockRPCClient) GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error) {
 	args := m.Called(ctx, number, withTransactions)
 	return args.Get(0).(types.Block), args.Error(1) //nolint:errcheck // mock safe cast
@@ -62,6 +58,11 @@ func (m *MockRPCClient) HeaderByNumber(ctx context.Context, number *big.Int) (*e
 func (m *MockRPCClient) TransactionReceipt(ctx context.Context, hash common.Hash) (*ethtypes.Receipt, error) {
 	args := m.Called(ctx, hash)
 	return args.Get(0).(*ethtypes.Receipt), args.Error(1) //nolint:errcheck // mock safe cast
+}
+
+func (m *MockRPCClient) SimulateTransactions(ctx context.Context, transactions []*rpc.ParsedTransaction, blockParameter string) (any, error) {
+	args := m.Called(ctx, transactions, blockParameter)
+	return args.Get(0), args.Error(1)
 }
 
 func (m *MockRPCClient) AsEthClient() rpc.IETHClient {

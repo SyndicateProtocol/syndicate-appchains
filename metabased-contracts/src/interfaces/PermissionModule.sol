@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-interface IsAllowed {
+interface PermissionModule {
     // TODO: Evaluate whether this should be a view function or not. You could
     // imagine isAllowed() checks that also modify some state
 

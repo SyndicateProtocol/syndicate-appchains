@@ -36,7 +36,11 @@ func TestParseMethod(t *testing.T) {
 func TestHealthEndpoint(t *testing.T) {
 	mockTranslator := &mocks.Translator{}
 
-	router, err := server.TranslatorHandler(mocks.DefaultTestingConfig, mockTranslator)
+	router, err := server.TranslatorHandler(
+		mocks.DefaultTestingConfig.SettlementChainRPCURL,
+		mocks.DefaultTestingConfig.LogLevel,
+		mockTranslator,
+	)
 	assert.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodGet, "/health", http.NoBody)
@@ -65,9 +69,11 @@ func TestProxyEndpoint(t *testing.T) {
 	}))
 	defer mockBackend.Close()
 
-	config := mocks.DefaultTestingConfig
-	config.SettlementChainRPCURL = mockBackend.URL
-	router, err := server.TranslatorHandler(config, mockTranslator)
+	router, err := server.TranslatorHandler(
+		mockBackend.URL,
+		mocks.DefaultTestingConfig.LogLevel,
+		mockTranslator,
+	)
 	assert.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{"method": "eth_getBalance"}`))
@@ -88,7 +94,11 @@ func TestProxyEndpoint(t *testing.T) {
 
 func TestTranslatedEndpoint(t *testing.T) {
 	mockTranslator := &mocks.Translator{}
-	router, err := server.TranslatorHandler(mocks.DefaultTestingConfig, mockTranslator)
+	router, err := server.TranslatorHandler(
+		mocks.DefaultTestingConfig.SettlementChainRPCURL,
+		mocks.DefaultTestingConfig.LogLevel,
+		mockTranslator,
+	)
 	assert.NoError(t, err)
 
 	req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(`{"id": 1, "jsonrpc": "2.0", "method": "eth_getBlockByNumber", "params": ["0x123", false]}`))
@@ -109,4 +119,23 @@ func TestTranslatedEndpoint(t *testing.T) {
 	blockResult, ok := response["result"].(map[string]any)
 	assert.True(t, ok)
 	assert.Equal(t, "0x123", blockResult["block"])
+}
+
+func TestShouldTranslate(t *testing.T) {
+	tests := []struct {
+		method   string
+		expected bool
+	}{
+		{"eth_getBlockByNumber", true},
+		{"eth_getBlockByHash", true},
+		{"eth_getTransactionByHash", false},
+		{"eth_blockNumber", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.method, func(t *testing.T) {
+			result := server.ShouldTranslate(tt.method)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
 }
