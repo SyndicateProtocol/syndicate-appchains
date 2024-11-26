@@ -28,5 +28,5 @@ func (m *MockBatchProvider) GetBatch(ctx context.Context, block types.Block) (*t
 
 func (m *MockBatchProvider) ValidateBlock(rawTxns []hexutil.Bytes, txns []*rpc.ParsedTransaction) ([]hexutil.Bytes, error) {
 	args := m.Called(rawTxns, txns)
-	return args.Get(0).([]hexutil.Bytes), args.Error(1)
+	return args.Get(0).([]hexutil.Bytes), args.Error(1) //nolint:errcheck // mock safe cast
 }
