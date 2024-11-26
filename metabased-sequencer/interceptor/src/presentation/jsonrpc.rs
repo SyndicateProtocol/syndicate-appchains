@@ -115,7 +115,9 @@ where
 
     let result = application::send_raw_transaction(bytes, chain).await;
 
-    metrics.append_send_raw_transaction_with_duration(start.elapsed());
+    if result.is_ok() {
+        metrics.append_send_raw_transaction_with_duration(start.elapsed());
+    }
 
     Ok(result?.encode_hex_with_prefix())
 }
@@ -148,4 +150,124 @@ where
     S: Stopwatch,
 {
     Ok("ok".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::application::Metrics;
+    use crate::domain::primitives::TxHash;
+    use crate::domain::MetabasedSequencerChainService;
+    use crate::presentation::services::Services;
+    use alloy_primitives::Bytes;
+    use async_trait::async_trait;
+    use jsonrpsee::types::Params;
+    use std::convert::Infallible;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn test_send_raw_transaction_success() {
+        let services = Services::new(MockChain, MockMetrics::new(), ());
+        // an arbitrary (valid) tx
+        let params = Params::new(Some(
+            r#"["0x02f871018319cb1d808502b95ddeef82520894e94f1fa4f27d9d288ffea234bb62e1fbc086ca0c877654752ccd929080c001a0fd107a1713c5b89e4affcf616b2bdc517a70ce9735c4d67d142fd9211f2c6d8ea032fac076f33f22c968380c02331be61da3f157f90e72a121d5fac80313745779"]"#,
+        ));
+        let result = send_raw_transaction(params, Arc::new(services), Default::default())
+            .await
+            .unwrap();
+
+        assert_eq!(
+            result,
+            "0x1111111111111111111111111111111111111111111111111111111111111111"
+        );
+        assert_eq!(METRICS_CALL_COUNTER.load(Ordering::Relaxed), 1);
+    }
+
+    #[tokio::test]
+    async fn test_send_raw_transaction_invalid_number_of_params() {
+        let services = Services::new(MockChain, MockMetrics::new(), ());
+        // an arbitrary (valid) tx, and an extra param
+        let params = Params::new(Some(
+            r#"["0x02f871018319cb1d808502b95ddeef82520894e94f1fa4f27d9d288ffea234bb62e1fbc086ca0c877654752ccd929080c001a0fd107a1713c5b89e4affcf616b2bdc517a70ce9735c4d67d142fd9211f2c6d8ea032fac076f33f22c968380c02331be61da3f157f90e72a121d5fac80313745779", "1"]"#,
+        ));
+        let err = send_raw_transaction(params, Arc::new(services), Default::default())
+            .await
+            .unwrap_err();
+
+        assert!(err
+            .to_string()
+            .contains("invalid params: wrong number of params"));
+        assert_eq!(METRICS_CALL_COUNTER.load(Ordering::Relaxed), 0);
+    }
+
+    #[tokio::test]
+    async fn test_send_raw_transaction_invalid_payload() {
+        let services = Services::new(MockChain, MockMetrics::new(), ());
+        let params = Params::new(Some(r#"["0x not hex"]"#));
+
+        let err = send_raw_transaction(params, Arc::new(services), Default::default())
+            .await
+            .unwrap_err();
+
+        assert!(err.to_string().contains("invalid character"));
+        assert_eq!(METRICS_CALL_COUNTER.load(Ordering::Relaxed), 0);
+    }
+
+    #[tokio::test]
+    async fn test_send_raw_transaction_invalid_tx() {
+        let services = Services::new(MockChain, MockMetrics::new(), ());
+        let params = Params::new(Some(r#"["0xdeadbeef"]"#));
+
+        let err = send_raw_transaction(params, Arc::new(services), Default::default())
+            .await
+            .unwrap_err();
+
+        assert!(err
+            .to_string()
+            .contains("invalid input: unable to RLP decode"));
+        assert_eq!(METRICS_CALL_COUNTER.load(Ordering::Relaxed), 0);
+    }
+
+    #[derive(Default)]
+    struct MockChain;
+
+    #[async_trait]
+    impl MetabasedSequencerChainService for MockChain {
+        type Error = Infallible;
+
+        async fn process_transaction(&self, _tx: Bytes) -> Result<TxHash, Self::Error> {
+            Ok(TxHash::repeat_byte(0x11))
+        }
+
+        async fn process_bulk_transactions(&self, _tx: Vec<Bytes>) -> Result<TxHash, Self::Error> {
+            unimplemented!()
+        }
+    }
+
+    struct MockMetrics;
+
+    impl MockMetrics {
+        fn new() -> Self {
+            METRICS_CALL_COUNTER.store(0, Ordering::Relaxed);
+            Self
+        }
+    }
+
+    impl Display for MockMetrics {
+        fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+            write!(f, "MockMetrics")
+        }
+    }
+
+    static METRICS_CALL_COUNTER: AtomicUsize = AtomicUsize::new(0);
+
+    impl Metrics for MockMetrics {
+        fn append_send_raw_transaction_with_duration(&self, _duration: Duration) {
+            METRICS_CALL_COUNTER.fetch_add(1, Ordering::Relaxed);
+        }
+        fn encode(&self, _writer: &mut impl std::fmt::Write) -> std::fmt::Result {
+            Ok(())
+        }
+    }
 }

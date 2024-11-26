@@ -97,7 +97,7 @@ mod tests {
 
         impl RunningStopwatch for () {
             fn elapsed(&self) -> Duration {
-                unimplemented!("Dummy implementation not expected to be invoked")
+                Duration::from_secs(1)
             }
         }
     }
