@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/metrics"
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common"
@@ -67,17 +68,17 @@ var _ RPCAPI = (*mockOpTranslatorRPC)(nil)
 
 func (m *mockOpTranslatorRPC) BlockNumber(ctx context.Context) (uint64, error) {
 	args := m.Called(ctx)
-	return args.Get(0).(uint64), args.Error(1) //nolint:errcheck // mock safe cast
+	return mocks.Args0[uint64](args), args.Error(1)
 }
 
 func (m *mockOpTranslatorRPC) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
 	args := m.Called(ctx)
-	return args.Get(0).(*types.Block), args.Error(1) //nolint:errcheck // mock safe cast
+	return mocks.Args0[*types.Block](args), args.Error(1)
 }
 
 func (m *mockOpTranslatorRPC) ChainID(ctx context.Context) (*big.Int, error) {
 	args := m.Called(ctx)
-	return args.Get(0).(*big.Int), args.Error(1) //nolint:errcheck // mock safe cast
+	return mocks.Args0[*big.Int](args), args.Error(1)
 }
 
 // Mocked AltDA Provider
@@ -87,10 +88,10 @@ var _ AltDAProvider = (*mockAltDAProvider)(nil)
 
 func (m *mockAltDAProvider) GetInput(ctx context.Context, comm altda.CommitmentData) ([]byte, error) {
 	args := m.Called(ctx, comm)
-	return args.Get(0).([]byte), args.Error(1) //nolint:errcheck // mock safe cast
+	return mocks.Args0[[]byte](args), args.Error(1)
 }
 
 func (m *mockAltDAProvider) SetInput(ctx context.Context, img []byte) (altda.CommitmentData, error) {
 	args := m.Called(ctx, img)
-	return args.Get(0).(altda.CommitmentData), args.Error(1) //nolint:errcheck // mock safe cast
+	return mocks.Args0[altda.CommitmentData](args), args.Error(1)
 }

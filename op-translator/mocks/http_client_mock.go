@@ -12,5 +12,5 @@ type HTTPClientMock struct {
 
 func (m *HTTPClientMock) Do(req *http.Request) (*http.Response, error) {
 	args := m.Called(req)
-	return args.Get(0).(*http.Response), args.Error(1) //nolint:errcheck // mock safe cast
+	return Args0[*http.Response](args), args.Error(1)
 }

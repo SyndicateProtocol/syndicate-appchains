@@ -16,12 +16,12 @@ type MockSigner struct {
 func (m *MockSigner) NewSigner(cfg *translator.CLIConfig) {}
 func (m *MockSigner) Sign(data []byte) ([]byte, error) {
 	args := m.Called(data)
-	return args.Get(0).([]byte), args.Error(1) //nolint:errcheck // mock safe cast
+	return Args0[[]byte](args), args.Error(1)
 }
 
 func (m *MockSigner) ChainID() int64 {
 	args := m.Called()
-	return args.Get(0).(int64) //nolint:errcheck // mock safe cast
+	return Args0[int64](args)
 }
 
 func TestSigner(t *testing.T) *translator.Signer {
