@@ -17,7 +17,7 @@ pub fn metrics(metrics: &impl Metrics) -> String {
 /// A service for collecting measurements of properties describing the application usage.
 pub trait Metrics: Display {
     /// Increases the count of calls to `eth_sendRawTransaction` with response latency measurement.
-    fn append_send_raw_transaction_with_duration(&self, duration: Duration);
+    fn append_send_raw_transaction_with_duration(&self, duration: Duration, success: bool);
 
     /// Encodes all the collected metrics into textual representation and outputs using `writer`.
     fn encode(&self, writer: &mut impl Write) -> std::fmt::Result;
@@ -53,7 +53,7 @@ mod tests {
     }
 
     impl Metrics for DummyMetrics {
-        fn append_send_raw_transaction_with_duration(&self, _duration: Duration) {}
+        fn append_send_raw_transaction_with_duration(&self, _duration: Duration, _success: bool) {}
 
         fn encode(&self, writer: &mut impl Write) -> std::fmt::Result {
             writer.write_str(self.0)

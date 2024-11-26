@@ -110,7 +110,11 @@ mod tests {
         use std::time::Duration;
 
         impl Metrics for &'static str {
-            fn append_send_raw_transaction_with_duration(&self, _duration: Duration) {
+            fn append_send_raw_transaction_with_duration(
+                &self,
+                _duration: Duration,
+                _success: bool,
+            ) {
                 unimplemented!("Unexpected call")
             }
 

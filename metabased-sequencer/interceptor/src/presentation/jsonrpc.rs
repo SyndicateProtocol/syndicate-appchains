@@ -115,8 +115,7 @@ where
 
     let result = application::send_raw_transaction(bytes, chain).await;
 
-    // TODO (SEQ-352): differentiate on error
-    metrics.append_send_raw_transaction_with_duration(start.elapsed());
+    metrics.append_send_raw_transaction_with_duration(start.elapsed(), result.is_ok());
     Ok(result?.encode_hex_with_prefix())
 }
 
@@ -179,6 +178,8 @@ mod tests {
             result,
             "0x1111111111111111111111111111111111111111111111111111111111111111"
         );
+        assert_eq!(METRICS_CALL_ERROR_COUNTER.load(Ordering::Relaxed), 0);
+        assert_eq!(METRICS_CALL_SUCCESS_COUNTER.load(Ordering::Relaxed), 1);
     }
 
     #[tokio::test]
@@ -195,6 +196,8 @@ mod tests {
         assert!(err
             .to_string()
             .contains("invalid params: wrong number of params"));
+        assert_eq!(METRICS_CALL_ERROR_COUNTER.load(Ordering::Relaxed), 0);
+        assert_eq!(METRICS_CALL_SUCCESS_COUNTER.load(Ordering::Relaxed), 0);
     }
 
     #[tokio::test]
@@ -207,6 +210,8 @@ mod tests {
             .unwrap_err();
 
         assert!(err.to_string().contains("invalid character"));
+        assert_eq!(METRICS_CALL_ERROR_COUNTER.load(Ordering::Relaxed), 0);
+        assert_eq!(METRICS_CALL_SUCCESS_COUNTER.load(Ordering::Relaxed), 0);
     }
 
     #[tokio::test]
@@ -221,6 +226,8 @@ mod tests {
         assert!(err
             .to_string()
             .contains("invalid input: unable to RLP decode"));
+        assert_eq!(METRICS_CALL_ERROR_COUNTER.load(Ordering::Relaxed), 1);
+        assert_eq!(METRICS_CALL_SUCCESS_COUNTER.load(Ordering::Relaxed), 0);
     }
 
     #[derive(Default)]
@@ -243,7 +250,8 @@ mod tests {
 
     impl MockMetrics {
         fn new() -> Self {
-            METRICS_CALL_COUNTER.store(0, Ordering::Relaxed);
+            METRICS_CALL_SUCCESS_COUNTER.store(0, Ordering::Relaxed);
+            METRICS_CALL_ERROR_COUNTER.store(0, Ordering::Relaxed);
             Self
         }
     }
@@ -254,13 +262,17 @@ mod tests {
         }
     }
 
-    
-    static METRICS_CALL_COUNTER: AtomicUsize = AtomicUsize::new(0);
+    static METRICS_CALL_ERROR_COUNTER: AtomicUsize = AtomicUsize::new(0);
+    static METRICS_CALL_SUCCESS_COUNTER: AtomicUsize = AtomicUsize::new(0);
 
     // TODO (SEQ-352): make this deterministic
     impl Metrics for MockMetrics {
-        fn append_send_raw_transaction_with_duration(&self, _duration: Duration) {
-            METRICS_CALL_COUNTER.fetch_add(1, Ordering::Relaxed);
+        fn append_send_raw_transaction_with_duration(&self, _duration: Duration, success: bool) {
+            if success {
+                METRICS_CALL_SUCCESS_COUNTER.fetch_add(1, Ordering::Relaxed);
+            } else {
+                METRICS_CALL_ERROR_COUNTER.fetch_add(1, Ordering::Relaxed);
+            }
         }
         fn encode(&self, _writer: &mut impl std::fmt::Write) -> std::fmt::Result {
             Ok(())
