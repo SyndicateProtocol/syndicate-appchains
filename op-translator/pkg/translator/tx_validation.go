@@ -3,7 +3,9 @@ package translator
 import (
 	"fmt"
 	"slices"
+	"strconv"
 
+	rpc "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/txpool"
@@ -21,42 +23,62 @@ const (
 
 	// maxBigIntBitLen is the max length in bits for a BigInt
 	maxBigIntBitLen = 256
+
+	decimalBase = 10
 )
 
-// FilterTransactionsStateless perform an inexpensive local validation
+// ParseRawTransactions perform an inexpensive local validation
 // In the case we have an invalid transaction, it should not be included in the block
 // This filters transactions using a local stateless validation, i.e. gas, nonces
 // and chain-specific configs such as activated hardforks are *not* validated at this point
 // State-dependent validations can only be performed by the MetaBased chain itself
-func FilterTransactionsStateless(txs []hexutil.Bytes, log gethlog.Logger) (filteredTxsStateless []hexutil.Bytes, parsedFilteredTxStateless []*ethtypes.Transaction, removedCountStateless int) {
-	filteredTxsStateless = make([]hexutil.Bytes, 0, len(txs))
-	parsedFilteredTxStateless = make([]*ethtypes.Transaction, 0, len(txs))
-	removedCountStateless = 0
+func ParseRawTransactions(txs []hexutil.Bytes, log gethlog.Logger) (rawTxns []hexutil.Bytes, parsedTxns []*rpc.ParsedTransaction) {
+	rawTxns = make([]hexutil.Bytes, 0, len(txs))
+	parsedTxns = make([]*rpc.ParsedTransaction, 0, len(txs))
 
 	for _, rawTx := range txs {
 		tx := new(ethtypes.Transaction)
 		unmarshalErr := tx.UnmarshalBinary(rawTx)
 		if unmarshalErr != nil {
 			log.Warn("can't unmarshall transaction", "error", unmarshalErr, "transaction", tx)
-			removedCountStateless++
 			continue
 		}
-		validationErr := ValidateTransactionStateless(tx)
+
+		// Validate transaction locally
+		validationErr := ValidateTransactionInternal(tx)
 		if validationErr != nil {
 			log.Warn("skipping invalid transaction", "error", validationErr, "transaction", tx)
-			removedCountStateless++
 			continue
 		}
-		filteredTxsStateless = append(filteredTxsStateless, rawTx)
-		parsedFilteredTxStateless = append(parsedFilteredTxStateless, tx)
-	}
 
-	return filteredTxsStateless, parsedFilteredTxStateless, removedCountStateless
+		// Derive from address from the sender
+		from, err := ethtypes.Sender(ethtypes.NewLondonSigner(tx.ChainId()), tx)
+		if err != nil {
+			log.Warn("can't derive from address from the sender", "tx", tx, "error", err)
+			continue
+		}
+
+		simTx := &rpc.ParsedTransaction{
+			Hash:                 tx.Hash().Hex(),
+			From:                 from.Hex(),
+			To:                   tx.To().Hex(),
+			Value:                tx.Value().String(),
+			Data:                 hexutil.Encode(tx.Data()),
+			Nonce:                strconv.FormatUint(tx.Nonce(), decimalBase),
+			Gas:                  strconv.FormatUint(tx.Gas(), decimalBase),
+			MaxFeePerGas:         tx.GasPrice().String(),
+			MaxPriorityFeePerGas: tx.GasTipCap().String(),
+		}
+
+		rawTxns = append(rawTxns, rawTx)
+		parsedTxns = append(parsedTxns, simTx)
+	}
+	return rawTxns, parsedTxns
 }
 
-// ValidateTransactionStateless is a lightweight stateless MetaBased tx validation
+// ValidateTransactionInternal is a lightweight stateless MetaBased tx validation
 // And should not be used a general validation for non-MB
-func ValidateTransactionStateless(tx *ethtypes.Transaction) error {
+func ValidateTransactionInternal(tx *ethtypes.Transaction) error {
 	acceptedTypes := []uint8{
 		ethtypes.LegacyTxType,     // supported since Berlin hardfork activation
 		ethtypes.DynamicFeeTxType, // supported since London hardfork activation
@@ -106,20 +128,4 @@ func ValidateTransactionStateless(tx *ethtypes.Transaction) error {
 		return fmt.Errorf("%w: gas %v, minimum needed %v", core.ErrIntrinsicGas, tx.Gas(), intrGas)
 	}
 	return nil
-}
-
-// FilterTransactionsStateful depends on the state of the chain to get access to
-// gas parameters, limits of the mempool, account state for nonces
-// so we delegate this to the MetaBased chain for now until op-translator
-// is not aware of the chain state
-func (m *MetaBasedBatchProvider) FilterTransactionsStateful(rawTx []hexutil.Bytes, parsedTxs []*ethtypes.Transaction) (rawFilteredTxStateful []hexutil.Bytes, parsedFilteredTxsStateful []*ethtypes.Transaction, removedCountStateful int) {
-	// TODO: to be implemented in SEQ-278: Stateful transaction validation
-	// https://linear.app/syndicate/issue/SEQ-278/stateful-transaction-validation
-
-	// Everytime a transaction is filtered, it should be removed from both slices
-	rawFilteredTxStateful = rawTx
-	parsedFilteredTxsStateful = parsedTxs
-	removedCountStateful = 0
-
-	return rawFilteredTxStateful, parsedFilteredTxsStateful, removedCountStateful
 }

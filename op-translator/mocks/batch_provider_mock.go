@@ -3,12 +3,16 @@ package mocks
 import (
 	"context"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/stretchr/testify/mock"
 )
 
-type MockBatchProvider struct{}
+type MockBatchProvider struct {
+	mock.Mock
+}
 
 func (m *MockBatchProvider) GetBatch(ctx context.Context, block types.Block) (*types.Batch, error) {
 	batch := &types.Batch{
@@ -20,4 +24,9 @@ func (m *MockBatchProvider) GetBatch(ctx context.Context, block types.Block) (*t
 	}
 
 	return batch, nil
+}
+
+func (m *MockBatchProvider) ValidateBlock(rawTxns []hexutil.Bytes, txns []*rpc.ParsedTransaction) ([]hexutil.Bytes, error) {
+	args := m.Called(rawTxns, txns)
+	return args.Get(0).([]hexutil.Bytes), args.Error(1)
 }

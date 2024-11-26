@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {IsAllowed} from "../interfaces/IsAllowed.sol";
+import {PermissionModule} from "../interfaces/PermissionModule.sol";
 
 interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
@@ -12,7 +12,7 @@ interface IERC20 {
  * @dev This contract allows sequencing based on the caller's token balance.
  * @dev Useful in case Syndicate releases a token and wants to allow only token holders to sequence.
  */
-contract TokenBalanceSequencingModule is IsAllowed {
+contract TokenBalanceSequencingModule is PermissionModule {
     /// @notice The address of the ERC20 token contract.
     address public immutable tokenAddress;
     /// @notice The minimum token balance required to be allowed.

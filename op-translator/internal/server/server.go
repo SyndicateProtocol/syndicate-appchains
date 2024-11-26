@@ -19,7 +19,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func TranslatorHandler(settlementChainRPCURL string, translator any, log gethlog.Logger) (*http.ServeMux, error) {
+func TranslatorHandler(settlementChainRPCURL, translator any, log gethlog.Logger) (*http.ServeMux, error) {
 	// Setup proxy
 	parsedURL, err := url.Parse(settlementChainRPCURL)
 	if err != nil {
