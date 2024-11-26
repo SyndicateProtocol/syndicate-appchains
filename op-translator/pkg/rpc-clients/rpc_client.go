@@ -25,10 +25,12 @@ type IRawRPCClient interface {
 }
 
 type IETHClient interface {
+	BlockNumber(ctx context.Context) (uint64, error)
 	BlockReceipts(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) ([]*ethtypes.Receipt, error)
 	BlockByNumber(ctx context.Context, number *big.Int) (*ethtypes.Block, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*ethtypes.Header, error)
 	TransactionReceipt(ctx context.Context, hash common.Hash) (*ethtypes.Receipt, error)
+	ChainID(ctx context.Context) (*big.Int, error)
 	Close()
 }
 
@@ -112,7 +114,7 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 
 			hashes := make([]common.Hash, len(transactions))
 			for i, tx := range transactions {
-				hashes[i] = common.HexToHash(tx.(string))
+				hashes[i] = common.HexToHash(tx.(string)) //nolint:errcheck // safe to cast to string
 			}
 
 			blockNumber, err := block.GetBlockNumberHex()

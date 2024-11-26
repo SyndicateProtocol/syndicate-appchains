@@ -2,6 +2,7 @@ package flags
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/urfave/cli/v2"
 
@@ -9,7 +10,6 @@ import (
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	"github.com/ethereum-optimism/optimism/op-service/oppprof"
-	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 )
 
 const EnvVarPrefix = "MB_PUBLISHER"
@@ -23,59 +23,29 @@ var (
 	// Required flags
 	//////////////////////////
 
-	// settlement chain
-	SettlementChainRPCURL = &cli.StringFlag{
-		Name:    "settlement-chain-rpc",
-		Usage:   "JSON-RPC URL for the settlement chain",
-		EnvVars: []string{"SETTLEMENT_CHAIN_ADDR"},
+	// op-translator
+	OpTranslatorRPCURL = &cli.StringFlag{
+		Name:    "op-translator-rpc",
+		Usage:   "JSON-RPC URL for the op-translator service",
+		EnvVars: []string{"OP_TRANSLATOR_RPC_URL"},
 	}
-	// state commitments
-	// L2OutputOracleAddr = &cli.StringFlag{
-	// 	Name:    "l2-output-oracle-address",
-	// 	Usage:   "Address of the L2OutputOracle contract",
-	// 	EnvVars: prefixEnvVars("L2_OUTPUT_ORACLE_ADDRESS"),
-	// }
-	// DisputeGameFactoryAddress = &cli.StringFlag{
-	// 	Name:    "game-factory-address",
-	// 	Usage:   "Address of the DisputeGameFactory contract",
-	// 	EnvVars: prefixEnvVars("GAME_FACTORY_ADDRESS"),
-	// }
-	// ProposalInterval = &cli.DurationFlag{
-	// 	Name:    "proposal-interval",
-	// 	Usage:   "Interval between submitting L3 output proposals when the dispute game factory address is set",
-	// 	EnvVars: prefixEnvVars("PROPOSAL_INTERVAL"),
-	// }
-	// DisputeGameType = &cli.UintFlag{
-	// 	Name:    "game-type",
-	// 	Usage:   "Dispute game type to create via the configured DisputeGameFactory",
-	// 	Value:   0,
-	// 	EnvVars: prefixEnvVars("GAME_TYPE"),
-	// }
 
-	// DA commitments
+	BatcherAddress = &cli.StringFlag{
+		Name:    "batcher-address",
+		Usage:   "Address of the Batcher",
+		EnvVars: []string{"BATCHER_ADDRESS"},
+	}
 	BatchInboxAddress = &cli.StringFlag{
 		Name:    "batch-inbox-address",
-		Usage:   "Address of the BatchInbox contract",
+		Usage:   "Address of the Batch Inbox",
 		EnvVars: []string{"BATCH_INBOX_ADDRESS"},
 	}
 
-	// sequencing chain
-	SequencingChainRPCURL = &cli.StringFlag{
-		Name:    "sequencing-chain-rpc",
-		Usage:   "JSON-RPC URL for the Sequencing chain",
-		EnvVars: []string{"SEQUENCING_CHAIN_ADDR"},
-	}
-	SequencingContractAddress = &cli.StringFlag{
-		Name:    "sequencing-contract-address",
-		Usage:   "Address of the Sequencing contract",
-		EnvVars: []string{"SEQUENCING_CONTRACT_ADDRESS"},
-	}
-
-	// L3 Metabased Chain
-	L3RPCURL = &cli.StringFlag{
-		Name:    "l3-rpc",
-		Usage:   "JSON-RPC URL for the L3 Metabased Chain Execution Client",
-		EnvVars: []string{"META_BASED_CHAIN_ADDR"},
+	// AltDA
+	AltDAURL = &cli.StringFlag{
+		Name:    "alt-da-url",
+		Usage:   "URL for the AltDA service",
+		EnvVars: []string{"ALT_DA_URL"},
 	}
 
 	//////////////////////////
@@ -86,32 +56,38 @@ var (
 		Name:    "poll-interval",
 		Usage:   "Interval at which the service will poll the source chains for new data",
 		EnvVars: prefixEnvVars("POLL_INTERVAL"),
+		Value:   time.Second * 60, //nolint:mnd // default value
 	}
 
-// TODO add if necessary
-//
-//	MaxPendingTransactions = &cli.Uint64Flag{
-//		Name:    "max-pending-tx",
-//		Usage:   "The maximum number of pending transactions. 0 for no limit.",
-//		Value:   1,
-//		EnvVars: prefixEnvVars("MAX_PENDING_TX"),
-//	}
+	NetworkTimeout = &cli.DurationFlag{
+		Name:    "network-timeout",
+		Usage:   "Timeout for network operations",
+		EnvVars: prefixEnvVars("NETWORK_TIMEOUT"),
+		Value:   time.Second * 20, //nolint:mnd // default value
+	}
+
+	BlobUploadTimeout = &cli.DurationFlag{
+		Name:    "blob-upload-timeout",
+		Usage:   "Timeout for blob upload operations",
+		EnvVars: prefixEnvVars("BLOB_UPLOAD_TIMEOUT"),
+		Value:   time.Minute * 10, //nolint:mnd // default value
+	}
 )
 
 var requiredFlags = []cli.Flag{
-	SettlementChainRPCURL,
+	OpTranslatorRPCURL,
+	BatcherAddress,
 	BatchInboxAddress,
-	SequencingChainRPCURL,
-	SequencingContractAddress,
-	L3RPCURL,
+	AltDAURL,
 }
 
 var optionalFlags = []cli.Flag{
 	PollInterval,
+	NetworkTimeout,
+	BlobUploadTimeout,
 }
 
 func init() {
-	optionalFlags = append(optionalFlags, txmgr.CLIFlags(EnvVarPrefix)...)
 	optionalFlags = append(optionalFlags, oplog.CLIFlags(EnvVarPrefix)...)
 	optionalFlags = append(optionalFlags, opmetrics.CLIFlags(EnvVarPrefix)...)
 	optionalFlags = append(optionalFlags, oppprof.CLIFlags(EnvVarPrefix)...)
