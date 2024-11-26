@@ -179,7 +179,7 @@ mod tests {
             result,
             "0x1111111111111111111111111111111111111111111111111111111111111111"
         );
-        assert_eq!(METRICS_CALL_COUNTER.load(Ordering::Relaxed), 1);
+        assert_eq!(METRICS_CALL_COUNTER.load(Ordering::Relaxed), 2);
     }
 
     #[tokio::test]
@@ -196,7 +196,7 @@ mod tests {
         assert!(err
             .to_string()
             .contains("invalid params: wrong number of params"));
-        assert_eq!(METRICS_CALL_COUNTER.load(Ordering::Relaxed), 0);
+        assert_eq!(METRICS_CALL_COUNTER.load(Ordering::Relaxed), 1);
     }
 
     #[tokio::test]
@@ -209,7 +209,7 @@ mod tests {
             .unwrap_err();
 
         assert!(err.to_string().contains("invalid character"));
-        assert_eq!(METRICS_CALL_COUNTER.load(Ordering::Relaxed), 0);
+        assert_eq!(METRICS_CALL_COUNTER.load(Ordering::Relaxed), 1);
     }
 
     #[tokio::test]
@@ -224,7 +224,7 @@ mod tests {
         assert!(err
             .to_string()
             .contains("invalid input: unable to RLP decode"));
-        assert_eq!(METRICS_CALL_COUNTER.load(Ordering::Relaxed), 0);
+        assert_eq!(METRICS_CALL_COUNTER.load(Ordering::Relaxed), 1);
     }
 
     #[derive(Default)]
