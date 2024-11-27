@@ -8,6 +8,7 @@
 
 use std::fmt::{Display, Write};
 use std::time::Duration;
+use crate::presentation::json_rpc_errors::Error;
 
 /// Queries all collected metrics into textual representation and returns as a string.
 pub fn metrics(metrics: &impl Metrics) -> String {
@@ -17,7 +18,7 @@ pub fn metrics(metrics: &impl Metrics) -> String {
 /// A service for collecting measurements of properties describing the application usage.
 pub trait Metrics: Display {
     /// Increases the count of calls to `eth_sendRawTransaction` with response latency measurement.
-    fn append_send_raw_transaction_with_duration(&self, duration: Duration, success: bool);
+    fn append_send_raw_transaction_with_duration(&self, duration: Duration, error: Option<&Error>);
 
     /// Encodes all the collected metrics into textual representation and outputs using `writer`.
     fn encode(&self, writer: &mut impl Write) -> std::fmt::Result;
@@ -53,7 +54,7 @@ mod tests {
     }
 
     impl Metrics for DummyMetrics {
-        fn append_send_raw_transaction_with_duration(&self, _duration: Duration, _success: bool) {}
+        fn append_send_raw_transaction_with_duration(&self, _duration: Duration, _error: Option<&Error>) {}
 
         fn encode(&self, writer: &mut impl Write) -> std::fmt::Result {
             writer.write_str(self.0)

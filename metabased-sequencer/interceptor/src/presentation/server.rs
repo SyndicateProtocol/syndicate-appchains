@@ -108,12 +108,13 @@ mod tests {
         use crate::application::Metrics;
         use std::fmt::Write;
         use std::time::Duration;
+        use crate::presentation::json_rpc_errors::Error;
 
         impl Metrics for &'static str {
             fn append_send_raw_transaction_with_duration(
                 &self,
                 _duration: Duration,
-                _success: bool,
+                _error: Option<&Error>,
             ) {
                 unimplemented!("Unexpected call")
             }
