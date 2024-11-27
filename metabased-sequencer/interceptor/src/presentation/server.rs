@@ -57,6 +57,7 @@ where
     module.register_async_method("eth_sendRawTransaction", jsonrpc::send_raw_transaction)?;
     module.register_method(METRICS_RPC, jsonrpc::metrics)?;
     module.register_method("health", jsonrpc::health)?;
+
     Ok(module)
 }
 

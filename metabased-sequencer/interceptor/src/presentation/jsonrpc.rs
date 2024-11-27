@@ -13,6 +13,7 @@ use alloy::hex::ToHexExt;
 use jsonrpsee::types::{ErrorObject, Params};
 use serde::Serialize;
 use std::fmt::{Debug, Display, Formatter};
+use std::future::Future;
 use std::sync::Arc;
 
 /// An error type for JSON-RPC endpoints.
@@ -100,27 +101,45 @@ where
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
     S: Stopwatch,
 {
-    let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap())?;
-    let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
-    if arr.len() != 1 {
-        return Err(InvalidParams(WrongParamCount(arr.len())).into());
-    }
-    let item = arr.pop().ok_or(InvalidParams(MissingParam))?; // should be impossible
-    let str = item.as_str().ok_or(InvalidParams(NotHexEncoded))?;
-    let bytes = hex::decode(str)?;
-    let bytes = Bytes::from(bytes);
-    let chain = ctx.chain_service();
     let metrics = ctx.metrics_service();
     let start = ctx.stopwatch_service().start();
 
-    let result = application::send_raw_transaction(bytes, chain).await;
+    // Use a wrapper to handle metrics
+    with_metrics(
+        metrics,
+        start,
+        async {
+            let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap())?;
+            let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
+            if arr.len() != 1 {
+                return Err(InvalidParams(WrongParamCount(arr.len())));
+            }
+            let item = arr.pop().ok_or(InvalidParams(MissingParam))?;
+            let str = item.as_str().ok_or(InvalidParams(NotHexEncoded))?;
+            let bytes = hex::decode(str)?;
+            let bytes = Bytes::from(bytes);
+
+            let chain = ctx.chain_service();
+            let tx_hash = application::send_raw_transaction(bytes, chain).await?;
+            Ok(tx_hash.encode_hex_with_prefix())
+        }
+    ).await
+}
+
+// Capture whole content of function `f` for metric
+async fn with_metrics<T>(
+    metrics: &impl Metrics,
+    start: impl RunningStopwatch,
+    f: impl Future<Output = Result<T, Error>>,
+) -> Result<T, JsonRpcError<()>> {
+    let result = f.await;
 
     metrics.append_send_raw_transaction_with_duration(
         start.elapsed(),
         result.as_ref().err()
     );
 
-    Ok(result?.encode_hex_with_prefix())
+    result.map_err(Into::into)
 }
 
 /// The JSON-RPC endpoint for Prometheus metrics scraper to collect data from.
@@ -204,9 +223,8 @@ mod tests {
             .to_string()
             .contains("invalid params: wrong number of params"));
 
-        // TODO this is WRONG CODE BEHAVIOR and needs a refactor
         assert!(services_arc.metrics_service().metrics_called.get());
-        assert_eq!(services_arc.metrics_service().last_error.get(), "");
+        assert_eq!(services_arc.metrics_service().last_error.get(), "invalid_params.wrong_count");
     }
 
     #[tokio::test]
@@ -219,9 +237,8 @@ mod tests {
             .await
             .unwrap_err();
 
-        // TODO this is WRONG CODE BEHAVIOR and needs a refactor
         assert!(services_arc.metrics_service().metrics_called.get());
-        assert_eq!(services_arc.metrics_service().last_error.get(), "");
+        assert_eq!(services_arc.metrics_service().last_error.get(), "invalid_params.invalid_hex");
     }
 
     #[tokio::test]
