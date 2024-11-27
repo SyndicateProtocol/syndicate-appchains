@@ -157,7 +157,7 @@ func (s *Server) Start(ctx context.Context) {
 		defer s.wg.Done()
 		// ErrServerClosed == Graceful shutdown
 		if err := s.srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			s.log.Error("RPC server error", "error", err)
+			s.log.Error("op-translator: RPC server error", "error", err)
 			panic(err)
 		}
 	}()
