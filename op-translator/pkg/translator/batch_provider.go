@@ -133,7 +133,7 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 	m.log.Debug("translating block", "block_number", blockNumber, "block_hash", blockHash, "receipts", receipts)
 
 	txns := m.FilterReceipts(receipts)
-	m.log.Debug("translating block", "block_number", blockNumber, "block_hash", blockHash, "filtered_transactions", txns)
+	m.log.Debug("translating block, filtered txs", "block_number", blockNumber, "block_hash", blockHash, "filtered_transactions", txns)
 
 	parentHash, err := m.getParentBlockHash(ctx, blockNumber)
 	if err != nil {
@@ -155,7 +155,7 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 	if err != nil {
 		return nil, err
 	}
-	m.log.Debug("translating block", "block_number", blockNumber, "block_hash", blockHash, "batch", batch)
+	m.log.Debug("translating block, batch produced", "block_number", blockNumber, "block_hash", blockHash, "batch", batch)
 
 	m.Metrics.RecordBatchProviderBatchProcessed("get_batch") // success count metric
 
