@@ -174,82 +174,82 @@ mod tests {
 
     #[test_case([400], r#"# HELP rpc_calls Number of RPC method calls received.
 # TYPE rpc_calls counter
-rpc_calls_total{rpc_method="eth_sendRawTransaction"} 1
+rpc_calls_total{rpc_method="eth_sendRawTransaction",error="none"} 1
 # HELP rpc_calls_latency Latency of RPC method calls responses.
 # TYPE rpc_calls_latency histogram
-rpc_calls_latency_sum{rpc_method="eth_sendRawTransaction"} 0.4
-rpc_calls_latency_count{rpc_method="eth_sendRawTransaction"} 1
-rpc_calls_latency_bucket{le="0.01",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.02",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.04",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.08",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.16",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.32",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.64",rpc_method="eth_sendRawTransaction"} 1
-rpc_calls_latency_bucket{le="1.28",rpc_method="eth_sendRawTransaction"} 1
-rpc_calls_latency_bucket{le="2.56",rpc_method="eth_sendRawTransaction"} 1
-rpc_calls_latency_bucket{le="5.12",rpc_method="eth_sendRawTransaction"} 1
-rpc_calls_latency_bucket{le="+Inf",rpc_method="eth_sendRawTransaction"} 1
+rpc_calls_latency_sum{rpc_method="eth_sendRawTransaction",error="none"} 0.4
+rpc_calls_latency_count{rpc_method="eth_sendRawTransaction",error="none"} 1
+rpc_calls_latency_bucket{le="0.01",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.02",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.04",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.08",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.16",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.32",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.64",rpc_method="eth_sendRawTransaction",error="none"} 1
+rpc_calls_latency_bucket{le="1.28",rpc_method="eth_sendRawTransaction",error="none"} 1
+rpc_calls_latency_bucket{le="2.56",rpc_method="eth_sendRawTransaction",error="none"} 1
+rpc_calls_latency_bucket{le="5.12",rpc_method="eth_sendRawTransaction",error="none"} 1
+rpc_calls_latency_bucket{le="+Inf",rpc_method="eth_sendRawTransaction",error="none"} 1
 # EOF
 "#; "One in middle bucket")]
     #[test_case([400, 600], r#"# HELP rpc_calls Number of RPC method calls received.
 # TYPE rpc_calls counter
-rpc_calls_total{rpc_method="eth_sendRawTransaction"} 2
+rpc_calls_total{rpc_method="eth_sendRawTransaction",error="none"} 2
 # HELP rpc_calls_latency Latency of RPC method calls responses.
 # TYPE rpc_calls_latency histogram
-rpc_calls_latency_sum{rpc_method="eth_sendRawTransaction"} 1.0
-rpc_calls_latency_count{rpc_method="eth_sendRawTransaction"} 2
-rpc_calls_latency_bucket{le="0.01",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.02",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.04",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.08",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.16",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.32",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.64",rpc_method="eth_sendRawTransaction"} 2
-rpc_calls_latency_bucket{le="1.28",rpc_method="eth_sendRawTransaction"} 2
-rpc_calls_latency_bucket{le="2.56",rpc_method="eth_sendRawTransaction"} 2
-rpc_calls_latency_bucket{le="5.12",rpc_method="eth_sendRawTransaction"} 2
-rpc_calls_latency_bucket{le="+Inf",rpc_method="eth_sendRawTransaction"} 2
+rpc_calls_latency_sum{rpc_method="eth_sendRawTransaction",error="none"} 1.0
+rpc_calls_latency_count{rpc_method="eth_sendRawTransaction",error="none"} 2
+rpc_calls_latency_bucket{le="0.01",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.02",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.04",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.08",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.16",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.32",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.64",rpc_method="eth_sendRawTransaction",error="none"} 2
+rpc_calls_latency_bucket{le="1.28",rpc_method="eth_sendRawTransaction",error="none"} 2
+rpc_calls_latency_bucket{le="2.56",rpc_method="eth_sendRawTransaction",error="none"} 2
+rpc_calls_latency_bucket{le="5.12",rpc_method="eth_sendRawTransaction",error="none"} 2
+rpc_calls_latency_bucket{le="+Inf",rpc_method="eth_sendRawTransaction",error="none"} 2
 # EOF
 "#; "Multiple in same bucket")]
     #[test_case([1, 200], r#"# HELP rpc_calls Number of RPC method calls received.
 # TYPE rpc_calls counter
-rpc_calls_total{rpc_method="eth_sendRawTransaction"} 2
+rpc_calls_total{rpc_method="eth_sendRawTransaction",error="none"} 2
 # HELP rpc_calls_latency Latency of RPC method calls responses.
 # TYPE rpc_calls_latency histogram
-rpc_calls_latency_sum{rpc_method="eth_sendRawTransaction"} 0.201
-rpc_calls_latency_count{rpc_method="eth_sendRawTransaction"} 2
-rpc_calls_latency_bucket{le="0.01",rpc_method="eth_sendRawTransaction"} 1
-rpc_calls_latency_bucket{le="0.02",rpc_method="eth_sendRawTransaction"} 1
-rpc_calls_latency_bucket{le="0.04",rpc_method="eth_sendRawTransaction"} 1
-rpc_calls_latency_bucket{le="0.08",rpc_method="eth_sendRawTransaction"} 1
-rpc_calls_latency_bucket{le="0.16",rpc_method="eth_sendRawTransaction"} 1
-rpc_calls_latency_bucket{le="0.32",rpc_method="eth_sendRawTransaction"} 2
-rpc_calls_latency_bucket{le="0.64",rpc_method="eth_sendRawTransaction"} 2
-rpc_calls_latency_bucket{le="1.28",rpc_method="eth_sendRawTransaction"} 2
-rpc_calls_latency_bucket{le="2.56",rpc_method="eth_sendRawTransaction"} 2
-rpc_calls_latency_bucket{le="5.12",rpc_method="eth_sendRawTransaction"} 2
-rpc_calls_latency_bucket{le="+Inf",rpc_method="eth_sendRawTransaction"} 2
+rpc_calls_latency_sum{rpc_method="eth_sendRawTransaction",error="none"} 0.201
+rpc_calls_latency_count{rpc_method="eth_sendRawTransaction",error="none"} 2
+rpc_calls_latency_bucket{le="0.01",rpc_method="eth_sendRawTransaction",error="none"} 1
+rpc_calls_latency_bucket{le="0.02",rpc_method="eth_sendRawTransaction",error="none"} 1
+rpc_calls_latency_bucket{le="0.04",rpc_method="eth_sendRawTransaction",error="none"} 1
+rpc_calls_latency_bucket{le="0.08",rpc_method="eth_sendRawTransaction",error="none"} 1
+rpc_calls_latency_bucket{le="0.16",rpc_method="eth_sendRawTransaction",error="none"} 1
+rpc_calls_latency_bucket{le="0.32",rpc_method="eth_sendRawTransaction",error="none"} 2
+rpc_calls_latency_bucket{le="0.64",rpc_method="eth_sendRawTransaction",error="none"} 2
+rpc_calls_latency_bucket{le="1.28",rpc_method="eth_sendRawTransaction",error="none"} 2
+rpc_calls_latency_bucket{le="2.56",rpc_method="eth_sendRawTransaction",error="none"} 2
+rpc_calls_latency_bucket{le="5.12",rpc_method="eth_sendRawTransaction",error="none"} 2
+rpc_calls_latency_bucket{le="+Inf",rpc_method="eth_sendRawTransaction",error="none"} 2
 # EOF
 "#; "Multiple in different buckets")]
     #[test_case([9999], r#"# HELP rpc_calls Number of RPC method calls received.
 # TYPE rpc_calls counter
-rpc_calls_total{rpc_method="eth_sendRawTransaction"} 1
+rpc_calls_total{rpc_method="eth_sendRawTransaction",error="none"} 1
 # HELP rpc_calls_latency Latency of RPC method calls responses.
 # TYPE rpc_calls_latency histogram
-rpc_calls_latency_sum{rpc_method="eth_sendRawTransaction"} 9.999
-rpc_calls_latency_count{rpc_method="eth_sendRawTransaction"} 1
-rpc_calls_latency_bucket{le="0.01",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.02",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.04",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.08",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.16",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.32",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="0.64",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="1.28",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="2.56",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="5.12",rpc_method="eth_sendRawTransaction"} 0
-rpc_calls_latency_bucket{le="+Inf",rpc_method="eth_sendRawTransaction"} 1
+rpc_calls_latency_sum{rpc_method="eth_sendRawTransaction",error="none"} 9.999
+rpc_calls_latency_count{rpc_method="eth_sendRawTransaction",error="none"} 1
+rpc_calls_latency_bucket{le="0.01",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.02",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.04",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.08",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.16",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.32",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="0.64",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="1.28",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="2.56",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="5.12",rpc_method="eth_sendRawTransaction",error="none"} 0
+rpc_calls_latency_bucket{le="+Inf",rpc_method="eth_sendRawTransaction",error="none"} 1
 # EOF
 "#; "One in bucket beyond all")]
     fn test_collecting_metrics_records_all_durations(
