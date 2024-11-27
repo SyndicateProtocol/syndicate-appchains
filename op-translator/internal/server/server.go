@@ -145,7 +145,7 @@ func NewServer(
 }
 
 func (s *Server) Start(ctx context.Context) {
-	s.log.Debug("Starting JSON-RPC server", "address", s.srv.Addr)
+	s.log.Debug("Starting op-translator JSON-RPC server", "address", s.srv.Addr)
 	ctx, cancel := context.WithCancel(ctx)
 	s.ctx = ctx
 	s.cancel = cancel
