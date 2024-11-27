@@ -184,7 +184,7 @@ mod tests {
             "0x1111111111111111111111111111111111111111111111111111111111111111"
         );
 
-        assert_eq!(services_arc.metrics_service().metrics_called.get(), true);
+        assert!(services_arc.metrics_service().metrics_called.get());
         assert_eq!(services_arc.metrics_service().last_error.get(), "none");
     }
 
@@ -205,7 +205,7 @@ mod tests {
             .contains("invalid params: wrong number of params"));
 
         // TODO this is WRONG CODE BEHAVIOR and needs a refactor
-        assert_eq!(services_arc.metrics_service().metrics_called.get(), false);
+        assert!(services_arc.metrics_service().metrics_called.get());
         assert_eq!(services_arc.metrics_service().last_error.get(), "");
     }
 
@@ -215,12 +215,12 @@ mod tests {
         let params = Params::new(Some(r#"["0x not hex"]"#));
 
         let services_arc = Arc::new(services);
-        let err = send_raw_transaction(params, services_arc.clone(), Default::default())
+        let _err = send_raw_transaction(params, services_arc.clone(), Default::default())
             .await
             .unwrap_err();
 
         // TODO this is WRONG CODE BEHAVIOR and needs a refactor
-        assert_eq!(services_arc.metrics_service().metrics_called.get(), false);
+        assert!(services_arc.metrics_service().metrics_called.get());
         assert_eq!(services_arc.metrics_service().last_error.get(), "");
     }
 
@@ -239,7 +239,7 @@ mod tests {
             .contains("invalid input: unable to RLP decode"));
 
 
-        assert_eq!(services_arc.metrics_service().metrics_called.get(), true);
+        assert!(services_arc.metrics_service().metrics_called.get());
         assert_eq!(services_arc.metrics_service().last_error.get(), "invalid_input.rlp_decode_error");
     }
 
