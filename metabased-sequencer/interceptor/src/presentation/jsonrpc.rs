@@ -83,13 +83,6 @@ impl JsonRpcError<()> {
     }
 }
 
-/// The JSON-RPC endpoint for `eth_sendRawTransaction`.
-///
-/// # Parameters
-/// Expects an array of a single element.
-///
-/// * Data: hex encoded string that contains signed and serialized transaction with an optional `0x`
-///   prefix.
 pub async fn send_raw_transaction<Chain, M, S>(
     params: Params<'static>,
     ctx: Arc<Services<Chain, M, S>>,
@@ -103,27 +96,35 @@ where
 {
     let metrics = ctx.metrics_service();
     let start = ctx.stopwatch_service().start();
+    let chain = ctx.chain_service();
 
-    // Use a wrapper to handle metrics
     with_metrics(
         metrics,
         start,
-        async {
-            let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap())?;
-            let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
-            if arr.len() != 1 {
-                return Err(InvalidParams(WrongParamCount(arr.len())));
-            }
-            let item = arr.pop().ok_or(InvalidParams(MissingParam))?;
-            let str = item.as_str().ok_or(InvalidParams(NotHexEncoded))?;
-            let bytes = hex::decode(str)?;
-            let bytes = Bytes::from(bytes);
-
-            let chain = ctx.chain_service();
-            let tx_hash = application::send_raw_transaction(bytes, chain).await?;
-            Ok(tx_hash.encode_hex_with_prefix())
-        }
+        handle_send_raw_transaction(params, chain)
     ).await
+}
+
+async fn handle_send_raw_transaction<Chain>(
+    params: Params<'static>,
+    chain: &Chain,
+) -> Result<String, Error>
+where
+    Chain: MetabasedSequencerChainService,
+    Error: From<<Chain as MetabasedSequencerChainService>::Error>,
+{
+    let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap())?;
+    let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
+    if arr.len() != 1 {
+        return Err(InvalidParams(WrongParamCount(arr.len())));
+    }
+    let item = arr.pop().ok_or(InvalidParams(MissingParam))?;
+    let str = item.as_str().ok_or(InvalidParams(NotHexEncoded))?;
+    let bytes = hex::decode(str)?;
+    let bytes = Bytes::from(bytes);
+
+    let tx_hash = application::send_raw_transaction(bytes, chain).await?;
+    Ok(tx_hash.encode_hex_with_prefix())
 }
 
 // Capture whole content of function `f` for metric
@@ -136,10 +137,10 @@ async fn with_metrics<T>(
 
     metrics.append_send_raw_transaction_with_duration(
         start.elapsed(),
-        result.as_ref().err()
+        result.as_ref().err(),
     );
 
-    result.map_err(Into::into)
+    result.map_err(JsonRpcError::from)
 }
 
 /// The JSON-RPC endpoint for Prometheus metrics scraper to collect data from.
