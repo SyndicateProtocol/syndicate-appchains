@@ -1,12 +1,8 @@
 use crate::application;
-use crate::application::{Metrics, RunningStopwatch, Stopwatch};
+use crate::application::{Metrics, RunningStopwatch, SendRawTransactionParams, Stopwatch};
 use crate::domain::primitives::Bytes;
 use crate::domain::MetabasedSequencerChainService;
 use crate::presentation::json_rpc_errors::Error;
-use crate::presentation::json_rpc_errors::Error::InvalidParams;
-use crate::presentation::json_rpc_errors::InvalidParamsError::{
-    MissingParam, NotAnArray, NotHexEncoded, WrongParamCount,
-};
 use crate::presentation::services::Services;
 use alloy::hex;
 use alloy::hex::ToHexExt;
@@ -83,6 +79,13 @@ impl JsonRpcError<()> {
     }
 }
 
+/// The JSON-RPC endpoint for `eth_sendRawTransaction`.
+///
+/// # Parameters
+/// Expects an array of a single element.
+///
+/// * Data: hex encoded string that contains signed and serialized transaction with an optional `0x`
+///   prefix.
 pub async fn send_raw_transaction<Chain, M, S>(
     params: Params<'static>,
     ctx: Arc<Services<Chain, M, S>>,
@@ -105,7 +108,7 @@ where
     ).await
 }
 
-async fn handle_send_raw_transaction<Chain>(
+pub async fn handle_send_raw_transaction<Chain>(
     params: Params<'static>,
     chain: &Chain,
 ) -> Result<String, Error>
@@ -113,15 +116,9 @@ where
     Chain: MetabasedSequencerChainService,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
 {
-    let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap())?;
-    let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
-    if arr.len() != 1 {
-        return Err(InvalidParams(WrongParamCount(arr.len())));
-    }
-    let item = arr.pop().ok_or(InvalidParams(MissingParam))?;
-    let str = item.as_str().ok_or(InvalidParams(NotHexEncoded))?;
-    let bytes = hex::decode(str)?;
-    let bytes = Bytes::from(bytes);
+    let params = SendRawTransactionParams::try_from(params)?;
+    let bytes = hex::decode(&params.raw_tx)
+        .map(Bytes::from)?;
 
     let tx_hash = application::send_raw_transaction(bytes, chain).await?;
     Ok(tx_hash.encode_hex_with_prefix())
@@ -259,6 +256,29 @@ mod tests {
 
         assert!(services_arc.metrics_service().metrics_called.get());
         assert_eq!(services_arc.metrics_service().last_error.get(), "invalid_input.rlp_decode_error");
+    }
+
+    // handler tests
+    #[tokio::test]
+    async fn test_handle_valid_transaction() {
+        let chain = MockChain;
+        let params = Params::new(Some(r#"["0x02f871018319cb1d808502b95ddeef82520894e94f1fa4f27d9d288ffea234bb62e1fbc086ca0c877654752ccd929080c001a0fd107a1713c5b89e4affcf616b2bdc517a70ce9735c4d67d142fd9211f2c6d8ea032fac076f33f22c968380c02331be61da3f157f90e72a121d5fac80313745779"]"#));
+
+        let result = handle_send_raw_transaction(params, &chain).await;
+        assert!(result.is_ok());
+        assert_eq!(
+            result.unwrap(),
+            "0x1111111111111111111111111111111111111111111111111111111111111111"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_invalid_hex() {
+        let chain = MockChain;
+        let params = Params::new(Some(r#"["not hex"]"#));
+
+        let result = handle_send_raw_transaction(params, &chain).await;
+        assert!(result.is_err());
     }
 
     #[derive(Default)]
