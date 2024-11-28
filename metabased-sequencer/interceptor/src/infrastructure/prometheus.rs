@@ -52,49 +52,8 @@ impl PrometheusMetrics {
             rpc_calls_duration,
         }
     }
-
-    // // mapping for Prometheus
-    // pub fn error_to_static_str(error: Option<&Error>) -> &'static str {
-    //     match error {
-    //         None => "none",
-    //         Some(error) => match error {
-    //             Error::InvalidRequest => "invalid_request",
-    //             Error::MethodNotFound(ref _method) => "method_not_found",  // Note: We lose the specific method name here
-    //             Error::Internal => "internal_error",
-    //             Error::Parse => "parse_error",
-    //             Error::ResourceNotFound => "resource_not_found",
-    //             Error::ResourceUnavailable => "resource_unavailable",
-    //             Error::MethodNotSupported => "method_not_supported",
-    //             Error::LimitExceeded => "limit_exceeded",
-    //             Error::Server => "server_error",
-    //
-    //             Error::Contract(ref _contract_error) => "contract_error",
-    //
-    //             Error::InvalidParams(param_error) => match param_error {
-    //                 InvalidParamsError::BadSignature => "invalid_params.bad_signature",
-    //                 InvalidParamsError::NonceTooLow => "invalid_params.nonce_too_low",
-    //                 InvalidParamsError::InvalidHex => "invalid_params.invalid_hex",
-    //                 InvalidParamsError::NotAnArray => "invalid_params.not_array",
-    //                 InvalidParamsError::WrongParamCount(_) => "invalid_params.wrong_count",
-    //                 InvalidParamsError::MissingParam => "invalid_params.missing_param",
-    //                 InvalidParamsError::NotHexEncoded => "invalid_params.not_hex_encoded",
-    //             },
-    //
-    //             Error::InvalidInput(input_error) => match input_error {
-    //                 InvalidInputError::InvalidJson => "invalid_input.invalid_json",
-    //                 InvalidInputError::InvalidUint => "invalid_input.invalid_uint",
-    //                 InvalidInputError::InvalidTransactionSignature => "invalid_input.invalid_tx_signature",
-    //                 InvalidInputError::MissingGasPrice => "invalid_input.missing_gas_price",
-    //                 InvalidInputError::UnableToRLPDecode => "invalid_input.rlp_decode_error",
-    //             },
-    //
-    //             Error::TransactionRejected(rejection) => match rejection {
-    //                 Rejection::FeeTooHigh => "tx_rejected.fee_too_high",
-    //             },
-    //         }
-    //     }
-    // }
 }
+
 pub fn error_to_static_str(error: Option<&Error>) -> &'static str {
     match error {
         None => "none",
