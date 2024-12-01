@@ -6,10 +6,10 @@
 -include .env
 
 # deploy MetabasedFactory to Base Sepolia
-deploy-metabased-factory :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedFactory --rpc-url metabased_stratos --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+deploy-metabased-factory :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedFactory --rpc-url metabased_stratos --private-key ${ETH_PRIVATE_KEY} --skip-simulation --legacy --broadcast -vv
 
 # deploy DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule to Metabased Testnet
-deploy-metabased-sequencerchain-plus-setup-with-always-allow-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url metabased_testnet --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+deploy-metabased-sequencerchain-plus-setup-with-always-allow-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url metabased_stratos --private-key ${ETH_PRIVATE_KEY} --skip-simulation --legacy --broadcast -vv
 
 # run AddBatchTransactionsToMetabasedSequencerChainContract script on Base Sepolia
 add-batch-transactions-to-metabased-sequencerchain :; forge script script/AddBatchTransactionsToMetabasedSequencerChainContract.s.sol:AddBatchTransactionsToMetabasedSequencerChainContract --rpc-url base_sepolia --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
