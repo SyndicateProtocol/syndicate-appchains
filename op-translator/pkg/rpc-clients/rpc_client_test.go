@@ -17,6 +17,7 @@ import (
 )
 
 func TestConnect(t *testing.T) {
+	mockMetrics := mocks.NewMockMetrics()
 	tests := []struct {
 		name    string
 		address string
@@ -28,7 +29,7 @@ func TestConnect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			client, err := rpc.Connect(tt.address)
+			client, err := rpc.Connect(tt.address, mockMetrics)
 
 			if tt.wantErr {
 				assert.Error(t, err, "expected an error but got none")
@@ -44,7 +45,8 @@ func TestConnect(t *testing.T) {
 }
 
 func TestCloseConnection(t *testing.T) {
-	client, err := rpc.Connect("http://localhost:8545")
+	mockMetrics := mocks.NewMockMetrics()
+	client, err := rpc.Connect("http://localhost:8545", mockMetrics)
 	require.NoError(t, err)
 	require.NotNil(t, client)
 
@@ -150,12 +152,13 @@ func TestGetReceiptsByBlocks(t *testing.T) {
 			mockFetcher := new(mocks.MockReceiptsFetcher)
 			mockEthClient := new(mocks.MockEthClient)
 			mockRawClient := new(mocks.MockRawRPCClient)
+			mockMetrics := mocks.NewMockMetrics()
 
 			if tt.setupMocks != nil {
 				tt.setupMocks(mockFetcher, mockEthClient, mockRawClient)
 			}
 
-			rpcClient := rpc.NewRPCClient(mockEthClient, mockRawClient, mockFetcher)
+			rpcClient := rpc.NewRPCClient(mockEthClient, mockRawClient, mockFetcher, mockMetrics)
 
 			result, err := rpcClient.GetReceiptsByBlocks(context.Background(), tt.blocks)
 			if tt.expectError {

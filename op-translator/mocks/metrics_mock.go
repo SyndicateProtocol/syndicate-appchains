@@ -27,6 +27,10 @@ func NewMockMetrics() *MockMetrics {
 	m.On("RecordBackfillProviderBackfillResponseStatus", mock.Anything, mock.Anything).Return()
 	m.On("RecordBackfillProviderBackfillingWindow", mock.Anything).Return()
 
+	// RPC Client
+	m.On("RecordRPCRequestDuration", mock.Anything, mock.Anything, mock.Anything).Return()
+	m.On("RecordRPCRequestError", mock.Anything, mock.Anything, mock.Anything).Return()
+
 	return m
 }
 
@@ -74,4 +78,14 @@ func (m *MockMetrics) RecordBackfillProviderBackfillResponseStatus(method string
 
 func (m *MockMetrics) RecordBackfillProviderBackfillingWindow(inWindow bool) {
 	m.Called(inWindow)
+}
+
+// RPC Client
+
+func (m *MockMetrics) RecordRPCRequestDuration(clientType string, method string, duration float64) {
+	m.Called(clientType, method, duration)
+}
+
+func (m *MockMetrics) RecordRPCRequestError(clientType string, method string, errMsg string) {
+	m.Called(clientType, method, errMsg)
 }

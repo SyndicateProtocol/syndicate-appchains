@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"math/big"
 	"sync"
+	"time"
 
+	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/metrics"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
 
@@ -36,25 +38,29 @@ type IETHClient interface {
 
 type RPCClient struct {
 	client          IETHClient
+	clientType      string
 	rawClient       IRawRPCClient
 	receiptsFetcher IReceiptsFetcher
+	metrics         metrics.IMetrics
 }
 
-func NewRPCClient(client IETHClient, rawClient IRawRPCClient, receiptsFetcher IReceiptsFetcher) *RPCClient {
+func NewRPCClient(client IETHClient, rawClient IRawRPCClient, receiptsFetcher IReceiptsFetcher, metrics metrics.IMetrics, clientType string) *RPCClient {
 	return &RPCClient{
 		client:          client,
 		rawClient:       rawClient,
 		receiptsFetcher: receiptsFetcher,
+		metrics:         metrics,
+		clientType:      clientType,
 	}
 }
 
-func Connect(address string) (*RPCClient, error) {
+func Connect(address string, metrics metrics.IMetrics, clientType string) (*RPCClient, error) {
 	c, err := rpc.Dial(address)
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial address %s: %w", address, err)
 	}
 	log.Debug().Msgf("RPC connection established: %s", address)
-	return NewRPCClient(ethclient.NewClient(c), c, NewReceiptFetcher(c)), nil
+	return NewRPCClient(ethclient.NewClient(c), c, NewReceiptFetcher(c), metrics, clientType), nil
 }
 
 func (c *RPCClient) AsEthClient() IETHClient {
@@ -67,18 +73,24 @@ func (c *RPCClient) CloseConnection() {
 }
 
 func (c *RPCClient) GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error) {
+	start := time.Now()
 	var block types.Block
 	err := c.rawClient.CallContext(ctx, &block, "eth_getBlockByNumber", number, withTransactions)
+	c.metrics.RecordRPCRequestDuration(c.clientType, "eth_getBlockByNumber", time.Since(start).Seconds())
 	if err != nil {
+		c.metrics.RecordRPCRequestError(c.clientType, "eth_getBlockByNumber", err.Error())
 		return nil, err
 	}
 	return block, nil
 }
 
 func (c *RPCClient) GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (types.Block, error) {
+	start := time.Now()
 	var block types.Block
 	err := c.rawClient.CallContext(ctx, &block, "eth_getBlockByHash", hash, withTransactions)
+	c.metrics.RecordRPCRequestDuration(c.clientType, "eth_getBlockByHash", time.Since(start).Seconds())
 	if err != nil {
+		c.metrics.RecordRPCRequestError(c.clientType, "eth_getBlockByHash", err.Error())
 		return nil, err
 	}
 	return block, nil

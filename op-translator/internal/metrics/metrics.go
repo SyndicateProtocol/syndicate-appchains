@@ -28,6 +28,10 @@ type IMetrics interface {
 	RecordBackfillProviderBackfillDuration(method string, duration float64)
 	RecordBackfillProviderBackfillResponseStatus(method string, status int)
 	RecordBackfillProviderBackfillingWindow(inWindow bool)
+
+	// RPC Client metrics
+	RecordRPCRequestDuration(clientType string, method string, duration float64)
+	RecordRPCRequestError(clientType string, method string, errMsg string)
 }
 
 type Metrics struct {
@@ -46,6 +50,10 @@ type Metrics struct {
 	backfillProviderBackfillDuration       *prometheus.HistogramVec
 	backfillProviderBackfillResponseStatus *prometheus.CounterVec
 	backfillProviderBackfillingWindow      prometheus.Gauge
+
+	// RPC Client metrics
+	rpcRequestDuration *prometheus.HistogramVec
+	rpcRequestErrors   *prometheus.CounterVec
 }
 
 func NewMetrics() *Metrics {
@@ -135,6 +143,25 @@ func NewMetrics() *Metrics {
 			Name:      "backfilling_window",
 			Help:      "Whether we are backfilling (1) or processing live blocks (0)",
 		}),
+
+		// RPC Client
+		rpcRequestDuration: promauto.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Namespace: "op_translator",
+				Name:      "rpc_request_duration_seconds",
+				Help:      "Duration of RPC requests in seconds",
+				Buckets:   prometheus.DefBuckets,
+			},
+			[]string{"client_type", "method"},
+		),
+		rpcRequestErrors: promauto.NewCounterVec(
+			prometheus.CounterOpts{
+				Namespace: "op_translator",
+				Name:      "rpc_request_errors_total",
+				Help:      "Total number of RPC request errors",
+			},
+			[]string{"client_type", "method", "error"},
+		),
 	}
 }
 
@@ -186,4 +213,14 @@ func (m *Metrics) RecordBackfillProviderBackfillingWindow(inWindow bool) {
 	} else {
 		m.backfillProviderBackfillingWindow.Set(0)
 	}
+}
+
+// RPC Client metrics
+
+func (m *Metrics) RecordRPCRequestDuration(clientType string, method string, duration float64) {
+	m.rpcRequestDuration.WithLabelValues(clientType, method).Observe(duration)
+}
+
+func (m *Metrics) RecordRPCRequestError(clientType string, method string, errMsg string) {
+	m.rpcRequestErrors.WithLabelValues(clientType, method, errMsg).Inc()
 }

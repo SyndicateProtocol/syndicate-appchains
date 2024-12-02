@@ -107,7 +107,7 @@ func (p *PublisherService) initMetrics(cfg *CLIConfig) {
 
 // initRPCClient creates the RPC client for the op-translator
 func (p *PublisherService) initRPCClient(cfg *CLIConfig) error {
-	opTranslatorClient, err := rpc.Connect(cfg.OpTranslatorRPCURL)
+	opTranslatorClient, err := rpc.Connect(cfg.OpTranslatorRPCURL, p.metrics, "op-translator")
 	if err != nil {
 		return fmt.Errorf("failed to dial L3 chain RPC: %w", err)
 	}

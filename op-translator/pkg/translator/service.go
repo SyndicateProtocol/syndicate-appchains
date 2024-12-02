@@ -95,19 +95,19 @@ func (t *TranslatorService) initFromCLIConfig(ctx context.Context, version strin
 }
 
 func (t *TranslatorService) initRPCServers(_ context.Context, cfg *CLIConfig) error {
-	settlementChain, err := rpc.Connect(cfg.SettlementChainRPCURL)
+	settlementChain, err := rpc.Connect(cfg.SettlementChainRPCURL, t.metricsCollector, "settlement")
 	if err != nil {
 		return errors.New("failed to initialize settlement chain")
 	}
 	t.settlementChainRPC = settlementChain
 
-	sequencingChain, err := rpc.Connect(cfg.SequencingChainRPCURL)
+	sequencingChain, err := rpc.Connect(cfg.SequencingChainRPCURL, t.metricsCollector, "sequencing")
 	if err != nil {
 		return errors.New("failed to initialize sequencing chain")
 	}
 	t.sequencingChainRPC = sequencingChain
 
-	metaBasedChain, err := rpc.Connect(cfg.MetaBasedChainRPCURL)
+	metaBasedChain, err := rpc.Connect(cfg.MetaBasedChainRPCURL, t.metricsCollector, "metabased")
 	if err != nil {
 		return errors.New("failed to initialize metabased chain")
 	}
