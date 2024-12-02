@@ -45,6 +45,7 @@ func Main(version string) cliapp.LifecycleAction {
 func TranslatorServiceFromCLIConfig(ctx context.Context, version string, cfg *CLIConfig, log gethlog.Logger) (*TranslatorService, error) {
 	var t TranslatorService
 	if err := t.initFromCLIConfig(ctx, version, cfg, log); err != nil {
+		log.Error("unable to initialize op-translator", "error", err)
 		return nil, errors.Join(err, t.Stop(ctx)) // try to clean up our failed initialization attempt
 	}
 	return &t, nil
