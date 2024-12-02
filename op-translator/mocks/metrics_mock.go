@@ -15,6 +15,7 @@ func NewMockMetrics() *MockMetrics {
 	m.On("RecordOPTranslatorRPCRequest", mock.Anything).Return()
 	m.On("RecordOPTranslatorTranslationLatency", mock.Anything, mock.Anything).Return()
 	m.On("RecordOPTranslatorError", mock.Anything, mock.Anything).Return()
+	m.On("RecordOPTranslatorRPCCallDuration", mock.Anything, mock.Anything, mock.Anything).Return()
 
 	// Batch Provider
 	m.On("RecordBatchProviderBatchProcessed", mock.Anything).Return()
@@ -42,6 +43,10 @@ func (m *MockMetrics) RecordOPTranslatorTranslationLatency(method string, durati
 
 func (m *MockMetrics) RecordOPTranslatorError(method, errorType string) {
 	m.Called(method, errorType)
+}
+
+func (m *MockMetrics) RecordOPTranslatorRPCCallDuration(method, clientType string, duration float64) {
+	m.Called(method, clientType, duration)
 }
 
 // Batch Provider

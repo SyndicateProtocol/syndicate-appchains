@@ -68,7 +68,9 @@ func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string,
 
 	t.metrics.RecordOPTranslatorRPCRequest("eth_getBlockByNumber")
 
+	settlementChainRPCStart := time.Now()
 	block, err := t.settlementChain.GetBlockByNumber(ctx, blockNumber, transactionDetailFlag)
+	t.metrics.RecordOPTranslatorRPCCallDuration("eth_getBlockByNumber", "settlement_chain", time.Since(settlementChainRPCStart).Seconds())
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get block by number")
 		t.metrics.RecordOPTranslatorError("eth_getBlockByNumber", "block_fetch_error")
@@ -90,7 +92,9 @@ func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash
 
 	t.metrics.RecordOPTranslatorRPCRequest("eth_getBlockByHash")
 
+	settlementChainRPCStart := time.Now()
 	block, err := t.settlementChain.GetBlockByHash(ctx, blockHash, transactionDetailFlag)
+	t.metrics.RecordOPTranslatorRPCCallDuration("eth_getBlockByHash", "settlement_chain", time.Since(settlementChainRPCStart).Seconds())
 	if err != nil {
 		log.Error().Err(err).Msg("Failed to get block by hash")
 		t.metrics.RecordOPTranslatorError("eth_getBlockByHash", "block_fetch_error")
