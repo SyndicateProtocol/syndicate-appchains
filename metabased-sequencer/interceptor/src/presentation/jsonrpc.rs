@@ -176,7 +176,7 @@ mod tests {
     use crate::application::Metrics;
     use crate::domain::primitives::TxHash;
     use crate::domain::MetabasedSequencerChainService;
-    use crate::infrastructure::error_to_static_str;
+    use crate::infrastructure::error_to_metric_category;
     use crate::presentation::services::Services;
     use alloy_primitives::Bytes;
     use async_trait::async_trait;
@@ -202,7 +202,7 @@ mod tests {
         );
 
         assert!(services_arc.metrics_service().metrics_called.get());
-        assert_eq!(services_arc.metrics_service().last_error.get(), "none");
+        assert_eq!(services_arc.metrics_service().last_error_category.get(), "none");
     }
 
     #[tokio::test]
@@ -222,7 +222,7 @@ mod tests {
             .contains("invalid params: wrong number of params"));
 
         assert!(services_arc.metrics_service().metrics_called.get());
-        assert_eq!(services_arc.metrics_service().last_error.get(), "invalid_params.wrong_count");
+        assert_eq!(services_arc.metrics_service().last_error_category.get(), "params_error");
     }
 
     #[tokio::test]
@@ -236,7 +236,7 @@ mod tests {
             .unwrap_err();
 
         assert!(services_arc.metrics_service().metrics_called.get());
-        assert_eq!(services_arc.metrics_service().last_error.get(), "invalid_params.invalid_hex");
+        assert_eq!(services_arc.metrics_service().last_error_category.get(), "params_error");
     }
 
     #[tokio::test]
@@ -255,7 +255,7 @@ mod tests {
 
 
         assert!(services_arc.metrics_service().metrics_called.get());
-        assert_eq!(services_arc.metrics_service().last_error.get(), "invalid_input.rlp_decode_error");
+        assert_eq!(services_arc.metrics_service().last_error_category.get(), "validation_error");
     }
 
     // handler tests
@@ -303,7 +303,7 @@ mod tests {
 
     struct MockMetrics {
         metrics_called: std::cell::Cell<bool>,
-        last_error: std::cell::Cell<&'static str>,
+        last_error_category: std::cell::Cell<&'static str>,
     }
 
     impl MockMetrics {
@@ -311,7 +311,7 @@ mod tests {
             // Init to zero vals
             Self {
                 metrics_called: std::cell::Cell::new(false),
-                last_error: std::cell::Cell::new(""),
+                last_error_category: std::cell::Cell::new(""),
             }
         }
     }
@@ -325,7 +325,7 @@ mod tests {
     impl Metrics for MockMetrics {
         fn append_send_raw_transaction_with_duration(&self, _duration: Duration, error: Option<&Error>) {
             self.metrics_called.set(true);
-            self.last_error.set(error_to_static_str(error));
+            self.last_error_category.set(error_to_metric_category(error));
         }
 
         fn encode(&self, _writer: &mut impl std::fmt::Write) -> std::fmt::Result {
