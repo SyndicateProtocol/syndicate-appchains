@@ -96,7 +96,6 @@ func (c *CLIConfig) Check() error {
 		errs = append(errs, fmt.Errorf("settlementChainBlockTime must be positive: %d", c.SettlementChainBlockTime))
 	}
 
-	// from op-stack
 	if err := c.PprofConfig.Check(); err != nil {
 		errs = append(errs, err)
 	}
