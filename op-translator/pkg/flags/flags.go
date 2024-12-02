@@ -6,6 +6,7 @@ import (
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
 	opservice "github.com/ethereum-optimism/optimism/op-service"
+	"github.com/ethereum-optimism/optimism/op-service/oppprof"
 	"github.com/urfave/cli/v2"
 )
 
@@ -162,6 +163,8 @@ var optionalFlags = []cli.Flag{
 }
 
 func init() {
+	optionalFlags = append(optionalFlags, oppprof.CLIFlags(EnvVarPrefix)...)
+
 	Flags = append(requiredFlags, optionalFlags...) //nolint:gocritic // false positive
 }
 
