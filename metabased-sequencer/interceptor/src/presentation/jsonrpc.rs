@@ -43,7 +43,7 @@ impl<E: Into<anyhow::Error>> From<E> for JsonRpcError<()> {
     }
 }
 
-impl<'error, S: Serialize> From<JsonRpcError<S>> for ErrorObject<'error> {
+impl<S: Serialize> From<JsonRpcError<S>> for ErrorObject<'_> {
     fn from(value: JsonRpcError<S>) -> Self {
         ErrorObject::owned(value.code, value.message, value.data)
     }

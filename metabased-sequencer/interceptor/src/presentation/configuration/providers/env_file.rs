@@ -11,7 +11,7 @@ pub struct EnvFile<'a> {
     profile: figment::Profile,
 }
 
-impl<'a> Display for EnvFile<'a> {
+impl Display for EnvFile<'_> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "ENV file {:?} in CWD or parent", self.path())
     }
@@ -48,7 +48,7 @@ impl<'a> EnvFile<'a> {
     }
 }
 
-impl<'a> Provider for EnvFile<'a> {
+impl Provider for EnvFile<'_> {
     fn metadata(&self) -> Metadata {
         Metadata::from(
             format!("`{}` environment variable(s)", self.prefix),
