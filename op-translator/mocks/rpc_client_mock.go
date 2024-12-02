@@ -22,42 +22,42 @@ var _ translator.IRPCClient = (*MockRPCClient)(nil)
 
 func (m *MockRPCClient) GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error) {
 	args := m.Called(ctx, number, withTransactions)
-	return args.Get(0).(types.Block), args.Error(1)
+	return Args0[types.Block](args), args.Error(1)
 }
 
 func (m *MockRPCClient) GetBlockByHash(ctx context.Context, hash common.Hash, withTransactions bool) (types.Block, error) {
 	args := m.Called(ctx, hash, withTransactions)
-	return args.Get(0).(types.Block), args.Error(1)
+	return Args0[types.Block](args), args.Error(1)
 }
 
 func (m *MockRPCClient) GetBlocksByNumbers(ctx context.Context, numbers []string, withTransactions bool) ([]types.Block, error) {
 	args := m.Called(ctx, numbers, withTransactions)
-	return args.Get(0).([]types.Block), args.Error(1)
+	return Args0[[]types.Block](args), args.Error(1)
 }
 
 func (m *MockRPCClient) GetReceiptsByHashes(ctx context.Context, hashes []common.Hash) ([]*ethtypes.Receipt, error) {
 	args := m.Called(ctx, hashes)
-	return args.Get(0).([]*ethtypes.Receipt), args.Error(1)
+	return Args0[[]*ethtypes.Receipt](args), args.Error(1)
 }
 
 func (m *MockRPCClient) GetReceiptByHash(ctx context.Context, hash common.Hash) (ethtypes.Receipt, error) {
 	args := m.Called(ctx, hash)
-	return args.Get(0).(ethtypes.Receipt), args.Error(1)
+	return Args0[ethtypes.Receipt](args), args.Error(1)
 }
 
 func (m *MockRPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Block) ([]*ethtypes.Receipt, error) {
 	args := m.Called(ctx, blocks)
-	return args.Get(0).([]*ethtypes.Receipt), args.Error(1)
+	return Args0[[]*ethtypes.Receipt](args), args.Error(1)
 }
 
 func (m *MockRPCClient) HeaderByNumber(ctx context.Context, number *big.Int) (*ethtypes.Header, error) {
 	args := m.Called(ctx, number)
-	return args.Get(0).(*ethtypes.Header), args.Error(1)
+	return Args0[*ethtypes.Header](args), args.Error(1)
 }
 
 func (m *MockRPCClient) TransactionReceipt(ctx context.Context, hash common.Hash) (*ethtypes.Receipt, error) {
 	args := m.Called(ctx, hash)
-	return args.Get(0).(*ethtypes.Receipt), args.Error(1)
+	return Args0[*ethtypes.Receipt](args), args.Error(1)
 }
 
 func (m *MockRPCClient) SimulateTransactions(ctx context.Context, transactions []*rpc.ParsedTransaction, blockParameter string) (any, error) {
@@ -71,5 +71,5 @@ func (m *MockRPCClient) AsEthClient() rpc.IETHClient {
 
 func (m *MockRPCClient) FetchReceipts(ctx context.Context, blockInfo eth.BlockInfo, txHashes []common.Hash) (ethtypes.Receipts, error) {
 	args := m.Called(ctx, blockInfo, txHashes)
-	return args.Get(0).(ethtypes.Receipts), args.Error(1)
+	return Args0[ethtypes.Receipts](args), args.Error(1)
 }

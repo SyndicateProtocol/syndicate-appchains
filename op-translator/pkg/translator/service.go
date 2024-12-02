@@ -16,6 +16,7 @@ import (
 	opservice "github.com/ethereum-optimism/optimism/op-service"
 	"github.com/ethereum-optimism/optimism/op-service/cliapp"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
+	"github.com/ethereum-optimism/optimism/op-service/oppprof"
 	"github.com/ethereum/go-ethereum/common"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/urfave/cli/v2"
@@ -64,6 +65,7 @@ type TranslatorService struct {
 	server                    *server.Server
 	metricsCollector          *metrics.Metrics
 	sequencingContractAddress *common.Address
+	pprofService              *oppprof.Service
 	version                   string
 	stopped                   atomic.Bool
 }
@@ -84,9 +86,11 @@ func (t *TranslatorService) initFromCLIConfig(ctx context.Context, version strin
 	if err := t.initBatchSigner(cfg); err != nil {
 		return fmt.Errorf("failed to initialize batch signer: %w", err)
 	}
-
-	t.initBackfillProvider(cfg)
+	if err := t.initPProf(cfg); err != nil {
+		return fmt.Errorf("failed to initialize pprof service: %w", err)
+	}
 	t.initMetrics()
+	t.initBackfillProvider(cfg)
 	t.initBatchProvider(cfg)
 	t.initOPTranslator()
 
@@ -160,6 +164,22 @@ func (t *TranslatorService) initBackfillProvider(cfg *CLIConfig) {
 	)
 }
 
+func (t *TranslatorService) initPProf(cfg *CLIConfig) error {
+	t.pprofService = oppprof.New(
+		cfg.PprofConfig.ListenEnabled,
+		cfg.PprofConfig.ListenAddr,
+		cfg.PprofConfig.ListenPort,
+		cfg.PprofConfig.ProfileType,
+		cfg.PprofConfig.ProfileDir,
+		cfg.PprofConfig.ProfileFilename,
+	)
+
+	if err := t.pprofService.Start(); err != nil {
+		return fmt.Errorf("failed to start pprof service: %w", err)
+	}
+	return nil
+}
+
 func (t *TranslatorService) initMetrics() {
 	t.metricsCollector = metrics.NewMetrics()
 }
@@ -223,6 +243,12 @@ func (t *TranslatorService) Stop(ctx context.Context) error {
 	t.settlementChainRPC.CloseConnection()
 	t.sequencingChainRPC.CloseConnection()
 	t.server.Stop(ctx)
+
+	if t.pprofService != nil {
+		if err := t.pprofService.Stop(ctx); err != nil {
+			return fmt.Errorf("unable to stop pprof service: %w", err)
+		}
+	}
 
 	t.stopped.Store(true)
 	t.log.Info("op-translator stopped")

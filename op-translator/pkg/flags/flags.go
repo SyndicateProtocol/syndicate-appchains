@@ -6,6 +6,7 @@ import (
 
 	opservice "github.com/ethereum-optimism/optimism/op-service"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
+	"github.com/ethereum-optimism/optimism/op-service/oppprof"
 	"github.com/urfave/cli/v2"
 )
 
@@ -146,6 +147,8 @@ var optionalFlags = []cli.Flag{
 
 func init() {
 	optionalFlags = append(optionalFlags, oplog.CLIFlags(EnvVarPrefix)...)
+	optionalFlags = append(optionalFlags, oppprof.CLIFlags(EnvVarPrefix)...)
+
 	Flags = append(requiredFlags, optionalFlags...) //nolint:gocritic // false positive
 }
 

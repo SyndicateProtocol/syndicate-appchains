@@ -220,7 +220,9 @@ func TestOPNodeCalls(t *testing.T) {
 			assert.Equal(t, "2.0", response["jsonrpc"])
 
 			if tc.expectedError != "" {
-				assert.Contains(t, response["error"].(map[string]any)["message"], tc.expectedError)
+				errorData, ok := response["error"].(map[string]any)
+				assert.True(t, ok)
+				assert.Contains(t, errorData["message"], tc.expectedError)
 			} else {
 				assert.Equal(t, tc.expectedBackfill, len(mockHTTPBackfillClient.Calls) > 0)
 				blockData, ok := response["result"].(map[string]any)

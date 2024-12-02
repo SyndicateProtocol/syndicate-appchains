@@ -8,11 +8,14 @@ import (
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/flags"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
+	"github.com/ethereum-optimism/optimism/op-service/oppprof"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
 )
 
 type CLIConfig struct {
+	PprofConfig               oppprof.CLIConfig
+	LogLevel                  string
 	SequencingChainRPCURL     string
 	MetaBasedChainRPCURL      string
 	MetafillerURL             string
@@ -89,6 +92,10 @@ func (c *CLIConfig) Check() error {
 		errs = append(errs, fmt.Errorf("settlementChainBlockTime must be positive: %d", c.SettlementChainBlockTime))
 	}
 
+	if err := c.PprofConfig.Check(); err != nil {
+		errs = append(errs, err)
+	}
+
 	return errors.Join(errs...)
 }
 
@@ -114,6 +121,7 @@ func NewConfig(ctx *cli.Context) *CLIConfig {
 		WriteTimeout: ctx.Duration(flags.WriteTimeout.Name),
 
 		// from op-stack
-		LogConfig: oplog.ReadCLIConfig(ctx),
+		LogConfig:   oplog.ReadCLIConfig(ctx),
+		PprofConfig: oppprof.ReadCLIConfig(ctx),
 	}
 }
