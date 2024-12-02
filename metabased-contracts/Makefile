@@ -16,6 +16,7 @@ add-batch-transactions-to-metabased-sequencerchain :; forge script script/AddBat
 
 ## deploy Metafiller related contracts to Metabased Testnet
 deploy-metafiller-storage :; forge create --rpc-url metabased_stratos --private-key ${ETH_PRIVATE_KEY} src/backfill/MetafillerStorage.sol:MetafillerStorage --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR} ${L3_CHAIN_ID}
+allowlist-metafiller-storage-addresses :; forge script script/AllowlistMetafillerStorageAddresses.s.sol:AllowlistMetafillerStorageAddresses --rpc-url metabased_stratos --private-key ${ETH_PRIVATE_KEY} --legacy --skip-simulation --broadcast -vvv
 
 
 ## Tx Limit Test

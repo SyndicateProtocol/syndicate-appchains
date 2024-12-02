@@ -58,7 +58,7 @@ $ make deploy-based-sequencerchain-frame
 | AlwaysAllowedModule             | 0x87F4DE1886298255c5fce2adF15977fE44F48f68 |
 | MetabasedSequencerChain (Frame) | 0x56b2cd4fb8d6D6486b95Ff2DF5cDC30FE526FFaf |
 | MetabasedSequencerChain (Ham)   | 0x0e6A93458fEdaEFaAcb106f08441058c8E0b2b0F |
-| MetafillerStorage (Frame)       | 0x0D26034350193af5Fb3e7c206f3462A8fD25F289 |
-| MetafillerStorage (Ham)         | 0xE3c1d5335203066EB8c3212a6bda57Ff33133f54 |
+| MetafillerStorage (Frame)       | 0x04a1D138d681De93412581673a993eD7878EaBC4 |
+| MetafillerStorage (Ham)         | 0x037A5BC4DB3C5c4Be90d8C3D7eaD6B2B231b9EFb |
 | RequiredAllModule (Ham)         | 0xAfeA8F68921242A90ae9e35f4DDF0d3769dE3150 |
 | RequiredAllModule (Frame)       | 0x7Bc475096B936Ad04Cfc544FB56aC54B3661beE6 |
