@@ -48,10 +48,25 @@ func NewRPCClient(client IETHClient, rawClient IRawRPCClient, receiptsFetcher IR
 }
 
 func Connect(address string) (*RPCClient, error) {
-	c, err := rpc.Dial(address)
-	if err != nil {
-		return nil, fmt.Errorf("failed to dial address %s: %w", address, err)
+	var c *rpc.Client
+	var err error
+	switch {
+	case address[:2] == "ws":
+		// Use DialWebsocket for WebSocket connections
+		c, err = rpc.DialWebsocket(context.Background(), address, "")
+		if err != nil {
+			return nil, fmt.Errorf("failed to dial WebSocket address %s: %w", address, err)
+		}
+	case address[:4] == "http":
+		// Use Dial for HTTP connections
+		c, err = rpc.Dial(address)
+		if err != nil {
+			return nil, fmt.Errorf("failed to dial HTTP address %s: %w", address, err)
+		}
+	default:
+		return nil, fmt.Errorf("invalid address format: %s (must start with ws or http)", address)
 	}
+
 	return NewRPCClient(ethclient.NewClient(c), c, NewReceiptFetcher(c)), nil
 }
 
