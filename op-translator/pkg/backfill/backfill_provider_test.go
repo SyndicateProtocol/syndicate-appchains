@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"testing"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -20,10 +22,10 @@ import (
 func TestGetBackfillFramesMultipleCases(t *testing.T) {
 	mockMetrics := mocks.NewMockMetrics()
 
-	tests := []struct { //nolint:govet // test struct
+	tests := []struct {
+		block              types.Block
 		name               string
 		mockResponseData   backfill.BackfillData
-		block              types.Block
 		expectedFrameCount int
 		expectedErr        bool
 	}{
@@ -102,6 +104,7 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 				0,
 				mockHTTPClient,
 				mockMetrics,
+				testlog.Logger(t, slog.LevelDebug),
 			)
 
 			frames, err := backfillProvider.GetBackfillFrames(ctx, tt.block)

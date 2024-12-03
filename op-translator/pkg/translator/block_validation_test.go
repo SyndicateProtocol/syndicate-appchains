@@ -2,12 +2,14 @@ package translator_test
 
 import (
 	"errors"
+	"log/slog"
 	"math/big"
 	"testing"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/stretchr/testify/assert"
@@ -316,7 +318,7 @@ func TestValidateBlockState(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			validRawTxns, validTxns := translator.ValidateBlockState(rawTxns, txns, tt.state)
+			validRawTxns, validTxns := translator.ValidateBlockState(rawTxns, txns, tt.state, testlog.Logger(t, slog.LevelDebug))
 			if len(validRawTxns) != tt.expectedValid || len(validTxns) != tt.expectedValid {
 				t.Errorf("expected %d valid transactions, got %d valid raw txns and %d valid txns", tt.expectedValid, len(validRawTxns), len(validTxns))
 			}
@@ -326,7 +328,7 @@ func TestValidateBlockState(t *testing.T) {
 
 func TestValidateBlock(t *testing.T) {
 	mockChain := &mocks.MockRPCClient{}
-	provider := translator.NewMetaBasedBatchProvider(mockChain, mockChain, common.Address{}, 0, 0, nil)
+	provider := translator.NewMetaBasedBatchProvider(mockChain, mockChain, common.Address{}, 0, 0, nil, testlog.Logger(t, slog.LevelDebug))
 
 	validRawTxns := []hexutil.Bytes{
 		hexutil.MustDecode("0xf86a0180850b8447060082520894868c2f4324ddddf07ebeb3605b5a0dc3bfc918a80b844a9059cbb00000000000000000000000033e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef00000000000000000000000000000000000000000000000000000000000000001"),

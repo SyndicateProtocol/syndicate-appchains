@@ -27,7 +27,6 @@ type MockConfig struct {
 var DefaultTestingConfig = &translator.CLIConfig{
 	Port:                      TestingPort,
 	FrameSize:                 TestingFrameSize,
-	LogLevel:                  "info",
 	SequencingContractAddress: TestingSequencingContractAddress,
 	SettlementStartBlock:      TestingSettlementStartBlock,
 	BatcherPrivateKey:         TestingBatcherPrivateKey,

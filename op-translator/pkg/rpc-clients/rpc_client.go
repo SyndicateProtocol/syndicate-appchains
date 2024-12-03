@@ -13,7 +13,6 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/rs/zerolog/log"
 )
 
 type IReceiptsFetcher interface {
@@ -53,7 +52,6 @@ func Connect(address string) (*RPCClient, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to dial address %s: %w", address, err)
 	}
-	log.Debug().Msgf("RPC connection established: %s", address)
 	return NewRPCClient(ethclient.NewClient(c), c, NewReceiptFetcher(c)), nil
 }
 
@@ -63,7 +61,6 @@ func (c *RPCClient) AsEthClient() IETHClient {
 
 func (c *RPCClient) CloseConnection() {
 	c.client.Close()
-	log.Debug().Msg("RPC connection closed")
 }
 
 func (c *RPCClient) GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error) {

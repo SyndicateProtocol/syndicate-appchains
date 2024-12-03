@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/rs/zerolog/log"
 )
 
 type Signer struct {
@@ -37,7 +36,6 @@ func (s *Signer) Sign(tx *ethtypes.Transaction) (*ethtypes.Transaction, error) {
 
 	signature, err := crypto.Sign(txHash.Bytes(), s.privateKey)
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to sign the transaction")
 		return nil, err
 	}
 
