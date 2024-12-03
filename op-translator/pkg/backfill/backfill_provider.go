@@ -105,17 +105,17 @@ func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Bl
 		return nil, fmt.Errorf("failed to get backfill data - invalid block number: %w", err)
 	}
 
-	if epochNumber == b.genesisEpochBlock {
-		log.Debug().Msgf("Block number is genesis block, not backfilling, %d", epochNumber)
-		return []*types.Frame{}, nil
-	}
-
 	epochHash, err := block.GetBlockHash()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get backfill data - invalid block hash: %w", err)
 	}
 
 	backfillData, err := b.GetBackfillData(ctx, epochNumber)
+	if backfillData == nil && epochNumber == b.genesisEpochBlock {
+		log.Debug().Msgf("Block number is genesis block, not backfilling, %d", epochNumber)
+		return []*types.Frame{}, nil
+	}
+
 	if err != nil {
 		return nil, fmt.Errorf("failed to get backfill data for epoch %d: %w", epochNumber, err)
 	}

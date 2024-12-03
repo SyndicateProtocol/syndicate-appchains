@@ -1,5 +1,4 @@
 # Common
-
 export SETTLEMENT_CHAIN_RPC_URL=https://base-rpc.publicnode.com
 export SEQUENCING_CHAIN_RPC_URL=https://nova.arbitrum.io/rpc 
 export META_BASED_CHAIN_RPC_URL=http://localhost:8555
@@ -20,7 +19,6 @@ export OP_TRANSLATOR_LOG_LEVEL=debug
 export OP_TRANSLATOR_PRETTY=true
 
 # metabased-publisher
-
 export MB_PUBLISHER_POLL_INTERVAL=1m
 export MB_PUBLISHER_NETWORK_TIMEOUT=30s
 export MB_PUBLISHER_BLOB_UPLOAD_TIMEOUT=10m
