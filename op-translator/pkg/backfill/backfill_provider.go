@@ -115,7 +115,7 @@ func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Bl
 
 	backfillData, err := b.GetBackfillData(ctx, epochNumber)
 	if backfillData == nil && epochNumber == b.genesisEpochBlock {
-		log.Debug().Msgf("Block number is genesis block, not backfilling, %d", epochNumber)
+		b.log.Debug("Block number is genesis block, not backfilling", "epoch_number", epochNumber)
 		return []*types.Frame{}, nil
 	}
 
