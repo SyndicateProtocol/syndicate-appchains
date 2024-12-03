@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/test/stubs"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/assert"
@@ -188,6 +190,7 @@ func TestOPNodeCalls(t *testing.T) {
 		mockMetrics := mocks.NewMockMetrics()
 
 		batcherInboxAddress := common.HexToAddress("0x123")
+		testlogger := testlog.Logger(t, slog.LevelDebug)
 		opTranslator := translator.NewOPTranslator(
 			mockClient,
 			&mocks.MockBatchProvider{},
@@ -197,13 +200,15 @@ func TestOPNodeCalls(t *testing.T) {
 				mockConfig.CutoverEpochBlock,
 				mockHTTPBackfillClient,
 				mockMetrics,
+				testlogger,
 			),
 			mocks.TestSigner(t),
 			&batcherInboxAddress,
 			mockMetrics,
+			testlogger,
 		)
 
-		s, err := server.TranslatorHandler(mockConfig.SettlementChainRPCURL, mockConfig.LogLevel, opTranslator)
+		s, err := server.TranslatorHandler(mockConfig.SettlementChainRPCURL, opTranslator, testlogger)
 		assert.NoError(t, err)
 
 		t.Run(tc.name, func(t *testing.T) {

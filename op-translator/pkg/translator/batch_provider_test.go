@@ -1,9 +1,11 @@
 package translator_test
 
 import (
+	"log/slog"
 	"testing"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	"github.com/ethereum/go-ethereum/common"
@@ -18,7 +20,8 @@ var (
 	SequencingContractAddress = common.HexToAddress("0x1111111111111111111111111111111111111111")
 )
 
-func getBatchProvider() *translator.MetaBasedBatchProvider {
+func getBatchProvider(t *testing.T) *translator.MetaBasedBatchProvider {
+	t.Helper()
 	mockMetrics := mocks.NewMockMetrics()
 	return translator.NewMetaBasedBatchProvider(
 		nil,
@@ -27,11 +30,12 @@ func getBatchProvider() *translator.MetaBasedBatchProvider {
 		1,
 		2,
 		mockMetrics,
+		testlog.Logger(t, slog.LevelDebug),
 	)
 }
 
 func TestFilterReceipts(t *testing.T) {
-	metaBasedBatchProvider := getBatchProvider()
+	metaBasedBatchProvider := getBatchProvider(t)
 	sequencingContractAddress := SequencingContractAddress
 	senderAddr := common.HexToAddress("0x2222222222222222222222222222222222222222")
 
@@ -75,7 +79,7 @@ func TestFilterReceipts(t *testing.T) {
 }
 
 func TestFilterReceiptsWithExtraLog(t *testing.T) {
-	metaBasedBatchProvider := getBatchProvider()
+	metaBasedBatchProvider := getBatchProvider(t)
 	sequencingContractAddress := SequencingContractAddress
 	senderAddr := common.HexToAddress("0x2222222222222222222222222222222222222222")
 

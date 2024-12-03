@@ -14,7 +14,7 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/flags"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/rs/zerolog/log"
+	gethlog "github.com/ethereum/go-ethereum/log"
 )
 
 // TODO SEQ-141: spike: performant Go HTTP/JSON-RPC lib
@@ -25,6 +25,7 @@ type HTTPClient interface {
 type BackfillProvider struct {
 	client            HTTPClient
 	metrics           metrics.IMetrics
+	log               gethlog.Logger
 	metafillerURL     string
 	genesisEpochBlock uint64
 	cutoverEpochBlock uint64
@@ -36,6 +37,7 @@ func NewBackfillerProvider(
 	cutoverEpochBlock uint64,
 	client HTTPClient,
 	metricsCollector metrics.IMetrics,
+	log gethlog.Logger,
 ) *BackfillProvider {
 	return &BackfillProvider{
 		metafillerURL:     metafillerURL,
@@ -43,6 +45,7 @@ func NewBackfillerProvider(
 		genesisEpochBlock: genesisEpochBlock,
 		cutoverEpochBlock: cutoverEpochBlock,
 		metrics:           metricsCollector,
+		log:               log,
 	}
 }
 
@@ -59,7 +62,7 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 	}()
 
 	fullURL := b.metafillerURL + "/" + strconv.FormatUint(epochNumber, 10)
-	log.Debug().Msgf("Getting backfill data for epoch number: %d. Fetching from: %s", epochNumber, fullURL)
+	b.log.Debug("getting backfill data", "epoch_number", epochNumber, "url", fullURL)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, http.NoBody)
 	if err != nil {
@@ -74,7 +77,7 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 
 	if resp.StatusCode != http.StatusOK {
 		b.metrics.RecordBackfillProviderBackfillResponseStatus("get_backfill_data", resp.StatusCode)
-		log.Debug().Msgf("Received non-200 response from backfill data provider: %d", resp.StatusCode)
+		b.log.Debug("received non-200 response from backfill data provider", "status", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -87,7 +90,7 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 	if err != nil {
 		return nil, err
 	}
-	log.Debug().Msgf("Backfill data for epoch %d: %v", epochNumber, data)
+	b.log.Debug("backfill data", "epoch_number", epochNumber, "data", data)
 	return data, nil
 }
 

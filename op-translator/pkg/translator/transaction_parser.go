@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/rs/zerolog/log"
+	gethlog "github.com/ethereum/go-ethereum/log"
 )
 
 type TransactionProcessed struct {
@@ -34,10 +34,11 @@ type L3TransactionParser struct {
 	sequencingContractAddress common.Address
 }
 
-func NewL3TransactionParser(sequencingContractAddress common.Address) *L3TransactionParser {
+func MustNewL3TransactionParser(sequencingContractAddress common.Address, log gethlog.Logger) *L3TransactionParser {
 	sequencingContractABI, err := abi.JSON(strings.NewReader(TransactionProcessedABI))
 	if err != nil {
-		log.Panic().Err(err).Msg("Failed to initialize sequencing contract ABI")
+		log.Error("failed to initialize sequencing contract ABI", "error", err)
+		panic(err)
 	}
 
 	return &L3TransactionParser{

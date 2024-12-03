@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/rs/zerolog/log"
+	gethlog "github.com/ethereum/go-ethereum/log"
 )
 
 type IRPCClient interface {
@@ -38,6 +38,7 @@ type OPTranslator struct {
 	metrics             metrics.IMetrics
 	batcherSigner       *Signer
 	batcherInboxAddress *common.Address
+	log                 gethlog.Logger
 }
 
 func NewOPTranslator(
@@ -47,6 +48,7 @@ func NewOPTranslator(
 	signer *Signer,
 	batcherInboxAddress *common.Address,
 	metricsCollector metrics.IMetrics,
+	log gethlog.Logger,
 ) *OPTranslator {
 	return &OPTranslator{
 		settlementChain:     settlementChain,
@@ -55,11 +57,12 @@ func NewOPTranslator(
 		backfillProvider:    backfillProvider,
 		batcherSigner:       signer,
 		metrics:             metricsCollector,
+		log:                 log,
 	}
 }
 
 func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string, transactionDetailFlag bool) (types.Block, error) {
-	log.Debug().Msg("-- HIT eth_getBlockByNumber")
+	t.log.Debug("-- HIT eth_getBlockByNumber")
 
 	start := time.Now()
 	defer func() {
@@ -72,7 +75,7 @@ func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string,
 	block, err := t.settlementChain.GetBlockByNumber(ctx, blockNumber, transactionDetailFlag)
 	t.metrics.RecordOPTranslatorRPCCallDuration("eth_getBlockByNumber", "settlement_chain", time.Since(settlementChainRPCStart).Seconds())
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to get block by number")
+		t.log.Error("failed to get block by number", "error", err)
 		t.metrics.RecordOPTranslatorError("eth_getBlockByNumber", "block_fetch_error")
 		return nil, err
 	}
@@ -83,7 +86,7 @@ func (t *OPTranslator) GetBlockByNumber(ctx context.Context, blockNumber string,
 }
 
 func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash, transactionDetailFlag bool) (types.Block, error) {
-	log.Debug().Msg("-- HIT eth_getBlockByHash")
+	t.log.Debug("-- HIT eth_getBlockByHash")
 
 	start := time.Now()
 	defer func() {
@@ -96,7 +99,7 @@ func (t *OPTranslator) GetBlockByHash(ctx context.Context, blockHash common.Hash
 	block, err := t.settlementChain.GetBlockByHash(ctx, blockHash, transactionDetailFlag)
 	t.metrics.RecordOPTranslatorRPCCallDuration("eth_getBlockByHash", "settlement_chain", time.Since(settlementChainRPCStart).Seconds())
 	if err != nil {
-		log.Error().Err(err).Msg("Failed to get block by hash")
+		t.log.Error("failed to get block by hash", "error", err)
 		t.metrics.RecordOPTranslatorError("eth_getBlockByHash", "block_fetch_error")
 		return nil, err
 	}
@@ -139,7 +142,7 @@ func (t *OPTranslator) translateBlock(ctx context.Context, block types.Block) (t
 	}
 
 	if len(frames) == 0 {
-		log.Debug().Msgf("No frames to translate, block number (hex): %s", blockNumHex)
+		t.log.Debug("no frames to translate", "block_number_hex", blockNumHex)
 		return block, nil
 	}
 

@@ -14,15 +14,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/rs/zerolog/log"
+	gethlog "github.com/ethereum/go-ethereum/log"
 )
 
 type MetaBasedBatchProvider struct {
 	MetaBasedChain         IRPCClient
 	SequencingChain        IRPCClient
+	Metrics                metrics.IMetrics
+	log                    gethlog.Logger
 	TransactionParser      *L3TransactionParser
 	SequencingBlockFetcher *SequencingBlockFetcher
-	Metrics                metrics.IMetrics
 	SettlementStartBlock   uint64
 }
 
@@ -33,14 +34,16 @@ func NewMetaBasedBatchProvider(
 	settlementStartBlock uint64,
 	settlementChainBlockTime int,
 	bpMetrics metrics.IMetrics,
+	log gethlog.Logger,
 ) *MetaBasedBatchProvider {
 	return &MetaBasedBatchProvider{
 		MetaBasedChain:         settlementChainClient,
 		SequencingChain:        sequencingChainClient,
-		TransactionParser:      NewL3TransactionParser(sequencingContractAddress),
-		SequencingBlockFetcher: NewSequencingBlockFetcher(sequencingChainClient, settlementChainBlockTime),
+		TransactionParser:      MustNewL3TransactionParser(sequencingContractAddress, log),
+		SequencingBlockFetcher: NewSequencingBlockFetcher(sequencingChainClient, settlementChainBlockTime, log),
 		Metrics:                bpMetrics,
 		SettlementStartBlock:   settlementStartBlock,
+		log:                    log,
 	}
 }
 
@@ -52,7 +55,7 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 		m.Metrics.RecordBatchProviderBatchProcessingDuration("get_parent_block_hash", duration)
 	}()
 
-	log.Debug().Msgf("Getting parent block hash for block number %s", blockNumStr)
+	m.log.Debug("getting parent block hash", "block_number", blockNumStr)
 	blockNum, err := utils.HexToUInt64(blockNumStr)
 	if err != nil {
 		return "", err
@@ -65,16 +68,16 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	if blockNum == m.SettlementStartBlock {
 		return constants.ZeroHash, nil
 	}
-	log.Debug().Msgf("Settlement start block: %d", m.SettlementStartBlock)
+	m.log.Debug("settlement start block", "block_number", m.SettlementStartBlock)
 
 	parentBlockNum := blockNum - m.SettlementStartBlock - 1
 
-	log.Debug().Msgf("Getting block hash for block number %d", parentBlockNum)
+	m.log.Debug("getting parent block hash", "block_number", parentBlockNum)
 	previousBlock, err := m.MetaBasedChain.AsEthClient().HeaderByNumber(ctx, new(big.Int).SetUint64(parentBlockNum))
 	if err != nil {
 		return "", err
 	}
-	log.Debug().Msgf("Previous block: %v", previousBlock)
+	m.log.Debug("previous block", "block", previousBlock)
 
 	return previousBlock.Hash().Hex(), nil
 }
@@ -92,7 +95,7 @@ func (m *MetaBasedBatchProvider) FilterReceipts(receipts []*ethtypes.Receipt) []
 			}
 			transactionsInEvent, parseErr := m.TransactionParser.GetEventTransactions(txLog)
 			if parseErr != nil {
-				log.Warn().Err(parseErr).Msgf("malformatted l2 receipt log in receipt %d, log %d", i, j)
+				m.log.Warn("malformatted l2 receipt log in receipt", "receipt_index", i, "log_index", j, "error", parseErr)
 				continue
 			}
 			transactions = append(transactions, transactionsInEvent...)
@@ -127,10 +130,10 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 	if err != nil {
 		return nil, err
 	}
-	log.Debug().Msgf("Translating block number %s and hash %s: receipts: %v", blockNumber, blockHash, receipts)
+	m.log.Debug("translating block", "block_number", blockNumber, "block_hash", blockHash, "receipts", receipts)
 
 	txns := m.FilterReceipts(receipts)
-	log.Debug().Msgf("Translating block number %s and hash %s: filtered transactions: %v", blockNumber, blockHash, txns)
+	m.log.Debug("translating block, filtered txs", "block_number", blockNumber, "block_hash", blockHash, "filtered_transactions", txns)
 
 	parentHash, err := m.getParentBlockHash(ctx, blockNumber)
 	if err != nil {
@@ -152,7 +155,7 @@ func (m *MetaBasedBatchProvider) GetBatch(ctx context.Context, block types.Block
 	if err != nil {
 		return nil, err
 	}
-	log.Debug().Msgf("Translating block number %s and hash %s: batch: %v", blockNumber, blockHash, batch)
+	m.log.Debug("translating block, batch produced", "block_number", blockNumber, "block_hash", blockHash, "batch", batch)
 
 	m.Metrics.RecordBatchProviderBatchProcessed("get_batch") // success count metric
 
@@ -170,11 +173,11 @@ func (m *MetaBasedBatchProvider) GetValidTransactions(rawTxs []hexutil.Bytes) ([
 	}()
 
 	// First phase validation: stateless
-	rawFilteredTxStateless, parsedFilteredTxStateless := ParseRawTransactions(rawTxs)
+	rawFilteredTxStateless, parsedFilteredTxStateless := ParseRawTransactions(rawTxs, m.log)
 	removedCountStateless := len(rawTxs) - len(rawFilteredTxStateless)
 	m.Metrics.RecordBatchProviderInvalidTransactionsCount("stateless", removedCountStateless)
 	if removedCountStateless > 0 {
-		log.Debug().Msgf("Transactions got filtered by stateless validation: %d", removedCountStateless)
+		m.log.Debug("transactions got filtered by stateless validation", "count", removedCountStateless)
 	}
 
 	// Second phase validation: validate block
@@ -185,7 +188,7 @@ func (m *MetaBasedBatchProvider) GetValidTransactions(rawTxs []hexutil.Bytes) ([
 	removedCountStateful := len(rawFilteredTxStateless) - len(rawFilteredTxStateful)
 	m.Metrics.RecordBatchProviderInvalidTransactionsCount("stateful", removedCountStateful)
 	if removedCountStateful > 0 {
-		log.Debug().Msgf("Transactions got filtered by stateful validation: %d", removedCountStateful)
+		m.log.Debug("transactions got filtered by stateful validation", "count", removedCountStateful)
 	}
 	return rawFilteredTxStateful, nil
 }

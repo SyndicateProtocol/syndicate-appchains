@@ -2,11 +2,13 @@ package translator_test
 
 import (
 	"fmt"
+	"log/slog"
 	"testing"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -89,7 +91,7 @@ func TestGetLastUsedBlockNumber(t *testing.T) {
 				tt.setupMocks(mockClient)
 			}
 
-			fetcher := translator.NewSequencingBlockFetcher(mockClient, 12)
+			fetcher := translator.NewSequencingBlockFetcher(mockClient, 12, testlog.Logger(t, slog.LevelDebug))
 			fetcher.LastUsedBlock = tt.lastUsedBlock
 
 			result := fetcher.GetLastUsedBlockNumber(tt.startTime)
@@ -193,7 +195,7 @@ func TestFindFirstBlockOnOrBeforeTime(t *testing.T) {
 				tt.setupMocks(mockClient)
 			}
 
-			fetcher := translator.NewSequencingBlockFetcher(mockClient, 2)
+			fetcher := translator.NewSequencingBlockFetcher(mockClient, 2, testlog.Logger(t, slog.LevelDebug))
 			block, err := fetcher.FindFirstBlockOnOrBeforeTime(tt.targetTime)
 
 			if tt.expectError {
@@ -314,7 +316,7 @@ func TestGetSequencingBlocksByTimeWindow(t *testing.T) {
 				tt.setupMocks(mockClient)
 			}
 
-			fetcher := translator.NewSequencingBlockFetcher(mockClient, 2)
+			fetcher := translator.NewSequencingBlockFetcher(mockClient, 2, testlog.Logger(t, slog.LevelDebug))
 			blocks, err := fetcher.GetSequencingBlocksByTimeWindow(tt.timeWindowStart, tt.timeWindowEnd, tt.firstBlockBeforeStart)
 
 			if tt.expectError {
@@ -420,7 +422,7 @@ func TestGetSequencingBlocks(t *testing.T) {
 				tt.setupMocks(mockClient)
 			}
 
-			fetcher := translator.NewSequencingBlockFetcher(mockClient, 2)
+			fetcher := translator.NewSequencingBlockFetcher(mockClient, 2, testlog.Logger(t, slog.LevelDebug))
 			blocks, err := fetcher.GetSequencingBlocks(tt.block)
 
 			if tt.expectError {
