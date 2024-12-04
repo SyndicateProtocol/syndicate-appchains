@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"math/big"
 	"net/http"
-	"net/url"
 	"sync/atomic"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/metrics"
@@ -104,9 +103,7 @@ func (t *TranslatorService) initFromCLIConfig(ctx context.Context, version strin
 func (t *TranslatorService) initRPCServers(_ context.Context, cfg *CLIConfig) error {
 	settlmentURL := cfg.SettlementChainRPCURL
 	// If the WS URL is provided, use it instead of the HTTP URL
-	_, err := url.ParseRequestURI(cfg.SettlementChainRPCURLWS)
-	if err == nil {
-		fmt.Println("Using WS URL for settlement chain")
+	if cfg.SettlementChainRPCURLWS != "" {
 		settlmentURL = cfg.SettlementChainRPCURLWS
 	}
 	settlementChain, err := rpc.Connect(settlmentURL)

@@ -98,6 +98,13 @@ func (c *CLIConfig) Check() error {
 		errs = append(errs, err)
 	}
 
+	if c.SettlementChainRPCURLWS != "" {
+		_, err := url.ParseRequestURI(c.SettlementChainRPCURLWS)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("invalid URL for settlement chain address WS: %w", err))
+		}
+	}
+
 	return errors.Join(errs...)
 }
 
