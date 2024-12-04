@@ -149,7 +149,7 @@ create-localenv:
     #!/usr/bin/env bash
         cat > {{ localenv_file }} << EOL
     PORT={{ op_translator_port }}
-    SETTLEMENT_CHAIN_RPC_URL={{ op_devnet_l2_rpc_url }}
+    OP_TRANSLATOR_SETTLEMENT_CHAIN_RPC_URL={{ op_devnet_l2_rpc_url }}
     SEQUENCING_CHAIN_RPC_URL={{ arb_orbit_l2_rpc_url }}
     META_BASED_CHAIN_RPC_URL=http://localhost:8548
     METAFILLER_URL=http://localhost:8080
