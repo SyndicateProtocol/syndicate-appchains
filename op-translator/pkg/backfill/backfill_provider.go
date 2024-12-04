@@ -78,6 +78,7 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 	if resp.StatusCode != http.StatusOK {
 		b.metrics.RecordBackfillProviderBackfillResponseStatus("get_backfill_data", resp.StatusCode)
 		b.log.Debug("received non-200 response from backfill data provider", "status", resp.StatusCode)
+		return nil, fmt.Errorf("received non-200 response from backfill data provider: %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
