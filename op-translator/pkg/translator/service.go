@@ -213,7 +213,7 @@ func (t *TranslatorService) initServer(cfg *CLIConfig) error {
 		cfg.Port,
 		cfg.ReadTimeout,
 		cfg.WriteTimeout,
-		cfg.ProxyURL,
+		cfg.TargetProxyURL,
 		t.opTranslator,
 		t.log,
 	)

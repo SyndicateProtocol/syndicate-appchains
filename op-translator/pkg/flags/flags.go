@@ -25,10 +25,10 @@ var (
 	// Required flags
 	//////////////////////////
 
-	ProxyURL = &cli.StringFlag{
+	TargetProxyURL = &cli.StringFlag{
 		Name:    "proxy_url",
 		Usage:   "Proxy URL",
-		EnvVars: []string{"PROXY_URL"},
+		EnvVars: []string{"TARGET_PROXY_URL"},
 	}
 
 	SettlementChainRPCURL = &cli.StringFlag{
@@ -131,7 +131,7 @@ var (
 )
 
 var requiredFlags = []cli.Flag{
-	ProxyURL,
+	TargetProxyURL,
 	SettlementChainRPCURL,
 	SequencingChainRPCURL,
 	MetaBasedChainRPCURL,

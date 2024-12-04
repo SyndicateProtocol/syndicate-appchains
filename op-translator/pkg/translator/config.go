@@ -14,7 +14,7 @@ import (
 )
 
 type CLIConfig struct {
-	ProxyURL                  string
+	TargetProxyURL            string
 	PprofConfig               oppprof.CLIConfig
 	LogLevel                  string
 	SequencingChainRPCURL     string
@@ -38,9 +38,9 @@ type CLIConfig struct {
 func (c *CLIConfig) Check() error {
 	var errs []error
 
-	_, err := url.ParseRequestURI(c.ProxyURL)
+	_, err := url.ParseRequestURI(c.TargetProxyURL)
 	if err != nil {
-		errs = append(errs, errors.New("invalid URL for proxyURL"))
+		errs = append(errs, errors.New("invalid URL for target proxy URL"))
 	}
 
 	if c.Port <= 0 {
@@ -109,7 +109,7 @@ func (c *CLIConfig) Check() error {
 func NewConfig(ctx *cli.Context) *CLIConfig {
 	return &CLIConfig{
 		// required
-		ProxyURL:                  ctx.String(flags.ProxyURL.Name),
+		TargetProxyURL:            ctx.String(flags.TargetProxyURL.Name),
 		SettlementChainRPCURL:     ctx.String(flags.SettlementChainRPCURL.Name),
 		SequencingChainRPCURL:     ctx.String(flags.SequencingChainRPCURL.Name),
 		MetaBasedChainRPCURL:      ctx.String(flags.MetaBasedChainRPCURL.Name),
