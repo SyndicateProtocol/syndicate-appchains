@@ -25,6 +25,7 @@ type MockConfig struct {
 }
 
 var DefaultTestingConfig = &translator.CLIConfig{
+	ProxyURL:                  "http://localhost:8545",
 	Port:                      TestingPort,
 	FrameSize:                 TestingFrameSize,
 	SequencingContractAddress: TestingSequencingContractAddress,
