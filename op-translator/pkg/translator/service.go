@@ -101,12 +101,12 @@ func (t *TranslatorService) initFromCLIConfig(ctx context.Context, version strin
 }
 
 func (t *TranslatorService) initRPCServers(_ context.Context, cfg *CLIConfig) error {
-	settlmentURL := cfg.SettlementChainRPCURL
+	settlementURL := cfg.SettlementChainRPCURL
 	// If the WS URL is provided, use it instead of the HTTP URL
 	if cfg.SettlementChainRPCURLWS != "" {
-		settlmentURL = cfg.SettlementChainRPCURLWS
+		settlementURL = cfg.SettlementChainRPCURLWS
 	}
-	settlementChain, err := rpc.Connect(settlmentURL)
+	settlementChain, err := rpc.Connect(settlementURL)
 	if err != nil {
 		return errors.New("failed to initialize settlement chain")
 	}
