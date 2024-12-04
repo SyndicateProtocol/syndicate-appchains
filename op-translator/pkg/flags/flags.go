@@ -28,7 +28,7 @@ var (
 	TargetProxyURL = &cli.StringFlag{
 		Name:    "proxy_url",
 		Usage:   "Proxy URL",
-		EnvVars: []string{"TARGET_PROXY_URL"},
+		EnvVars: prefixEnvVars("TARGET_PROXY_URL"),
 	}
 
 	SettlementChainRPCURL = &cli.StringFlag{
