@@ -23,9 +23,9 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 	mockMetrics := mocks.NewMockMetrics()
 
 	tests := []struct {
+		mockResponseData   *backfill.BackfillData
 		block              types.Block
 		name               string
-		mockResponseData   *backfill.BackfillData
 		expectedFrameCount int
 		expectedStatusCode int
 		expectedErr        bool
