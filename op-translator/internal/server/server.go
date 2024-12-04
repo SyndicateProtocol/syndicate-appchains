@@ -19,9 +19,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-func TranslatorHandler(settlementChainRPCURL string, translator any, log gethlog.Logger) (*http.ServeMux, error) {
+func TranslatorHandler(proxyURL string, translator any, log gethlog.Logger) (*http.ServeMux, error) {
 	// Setup proxy
-	parsedURL, err := url.Parse(settlementChainRPCURL)
+	parsedURL, err := url.Parse(proxyURL)
 	if err != nil {
 		return nil, err
 	}
@@ -127,11 +127,11 @@ func NewServer(
 	port int,
 	readTimeout,
 	writeTimeout time.Duration,
-	settlementChainRPCURL string,
+	proxyURL string,
 	opTranslator any,
 	log gethlog.Logger,
 ) (*Server, error) {
-	router, err := TranslatorHandler(settlementChainRPCURL, opTranslator, log)
+	router, err := TranslatorHandler(proxyURL, opTranslator, log)
 	if err != nil {
 		return nil, err
 	}
