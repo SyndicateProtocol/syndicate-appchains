@@ -17,6 +17,7 @@ type CLIConfig struct {
 	PprofConfig               oppprof.CLIConfig
 	LogLevel                  string
 	SequencingChainRPCURL     string
+	SettlementChainRPCURLWS   string
 	MetaBasedChainRPCURL      string
 	MetafillerURL             string
 	SequencingContractAddress string
@@ -36,6 +37,7 @@ type CLIConfig struct {
 
 func (c *CLIConfig) Check() error {
 	var errs []error
+
 	if c.Port <= 0 {
 		errs = append(errs, errors.New("port must be a positive number"))
 	}
@@ -115,10 +117,11 @@ func NewConfig(ctx *cli.Context) *CLIConfig {
 		SettlementChainBlockTime:  ctx.Duration(flags.SettlementChainBlockTime.Name),
 
 		// optional
-		Port:         ctx.Int(flags.Port.Name),
-		FrameSize:    ctx.Int(flags.FrameSize.Name),
-		ReadTimeout:  ctx.Duration(flags.ReadTimeout.Name),
-		WriteTimeout: ctx.Duration(flags.WriteTimeout.Name),
+		SettlementChainRPCURLWS: ctx.String(flags.SettlementChainRPCURLWS.Name),
+		Port:                    ctx.Int(flags.Port.Name),
+		FrameSize:               ctx.Int(flags.FrameSize.Name),
+		ReadTimeout:             ctx.Duration(flags.ReadTimeout.Name),
+		WriteTimeout:            ctx.Duration(flags.WriteTimeout.Name),
 
 		// from op-stack
 		LogConfig:   oplog.ReadCLIConfig(ctx),
