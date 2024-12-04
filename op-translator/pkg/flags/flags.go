@@ -25,12 +25,6 @@ var (
 	// Required flags
 	//////////////////////////
 
-	TargetProxyURL = &cli.StringFlag{
-		Name:    "proxy_url",
-		Usage:   "Proxy URL",
-		EnvVars: prefixEnvVars("TARGET_PROXY_URL"),
-	}
-
 	SettlementChainRPCURL = &cli.StringFlag{
 		Name:    "settlement_chain_rpc_url",
 		Usage:   "Settlement chain address",
@@ -101,6 +95,12 @@ var (
 	// Optional flags
 	//////////////////////////
 
+	SettlementChainRPCURLWS = &cli.StringFlag{
+		Name:    "settlement_chain_rpc_url_ws",
+		Usage:   "Settlement chain address WS",
+		EnvVars: []string{"SETTLEMENT_CHAIN_RPC_URL_WS"},
+	}
+
 	FrameSize = &cli.IntFlag{
 		Name:    "frame_size",
 		Usage:   "Size of each frame in bytes. Max is 1,000,000",
@@ -131,7 +131,6 @@ var (
 )
 
 var requiredFlags = []cli.Flag{
-	TargetProxyURL,
 	SettlementChainRPCURL,
 	SequencingChainRPCURL,
 	MetaBasedChainRPCURL,
@@ -146,6 +145,7 @@ var requiredFlags = []cli.Flag{
 }
 
 var optionalFlags = []cli.Flag{
+	SettlementChainRPCURLWS,
 	FrameSize,
 	Port,
 	ReadTimeout,

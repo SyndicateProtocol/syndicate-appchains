@@ -10,7 +10,6 @@ import (
 
 func validConfig() CLIConfig {
 	return CLIConfig{
-		TargetProxyURL:            "http://proxy.com",
 		Port:                      1234,
 		FrameSize:                 100,
 		SequencingChainRPCURL:     "http://example.com",

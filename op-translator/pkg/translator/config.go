@@ -14,10 +14,10 @@ import (
 )
 
 type CLIConfig struct {
-	TargetProxyURL            string
 	PprofConfig               oppprof.CLIConfig
 	LogLevel                  string
 	SequencingChainRPCURL     string
+	SettlementChainRPCURLWS   string
 	MetaBasedChainRPCURL      string
 	MetafillerURL             string
 	SequencingContractAddress string
@@ -38,11 +38,6 @@ type CLIConfig struct {
 func (c *CLIConfig) Check() error {
 	var errs []error
 
-	_, err := url.ParseRequestURI(c.TargetProxyURL)
-	if err != nil {
-		errs = append(errs, errors.New("invalid URL for target proxy URL"))
-	}
-
 	if c.Port <= 0 {
 		errs = append(errs, errors.New("port must be a positive number"))
 	}
@@ -55,7 +50,7 @@ func (c *CLIConfig) Check() error {
 		errs = append(errs, errors.New("frameSize must be less than maximum"))
 	}
 
-	_, err = url.ParseRequestURI(c.SequencingChainRPCURL)
+	_, err := url.ParseRequestURI(c.SequencingChainRPCURL)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("invalid URL for sequencing chain address: %w", err))
 	}
@@ -109,7 +104,6 @@ func (c *CLIConfig) Check() error {
 func NewConfig(ctx *cli.Context) *CLIConfig {
 	return &CLIConfig{
 		// required
-		TargetProxyURL:            ctx.String(flags.TargetProxyURL.Name),
 		SettlementChainRPCURL:     ctx.String(flags.SettlementChainRPCURL.Name),
 		SequencingChainRPCURL:     ctx.String(flags.SequencingChainRPCURL.Name),
 		MetaBasedChainRPCURL:      ctx.String(flags.MetaBasedChainRPCURL.Name),
@@ -123,10 +117,11 @@ func NewConfig(ctx *cli.Context) *CLIConfig {
 		SettlementChainBlockTime:  ctx.Duration(flags.SettlementChainBlockTime.Name),
 
 		// optional
-		Port:         ctx.Int(flags.Port.Name),
-		FrameSize:    ctx.Int(flags.FrameSize.Name),
-		ReadTimeout:  ctx.Duration(flags.ReadTimeout.Name),
-		WriteTimeout: ctx.Duration(flags.WriteTimeout.Name),
+		SettlementChainRPCURLWS: ctx.String(flags.SettlementChainRPCURLWS.Name),
+		Port:                    ctx.Int(flags.Port.Name),
+		FrameSize:               ctx.Int(flags.FrameSize.Name),
+		ReadTimeout:             ctx.Duration(flags.ReadTimeout.Name),
+		WriteTimeout:            ctx.Duration(flags.WriteTimeout.Name),
 
 		// from op-stack
 		LogConfig:   oplog.ReadCLIConfig(ctx),
