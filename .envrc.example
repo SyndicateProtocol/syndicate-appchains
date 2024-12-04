@@ -15,6 +15,7 @@ export OP_TRANSLATOR_RPC_URL=http://localhost:8888
 export ALT_DA_URL=http://localhost:3100
 
 # Op Translator
+export TARGET_PROXY_URL=https://base-rpc.publicnode.com
 export OP_TRANSLATOR_PORT=8888
 export OP_TRANSLATOR_LOG_LEVEL=debug
 export OP_TRANSLATOR_PRETTY=true
