@@ -1,13 +1,16 @@
+use std::convert::TryFrom;
 use crate::domain::primitives::Bytes;
 use crate::domain::MetabasedSequencerChainService;
 use crate::presentation::json_rpc_errors::Error;
-use crate::presentation::json_rpc_errors::Error::InvalidInput;
+use crate::presentation::json_rpc_errors::Error::{InvalidInput, InvalidParams};
 use crate::presentation::json_rpc_errors::InvalidInputError::MissingGasPrice;
 use crate::presentation::transaction;
 use alloy::consensus::{Transaction, TxEnvelope, TxType};
 use alloy::primitives::private::alloy_rlp::Decodable;
 use alloy::primitives::TxHash;
 use alloy::primitives::U256;
+use jsonrpsee::types::Params;
+use crate::presentation::json_rpc_errors::InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount};
 
 /// Sends serialized and signed transaction `tx` using `chain`.
 pub async fn send_raw_transaction<Chain>(encoded: Bytes, chain: &Chain) -> Result<TxHash, Error>
@@ -36,6 +39,30 @@ where
 
     // 3. Submission/forwarding:
     Ok(chain.process_transaction(encoded).await?)
+}
+
+#[derive(Debug)]
+pub struct SendRawTransactionParams {
+    pub(crate) raw_tx: String,
+}
+
+impl TryFrom<Params<'static>> for SendRawTransactionParams {
+    type Error = Error;
+
+    // Params validation
+    fn try_from(params: Params<'static>) -> Result<Self, Self::Error> {
+        let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap())?;
+        let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
+        if arr.len() != 1 {
+            return Err(InvalidParams(WrongParamCount(arr.len())));
+        }
+        let item = arr.pop().ok_or(InvalidParams(MissingParam))?;
+        let raw_tx = item.as_str()
+            .ok_or(InvalidParams(NotHexEncoded))?
+            .to_string();
+
+        Ok(Self { raw_tx })
+    }
 }
 
 #[cfg(test)]
@@ -265,4 +292,42 @@ mod tests {
 
         assert_eq!(actual_error, expected_error);
     }
+
+    // Params tests
+    #[test]
+    fn test_valid_params() {
+        let params = Params::new(Some(r#"["0x1234"]"#));
+        let result = SendRawTransactionParams::try_from(params);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().raw_tx, "0x1234");
+    }
+
+    #[test]
+    fn test_invalid_array() {
+        let params = Params::new(Some(r#"{"tx": "0x1234"}"#));
+        let result = SendRawTransactionParams::try_from(params);
+        assert!(matches!(result, Err(InvalidParams(NotAnArray))));
+    }
+
+    #[test]
+    fn test_wrong_param_count() {
+        let params = Params::new(Some(r#"["0x1234", "extra"]"#));
+        let result = SendRawTransactionParams::try_from(params);
+        assert!(matches!(result, Err(InvalidParams(WrongParamCount(2)))));
+    }
+
+    #[test]
+    fn test_missing_param() {
+        let params = Params::new(Some(r#"[]"#));
+        let result = SendRawTransactionParams::try_from(params);
+        assert!(matches!(result, Err(InvalidParams(WrongParamCount(0)))));
+    }
+
+    #[test]
+    fn test_not_hex_encoded() {
+        let params = Params::new(Some(r#"[123]"#));
+        let result = SendRawTransactionParams::try_from(params);
+        assert!(matches!(result, Err(InvalidParams(NotHexEncoded))));
+    }
+
 }
