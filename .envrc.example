@@ -1,6 +1,6 @@
 # Common
-
 export SETTLEMENT_CHAIN_RPC_URL=https://base-rpc.publicnode.com
+export SETTLEMENT_CHAIN_RPC_URL_WS=wss://base-rpc.publicnode.com # Optional if using WS
 export SEQUENCING_CHAIN_RPC_URL=https://nova.arbitrum.io/rpc 
 export META_BASED_CHAIN_RPC_URL=http://localhost:8555
 export METAFILLER_URL=https://staging-metafiller.metabased.org/batch/5101
@@ -15,7 +15,6 @@ export OP_TRANSLATOR_RPC_URL=http://localhost:8888
 export ALT_DA_URL=http://localhost:3100
 
 # Op Translator
-export OP_TRANSLATOR_TARGET_PROXY_URL=https://base-rpc.publicnode.com
 export OP_TRANSLATOR_PORT=8888
 export OP_TRANSLATOR_LOG_LEVEL=debug
 export OP_TRANSLATOR_PRETTY=true
