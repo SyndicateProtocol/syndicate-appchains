@@ -76,8 +76,7 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b.metrics.RecordBackfillProviderBackfillResponseStatus("get_backfill_data", resp.StatusCode)
-		b.log.Debug("received non-200 response from backfill data provider", "status", resp.StatusCode)
+		return nil, b.HandleBackfillProviderError(resp, epochNumber)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -94,6 +93,20 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 	return data, nil
 }
 
+func (b *BackfillProvider) IsGenesisBlock(epochNumber uint64) bool {
+	return epochNumber == b.genesisEpochBlock
+}
+
+func (b *BackfillProvider) HandleBackfillProviderError(resp *http.Response, epochNumber uint64) error {
+	b.log.Debug("received non-200 response from backfill data provider", "status", resp.StatusCode)
+	b.metrics.RecordBackfillProviderBackfillResponseStatus("get_backfill_data", resp.StatusCode)
+	if resp.StatusCode == http.StatusNotFound && b.IsGenesisBlock(epochNumber) {
+		b.log.Debug("Backfill data not available for genesis block", "epoch_number", epochNumber)
+		return nil
+	}
+	return fmt.Errorf("received non-200 response from backfill data provider: %d", resp.StatusCode)
+}
+
 func (b *BackfillProvider) IsBlockInBackfillingWindow(block types.Block) bool {
 	epochNumber, err := block.GetBlockNumber()
 	if err != nil {
@@ -108,11 +121,6 @@ func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Bl
 		return nil, fmt.Errorf("failed to get backfill data - invalid block number: %w", err)
 	}
 
-	if epochNumber == b.genesisEpochBlock {
-		b.log.Debug("block number is genesis block, not backfilling", "epoch_number", epochNumber)
-		return []*types.Frame{}, nil
-	}
-
 	epochHash, err := block.GetBlockHash()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get backfill data - invalid block hash: %w", err)
@@ -121,6 +129,10 @@ func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Bl
 	backfillData, err := b.GetBackfillData(ctx, epochNumber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get backfill data for epoch %d: %w", epochNumber, err)
+	}
+	if backfillData == nil {
+		b.log.Debug("Block number is genesis block, not backfilling", "epoch_number", epochNumber)
+		return []*types.Frame{}, nil
 	}
 
 	if backfillData.EpochHash != common.HexToHash(epochHash) {
