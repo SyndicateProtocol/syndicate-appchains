@@ -167,7 +167,7 @@ create-localenv:
     METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}
     METABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_private_key }}
     METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=[METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS]
-    PORT_SEQUENCER={{ metabased_sequencer_port }}
+    PORT={{ metabased_sequencer_port }}
     EOL
 
 # TODO - for OP localnet, not op-translator

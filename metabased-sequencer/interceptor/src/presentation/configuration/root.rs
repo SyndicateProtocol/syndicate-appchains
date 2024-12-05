@@ -22,7 +22,7 @@ pub struct Args {
 
     /// Port to listen on
     #[arg(short = 'p', long)]
-    pub port_sequencer: Option<u16>,
+    pub port: Option<u16>,
 
     /// Private key for signing layer-2 transactions
     #[arg(short = 'k', long)]
@@ -42,7 +42,7 @@ pub struct Configuration {
     pub chain_contract_address: Address,
     pub chain_rpc_address: Url,
     pub private_key: B256,
-    pub port_sequencer: u16,
+    pub port: u16,
 }
 
 impl Configuration {
@@ -53,7 +53,7 @@ impl Configuration {
         cli: impl Provider + Debug,
     ) -> Result<Self, figment::Error> {
         Figment::new()
-            .merge(Serialized::default("port_sequencer", DEFAULT_PORT))
+            .merge(Serialized::default("port", DEFAULT_PORT))
             // .merge(Logged::new(env_file))
             // .merge(Logged::new(env_profile))
             .merge(Logged::new(env))
@@ -63,7 +63,7 @@ impl Configuration {
 
     pub fn parse() -> Result<Self, figment::Error> {
         let args = Args::parse();
-        
+
         // let env_profile = args
         //     .profile
         //     .as_ref()
@@ -75,7 +75,7 @@ impl Configuration {
         Self::parse_with_args(
             // EnvFile::new().with_prefix(ENV_PREFIX),
             // env_profile,
-            Env::prefixed(ENV_PREFIX), // maps to one without the prefix 
+            Env::prefixed(ENV_PREFIX), // maps to one without the prefix
             CliArgs::new(args),
         )
     }
@@ -133,13 +133,13 @@ mod tests {
         DEFAULT_PORT
     ; "Default values are used when not set by any provider")]
     #[test_case(
-        Serialized::dummy_with("port_sequencer", 0),
+        Serialized::dummy_with("port", 0),
         Serialized::empty(),
         0
     ; "ENV vars overwrite defaults")]
     #[test_case(
-        Serialized::dummy_with("port_sequencer", 2),
-        Serialized::dummy_with("port_sequencer", 3),
+        Serialized::dummy_with("port", 2),
+        Serialized::dummy_with("port", 3),
         3
     ; "CLI args overwrite ENV vars")]
     fn test_configuration_loads_values_from_providers_based_on_expected_priority(
@@ -148,7 +148,7 @@ mod tests {
         expected_port: u16,
     ) {
         let config = Configuration::parse_with_args(env, cli).unwrap();
-        let actual_port = config.port_sequencer;
+        let actual_port = config.port;
 
         assert_eq!(actual_port, expected_port);
     }
@@ -157,7 +157,7 @@ mod tests {
     fn env_with_prefixed_port(port: u16) -> Env {
         let mut env = std::collections::HashMap::new();
         env.insert(
-            "METABASED_SEQUENCER_PORT_SEQUENCER".to_string(),
+            "METABASED_SEQUENCER_PORT".to_string(),
             port.to_string()
         );
         Env::prefixed(ENV_PREFIX)
@@ -170,27 +170,27 @@ mod tests {
         let env = env_with_prefixed_port(9999);
 
         // Create CLI args with port override
-        let cli = Serialized::dummy_with("port_sequencer", 8888);
+        let cli = Serialized::dummy_with("port", 8888);
 
         let config = Configuration::parse_with_args(env, cli).unwrap();
 
-        assert_eq!(config.port_sequencer, 8888);
-        assert_ne!(config.port_sequencer, 9999);
-        assert_ne!(config.port_sequencer, DEFAULT_PORT);
+        assert_eq!(config.port, 8888);
+        assert_ne!(config.port, 9999);
+        assert_ne!(config.port, DEFAULT_PORT);
     }
 
     #[test]
     fn test_unprefixed_env_var_does_not_override_default() {
         // Create environment with unprefixed port variable that should be ignored
         let mut env = std::collections::HashMap::new();
-        env.insert("PORT_SEQUENCER".to_string(), "9999".to_string());
+        env.insert("PORT".to_string(), "9999".to_string());
         let env = Env::prefixed(ENV_PREFIX);
 
         let cli = Serialized::dummy();
 
         let config = Configuration::parse_with_args(env, cli).unwrap();
 
-        assert_eq!(config.port_sequencer, DEFAULT_PORT);
-        assert_ne!(config.port_sequencer, 9999);
+        assert_eq!(config.port, DEFAULT_PORT);
+        assert_ne!(config.port, 9999);
     }
 }
