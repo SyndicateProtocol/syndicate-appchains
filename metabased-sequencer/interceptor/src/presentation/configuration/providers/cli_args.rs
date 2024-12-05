@@ -47,7 +47,7 @@ impl Provider for CliArgs {
             private_key,
             chain_rpc_address,
             chain_contract_address,
-            port
+            port_sequencer
         );
 
         Ok(self.profile.collect(dict))

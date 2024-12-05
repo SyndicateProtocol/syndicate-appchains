@@ -23,7 +23,7 @@ pub struct Args {
 
     /// Port to listen on
     #[arg(short = 'p', long)]
-    pub port: Option<u16>,
+    pub port_sequencer: Option<u16>,
 
     /// Private key for signing layer-2 transactions
     #[arg(short = 'k', long)]
@@ -41,7 +41,7 @@ pub struct Configuration {
     pub chain_contract_address: Address,
     pub chain_rpc_address: Url,
     pub private_key: B256,
-    pub port: u16,
+    pub port_sequencer: u16,
 }
 
 impl Configuration {
@@ -52,7 +52,7 @@ impl Configuration {
         cli: impl Provider + Debug,
     ) -> Result<Self, figment::Error> {
         Figment::new()
-            .merge(Serialized::default("port", DEFAULT_PORT))
+            .merge(Serialized::default("port_sequencer", DEFAULT_PORT))
             .merge(Logged::new(env_file))
             .merge(Logged::new(env_profile))
             .merge(Logged::new(env))
@@ -134,31 +134,31 @@ mod tests {
         DEFAULT_PORT
     ; "Default values are used when not set by any provider")]
     #[test_case(
-        Serialized::dummy_with("port", 0),
+        Serialized::dummy_with("port_sequencer", 0),
         Serialized::empty(),
         Serialized::empty(),
         Serialized::empty(),
         0
     ; "ENV file overwrites defaults")]
     #[test_case(
-        Serialized::dummy_with("port", 0),
-        Serialized::default("port", 1),
+        Serialized::dummy_with("port_sequencer", 0),
+        Serialized::default("port_sequencer", 1),
         Serialized::empty(),
         Serialized::empty(),
         1
     ; "ENV profile overwrites ENV file")]
     #[test_case(
-        Serialized::dummy_with("port", 0),
-        Serialized::default("port", 1),
-        Serialized::default("port", 2),
+        Serialized::dummy_with("port_sequencer", 0),
+        Serialized::default("port_sequencer", 1),
+        Serialized::default("port_sequencer", 2),
         Serialized::empty(),
         2
     ; "ENV vars overwrite ENV files")]
     #[test_case(
-        Serialized::dummy_with("port", 0),
-        Serialized::default("port", 1),
-        Serialized::default("port", 2),
-        Serialized::default("port", 3),
+        Serialized::dummy_with("port_sequencer", 0),
+        Serialized::default("port_sequencer", 1),
+        Serialized::default("port_sequencer", 2),
+        Serialized::default("port_sequencer", 3),
         3
     ; "CLI args overwrite ENV vars")]
     fn test_configuration_loads_values_from_providers_based_on_expected_priority(
@@ -169,7 +169,7 @@ mod tests {
         expected_port: u16,
     ) {
         let config = Configuration::parse_with_args(env_file, env_profile, env, cli).unwrap();
-        let actual_port = config.port;
+        let actual_port = config.port_sequencer;
 
         assert_eq!(actual_port, expected_port);
     }

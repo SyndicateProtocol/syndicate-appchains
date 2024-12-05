@@ -117,7 +117,7 @@ arb-deploy-chain:
 
 # Runs sequencer using .env file
 run-metabased-sequencer:
-    cd {{ sequencer_root }} && cargo run -p interceptor -- --profile localnet
+    cd {{ sequencer_root }} && cargo run -p interceptor
 
 # Creates localnet ENV file for op-translator
 op-translator-create-localenv:
@@ -167,6 +167,7 @@ create-localenv:
     METABASED_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}
     METABASED_PRIVATE_KEY={{ arb_orbit_private_key }}
     METABASED_CHAIN_CONTRACT_ADDRESS=[METABASED_CHAIN_CONTRACT_ADDRESS]
+    PORT_SEQUENCER={{ metabased_sequencer_port }}
     EOL
 
 # TODO - for OP localnet, not op-translator
