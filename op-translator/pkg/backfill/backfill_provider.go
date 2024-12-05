@@ -76,14 +76,7 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b.metrics.RecordBackfillProviderBackfillResponseStatus("get_backfill_data", resp.StatusCode)
-		b.log.Debug("received non-200 response from backfill data provider", "status", resp.StatusCode)
-		if resp.StatusCode == http.StatusNotFound && epochNumber == b.genesisEpochBlock {
-			// If genesis block returns 404, it means no backfill data is available but we should not error
-			b.log.Debug("Backfill data not available for genesis block", "epoch_number", epochNumber)
-			return nil, nil
-		}
-		return nil, fmt.Errorf("received non-200 response from backfill data provider: %d", resp.StatusCode)
+		return nil, b.handleBackfillProviderError(resp, epochNumber)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -98,6 +91,20 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 	}
 	b.log.Debug("backfill data", "epoch_number", epochNumber, "data", data)
 	return data, nil
+}
+
+func (b *BackfillProvider) IsGenesisBlock(epochNumber uint64) bool {
+	return epochNumber == b.genesisEpochBlock
+}
+
+func (b *BackfillProvider) handleBackfillProviderError(resp *http.Response, epochNumber uint64) error {
+	b.log.Debug("received non-200 response from backfill data provider", "status", resp.StatusCode)
+	b.metrics.RecordBackfillProviderBackfillResponseStatus("get_backfill_data", resp.StatusCode)
+	if resp.StatusCode == http.StatusNotFound && b.IsGenesisBlock(epochNumber) {
+		b.log.Debug("Backfill data not available for genesis block", "epoch_number", epochNumber)
+		return nil
+	}
+	return fmt.Errorf("received non-200 response from backfill data provider: %d", resp.StatusCode)
 }
 
 func (b *BackfillProvider) IsBlockInBackfillingWindow(block types.Block) bool {
