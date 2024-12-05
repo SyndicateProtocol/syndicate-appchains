@@ -121,7 +121,7 @@ run-metabased-sequencer:
 
 # Creates localnet ENV file for op-translator
 op-translator-create-localenv:
-    [ -f {{ localenv_file }} ] || printf "METABASED_CHAIN_RPC_ADDRESS={{ op_devnet_l2_rpc_url }}\nMETABASED_PRIVATE_KEY={{ op_devnet_private_key }}" > {{ localenv_file }}
+    [ -f {{ localenv_file }} ] || printf "METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ op_devnet_l2_rpc_url }}\nMETABASED_SEQUENCER_PRIVATE_KEY={{ op_devnet_private_key }}" > {{ localenv_file }}
 
 # TODO - change to both-update-chain-address
 # Runs op-translator
@@ -138,12 +138,12 @@ arb-clean-chain:
 
 # Puts contract address into localnet ENV file
 op-update-chain-address: op-deploy-chain create-localenv
-    cat {{ localenv_file }} | grep -v METABASED_CHAIN_CONTRACT_ADDRESS= > {{ localenv_file }}.tmp
-    echo METABASED_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ op_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ localenv_file }}.tmp
+    cat {{ localenv_file }} | grep -v METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS= > {{ localenv_file }}.tmp
+    echo METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ op_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ localenv_file }}.tmp
     mv {{ localenv_file }}.tmp {{ localenv_file }}
 
 ## TODO [SEQ-323]: change PORT -> separate ports for op-translator and sequencer
-## TODO Merge METABASED_CHAIN_RPC_ADDRESS -> SEQUENCING_CHAIN_RPC_URL
+## TODO Merge METABASED_SEQUENCER_CHAIN_RPC_ADDRESS -> SEQUENCING_CHAIN_RPC_URL
 # Create or update localnet .env file
 create-localenv:
     #!/usr/bin/env bash
@@ -164,25 +164,25 @@ create-localenv:
     BATCHER_ADDRESS=0x063D87A885a9323831A688645647eD7d0e859C5d
     CUTOVER_BLOCK=0
     # Vars below are used by metabased-sequencer. TODO: refactor duplicates
-    METABASED_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}
-    METABASED_PRIVATE_KEY={{ arb_orbit_private_key }}
-    METABASED_CHAIN_CONTRACT_ADDRESS=[METABASED_CHAIN_CONTRACT_ADDRESS]
+    METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}
+    METABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_private_key }}
+    METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=[METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS]
     PORT_SEQUENCER={{ metabased_sequencer_port }}
     EOL
 
 # TODO - for OP localnet, not op-translator
 # Creates localnet ENV file with values fit for Optimism devnet
 #create-localenv:
-#    [ -f {{ localenv_file }} ] || printf "METABASED_CHAIN_RPC_ADDRESS={{ op_devnet_l2_rpc_url }}\nMETABASED_PRIVATE_KEY={{ op_devnet_private_key }}" > {{ localenv_file }}
+#    [ -f {{ localenv_file }} ] || printf "METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ op_devnet_l2_rpc_url }}\nMETABASED_SEQUENCER_PRIVATE_KEY={{ op_devnet_private_key }}" > {{ localenv_file }}
 
 # Creates localnet ENV file with values fit for Arbitrum devnet
 arb-create-localenv:
-    [ -f {{ localenv_file }} ] || printf "METABASED_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}\nMETABASED_PRIVATE_KEY={{ arb_orbit_private_key }}" > {{ localenv_file }}
+    [ -f {{ localenv_file }} ] || printf "METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}\nMETABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_private_key }}" > {{ localenv_file }}
 
 # Puts arb contract address into localnet ENV file
 arb-update-chain-address: arb-deploy-chain arb-create-localenv
-    cat {{ localenv_file }} | grep -v METABASED_CHAIN_CONTRACT_ADDRESS= > {{ localenv_file }}.tmp
-    echo METABASED_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ localenv_file }}.tmp
+    cat {{ localenv_file }} | grep -v METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS= > {{ localenv_file }}.tmp
+    echo METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ localenv_file }}.tmp
     mv {{ localenv_file }}.tmp {{ localenv_file }}
 
 # TODO - refactor duplicate
@@ -192,9 +192,9 @@ update-chain-address: arb-deploy-chain create-localenv
     # Get the contract address from arb deployment file
     contract_address=$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq)
     # Remove both old addresses and create temp file
-    cat {{ localenv_file }} | grep -v METABASED_CHAIN_CONTRACT_ADDRESS= | grep -v SEQUENCING_CONTRACT_ADDRESS= > {{ localenv_file }}.tmp
+    cat {{ localenv_file }} | grep -v METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS= | grep -v SEQUENCING_CONTRACT_ADDRESS= > {{ localenv_file }}.tmp
     # Add both new addresses
-    echo "METABASED_CHAIN_CONTRACT_ADDRESS=0x${contract_address}" >> {{ localenv_file }}.tmp
+    echo "METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x${contract_address}" >> {{ localenv_file }}.tmp
     echo "SEQUENCING_CONTRACT_ADDRESS=0x${contract_address}" >> {{ localenv_file }}.tmp
     mv {{ localenv_file }}.tmp {{ localenv_file }}
 
