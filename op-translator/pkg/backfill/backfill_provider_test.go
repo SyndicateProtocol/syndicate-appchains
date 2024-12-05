@@ -91,7 +91,7 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 			expectedStatusCode: http.StatusOK,
 		},
 		{
-			name:             "Non-200 Status Code - Genesis Block",
+			name:             "404 Not Found - Genesis Block",
 			mockResponseData: nil,
 			block: types.Block{
 				"number":       "0x0",
@@ -103,7 +103,7 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 			expectedStatusCode: http.StatusNotFound,
 		},
 		{
-			name:             "Non-200 Status Code - Non-Genesis Block",
+			name:             "404 Not Found - Non-Genesis Block",
 			mockResponseData: nil,
 			block: types.Block{
 				"number":       "0x01",
@@ -113,6 +113,18 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 			expectedFrameCount: 0,
 			expectedErr:        true,
 			expectedStatusCode: http.StatusNotFound,
+		},
+		{
+			name:             "Non-200 or Non-404 - Genesis Block",
+			mockResponseData: nil,
+			block: types.Block{
+				"number":       "0x0",
+				"hash":         "0x123",
+				"transactions": []any{},
+			},
+			expectedFrameCount: 0,
+			expectedErr:        true,
+			expectedStatusCode: http.StatusBadRequest,
 		},
 	}
 	for _, tt := range tests {

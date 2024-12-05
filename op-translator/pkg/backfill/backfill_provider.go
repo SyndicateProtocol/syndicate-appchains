@@ -78,6 +78,11 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 	if resp.StatusCode != http.StatusOK {
 		b.metrics.RecordBackfillProviderBackfillResponseStatus("get_backfill_data", resp.StatusCode)
 		b.log.Debug("received non-200 response from backfill data provider", "status", resp.StatusCode)
+		if resp.StatusCode == http.StatusNotFound && epochNumber == b.genesisEpochBlock {
+			// If genesis block returns 404, it means no backfill data is available but we should not error
+			b.log.Debug("Block number is genesis block, not backfilling", "epoch_number", epochNumber)
+			return nil, nil
+		}
 		return nil, fmt.Errorf("received non-200 response from backfill data provider: %d", resp.StatusCode)
 	}
 
@@ -115,13 +120,12 @@ func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Bl
 	}
 
 	backfillData, err := b.GetBackfillData(ctx, epochNumber)
-	if backfillData == nil && epochNumber == b.genesisEpochBlock {
-		b.log.Debug("Block number is genesis block, not backfilling", "epoch_number", epochNumber)
-		return []*types.Frame{}, nil
-	}
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to get backfill data for epoch %d: %w", epochNumber, err)
+	}
+	if backfillData == nil {
+		b.log.Debug("no backfill data found for epoch", "epoch_number", epochNumber)
+		return []*types.Frame{}, nil
 	}
 
 	if backfillData.EpochHash != common.HexToHash(epochHash) {
