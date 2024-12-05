@@ -76,7 +76,7 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, b.handleBackfillProviderError(resp, epochNumber)
+		return nil, b.HandleBackfillProviderError(resp, epochNumber)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -97,7 +97,7 @@ func (b *BackfillProvider) IsGenesisBlock(epochNumber uint64) bool {
 	return epochNumber == b.genesisEpochBlock
 }
 
-func (b *BackfillProvider) handleBackfillProviderError(resp *http.Response, epochNumber uint64) error {
+func (b *BackfillProvider) HandleBackfillProviderError(resp *http.Response, epochNumber uint64) error {
 	b.log.Debug("received non-200 response from backfill data provider", "status", resp.StatusCode)
 	b.metrics.RecordBackfillProviderBackfillResponseStatus("get_backfill_data", resp.StatusCode)
 	if resp.StatusCode == http.StatusNotFound && b.IsGenesisBlock(epochNumber) {

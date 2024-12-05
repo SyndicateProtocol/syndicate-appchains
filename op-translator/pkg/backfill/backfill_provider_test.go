@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"log/slog"
 	"net/http"
@@ -170,6 +171,61 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 				}
 			}
 			mockHTTPClient.AssertExpectations(t)
+		})
+	}
+}
+
+func TestHandleBackfillProviderError(t *testing.T) {
+	tests := []struct {
+		expectedError  error
+		name           string
+		epochNumber    uint64
+		statusCode     int
+		isGenesisBlock bool
+	}{
+		{
+			name:           "404 Not Found for genesis block",
+			statusCode:     http.StatusNotFound,
+			epochNumber:    0,
+			isGenesisBlock: true,
+			expectedError:  nil,
+		},
+		{
+			name:           "500 Internal Server Error",
+			statusCode:     http.StatusInternalServerError,
+			epochNumber:    1,
+			isGenesisBlock: false,
+			expectedError:  errors.New("received non-200 response from backfill data provider: 500"),
+		},
+		{
+			name:           "404 Not Found for non-genesis block",
+			statusCode:     http.StatusNotFound,
+			epochNumber:    1,
+			isGenesisBlock: false,
+			expectedError:  errors.New("received non-200 response from backfill data provider: 404"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			backfillProvider := backfill.NewBackfillerProvider(
+				"http://metafiller.io",
+				0,
+				0,
+				new(mocks.HTTPClientMock),
+				mocks.NewMockMetrics(),
+				testlog.Logger(t, slog.LevelDebug),
+			)
+
+			resp := &http.Response{
+				StatusCode: tt.statusCode,
+			}
+			err := backfillProvider.HandleBackfillProviderError(resp, tt.epochNumber)
+			if tt.expectedError == nil {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tt.expectedError.Error())
+			}
 		})
 	}
 }
