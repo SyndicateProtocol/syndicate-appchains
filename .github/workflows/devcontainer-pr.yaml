@@ -67,7 +67,7 @@ jobs:
             echo "[STATUS] Arbitrum node is ready"
               
             # Run sequencer setup and capture logs
-            just -f .devcontainer/justfile arb-sequencer-plus-setup > /tmp/sequencer-setup.log 2>&1 &
+            just -f .devcontainer/justfile arb-sequencer-plus-setup 2>&1 | tee /tmp/sequencer-setup.log &
 
             # Wait for Rust build to complete by watching for specific log line
             echo "[STATUS] Waiting for sequencer setup to complete..."

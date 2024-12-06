@@ -245,12 +245,12 @@ go-install:
 # Install Foundry
 # Based on https://book.getfoundry.sh/getting-started/installation
 foundry-install:
-    [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }})" ] || curl -L https://foundry.paradigm.xyz | bash
+    [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || curl -L https://foundry.paradigm.xyz | bash
 
 # Update Foundry
 # Based on https://book.getfoundry.sh/getting-started/installation
 foundry-update:
-    [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }})" ] || foundryup
+    [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || foundryup
 
 # Initialize op-devnet
 op-up:
