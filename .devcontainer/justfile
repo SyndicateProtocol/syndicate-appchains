@@ -216,11 +216,11 @@ create-localenv:
 #    [ -f {{ localenv_file }} ] || printf "METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ op_devnet_l2_rpc_url }}\nMETABASED_SEQUENCER_PRIVATE_KEY={{ op_devnet_private_key }}" > {{ localenv_file }}
 
 # Creates localnet ENV file with values fit for Arbitrum devnet
-arb-create-localenv:
-    [ -f {{ localenv_file }} ] || printf "METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}\nMETABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_private_key }}" > {{ localenv_file }}
+#arb-create-localenv:
+#    [ -f {{ localenv_file }} ] || printf "METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}\nMETABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_private_key }}" > {{ localenv_file }}
 
 # Puts arb contract address into localnet ENV file
-arb-update-chain-address: arb-deploy-chain arb-create-localenv
+arb-update-chain-address: arb-deploy-chain create-localenv
     cat {{ localenv_file }} | grep -v METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS= > {{ localenv_file }}.tmp
     echo export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ localenv_file }}.tmp
     mv {{ localenv_file }}.tmp {{ localenv_file }}
@@ -306,8 +306,13 @@ op-all: op-clone foundry-install foundry-update create-aliases
 arb-network-setup: foundry-install foundry-update create-aliases
     @echo "Post-setup Arbitrum script completed successfully. Ready to bring up the Arbitrum Orbit devnet with arb-up."
 
-arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabased-sequencer
+arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address direnv-allow run-metabased-sequencer
     @echo "Arbitrum Sequencer setup completed successfully. Running sequencer."
+
+direnv-allow:
+    source ~/.bashrc
+    command -v direnv >/dev/null 2>&1 || (echo "direnv not installed" && exit 1)
+    direnv allow
 
 arb-health-check:
     curl -s -X POST -H "Content-Type: application/json" \

@@ -34,6 +34,9 @@ jobs:
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-pr-${{ github.event.pull_request.number }}
           runCmd: |
+            # Check for direnv so we can load the .envrc file
+            just -f .devcontainer/justfile direnv-allow
+            
             # Set up network
             RESPONSE=$(just -f .devcontainer/justfile arb-network-setup)
             echo "Network setup: $RESPONSE"
@@ -55,19 +58,17 @@ jobs:
               sleep 10
             done
             echo "[STATUS] Arbitrum node is ready"
-            
-            # Run sequencer setup
-            just -f .devcontainer/justfile arb-sequencer-plus-setup &
-            
-            # Some time for Rust build to compile. Refactor this to look for completion string
-            sleep 60
-            
-            # Wait for sequencer setup completion via health check
+              
+            # Run sequencer setup and capture logs
+            just -f .devcontainer/justfile arb-sequencer-plus-setup > /tmp/sequencer-setup.log 2>&1 &
+
+            # Wait for Rust build to complete by watching for specific log line
             echo "[STATUS] Waiting for sequencer setup to complete..."
-            until just -f .devcontainer/justfile sequencer-health-check | grep -q "result"; do
+            while ! grep -q "Finished \`dev\` profile" /tmp/sequencer-setup.log; do
               sleep 20
+              echo "[STATUS] Still waiting for Rust build complete..."
             done
-            echo "[STATUS] Sequencer setup complete"
+            echo "[STATUS] Rust build completed. Sequencer setup completed."
 
             # Exit on error
             set -e
@@ -125,3 +126,4 @@ jobs:
           path: |
             /tmp/sequencer.log
             /tmp/postCreateOutput
+            /tmp/sequencer-setup.log
