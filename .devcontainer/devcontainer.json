@@ -26,7 +26,8 @@
     "ghcr.io/devcontainers/features/github-cli",
     "ghcr.io/devcontainers/features/docker-in-docker",
     "ghcr.io/devcontainers/features/go",
-    "ghcr.io/devcontainers/features/rust"
+    "ghcr.io/devcontainers/features/rust",
+    "ghcr.io/christophermacgown/devcontainer-features/direnv"
   ],
   "remoteUser": "vscode",
   "containerUser": "vscode",
