@@ -306,11 +306,11 @@ op-all: op-clone foundry-install foundry-update create-aliases
 arb-network-setup: foundry-install foundry-update create-aliases
     @echo "Post-setup Arbitrum script completed successfully. Ready to bring up the Arbitrum Orbit devnet with arb-up."
 
-arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address direnv-allow run-metabased-sequencer
+arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabased-sequencer
     @echo "Arbitrum Sequencer setup completed successfully. Running sequencer."
 
 direnv-allow:
-    source ~/.bashrc
+    source ~/.bashrc || echo "No bash found"
     command -v direnv >/dev/null 2>&1 || (echo "direnv not installed" && exit 1)
     direnv allow
 
