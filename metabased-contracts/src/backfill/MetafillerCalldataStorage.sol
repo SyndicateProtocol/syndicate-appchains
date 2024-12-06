@@ -12,7 +12,7 @@ contract MetafillerCalldataStorage is AccessControl {
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
-    event Batch(uint256 indexed epochNumber);
+    event BatchRange(uint256 indexed startingEpochNumber, uint256 indexed endingEpochNumber);
 
     /// @notice Constructor that sets up the default admin and manager roles
     /// @param admin The address that will be the default admin role
@@ -38,7 +38,7 @@ contract MetafillerCalldataStorage is AccessControl {
     /// @notice Emits a Batch
     /// @param batch: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#batch-format
     function save(uint256 epochNumber, bytes32 epochHash, bytes calldata batch) external onlyRole(MANAGER_ROLE) {
-        emit Batch(epochNumber);
+        emit BatchRange(epochNumber, epochNumber);
     }
 
     /// @notice Emits many Batches
@@ -52,8 +52,6 @@ contract MetafillerCalldataStorage is AccessControl {
             "Array lengths must be equal"
         );
         uint256 length = epochNumbers.length;
-        for (uint256 i = 0; i < length; i++) {
-            emit Batch(epochNumbers[i]);
-        }
+        emit BatchRange(epochNumbers[0], epochNumbers[length - 1]);
     }
 }

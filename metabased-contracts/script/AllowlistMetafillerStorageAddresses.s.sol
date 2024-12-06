@@ -2,15 +2,16 @@
 
 import {Script} from "forge-std/Script.sol";
 
-import {MetafillerStorage} from "../src/backfill/MetafillerStorage.sol";
+// import {MetafillerStorage} from "../src/backfill/MetafillerStorage.sol";
+import {MetafillerCalldataStorage} from "../src/backfill/MetafillerCalldataStorage.sol";
 
 contract AllowlistMetafillerStorageAddresses is Script {
-    MetafillerStorage public metafillerStorage;
+    MetafillerCalldataStorage public metafillerStorage;
 
     function run() public {
         vm.startBroadcast();
         address metafillerStorageAddress = vm.envAddress("METAFILLER_STORAGE_ADDRESS");
-        metafillerStorage = MetafillerStorage(metafillerStorageAddress);
+        metafillerStorage = MetafillerCalldataStorage(metafillerStorageAddress);
         // TODO: Update the addresses to allowlist
         address[10] memory addressesToAllowlist = [
             0x5f008726C9584810fB4C6e7B794e7EA5aC79C1C6,
