@@ -37,6 +37,9 @@ jobs:
             # Create .envrc file
             just -f .devcontainer/justfile create-localenv
             [ -f .envrc ] || { echo ".envrc file not created successfully"; exit 1; }
+            echo "========== .envrc contents =========="
+            cat .envrc
+            echo "==================================="
             
             # Check for direnv so we can load the .envrc file
             just -f .devcontainer/justfile direnv-allow
@@ -123,7 +126,8 @@ jobs:
 #            echo "[STATUS] op-translator is ready"
 
       - name: Upload logs
-        uses: actions/upload-artifact@v3
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: debug-logs
           path: |
