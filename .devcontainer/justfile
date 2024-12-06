@@ -208,7 +208,6 @@ create-localenv:
     export METABASED_SEQUENCER_PORT={{ metabased_sequencer_port }}
     export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=[GETS_REPLACED_BY_SCRIPT]
     EOL
-        direnv allow
 
 # TODO - for OP localnet, not op-translator
 # Creates localnet ENV file with values fit for Optimism devnet
@@ -310,7 +309,6 @@ arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabase
     @echo "Arbitrum Sequencer setup completed successfully. Running sequencer."
 
 direnv-allow:
-    source ~/.bashrc || echo "No bash found"
     command -v direnv >/dev/null 2>&1 || (echo "direnv not installed" && exit 1)
     direnv allow
 
