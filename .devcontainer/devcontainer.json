@@ -15,7 +15,7 @@
     "ghcr.io/devcontainers/features/rust:1": "latest",
     "ghcr.io/devcontainers/features/git-lfs:1": "latest",
     "ghcr.io/devcontainers/features/github-cli:1": "latest",
-    "ghcr.io/christophermacgown/devcontainer-features/direnv:1.0.1": {} // Community feature - https://containers.dev/features
+//    "ghcr.io/christophermacgown/devcontainer-features/direnv:1.0.1": {} // Community feature - https://containers.dev/features
   },
 
   "overrideFeatureInstallOrder": [
@@ -26,8 +26,8 @@
     "ghcr.io/devcontainers/features/github-cli",
     "ghcr.io/devcontainers/features/docker-in-docker",
     "ghcr.io/devcontainers/features/go",
-    "ghcr.io/devcontainers/features/rust",
-    "ghcr.io/christophermacgown/devcontainer-features/direnv"
+    "ghcr.io/devcontainers/features/rust"
+//    "ghcr.io/christophermacgown/devcontainer-features/direnv"
   ],
   "remoteUser": "vscode",
   "containerUser": "vscode",

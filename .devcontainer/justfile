@@ -314,7 +314,7 @@ arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address source-envrc
 #    direnv allow
 
 source-envrc:
-    source {{ localenv_file }}
+    . {{ localenv_file }}
 
 arb-health-check:
     curl -s -X POST -H "Content-Type: application/json" \
