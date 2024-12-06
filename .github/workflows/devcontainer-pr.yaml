@@ -41,9 +41,11 @@ jobs:
             cat .envrc
             echo "==================================="
             
-            # Check for direnv so we can load the .envrc file
-            just -f .devcontainer/justfile direnv-allow
-            direnv reload
+            just -f .devcontainer/justfile source-envrc
+            
+            echo "========== All Environment Variables =========="
+            env | sort
+            echo "============================================="
             
             # Set up network
             RESPONSE=$(just -f .devcontainer/justfile arb-network-setup)

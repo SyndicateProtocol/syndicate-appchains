@@ -223,7 +223,6 @@ arb-update-chain-address: arb-deploy-chain create-localenv
     cat {{ localenv_file }} | grep -v METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS= > {{ localenv_file }}.tmp
     echo export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ localenv_file }}.tmp
     mv {{ localenv_file }}.tmp {{ localenv_file }}
-    direnv allow
 
 # TODO - refactor duplicate
 # Puts Arb contract address into localnet ENV file
@@ -287,7 +286,7 @@ create-aliases:
             echo "alias arb-update-chain-address='just -f {{justfile()}} arb-update-chain-address'" >> "$rc_file"
             echo "alias arb-health-check='just -f {{justfile()}} arb-health-check'" >> "$rc_file"
             echo "alias run-metabased-sequencer='just -f {{justfile()}} run-metabased-sequencer'" >> "$rc_file"
-            echo "alias direnv-allow='just -f {{justfile()}} direnv-allow'" >> "$rc_file"
+            echo "alias source-envrc='just -f {{justfile()}} source-envrc'" >> "$rc_file"
             echo "# END Metabased Rollup Dev Container aliases" >> "$rc_file"
             echo "Aliases created in $rc_file"
         else
@@ -306,12 +305,16 @@ op-all: op-clone foundry-install foundry-update create-aliases
 arb-network-setup: foundry-install foundry-update create-aliases
     @echo "Post-setup Arbitrum script completed successfully. Ready to bring up the Arbitrum Orbit devnet with arb-up."
 
-arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabased-sequencer
+arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address source-envrc run-metabased-sequencer
     @echo "Arbitrum Sequencer setup completed successfully. Running sequencer."
 
-direnv-allow:
-    command -v direnv >/dev/null 2>&1 || (echo "direnv not installed" && exit 1)
-    direnv allow
+# TODO delete me
+#direnv-allow:
+#    command -v direnv >/dev/null 2>&1 || (echo "direnv not installed" && exit 1)
+#    direnv allow
+
+source-envrc:
+    source {{ localenv_file }}
 
 arb-health-check:
     curl -s -X POST -H "Content-Type: application/json" \
