@@ -36,10 +36,11 @@ $ make deploy-based-sequencerchain-frame
 
 | Contract Name           | Address                                    |
 | ----------------------- | ------------------------------------------ |
-| MetabasedFactory        | 0xD1e50D5A203E6485e97E3bC8A951b49aaFC28603 |
-| MetabasedSequencerChain | 0xEFfCeaf782d14D7271B30C68e9667cD3B4218553 |
+| MetabasedFactory        | 0xb80c82702791664f59dF773e8b50dE921fC026fE |
+| MetabasedSequencerChain | 0xb1567B5DFa038e4F279d3b585D4D45b8bDD2263D |
 | AlwaysAllowedModule     | 0x33aB24E0a47A7aAe869755420950A6326e3CB9F3 |
-| MetafillerStorage       | 0x745bdeFA5C879ADCf739075bB03FD4ecCd03cE22 |
+| MetafillerStorage       | 0x91C77f7857EcD4Edd1d5242e38345E42Ad1212E4 |
+| RequiredAllModule       | 0xaE938C7D5b69106BaA2316BC007D0f30e6239826 |
 
 #### Metabased Testnet (Private Devnet)
 
