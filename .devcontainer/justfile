@@ -245,12 +245,12 @@ go-install:
 # Install Foundry
 # Based on https://book.getfoundry.sh/getting-started/installation
 foundry-install:
-    [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || curl -L https://foundry.paradigm.xyz | bash
+    [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }})" ] || curl -L https://foundry.paradigm.xyz | bash
 
 # Update Foundry
 # Based on https://book.getfoundry.sh/getting-started/installation
 foundry-update:
-    [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || foundryup
+    [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }})" ] || foundryup
 
 # Initialize op-devnet
 op-up:
@@ -287,6 +287,7 @@ create-aliases:
             echo "alias arb-update-chain-address='just -f {{justfile()}} arb-update-chain-address'" >> "$rc_file"
             echo "alias arb-health-check='just -f {{justfile()}} arb-health-check'" >> "$rc_file"
             echo "alias run-metabased-sequencer='just -f {{justfile()}} run-metabased-sequencer'" >> "$rc_file"
+            echo "alias direnv-allow='just -f {{justfile()}} direnv-allow'" >> "$rc_file"
             echo "# END Metabased Rollup Dev Container aliases" >> "$rc_file"
             echo "Aliases created in $rc_file"
         else
