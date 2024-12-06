@@ -10,6 +10,18 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
     /// @notice The ID of the L3 chain that this contract is sequencing transactions for.
     uint256 public immutable l3ChainId;
 
+    /// @notice Tracks the ownership and state of chunk processing
+    struct ChunkState {
+        address owner; // Address that initiated the chunk processing
+        uint256 processedCount; // Number of chunks processed so far
+        bool isComplete; // Whether the chunk processing is complete
+        uint256 totalChunks; // Total number of chunks expected
+        uint256 lastIndex; // Last processed index
+    }
+
+    /// @notice Mapping from transaction hash to chunk processing state
+    mapping(bytes32 => ChunkState) public chunkStates;
+
     /// @notice Emitted when a new transaction is processed.
     event TransactionProcessed(address indexed sender, bytes data);
 
@@ -18,6 +30,15 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
 
     /// @dev Thrown when an invalid chunk size is provided.
     error InvalidChunkSize();
+
+    /// @dev Thrown when chunks are processed out of order
+    error InvalidChunkOrder();
+
+    /// @dev Thrown when an unauthorized address tries to process a chunk
+    error UnauthorizedChunkProcessor();
+
+    /// @dev Thrown when trying to process a chunk for a completed transaction
+    error ChunkProcessingAlreadyComplete();
 
     /// @notice Constructs the MetabasedSequencerChain contract.
     /// @param _l3ChainId The ID of the L3 chain that this contract is sequencing transactions for.
@@ -67,9 +88,40 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
             revert InvalidChunkSize();
         }
 
-        emit TransactionProcessed(msg.sender, txChunk);
+        ChunkState storage state = chunkStates[txHashForParent];
 
+        // If this is the first chunk for this txHashForParent
+        if (state.owner == address(0)) {
+            state.owner = msg.sender;
+            state.totalChunks = totalChunks;
+            state.lastIndex = type(uint256).max; // Initialize to max value
+        } else {
+            // Verify the sender is the original chunk processor
+            if (state.owner != msg.sender) {
+                revert UnauthorizedChunkProcessor();
+            }
+
+            // Verify chunk processing hasn't been completed
+            if (state.isComplete) {
+                revert ChunkProcessingAlreadyComplete();
+            }
+
+            // Verify chunks are processed in order
+            if (index != state.lastIndex + 1) {
+                revert InvalidChunkOrder();
+            }
+        }
+
+        state.lastIndex = index;
+        state.processedCount++;
+
+        emit TransactionProcessed(msg.sender, txChunk);
         emit TransactionChunkProcessed(txChunk, index, totalChunks, txHashForParent);
+
+        // Check if all chunks have been processed
+        if (state.processedCount == state.totalChunks) {
+            state.isComplete = true;
+        }
     }
 
     /// @notice Prepends a zero byte to the transaction data
