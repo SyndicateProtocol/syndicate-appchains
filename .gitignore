@@ -16,8 +16,6 @@
 
 # Local environment
 .envrc
-.env
-localnet.env
 
 # Build files
 bin/
