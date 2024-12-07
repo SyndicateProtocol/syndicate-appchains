@@ -143,34 +143,6 @@ op-update-chain-address: op-deploy-chain create-localenv
     echo METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ op_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ localenv_file }}.tmp
     mv {{ localenv_file }}.tmp {{ localenv_file }}
 
-## TODO [SEQ-323]: change PORT -> separate ports for op-translator and sequencer
-## TODO Merge METABASED_SEQUENCER_CHAIN_RPC_ADDRESS -> SEQUENCING_CHAIN_RPC_URL
-# Create or update localnet .env file
-#create-localenv:
-#    #!/usr/bin/env bash
-#        cat > {{ localenv_file }} << EOL
-#    PORT={{ op_translator_port }}
-#    SETTLEMENT_CHAIN_RPC_URL={{ op_devnet_l2_rpc_url }}
-#    SEQUENCING_CHAIN_RPC_URL={{ arb_orbit_l2_rpc_url }}
-#    META_BASED_CHAIN_RPC_URL=http://localhost:8548
-#    METAFILLER_URL=http://localhost:8080
-#    FRAME_SIZE=1024
-#    LOG_LEVEL=debug
-#    SEQUENCING_CONTRACT_ADDRESS=[SEQUENCING_CONTRACT_ADDRESS]
-#    SETTLEMENT_START_BLOCK=1
-#    BATCHER_PRIVATE_KEY=fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d
-#    SETTLEMENT_CHAIN_ID={{ op_devnet_l2_chain_id }}
-#    SETTLEMENT_CHAIN_BLOCK_TIME=2s
-#    BATCH_INBOX_ADDRESS=0xff00000000000000000000000000000000005100
-#    BATCHER_ADDRESS=0x063D87A885a9323831A688645647eD7d0e859C5d
-#    CUTOVER_BLOCK=0
-#    # Vars below are used by metabased-sequencer. TODO: refactor duplicates
-#    METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}
-#    METABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_private_key }}
-#    METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=[METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS]
-#    PORT={{ metabased_sequencer_port }}
-#    EOL
-
 ## TODO Merge METABASED_SEQUENCER_CHAIN_RPC_ADDRESS -> SEQUENCING_CHAIN_RPC_URL
 ## TODO rename me to create-envrc
 create-localenv:
@@ -286,7 +258,6 @@ create-aliases:
             echo "alias arb-update-chain-address='just -f {{justfile()}} arb-update-chain-address'" >> "$rc_file"
             echo "alias arb-health-check='just -f {{justfile()}} arb-health-check'" >> "$rc_file"
             echo "alias run-metabased-sequencer='just -f {{justfile()}} run-metabased-sequencer'" >> "$rc_file"
-            echo "alias source-envrc='just -f {{justfile()}} source-envrc'" >> "$rc_file"
             echo "# END Metabased Rollup Dev Container aliases" >> "$rc_file"
             echo "Aliases created in $rc_file"
         else
@@ -307,14 +278,6 @@ arb-network-setup: foundry-install foundry-update create-aliases
 
 arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabased-sequencer
     @echo "Arbitrum Sequencer setup completed successfully. Running sequencer."
-
-# TODO delete me
-#direnv-allow:
-#    command -v direnv >/dev/null 2>&1 || (echo "direnv not installed" && exit 1)
-#    direnv allow
-
-#source-envrc:
-#    . {{ localenv_file }}
 
 arb-health-check:
     curl -s -X POST -H "Content-Type: application/json" \
