@@ -35,7 +35,7 @@ jobs:
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-pr-${{ github.event.pull_request.number }}
           runCmd: |
             # Create .envrc file
-            just -f .devcontainer/justfile create-localenv
+            just -f .devcontainer/justfile create-envrc
             [ -f .envrc ] || { echo ".envrc file not created successfully"; exit 1; }
             echo "========== .envrc contents =========="
             cat .envrc
