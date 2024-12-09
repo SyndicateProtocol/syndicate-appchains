@@ -1,3 +1,4 @@
+pragma solidity 0.8.25;
 // SPDX-License-Identifier: UNLICENSED
 
 import {Script} from "forge-std/Script.sol";
