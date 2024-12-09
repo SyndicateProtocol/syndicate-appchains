@@ -119,11 +119,6 @@ arb-deploy-chain:
 run-metabased-sequencer:
     . {{ envrc_file }} && cd {{ sequencer_root }} && cargo run -p interceptor
 
-# Creates localnet ENV file for op-translator
-op-translator-create-envrc:
-    [ -f {{ envrc_file }} ] || printf "METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ op_devnet_l2_rpc_url }}\nMETABASED_SEQUENCER_PRIVATE_KEY={{ op_devnet_private_key }}" > {{ envrc_file }}
-
-# TODO - change to both-update-chain-address
 # Runs op-translator
 run-op-translator: create-envrc update-chain-address
     . {{ envrc_file }} && cd {{ op_translator_root }} && go run main.go
@@ -136,13 +131,15 @@ op-clean-chain:
 arb-clean-chain:
     rm -rf {{ arb_contract_deploy_file }}
 
-# Puts contract address into localnet ENV file
+# Puts contract address into localnet .envrc file
+# Works by finding the value corresponding to the key in the .envrc, and replacing it with the address found in the `deploy_file`
 op-update-chain-address: op-deploy-chain create-envrc
     cat {{ envrc_file }} | grep -v METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS= > {{ envrc_file }}.tmp
     echo METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ op_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ envrc_file }}.tmp
     mv {{ envrc_file }}.tmp {{ envrc_file }}
 
-## TODO Merge METABASED_SEQUENCER_CHAIN_RPC_ADDRESS -> SEQUENCING_CHAIN_RPC_URL
+# TODO(SEQ-312): Merge METABASED_SEQUENCER_CHAIN_RPC_ADDRESS -> SEQUENCING_CHAIN_RPC_URL
+# Copy of `.envrc.example` using vars set earlier in the file
 create-envrc:
     #!/usr/bin/env bash
         cat > {{ envrc_file }} << EOL
@@ -179,22 +176,14 @@ create-envrc:
     export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=[GETS_REPLACED_BY_SCRIPT]
     EOL
 
-# TODO - for OP localnet, not op-translator
-# Creates localnet ENV file with values fit for Optimism devnet
-#op-create-envrc:
-#    [ -f {{ envrc_file }} ] || printf "METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ op_devnet_l2_rpc_url }}\nMETABASED_SEQUENCER_PRIVATE_KEY={{ op_devnet_private_key }}" > {{ envrc_file }}
-
-# Creates localnet ENV file with values fit for Arbitrum devnet
-#arb-create-envrc:
-#    [ -f {{ envrc_file }} ] || printf "METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}\nMETABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_private_key }}" > {{ envrc_file }}
-
 # Puts arb contract address into localnet ENV file
+# Works by finding the value corresponding to the key in the .envrc, and replacing it with the address found in the `deploy_file`
 arb-update-chain-address: arb-deploy-chain create-envrc
     cat {{ envrc_file }} | grep -v METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS= > {{ envrc_file }}.tmp
     echo export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ envrc_file }}.tmp
     mv {{ envrc_file }}.tmp {{ envrc_file }}
 
-# TODO - refactor duplicate
+# TODO(SEQ-312): refactor duplicate
 # Puts Arb contract address into localnet ENV file
 update-chain-address: arb-deploy-chain create-envrc
     #!/usr/bin/env bash

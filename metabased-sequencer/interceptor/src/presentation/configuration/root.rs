@@ -47,15 +47,11 @@ pub struct Configuration {
 
 impl Configuration {
     pub fn parse_with_args(
-        // env_file: impl Provider + Debug,
-        // env_profile: impl Provider + Debug,
         env: impl Provider + Debug,
         cli: impl Provider + Debug,
     ) -> Result<Self, figment::Error> {
         Figment::new()
             .merge(Serialized::default("port", DEFAULT_PORT))
-            // .merge(Logged::new(env_file))
-            // .merge(Logged::new(env_profile))
             .merge(Logged::new(env))
             .merge(Logged::new(cli))
             .extract()
@@ -64,17 +60,8 @@ impl Configuration {
     pub fn parse() -> Result<Self, figment::Error> {
         let args = Args::parse();
 
-        // let env_profile = args
-        //     .profile
-        //     .as_ref()
-        //     .map(Profile::to_env_filename)
-        //     .map(EnvFile::from_filename)
-        //     .unwrap_or_else(EnvFile::new)
-        //     .with_prefix(ENV_PREFIX);
 
         Self::parse_with_args(
-            // EnvFile::new().with_prefix(ENV_PREFIX),
-            // env_profile,
             Env::prefixed(ENV_PREFIX), // maps to one without the prefix
             CliArgs::new(args),
         )

@@ -2,6 +2,7 @@
 
 # metabased-sequencer
 
+# TODO [SEQ-389]: replace Alchemy private URL
 # Optimism layer-2 RPC URL from Alchemy
 export METABASED_SEQUENCER_CHAIN_RPC_ADDRESS=https://rpc.devnet.alchemy.com/4934ab6a-37a9-4431-a473-84b7d6bcef57
 # Placeholder Arbitrum devnet key https://docs.arbitrum.io/run-arbitrum-node/run-nitro-dev-node#development-account-used-by-default
