@@ -1,12 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {MetabasedSequencerChain} from "./MetabasedSequencerChain.sol";
+import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
 
-/// @title AtomicSequencer
-/// @notice A wrapper contract that sequences transactions on two MetabasedChain contracts atomically.
-/// If either sequencing fails, the entire transaction is reverted.
-contract AtomicSequencer {
+/// @title AtomicSequencerImplementation
+/// @notice Implementation contract containing the logic for atomic sequencing
+contract AtomicSequencerImplementation {
     /// @dev Thrown when the chain addresses are invalid
     error InvalidChainAddresses();
 
