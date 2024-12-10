@@ -10,13 +10,12 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
     /// @notice The ID of the L3 chain that this contract is sequencing transactions for.
     uint256 public immutable l3ChainId;
 
-    /// @notice Tracks the ownership and state of chunk processing
+    /// @notice Tracks the processing state of chunked transactions
     struct ChunkState {
+        uint256 chunkMask; // Bitmask tracking which chunks have been processed
+        uint256 totalChunks; // Total number of expected chunks
         address owner; // Address that initiated the chunk processing
-        uint256 processedCount; // Number of chunks processed so far
-        bool isComplete; // Whether the chunk processing is complete
-        uint256 totalChunks; // Total number of chunks expected
-        uint256 lastIndex; // Last processed index
+        bool isComplete; // Whether all chunks have been processed
     }
 
     /// @notice Mapping from transaction hash to chunk processing state
@@ -28,11 +27,14 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
     /// @notice Emitted when a chunk of transactions is processed.
     event TransactionChunkProcessed(bytes txChunk, uint256 index, uint256 totalChunks, bytes32 txHashForParent);
 
-    /// @dev Thrown when an invalid chunk size is provided.
-    error InvalidChunkSize();
+    /// @notice Emitted when all chunks for a transaction have been processed
+    event ChunkProcessingCompleted(bytes32 indexed txHashForParent);
 
-    /// @dev Thrown when chunks are processed out of order
-    error InvalidChunkOrder();
+    /// @dev Thrown when an invalid chunk configuration is provided
+    error InvalidChunkConfig();
+
+    /// @dev Thrown when chunk index exceeds total chunks
+    error InvalidChunkIndex();
 
     /// @dev Thrown when an unauthorized address tries to process a chunk
     error UnauthorizedChunkProcessor();
@@ -77,15 +79,20 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
 
     /// @notice Processes a chunk of transactions from a larger batch.
     /// @param txChunk the compressed chunked transaction data.
-    /// @param index The starting index for this chunk in the overall batch.
-    /// @param totalChunks The number of transactions to process in this chunk.
-    /// @param txHashForParent The hash of the parent transaction.
+    /// @param index The index for this chunk in the overall batch.
+    /// @param totalChunks The total number of chunks in the batch. Due to bitmasking, this must be <= 256.
+    /// @param txHashForParent The hash identifying this batch of chunks.
     function processChunk(bytes calldata txChunk, uint256 index, uint256 totalChunks, bytes32 txHashForParent)
         external
         onlyWhenAllowed(msg.sender)
     {
-        if (totalChunks == 0) {
-            revert InvalidChunkSize();
+        // Validate chunk parameters
+        if (totalChunks == 0 || totalChunks > 256) {
+            revert InvalidChunkConfig();
+        }
+
+        if (index >= totalChunks) {
+            revert InvalidChunkIndex();
         }
 
         ChunkState storage state = chunkStates[txHashForParent];
@@ -94,7 +101,6 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
         if (state.owner == address(0)) {
             state.owner = msg.sender;
             state.totalChunks = totalChunks;
-            state.lastIndex = type(uint256).max; // Initialize to max value
         } else {
             // Verify the sender is the original chunk processor
             if (state.owner != msg.sender) {
@@ -105,22 +111,21 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
             if (state.isComplete) {
                 revert ChunkProcessingAlreadyComplete();
             }
-
-            // Verify chunks are processed in order
-            if (index != state.lastIndex + 1) {
-                revert InvalidChunkOrder();
-            }
         }
 
-        state.lastIndex = index;
-        state.processedCount++;
+        // Update the bitmask to mark this chunk as received
+        uint256 chunkBit = 1 << index;
+        state.chunkMask = state.chunkMask | chunkBit;
 
+        // Emit the chunk processing event
         emit TransactionProcessed(msg.sender, txChunk);
         emit TransactionChunkProcessed(txChunk, index, totalChunks, txHashForParent);
 
-        // Check if all chunks have been processed
-        if (state.processedCount == state.totalChunks) {
+        // Check if all chunks have been received
+        uint256 expectedMask = (1 << totalChunks) - 1;
+        if (state.chunkMask == expectedMask) {
             state.isComplete = true;
+            emit ChunkProcessingCompleted(txHashForParent);
         }
     }
 

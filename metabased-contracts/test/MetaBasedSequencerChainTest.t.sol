@@ -110,34 +110,32 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         chain.processBulkTransactions(validTxns);
     }
 
-    function testProcessChunkInitial() public {
-        bytes memory compressedTxChunk = abi.encode("compressed_transaction_data");
-        bytes32 txHash = bytes32(keccak256(compressedTxChunk));
+    function testProcessFirstChunk() public {
+        bytes memory chunk = abi.encode("chunk1");
+        bytes32 txHash = bytes32(keccak256(chunk));
 
         vm.startPrank(admin);
         permissionModule.addCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit MetabasedSequencerChain.TransactionProcessed(address(this), compressedTxChunk);
+        emit MetabasedSequencerChain.TransactionProcessed(address(this), chunk);
 
         vm.expectEmit(true, true, true, true);
-        emit MetabasedSequencerChain.TransactionChunkProcessed(compressedTxChunk, 0, 3, txHash);
+        emit MetabasedSequencerChain.TransactionChunkProcessed(chunk, 0, 3, txHash);
 
-        chain.processChunk(compressedTxChunk, 0, 3, txHash);
+        chain.processChunk(chunk, 0, 3, txHash);
 
         // Verify chunk state
-        (address owner, uint256 processedCount, bool isComplete, uint256 totalChunks, uint256 lastIndex) =
-            chain.chunkStates(txHash);
+        (uint256 chunkMask, uint256 totalChunks, address owner, bool isComplete) = chain.chunkStates(txHash);
 
         assertEq(owner, address(this));
-        assertEq(processedCount, 1);
-        assertFalse(isComplete);
+        assertEq(chunkMask, 1); // First bit set (2^0 = 1)
         assertEq(totalChunks, 3);
-        assertEq(lastIndex, 0);
+        assertFalse(isComplete);
     }
 
-    function testProcessCompleteChunkSequence() public {
+    function testProcessChunksOutOfOrder() public {
         bytes memory chunk1 = abi.encode("chunk1");
         bytes memory chunk2 = abi.encode("chunk2");
         bytes memory chunk3 = abi.encode("chunk3");
@@ -147,27 +145,96 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         permissionModule.addCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
-        // Process first chunk
-        chain.processChunk(chunk1, 0, 3, txHash);
+        // Process chunks out of order: 2 -> 0
+        chain.processChunk(chunk3, 2, 3, txHash); // Sets bit 2 (0b0100 = 4)
+        chain.processChunk(chunk1, 0, 3, txHash); // Sets bit 0 (0b0001 = 1)
 
-        // Process second chunk
-        chain.processChunk(chunk2, 1, 3, txHash);
+        // Verify intermediate state
+        (uint256 chunkMask,,, bool isComplete) = chain.chunkStates(txHash);
 
-        // Process final chunk
-        vm.expectEmit(true, true, true, true);
-        emit MetabasedSequencerChain.TransactionChunkProcessed(chunk3, 2, 3, txHash);
+        assertEq(chunkMask, 5); // Should be 0b0101 (bits 0 and 2 set = 1 + 4 = 5)
+        assertFalse(isComplete);
 
-        chain.processChunk(chunk3, 2, 3, txHash);
+        // Process final chunk and expect completion event
+        vm.expectEmit(true, false, false, true);
+        emit MetabasedSequencerChain.ChunkProcessingCompleted(txHash);
+
+        chain.processChunk(chunk2, 1, 3, txHash); // Sets bit 1 (0b0010 = 2)
 
         // Verify final state
-        (address owner, uint256 processedCount, bool isComplete, uint256 totalChunks, uint256 lastIndex) =
-            chain.chunkStates(txHash);
+        (chunkMask,,, isComplete) = chain.chunkStates(txHash);
+        assertEq(chunkMask, 7); // Should be 0b0111 (all bits set = 1 + 2 + 4 = 7)
+        assertTrue(isComplete);
+    }
+
+    function testProcessChunkInvalidConfigs() public {
+        bytes memory chunk = abi.encode("chunk");
+        bytes32 txHash = bytes32(keccak256(chunk));
+
+        vm.startPrank(admin);
+        permissionModule.addCheck(address(new MockIsAllowed(true)), false);
+        vm.stopPrank();
+
+        // Test zero chunks
+        vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidChunkConfig.selector));
+        chain.processChunk(chunk, 0, 0, txHash);
+
+        // Test too many chunks (> 256)
+        vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidChunkConfig.selector));
+        chain.processChunk(chunk, 0, 257, txHash);
+
+        // Test invalid index
+        vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidChunkIndex.selector));
+        chain.processChunk(chunk, 5, 3, txHash);
+    }
+
+    function testIncompleteChunks() public {
+        bytes memory chunk = abi.encode("chunk");
+        bytes32 txHash = bytes32(keccak256(chunk));
+
+        vm.startPrank(admin);
+        permissionModule.addCheck(address(new MockIsAllowed(true)), false);
+        vm.stopPrank();
+
+        // Process first and third chunks of a 4-chunk sequence
+        chain.processChunk(chunk, 0, 4, txHash);
+        chain.processChunk(chunk, 2, 4, txHash);
+
+        // Verify state shows incomplete
+        (uint256 chunkMask, uint256 totalChunks, address owner, bool isComplete) = chain.chunkStates(txHash);
 
         assertEq(owner, address(this));
-        assertEq(processedCount, 3);
-        assertTrue(isComplete);
-        assertEq(totalChunks, 3);
-        assertEq(lastIndex, 2);
+        assertEq(chunkMask, 5); // Bits 0 and 2 set (2^0 + 2^2 = 1 + 4 = 5)
+        assertEq(totalChunks, 4);
+        assertFalse(isComplete); // Should not be complete as chunks 1 and 3 are missing
+
+        // Verify expected mask
+        uint256 expectedMask = (1 << 4) - 1; // Should be 15 (2^4 - 1)
+        assertFalse(chunkMask == expectedMask);
+    }
+
+    function testProcessDuplicateChunk() public {
+        bytes memory chunk = abi.encode("chunk");
+        bytes32 txHash = bytes32(keccak256(chunk));
+
+        vm.startPrank(admin);
+        permissionModule.addCheck(address(new MockIsAllowed(true)), false);
+        vm.stopPrank();
+
+        // Process first chunk (setting bit 1)
+        chain.processChunk(chunk, 1, 3, txHash); // Sets bit 1 (0b0010 = 2)
+
+        // Verify initial state
+        (uint256 chunkMask_,,,) = chain.chunkStates(txHash);
+        assertEq(chunkMask_, 2); // Should be 0b0010 (bit 1 set = 2)
+
+        // Process same chunk again
+        chain.processChunk(chunk, 1, 3, txHash);
+
+        // Verify state has not changed
+        (uint256 chunkMask,,, bool isComplete) = chain.chunkStates(txHash);
+        assertEq(chunkMask, 2); // Should still be 0b0010 (bit 1 set = 2)
+        assertFalse(isComplete);
     }
 
     function testUnauthorizedChunkProcessor() public {
@@ -188,22 +255,6 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         chain.processChunk(chunk, 1, 3, txHash);
     }
 
-    function testOutOfOrderChunkProcessing() public {
-        bytes memory chunk = abi.encode("chunk1");
-        bytes32 txHash = bytes32(keccak256(chunk));
-
-        vm.startPrank(admin);
-        permissionModule.addCheck(address(new MockIsAllowed(true)), false);
-        vm.stopPrank();
-
-        // Process first chunk
-        chain.processChunk(chunk, 0, 3, txHash);
-
-        // Attempt to process chunk 2 before chunk 1
-        vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidChunkOrder.selector));
-        chain.processChunk(chunk, 2, 3, txHash);
-    }
-
     function testProcessChunkAfterCompletion() public {
         bytes memory chunk = abi.encode("chunk");
         bytes32 txHash = bytes32(keccak256(chunk));
@@ -212,24 +263,12 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         permissionModule.addCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
-        // Process single chunk transaction
+        // Process first chunk (with totalChunks = 1)
         chain.processChunk(chunk, 0, 1, txHash);
 
-        // Attempt to process another chunk after completion
+        // Attempt to process more chunks after completion
         vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.ChunkProcessingAlreadyComplete.selector));
-        chain.processChunk(chunk, 1, 1, txHash);
-    }
-
-    function testProcessChunkInvalidSize() public {
-        bytes memory compressedTxChunk = abi.encode("compressed_transaction_data");
-        bytes32 txHash = bytes32(keccak256(compressedTxChunk));
-
-        vm.startPrank(admin);
-        permissionModule.addCheck(address(new MockIsAllowed(true)), false);
-        vm.stopPrank();
-
-        vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidChunkSize.selector));
-        chain.processChunk(compressedTxChunk, 0, 0, txHash);
+        chain.processChunk(chunk, 0, 1, txHash);
     }
 }
 
