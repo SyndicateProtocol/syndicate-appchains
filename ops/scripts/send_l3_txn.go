@@ -16,15 +16,9 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Load environment variables from .env file
-	if err := godotenv.Load(); err != nil {
-		log.Fatalf("Error loading .env file: %v", err)
-	}
-
 	// Get environment variables
 	sequencingRPCUrl := os.Getenv("SEQUENCING_RPC_URL")
 	sequencingContractAddress := common.HexToAddress(os.Getenv("SEQUENCING_CONTRACT_ADDRESS"))
