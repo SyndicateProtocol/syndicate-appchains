@@ -3,7 +3,7 @@ use crate::domain::primitives::Bytes;
 use crate::domain::MetabasedSequencerChainService;
 use crate::presentation::json_rpc_errors::Error;
 use crate::presentation::json_rpc_errors::Error::{InvalidInput, InvalidParams};
-use crate::presentation::json_rpc_errors::InvalidInputError::MissingGasPrice;
+use crate::presentation::json_rpc_errors::InvalidInputError::{MissingChainID, MissingGasPrice, UnableToRLPDecode};
 use crate::presentation::transaction;
 use alloy::consensus::{Transaction, TxEnvelope, TxType};
 use alloy::primitives::private::alloy_rlp::Decodable;
@@ -20,9 +20,17 @@ where
 {
     // 1. Decoding:
     let mut slice: &[u8] = encoded.as_ref();
-    let tx = TxEnvelope::decode(&mut slice)?;
+    let tx = match TxEnvelope::decode(&mut slice) {
+        Ok(tx) => tx,
+        Err(_) => return Err(InvalidInput(UnableToRLPDecode)),
+    };
 
     // 2. Validation:
+    //For legacy transactions, validate chain ID immediately
+    if tx.tx_type() == TxType::Legacy && tx.chain_id().is_none() {
+        return Err(InvalidInput(MissingChainID));
+    }
+
     tx.recover_signer()?;
 
     if tx.tx_type() == TxType::Legacy {
@@ -75,7 +83,7 @@ mod tests {
     use alloy::primitives::TxKind;
     use alloy::signers::local::PrivateKeySigner;
     use alloy_primitives::private::alloy_rlp::Encodable;
-    use alloy_primitives::{b256, Signature};
+    use alloy_primitives::{b256, PrimitiveSignature};
     use async_trait::async_trait;
     use std::fmt::{Debug, Display, Formatter};
     use std::sync::Arc;
@@ -144,7 +152,6 @@ mod tests {
     #[tokio::test]
     #[test_case(vec![0, 1, 2, 3]; "Non-rlp")]
     #[test_case(vec![]; "Empty")]
-    #[test_case(encode_legacy_transaction_without_chain_id(); "Legacy transaction without chain ID")]
     async fn test_decoding_invalid_rlp_transaction_fails(encoded_tx: Vec<u8>) {
         let encoded_tx = Bytes::from(encoded_tx);
 
@@ -156,6 +163,24 @@ mod tests {
             .unwrap_err();
 
         let expected_error = "invalid input: unable to RLP decode";
+        let actual_error = error.to_string();
+
+        assert_eq!(actual_error, expected_error);
+    }
+
+    #[tokio::test]
+    #[test_case(encode_legacy_transaction_without_chain_id(); "Legacy transaction without chain ID")]
+    async fn test_decoding_legacy_transaction_without_chain_id_fails(encoded_tx: Vec<u8>) {
+        let encoded_tx = Bytes::from(encoded_tx);
+
+        let transactions = Arc::new(RwLock::new(Vec::new()));
+        let chain = InMemoryMetabasedSequencerChain::new(transactions.clone());
+
+        let error = send_raw_transaction(encoded_tx.clone(), &chain)
+            .await
+            .unwrap_err();
+
+        let expected_error = "invalid input: missing chain ID";
         let actual_error = error.to_string();
 
         assert_eq!(actual_error, expected_error);
@@ -175,12 +200,11 @@ mod tests {
                 access_list: Default::default(),
                 input: Default::default(),
             };
-            let signature = Signature::from_scalars_and_parity(
+            let signature = PrimitiveSignature::from_scalars_and_parity(
                 b256!("0000000000000000000000000000000000000000000000000000000000000000"),
                 b256!("0000000000000000000000000000000000000000000000000000000000000000"),
                 false,
-            )
-            .unwrap();
+            );
 
             TxEnvelope::Eip1559(tx.into_signed(signature))
         }
