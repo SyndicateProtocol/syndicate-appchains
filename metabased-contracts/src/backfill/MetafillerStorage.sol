@@ -12,7 +12,16 @@ contract MetafillerStorage is AccessControl {
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
-    event Batch(uint256 indexed epochNumber, bytes32 indexed epochHash, bytes batch);
+    /// @notice Modifier to ensure the sender is the originator of the transaction
+    modifier senderOnlyOriginator() {
+        require(msg.sender == tx.origin, "Sender must be the originator");
+        _;
+    }
+
+    /// @notice Emits a EpochRangeProcessed indicating the range of epochs that have been processed
+    /// @param startEpochNumber The starting epoch number
+    /// @param endEpochNumber The ending epoch number
+    event EpochRangeProcessed(uint256 indexed startEpochNumber, uint256 indexed endEpochNumber);
 
     /// @notice Constructor that sets up the default admin and manager roles
     /// @param admin The address that will be the default admin role
@@ -37,8 +46,12 @@ contract MetafillerStorage is AccessControl {
 
     /// @notice Emits a Batch
     /// @param batch: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#batch-format
-    function save(uint256 epochNumber, bytes32 epochHash, bytes calldata batch) external onlyRole(MANAGER_ROLE) {
-        emit Batch(epochNumber, epochHash, batch);
+    function save(uint256 epochNumber, bytes32 epochHash, bytes calldata batch)
+        external
+        onlyRole(MANAGER_ROLE)
+        senderOnlyOriginator
+    {
+        emit EpochRangeProcessed(epochNumber, epochNumber);
     }
 
     /// @notice Emits many Batches
@@ -46,14 +59,13 @@ contract MetafillerStorage is AccessControl {
     function saveForMany(uint256[] calldata epochNumbers, bytes32[] calldata epochHashes, bytes[] calldata batches)
         external
         onlyRole(MANAGER_ROLE)
+        senderOnlyOriginator
     {
         require(
             epochNumbers.length == epochHashes.length && epochHashes.length == batches.length,
             "Array lengths must be equal"
         );
         uint256 length = epochNumbers.length;
-        for (uint256 i = 0; i < length; i++) {
-            emit Batch(epochNumbers[i], epochHashes[i], batches[i]);
-        }
+        emit EpochRangeProcessed(epochNumbers[0], epochNumbers[length - 1]);
     }
 }

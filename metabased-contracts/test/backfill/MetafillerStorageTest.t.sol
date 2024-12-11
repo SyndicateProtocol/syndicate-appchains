@@ -6,12 +6,14 @@ import {MetafillerStorage} from "../../src/backfill/MetafillerStorage.sol";
 
 contract MetafillerStorageTest is Test {
     address public manager;
+    address public notManager;
     address public admin;
     MetafillerStorage public l3Storage;
 
     function setUp() public {
         manager = address(0x1);
-        admin = address(0x2);
+        notManager = address(0x2);
+        admin = address(0x3);
         uint256 l3ChainId = 10042001;
         l3Storage = new MetafillerStorage(admin, manager, l3ChainId);
     }
@@ -32,6 +34,27 @@ contract MetafillerStorageTest is Test {
         vm.prank(manager);
         l3Storage.setIndexFromBlock(1);
         assertEq(l3Storage.indexFromBlock(), 1);
+    }
+
+    function testOnlyOriginatorCanSave() public {
+        vm.expectRevert();
+        vm.prank(manager, notManager);
+        l3Storage.save(1, 0x505f3a50f83559ab090dbd840556254a7248404f2dedb53b4f12b26748a8ec08, "0x");
+    }
+
+    function testOnlyOriginatorCanSaveForMany() public {
+        vm.expectRevert();
+        uint256[] memory epochNumbers = new uint256[](1);
+        epochNumbers[0] = 1;
+
+        bytes32[] memory epochHashes = new bytes32[](1);
+        epochHashes[0] = 0x505f3a50f83559ab090dbd840556254a7248404f2dedb53b4f12b26748a8ec08;
+
+        bytes[] memory batches = new bytes[](1);
+        batches[0] = "0x";
+        vm.expectRevert();
+        vm.prank(manager, notManager);
+        l3Storage.saveForMany(epochNumbers, epochHashes, batches);
     }
 
     function testOnlyManagerCanSaveForMany() public {
@@ -73,10 +96,10 @@ contract MetafillerStorageTest is Test {
 
         // Listen for the Batch event
         vm.expectEmit(true, true, false, true);
-        emit MetafillerStorage.Batch(epochNumber, epochHash, batch);
+        emit MetafillerStorage.EpochRangeProcessed(epochNumber, epochNumber);
 
         // Call the save function
-        vm.prank(manager);
+        vm.prank(manager, manager);
         l3Storage.save(epochNumber, epochHash, batch);
     }
 
@@ -98,19 +121,17 @@ contract MetafillerStorageTest is Test {
         batches[2] = "0x9abc";
 
         // Expect three Batch events to be emitted
-        for (uint256 i = 0; i < 3; i++) {
-            vm.expectEmit(true, true, false, true);
-            emit MetafillerStorage.Batch(epochNumbers[i], epochHashes[i], batches[i]);
-        }
+        vm.expectEmit(true, true, true, true);
+        emit MetafillerStorage.EpochRangeProcessed(epochNumbers[0], epochNumbers[2]);
 
         // Call the saveForMany function
-        vm.prank(manager);
+        vm.prank(manager, manager);
         l3Storage.saveForMany(epochNumbers, epochHashes, batches);
     }
 
     function testGasEmptyEmit() public {
         uint256 gasStart = gasleft();
-        vm.prank(manager);
+        vm.prank(manager, manager);
         l3Storage.save(1, 0x351e92084d6040b02259b6f0aa89141a23f7c796909f7d81731e228a84529f92, "");
         uint256 gasUsed = gasStart - gasleft();
         console.log("Gas used for empty emit:", gasUsed);
