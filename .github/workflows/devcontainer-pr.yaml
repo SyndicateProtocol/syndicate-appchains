@@ -34,6 +34,13 @@ jobs:
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-pr-${{ github.event.pull_request.number }}
           runCmd: |
+            # Create .envrc file
+            just -f .devcontainer/justfile create-envrc
+            [ -f .envrc ] || { echo ".envrc file not created successfully"; exit 1; }
+            echo "========== .envrc contents =========="
+            cat .envrc
+            echo "==================================="
+            
             # Set up network
             RESPONSE=$(just -f .devcontainer/justfile arb-network-setup)
             echo "Network setup: $RESPONSE"
@@ -55,19 +62,17 @@ jobs:
               sleep 10
             done
             echo "[STATUS] Arbitrum node is ready"
-            
-            # Run sequencer setup
-            just -f .devcontainer/justfile arb-sequencer-plus-setup &
-            
-            # Some time for Rust build to compile. Refactor this to look for completion string
-            sleep 60
-            
-            # Wait for sequencer setup completion via health check
+              
+            # Run sequencer setup and capture logs
+            just -f .devcontainer/justfile arb-sequencer-plus-setup 2>&1 | tee /tmp/sequencer-setup.log &
+
+            # Wait for Rust build to complete by watching for specific log line
             echo "[STATUS] Waiting for sequencer setup to complete..."
-            until just -f .devcontainer/justfile sequencer-health-check | grep -q "result"; do
+            while ! grep -q "Finished \`dev\` profile" /tmp/sequencer-setup.log; do
               sleep 20
+              echo "[STATUS] Still waiting for Rust build complete..."
             done
-            echo "[STATUS] Sequencer setup complete"
+            echo "[STATUS] Rust build completed. Sequencer setup completed."
 
             # Exit on error
             set -e
@@ -117,11 +122,9 @@ jobs:
 #            done
 #            echo "[STATUS] op-translator is ready"
 
-      - name: Upload logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v3
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: debug-logs
-          path: |
-            /tmp/sequencer.log
-            /tmp/postCreateOutput
+          path: /tmp/sequencer-setup.log
