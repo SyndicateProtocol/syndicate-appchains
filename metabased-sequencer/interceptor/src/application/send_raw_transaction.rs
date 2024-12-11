@@ -26,8 +26,8 @@ where
     };
 
     // 2. Validation:
-    //For legacy transactions, validate chain ID immediately
-    if tx.tx_type() == TxType::Legacy && tx.chain_id().is_none() {
+    //For non-legacy transactions, validate chain ID immediately
+    if tx.tx_type() != TxType::Legacy && tx.chain_id().is_none() {
         return Err(InvalidInput(MissingChainID));
     }
 
@@ -130,12 +130,12 @@ mod tests {
         assert_eq!(actual_transactions, expected_transactions);
     }
 
-    fn encode_legacy_transaction_without_chain_id() -> Vec<u8> {
+    fn encode_legacy_transaction_without_chain_id(gas_price: u128) -> Vec<u8> {
         let mut tx = TxLegacy {
             chain_id: None,
             nonce: 0,
-            gas_price: u128::MAX,
-            gas_limit: u64::MAX,
+            gas_price,
+            gas_limit: 1,
             to: TxKind::Create,
             value: Default::default(),
             input: Default::default(),
@@ -169,21 +169,21 @@ mod tests {
     }
 
     #[tokio::test]
-    #[test_case(encode_legacy_transaction_without_chain_id(); "Legacy transaction without chain ID")]
-    async fn test_decoding_legacy_transaction_without_chain_id_fails(encoded_tx: Vec<u8>) {
+    async fn test_decoding_legacy_transaction_without_chain_id_succeeds() {
+        let encoded_tx = encode_legacy_transaction_without_chain_id(1);
         let encoded_tx = Bytes::from(encoded_tx);
 
         let transactions = Arc::new(RwLock::new(Vec::new()));
         let chain = InMemoryMetabasedSequencerChain::new(transactions.clone());
 
-        let error = send_raw_transaction(encoded_tx.clone(), &chain)
+        send_raw_transaction(encoded_tx.clone(), &chain)
             .await
-            .unwrap_err();
+            .unwrap();
 
-        let expected_error = "invalid input: missing chain ID";
-        let actual_error = error.to_string();
+        let expected_transactions = vec![encoded_tx];
+        let actual_transactions = transactions.read().await.clone();
 
-        assert_eq!(actual_error, expected_error);
+        assert_eq!(actual_transactions, expected_transactions);
     }
 
     #[tokio::test]
@@ -283,25 +283,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sending_legacy_transaction_exceeding_gas_price_cap_fails() {
-        fn create_transaction() -> TxEnvelope {
-            let mut tx = TxLegacy {
-                chain_id: Some(0),
-                nonce: 0,
-                gas_price: u128::MAX,
-                gas_limit: u64::MAX,
-                to: TxKind::Create,
-                value: Default::default(),
-                input: Default::default(),
-            };
-            let signer = PrivateKeySigner::from_bytes(&PRIVATE_KEY.into()).unwrap();
-            let signature = signer.sign_transaction_sync(&mut tx).unwrap();
-
-            TxEnvelope::Legacy(tx.into_signed(signature))
-        }
-
-        let tx = create_transaction();
-        let mut encoded_tx = Vec::new();
-        tx.encode(&mut encoded_tx);
+        let encoded_tx = encode_legacy_transaction_without_chain_id(u128::MAX);
         let encoded_tx = Bytes::from(encoded_tx);
 
         let transactions = Arc::new(RwLock::new(Vec::new()));
