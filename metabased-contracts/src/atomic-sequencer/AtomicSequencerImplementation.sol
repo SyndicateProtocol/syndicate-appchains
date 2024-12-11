@@ -9,52 +9,59 @@ contract AtomicSequencerImplementation {
     /// @dev Thrown when the chain addresses are invalid
     error InvalidChainAddresses();
 
-    /// @notice Processes single transactions on two Metabased chains atomically.
-    /// @param chainA The first Metabased chain
-    /// @param chainB The second Metabased chain
-    /// @param txnA The transaction for the first chain
-    /// @param txnB The transaction for the second chain
+    /// @notice Processes transactions on multiple Metabased chains atomically.
+    /// @param chains Array of Metabased chains
+    /// @param transactions Array of transactions corresponding to each chain
     /// @param isRaw Whether to use raw transaction processing
     function processTransactionsAtomically(
-        MetabasedSequencerChain chainA,
-        MetabasedSequencerChain chainB,
-        bytes calldata txnA,
-        bytes calldata txnB,
+        MetabasedSequencerChain[] calldata chains,
+        bytes[] calldata transactions,
         bool isRaw
     ) external {
-        // Validate chain addresses
-        if (address(chainA) == address(0) || address(chainB) == address(0) || address(chainA) == address(chainB)) {
+        // Validate input arrays
+        if (chains.length == 0 || chains.length != transactions.length) {
             revert InvalidChainAddresses();
+        }
+
+        // Validate chain addresses (only check for zero address)
+        for (uint256 i = 0; i < chains.length; i++) {
+            if (address(chains[i]) == address(0)) {
+                revert InvalidChainAddresses();
+            }
         }
 
         // Process transactions using appropriate method
-        if (isRaw) {
-            chainA.processTransactionRaw(txnA);
-            chainB.processTransactionRaw(txnB);
-        } else {
-            chainA.processTransaction(txnA);
-            chainB.processTransaction(txnB);
+        for (uint256 i = 0; i < chains.length; i++) {
+            if (isRaw) {
+                chains[i].processTransactionRaw(transactions[i]);
+            } else {
+                chains[i].processTransaction(transactions[i]);
+            }
         }
     }
 
-    /// @notice Processes bulk transactions on two Metabased chains atomically.
-    /// @param chainA The first Metabased chain
-    /// @param chainB The second Metabased chain
-    /// @param txnsA The transactions for the first chain
-    /// @param txnsB The transactions for the second chain
+    /// @notice Processes bulk transactions on multiple Metabased chains atomically.
+    /// @param chains Array of Metabased chains
+    /// @param transactions Array of transaction arrays corresponding to each chain
     function processBulkTransactionsAtomically(
-        MetabasedSequencerChain chainA,
-        MetabasedSequencerChain chainB,
-        bytes[] calldata txnsA,
-        bytes[] calldata txnsB
+        MetabasedSequencerChain[] calldata chains,
+        bytes[][] calldata transactions
     ) external {
-        // Validate chain addresses
-        if (address(chainA) == address(0) || address(chainB) == address(0) || address(chainA) == address(chainB)) {
+        // Validate input arrays
+        if (chains.length == 0 || chains.length != transactions.length) {
             revert InvalidChainAddresses();
         }
 
-        // Process bulk transactions on both chains
-        chainA.processBulkTransactions(txnsA);
-        chainB.processBulkTransactions(txnsB);
+        // Validate chain addresses (only check for zero address)
+        for (uint256 i = 0; i < chains.length; i++) {
+            if (address(chains[i]) == address(0)) {
+                revert InvalidChainAddresses();
+            }
+        }
+
+        // Process bulk transactions on all chains
+        for (uint256 i = 0; i < chains.length; i++) {
+            chains[i].processBulkTransactions(transactions[i]);
+        }
     }
 }

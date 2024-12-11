@@ -48,8 +48,20 @@ contract AtomicSequencerTest is Test {
         bytes memory txnA = abi.encode("transaction A");
         bytes memory txnB = abi.encode("transaction B");
 
+        // Create arrays for chains and transactions
+        address[] memory chainAddresses = new address[](2);
+        chainAddresses[0] = address(chainA);
+        chainAddresses[1] = address(chainB);
+
+        bytes[] memory txns = new bytes[](2);
+        txns[0] = txnA;
+        txns[1] = txnB;
+
         bytes memory callData = abi.encodeWithSignature(
-            "processTransactionsAtomically(address,address,bytes,bytes,bool)", chainA, chainB, txnA, txnB, true
+            "processTransactionsAtomically(address[],bytes[],bool)",
+            chainAddresses,
+            txns,
+            true
         );
 
         vm.prank(originalCaller);
@@ -66,8 +78,19 @@ contract AtomicSequencerTest is Test {
         txnsB[0] = abi.encode("B1");
         txnsB[1] = abi.encode("B2");
 
+        // Create arrays for chains and transactions
+        address[] memory chainAddresses = new address[](2);
+        chainAddresses[0] = address(chainA);
+        chainAddresses[1] = address(chainB);
+
+        bytes[][] memory allTxns = new bytes[][](2);
+        allTxns[0] = txnsA;
+        allTxns[1] = txnsB;
+
         bytes memory callData = abi.encodeWithSignature(
-            "processBulkTransactionsAtomically(address,address,bytes[],bytes[])", chainA, chainB, txnsA, txnsB
+            "processBulkTransactionsAtomically(address[],bytes[][])",
+            chainAddresses,
+            allTxns
         );
 
         vm.prank(originalCaller);
@@ -75,34 +98,71 @@ contract AtomicSequencerTest is Test {
         assertTrue(success, "failure in processing bulk transactions");
     }
 
-    function testInvalidChainAddresses() public {
-        bytes memory txn = abi.encode("transaction");
+    function testProcessMultipleChains() public {
+        MetabasedSequencerChain chainC = new MetabasedSequencerChain(10042003, admin, address(permissionModule));
 
-        // Test zero address for chainA
+        MetabasedSequencerChain[] memory chains = new MetabasedSequencerChain[](3);
+        chains[0] = chainA;
+        chains[1] = chainB;
+        chains[2] = chainC;
+
+        bytes[] memory txns = new bytes[](3);
+        txns[0] = abi.encode("transaction A");
+        txns[1] = abi.encode("transaction B");
+        txns[2] = abi.encode("transaction C");
+
         bytes memory callData = abi.encodeWithSignature(
-            "processTransactionsAtomically(address,address,bytes,bytes,bool)", address(0), chainB, txn, txn, true
+            "processTransactionsAtomically(address[],bytes[],bool)",
+            chains,
+            txns,
+            true
+        );
+
+        vm.prank(originalCaller);
+        (bool success,) = address(atomicSequencer).call(callData);
+        assertTrue(success, "failure in processing multiple transactions");
+    }
+
+    function testProcessSameChainMultipleTimes() public {
+        MetabasedSequencerChain[] memory chains = new MetabasedSequencerChain[](2);
+        chains[0] = chainA;
+        chains[1] = chainA;
+
+        bytes[] memory txns = new bytes[](2);
+        txns[0] = abi.encode("transaction 1");
+        txns[1] = abi.encode("transaction 2");
+
+        bytes memory callData = abi.encodeWithSignature(
+            "processTransactionsAtomically(address[],bytes[],bool)",
+            chains,
+            txns,
+            true
+        );
+
+        vm.prank(originalCaller);
+        (bool success,) = address(atomicSequencer).call(callData);
+        assertTrue(success, "failure in processing same chain multiple times");
+    }
+
+    function testInvalidChainAddresses() public {
+        MetabasedSequencerChain[] memory chains = new MetabasedSequencerChain[](1);
+        chains[0] = MetabasedSequencerChain(address(0));
+
+        bytes[] memory txns = new bytes[](1);
+        txns[0] = abi.encode("transaction");
+
+        bytes memory callData = abi.encodeWithSignature(
+            "processTransactionsAtomically(address[],bytes[],bool)",
+            chains,
+            txns,
+            true
         );
 
         vm.prank(originalCaller);
         (bool success, bytes memory returnData) = address(atomicSequencer).call(callData);
         assertFalse(success);
 
-        // Extract the error selector from the revert data
         bytes4 errorSelector;
-        assembly {
-            errorSelector := mload(add(returnData, 0x20))
-        }
-        assertEq(errorSelector, AtomicSequencerImplementation.InvalidChainAddresses.selector);
-
-        // Test same address for both chains
-        callData = abi.encodeWithSignature(
-            "processTransactionsAtomically(address,address,bytes,bytes,bool)", chainA, chainA, txn, txn, true
-        );
-
-        vm.prank(originalCaller);
-        (success, returnData) = address(atomicSequencer).call(callData);
-        assertFalse(success);
-
         assembly {
             errorSelector := mload(add(returnData, 0x20))
         }
