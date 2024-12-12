@@ -28,7 +28,7 @@ type MetaBasedBatchProvider struct {
 }
 
 func NewMetaBasedBatchProvider(
-	settlementChainClient IRPCClient,
+	metabasedChainClient IRPCClient,
 	sequencingChainClient IRPCClient,
 	sequencingContractAddress common.Address,
 	settlementStartBlock uint64,
@@ -37,7 +37,7 @@ func NewMetaBasedBatchProvider(
 	log gethlog.Logger,
 ) *MetaBasedBatchProvider {
 	return &MetaBasedBatchProvider{
-		MetaBasedChain:         settlementChainClient,
+		MetaBasedChain:         metabasedChainClient,
 		SequencingChain:        sequencingChainClient,
 		TransactionParser:      MustNewL3TransactionParser(sequencingContractAddress, log),
 		SequencingBlockFetcher: NewSequencingBlockFetcher(sequencingChainClient, settlementChainBlockTime, log),
