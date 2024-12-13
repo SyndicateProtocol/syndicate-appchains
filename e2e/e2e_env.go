@@ -16,14 +16,21 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/translator"
+	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/foundry"
 	"github.com/ethereum-optimism/optimism/op-chain-ops/genesis"
 	"github.com/ethereum-optimism/optimism/op-e2e/actions/helpers"
 	"github.com/ethereum-optimism/optimism/op-e2e/config"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils"
 	"github.com/ethereum-optimism/optimism/op-e2e/e2eutils/geth"
+	"github.com/ethereum-optimism/optimism/op-node/rollup"
+	op_service_client "github.com/ethereum-optimism/optimism/op-service/client"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/sources"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -31,6 +38,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
+	geth_rpc "github.com/ethereum/go-ethereum/rpc"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,22 +47,16 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
-// - spawn a settlement chain with the bridge contract
-// - spawn a sequencing chain with the sequencing contract
-// - have a tool to send txs to the sequencing chain
-// - send sequenced batches and deposits to the L2 chains
-// - use translator code to derive the L2.5 block
-// - hook up an execution engine to the output of the translator, make assertions on the output
-
-type FakeChain struct {
+type fakeChain struct {
 	t       helpers.StatefulTesting
 	genesis *core.Genesis
 	miner   *helpers.L1Miner
+	log     gethlog.Logger
 }
 
-var _ SourceChain = (*FakeChain)(nil)
+var _ SourceChain = (*fakeChain)(nil)
 
-func NewFakeChain(t helpers.StatefulTesting, deployParams *e2eutils.DeployParams, log gethlog.Logger, chainID *big.Int) *FakeChain {
+func newFakeChain(t helpers.StatefulTesting, deployParams *e2eutils.DeployParams, log gethlog.Logger, chainID *big.Int) *fakeChain {
 	chainGenesis, err := genesis.BuildL1DeveloperGenesis(
 		deployParams.DeployConfig.Copy(),
 		config.L1Allocs(deployParams.AllocType),
@@ -68,42 +70,58 @@ func NewFakeChain(t helpers.StatefulTesting, deployParams *e2eutils.DeployParams
 	// NOTE: we're setting up the L2 chains as "L1s" here - doesn't particularly matter, we just want to be able to emulate the behavior of a chain
 	miner := helpers.NewL1Miner(t, log, chainGenesis)
 
+	chain := &fakeChain{
+		t:       t,
+		genesis: chainGenesis,
+		miner:   miner,
+		log:     log,
+	}
+
+	// mine the blocks until the L3 start block number
+	for i := 0; i < settlementChainL3StartBlockNumber; i++ {
+		chain.MineBlock(1)
+	}
+
 	// TODO this is just producing blocks ad-infinitum, but we can expand the logic to be able to stop/resume block production for certain test cases
 	go func() {
 		for {
 			if t.Ctx().Err() != nil {
 				return
 			}
-			miner.ActL1StartBlock(1)(t) // TODO right now we have a 1s block time, but we can make this configurable / variable on command
-			// include all pending txs
-			runnableTxs, _ := miner.Eth.TxPool().Content()
-			for _, txs := range runnableTxs {
-				for _, tx := range txs {
-					miner.ActL1IncludeTxByHash(tx.Hash())(t)
-				}
-			}
-			b := miner.ActL1EndBlock(t)
-			log.Info("new block mined", "number", b.NumberU64(), "hash", b.Hash().Hex())
-			miner.ActL1SafeNext(t)
-			miner.ActL1FinalizeNext(t)
-			time.Sleep(100 * time.Millisecond) // 100ms block time
+			// a new block is produced every 200ms with a 1s time increment in timestamp
+			chain.MineBlock(1)
+			time.Sleep(200 * time.Millisecond)
 		}
 	}()
 
-	return &FakeChain{
-		t:       t,
-		genesis: chainGenesis,
-		miner:   miner,
-		// node:    gethNode,
-	}
+	return chain
 }
 
-func (c *FakeChain) Client() *ethclient.Client {
+func (c *fakeChain) Client() *ethclient.Client {
 	return c.miner.EthClient()
 }
 
-func (c *FakeChain) Signer() types.Signer {
+func (c *fakeChain) RPCHTTPEndpoint() string {
+	return c.miner.HTTPEndpoint()
+}
+
+func (c *fakeChain) Signer() types.Signer {
 	return types.LatestSigner(c.genesis.Config)
+}
+
+func (c *fakeChain) MineBlock(timeDelta uint64) {
+	c.miner.ActL1StartBlock(timeDelta)(c.t) // TODO right now we have a 1s block time, but we can make this configurable / variable on command
+	// include all pending txs
+	runnableTxs, _ := c.miner.Eth.TxPool().Content()
+	for _, txs := range runnableTxs {
+		for _, tx := range txs {
+			c.miner.ActL1IncludeTxByHash(tx.Hash())(c.t)
+		}
+	}
+	b := c.miner.ActL1EndBlock(c.t)
+	c.log.Info("new block mined", "number", b.NumberU64(), "timestamp", b.Time(), "hash", b.Hash().Hex())
+	c.miner.ActL1SafeNext(c.t)
+	c.miner.ActL1FinalizeNext(c.t)
 }
 
 /// ------------------------------------------------------------------------------------------------
@@ -112,8 +130,17 @@ func (c *FakeChain) Signer() types.Signer {
 // it is meant to be filled with either a fake miner, or a real chain connection
 type SourceChain interface {
 	Client() *ethclient.Client
+	RPCHTTPEndpoint() string
 	Signer() types.Signer
 }
+
+// NOTE: these files are generated by running "forge build" in the metabased-contracts dir
+// read contract artifacts
+var (
+	MetabasedFactoryArtifact        = MustParseFoundryArtifact("../metabased-contracts/out/MetabasedFactory.sol/MetabasedFactory.json")
+	AlwaysAllowModuleArtifact       = MustParseFoundryArtifact("../metabased-contracts/out/AlwaysAllowedModule.sol/AlwaysAllowedModule.json")
+	MetabasedSequencerChainArtifact = MustParseFoundryArtifact("../metabased-contracts/out/MetabasedSequencerChain.sol/MetabasedSequencerChain.json")
+)
 
 type MetabasedChainTestEnv struct {
 	T helpers.StatefulTesting
@@ -122,16 +149,14 @@ type MetabasedChainTestEnv struct {
 	SettlementChain SourceChain
 	log             gethlog.Logger
 	translator      *translator.OPTranslator
-	// l3                   *helpers.L3
 
-	MetabasedFactoryArtifact        *foundry.Artifact
-	MetabasedSequencerChainArtifact *foundry.Artifact
-	AlwaysAllowModuleArtifact       *foundry.Artifact
+	L3Client *ethclient.Client
+	L3Signer types.Signer
 
 	MetabasedFactoryContractAddress    common.Address
 	AlwaysAllowedModuleContractAddress common.Address
 	L3SequencingContractAddress        common.Address
-	BatcherInboxAddress                common.Address // TODO not filled
+	BatcherInboxAddress                common.Address
 
 	Secrets   *e2eutils.Secrets
 	Addresses *e2eutils.Addresses
@@ -141,51 +166,46 @@ type MetabasedChainTestEnv struct {
 	L3ChainID         *big.Int
 }
 
+// TODO if we set this to 0, the translator will return errors because it can't find sequencing blocks to fit the time window
+const settlementChainL3StartBlockNumber = 2
+
 func NewMetabasedChainTestEnv(gt *testing.T) *MetabasedChainTestEnv { //nolint:thelper // t is named gt and wrapped into a helpers.StatefulTesting object which is named t
 	gt.Helper()
 	t := helpers.NewDefaultTesting(gt)
 	s := &MetabasedChainTestEnv{
-		SequencingChainID: big.NewInt(1001),
-		SettlementChainID: big.NewInt(1002),
-		L3ChainID:         big.NewInt(1003),
+		SettlementChainID: big.NewInt(900), // NOTE: must be 900 this is what the L2 allocs expect
+		SequencingChainID: big.NewInt(1000),
+		L3ChainID:         big.NewInt(2000),
 	}
 	s.T = t
 	s.log = testlog.Logger(t, gethlog.LvlDebug)
 
-	// NOTE: these files are generated by running "forge build" in the metabased-contracts dir
-	// read contract artifacts
-	s.MetabasedFactoryArtifact = MustParseFoundryArtifact("../metabased-contracts/out/MetabasedFactory.sol/MetabasedFactory.json")
-	s.AlwaysAllowModuleArtifact = MustParseFoundryArtifact("../metabased-contracts/out/AlwaysAllowedModule.sol/AlwaysAllowedModule.json")
-	s.MetabasedSequencerChainArtifact = MustParseFoundryArtifact("../metabased-contracts/out/MetabasedSequencerChain.sol/MetabasedSequencerChain.json")
-
 	alwaysAllowModuleJSON, err := os.ReadFile("../metabased-contracts/out/AlwaysAllowedModule.sol/AlwaysAllowedModule.json")
 	require.NoError(t, err, "failed to read  alwaysAllowModule json")
-	require.NoError(t, json.Unmarshal(alwaysAllowModuleJSON, &s.AlwaysAllowModuleArtifact), "failed to unmarshal alwaysAllowModule json")
+	require.NoError(t, json.Unmarshal(alwaysAllowModuleJSON, &AlwaysAllowModuleArtifact), "failed to unmarshal alwaysAllowModule json")
 
 	// TODO swap for real chains here if configured (Note: and real wallets)
-	{
-		s.Secrets = must(e2eutils.DefaultMnemonicConfig.Secrets())
-		s.Addresses = s.Secrets.Addresses()
+	s.Secrets = must(e2eutils.DefaultMnemonicConfig.Secrets())
+	s.Addresses = s.Secrets.Addresses()
 
-		testParams := &e2eutils.TestParams{
-			MaxSequencerDrift:   40,
-			SequencerWindowSize: 120,
-			ChannelTimeout:      120,
-			L1BlockTime:         2, // 2s block time for the source chains
-			UseAltDA:            false,
-			AllocType:           config.AllocTypeStandard,
-		}
-
-		deployParams := e2eutils.MakeDeployParams(t, testParams)
-		// setupData := e2eutils.Setup(t, deployParams, &e2eutils.AllocParams{PrefundTestUsers: true})
-
-		sequencingChain := NewFakeChain(t, deployParams, s.log.New("role", "sequencing-chain-miner"), s.SequencingChainID)
-		settlementChain := NewFakeChain(t, deployParams, s.log.New("role", "settlement-chain-miner"), s.SettlementChainID)
-		s.SequencingChain = sequencingChain
-		s.SettlementChain = settlementChain
-
+	testParams := &e2eutils.TestParams{
+		MaxSequencerDrift:   40,
+		SequencerWindowSize: 120,
+		ChannelTimeout:      120,
+		L1BlockTime:         2, // 2s block time for the source chains
+		UseAltDA:            false,
+		AllocType:           config.AllocTypeStandard,
 	}
+	deployParams := e2eutils.MakeDeployParams(t, testParams)
+	s.BatcherInboxAddress = deployParams.DeployConfig.BatchInboxAddress
 
+	sequencingChain := newFakeChain(t, deployParams, s.log.New("role", "sequencing-chain-miner"), s.SequencingChainID)
+	settlementChain := newFakeChain(t, deployParams, s.log.New("role", "settlement-chain-miner"), s.SettlementChainID)
+	s.SequencingChain = sequencingChain
+	s.SettlementChain = settlementChain
+
+	//
+	// deploy the metabased chain
 	s.deployNewMetabasedChain()
 
 	// TODO deploy rollup contrants on the settlement layer
@@ -203,34 +223,34 @@ func NewMetabasedChainTestEnv(gt *testing.T) *MetabasedChainTestEnv { //nolint:t
 	// init op-translator
 
 	batchProvider := translator.NewMetaBasedBatchProvider(
-		rpc.NewRPCClient(s.SettlementChain.Client(), s.SettlementChain.Client().Client(), nil), // TODO is the receipt fetcher necessary?
-		rpc.NewRPCClient(s.SequencingChain.Client(), s.SequencingChain.Client().Client(), nil), // TODO is the receipt fetcher necessary?
+		rpc.NewRPCClient(s.SettlementChain.Client(), s.SettlementChain.Client().Client(), rpc.NewReceiptFetcher(s.SettlementChain.Client().Client())),
+		rpc.NewRPCClient(s.SequencingChain.Client(), s.SequencingChain.Client().Client(), rpc.NewReceiptFetcher(s.SequencingChain.Client().Client())),
 		s.L3SequencingContractAddress,
-		0, // TODO we currently only handle "fully metabased chains", this should be changed if we want to support backfilled chains
-		1, // TODO this should be deprecated to handle variable block time chains
-		&mocks.MockMetrics{},
+		settlementChainL3StartBlockNumber,
+		1, // TODO parameterize this, or remove it if we decide to support variable block time settlement chains
+		mocks.NewMockMetrics(),
 		s.log.New("role", "batch-provider"),
 	)
 
 	s.translator = translator.NewOPTranslator(
-		rpc.NewRPCClient(s.SettlementChain.Client(), s.SettlementChain.Client().Client(), nil), // TODO is the receipt fetcher necessary?
+		rpc.NewRPCClient(s.SettlementChain.Client(), s.SettlementChain.Client().Client(), rpc.NewReceiptFetcher(s.SettlementChain.Client().Client())),
 		batchProvider,
-		nil, // TODO backfill provider is currently nil
-		must(translator.NewSigner(hex.EncodeToString(crypto.FromECDSA(s.Secrets.Bob)), s.SettlementChainID)), // TODO Bob is hardcoded as the signer - define what address should be used here
+		mocks.NewMockBackfillProvider(),
+		must(translator.NewSigner(hex.EncodeToString(crypto.FromECDSA(s.Secrets.Batcher)), s.SettlementChainID)),
 		&s.BatcherInboxAddress,
-		&mocks.MockMetrics{},
+		mocks.NewMockMetrics(),
 		s.log.New("role", "translator"),
 	)
 
-	// TODO continue
-	// TODO use deriver to obtain L3 state from the translator output
+	// TODO: if we would want to swap the consumer from op-stack for arb, here would be the place to do it
+	s.initOpStackL3(deployParams)
 
 	return s
 }
 
 func (s *MetabasedChainTestEnv) AssertNonZeroBalance(client *ethclient.Client, addr common.Address) {
-	bal, err2 := client.BalanceAt(s.T.Ctx(), s.Addresses.Alice, nil)
-	require.NoError(s.T, err2, "failed to get alice balance")
+	bal, err := client.BalanceAt(s.T.Ctx(), s.Addresses.Alice, nil)
+	require.NoError(s.T, err, "failed to get alice balance")
 	require.True(s.T, bal.Cmp(e2eutils.Ether(0)) > 0, "alice balance is too low")
 }
 
@@ -241,7 +261,13 @@ func (s *MetabasedChainTestEnv) deployNewMetabasedChain() {
 	//
 	// deploy the metabased factory
 	{
-		tx := BuildGenericDataTx(s.T.Ctx(), seqClient, s.SequencingChain.Signer(), s.Secrets.Alice, must(DeployContractCallData(s.MetabasedFactoryArtifact)))
+		tx := BuildGenericDataTx(
+			s.T.Ctx(),
+			seqClient,
+			s.SequencingChain.Signer(),
+			s.Secrets.Alice,
+			must(GenerateContractDeploymentCallData(MetabasedFactoryArtifact)),
+		)
 		receipt := s.sendTxWaitReceipt(seqClient, tx)
 		require.Equal(s.T, receipt.Status, types.ReceiptStatusSuccessful)
 		s.MetabasedFactoryContractAddress = receipt.ContractAddress
@@ -252,7 +278,13 @@ func (s *MetabasedChainTestEnv) deployNewMetabasedChain() {
 	//
 	// deploy the always allowed module
 	{
-		tx := BuildGenericDataTx(s.T.Ctx(), seqClient, s.SequencingChain.Signer(), s.Secrets.Alice, must(DeployContractCallData(s.AlwaysAllowModuleArtifact)))
+		tx := BuildGenericDataTx(
+			s.T.Ctx(),
+			seqClient,
+			s.SequencingChain.Signer(),
+			s.Secrets.Alice,
+			must(GenerateContractDeploymentCallData(AlwaysAllowModuleArtifact)),
+		)
 		receipt := s.sendTxWaitReceipt(seqClient, tx)
 		require.Equal(s.T, receipt.Status, types.ReceiptStatusSuccessful)
 		s.AlwaysAllowedModuleContractAddress = receipt.ContractAddress
@@ -270,12 +302,12 @@ func (s *MetabasedChainTestEnv) deployNewMetabasedChain() {
 			Gas:       10_000_000,
 			Value:     e2eutils.Ether(0),
 			To:        &s.MetabasedFactoryContractAddress,
-			Data:      must(s.MetabasedFactoryArtifact.ABI.Pack("createMetabasedSequencerChain", s.L3ChainID, s.Addresses.Alice, s.AlwaysAllowedModuleContractAddress)),
+			Data:      must(MetabasedFactoryArtifact.ABI.Pack("createMetabasedSequencerChain", s.L3ChainID, s.Addresses.Alice, s.AlwaysAllowedModuleContractAddress)),
 		})
 		receipt := s.sendTxWaitReceipt(seqClient, tx)
 		require.Equal(s.T, receipt.Status, types.ReceiptStatusSuccessful)
 
-		event := s.MetabasedFactoryArtifact.ABI.Events["MetabasedSequencerChainCreated"]
+		event := MetabasedFactoryArtifact.ABI.Events["MetabasedSequencerChainCreated"]
 		argIndex := -1
 		for i := 0; i < len(event.Inputs); i++ {
 			if event.Inputs[i].Name == "metabasedSequencerChainAddress" {
@@ -308,16 +340,204 @@ func (s *MetabasedChainTestEnv) sendTxWaitReceipt(client *ethclient.Client, tx *
 	return receipt
 }
 
+func (s *MetabasedChainTestEnv) initOpStackL3(deployParams *e2eutils.DeployParams) {
+	// use the op deriver to obtain L3 state from the translator output
+
+	//
+	// generate the L3 genesis and rollup config
+	settlementLayerBlock := must(s.SequencingChain.Client().BlockByNumber(s.T.Ctx(), nil))
+
+	deployConf := deployParams.DeployConfig.Copy()
+	// deployConf.L1ChainID = s.SettlementChainID.Uint64()
+	// deployConf.L2ChainID = s.L3ChainID.Uint64()
+	deployConf.L2BlockTime = 2
+
+	allocsMode := e2eutils.GetL2AllocsMode(deployConf, settlementLayerBlock.Time())
+	l3Allocs := config.L2Allocs(deployParams.AllocType, allocsMode)
+	l3Genesis, err := genesis.BuildL2Genesis(deployConf, l3Allocs, settlementLayerBlock.Header())
+	require.NoError(s.T, err)
+	l3Genesis.Config.ChainID = s.L3ChainID // override the chainID
+
+	var pcfg *rollup.AltDAConfig
+	if deployConf.UseAltDA {
+		pcfg = &rollup.AltDAConfig{
+			DAChallengeAddress: config.L1Deployments(deployParams.AllocType).DataAvailabilityChallengeProxy,
+			DAChallengeWindow:  deployConf.DAChallengeWindow,
+			DAResolveWindow:    deployConf.DAResolveWindow,
+			CommitmentType:     altda.KeccakCommitmentString,
+		}
+	}
+
+	settlementStartBlock := must(s.SettlementChain.Client().BlockByNumber(s.T.Ctx(), big.NewInt(settlementChainL3StartBlockNumber)))
+	deployConf.L1GenesisBlockTimestamp = hexutil.Uint64(settlementStartBlock.Time())
+
+	rollupConfig := &rollup.Config{
+		Genesis: rollup.Genesis{
+			L1: eth.BlockID{
+				Hash:   settlementStartBlock.Hash(),
+				Number: settlementChainL3StartBlockNumber,
+			},
+			L2: eth.BlockID{
+				Hash:   l3Genesis.ToBlock().Hash(),
+				Number: 0,
+			},
+			L2Time:       uint64(deployConf.L1GenesisBlockTimestamp),
+			SystemConfig: e2eutils.SystemConfigFromDeployConfig(deployConf),
+		},
+		BlockTime:              deployConf.L2BlockTime,
+		MaxSequencerDrift:      deployConf.MaxSequencerDrift,
+		SeqWindowSize:          deployConf.SequencerWindowSize,
+		ChannelTimeoutBedrock:  deployConf.ChannelTimeoutBedrock,
+		L1ChainID:              new(big.Int).SetUint64(deployConf.L1ChainID),
+		L2ChainID:              new(big.Int).SetUint64(deployConf.L2ChainID),
+		BatchInboxAddress:      deployConf.BatchInboxAddress,
+		DepositContractAddress: deployConf.OptimismPortalProxy,
+		L1SystemConfigAddress:  deployConf.SystemConfigProxy,
+		RegolithTime:           deployConf.RegolithTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		CanyonTime:             deployConf.CanyonTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		DeltaTime:              deployConf.DeltaTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		// disable ecotone upgrade (we do this so we don't need a beacon chain/client)
+		EcotoneTime:  nil, // deployConf.EcotoneTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		FjordTime:    nil, // deployConf.FjordTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		GraniteTime:  nil, // deployConf.GraniteTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		HoloceneTime: nil, // deployConf.HoloceneTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		InteropTime:  nil, // deployConf.InteropTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		AltDAConfig:  pcfg,
+	}
+	require.NoError(s.T, rollupConfig.Check())
+
+	//
+	// init L3 components
+	l1FConfig := sources.L1ClientDefaultConfig(rollupConfig, false, sources.RPCKindStandard)
+	l1FConfig.TrustRPC = true // must set `trustRPC` to true, otherwise the engine will fail when verifying op-translator blocks // TODO delete if we can fix this behavior
+	l1F, err := sources.NewL1Client(
+		newRPCInterceptor(s.SettlementChain.Client(), s.translator),
+		s.log.New("component", "l3-settlement-chain-fetcher"),
+		nil,
+		l1FConfig,
+	)
+	require.NoError(s.T, err)
+	jwtPath := e2eutils.WriteDefaultJWT(s.T)
+	engine := helpers.NewL2Engine(s.T, s.log.New("component", "l3-engine"), l3Genesis, jwtPath, helpers.EngineWithP2P())
+	engineClientConfig := sources.EngineClientDefaultConfig(rollupConfig)
+	engineClientConfig.TrustRPC = true // must set `trustRPC` to true, otherwise the engine will fail when verifying op-translator blocks // TODO delete if we can fix this behavior
+	engineClient, err := sources.NewEngineClient(
+		engine.RPCClient(),
+		s.log.New("component", "l3-engine-client"),
+		nil,
+		engineClientConfig,
+	)
+	require.NoError(s.T, err)
+
+	// cfg := &helpers.SequencerCfg{VerifierCfg: *helpers.DefaultVerifierCfg()}
+
+	sequencer := helpers.NewL2Sequencer(
+		s.T,
+		s.log.New("role", "l3-sequencer"),
+		l1F,
+		nil,            // TODO is this okay? maybe a noopFetcher will be required here //miner.BlobStore(),
+		altda.Disabled, // TODO if we want to integrate altDA in these tests, we'll need to provide a valid altDAFetcher
+		engineClient,
+		rollupConfig,
+		0,
+		nil, // TODO is this okay? // cfg.InteropBackend,
+	)
+	sequencer.ActL2PipelineFull(s.T) // TODO not sure if needed
+
+	go func() {
+		// for {
+		if s.T.Ctx().Err() != nil {
+			return
+		}
+		// TODO not sure if needed
+		// Build an empty block on L2
+		// sequencer.ActL2StartBlock(s.T)
+		// sequencer.ActL2EndBlock(s.T)
+
+		// Instruct the sequencer to derive the L2 chain from the data on L1
+		// sequencer.ActL1HeadSignal(s.T) //TODO not sure if needed
+		sequencer.ActL2PipelineFull(s.T)
+		sequencer.ActL1FinalizedSignal(s.T)
+		time.Sleep(100 * time.Millisecond)
+		// }
+	}()
+
+	// batcher := helpers.NewL2Batcher(s.log.New("component", "l3-batcher"), rollupConfig, helpers.DefaultBatcherCfg(deployParams),
+	// 	l3.RollupClient(), s.SequencingChain.Client(), engine.EthClient(), engineClient)
+
+	s.L3Client = engine.EthClient()
+	s.L3Signer = types.LatestSigner(l3Genesis.Config)
+}
+
 // ------------------------------------------------------------------------------------------------
 // public methods
 
 func (s *MetabasedChainTestEnv) SequenceL3TransactionRaw(sender *ecdsa.PrivateKey, data []byte) {
 	seqClient := s.SequencingChain.Client()
-	txData, err := s.MetabasedSequencerChainArtifact.ABI.Pack("processTransactionRaw", data)
+	txData, err := MetabasedSequencerChainArtifact.ABI.Pack("processTransactionRaw", data)
 	require.NoError(s.T, err, "failed to pack tx data")
 	tx := BuildGenericDataTx(s.T.Ctx(), seqClient, s.SequencingChain.Signer(), sender, txData, s.L3SequencingContractAddress)
 	receipt := s.sendTxWaitReceipt(seqClient, tx)
 	require.Equal(s.T, receipt.Status, types.ReceiptStatusSuccessful)
+}
+
+// ------------------------------------------------------------------------------------------------
+// rpc interceptor
+
+type rpcInterceptor struct {
+	settlementChainRPC *geth_rpc.Client
+	opTranslator       *translator.OPTranslator
+}
+
+// Note: this RPC is used in op e2e tests to wrap an RPC client and be able to fake errors (to test the handling of said errors). (example: https://github.com/ethereum-optimism/optimism/blob/develop/op-service/testutils/rpc_err_faker.go )
+// In our case we're not interested in faking errors, but we do need to implement this interface to be able to use the RPC client in the tests.
+// this interceptor client has the same high level functionality as the `internal/server` package of op-translator
+var _ op_service_client.RPC = (*rpcInterceptor)(nil)
+
+func newRPCInterceptor(settlementChainRPC *ethclient.Client, opTranslator *translator.OPTranslator) *rpcInterceptor {
+	return &rpcInterceptor{
+		settlementChainRPC: settlementChainRPC.Client(),
+		opTranslator:       opTranslator,
+	}
+}
+
+func (r *rpcInterceptor) interceptMethod(ctx context.Context, method string, args ...any) (any, error) {
+	switch method {
+	case "eth_getBlockByHash":
+		return r.opTranslator.GetBlockByHash(ctx, args[0].(common.Hash), args[1].(bool)) //nolint:errcheck // safe to ignore
+	case "eth_getBlockByNumber":
+		return r.opTranslator.GetBlockByNumber(ctx, args[0].(string), args[1].(bool)) //nolint:errcheck // safe to ignore
+	case "eth_getBlockReceipts":
+		return r.opTranslator.GetBlockReceipts(ctx, args[0].(common.Hash)) //nolint:errcheck // safe to ignore
+	}
+	return nil, nil
+}
+
+func (r *rpcInterceptor) CallContext(ctx context.Context, result any, method string, args ...any) error {
+	interceptResult, err := r.interceptMethod(ctx, method, args...)
+	if err != nil {
+		return err
+	}
+	if result != nil {
+		jsonBytes, err := json.Marshal(interceptResult)
+		if err != nil {
+			panic("failed to marshal result")
+		}
+		return json.Unmarshal(jsonBytes, result)
+	}
+	return r.settlementChainRPC.CallContext(ctx, result, method, args...)
+}
+
+func (r *rpcInterceptor) BatchCallContext(ctx context.Context, b []geth_rpc.BatchElem) error {
+	panic("this is not expected to be called")
+}
+
+func (r *rpcInterceptor) EthSubscribe(ctx context.Context, channel any, args ...any) (ethereum.Subscription, error) {
+	panic("this is not expected to be called")
+}
+
+func (r *rpcInterceptor) Close() {
+	r.settlementChainRPC.Close()
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -330,7 +550,7 @@ func must[T any](v T, err error) T {
 	return v
 }
 
-func DeployContractCallData(contractArtifact *foundry.Artifact, args ...any) ([]byte, error) {
+func GenerateContractDeploymentCallData(contractArtifact *foundry.Artifact, args ...any) ([]byte, error) {
 	constructorArgs, err := contractArtifact.ABI.Pack("", args...)
 	if err != nil {
 		return nil, err

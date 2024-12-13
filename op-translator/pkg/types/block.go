@@ -2,9 +2,13 @@ package types
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/trie"
 )
 
 type Block map[string]any
@@ -65,7 +69,7 @@ func (b Block) GetTransactions() ([]any, error) {
 	return transactions, nil
 }
 
-func (b Block) AppendTransaction(txn *ethtypes.Transaction) error {
+func (b Block) AppendTransaction(txn *ethtypes.Transaction, from string, receipts []*ethtypes.Receipt) error {
 	transactions, err := b.GetTransactions()
 	if err != nil {
 		return fmt.Errorf("error appending txn to batch: %w", err)
@@ -73,5 +77,56 @@ func (b Block) AppendTransaction(txn *ethtypes.Transaction) error {
 	transactions = append(transactions, txn)
 	b["transactions"] = transactions
 
+	hasher := trie.NewStackTrie(nil)
+	// TODO update "transactionsRoot" ?
+	// b["transactionsRoot"] = types.DeriveSha(types.Transactions(transactions), hasher).Hex()
+
+	// TODO it would probably be easier to unmarshal the block into the proper type
+	blockNumber, err := b.GetBlockNumber()
+	if err != nil {
+		return fmt.Errorf("error appending txn to batch: %w", err)
+	}
+	blockHash, err := b.GetBlockHash()
+	if err != nil {
+		return fmt.Errorf("error appending txn to batch: %w", err)
+	}
+
+	// also append a receipt
+	receipt := &types.Receipt{
+		Type:        types.DynamicFeeTxType,
+		Logs:        []*types.Log{},
+		Status:      types.ReceiptStatusSuccessful,
+		TxHash:      txn.Hash(),
+		BlockNumber: big.NewInt(int64(blockNumber)),
+		BlockHash:   common.HexToHash(blockHash),
+	}
+	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
+
+	receipts = append(receipts, receipt)
+	// receiptsJSON, err := json.Marshal(receipts)
+	// if err != nil {
+	// 	return err
+	// }
+	b["receipts"] = receipts
+
+	// recalculate receiptsRoot
+	b["receiptsRoot"] = types.DeriveSha(types.Receipts(receipts), hasher).Hex()
+	b["logsBloom"] = types.CreateBloom(receipts)
+
+	// TODO update block hash ?
+
 	return nil
+}
+
+func (b Block) GetReceipts() (any, error) {
+	receipts, ok := b["receipts"].(any)
+	if !ok {
+		return nil, fmt.Errorf("parsing error: receipts")
+	}
+	return receipts, nil
+}
+
+func (b Block) WithoutReceipts() Block {
+	delete(b, "receipts")
+	return b
 }
