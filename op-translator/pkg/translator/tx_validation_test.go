@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var chainID = new(big.Int).SetInt64(1)
@@ -90,7 +91,7 @@ func TestParseRawTransactions(t *testing.T) {
 func GenerateDummyTx(customFunc func(tx *ethtypes.DynamicFeeTx)) *ethtypes.Transaction {
 	dynamicTx := &ethtypes.DynamicFeeTx{
 		ChainID:   new(big.Int),
-		Nonce:     0,
+		Nonce:     uint64(0),
 		Gas:       uint64(0),
 		GasFeeCap: new(big.Int),
 		GasTipCap: new(big.Int),
@@ -284,4 +285,30 @@ func TestValidateTransactionInternal(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestParseRawTransactionsHexEncoding tests that the nonce and gas are hex-encoded in the parsed transaction before sending to op-geth for simulation
+func TestParseRawTransactionsHexEncoding(t *testing.T) {
+	tx := GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
+		to := common.HexToAddress("0x1234567890123456789012345678901234567001")
+		tx.To = &to
+		tx.Gas = 21000
+		tx.Nonce = 10
+		tx.GasFeeCap = big.NewInt(1000000000)
+		tx.GasTipCap = big.NewInt(100000000)
+		tx.Value = big.NewInt(0)
+		tx.ChainID = chainID
+	})
+
+	rawTx := MustMarshalTransaction(tx)
+	rawTxns, parsedTxns := translator.ParseRawTransactions([]hexutil.Bytes{rawTx}, testlog.Logger(t, slog.LevelDebug))
+
+	// Verify we got one transaction back
+	require.Len(t, rawTxns, 1)
+	require.Len(t, parsedTxns, 1)
+
+	// Check the hex encoding of nonce and gas
+	parsedTx := parsedTxns[0]
+	assert.Equal(t, "0xa", parsedTx.Nonce, "nonce should be hex encoded")
+	assert.Equal(t, "0x5208", parsedTx.Gas, "gas should be hex encoded")
 }

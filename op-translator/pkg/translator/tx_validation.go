@@ -3,7 +3,6 @@ package translator
 import (
 	"fmt"
 	"slices"
-	"strconv"
 
 	rpc "github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -64,8 +63,8 @@ func ParseRawTransactions(txs []hexutil.Bytes, log gethlog.Logger) (rawTxns []he
 			To:                   tx.To().Hex(),
 			Value:                tx.Value().String(),
 			Data:                 hexutil.Encode(tx.Data()),
-			Nonce:                strconv.FormatUint(tx.Nonce(), decimalBase),
-			Gas:                  strconv.FormatUint(tx.Gas(), decimalBase),
+			Nonce:                hexutil.EncodeUint64(tx.Nonce()),
+			Gas:                  hexutil.EncodeUint64(tx.Gas()),
 			MaxFeePerGas:         tx.GasPrice().String(),
 			MaxPriorityFeePerGas: tx.GasTipCap().String(),
 		}
