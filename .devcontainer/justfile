@@ -217,7 +217,7 @@ op-up:
 
 # Initialize op-devnet
 op-up-kurtosis:
-    kurtosis run github.com/ethpandaops/optimism-package --args-file .devcontainer/network-config.yaml
+    cd {{ repository_root }} && kurtosis run github.com/ethpandaops/optimism-package --args-file .devcontainer/network-config.yaml
     @echo "OP Devnet initialized"
 
 # Shut down devnet
