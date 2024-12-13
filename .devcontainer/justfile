@@ -215,10 +215,52 @@ op-up:
     PATH={{foundry_path}} make --directory ~/optimism devnet-up
     @echo "OP Devnet initialized"
 
+
+# TODO update more descriptive names
+L1_RPC := ""
+L1_WS := ""
+L2_RPC := ""
+L2_WS := ""
+
 # Initialize op-devnet
 op-up-kurtosis:
-    cd {{ repository_root }} && kurtosis run github.com/ethpandaops/optimism-package --args-file .devcontainer/network-config.yaml
-    @echo "OP Devnet initialized"
+    cd {{ repository_root }} && kurtosis run github.com/ethpandaops/optimism-package --args-file .devcontainer/network-config.yaml || exit 1
+    @echo "OP Devnet initialized with Kurtosis"
+
+op-grep-ports:
+    #!/usr/bin/env bash
+    set -e
+    ENCLAVE_NAME=`kurtosis enclave ls | tail -n 1 | awk '{print $1}'`
+    echo "Using enclave: $ENCLAVE_NAME"
+    PORTS=`kurtosis enclave inspect $ENCLAVE_NAME`
+
+    # Export port values to separate justfile
+    cat > {{ justfile_directory() }}/.ports.just << EOL
+    L1_RPC := "`echo "${PORTS}" | grep "el-1-geth-lighthouse" -A 5 | grep "rpc:" | grep -oE "127.0.0.1:[0-9]+" | cut -d: -f2 | head -n 1`"
+    L1_WS := "`echo "${PORTS}" | grep "el-1-geth-lighthouse" -A 5 | grep "ws:" | grep -oE "127.0.0.1:[0-9]+" | cut -d: -f2 | head -n 1`"
+    L2_RPC := "`echo "${PORTS}" | grep "op-el-1-op-geth-op-node-rollup-1" -A 5 | grep "rpc:" | grep -oE "127.0.0.1:[0-9]+" | cut -d: -f2 | head -n 1`"
+    L2_WS := "`echo "${PORTS}" | grep "op-el-1-op-geth-op-node-rollup-1" -A 5 | grep "ws:" | grep -oE "127.0.0.1:[0-9]+" | cut -d: -f2 | head -n 1`"
+    EOL
+
+    # Also export to environment for other processes
+    echo "export L1_RPC=`echo "${PORTS}" | grep "el-1-geth-lighthouse" -A 5 | grep "rpc:" | grep -oE "127.0.0.1:[0-9]+" | cut -d: -f2 | head -n 1`" >> .env
+    echo "export L1_WS=`echo "${PORTS}" | grep "el-1-geth-lighthouse" -A 5 | grep "ws:" | grep -oE "127.0.0.1:[0-9]+" | cut -d: -f2 | head -n 1`" >> .env
+    echo "export L2_RPC=`echo "${PORTS}" | grep "op-el-1-op-geth-op-node-rollup-1" -A 5 | grep "rpc:" | grep -oE "127.0.0.1:[0-9]+" | cut -d: -f2 | head -n 1`" >> .env
+    echo "export L2_WS=`echo "${PORTS}" | grep "op-el-1-op-geth-op-node-rollup-1" -A 5 | grep "ws:" | grep -oE "127.0.0.1:[0-9]+" | cut -d: -f2 | head -n 1`" >> .env
+
+    # Display the captured ports
+    cat {{ justfile_directory() }}/.ports.just
+
+# Now we need to re-read the ports after they're written
+_load-ports:
+    @just --justfile {{ justfile_directory() }}/.ports.just --evaluate
+
+# Recipe to check port values
+check-ports: op-grep-ports _load-ports
+    @echo "L1 RPC Port: http://127.0.0.1:{{ L1_RPC }}"
+    @echo "L1 WS Port: ws://127.0.0.1:{{ L1_WS }}"
+    @echo "L2 RPC Port: http://127.0.0.1:{{ L2_RPC }}"
+    @echo "L2 WS Port: ws://127.0.0.1:{{ L2_WS }}"
 
 # Shut down devnet
 op-down:
