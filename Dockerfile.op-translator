@@ -7,7 +7,7 @@ RUN apk add --no-cache make gcc musl-dev linux-headers git
 # Set working directory
 WORKDIR /app
 
-# First copy only go.mod and go.sum from parent directory
+# Copy only go.mod and go.sum from parent directory
 COPY go.mod go.sum ./
 
 # Download dependencies
@@ -29,11 +29,11 @@ RUN apk add --no-cache ca-certificates
 # Copy binary from builder
 COPY --from=builder /app/op-translator/bin/op-translator /usr/local/bin/
 
-# Create non-root user
+# Create non-root user, standard security practice for running containers
 RUN adduser -D -u 10001 appuser
 USER appuser
 
-# Default port (from testnet.env)
-EXPOSE 9999
+# Default port is 8888, but this can be overridden in the docker-run/docker-compose config
+EXPOSE 8888
 
 ENTRYPOINT ["op-translator"]
