@@ -215,6 +215,11 @@ op-up:
     PATH={{foundry_path}} make --directory ~/optimism devnet-up
     @echo "OP Devnet initialized"
 
+# Initialize op-devnet
+op-up-kurtosis:
+    kurtosis run github.com/ethpandaops/optimism-package --args-file .devcontainer/network-config.yaml
+    @echo "OP Devnet initialized"
+
 # Shut down devnet
 op-down:
     PATH={{foundry_path}} make --directory ~/optimism devnet-down
@@ -233,6 +238,7 @@ create-aliases:
             echo "alias foundry-update='just -f {{justfile()}} foundry-update'" >> "$rc_file"
             echo "# Local Devnet aliases" >> "$rc_file"
             echo "alias op-up='just -f {{justfile()}} op-up'" >> "$rc_file"
+            echo "alias op-up-kurtosis='just -f {{justfile()}} op-up-kurtosis'" >> "$rc_file"
             echo "alias op-down='just -f {{justfile()}} op-down'" >> "$rc_file"
             echo "alias op-clean='just -f {{justfile()}} op-clean'" >> "$rc_file"
             echo "alias op-reclone='just -f {{justfile()}} op-reclone'" >> "$rc_file"
