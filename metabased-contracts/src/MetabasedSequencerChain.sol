@@ -18,8 +18,8 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
         bool isComplete; // Whether all chunks have been processed
     }
 
-    /// @notice Mapping from transaction hash to chunk processing state
-    mapping(bytes32 => ChunkState) public chunkStates;
+    /// @notice Mapping from transaction hash id to chunk processing state
+    mapping(bytes32 txHashProcessId => ChunkState) public chunkStates;
 
     /// @notice Emitted when a new transaction is processed.
     event TransactionProcessed(address indexed sender, bytes data);
@@ -94,8 +94,9 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
         if (index >= totalChunks) {
             revert InvalidChunkIndex();
         }
+        bytes32 txHashProcessId = keccak256(abi.encode(txHashForParent, msg.sender, tx.origin));
 
-        ChunkState storage state = chunkStates[txHashForParent];
+        ChunkState storage state = chunkStates[txHashProcessId];
 
         // If this is the first chunk for this txHashForParent
         if (state.owner == address(0)) {
