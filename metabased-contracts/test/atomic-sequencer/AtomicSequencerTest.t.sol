@@ -48,20 +48,23 @@ contract AtomicSequencerTest is Test {
         bytes memory txnA = abi.encode("transaction A");
         bytes memory txnB = abi.encode("transaction B");
 
-        // Create arrays for chains and transactions
-        address[] memory chainAddresses = new address[](2);
-        chainAddresses[0] = address(chainA);
-        chainAddresses[1] = address(chainB);
+        MetabasedSequencerChain[] memory chains = new MetabasedSequencerChain[](2);
+        chains[0] = chainA;
+        chains[1] = chainB;
 
         bytes[] memory txns = new bytes[](2);
         txns[0] = txnA;
         txns[1] = txnB;
 
+        bool[] memory isRawArray = new bool[](2);
+        isRawArray[0] = true;
+        isRawArray[1] = true;
+
         bytes memory callData = abi.encodeWithSignature(
-            "processTransactionsAtomically(address[],bytes[],bool)",
-            chainAddresses,
+            "processTransactionsAtomically(address[],bytes[],bool[])",
+            chains,
             txns,
-            true
+            isRawArray
         );
 
         vm.prank(originalCaller);
@@ -78,19 +81,23 @@ contract AtomicSequencerTest is Test {
         txnsB[0] = abi.encode("B1");
         txnsB[1] = abi.encode("B2");
 
-        // Create arrays for chains and transactions
-        address[] memory chainAddresses = new address[](2);
-        chainAddresses[0] = address(chainA);
-        chainAddresses[1] = address(chainB);
+        MetabasedSequencerChain[] memory chains = new MetabasedSequencerChain[](2);
+        chains[0] = chainA;
+        chains[1] = chainB;
 
         bytes[][] memory allTxns = new bytes[][](2);
         allTxns[0] = txnsA;
         allTxns[1] = txnsB;
 
+        bool[] memory isRawArray = new bool[](2);
+        isRawArray[0] = true;
+        isRawArray[1] = false;
+
         bytes memory callData = abi.encodeWithSignature(
-            "processBulkTransactionsAtomically(address[],bytes[][])",
-            chainAddresses,
-            allTxns
+            "processBulkTransactionsAtomically(address[],bytes[][],bool[])",
+            chains,
+            allTxns,
+            isRawArray
         );
 
         vm.prank(originalCaller);
@@ -111,11 +118,16 @@ contract AtomicSequencerTest is Test {
         txns[1] = abi.encode("transaction B");
         txns[2] = abi.encode("transaction C");
 
+        bool[] memory isRawArray = new bool[](3);
+        isRawArray[0] = true;
+        isRawArray[1] = false;
+        isRawArray[2] = true;
+
         bytes memory callData = abi.encodeWithSignature(
-            "processTransactionsAtomically(address[],bytes[],bool)",
+            "processTransactionsAtomically(address[],bytes[],bool[])",
             chains,
             txns,
-            true
+            isRawArray
         );
 
         vm.prank(originalCaller);
@@ -132,11 +144,15 @@ contract AtomicSequencerTest is Test {
         txns[0] = abi.encode("transaction 1");
         txns[1] = abi.encode("transaction 2");
 
+        bool[] memory isRawArray = new bool[](2);
+        isRawArray[0] = true;
+        isRawArray[1] = false;
+
         bytes memory callData = abi.encodeWithSignature(
-            "processTransactionsAtomically(address[],bytes[],bool)",
+            "processTransactionsAtomically(address[],bytes[],bool[])",
             chains,
             txns,
-            true
+            isRawArray
         );
 
         vm.prank(originalCaller);
@@ -151,11 +167,14 @@ contract AtomicSequencerTest is Test {
         bytes[] memory txns = new bytes[](1);
         txns[0] = abi.encode("transaction");
 
+        bool[] memory isRawArray = new bool[](1);
+        isRawArray[0] = true;
+
         bytes memory callData = abi.encodeWithSignature(
-            "processTransactionsAtomically(address[],bytes[],bool)",
+            "processTransactionsAtomically(address[],bytes[],bool[])",
             chains,
             txns,
-            true
+            isRawArray
         );
 
         vm.prank(originalCaller);
@@ -167,5 +186,62 @@ contract AtomicSequencerTest is Test {
             errorSelector := mload(add(returnData, 0x20))
         }
         assertEq(errorSelector, AtomicSequencerImplementation.InvalidChainAddresses.selector);
+    }
+
+    function testInputLengthMismatch() public {
+        MetabasedSequencerChain[] memory chains = new MetabasedSequencerChain[](2);
+        chains[0] = chainA;
+        chains[1] = chainB;
+
+        bytes[] memory txns = new bytes[](2);
+        txns[0] = abi.encode("tx1");
+        txns[1] = abi.encode("tx2");
+
+        bool[] memory isRawArray = new bool[](1); // Mismatched length
+
+        bytes memory callData = abi.encodeWithSignature(
+            "processTransactionsAtomically(address[],bytes[],bool[])",
+            chains,
+            txns,
+            isRawArray
+        );
+
+        vm.prank(originalCaller);
+        (bool success, bytes memory returnData) = address(atomicSequencer).call(callData);
+        assertFalse(success);
+
+        bytes4 errorSelector;
+        assembly {
+            errorSelector := mload(add(returnData, 0x20))
+        }
+        assertEq(errorSelector, AtomicSequencerImplementation.InputLengthMismatchError.selector);
+    }
+
+    function testMixedRawProcessing() public {
+        MetabasedSequencerChain[] memory chains = new MetabasedSequencerChain[](3);
+        chains[0] = chainA;
+        chains[1] = chainB;
+        chains[2] = chainA;
+
+        bytes[] memory txns = new bytes[](3);
+        txns[0] = abi.encode("tx1");
+        txns[1] = abi.encode("tx2");
+        txns[2] = abi.encode("tx3");
+
+        bool[] memory isRawArray = new bool[](3);
+        isRawArray[0] = true;   // Raw processing
+        isRawArray[1] = false;  // Standard processing
+        isRawArray[2] = true;   // Raw processing
+
+        bytes memory callData = abi.encodeWithSignature(
+            "processTransactionsAtomically(address[],bytes[],bool[])",
+            chains,
+            txns,
+            isRawArray
+        );
+
+        vm.prank(originalCaller);
+        (bool success,) = address(atomicSequencer).call(callData);
+        assertTrue(success, "failure in processing mixed raw transactions");
     }
 }
