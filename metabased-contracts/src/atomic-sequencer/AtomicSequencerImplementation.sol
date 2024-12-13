@@ -66,7 +66,10 @@ contract AtomicSequencerImplementation {
         // Process bulk transactions using appropriate method per chain
         for (uint256 i = 0; i < chains.length; i++) {
             if (isRawArray[i]) {
-                chains[i].processBulkTransactionsRaw(transactions[i]);
+                // Process raw transactions individually since bulk raw processing is not supported
+                for (uint256 j = 0; j < transactions[i].length; j++) {
+                    chains[i].processTransactionRaw(transactions[i][j]);
+                }
             } else {
                 chains[i].processBulkTransactions(transactions[i]);
             }
