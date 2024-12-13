@@ -61,12 +61,12 @@ func ParseRawTransactions(txs []hexutil.Bytes, log gethlog.Logger) (rawTxns []he
 			Hash:                 tx.Hash().Hex(),
 			From:                 from.Hex(),
 			To:                   tx.To().Hex(),
-			Value:                tx.Value().String(),
+			Value:                hexutil.EncodeBig(tx.Value()),
 			Data:                 hexutil.Encode(tx.Data()),
 			Nonce:                hexutil.EncodeUint64(tx.Nonce()),
 			Gas:                  hexutil.EncodeUint64(tx.Gas()),
-			MaxFeePerGas:         tx.GasPrice().String(),
-			MaxPriorityFeePerGas: tx.GasTipCap().String(),
+			MaxFeePerGas:         hexutil.EncodeBig(tx.GasPrice()),
+			MaxPriorityFeePerGas: hexutil.EncodeBig(tx.GasTipCap()),
 		}
 
 		rawTxns = append(rawTxns, rawTx)
