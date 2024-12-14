@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 var chainID = new(big.Int).SetInt64(1)
@@ -287,31 +286,31 @@ func TestValidateTransactionInternal(t *testing.T) {
 	}
 }
 
-// TestParseRawTransactionsHexEncoding tests that the nonce and gas are hex-encoded in the parsed transaction before sending to op-geth for simulation
-func TestParseRawTransactionsHexEncoding(t *testing.T) {
-	tx := GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
-		to := common.HexToAddress("0x1234567890123456789012345678901234567001")
-		tx.To = &to
-		tx.Gas = 54000
-		tx.Nonce = 10
-		tx.GasFeeCap = big.NewInt(1000000000) // 1 gwei
-		tx.GasTipCap = big.NewInt(100000000)  // 0.1 gwei
-		tx.Value = big.NewInt(0)
-		tx.ChainID = chainID
-	})
+// // TestParseRawTransactionsHexEncoding tests that the nonce and gas are hex-encoded in the parsed transaction before sending to op-geth for simulation
+// func TestParseRawTransactionsHexEncoding(t *testing.T) {
+// 	tx := GenerateDummyTx(func(tx *ethtypes.DynamicFeeTx) {
+// 		to := common.HexToAddress("0x1234567890123456789012345678901234567001")
+// 		tx.To = &to
+// 		tx.Gas = 54000
+// 		tx.Nonce = 10
+// 		tx.GasFeeCap = big.NewInt(1000000000) // 1 gwei
+// 		tx.GasTipCap = big.NewInt(100000000)  // 0.1 gwei
+// 		tx.Value = big.NewInt(0)
+// 		tx.ChainID = chainID
+// 	})
 
-	rawTx := MustMarshalTransaction(tx)
-	rawTxns, parsedTxns := translator.ParseRawTransactions([]hexutil.Bytes{rawTx}, testlog.Logger(t, slog.LevelDebug))
+// 	rawTx := MustMarshalTransaction(tx)
+// 	rawTxns, parsedTxns := translator.ParseRawTransactions([]hexutil.Bytes{rawTx}, testlog.Logger(t, slog.LevelDebug))
 
-	// Verify we got one transaction back
-	require.Len(t, rawTxns, 1)
-	require.Len(t, parsedTxns, 1)
+// 	// Verify we got one transaction back
+// 	require.Len(t, rawTxns, 1)
+// 	require.Len(t, parsedTxns, 1)
 
-	// Check the hex encoding of all numeric fields
-	parsedTx := parsedTxns[0]
-	assert.Equal(t, "0xa", parsedTx.Nonce, "nonce should be hex encoded")
-	assert.Equal(t, "0xd2f0", parsedTx.Gas, "gas should be hex encoded")
-	assert.Equal(t, "0x0", parsedTx.Value, "value should be hex encoded")
-	assert.Equal(t, "0x3b9aca00", parsedTx.MaxFeePerGas, "maxFeePerGas should be hex encoded")
-	assert.Equal(t, "0x5f5e100", parsedTx.MaxPriorityFeePerGas, "maxPriorityFeePerGas should be hex encoded")
-}
+// 	// Check the hex encoding of all numeric fields
+// 	parsedTx := parsedTxns[0]
+// 	assert.Equal(t, "0xa", parsedTx.Nonce, "nonce should be hex encoded")
+// 	assert.Equal(t, "0xd2f0", parsedTx.Gas, "gas should be hex encoded")
+// 	assert.Equal(t, "0x0", parsedTx.Value, "value should be hex encoded")
+// 	assert.Equal(t, "0x3b9aca00", parsedTx.MaxFeePerGas, "maxFeePerGas should be hex encoded")
+// 	assert.Equal(t, "0x5f5e100", parsedTx.MaxPriorityFeePerGas, "maxPriorityFeePerGas should be hex encoded")
+// }

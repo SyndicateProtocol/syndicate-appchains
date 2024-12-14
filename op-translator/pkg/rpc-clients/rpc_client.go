@@ -9,6 +9,7 @@ import (
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -173,15 +174,16 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 }
 
 type ParsedTransaction struct {
-	Hash                 string
-	Nonce                string
-	Value                string
-	Gas                  string
-	MaxFeePerGas         string
-	MaxPriorityFeePerGas string
-	From                 string
-	To                   string
-	Data                 string
+	From                 *common.Address `json:"from"`
+	To                   *common.Address `json:"to"`
+	Gas                  *hexutil.Uint64 `json:"gas"`
+	GasPrice             *hexutil.Big    `json:"gasPrice"`
+	MaxFeePerGas         *hexutil.Big    `json:"maxFeePerGas"`
+	MaxPriorityFeePerGas *hexutil.Big    `json:"maxPriorityFeePerGas"`
+	Value                *hexutil.Big    `json:"value"`
+	Nonce                *hexutil.Uint64 `json:"nonce"`
+	Data                 *hexutil.Bytes  `json:"data"`
+	Hash                 *common.Hash    `json:"hash"`
 }
 
 type BlockStateCall struct {

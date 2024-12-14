@@ -57,16 +57,19 @@ func ParseRawTransactions(txs []hexutil.Bytes, log gethlog.Logger) (rawTxns []he
 			continue
 		}
 
+		gas := tx.Gas()
+		nonce := tx.Nonce()
+		data := tx.Data()
+
 		simTx := &rpc.ParsedTransaction{
-			Hash:                 tx.Hash().Hex(),
-			From:                 from.Hex(),
-			To:                   tx.To().Hex(),
-			Value:                hexutil.EncodeBig(tx.Value()),
-			Data:                 hexutil.Encode(tx.Data()),
-			Nonce:                hexutil.EncodeUint64(tx.Nonce()),
-			Gas:                  hexutil.EncodeUint64(tx.Gas()),
-			MaxFeePerGas:         hexutil.EncodeBig(tx.GasPrice()),
-			MaxPriorityFeePerGas: hexutil.EncodeBig(tx.GasTipCap()),
+			From:                 &from,
+			To:                   tx.To(),
+			Gas:                  (*hexutil.Uint64)(&gas),
+			Value:                (*hexutil.Big)(tx.Value()),
+			Data:                 (*hexutil.Bytes)(&data),
+			Nonce:                (*hexutil.Uint64)(&nonce),
+			MaxFeePerGas:         (*hexutil.Big)(tx.GasFeeCap()),
+			MaxPriorityFeePerGas: (*hexutil.Big)(tx.GasTipCap()),
 		}
 
 		rawTxns = append(rawTxns, rawTx)

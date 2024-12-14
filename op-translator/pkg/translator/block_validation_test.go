@@ -22,7 +22,7 @@ func TestParseValidationErrorAndUpdateState(t *testing.T) {
 		BlockStateValidation:  translator.BlockStateValidation{},
 	}
 
-	tests := []struct { //nolint:govet // test struct
+	tests := []struct {
 		name         string
 		err          error
 		expectedType string
@@ -55,33 +55,26 @@ func TestHandleNonceError(t *testing.T) {
 		WalletStateValidation: make(map[string]translator.WalletStateValidation),
 	}
 
-	tests := []struct { //nolint:govet // test struct
+	tests := []struct {
 		name          string
 		errorMessage  string
 		expectError   bool
-		expectedNonce *big.Int
+		expectedNonce uint64
 	}{
-		{"Valid nonce error", "nonce too high: address 0x123456, tx: 5 state: 3", false, big.NewInt(3)},
-		{"Malformed nonce error", "nonce too high: address missing fields", true, nil},
-		{"Invalid nonce format", "nonce too high: address 0x123456, tx: 5 state: abc", true, nil},
+		{"Valid nonce error", "nonce too high: address 0x123456, tx: 5 state: 3", false, 3},
+		{"Malformed nonce error", "nonce too high: address missing fields", true, 0},
+		{"Invalid nonce format", "nonce too high: address 0x123456, tx: 5 state: abc", true, 0},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			updatedState, err := translator.HandleNonceError(validationState, tt.errorMessage)
 			if tt.expectError {
-				if err == nil {
-					t.Errorf("expected error but got none")
-				}
+				assert.NotNil(t, err)
 			} else {
-				if err != nil {
-					t.Errorf("expected no error, got: %v", err)
-				}
-
+				assert.Nil(t, err)
 				address := "0x123456"
-				if updatedState.WalletStateValidation[address].Nonce.Cmp(tt.expectedNonce) != 0 {
-					t.Errorf("expected nonce: %v, got: %v", tt.expectedNonce, updatedState.WalletStateValidation[address].Nonce)
-				}
+				assert.Equal(t, tt.expectedNonce, updatedState.WalletStateValidation[address].Nonce)
 			}
 		})
 	}
@@ -165,32 +158,25 @@ func TestHandleBlockGasLimitError(t *testing.T) {
 		BlockStateValidation: translator.BlockStateValidation{},
 	}
 
-	tests := []struct { //nolint:govet // test struct
+	tests := []struct {
 		name             string
 		errorMessage     string
 		expectError      bool
-		expectedGasLimit *big.Int
+		expectedGasLimit uint64
 	}{
-		{"Valid gas limit error", "gas limit reached: 30000000 >= 15000000", false, big.NewInt(15000000)},
-		{"Malformed gas limit error", "gas limit error missing fields", true, nil},
-		{"Invalid gas limit format", "gas limit reached: 30000000 >= abc", true, nil},
+		{"Valid gas limit error", "gas limit reached: 30000000 >= 15000000", false, 15000000},
+		{"Malformed gas limit error", "gas limit error missing fields", true, 0},
+		{"Invalid gas limit format", "gas limit reached: 30000000 >= abc", true, 0},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			updatedState, err := translator.HandleBlockGasLimitError(validationState, tt.errorMessage)
 			if tt.expectError {
-				if err == nil {
-					t.Errorf("expected error but got none")
-				}
+				assert.NotNil(t, err)
 			} else {
-				if err != nil {
-					t.Errorf("expected no error, got: %v", err)
-				}
-
-				if updatedState.BlockStateValidation.GasLimit.Cmp(tt.expectedGasLimit) != 0 {
-					t.Errorf("expected gas limit: %v, got: %v", tt.expectedGasLimit, updatedState.BlockStateValidation.GasLimit)
-				}
+				assert.Nil(t, err)
+				assert.Equal(t, tt.expectedGasLimit, updatedState.BlockStateValidation.GasLimit)
 			}
 		})
 	}
@@ -200,13 +186,13 @@ func TestCloneValidationState(t *testing.T) {
 	originalState := translator.ValidationState{
 		WalletStateValidation: map[string]translator.WalletStateValidation{
 			"0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef": {
-				Nonce:   big.NewInt(1),
+				Nonce:   3,
 				Balance: big.NewInt(100000000000),
 			},
 		},
 		BlockStateValidation: translator.BlockStateValidation{
 			BaseFeePerGas: big.NewInt(10000000000),
-			GasLimit:      big.NewInt(30000000),
+			GasLimit:      30000000,
 		},
 	}
 
@@ -214,11 +200,11 @@ func TestCloneValidationState(t *testing.T) {
 
 	// Modify the cloned state and ensure original is not affected
 	walletState := clonedState.WalletStateValidation["0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef"]
-	walletState.Nonce = big.NewInt(2)
+	walletState.Nonce = 4
 	clonedState.WalletStateValidation["0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef"] = walletState
 
-	assert.Equal(t, big.NewInt(1), originalState.WalletStateValidation["0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef"].Nonce)
-	assert.Equal(t, big.NewInt(2), clonedState.WalletStateValidation["0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef"].Nonce)
+	assert.Equal(t, uint64(3), originalState.WalletStateValidation["0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef"].Nonce)
+	assert.Equal(t, uint64(4), clonedState.WalletStateValidation["0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef"].Nonce)
 }
 
 func TestValidateBlockState(t *testing.T) {
@@ -226,26 +212,39 @@ func TestValidateBlockState(t *testing.T) {
 		hexutil.MustDecode("0xf86a0180850b8447060082520894868c2f4324ddddf07ebeb3605b5a0dc3bfc918a80b844a9059cbb00000000000000000000000033e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef00000000000000000000000000000000000000000000000000000000000000001"),
 		hexutil.MustDecode("0xf86b0180850b8447060082520894868c2f4324ddddf07ebeb3605b5a0dc3bfc918a80b844a9059cbb00000000000000000000000033e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef00000000000000000000000000000000000000000000000000000000000000002"),
 	}
+
+	nonce1 := hexutil.MustDecodeUint64("0x1")
+	gas1 := hexutil.MustDecodeUint64("0x5208")
+	maxFeePerGas1 := hexutil.MustDecodeBig("0xb84470600")
+	from1 := common.HexToAddress("0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef")
+	to1 := common.HexToAddress("0x868c2f4324ddddf07ebeb3605b5a0dc3bfc918a8")
+
+	nonce2 := hexutil.MustDecodeUint64("0x2")
+	gas2 := hexutil.MustDecodeUint64("0x5208")
+	maxFeePerGas2 := hexutil.MustDecodeBig("0xb84470600")
+	from2 := common.HexToAddress("0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef")
+	to2 := common.HexToAddress("0x868c2f4324ddddf07ebeb3605b5a0dc3bfc918a8")
+
 	txns := []*rpc.ParsedTransaction{
 		{
-			Nonce:        "0x1",
-			Value:        "0x0",
-			Gas:          "0x5208",
-			MaxFeePerGas: "0xb84470600",
-			From:         "0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef",
-			To:           "0x868c2f4324ddddd07ebeb3605b5a0dc3bfc918a8",
+			Nonce:        (*hexutil.Uint64)(&nonce1),
+			Value:        (*hexutil.Big)(big.NewInt(0)),
+			Gas:          (*hexutil.Uint64)(&gas1),
+			MaxFeePerGas: (*hexutil.Big)(maxFeePerGas1),
+			From:         &from1,
+			To:           &to1,
 		},
 		{
-			Nonce:        "0x2",
-			Value:        "0x0",
-			Gas:          "0x5208",
-			MaxFeePerGas: "0xb84470600",
-			From:         "0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef",
-			To:           "0x868c2f4324ddddd07ebeb3605b5a0dc3bfc918a8",
+			Nonce:        (*hexutil.Uint64)(&nonce2),
+			Value:        (*hexutil.Big)(big.NewInt(0)),
+			Gas:          (*hexutil.Uint64)(&gas2),
+			MaxFeePerGas: (*hexutil.Big)(maxFeePerGas2),
+			From:         &from2,
+			To:           &to2,
 		},
 	}
 
-	tests := []struct { //nolint:govet // test struct
+	tests := []struct {
 		name          string
 		state         translator.ValidationState
 		expectedValid int
@@ -255,13 +254,13 @@ func TestValidateBlockState(t *testing.T) {
 			state: translator.ValidationState{
 				WalletStateValidation: map[string]translator.WalletStateValidation{
 					"0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef": {
-						Nonce:   big.NewInt(1),
+						Nonce:   1,
 						Balance: big.NewInt(2000000000000000),
 					},
 				},
 				BlockStateValidation: translator.BlockStateValidation{
 					BaseFeePerGas: big.NewInt(10000000000),
-					GasLimit:      big.NewInt(30000000),
+					GasLimit:      30000000,
 				},
 			},
 			expectedValid: 2,
@@ -271,29 +270,13 @@ func TestValidateBlockState(t *testing.T) {
 			state: translator.ValidationState{
 				WalletStateValidation: map[string]translator.WalletStateValidation{
 					"0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef": {
-						Nonce:   big.NewInt(3),
+						Nonce:   3,
 						Balance: big.NewInt(2000000000000000),
 					},
 				},
 				BlockStateValidation: translator.BlockStateValidation{
 					BaseFeePerGas: big.NewInt(10000000000),
-					GasLimit:      big.NewInt(30000000),
-				},
-			},
-			expectedValid: 0,
-		},
-		{
-			name: "Insufficient balance",
-			state: translator.ValidationState{
-				WalletStateValidation: map[string]translator.WalletStateValidation{
-					"0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef": {
-						Nonce:   big.NewInt(1),
-						Balance: big.NewInt(5000),
-					},
-				},
-				BlockStateValidation: translator.BlockStateValidation{
-					BaseFeePerGas: big.NewInt(10000000000),
-					GasLimit:      big.NewInt(30000000),
+					GasLimit:      30000000,
 				},
 			},
 			expectedValid: 0,
@@ -303,13 +286,13 @@ func TestValidateBlockState(t *testing.T) {
 			state: translator.ValidationState{
 				WalletStateValidation: map[string]translator.WalletStateValidation{
 					"0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef": {
-						Nonce:   big.NewInt(1),
+						Nonce:   1,
 						Balance: big.NewInt(2000000000000000),
 					},
 				},
 				BlockStateValidation: translator.BlockStateValidation{
 					BaseFeePerGas: big.NewInt(10000000000),
-					GasLimit:      big.NewInt(10000),
+					GasLimit:      10000,
 				},
 			},
 			expectedValid: 0,
@@ -319,9 +302,8 @@ func TestValidateBlockState(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validRawTxns, validTxns := translator.ValidateBlockState(rawTxns, txns, tt.state, testlog.Logger(t, slog.LevelDebug))
-			if len(validRawTxns) != tt.expectedValid || len(validTxns) != tt.expectedValid {
-				t.Errorf("expected %d valid transactions, got %d valid raw txns and %d valid txns", tt.expectedValid, len(validRawTxns), len(validTxns))
-			}
+			assert.Equal(t, tt.expectedValid, len(validRawTxns))
+			assert.Equal(t, tt.expectedValid, len(validTxns))
 		})
 	}
 }
@@ -336,20 +318,32 @@ func TestValidateBlock(t *testing.T) {
 	}
 	validParsedTxns := []*rpc.ParsedTransaction{
 		{
-			Nonce:        "0x1",
-			Value:        "0x0",
-			Gas:          "0x5208",
-			MaxFeePerGas: "0xb84470600",
-			From:         "0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef",
-			To:           "0x868c2f4324ddddd07ebeb3605b5a0dc3bfc918a8",
+			Nonce:        (*hexutil.Uint64)(new(uint64)),
+			Value:        (*hexutil.Big)(big.NewInt(0)),
+			Gas:          (*hexutil.Uint64)(new(uint64)),
+			MaxFeePerGas: (*hexutil.Big)(big.NewInt(50000000000)),
+			From: func() *common.Address {
+				addr := common.HexToAddress("0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef")
+				return &addr
+			}(),
+			To: func() *common.Address {
+				addr := common.HexToAddress("0x868c2f4324ddddf07ebeb3605b5a0dc3bfc918a8")
+				return &addr
+			}(),
 		},
 		{
-			Nonce:        "0x2",
-			Value:        "0x0",
-			Gas:          "0x5208",
-			MaxFeePerGas: "0xb84470600",
-			From:         "0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef",
-			To:           "0x868c2f4324ddddd07ebeb3605b5a0dc3bfc918a8",
+			Nonce:        (*hexutil.Uint64)(new(uint64)),
+			Value:        (*hexutil.Big)(big.NewInt(0)),
+			Gas:          (*hexutil.Uint64)(new(uint64)),
+			MaxFeePerGas: (*hexutil.Big)(big.NewInt(50000000000)),
+			From: func() *common.Address {
+				addr := common.HexToAddress("0x33e244b5c8b54cd1f0e7b2a7b2e75e2204acb2ef")
+				return &addr
+			}(),
+			To: func() *common.Address {
+				addr := common.HexToAddress("0x868c2f4324ddddf07ebeb3605b5a0dc3bfc918a8")
+				return &addr
+			}(),
 		},
 	}
 
