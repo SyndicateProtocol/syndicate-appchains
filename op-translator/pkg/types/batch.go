@@ -36,6 +36,8 @@ func NewBatch(parentHashStr, epochNumberStr, epochHashStr, timestampStr string, 
 		return nil, err
 	}
 
+	timestamp += 2 // TODO remove this
+
 	return &Batch{
 		ParentHash:      parentHash,
 		EpochNumber:     epochNumber,

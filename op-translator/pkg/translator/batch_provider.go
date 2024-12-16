@@ -47,6 +47,8 @@ func NewMetaBasedBatchProvider(
 	}
 }
 
+var ErrNoMetabasedChainBlock = errors.New("could not find metabased chain block")
+
 // NOTE [SEQ-144]: THIS ASSUMES THAT THE L3 HAS THE SAME BLOCK TIME AS THE SETTLEMENT L2
 func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNumStr string) (string, error) {
 	start := time.Now()
@@ -75,7 +77,7 @@ func (m *MetaBasedBatchProvider) getParentBlockHash(ctx context.Context, blockNu
 	m.log.Debug("getting parent block hash", "block_number", parentBlockNum)
 	previousBlock, err := m.MetaBasedChain.AsEthClient().HeaderByNumber(ctx, new(big.Int).SetUint64(parentBlockNum))
 	if err != nil {
-		return "", err
+		return "", ErrNoMetabasedChainBlock
 	}
 	m.log.Debug("previous block", "block", previousBlock)
 

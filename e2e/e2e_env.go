@@ -30,7 +30,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -46,6 +45,11 @@ func TestMain(m *testing.M) {
 	// TODO parse env
 	os.Exit(m.Run())
 }
+
+const settlementChainBlockTime = 2
+
+// TODO if we set this to a value lower than 3, the translator will return errors because it can't find sequencing blocks to fit the time window
+const settlementChainL3StartBlockNumber = 3
 
 type fakeChain struct {
 	t       helpers.StatefulTesting
@@ -150,8 +154,9 @@ type MetabasedChainTestEnv struct {
 	log             gethlog.Logger
 	translator      *translator.OPTranslator
 
-	L3Client *ethclient.Client
-	L3Signer types.Signer
+	L3Client           *ethclient.Client
+	l3ClientLazyLoaded *lazyLoadedL3Client
+	L3Signer           types.Signer
 
 	MetabasedFactoryContractAddress    common.Address
 	AlwaysAllowedModuleContractAddress common.Address
@@ -166,9 +171,6 @@ type MetabasedChainTestEnv struct {
 	L3ChainID         *big.Int
 }
 
-// TODO if we set this to 0, the translator will return errors because it can't find sequencing blocks to fit the time window
-const settlementChainL3StartBlockNumber = 2
-
 func NewMetabasedChainTestEnv(gt *testing.T) *MetabasedChainTestEnv { //nolint:thelper // t is named gt and wrapped into a helpers.StatefulTesting object which is named t
 	gt.Helper()
 	t := helpers.NewDefaultTesting(gt)
@@ -179,6 +181,7 @@ func NewMetabasedChainTestEnv(gt *testing.T) *MetabasedChainTestEnv { //nolint:t
 	}
 	s.T = t
 	s.log = testlog.Logger(t, gethlog.LvlDebug)
+	s.l3ClientLazyLoaded = newLazyLoadedL3Client()
 
 	alwaysAllowModuleJSON, err := os.ReadFile("../metabased-contracts/out/AlwaysAllowedModule.sol/AlwaysAllowedModule.json")
 	require.NoError(t, err, "failed to read  alwaysAllowModule json")
@@ -199,8 +202,8 @@ func NewMetabasedChainTestEnv(gt *testing.T) *MetabasedChainTestEnv { //nolint:t
 	deployParams := e2eutils.MakeDeployParams(t, testParams)
 	s.BatcherInboxAddress = deployParams.DeployConfig.BatchInboxAddress
 
-	sequencingChain := newFakeChain(t, deployParams, s.log.New("role", "sequencing-chain-miner"), s.SequencingChainID)
 	settlementChain := newFakeChain(t, deployParams, s.log.New("role", "settlement-chain-miner"), s.SettlementChainID)
+	sequencingChain := newFakeChain(t, deployParams, s.log.New("role", "sequencing-chain-miner"), s.SequencingChainID)
 	s.SequencingChain = sequencingChain
 	s.SettlementChain = settlementChain
 
@@ -219,15 +222,12 @@ func NewMetabasedChainTestEnv(gt *testing.T) *MetabasedChainTestEnv { //nolint:t
 	s.AssertNonZeroBalance(s.SettlementChain.Client(), s.Addresses.Bob)
 	s.AssertNonZeroBalance(s.SettlementChain.Client(), s.Addresses.Mallory)
 
-	//
-	// init op-translator
-
 	batchProvider := translator.NewMetaBasedBatchProvider(
-		rpc.NewRPCClient(s.SettlementChain.Client(), s.SettlementChain.Client().Client(), rpc.NewReceiptFetcher(s.SettlementChain.Client().Client())),
+		s.l3ClientLazyLoaded,
 		rpc.NewRPCClient(s.SequencingChain.Client(), s.SequencingChain.Client().Client(), rpc.NewReceiptFetcher(s.SequencingChain.Client().Client())),
 		s.L3SequencingContractAddress,
 		settlementChainL3StartBlockNumber,
-		1, // TODO parameterize this, or remove it if we decide to support variable block time settlement chains
+		settlementChainBlockTime,
 		mocks.NewMockMetrics(),
 		s.log.New("role", "batch-provider"),
 	)
@@ -242,16 +242,13 @@ func NewMetabasedChainTestEnv(gt *testing.T) *MetabasedChainTestEnv { //nolint:t
 		s.log.New("role", "translator"),
 	)
 
+	//
+	// init op-translator
+
 	// TODO: if we would want to swap the consumer from op-stack for arb, here would be the place to do it
 	s.initOpStackL3(deployParams)
 
 	return s
-}
-
-func (s *MetabasedChainTestEnv) AssertNonZeroBalance(client *ethclient.Client, addr common.Address) {
-	bal, err := client.BalanceAt(s.T.Ctx(), s.Addresses.Alice, nil)
-	require.NoError(s.T, err, "failed to get alice balance")
-	require.True(s.T, bal.Cmp(e2eutils.Ether(0)) > 0, "alice balance is too low")
 }
 
 func (s *MetabasedChainTestEnv) deployNewMetabasedChain() {
@@ -345,16 +342,17 @@ func (s *MetabasedChainTestEnv) initOpStackL3(deployParams *e2eutils.DeployParam
 
 	//
 	// generate the L3 genesis and rollup config
-	settlementLayerBlock := must(s.SequencingChain.Client().BlockByNumber(s.T.Ctx(), nil))
+	// TODO should this block be obtained via translator? does it make a difference?
+	settlementStartBlock := must(s.SettlementChain.Client().BlockByNumber(s.T.Ctx(), big.NewInt(settlementChainL3StartBlockNumber)))
 
 	deployConf := deployParams.DeployConfig.Copy()
 	// deployConf.L1ChainID = s.SettlementChainID.Uint64()
 	// deployConf.L2ChainID = s.L3ChainID.Uint64()
 	deployConf.L2BlockTime = 2
 
-	allocsMode := e2eutils.GetL2AllocsMode(deployConf, settlementLayerBlock.Time())
+	allocsMode := e2eutils.GetL2AllocsMode(deployConf, settlementStartBlock.Time())
 	l3Allocs := config.L2Allocs(deployParams.AllocType, allocsMode)
-	l3Genesis, err := genesis.BuildL2Genesis(deployConf, l3Allocs, settlementLayerBlock.Header())
+	l3Genesis, err := genesis.BuildL2Genesis(deployConf, l3Allocs, settlementStartBlock.Header())
 	require.NoError(s.T, err)
 	l3Genesis.Config.ChainID = s.L3ChainID // override the chainID
 
@@ -368,8 +366,8 @@ func (s *MetabasedChainTestEnv) initOpStackL3(deployParams *e2eutils.DeployParam
 		}
 	}
 
-	settlementStartBlock := must(s.SettlementChain.Client().BlockByNumber(s.T.Ctx(), big.NewInt(settlementChainL3StartBlockNumber)))
-	deployConf.L1GenesisBlockTimestamp = hexutil.Uint64(settlementStartBlock.Time())
+	settlementStartBlockTime := settlementStartBlock.Time()
+	// deployConf.L1GenesisBlockTimestamp = hexutil.Uint64(settlementStartBlock.Time())
 
 	rollupConfig := &rollup.Config{
 		Genesis: rollup.Genesis{
@@ -381,7 +379,8 @@ func (s *MetabasedChainTestEnv) initOpStackL3(deployParams *e2eutils.DeployParam
 				Hash:   l3Genesis.ToBlock().Hash(),
 				Number: 0,
 			},
-			L2Time:       uint64(deployConf.L1GenesisBlockTimestamp),
+			// L2Time:       uint64(deployConf.L1GenesisBlockTimestamp),
+			L2Time:       settlementStartBlockTime,
 			SystemConfig: e2eutils.SystemConfigFromDeployConfig(deployConf),
 		},
 		BlockTime:              deployConf.L2BlockTime,
@@ -393,9 +392,9 @@ func (s *MetabasedChainTestEnv) initOpStackL3(deployParams *e2eutils.DeployParam
 		BatchInboxAddress:      deployConf.BatchInboxAddress,
 		DepositContractAddress: deployConf.OptimismPortalProxy,
 		L1SystemConfigAddress:  deployConf.SystemConfigProxy,
-		RegolithTime:           deployConf.RegolithTime(uint64(deployConf.L1GenesisBlockTimestamp)),
-		CanyonTime:             deployConf.CanyonTime(uint64(deployConf.L1GenesisBlockTimestamp)),
-		DeltaTime:              deployConf.DeltaTime(uint64(deployConf.L1GenesisBlockTimestamp)),
+		RegolithTime:           deployConf.RegolithTime(settlementStartBlockTime),
+		CanyonTime:             deployConf.CanyonTime(settlementStartBlockTime),
+		DeltaTime:              deployConf.DeltaTime(settlementStartBlockTime),
 		// disable ecotone upgrade (we do this so we don't need a beacon chain/client)
 		EcotoneTime:  nil, // deployConf.EcotoneTime(uint64(deployConf.L1GenesisBlockTimestamp)),
 		FjordTime:    nil, // deployConf.FjordTime(uint64(deployConf.L1GenesisBlockTimestamp)),
@@ -418,6 +417,8 @@ func (s *MetabasedChainTestEnv) initOpStackL3(deployParams *e2eutils.DeployParam
 	)
 	require.NoError(s.T, err)
 	jwtPath := e2eutils.WriteDefaultJWT(s.T)
+
+	// TODO why does the engine return hash of block 0 as ZEROHASH?
 	engine := helpers.NewL2Engine(s.T, s.log.New("component", "l3-engine"), l3Genesis, jwtPath, helpers.EngineWithP2P())
 	engineClientConfig := sources.EngineClientDefaultConfig(rollupConfig)
 	engineClientConfig.TrustRPC = true // must set `trustRPC` to true, otherwise the engine will fail when verifying op-translator blocks // TODO delete if we can fix this behavior
@@ -442,31 +443,41 @@ func (s *MetabasedChainTestEnv) initOpStackL3(deployParams *e2eutils.DeployParam
 		0,
 		nil, // TODO is this okay? // cfg.InteropBackend,
 	)
-	sequencer.ActL2PipelineFull(s.T) // TODO not sure if needed
+	// sequencer.ActL2PipelineFull(s.T) // TODO not sure if needed
 
 	go func() {
-		// for {
-		if s.T.Ctx().Err() != nil {
-			return
-		}
-		// TODO not sure if needed
-		// Build an empty block on L2
-		// sequencer.ActL2StartBlock(s.T)
-		// sequencer.ActL2EndBlock(s.T)
+		for {
+			if s.T.Ctx().Err() != nil {
+				return
+			}
 
-		// Instruct the sequencer to derive the L2 chain from the data on L1
-		// sequencer.ActL1HeadSignal(s.T) //TODO not sure if needed
-		sequencer.ActL2PipelineFull(s.T)
-		sequencer.ActL1FinalizedSignal(s.T)
-		time.Sleep(100 * time.Millisecond)
-		// }
+			// sequencer.ActL1HeadSignal(s.T)
+			// sequencer.ActBuildToL1Head(s.T)
+
+			// TODO not sure if needed
+			// Build an empty block on L2
+			// sequencer.ActL2StartBlock(s.T)
+			// sequencer.ActL2EndBlock(s.T)
+
+			// Instruct the sequencer to derive the L2 chain from the data on L1
+			// sequencer.ActL1HeadSignal(s.T) // TODO not sure if needed
+			// sequencer.ActL1SafeSignal(s.T)
+			// sequencer.ActL1FinalizedSignal(s.T)
+			// sequencer.ActL2StartBlock(s.T)
+			// sequencer.ActL2EndBlock(s.T)
+
+			sequencer.ActL2PipelineFull(s.T)
+			// sequencer.ActL1FinalizedSignal(s.T)
+			time.Sleep(100 * time.Millisecond)
+		}
 	}()
 
 	// batcher := helpers.NewL2Batcher(s.log.New("component", "l3-batcher"), rollupConfig, helpers.DefaultBatcherCfg(deployParams),
 	// 	l3.RollupClient(), s.SequencingChain.Client(), engine.EthClient(), engineClient)
 
-	s.L3Client = engine.EthClient()
 	s.L3Signer = types.LatestSigner(l3Genesis.Config)
+	s.L3Client = engine.EthClient()
+	s.l3ClientLazyLoaded.setEthClient(s.L3Client)
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -479,6 +490,12 @@ func (s *MetabasedChainTestEnv) SequenceL3TransactionRaw(sender *ecdsa.PrivateKe
 	tx := BuildGenericDataTx(s.T.Ctx(), seqClient, s.SequencingChain.Signer(), sender, txData, s.L3SequencingContractAddress)
 	receipt := s.sendTxWaitReceipt(seqClient, tx)
 	require.Equal(s.T, receipt.Status, types.ReceiptStatusSuccessful)
+}
+
+func (s *MetabasedChainTestEnv) AssertNonZeroBalance(client *ethclient.Client, addr common.Address) {
+	bal, err := client.BalanceAt(s.T.Ctx(), s.Addresses.Alice, nil)
+	require.NoError(s.T, err, "failed to get alice balance")
+	require.True(s.T, bal.Cmp(e2eutils.Ether(0)) > 0, "alice balance is too low")
 }
 
 // ------------------------------------------------------------------------------------------------

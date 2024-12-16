@@ -14,10 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TODO figure out this error:
-//     data_source.go:103:         WARN [12-13|12:34:18.460] tx in inbox with invalid signature
-//  role=l3-sequencer origin=e2009d..388597:2 hash=0ab7f4..1afd50 err="invalid chain id for signer: have 1002 want 900"
-
 var counterContractArtifact = MustParseFoundryArtifact("./CounterContractArtifact.json")
 
 func TestE2ESimpleCounterContract(t *testing.T) {

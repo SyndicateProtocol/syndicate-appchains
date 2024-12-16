@@ -126,7 +126,22 @@ func (b Block) GetReceipts() (any, error) {
 	return receipts, nil
 }
 
+func (b Block) Clone() Block {
+	cloned := Block{}
+	for k, v := range b {
+		cloned[k] = v
+	}
+	return cloned
+}
+
 func (b Block) WithoutReceipts() Block {
-	delete(b, "receipts")
-	return b
+	cloned := b.Clone()
+	delete(cloned, "receipts")
+	return cloned
+}
+
+func (b Block) WithoutTransactions() Block {
+	cloned := b.Clone()
+	delete(cloned, "transactions")
+	return cloned
 }
