@@ -18,6 +18,9 @@ add-batch-transactions-to-metabased-sequencerchain :; forge script script/AddBat
 deploy-metafiller-storage :; forge create --rpc-url metabased_stratos --private-key ${ETH_PRIVATE_KEY} src/backfill/MetafillerStorage.sol:MetafillerStorage --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR} ${L3_CHAIN_ID}
 allowlist-metafiller-storage-addresses :; forge script script/AllowlistMetafillerStorageAddresses.s.sol:AllowlistMetafillerStorageAddresses --rpc-url metabased_stratos --private-key ${ETH_PRIVATE_KEY} --legacy --skip-simulation --broadcast -vvv
 
+## deploy SynGasToken to Sepolia
+deploy-syn-gas-token :; forge create --rpc-url ${ETH_SEPOLIA_RPC_URL} --private-key ${ETH_PRIVATE_KEY} src/token/SynGasToken.sol:SynGasToken --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
+
 
 ## Tx Limit Test
 # run tx limit test against OP Mainnet or Base Sepolia

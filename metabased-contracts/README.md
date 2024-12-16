@@ -63,3 +63,9 @@ $ make deploy-based-sequencerchain-frame
 | MetafillerStorage (Ham)         | 0x037A5BC4DB3C5c4Be90d8C3D7eaD6B2B231b9EFb |
 | RequiredAllModule (Ham)         | 0xAfeA8F68921242A90ae9e35f4DDF0d3769dE3150 |
 | RequiredAllModule (Frame)       | 0x7Bc475096B936Ad04Cfc544FB56aC54B3661beE6 |
+
+#### ETH Sepolia
+
+| Contract Name | Address                                    |
+| ------------- | ------------------------------------------ |
+| SynGasToken   | 0x8c8861c1bBd3a47deC0cfc5dc82e4B5E88810BfE |
