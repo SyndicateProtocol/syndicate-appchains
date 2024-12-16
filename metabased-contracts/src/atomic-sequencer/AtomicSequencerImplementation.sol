@@ -6,34 +6,8 @@ import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
 /// @title AtomicSequencerImplementation
 /// @notice Implementation contract containing the logic for atomic sequencing
 contract AtomicSequencerImplementation {
-    /// @dev Thrown when a chain address is zero
-    error InvalidChainAddresses();
-
     /// @dev Thrown when input array lengths don't match or are invalid
     error InputLengthMismatchError();
-
-    /// @dev Validates chain addresses and array lengths
-    /// @param chains Array of Metabased chains to validate
-    /// @param transactions Array of transactions to validate
-    /// @param isRawArray Array of flags indicating raw transaction processing
-    modifier onlyValidChains(
-        MetabasedSequencerChain[] calldata chains,
-        bytes[] calldata transactions,
-        bool[] calldata isRawArray
-    ) {
-        // Check array lengths match
-        if (chains.length == 0 || chains.length != transactions.length || chains.length != isRawArray.length) {
-            revert InputLengthMismatchError();
-        }
-
-        // Check for zero addresses
-        for (uint256 i = 0; i < chains.length; i++) {
-            if (address(chains[i]) == address(0)) {
-                revert InvalidChainAddresses();
-            }
-        }
-        _;
-    }
 
     /// @notice Processes transactions on multiple Metabased chains atomically.
     /// @param chains Array of Metabased chains
@@ -43,8 +17,12 @@ contract AtomicSequencerImplementation {
         MetabasedSequencerChain[] calldata chains,
         bytes[] calldata transactions,
         bool[] calldata isRawArray
-    ) external onlyValidChains(chains, transactions, isRawArray) {
-        // Process transactions using appropriate method per transaction
+    ) external {
+        // Check array lengths match
+        if (chains.length == 0 || chains.length != transactions.length || chains.length != isRawArray.length) {
+            revert InputLengthMismatchError();
+        }
+
         for (uint256 i = 0; i < chains.length; i++) {
             if (isRawArray[i]) {
                 chains[i].processTransactionRaw(transactions[i]);
@@ -54,25 +32,15 @@ contract AtomicSequencerImplementation {
         }
     }
 
-    /// @notice Processes bulk transactions on multiple Metabased chains atomically.
+    /// @notice Processes bulk transactions on multiple Metabased chains atomically. Only used with encoded transactions.
     /// @param chains Array of Metabased chains
     /// @param transactions Array of transaction arrays corresponding to each chain
-    /// @param isRawArray Array indicating whether each chain should use raw processing
     function processBulkTransactionsAtomically(
         MetabasedSequencerChain[] calldata chains,
-        bytes[][] calldata transactions,
-        bool[] calldata isRawArray
-    ) external onlyValidChains(chains, transactions, isRawArray) {
-        // Process bulk transactions using appropriate method per chain
+        bytes[][] calldata transactions
+    ) external {
         for (uint256 i = 0; i < chains.length; i++) {
-            if (isRawArray[i]) {
-                // Process raw transactions individually since bulk raw processing is not supported
-                for (uint256 j = 0; j < transactions[i].length; j++) {
-                    chains[i].processTransactionRaw(transactions[i][j]);
-                }
-            } else {
-                chains[i].processBulkTransactions(transactions[i]);
-            }
+            chains[i].processBulkTransactions(transactions[i]);
         }
     }
 }
