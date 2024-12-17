@@ -1,20 +1,26 @@
 use alloy_primitives::B256; // 32-byte hash
-use alloy_rlp::Encodable;
+use alloy_rlp::{Buf, Decodable, Encodable, Error as RlpError}; // Updated imports
 use flate2::{write::ZlibEncoder, Compression}; // Zlib compression
 use std::error::Error;
 use std::io::Write;
 
+use eyre::Result;
+
 // Constants
 const BATCH_VERSION_BYTE: u8 = 0x01;
-
 // Define the Batch struct
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Batch {
+    /// Block hash of the previous L2 block
     pub parent_hash: B256,
-    pub epoch_number: u64,
+    /// The batch epoch number. Same as the first L1 block number in the epoch.
+    pub epoch_num: u64,
+    /// The block hash of the first L1 block in the epoch
     pub epoch_hash: B256,
+    /// The L2 block timestamp of this batch
     pub timestamp: u64,
-    pub transaction_list: Vec<Vec<u8>>,
+    /// The L2 block transactions in this batch
+    pub transactions: Vec<Vec<u8>>,
 }
 
 // Frame struct to represent the framed data
@@ -28,27 +34,70 @@ pub struct Frame {
 
 // Implementation for the Batch struct
 impl Batch {
-    /// Encodes the Batch to RLP bytes
-    pub fn encode(&self) -> Result<Vec<u8>, Box<dyn Error>> {
-        let mut buf = Vec::new();
+    /// Encode the `Batch` into RLP
+    fn encode(&self) -> Vec<u8> {
+        let mut out = Vec::new();
 
-        // Write the version byte
-        buf.push(BATCH_VERSION_BYTE);
+        // Step 1: Add the version byte
+        out.push(BATCH_VERSION_BYTE);
 
-        // RLP encode fields
-        self.parent_hash.encode(&mut buf);
-        self.epoch_number.encode(&mut buf);
-        self.epoch_hash.encode(&mut buf);
-        self.timestamp.encode(&mut buf);
-        self.transaction_list.encode(&mut buf);
+        // Step 2: Encode fields as a list
+        let header = alloy_rlp::Header {
+            list: true,
+            payload_length: self.parent_hash.length()
+                + self.epoch_num.length()
+                + self.epoch_hash.length()
+                + self.timestamp.length()
+                + self.transactions.length(),
+        };
+        header.encode(&mut out);
 
-        Ok(buf)
+        // Step 3: Encode fields
+        self.parent_hash.encode(&mut out);
+        self.epoch_num.encode(&mut out);
+        self.epoch_hash.encode(&mut out);
+        self.timestamp.encode(&mut out);
+        self.transactions.encode(&mut out);
+
+        out
+    }
+
+    pub fn decode(encoded: &[u8]) -> Result<Self, RlpError> {
+        let mut buf = encoded;
+
+        // Step 1: Consume the version byte
+        let version_byte = buf.get_u8();
+        if version_byte != BATCH_VERSION_BYTE {
+            return Err(RlpError::Custom("Invalid version byte for Batch"));
+        }
+
+        // Step 2: Decode as a list
+        let header = alloy_rlp::Header::decode(&mut buf)?;
+        if !header.list {
+            return Err(RlpError::Custom("Batch must be an RLP list"));
+        }
+
+        // Step 3: Decode individual fields
+        let parent_hash = B256::decode(&mut buf)?;
+        let epoch_num = u64::decode(&mut buf)?;
+        let epoch_hash = B256::decode(&mut buf)?;
+        let timestamp = u64::decode(&mut buf)?;
+        let transactions = Vec::<Vec<u8>>::decode(&mut buf)?;
+
+        // Return the decoded Batch
+        Ok(Batch {
+            parent_hash,
+            epoch_num,
+            epoch_hash,
+            timestamp,
+            transactions,
+        })
     }
 
     /// Splits the Batch into frames of a given size
     pub fn get_frames(&self, frame_size: usize) -> Result<Vec<Frame>, Box<dyn Error>> {
         // Step 1: Encode the Batch
-        let encoded_batch = self.encode()?;
+        let encoded_batch = self.encode();
 
         // Step 2: Compress using zlib
         let compressed_channel = to_channel(&encoded_batch)?;
@@ -60,7 +109,7 @@ impl Batch {
 }
 
 /// Compresses the batch data using zlib (no compression)
-pub fn to_channel(batch: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
+pub fn to_channel(batch: &[u8]) -> Result<Vec<u8>> {
     let mut buf = Vec::new();
     let mut encoder = ZlibEncoder::new(&mut buf, Compression::none());
     encoder.write_all(batch)?;
@@ -68,28 +117,20 @@ pub fn to_channel(batch: &[u8]) -> Result<Vec<u8>, Box<dyn Error>> {
     Ok(buf)
 }
 
-/// Splits the compressed channel into frames
-pub fn to_frames(
-    channel: &[u8],
-    frame_size: usize,
-    block_hash: B256,
-) -> Result<Vec<Frame>, Box<dyn Error>> {
+pub fn to_frames(channel: &[u8], frame_size: usize, block_hash: B256) -> Result<Vec<Frame>> {
     let num_frames = (channel.len() + frame_size - 1) / frame_size;
     let mut frames = Vec::with_capacity(num_frames);
 
-    // Generate ChannelID (here it's the block hash)
     let id = block_hash;
 
-    let mut frame_num: u16 = 0;
-    for chunk in channel.chunks(frame_size) {
-        let is_last = frame_num as usize == num_frames - 1;
+    for (frame_num, chunk) in channel.chunks(frame_size).enumerate() {
+        let is_last = frame_num == num_frames - 1;
         frames.push(Frame {
             id,
-            frame_num,
+            frame_num: frame_num as u16,
             data: chunk.to_vec(),
             is_last,
         });
-        frame_num += 1;
     }
     Ok(frames)
 }
@@ -98,30 +139,21 @@ pub fn to_frames(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::hex::FromHex;
 
     fn sample_batch() -> Batch {
-        let parent_hash =
-            B256::from_hex("1111111111111111111111111111111111111111111111111111111111111111")
-                .unwrap();
-        let epoch_hash =
-            B256::from_hex("2222222222222222222222222222222222222222222222222222222222222222")
-                .unwrap();
-        let transaction_list = vec![b"transaction_1".to_vec(), b"transaction_2".to_vec()];
-
         Batch {
-            parent_hash,
-            epoch_number: 42,
-            epoch_hash,
+            parent_hash: B256::repeat_byte(0x11),
+            epoch_num: 42,
+            epoch_hash: B256::repeat_byte(0x22),
             timestamp: 1712500000,
-            transaction_list,
+            transactions: vec![b"tx1".to_vec(), b"tx2".to_vec()],
         }
     }
 
     #[test]
     fn test_batch_encoding() {
         let batch = sample_batch();
-        let encoded = batch.encode().expect("Batch encoding failed");
+        let encoded = batch.encode();
 
         // Ensure encoded batch starts with version byte
         assert_eq!(encoded[0], BATCH_VERSION_BYTE);
@@ -132,9 +164,31 @@ mod tests {
     }
 
     #[test]
+    fn test_encode_decode() -> Result<(), RlpError> {
+        let batch = Batch {
+            parent_hash: B256::repeat_byte(0x11),
+            epoch_num: 42,
+            epoch_hash: B256::repeat_byte(0x22),
+            timestamp: 1638230400,
+            transactions: vec![vec![0x01, 0x02, 0x03], vec![0x04, 0x05, 0x06]],
+        };
+
+        // Encode the batch (no need to unwrap or use .expect since it returns Vec<u8>)
+        let encoded = batch.encode();
+
+        // Decode the batch
+        let decoded = Batch::decode(&encoded)?;
+
+        // Verify the batch matches the original
+        assert_eq!(batch, decoded);
+
+        Ok(())
+    }
+
+    #[test]
     fn test_channel_compression() {
         let batch = sample_batch();
-        let encoded = batch.encode().expect("Batch encoding failed");
+        let encoded = batch.encode();
 
         let compressed = to_channel(&encoded).expect("Compression failed");
         assert!(compressed.len() > 0, "Compressed data should not be empty");
