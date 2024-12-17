@@ -2,14 +2,15 @@
 pragma solidity 0.8.25;
 
 import {Test} from "forge-std/Test.sol";
-import {EventEmitter} from "src/EventEmitter.sol";
+import {EventEmitter} from "../src/EventEmitter.sol";
 
 contract EventEmitterTest is Test {
     EventEmitter public eventEmitter;
-    event Foo1( uint256 nonIndexed);
-    event Foo2( uint256 indexed indexed1, uint256 nonIndexed);
-    event Foo3( uint256 indexed indexed1, uint256 indexed indexed2, uint256 nonIndexed);
-    event Foo4( uint256 indexed indexed1, uint256 indexed indexed2, uint256 indexed indexed3, uint256 nonIndexed);
+
+    event Foo1(uint256 nonIndexed);
+    event Foo2(uint256 indexed indexed1, uint256 nonIndexed);
+    event Foo3(uint256 indexed indexed1, uint256 indexed indexed2, uint256 nonIndexed);
+    event Foo4(uint256 indexed indexed1, uint256 indexed indexed2, uint256 indexed indexed3, uint256 nonIndexed);
 
     function setUp() public {
         eventEmitter = new EventEmitter();
@@ -36,6 +37,8 @@ contract EventEmitterTest is Test {
     function testEmitEvent4() public {
         vm.expectEmit(true, true, true, true);
         emit Foo4(123, 456, 789, 101112);
-        eventEmitter.emitEvent4(Foo4.selector, bytes32(uint256(123)), bytes32(uint256(456)), bytes32(uint256(789)), bytes32(uint256(101112)));
+        eventEmitter.emitEvent4(
+            Foo4.selector, bytes32(uint256(123)), bytes32(uint256(456)), bytes32(uint256(789)), bytes32(uint256(101112))
+        );
     }
 }
