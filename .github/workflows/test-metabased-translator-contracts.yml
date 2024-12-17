@@ -1,4 +1,4 @@
-name: CI
+name: test-metabased-translator-contracts
 
 on:
   pull_request:
