@@ -3,6 +3,12 @@
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
 
   "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": false,
+      "username": "vscode",
+      "upgradePackages": false
+    },
+    "ghcr.io/devcontainers/features/git:1": "latest",
     "ghcr.io/devcontainers/features/node:1": {
       "version": "20"
     },
@@ -31,7 +37,7 @@
   "containerUser": "vscode",
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  // "forwardPorts": [],
+  "forwardPorts": [8547, 8456, 9999, 9545],
 
   // Update package lists
   // Without this, just won't be found
