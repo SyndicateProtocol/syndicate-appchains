@@ -1,3 +1,4 @@
+use crate::rollups::optimism::frame::Frame;
 use alloy_primitives::B256;
 use alloy_rlp::{Buf, Decodable, Encodable, Error as RlpError};
 use flate2::{write::ZlibEncoder, Compression};
@@ -8,7 +9,7 @@ use std::ops::Div;
 use eyre::Result;
 
 // Constants
-const BATCH_VERSION_BYTE: u8 = 0x01;
+pub const BATCH_VERSION_BYTE: u8 = 0x01;
 // Define the Batch struct
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Batch {
@@ -22,15 +23,6 @@ pub struct Batch {
     pub timestamp: u64,
     /// The L2 block transactions in this batch
     pub transactions: Vec<Vec<u8>>,
-}
-
-// Frame struct to represent the framed data
-#[derive(Debug, PartialEq, Eq)]
-pub struct Frame {
-    pub id: B256,
-    pub frame_num: u16,
-    pub data: Vec<u8>,
-    pub is_last: bool,
 }
 
 // Implementation for the Batch struct
