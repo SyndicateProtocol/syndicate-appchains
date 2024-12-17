@@ -1,4 +1,4 @@
-name: test
+name: foundry test metabased-contracts
 
 on:
   # Run workflow on every push to main. This ensures that cross-service PRs that
