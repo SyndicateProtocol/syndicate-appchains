@@ -3,6 +3,7 @@ use alloy_rlp::{Buf, Decodable, Encodable, Error as RlpError}; // Updated import
 use flate2::{write::ZlibEncoder, Compression}; // Zlib compression
 use std::error::Error;
 use std::io::Write;
+use std::ops::Div;
 
 use eyre::Result;
 
@@ -118,7 +119,7 @@ pub fn to_channel(batch: &[u8]) -> Result<Vec<u8>> {
 }
 
 pub fn to_frames(channel: &[u8], frame_size: usize, block_hash: B256) -> Result<Vec<Frame>> {
-    let num_frames = (channel.len() + frame_size - 1).div_ceil(frame_size);
+    let num_frames = (channel.len() + frame_size - 1).div(frame_size);
     let mut frames = Vec::with_capacity(num_frames);
 
     let id = block_hash;
