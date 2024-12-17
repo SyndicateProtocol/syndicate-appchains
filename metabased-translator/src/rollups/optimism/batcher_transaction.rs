@@ -1,11 +1,15 @@
 use crate::rollups::optimism::batch::Batch;
 use crate::rollups::optimism::frame::to_data;
-use alloy_primitives::{Address, Bytes, B256};
+use alloy::network::TransactionBuilder;
+use alloy_primitives::{Address, Bytes, B256, U256};
 use alloy_rpc_types::{TransactionInput, TransactionRequest};
 
 pub fn new_batcher_tx(from: Address, to: Address, data: Bytes) -> TransactionRequest {
     let input = TransactionInput::new(data);
-    let batcher_tx = TransactionRequest::default().from(from).to(to).input(input);
+    let batcher_tx = TransactionRequest::default()
+        .from(from)
+        .to(to)
+        .input(input);
     batcher_tx
 }
 

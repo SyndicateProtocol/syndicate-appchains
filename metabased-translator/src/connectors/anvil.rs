@@ -1,9 +1,16 @@
+use std::backtrace;
 use std::process::{Child, Command};
+use std::str::FromStr;
 use std::time::Duration;
 use alloy_provider::ext::AnvilApi;
-use alloy_provider::ProviderBuilder;
+use alloy_provider::{Provider, ProviderBuilder};
 use reqwest::Url;
 use tracing::{error, info};
+use alloy_primitives::{Address, U256, B256};
+use crate::rollups::optimism::batch::Batch;
+use crate::rollups::optimism::frame::to_data;
+
+use crate::rollups::optimism::batcher_transaction::new_batcher_tx;
 
 // Graceful shutdown for Anvil process
 fn cleanup_anvil(mut anvil: Child) {
@@ -17,6 +24,10 @@ pub async fn run() -> eyre::Result<()> {
     // Start Anvil node on a specific port
     let port = 8545;
     let anvil = Command::new("anvil")
+        .arg("--base-fee")
+        .arg("0")
+        .arg("--gas-limit")
+        .arg("9999999999999999999999999")
         .arg("--port")
         .arg(port.to_string())
         .arg("--no-mining")
@@ -89,6 +100,35 @@ pub async fn run() -> eyre::Result<()> {
         .await?.json::<serde_json::Value>().await?;
 
     info!("anvil_setCode Response: {}", json_response);
+
+
+
+
+    //// BATCHER TESTING ////
+
+    // Set up the batcher and batch inbox
+    let batcher = Address::from_str("0x1234000000000000000000000000000000000000").expect("Failed to parse Batcher address");
+    let batch_inbox = Address::from_str("0x1234000000000000000000000000000000000000").expect("Failed to parse Batch Inbox address");
+    let balance = U256::MAX;
+    provider.anvil_set_balance(batcher, balance).await?;
+
+
+
+    let batch = Batch {
+                parent_hash: B256::from_str("0xfe705b3c9f7e9154dc17baf8f5d6b62456cf1f607dffcdbb0b4f00fcdfbfa16b").unwrap(),
+                epoch_num: 0,
+                epoch_hash: B256::from_str("0xfe705b3c9f7e9154dc17baf8f5d6b62456cf1f607dffcdbb0b4f00fcdfbfa16b").unwrap(),
+                timestamp: 1712500000,
+                transactions: vec![],
+            };
+    let frames = batch.get_frames(1000).unwrap();
+    let data = to_data(&frames).unwrap();
+    let txn = new_batcher_tx(batcher, batch_inbox, data.into());
+    info!("Sending transaction to batch inbox: {:?}", txn);
+    provider.eth_send_unsigned_transaction(txn).await?;
+    provider.anvil_mine(Some(U256::from(1)), None::<U256>).await?;
+
+    //// END BATCHER TESTING ////
 
 
     // Keep the main thread alive
