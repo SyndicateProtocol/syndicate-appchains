@@ -118,7 +118,7 @@ pub fn to_channel(batch: &[u8]) -> Result<Vec<u8>> {
 }
 
 pub fn to_frames(channel: &[u8], frame_size: usize, block_hash: B256) -> Result<Vec<Frame>> {
-    let num_frames = (channel.len() + frame_size - 1) / frame_size;
+    let num_frames = (channel.len() + frame_size - 1).div_ceil(frame_size);
     let mut frames = Vec::with_capacity(num_frames);
 
     let id = block_hash;
@@ -191,7 +191,10 @@ mod tests {
         let encoded = batch.encode();
 
         let compressed = to_channel(&encoded).expect("Compression failed");
-        assert!(compressed.len() > 0, "Compressed data should not be empty");
+        assert!(
+            !compressed.is_empty(),
+            "Compressed data should not be empty"
+        );
     }
 
     #[test]
@@ -200,9 +203,8 @@ mod tests {
         let frames = batch.get_frames(16).expect("Frame splitting failed");
 
         assert!(!frames.is_empty(), "Frames should not be empty");
-        assert_eq!(
+        assert!(
             frames.last().unwrap().is_last,
-            true,
             "Last frame should be marked as is_last"
         );
 
