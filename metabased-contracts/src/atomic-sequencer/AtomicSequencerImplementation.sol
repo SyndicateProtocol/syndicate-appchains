@@ -12,19 +12,19 @@ contract AtomicSequencerImplementation {
     /// @notice Processes transactions on multiple Metabased chains atomically.
     /// @param chains Array of Metabased chains
     /// @param transactions Array of transactions corresponding to each chain
-    /// @param isRawArray Array indicating whether each transaction should use raw processing
+    /// @param isRaw Array indicating whether each transaction should use raw processing
     function processTransactionsAtomically(
         MetabasedSequencerChain[] calldata chains,
         bytes[] calldata transactions,
-        bool[] calldata isRawArray
+        bool[] calldata isRaw
     ) external {
         // Check array lengths match
-        if (chains.length == 0 || chains.length != transactions.length || chains.length != isRawArray.length) {
+        if (chains.length == 0 || chains.length != transactions.length || chains.length != isRaw.length) {
             revert InputLengthMismatchError();
         }
 
         for (uint256 i = 0; i < chains.length; i++) {
-            if (isRawArray[i]) {
+            if (isRaw[i]) {
                 chains[i].processTransactionRaw(transactions[i]);
             } else {
                 chains[i].processTransaction(transactions[i]);
