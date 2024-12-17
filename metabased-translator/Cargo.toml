@@ -12,3 +12,9 @@ alloy-provider = { version = "0.8.1", features = ["default", "anvil-node"] }
 alloy-primitives = "0.8.15"
 alloy-rlp = "0.3.10"
 flate2 = "1.0.35"
+reqwest = "0.12.9"
+hex = "0.4.3"
+scopeguard = "1.2.0"
+alloy-contract = "0.8.1"
+tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tracing = "0.1.41"
