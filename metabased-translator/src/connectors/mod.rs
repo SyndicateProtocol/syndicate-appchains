@@ -1,2 +1,2 @@
-mod anvil;
-mod rpc;
+pub mod anvil;
+pub mod rpc;
