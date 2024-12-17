@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# This script is for CLI-based dev container launches only.
+# It is not necessary if you're using an IDE (like VS Code) which handles container setup automatically.
+# Use this script when you need to launch the dev container from a terminal or CI environment.
+
 # Check if devcontainer CLI is installed
 if ! command -v devcontainer >/dev/null 2>&1; then
     echo "Installing devcontainer CLI..."
