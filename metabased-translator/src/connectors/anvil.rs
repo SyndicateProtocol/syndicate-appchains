@@ -1,16 +1,13 @@
-use std::backtrace;
+use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
+use crate::rollups::optimism::frame::to_data;
+use alloy_primitives::{Address, B256, U256};
+use alloy_provider::ext::AnvilApi;
+use alloy_provider::ProviderBuilder;
+use reqwest::Url;
 use std::process::{Child, Command};
 use std::str::FromStr;
 use std::time::Duration;
-use alloy_provider::ext::AnvilApi;
-use alloy_provider::{Provider, ProviderBuilder};
-use reqwest::Url;
 use tracing::{error, info};
-use alloy_primitives::{Address, U256, B256};
-use crate::rollups::optimism::batch::Batch;
-use crate::rollups::optimism::frame::to_data;
-
-use crate::rollups::optimism::batcher_transaction::new_batcher_tx;
 
 // Graceful shutdown for Anvil process
 fn cleanup_anvil(mut anvil: Child) {
@@ -46,7 +43,8 @@ pub async fn run() -> eyre::Result<()> {
     let client = reqwest::Client::new();
     let server_url = format!("http://localhost:{}", port);
 
-    let response = client.post(server_url.clone())
+    let response = client
+        .post(server_url.clone())
         .json(&serde_json::json!({
             "jsonrpc": "2.0",
             "method": "eth_chainId",
@@ -89,7 +87,8 @@ pub async fn run() -> eyre::Result<()> {
     );
 
     // Test server call to anvil_setCode
-    let json_response = client.post(server_url)
+    let json_response = client
+        .post(server_url)
         .json(&serde_json::json!({
             "jsonrpc": "2.0",
             "method": "anvil_setCode",
@@ -97,39 +96,45 @@ pub async fn run() -> eyre::Result<()> {
             "id": 1
         }))
         .send()
-        .await?.json::<serde_json::Value>().await?;
+        .await?
+        .json::<serde_json::Value>()
+        .await?;
 
     info!("anvil_setCode Response: {}", json_response);
-
-
-
 
     //// BATCHER TESTING ////
 
     // Set up the batcher and batch inbox
-    let batcher = Address::from_str("0x1234000000000000000000000000000000000000").expect("Failed to parse Batcher address");
-    let batch_inbox = Address::from_str("0x1234000000000000000000000000000000000000").expect("Failed to parse Batch Inbox address");
+    let batcher = Address::from_str("0x1234000000000000000000000000000000000000")
+        .expect("Failed to parse Batcher address");
+    let batch_inbox = Address::from_str("0x1234000000000000000000000000000000000000")
+        .expect("Failed to parse Batch Inbox address");
     let balance = U256::MAX;
     provider.anvil_set_balance(batcher, balance).await?;
 
-
-
     let batch = Batch {
-                parent_hash: B256::from_str("0xfe705b3c9f7e9154dc17baf8f5d6b62456cf1f607dffcdbb0b4f00fcdfbfa16b").unwrap(),
-                epoch_num: 0,
-                epoch_hash: B256::from_str("0xfe705b3c9f7e9154dc17baf8f5d6b62456cf1f607dffcdbb0b4f00fcdfbfa16b").unwrap(),
-                timestamp: 1712500000,
-                transactions: vec![],
-            };
+        parent_hash: B256::from_str(
+            "0xfe705b3c9f7e9154dc17baf8f5d6b62456cf1f607dffcdbb0b4f00fcdfbfa16b",
+        )
+        .unwrap(),
+        epoch_num: 0,
+        epoch_hash: B256::from_str(
+            "0xfe705b3c9f7e9154dc17baf8f5d6b62456cf1f607dffcdbb0b4f00fcdfbfa16b",
+        )
+        .unwrap(),
+        timestamp: 1712500000,
+        transactions: vec![],
+    };
     let frames = batch.get_frames(1000).unwrap();
     let data = to_data(&frames).unwrap();
     let txn = new_batcher_tx(batcher, batch_inbox, data.into());
     info!("Sending transaction to batch inbox: {:?}", txn);
     provider.eth_send_unsigned_transaction(txn).await?;
-    provider.anvil_mine(Some(U256::from(1)), None::<U256>).await?;
+    provider
+        .anvil_mine(Some(U256::from(1)), None::<U256>)
+        .await?;
 
     //// END BATCHER TESTING ////
-
 
     // Keep the main thread alive
     loop {
@@ -158,16 +163,18 @@ mod tests {
         }
     }
 
-    use alloy::{hex, sol};
     use alloy::primitives::U256;
-    use alloy_provider::ext::AnvilApi;
     use alloy::providers::ProviderBuilder;
+    use alloy::{hex, sol};
+    use alloy_provider::ext::AnvilApi;
 
     #[tokio::test]
     async fn test_counter_contract_with_anvil_set_code() -> eyre::Result<()> {
         // Spin up a local Anvil node.
         // Ensure `anvil` is available in $PATH.
-        let provider = ProviderBuilder::new().with_recommended_fillers().on_anvil_with_wallet();
+        let provider = ProviderBuilder::new()
+            .with_recommended_fillers()
+            .on_anvil_with_wallet();
 
         let address = "0x1234000000000000000000000000000000000000".parse()?;
         let contract = Counter::new(address, provider.clone());
