@@ -1,4 +1,3 @@
-<<<<<<<< HEAD:.github/workflows/test-metabased-contracts.yaml
 name: foundry test metabased-contracts
 
 on:
@@ -7,19 +6,11 @@ on:
   push:
     branches:
       - main
+      - anvil-poc
   # Only run on PRs that touch metabased-contracts
   pull_request:
     paths:
       - "metabased-contracts/**"
-========
-name: test-metabased-contracts
-
-on:
-  pull_request:
-    branches:
-      - anvil-poc
-      - main
->>>>>>>> 10c0de1 (cleanup contracts CI testing):.github/workflows/test-metabased-contracts.yml
 
 env:
   FOUNDRY_PROFILE: ci
