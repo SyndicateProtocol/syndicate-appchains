@@ -21,6 +21,7 @@ sol! {
     }
 }
 
+// PoC deploying a contract using `anvil_set_code`, then interacting with it
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
     // Spin up a local Anvil node.
