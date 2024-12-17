@@ -2,8 +2,9 @@ name: CI
 
 on:
   push:
-  pull_request:
-  workflow_dispatch:
+    branches:
+      - anvil-poc
+      - main
 
 env:
   FOUNDRY_PROFILE: ci
