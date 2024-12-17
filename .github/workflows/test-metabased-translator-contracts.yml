@@ -16,6 +16,9 @@ jobs:
 
     name: Foundry project
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: metabased-translator/contracts
     steps:
       - uses: actions/checkout@v4
         with:
