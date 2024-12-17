@@ -1,15 +1,25 @@
-name: test
+name: foundry test metabased-contracts
 
-on: workflow_dispatch
+on:
+  # Run workflow on every push to main. This ensures that cross-service PRs that
+  # depend on metabased-contracts are tested.
+  push:
+    branches:
+      - main
+  # Only run on PRs that touch metabased-contracts
+  pull_request:
+    paths:
+      - "metabased-contracts/**"
 
 env:
   FOUNDRY_PROFILE: ci
 
+defaults:
+  run:
+    working-directory: metabased-contracts
+
 jobs:
   check:
-    strategy:
-      fail-fast: true
-
     name: Foundry project
     runs-on: ubuntu-latest
     steps:
