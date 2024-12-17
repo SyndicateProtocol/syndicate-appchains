@@ -1,5 +1,105 @@
+use std::process::{Child, Command};
+use std::time::Duration;
+use alloy_provider::ext::AnvilApi;
+use alloy_provider::ProviderBuilder;
+use reqwest::Url;
+use tracing::{error, info};
+
+// Graceful shutdown for Anvil process
+fn cleanup_anvil(mut anvil: Child) {
+    if let Err(err) = anvil.kill() {
+        error!("Failed to kill Anvil process: {}", err);
+    }
+    info!("Anvil process terminated.");
+}
+
+pub async fn run() -> eyre::Result<()> {
+    // Start Anvil node on a specific port
+    let port = 8545;
+    let anvil = Command::new("anvil")
+        .arg("--port")
+        .arg(port.to_string())
+        .arg("--no-mining")
+        .spawn()
+        .expect("Failed to start Anvil. Is it installed?");
+
+    info!("Started Anvil node with PID: {}", anvil.id());
+
+    // Gracefully handle Anvil shutdown on program exit
+    let _guard = scopeguard::guard(anvil, cleanup_anvil);
+
+    // Wait for Anvil to start
+    tokio::time::sleep(Duration::from_secs(2)).await;
+
+    // Test JSON-RPC request to get the chain ID
+    let client = reqwest::Client::new();
+    let server_url = format!("http://localhost:{}", port);
+
+    let response = client.post(server_url.clone())
+        .json(&serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "eth_chainId",
+            "params": [],
+            "id": 1
+        }))
+        .send()
+        .await?;
+
+    let json_response = response.json::<serde_json::Value>().await?;
+    info!("Chain ID Response: {}", json_response);
+
+    // Create a provider to interact with the node
+    let provider = ProviderBuilder::new()
+        .with_recommended_fillers()
+        .on_http(Url::parse(server_url.clone().as_str())?);
+
+    // Deploy a contract using anvil_setCode
+    let address = "0x1234000000000000000000000000000000000000".parse()?;
+    let bytecode = alloy::hex::decode(
+        "6080806040526004361015601257600080fd5b60003560e01c9081633fb5c1cb1460925781638381f58a146079575063d09de08a14603c57600080fd5b3460745760003660031901126074576000546000198114605e57600101600055005b634e487b7160e01b600052601160045260246000fd5b600080fd5b3460745760003660031901126074576020906000548152f35b34607457602036600319011260745760043560005500fea2646970667358221220e978270883b7baed10810c4079c941512e93a7ba1cd1108c781d4bc738d9090564736f6c634300081a0033"
+    )?;
+    provider.anvil_set_code(address, bytecode.into()).await?;
+    info!("Deployed contract code at: {}", address);
+
+    // // Create contract instance
+    // let contract = Contract::default(address, provider.clone());
+    //
+    // // Interact with the deployed contract
+    // let tx_result = contract.setNumber(U256::from(42)).send().await?;
+    // let receipt = tx_result.await?;
+    // println!("Set number transaction receipt: {:?}", receipt);
+    //
+    // let number = contract.number().call().await?;
+    // println!("Number value: {}", number);
+
+    info!(
+        "Server is running at http://localhost:{}. Press Ctrl+C to stop.",
+        port
+    );
+
+    // Test server call to anvil_setCode
+    let json_response = client.post(server_url)
+        .json(&serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "anvil_setCode",
+            "params": ["0x1235000000000000000000000000000000000000", "0x"],
+            "id": 1
+        }))
+        .send()
+        .await?.json::<serde_json::Value>().await?;
+
+    info!("anvil_setCode Response: {}", json_response);
+
+
+    // Keep the main thread alive
+    loop {
+        tokio::time::sleep(Duration::from_secs(1)).await;
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    // Simple contract from Allou-rs/examples repo
     // Codegen from embedded Solidity code and precompiled bytecode.
     sol! {
     #[allow(missing_docs)]
