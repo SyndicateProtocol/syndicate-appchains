@@ -1,6 +1,6 @@
-use alloy_primitives::B256; // 32-byte hash
-use alloy_rlp::{Buf, Decodable, Encodable, Error as RlpError}; // Updated imports
-use flate2::{write::ZlibEncoder, Compression}; // Zlib compression
+use alloy_primitives::B256;
+use alloy_rlp::{Buf, Decodable, Encodable, Error as RlpError};
+use flate2::{write::ZlibEncoder, Compression};
 use std::error::Error;
 use std::io::Write;
 use std::ops::Div;
@@ -69,12 +69,14 @@ impl Batch {
         // Step 1: Consume the version byte
         let version_byte = buf.get_u8();
         if version_byte != BATCH_VERSION_BYTE {
+            // TODO: Use discrete error
             return Err(RlpError::Custom("Invalid version byte for Batch"));
         }
 
         // Step 2: Decode as a list
         let header = alloy_rlp::Header::decode(&mut buf)?;
         if !header.list {
+            // TODO: Use discrete error
             return Err(RlpError::Custom("Batch must be an RLP list"));
         }
 
