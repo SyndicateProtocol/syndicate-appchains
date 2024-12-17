@@ -1,13 +1,10 @@
 name: Rust Tests metabased-sequencer
 
 on:
-  # Run workflow on every push to main. This ensures that cross-service PRs that
-  # depend on metabased-sequencer are tested.
   push:
     branches:
       - anvil-poc
       - main
-  # Only run on PRs that touch metabased-sequencer
   pull_request:
     paths:
       - "metabased-translator/**"
@@ -27,9 +24,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # GitHub Actions supports rustup by default, so we can install the toolchain directly
-      # selecting a toolchain either by action or manual `rustup` calls should happen
-      # before the plugin, as the cache uses the current rustc version as its cache key
+      # Install Foundry before Rust setup
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
       - run: rustup toolchain install stable --profile minimal
 
       - name: Cache Cargo dependencies
