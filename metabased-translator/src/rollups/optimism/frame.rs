@@ -14,7 +14,7 @@ pub struct Frame {
 impl Frame {
     // Marshal the Frame into a binary buffer
     pub fn marshal_binary<W: Write>(&self, writer: &mut W) -> io::Result<()> {
-        writer.write_all(&self.id.as_ref())?; // Write 32-byte id
+        writer.write_all(self.id.as_ref())?; // Write 32-byte id
         writer.write_all(&self.frame_num.to_be_bytes())?; // Write frame_num in big-endian
         writer.write_all(&[self.is_last as u8])?; // Write is_last as a single byte (0 or 1)
         writer.write_all(&self.data)?; // Write the data payload

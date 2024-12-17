@@ -133,8 +133,7 @@ fn to_frames(channel: &[u8], frame_size: usize, block_hash: B256) -> Result<Vec<
 
 pub fn new_batcher_tx(from: Address, to: Address, data: Bytes) -> TransactionRequest {
     let input = TransactionInput::new(data);
-    let batcher_tx = TransactionRequest::default().from(from).to(to).input(input);
-    batcher_tx
+    TransactionRequest::default().from(from).to(to).input(input)
 }
 
 // Unit Tests
