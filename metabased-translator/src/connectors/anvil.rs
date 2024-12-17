@@ -107,7 +107,7 @@ pub async fn run() -> eyre::Result<()> {
     // Set up the batcher and batch inbox
     let batcher = Address::from_str("0x1234000000000000000000000000000000000000")
         .expect("Failed to parse Batcher address");
-    let batch_inbox = Address::from_str("0x1234000000000000000000000000000000000000")
+    let batch_inbox = Address::from_str("0x1234000000000000000000000000000000000001")
         .expect("Failed to parse Batch Inbox address");
     let balance = U256::MAX;
     provider.anvil_set_balance(batcher, balance).await?;
@@ -128,6 +128,7 @@ pub async fn run() -> eyre::Result<()> {
     let frames = batch.get_frames(1000).unwrap();
     let data = to_data(&frames).unwrap();
     let txn = new_batcher_tx(batcher, batch_inbox, data.into());
+
     info!("Sending transaction to batch inbox: {:?}", txn);
     provider.eth_send_unsigned_transaction(txn).await?;
     provider
