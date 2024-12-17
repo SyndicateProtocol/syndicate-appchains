@@ -41,7 +41,7 @@
 
   // Update package lists
   // Without this, just won't be found
-  "postCreateCommand": "sudo apt update && sudo apt install -y just",
+  "postCreateCommand": "sudo apt update && sudo apt install -y just netcat-openbsd",
 
   // Configure tool-specific properties.
   "customizations": {
