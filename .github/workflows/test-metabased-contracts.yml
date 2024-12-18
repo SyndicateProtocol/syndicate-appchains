@@ -15,12 +15,11 @@ on:
 env:
   FOUNDRY_PROFILE: ci
 
-defaults:
-  run:
-    working-directory: metabased-contracts
-
 jobs:
   check:
+    strategy:
+      fail-fast: true
+
     name: Foundry project
     runs-on: ubuntu-latest
     defaults:

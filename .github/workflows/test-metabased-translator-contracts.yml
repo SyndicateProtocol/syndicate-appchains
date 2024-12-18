@@ -7,7 +7,7 @@ on:
     branches:
       - main
       - anvil-poc
-  # Only run on PRs that touch metabased-contracts
+  # Only run on PRs that touch metabased-translator/contracts
   pull_request:
     paths:
       - "metabased-translator/contracts/**"
