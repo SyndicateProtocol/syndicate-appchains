@@ -2,10 +2,13 @@ use crate::rollups::optimism::frame::Frame;
 use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::{Buf, Decodable, Encodable, Error as RlpError};
 use alloy_rpc_types::{TransactionInput, TransactionRequest};
-use flate2::{write::ZlibEncoder, Compression};
+use flate2::write::ZlibEncoder;
+use flate2::Compression;
+
 use std::error::Error;
 use std::io::Write;
 use std::ops::Div;
+use tracing::{error, info};
 
 use eyre::Result;
 
@@ -94,9 +97,11 @@ impl Batch {
     pub fn get_frames(&self, frame_size: usize) -> Result<Vec<Frame>, Box<dyn Error>> {
         // Step 1: Encode the Batch
         let encoded_batch = self.encode();
+        info!("encoded_batch : {:?}", encoded_batch);
 
         // Step 2: Compress using zlib
         let compressed_channel = to_channel(&encoded_batch)?;
+        info!("channel: {:?}", compressed_channel);
 
         // Step 3: Split into frames
         let frames = to_frames(&compressed_channel, frame_size, self.epoch_hash)?;
