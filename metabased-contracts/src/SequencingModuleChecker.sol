@@ -33,7 +33,7 @@ abstract contract SequencingModuleChecker is Ownable, PermissionModule {
     /// @notice Checks if an address is allowed to submit batches
     /// @param batchSubmitter The address to check
     modifier onlyWhenAllowed(address batchSubmitter) {
-        isAllowed(batchSubmitter);
+        require(isAllowed(batchSubmitter), "SequencingModuleChecker: not allowed");
         _;
     }
 

@@ -80,9 +80,6 @@ contract AllowlistSequencingModule is PermissionModule {
      * @return bool indicating if the caller is allowed.
      */
     function isAllowed(address proposer) external view override returns (bool) {
-        if (!allowlist[proposer]) {
-            revert AddressNotAllowed();
-        }
-        return true;
+        return allowlist[proposer];
     }
 }
