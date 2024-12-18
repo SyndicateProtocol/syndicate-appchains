@@ -20,9 +20,4 @@ contract AtomicSequencer is Proxy {
     function _implementation() internal view override returns (address) {
         return implementation;
     }
-
-    /// @dev Prevents receiving Ether
-    receive() external payable {
-        revert();
-    }
 }
