@@ -3,6 +3,11 @@
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
 
   "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "installZsh": false,
+      "username": "vscode"
+    },
+    "ghcr.io/devcontainers/features/git:1": "latest",
     "ghcr.io/devcontainers/features/node:1": {
       "version": "20"
     },
@@ -31,11 +36,17 @@
   "containerUser": "vscode",
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  // "forwardPorts": [],
+  // Port mappings for development services:
+  // - 8547: Arbitrum Orbit chain endpoint
+  // - 8456: Metabased Sequencer service
+  // - 9999: OP Translator service
+  // - 9545: Development network endpoint
+  "forwardPorts": [8547, 8456, 9999, 9545],
 
-  // Update package lists
-  // Without this, just won't be found
-  "postCreateCommand": "sudo apt update && sudo apt install -y just",
+  // Update package lists and install required tools:
+  // - just: Required for running development commands
+  // - netcat-openbsd: Used for port verification during container startup
+  "postCreateCommand": "sudo apt update && sudo apt install -y just netcat-openbsd",
 
   // Configure tool-specific properties.
   "customizations": {
