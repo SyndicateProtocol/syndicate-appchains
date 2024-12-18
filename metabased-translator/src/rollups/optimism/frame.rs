@@ -1,6 +1,7 @@
-use crate::rollups::optimism::batch::BATCH_VERSION_BYTE;
 use alloy_primitives::B256;
 use std::io::{self, Write};
+
+const BATCHER_TRANSACTION_VERSION_BYTE: u8 = 0x00;
 
 // Frame struct to represent the framed data
 #[derive(Debug, PartialEq, Eq)]
@@ -25,7 +26,7 @@ impl Frame {
 // Function to serialize frames into a byte buffer
 pub fn to_data(frames: &[Frame]) -> io::Result<Vec<u8>> {
     let mut buf = Vec::new();
-    buf.push(BATCH_VERSION_BYTE); // Add version byte at the beginning
+    buf.push(BATCHER_TRANSACTION_VERSION_BYTE); // Add version byte at the beginning
 
     for frame in frames {
         frame.marshal_binary(&mut buf)?; // Serialize each frame and append to buffer

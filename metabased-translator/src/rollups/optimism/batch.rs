@@ -10,7 +10,7 @@ use std::ops::Div;
 use eyre::Result;
 
 // Constants
-pub const BATCH_VERSION_BYTE: u8 = 0x01;
+const BATCH_VERSION_BYTE: u8 = 0x00;
 // Define the Batch struct
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Batch {
