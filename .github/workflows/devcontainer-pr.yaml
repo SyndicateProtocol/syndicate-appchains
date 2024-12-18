@@ -34,68 +34,8 @@ jobs:
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-pr-${{ github.event.pull_request.number }}
           runCmd: |
-            # Create .envrc file
-            just -f .devcontainer/justfile create-envrc
-            [ -f .envrc ] || { echo ".envrc file not created successfully"; exit 1; }
-            echo "========== .envrc contents =========="
-            cat .envrc
-            echo "==================================="
-            
-            # Set up network
-            RESPONSE=$(just -f .devcontainer/justfile arb-network-setup)
-            echo "Network setup: $RESPONSE"
-            
-            # Wait for network setup to complete
-            if echo "$RESPONSE" || ! grep -q "Ready to bring up the Arbitrum Orbit devnet"; then
-              echo "[✓] Network setup succeeded"
-            else
-              echo "[✗] Network setup failed"
-              exit 1
-            fi
-            
-            # Start Arbitrum node in background
-            just -f .devcontainer/justfile arb-up &
-
-            # Wait for Arbitrum node to be ready via health check
-            echo "[STATUS] Waiting for Arbitrum node to be ready..."
-            until just -f .devcontainer/justfile arb-health-check | grep -q "result"; do
-              sleep 10
-            done
-            echo "[STATUS] Arbitrum node is ready"
-              
-            # Run sequencer setup and capture logs
-            just -f .devcontainer/justfile arb-sequencer-plus-setup 2>&1 | tee /tmp/sequencer-setup.log &
-
-            # Wait for Rust build to complete by watching for specific log line
-            echo "[STATUS] Waiting for sequencer setup to complete..."
-            while ! grep -q "Finished \`dev\` profile" /tmp/sequencer-setup.log; do
-              sleep 20
-              echo "[STATUS] Still waiting for Rust build complete..."
-            done
-            echo "[STATUS] Rust build completed. Sequencer setup completed."
-
-            # Exit on error
-            set -e
-            
-            # Run the test command and capture response
-            echo "[STATUS] Running test transaction..."
-            RESPONSE=$(just -f .devcontainer/justfile arb-test-sendRawTransaction)
-            echo "Response: $RESPONSE"
-            
-            # Check if response contains an error
-            if echo "$RESPONSE" | grep -q '"error"'; then
-              echo "[ERROR] Transaction failed with error:"
-              echo "$RESPONSE"
-              exit 1
-            fi
-            
-            # Check if response contains expected result
-            if ! echo "$RESPONSE" | grep -q '"result"'; then
-              echo "[ERROR] Transaction response missing result field:"
-              echo "$RESPONSE"
-              exit 1
-            fi
-            echo "[STATUS] Test L3 -> Arbitrum L2 transaction completed successfully"
+            # Run all verifications
+            just -f .devcontainer/justfile verify-all
 
 #       TODO [SEQ-323]: Can combine this with the above job
       - name: Run OP-Translator
