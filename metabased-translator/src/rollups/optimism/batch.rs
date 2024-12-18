@@ -8,7 +8,7 @@ use flate2::Compression;
 use std::error::Error;
 use std::io::Write;
 use std::ops::Div;
-use tracing::{error, info};
+use tracing::info;
 
 use eyre::Result;
 
@@ -112,7 +112,7 @@ impl Batch {
 /// Compresses the batch data using zlib (no compression)
 fn to_channel(batch: &[u8]) -> Result<Vec<u8>> {
     let mut buf = Vec::new();
-    let mut encoder = ZlibEncoder::new(&mut buf, Compression::none());
+    let mut encoder = ZlibEncoder::new(&mut buf, Compression::default());
     encoder.write_all(batch)?;
     encoder.finish()?;
     Ok(buf)
