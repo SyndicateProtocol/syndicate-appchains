@@ -5,8 +5,7 @@
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
       "installZsh": false,
-      "username": "vscode",
-      "upgradePackages": false
+      "username": "vscode"
     },
     "ghcr.io/devcontainers/features/git:1": "latest",
     "ghcr.io/devcontainers/features/node:1": {
