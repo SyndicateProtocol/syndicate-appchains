@@ -122,7 +122,7 @@ fn to_frames(channel: &[u8], frame_size: usize, block_hash: B256) -> Result<Vec<
     let num_frames = (channel.len() + frame_size - 1).div(frame_size);
     let mut frames = Vec::with_capacity(num_frames);
 
-    let id = block_hash;
+    let id = B256::from(block_hash)[..16].try_into().expect("16 bytes always fit");
 
     for (frame_num, chunk) in channel.chunks(frame_size).enumerate() {
         let is_last = frame_num == num_frames - 1;

@@ -1,4 +1,4 @@
-use alloy_primitives::B256;
+use alloy_primitives::B128;
 use std::io::{self, Write};
 use tracing::info;
 
@@ -7,7 +7,7 @@ const BATCHER_TRANSACTION_VERSION_BYTE: u8 = 0x00;
 // Frame struct to represent the framed data
 #[derive(Debug, PartialEq, Eq)]
 pub struct Frame {
-    pub id: B256,
+    pub id: B128, // THIS SHOULD BE 16 BYTES
     pub frame_num: u16,
     pub data: Vec<u8>,
     pub is_last: bool,
