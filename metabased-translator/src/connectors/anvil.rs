@@ -147,7 +147,7 @@ pub async fn run() -> eyre::Result<()> {
     }
 }
 
-//
+// TODO - replace addresses with OP and Arb precompile addresses 
 async fn deploy_contracts(server_url:String) -> Result<(), Report> {
     let anvil_provider = ProviderBuilder::new()
         .with_recommended_fillers()
