@@ -13,6 +13,7 @@ abstract contract SequencingModuleChecker is Ownable, PermissionModule {
     event RequirementModuleUpdated(address indexed newModule);
 
     error InvalidModuleAddress();
+    error NotAllowed(address batchSubmitter);
 
     /// @dev Constructor function
     /// @param admin The address that will be set as the admin
@@ -33,7 +34,7 @@ abstract contract SequencingModuleChecker is Ownable, PermissionModule {
     /// @notice Checks if an address is allowed to submit batches
     /// @param batchSubmitter The address to check
     modifier onlyWhenAllowed(address batchSubmitter) {
-        require(isAllowed(batchSubmitter), "SequencingModuleChecker: not allowed");
+        if (!isAllowed(batchSubmitter)) revert NotAllowed(batchSubmitter);
         _;
     }
 

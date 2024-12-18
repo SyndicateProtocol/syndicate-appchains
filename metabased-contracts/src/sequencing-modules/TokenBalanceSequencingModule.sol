@@ -31,8 +31,6 @@ contract TokenBalanceSequencingModule is PermissionModule {
         minimumBalance = _minimumBalance;
     }
 
-    error InsufficientBalance();
-
     /**
      * @notice Checks if the caller is allowed based on their token balance.
      * @return bool indicating if the caller is allowed.

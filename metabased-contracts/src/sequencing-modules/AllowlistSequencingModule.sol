@@ -17,6 +17,9 @@ contract AllowlistSequencingModule is PermissionModule {
     event UserRemoved(address indexed user);
     event AdminTransferred(address indexed previousAdmin, address indexed newAdmin);
 
+    error NotAdmin();
+    error AddressNotAllowed();
+
     /**
      * @dev Sets the deployer as the initial admin.
      */
@@ -27,9 +30,6 @@ contract AllowlistSequencingModule is PermissionModule {
 
         admin = _admin;
     }
-
-    error NotAdmin();
-    error AddressNotAllowed();
 
     /**
      * @dev Modifier to check if the caller is the admin.
