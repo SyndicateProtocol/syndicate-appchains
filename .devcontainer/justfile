@@ -314,17 +314,16 @@ op-down:
 
 # Create aliases for devnet commands in both Bash and Zsh
 create-aliases:
-    {{_log-start}}
-    {{_log-cmd}} "Creating shell aliases..."
     #!/bin/bash
+    echo "[JUST] Creating shell aliases..."
     for rc_file in ~/.bashrc ~/.zshrc; do
         if [[ -f "$rc_file" ]]; then
-            {{_log-cmd}} "Processing $rc_file..."
+            echo "[JUST] Processing $rc_file..."
             # Remove any existing aliases first
             sed -i '/# BEGIN Metabased Rollup Dev Container aliases/,/# END Metabased Rollup Dev Container aliases/d' "$rc_file"
 
             # Add new aliases
-            {{_log-cmd}} "Adding Foundry configuration..."
+            echo "[JUST] Adding Foundry configuration..."
             echo "# BEGIN Metabased Rollup Dev Container aliases" >> "$rc_file"
             echo "# Foundry PATH" >> "$rc_file"
             echo "export PATH=\"\$PATH:\$HOME/.foundry/bin\"" >> "$rc_file"
@@ -332,7 +331,7 @@ create-aliases:
             echo "alias foundry-install='just -f {{justfile()}} foundry-install'" >> "$rc_file"
             echo "alias foundry-update='just -f {{justfile()}} foundry-update'" >> "$rc_file"
 
-            {{_log-cmd}} "Adding Local Devnet aliases..."
+            echo "[JUST] Adding Local Devnet aliases..."
             echo "# Local Devnet aliases" >> "$rc_file"
             echo "alias op-up='just -f {{justfile()}} op-up'" >> "$rc_file"
             echo "alias op-down='just -f {{justfile()}} op-down'" >> "$rc_file"
@@ -351,12 +350,11 @@ create-aliases:
 
             # Source the rc file immediately
             echo "source \"\$rc_file\"" >> "$rc_file"
-            {{_log-cmd}} "[✓] Aliases created successfully in $rc_file"
+            echo "[JUST] [✓] Aliases created successfully in $rc_file"
         else
-            {{_log-cmd}} "[✗] Warning: $rc_file does not exist. Skipping."
+            echo "[JUST] [✗] Warning: $rc_file does not exist. Skipping."
         fi
     done
-    {{_log-end}}
 
 # Run all OP steps in sequence
 # OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
