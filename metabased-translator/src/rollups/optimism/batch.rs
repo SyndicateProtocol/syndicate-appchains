@@ -1,5 +1,7 @@
-use alloy_primitives::B256;
+use crate::rollups::optimism::frame::Frame;
+use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::{Buf, Decodable, Encodable, Error as RlpError};
+use alloy_rpc_types::{TransactionInput, TransactionRequest};
 use flate2::{write::ZlibEncoder, Compression};
 use std::error::Error;
 use std::io::Write;
@@ -8,7 +10,7 @@ use std::ops::Div;
 use eyre::Result;
 
 // Constants
-const BATCH_VERSION_BYTE: u8 = 0x01;
+pub const BATCH_VERSION_BYTE: u8 = 0x01;
 // Define the Batch struct
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Batch {
@@ -22,15 +24,6 @@ pub struct Batch {
     pub timestamp: u64,
     /// The L2 block transactions in this batch
     pub transactions: Vec<Vec<u8>>,
-}
-
-// Frame struct to represent the framed data
-#[derive(Debug, PartialEq, Eq)]
-pub struct Frame {
-    pub id: B256,
-    pub frame_num: u16,
-    pub data: Vec<u8>,
-    pub is_last: bool,
 }
 
 // Implementation for the Batch struct
@@ -138,10 +131,16 @@ fn to_frames(channel: &[u8], frame_size: usize, block_hash: B256) -> Result<Vec<
     Ok(frames)
 }
 
+pub fn new_batcher_tx(from: Address, to: Address, data: Bytes) -> TransactionRequest {
+    let input = TransactionInput::new(data);
+    TransactionRequest::default().from(from).to(to).input(input)
+}
+
 // Unit Tests
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy_primitives::{Address, Bytes};
 
     fn sample_batch() -> Batch {
         Batch {
@@ -168,23 +167,14 @@ mod tests {
 
     #[test]
     fn test_encode_decode() -> Result<(), RlpError> {
-        let batch = Batch {
-            parent_hash: B256::repeat_byte(0x11),
-            epoch_num: 42,
-            epoch_hash: B256::repeat_byte(0x22),
-            timestamp: 1638230400,
-            transactions: vec![vec![0x01, 0x02, 0x03], vec![0x04, 0x05, 0x06]],
-        };
+        let batch = sample_batch();
 
-        // Encode the batch (no need to unwrap or use .expect since it returns Vec<u8>)
+        // Encode and decode the batch
         let encoded = batch.encode();
-
-        // Decode the batch
         let decoded = Batch::decode(&encoded)?;
 
-        // Verify the batch matches the original
+        // Verify batch matches original
         assert_eq!(batch, decoded);
-
         Ok(())
     }
 
@@ -211,12 +201,66 @@ mod tests {
             "Last frame should be marked as is_last"
         );
 
-        // Validate frame content
         for (i, frame) in frames.iter().enumerate() {
             assert_eq!(
                 frame.frame_num as usize, i,
                 "Frame numbers should increment sequentially"
             );
         }
+    }
+
+    #[test]
+    fn test_to_frames_small_chunk() {
+        let data = vec![0xAA; 8]; // Small data
+        let block_hash = B256::repeat_byte(0x55);
+        let frames = to_frames(&data, 4, block_hash).expect("Frame creation failed");
+
+        assert_eq!(frames.len(), 2, "Data should split into 2 frames");
+        assert!(frames[1].is_last, "Second frame should be marked as last");
+    }
+
+    #[test]
+    fn test_to_frames_exact_chunk() {
+        let data = vec![0xBB; 16]; // Exact chunk size
+        let block_hash = B256::repeat_byte(0x66);
+        let frames = to_frames(&data, 16, block_hash).expect("Frame creation failed");
+
+        assert_eq!(frames.len(), 1, "Data should fit exactly into one frame");
+        assert!(frames[0].is_last, "Single frame should be marked as last");
+    }
+
+    #[test]
+    fn test_new_batcher_tx() {
+        let from = Address::repeat_byte(0x11);
+        let to = Address::repeat_byte(0x22);
+        let data = Bytes::from(b"batch-data".to_vec());
+
+        let tx = new_batcher_tx(from, to, data.clone());
+        assert_eq!(tx.from, Some(from), "From address should match");
+        assert_eq!(tx.input, TransactionInput::new(data), "Data input mismatch");
+    }
+
+    #[test]
+    fn test_invalid_version_decode() {
+        let mut invalid_encoded = sample_batch().encode();
+        invalid_encoded[0] = 0xFF; // Invalid version byte
+
+        let result = Batch::decode(&invalid_encoded);
+        assert!(
+            result.is_err(),
+            "Decoding should fail with invalid version byte"
+        );
+    }
+
+    #[test]
+    fn test_empty_frame_data() {
+        let empty_data = vec![];
+        let block_hash = B256::repeat_byte(0x33);
+
+        let frames = to_frames(&empty_data, 16, block_hash).expect("Frame splitting failed");
+        assert!(
+            frames.is_empty(),
+            "No frames should be generated for empty data"
+        );
     }
 }
