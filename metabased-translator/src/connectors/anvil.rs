@@ -19,12 +19,16 @@ fn cleanup_anvil(mut anvil: Child) {
 
 pub async fn run() -> eyre::Result<()> {
     // Start Anvil node on a specific port
-    let port = 8545;
+    let port = 8888;
     let anvil = Command::new("anvil")
         .arg("--base-fee")
         .arg("0")
         .arg("--gas-limit")
-        .arg("9999999999999999999999999")
+        .arg("10000000000000000000")
+        .arg("--chain-id")
+        .arg("84532")
+        .arg("--timestamp")
+        .arg("1712500000")
         .arg("--port")
         .arg(port.to_string())
         .arg("--no-mining")
@@ -105,21 +109,21 @@ pub async fn run() -> eyre::Result<()> {
     //// BATCHER TESTING ////
 
     // Set up the batcher and batch inbox
-    let batcher = Address::from_str("0x1234000000000000000000000000000000000000")
+    let batcher = Address::from_str("0x063D87A885a9323831A688645647eD7d0e859C5d")
         .expect("Failed to parse Batcher address");
-    let batch_inbox = Address::from_str("0x1234000000000000000000000000000000000001")
+    let batch_inbox = Address::from_str("0x97395dd253e2d096a0caa62a574895c3c2f2b2e0")
         .expect("Failed to parse Batch Inbox address");
     let balance = U256::MAX;
     provider.anvil_set_balance(batcher, balance).await?;
 
     let batch = Batch {
         parent_hash: B256::from_str(
-            "0xfe705b3c9f7e9154dc17baf8f5d6b62456cf1f607dffcdbb0b4f00fcdfbfa16b",
+            "0xe009262cd1adf34cfaf845fd1c17a6ddb7f97c67b2992cd9f286ff4e1c6ad233",
         )
         .unwrap(),
         epoch_num: 0,
         epoch_hash: B256::from_str(
-            "0xfe705b3c9f7e9154dc17baf8f5d6b62456cf1f607dffcdbb0b4f00fcdfbfa16b",
+            "0xe2f3172a6949173201dfd3428f08577dcc6786fbc4bc31fafbc4e44d282170a6",
         )
         .unwrap(),
         timestamp: 1712500000,
