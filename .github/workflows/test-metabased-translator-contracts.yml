@@ -1,10 +1,16 @@
-name: test-metabased-translator-contracts
+name: foundry test metabased-translator-contracts
 
 on:
-  pull_request:
+  # Run workflow on every push to main. This ensures that cross-service PRs that
+  # depend on metabased-contracts are tested.
+  push:
     branches:
-      - anvil-poc
       - main
+      - anvil-poc
+  # Only run on PRs that touch metabased-translator/contracts
+  pull_request:
+    paths:
+      - "metabased-translator/contracts/**"
 
 env:
   FOUNDRY_PROFILE: ci
