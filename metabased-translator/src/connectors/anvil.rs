@@ -121,18 +121,16 @@ pub async fn run() -> eyre::Result<()> {
     let batch = Batch {
         parent_hash: B256::from_str(
             "0xfe705b3c9f7e9154dc17baf8f5d6b62456cf1f607dffcdbb0b4f00fcdfbfa16b",
-        )
-        .unwrap(),
+        )?,
         epoch_num: 0,
         epoch_hash: B256::from_str(
             "0xfe705b3c9f7e9154dc17baf8f5d6b62456cf1f607dffcdbb0b4f00fcdfbfa16b",
-        )
-        .unwrap(),
+        )?,
         timestamp: 1712500000,
         transactions: vec![],
     };
     let frames = batch.get_frames(1000).unwrap();
-    let data = to_data(&frames).unwrap();
+    let data = to_data(&frames)?;
     let txn = new_batcher_tx(batcher, batch_inbox, data.into());
 
     info!("Sending transaction to batch inbox: {:?}", txn);
@@ -233,11 +231,7 @@ mod tests {
             }
         }
     }
-
-    use alloy::primitives::U256;
-    use alloy::providers::ProviderBuilder;
-    use alloy::{hex, sol};
-    use alloy_provider::ext::AnvilApi;
+    
     #[tokio::test]
     async fn test_deploy_event_emitter_contracts() -> eyre::Result<()> {
         let anvil = AnvilInstance::with_port(8456).await?;
@@ -288,7 +282,6 @@ mod tests {
             .with_recommended_fillers()
             .on_anvil_with_wallet();
 
-        let provider = ProviderBuilder::new().with_recommended_fillers().on_anvil_with_wallet();
         let address = "0x1234000000000000000000000000000000000000".parse()?;
 
         let bytecode = hex::decode(
