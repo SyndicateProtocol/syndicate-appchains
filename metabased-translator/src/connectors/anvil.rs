@@ -11,7 +11,6 @@ use std::time::Duration;
 use tracing::{error, info};
 use crate::contract_bindings::eventemitter::EventEmitter;
 
-
 // Graceful shutdown for Anvil process
 fn cleanup_anvil(mut anvil: Child) {
     if let Err(err) = anvil.kill() {
@@ -194,10 +193,9 @@ mod tests {
 
         async fn with_port(port: u16) -> eyre::Result<Self> {
             let anvil = Command::new("anvil")
-                .arg("-vvv")
                 .arg("--port")
                 .arg(port.to_string())
-                // .arg("--no-mining")
+                // .arg("--no-mining") // Want to mine blocks to confirm txn 
                 .spawn()
                 .expect("Failed to start Anvil");
 
@@ -234,16 +232,14 @@ mod tests {
         }
     }
 
-    // TODO fixme
     #[tokio::test]
     async fn test_deploy_event_emitter_contracts() -> eyre::Result<()> {
         let anvil = AnvilInstance::with_port(8457).await?;
         deploy_contracts(anvil.url().to_string()).await?;
 
-        // Create provider with a wallet
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
-            .on_anvil_with_wallet();
+            .on_http(Url::parse(anvil.url())?);
 
         provider.anvil_set_logging(true).await?;
 
@@ -257,32 +253,22 @@ mod tests {
         // Send transaction and wait for it
         let tx = contract.emitEvent1(sig_hash, non_indexed.into())
             .gas(1_000_000)
+            .nonce(0)
+            .from("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266".parse()?)// Prefunded testing address
             .send()
             .await?;
 
-
-        // println!("Tx: {:?}", tx.watch().await?);
-
         let hash = tx.watch().await?;
-        let txn1 = provider.get_transaction_by_hash(hash).await?;
-        println!("txn1: {:?}", txn1);
-        println!();
-
-
-
         let receipt =
             provider.get_transaction_receipt(hash).await?.expect("Transaction receipt not found");
 
-        // let receipt = tx.get_receipt().await?;
-
         // Verify the transaction succeeded
         assert!(receipt.status());
-        println!("Receipt: {:?}", receipt);
 
-        // TODO - EventEmitter contract needs to emit an event
-        receipt.inner.logs().iter().for_each(|log| {
-            println!("Log: {:?}", log);
-        });
+        // Uncomment to see logs
+        // receipt.inner.logs().iter().for_each(|log| {
+        //     println!("Log: {:?}", log);
+        // });
 
         // // Optionally verify events were emitted
         assert!(!receipt.inner.logs().is_empty());
