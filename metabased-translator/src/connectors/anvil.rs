@@ -267,7 +267,7 @@ mod tests {
         let txn1 = provider.get_transaction_by_hash(hash).await?;
         println!("txn1: {:?}", txn1);
         println!();
-        
+
 
 
         let receipt =
@@ -285,7 +285,7 @@ mod tests {
         });
 
         // // Optionally verify events were emitted
-        // assert!(!receipt.inner.logs().is_empty());
+        assert!(!receipt.inner.logs().is_empty());
 
         Ok(())
     }
