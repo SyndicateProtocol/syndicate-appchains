@@ -10,6 +10,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use tracing::{error, info};
 use crate::contract_bindings::eventemitter::EventEmitter;
+use std::net::TcpListener;
 
 // Graceful shutdown for Anvil process
 fn cleanup_anvil(mut anvil: Child) {
@@ -19,9 +20,38 @@ fn cleanup_anvil(mut anvil: Child) {
     info!("Anvil process terminated.");
 }
 
+/// Check if a port is available by attempting to bind to it
+///
+/// The port will be used for both HTTP and WebSocket connections, a feature provided by Anvil.
+/// See: <https://book.getfoundry.sh/reference/anvil/#supported-transport-layers>
+pub fn is_port_available(port: u16) -> bool {
+    let addr = format!("127.0.0.1:{}", port);
+    TcpListener::bind(addr).is_ok()
+}
+
+/// Try to find an available port starting from base_port
+/// Increments by 100 each try, up to max_attempts
+pub fn find_available_port(base_port: u16, max_attempts: u16) -> Option<u16> {
+    for attempt in 0..max_attempts {
+        let port = base_port.saturating_add(attempt * 100);
+        if is_port_available(port) {
+            return Some(port);
+        }
+    }
+    None
+}
+
 pub async fn run() -> eyre::Result<()> {
-    // Start Anvil node on a specific port
-    let port = 8545;
+    // Try to find an available port, starting from 8501 to avoid conflicts
+    let base_port = 8501;
+    let port = find_available_port(base_port, 10)
+        .ok_or_else(|| eyre::eyre!("No available ports found after 10 attempts"))?;
+
+    if port != base_port {
+        info!("Port {} is in use, switching to port {}", base_port, port);
+    }
+
+    // Start Anvil node on the available port
     let anvil = Command::new("anvil")
         .arg("--base-fee")
         .arg("0")
@@ -194,7 +224,7 @@ mod tests {
             let anvil = Command::new("anvil")
                 .arg("--port")
                 .arg(port.to_string())
-                // .arg("--no-mining") // Want to mine blocks to confirm txn 
+                // .arg("--no-mining") // Want to mine blocks to confirm txn
                 .spawn()
                 .expect("Failed to start Anvil");
 
@@ -321,6 +351,31 @@ mod tests {
         for _ in 0..3 {
             deploy_contracts(anvil.url().to_string()).await?;
         }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_port_availability_checking() -> eyre::Result<()> {
+        // Initial port should be available
+        let base_port = 8501;
+        assert!(super::is_port_available(base_port), "Base port should be available initially");
+
+        // Bind to the port to make it unavailable
+        let _listener = TcpListener::bind(format!("127.0.0.1:{}", base_port))?;
+        assert!(!super::is_port_available(base_port), "Base port should be unavailable after binding");
+
+        // Should find next available port
+        let port = super::find_available_port(base_port, 10)
+            .ok_or_else(|| eyre::eyre!("Failed to find available port"))?;
+
+        // Port should be base_port + N*100 where N is 1..10
+        assert!(port > base_port, "New port should be higher than base port");
+        assert_eq!((port - base_port) % 100, 0, "Port increment should be multiple of 100");
+        assert!(port <= base_port + 900, "Port should not exceed max attempts range");
+
+        // New port should be available
+        assert!(super::is_port_available(port), "New port should be available");
 
         Ok(())
     }
