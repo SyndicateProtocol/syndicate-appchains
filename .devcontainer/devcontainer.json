@@ -46,7 +46,7 @@
   // Update package lists and install required tools:
   // - just: Required for running development commands
   // - netcat-openbsd: Used for port verification during container startup
-  "postCreateCommand": "sudo apt update && sudo apt install -y just netcat-openbsd && just --justfile /home/ubuntu/repos/metabased-rollup/.devcontainer/justfile create-aliases",
+  "postCreateCommand": "sudo apt update && sudo apt install -y just netcat-openbsd && just --justfile ./.devcontainer/justfile create-aliases",
 
   // Configure tool-specific properties.
   "customizations": {
