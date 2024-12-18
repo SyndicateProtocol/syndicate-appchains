@@ -285,3 +285,96 @@ arb-test-sendRawTransaction: arb-health-check sequencer-health-check
     curl --location {{ metabased_sequencer_url }} \
     --header 'Content-Type: application/json' \
     --data '{"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["0xb85902f85682038501808088ffffffffffffffff808080c001a0d555dc3a308d5bde3d5bc665796f9e7d7125c1554667325533fe237c1aa120b5a07d97dae06082d3eb7fa8966b33f6ce51d7127dcddd5da3d8be9c448a72150a90"],"id":1}'
+
+# Setup and verify Arbitrum network configuration
+arb-network-verify:
+    #!/usr/bin/env bash
+    set -e
+
+    # Create .envrc file
+    just create-envrc
+    [ -f {{ envrc_file }} ] || { echo ".envrc file not created successfully"; exit 1; }
+
+    # Set up network
+    RESPONSE=$(just arb-network-setup)
+    echo "Network setup: $RESPONSE"
+
+    # Wait for network setup to complete
+    if echo "$RESPONSE" || ! grep -q "Ready to bring up the Arbitrum Orbit devnet"; then
+        echo "[✓] Network setup succeeded"
+    else
+        echo "[✗] Network setup failed"
+        exit 1
+    fi
+
+# Health check for Arbitrum node
+arb-health-verify:
+    #!/usr/bin/env bash
+    set -e
+
+    # Start Arbitrum node in background if not running
+    if ! nc -z localhost {{ arb_orbit_port }}; then
+        just arb-up &
+    fi
+
+    # Wait for Arbitrum node to be ready via health check
+    echo "[STATUS] Waiting for Arbitrum node to be ready..."
+    until just arb-health-check | grep -q "result"; do
+        sleep 10
+    done
+    echo "[STATUS] Arbitrum node is ready"
+
+# Setup and verify sequencer
+sequencer-verify:
+    #!/usr/bin/env bash
+    set -e
+
+    # Run sequencer setup and capture logs
+    just arb-sequencer-plus-setup 2>&1 | tee /tmp/sequencer-setup.log &
+
+    # Wait for Rust build to complete
+    echo "[STATUS] Waiting for sequencer setup to complete..."
+    while ! grep -q "Finished \`dev\` profile" /tmp/sequencer-setup.log; do
+        sleep 20
+        echo "[STATUS] Still waiting for Rust build complete..."
+    done
+    echo "[STATUS] Rust build completed. Sequencer setup completed."
+
+# Run transaction test
+transaction-verify:
+    #!/usr/bin/env bash
+    set -e
+
+    echo "[STATUS] Running test transaction..."
+    RESPONSE=$(just arb-test-sendRawTransaction)
+    echo "Response: $RESPONSE"
+
+    # Check if response contains an error
+    if echo "$RESPONSE" | grep -q '"error"'; then
+        echo "[ERROR] Transaction failed with error:"
+        echo "$RESPONSE"
+        exit 1
+    fi
+
+    # Check if response contains expected result
+    if ! echo "$RESPONSE" | grep -q '"result"'; then
+        echo "[ERROR] Transaction response missing result field:"
+        echo "$RESPONSE"
+        exit 1
+    fi
+    echo "[STATUS] Test L3 -> Arbitrum L2 transaction completed successfully"
+
+# Aggregated command for CI pipeline to run all verifications
+verify-all:
+    #!/usr/bin/env bash
+    set -e
+
+    echo "[STATUS] Starting full verification process..."
+
+    # Run all verification steps in sequence
+    just arb-network-verify
+    just arb-health-verify
+    just sequencer-verify
+    just transaction-verify
+
+    echo "[STATUS] All verification steps completed successfully"
