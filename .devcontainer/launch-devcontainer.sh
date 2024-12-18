@@ -3,7 +3,11 @@ set -e
 
 # This script is for CLI-based dev container launches only.
 # It is not necessary if you're using an IDE (like VS Code) which handles container setup automatically.
-# Use this script when you need to launch the dev container from a terminal or CI environment.
+# Use this script when you need to launch the dev container from a terminal.
+# This is particularly useful for fresh machines without existing Dev Container
+# support, like for development with Devin.
+# If you're using GitHub Actions, you can use devcontainers-ci:
+# (https://github.com/marketplace/actions/dev-container-build-and-run-action)
 
 # Check if devcontainer CLI is installed
 if ! command -v devcontainer >/dev/null 2>&1; then
