@@ -112,7 +112,7 @@ impl Batch {
 /// Compresses the batch data using zlib (no compression)
 fn to_channel(batch: &[u8]) -> Result<Vec<u8>> {
     let mut buf = Vec::new();
-    let mut encoder = ZlibEncoder::new(&mut buf, Compression::default());
+    let mut encoder = ZlibEncoder::new(&mut buf, Compression::none());
     encoder.write_all(batch)?;
     encoder.finish()?;
     Ok(buf)
