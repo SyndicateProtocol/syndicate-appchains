@@ -67,6 +67,11 @@ arb_contract_deploy_file := contracts_root + "/broadcast/DeployContractsForSeque
 # Add Foundry's bin directory to the PATH for all recipes
 export PATH := foundry_path
 
+# Helper functions for consistent command logging
+_log-start := "echo '[JUST] ═══════════════════════════════════════════'"
+_log-cmd := "echo '[JUST] Running command: '"
+_log-end := "echo '[JUST] ═══════════════════════════════════════════\n'"
+
 # Clone the Optimism repository
 op-clone:
     # The op-devnet sometimes breaks with the error `t=2024-10-22T23:38:03+0000 lvl=crit msg="Application failed" message="failed to fetch startBlock from SystemConfig: failed to call startBlock: failed to unpack result: failed to unpack data: abi: attempting to unmarshal an empty string while arguments are expected"`
@@ -75,53 +80,92 @@ op-clone:
     # once it's fixed
     # If you encounter this error, you can try running `op-reclone` to clean up
     # and re-clone the repository
-    git clone --branch develop --single-branch --depth 1 https://github.com/ethereum-optimism/optimism.git ~/optimism || echo skipping optimism clone
-    git clone --branch optimism --single-branch --depth 1 https://github.com/ethereum-optimism/op-geth.git ~/op-geth || echo skipping op-geth clone
+    {{_log-start}}
+    {{_log-cmd}} "Cloning Optimism repositories..."
+    git clone --branch develop --single-branch --depth 1 https://github.com/ethereum-optimism/optimism.git ~/optimism || echo "[JUST] Skipping optimism clone - repository may already exist"
+    git clone --branch optimism --single-branch --depth 1 https://github.com/ethereum-optimism/op-geth.git ~/op-geth || echo "[JUST] Skipping op-geth clone - repository may already exist"
+    {{_log-end}}
 
 # Starts arbitrum node listening at 8547
 arb-up:
+    {{_log-start}}
+    {{_log-cmd}} "Starting Arbitrum node..."
     chmod +x ./run-arb-nitro-dev-node.sh && ARB_ORBIT_PORT={{ arb_orbit_port }} ARB_ORBIT_L2_RPC_URL={{ arb_orbit_l2_rpc_url }} ./run-arb-nitro-dev-node.sh
+    {{_log-end}}
 
 # Stops Arbitrum docker container created by script above
 arb-down:
-    @echo "Stopping Arbitrum node..."
+    {{_log-start}}
+    {{_log-cmd}} "Stopping Arbitrum node..."
     docker stop nitro-dev
-    @echo "Arbitrum node stopped."
+    @echo "[JUST] Arbitrum node stopped."
+    {{_log-end}}
 
 # Removes all Docker infra assocaited with the Arbitrum, returning to a blank slate
 arb-teardown: arb-down
-    @echo "Removing Arbitrum container..."
+    {{_log-start}}
+    {{_log-cmd}} "Cleaning up Arbitrum infrastructure..."
     @docker rm nitro-dev 2>/dev/null || true
-    @echo "Removing associated volumes..."
+    @echo "[JUST] Arbitrum container removed"
     @docker volume rm $(docker volume ls -q -f name=nitro-dev) 2>/dev/null || true
-    @echo "Removing associated networks..."
+    @echo "[JUST] Associated volumes removed"
     @docker network rm $(docker network ls -q -f name=nitro-dev) 2>/dev/null || true
-    @echo "Arbitrum node infrastructure removed."
+    @echo "[JUST] Associated networks removed"
+    @echo "[JUST] Arbitrum node infrastructure cleanup complete"
+    {{_log-end}}
 
 op-clean:
+    {{_log-start}}
+    {{_log-cmd}} "Cleaning up Optimism directory..."
     rm -rf ~/optimism
+    @echo "[JUST] Optimism directory removed"
+    {{_log-end}}
 
 op-reclone: op-down op-clean op-clone
+    {{_log-start}}
+    {{_log-cmd}} "Recloning Optimism repositories..."
+    @echo "[JUST] Starting fresh clone of Optimism repositories"
+    {{_log-end}}
 
 # Deploy MetabasedSequencerChain smart contract to Optimism devnet
 op-deploy-chain:
+    {{_log-start}}
+    {{_log-cmd}} "Deploying MetabasedSequencerChain to Optimism devnet..."
+    @echo "[JUST] Preparing deployment script..."
     cat {{ contracts_root }}/script/DeployContractsForSequencerChain.s.sol | sed -E 's/(l3ChainId = )0;/\1{{ l3_chain_id }};/' > {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
+    @echo "[JUST] Running Forge deployment script..."
     [ -f {{ op_contract_deploy_file }} ] || forge script --root {{ contracts_root }} {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url {{ op_devnet_l2_rpc_url }} --private-key {{ op_devnet_private_key }} --broadcast -vvvv
+    @echo "[JUST] Cleaning up temporary files..."
     rm {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
+    @echo "[JUST] Deployment process complete"
+    {{_log-end}}
 
 # Deploy MetabasedSequencerChain smart contract to Arbitrum Orbit devnet
 arb-deploy-chain:
+    {{_log-start}}
+    {{_log-cmd}} "Deploying MetabasedSequencerChain to Arbitrum Orbit devnet..."
+    @echo "[JUST] Preparing deployment script..."
     cat {{ contracts_root }}/script/DeployContractsForSequencerChain.s.sol | sed -E 's/(l3ChainId = )0;/\1{{ l3_chain_id }};/' > {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
+    @echo "[JUST] Running Forge deployment script (with simulation skipped)..."
     [ -f {{ arb_contract_deploy_file }} ] || forge script --root {{ contracts_root }} {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url {{ arb_orbit_l2_rpc_url }} --private-key {{ arb_orbit_private_key }} --broadcast --skip-simulation -vvvv
+    @echo "[JUST] Cleaning up temporary files..."
     rm {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
+    @echo "[JUST] Deployment process complete"
+    {{_log-end}}
 
 # Runs sequencer using .env file
 run-metabased-sequencer:
+    {{_log-start}}
+    {{_log-cmd}} "Starting Metabased Sequencer..."
     . {{ envrc_file }} && cd {{ sequencer_root }} && cargo run -p interceptor
+    {{_log-end}}
 
 # Runs op-translator
 run-op-translator: create-envrc update-chain-address
+    {{_log-start}}
+    {{_log-cmd}} "Starting OP Translator service..."
     . {{ envrc_file }} && cd {{ op_translator_root }} && go run main.go
+    {{_log-end}}
 
 # Removes files generated by deploying metabased sequencer chain contract to Optimism devnet
 op-clean-chain:
@@ -141,8 +185,11 @@ op-update-chain-address: op-deploy-chain create-envrc
 # TODO(SEQ-312): Merge METABASED_SEQUENCER_CHAIN_RPC_ADDRESS -> SEQUENCING_CHAIN_RPC_URL
 # Copy of `.envrc.example` using vars set earlier in the file
 create-envrc:
+    {{_log-start}}
+    {{_log-cmd}} "Creating .envrc file..."
     #!/usr/bin/env bash
-        cat > {{ envrc_file }} << EOL
+    {{_log-cmd}} "Writing common environment variables..."
+    cat > {{ envrc_file }} << EOL
     # Common
     export SETTLEMENT_CHAIN_RPC_URL={{ op_devnet_l2_rpc_url }}
     export SETTLEMENT_CHAIN_RPC_URL_WS=wss://base-rpc.publicnode.com # Optional if using WS
@@ -175,66 +222,117 @@ create-envrc:
     export METABASED_SEQUENCER_PORT={{ metabased_sequencer_port }}
     export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=[GETS_REPLACED_BY_SCRIPT]
     EOL
+    {{_log-cmd}} "[✓] Environment configuration file created successfully"
+    {{_log-end}}
 
 # Puts arb contract address into localnet ENV file
 # Works by finding the value corresponding to the key in the .envrc, and replacing it with the address found in the `deploy_file`
 arb-update-chain-address: arb-deploy-chain create-envrc
+    {{_log-start}}
+    {{_log-cmd}} "Updating Arbitrum chain contract address in environment..."
+    @echo "[JUST] Reading current environment configuration..."
     cat {{ envrc_file }} | grep -v METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS= > {{ envrc_file }}.tmp
+    @echo "[JUST] Setting new contract address from deployment..."
     echo export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ envrc_file }}.tmp
+    @echo "[JUST] Saving updated environment configuration..."
     mv {{ envrc_file }}.tmp {{ envrc_file }}
+    @echo "[JUST] Environment configuration updated successfully"
+    {{_log-end}}
 
 # TODO(SEQ-312): refactor duplicate
 # Puts Arb contract address into localnet ENV file
 update-chain-address: arb-deploy-chain create-envrc
+    {{_log-start}}
+    {{_log-cmd}} "Updating chain contract addresses in environment..."
+    @echo "[JUST] Reading contract address from deployment..."
     #!/usr/bin/env bash
     # Get the contract address from arb deployment file
     contract_address=$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq)
+    @echo "[JUST] Updating environment configuration..."
     # Remove both old addresses and create temp file
     cat {{ envrc_file }} | grep -v METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS= | grep -v SEQUENCING_CONTRACT_ADDRESS= > {{ envrc_file }}.tmp
+    @echo "[JUST] Setting new contract addresses..."
     # Add both new addresses
     echo "METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x${contract_address}" >> {{ envrc_file }}.tmp
     echo "SEQUENCING_CONTRACT_ADDRESS=0x${contract_address}" >> {{ envrc_file }}.tmp
+    @echo "[JUST] Saving updated environment configuration..."
     mv {{ envrc_file }}.tmp {{ envrc_file }}
+    @echo "[JUST] Environment configuration updated successfully"
+    {{_log-end}}
 
 go-install:
+    {{_log-start}}
+    {{_log-cmd}} "Installing Go packages..."
     go install {{ repository_root }}/op-translator
     # go install {{ repository_root }}/metabased-publisher/cmd
+    {{_log-cmd}} "[✓] Go packages installed successfully"
+    {{_log-end}}
 
 # Install Foundry
 # Based on https://book.getfoundry.sh/getting-started/installation
 foundry-install:
-    [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || curl -L https://foundry.paradigm.xyz | bash
+    {{_log-start}}
+    {{_log-cmd}} "Checking Foundry version..."
+    if [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ]; then
+        {{_log-cmd}} "[✓] Foundry version is up to date"
+    else
+        {{_log-cmd}} "Installing latest Foundry version..."
+        curl -L https://foundry.paradigm.xyz | bash
+        {{_log-cmd}} "[✓] Foundry installed successfully"
+    fi
+    {{_log-end}}
 
 # Update Foundry
 # Based on https://book.getfoundry.sh/getting-started/installation
 foundry-update:
-    [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || foundryup
+    {{_log-start}}
+    {{_log-cmd}} "Checking Foundry version..."
+    if [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ]; then
+        {{_log-cmd}} "[✓] Foundry is already at the latest version"
+    else
+        {{_log-cmd}} "Updating Foundry..."
+        foundryup
+        {{_log-cmd}} "[✓] Foundry updated successfully"
+    fi
+    {{_log-end}}
 
 # Initialize op-devnet
 op-up:
+    {{_log-start}}
+    {{_log-cmd}} "Initializing OP Devnet..."
     PATH={{foundry_path}} make --directory ~/optimism devnet-up
-    @echo "OP Devnet initialized"
+    @echo "[JUST] OP Devnet initialized"
+    {{_log-end}}
 
 # Shut down devnet
 op-down:
+    {{_log-start}}
+    {{_log-cmd}} "Shutting down OP Devnet..."
     PATH={{foundry_path}} make --directory ~/optimism devnet-down
-    @echo "OP Devnet shut down"
+    @echo "[JUST] OP Devnet shut down"
+    {{_log-end}}
 
 # Create aliases for devnet commands in both Bash and Zsh
 create-aliases:
+    {{_log-start}}
+    {{_log-cmd}} "Creating shell aliases..."
     #!/bin/bash
     for rc_file in ~/.bashrc ~/.zshrc; do
         if [[ -f "$rc_file" ]]; then
+            {{_log-cmd}} "Processing $rc_file..."
             # Remove any existing aliases first
             sed -i '/# BEGIN Metabased Rollup Dev Container aliases/,/# END Metabased Rollup Dev Container aliases/d' "$rc_file"
 
             # Add new aliases
+            {{_log-cmd}} "Adding Foundry configuration..."
             echo "# BEGIN Metabased Rollup Dev Container aliases" >> "$rc_file"
             echo "# Foundry PATH" >> "$rc_file"
             echo "export PATH=\"\$PATH:\$HOME/.foundry/bin\"" >> "$rc_file"
             echo "# Foundry aliases" >> "$rc_file"
             echo "alias foundry-install='just -f {{justfile()}} foundry-install'" >> "$rc_file"
             echo "alias foundry-update='just -f {{justfile()}} foundry-update'" >> "$rc_file"
+
+            {{_log-cmd}} "Adding Local Devnet aliases..."
             echo "# Local Devnet aliases" >> "$rc_file"
             echo "alias op-up='just -f {{justfile()}} op-up'" >> "$rc_file"
             echo "alias op-down='just -f {{justfile()}} op-down'" >> "$rc_file"
@@ -253,135 +351,190 @@ create-aliases:
 
             # Source the rc file immediately
             echo "source \"\$rc_file\"" >> "$rc_file"
-            echo "Aliases created in $rc_file"
+            {{_log-cmd}} "[✓] Aliases created successfully in $rc_file"
         else
-            echo "Warning: $rc_file does not exist. Skipping."
+            {{_log-cmd}} "[✗] Warning: $rc_file does not exist. Skipping."
         fi
     done
+    {{_log-end}}
 
 # Run all OP steps in sequence
 # OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
 # We initialize and then spin down the devnet to get the initialization time out
 # of the way upfront
 op-all: op-clone foundry-install foundry-update create-aliases
-    @echo "Post-setup OP script completed successfully. Ready to bring up the OP Stack devnet with op-up."
+    {{_log-start}}
+    {{_log-cmd}} "Running complete OP Stack setup sequence..."
+    # PLACEHOLDER: Dependencies are handled by the prerequisites listed above
+    {{_log-cmd}} "[✓] Post-setup OP script completed successfully"
+    {{_log-cmd}} "Ready to bring up the OP Stack devnet with op-up"
+    {{_log-end}}
 
 # Run all Arbitrum setup steps in sequence necessary for `arb-up`
 arb-network-setup: foundry-install foundry-update create-aliases
-    @echo "Post-setup Arbitrum script completed successfully. Ready to bring up the Arbitrum Orbit devnet with arb-up."
+    {{_log-start}}
+    {{_log-cmd}} "Setting up Arbitrum network environment..."
+    @echo "[JUST] Post-setup Arbitrum script completed successfully. Ready to bring up the Arbitrum Orbit devnet with arb-up."
+    {{_log-end}}
 
 arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabased-sequencer
-    @echo "Arbitrum Sequencer setup completed successfully. Running sequencer."
+    {{_log-start}}
+    {{_log-cmd}} "Starting Arbitrum Sequencer setup sequence..."
+    # PLACEHOLDER: Dependencies are handled by the prerequisites listed above
+    {{_log-cmd}} "[✓] Arbitrum Sequencer setup completed successfully"
+    {{_log-cmd}} "Sequencer is now running"
+    {{_log-end}}
 
 arb-health-check:
+    {{_log-start}}
+    {{_log-cmd}} "Checking Arbitrum node health..."
     curl -s -X POST -H "Content-Type: application/json" \
     --data '{"jsonrpc":"2.0","method":"net_version","id":1}' \
-    {{ arb_orbit_l2_rpc_url }} || echo "RPC endpoint not responding"
+    {{ arb_orbit_l2_rpc_url }} || echo "[JUST] RPC endpoint not responding"
+    {{_log-end}}
 
 sequencer-health-check:
+    {{_log-start}}
+    {{_log-cmd}} "Checking Metabased Sequencer health..."
     curl --location {{ metabased_sequencer_url }} \
     --header 'Content-Type: application/json' \
-    --data '{"jsonrpc":"2.0","method":"health","id":1}'
+    --data '{"jsonrpc":"2.0","method":"health","id":1}' || \
+    echo "[JUST] Sequencer endpoint not responding"
+    {{_log-end}}
 
 op-translator-health-check:
+    {{_log-start}}
+    {{_log-cmd}} "Checking OP Translator health..."
     curl --location {{ op_translator_url }} \
     --header 'Content-Type: application/json' \
-    --data '{"jsonrpc":"2.0","method":"health","id":1}'
+    --data '{"jsonrpc":"2.0","method":"health","id":1}' || \
+    echo "[JUST] OP Translator endpoint not responding"
+    {{_log-end}}
 
 arb-test-sendRawTransaction: arb-health-check sequencer-health-check
-    curl --location {{ metabased_sequencer_url }} \
+    {{_log-start}}
+    {{_log-cmd}} "Sending test raw transaction..."
+    RESPONSE=$(curl --location {{ metabased_sequencer_url }} \
     --header 'Content-Type: application/json' \
-    --data '{"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["0xb85902f85682038501808088ffffffffffffffff808080c001a0d555dc3a308d5bde3d5bc665796f9e7d7125c1554667325533fe237c1aa120b5a07d97dae06082d3eb7fa8966b33f6ce51d7127dcddd5da3d8be9c448a72150a90"],"id":1}'
+    --data '{"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["0xb85902f85682038501808088ffffffffffffffff808080c001a0d555dc3a308d5bde3d5bc665796f9e7d7125c1554667325533fe237c1aa120b5a07d97dae06082d3eb7fa8966b33f6ce51d7127dcddd5da3d8be9c448a72150a90"],"id":1}')
+    if echo "$RESPONSE" | grep -q "result"; then
+        {{_log-cmd}} "[✓] Test transaction sent successfully"
+        {{_log-cmd}} "Response: $RESPONSE"
+    else
+        {{_log-cmd}} "[✗] Failed to send test transaction"
+        {{_log-cmd}} "Error: $RESPONSE"
+        exit 1
+    fi
+    {{_log-end}}
 
 # Setup and verify Arbitrum network configuration
 arb-network-verify:
+    {{_log-start}}
+    {{_log-cmd}} "Verifying Arbitrum network configuration..."
     #!/usr/bin/env bash
     set -e
 
     # Create .envrc file
     just create-envrc
-    [ -f {{ envrc_file }} ] || { echo ".envrc file not created successfully"; exit 1; }
+    [ -f {{ envrc_file }} ] || { echo "[JUST] .envrc file not created successfully"; exit 1; }
 
     # Set up network
     RESPONSE=$(just arb-network-setup)
-    echo "Network setup: $RESPONSE"
+    echo "[JUST] Network setup: $RESPONSE"
 
     # Wait for network setup to complete
     if echo "$RESPONSE" || ! grep -q "Ready to bring up the Arbitrum Orbit devnet"; then
-        echo "[✓] Network setup succeeded"
+        echo "[JUST] [✓] Network setup succeeded"
     else
-        echo "[✗] Network setup failed"
+        echo "[JUST] [✗] Network setup failed"
         exit 1
     fi
+    {{_log-end}}
 
 # Health check for Arbitrum node
 arb-health-verify:
+    {{_log-start}}
+    {{_log-cmd}} "Verifying Arbitrum node health..."
     #!/usr/bin/env bash
     set -e
 
     # Start Arbitrum node in background if not running
     if ! nc -z localhost {{ arb_orbit_port }}; then
+        {{_log-cmd}} "Arbitrum node not running, starting it..."
         just arb-up &
     fi
 
     # Wait for Arbitrum node to be ready via health check
-    echo "[STATUS] Waiting for Arbitrum node to be ready..."
+    {{_log-cmd}} "Waiting for Arbitrum node to be ready..."
     until just arb-health-check | grep -q "result"; do
         sleep 10
     done
-    echo "[STATUS] Arbitrum node is ready"
+    {{_log-cmd}} "Arbitrum node is ready"
+    {{_log-end}}
 
 # Setup and verify sequencer
 sequencer-verify:
+    {{_log-start}}
+    {{_log-cmd}} "Starting sequencer verification..."
     #!/usr/bin/env bash
     set -e
 
     # Run sequencer setup and capture logs
+    {{_log-cmd}} "Running sequencer setup..."
     just arb-sequencer-plus-setup 2>&1 | tee /tmp/sequencer-setup.log &
 
     # Wait for Rust build to complete
-    echo "[STATUS] Waiting for sequencer setup to complete..."
+    {{_log-cmd}} "Waiting for sequencer setup to complete..."
     while ! grep -q "Finished \`dev\` profile" /tmp/sequencer-setup.log; do
         sleep 20
-        echo "[STATUS] Still waiting for Rust build complete..."
+        {{_log-cmd}} "Still waiting for Rust build to complete..."
     done
-    echo "[STATUS] Rust build completed. Sequencer setup completed."
+    {{_log-cmd}} "[✓] Rust build and sequencer setup completed successfully"
+    {{_log-end}}
 
 # Run transaction test
 transaction-verify:
+    {{_log-start}}
+    {{_log-cmd}} "Starting transaction verification..."
     #!/usr/bin/env bash
     set -e
 
-    echo "[STATUS] Running test transaction..."
+    {{_log-cmd}} "Running test transaction..."
     RESPONSE=$(just arb-test-sendRawTransaction)
-    echo "Response: $RESPONSE"
+    {{_log-cmd}} "Response: $RESPONSE"
 
     # Check if response contains an error
     if echo "$RESPONSE" | grep -q '"error"'; then
-        echo "[ERROR] Transaction failed with error:"
-        echo "$RESPONSE"
+        {{_log-cmd}} "[✗] Transaction failed with error:"
+        {{_log-cmd}} "$RESPONSE"
         exit 1
     fi
 
     # Check if response contains expected result
     if ! echo "$RESPONSE" | grep -q '"result"'; then
-        echo "[ERROR] Transaction response missing result field:"
-        echo "$RESPONSE"
+        {{_log-cmd}} "[✗] Transaction response missing result field:"
+        {{_log-cmd}} "$RESPONSE"
         exit 1
     fi
-    echo "[STATUS] Test L3 -> Arbitrum L2 transaction completed successfully"
+    {{_log-cmd}} "[✓] Test L3 -> Arbitrum L2 transaction completed successfully"
+    {{_log-end}}
 
 # Aggregated command for CI pipeline to run all verifications
 verify-all:
+    {{_log-start}}
+    {{_log-cmd}} "Starting full verification process..."
     #!/usr/bin/env bash
     set -e
 
-    echo "[STATUS] Starting full verification process..."
-
     # Run all verification steps in sequence
+    {{_log-cmd}} "Running network verification..."
     just arb-network-verify
+    {{_log-cmd}} "Running health verification..."
     just arb-health-verify
+    {{_log-cmd}} "Running sequencer verification..."
     just sequencer-verify
+    {{_log-cmd}} "Running transaction verification..."
     just transaction-verify
 
-    echo "[STATUS] All verification steps completed successfully"
+    {{_log-cmd}} "[✓] All verification steps completed successfully"
+    {{_log-end}}
