@@ -197,8 +197,8 @@ update-chain-address: arb-deploy-chain create-envrc
     mv {{ envrc_file }}.tmp {{ envrc_file }}
 
 go-install:
-    go install /workspaces/metabased-rollup/op-translator
-    # go install /workspaces/metabased-rollup/metabased-publisher/cmd
+    go install {{ repository_root }}/op-translator
+    # go install {{ repository_root }}/metabased-publisher/cmd
 
 # Install Foundry
 # Based on https://book.getfoundry.sh/getting-started/installation
@@ -225,6 +225,10 @@ create-aliases:
     #!/bin/bash
     for rc_file in ~/.bashrc ~/.zshrc; do
         if [[ -f "$rc_file" ]]; then
+            # Remove any existing aliases first
+            sed -i '/# BEGIN Metabased Rollup Dev Container aliases/,/# END Metabased Rollup Dev Container aliases/d' "$rc_file"
+
+            # Add new aliases
             echo "# BEGIN Metabased Rollup Dev Container aliases" >> "$rc_file"
             echo "# Foundry PATH" >> "$rc_file"
             echo "export PATH=\"\$PATH:\$HOME/.foundry/bin\"" >> "$rc_file"
@@ -246,6 +250,9 @@ create-aliases:
             echo "alias arb-health-check='just -f {{justfile()}} arb-health-check'" >> "$rc_file"
             echo "alias run-metabased-sequencer='just -f {{justfile()}} run-metabased-sequencer'" >> "$rc_file"
             echo "# END Metabased Rollup Dev Container aliases" >> "$rc_file"
+
+            # Source the rc file immediately
+            echo "source \"\$rc_file\"" >> "$rc_file"
             echo "Aliases created in $rc_file"
         else
             echo "Warning: $rc_file does not exist. Skipping."
