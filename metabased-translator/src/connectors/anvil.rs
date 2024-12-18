@@ -130,7 +130,7 @@ pub async fn run() -> eyre::Result<()> {
     //     transactions: vec![],
     // };
     // let frames = batch.get_frames(1000).unwrap();
-    let data = alloy::hex::decode("0040ee8c63991282805f8edfe82d61cbe500000000005e7801004e00b1ffb84c00f849a0e009262cd1adf34cfaf845fd1c17a6ddb7f97c67b2992cd9f286ff4e1c6ad23380a0e2f3172a6949173201dfd3428f08577dcc6786fbc4bc31fafbc4e44d282170a6846612ad20c0010000ffff697928c301")?; //to_data(&frames).unwrap();
+    let data = alloy::hex::decode("0040ee8c63991282805f8edfe82d61cbe500000000005e7801004e00b1ffb84c00f849a0e009262cd1adf34cfaf845fd1c17a6ddb7f97c67b2992cd9f286ff4e1c6ad23380a0e2f3172a6949173201dfd3428f08577dcc6786fbc4bc31fafbc4e44d282170a6846612ad22c0010000ffff697d28c501")?; //to_data(&frames).unwrap();
     let txn = new_batcher_tx(batcher, batch_inbox, data.into());
 
     info!("Sending transaction to batch inbox: {:?}", txn);
