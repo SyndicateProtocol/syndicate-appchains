@@ -147,13 +147,14 @@ pub async fn run() -> eyre::Result<()> {
     }
 }
 
-// TODO - replace addresses with OP and Arb precompile addresses 
+// TODO - replace addresses with OP and Arb precompile addresses
 async fn deploy_contracts(server_url:String) -> Result<(), Report> {
     let anvil_provider = ProviderBuilder::new()
         .with_recommended_fillers()
         .on_http(Url::parse(server_url.clone().as_str())?);
 
-    let event_emitter_bytecode = &EventEmitter::BYTECODE;
+    // let event_emitter_bytecode = &EventEmitter::BYTECODE;
+    let event_emitter_bytecode = &EventEmitter::DEPLOYED_BYTECODE;
 
     let addresses = [
         "0x1234000000000000000000000000000000000000".parse()?,
@@ -193,9 +194,10 @@ mod tests {
 
         async fn with_port(port: u16) -> eyre::Result<Self> {
             let anvil = Command::new("anvil")
+                .arg("-vvv")
                 .arg("--port")
                 .arg(port.to_string())
-                .arg("--no-mining")
+                // .arg("--no-mining")
                 .spawn()
                 .expect("Failed to start Anvil");
 
@@ -231,16 +233,19 @@ mod tests {
             }
         }
     }
-    
+
+    // TODO fixme
     #[tokio::test]
     async fn test_deploy_event_emitter_contracts() -> eyre::Result<()> {
-        let anvil = AnvilInstance::with_port(8456).await?;
+        let anvil = AnvilInstance::with_port(8457).await?;
         deploy_contracts(anvil.url().to_string()).await?;
 
         // Create provider with a wallet
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
             .on_anvil_with_wallet();
+
+        provider.anvil_set_logging(true).await?;
 
         let address = Address::from_str("0x1234000000000000000000000000000000000000")?;
         let contract = EventEmitterInstance::new(address, provider.clone());
@@ -251,23 +256,34 @@ mod tests {
 
         // Send transaction and wait for it
         let tx = contract.emitEvent1(sig_hash, non_indexed.into())
+            .gas(1_000_000)
             .send()
             .await?;
 
+
+        // println!("Tx: {:?}", tx.watch().await?);
+
         let hash = tx.watch().await?;
+        let txn1 = provider.get_transaction_by_hash(hash).await?;
+        println!("txn1: {:?}", txn1);
+        println!();
+        
+
 
         let receipt =
             provider.get_transaction_receipt(hash).await?.expect("Transaction receipt not found");
 
+        // let receipt = tx.get_receipt().await?;
 
         // Verify the transaction succeeded
         assert!(receipt.status());
+        println!("Receipt: {:?}", receipt);
 
         // TODO - EventEmitter contract needs to emit an event
-        // receipt.inner.logs().iter().for_each(|log| {
-        //     info!("Log: {:?}", log);
-        // });
-        //
+        receipt.inner.logs().iter().for_each(|log| {
+            println!("Log: {:?}", log);
+        });
+
         // // Optionally verify events were emitted
         // assert!(!receipt.inner.logs().is_empty());
 

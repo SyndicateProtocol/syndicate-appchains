@@ -46,7 +46,13 @@ interface IERC721TokenReceiver {
   }
 ]
 ```*/
-#[allow(non_camel_case_types, non_snake_case, clippy::style)]
+#[allow(
+    non_camel_case_types,
+    non_snake_case,
+    clippy::pub_underscore_fields,
+    clippy::style,
+    clippy::empty_structs_with_brackets
+)]
 pub mod IERC721TokenReceiver {
     use super::*;
     use alloy::sol_types as alloy_sol_types;
@@ -74,7 +80,7 @@ pub mod IERC721TokenReceiver {
 ```solidity
 function onERC721Received(address _operator, address _from, uint256 _tokenId, bytes memory _data) external returns (bytes4);
 ```*/
-    #[allow(non_camel_case_types, non_snake_case)]
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct onERC721ReceivedCall {
         pub _operator: alloy::sol_types::private::Address,
@@ -83,12 +89,17 @@ function onERC721Received(address _operator, address _from, uint256 _tokenId, by
         pub _data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`onERC721Received(address,address,uint256,bytes)`](onERC721ReceivedCall) function.
-    #[allow(non_camel_case_types, non_snake_case)]
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct onERC721ReceivedReturn {
         pub _0: alloy::sol_types::private::FixedBytes<4>,
     }
-    #[allow(non_camel_case_types, non_snake_case, clippy::style)]
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         {
@@ -261,7 +272,7 @@ function onERC721Received(address _operator, address _from, uint256 _tokenId, by
             Self::SELECTORS.binary_search(&selector).is_ok()
         }
         #[inline]
-        #[allow(unsafe_code, non_snake_case)]
+        #[allow(non_snake_case)]
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
@@ -293,7 +304,7 @@ function onERC721Received(address _operator, address _from, uint256 _tokenId, by
                     ),
                 );
             };
-            (unsafe { DECODE_SHIMS.get_unchecked(idx) })(data, validate)
+            DECODE_SHIMS[idx](data, validate)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {

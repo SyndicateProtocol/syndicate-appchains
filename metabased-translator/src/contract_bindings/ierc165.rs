@@ -31,7 +31,13 @@ interface IERC165 {
   }
 ]
 ```*/
-#[allow(non_camel_case_types, non_snake_case, clippy::style)]
+#[allow(
+    non_camel_case_types,
+    non_snake_case,
+    clippy::pub_underscore_fields,
+    clippy::style,
+    clippy::empty_structs_with_brackets
+)]
 pub mod IERC165 {
     use super::*;
     use alloy::sol_types as alloy_sol_types;
@@ -59,18 +65,23 @@ pub mod IERC165 {
 ```solidity
 function supportsInterface(bytes4 interfaceID) external view returns (bool);
 ```*/
-    #[allow(non_camel_case_types, non_snake_case)]
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct supportsInterfaceCall {
         pub interfaceID: alloy::sol_types::private::FixedBytes<4>,
     }
     ///Container type for the return parameters of the [`supportsInterface(bytes4)`](supportsInterfaceCall) function.
-    #[allow(non_camel_case_types, non_snake_case)]
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct supportsInterfaceReturn {
         pub _0: bool,
     }
-    #[allow(non_camel_case_types, non_snake_case, clippy::style)]
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
     const _: () = {
         use alloy::sol_types as alloy_sol_types;
         {
@@ -214,7 +225,7 @@ function supportsInterface(bytes4 interfaceID) external view returns (bool);
             Self::SELECTORS.binary_search(&selector).is_ok()
         }
         #[inline]
-        #[allow(unsafe_code, non_snake_case)]
+        #[allow(non_snake_case)]
         fn abi_decode_raw(
             selector: [u8; 4],
             data: &[u8],
@@ -246,7 +257,7 @@ function supportsInterface(bytes4 interfaceID) external view returns (bool);
                     ),
                 );
             };
-            (unsafe { DECODE_SHIMS.get_unchecked(idx) })(data, validate)
+            DECODE_SHIMS[idx](data, validate)
         }
         #[inline]
         fn abi_encoded_size(&self) -> usize {
