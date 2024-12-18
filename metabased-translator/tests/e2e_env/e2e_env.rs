@@ -1,6 +1,30 @@
 use ethers::providers::{Http, Provider};
 use std::sync::Arc;
 
+#[derive(Clone, Debug)]
+pub struct TestEnvConfig {
+    pub rollup_type: RollupType,
+    pub settlement_rpc: Option<String>,
+    pub sequencing_rpc: Option<String>,
+}
+
+impl TestEnvConfig {
+    pub fn from_env() -> Result<Self, Box<dyn std::error::Error>> {
+        Ok(Self {
+            rollup_type: RollupType::from_env()?,
+            settlement_rpc: std::env::var("SETTLEMENT_JSON_RPC_URL").ok(),
+            sequencing_rpc: std::env::var("SEQUENCING_JSON_RPC_URL").ok(),
+        })
+    }
+}
+
+pub struct TestEnv {
+    pub chains: ChainConnections,
+    pub rollup_type: RollupType,
+    settlement_anvil: Option<AnvilHandle>,
+    sequencing_anvil: Option<AnvilHandle>,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub enum RollupType {
     Optimism,
@@ -47,30 +71,6 @@ impl ChainConnections {
         futures::future::try_join_all(tasks).await?;
         Ok(())
     }
-}
-
-#[derive(Clone, Debug)]
-pub struct TestEnvConfig {
-    pub rollup_type: RollupType,
-    pub settlement_rpc: Option<String>,
-    pub sequencing_rpc: Option<String>,
-}
-
-impl TestEnvConfig {
-    pub fn from_env() -> Result<Self, Box<dyn std::error::Error>> {
-        Ok(Self {
-            rollup_type: RollupType::from_env()?,
-            settlement_rpc: std::env::var("SETTLEMENT_JSON_RPC_URL").ok(),
-            sequencing_rpc: std::env::var("SEQUENCING_JSON_RPC_URL").ok(),
-        })
-    }
-}
-
-pub struct TestEnv {
-    pub chains: ChainConnections,
-    pub rollup_type: RollupType,
-    settlement_anvil: Option<AnvilHandle>,
-    sequencing_anvil: Option<AnvilHandle>,
 }
 
 impl TestEnv {

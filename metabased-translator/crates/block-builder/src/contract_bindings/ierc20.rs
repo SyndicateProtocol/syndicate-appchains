@@ -7,14 +7,11 @@ interface IERC20 {
     event Transfer(address indexed from, address indexed to, uint256 value);
 
     function allowance(address owner, address spender) external view returns (uint256);
-    function approve(address spender, uint256 amount) external returns (bool);
+    function approve(address spender, uint256 value) external returns (bool);
     function balanceOf(address account) external view returns (uint256);
-    function decimals() external view returns (uint8);
-    function name() external view returns (string memory);
-    function symbol() external view returns (string memory);
     function totalSupply() external view returns (uint256);
-    function transfer(address to, uint256 amount) external returns (bool);
-    function transferFrom(address from, address to, uint256 amount) external returns (bool);
+    function transfer(address to, uint256 value) external returns (bool);
+    function transferFrom(address from, address to, uint256 value) external returns (bool);
 }
 ```
 
@@ -55,7 +52,7 @@ interface IERC20 {
         "internalType": "address"
       },
       {
-        "name": "amount",
+        "name": "value",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -90,45 +87,6 @@ interface IERC20 {
   },
   {
     "type": "function",
-    "name": "decimals",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint8",
-        "internalType": "uint8"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "name",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "string",
-        "internalType": "string"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "symbol",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "string",
-        "internalType": "string"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "totalSupply",
     "inputs": [],
     "outputs": [
@@ -150,7 +108,7 @@ interface IERC20 {
         "internalType": "address"
       },
       {
-        "name": "amount",
+        "name": "value",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -179,7 +137,7 @@ interface IERC20 {
         "internalType": "address"
       },
       {
-        "name": "amount",
+        "name": "value",
         "type": "uint256",
         "internalType": "uint256"
       }
@@ -719,13 +677,13 @@ function allowance(address owner, address spender) external view returns (uint25
     };
     /**Function with signature `approve(address,uint256)` and selector `0x095ea7b3`.
 ```solidity
-function approve(address spender, uint256 amount) external returns (bool);
+function approve(address spender, uint256 value) external returns (bool);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct approveCall {
         pub spender: alloy::sol_types::private::Address,
-        pub amount: alloy::sol_types::private::primitives::aliases::U256,
+        pub value: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`approve(address,uint256)`](approveCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
@@ -767,7 +725,7 @@ function approve(address spender, uint256 amount) external returns (bool);
             #[doc(hidden)]
             impl ::core::convert::From<approveCall> for UnderlyingRustTuple<'_> {
                 fn from(value: approveCall) -> Self {
-                    (value.spender, value.amount)
+                    (value.spender, value.value)
                 }
             }
             #[automatically_derived]
@@ -776,7 +734,7 @@ function approve(address spender, uint256 amount) external returns (bool);
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self {
                         spender: tuple.0,
-                        amount: tuple.1,
+                        value: tuple.1,
                     }
                 }
             }
@@ -842,7 +800,7 @@ function approve(address spender, uint256 amount) external returns (bool);
                     ),
                     <alloy::sol_types::sol_data::Uint<
                         256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.amount),
+                    > as alloy_sol_types::SolType>::tokenize(&self.value),
                 )
             }
             #[inline]
@@ -983,360 +941,6 @@ function balanceOf(address account) external view returns (uint256);
             }
         }
     };
-    /**Function with signature `decimals()` and selector `0x313ce567`.
-```solidity
-function decimals() external view returns (uint8);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct decimalsCall {}
-    ///Container type for the return parameters of the [`decimals()`](decimalsCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct decimalsReturn {
-        pub _0: u8,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<decimalsCall> for UnderlyingRustTuple<'_> {
-                fn from(value: decimalsCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for decimalsCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Uint<8>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (u8,);
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<decimalsReturn> for UnderlyingRustTuple<'_> {
-                fn from(value: decimalsReturn) -> Self {
-                    (value._0,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for decimalsReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for decimalsCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = decimalsReturn;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Uint<8>,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "decimals()";
-            const SELECTOR: [u8; 4] = [49u8, 60u8, 229u8, 103u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn abi_decode_returns(
-                data: &[u8],
-                validate: bool,
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
-            }
-        }
-    };
-    /**Function with signature `name()` and selector `0x06fdde03`.
-```solidity
-function name() external view returns (string memory);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct nameCall {}
-    ///Container type for the return parameters of the [`name()`](nameCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct nameReturn {
-        pub _0: alloy::sol_types::private::String,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<nameCall> for UnderlyingRustTuple<'_> {
-                fn from(value: nameCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for nameCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<nameReturn> for UnderlyingRustTuple<'_> {
-                fn from(value: nameReturn) -> Self {
-                    (value._0,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for nameReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for nameCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = nameReturn;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::String,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "name()";
-            const SELECTOR: [u8; 4] = [6u8, 253u8, 222u8, 3u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn abi_decode_returns(
-                data: &[u8],
-                validate: bool,
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
-            }
-        }
-    };
-    /**Function with signature `symbol()` and selector `0x95d89b41`.
-```solidity
-function symbol() external view returns (string memory);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct symbolCall {}
-    ///Container type for the return parameters of the [`symbol()`](symbolCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct symbolReturn {
-        pub _0: alloy::sol_types::private::String,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<symbolCall> for UnderlyingRustTuple<'_> {
-                fn from(value: symbolCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for symbolCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::String,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (alloy::sol_types::private::String,);
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<symbolReturn> for UnderlyingRustTuple<'_> {
-                fn from(value: symbolReturn) -> Self {
-                    (value._0,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for symbolReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for symbolCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = symbolReturn;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::String,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "symbol()";
-            const SELECTOR: [u8; 4] = [149u8, 216u8, 155u8, 65u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn abi_decode_returns(
-                data: &[u8],
-                validate: bool,
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
-            }
-        }
-    };
     /**Function with signature `totalSupply()` and selector `0x18160ddd`.
 ```solidity
 function totalSupply() external view returns (uint256);
@@ -1459,13 +1063,13 @@ function totalSupply() external view returns (uint256);
     };
     /**Function with signature `transfer(address,uint256)` and selector `0xa9059cbb`.
 ```solidity
-function transfer(address to, uint256 amount) external returns (bool);
+function transfer(address to, uint256 value) external returns (bool);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferCall {
         pub to: alloy::sol_types::private::Address,
-        pub amount: alloy::sol_types::private::primitives::aliases::U256,
+        pub value: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`transfer(address,uint256)`](transferCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
@@ -1507,7 +1111,7 @@ function transfer(address to, uint256 amount) external returns (bool);
             #[doc(hidden)]
             impl ::core::convert::From<transferCall> for UnderlyingRustTuple<'_> {
                 fn from(value: transferCall) -> Self {
-                    (value.to, value.amount)
+                    (value.to, value.value)
                 }
             }
             #[automatically_derived]
@@ -1516,7 +1120,7 @@ function transfer(address to, uint256 amount) external returns (bool);
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self {
                         to: tuple.0,
-                        amount: tuple.1,
+                        value: tuple.1,
                     }
                 }
             }
@@ -1582,7 +1186,7 @@ function transfer(address to, uint256 amount) external returns (bool);
                     ),
                     <alloy::sol_types::sol_data::Uint<
                         256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.amount),
+                    > as alloy_sol_types::SolType>::tokenize(&self.value),
                 )
             }
             #[inline]
@@ -1599,14 +1203,14 @@ function transfer(address to, uint256 amount) external returns (bool);
     };
     /**Function with signature `transferFrom(address,address,uint256)` and selector `0x23b872dd`.
 ```solidity
-function transferFrom(address from, address to, uint256 amount) external returns (bool);
+function transferFrom(address from, address to, uint256 value) external returns (bool);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferFromCall {
         pub from: alloy::sol_types::private::Address,
         pub to: alloy::sol_types::private::Address,
-        pub amount: alloy::sol_types::private::primitives::aliases::U256,
+        pub value: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`transferFrom(address,address,uint256)`](transferFromCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
@@ -1650,7 +1254,7 @@ function transferFrom(address from, address to, uint256 amount) external returns
             #[doc(hidden)]
             impl ::core::convert::From<transferFromCall> for UnderlyingRustTuple<'_> {
                 fn from(value: transferFromCall) -> Self {
-                    (value.from, value.to, value.amount)
+                    (value.from, value.to, value.value)
                 }
             }
             #[automatically_derived]
@@ -1660,7 +1264,7 @@ function transferFrom(address from, address to, uint256 amount) external returns
                     Self {
                         from: tuple.0,
                         to: tuple.1,
-                        amount: tuple.2,
+                        value: tuple.2,
                     }
                 }
             }
@@ -1730,7 +1334,7 @@ function transferFrom(address from, address to, uint256 amount) external returns
                     ),
                     <alloy::sol_types::sol_data::Uint<
                         256,
-                    > as alloy_sol_types::SolType>::tokenize(&self.amount),
+                    > as alloy_sol_types::SolType>::tokenize(&self.value),
                 )
             }
             #[inline]
@@ -1750,9 +1354,6 @@ function transferFrom(address from, address to, uint256 amount) external returns
         allowance(allowanceCall),
         approve(approveCall),
         balanceOf(balanceOfCall),
-        decimals(decimalsCall),
-        name(nameCall),
-        symbol(symbolCall),
         totalSupply(totalSupplyCall),
         transfer(transferCall),
         transferFrom(transferFromCall),
@@ -1766,13 +1367,10 @@ function transferFrom(address from, address to, uint256 amount) external returns
         ///
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 4usize]] = &[
-            [6u8, 253u8, 222u8, 3u8],
             [9u8, 94u8, 167u8, 179u8],
             [24u8, 22u8, 13u8, 221u8],
             [35u8, 184u8, 114u8, 221u8],
-            [49u8, 60u8, 229u8, 103u8],
             [112u8, 160u8, 130u8, 49u8],
-            [149u8, 216u8, 155u8, 65u8],
             [169u8, 5u8, 156u8, 187u8],
             [221u8, 98u8, 237u8, 62u8],
         ];
@@ -1781,7 +1379,7 @@ function transferFrom(address from, address to, uint256 amount) external returns
     impl alloy_sol_types::SolInterface for IERC20Calls {
         const NAME: &'static str = "IERC20Calls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 9usize;
+        const COUNT: usize = 6usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -1792,9 +1390,6 @@ function transferFrom(address from, address to, uint256 amount) external returns
                 Self::balanceOf(_) => {
                     <balanceOfCall as alloy_sol_types::SolCall>::SELECTOR
                 }
-                Self::decimals(_) => <decimalsCall as alloy_sol_types::SolCall>::SELECTOR,
-                Self::name(_) => <nameCall as alloy_sol_types::SolCall>::SELECTOR,
-                Self::symbol(_) => <symbolCall as alloy_sol_types::SolCall>::SELECTOR,
                 Self::totalSupply(_) => {
                     <totalSupplyCall as alloy_sol_types::SolCall>::SELECTOR
                 }
@@ -1823,19 +1418,6 @@ function transferFrom(address from, address to, uint256 amount) external returns
                 &[u8],
                 bool,
             ) -> alloy_sol_types::Result<IERC20Calls>] = &[
-                {
-                    fn name(
-                        data: &[u8],
-                        validate: bool,
-                    ) -> alloy_sol_types::Result<IERC20Calls> {
-                        <nameCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
-                            .map(IERC20Calls::name)
-                    }
-                    name
-                },
                 {
                     fn approve(
                         data: &[u8],
@@ -1876,19 +1458,6 @@ function transferFrom(address from, address to, uint256 amount) external returns
                     transferFrom
                 },
                 {
-                    fn decimals(
-                        data: &[u8],
-                        validate: bool,
-                    ) -> alloy_sol_types::Result<IERC20Calls> {
-                        <decimalsCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
-                            .map(IERC20Calls::decimals)
-                    }
-                    decimals
-                },
-                {
                     fn balanceOf(
                         data: &[u8],
                         validate: bool,
@@ -1900,19 +1469,6 @@ function transferFrom(address from, address to, uint256 amount) external returns
                             .map(IERC20Calls::balanceOf)
                     }
                     balanceOf
-                },
-                {
-                    fn symbol(
-                        data: &[u8],
-                        validate: bool,
-                    ) -> alloy_sol_types::Result<IERC20Calls> {
-                        <symbolCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
-                            .map(IERC20Calls::symbol)
-                    }
-                    symbol
                 },
                 {
                     fn transfer(
@@ -1963,15 +1519,6 @@ function transferFrom(address from, address to, uint256 amount) external returns
                 Self::balanceOf(inner) => {
                     <balanceOfCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
-                Self::decimals(inner) => {
-                    <decimalsCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
-                }
-                Self::name(inner) => {
-                    <nameCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
-                }
-                Self::symbol(inner) => {
-                    <symbolCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
-                }
                 Self::totalSupply(inner) => {
                     <totalSupplyCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
@@ -2004,18 +1551,6 @@ function transferFrom(address from, address to, uint256 amount) external returns
                         inner,
                         out,
                     )
-                }
-                Self::decimals(inner) => {
-                    <decimalsCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::name(inner) => {
-                    <nameCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
-                }
-                Self::symbol(inner) => {
-                    <symbolCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
                 }
                 Self::totalSupply(inner) => {
                     <totalSupplyCall as alloy_sol_types::SolCall>::abi_encode_raw(
@@ -2361,9 +1896,9 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn approve(
             &self,
             spender: alloy::sol_types::private::Address,
-            amount: alloy::sol_types::private::primitives::aliases::U256,
+            value: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::SolCallBuilder<T, &P, approveCall, N> {
-            self.call_builder(&approveCall { spender, amount })
+            self.call_builder(&approveCall { spender, value })
         }
         ///Creates a new call builder for the [`balanceOf`] function.
         pub fn balanceOf(
@@ -2371,20 +1906,6 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             account: alloy::sol_types::private::Address,
         ) -> alloy_contract::SolCallBuilder<T, &P, balanceOfCall, N> {
             self.call_builder(&balanceOfCall { account })
-        }
-        ///Creates a new call builder for the [`decimals`] function.
-        pub fn decimals(
-            &self,
-        ) -> alloy_contract::SolCallBuilder<T, &P, decimalsCall, N> {
-            self.call_builder(&decimalsCall {})
-        }
-        ///Creates a new call builder for the [`name`] function.
-        pub fn name(&self) -> alloy_contract::SolCallBuilder<T, &P, nameCall, N> {
-            self.call_builder(&nameCall {})
-        }
-        ///Creates a new call builder for the [`symbol`] function.
-        pub fn symbol(&self) -> alloy_contract::SolCallBuilder<T, &P, symbolCall, N> {
-            self.call_builder(&symbolCall {})
         }
         ///Creates a new call builder for the [`totalSupply`] function.
         pub fn totalSupply(
@@ -2396,22 +1917,22 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         pub fn transfer(
             &self,
             to: alloy::sol_types::private::Address,
-            amount: alloy::sol_types::private::primitives::aliases::U256,
+            value: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::SolCallBuilder<T, &P, transferCall, N> {
-            self.call_builder(&transferCall { to, amount })
+            self.call_builder(&transferCall { to, value })
         }
         ///Creates a new call builder for the [`transferFrom`] function.
         pub fn transferFrom(
             &self,
             from: alloy::sol_types::private::Address,
             to: alloy::sol_types::private::Address,
-            amount: alloy::sol_types::private::primitives::aliases::U256,
+            value: alloy::sol_types::private::primitives::aliases::U256,
         ) -> alloy_contract::SolCallBuilder<T, &P, transferFromCall, N> {
             self.call_builder(
                 &transferFromCall {
                     from,
                     to,
-                    amount,
+                    value,
                 },
             )
         }
