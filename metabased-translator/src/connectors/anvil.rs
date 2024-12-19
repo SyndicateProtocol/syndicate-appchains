@@ -5,20 +5,12 @@ use alloy_provider::ext::AnvilApi;
 use alloy_provider::ProviderBuilder;
 use eyre::Report;
 use reqwest::Url;
-use std::process::{Child, Command};
 use std::str::FromStr;
 use std::time::Duration;
-use tracing::{error, info};
+use tracing::info;
 use crate::contract_bindings::eventemitter::EventEmitter;
 use std::net::TcpListener;
-
-// Graceful shutdown for Anvil process
-fn cleanup_anvil(mut anvil: Child) {
-    if let Err(err) = anvil.kill() {
-        error!("Failed to kill Anvil process: {}", err);
-    }
-    info!("Anvil process terminated.");
-}
+use alloy_node_bindings::Anvil;
 
 /// Check if a port is available by attempting to bind to it
 ///
@@ -51,25 +43,14 @@ pub async fn run() -> eyre::Result<()> {
         info!("Port {} is in use, switching to port {}", base_port, port);
     }
 
-    // Start Anvil node on the available port
-    let anvil = Command::new("anvil")
-        .arg("--base-fee")
-        .arg("0")
-        .arg("--gas-limit")
-        .arg("9999999999999999999999999")
-        .arg("--port")
-        .arg(port.to_string())
-        .arg("--no-mining")
-        .spawn()
-        .expect("Failed to start Anvil. Is it installed?");
-
-    info!("Started Anvil node with PID: {}", anvil.id());
-
-    // Gracefully handle Anvil shutdown on program exit
-    let _guard = scopeguard::guard(anvil, cleanup_anvil);
-
-    // Wait for Anvil to start
-    tokio::time::sleep(Duration::from_secs(2)).await;
+    // INIT anvil
+    let _anvil = Anvil::new()
+        .port(port)
+        .chain_id(1)
+        .args(vec!["--base-fee", "0",
+                   "--gas-limit", "30000000",
+                   "--no-mining"
+        ]).try_spawn()?;
 
     // Test JSON-RPC request to get the chain ID
     let client = reqwest::Client::new();
@@ -203,16 +184,28 @@ mod tests {
     use alloy_primitives::{keccak256, Address};
     use alloy_provider::ext::AnvilApi;
     use alloy::providers::ProviderBuilder;
-    use std::process::Child;
     use std::str::FromStr;
-    use alloy_provider::Provider;
-    use scopeguard::ScopeGuard;
+    use std::sync::Arc;
+    use alloy::transports::BoxTransport;
+    use alloy_provider::fillers::{BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller};
+    use alloy_provider::{Identity, Provider, RootProvider};
+    use alloy_provider::layers::AnvilProvider;
+    use alloy_provider::network::{Ethereum, EthereumWallet};
     use crate::contract_bindings::eventemitter::EventEmitter::EventEmitterInstance;
+
+    // Create a type alias for our complex provider type
+    type AnvilFillProvider =
+    FillProvider<
+        JoinFill<JoinFill<Identity, JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>>,
+            WalletFiller<EthereumWallet>>, AnvilProvider<RootProvider<BoxTransport>, BoxTransport>,
+        BoxTransport,
+        Ethereum
+    >;
 
     // Helper struct for Anvil instance management
     struct AnvilInstance {
         url: String,
-        _guard: ScopeGuard<Child, fn(Child)>,
+        provider: Arc<AnvilFillProvider>,
     }
 
     impl AnvilInstance {
@@ -221,22 +214,21 @@ mod tests {
         }
 
         async fn with_port(port: u16) -> eyre::Result<Self> {
-            let anvil = Command::new("anvil")
-                .arg("--port")
-                .arg(port.to_string())
-                // .arg("--no-mining") // Want to mine blocks to confirm txn
-                .spawn()
-                .expect("Failed to start Anvil");
-
-            info!("Started Anvil node with PID: {}", anvil.id());
-
-            // Wait for anvil to start
-            tokio::time::sleep(Duration::from_secs(2)).await;
+            // Init provider as part of creating Anvil layer in one step. 
+            let provider = ProviderBuilder::new()
+                .with_recommended_fillers()
+                .on_anvil_with_wallet_and_config(|anvil| {
+                    anvil
+                        .port(port)
+                        // .args(vec!["--no-mining"]) // Need to mine blocks to check txns
+                });
 
             let url = format!("http://localhost:{}", port);
-            let _guard: ScopeGuard<Child, fn(Child)> = scopeguard::guard(anvil, cleanup_anvil);
 
-            Ok(Self { url, _guard })
+            Ok(Self {
+                url,
+                provider: Arc::new(provider)
+            })
         }
 
         fn url(&self) -> &str {
@@ -263,17 +255,16 @@ mod tests {
 
     #[tokio::test]
     async fn test_deploy_event_emitter_contracts() -> eyre::Result<()> {
-        let anvil = AnvilInstance::with_port(8457).await?;
-        deploy_contracts(anvil.url().to_string()).await?;
+        let port = find_available_port(8457, 10).ok_or(eyre::eyre!("Failed to find available port"))?;
+        let anvil = AnvilInstance::with_port(port).await?;
+        deploy_contracts(anvil.url).await?;
 
-        let provider = ProviderBuilder::new()
-            .with_recommended_fillers()
-            .on_http(Url::parse(anvil.url())?);
+        let anvil_provider = anvil.provider;
+        anvil_provider.anvil_set_logging(true).await?;
 
-        provider.anvil_set_logging(true).await?;
 
         let address = Address::from_str("0x1234000000000000000000000000000000000000")?;
-        let contract = EventEmitterInstance::new(address, provider.clone());
+        let contract = EventEmitterInstance::new(address, anvil_provider.clone());
 
         // Create meaningful test data
         let sig_hash = keccak256("TestEvent(bytes32)"); // Using appropriate event signature
@@ -289,7 +280,7 @@ mod tests {
 
         let hash = tx.watch().await?;
         let receipt =
-            provider.get_transaction_receipt(hash).await?.expect("Transaction receipt not found");
+            anvil_provider.get_transaction_receipt(hash).await?.expect("Transaction receipt not found");
 
         // Verify the transaction succeeded
         assert!(receipt.status());
@@ -309,9 +300,11 @@ mod tests {
     async fn test_counter_contract_with_anvil_set_code() -> eyre::Result<()> {
         // Spin up a local Anvil node.
         // Ensure `anvil` is available in $PATH.
-        let provider = ProviderBuilder::new()
-            .with_recommended_fillers()
-            .on_anvil_with_wallet();
+        let port = find_available_port(1234, 10).ok_or(eyre::eyre!("Failed to find available port"))?;
+        let anvil = AnvilInstance::with_port(port).await?;
+        deploy_contracts(anvil.url).await?;
+
+        let provider = anvil.provider;
 
         let address = "0x1234000000000000000000000000000000000000".parse()?;
 
@@ -358,15 +351,15 @@ mod tests {
     #[tokio::test]
     async fn test_port_availability_checking() -> eyre::Result<()> {
         // Initial port should be available
-        let base_port = 8501;
-        assert!(super::is_port_available(base_port), "Base port should be available initially");
+        let base_port = 1111;
+        assert!(is_port_available(base_port), "Base port should be available initially");
 
         // Bind to the port to make it unavailable
         let _listener = TcpListener::bind(format!("127.0.0.1:{}", base_port))?;
-        assert!(!super::is_port_available(base_port), "Base port should be unavailable after binding");
+        assert!(!is_port_available(base_port), "Base port should be unavailable after binding");
 
         // Should find next available port
-        let port = super::find_available_port(base_port, 10)
+        let port = find_available_port(base_port, 10)
             .ok_or_else(|| eyre::eyre!("Failed to find available port"))?;
 
         // Port should be base_port + N*100 where N is 1..10
@@ -375,7 +368,7 @@ mod tests {
         assert!(port <= base_port + 900, "Port should not exceed max attempts range");
 
         // New port should be available
-        assert!(super::is_port_available(port), "New port should be available");
+        assert!(is_port_available(port), "New port should be available");
 
         Ok(())
     }
