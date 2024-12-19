@@ -357,9 +357,9 @@ arb-network-verify:
     echo "Network setup: $RESPONSE"
     # Wait for network setup to complete
     if echo "$RESPONSE" || ! grep -q "Ready to bring up the Arbitrum Orbit devnet"; then
-        echo "[✓] Network setup succeeded"
+        echo "\[✓\] Network setup succeeded"
     else
-        echo "[✗] Network setup failed"
+        echo "\[✗\] Network setup failed"
         exit 1
     fi
     just _log-end "arb-network-verify"
