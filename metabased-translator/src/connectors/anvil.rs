@@ -184,14 +184,12 @@ async fn deploy_contracts(server_url:String) -> Result<(), Report> {
 
 #[cfg(test)]
 mod tests {
-    use serial_test::serial;
-use super::*;
+    use super::*;
     use alloy::{hex, sol};
     use alloy::primitives::U256;
     use alloy_primitives::{keccak256, Address};
     use alloy_provider::ext::AnvilApi;
     use alloy::providers::ProviderBuilder;
-    use std::process::Child;
     use std::str::FromStr;
     use std::sync::Arc;
     use alloy::transports::BoxTransport;
@@ -261,7 +259,6 @@ use super::*;
     }
 
     #[tokio::test]
-    #[serial(deploy_contracts)]
     async fn test_deploy_event_emitter_contracts() -> eyre::Result<()> {
         let port = find_available_port(8457, 10).ok_or(eyre::eyre!("Failed to find available port"))?;
         let anvil = AnvilInstance::with_port(port).await?;
@@ -305,7 +302,6 @@ use super::*;
     }
 
     #[tokio::test]
-    #[serial(deploy_contracts)]
     async fn test_counter_contract_with_anvil_set_code() -> eyre::Result<()> {
         // Spin up a local Anvil node.
         // Ensure `anvil` is available in $PATH.
@@ -339,21 +335,18 @@ use super::*;
     }
 
     #[tokio::test]
-    #[serial(deploy_contracts)]
     async fn test_deploy_contracts_invalid_url() {
         let result = deploy_contracts("invalid-url".to_string()).await;
         assert!(result.is_err(), "Expected error for invalid URL");
     }
 
     #[tokio::test]
-    #[serial(deploy_contracts)]
     async fn test_deploy_contracts_no_anvil() {
         let result = deploy_contracts("http://localhost:9999".to_string()).await;
         assert!(result.is_err(), "Expected error when Anvil is not running");
     }
 
     #[tokio::test]
-    #[serial(deploy_contracts)]
     async fn test_deploy_multiple_times() -> eyre::Result<()> {
         let anvil = AnvilInstance::new().await?;
 
