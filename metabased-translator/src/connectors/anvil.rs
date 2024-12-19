@@ -48,16 +48,6 @@ info!("Anvil process terminated.");
 
 pub async fn run() -> eyre::Result<()> {
 
-    // Try to find an available port, starting from 8501 to avoid conflicts
-    let base_port = 8501;	
-    let port = find_available_port(base_port, 10)	
-        .ok_or_else(|| eyre::eyre!("No available ports found after 10 attempts"))?;	
-
-
-    if port != base_port {	
-        info!("Port {} is in use, switching to port {}", base_port, port);
-    }
-
     // Start Anvil node on a specific port
     let port = 8888;
     let anvil = Command::new("anvil")
