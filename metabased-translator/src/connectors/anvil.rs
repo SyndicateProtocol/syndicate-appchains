@@ -38,18 +38,22 @@ pub fn find_available_port(base_port: u16, max_attempts: u16) -> Option<u16> {
     None
 }
 
-
 fn cleanup_anvil(mut anvil: Child) {
-if let Err(err) = anvil.kill() {
-    error!("Failed to kill Anvil process: {}", err);
-}
-info!("Anvil process terminated.");
+    if let Err(err) = anvil.kill() {
+        error!("Failed to kill Anvil process: {}", err);
+    }
+    info!("Anvil process terminated.");
 }
 
 pub async fn run() -> eyre::Result<()> {
+    let base_port = 8501;
+    let port = find_available_port(base_port, 10)
+        .ok_or_else(|| eyre::eyre!("No available ports found after 10 attempts"))?;
 
-    // Start Anvil node on a specific port
-    let port = 8888;
+    if port != base_port {
+        info!("Port {} is in use, switching to port {}", base_port, port);
+    }
+
     let anvil = Command::new("anvil")
         .arg("--base-fee")
         .arg("0")
@@ -66,24 +70,7 @@ pub async fn run() -> eyre::Result<()> {
         .expect("Failed to start Anvil. Is it installed?");
 
     let _guard = scopeguard::guard(anvil, cleanup_anvil);
-    // Test JSON-RPC request to get the chain ID
-    let client = reqwest::Client::new();
     let server_url = format!("http://localhost:{}", port);
-
-    let response = client
-        .post(server_url.clone())
-        .json(&serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "eth_chainId",
-            "params": [],
-            "id": 1
-        }))
-        .send()
-        .await?;
-
-    let json_response = response.json::<serde_json::Value>().await?;
-    info!("Chain ID Response: {}", json_response);
-
 
     let signer: PrivateKeySigner ="fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d".parse().unwrap();
     let wallet = EthereumWallet::from(signer);
