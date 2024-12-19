@@ -1,10 +1,9 @@
-use crate::rollups::optimism::batch::new_batcher_tx;
-use crate::rollups::optimism::batcher_data::get_batcher_data;
+use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
+use crate::rollups::optimism::frame::to_data;
 use alloy_primitives::{Address, B256, U256};
 use alloy_provider::ext::AnvilApi;
 use alloy_provider::{Provider, ProviderBuilder};
 use alloy_rpc_types::{BlockId, BlockTransactionsKind, BlockNumberOrTag};
-use op_alloy::protocol::SingleBatch;
 use reqwest::Url;
 use std::str::FromStr;
 use std::time::Duration;
@@ -80,7 +79,7 @@ pub async fn run() -> eyre::Result<()> {
     .expect("Failed to get block");
 
     info!("Block: {:?}", block);
-    let single_batch = SingleBatch {
+    let single_batch = Batch {
         parent_hash: B256::from_str(
             "0xe009262cd1adf34cfaf845fd1c17a6ddb7f97c67b2992cd9f286ff4e1c6ad233",
         )
@@ -90,9 +89,8 @@ pub async fn run() -> eyre::Result<()> {
         timestamp: 1712500002,
         transactions: vec![],
     };
-    let data = get_batcher_data(single_batch);
-    info!("OP Data: {:?}", data);
-
+    let frames = single_batch.get_frames(1000000).unwrap();
+    let data = to_data(&frames).unwrap();
 
     let tx = new_batcher_tx(batcher, batch_inbox, data.into());
     info!("Transaction: {:?}", tx);

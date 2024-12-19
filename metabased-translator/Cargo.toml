@@ -21,4 +21,3 @@ tracing = "0.1.41"
 alloy-rpc-types = "0.8.1"
 alloy-network = "0.8.2"
 alloy-node-bindings = "0.8.2"
-op-alloy = { version = "0.8.5", features = ["full"] }
