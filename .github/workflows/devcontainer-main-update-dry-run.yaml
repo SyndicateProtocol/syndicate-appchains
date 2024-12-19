@@ -1,3 +1,6 @@
+# This workflow runs on pull requests to check changes to the dev container configuration.
+# It intentionally runs only on pull requests (not pushes to main) as a validation step,
+# while actual image updates are handled by devcontainer-main-update.yaml on main branch.
 name: (Dry Run) Update Dev Container Image Cache
 
 on:
