@@ -174,6 +174,8 @@ op-update-chain-address: op-deploy-chain create-envrc
 create-envrc:
     just _log-start "create-envrc"
     #!/usr/bin/env bash
+    # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
+    set -euxo pipefail
     cat > {{ envrc_file }} << EOL
     # Common
     export SETTLEMENT_CHAIN_RPC_URL={{ op_devnet_l2_rpc_url }}
@@ -221,6 +223,8 @@ arb-update-chain-address: arb-deploy-chain create-envrc
 update-chain-address: arb-deploy-chain create-envrc
     just _log-start "update-chain-address"
     #!/usr/bin/env bash
+    # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
+    set -euxo pipefail
     # Get the contract address from arb deployment file
     contract_address=$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq)
     # Remove both old addresses and create temp file
@@ -267,7 +271,9 @@ op-down:
 
 # Create aliases for devnet commands in both Bash and Zsh
 create-aliases:
-    #!/bin/bash
+    #!/usr/bin/env bash
+    # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
+    set -euxo pipefail
     for rc_file in ~/.bashrc ~/.zshrc; do
         if [[ -f "$rc_file" ]]; then
             # Remove any existing aliases first
@@ -348,6 +354,7 @@ arb-test-sendRawTransaction: arb-health-check sequencer-health-check
 arb-network-verify:
     just _log-start "arb-network-verify"
     #!/usr/bin/env bash
+    # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
     # Create .envrc file
     just create-envrc
@@ -367,6 +374,7 @@ arb-network-verify:
 # Health check for Arbitrum node
 arb-health-verify:
     #!/usr/bin/env bash
+    # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
 
     # Start Arbitrum node in background if not running
@@ -384,6 +392,7 @@ arb-health-verify:
 # Setup and verify sequencer
 sequencer-verify:
     #!/usr/bin/env bash
+    # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
 
     # Run sequencer setup and capture logs
@@ -400,6 +409,7 @@ sequencer-verify:
 # Run transaction test
 transaction-verify:
     #!/usr/bin/env bash
+    # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
 
     echo "[STATUS] Running test transaction..."
@@ -425,6 +435,7 @@ transaction-verify:
 verify-all:
     just _log-start "verify-all"
     #!/usr/bin/env bash
+    # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
 
     echo "[STATUS] Starting full verification process..."
