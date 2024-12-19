@@ -2,13 +2,9 @@ use crate::rollups::optimism::frame::Frame;
 use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::{Buf, Decodable, Encodable, Error as RlpError};
 use alloy_rpc_types::{TransactionInput, TransactionRequest};
-use flate2::write::ZlibEncoder;
-use flate2::Compression;
-
-
 
 use std::error::Error;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::ops::Div;
 use tracing::info;
 
@@ -118,11 +114,27 @@ impl Batch {
 
 /// Compresses the batch data using zlib (no compression)
 fn to_channel(batch: &[u8]) -> Result<Vec<u8>> {
-    let mut buf = Vec::new();
-    let mut encoder = ZlibEncoder::new(&mut buf, Compression::default());
-    encoder.write_all(batch)?;
-    encoder.finish()?;
-    Ok(buf)
+    use flate2::write::DeflateEncoder;
+    use flate2::Compression;
+
+    // Manually construct zlib header with no compression flag
+    let mut output = Vec::with_capacity(batch.len() + 6);  // Header + data + adler32
+    output.extend_from_slice(&[0x78, 0x01, 0x00]);  // zlib header with no compression
+
+    // Write length bytes in correct order for no compression
+    let len = batch.len() as u16;
+    output.extend_from_slice(&len.to_be_bytes());  // Length
+    output.extend_from_slice(&[0x00]);  // Padding byte
+    output.extend_from_slice(&[0xb1, 0xff]);  // Fixed bytes for no compression
+    output.extend_from_slice(batch);  // Raw data
+
+    // Calculate and append Adler32 checksum
+    let mut hasher = adler32::RollingAdler32::new();
+    hasher.update_buffer(batch);
+    let adler = hasher.hash();
+    output.extend_from_slice(&adler.to_be_bytes());
+
+    Ok(output)
 }
 
 fn to_frames(channel: &[u8], frame_size: usize, block_hash: B256) -> Result<Vec<Frame>> {
