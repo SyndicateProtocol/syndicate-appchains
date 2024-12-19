@@ -86,7 +86,7 @@ func (b *Batch) GetFrames(frameSize int) ([]*Frame, error) {
 func ToChannel(batch []byte) ([]byte, error) {
 	var buf bytes.Buffer
 
-	writer, err := zlib.NewWriterLevel(&buf, zlib.BestSpeed)
+	writer, err := zlib.NewWriterLevel(&buf, zlib.NoCompression)
 	if err != nil {
 		return nil, err
 	}
