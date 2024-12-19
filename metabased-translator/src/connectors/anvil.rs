@@ -48,7 +48,8 @@ pub async fn run() -> eyre::Result<()> {
         .chain_id(84532)
         .args(vec!["--base-fee", "0",
                    "--gas-limit", "30000000",
-                   "--no-mining"
+                   "--no-mining",
+                   "--timestamp", "1712500000"
         ]).try_spawn()?;
 
 
