@@ -12,9 +12,6 @@ use std::time::Duration;
 use tracing::{error, info};
 use alloy_network::EthereumWallet;
 use alloy::signers::local::PrivateKeySigner;
-
-use eyre::Report;
-use crate::contract_bindings::eventemitter::EventEmitter;
 use std::net::TcpListener;
 
 /// Check if a port is available by attempting to bind to it
@@ -131,25 +128,25 @@ pub async fn run() -> eyre::Result<()> {
     }
 }
 
-// TODO - replace addresses with OP and Arb precompile addresses
-async fn deploy_contracts(server_url:String) -> Result<(), Report> {
-    let anvil_provider = ProviderBuilder::new()
-        .with_recommended_fillers()
-        .on_http(Url::parse(server_url.clone().as_str())?);
+// TODO : Implement generic deploy_contracts function
+// async fn deploy_contracts(server_url:String) -> Result<(), Report> {
+//     let anvil_provider = ProviderBuilder::new()
+//         .with_recommended_fillers()
+//         .on_http(Url::parse(server_url.clone().as_str())?);
 
-    // let event_emitter_bytecode = &EventEmitter::BYTECODE;
-    let event_emitter_bytecode = &EventEmitter::DEPLOYED_BYTECODE;
+//     // let event_emitter_bytecode = &EventEmitter::BYTECODE;
+//     let event_emitter_bytecode = &EventEmitter::DEPLOYED_BYTECODE;
 
-    let addresses = [
-        "0x1234000000000000000000000000000000000000".parse()?,
-        "0x1234000000000000000000000000000000000001".parse()?,
-        "0x1234000000000000000000000000000000000002".parse()?];
+//     let addresses = [
+//         "0x1234000000000000000000000000000000000000".parse()?,
+//         "0x1234000000000000000000000000000000000001".parse()?,
+//         "0x1234000000000000000000000000000000000002".parse()?];
 
-    for address in addresses.iter() {
-        anvil_provider.anvil_set_code(*address, event_emitter_bytecode.clone()).await?;
-    }
-    Ok(())
-}
+//     for address in addresses.iter() {
+//         anvil_provider.anvil_set_code(*address, event_emitter_bytecode.clone()).await?;
+//     }
+//     Ok(())
+// }
 
 #[cfg(test)]
 mod tests {
@@ -249,29 +246,6 @@ mod tests {
 
         let number = contract.number().call().await?;
         assert_eq!(number.number, U256::from(42), "Number should be 42");
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_deploy_contracts_invalid_url() {
-        let result = deploy_contracts("invalid-url".to_string()).await;
-        assert!(result.is_err(), "Expected error for invalid URL");
-    }
-
-    #[tokio::test]
-    async fn test_deploy_contracts_no_anvil() {
-        let result = deploy_contracts("http://localhost:9999".to_string()).await;
-        assert!(result.is_err(), "Expected error when Anvil is not running");
-    }
-
-    #[tokio::test]
-    async fn test_deploy_multiple_times() -> eyre::Result<()> {
-        let anvil = AnvilInstance::new().await?;
-
-        for _ in 0..3 {
-            deploy_contracts(anvil.url().to_string()).await?;
-        }
 
         Ok(())
     }
