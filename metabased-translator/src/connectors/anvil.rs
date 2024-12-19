@@ -36,7 +36,7 @@ pub fn find_available_port(base_port: u16, max_attempts: u16) -> Option<u16> {
 }
 
 pub async fn run() -> eyre::Result<()> {
-    let base_port = 8501;
+    let base_port = 8888;
     let port = find_available_port(base_port, 10)
         .ok_or_else(|| eyre::eyre!("No available ports found after 10 attempts"))?;
 
