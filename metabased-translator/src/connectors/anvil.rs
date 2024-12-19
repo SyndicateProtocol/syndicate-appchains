@@ -46,7 +46,7 @@ pub async fn run() -> eyre::Result<()> {
 
     let _anvil = Anvil::new()
         .port(port)
-        .chain_id(1)
+        .chain_id(84532)
         .args(vec!["--base-fee", "0",
                    "--gas-limit", "30000000",
                    "--no-mining"
