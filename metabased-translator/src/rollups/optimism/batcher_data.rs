@@ -7,7 +7,6 @@ use op_alloy::genesis::RollupConfig;
 
 // Constants
 const BATCHER_TRANSACTION_VERSION_BYTE: u8 = 0x00;
-const COMPRESSION_ALGO: CompressionAlgo = CompressionAlgo::Zlib;
 const FRAME_SIZE: usize = 1000000;
 
 pub fn get_batcher_data(batch: SingleBatch) -> Vec<u8> {
@@ -18,7 +17,8 @@ pub fn get_batcher_data(batch: SingleBatch) -> Vec<u8> {
     .expect("16 bytes always fit");
 
     let config = RollupConfig::default();
-    let compressor: VariantCompressor = COMPRESSION_ALGO.into();
+    let compressor: VariantCompressor = CompressionAlgo::Zlib.into();
+    // let compressor: VariantCompressor = CompressionAlgo::Brotli10.into();
     let mut channel_out = ChannelOut::new(id, &config, compressor);
 
     channel_out.add_batch(Batch::Single(batch)).unwrap();
