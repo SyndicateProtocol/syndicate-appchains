@@ -1,3 +1,6 @@
+# Set the shell to zsh
+set shell := ["zsh", "-cu"]
+
 # Define the PATH variable to include Foundry's bin directory
 foundry_path := env_var('PATH') + ":" + env_var('HOME') + "/.foundry/bin"
 
@@ -173,7 +176,7 @@ op-update-chain-address: op-deploy-chain create-envrc
 # Copy of `.envrc.example` using vars set earlier in the file
 create-envrc:
     just _log-start "create-envrc"
-    #! /bin/bash
+    #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
     cat > {{ envrc_file }} << EOL
@@ -222,7 +225,7 @@ arb-update-chain-address: arb-deploy-chain create-envrc
 # Puts Arb contract address into localnet ENV file
 update-chain-address: arb-deploy-chain create-envrc
     just _log-start "update-chain-address"
-    #! /bin/bash
+    #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
     # Get the contract address from arb deployment file
@@ -271,7 +274,7 @@ op-down:
 
 # Create aliases for devnet commands in both Bash and Zsh
 create-aliases:
-    #! /bin/bash
+    #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
     for rc_file in ~/.bashrc ~/.zshrc; do
@@ -353,7 +356,7 @@ arb-test-sendRawTransaction: arb-health-check sequencer-health-check
 # Setup and verify Arbitrum network configuration
 arb-network-verify:
     just _log-start "arb-network-verify"
-    #! /bin/bash
+    #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
     # Create .envrc file
@@ -367,7 +370,7 @@ arb-network-verify:
 
 # Health check for Arbitrum node
 arb-health-verify:
-    #! /bin/bash
+    #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
 
@@ -385,7 +388,7 @@ arb-health-verify:
 
 # Setup and verify sequencer
 sequencer-verify:
-    #! /bin/bash
+    #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
 
@@ -402,7 +405,7 @@ sequencer-verify:
 
 # Run transaction test
 transaction-verify:
-    #! /bin/bash
+    #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
 
@@ -428,7 +431,7 @@ transaction-verify:
 # Aggregated command for CI pipeline to run all verifications
 verify-all:
     just _log-start "verify-all"
-    #! /bin/bash
+    #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
 
