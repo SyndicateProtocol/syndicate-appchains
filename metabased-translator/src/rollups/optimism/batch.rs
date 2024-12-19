@@ -3,14 +3,15 @@ use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::{Buf, Decodable, Encodable, Error as RlpError};
 use alloy_rpc_types::{TransactionInput, TransactionRequest};
 use flate2::{write::ZlibEncoder, Compression};
+use std::ops::Div;
+
 use std::error::Error;
 use std::io::Write;
-use std::ops::Div;
 
 use eyre::Result;
 
 // Constants
-pub const BATCH_VERSION_BYTE: u8 = 0x01;
+const BATCH_VERSION_BYTE: u8 = 0x00;
 // Define the Batch struct
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Batch {
@@ -95,11 +96,14 @@ impl Batch {
         // Step 1: Encode the Batch
         let encoded_batch = self.encode();
 
-        // Step 2: Compress using zlib
-        let compressed_channel = to_channel(&encoded_batch)?;
+        // Step 2: Encode using RLP
+        let rlp_batch = alloy_rlp::encode(&encoded_batch[..]);
+
+        // Step 3: Compress using zlib
+        let channel = to_channel(&rlp_batch)?;
 
         // Step 3: Split into frames
-        let frames = to_frames(&compressed_channel, frame_size, self.epoch_hash)?;
+        let frames = to_frames(&channel, frame_size, self.epoch_hash)?;
         Ok(frames)
     }
 }
@@ -107,27 +111,33 @@ impl Batch {
 /// Compresses the batch data using zlib (no compression)
 fn to_channel(batch: &[u8]) -> Result<Vec<u8>> {
     let mut buf = Vec::new();
-    let mut encoder = ZlibEncoder::new(&mut buf, Compression::none());
+    let mut encoder = ZlibEncoder::new(&mut buf, Compression::best());
     encoder.write_all(batch)?;
     encoder.finish()?;
     Ok(buf)
 }
 
 fn to_frames(channel: &[u8], frame_size: usize, block_hash: B256) -> Result<Vec<Frame>> {
-    let num_frames = (channel.len() + frame_size - 1).div(frame_size);
+    let num_frames = (channel.len() + frame_size - 1) .div(frame_size);
     let mut frames = Vec::with_capacity(num_frames);
 
-    let id = block_hash;
+    let id = B256::from(block_hash)[..16]
+    .try_into()
+    .expect("16 bytes always fit");
 
-    for (frame_num, chunk) in channel.chunks(frame_size).enumerate() {
-        let is_last = frame_num == num_frames - 1;
-        frames.push(Frame {
+
+    for (frame_num, i) in (0_u16..).zip((0..channel.len()).step_by(frame_size)){       let end = (i + frame_size).min(channel.len());
+        let is_last = end == channel.len();
+
+        let frame = Frame{
             id,
-            frame_num: frame_num as u16,
-            data: chunk.to_vec(),
+            frame_num,
+            data: channel[i..end].to_vec(),
             is_last,
-        });
+        };
+        frames.push(frame);
     }
+
     Ok(frames)
 }
 

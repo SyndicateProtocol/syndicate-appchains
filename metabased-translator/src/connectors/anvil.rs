@@ -2,13 +2,14 @@ use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
 use crate::rollups::optimism::frame::to_data;
 use alloy_primitives::{Address, B256, U256};
 use alloy_provider::ext::AnvilApi;
-use alloy_provider::ProviderBuilder;
-use eyre::Report;
+use alloy_provider::{Provider, ProviderBuilder};
+use alloy_rpc_types::{BlockId, BlockTransactionsKind, BlockNumberOrTag};
 use reqwest::Url;
 use std::str::FromStr;
 use std::time::Duration;
 use tracing::info;
-use crate::contract_bindings::eventemitter::EventEmitter;
+use alloy_network::EthereumWallet;
+use alloy::signers::local::PrivateKeySigner;
 use std::net::TcpListener;
 use alloy_node_bindings::Anvil;
 
@@ -34,8 +35,7 @@ pub fn find_available_port(base_port: u16, max_attempts: u16) -> Option<u16> {
 }
 
 pub async fn run() -> eyre::Result<()> {
-    // Try to find an available port, starting from 8501 to avoid conflicts
-    let base_port = 8501;
+    let base_port = 8888;
     let port = find_available_port(base_port, 10)
         .ok_or_else(|| eyre::eyre!("No available ports found after 10 attempts"))?;
 
@@ -43,112 +43,64 @@ pub async fn run() -> eyre::Result<()> {
         info!("Port {} is in use, switching to port {}", base_port, port);
     }
 
-    // INIT anvil
     let _anvil = Anvil::new()
         .port(port)
-        .chain_id(1)
+        .chain_id(84532)
         .args(vec!["--base-fee", "0",
                    "--gas-limit", "30000000",
-                   "--no-mining"
+                   "--no-mining",
+                   "--timestamp", "1712500000"
         ]).try_spawn()?;
 
+
     // Test JSON-RPC request to get the chain ID
-    let client = reqwest::Client::new();
     let server_url = format!("http://localhost:{}", port);
 
-    let response = client
-        .post(server_url.clone())
-        .json(&serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "eth_chainId",
-            "params": [],
-            "id": 1
-        }))
-        .send()
-        .await?;
-
-    let json_response = response.json::<serde_json::Value>().await?;
-    info!("Chain ID Response: {}", json_response);
+    let signer: PrivateKeySigner ="fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d".parse().unwrap();
+    let wallet = EthereumWallet::from(signer);
 
     // Create a provider to interact with the node
     let provider = ProviderBuilder::new()
         .with_recommended_fillers()
+        .wallet(wallet)
         .on_http(Url::parse(server_url.clone().as_str())?);
 
-    // Deploy a contract using anvil_setCode
-    let address = "0x1234000000000000000000000000000000000000".parse()?;
-    let bytecode = alloy::hex::decode(
-        "6080806040526004361015601257600080fd5b60003560e01c9081633fb5c1cb1460925781638381f58a146079575063d09de08a14603c57600080fd5b3460745760003660031901126074576000546000198114605e57600101600055005b634e487b7160e01b600052601160045260246000fd5b600080fd5b3460745760003660031901126074576020906000548152f35b34607457602036600319011260745760043560005500fea2646970667358221220e978270883b7baed10810c4079c941512e93a7ba1cd1108c781d4bc738d9090564736f6c634300081a0033"
-    )?;
-    provider.anvil_set_code(address, bytecode.clone().into()).await?;
-    info!("Deployed contract code at: {}", address);
-
-    deploy_contracts(server_url.clone()).await?;
-
-    // // Create contract instance
-    // let contract = Contract::default(address, provider.clone());
-    //
-    // // Interact with the deployed contract
-    // let tx_result = contract.setNumber(U256::from(42)).send().await?;
-    // let receipt = tx_result.await?;
-    // println!("Set number transaction receipt: {:?}", receipt);
-    //
-    // let number = contract.number().call().await?;
-    // println!("Number value: {}", number);
-
-    info!(
-        "Server is running at http://localhost:{}. Press Ctrl+C to stop.",
-        port
-    );
-
-    // Test server call to anvil_setCode
-    let json_response = client
-        .post(server_url)
-        .json(&serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "anvil_setCode",
-            "params": ["0x1235000000000000000000000000000000000000", "0x"],
-            "id": 1
-        }))
-        .send()
-        .await?
-        .json::<serde_json::Value>()
-        .await?;
-
-    info!("anvil_setCode Response: {}", json_response);
-
-    //// BATCHER TESTING ////
 
     // Set up the batcher and batch inbox
-    let batcher = Address::from_str("0x1234000000000000000000000000000000000000")
-        .expect("Failed to parse Batcher address");
-    let batch_inbox = Address::from_str("0x1234000000000000000000000000000000000001")
+    let batcher = Address::from_str("0x063D87A885a9323831A688645647eD7d0e859C5d").expect("Failed to parse batcher address");
+    let batch_inbox = Address::from_str("0x97395dd253e2d096a0caa62a574895c3c2f2b2e0")
         .expect("Failed to parse Batch Inbox address");
     let balance = U256::MAX;
     provider.anvil_set_balance(batcher, balance).await?;
 
-    let batch = Batch {
+    let block = provider.get_block(
+        BlockId::Number(BlockNumberOrTag::Number(0)),
+        BlockTransactionsKind::Hashes
+    ).await?
+    .expect("Failed to get block");
+
+    info!("Block: {:?}", block);
+    let single_batch = Batch {
         parent_hash: B256::from_str(
-            "0xfe705b3c9f7e9154dc17baf8f5d6b62456cf1f607dffcdbb0b4f00fcdfbfa16b",
-        )?,
+            "0xe009262cd1adf34cfaf845fd1c17a6ddb7f97c67b2992cd9f286ff4e1c6ad233",
+        )
+        .unwrap(),
         epoch_num: 0,
-        epoch_hash: B256::from_str(
-            "0xfe705b3c9f7e9154dc17baf8f5d6b62456cf1f607dffcdbb0b4f00fcdfbfa16b",
-        )?,
-        timestamp: 1712500000,
+        epoch_hash: block.header.hash,
+        timestamp: 1712500002,
         transactions: vec![],
     };
-    let frames = batch.get_frames(1000).unwrap();
-    let data = to_data(&frames)?;
-    let txn = new_batcher_tx(batcher, batch_inbox, data.into());
+    let frames = single_batch.get_frames(1000000).unwrap();
+    let data = to_data(&frames).unwrap();
 
-    info!("Sending transaction to batch inbox: {:?}", txn);
-    provider.eth_send_unsigned_transaction(txn).await?;
+    let tx = new_batcher_tx(batcher, batch_inbox, data.into());
+    info!("Transaction: {:?}", tx);
+    let builder = provider.send_transaction(tx.clone()).await.unwrap();
+    let hash = *builder.tx_hash();
+    info!("Transaction hash: {:?}", hash);
     provider
         .anvil_mine(Some(U256::from(1)), None::<U256>)
         .await?;
-
-    //// END BATCHER TESTING ////
 
     // Keep the main thread alive
     loop {
@@ -156,198 +108,30 @@ pub async fn run() -> eyre::Result<()> {
     }
 }
 
-// TODO - replace addresses with OP and Arb precompile addresses
-async fn deploy_contracts(server_url:String) -> Result<(), Report> {
-    let anvil_provider = ProviderBuilder::new()
-        .with_recommended_fillers()
-        .on_http(Url::parse(server_url.clone().as_str())?);
+// TODO : Implement generic deploy_contracts function
+// async fn deploy_contracts(server_url:String) -> Result<(), Report> {
+//     let anvil_provider = ProviderBuilder::new()
+//         .with_recommended_fillers()
+//         .on_http(Url::parse(server_url.clone().as_str())?);
 
-    // let event_emitter_bytecode = &EventEmitter::BYTECODE;
-    let event_emitter_bytecode = &EventEmitter::DEPLOYED_BYTECODE;
+//     // let event_emitter_bytecode = &EventEmitter::BYTECODE;
+//     let event_emitter_bytecode = &EventEmitter::DEPLOYED_BYTECODE;
 
-    let addresses = [
-        "0x1234000000000000000000000000000000000000".parse()?,
-        "0x1234000000000000000000000000000000000001".parse()?,
-        "0x1234000000000000000000000000000000000002".parse()?];
+//     let addresses = [
+//         "0x1234000000000000000000000000000000000000".parse()?,
+//         "0x1234000000000000000000000000000000000001".parse()?,
+//         "0x1234000000000000000000000000000000000002".parse()?];
 
-    for address in addresses.iter() {
-        anvil_provider.anvil_set_code(*address, event_emitter_bytecode.clone()).await?;
-    }
-    Ok(())
-}
+//     for address in addresses.iter() {
+//         anvil_provider.anvil_set_code(*address, event_emitter_bytecode.clone()).await?;
+//     }
+//     Ok(())
+// }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::{hex, sol};
-    use alloy::primitives::U256;
-    use alloy_primitives::{keccak256, Address};
-    use alloy_provider::ext::AnvilApi;
-    use alloy::providers::ProviderBuilder;
-    use std::str::FromStr;
-    use std::sync::Arc;
-    use alloy::transports::BoxTransport;
-    use alloy_provider::fillers::{BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller};
-    use alloy_provider::{Identity, Provider, RootProvider};
-    use alloy_provider::layers::AnvilProvider;
-    use alloy_provider::network::{Ethereum, EthereumWallet};
-    use crate::contract_bindings::eventemitter::EventEmitter::EventEmitterInstance;
-
-    // Create a type alias for our complex provider type
-    type AnvilFillProvider =
-    FillProvider<
-        JoinFill<JoinFill<Identity, JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>>,
-            WalletFiller<EthereumWallet>>, AnvilProvider<RootProvider<BoxTransport>, BoxTransport>,
-        BoxTransport,
-        Ethereum
-    >;
-
-    // Helper struct for Anvil instance management
-    struct AnvilInstance {
-        url: String,
-        provider: Arc<AnvilFillProvider>,
-    }
-
-    impl AnvilInstance {
-        async fn new() -> eyre::Result<Self> {
-            Self::with_port(8545).await
-        }
-
-        async fn with_port(port: u16) -> eyre::Result<Self> {
-            // Init provider as part of creating Anvil layer in one step. 
-            let provider = ProviderBuilder::new()
-                .with_recommended_fillers()
-                .on_anvil_with_wallet_and_config(|anvil| {
-                    anvil
-                        .port(port)
-                        // .args(vec!["--no-mining"]) // Need to mine blocks to check txns
-                });
-
-            let url = format!("http://localhost:{}", port);
-
-            Ok(Self {
-                url,
-                provider: Arc::new(provider)
-            })
-        }
-
-        fn url(&self) -> &str {
-            &self.url
-        }
-    }
-
-    // Existing simple Counter contract definition
-    sol! {
-        #[allow(missing_docs)]
-        #[sol(rpc, bytecode="6080806040523460135760df908160198239f35b600080fdfe6080806040526004361015601257600080fd5b60003560e01c9081633fb5c1cb1460925781638381f58a146079575063d09de08a14603c57600080fd5b3460745760003660031901126074576000546000198114605e57600101600055005b634e487b7160e01b600052601160045260246000fd5b600080fd5b3460745760003660031901126074576020906000548152f35b34607457602036600319011260745760043560005500fea2646970667358221220e978270883b7baed10810c4079c941512e93a7ba1cd1108c781d4bc738d9090564736f6c634300081a0033")]
-        contract Counter {
-            uint256 public number;
-
-            function setNumber(uint256 newNumber) public {
-                number = newNumber;
-            }
-
-            function increment() public {
-                number++;
-            }
-        }
-    }
-
-    #[tokio::test]
-    async fn test_deploy_event_emitter_contracts() -> eyre::Result<()> {
-        let port = find_available_port(8457, 10).ok_or(eyre::eyre!("Failed to find available port"))?;
-        let anvil = AnvilInstance::with_port(port).await?;
-        deploy_contracts(anvil.url).await?;
-
-        let anvil_provider = anvil.provider;
-        anvil_provider.anvil_set_logging(true).await?;
-
-
-        let address = Address::from_str("0x1234000000000000000000000000000000000000")?;
-        let contract = EventEmitterInstance::new(address, anvil_provider.clone());
-
-        // Create meaningful test data
-        let sig_hash = keccak256("TestEvent(bytes32)"); // Using appropriate event signature
-        let non_indexed = [1u8; 32]; // Some test data
-
-        // Send transaction and wait for it
-        let tx = contract.emitEvent1(sig_hash, non_indexed.into())
-            .gas(1_000_000)
-            .nonce(0)
-            .from("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266".parse()?)// Prefunded testing address
-            .send()
-            .await?;
-
-        let hash = tx.watch().await?;
-        let receipt =
-            anvil_provider.get_transaction_receipt(hash).await?.expect("Transaction receipt not found");
-
-        // Verify the transaction succeeded
-        assert!(receipt.status());
-
-        // Uncomment me to see logs
-        // receipt.inner.logs().iter().for_each(|log| {
-        //     println!("Log: {:?}", log);
-        // });
-
-        // // Optionally verify events were emitted
-        assert!(!receipt.inner.logs().is_empty());
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_counter_contract_with_anvil_set_code() -> eyre::Result<()> {
-        // Spin up a local Anvil node.
-        // Ensure `anvil` is available in $PATH.
-        let port = find_available_port(1234, 10).ok_or(eyre::eyre!("Failed to find available port"))?;
-        let anvil = AnvilInstance::with_port(port).await?;
-        deploy_contracts(anvil.url).await?;
-
-        let provider = anvil.provider;
-
-        let address = "0x1234000000000000000000000000000000000000".parse()?;
-
-        let bytecode = hex::decode(
-            "6080806040526004361015601257600080fd5b60003560e01c9081633fb5c1cb1460925781638381f58a146079575063d09de08a14603c57600080fd5b3460745760003660031901126074576000546000198114605e57600101600055005b634e487b7160e01b600052601160045260246000fd5b600080fd5b3460745760003660031901126074576020906000548152f35b34607457602036600319011260745760043560005500fea2646970667358221220e978270883b7baed10810c4079c941512e93a7ba1cd1108c781d4bc738d9090564736f6c634300081a0033"
-        )?;
-
-        provider.anvil_set_code(address, bytecode.into()).await?;
-
-        let contract = Counter::new(address, provider.clone());
-        let result = contract.setNumber(U256::from(42)).send().await?;
-        let receipt = result.watch().await?;
-        info!("Set number transaction: {:?}", receipt);
-
-        let number = contract.number().call().await?;
-        assert_eq!(number.number, U256::from(42), "Number should be 42");
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_deploy_contracts_invalid_url() {
-        let result = deploy_contracts("invalid-url".to_string()).await;
-        assert!(result.is_err(), "Expected error for invalid URL");
-    }
-
-    #[tokio::test]
-    async fn test_deploy_contracts_no_anvil() {
-        let result = deploy_contracts("http://localhost:9999".to_string()).await;
-        assert!(result.is_err(), "Expected error when Anvil is not running");
-    }
-
-    #[tokio::test]
-    async fn test_deploy_multiple_times() -> eyre::Result<()> {
-        let anvil = AnvilInstance::new().await?;
-
-        for _ in 0..3 {
-            deploy_contracts(anvil.url().to_string()).await?;
-        }
-
-        Ok(())
-    }
-
+ 
     #[tokio::test]
     async fn test_port_availability_checking() -> eyre::Result<()> {
         // Initial port should be available
