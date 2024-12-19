@@ -348,7 +348,7 @@ arb-test-sendRawTransaction: arb-health-check sequencer-health-check
 arb-network-verify:
     just _log-start "arb-network-verify"
     #!/usr/bin/env bash
-    set -e
+    set -euxo pipefail
     # Create .envrc file
     just create-envrc
     [ -f {{ envrc_file }} ] || { echo ".envrc file not created successfully"; exit 1; }
@@ -367,7 +367,7 @@ arb-network-verify:
 # Health check for Arbitrum node
 arb-health-verify:
     #!/usr/bin/env bash
-    set -e
+    set -euxo pipefail
 
     # Start Arbitrum node in background if not running
     if ! nc -z localhost {{ arb_orbit_port }}; then
@@ -384,7 +384,7 @@ arb-health-verify:
 # Setup and verify sequencer
 sequencer-verify:
     #!/usr/bin/env bash
-    set -e
+    set -euxo pipefail
 
     # Run sequencer setup and capture logs
     just arb-sequencer-plus-setup 2>&1 | tee /tmp/sequencer-setup.log &
@@ -400,7 +400,7 @@ sequencer-verify:
 # Run transaction test
 transaction-verify:
     #!/usr/bin/env bash
-    set -e
+    set -euxo pipefail
 
     echo "[STATUS] Running test transaction..."
     RESPONSE=$(just arb-test-sendRawTransaction)
@@ -425,7 +425,7 @@ transaction-verify:
 verify-all:
     just _log-start "verify-all"
     #!/usr/bin/env bash
-    set -e
+    set -euxo pipefail
 
     echo "[STATUS] Starting full verification process..."
 
