@@ -1,5 +1,6 @@
 use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
 use crate::rollups::optimism::frame::to_data;
+use alloy::signers::k256::ecdsa;
 use alloy_primitives::{Address, B256, U256};
 use alloy_provider::ext::AnvilApi;
 use alloy_provider::{Provider, ProviderBuilder};
@@ -47,7 +48,16 @@ info!("Anvil process terminated.");
 
 pub async fn run() -> eyre::Result<()> {
 
-    
+    // Try to find an available port, starting from 8501 to avoid conflicts
+    let base_port = 8501;	
+    let port = find_available_port(base_port, 10)	
+        .ok_or_else(|| eyre::eyre!("No available ports found after 10 attempts"))?;	
+
+
+    if port != base_port {	
+        info!("Port {} is in use, switching to port {}", base_port, port);
+    }
+
     // Start Anvil node on a specific port
     let port = 8888;
     let anvil = Command::new("anvil")
@@ -84,8 +94,8 @@ pub async fn run() -> eyre::Result<()> {
     let json_response = response.json::<serde_json::Value>().await?;
     info!("Chain ID Response: {}", json_response);
 
-    let signer: PrivateKeySigner =
-            "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d".parse().unwrap();
+
+    let signer: PrivateKeySigner ="fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d".parse().unwrap();
     let wallet = EthereumWallet::from(signer);
 
     // Create a provider to interact with the node
@@ -94,53 +104,9 @@ pub async fn run() -> eyre::Result<()> {
         .wallet(wallet)
         .on_http(Url::parse(server_url.clone().as_str())?);
 
-    // Deploy a contract using anvil_setCode
-    let address = "0x1234000000000000000000000000000000000000".parse()?;
-    let bytecode = alloy::hex::decode(
-        "6080806040526004361015601257600080fd5b60003560e01c9081633fb5c1cb1460925781638381f58a146079575063d09de08a14603c57600080fd5b3460745760003660031901126074576000546000198114605e57600101600055005b634e487b7160e01b600052601160045260246000fd5b600080fd5b3460745760003660031901126074576020906000548152f35b34607457602036600319011260745760043560005500fea2646970667358221220e978270883b7baed10810c4079c941512e93a7ba1cd1108c781d4bc738d9090564736f6c634300081a0033"
-    )?;
-    provider.anvil_set_code(address, bytecode.clone().into()).await?;
-    info!("Deployed contract code at: {}", address);
-
-    deploy_contracts(server_url.clone()).await?;
-
-    // // Create contract instance
-    // let contract = Contract::default(address, provider.clone());
-    //
-    // // Interact with the deployed contract
-    // let tx_result = contract.setNumber(U256::from(42)).send().await?;
-    // let receipt = tx_result.await?;
-    // println!("Set number transaction receipt: {:?}", receipt);
-    //
-    // let number = contract.number().call().await?;
-    // println!("Number value: {}", number);
-
-    info!(
-        "Server is running at http://localhost:{}. Press Ctrl+C to stop.",
-        port
-    );
-
-    // Test server call to anvil_setCode
-    let json_response = client
-        .post(server_url)
-        .json(&serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "anvil_setCode",
-            "params": ["0x1235000000000000000000000000000000000000", "0x"],
-            "id": 1
-        }))
-        .send()
-        .await?
-        .json::<serde_json::Value>()
-        .await?;
-
-    info!("anvil_setCode Response: {}", json_response);
-
-    //// BATCHER TESTING ////
 
     // Set up the batcher and batch inbox
-    let batcher = Address::from_str("0x063D87A885a9323831A688645647eD7d0e859C5d")
-        .expect("Failed to parse Batcher address");
+    let batcher = Address::from_str("0x063D87A885a9323831A688645647eD7d0e859C5d").expect("Failed to parse batcher address");
     let batch_inbox = Address::from_str("0x97395dd253e2d096a0caa62a574895c3c2f2b2e0")
         .expect("Failed to parse Batch Inbox address");
     let balance = U256::MAX;
