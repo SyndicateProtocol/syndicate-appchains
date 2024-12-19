@@ -180,37 +180,37 @@ create-envrc:
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
     cat > {{ envrc_file }} << EOL
-    # Common
-    export SETTLEMENT_CHAIN_RPC_URL={{ op_devnet_l2_rpc_url }}
-    export SETTLEMENT_CHAIN_RPC_URL_WS=wss://base-rpc.publicnode.com # Optional if using WS
-    export SEQUENCING_CHAIN_RPC_URL={{ arb_orbit_l2_rpc_url }}
-    export META_BASED_CHAIN_RPC_URL=http://localhost:8555
-    export METAFILLER_URL=https://staging-metafiller.metabased.org/batch/5101
-    export SEQUENCING_CONTRACT_ADDRESS=0xD77Aa8b1743326Baeb548357f8334df911A4E58f
-    export BATCH_INBOX_ADDRESS=0x97395dd253e2d096a0caa62a574895c3c2f2b2e0
-    export BATCHER_PRIVATE_KEY=fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d
-    export SETTLEMENT_CHAIN_ID={{ op_devnet_l2_chain_id }}
-    export CUTOVER_EPOCH_BLOCK=0
-    export SETTLEMENT_CHAIN_BLOCK_TIME=2s
-    export SETTLEMENT_START_BLOCK=10289263
-    export ALT_DA_URL=http://localhost:3100
+        # Common
+        export SETTLEMENT_CHAIN_RPC_URL={{ op_devnet_l2_rpc_url }}
+        export SETTLEMENT_CHAIN_RPC_URL_WS=wss://base-rpc.publicnode.com # Optional if using WS
+        export SEQUENCING_CHAIN_RPC_URL={{ arb_orbit_l2_rpc_url }}
+        export META_BASED_CHAIN_RPC_URL=http://localhost:8555
+        export METAFILLER_URL=https://staging-metafiller.metabased.org/batch/5101
+        export SEQUENCING_CONTRACT_ADDRESS=0xD77Aa8b1743326Baeb548357f8334df911A4E58f
+        export BATCH_INBOX_ADDRESS=0x97395dd253e2d096a0caa62a574895c3c2f2b2e0
+        export BATCHER_PRIVATE_KEY=fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d
+        export SETTLEMENT_CHAIN_ID={{ op_devnet_l2_chain_id }}
+        export CUTOVER_EPOCH_BLOCK=0
+        export SETTLEMENT_CHAIN_BLOCK_TIME=2s
+        export SETTLEMENT_START_BLOCK=10289263
+        export ALT_DA_URL=http://localhost:3100
 
-    # Op Translator
-    export OP_TRANSLATOR_PORT={{ op_translator_port }}
-    export OP_TRANSLATOR_RPC_URL={{ op_translator_url }}
-    export OP_TRANSLATOR_LOG_LEVEL=debug
-    export OP_TRANSLATOR_PRETTY=true
+        # Op Translator
+        export OP_TRANSLATOR_PORT={{ op_translator_port }}
+        export OP_TRANSLATOR_RPC_URL={{ op_translator_url }}
+        export OP_TRANSLATOR_LOG_LEVEL=debug
+        export OP_TRANSLATOR_PRETTY=true
 
-    # metabased-publisher
-    export MB_PUBLISHER_POLL_INTERVAL=1m
-    export MB_PUBLISHER_NETWORK_TIMEOUT=30s
-    export MB_PUBLISHER_BLOB_UPLOAD_TIMEOUT=10m
+        # metabased-publisher
+        export MB_PUBLISHER_POLL_INTERVAL=1m
+        export MB_PUBLISHER_NETWORK_TIMEOUT=30s
+        export MB_PUBLISHER_BLOB_UPLOAD_TIMEOUT=10m
 
-    # metabased-sequencer
-    export METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}
-    export METABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_private_key }}
-    export METABASED_SEQUENCER_PORT={{ metabased_sequencer_port }}
-    export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x0000000000000000000000000000000000000000
+        # metabased-sequencer
+        export METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}
+        export METABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_private_key }}
+        export METABASED_SEQUENCER_PORT={{ metabased_sequencer_port }}
+        export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x0000000000000000000000000000000000000000
     EOL
     just _log-end "create-envrc"
 
