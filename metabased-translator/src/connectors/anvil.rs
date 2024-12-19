@@ -2,12 +2,15 @@ use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
 use crate::rollups::optimism::frame::to_data;
 use alloy_primitives::{Address, B256, U256};
 use alloy_provider::ext::AnvilApi;
-use alloy_provider::ProviderBuilder;
+use alloy_provider::{Provider, ProviderBuilder};
 use reqwest::Url;
 use std::process::{Child, Command};
 use std::str::FromStr;
 use std::time::Duration;
 use tracing::{error, info};
+use alloy_network::EthereumWallet;
+use alloy::signers::local::PrivateKeySigner;
+
 
 // Graceful shutdown for Anvil process
 fn cleanup_anvil(mut anvil: Child) {
@@ -61,9 +64,14 @@ pub async fn run() -> eyre::Result<()> {
     let json_response = response.json::<serde_json::Value>().await?;
     info!("Chain ID Response: {}", json_response);
 
+    let signer: PrivateKeySigner =
+            "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d".parse().unwrap();
+    let wallet = EthereumWallet::from(signer);
+
     // Create a provider to interact with the node
     let provider = ProviderBuilder::new()
         .with_recommended_fillers()
+        .wallet(wallet)
         .on_http(Url::parse(server_url.clone().as_str())?);
 
     // Deploy a contract using anvil_setCode
@@ -131,8 +139,11 @@ pub async fn run() -> eyre::Result<()> {
     };
     let frames = batch.get_frames(1000000).unwrap();
     let data = to_data(&frames).unwrap();
-    let txn = new_batcher_tx(batcher, batch_inbox, data.into());
-    provider.eth_send_unsigned_transaction(txn).await?;
+    let tx = new_batcher_tx(batcher, batch_inbox, data.into());
+    info!("Transaction: {:?}", tx);
+    let builder = provider.send_transaction(tx.clone()).await.unwrap();
+    let hash = *builder.tx_hash();
+    info!("Transaction hash: {:?}", hash);
     provider
         .anvil_mine(Some(U256::from(1)), None::<U256>)
         .await?;
