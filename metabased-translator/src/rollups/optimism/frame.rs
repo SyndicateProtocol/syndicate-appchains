@@ -1,6 +1,5 @@
 use alloy_primitives::B128;
 use std::io::{self, Write};
-use tracing::info;
 
 const BATCHER_TRANSACTION_VERSION_BYTE: u8 = 0x00;
 
@@ -33,8 +32,6 @@ pub fn to_data(frames: &[Frame]) -> io::Result<Vec<u8>> {
     for frame in frames {
         frame.marshal_binary(&mut buf)?; // Serialize each frame and append to buffer
     }
-
-    info!("Serialized Frame buffer: {:?}", buf);
 
     Ok(buf)
 }
