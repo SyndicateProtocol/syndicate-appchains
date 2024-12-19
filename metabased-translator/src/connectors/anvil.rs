@@ -12,16 +12,42 @@ use tracing::{error, info};
 use alloy_network::EthereumWallet;
 use alloy::signers::local::PrivateKeySigner;
 
+use eyre::Report;
+use crate::contract_bindings::eventemitter::EventEmitter;
+use std::net::TcpListener;
 
-// Graceful shutdown for Anvil process
-fn cleanup_anvil(mut anvil: Child) {
-    if let Err(err) = anvil.kill() {
-        error!("Failed to kill Anvil process: {}", err);
+/// Check if a port is available by attempting to bind to it
+///
+/// The port will be used for both HTTP and WebSocket connections, a feature provided by Anvil.
+/// See: <https://book.getfoundry.sh/reference/anvil/#supported-transport-layers>
+pub fn is_port_available(port: u16) -> bool {
+    let addr = format!("127.0.0.1:{}", port);
+    TcpListener::bind(addr).is_ok()
+}
+
+/// Try to find an available port starting from base_port
+/// Increments by 100 each try, up to max_attempts
+pub fn find_available_port(base_port: u16, max_attempts: u16) -> Option<u16> {
+    for attempt in 0..max_attempts {
+        let port = base_port.saturating_add(attempt * 100);
+        if is_port_available(port) {
+            return Some(port);
+        }
     }
-    info!("Anvil process terminated.");
+    None
+}
+
+
+fn cleanup_anvil(mut anvil: Child) {
+if let Err(err) = anvil.kill() {
+    error!("Failed to kill Anvil process: {}", err);
+}
+info!("Anvil process terminated.");
 }
 
 pub async fn run() -> eyre::Result<()> {
+
+    
     // Start Anvil node on a specific port
     let port = 8888;
     let anvil = Command::new("anvil")
@@ -39,14 +65,7 @@ pub async fn run() -> eyre::Result<()> {
         .spawn()
         .expect("Failed to start Anvil. Is it installed?");
 
-    info!("Started Anvil node with PID: {}", anvil.id());
-
-    // Gracefully handle Anvil shutdown on program exit
     let _guard = scopeguard::guard(anvil, cleanup_anvil);
-
-    // Wait for Anvil to start
-    tokio::time::sleep(Duration::from_secs(2)).await;
-
     // Test JSON-RPC request to get the chain ID
     let client = reqwest::Client::new();
     let server_url = format!("http://localhost:{}", port);
@@ -80,8 +99,10 @@ pub async fn run() -> eyre::Result<()> {
     let bytecode = alloy::hex::decode(
         "6080806040526004361015601257600080fd5b60003560e01c9081633fb5c1cb1460925781638381f58a146079575063d09de08a14603c57600080fd5b3460745760003660031901126074576000546000198114605e57600101600055005b634e487b7160e01b600052601160045260246000fd5b600080fd5b3460745760003660031901126074576020906000548152f35b34607457602036600319011260745760043560005500fea2646970667358221220e978270883b7baed10810c4079c941512e93a7ba1cd1108c781d4bc738d9090564736f6c634300081a0033"
     )?;
-    provider.anvil_set_code(address, bytecode.into()).await?;
+    provider.anvil_set_code(address, bytecode.clone().into()).await?;
     info!("Deployed contract code at: {}", address);
+
+    deploy_contracts(server_url.clone()).await?;
 
     // // Create contract instance
     // let contract = Contract::default(address, provider.clone());
@@ -162,14 +183,90 @@ pub async fn run() -> eyre::Result<()> {
     }
 }
 
+// TODO - replace addresses with OP and Arb precompile addresses
+async fn deploy_contracts(server_url:String) -> Result<(), Report> {
+    let anvil_provider = ProviderBuilder::new()
+        .with_recommended_fillers()
+        .on_http(Url::parse(server_url.clone().as_str())?);
+
+    // let event_emitter_bytecode = &EventEmitter::BYTECODE;
+    let event_emitter_bytecode = &EventEmitter::DEPLOYED_BYTECODE;
+
+    let addresses = [
+        "0x1234000000000000000000000000000000000000".parse()?,
+        "0x1234000000000000000000000000000000000001".parse()?,
+        "0x1234000000000000000000000000000000000002".parse()?];
+
+    for address in addresses.iter() {
+        anvil_provider.anvil_set_code(*address, event_emitter_bytecode.clone()).await?;
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
-    // Simple contract from Allou-rs/examples repo
-    // Codegen from embedded Solidity code and precompiled bytecode.
+    use super::*;
+    use alloy::{hex, sol};
+    use alloy::primitives::U256;
+    use alloy_primitives::{keccak256, Address};
+    use alloy_provider::ext::AnvilApi;
+    use alloy::providers::ProviderBuilder;
+    use std::str::FromStr;
+    use std::sync::Arc;
+    use alloy::transports::BoxTransport;
+    use alloy_provider::fillers::{BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller};
+    use alloy_provider::{Identity, Provider, RootProvider};
+    use alloy_provider::layers::AnvilProvider;
+    use alloy_provider::network::{Ethereum, EthereumWallet};
+    use crate::contract_bindings::eventemitter::EventEmitter::EventEmitterInstance;
+
+    // Create a type alias for our complex provider type
+    type AnvilFillProvider =
+    FillProvider<
+        JoinFill<JoinFill<Identity, JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>>,
+            WalletFiller<EthereumWallet>>, AnvilProvider<RootProvider<BoxTransport>, BoxTransport>,
+        BoxTransport,
+        Ethereum
+    >;
+
+    // Helper struct for Anvil instance management
+    struct AnvilInstance {
+        url: String,
+        provider: Arc<AnvilFillProvider>,
+    }
+
+    impl AnvilInstance {
+        async fn new() -> eyre::Result<Self> {
+            Self::with_port(8545).await
+        }
+
+        async fn with_port(port: u16) -> eyre::Result<Self> {
+            // Init provider as part of creating Anvil layer in one step. 
+            let provider = ProviderBuilder::new()
+                .with_recommended_fillers()
+                .on_anvil_with_wallet_and_config(|anvil| {
+                    anvil
+                        .port(port)
+                        // .args(vec!["--no-mining"]) // Need to mine blocks to check txns
+                });
+
+            let url = format!("http://localhost:{}", port);
+
+            Ok(Self {
+                url,
+                provider: Arc::new(provider)
+            })
+        }
+
+        fn url(&self) -> &str {
+            &self.url
+        }
+    }
+
+    // Existing simple Counter contract definition
     sol! {
-    #[allow(missing_docs)]
-    // solc v0.8.26; solc Counter.sol --via-ir --optimize --bin
-    #[sol(rpc, bytecode="6080806040523460135760df908160198239f35b600080fdfe6080806040526004361015601257600080fd5b60003560e01c9081633fb5c1cb1460925781638381f58a146079575063d09de08a14603c57600080fd5b3460745760003660031901126074576000546000198114605e57600101600055005b634e487b7160e01b600052601160045260246000fd5b600080fd5b3460745760003660031901126074576020906000548152f35b34607457602036600319011260745760043560005500fea2646970667358221220e978270883b7baed10810c4079c941512e93a7ba1cd1108c781d4bc738d9090564736f6c634300081a0033")]
+        #[allow(missing_docs)]
+        #[sol(rpc, bytecode="6080806040523460135760df908160198239f35b600080fdfe6080806040526004361015601257600080fd5b60003560e01c9081633fb5c1cb1460925781638381f58a146079575063d09de08a14603c57600080fd5b3460745760003660031901126074576000546000198114605e57600101600055005b634e487b7160e01b600052601160045260246000fd5b600080fd5b3460745760003660031901126074576020906000548152f35b34607457602036600319011260745760043560005500fea2646970667358221220e978270883b7baed10810c4079c941512e93a7ba1cd1108c781d4bc738d9090564736f6c634300081a0033")]
         contract Counter {
             uint256 public number;
 
@@ -183,10 +280,6 @@ mod tests {
         }
     }
 
-    use alloy::primitives::U256;
-    use alloy::providers::ProviderBuilder;
-    use alloy::{hex, sol};
-    use alloy_provider::ext::AnvilApi;
 
     #[tokio::test]
     async fn test_counter_contract_with_anvil_set_code() -> eyre::Result<()> {
@@ -197,32 +290,68 @@ mod tests {
             .on_anvil_with_wallet();
 
         let address = "0x1234000000000000000000000000000000000000".parse()?;
-        let contract = Counter::new(address, provider.clone());
 
-        println!("Deployed contract at address: {}", contract.address());
-
-        // Get the runtime bytecode (not the deployment bytecode)
         let bytecode = hex::decode(
             "6080806040526004361015601257600080fd5b60003560e01c9081633fb5c1cb1460925781638381f58a146079575063d09de08a14603c57600080fd5b3460745760003660031901126074576000546000198114605e57600101600055005b634e487b7160e01b600052601160045260246000fd5b600080fd5b3460745760003660031901126074576020906000548152f35b34607457602036600319011260745760043560005500fea2646970667358221220e978270883b7baed10810c4079c941512e93a7ba1cd1108c781d4bc738d9090564736f6c634300081a0033"
         )?;
 
-        // Set the code at the address
         provider.anvil_set_code(address, bytecode.into()).await?;
 
-        // Create contract instance
         let contract = Counter::new(address, provider.clone());
-
-        // Try to interact with the contract
         let result = contract.setNumber(U256::from(42)).send().await?;
         let receipt = result.watch().await?;
-        println!("Set number transaction: {:?}", receipt);
+        info!("Set number transaction: {:?}", receipt);
 
-        // Read the number
         let number = contract.number().call().await?;
-        println!("Number: {}", number.number);
-
-        // Add an actual test assertion
         assert_eq!(number.number, U256::from(42), "Number should be 42");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_deploy_contracts_invalid_url() {
+        let result = deploy_contracts("invalid-url".to_string()).await;
+        assert!(result.is_err(), "Expected error for invalid URL");
+    }
+
+    #[tokio::test]
+    async fn test_deploy_contracts_no_anvil() {
+        let result = deploy_contracts("http://localhost:9999".to_string()).await;
+        assert!(result.is_err(), "Expected error when Anvil is not running");
+    }
+
+    #[tokio::test]
+    async fn test_deploy_multiple_times() -> eyre::Result<()> {
+        let anvil = AnvilInstance::new().await?;
+
+        for _ in 0..3 {
+            deploy_contracts(anvil.url().to_string()).await?;
+        }
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_port_availability_checking() -> eyre::Result<()> {
+        // Initial port should be available
+        let base_port = 1111;
+        assert!(is_port_available(base_port), "Base port should be available initially");
+
+        // Bind to the port to make it unavailable
+        let _listener = TcpListener::bind(format!("127.0.0.1:{}", base_port))?;
+        assert!(!is_port_available(base_port), "Base port should be unavailable after binding");
+
+        // Should find next available port
+        let port = find_available_port(base_port, 10)
+            .ok_or_else(|| eyre::eyre!("Failed to find available port"))?;
+
+        // Port should be base_port + N*100 where N is 1..10
+        assert!(port > base_port, "New port should be higher than base port");
+        assert_eq!((port - base_port) % 100, 0, "Port increment should be multiple of 100");
+        assert!(port <= base_port + 900, "Port should not exceed max attempts range");
+
+        // New port should be available
+        assert!(is_port_available(port), "New port should be available");
 
         Ok(())
     }
