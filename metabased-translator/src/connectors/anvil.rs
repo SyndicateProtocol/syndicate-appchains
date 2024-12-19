@@ -2,7 +2,8 @@ use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
 use crate::rollups::optimism::frame::to_data;
 use alloy_primitives::{Address, B256, U256};
 use alloy_provider::ext::AnvilApi;
-use alloy_provider::ProviderBuilder;
+use alloy_provider::{Provider, ProviderBuilder};
+use alloy_rpc_types::{BlockId, BlockTransactionsKind, BlockNumberOrTag};
 use reqwest::Url;
 use std::process::{Child, Command};
 use std::str::FromStr;
@@ -116,16 +117,21 @@ pub async fn run() -> eyre::Result<()> {
     let balance = U256::MAX;
     provider.anvil_set_balance(batcher, balance).await?;
 
+    let block = provider.get_block(
+        BlockId::Number(BlockNumberOrTag::Number(0)),
+        BlockTransactionsKind::Hashes
+    ).await?
+    .expect("Failed to get block");
+
+    info!("Block: {:?}", block);
+
     let batch = Batch {
         parent_hash: B256::from_str(
             "0xe009262cd1adf34cfaf845fd1c17a6ddb7f97c67b2992cd9f286ff4e1c6ad233",
         )
         .unwrap(),
         epoch_num: 0,
-        epoch_hash: B256::from_str(
-            "0x103ac73bf5b87545625259521c3c53c9f51f08c782831a5eb216c6383ddb201d",
-        )
-        .unwrap(),
+        epoch_hash: block.header.hash,
         timestamp: 1712500002,
         transactions: vec![],
     };
