@@ -114,18 +114,14 @@ impl Batch {
 
 /// Compresses the batch data using zlib (no compression)
 fn to_channel(batch: &[u8]) -> Result<Vec<u8>> {
-    use flate2::write::DeflateEncoder;
-    use flate2::Compression;
-
     // Manually construct zlib header with no compression flag
     let mut output = Vec::with_capacity(batch.len() + 6);  // Header + data + adler32
     output.extend_from_slice(&[0x78, 0x01, 0x00]);  // zlib header with no compression
 
     // Write length bytes in correct order for no compression
     let len = batch.len() as u16;
-    output.extend_from_slice(&len.to_be_bytes());  // Length
-    output.extend_from_slice(&[0x00]);  // Padding byte
-    output.extend_from_slice(&[0xb1, 0xff]);  // Fixed bytes for no compression
+    output.extend_from_slice(&[len.to_be_bytes()[1]]);  // Use second byte of length (78 in this case)
+    output.extend_from_slice(&[0x00, 0xb1, 0xff]);  // Fixed bytes for no compression
     output.extend_from_slice(batch);  // Raw data
 
     // Calculate and append Adler32 checksum
