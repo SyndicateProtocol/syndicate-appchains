@@ -10,6 +10,7 @@ use std::time::Duration;
 use tracing::info;
 use crate::contract_bindings::eventemitter::EventEmitter;
 use std::net::TcpListener;
+use alloy_node_bindings::Anvil;
 
 /// Check if a port is available by attempting to bind to it
 ///
@@ -43,20 +44,13 @@ pub async fn run() -> eyre::Result<()> {
     }
 
     // INIT anvil
-    let _anvil = ProviderBuilder::new()
-        .with_recommended_fillers()
-        .on_anvil_with_config(|anvil|
-            anvil
-                .chain_id(1)
-                .port(port)
-                .args(vec!["--base-fee", "0",
-                           "--gas-limit", "30000000",
-                           "--no-mining"
-                ])
-        );
-
-    // Wait for Anvil to start
-    tokio::time::sleep(Duration::from_secs(2)).await;
+    let _anvil = Anvil::new()
+        .port(port)
+        .chain_id(1)
+        .args(vec!["--base-fee", "0",
+                   "--gas-limit", "30000000",
+                   "--no-mining"
+        ]).try_spawn()?;
 
     // Test JSON-RPC request to get the chain ID
     let client = reqwest::Client::new();
@@ -220,6 +214,7 @@ mod tests {
         }
 
         async fn with_port(port: u16) -> eyre::Result<Self> {
+            // Init provider as part of creating Anvil layer in one step. 
             let provider = ProviderBuilder::new()
                 .with_recommended_fillers()
                 .on_anvil_with_wallet_and_config(|anvil| {
