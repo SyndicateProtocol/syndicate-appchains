@@ -1,7 +1,7 @@
 name: Dev Container Dry Run Check
 
 on:
-  push:
+  pull_request:
     branches: [ main ]
 
 jobs:
