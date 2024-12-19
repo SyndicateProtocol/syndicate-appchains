@@ -1,8 +1,10 @@
-name: Dev Container Dry Run Check
+name: (Dry Run) Update Dev Container Image Cache
 
 on:
   pull_request:
     branches: [ main ]
+    paths:
+      - '.devcontainer/**'
 
 jobs:
   dry-run-check:
