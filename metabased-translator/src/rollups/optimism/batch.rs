@@ -3,12 +3,12 @@ use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::{Buf, Decodable, Encodable, Error as RlpError};
 use alloy_rpc_types::{TransactionInput, TransactionRequest};
 use flate2::write::ZlibEncoder;
-use flate2::Compression;
+use flate2::{Compress,Compression};
 
 
 
 use std::error::Error;
-use std::io::{Read, Write};
+use std::io::Write;
 use std::ops::Div;
 use tracing::info;
 
@@ -101,13 +101,12 @@ impl Batch {
         let encoded_batch = self.encode();
         info!("encoded_batch : {:?}", encoded_batch);
 
-
         // Step 2: Encode using RLP
-        let buff = alloy_rlp::encode(&encoded_batch[..]);
-        info!("buff: {:?}", buff);
+        let rlp_batch = alloy_rlp::encode(&encoded_batch[..]);
+        info!("rlp_batch: {:?}", rlp_batch);
 
         // Step 3: Compress using zlib
-        let channel = to_channel(&buff)?;
+        let channel = to_channel(&rlp_batch)?;
         info!("channel: {:?}", channel);
 
         // Step 3: Split into frames
@@ -119,7 +118,7 @@ impl Batch {
 /// Compresses the batch data using zlib (no compression)
 fn to_channel(batch: &[u8]) -> Result<Vec<u8>> {
     let mut buf = Vec::new();
-    let mut encoder = ZlibEncoder::new(&mut buf, Compression::default());
+    let mut encoder = ZlibEncoder::new(&mut buf, Compression::best());
     encoder.write_all(batch)?;
     encoder.finish()?;
     Ok(buf)
