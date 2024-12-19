@@ -3,6 +3,7 @@ use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::{Buf, Decodable, Encodable, Error as RlpError};
 use alloy_rpc_types::{TransactionInput, TransactionRequest};
 use flate2::{write::ZlibEncoder, Compression};
+use std::ops::Div;
 
 use std::error::Error;
 use std::io::Write;
@@ -117,17 +118,15 @@ fn to_channel(batch: &[u8]) -> Result<Vec<u8>> {
 }
 
 fn to_frames(channel: &[u8], frame_size: usize, block_hash: B256) -> Result<Vec<Frame>> {
-    let num_frames = (channel.len() + frame_size - 1) / frame_size;
+    let num_frames = (channel.len() + frame_size - 1) .div(frame_size);
     let mut frames = Vec::with_capacity(num_frames);
 
     let id = B256::from(block_hash)[..16]
     .try_into()
     .expect("16 bytes always fit");
 
-    let mut frame_num: u16 = 0;
 
-    for i in (0..channel.len()).step_by(frame_size) {
-        let end = (i + frame_size).min(channel.len());
+    for (frame_num, i) in (0_u16..).zip((0..channel.len()).step_by(frame_size)){       let end = (i + frame_size).min(channel.len());
         let is_last = end == channel.len();
 
         let frame = Frame{
@@ -137,7 +136,6 @@ fn to_frames(channel: &[u8], frame_size: usize, block_hash: B256) -> Result<Vec<
             is_last,
         };
         frames.push(frame);
-        frame_num += 1;
     }
 
     Ok(frames)
