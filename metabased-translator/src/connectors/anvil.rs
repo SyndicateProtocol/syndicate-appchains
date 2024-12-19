@@ -1,10 +1,10 @@
-use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
-use crate::rollups::optimism::frame::to_data;
-use alloy::signers::k256::ecdsa;
+use crate::rollups::optimism::batch::new_batcher_tx;
+use crate::rollups::optimism::batcher_data::get_batcher_data;
 use alloy_primitives::{Address, B256, U256};
 use alloy_provider::ext::AnvilApi;
 use alloy_provider::{Provider, ProviderBuilder};
 use alloy_rpc_types::{BlockId, BlockTransactionsKind, BlockNumberOrTag};
+use op_alloy::protocol::SingleBatch;
 use reqwest::Url;
 use std::process::{Child, Command};
 use std::str::FromStr;
@@ -70,6 +70,12 @@ pub async fn run() -> eyre::Result<()> {
         .expect("Failed to start Anvil. Is it installed?");
 
     let _guard = scopeguard::guard(anvil, cleanup_anvil);
+
+
+    //sleep for 1 second to make sure anvil is ready
+    tokio::time::sleep(Duration::from_secs(1)).await;
+
+    // Test JSON-RPC request to get the chain ID
     let server_url = format!("http://localhost:{}", port);
 
     let signer: PrivateKeySigner ="fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d".parse().unwrap();
@@ -96,8 +102,7 @@ pub async fn run() -> eyre::Result<()> {
     .expect("Failed to get block");
 
     info!("Block: {:?}", block);
-
-    let batch = Batch {
+    let single_batch = SingleBatch {
         parent_hash: B256::from_str(
             "0xe009262cd1adf34cfaf845fd1c17a6ddb7f97c67b2992cd9f286ff4e1c6ad233",
         )
@@ -107,8 +112,10 @@ pub async fn run() -> eyre::Result<()> {
         timestamp: 1712500002,
         transactions: vec![],
     };
-    let frames = batch.get_frames(1000000).unwrap();
-    let data = to_data(&frames).unwrap();
+    let data = get_batcher_data(single_batch);
+    info!("OP Data: {:?}", data);
+
+
     let tx = new_batcher_tx(batcher, batch_inbox, data.into());
     info!("Transaction: {:?}", tx);
     let builder = provider.send_transaction(tx.clone()).await.unwrap();
@@ -117,8 +124,6 @@ pub async fn run() -> eyre::Result<()> {
     provider
         .anvil_mine(Some(U256::from(1)), None::<U256>)
         .await?;
-
-    //// END BATCHER TESTING ////
 
     // Keep the main thread alive
     loop {
@@ -151,17 +156,14 @@ mod tests {
     use super::*;
     use alloy::{hex, sol};
     use alloy::primitives::U256;
-    use alloy_primitives::{keccak256, Address};
     use alloy_provider::ext::AnvilApi;
     use alloy::providers::ProviderBuilder;
-    use std::str::FromStr;
     use std::sync::Arc;
     use alloy::transports::BoxTransport;
     use alloy_provider::fillers::{BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller};
-    use alloy_provider::{Identity, Provider, RootProvider};
+    use alloy_provider::{Identity, RootProvider};
     use alloy_provider::layers::AnvilProvider;
     use alloy_provider::network::{Ethereum, EthereumWallet};
-    use crate::contract_bindings::eventemitter::EventEmitter::EventEmitterInstance;
 
     // Create a type alias for our complex provider type
     type AnvilFillProvider =
