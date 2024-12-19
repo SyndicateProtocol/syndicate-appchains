@@ -5,8 +5,10 @@ use alloy_rpc_types::{TransactionInput, TransactionRequest};
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 
+
+
 use std::error::Error;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::ops::Div;
 use tracing::info;
 
@@ -99,12 +101,17 @@ impl Batch {
         let encoded_batch = self.encode();
         info!("encoded_batch : {:?}", encoded_batch);
 
-        // Step 2: Compress using zlib
-        let compressed_channel = to_channel(&encoded_batch)?;
-        info!("channel: {:?}", compressed_channel);
+
+        // Step 2: Encode using RLP
+        let buff = alloy_rlp::encode(&encoded_batch[..]);
+        info!("buff: {:?}", buff);
+
+        // Step 3: Compress using zlib
+        let channel = to_channel(&buff)?;
+        info!("channel: {:?}", channel);
 
         // Step 3: Split into frames
-        let frames = to_frames(&compressed_channel, frame_size, self.epoch_hash)?;
+        let frames = to_frames(&channel, frame_size, self.epoch_hash)?;
         Ok(frames)
     }
 }
@@ -112,7 +119,7 @@ impl Batch {
 /// Compresses the batch data using zlib (no compression)
 fn to_channel(batch: &[u8]) -> Result<Vec<u8>> {
     let mut buf = Vec::new();
-    let mut encoder = ZlibEncoder::new(&mut buf, Compression::none());
+    let mut encoder = ZlibEncoder::new(&mut buf, Compression::default());
     encoder.write_all(batch)?;
     encoder.finish()?;
     Ok(buf)
@@ -122,7 +129,9 @@ fn to_frames(channel: &[u8], frame_size: usize, block_hash: B256) -> Result<Vec<
     let num_frames = (channel.len() + frame_size - 1).div(frame_size);
     let mut frames = Vec::with_capacity(num_frames);
 
-    let id = B256::from(block_hash)[..16].try_into().expect("16 bytes always fit");
+    let id = B256::from(block_hash)[..16]
+        .try_into()
+        .expect("16 bytes always fit");
 
     for (frame_num, chunk) in channel.chunks(frame_size).enumerate() {
         let is_last = frame_num == num_frames - 1;
