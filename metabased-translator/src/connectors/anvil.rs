@@ -42,7 +42,7 @@ pub async fn run() -> eyre::Result<()> {
         info!("Port {} is in use, switching to port {}", base_port, port);
     }
 
-    // INIT anvil 
+    // INIT anvil
     let _anvil = ProviderBuilder::new()
         .with_recommended_fillers()
         .on_anvil_with_config(|anvil|
@@ -309,10 +309,6 @@ mod tests {
         let anvil = AnvilInstance::with_port(port).await?;
         deploy_contracts(anvil.url).await?;
 
-        // let provider = anvil.provider;
-        // let provider = ProviderBuilder::new()
-        //     .with_recommended_fillers()
-        //     .on_anvil_with_wallet();
         let provider = anvil.provider;
 
         let address = "0x1234000000000000000000000000000000000000".parse()?;
