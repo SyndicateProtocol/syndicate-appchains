@@ -111,6 +111,7 @@ impl Batch {
 
         // Step 3: Split into frames
         let frames = to_frames(&channel, frame_size, self.epoch_hash)?;
+        info!("frames: {:?}", frames);
         Ok(frames)
     }
 }
@@ -125,24 +126,32 @@ fn to_channel(batch: &[u8]) -> Result<Vec<u8>> {
 }
 
 fn to_frames(channel: &[u8], frame_size: usize, block_hash: B256) -> Result<Vec<Frame>> {
-    let num_frames = (channel.len() + frame_size - 1).div(frame_size);
+    let num_frames = (channel.len() + frame_size - 1) / frame_size;
     let mut frames = Vec::with_capacity(num_frames);
 
     let id = B256::from(block_hash)[..16]
-        .try_into()
-        .expect("16 bytes always fit");
+    .try_into()
+    .expect("16 bytes always fit");
 
-    for (frame_num, chunk) in channel.chunks(frame_size).enumerate() {
-        let is_last = frame_num == num_frames - 1;
-        frames.push(Frame {
+    let mut frame_num: u16 = 0;
+
+    for i in (0..channel.len()).step_by(frame_size) {
+        let end = (i + frame_size).min(channel.len());
+        let is_last = end == channel.len();
+
+        let frame = Frame{
             id,
-            frame_num: frame_num as u16,
-            data: chunk.to_vec(),
+            frame_num,
+            data: channel[i..end].to_vec(),
             is_last,
-        });
+        };
+        frames.push(frame);
+        frame_num += 1;
     }
+
     Ok(frames)
 }
+
 
 pub fn new_batcher_tx(from: Address, to: Address, data: Bytes) -> TransactionRequest {
     let input = TransactionInput::new(data);
