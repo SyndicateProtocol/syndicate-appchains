@@ -1,10 +1,12 @@
 use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
+use crate::rollups::optimism::batcher_data::get_batcher_data;
 use crate::rollups::optimism::frame::to_data;
 use alloy::signers::k256::ecdsa;
 use alloy_primitives::{Address, B256, U256};
 use alloy_provider::ext::AnvilApi;
 use alloy_provider::{Provider, ProviderBuilder};
 use alloy_rpc_types::{BlockId, BlockTransactionsKind, BlockNumberOrTag};
+use op_alloy::protocol::SingleBatch;
 use reqwest::Url;
 use std::process::{Child, Command};
 use std::str::FromStr;
@@ -66,6 +68,11 @@ pub async fn run() -> eyre::Result<()> {
         .expect("Failed to start Anvil. Is it installed?");
 
     let _guard = scopeguard::guard(anvil, cleanup_anvil);
+
+
+    //sleep for 1 second to make sure anvil is ready
+    tokio::time::sleep(Duration::from_secs(1)).await;
+
     // Test JSON-RPC request to get the chain ID
     let client = reqwest::Client::new();
     let server_url = format!("http://localhost:{}", port);
@@ -110,7 +117,23 @@ pub async fn run() -> eyre::Result<()> {
 
     info!("Block: {:?}", block);
 
-    let batch = Batch {
+    // let batch = Batch {
+    //     parent_hash: B256::from_str(
+    //         "0xe009262cd1adf34cfaf845fd1c17a6ddb7f97c67b2992cd9f286ff4e1c6ad233",
+    //     )
+    //     .unwrap(),
+    //     epoch_num: 0,
+    //     epoch_hash: block.header.hash,
+    //     timestamp: 1712500002,
+    //     transactions: vec![],
+    // };
+
+    // let frames = batch.get_frames(1000000).unwrap();
+    // let data = to_data(&frames).unwrap();
+    // info!("Data: {:?}", data);
+    // Test the op_alloy batcher_data function
+
+    let single_batch = SingleBatch {
         parent_hash: B256::from_str(
             "0xe009262cd1adf34cfaf845fd1c17a6ddb7f97c67b2992cd9f286ff4e1c6ad233",
         )
@@ -120,8 +143,10 @@ pub async fn run() -> eyre::Result<()> {
         timestamp: 1712500002,
         transactions: vec![],
     };
-    let frames = batch.get_frames(1000000).unwrap();
-    let data = to_data(&frames).unwrap();
+    let data = get_batcher_data(single_batch);
+    info!("OP Data: {:?}", data);
+
+
     let tx = new_batcher_tx(batcher, batch_inbox, data.into());
     info!("Transaction: {:?}", tx);
     let builder = provider.send_transaction(tx.clone()).await.unwrap();
