@@ -4,9 +4,10 @@
 
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
-      "installZsh": false,
       "username": "vscode",
-      "upgradePackages": true
+      "upgradePackages": true,
+      "installZsh": true,
+      "configureZshAsDefaultShell": true
     },
     "ghcr.io/devcontainers/features/git:1": "latest",
     "ghcr.io/devcontainers/features/node:1": {
@@ -47,7 +48,7 @@
   // Update package lists and install required tools:
   // - just: Required for running development commands
   // - netcat-openbsd: Used for port verification during container startup
-  "postCreateCommand": "sudo apt update && sudo apt install -y bash just netcat-openbsd && just --justfile ./.devcontainer/justfile create-aliases",
+  "postCreateCommand": "sudo apt update && sudo apt install -y just netcat-openbsd && just --justfile ./.devcontainer/justfile create-aliases",
 
   // Configure tool-specific properties.
   "customizations": {
