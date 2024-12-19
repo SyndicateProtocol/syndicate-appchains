@@ -129,7 +129,7 @@ pub async fn run() -> eyre::Result<()> {
         timestamp: 1712500002,
         transactions: vec![],
     };
-    let frames = batch.get_frames(1000).unwrap();
+    let frames = batch.get_frames(1000000).unwrap();
     let data = to_data(&frames).unwrap();
     let expected_data = alloy::hex::decode("0081c27ac9f21c4f1abd1679d7bddcd69300000000005e7801004e00b1ffb84c00f849a0e009262cd1adf34cfaf845fd1c17a6ddb7f97c67b2992cd9f286ff4e1c6ad23380a0103ac73bf5b87545625259521c3c53c9f51f08c782831a5eb216c6383ddb201d846612ad22c0010000ffff381525a701")?; //to_data(&frames).unwrap();
     let txn = new_batcher_tx(batcher, batch_inbox, data.into());
