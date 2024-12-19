@@ -3,7 +3,6 @@ package types
 import (
 	"bytes"
 	"compress/zlib"
-	"fmt"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/ethereum/go-ethereum/common"
@@ -69,7 +68,6 @@ func (b *Batch) GetFrames(frameSize int) ([]*Frame, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("encodedBatch", encodedBatch)
 
 	buff := bytes.NewBuffer(nil)
 	err = rlp.Encode(buff, encodedBatch)
@@ -82,15 +80,13 @@ func (b *Batch) GetFrames(frameSize int) ([]*Frame, error) {
 		return nil, err
 	}
 
-	fmt.Println("channel", channel)
-
 	return ToFrames(channel, frameSize, b.EpochHash)
 }
 
 func ToChannel(batch []byte) ([]byte, error) {
 	var buf bytes.Buffer
 
-	writer, err := zlib.NewWriterLevel(&buf, zlib.NoCompression)
+	writer, err := zlib.NewWriterLevel(&buf, zlib.BestSpeed)
 	if err != nil {
 		return nil, err
 	}
@@ -102,8 +98,6 @@ func ToChannel(batch []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	fmt.Println("buf before", buf)
 
 	return buf.Bytes(), nil
 }
