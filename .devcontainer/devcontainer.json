@@ -4,8 +4,10 @@
 
   "features": {
     "ghcr.io/devcontainers/features/common-utils:2": {
-      "installZsh": false,
-      "username": "vscode"
+      "username": "vscode",
+      "upgradePackages": true,
+      "installZsh": true,
+      "configureZshAsDefaultShell": true
     },
     "ghcr.io/devcontainers/features/git:1": "latest",
     "ghcr.io/devcontainers/features/node:1": {
@@ -56,7 +58,7 @@
       "settings": {
         "go.toolsManagement.checkForUpdates": "local",
         "go.useLanguageServer": true,
-        "go.gopath": "/go",
+        "go.gopath": "/go"
       },
       // Add the IDs of extensions you want installed when the container is created.
       "extensions": [
