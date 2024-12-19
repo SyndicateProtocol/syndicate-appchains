@@ -209,6 +209,8 @@ create-envrc:
     "export METABASED_SEQUENCER_PORT={{ metabased_sequencer_port }}\n"\
     "export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x0000000000000000000000000000000000000000"\
     > {{ envrc_file }}
+    # Exit the script after creating the .envrc file
+    exit 0
     just _log-end "create-envrc"
 
 # Puts arb contract address into localnet ENV file
