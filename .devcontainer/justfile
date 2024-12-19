@@ -179,7 +179,7 @@ create-envrc:
     #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
-    cat > {{ envrc_file }} << EOL
+    cat > {{ envrc_file }} <<-EOL
         # Common
         export SETTLEMENT_CHAIN_RPC_URL={{ op_devnet_l2_rpc_url }}
         export SETTLEMENT_CHAIN_RPC_URL_WS=wss://base-rpc.publicnode.com # Optional if using WS
