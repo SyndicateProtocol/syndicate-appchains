@@ -1,0 +1,22 @@
+name: Dev Container Dry Run Check
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  dry-run-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Build dev container (dry run)
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/syndicateprotocol/metabased-devcontainer
+          imageTag: dry-run-test
+          push: never
