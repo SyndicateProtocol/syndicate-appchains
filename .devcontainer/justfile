@@ -174,7 +174,7 @@ op-update-chain-address: op-deploy-chain create-envrc
 create-envrc:
     just _log-start "create-envrc"
     #!/usr/bin/env bash
-        cat > {{ envrc_file }} << EOL
+    cat > {{ envrc_file }} << EOL
     # Common
     export SETTLEMENT_CHAIN_RPC_URL={{ op_devnet_l2_rpc_url }}
     export SETTLEMENT_CHAIN_RPC_URL_WS=wss://base-rpc.publicnode.com # Optional if using WS
@@ -349,21 +349,18 @@ arb-network-verify:
     just _log-start "arb-network-verify"
     #!/usr/bin/env bash
     set -e
-
     # Create .envrc file
     just create-envrc
     [ -f {{ envrc_file }} ] || { echo ".envrc file not created successfully"; exit 1; }
-
     # Set up network
     RESPONSE=$(just arb-network-setup)
     echo "Network setup: $RESPONSE"
-
     # Wait for network setup to complete
     if echo "$RESPONSE" || ! grep -q "Ready to bring up the Arbitrum Orbit devnet"; then
-        echo "[✓] Network setup succeeded"
+    echo "[✓] Network setup succeeded"
     else
-        echo "[✗] Network setup failed"
-        exit 1
+    echo "[✗] Network setup failed"
+    exit 1
     fi
     just _log-end "arb-network-verify"
 
@@ -374,13 +371,13 @@ arb-health-verify:
 
     # Start Arbitrum node in background if not running
     if ! nc -z localhost {{ arb_orbit_port }}; then
-        just arb-up &
+    just arb-up &
     fi
 
     # Wait for Arbitrum node to be ready via health check
     echo "[STATUS] Waiting for Arbitrum node to be ready..."
     until just arb-health-check | grep -q "result"; do
-        sleep 10
+    sleep 10
     done
     echo "[STATUS] Arbitrum node is ready"
 
