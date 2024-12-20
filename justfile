@@ -75,6 +75,10 @@ arb_contract_deploy_file := contracts_root + "/broadcast/DeployContractsForSeque
 # Add Foundry's bin directory to the PATH for all recipes
 export PATH := foundry_path
 
+# List all recipes
+default:
+    @just --list
+
 # Helper functions for command logging
 # Underscores are used to indicate a private function that can be called only
 # within the justfile
@@ -385,21 +389,13 @@ arb-network-verify:
 arb-health-verify:
     @just _log-start "arb-health-verify"
 
-    #! /usr/bin/zsh
-    # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
-    set -euxo pipefail
-
     # Start Arbitrum node in background if not running
-    if ! nc -z localhost {{ arb_orbit_port }}; then
-        just arb-up &
-    fi
+    if nc -z localhost {{ arb_orbit_port }} != "" {just arb-up}
 
     # Wait for Arbitrum node to be ready via health check
-    echo "[STATUS] Waiting for Arbitrum node to be ready..."
-    until just arb-health-check | grep -q "result"; do
-        sleep 10
-    done
-    echo "[STATUS] Arbitrum node is ready"
+    @echo "[STATUS] Waiting for Arbitrum node to be ready..."
+    until just arb-health-check | grep -q "result"; do sleep 10; done
+    @echo "[STATUS] Arbitrum node is ready"
     exit 0
 
     @just _log-end "arb-health-verify"
@@ -407,20 +403,16 @@ arb-health-verify:
 # Setup and verify sequencer
 sequencer-verify:
     @just _log-start "sequencer-verify"
-    #! /usr/bin/zsh
-    # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
-    set -euxo pipefail
 
     # Run sequencer setup and capture logs
-    just arb-sequencer-plus-setup 2>&1 | tee /tmp/sequencer-setup.log &
+    just arb-sequencer-plus-setup 2>&1 | tee /tmp/sequencer-setup.log
 
     # Wait for Rust build to complete
-    echo "[STATUS] Waiting for sequencer setup to complete..."
-    while ! grep -q "Finished \`dev\` profile" /tmp/sequencer-setup.log; do
-        sleep 20
-        echo "[STATUS] Still waiting for Rust build complete..."
-    done
-    echo "[STATUS] Rust build completed. Sequencer setup completed."
+    @echo "[STATUS] Waiting for sequencer setup to complete..."
+    while ! grep -q "Finished \`dev\` profile" /tmp/sequencer-setup.log; do \
+            echo "[STATUS] Still waiting for Rust build complete..." && sleep 20; \
+     done;
+    @echo "[STATUS] Rust build completed. Sequencer setup completed."
     exit 0
 
     @just _log-end "sequencer-verify"
@@ -428,25 +420,22 @@ sequencer-verify:
 # Run transaction test
 transaction-verify:
     @just _log-start "transaction-verify"
-    #! /usr/bin/zsh
-    # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
-    set -euxo pipefail
 
-    echo "[STATUS] Running test transaction..."
+    @echo "[STATUS] Running test transaction..."
     RESPONSE=$(just arb-test-sendRawTransaction)
-    echo "Response: $RESPONSE"
+    @echo "Response: $RESPONSE"
 
     # Check if response contains an error
-    if echo "$RESPONSE" | grep -q '"error"'; then
-        echo "[ERROR] Transaction failed with error:"
-        echo "$RESPONSE"
+    if echo "$RESPONSE" | grep -q '"error"'; then \
+        @echo "[ERROR] Transaction failed with error:" \
+        @echo "$RESPONSE" \
         exit 1
     fi
 
     # Check if response contains expected result
-    if ! echo "$RESPONSE" | grep -q '"result"'; then
-        echo "[ERROR] Transaction response missing result field:"
-        echo "$RESPONSE"
+    if ! echo "$RESPONSE" | grep -q '"result"'; then \
+        @echo "[ERROR] Transaction response missing result field:" \
+        @echo "$RESPONSE" \
         exit 1
     fi
     echo "[STATUS] Test L3 -> Arbitrum L2 transaction completed successfully"
