@@ -1,5 +1,4 @@
-pub mod ingestor {
-}
+pub mod ingestor {}
 
 #[cfg(test)]
 mod tests {
