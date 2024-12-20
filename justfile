@@ -295,11 +295,11 @@ foundry-upgrade:
 # OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
 # We initialize and then spin down the devnet to get the initialization time out
 # of the way upfront
-op-all: op-clone foundry-setup foundry-upgrade create-aliases
+op-all: op-clone foundry-setup foundry-upgrade
     @echo "Post-setup OP script completed successfully. Ready to bring up the OP Stack devnet with op-up."
 
 # Run all Arbitrum setup steps in sequence necessary for `arb-up`
-arb-network-setup: foundry-setup foundry-upgrade create-aliases
+arb-network-setup: foundry-setup foundry-upgrade
     @echo "Post-setup Arbitrum script completed successfully. Ready to bring up the Arbitrum Orbit devnet with arb-up."
 
 arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabased-sequencer
