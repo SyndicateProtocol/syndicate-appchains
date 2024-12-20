@@ -1,6 +1,6 @@
 use eyre::Result;
-use metabased_translator::config::cli;
-use metabased_translator::connectors::anvil;
+use block_builder::config::cli;
+use block_builder::connectors::anvil;
 
 // PoC deploying a contract using `anvil_set_code`, then interacting with it
 #[tokio::main]
