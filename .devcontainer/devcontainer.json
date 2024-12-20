@@ -48,7 +48,8 @@
   // Update package lists and install required tools:
   // - just: Required for running development commands
   // - netcat-openbsd: Used for port verification during container startup
-  "postCreateCommand": "sudo apt update && sudo apt install -y just netcat-openbsd && just --justfile ./.devcontainer/justfile create-aliases",
+  // - just zsh completions: Adds zsh tab completion for just commands within the justfile
+  "postCreateCommand": "sudo apt update && sudo apt install -y just netcat-openbsd && just --completions zsh > just.zsh && just --justfile ./.devcontainer/justfile create-aliases",
 
   // Configure tool-specific properties.
   "customizations": {
