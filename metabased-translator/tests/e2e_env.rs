@@ -15,6 +15,7 @@ impl TestEnvConfig {
     pub fn from_env() -> Result<Self, Error> {
         Ok(Self {
             rollup_type: RollupType::from_env()?,
+            // TODO TODO (SEQ-435) - refactor
             settlement_rpc: std::env::var("SETTLEMENT_CHAIN_RPC_URL").ok(),
             sequencing_rpc: std::env::var("SEQUENCING_CHAIN_RPC_URL").ok(),
         })
@@ -29,6 +30,7 @@ pub enum RollupType {
 
 impl RollupType {
     pub fn from_env() -> Result<Self, Box<dyn std::error::Error>> {
+        // TODO TODO (SEQ-435) - refactor
         match std::env::var("ROLLUP_TYPE").as_deref() {
             Ok("OP") => Ok(RollupType::Optimism),
             Ok("ARB") => Ok(RollupType::Arbitrum),
