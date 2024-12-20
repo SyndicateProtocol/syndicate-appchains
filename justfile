@@ -493,7 +493,7 @@ _run-arb-nitro-dev-node:
     --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":1}' \
     "{{arb_orbit_l2_rpc_url}}")
 
-    if [[ "$curl_output" == *"result"* ]]; then \
+    if [[ "$curl_output" =~ "result" ]]; then \
         echo "Nitro node is running!" \
     else \
         echo "Failed to start Nitro node." \
