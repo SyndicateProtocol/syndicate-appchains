@@ -152,6 +152,7 @@ op-deploy-chain:
     @just _log-start "op-deploy-chain"
     cat {{ contracts_root }}/script/DeployContractsForSequencerChain.s.sol | sed -E 's/(l3ChainId = )0;/\1{{ l3_chain_id }};/' > {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
     [ -f {{ op_contract_deploy_file }} ] || forge script --root {{ contracts_root }} {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url {{ op_devnet_l2_rpc_url }} --private-key {{ op_devnet_private_key }} --broadcast -vvvv
+    # TODO: Execute clean even if deploy fails. Also merge this in with op-clean-chain
     rm {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
     @just _log-end "op-deploy-chain"
 
@@ -161,6 +162,7 @@ arb-deploy-chain:
     @just _log-start "arb-deploy-chain"
     cat {{ contracts_root }}/script/DeployContractsForSequencerChain.s.sol | sed -E 's/(l3ChainId = )0;/\1{{ l3_chain_id }};/' > {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
     [ -f {{ arb_contract_deploy_file }} ] || forge script --root {{ contracts_root }} {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url {{ arb_orbit_l2_rpc_url }} --private-key {{ arb_orbit_l2_private_key }} --broadcast --skip-simulation -vvvv
+    # TODO: Execute clean even if deploy fails. Also merge this in with arb-clean-chain
     rm {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
     @just _log-end "arb-deploy-chain"
 
@@ -190,15 +192,19 @@ arb-clean-chain:
 
 # Puts contract address into localnet .envrc file
 # Works by finding the value corresponding to the key in the .envrc, and replacing it with the address found in the `deploy_file`
+# TODO: Requires running RPC. Will handle soon
 op-update-chain-address: op-deploy-chain create-envrc
+    @just _log-start "op-update-chain-address"
     cat {{ envrc_file }} | grep -v METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS= > {{ envrc_file }}.tmp
     echo METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ op_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ envrc_file }}.tmp
     mv {{ envrc_file }}.tmp {{ envrc_file }}
+    @just _log-end "op-update-chain-address"
 
 # TODO(SEQ-312): Merge METABASED_SEQUENCER_CHAIN_RPC_ADDRESS -> SEQUENCING_CHAIN_RPC_URL
 # Copy of `.envrc.example` using vars set earlier in the file
 create-envrc:
     @just _log-start "create-envrc"
+
     #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
@@ -238,6 +244,7 @@ create-envrc:
 
 # Puts arb contract address into localnet ENV file
 # Works by finding the value corresponding to the key in the .envrc, and replacing it with the address found in the `deploy_file`
+# TODO: Requires running RPC. Will handle soon
 arb-update-chain-address: arb-deploy-chain create-envrc
     cat {{ envrc_file }} | grep -v METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS= > {{ envrc_file }}.tmp
     echo export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ envrc_file }}.tmp
@@ -263,6 +270,7 @@ update-chain-address: arb-deploy-chain create-envrc
 
     @just _log-end "update-chain-address"
 
+# Runs Go install for Go projects within the monorepo
 go-install:
     @just _log-start "go-install"
     go install {{ repository_root }}/op-translator
