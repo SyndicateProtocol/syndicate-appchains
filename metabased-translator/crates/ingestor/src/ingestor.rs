@@ -9,7 +9,7 @@ use tokio::sync::{
     mpsc::{channel, Receiver, Sender},
     oneshot,
 };
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
@@ -98,8 +98,6 @@ impl Ingestor {
         }
         self.sender.send(block_and_receipts.clone()).await?;
         self.current_block_number += 1;
-        info!("CURRENT BLOCK {:?}", self.current_block_number);
-        info!("update_channel_capacity {:?}", self.sender.capacity());
         self.metrics.update_channel_capacity(self.chain, self.sender.capacity());
         Ok(())
     }
