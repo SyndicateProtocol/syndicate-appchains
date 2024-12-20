@@ -5,13 +5,14 @@ use alloy::{
     transports::BoxTransport,
 };
 use eyre;
-use std::error::Error;
+use std::{error::Error, time::Duration};
 use tokio::sync::mpsc;
 
 pub struct Ingestor {
     chain: RootProvider<BoxTransport>,
     current_block_number: u64,
     sender: mpsc::Sender<Block>,
+    polling_interval: Duration,
 }
 
 impl Ingestor {
@@ -19,6 +20,7 @@ impl Ingestor {
         rpc_url: &str,
         start_block: u64,
         buffer_size: usize,
+        polling_interval: Duration,
     ) -> Result<(Self, mpsc::Receiver<Block>), Box<dyn Error>> {
         let chain = ProviderBuilder::new().on_builtin(rpc_url).await?;
         let (sender, receiver) = mpsc::channel(buffer_size);
@@ -27,12 +29,13 @@ impl Ingestor {
                 chain,
                 current_block_number: start_block,
                 sender,
+                polling_interval,
             },
             receiver,
         ))
     }
 
-    pub async fn get_block(&self, block_number: u64) -> Result<Block, Box<dyn Error>> {
+    async fn get_block(&self, block_number: u64) -> Result<Block, Box<dyn Error>> {
         let block = self
             .chain
             .get_block_by_number(
@@ -44,7 +47,7 @@ impl Ingestor {
         Ok(block)
     }
 
-    pub async fn push_block(&mut self, block: Block) -> Result<(), Box<dyn Error>> {
+    async fn push_block(&mut self, block: Block) -> Result<(), Box<dyn Error>> {
         if block.header.inner.number != self.current_block_number {
             return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
@@ -54,6 +57,15 @@ impl Ingestor {
         self.sender.send(block.clone()).await?;
         self.current_block_number += 1;
         Ok(())
+    }
+
+    pub async fn start_polling(&mut self) -> Result<(), Box<dyn Error>> {
+        let mut interval = tokio::time::interval(self.polling_interval);
+        loop {
+            let block = self.get_block(self.current_block_number).await?;
+            self.push_block(block).await?;
+            interval.tick().await;
+        }
     }
 }
 
@@ -89,10 +101,12 @@ mod tests {
     async fn test_ingestor_new() -> Result<()> {
         let start_block = 100;
         let buffer_size = 10;
+        let polling_interval = Duration::from_secs(1);
 
-        let (ingestor, receiver) = Ingestor::new(RPC_URL, start_block, buffer_size)
-            .await
-            .expect("Failed to create ingestor");
+        let (ingestor, receiver) =
+            Ingestor::new(RPC_URL, start_block, buffer_size, polling_interval)
+                .await
+                .expect("Failed to create ingestor");
 
         assert_eq!(ingestor.current_block_number, start_block);
         assert_eq!(receiver.capacity(), buffer_size);
@@ -103,11 +117,14 @@ mod tests {
     #[tokio::test]
     async fn test_poll_block() -> Result<()> {
         let start_block = 100;
+        let polling_interval = Duration::from_secs(1);
+
         let (sender, mut receiver) = mpsc::channel(10);
         let mut ingestor = Ingestor {
             chain: ProviderBuilder::new().on_builtin(RPC_URL).await?,
             current_block_number: start_block,
             sender,
+            polling_interval,
         };
 
         let block = get_dummy_block(start_block);
@@ -132,11 +149,14 @@ mod tests {
     #[tokio::test]
     async fn test_poll_block_mismatch_error() -> Result<()> {
         let start_block = 100;
+        let polling_interval = Duration::from_secs(1);
+
         let (sender, _) = mpsc::channel(10);
         let mut ingestor = Ingestor {
             chain: ProviderBuilder::new().on_builtin(RPC_URL).await?,
             current_block_number: start_block,
             sender,
+            polling_interval,
         };
 
         let mismatched_block = get_dummy_block(start_block + 1);
