@@ -36,9 +36,9 @@ op_devnet_l2_chain_id := "901"
 arb_orbit_l2_chain_id := "412346"
 
 # Default localnet port
-arb_orbit_port := "8547"
+arb_orbit_l2_port := "8547"
 
-arb_orbit_l2_rpc_url := "http://127.0.0.1:" + arb_orbit_port
+arb_orbit_l2_rpc_url := "http://127.0.0.1:" + arb_orbit_l2_port
 
 metabased_sequencer_port := "8456"
 
@@ -49,7 +49,7 @@ op_translator_port := "9999"
 op_translator_url := "http://127.0.0.1:" + op_translator_port
 
 # Dev account private key - https://docs.arbitrum.io/run-arbitrum-node/run-nitro-dev-node#development-account-used-by-default
-arb_orbit_private_key := "0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659"
+arb_orbit_l2_private_key := "0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659"
 
 # Define root directory of the git repository
 repository_root := justfile_directory() + "/.."
@@ -158,7 +158,7 @@ op-deploy-chain:
 arb-deploy-chain:
     @just _log-start "arb-deploy-chain"
     cat {{ contracts_root }}/script/DeployContractsForSequencerChain.s.sol | sed -E 's/(l3ChainId = )0;/\1{{ l3_chain_id }};/' > {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
-    [ -f {{ arb_contract_deploy_file }} ] || forge script --root {{ contracts_root }} {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url {{ arb_orbit_l2_rpc_url }} --private-key {{ arb_orbit_private_key }} --broadcast --skip-simulation -vvvv
+    [ -f {{ arb_contract_deploy_file }} ] || forge script --root {{ contracts_root }} {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url {{ arb_orbit_l2_rpc_url }} --private-key {{ arb_orbit_l2_private_key }} --broadcast --skip-simulation -vvvv
     rm {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
     @just _log-end "arb-deploy-chain"
 
@@ -226,7 +226,7 @@ create-envrc:
     "export MB_PUBLISHER_BLOB_UPLOAD_TIMEOUT=10m\n"\
     "# metabased-sequencer\n"\
     "export METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}\n"\
-    "export METABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_private_key }}\n"\
+    "export METABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_l2_private_key }}\n"\
     "export METABASED_SEQUENCER_PORT={{ metabased_sequencer_port }}\n"\
     "export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x0000000000000000000000000000000000000000"\
     > {{ envrc_file }}
@@ -385,7 +385,7 @@ arb-health-verify:
     @just _log-start "arb-health-verify"
 
     # Start Arbitrum node in background if not running
-    if nc -z localhost {{ arb_orbit_port }} != "" {just arb-up}
+    if nc -z localhost {{ arb_orbit_l2_port }} != "" {just arb-up}
 
     # Wait for Arbitrum node to be ready via health check
     @echo "[STATUS] Waiting for Arbitrum node to be ready..."
@@ -473,12 +473,16 @@ _log-end command:
 
 # SOURCE: https://github.com/OffchainLabs/nitro-devnode/blob/main/run-dev-node.sh , 10/31/24
 _run-arb-nitro-dev-node:
-    #!/bin/bash
+    #!/usr/bin/zsh
+
+    echo "PORT {{arb_orbit_l2_port}}"
+    echo "DEV_PRIVATE_KEY {{arb_orbit_l2_private_key}}"
+    echo "RPC_URL {{arb_orbit_l2_rpc_url}}"
 
     # Variable defaults
-    PORT=${{arb_orbit_port}}
-    DEV_PRIVATE_KEY=${{arb_orbit_private_key}}
-    RPC_URL=${{arb_orbit_l2_rpc_url}}
+    export PORT="${{arb_orbit_l2_port}}"
+    export DEV_PRIVATE_KEY="${{arb_orbit_l2_private_key}}"
+    export RPC_URL="${{arb_orbit_l2_rpc_url}}"
 
 
     # Start Nitro dev node in the background
@@ -487,7 +491,7 @@ _run-arb-nitro-dev-node:
     --http.port $PORT \
 
     # Wait for the node to initialize
-    echo "Waiting for the Nitro node to initialize on port $PORT..."
+    echo "Waiting for the Nitro node to initialize on port $PORT and RPC URL $RPC_URL..."
 
     while ! curl -s -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":1}' "$RPC_URL" | grep -q "result"; do echo "Checking for node initialization..." && sleep 1; done
 
