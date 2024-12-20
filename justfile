@@ -165,7 +165,7 @@ arb-deploy-chain:
     @just _log-end "arb-deploy-chain"
 
 # Runs sequencer using .env file
-run-metabased-sequencer:
+run-metabased-sequencer: create-envrc
     @just _log-start "run-metabased-sequencer"
     . {{ envrc_file }} && cd {{ sequencer_root }} && cargo run -p interceptor
     @just _log-end "run-metabased-sequencer"
