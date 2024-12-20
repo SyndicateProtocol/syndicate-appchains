@@ -1,4 +1,4 @@
-name: Publish metabased rollup Docker images
+name: Publish metabased-sequencer Docker image
 
 on:
   push:

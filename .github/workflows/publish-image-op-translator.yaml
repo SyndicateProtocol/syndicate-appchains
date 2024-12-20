@@ -1,4 +1,4 @@
-name: Publish metabased rollup Docker images
+name: Publish op-translator Docker image
 
 on:
   push:
