@@ -12,11 +12,11 @@ pub struct TestEnvConfig {
 }
 
 impl TestEnvConfig {
-    pub fn from_env() -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn from_env() -> Result<Self, Error> {
         Ok(Self {
             rollup_type: RollupType::from_env()?,
-            settlement_rpc: std::env::var("SETTLEMENT_JSON_RPC_URL").ok(),
-            sequencing_rpc: std::env::var("SEQUENCING_JSON_RPC_URL").ok(),
+            settlement_rpc: std::env::var("SETTLEMENT_CHAIN_RPC_URL").ok(),
+            sequencing_rpc: std::env::var("SEQUENCING_CHAIN_RPC_URL").ok(),
         })
     }
 }
