@@ -494,10 +494,10 @@ _run-arb-nitro-dev-node:
     "{{arb_orbit_l2_rpc_url}}")
 
     if [[ "$curl_output" =~ "result" ]]; then \
-        echo "Nitro node is running!" \
+        echo "Nitro node is running!"; \
     else \
-        echo "Failed to start Nitro node." \
-        exit 1 \
+        echo "Failed to start Nitro node."; \
+        exit 1; \
     fi
 
     # Make the caller a chain owner
