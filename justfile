@@ -52,7 +52,7 @@ op_translator_url := "http://127.0.0.1:" + op_translator_port
 arb_orbit_l2_private_key := "0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659"
 
 # Define root directory of the git repository
-repository_root := justfile_directory() + "/.."
+repository_root := justfile_directory()
 
 # Define root directory of the metabased contracts project
 contracts_root := repository_root + "/metabased-contracts"
