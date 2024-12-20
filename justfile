@@ -305,6 +305,7 @@ arb-network-setup: foundry-setup foundry-upgrade
 arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabased-sequencer
     @echo "Arbitrum Sequencer setup completed successfully. Running sequencer."
 
+# TODO: Confirm that health checks work for running services
 arb-health-check:
     @just _log-start "arb-health-check"
     curl -s -X POST -H "Content-Type: application/json" \
@@ -326,12 +327,15 @@ op-translator-health-check:
     --data '{"jsonrpc":"2.0","method":"health","id":1}'
     @just _log-end "op-translator-health-check"
 
+# Requires arb-up and metabased-sequencer up
+# TODO: Auto-start services if not running
 arb-test-sendRawTransaction: arb-health-check sequencer-health-check
     curl --location {{ metabased_sequencer_url }} \
     --header 'Content-Type: application/json' \
     --data '{"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["0xb85902f85682038501808088ffffffffffffffff808080c001a0d555dc3a308d5bde3d5bc665796f9e7d7125c1554667325533fe237c1aa120b5a07d97dae06082d3eb7fa8966b33f6ce51d7127dcddd5da3d8be9c448a72150a90"],"id":1}'
 
 # Setup and verify Arbitrum network configuration
+# TODO: Fix this script
 arb-network-verify:
     @just _log-start "arb-network-verify"
 
@@ -350,6 +354,7 @@ arb-network-verify:
     @just _log-end "arb-network-verify"
 
 # Health check for Arbitrum node
+# TODO: Fix this script
 arb-health-verify:
     @just _log-start "arb-health-verify"
 
@@ -382,6 +387,7 @@ sequencer-verify:
     @just _log-end "sequencer-verify"
 
 # Run transaction test
+# TODO: Fix this script
 transaction-verify:
     @just _log-start "transaction-verify"
 
@@ -408,6 +414,7 @@ transaction-verify:
     @just _log-end "transaction-verify"
 
 # Aggregated command for CI pipeline to run all verifications
+# TODO: Migrate to standard Justfile syntax
 verify-all:
     @just _log-start "verify-all"
     #! /usr/bin/zsh
