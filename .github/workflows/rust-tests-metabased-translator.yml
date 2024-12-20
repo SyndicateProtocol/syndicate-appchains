@@ -1,0 +1,39 @@
+name: Rust Tests metabased-sequencer
+
+on:
+  push:
+    branches:
+      - anvil-poc
+      - main
+  pull_request:
+    paths:
+      - "metabased-translator/**"
+
+env:
+  CARGO_TERM_COLOR: always
+
+defaults:
+  run:
+    working-directory: metabased-translator
+
+jobs:
+  test:
+    name: Run Rust Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Foundry before Rust setup
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - run: rustup toolchain install stable --profile minimal
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "metabased-translator -> target"
+
+      - name: Run tests
+        run: cargo test --workspace

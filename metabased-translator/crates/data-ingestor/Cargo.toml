@@ -1,0 +1,7 @@
+[package]
+name = "data-ingestor"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pre-commit-hooks = "0.3.0"
