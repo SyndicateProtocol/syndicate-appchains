@@ -1,6 +1,6 @@
 use block_builder::config::cli;
-use eyre::Result;
 use block_builder::connectors::anvil::MetaChainProvider;
+use eyre::Result;
 
 // PoC deploying a contract using `anvil_set_code`, then interacting with it
 #[tokio::main]
