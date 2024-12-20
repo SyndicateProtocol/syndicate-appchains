@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-    "block-builder",
-    "data-ingestor"
+    "crates/block-builder",
+    "crates/data-ingestor"
 ]
 
 [workspace.dependencies]
