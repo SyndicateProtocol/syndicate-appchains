@@ -291,47 +291,6 @@ foundry-upgrade:
     [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || foundryup
     @just _log-end "foundry-upgrade"
 
-# Create aliases for devnet commands in both Bash and Zsh
-create-aliases:
-    #! /usr/bin/zsh
-    # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
-    set -euxo pipefail
-    for rc_file in ~/.bashrc ~/.zshrc; do
-        if [[ -f "$rc_file" ]]; then
-            # Remove any existing aliases first
-            sed -i '/# BEGIN Metabased Rollup Dev Container aliases/,/# END Metabased Rollup Dev Container aliases/d' "$rc_file"
-
-            # Add new aliases
-            echo "# BEGIN Metabased Rollup Dev Container aliases" >> "$rc_file"
-            echo "# Foundry PATH" >> "$rc_file"
-            echo "export PATH=\"\$PATH:\$HOME/.foundry/bin\"" >> "$rc_file"
-            echo "# Foundry aliases" >> "$rc_file"
-            echo "alias foundry-setup='just -f {{justfile()}} foundry-setup'" >> "$rc_file"
-            echo "alias foundry-upgrade='just -f {{justfile()}} foundry-upgrade'" >> "$rc_file"
-            echo "# Local Devnet aliases" >> "$rc_file"
-            echo "alias op-up='just -f {{justfile()}} op-up'" >> "$rc_file"
-            echo "alias op-down='just -f {{justfile()}} op-down'" >> "$rc_file"
-            echo "alias op-clean='just -f {{justfile()}} op-clean'" >> "$rc_file"
-            echo "alias op-reclone='just -f {{justfile()}} op-reclone'" >> "$rc_file"
-            echo "alias go-install='just -f {{justfile()}} go-install'" >> "$rc_file"
-            echo "alias op-deploy-chain='just -f {{justfile()}} op-deploy-chain'" >> "$rc_file"
-            echo "alias arb-up='just -f {{justfile()}} arb-up'" >> "$rc_file"
-            echo "alias arb-down='just -f {{justfile()}} arb-down'" >> "$rc_file"
-            echo "alias arb-teardown='just -f {{justfile()}} arb-teardown'" >> "$rc_file"
-            echo "alias arb-deploy-chain='just -f {{justfile()}} arb-deploy-chain'" >> "$rc_file"
-            echo "alias arb-update-chain-address='just -f {{justfile()}} arb-update-chain-address'" >> "$rc_file"
-            echo "alias arb-health-check='just -f {{justfile()}} arb-health-check'" >> "$rc_file"
-            echo "alias run-metabased-sequencer='just -f {{justfile()}} run-metabased-sequencer'" >> "$rc_file"
-            echo "# END Metabased Rollup Dev Container aliases" >> "$rc_file"
-
-            # Source the rc file immediately
-            echo "source \"\$rc_file\"" >> "$rc_file"
-            echo "Aliases created in $rc_file"
-        else
-            echo "Warning: $rc_file does not exist. Skipping."
-        fi
-    done
-
 # Run all OP steps in sequence
 # OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
 # We initialize and then spin down the devnet to get the initialization time out
