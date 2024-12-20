@@ -85,8 +85,6 @@ mod tests {
         block
     }
 
-    /// Helper: Creates a dummy block for testing.
-
     #[tokio::test]
     async fn test_ingestor_new() -> Result<()> {
         let start_block = 100;
@@ -119,7 +117,6 @@ mod tests {
             .await
             .expect("Failed to poll block");
 
-        // Check if the block was sent to the channel
         if let Some(block) = receiver.recv().await {
             println!("Received block number: {:?}", block.header.inner.number);
             assert_eq!(block.header.inner.number, start_block);
