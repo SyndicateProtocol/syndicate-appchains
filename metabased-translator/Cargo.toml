@@ -2,7 +2,7 @@
 resolver = "2"
 members = [
     "crates/block-builder",
-    "crates/data-ingestor"
+    "crates/ingestor"
 ]
 
 [workspace.dependencies]
