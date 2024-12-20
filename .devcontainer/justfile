@@ -76,6 +76,9 @@ arb_contract_deploy_file := contracts_root + "/broadcast/DeployContractsForSeque
 export PATH := foundry_path
 
 # Helper functions for command logging
+# Underscores are used to indicate a private function that can be called only
+# within the justfile
+# Functions with underscores cannot be called externally
 _log-start command:
     @echo "┌──────────────────────────────────────────┐"
     @echo "│ Starting command: {{command}}            │"
