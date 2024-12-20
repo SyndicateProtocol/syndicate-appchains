@@ -101,7 +101,8 @@ op-clone:
 # Starts arbitrum node listening at 8547
 arb-up:
     @just _log-start "arb-up"
-    chmod +x ./run-arb-nitro-dev-node.sh && ARB_ORBIT_PORT={{ arb_orbit_port }} ARB_ORBIT_L2_RPC_URL={{ arb_orbit_l2_rpc_url }} ./run-arb-nitro-dev-node.sh
+    chmod +x ./run-arb-nitro-dev-node.sh
+    ARB_ORBIT_PORT={{ arb_orbit_port }} ARB_ORBIT_L2_RPC_URL={{ arb_orbit_l2_rpc_url }} ./run-arb-nitro-dev-node.sh
     @just _log-end "arb-up"
 
 # Stops Arbitrum docker container created by script above
