@@ -164,7 +164,7 @@ arb-deploy-chain:
     rm {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
     @just _log-end "arb-deploy-chain"
 
-# Runs sequencer using .env file
+# Runs sequencer
 run-metabased-sequencer: create-envrc
     @just _log-start "run-metabased-sequencer"
     . {{ envrc_file }} && cd {{ sequencer_root }} && cargo run -p interceptor
