@@ -1,19 +1,19 @@
-name: Publish op-translator Image to GitHub Container Registry
+name: Publish metabased-sequencer Docker image
 
 on:
   push:
     branches:
       - main
     paths:
-      - "op-translator/**"
-      - "Dockerfile.op-translator"
+      - "metabased-sequencer/**"
+      - "Dockerfile.metabased-sequencer"
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/op-translator
+  METABASED_SEQUENCER_IMAGE_NAME: ${{ github.repository }}/metabased-sequencer
 
 jobs:
-  build-and-push:
+  build-and-push-image-metabased-sequencer:
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -33,24 +33,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
+      - name: Extract metadata for metabased-sequencer
+        id: meta-sequencer
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.METABASED_SEQUENCER_IMAGE_NAME }}
           tags: |
             type=sha,format=long
             type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push Docker image
+      - name: Build and push metabased-sequencer Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile.op-translator
+          file: Dockerfile.metabased-sequencer
           push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          # removed linux/arm64 part, took ~1hr on Github Actions
+          platforms: linux/amd64
+          tags: ${{ steps.meta-sequencer.outputs.tags }}
+          labels: ${{ steps.meta-sequencer.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
