@@ -63,6 +63,10 @@ sequencer_root := repository_root + "/metabased-sequencer"
 # Define root directory of the op-translator project
 op_translator_root := repository_root + "/op-translator"
 
+# Define root directory of the metabased translator project
+metabased_translator_root := repository_root + "/metabased-translator"
+metabased_translator_contracts_root := metabased_translator_root + "/contracts" 
+
 # Define file for localnet environment variables
 envrc_file := repository_root + "/.envrc"
 
@@ -295,15 +299,26 @@ foundry-upgrade:
     [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || foundryup
     @just _log-end "foundry-upgrade"
 
+# Install dependencies for all monorepo smart contracts via forge
+contract-deps:
+    @just _log-start "contract-deps"
+    
+    cd {{ contracts_root }} && forge install
+    cd {{ metabased_translator_contracts_root }} && forge install
+
+    @just _log-end "contract-deps"
+
+foundry-all: foundry-setup foundry-upgrade contract-deps
+
 # Run all OP steps in sequence
 # OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
 # We initialize and then spin down the devnet to get the initialization time out
 # of the way upfront
-op-all: op-clone foundry-setup foundry-upgrade
+op-all: op-clone foundry-all
     @echo "Post-setup OP script completed successfully. Ready to bring up the OP Stack devnet with op-up."
 
 # Run all Arbitrum setup steps in sequence necessary for `arb-up`
-arb-network-setup: foundry-setup foundry-upgrade
+arb-network-setup: foundry-all
     @echo "Post-setup Arbitrum script completed successfully. Ready to bring up the Arbitrum Orbit devnet with arb-up."
 
 arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabased-sequencer
