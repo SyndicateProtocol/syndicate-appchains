@@ -123,7 +123,6 @@ op-down:
 # Starts arbitrum node listening at 8547
 arb-up:
     @just _log-start "arb-up"
-
     @just _run-arb-nitro-dev-node
     @just _log-end "arb-up"
 
@@ -137,6 +136,7 @@ arb-down:
 
 # Removes all Docker infra assocaited with the Arbitrum, returning to a blank slate
 arb-teardown: arb-down
+    @just _log-start "arb-teardown"
     @echo "Removing Arbitrum container..."
     docker rm nitro-dev 2>/dev/null || true
     @echo "Removing associated volumes..."
@@ -144,7 +144,7 @@ arb-teardown: arb-down
     @echo "Removing associated networks..."
     docker network rm $(docker network ls -q -f name=nitro-dev) 2>/dev/null || true
     @echo "Arbitrum node infrastructure removed."
-
+    @just _log-end "arb-teardown"
 
 # Deploy MetabasedSequencerChain smart contract to Optimism devnet
 op-deploy-chain:
