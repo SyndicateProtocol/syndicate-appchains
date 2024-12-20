@@ -148,9 +148,9 @@ pub mod EventEmitter {
         b"`\x80`@R4\x80\x15a\0\x0FW_\x80\xFD[P`\x046\x10a\0JW_5`\xE0\x1C\x80c4\x04\xFE\xE9\x14a\0NW\x80c\x8E4z:\x14a\0cW\x80c\xAA~\x01\n\x14a\0vW\x80c\xAD\xDF#^\x14a\0\x89W[_\x80\xFD[a\0aa\0\\6`\x04a\0\xD8V[a\0\x9CV[\0[a\0aa\0q6`\x04a\x01\x07V[a\0\xACV[a\0aa\0\x846`\x04a\x01>V[a\0\xBEV[a\0aa\0\x976`\x04a\x01gV[a\0\xCCV[\x80_R\x81\x83\x85` _\xA3PPPPV[\x80_R\x81\x83\x85\x87` _\xA4PPPPPV[\x80_R\x81\x83` _\xA2PPPV[\x80_R\x81` _\xA1PPV[_\x80_\x80`\x80\x85\x87\x03\x12\x15a\0\xEBW_\x80\xFD[PP\x825\x94` \x84\x015\x94P`@\x84\x015\x93``\x015\x92P\x90PV[_\x80_\x80_`\xA0\x86\x88\x03\x12\x15a\x01\x1BW_\x80\xFD[PP\x835\x95` \x85\x015\x95P`@\x85\x015\x94``\x81\x015\x94P`\x80\x015\x92P\x90PV[_\x80_``\x84\x86\x03\x12\x15a\x01PW_\x80\xFD[PP\x815\x93` \x83\x015\x93P`@\x90\x92\x015\x91\x90PV[_\x80`@\x83\x85\x03\x12\x15a\x01xW_\x80\xFD[PP\x805\x92` \x90\x91\x015\x91PV\xFE\xA2dipfsX\"\x12 \x1B|\xFB\x92\xC7\x8D4\xF8\x19\xCB^W\x8E\xC4Mq1\xDE\x1D\x0F22j2$\xABR\xEB\x01\xCAr\xF5dsolcC\0\x08\x19\x003",
     );
     /**Function with signature `emitEvent1(bytes32,bytes32)` and selector `0xaddf235e`.
-    ```solidity
-    function emitEvent1(bytes32 signatureHash, bytes32 nonIndexed) external;
-    ```*/
+```solidity
+function emitEvent1(bytes32 signatureHash, bytes32 nonIndexed) external;
+```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct emitEvent1Call {
@@ -182,7 +182,9 @@ pub mod EventEmitter {
             );
             #[cfg(test)]
             #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(_t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>) {
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
                 match _t {
                     alloy_sol_types::private::AssertTypeEq::<
                         <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
@@ -214,7 +216,9 @@ pub mod EventEmitter {
             type UnderlyingRustTuple<'a> = ();
             #[cfg(test)]
             #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(_t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>) {
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
                 match _t {
                     alloy_sol_types::private::AssertTypeEq::<
                         <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
@@ -242,10 +246,14 @@ pub mod EventEmitter {
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
             );
-            type Token<'a> = <Self::Parameters<'a> as alloy_sol_types::SolType>::Token<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
             type Return = emitEvent1Return;
             type ReturnTuple<'a> = ();
-            type ReturnToken<'a> = <Self::ReturnTuple<'a> as alloy_sol_types::SolType>::Token<'a>;
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
             const SIGNATURE: &'static str = "emitEvent1(bytes32,bytes32)";
             const SELECTOR: [u8; 4] = [173u8, 223u8, 35u8, 94u8];
             #[inline]
@@ -270,17 +278,17 @@ pub mod EventEmitter {
                 data: &[u8],
                 validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(
-                    data, validate,
-                )
-                .map(Into::into)
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
     /**Function with signature `emitEvent2(bytes32,bytes32,bytes32)` and selector `0xaa7e010a`.
-    ```solidity
-    function emitEvent2(bytes32 signatureHash, bytes32 indexed1, bytes32 nonIndexed) external;
-    ```*/
+```solidity
+function emitEvent2(bytes32 signatureHash, bytes32 indexed1, bytes32 nonIndexed) external;
+```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct emitEvent2Call {
@@ -315,7 +323,9 @@ pub mod EventEmitter {
             );
             #[cfg(test)]
             #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(_t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>) {
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
                 match _t {
                     alloy_sol_types::private::AssertTypeEq::<
                         <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
@@ -348,7 +358,9 @@ pub mod EventEmitter {
             type UnderlyingRustTuple<'a> = ();
             #[cfg(test)]
             #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(_t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>) {
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
                 match _t {
                     alloy_sol_types::private::AssertTypeEq::<
                         <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
@@ -377,10 +389,14 @@ pub mod EventEmitter {
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
             );
-            type Token<'a> = <Self::Parameters<'a> as alloy_sol_types::SolType>::Token<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
             type Return = emitEvent2Return;
             type ReturnTuple<'a> = ();
-            type ReturnToken<'a> = <Self::ReturnTuple<'a> as alloy_sol_types::SolType>::Token<'a>;
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
             const SIGNATURE: &'static str = "emitEvent2(bytes32,bytes32,bytes32)";
             const SELECTOR: [u8; 4] = [170u8, 126u8, 1u8, 10u8];
             #[inline]
@@ -408,17 +424,17 @@ pub mod EventEmitter {
                 data: &[u8],
                 validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(
-                    data, validate,
-                )
-                .map(Into::into)
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
     /**Function with signature `emitEvent3(bytes32,bytes32,bytes32,bytes32)` and selector `0x3404fee9`.
-    ```solidity
-    function emitEvent3(bytes32 signatureHash, bytes32 indexed1, bytes32 indexed2, bytes32 nonIndexed) external;
-    ```*/
+```solidity
+function emitEvent3(bytes32 signatureHash, bytes32 indexed1, bytes32 indexed2, bytes32 nonIndexed) external;
+```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct emitEvent3Call {
@@ -456,7 +472,9 @@ pub mod EventEmitter {
             );
             #[cfg(test)]
             #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(_t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>) {
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
                 match _t {
                     alloy_sol_types::private::AssertTypeEq::<
                         <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
@@ -495,7 +513,9 @@ pub mod EventEmitter {
             type UnderlyingRustTuple<'a> = ();
             #[cfg(test)]
             #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(_t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>) {
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
                 match _t {
                     alloy_sol_types::private::AssertTypeEq::<
                         <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
@@ -525,10 +545,14 @@ pub mod EventEmitter {
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
             );
-            type Token<'a> = <Self::Parameters<'a> as alloy_sol_types::SolType>::Token<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
             type Return = emitEvent3Return;
             type ReturnTuple<'a> = ();
-            type ReturnToken<'a> = <Self::ReturnTuple<'a> as alloy_sol_types::SolType>::Token<'a>;
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
             const SIGNATURE: &'static str = "emitEvent3(bytes32,bytes32,bytes32,bytes32)";
             const SELECTOR: [u8; 4] = [52u8, 4u8, 254u8, 233u8];
             #[inline]
@@ -559,17 +583,17 @@ pub mod EventEmitter {
                 data: &[u8],
                 validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(
-                    data, validate,
-                )
-                .map(Into::into)
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
     /**Function with signature `emitEvent4(bytes32,bytes32,bytes32,bytes32,bytes32)` and selector `0x8e347a3a`.
-    ```solidity
-    function emitEvent4(bytes32 signatureHash, bytes32 indexed1, bytes32 indexed2, bytes32 indexed3, bytes32 nonIndexed) external;
-    ```*/
+```solidity
+function emitEvent4(bytes32 signatureHash, bytes32 indexed1, bytes32 indexed2, bytes32 indexed3, bytes32 nonIndexed) external;
+```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct emitEvent4Call {
@@ -610,7 +634,9 @@ pub mod EventEmitter {
             );
             #[cfg(test)]
             #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(_t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>) {
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
                 match _t {
                     alloy_sol_types::private::AssertTypeEq::<
                         <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
@@ -651,7 +677,9 @@ pub mod EventEmitter {
             type UnderlyingRustTuple<'a> = ();
             #[cfg(test)]
             #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(_t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>) {
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
                 match _t {
                     alloy_sol_types::private::AssertTypeEq::<
                         <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
@@ -682,10 +710,14 @@ pub mod EventEmitter {
                 alloy::sol_types::sol_data::FixedBytes<32>,
                 alloy::sol_types::sol_data::FixedBytes<32>,
             );
-            type Token<'a> = <Self::Parameters<'a> as alloy_sol_types::SolType>::Token<'a>;
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
             type Return = emitEvent4Return;
             type ReturnTuple<'a> = ();
-            type ReturnToken<'a> = <Self::ReturnTuple<'a> as alloy_sol_types::SolType>::Token<'a>;
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
             const SIGNATURE: &'static str = "emitEvent4(bytes32,bytes32,bytes32,bytes32,bytes32)";
             const SELECTOR: [u8; 4] = [142u8, 52u8, 122u8, 58u8];
             #[inline]
@@ -719,10 +751,10 @@ pub mod EventEmitter {
                 data: &[u8],
                 validate: bool,
             ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<'_> as alloy_sol_types::SolType>::abi_decode_sequence(
-                    data, validate,
-                )
-                .map(Into::into)
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
             }
         }
     };
@@ -756,10 +788,18 @@ pub mod EventEmitter {
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
-                Self::emitEvent1(_) => <emitEvent1Call as alloy_sol_types::SolCall>::SELECTOR,
-                Self::emitEvent2(_) => <emitEvent2Call as alloy_sol_types::SolCall>::SELECTOR,
-                Self::emitEvent3(_) => <emitEvent3Call as alloy_sol_types::SolCall>::SELECTOR,
-                Self::emitEvent4(_) => <emitEvent4Call as alloy_sol_types::SolCall>::SELECTOR,
+                Self::emitEvent1(_) => {
+                    <emitEvent1Call as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::emitEvent2(_) => {
+                    <emitEvent2Call as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::emitEvent3(_) => {
+                    <emitEvent3Call as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::emitEvent4(_) => {
+                    <emitEvent4Call as alloy_sol_types::SolCall>::SELECTOR
+                }
             }
         }
         #[inline]
@@ -780,14 +820,16 @@ pub mod EventEmitter {
             static DECODE_SHIMS: &[fn(
                 &[u8],
                 bool,
-            )
-                -> alloy_sol_types::Result<EventEmitterCalls>] = &[
+            ) -> alloy_sol_types::Result<EventEmitterCalls>] = &[
                 {
                     fn emitEvent3(
                         data: &[u8],
                         validate: bool,
                     ) -> alloy_sol_types::Result<EventEmitterCalls> {
-                        <emitEvent3Call as alloy_sol_types::SolCall>::abi_decode_raw(data, validate)
+                        <emitEvent3Call as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
                             .map(EventEmitterCalls::emitEvent3)
                     }
                     emitEvent3
@@ -797,7 +839,10 @@ pub mod EventEmitter {
                         data: &[u8],
                         validate: bool,
                     ) -> alloy_sol_types::Result<EventEmitterCalls> {
-                        <emitEvent4Call as alloy_sol_types::SolCall>::abi_decode_raw(data, validate)
+                        <emitEvent4Call as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
                             .map(EventEmitterCalls::emitEvent4)
                     }
                     emitEvent4
@@ -807,7 +852,10 @@ pub mod EventEmitter {
                         data: &[u8],
                         validate: bool,
                     ) -> alloy_sol_types::Result<EventEmitterCalls> {
-                        <emitEvent2Call as alloy_sol_types::SolCall>::abi_decode_raw(data, validate)
+                        <emitEvent2Call as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
                             .map(EventEmitterCalls::emitEvent2)
                     }
                     emitEvent2
@@ -817,17 +865,22 @@ pub mod EventEmitter {
                         data: &[u8],
                         validate: bool,
                     ) -> alloy_sol_types::Result<EventEmitterCalls> {
-                        <emitEvent1Call as alloy_sol_types::SolCall>::abi_decode_raw(data, validate)
+                        <emitEvent1Call as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
                             .map(EventEmitterCalls::emitEvent1)
                     }
                     emitEvent1
                 },
             ];
             let Ok(idx) = Self::SELECTORS.binary_search(&selector) else {
-                return Err(alloy_sol_types::Error::unknown_selector(
-                    <Self as alloy_sol_types::SolInterface>::NAME,
-                    selector,
-                ));
+                return Err(
+                    alloy_sol_types::Error::unknown_selector(
+                        <Self as alloy_sol_types::SolInterface>::NAME,
+                        selector,
+                    ),
+                );
             };
             DECODE_SHIMS[idx](data, validate)
         }
@@ -852,16 +905,28 @@ pub mod EventEmitter {
         fn abi_encode_raw(&self, out: &mut alloy_sol_types::private::Vec<u8>) {
             match self {
                 Self::emitEvent1(inner) => {
-                    <emitEvent1Call as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
+                    <emitEvent1Call as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
                 }
                 Self::emitEvent2(inner) => {
-                    <emitEvent2Call as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
+                    <emitEvent2Call as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
                 }
                 Self::emitEvent3(inner) => {
-                    <emitEvent3Call as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
+                    <emitEvent3Call as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
                 }
                 Self::emitEvent4(inner) => {
-                    <emitEvent4Call as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
+                    <emitEvent4Call as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
                 }
             }
         }
@@ -869,7 +934,7 @@ pub mod EventEmitter {
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`EventEmitter`](self) contract instance.
 
-    See the [wrapper's documentation](`EventEmitterInstance`) for more details.*/
+See the [wrapper's documentation](`EventEmitterInstance`) for more details.*/
     #[inline]
     pub const fn new<
         T: alloy_contract::private::Transport + ::core::clone::Clone,
@@ -883,9 +948,9 @@ pub mod EventEmitter {
     }
     /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
-    Returns a new instance of the contract, if the deployment was successful.
+Returns a new instance of the contract, if the deployment was successful.
 
-    For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
+For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
     #[inline]
     pub fn deploy<
         T: alloy_contract::private::Transport + ::core::clone::Clone,
@@ -893,36 +958,35 @@ pub mod EventEmitter {
         N: alloy_contract::private::Network,
     >(
         provider: P,
-    ) -> impl ::core::future::Future<Output = alloy_contract::Result<EventEmitterInstance<T, P, N>>>
-    {
+    ) -> impl ::core::future::Future<
+        Output = alloy_contract::Result<EventEmitterInstance<T, P, N>>,
+    > {
         EventEmitterInstance::<T, P, N>::deploy(provider)
     }
     /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
-    and constructor arguments, if any.
+and constructor arguments, if any.
 
-    This is a simple wrapper around creating a `RawCallBuilder` with the data set to
-    the bytecode concatenated with the constructor's ABI-encoded arguments.*/
+This is a simple wrapper around creating a `RawCallBuilder` with the data set to
+the bytecode concatenated with the constructor's ABI-encoded arguments.*/
     #[inline]
     pub fn deploy_builder<
         T: alloy_contract::private::Transport + ::core::clone::Clone,
         P: alloy_contract::private::Provider<T, N>,
         N: alloy_contract::private::Network,
-    >(
-        provider: P,
-    ) -> alloy_contract::RawCallBuilder<T, P, N> {
+    >(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
         EventEmitterInstance::<T, P, N>::deploy_builder(provider)
     }
     /**A [`EventEmitter`](self) instance.
 
-    Contains type-safe methods for interacting with an on-chain instance of the
-    [`EventEmitter`](self) contract located at a given `address`, using a given
-    provider `P`.
+Contains type-safe methods for interacting with an on-chain instance of the
+[`EventEmitter`](self) contract located at a given `address`, using a given
+provider `P`.
 
-    If the contract bytecode is available (see the [`sol!`](alloy_sol_types::sol!)
-    documentation on how to provide it), the `deploy` and `deploy_builder` methods can
-    be used to deploy a new instance of the contract.
+If the contract bytecode is available (see the [`sol!`](alloy_sol_types::sol!)
+documentation on how to provide it), the `deploy` and `deploy_builder` methods can
+be used to deploy a new instance of the contract.
 
-    See the [module-level documentation](self) for all the available methods.*/
+See the [module-level documentation](self) for all the available methods.*/
     #[derive(Clone)]
     pub struct EventEmitterInstance<T, P, N = alloy_contract::private::Ethereum> {
         address: alloy_sol_types::private::Address,
@@ -933,24 +997,24 @@ pub mod EventEmitter {
     impl<T, P, N> ::core::fmt::Debug for EventEmitterInstance<T, P, N> {
         #[inline]
         fn fmt(&self, f: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
-            f.debug_tuple("EventEmitterInstance")
-                .field(&self.address)
-                .finish()
+            f.debug_tuple("EventEmitterInstance").field(&self.address).finish()
         }
     }
     /// Instantiation and getters/setters.
     #[automatically_derived]
     impl<
-            T: alloy_contract::private::Transport + ::core::clone::Clone,
-            P: alloy_contract::private::Provider<T, N>,
-            N: alloy_contract::private::Network,
-        > EventEmitterInstance<T, P, N>
-    {
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
+        N: alloy_contract::private::Network,
+    > EventEmitterInstance<T, P, N> {
         /**Creates a new wrapper around an on-chain [`EventEmitter`](self) contract instance.
 
-        See the [wrapper's documentation](`EventEmitterInstance`) for more details.*/
+See the [wrapper's documentation](`EventEmitterInstance`) for more details.*/
         #[inline]
-        pub const fn new(address: alloy_sol_types::private::Address, provider: P) -> Self {
+        pub const fn new(
+            address: alloy_sol_types::private::Address,
+            provider: P,
+        ) -> Self {
             Self {
                 address,
                 provider,
@@ -959,20 +1023,22 @@ pub mod EventEmitter {
         }
         /**Deploys this contract using the given `provider` and constructor arguments, if any.
 
-        Returns a new instance of the contract, if the deployment was successful.
+Returns a new instance of the contract, if the deployment was successful.
 
-        For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
+For more fine-grained control over the deployment process, use [`deploy_builder`] instead.*/
         #[inline]
-        pub async fn deploy(provider: P) -> alloy_contract::Result<EventEmitterInstance<T, P, N>> {
+        pub async fn deploy(
+            provider: P,
+        ) -> alloy_contract::Result<EventEmitterInstance<T, P, N>> {
             let call_builder = Self::deploy_builder(provider);
             let contract_address = call_builder.deploy().await?;
             Ok(Self::new(contract_address, call_builder.provider))
         }
         /**Creates a `RawCallBuilder` for deploying this contract using the given `provider`
-        and constructor arguments, if any.
+and constructor arguments, if any.
 
-        This is a simple wrapper around creating a `RawCallBuilder` with the data set to
-        the bytecode concatenated with the constructor's ABI-encoded arguments.*/
+This is a simple wrapper around creating a `RawCallBuilder` with the data set to
+the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         #[inline]
         pub fn deploy_builder(provider: P) -> alloy_contract::RawCallBuilder<T, P, N> {
             alloy_contract::RawCallBuilder::new_raw_deploy(
@@ -1015,11 +1081,10 @@ pub mod EventEmitter {
     /// Function calls.
     #[automatically_derived]
     impl<
-            T: alloy_contract::private::Transport + ::core::clone::Clone,
-            P: alloy_contract::private::Provider<T, N>,
-            N: alloy_contract::private::Network,
-        > EventEmitterInstance<T, P, N>
-    {
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
+        N: alloy_contract::private::Network,
+    > EventEmitterInstance<T, P, N> {
         /// Creates a new call builder using this contract instance's provider and address.
         ///
         /// Note that the call can be any function call, not just those defined in this
@@ -1036,10 +1101,12 @@ pub mod EventEmitter {
             signatureHash: alloy::sol_types::private::FixedBytes<32>,
             nonIndexed: alloy::sol_types::private::FixedBytes<32>,
         ) -> alloy_contract::SolCallBuilder<T, &P, emitEvent1Call, N> {
-            self.call_builder(&emitEvent1Call {
-                signatureHash,
-                nonIndexed,
-            })
+            self.call_builder(
+                &emitEvent1Call {
+                    signatureHash,
+                    nonIndexed,
+                },
+            )
         }
         ///Creates a new call builder for the [`emitEvent2`] function.
         pub fn emitEvent2(
@@ -1048,11 +1115,13 @@ pub mod EventEmitter {
             indexed1: alloy::sol_types::private::FixedBytes<32>,
             nonIndexed: alloy::sol_types::private::FixedBytes<32>,
         ) -> alloy_contract::SolCallBuilder<T, &P, emitEvent2Call, N> {
-            self.call_builder(&emitEvent2Call {
-                signatureHash,
-                indexed1,
-                nonIndexed,
-            })
+            self.call_builder(
+                &emitEvent2Call {
+                    signatureHash,
+                    indexed1,
+                    nonIndexed,
+                },
+            )
         }
         ///Creates a new call builder for the [`emitEvent3`] function.
         pub fn emitEvent3(
@@ -1062,12 +1131,14 @@ pub mod EventEmitter {
             indexed2: alloy::sol_types::private::FixedBytes<32>,
             nonIndexed: alloy::sol_types::private::FixedBytes<32>,
         ) -> alloy_contract::SolCallBuilder<T, &P, emitEvent3Call, N> {
-            self.call_builder(&emitEvent3Call {
-                signatureHash,
-                indexed1,
-                indexed2,
-                nonIndexed,
-            })
+            self.call_builder(
+                &emitEvent3Call {
+                    signatureHash,
+                    indexed1,
+                    indexed2,
+                    nonIndexed,
+                },
+            )
         }
         ///Creates a new call builder for the [`emitEvent4`] function.
         pub fn emitEvent4(
@@ -1078,23 +1149,24 @@ pub mod EventEmitter {
             indexed3: alloy::sol_types::private::FixedBytes<32>,
             nonIndexed: alloy::sol_types::private::FixedBytes<32>,
         ) -> alloy_contract::SolCallBuilder<T, &P, emitEvent4Call, N> {
-            self.call_builder(&emitEvent4Call {
-                signatureHash,
-                indexed1,
-                indexed2,
-                indexed3,
-                nonIndexed,
-            })
+            self.call_builder(
+                &emitEvent4Call {
+                    signatureHash,
+                    indexed1,
+                    indexed2,
+                    indexed3,
+                    nonIndexed,
+                },
+            )
         }
     }
     /// Event filters.
     #[automatically_derived]
     impl<
-            T: alloy_contract::private::Transport + ::core::clone::Clone,
-            P: alloy_contract::private::Provider<T, N>,
-            N: alloy_contract::private::Network,
-        > EventEmitterInstance<T, P, N>
-    {
+        T: alloy_contract::private::Transport + ::core::clone::Clone,
+        P: alloy_contract::private::Provider<T, N>,
+        N: alloy_contract::private::Network,
+    > EventEmitterInstance<T, P, N> {
         /// Creates a new event filter using this contract instance's provider and address.
         ///
         /// Note that the type can be any event, not just those defined in this contract.
