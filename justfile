@@ -324,13 +324,13 @@ arb-network-setup: foundry-all
 arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabased-sequencer
     @echo "Arbitrum Sequencer setup completed successfully. Running sequencer."
 
-# TODO: Confirm that health checks work for running services
-# Spin up arb-up if not running
+# Health check for Arbitrum node. Exits with error if RPC endpoint is not responding
 arb-health-check:
     @just _log-start "arb-health-check"
-    curl -s -X POST -H "Content-Type: application/json" \
+    @curl -s -X POST -H "Content-Type: application/json" \
     --data '{"jsonrpc":"2.0","method":"net_version","id":1}' \
-    {{ arb_orbit_l2_rpc_url }} || echo "RPC endpoint not responding"
+    {{ arb_orbit_l2_rpc_url }} \
+    || (echo "RPC endpoint not responding"; exit 1;)
     @just _log-end "arb-health-check"
 
 sequencer-health-check:
