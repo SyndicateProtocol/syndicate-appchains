@@ -448,6 +448,10 @@ _log-end command:
     @echo "└──────────────────────────────────────────┘"
 
 # SOURCE: https://github.com/OffchainLabs/nitro-devnode/blob/main/run-dev-node.sh , 10/31/24
+# Modifications are:
+# 1. Backslashes were added to all if statements and loops to match the whitespace requirements of Just (no newlines without backslashes)
+# 2. Environment variables were converted to Justfile variables
+# 3. Pattern matching was changed from bash syntax to zsh syntax
 _run-arb-nitro-dev-node:
     #!/usr/bin/zsh
 
