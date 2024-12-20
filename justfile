@@ -483,7 +483,7 @@ _run-arb-nitro-dev-node:
 
     # Start Nitro dev node in the background
     echo "Starting Nitro dev node on $PORT..."
-    docker run -d --rm --name nitro-dev -p $PORT:$PORT offchainlabs/nitro-node:v3.2.1-d81324d --dev --http.addr 0.0.0.0 \
+    docker run --rm --name nitro-dev -p $PORT:$PORT offchainlabs/nitro-node:v3.2.1-d81324d --dev --http.addr 0.0.0.0 \
     --http.port $PORT \
 
     # Wait for the node to initialize
