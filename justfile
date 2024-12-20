@@ -475,33 +475,23 @@ _log-end command:
 _run-arb-nitro-dev-node:
     #!/usr/bin/zsh
 
-    echo "PORT {{arb_orbit_l2_port}}"
-    echo "DEV_PRIVATE_KEY {{arb_orbit_l2_private_key}}"
-    echo "RPC_URL {{arb_orbit_l2_rpc_url}}"
-
-    # Variable defaults
-    export PORT="${{arb_orbit_l2_port}}"
-    export DEV_PRIVATE_KEY="${{arb_orbit_l2_private_key}}"
-    export RPC_URL="${{arb_orbit_l2_rpc_url}}"
-
-
     # Start Nitro dev node in the background
-    echo "Starting Nitro dev node on $PORT..."
-    docker run --rm --name nitro-dev -p $PORT:$PORT offchainlabs/nitro-node:v3.2.1-d81324d --dev --http.addr 0.0.0.0 \
-    --http.port $PORT \
+    echo "Starting Nitro dev node on {{arb_orbit_l2_port}}..."
+    docker run --rm --name nitro-dev -p {{arb_orbit_l2_port}}:{{arb_orbit_l2_port}} offchainlabs/nitro-node:v3.2.1-d81324d --dev --http.addr 0.0.0.0 \
+    --http.port {{arb_orbit_l2_port}} \
 
     # Wait for the node to initialize
-    echo "Waiting for the Nitro node to initialize on port $PORT and RPC URL $RPC_URL..."
+    echo "Waiting for the Nitro node to initialize on port {{arb_orbit_l2_port}} and RPC URL {{arb_orbit_l2_rpc_url}}..."
 
-    while ! curl -s -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":1}' "$RPC_URL" | grep -q "result"; do echo "Checking for node initialization..." && sleep 1; done
+    while ! curl -s -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":1}' "{{arb_orbit_l2_rpc_url}}" | grep -q "result"; do echo "Checking for node initialization..." && sleep 1; done
 
-    echo "Nitro node initialized on port $PORT..."
+    echo "Nitro node initialized on port {{arb_orbit_l2_port}}..."
 
 
     # Check if node is running
     curl_output=$(curl -s -X POST -H "Content-Type: application/json" \
     --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":1}' \
-    "$RPC_URL")
+    "{{arb_orbit_l2_rpc_url}}")
 
     if [[ "$curl_output" == *"result"* ]]; then \
         echo "Nitro node is running!" \
@@ -513,13 +503,13 @@ _run-arb-nitro-dev-node:
     # Make the caller a chain owner
     echo "Setting chain owner to pre-funded dev account..."
     cast send 0x00000000000000000000000000000000000000FF "becomeChainOwner()" \
-        --private-key $DEV_PRIVATE_KEY \
-        --rpc-url $RPC_URL
+        --private-key {{arb_orbit_l2_private_key}} \
+        --rpc-url {{arb_orbit_l2_rpc_url}}
 
     # Deploy Cache Manager Contract
     echo "Deploying Cache Manager contract..."
-    deploy_output=$(cast send --private-key $DEV_PRIVATE_KEY \
-        --rpc-url $RPC_URL \
+    deploy_output=$(cast send --private-key {{arb_orbit_l2_private_key}} \
+        --rpc-url {{arb_orbit_l2_rpc_url}} \
         --create 0x60a06040523060805234801561001457600080fd5b50608051611d1c61003060003960006105260152611d1c6000f3fe)
 
     # Extract contract address using awk from plain text output
@@ -536,8 +526,8 @@ _run-arb-nitro-dev-node:
 
     # Register the deployed Cache Manager contract
     echo "Registering Cache Manager contract as a WASM cache manager..."
-    registration_output=$(cast send --private-key $DEV_PRIVATE_KEY \
-        --rpc-url $RPC_URL \
+    registration_output=$(cast send --private-key {{arb_orbit_l2_private_key}} \
+        --rpc-url {{arb_orbit_l2_rpc_url}} \
         0x0000000000000000000000000000000000000070 \
         "addWasmCacheManager(address)" "$contract_address")
 
