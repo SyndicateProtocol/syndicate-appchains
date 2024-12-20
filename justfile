@@ -489,7 +489,7 @@ _run-arb-nitro-dev-node:
     # Wait for the node to initialize
     echo "Waiting for the Nitro node to initialize on port $PORT..."
 
-    while ! curl -s -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":1}' "$RPC_URL" | grep -q "result"; do echo "Checking for node initialization..." && sleep 0.1; done
+    while ! curl -s -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":1}' "$RPC_URL" | grep -q "result"; do echo "Checking for node initialization..." && sleep 1; done
 
     echo "Nitro node initialized on port $PORT..."
 
