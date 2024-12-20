@@ -2,7 +2,6 @@ use alloy_rpc_client::{ClientBuilder, ReqwestClient};
 use serde_json::{json, Value};
 use std::error::Error;
 
-// Define the Ethereum RPC client
 pub struct RPCClient {
     client: ReqwestClient,
 }
