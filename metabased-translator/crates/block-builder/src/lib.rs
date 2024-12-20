@@ -1,4 +1,5 @@
 pub mod config;
 pub mod connectors;
-pub mod rollups;
+#[rustfmt::skip]
 pub mod contract_bindings;
+pub mod rollups;
