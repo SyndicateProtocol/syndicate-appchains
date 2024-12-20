@@ -1,4 +1,9 @@
 # Set the shell to zsh
+# The -u flag is used to exit the script if an uncaught error occurs. This
+# ensures that we can place exit 0 at the end of scripts to jump back into just
+# without inadvertently continuing after failed commands
+# The -c flag is used to run the script in a subshell. This is recommended by
+# just: https://just.systems/man/en/settings.html#settings
 set shell := ["zsh", "-cu"]
 
 # Define the PATH variable to include Foundry's bin directory
@@ -72,14 +77,13 @@ export PATH := foundry_path
 
 # Helper functions for command logging
 _log-start command:
-    @echo "┌──────────────────────────────────────────"
-    @echo "│ Starting command: {{command}}"
-    @echo "└──────────────────────────────────────────"
-
+    @echo "┌──────────────────────────────────────────┐"
+    @echo "│ Starting command: {{command}}            │"
+    @echo "└──────────────────────────────────────────┘"
 _log-end command:
-    @echo "┌──────────────────────────────────────────"
-    @echo "│ Completed command: {{command}}"
-    @echo "└──────────────────────────────────────────"
+    @echo "┌──────────────────────────────────────────┐"
+    @echo "│ Completed command: {{command}}           │"
+    @echo "└──────────────────────────────────────────┘"
 
 # Clone the Optimism repository
 op-clone:
