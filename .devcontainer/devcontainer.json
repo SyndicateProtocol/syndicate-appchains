@@ -49,7 +49,7 @@
   // - just: Required for running development commands
   // - netcat-openbsd: Used for port verification during container startup
   // - just zsh completions: Adds zsh tab completion for just commands within the justfile
-  "postCreateCommand": "sudo apt update && sudo apt install -y just netcat-openbsd && mkdir -p ~/.zsh/completions && just --completions zsh > ~/.zsh/completions/just.zsh && just --justfile ./.devcontainer/justfile create-aliases",
+  "postCreateCommand": "sudo apt update && sudo apt install -y just netcat-openbsd && mkdir -p ~/.zsh/completions && just --completions zsh > ~/.zsh/completions/just.zsh",
 
   // Configure tool-specific properties.
   "customizations": {
