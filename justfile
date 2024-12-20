@@ -105,6 +105,33 @@ op-clone:
     git clone --branch optimism --single-branch --depth 1 https://github.com/ethereum-optimism/op-geth.git ~/op-geth || echo skipping op-geth clone
     @just _log-end "op-clone"
 
+# Remove OP devnet directory
+op-clean:
+    @just _log-start "op-clean"
+    rm -rf ~/optimism
+    @just _log-end "op-clean"
+
+# Re-clone OP devnet directory
+op-reclone: op-down op-clean op-clone
+
+# Initialize op-devnet
+op-up:
+    @just _log-start "op-up"
+    PATH={{foundry_path}} make --directory ~/optimism devnet-up
+    @echo "OP Devnet initialized"
+    @just _log-end "op-up"
+
+# Shut down devnet
+op-down:
+    @just _log-start "op-down"
+    @if [ -d ~/optimism ]; then \
+        PATH={{foundry_path}} make --directory ~/optimism devnet-down; \
+        echo "OP Devnet shut down"; \
+    else \
+        echo "OP Devnet not running"; \
+    fi
+    @just _log-end "op-down"
+
 # Starts arbitrum node listening at 8547
 arb-up:
     @just _log-start "arb-up"
@@ -130,12 +157,6 @@ arb-teardown: arb-down
     docker network rm $(docker network ls -q -f name=nitro-dev) 2>/dev/null || true
     @echo "Arbitrum node infrastructure removed."
 
-op-clean:
-    @just _log-start "op-clean"
-    rm -rf ~/optimism
-    @just _log-end "op-clean"
-
-op-reclone: op-down op-clean op-clone
 
 # Deploy MetabasedSequencerChain smart contract to Optimism devnet
 op-deploy-chain:
@@ -271,20 +292,6 @@ foundry-update:
     @just _log-start "foundry-update"
     [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || foundryup
     @just _log-end "foundry-update"
-
-# Initialize op-devnet
-op-up:
-    @just _log-start "op-up"
-    PATH={{foundry_path}} make --directory ~/optimism devnet-up
-    @echo "OP Devnet initialized"
-    @just _log-end "op-up"
-
-# Shut down devnet
-op-down:
-    @just _log-start "op-down"
-    PATH={{foundry_path}} make --directory ~/optimism devnet-down
-    @echo "OP Devnet shut down"
-    @just _log-end "op-down"
 
 # Create aliases for devnet commands in both Bash and Zsh
 create-aliases:
