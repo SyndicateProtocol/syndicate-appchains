@@ -1,8 +1,5 @@
 [workspace]
 resolver = "2"
-members = [
-    "crates/block-builder",
-    "crates/data-ingestor"
-]
+members = ["crates/block-builder", "crates/data-ingestor"]
 
 [workspace.dependencies]
