@@ -121,7 +121,7 @@ op-down:
     @just _log-end "op-down"
 
 # Starts arbitrum node listening at 8547
-arb-up:
+arb-up: foundry-setup foundry-upgrade
     @just _log-start "arb-up"
     @just _run-arb-nitro-dev-node
     @just _log-end "arb-up"
