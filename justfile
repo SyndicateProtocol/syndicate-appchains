@@ -147,6 +147,7 @@ arb-teardown: arb-down
     @just _log-end "arb-teardown"
 
 # Deploy MetabasedSequencerChain smart contract to Optimism devnet
+# TODO: Requires running RPC. Will handle soon
 op-deploy-chain:
     @just _log-start "op-deploy-chain"
     cat {{ contracts_root }}/script/DeployContractsForSequencerChain.s.sol | sed -E 's/(l3ChainId = )0;/\1{{ l3_chain_id }};/' > {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
@@ -155,6 +156,7 @@ op-deploy-chain:
     @just _log-end "op-deploy-chain"
 
 # Deploy MetabasedSequencerChain smart contract to Arbitrum Orbit devnet
+# TODO: Requires running RPC. Will handle soon
 arb-deploy-chain:
     @just _log-start "arb-deploy-chain"
     cat {{ contracts_root }}/script/DeployContractsForSequencerChain.s.sol | sed -E 's/(l3ChainId = )0;/\1{{ l3_chain_id }};/' > {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
