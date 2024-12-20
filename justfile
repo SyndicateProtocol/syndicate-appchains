@@ -533,9 +533,9 @@ _run-arb-nitro-dev-node:
 
     # Check if registration was successful
     if [[ "$registration_output" == *"error"* ]]; then \
-        echo "Failed to register Cache Manager contract. Registration output:" \
-        echo "$registration_output" \
-        exit 1 \
+        echo "Failed to register Cache Manager contract. Registration output:"; \
+        echo "$registration_output"; \
+        exit 1; \
     fi
 
     # If no errors, print success message
