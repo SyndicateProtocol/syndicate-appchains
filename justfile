@@ -131,23 +131,35 @@ arb-up: foundry-all
     @# Only run the node if health check fails
     @if ! just arb-health-check &>/dev/null; then \
         just _run-arb-nitro-dev-node; \
+        echo "Arbitrum node RPC is now running at {{arb_orbit_l2_rpc_url}}"; \
     else \
-        echo "Arbitrum node is already running"; \
+        echo "Arbitrum node is already running at {{arb_orbit_l2_rpc_url}}"; \
     fi
+
 
     @just _log-end "arb-up"
 
 # Stops Arbitrum docker container created by script above
 arb-down:
     @just _log-start "arb-down"
+
     @echo "Stopping Arbitrum node..."
     docker stop nitro-dev
     @echo "Arbitrum node stopped."
+
     @just _log-end "arb-down"
 
 # Removes all Docker infra assocaited with the Arbitrum, returning to a blank slate
-arb-teardown: arb-down
+arb-teardown:
     @just _log-start "arb-teardown"
+
+    @# Stop the node if it's running
+    @if just arb-health-check &>/dev/null; then \
+        just arb-down; \
+    else \
+        echo "Arbitrum node is already stopped"; \
+    fi
+
     @echo "Removing Arbitrum container..."
     docker rm nitro-dev 2>/dev/null || true
     @echo "Removing associated volumes..."
@@ -155,6 +167,7 @@ arb-teardown: arb-down
     @echo "Removing associated networks..."
     docker network rm $(docker network ls -q -f name=nitro-dev) 2>/dev/null || true
     @echo "Arbitrum node infrastructure removed."
+
     @just _log-end "arb-teardown"
 
 # Deploy MetabasedSequencerChain smart contract to Optimism devnet
