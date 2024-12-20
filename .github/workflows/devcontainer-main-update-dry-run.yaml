@@ -5,11 +5,11 @@ name: (Dry Run) Update Dev Container Image Cache
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
     paths:
-      - '.devcontainer/**'
-      - '**/justfile'
-      - '.github/**'
+      - ".devcontainer/**"
+      - ".github/**"
+      - "**/justfile"
 
 jobs:
   dry-run-check:
