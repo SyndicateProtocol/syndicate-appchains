@@ -213,8 +213,8 @@ create-envrc:
     "export METABASED_SEQUENCER_PORT={{ metabased_sequencer_port }}\n"\
     "export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x0000000000000000000000000000000000000000"\
     > {{ envrc_file }}
-    # Exit the script after creating the .envrc file
     exit 0
+
     just _log-end "create-envrc"
 
 # Puts arb contract address into localnet ENV file
@@ -228,6 +228,7 @@ arb-update-chain-address: arb-deploy-chain create-envrc
 # Puts Arb contract address into localnet ENV file
 update-chain-address: arb-deploy-chain create-envrc
     just _log-start "update-chain-address"
+
     #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
@@ -239,6 +240,8 @@ update-chain-address: arb-deploy-chain create-envrc
     echo "METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x${contract_address}" >> {{ envrc_file }}.tmp
     echo "SEQUENCING_CONTRACT_ADDRESS=0x${contract_address}" >> {{ envrc_file }}.tmp
     mv {{ envrc_file }}.tmp {{ envrc_file }}
+    exit 0
+
     just _log-end "update-chain-address"
 
 go-install:
@@ -359,6 +362,7 @@ arb-test-sendRawTransaction: arb-health-check sequencer-health-check
 # Setup and verify Arbitrum network configuration
 arb-network-verify:
     just _log-start "arb-network-verify"
+
     #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
@@ -369,10 +373,14 @@ arb-network-verify:
     RESPONSE=$(just arb-network-setup)
     echo "Network setup: $RESPONSE"
     if echo "$RESPONSE" || ! grep -q "Ready to bring up the Arbitrum Orbit devnet"; then echo "\[✓\] Network setup succeeded"; else echo "\[✗\] Network setup failed"; exit 1; fi
+    exit 0
+
     just _log-end "arb-network-verify"
 
 # Health check for Arbitrum node
 arb-health-verify:
+    just _log-start "arb-health-verify"
+
     #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
@@ -388,9 +396,12 @@ arb-health-verify:
         sleep 10
     done
     echo "[STATUS] Arbitrum node is ready"
+    exit 0
 
+    just _log-end "arb-health-verify"
 # Setup and verify sequencer
 sequencer-verify:
+    just _log-start "sequencer-verify"
     #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
@@ -405,9 +416,12 @@ sequencer-verify:
         echo "[STATUS] Still waiting for Rust build complete..."
     done
     echo "[STATUS] Rust build completed. Sequencer setup completed."
+    exit 0
 
+    just _log-end "sequencer-verify"
 # Run transaction test
 transaction-verify:
+    just _log-start "transaction-verify"
     #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
@@ -430,6 +444,9 @@ transaction-verify:
         exit 1
     fi
     echo "[STATUS] Test L3 -> Arbitrum L2 transaction completed successfully"
+    exit 0
+
+    just _log-end "transaction-verify"
 
 # Aggregated command for CI pipeline to run all verifications
 verify-all:
@@ -447,4 +464,6 @@ verify-all:
     just transaction-verify
 
     echo "[STATUS] All verification steps completed successfully"
+    exit 0
+
     just _log-end "verify-all"
