@@ -517,9 +517,9 @@ _run-arb-nitro-dev-node:
 
     # Check if contract deployment was successful
     if [[ -z "$contract_address" ]]; then \
-        echo "Error: Failed to extract contract address. Full output:" \
-        echo "$deploy_output" \
-        exit 1 \
+        echo "Error: Failed to extract contract address. Full output:"; \
+        echo "$deploy_output"; \
+        exit 1; \
     fi
 
     echo "Cache Manager contract deployed at address: $contract_address"
