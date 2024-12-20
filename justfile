@@ -267,19 +267,19 @@ go-install:
     # go install {{ repository_root }}/metabased-publisher/cmd
     @just _log-end "go-install"
 
-# Install Foundry
+# Install foundryup (Foundry installer)
 # Based on https://book.getfoundry.sh/getting-started/installation
-foundry-install:
-    @just _log-start "foundry-install"
+foundry-setup:
+    @just _log-start "foundry-setup"
     [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || curl -L https://foundry.paradigm.xyz | bash
-    @just _log-end "foundry-install"
+    @just _log-end "foundry-setup"
 
-# Update Foundry
+# Install or upgrade Foundry with foundryup
 # Based on https://book.getfoundry.sh/getting-started/installation
-foundry-update:
-    @just _log-start "foundry-update"
+foundry-upgrade:
+    @just _log-start "foundry-upgrade"
     [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || foundryup
-    @just _log-end "foundry-update"
+    @just _log-end "foundry-upgrade"
 
 # Create aliases for devnet commands in both Bash and Zsh
 create-aliases:
@@ -296,8 +296,8 @@ create-aliases:
             echo "# Foundry PATH" >> "$rc_file"
             echo "export PATH=\"\$PATH:\$HOME/.foundry/bin\"" >> "$rc_file"
             echo "# Foundry aliases" >> "$rc_file"
-            echo "alias foundry-install='just -f {{justfile()}} foundry-install'" >> "$rc_file"
-            echo "alias foundry-update='just -f {{justfile()}} foundry-update'" >> "$rc_file"
+            echo "alias foundry-setup='just -f {{justfile()}} foundry-setup'" >> "$rc_file"
+            echo "alias foundry-upgrade='just -f {{justfile()}} foundry-upgrade'" >> "$rc_file"
             echo "# Local Devnet aliases" >> "$rc_file"
             echo "alias op-up='just -f {{justfile()}} op-up'" >> "$rc_file"
             echo "alias op-down='just -f {{justfile()}} op-down'" >> "$rc_file"
@@ -326,11 +326,11 @@ create-aliases:
 # OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
 # We initialize and then spin down the devnet to get the initialization time out
 # of the way upfront
-op-all: op-clone foundry-install foundry-update create-aliases
+op-all: op-clone foundry-setup foundry-upgrade create-aliases
     @echo "Post-setup OP script completed successfully. Ready to bring up the OP Stack devnet with op-up."
 
 # Run all Arbitrum setup steps in sequence necessary for `arb-up`
-arb-network-setup: foundry-install foundry-update create-aliases
+arb-network-setup: foundry-setup foundry-upgrade create-aliases
     @echo "Post-setup Arbitrum script completed successfully. Ready to bring up the Arbitrum Orbit devnet with arb-up."
 
 arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabased-sequencer
