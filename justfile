@@ -452,6 +452,7 @@ _log-end command:
 # 1. Backslashes were added to all if statements and loops to match the whitespace requirements of Just (no newlines without backslashes)
 # 2. Environment variables were converted to Justfile variables
 # 3. Pattern matching was changed from bash syntax to zsh syntax
+# TODO: Update ported version of the script
 _run-arb-nitro-dev-node:
     #!/usr/bin/zsh
 
