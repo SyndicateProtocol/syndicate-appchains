@@ -205,10 +205,11 @@ op-update-chain-address: op-deploy-chain create-envrc
 create-envrc:
     @just _log-start "create-envrc"
 
-    #! /usr/bin/zsh
-    # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
-    set -euxo pipefail
-    echo -e \
+    @#! /usr/bin/zsh
+    @# Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
+    @set -euxo pipefail
+
+    @echo -e \
     "# Common\n"\
     "export SETTLEMENT_CHAIN_RPC_URL={{ op_devnet_l2_rpc_url }}\n"\
     "export SETTLEMENT_CHAIN_RPC_URL_WS=wss://base-rpc.publicnode.com # Optional if using WS\n"\
@@ -238,7 +239,10 @@ create-envrc:
     "export METABASED_SEQUENCER_PORT={{ metabased_sequencer_port }}\n"\
     "export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x0000000000000000000000000000000000000000"\
     > {{ envrc_file }}
-    exit 0
+
+    @echo "Created .envrc file at {{ envrc_file }}"
+
+    @exit 0
 
     @just _log-end "create-envrc"
 
@@ -306,6 +310,7 @@ arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabase
     @echo "Arbitrum Sequencer setup completed successfully. Running sequencer."
 
 # TODO: Confirm that health checks work for running services
+# Spin up arb-up if not running
 arb-health-check:
     @just _log-start "arb-health-check"
     curl -s -X POST -H "Content-Type: application/json" \
@@ -328,7 +333,7 @@ op-translator-health-check:
     @just _log-end "op-translator-health-check"
 
 # Requires arb-up and metabased-sequencer up
-# TODO: Auto-start services if not running
+# TODO: Auto-start services if not running (arb-up, metabased-sequencer)
 arb-test-sendRawTransaction: arb-health-check sequencer-health-check
     curl --location {{ metabased_sequencer_url }} \
     --header 'Content-Type: application/json' \
