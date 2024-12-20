@@ -124,10 +124,17 @@ op-down:
     fi
     @just _log-end "op-down"
 
-# Starts arbitrum node listening at 8547
-arb-up: foundry-setup foundry-upgrade
+# Starts Arbitrum Orbit devnet if one is not already running
+arb-up: foundry-all
     @just _log-start "arb-up"
-    @just _run-arb-nitro-dev-node
+
+    @# Only run the node if health check fails
+    @if ! just arb-health-check &>/dev/null; then \
+        just _run-arb-nitro-dev-node; \
+    else \
+        echo "Arbitrum node is already running"; \
+    fi
+
     @just _log-end "arb-up"
 
 # Stops Arbitrum docker container created by script above
