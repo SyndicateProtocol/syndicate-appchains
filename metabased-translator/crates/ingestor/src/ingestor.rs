@@ -1,14 +1,12 @@
 use alloy::{
-    providers::{Provider, ProviderBuilder, RootProvider},
     eips::eip1898::BlockNumberOrTag,
-    rpc::types::{
-        Block, BlockTransactionsKind,
-    },
+    providers::{Provider, ProviderBuilder, RootProvider},
+    rpc::types::{Block, BlockTransactionsKind},
     transports::BoxTransport,
 };
-use tokio::sync::mpsc;
-use std::error::Error;
 use eyre;
+use std::error::Error;
+use tokio::sync::mpsc;
 
 pub struct Ingestor {
     chain: RootProvider<BoxTransport>,
@@ -17,7 +15,11 @@ pub struct Ingestor {
 }
 
 impl Ingestor {
-    pub async fn new(rpc_url: &str, start_block: u64, buffer_size: usize) -> Result<(Self, mpsc::Receiver<Block>), Box<dyn Error>> {
+    pub async fn new(
+        rpc_url: &str,
+        start_block: u64,
+        buffer_size: usize,
+    ) -> Result<(Self, mpsc::Receiver<Block>), Box<dyn Error>> {
         let chain = ProviderBuilder::new().on_builtin(rpc_url).await?;
         let (sender, receiver) = mpsc::channel(buffer_size);
         Ok((
@@ -31,8 +33,12 @@ impl Ingestor {
     }
 
     pub async fn get_block(&self, block_number: u64) -> Result<Block, Box<dyn Error>> {
-        let block = self.chain
-            .get_block_by_number(BlockNumberOrTag::from(block_number), BlockTransactionsKind::Full)
+        let block = self
+            .chain
+            .get_block_by_number(
+                BlockNumberOrTag::from(block_number),
+                BlockTransactionsKind::Full,
+            )
             .await?
             .ok_or_else(|| eyre::eyre!("Block not found"))?;
         Ok(block)
@@ -42,7 +48,7 @@ impl Ingestor {
         if block.header.inner.number != self.current_block_number {
             return Err(Box::new(std::io::Error::new(
                 std::io::ErrorKind::InvalidData,
-                "Block number mismatch"
+                "Block number mismatch",
             )));
         }
         self.sender.send(block.clone()).await?;
@@ -51,21 +57,20 @@ impl Ingestor {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use alloy::{
-        rpc::types::{Block, Header,BlockTransactions},
         primitives::{B256, U256},
+        rpc::types::{Block, BlockTransactions, Header},
     };
-    use tokio::sync::mpsc;
     use eyre::Result;
+    use tokio::sync::mpsc;
 
     const RPC_URL: &str = "https://syndicate.io";
 
-     fn get_dummy_block(block_number: u64) -> Block{
-        let mut block: Block =  Block {
+    fn get_dummy_block(block_number: u64) -> Block {
+        let mut block: Block = Block {
             header: Header {
                 hash: B256::with_last_byte(block_number as u8),
                 inner: Default::default(),
@@ -73,7 +78,7 @@ mod tests {
                 size: Some(U256::from(1000)),
             },
             uncles: vec![B256::with_last_byte((block_number - 1) as u8)],
-            transactions:BlockTransactions::Full(vec![]),
+            transactions: BlockTransactions::Full(vec![]),
             withdrawals: None,
         };
         block.header.inner.number = block_number;
@@ -109,7 +114,10 @@ mod tests {
 
         let block = get_dummy_block(start_block);
 
-        ingestor.push_block(block).await.expect("Failed to poll block");
+        ingestor
+            .push_block(block)
+            .await
+            .expect("Failed to poll block");
 
         // Check if the block was sent to the channel
         if let Some(block) = receiver.recv().await {
@@ -139,10 +147,7 @@ mod tests {
         let result = ingestor.push_block(mismatched_block).await;
 
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "Block number mismatch"
-        );
+        assert_eq!(result.unwrap_err().to_string(), "Block number mismatch");
 
         Ok(())
     }
