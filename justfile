@@ -79,18 +79,6 @@ export PATH := foundry_path
 default:
     @just --list
 
-# Helper functions for command logging
-# Underscores are used to indicate a private function that can be called only
-# within the justfile
-# Functions with underscores cannot be called externally
-_log-start command:
-    @echo "┌──────────────────────────────────────────┐"
-    @echo "│ Starting command: {{command}}            │"
-    @echo "└──────────────────────────────────────────┘"
-_log-end command:
-    @echo "┌──────────────────────────────────────────┐"
-    @echo "│ Completed command: {{command}}           │"
-    @echo "└──────────────────────────────────────────┘"
 
 # Clone the Optimism repository
 op-clone:
@@ -469,3 +457,16 @@ verify-all:
     exit 0
 
     @just _log-end "verify-all"
+
+# Helper functions for command logging
+# Underscores are used to indicate a private function that can be called only
+# within the justfile
+# Functions with underscores cannot be called externally
+_log-start command:
+    @echo "┌──────────────────────────────────────────┐"
+    @echo "│ Starting command: {{command}}            │"
+    @echo "└──────────────────────────────────────────┘"
+_log-end command:
+    @echo "┌──────────────────────────────────────────┐"
+    @echo "│ Completed command: {{command}}           │"
+    @echo "└──────────────────────────────────────────┘"
