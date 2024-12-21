@@ -1,10 +1,12 @@
 # Set the shell to zsh
+# The -f flag indicates that the shell is non-interactive. This ensures that
+# programs being run don't try to wait for user input
 # The -u flag is used to exit the script if an uncaught error occurs. This
 # ensures that we can place exit 0 at the end of scripts to jump back into just
 # without inadvertently continuing after failed commands
 # The -c flag is used to run the script in a subshell. This is recommended by
 # just: https://just.systems/man/en/settings.html#settings
-set shell := ["zsh", "-cu"]
+set shell := ["zsh", "-fcu"]
 
 # Define the PATH variable to include Foundry's bin directory
 foundry_path := env_var('PATH') + ":" + env_var('HOME') + "/.foundry/bin"
@@ -118,9 +120,8 @@ op-reclone: op-down op-clean op-clone
 op-up: create-op-network-config
     @just _log-start "op-up"
 
-    @# INTERACTIVE=no prevents kurtosis from asking for an email address upon setup: https://github.com/kurtosis-tech/kurtosis/pull/1018/files
     @# OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
-    INTERACTIVE=no kurtosis run github.com/ethpandaops/optimism-package --args-file {{ op_network_config_file }}
+    kurtosis run github.com/ethpandaops/optimism-package --args-file {{ op_network_config_file }}
     @echo "OP Devnet initialized"
 
     @just _log-end "op-up"
