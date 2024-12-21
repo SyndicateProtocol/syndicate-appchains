@@ -48,6 +48,8 @@ op_translator_port := "9999"
 
 op_translator_url := "http://127.0.0.1:" + op_translator_port
 
+op_network_config_file := repository_root + "/.op-network-config.yaml"
+
 # Dev account private key - https://docs.arbitrum.io/run-arbitrum-node/run-nitro-dev-node#development-account-used-by-default
 arb_orbit_l2_private_key := "0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659"
 
@@ -248,6 +250,29 @@ op-update-chain-address: op-deploy-chain create-envrc
     mv {{ envrc_file }}.tmp {{ envrc_file }}
 
     @just _log-end "op-update-chain-address"
+
+# Make sure to add to .gitignore
+# TODO: Complete this step
+create-op-network-config:
+    @just _log-start "create-op-network-config"
+
+    @#! /usr/bin/zsh
+    @# Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
+    @set -euxo pipefail
+
+    # Based on https://docs.optimism.io/chain/testing/dev-node
+    @echo -e \
+    "optimism_package:\n"\
+    "    chains: # you can define multiple L2s, which will be deployed against the same L1 as a single Superchain\n"\
+    "        - participants: # each participant is a node in the network. here we've defined two, one running op-geth and one running op-reth\n"\
+    "            - el_type: op-geth # this node will be the sequencer since it's first in the list\n"\
+    "            - el_type: op-reth\n"\
+    "        network_params:\n"\
+    "            name: rollup-1 # can be anything as long as it is unique\n"\
+    "            network_id: 12345 # can be anything as long as it is unique \n"\
+    > {{ op_network_config_file }}
+
+    @just _log-end "create-op-network-config"
 
 # TODO(SEQ-312): Merge METABASED_SEQUENCER_CHAIN_RPC_ADDRESS -> SEQUENCING_CHAIN_RPC_URL
 # Copy of `.envrc.example` using vars set earlier in the file
