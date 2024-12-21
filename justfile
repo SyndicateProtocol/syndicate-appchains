@@ -269,9 +269,9 @@ create-op-network-config:
     "        - participants: # each participant is a node in the network. here we've defined two, one running op-geth and one running op-reth\n"\
     "            - el_type: op-geth # this node will be the sequencer since it's first in the list\n"\
     "            - el_type: op-reth\n"\
-    "        network_params:\n"\
-    "            name: rollup-1 # can be anything as long as it is unique\n"\
-    "            network_id: 12345 # can be anything as long as it is unique \n"\
+    "        - network_params:\n"\
+    "            - name: rollup-1 # can be anything as long as it is unique\n"\
+    "            - network_id: 12345 # can be anything as long as it is unique \n"\
     > {{ op_network_config_file }}
 
     @echo "Created OP network config file at {{ op_network_config_file }}"
