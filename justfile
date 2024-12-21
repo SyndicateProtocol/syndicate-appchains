@@ -115,11 +115,12 @@ op-reclone: op-down op-clean op-clone
 
 # Initialize op-devnet
 # TODO: Migrate to Kurtosis
-op-up:
+op-up: create-op-network-config
     @just _log-start "op-up"
 
-    # OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
-    PATH={{foundry_path}} make --directory ~/optimism devnet-up
+    @# INTERACTIVE=no prevents kurtosis from asking for an email address upon setup: https://github.com/kurtosis-tech/kurtosis/pull/1018/files
+    @# OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
+    INTERACTIVE=no kurtosis run github.com/ethpandaops/optimism-package --args-file {{ op_network_config_file }}
     @echo "OP Devnet initialized"
 
     @just _log-end "op-up"
