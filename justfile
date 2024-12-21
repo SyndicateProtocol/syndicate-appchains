@@ -100,7 +100,10 @@ op-clone:
 # Remove OP devnet directory
 op-clean:
     @just _log-start "op-clean"
+
     rm -rf ~/optimism
+    rm -rf ~/op-geth
+
     @just _log-end "op-clean"
 
 # Re-clone OP devnet directory
