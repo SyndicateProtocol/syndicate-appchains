@@ -10,7 +10,7 @@ create-translator-contract-bindings:
 
 create-test-contracts-bindings:
 	cd ../metabased-contracts && rm -rf out && forge bind --alloy
-	cp -r ../metabased-contracts/out/bindings/src/* tests/contract_bindings
-	mv tests/contract_bindings/lib.rs tests/contract_bindings/mod.rs
+	cp -r ../metabased-contracts/out/bindings/src/* tests/src/contract_bindings
+	mv tests/src/contract_bindings/lib.rs tests/src/contract_bindings/mod.rs
 .PHONY: create-test-contracts-bindings
 

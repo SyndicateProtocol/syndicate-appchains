@@ -1,7 +1,12 @@
 [package]
 name = "ingestor"
-version = "0.1.0"
-edition = "2021"
+version.workspace = true
+description = "Ingestor for metabased-translator."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [dependencies]
 pre-commit-hooks = "0.3.0"
