@@ -260,7 +260,7 @@ create-op-network-config:
     @# Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     @set -euxo pipefail
 
-    # Based on https://docs.optimism.io/chain/testing/dev-node
+    @# Based on https://docs.optimism.io/chain/testing/dev-node
     @echo -e \
     "optimism_package:\n"\
     "    chains: # you can define multiple L2s, which will be deployed against the same L1 as a single Superchain\n"\
@@ -271,6 +271,8 @@ create-op-network-config:
     "            name: rollup-1 # can be anything as long as it is unique\n"\
     "            network_id: 12345 # can be anything as long as it is unique \n"\
     > {{ op_network_config_file }}
+
+    @echo "Created OP network config file at {{ op_network_config_file }}"
 
     @just _log-end "create-op-network-config"
 
