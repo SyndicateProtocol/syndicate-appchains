@@ -147,7 +147,7 @@ arb-up: foundry-all
         just _run-arb-nitro-dev-node; \
         echo "Arbitrum node RPC is now running at {{arb_orbit_l2_rpc_url}}"; \
     else \
-        echo "Arbitrum node is already running at {{arb_orbit_l2_rpc_url}}"; \
+        echo "Arbitrum node RPC is already running at {{arb_orbit_l2_rpc_url}}"; \
     fi
 
     @just _log-end "arb-up"
