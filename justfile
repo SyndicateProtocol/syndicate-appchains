@@ -121,7 +121,10 @@ op-up: create-op-network-config
     @just _log-start "op-up"
 
     @# OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
-    kurtosis run github.com/ethpandaops/optimism-package --args-file {{ op_network_config_file }}
+    @# CI=true is used to prevent kurtosis from prompting for a user's email address: https://github.com/kurtosis-tech/kurtosis/blob/555b1bcc5ca8e7bcb84b3afa3c5b83db3df39975/cli/cli/helpers/interactive_terminal_decider/intearactive_terminal_decider.go#L4
+    @# Technically just the presence of the CI environment variable is enough, but
+    @# we're setting it to true to be more explicit
+    CI=true kurtosis run github.com/ethpandaops/optimism-package --args-file {{ op_network_config_file }}
     @echo "OP Devnet initialized"
 
     @just _log-end "op-up"
