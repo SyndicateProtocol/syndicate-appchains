@@ -1,6 +1,6 @@
 # Set the shell to zsh
-# The -f flag indicates that the shell is non-interactive. This ensures that
-# programs being run don't try to wait for user input
+# The -f flag doesn't load aliases, ensuring that the dev container won't conflict
+# with the user's shell
 # The -u flag is used to exit the script if an uncaught error occurs. This
 # ensures that we can place exit 0 at the end of scripts to jump back into just
 # without inadvertently continuing after failed commands
