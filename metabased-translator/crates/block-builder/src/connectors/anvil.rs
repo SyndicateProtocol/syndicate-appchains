@@ -1,16 +1,10 @@
-use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
-use crate::rollups::optimism::frame::to_data;
-use alloy::signers::local::PrivateKeySigner;
 use alloy::transports::http::Http;
-use alloy_network::EthereumWallet;
 use alloy_node_bindings::{Anvil, AnvilInstance};
-use alloy_primitives::{Address, B256, U256};
+use alloy_primitives::U256;
 use alloy_provider::ext::AnvilApi;
-use alloy_provider::{Provider, ProviderBuilder, RootProvider};
-use alloy_rpc_types::{BlockId, BlockNumberOrTag, BlockTransactionsKind};
-use reqwest::{Client, Url};
+use alloy_provider::{ProviderBuilder, RootProvider};
+use reqwest::Client;
 use std::net::TcpListener;
-use std::str::FromStr;
 use tracing::info;
 
 pub struct MetaChainProvider {
@@ -19,7 +13,7 @@ pub struct MetaChainProvider {
     genesis_timestamp: u64,
 
     anvil: Option<AnvilInstance>,
-    base_provider: Option<RootProvider<Http<Client>>>,
+    pub base_provider: Option<RootProvider<Http<Client>>>,
 }
 
 impl Default for MetaChainProvider {
@@ -58,7 +52,7 @@ impl MetaChainProvider {
             ])
             .try_spawn()?;
 
-        let provider = ProviderBuilder::new().on_http(Url::parse(anvil.endpoint_url().as_str())?);
+        let provider = ProviderBuilder::new().on_http(anvil.endpoint_url());
 
         self.anvil = Some(anvil);
         self.base_provider = Some(provider);
@@ -67,53 +61,9 @@ impl MetaChainProvider {
     }
 
     pub async fn mine_block(&self) -> eyre::Result<()> {
-        let signer: PrivateKeySigner =
-            "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d"
-                .parse()
-                .unwrap();
-        let wallet = EthereumWallet::from(signer);
-
-        let provider = ProviderBuilder::new()
-            .with_recommended_fillers()
-            .wallet(wallet)
-            .on_provider(self.base_provider.as_ref().unwrap());
-
-        // Set up the batcher and batch inbox
-        let batcher = Address::from_str("0x063D87A885a9323831A688645647eD7d0e859C5d")
-            .expect("Failed to parse batcher address");
-        let batch_inbox = Address::from_str("0x97395dd253e2d096a0caa62a574895c3c2f2b2e0")
-            .expect("Failed to parse Batch Inbox address");
-        let balance = U256::MAX;
-        provider.anvil_set_balance(batcher, balance).await?;
-
-        let block = provider
-            .get_block(
-                BlockId::Number(BlockNumberOrTag::Number(0)),
-                BlockTransactionsKind::Hashes,
-            )
-            .await?
-            .expect("Failed to get block");
-
-        info!("Block: {:?}", block);
-        let single_batch = Batch {
-            parent_hash: B256::from_str(
-                "0xe009262cd1adf34cfaf845fd1c17a6ddb7f97c67b2992cd9f286ff4e1c6ad233",
-            )
-            .unwrap(),
-            epoch_num: 0,
-            epoch_hash: block.header.hash,
-            timestamp: 1712500002,
-            transactions: vec![],
-        };
-        let frames = single_batch.get_frames(1000000).unwrap();
-        let data = to_data(&frames).unwrap();
-
-        let tx = new_batcher_tx(batcher, batch_inbox, data.into());
-        info!("Transaction: {:?}", tx);
-        let builder = provider.send_transaction(tx.clone()).await.unwrap();
-        let hash = *builder.tx_hash();
-        info!("Transaction hash: {:?}", hash);
-        provider
+        self.base_provider
+            .as_ref()
+            .ok_or_else(|| eyre::eyre!("Provider not initialized"))?
             .anvil_mine(Some(U256::from(1)), None::<U256>)
             .await?;
 
