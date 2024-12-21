@@ -50,7 +50,7 @@
   // - netcat-openbsd: Used for port verification during container startup
   // - kurtosis-cli: Required for running kurtosis commands (e.g. for the Optimism devnet)
   // - just zsh completions: Adds zsh tab completion for just commands within the justfile
-  "postCreateCommand": "/workspaces/metabased-rollup/.devcontainer/install-kurtosis-cli.sh && sudo apt install -y just netcat-openbsd && mkdir -p ~/.zsh/completions && just --completions zsh > ~/.zsh/completions/just.zsh",
+  "postCreateCommand": "zsh /workspaces/metabased-rollup/.devcontainer/install-kurtosis-cli.sh && sudo apt install -y just netcat-openbsd && mkdir -p ~/.zsh/completions && just --completions zsh > ~/.zsh/completions/just.zsh",
 
   // Configure tool-specific properties.
   "customizations": {
