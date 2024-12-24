@@ -6,12 +6,12 @@ use alloy::{
 };
 use eyre;
 use std::{error::Error, time::Duration};
-use tokio::sync::mpsc;
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 pub struct Ingestor {
     chain: RootProvider<BoxTransport>,
     current_block_number: u64,
-    sender: mpsc::Sender<Block>,
+    sender: Sender<Block>,
     polling_interval: Duration,
 }
 
@@ -21,9 +21,9 @@ impl Ingestor {
         start_block: u64,
         buffer_size: usize,
         polling_interval: Duration,
-    ) -> Result<(Self, mpsc::Receiver<Block>), Box<dyn Error>> {
+    ) -> Result<(Self, Receiver<Block>), Box<dyn Error>> {
         let chain = ProviderBuilder::new().on_builtin(rpc_url).await?;
-        let (sender, receiver) = mpsc::channel(buffer_size);
+        let (sender, receiver) = channel(buffer_size);
         Ok((
             Self {
                 chain,
@@ -40,10 +40,13 @@ impl Ingestor {
             .chain
             .get_block_by_number(
                 BlockNumberOrTag::from(block_number),
-                BlockTransactionsKind::Full,
+                // TODO: BlockTransactionsKind::Full will fail when deserializing OP specific transactions.
+                // Either use BlockTransactionsKind::Hashes or implement a custom deserializer for OP specific transactions.
+                BlockTransactionsKind::Hashes,
             )
             .await?
             .ok_or_else(|| eyre::eyre!("Block not found"))?;
+        log::info!("[Ingestor] Got block: {:?}", block.header.inner.number);
         Ok(block)
     }
 
@@ -60,9 +63,12 @@ impl Ingestor {
     }
 
     pub async fn start_polling(&mut self) -> Result<(), Box<dyn Error>> {
+        log::info!("[Ingestor] Starting polling");
+
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
             let block = self.get_block(self.current_block_number).await?;
+            log::info!("[Ingestor] Pushing block: {:?}", block.header.inner.number);
             self.push_block(block).await?;
             interval.tick().await;
         }
