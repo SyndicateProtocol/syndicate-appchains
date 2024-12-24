@@ -4,7 +4,7 @@ use std::time::Duration;
 
 #[tokio::main]
 async fn main() {
-    let rpc_url = "https://base-mainnet.g.alchemy.com/v2/y15rLULZktDv1PmPaC0eMVf-RuKUcGfX"; //"https://eth.llamarpc.com";
+    let rpc_url = "https://base.llamarpc.com"; //"https://eth.llamarpc.com";
     let start_block = 19486923;
     let polling_interval = Duration::from_secs(1);
 
@@ -19,7 +19,10 @@ async fn main() {
     // Spawn a task to log what the receiver receives
     tokio::spawn(async move {
         while let Some(message) = receiver.recv().await {
-            log::info!("[Ingestor] Received block number: {:?}", message.header.inner.number);
+            log::info!(
+                "[Ingestor] Received block number: {:?}",
+                message.header.inner.number
+            );
         }
     });
 
