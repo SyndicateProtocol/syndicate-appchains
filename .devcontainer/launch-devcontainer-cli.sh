@@ -48,12 +48,4 @@ if ! devcontainer exec --workspace-folder . bash -c "cd /workspaces/metabased-ro
     exit 1
 fi
 
-# Verify port forwarding
-echo "Verifying port forwarding..."
-for port in 8547 8456 9999 9545; do
-    if ! nc -z localhost $port; then
-        echo "Warning: Port $port is not accessible"
-    fi
-done
-
 echo "Dev container setup complete!"

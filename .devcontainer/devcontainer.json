@@ -9,7 +9,10 @@
       "installZsh": true,
       "configureZshAsDefaultShell": true
     },
-    "ghcr.io/devcontainers/features/git:1": "latest",
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest",
+      "ppa": false
+    },
     "ghcr.io/devcontainers/features/node:1": {
       "version": "20"
     },
@@ -19,7 +22,11 @@
     "ghcr.io/devcontainers/features/go:1": {
       "version": "1.23.0"
     },
-    "ghcr.io/devcontainers/features/rust:1": "latest",
+    "ghcr.io/devcontainers/features/rust:1": {
+      "version": "1.83.0",
+      "profile": "default",
+      "targets": "x86_64-unknown-linux-gnu,aarch64-apple-darwin"
+    },
     "ghcr.io/devcontainers/features/git-lfs:1": "latest",
     "ghcr.io/devcontainers/features/github-cli:1": "latest"
   },
