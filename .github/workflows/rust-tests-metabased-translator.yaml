@@ -17,7 +17,7 @@ defaults:
     working-directory: metabased-translator
 
 jobs:
-  test:
+  metabased-translator-test:
     name: Run Rust Tests
     runs-on: ubuntu-latest
 
