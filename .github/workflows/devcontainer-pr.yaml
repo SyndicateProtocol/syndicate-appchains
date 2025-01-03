@@ -1,4 +1,4 @@
-name: Dev Container Tests
+name: DevContainer Tests
 
 on:
   # Temporarily disabled while we work on the justfile refactor
@@ -7,6 +7,7 @@ on:
 
 jobs:
   arb-test:
+    name: DevContainer - Arbitrum Integration Test
     runs-on: ubuntu-latest
 
     steps:
