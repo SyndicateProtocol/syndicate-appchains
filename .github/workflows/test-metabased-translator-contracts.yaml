@@ -1,4 +1,4 @@
-name: foundry test metabased-translator-contracts
+name: Foundry Test Metabased Translator Contracts
 
 on:
   # Run workflow on every push to main. This ensures that cross-service PRs that
