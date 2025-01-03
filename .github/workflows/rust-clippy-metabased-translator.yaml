@@ -23,6 +23,7 @@ defaults:
 
 jobs:
   metabased-translator-clippy-check:
+    name: Metabased Translator
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
