@@ -1,4 +1,4 @@
-name: Rust Clippy Metabased Translator
+name: Rust Clippy
 
 on:
   # Run workflow on every push to main. This ensures that cross-service PRs that

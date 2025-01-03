@@ -1,4 +1,4 @@
-name: Rust Clippy Metabased Sequencer
+name: Rust Clippy
 
 on:
   # Run workflow on every push to main. This ensures that cross-service PRs that
