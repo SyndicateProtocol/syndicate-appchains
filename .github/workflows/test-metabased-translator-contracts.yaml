@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: true
 
-    name: Foundry project
+    name: Metabased Translator Contracts - Foundry Project
     runs-on: ubuntu-latest
     defaults:
       run:

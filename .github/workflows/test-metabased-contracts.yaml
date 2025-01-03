@@ -15,13 +15,13 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  metabased-contracts-check:
+  metabased-contracts-foundry-check:
     strategy:
       # Enable fail-fast to stop the job immediately if any step fails
       # This helps catch issues early and prevents wasting CI resources
       fail-fast: true
 
-    name: Foundry project
+    name: Metabased Contracts - Foundry Project
     runs-on: ubuntu-latest
     defaults:
       run:

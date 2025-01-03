@@ -18,7 +18,7 @@ defaults:
 
 jobs:
   metabased-translator-test:
-    name: Run Rust Tests
+    name: Metabased Translator - Rust Tests
     runs-on: ubuntu-latest
 
     steps:
