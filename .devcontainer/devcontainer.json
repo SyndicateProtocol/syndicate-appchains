@@ -68,7 +68,10 @@
         "JuanBlanco.solidity",
         "esbenp.prettier-vscode",
         "nefrob.vscode-just-syntax",
-        "GitHub.vscode-github-actions"
+        "GitHub.vscode-github-actions",
+        "usernamehw.errorlens",
+        "tamasfe.even-better-toml",
+        "fill-labs.dependi"
       ]
     }
   }
