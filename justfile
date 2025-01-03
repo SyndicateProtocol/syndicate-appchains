@@ -119,6 +119,7 @@ op-up:
     @just _log-start "op-up"
 
     # OP Devnet setup based on https://docs.optimism.io/chain/testing/dev-node
+    # FAILURE: Recipe failed - make: *** No rule to make target 'devnet-up'. The Optimism repository Makefile structure may have changed.
     PATH={{foundry_path}} make --directory ~/optimism devnet-up
     @echo "OP Devnet initialized"
 
@@ -130,10 +131,11 @@ op-down:
     @just _log-start "op-down"
 
     @if [ -d ~/optimism ]; then \
-        PATH={{foundry_path}} make --directory ~/optimism devnet-down; \
-        echo "OP Devnet shut down"; \
+    # FAILURE: Recipe failed - make: *** No rule to make target 'devnet-down'. The Optimism repository Makefile structure may have changed.
+    PATH={{foundry_path}} make --directory ~/optimism devnet-down; \
+    echo "OP Devnet shut down"; \
     else \
-        echo "OP Devnet not running"; \
+    echo "OP Devnet not running"; \
     fi
 
     @just _log-end "op-down"
@@ -217,6 +219,7 @@ run-metabased-sequencer: create-envrc
 
 # Runs op-translator
 run-op-translator: create-envrc update-chain-address
+    # FAILURE: Recipe failed during update-chain-address dependency. Error: "contract_address: parameter not set". The contract address extraction from deployment file failed, likely due to missing or malformed contract deployment data.
     @just _log-start "run-op-translator"
 
     . {{ envrc_file }} && cd {{ op_translator_root }} && go run main.go
@@ -443,6 +446,7 @@ arb-test-sendRawTransaction: arb-health-check sequencer-health-check
 # Setup and verify Arbitrum network configuration
 # TODO: Fix this script
 arb-network-verify:
+    # FAILURE: Recipe failed with "RESPONSE: parameter not set". Script error in capturing network setup response.
     @just _log-start "arb-network-verify"
 
     #! /usr/bin/zsh
@@ -462,6 +466,7 @@ arb-network-verify:
 # Health check for Arbitrum node
 # TODO: Fix this script
 arb-health-verify:
+    # FAILURE: Recipe failed due to zsh syntax error in if condition. The script uses incorrect zsh syntax for the if statement.
     @just _log-start "arb-health-verify"
 
     # Start Arbitrum node in background if not running
@@ -495,6 +500,7 @@ sequencer-verify:
 # Run transaction test
 # TODO: Fix this script
 transaction-verify:
+    # FAILURE: Recipe failed with "RESPONSE: parameter not set". Script error in capturing transaction test response, similar to arb-network-verify failure.
     @just _log-start "transaction-verify"
 
     @echo "[STATUS] Running test transaction..."
@@ -522,6 +528,7 @@ transaction-verify:
 # Aggregated command for CI pipeline to run all verifications
 # TODO: Migrate to standard Justfile syntax with one single command + one echo
 verify-all:
+    # FAILURE: Recipe will fail as it depends on multiple failing commands (arb-network-verify, arb-health-verify, transaction-verify) which have script errors in their implementations.
     @just _log-start "verify-all"
     #! /usr/bin/zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
