@@ -56,11 +56,11 @@
   // - 9545: Development network endpoint
   "forwardPorts": [8547, 8456, 9999, 9545],
 
-  // Update package lists and install required tools:
-  // - just: Required for running development commands
-  // - netcat-openbsd: Used for port verification during container startup
-  // - just zsh completions: Adds zsh tab completion for just commands within the justfile
-  "postCreateCommand": "sudo apt update && sudo apt install -y just netcat-openbsd && mkdir -p ~/.zsh/completions && just --completions zsh > ~/.zsh/completions/just.zsh",
+  // Update package lists and install required tools during container creation
+  "onCreateCommand": "sudo apt update && sudo apt install -y just netcat-openbsd",
+
+  // Setup user-specific configurations after container creation
+  "postCreateCommand": "mkdir -p ~/.zsh/completions && just --completions zsh > ~/.zsh/completions/just.zsh",
 
   // Configure tool-specific properties.
   "customizations": {
