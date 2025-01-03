@@ -1,4 +1,4 @@
-name: Rust Tests metabased-sequencer
+name: Rust Tests
 
 on:
   # Run workflow on every push to main. This ensures that cross-service PRs that
@@ -20,7 +20,7 @@ defaults:
 
 jobs:
   metabased-sequencer-test:
-    name: Metabased Sequencer - Rust Tests
+    name: Metabased Sequencer
     runs-on: ubuntu-latest
 
     steps:

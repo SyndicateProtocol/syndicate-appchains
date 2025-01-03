@@ -1,4 +1,4 @@
-name: Rust Clippy Metabased Translator
+name: Rust Clippy Check
 
 on:
   # Run workflow on every push to main. This ensures that cross-service PRs that
@@ -23,6 +23,7 @@ defaults:
 
 jobs:
   metabased-translator-clippy-check:
+    name: Metabased Translator
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

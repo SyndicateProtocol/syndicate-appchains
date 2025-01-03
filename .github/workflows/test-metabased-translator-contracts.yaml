@@ -1,4 +1,4 @@
-name: Foundry Test Metabased Translator Contracts
+name: Foundry Tests
 
 on:
   # Run workflow on every push to main. This ensures that cross-service PRs that
@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: true
 
-    name: Metabased Translator Contracts - Foundry Tests
+    name: Metabased Translator Contracts
     runs-on: ubuntu-latest
     defaults:
       run:

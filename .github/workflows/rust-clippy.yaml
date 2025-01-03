@@ -1,4 +1,4 @@
-name: Rust Clippy Metabased Sequencer
+name: Rust Clippy Check
 
 on:
   # Run workflow on every push to main. This ensures that cross-service PRs that
@@ -22,6 +22,7 @@ defaults:
 
 jobs:
   metabased-sequencer-clippy-check:
+    name: Metabased Sequencer
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

@@ -7,6 +7,7 @@ on:
 
 jobs:
   arb-test:
+    name: Arbitrum Integration Test
     runs-on: ubuntu-latest
 
     steps:

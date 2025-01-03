@@ -1,4 +1,4 @@
-name: Publish op-translator Docker image
+name: Docker Publish
 
 on:
   push:
@@ -14,6 +14,7 @@ env:
 
 jobs:
   build-and-push-image-op-translator:
+    name: OP Translator
     runs-on: ubuntu-latest
     permissions:
       contents: read
