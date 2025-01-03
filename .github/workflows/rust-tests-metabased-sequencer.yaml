@@ -19,7 +19,7 @@ defaults:
     working-directory: metabased-sequencer
 
 jobs:
-  test:
+  metabased-sequencer-test:
     name: Run Rust Tests
     runs-on: ubuntu-latest
 

@@ -16,7 +16,7 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  check:
+  metabased-translator-contracts-check:
     strategy:
       fail-fast: true
 

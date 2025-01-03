@@ -15,7 +15,7 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  check:
+  metabased-contracts-check:
     strategy:
       # Enable fail-fast to stop the job immediately if any step fails
       # This helps catch issues early and prevents wasting CI resources
