@@ -21,7 +21,7 @@ defaults:
     working-directory: metabased-sequencer
 
 jobs:
-  clippy-check:
+  metabased-sequencer-clippy-check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
