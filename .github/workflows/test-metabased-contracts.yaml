@@ -21,7 +21,7 @@ jobs:
       # This helps catch issues early and prevents wasting CI resources
       fail-fast: true
 
-    name: Metabased Contracts - Foundry Tests
+    name: Metabased Contracts
     runs-on: ubuntu-latest
     defaults:
       run:

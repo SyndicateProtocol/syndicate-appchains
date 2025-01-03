@@ -1,4 +1,4 @@
-name: DevContainer Update
+name: Dev Container Update
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
 
 jobs:
   update-cache:
-    name: DevContainer - Update Cache
+    name: Update Cache
     runs-on: ubuntu-latest
 
     steps:

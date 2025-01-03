@@ -20,7 +20,7 @@ jobs:
     strategy:
       fail-fast: true
 
-    name: Metabased Translator Contracts - Foundry Tests
+    name: Metabased Translator Contracts
     runs-on: ubuntu-latest
     defaults:
       run:

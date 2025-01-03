@@ -20,7 +20,7 @@ defaults:
 
 jobs:
   metabased-sequencer-test:
-    name: Metabased Sequencer - Rust Tests
+    name: Metabased Sequencer
     runs-on: ubuntu-latest
 
     steps:
