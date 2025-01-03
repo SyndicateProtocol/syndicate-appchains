@@ -1,4 +1,4 @@
-name: Rust Tests metabased-sequencer
+name: Rust Tests Metabased Translator
 
 on:
   push:

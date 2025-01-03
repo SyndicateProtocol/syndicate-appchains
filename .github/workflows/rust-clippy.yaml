@@ -1,4 +1,4 @@
-name: Rust Clippy Check
+name: Rust Clippy Metabased Sequencer
 
 on:
   # Run workflow on every push to main. This ensures that cross-service PRs that
@@ -6,11 +6,10 @@ on:
   push:
     branches:
       - main
-      - anvil-poc
   # Only run on PRs that touch metabased-sequencer
   pull_request:
     paths:
-      - "metabased-translator/**"
+      - "metabased-sequencer/**"
 
 env:
   CARGO_TERM_COLOR: always
@@ -19,7 +18,7 @@ env:
 
 defaults:
   run:
-    working-directory: metabased-translator
+    working-directory: metabased-sequencer
 
 jobs:
   clippy_check:
@@ -33,4 +32,4 @@ jobs:
         uses: Swatinem/rust-cache@v2
 
       - name: Run Clippy
-        run: cargo clippy --workspace --all-targets --all-features
+        run: cargo clippy --all-targets --all-features
