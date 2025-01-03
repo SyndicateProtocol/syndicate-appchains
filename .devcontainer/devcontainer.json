@@ -9,6 +9,7 @@
       "installZsh": true,
       "configureZshAsDefaultShell": true
     },
+    // Disable PPA installation to avoid keyserver errors on remote systems (like Devin)
     "ghcr.io/devcontainers/features/git:1": {
       "version": "latest",
       "ppa": false
@@ -22,6 +23,8 @@
     "ghcr.io/devcontainers/features/go:1": {
       "version": "1.23.0"
     },
+    // Pin Rust version for reproducible builds (update with each stable release)
+    // Targets: x86_64-unknown-linux-gnu (X86 Linux), aarch64-apple-darwin (M series Mac)
     "ghcr.io/devcontainers/features/rust:1": {
       "version": "1.83.0",
       "profile": "default",
