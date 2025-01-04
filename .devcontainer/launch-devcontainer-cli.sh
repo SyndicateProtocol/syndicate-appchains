@@ -12,9 +12,10 @@ set -e
 
 # Function to check for existing dev containers
 check_existing_container() {
-    local workspace_name=$1
-    # Look for running dev containers for this workspace
-    container_id=$(docker ps --filter "name=_${workspace_name}_" --filter "status=running" --format "{{.ID}}" | head -n1)
+    local workspace_path="$(pwd)"
+    # Look for running dev containers for this workspace using devcontainer labels
+    >&2 echo "Checking for existing Dev Container with label devcontainer.local_folder=$workspace_path..."
+    container_id=$(docker ps --filter "label=devcontainer.local_folder=$workspace_path" --filter "status=running" --format "{{.ID}}" | head -n1)
     echo "$container_id"
 }
 
@@ -33,15 +34,19 @@ if [ ! -f "$DEVCONTAINER_PATH" ]; then
     exit 1
 fi
 
+# Get workspace information
+WORKSPACE_NAME=$(basename $(pwd))
+WORKSPACE_PATH="/workspaces/$WORKSPACE_NAME"
+
 # Ready to proceed
 echo ""
 
 # Check for existing container
-# The workspace name is extracted from the current directory name because
-# dev containers are named with the pattern "_workspace-name_" where workspace-name
-# is the name of the repository directory they were launched from
-WORKSPACE_NAME=$(basename $(pwd))
-CONTAINER_ID=$(check_existing_container "$WORKSPACE_NAME")
+# We use the full workspace path to match the devcontainer.local_folder label
+# This ensures we find the exact container for this workspace
+echo "Workspace path: $(pwd)"
+CONTAINER_ID=$(check_existing_container)
+echo "Found container ID: $CONTAINER_ID"
 
 if [ -n "$CONTAINER_ID" ]; then
     echo "Found existing dev container. Connecting..."
@@ -62,7 +67,7 @@ sleep 10
 
 # Verify container setup
 echo "Verifying container setup..."
-if ! devcontainer exec --workspace-folder . bash -c "cd /workspaces/metabased-rollup/ && just --list"; then
+if ! devcontainer exec --workspace-folder . zsh -c "cd $WORKSPACE_PATH && just --list"; then
     echo "Error: Container verification failed"
     exit 1
 fi
