@@ -47,8 +47,7 @@
   ],
   "remoteUser": "vscode",
   "containerUser": "vscode",
-  "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",
-  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/${localWorkspaceFolderBasename},type=bind",
+
 
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // Port mappings for development services:

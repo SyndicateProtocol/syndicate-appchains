@@ -51,7 +51,7 @@ echo "Found container ID: $CONTAINER_ID"
 
 if [ -n "$CONTAINER_ID" ]; then
     echo "Found existing dev container. Connecting..."
-    docker exec -it "$CONTAINER_ID" zsh
+    docker exec -it -w "$WORKSPACE_PATH" "$CONTAINER_ID" zsh
     exit 0
 fi
 
