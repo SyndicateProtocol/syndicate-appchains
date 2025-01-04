@@ -69,12 +69,12 @@ sleep 10
 # Verify container setup
 echo "Verifying container setup..."
 # First verify we can connect to the container
-if ! devcontainer exec --workspace-folder . zsh -c "echo 'Container connection successful'"; then
+if ! devcontainer exec --workspace-folder . zsh -c "cd $WORKSPACE_PATH && echo 'Container connection successful'"; then
     echo "Error: Cannot connect to container"
     exit 1
 fi
 
-# Then verify the workspace is accessible
+# Then verify the workspace is accessible and set as working directory
 if ! devcontainer exec --workspace-folder . zsh -c "cd $WORKSPACE_PATH && pwd"; then
     echo "Error: Cannot access workspace directory"
     exit 1
