@@ -9,6 +9,14 @@ set -e
 # If you're using GitHub Actions, you can use devcontainers-ci:
 # (https://github.com/marketplace/actions/dev-container-build-and-run-action)
 
+# Function to check for existing dev containers
+check_existing_container() {
+    local workspace_name=$1
+    # Look for running dev containers for this workspace
+    container_id=$(docker ps --filter "name=_${workspace_name}_" --filter "status=running" --format "{{.ID}}" | head -n1)
+    echo "$container_id"
+}
+
 # Check if devcontainer CLI is installed
 if ! command -v devcontainer >/dev/null 2>&1; then
     echo "Installing devcontainer CLI..."
@@ -30,8 +38,18 @@ echo "The container will use Ubuntu 24.04 regardless of your host OS version."
 echo "This ensures compatibility with required tools like 'just'."
 echo ""
 
-# Launch the dev container
-echo "Launching dev container..."
+# Check for existing container
+WORKSPACE_NAME=$(basename $(pwd))
+CONTAINER_ID=$(check_existing_container "$WORKSPACE_NAME")
+
+if [ -n "$CONTAINER_ID" ]; then
+    echo "Found existing dev container. Connecting..."
+    docker exec -it "$CONTAINER_ID" bash
+    exit 0
+fi
+
+# Launch new dev container if none exists
+echo "No existing container found. Launching new dev container..."
 devcontainer up --workspace-folder . || {
     echo "Error: Failed to launch dev container"
     exit 1
