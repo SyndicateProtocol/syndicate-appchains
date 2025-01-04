@@ -43,7 +43,7 @@ sleep 10
 
 # Verify container setup
 echo "Verifying container setup..."
-if ! devcontainer exec --workspace-folder . bash -c "cd /workspaces/metabased-rollup/.devcontainer && just --list"; then
+if ! devcontainer exec --workspace-folder . bash -c "cd /workspaces/metabased-rollup && just --list"; then
     echo "Error: Container verification failed"
     exit 1
 fi
