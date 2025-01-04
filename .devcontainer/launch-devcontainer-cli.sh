@@ -4,6 +4,7 @@ set -e
 # This script is for CLI-based dev container launches only.
 # It is not necessary if you're using an IDE (like VS Code) which handles container setup automatically.
 # Use this script when you need to launch the dev container from a terminal.
+# IMPORTANT: This script must be run from the repository root directory.
 # This is particularly useful for fresh machines without existing Dev Container
 # support, like for development with Devin.
 # If you're using GitHub Actions, you can use devcontainers-ci:
@@ -32,10 +33,7 @@ if [ ! -f "$DEVCONTAINER_PATH" ]; then
     exit 1
 fi
 
-# Note about Ubuntu version requirement
-echo "Note: The dev container requires Ubuntu 24.04 or later for full functionality."
-echo "The container will use Ubuntu 24.04 regardless of your host OS version."
-echo "This ensures compatibility with required tools like 'just'."
+# Ready to proceed
 echo ""
 
 # Check for existing container
