@@ -44,8 +44,9 @@ echo ""
 # Check for existing container
 # We use the full workspace path to match the devcontainer.local_folder label
 # This ensures we find the exact container for this workspace
-echo "Workspace path: $(pwd)"
-CONTAINER_ID=$(check_existing_container)
+workspace_path="$(pwd)"
+echo "Workspace path: $workspace_path"
+CONTAINER_ID=$(check_existing_container "$workspace_path")
 echo "Found container ID: $CONTAINER_ID"
 
 if [ -n "$CONTAINER_ID" ]; then
@@ -67,9 +68,21 @@ sleep 10
 
 # Verify container setup
 echo "Verifying container setup..."
-if ! devcontainer exec --workspace-folder . zsh -c "cd $WORKSPACE_PATH && just --list"; then
-    echo "Error: Container verification failed"
+# First verify we can connect to the container
+if ! devcontainer exec --workspace-folder . zsh -c "echo 'Container connection successful'"; then
+    echo "Error: Cannot connect to container"
     exit 1
+fi
+
+# Then verify the workspace is accessible
+if ! devcontainer exec --workspace-folder . zsh -c "cd $WORKSPACE_PATH && pwd"; then
+    echo "Error: Cannot access workspace directory"
+    exit 1
+fi
+
+# Finally check if just is available (but don't fail if it isn't)
+if ! devcontainer exec --workspace-folder . zsh -c "just --list"; then
+    echo "Warning: 'just' command not available yet - container is usable but some tools may need installation"
 fi
 
 echo "Dev container setup complete!"
