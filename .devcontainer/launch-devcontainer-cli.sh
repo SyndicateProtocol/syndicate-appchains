@@ -39,6 +39,9 @@ echo "This ensures compatibility with required tools like 'just'."
 echo ""
 
 # Check for existing container
+# The workspace name is extracted from the current directory name because
+# dev containers are named with the pattern "_workspace-name_" where workspace-name
+# is the name of the repository directory they were launched from
 WORKSPACE_NAME=$(basename $(pwd))
 CONTAINER_ID=$(check_existing_container "$WORKSPACE_NAME")
 
