@@ -47,8 +47,6 @@
   ],
   "remoteUser": "vscode",
   "containerUser": "vscode",
-
-
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
   // Port mappings for development services:
   // - 8547: Arbitrum Orbit chain endpoint
