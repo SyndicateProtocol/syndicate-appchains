@@ -560,34 +560,36 @@ _log-end command:
     @echo "│ Completed command: {{command}}           │"
     @echo "└──────────────────────────────────────────┘"
 
-# SOURCE: https://github.com/OffchainLabs/nitro-devnode/blob/main/run-dev-node.sh , 10/31/24
+# SOURCE: https://github.com/OffchainLabs/nitro-devnode/blob/main/run-dev-node.sh , latest as of 2024-02-02
 # Modifications are:
 # 1. Backslashes were added to all if statements and loops to match the whitespace requirements of Just (no newlines without backslashes)
 # 2. Environment variables were converted to Justfile variables
 # 3. Pattern matching was changed from bash syntax to zsh syntax
-# TODO: Update ported version of the script
+# 4. Port configuration uses justfile variables instead of hardcoded values
+# 5. Added --http.api flag from upstream
 _run-arb-nitro-dev-node:
     #!/usr/bin/zsh
 
     # Start Nitro dev node in the background
     echo "Starting Nitro dev node on {{arb_orbit_l2_port}}..."
-    docker run --detach --rm --name nitro-dev -p {{arb_orbit_l2_port}}:{{arb_orbit_l2_port}} offchainlabs/nitro-node:v3.2.1-d81324d --dev --http.addr 0.0.0.0 \
-    --http.port {{arb_orbit_l2_port}} \
+    docker run --rm --name nitro-dev -p {{arb_orbit_l2_port}}:{{arb_orbit_l2_port}} offchainlabs/nitro-node:v3.2.1-d81324d --dev --http.addr 0.0.0.0 --http.api=net,web3,eth,debug \
+    --http.port {{arb_orbit_l2_port}} &
 
     # Wait for the node to initialize
     echo "Waiting for the Nitro node to initialize on port {{arb_orbit_l2_port}} and RPC URL {{arb_orbit_l2_rpc_url}}..."
 
-    while ! curl -s -X POST -H "Content-Type: application/json" --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":1}' "{{arb_orbit_l2_rpc_url}}" | grep -q "result"; do echo "Checking for node initialization..." && sleep 1; done
-
-    echo "Nitro node initialized on port {{arb_orbit_l2_port}}..."
-
+    until [[ "$(curl -s -X POST -H "Content-Type: application/json" \
+    --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":1}' \
+    "{{arb_orbit_l2_rpc_url}}")" == *"result"* ]]; do \
+        sleep 0.1; \
+    done
 
     # Check if node is running
     curl_output=$(curl -s -X POST -H "Content-Type: application/json" \
     --data '{"jsonrpc":"2.0","method":"net_version","params":[],"id":1}' \
     "{{arb_orbit_l2_rpc_url}}")
 
-    if [[ "$curl_output" =~ "result" ]]; then \
+    if [[ "$curl_output" == *"result"* ]]; then \
         echo "Nitro node is running!"; \
     else \
         echo "Failed to start Nitro node."; \
@@ -634,3 +636,4 @@ _run-arb-nitro-dev-node:
 
     # If no errors, print success message
     echo "Cache Manager deployed and registered successfully. Nitro node is ready..."
+    wait  # Keep the script alive and the node running
