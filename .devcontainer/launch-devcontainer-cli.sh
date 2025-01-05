@@ -51,7 +51,7 @@ echo "Found container ID: $CONTAINER_ID"
 
 if [ -n "$CONTAINER_ID" ]; then
     echo "Found existing dev container. Connecting..."
-    docker exec -it "$CONTAINER_ID" zsh
+    docker exec -it -w "$WORKSPACE_PATH" "$CONTAINER_ID" zsh
     exit 0
 fi
 
@@ -69,12 +69,12 @@ sleep 10
 # Verify container setup
 echo "Verifying container setup..."
 # First verify we can connect to the container
-if ! devcontainer exec --workspace-folder . zsh -c "echo 'Container connection successful'"; then
+if ! devcontainer exec --workspace-folder . zsh -c "cd $WORKSPACE_PATH && echo 'Container connection successful'"; then
     echo "Error: Cannot connect to container"
     exit 1
 fi
 
-# Then verify the workspace is accessible
+# Then verify the workspace is accessible and set as working directory
 if ! devcontainer exec --workspace-folder . zsh -c "cd $WORKSPACE_PATH && pwd"; then
     echo "Error: Cannot access workspace directory"
     exit 1
