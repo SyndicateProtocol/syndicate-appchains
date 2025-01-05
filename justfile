@@ -560,12 +560,13 @@ _log-end command:
     @echo "│ Completed command: {{command}}           │"
     @echo "└──────────────────────────────────────────┘"
 
-# SOURCE: https://github.com/OffchainLabs/nitro-devnode/blob/main/run-dev-node.sh , commit c501546 from Nov 3, 2024
+# SOURCE: https://github.com/OffchainLabs/nitro-devnode/blob/main/run-dev-node.sh , commit c501546 from Nov 2, 2024
 # Modifications are:
 # 1. Backslashes were added to all if statements and loops to match the whitespace requirements of Just (no newlines without backslashes)
 # 2. Environment variables were converted to Justfile variables
 # 3. Pattern matching was changed from bash syntax to zsh syntax
 # 4. Port configuration uses justfile variables instead of hardcoded values
+# 5. http.port parameter was added to the docker run command to make port usage explicit
 _run-arb-nitro-dev-node:
     #!/usr/bin/zsh
 
