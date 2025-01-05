@@ -3,7 +3,6 @@ name: Rust Tests
 on:
   push:
     branches:
-      - anvil-poc
       - main
   pull_request:
     paths:

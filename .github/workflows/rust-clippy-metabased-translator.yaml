@@ -6,7 +6,6 @@ on:
   push:
     branches:
       - main
-      - anvil-poc
   # Only run on PRs that touch metabased-sequencer
   pull_request:
     paths:
