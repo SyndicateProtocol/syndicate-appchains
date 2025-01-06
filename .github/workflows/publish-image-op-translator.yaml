@@ -1,4 +1,4 @@
-name: Publish op-translator Image to GitHub Container Registry
+name: Docker Publish
 
 on:
   push:
@@ -10,10 +10,11 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}/op-translator
+  OP_TRANSLATOR_IMAGE_NAME: ${{ github.repository }}/op-translator
 
 jobs:
-  build-and-push:
+  build-and-push-image-op-translator:
+    name: OP Translator
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -33,24 +34,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels) for Docker
-        id: meta
+      - name: Extract metadata for op-translator
+        id: meta-op-translator
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.OP_TRANSLATOR_IMAGE_NAME }}
           tags: |
             type=sha,format=long
             type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push Docker image
+      - name: Build and push op-translator Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: Dockerfile.op-translator
           push: true
           platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: ${{ steps.meta-op-translator.outputs.tags }}
+          labels: ${{ steps.meta-op-translator.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
