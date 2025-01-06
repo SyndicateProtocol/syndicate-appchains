@@ -54,24 +54,6 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
         }
     }
 
-    /// @notice Processes a chunk of transactions from a larger batch.
-    /// @param txChunk the compressed chunked transaction data.
-    /// @param index The starting index for this chunk in the overall batch.
-    /// @param totalChunks The number of transactions to process in this chunk.
-    /// @param txHashForParent The hash of the parent transaction.
-    function processChunk(bytes calldata txChunk, uint256 index, uint256 totalChunks, bytes32 txHashForParent)
-        external
-        onlyWhenAllowed(msg.sender)
-    {
-        if (totalChunks == 0) {
-            revert InvalidChunkSize();
-        }
-
-        emit TransactionProcessed(msg.sender, txChunk);
-
-        emit TransactionChunkProcessed(txChunk, index, totalChunks, txHashForParent);
-    }
-
     /// @notice Prepends a zero byte to the transaction data
     /// @dev This helps op-translator identify uncompressed data
     /// @param _data The original transaction data
