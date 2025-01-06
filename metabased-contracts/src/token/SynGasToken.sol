@@ -10,7 +10,7 @@ contract SynGasToken is ERC20, AccessControl, ERC20Permit {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     constructor(address defaultAdmin, address minter)
-        ERC20("Syndicate Testnet", "$SYNDTEST")
+        ERC20("Syndicate Testnet", "SYNDTEST")
         ERC20Permit("Syndicate Testnet")
     {
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
