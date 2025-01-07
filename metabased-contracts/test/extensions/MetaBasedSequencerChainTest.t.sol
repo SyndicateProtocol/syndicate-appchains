@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
+import {MetabasedSequencerChainWithPriority} from "src/extensions/MetabasedSequencerChainWithPriority.sol";
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
 import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
 import {PermissionModule} from "src/interfaces/PermissionModule.sol";
@@ -19,25 +19,27 @@ contract MockIsAllowed is PermissionModule {
     }
 }
 
-contract MetabasedSequencerChainTestSetUp is Test {
-    MetabasedSequencerChain public chain;
+contract MetabasedSequencerChainWithPriorityTestSetUp is Test {
+    MetabasedSequencerChainWithPriority public chain;
     RequireAllModule public permissionModule;
     RequireAnyModule public permissionModuleAny;
     address public admin;
+    uint256 public priority;
 
     function setUp() public virtual {
         admin = address(0x1);
         uint256 l3ChainId = 10042001;
+        priority = 1;
 
         vm.startPrank(admin);
         permissionModule = new RequireAllModule(admin);
         permissionModuleAny = new RequireAnyModule(admin);
-        chain = new MetabasedSequencerChain(l3ChainId, admin, address(permissionModule));
+        chain = new MetabasedSequencerChainWithPriority(l3ChainId, admin, address(permissionModule));
         vm.stopPrank();
     }
 }
 
-contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
+contract MetabasedSequencerChainWithPriorityTest is MetabasedSequencerChainWithPriorityTestSetUp {
     function testProcessRawTransaction() public {
         bytes memory validTxn = abi.encode("valid transaction");
 
@@ -46,9 +48,9 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit MetabasedSequencerChain.TransactionProcessed(address(this), validTxn);
+        emit MetabasedSequencerChainWithPriority.TransactionProcessed(address(this), validTxn, priority);
 
-        chain.processTransactionRaw(validTxn);
+        chain.processTransactionRaw(validTxn, priority);
     }
 
     function testProcessTransactionRequireAllFailure() public {
@@ -60,7 +62,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.stopPrank();
 
         vm.expectRevert(abi.encodeWithSelector(RequireAllModule.CheckFailed.selector, mockRequireAll, address(this)));
-        chain.processTransactionRaw(validTxn);
+        chain.processTransactionRaw(validTxn, priority);
     }
 
     function testProcessTransactionRequireAnyFailure() public {
@@ -72,7 +74,7 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.stopPrank();
 
         vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.CheckFailed.selector, address(this)));
-        chain.processTransactionRaw(validTxn);
+        chain.processTransactionRaw(validTxn, priority);
     }
 
     function testProcessTransaction() public {
@@ -84,9 +86,9 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         vm.stopPrank();
 
         vm.expectEmit(true, false, false, true);
-        emit MetabasedSequencerChain.TransactionProcessed(address(this), expectedTx);
+        emit MetabasedSequencerChainWithPriority.TransactionProcessed(address(this), expectedTx, priority);
 
-        chain.processTransaction(_data);
+        chain.processTransaction(_data, priority);
     }
 
     function testProcessBulkTransactions() public {
@@ -95,6 +97,11 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         validTxns[1] = abi.encode("transaction 2");
         validTxns[2] = abi.encode("transaction 3");
 
+        uint256[] memory priorities = new uint256[](3);
+        priorities[0] = 1;
+        priorities[1] = 2;
+        priorities[2] = 3;
+
         vm.startPrank(admin);
         permissionModule.addCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
@@ -102,16 +109,16 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         for (uint256 i = 0; i < validTxns.length; i++) {
             vm.expectEmit(true, false, false, true);
 
-            emit MetabasedSequencerChain.TransactionProcessed(
-                address(this), abi.encodePacked(bytes1(0x00), validTxns[i])
+            emit MetabasedSequencerChainWithPriority.TransactionProcessed(
+                address(this), abi.encodePacked(bytes1(0x00), validTxns[i]), priorities[i]
             );
         }
 
-        chain.processBulkTransactions(validTxns);
+        chain.processBulkTransactions(validTxns, priorities);
     }
 }
 
-contract MetabasedSequencerChainViewRequireAllTest is MetabasedSequencerChainTestSetUp {
+contract MetabasedSequencerChainWithPriorityViewRequireAllTest is MetabasedSequencerChainWithPriorityTestSetUp {
     MockIsAllowed mockRequireAll1;
     MockIsAllowed mockRequireAll2;
 
@@ -134,7 +141,7 @@ contract MetabasedSequencerChainViewRequireAllTest is MetabasedSequencerChainTes
     }
 }
 
-contract MetabasedSequencerChainViewRequireAnyTest is MetabasedSequencerChainTestSetUp {
+contract MetabasedSequencerChainWithPriorityViewRequireAnyTest is MetabasedSequencerChainWithPriorityTestSetUp {
     MockIsAllowed mockRequireAny1;
     MockIsAllowed mockRequireAny2;
 
