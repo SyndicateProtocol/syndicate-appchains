@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 import {
     MetabasedSequencerChainWithProcessChunk,
     MetabasedSequencerChain
-} from "src/MetabasedSequencerChainWithProcessChunk.sol";
+} from "src/extensions/MetabasedSequencerChainWithProcessChunk.sol";
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
 import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
 import {PermissionModule} from "src/interfaces/PermissionModule.sol";
