@@ -23,7 +23,9 @@ contract MetabasedSequencerChain_ReleaseCandidate is SequencingModuleChecker_Rel
     /// @param _l3ChainId The ID of the L3 chain that this contract is sequencing transactions for.
     /// @param admin The address that will be set as the admin
     /// @param masterModule The address of the master permission module
-    constructor(uint256 _l3ChainId, address admin, address masterModule) SequencingModuleChecker_ReleaseCandidate(admin, masterModule) {
+    constructor(uint256 _l3ChainId, address admin, address masterModule)
+        SequencingModuleChecker_ReleaseCandidate(admin, masterModule)
+    {
         // chain id zero has no replay protection : https://eips.ethereum.org/EIPS/eip-3788
         require(_l3ChainId != 0, "L3 chain ID cannot be 0");
         l3ChainId = _l3ChainId;
@@ -52,24 +54,6 @@ contract MetabasedSequencerChain_ReleaseCandidate is SequencingModuleChecker_Rel
         for (uint256 i = 0; i < dataCount; i++) {
             emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
         }
-    }
-
-    /// @notice Processes a chunk of transactions from a larger batch.
-    /// @param txChunk the compressed chunked transaction data.
-    /// @param index The starting index for this chunk in the overall batch.
-    /// @param totalChunks The number of transactions to process in this chunk.
-    /// @param txHashForParent The hash of the parent transaction.
-    function processChunk(bytes calldata txChunk, uint256 index, uint256 totalChunks, bytes32 txHashForParent)
-        external
-        onlyWhenAllowed(msg.sender)
-    {
-        if (totalChunks == 0) {
-            revert InvalidChunkSize();
-        }
-
-        emit TransactionProcessed(msg.sender, txChunk);
-
-        emit TransactionChunkProcessed(txChunk, index, totalChunks, txHashForParent);
     }
 
     /// @notice Prepends a zero byte to the transaction data
