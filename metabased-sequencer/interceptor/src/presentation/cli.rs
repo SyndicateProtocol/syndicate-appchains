@@ -12,7 +12,7 @@ pub fn init_tracing_subscriber() {
 pub async fn run() -> anyhow::Result<()> {
     let args = Configuration::parse()?;
     let (addr, handle) = server::run(
-        args.port_sequencer,
+        args.port,
         args.chain_contract_address,
         args.chain_rpc_address,
         args.private_key,

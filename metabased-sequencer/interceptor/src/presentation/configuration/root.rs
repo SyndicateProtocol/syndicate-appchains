@@ -1,9 +1,8 @@
-use crate::presentation::configuration::providers::{CliArgs, EnvFile, Logged};
-use crate::presentation::configuration::Profile;
+use crate::presentation::configuration::providers::{CliArgs, Logged};
 use alloy_primitives::{Address, B256};
 use clap::Parser;
 use figment::providers::{Env, Serialized};
-use figment::{Figment, Provider};
+use figment::{Figment, Profile, Provider};
 use serde::Deserialize;
 use std::fmt::Debug;
 use url::Url;
@@ -23,7 +22,7 @@ pub struct Args {
 
     /// Port to listen on
     #[arg(short = 'p', long)]
-    pub port_sequencer: Option<u16>,
+    pub port: Option<u16>,
 
     /// Private key for signing layer-2 transactions
     #[arg(short = 'k', long)]
@@ -35,26 +34,24 @@ pub struct Args {
 }
 
 pub const DEFAULT_PORT: u16 = 8456;
+// Prefix for environment variables for the sequencer
+pub const ENV_PREFIX: &str = "METABASED_SEQUENCER_";
 
 #[derive(Deserialize)]
 pub struct Configuration {
     pub chain_contract_address: Address,
     pub chain_rpc_address: Url,
     pub private_key: B256,
-    pub port_sequencer: u16,
+    pub port: u16,
 }
 
 impl Configuration {
     pub fn parse_with_args(
-        env_file: impl Provider + Debug,
-        env_profile: impl Provider + Debug,
         env: impl Provider + Debug,
         cli: impl Provider + Debug,
     ) -> Result<Self, figment::Error> {
         Figment::new()
-            .merge(Serialized::default("port_sequencer", DEFAULT_PORT))
-            .merge(Logged::new(env_file))
-            .merge(Logged::new(env_profile))
+            .merge(Serialized::default("port", DEFAULT_PORT))
             .merge(Logged::new(env))
             .merge(Logged::new(cli))
             .extract()
@@ -63,19 +60,9 @@ impl Configuration {
     pub fn parse() -> Result<Self, figment::Error> {
         let args = Args::parse();
 
-        let env_prefix = "METABASED_";
-        let env_profile = args
-            .profile
-            .as_ref()
-            .map(Profile::to_env_filename)
-            .map(EnvFile::from_filename)
-            .unwrap_or_else(EnvFile::new)
-            .with_prefix(env_prefix);
 
         Self::parse_with_args(
-            EnvFile::new().with_prefix(env_prefix),
-            env_profile,
-            Env::prefixed(env_prefix),
+            Env::prefixed(ENV_PREFIX), // maps to one without the prefix
             CliArgs::new(args),
         )
     }
@@ -88,10 +75,11 @@ mod tests {
     use figment::value::{Dict, Value};
     use test_case::test_case;
 
-    const DUMMY_VALUES: [(&str, &str); 3] = [
+    const DUMMY_VALUES: [(&str, &str); 4] = [
         ("chain_contract_address", str_repeat!("0", 40)),
         ("chain_rpc_address", "http://test.dummy"),
         ("private_key", str_repeat!("0", 64)),
+        ("sequencer_port", "101"),
     ];
 
     trait Dummy {
@@ -129,48 +117,67 @@ mod tests {
     #[test_case(
         Serialized::dummy(),
         Serialized::empty(),
-        Serialized::empty(),
-        Serialized::empty(),
         DEFAULT_PORT
     ; "Default values are used when not set by any provider")]
     #[test_case(
-        Serialized::dummy_with("port_sequencer", 0),
-        Serialized::empty(),
-        Serialized::empty(),
+        Serialized::dummy_with("port", 0),
         Serialized::empty(),
         0
-    ; "ENV file overwrites defaults")]
+    ; "ENV vars overwrite defaults")]
     #[test_case(
-        Serialized::dummy_with("port_sequencer", 0),
-        Serialized::default("port_sequencer", 1),
-        Serialized::empty(),
-        Serialized::empty(),
-        1
-    ; "ENV profile overwrites ENV file")]
-    #[test_case(
-        Serialized::dummy_with("port_sequencer", 0),
-        Serialized::default("port_sequencer", 1),
-        Serialized::default("port_sequencer", 2),
-        Serialized::empty(),
-        2
-    ; "ENV vars overwrite ENV files")]
-    #[test_case(
-        Serialized::dummy_with("port_sequencer", 0),
-        Serialized::default("port_sequencer", 1),
-        Serialized::default("port_sequencer", 2),
-        Serialized::default("port_sequencer", 3),
+        Serialized::dummy_with("port", 2),
+        Serialized::dummy_with("port", 3),
         3
     ; "CLI args overwrite ENV vars")]
     fn test_configuration_loads_values_from_providers_based_on_expected_priority(
-        env_file: impl Provider + Debug,
-        env_profile: impl Provider + Debug,
         env: impl Provider + Debug,
         cli: impl Provider + Debug,
         expected_port: u16,
     ) {
-        let config = Configuration::parse_with_args(env_file, env_profile, env, cli).unwrap();
-        let actual_port = config.port_sequencer;
+        let config = Configuration::parse_with_args(env, cli).unwrap();
+        let actual_port = config.port;
 
         assert_eq!(actual_port, expected_port);
+    }
+
+    // Helper function to create an environment with a properly prefixed variable
+    fn env_with_prefixed_port(port: u16) -> Env {
+        let mut env = std::collections::HashMap::new();
+        env.insert(
+            "METABASED_SEQUENCER_PORT".to_string(),
+            port.to_string()
+        );
+        Env::prefixed(ENV_PREFIX)
+    }
+
+
+    #[test]
+    fn test_cli_overrides_prefixed_env_var() {
+        // Create environment with prefixed port variable
+        let env = env_with_prefixed_port(9999);
+
+        // Create CLI args with port override
+        let cli = Serialized::dummy_with("port", 8888);
+
+        let config = Configuration::parse_with_args(env, cli).unwrap();
+
+        assert_eq!(config.port, 8888);
+        assert_ne!(config.port, 9999);
+        assert_ne!(config.port, DEFAULT_PORT);
+    }
+
+    #[test]
+    fn test_unprefixed_env_var_does_not_override_default() {
+        // Create environment with unprefixed port variable that should be ignored
+        let mut env = std::collections::HashMap::new();
+        env.insert("PORT".to_string(), "9999".to_string());
+        let env = Env::prefixed(ENV_PREFIX);
+
+        let cli = Serialized::dummy();
+
+        let config = Configuration::parse_with_args(env, cli).unwrap();
+
+        assert_eq!(config.port, DEFAULT_PORT);
+        assert_ne!(config.port, 9999);
     }
 }
