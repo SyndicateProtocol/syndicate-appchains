@@ -1,0 +1,36 @@
+name: Rust Clippy Check
+
+on:
+  # Run workflow on every push to main. This ensures that cross-service PRs that
+  # depend on metabased-sequencer are tested.
+  push:
+    branches:
+      - main
+  # Only run on PRs that touch metabased-sequencer
+  pull_request:
+    paths:
+      - "metabased-translator/**"
+
+env:
+  CARGO_TERM_COLOR: always
+  # Make sure CI fails on all warnings, including Clippy lints
+  RUSTFLAGS: "-Dwarnings"
+
+defaults:
+  run:
+    working-directory: metabased-translator
+
+jobs:
+  metabased-translator-clippy-check:
+    name: Metabased Translator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - run: rustup component add clippy
+
+      - name: Cache Cargo dependencies
+        uses: Swatinem/rust-cache@v2
+
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets --all-features

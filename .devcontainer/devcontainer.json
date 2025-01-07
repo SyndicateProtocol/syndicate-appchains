@@ -3,6 +3,17 @@
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
 
   "features": {
+    "ghcr.io/devcontainers/features/common-utils:2": {
+      "username": "vscode",
+      "upgradePackages": true,
+      "installZsh": true,
+      "configureZshAsDefaultShell": true
+    },
+    // Disable PPA installation to avoid keyserver errors on remote systems (like Devin)
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest",
+      "ppa": false
+    },
     "ghcr.io/devcontainers/features/node:1": {
       "version": "20"
     },
@@ -10,9 +21,16 @@
       "version": "latest"
     },
     "ghcr.io/devcontainers/features/go:1": {
-      "version": "latest"
+      "version": "1.23.0"
     },
-    "ghcr.io/devcontainers/features/rust:1": "latest",
+    // Pin Rust version for reproducible builds
+    // NOTE: We need to update the Rust version with each stable Rust release
+    // Targets: x86_64-unknown-linux-gnu (X86 Linux), aarch64-apple-darwin (M series Mac)
+    "ghcr.io/devcontainers/features/rust:1": {
+      "version": "1.83.0",
+      "profile": "default",
+      "targets": "x86_64-unknown-linux-gnu,aarch64-apple-darwin"
+    },
     "ghcr.io/devcontainers/features/git-lfs:1": "latest",
     "ghcr.io/devcontainers/features/github-cli:1": "latest"
   },
@@ -29,13 +47,25 @@
   ],
   "remoteUser": "vscode",
   "containerUser": "vscode",
-
   // Use 'forwardPorts' to make a list of ports inside the container available locally.
-  // "forwardPorts": [],
+  // Port mappings for development services:
+  // - 8547: Arbitrum Orbit chain endpoint
+  // - 8456: Metabased Sequencer service
+  // - 9999: OP Translator service
+  // - 9545: Development network endpoint
+  "forwardPorts": [8547, 8456, 9999, 9545],
 
-  // Update package lists
-  // Without this, just won't be found
-  "postCreateCommand": "sudo apt update && sudo apt install -y just",
+  // Update package lists and install required tools:
+  // - just: Required for running development commands
+  // - netcat-openbsd: Used for port verification during container startup
+  // - just zsh completions: Adds zsh tab completion for just commands within the justfile
+  // See https://containers.dev/implementors/json_reference/ for the differences
+  // between onCreateCommand, updateContentCommand, and postCreateCommand
+  // onCreateCommand is used for steps that do not update or update rarely
+  // updateContentCommand is used for steps that update frequently
+  // postCreateCommand is used for steps that require environment variables or other private information
+  "onCreateCommand": "sudo apt update && sudo apt install -y just netcat-openbsd && mkdir -p ~/.zsh/completions && just --completions zsh > ~/.zsh/completions/just.zsh",
+  "updateContentCommand": "just foundry-all",
 
   // Configure tool-specific properties.
   "customizations": {
@@ -45,14 +75,19 @@
       "settings": {
         "go.toolsManagement.checkForUpdates": "local",
         "go.useLanguageServer": true,
-        "go.gopath": "/go",
+        "go.gopath": "/go"
       },
       // Add the IDs of extensions you want installed when the container is created.
       "extensions": [
         "golang.go",
         "rust-lang.rust-analyzer",
         "JuanBlanco.solidity",
-        "esbenp.prettier-vscode"
+        "esbenp.prettier-vscode",
+        "nefrob.vscode-just-syntax",
+        "GitHub.vscode-github-actions",
+        "usernamehw.errorlens",
+        "tamasfe.even-better-toml",
+        "fill-labs.dependi"
       ]
     }
   }

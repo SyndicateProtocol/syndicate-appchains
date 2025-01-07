@@ -36,10 +36,11 @@ $ make deploy-based-sequencerchain-frame
 
 | Contract Name           | Address                                    |
 | ----------------------- | ------------------------------------------ |
-| MetabasedFactory        | 0xD1e50D5A203E6485e97E3bC8A951b49aaFC28603 |
-| MetabasedSequencerChain | 0xEFfCeaf782d14D7271B30C68e9667cD3B4218553 |
+| MetabasedFactory        | 0xb80c82702791664f59dF773e8b50dE921fC026fE |
+| MetabasedSequencerChain | 0xb1567B5DFa038e4F279d3b585D4D45b8bDD2263D |
 | AlwaysAllowedModule     | 0x33aB24E0a47A7aAe869755420950A6326e3CB9F3 |
-| MetafillerStorage       | 0x745bdeFA5C879ADCf739075bB03FD4ecCd03cE22 |
+| MetafillerStorage       | 0x91C77f7857EcD4Edd1d5242e38345E42Ad1212E4 |
+| RequiredAllModule       | 0xaE938C7D5b69106BaA2316BC007D0f30e6239826 |
 
 #### Metabased Testnet (Private Devnet)
 
@@ -54,11 +55,17 @@ $ make deploy-based-sequencerchain-frame
 
 | Contract Name                   | Address                                    |
 | ------------------------------- | ------------------------------------------ |
-| MetabasedFactory                | 0x19aaf160dA8985c54bb97adAF9304B5aC7890421 |
+| MetabasedFactory                | 0xe2aBFBD5357D28425638bad0849f57ea87417D1b |
 | AlwaysAllowedModule             | 0x87F4DE1886298255c5fce2adF15977fE44F48f68 |
 | MetabasedSequencerChain (Frame) | 0x56b2cd4fb8d6D6486b95Ff2DF5cDC30FE526FFaf |
 | MetabasedSequencerChain (Ham)   | 0x0e6A93458fEdaEFaAcb106f08441058c8E0b2b0F |
-| MetafillerStorage (Frame)       | 0x04a1D138d681De93412581673a993eD7878EaBC4 |
-| MetafillerStorage (Ham)         | 0x037A5BC4DB3C5c4Be90d8C3D7eaD6B2B231b9EFb |
+| MetafillerStorage (Frame)       | 0x428F74D12fB57dFc7b2979Dd0679813daB023406 |
+| MetafillerStorage (Ham)         | 0xfCF224BfF63658524d3Ed8c277c20e06488B59A8 |
 | RequiredAllModule (Ham)         | 0xAfeA8F68921242A90ae9e35f4DDF0d3769dE3150 |
 | RequiredAllModule (Frame)       | 0x7Bc475096B936Ad04Cfc544FB56aC54B3661beE6 |
+
+#### ETH Sepolia
+
+| Contract Name | Address                                    |
+| ------------- | ------------------------------------------ |
+| SynGasToken   | 0x8c8861c1bBd3a47deC0cfc5dc82e4B5E88810BfE |

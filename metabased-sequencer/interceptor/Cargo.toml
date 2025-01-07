@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1"
-alloy = { version = "0.4.2", features = ["full"] }
+alloy = { version = "0.7.3", features = ["full"] }
 dotenv = "=0.14.0"
 figment = { version = "0.10", features = ["env"] }
 jsonrpsee = { version = "0.24.3", features = ["full"] }

@@ -1,0 +1,2 @@
+[package.metadata.precommit]
+fmt="cargo fmt --all --check --manifest-path metabased-translator/Cargo.toml"

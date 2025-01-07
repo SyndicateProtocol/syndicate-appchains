@@ -191,7 +191,7 @@ func (t *TranslatorService) initMetrics() {
 
 func (t *TranslatorService) initBatchProvider(cfg *CLIConfig) {
 	t.metaBasedBatchProvider = NewMetaBasedBatchProvider(
-		t.settlementChainRPC,
+		t.metaBasedChainRPC,
 		t.sequencingChainRPC,
 		*t.sequencingContractAddress,
 		cfg.SettlementStartBlock,

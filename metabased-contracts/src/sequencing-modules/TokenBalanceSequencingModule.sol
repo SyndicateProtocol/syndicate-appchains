@@ -31,17 +31,12 @@ contract TokenBalanceSequencingModule is PermissionModule {
         minimumBalance = _minimumBalance;
     }
 
-    error InsufficientBalance();
-
     /**
      * @notice Checks if the caller is allowed based on their token balance.
      * @return bool indicating if the caller is allowed.
      */
     function isAllowed(address proposer) external view override returns (bool) {
         IERC20 token = IERC20(tokenAddress);
-        if (token.balanceOf(proposer) < minimumBalance) {
-            revert InsufficientBalance();
-        }
-        return true;
+        return token.balanceOf(proposer) >= minimumBalance;
     }
 }
