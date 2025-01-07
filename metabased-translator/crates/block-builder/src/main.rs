@@ -2,11 +2,12 @@ use block_builder::config::cli;
 use block_builder::connectors::anvil::MetaChainProvider;
 use eyre::Result;
 
-// PoC deploying a contract using `anvil_set_code`, then interacting with it
 #[tokio::main]
 async fn main() -> Result<()> {
     cli::init_tracing_subscriber();
-    let mut mchain = MetaChainProvider::default();
+    let config = cli::init_config()?;
+
+    let mut mchain = MetaChainProvider::with_config(config);
     mchain.start()?;
 
     mchain.mine_block().await?;

@@ -1,3 +1,4 @@
+use crate::config::Configuration;
 use tracing_subscriber::EnvFilter;
 
 // Sets global formatter subscriber, including env variables
@@ -6,4 +7,13 @@ pub fn init_tracing_subscriber() {
         .with_env_filter(EnvFilter::from_default_env())
         .try_init()
         .expect("setting default subscriber failed");
+}
+
+pub fn init_config() -> eyre::Result<Configuration> {
+    let args = Configuration::parse()?;
+
+    // TODO check logging?
+    println!("TODO RPC Server started on ");
+
+    Ok(args)
 }

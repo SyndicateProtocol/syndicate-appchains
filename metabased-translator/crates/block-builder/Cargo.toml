@@ -9,6 +9,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
+block-builder-macro = { path = "../block-builder-macro" }
 alloy = { version = "0.8", features = ["full"] }
 eyre = "0.6.12"
 tokio = { version = "1.42.0", features = ["rt", "rt-multi-thread", "macros"] }
@@ -22,8 +23,15 @@ hex = "0.4.3"
 scopeguard = "1.2.0"
 alloy-contract = "0.8.1"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-tracing = "0.1.41"
+tracing = { version = "0.1.41", features = ["log"]}
 alloy-rpc-types = "0.8.1"
 alloy-network = "0.8.2"
 alloy-node-bindings = "0.8.2"
 pre-commit-hooks = "0.3.0"
+clap = { version = "4.5.23", features = ["derive"] }
+serde = { version = "1.0.216", features = ["derive"] }
+url = "2.5.4"
+figment = { version = "0.10", features = ["env"] }
+
+[dev-dependencies]
+test-case = "3"
