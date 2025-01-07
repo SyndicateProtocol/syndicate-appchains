@@ -22,8 +22,16 @@ hex = "0.4.3"
 scopeguard = "1.2.0"
 alloy-contract = "0.9.2"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-tracing = "0.1.41"
+tracing = { version = "0.1.41", features = ["log"]}
 alloy-rpc-types = "0.9.2"
 alloy-network = "0.9.2"
 alloy-node-bindings = "0.9.2"
 pre-commit-hooks = "0.3.0"
+clap = { version = "4.5.23", features = ["derive"] }
+serde = { version = "1.0.216", features = ["derive"] }
+url = "2.5.4"
+figment = { version = "0.10", features = ["env"] }
+derive_more = "1.0.0"
+
+[dev-dependencies]
+test-case = "3"
