@@ -36,10 +36,11 @@ $ make deploy-based-sequencerchain-frame
 
 | Contract Name           | Address                                    |
 | ----------------------- | ------------------------------------------ |
-| MetabasedFactory        | 0xD1e50D5A203E6485e97E3bC8A951b49aaFC28603 |
-| MetabasedSequencerChain | 0xEFfCeaf782d14D7271B30C68e9667cD3B4218553 |
+| MetabasedFactory        | 0xb80c82702791664f59dF773e8b50dE921fC026fE |
+| MetabasedSequencerChain | 0xb1567B5DFa038e4F279d3b585D4D45b8bDD2263D |
 | AlwaysAllowedModule     | 0x33aB24E0a47A7aAe869755420950A6326e3CB9F3 |
-| MetafillerStorage       | 0x745bdeFA5C879ADCf739075bB03FD4ecCd03cE22 |
+| MetafillerStorage       | 0x91C77f7857EcD4Edd1d5242e38345E42Ad1212E4 |
+| RequiredAllModule       | 0xaE938C7D5b69106BaA2316BC007D0f30e6239826 |
 
 #### Metabased Testnet (Private Devnet)
 
@@ -54,12 +55,17 @@ $ make deploy-based-sequencerchain-frame
 
 | Contract Name                   | Address                                    |
 | ------------------------------- | ------------------------------------------ |
-| MetabasedFactory                | 0xc75954B9B4Bb4B80883Cf645744612138b7e4870 |
-| AlwaysAllowedModule             | 0x471584f0B8e35faEB2a618BD58A62316D8882d63 |
-| MetabasedSequencerChain (Frame) | 0x2d45AA77567618C031b8C8AFD3296ED724793B01 |
-| MetabsedSequencerChain (Ham)    | 0x869eE769d6ab3221894Cc555792e8c6467953bE1 |
-| MetafillerStorage (Frame)       | 0xFEA8A2BA8B760348ea95492516620ad45a299d53 |
-| MetafillerStorage (Ham)         | 0x9cecA064CaB740E5F511b426c7dBD7820795fe13 |
+| MetabasedFactory                | 0xe2aBFBD5357D28425638bad0849f57ea87417D1b |
+| AlwaysAllowedModule             | 0x87F4DE1886298255c5fce2adF15977fE44F48f68 |
+| MetabasedSequencerChain (Frame) | 0x56b2cd4fb8d6D6486b95Ff2DF5cDC30FE526FFaf |
+| MetabasedSequencerChain (Ham)   | 0x0e6A93458fEdaEFaAcb106f08441058c8E0b2b0F |
+| MetafillerStorage (Frame)       | 0x428F74D12fB57dFc7b2979Dd0679813daB023406 |
+| MetafillerStorage (Ham)         | 0xfCF224BfF63658524d3Ed8c277c20e06488B59A8 |
+| RequiredAllModule (Ham)         | 0xAfeA8F68921242A90ae9e35f4DDF0d3769dE3150 |
+| RequiredAllModule (Frame)       | 0x7Bc475096B936Ad04Cfc544FB56aC54B3661beE6 |
 
-| MetafillerStorage (Frame) | 0xFEA8A2BA8B760348ea95492516620ad45a299d53 |
-| MetafillerStorage (Ham) | 0x9cecA064CaB740E5F511b426c7dBD7820795fe13 |
+#### ETH Sepolia
+
+| Contract Name | Address                                    |
+| ------------- | ------------------------------------------ |
+| SynGasToken   | 0x8c8861c1bBd3a47deC0cfc5dc82e4B5E88810BfE |

@@ -1,0 +1,30 @@
+# This workflow runs on pull requests to check changes to the dev container configuration.
+# It intentionally runs only on pull requests (not pushes to main) as a validation step,
+# while actual image updates are handled by devcontainer-main-update.yaml on main branch.
+name: Dev Container Update
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".devcontainer/**"
+      - ".github/**"
+      - "**/justfile"
+
+jobs:
+  dry-run-check:
+    name: Dry Run Check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: Build dev container (dry run)
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/syndicateprotocol/metabased-devcontainer
+          imageTag: dry-run-test
+          push: never

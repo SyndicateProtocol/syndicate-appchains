@@ -14,7 +14,7 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/flags"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/rs/zerolog/log"
+	gethlog "github.com/ethereum/go-ethereum/log"
 )
 
 // TODO SEQ-141: spike: performant Go HTTP/JSON-RPC lib
@@ -25,6 +25,7 @@ type HTTPClient interface {
 type BackfillProvider struct {
 	client            HTTPClient
 	metrics           metrics.IMetrics
+	log               gethlog.Logger
 	metafillerURL     string
 	genesisEpochBlock uint64
 	cutoverEpochBlock uint64
@@ -36,6 +37,7 @@ func NewBackfillerProvider(
 	cutoverEpochBlock uint64,
 	client HTTPClient,
 	metricsCollector metrics.IMetrics,
+	log gethlog.Logger,
 ) *BackfillProvider {
 	return &BackfillProvider{
 		metafillerURL:     metafillerURL,
@@ -43,6 +45,7 @@ func NewBackfillerProvider(
 		genesisEpochBlock: genesisEpochBlock,
 		cutoverEpochBlock: cutoverEpochBlock,
 		metrics:           metricsCollector,
+		log:               log,
 	}
 }
 
@@ -59,7 +62,7 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 	}()
 
 	fullURL := b.metafillerURL + "/" + strconv.FormatUint(epochNumber, 10)
-	log.Debug().Msgf("Getting backfill data for epoch number: %d. Fetching from: %s", epochNumber, fullURL)
+	b.log.Debug("getting backfill data", "epoch_number", epochNumber, "url", fullURL)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fullURL, http.NoBody)
 	if err != nil {
@@ -73,8 +76,7 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		b.metrics.RecordBackfillProviderBackfillResponseStatus("get_backfill_data", resp.StatusCode)
-		log.Debug().Msgf("Received non-200 response from backfill data provider: %d", resp.StatusCode)
+		return nil, b.HandleBackfillProviderError(resp, epochNumber)
 	}
 
 	body, err := io.ReadAll(resp.Body)
@@ -87,8 +89,22 @@ func (b *BackfillProvider) GetBackfillData(ctx context.Context, epochNumber uint
 	if err != nil {
 		return nil, err
 	}
-	log.Debug().Msgf("Backfill data for epoch %d: %v", epochNumber, data)
+	b.log.Debug("backfill data", "epoch_number", epochNumber, "data", data)
 	return data, nil
+}
+
+func (b *BackfillProvider) IsGenesisBlock(epochNumber uint64) bool {
+	return epochNumber == b.genesisEpochBlock
+}
+
+func (b *BackfillProvider) HandleBackfillProviderError(resp *http.Response, epochNumber uint64) error {
+	b.log.Debug("received non-200 response from backfill data provider", "status", resp.StatusCode)
+	b.metrics.RecordBackfillProviderBackfillResponseStatus("get_backfill_data", resp.StatusCode)
+	if resp.StatusCode == http.StatusNotFound && b.IsGenesisBlock(epochNumber) {
+		b.log.Debug("Backfill data not available for genesis block", "epoch_number", epochNumber)
+		return nil
+	}
+	return fmt.Errorf("received non-200 response from backfill data provider: %d", resp.StatusCode)
 }
 
 func (b *BackfillProvider) IsBlockInBackfillingWindow(block types.Block) bool {
@@ -105,11 +121,6 @@ func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Bl
 		return nil, fmt.Errorf("failed to get backfill data - invalid block number: %w", err)
 	}
 
-	if epochNumber == b.genesisEpochBlock {
-		log.Debug().Msgf("Block number is genesis block, not backfilling, %d", epochNumber)
-		return []*types.Frame{}, nil
-	}
-
 	epochHash, err := block.GetBlockHash()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get backfill data - invalid block hash: %w", err)
@@ -118,6 +129,10 @@ func (b *BackfillProvider) GetBackfillFrames(ctx context.Context, block types.Bl
 	backfillData, err := b.GetBackfillData(ctx, epochNumber)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get backfill data for epoch %d: %w", epochNumber, err)
+	}
+	if backfillData == nil {
+		b.log.Debug("Block number is genesis block, not backfilling", "epoch_number", epochNumber)
+		return []*types.Frame{}, nil
 	}
 
 	if backfillData.EpochHash != common.HexToHash(epochHash) {

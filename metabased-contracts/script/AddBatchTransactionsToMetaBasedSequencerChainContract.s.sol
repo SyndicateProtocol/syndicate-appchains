@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity 0.8.25;
 
 import {Script} from "forge-std/Script.sol";
 
@@ -11,7 +11,7 @@ contract AddBatchTransactionsToMetabasedSequencerChainContract is Script {
     function run() public {
         vm.startBroadcast();
         // MetabasedSequencerChain address on Base Sepolia
-        metabasedSequencerChainContract = MetabasedSequencerChain(0x73Ba7D784d13Ec0070a4Ea6F49Ff57dc007Bb48d);
+        metabasedSequencerChainContract = MetabasedSequencerChain(0xb1567B5DFa038e4F279d3b585D4D45b8bDD2263D);
 
         // Example of adding multiple transactions in bulk.
 

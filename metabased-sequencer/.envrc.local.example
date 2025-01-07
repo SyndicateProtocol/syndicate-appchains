@@ -1,0 +1,12 @@
+# These are the `metabased-sequencer`-specific env vars. You would put a `.envrc` file at repo root
+
+# metabased-sequencer
+
+# TODO [SEQ-389]: replace Alchemy private URL
+# Optimism layer-2 RPC URL from Alchemy
+export METABASED_SEQUENCER_CHAIN_RPC_ADDRESS=https://rpc.devnet.alchemy.com/4934ab6a-37a9-4431-a473-84b7d6bcef57
+# Placeholder Arbitrum devnet key https://docs.arbitrum.io/run-arbitrum-node/run-nitro-dev-node#development-account-used-by-default
+export METABASED_SEQUENCER_PRIVATE_KEY=0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c22138887752191c9520659
+# Contract address deployed to private testnet https://github.com/SyndicateProtocol/metabased-rollup/tree/main/metabased-contracts#metabased-testnet-private-devnet
+export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0xa6e41ffd769491a42a6e5ce453259b93983a22ef
+export METABASED_SEQUENCER_PORT=8456

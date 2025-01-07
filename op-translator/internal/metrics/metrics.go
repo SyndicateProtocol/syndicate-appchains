@@ -17,6 +17,7 @@ type IMetrics interface {
 	RecordOPTranslatorRPCRequest(method string)
 	RecordOPTranslatorTranslationLatency(method string, duration float64)
 	RecordOPTranslatorError(method, errorType string)
+	RecordOPTranslatorRPCCallDuration(method, clientType string, duration float64)
 
 	// Batch Provider
 	RecordBatchProviderBatchProcessed(method string)
@@ -35,6 +36,7 @@ type Metrics struct {
 	opTranslatorRPCRequests        *prometheus.CounterVec
 	opTranslatorTranslationLatency *prometheus.HistogramVec
 	opTranslatorErrors             *prometheus.CounterVec
+	opTranslatorRPCRequestDuration *prometheus.HistogramVec
 
 	// Batch Provider
 	batchProviderBatchProcessed           *prometheus.CounterVec
@@ -75,6 +77,15 @@ func NewMetrics() *Metrics {
 				Help:      "Total number of errors encountered",
 			},
 			[]string{"method", "error_type"},
+		),
+		opTranslatorRPCRequestDuration: promauto.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Namespace: opTranslatorNamespace,
+				Name:      "rpc_call_duration_seconds",
+				Help:      "Duration of RPC calls",
+				Buckets:   prometheus.DefBuckets,
+			},
+			[]string{"client_type", "method"},
 		),
 
 		// Batch Provider
@@ -150,6 +161,10 @@ func (m *Metrics) RecordOPTranslatorTranslationLatency(method string, duration f
 
 func (m *Metrics) RecordOPTranslatorError(method, errorType string) {
 	m.opTranslatorErrors.WithLabelValues(method, errorType).Inc()
+}
+
+func (m *Metrics) RecordOPTranslatorRPCCallDuration(method, clientType string, duration float64) {
+	m.opTranslatorRPCRequestDuration.WithLabelValues(clientType, method).Observe(duration)
 }
 
 // Batch Provider

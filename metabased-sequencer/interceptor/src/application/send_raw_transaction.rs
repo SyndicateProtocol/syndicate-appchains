@@ -1,13 +1,16 @@
+use std::convert::TryFrom;
 use crate::domain::primitives::Bytes;
 use crate::domain::MetabasedSequencerChainService;
 use crate::presentation::json_rpc_errors::Error;
-use crate::presentation::json_rpc_errors::Error::InvalidInput;
-use crate::presentation::json_rpc_errors::InvalidInputError::MissingGasPrice;
+use crate::presentation::json_rpc_errors::Error::{InvalidInput, InvalidParams};
+use crate::presentation::json_rpc_errors::InvalidInputError::{MissingChainID, MissingGasPrice, UnableToRLPDecode};
 use crate::presentation::transaction;
 use alloy::consensus::{Transaction, TxEnvelope, TxType};
 use alloy::primitives::private::alloy_rlp::Decodable;
 use alloy::primitives::TxHash;
 use alloy::primitives::U256;
+use jsonrpsee::types::Params;
+use crate::presentation::json_rpc_errors::InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount};
 
 /// Sends serialized and signed transaction `tx` using `chain`.
 pub async fn send_raw_transaction<Chain>(encoded: Bytes, chain: &Chain) -> Result<TxHash, Error>
@@ -17,9 +20,17 @@ where
 {
     // 1. Decoding:
     let mut slice: &[u8] = encoded.as_ref();
-    let tx = TxEnvelope::decode(&mut slice)?;
+    let tx = match TxEnvelope::decode(&mut slice) {
+        Ok(tx) => tx,
+        Err(_) => return Err(InvalidInput(UnableToRLPDecode)),
+    };
 
     // 2. Validation:
+    //For non-legacy transactions, validate chain ID immediately
+    if tx.tx_type() != TxType::Legacy && tx.chain_id().is_none() {
+        return Err(InvalidInput(MissingChainID));
+    }
+
     tx.recover_signer()?;
 
     if tx.tx_type() == TxType::Legacy {
@@ -38,6 +49,30 @@ where
     Ok(chain.process_transaction(encoded).await?)
 }
 
+#[derive(Debug)]
+pub struct SendRawTransactionParams {
+    pub(crate) raw_tx: String,
+}
+
+impl TryFrom<Params<'static>> for SendRawTransactionParams {
+    type Error = Error;
+
+    // Params validation
+    fn try_from(params: Params<'static>) -> Result<Self, Self::Error> {
+        let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap())?;
+        let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
+        if arr.len() != 1 {
+            return Err(InvalidParams(WrongParamCount(arr.len())));
+        }
+        let item = arr.pop().ok_or(InvalidParams(MissingParam))?;
+        let raw_tx = item.as_str()
+            .ok_or(InvalidParams(NotHexEncoded))?
+            .to_string();
+
+        Ok(Self { raw_tx })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -48,7 +83,7 @@ mod tests {
     use alloy::primitives::TxKind;
     use alloy::signers::local::PrivateKeySigner;
     use alloy_primitives::private::alloy_rlp::Encodable;
-    use alloy_primitives::{b256, Signature};
+    use alloy_primitives::{b256, PrimitiveSignature};
     use async_trait::async_trait;
     use std::fmt::{Debug, Display, Formatter};
     use std::sync::Arc;
@@ -95,12 +130,12 @@ mod tests {
         assert_eq!(actual_transactions, expected_transactions);
     }
 
-    fn encode_legacy_transaction_without_chain_id() -> Vec<u8> {
+    fn encode_legacy_transaction_without_chain_id(gas_price: u128) -> Vec<u8> {
         let mut tx = TxLegacy {
             chain_id: None,
             nonce: 0,
-            gas_price: u128::MAX,
-            gas_limit: u64::MAX,
+            gas_price,
+            gas_limit: 1,
             to: TxKind::Create,
             value: Default::default(),
             input: Default::default(),
@@ -117,7 +152,6 @@ mod tests {
     #[tokio::test]
     #[test_case(vec![0, 1, 2, 3]; "Non-rlp")]
     #[test_case(vec![]; "Empty")]
-    #[test_case(encode_legacy_transaction_without_chain_id(); "Legacy transaction without chain ID")]
     async fn test_decoding_invalid_rlp_transaction_fails(encoded_tx: Vec<u8>) {
         let encoded_tx = Bytes::from(encoded_tx);
 
@@ -135,6 +169,24 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_decoding_legacy_transaction_without_chain_id_succeeds() {
+        let encoded_tx = encode_legacy_transaction_without_chain_id(1);
+        let encoded_tx = Bytes::from(encoded_tx);
+
+        let transactions = Arc::new(RwLock::new(Vec::new()));
+        let chain = InMemoryMetabasedSequencerChain::new(transactions.clone());
+
+        send_raw_transaction(encoded_tx.clone(), &chain)
+            .await
+            .unwrap();
+
+        let expected_transactions = vec![encoded_tx];
+        let actual_transactions = transactions.read().await.clone();
+
+        assert_eq!(actual_transactions, expected_transactions);
+    }
+
+    #[tokio::test]
     async fn test_sending_transaction_singed_with_wrong_signature_fails() {
         fn create_transaction_with_wrong_signature() -> TxEnvelope {
             let tx = TxEip1559 {
@@ -148,12 +200,11 @@ mod tests {
                 access_list: Default::default(),
                 input: Default::default(),
             };
-            let signature = Signature::from_scalars_and_parity(
+            let signature = PrimitiveSignature::from_scalars_and_parity(
                 b256!("0000000000000000000000000000000000000000000000000000000000000000"),
                 b256!("0000000000000000000000000000000000000000000000000000000000000000"),
                 false,
-            )
-            .unwrap();
+            );
 
             TxEnvelope::Eip1559(tx.into_signed(signature))
         }
@@ -232,25 +283,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_sending_legacy_transaction_exceeding_gas_price_cap_fails() {
-        fn create_transaction() -> TxEnvelope {
-            let mut tx = TxLegacy {
-                chain_id: Some(0),
-                nonce: 0,
-                gas_price: u128::MAX,
-                gas_limit: u64::MAX,
-                to: TxKind::Create,
-                value: Default::default(),
-                input: Default::default(),
-            };
-            let signer = PrivateKeySigner::from_bytes(&PRIVATE_KEY.into()).unwrap();
-            let signature = signer.sign_transaction_sync(&mut tx).unwrap();
-
-            TxEnvelope::Legacy(tx.into_signed(signature))
-        }
-
-        let tx = create_transaction();
-        let mut encoded_tx = Vec::new();
-        tx.encode(&mut encoded_tx);
+        let encoded_tx = encode_legacy_transaction_without_chain_id(u128::MAX);
         let encoded_tx = Bytes::from(encoded_tx);
 
         let transactions = Arc::new(RwLock::new(Vec::new()));
@@ -265,4 +298,42 @@ mod tests {
 
         assert_eq!(actual_error, expected_error);
     }
+
+    // Params tests
+    #[test]
+    fn test_valid_params() {
+        let params = Params::new(Some(r#"["0x1234"]"#));
+        let result = SendRawTransactionParams::try_from(params);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap().raw_tx, "0x1234");
+    }
+
+    #[test]
+    fn test_invalid_array() {
+        let params = Params::new(Some(r#"{"tx": "0x1234"}"#));
+        let result = SendRawTransactionParams::try_from(params);
+        assert!(matches!(result, Err(InvalidParams(NotAnArray))));
+    }
+
+    #[test]
+    fn test_wrong_param_count() {
+        let params = Params::new(Some(r#"["0x1234", "extra"]"#));
+        let result = SendRawTransactionParams::try_from(params);
+        assert!(matches!(result, Err(InvalidParams(WrongParamCount(2)))));
+    }
+
+    #[test]
+    fn test_missing_param() {
+        let params = Params::new(Some(r#"[]"#));
+        let result = SendRawTransactionParams::try_from(params);
+        assert!(matches!(result, Err(InvalidParams(WrongParamCount(0)))));
+    }
+
+    #[test]
+    fn test_not_hex_encoded() {
+        let params = Params::new(Some(r#"[123]"#));
+        let result = SendRawTransactionParams::try_from(params);
+        assert!(matches!(result, Err(InvalidParams(NotHexEncoded))));
+    }
+
 }

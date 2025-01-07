@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
 	opservice "github.com/ethereum-optimism/optimism/op-service"
+	oplog "github.com/ethereum-optimism/optimism/op-service/log"
+	"github.com/ethereum-optimism/optimism/op-service/oppprof"
 	"github.com/urfave/cli/v2"
 )
 
@@ -94,6 +95,12 @@ var (
 	// Optional flags
 	//////////////////////////
 
+	SettlementChainRPCURLWS = &cli.StringFlag{
+		Name:    "settlement_chain_rpc_url_ws",
+		Usage:   "Settlement chain address WS",
+		EnvVars: []string{"SETTLEMENT_CHAIN_RPC_URL_WS"},
+	}
+
 	FrameSize = &cli.IntFlag{
 		Name:    "frame_size",
 		Usage:   "Size of each frame in bytes. Max is 1,000,000",
@@ -121,21 +128,6 @@ var (
 		EnvVars: prefixEnvVars("SERVER_WRITE_TIMEOUT"),
 		Value:   10 * time.Second, //nolint:mnd // default
 	}
-
-	// TODO [SEQ-329] logger
-	LogLevel = &cli.StringFlag{
-		Name:    "log_level",
-		Usage:   "Log level",
-		EnvVars: prefixEnvVars("LOG_LEVEL"),
-		Value:   string(constants.Debug),
-	}
-
-	Pretty = &cli.BoolFlag{
-		Name:    "pretty",
-		Usage:   "Pretty print JSON log responses",
-		EnvVars: prefixEnvVars("PRETTY"),
-		Value:   false,
-	}
 )
 
 var requiredFlags = []cli.Flag{
@@ -153,15 +145,17 @@ var requiredFlags = []cli.Flag{
 }
 
 var optionalFlags = []cli.Flag{
+	SettlementChainRPCURLWS,
 	FrameSize,
 	Port,
 	ReadTimeout,
 	WriteTimeout,
-	LogLevel,
-	Pretty,
 }
 
 func init() {
+	optionalFlags = append(optionalFlags, oplog.CLIFlags(EnvVarPrefix)...)
+	optionalFlags = append(optionalFlags, oppprof.CLIFlags(EnvVarPrefix)...)
+
 	Flags = append(requiredFlags, optionalFlags...) //nolint:gocritic // false positive
 }
 

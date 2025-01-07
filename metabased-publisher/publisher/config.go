@@ -10,42 +10,37 @@ import (
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	"github.com/ethereum-optimism/optimism/op-service/oppprof"
-	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 )
 
 type CLIConfig struct {
-	PprofConfig               oppprof.CLIConfig
-	SettlementChainRPCURL     string
-	BatchInboxAddress         string
-	SequencingChainRPCURL     string
-	SequencingContractAddress string
-	L3RPCURL                  string
-	LogConfig                 oplog.CLIConfig
-	MetricsConfig             opmetrics.CLIConfig
-	TxMgrConfig               txmgr.CLIConfig
-	PollInterval              time.Duration
+	BatcherAddress     string
+	BatchInboxAddress  string
+	OpTranslatorRPCURL string
+	AltDAURL           string
+	PprofConfig        oppprof.CLIConfig
+	LogConfig          oplog.CLIConfig
+	MetricsConfig      opmetrics.CLIConfig
+	PollInterval       time.Duration
+	NetworkTimeout     time.Duration
+	BlobUploadTimeout  time.Duration
 }
 
 func (c *CLIConfig) Check() error {
-	// settlement chain
-	if c.SettlementChainRPCURL == "" {
-		return errors.New("empty settlement chain RPC URL")
+	// op-translator
+	if c.OpTranslatorRPCURL == "" {
+		return errors.New("empty op-translator RPC URL")
+	}
+
+	if c.BatcherAddress == "" {
+		return errors.New("empty batcher address")
 	}
 	if c.BatchInboxAddress == "" {
-		return errors.New("empty BatchInbox address")
+		return errors.New("empty batch inbox address")
 	}
 
-	// sequencing chain
-	if c.SequencingChainRPCURL == "" {
-		return errors.New("empty sequencing chain RPC URL")
-	}
-	if c.SequencingContractAddress == "" {
-		return errors.New("empty sequencing contract address")
-	}
-
-	// L3 metabased chain
-	if c.L3RPCURL == "" {
-		return errors.New("empty L3 RPC URL")
+	// AltDA
+	if c.AltDAURL == "" {
+		return errors.New("empty AltDA URL")
 	}
 
 	// operational configuration
@@ -54,9 +49,6 @@ func (c *CLIConfig) Check() error {
 	}
 
 	// from op-stack
-	if err := c.TxMgrConfig.Check(); err != nil {
-		return err
-	}
 	if err := c.MetricsConfig.Check(); err != nil {
 		return err
 	}
@@ -68,30 +60,23 @@ func (c *CLIConfig) Check() error {
 
 // NewConfig parses the Config from the provided flags or environment variables.
 func NewConfig(ctx *cli.Context) *CLIConfig {
-	// override L1_RPC flag with the settlement chain RPC URL
-	settlementChainRPCURL := ctx.String(flags.SettlementChainRPCURL.Name)
-	txMgrConfig := txmgr.ReadCLIConfig(ctx)
-	txMgrConfig.L1RPCURL = settlementChainRPCURL
-
 	return &CLIConfig{
-		// settlement chain
-		SettlementChainRPCURL: settlementChainRPCURL,
-		BatchInboxAddress:     ctx.String(flags.BatchInboxAddress.Name),
+		// op-translator
+		OpTranslatorRPCURL: ctx.String(flags.OpTranslatorRPCURL.Name),
+		BatcherAddress:     ctx.String(flags.BatcherAddress.Name),
+		BatchInboxAddress:  ctx.String(flags.BatchInboxAddress.Name),
 
-		// sequencing chain
-		SequencingChainRPCURL:     ctx.String(flags.SequencingChainRPCURL.Name),
-		SequencingContractAddress: ctx.String(flags.SequencingContractAddress.Name),
-
-		// L3 metabased chain
-		L3RPCURL: ctx.String(flags.L3RPCURL.Name),
+		// AltDA
+		AltDAURL: ctx.String(flags.AltDAURL.Name),
 
 		// operational configuration
-		PollInterval: ctx.Duration(flags.PollInterval.Name),
+		PollInterval:      ctx.Duration(flags.PollInterval.Name),
+		NetworkTimeout:    ctx.Duration(flags.NetworkTimeout.Name),
+		BlobUploadTimeout: ctx.Duration(flags.BlobUploadTimeout.Name),
 
 		// from op-stack
 		LogConfig:     oplog.ReadCLIConfig(ctx),
 		MetricsConfig: opmetrics.ReadCLIConfig(ctx),
 		PprofConfig:   oppprof.ReadCLIConfig(ctx),
-		TxMgrConfig:   txMgrConfig,
 	}
 }

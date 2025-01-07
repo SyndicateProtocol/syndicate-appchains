@@ -11,7 +11,7 @@ edition = "2021"
 rust-version = "1.81"
 
 [workspace.dependencies]
-alloy = { version = "0.3.1", features = ["full"] }
+alloy = { version = "0.7.3", features = ["full"] }
 # TODO: Opt into specific features
 jsonrpsee = { version = "0.24.3", features = ["full"] }
 tokio = { version = "1.0", features = ["full"] }

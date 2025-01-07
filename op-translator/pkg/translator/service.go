@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"sync/atomic"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/logger"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/metrics"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/server"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
@@ -16,8 +15,10 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	opservice "github.com/ethereum-optimism/optimism/op-service"
 	"github.com/ethereum-optimism/optimism/op-service/cliapp"
+	oplog "github.com/ethereum-optimism/optimism/op-service/log"
+	"github.com/ethereum-optimism/optimism/op-service/oppprof"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/rs/zerolog/log"
+	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/urfave/cli/v2"
 )
 
@@ -33,36 +34,38 @@ func Main(version string) cliapp.LifecycleAction {
 			return nil, fmt.Errorf("invalid CLI flags: %w", err)
 		}
 
-		// TODO [SEQ-329] logger
-		// l := oplog.NewLogger(oplog.AppOut(cliCtx), cfg.LogConfig)
-		// oplog.SetGlobalLogHandler(l.Handler())
-		// opservice.ValidateEnvVars(flags.EnvVarPrefix, flags.Flags, log)
+		log := oplog.NewLogger(oplog.AppOut(cliCtx), cfg.LogConfig)
+		oplog.SetGlobalLogHandler(log.Handler())
+		opservice.ValidateEnvVars(flags.EnvVarPrefix, flags.Flags, log)
 
-		// l.Info("Initializing op-translator")
-		return TranslatorServiceFromCLIConfig(cliCtx.Context, version, cfg)
+		log.Info("Initializing op-translator")
+		return TranslatorServiceFromCLIConfig(cliCtx.Context, version, cfg, log)
 	}
 }
 
-func TranslatorServiceFromCLIConfig(ctx context.Context, version string, cfg *CLIConfig) (*TranslatorService, error) {
+func TranslatorServiceFromCLIConfig(ctx context.Context, version string, cfg *CLIConfig, log gethlog.Logger) (*TranslatorService, error) {
 	var t TranslatorService
-	if err := t.initFromCLIConfig(ctx, version, cfg); err != nil {
+	if err := t.initFromCLIConfig(ctx, version, cfg, log); err != nil {
+		log.Error("unable to initialize op-translator", "error", err)
 		return nil, errors.Join(err, t.Stop(ctx)) // try to clean up our failed initialization attempt
 	}
 	return &t, nil
 }
 
 type TranslatorService struct {
-	metaBasedChainRPC         *rpc.RPCClient
-	sequencingContractAddress *common.Address
+	log                       gethlog.Logger
+	metaBasedBatchProvider    *MetaBasedBatchProvider
 	batchInboxAddress         *common.Address
 	batcherSigner             *Signer
 	settlementChainRPC        *rpc.RPCClient
 	sequencingChainRPC        *rpc.RPCClient
-	metaBasedBatchProvider    *MetaBasedBatchProvider
+	metaBasedChainRPC         *rpc.RPCClient
 	backfillProvider          *backfill.BackfillProvider
 	opTranslator              *OPTranslator
 	server                    *server.Server
 	metricsCollector          *metrics.Metrics
+	sequencingContractAddress *common.Address
+	pprofService              *oppprof.Service
 	version                   string
 	stopped                   atomic.Bool
 }
@@ -70,9 +73,9 @@ type TranslatorService struct {
 // guarantees that the cliapp.Lifecycle interface is implemented by TranslatorService
 var _ cliapp.Lifecycle = (*TranslatorService)(nil)
 
-func (t *TranslatorService) initFromCLIConfig(ctx context.Context, version string, cfg *CLIConfig) error {
+func (t *TranslatorService) initFromCLIConfig(ctx context.Context, version string, cfg *CLIConfig, log gethlog.Logger) error {
+	t.log = log
 	t.version = version
-	logger.Init(cfg.LogLevel, cfg.Pretty) // TODO [SEQ-329] logger
 
 	if err := t.initRPCServers(ctx, cfg); err != nil {
 		return fmt.Errorf("failed to initialize RPC servers: %w", err)
@@ -83,9 +86,11 @@ func (t *TranslatorService) initFromCLIConfig(ctx context.Context, version strin
 	if err := t.initBatchSigner(cfg); err != nil {
 		return fmt.Errorf("failed to initialize batch signer: %w", err)
 	}
-
-	t.initBackfillProvider(cfg)
+	if err := t.initPProf(cfg); err != nil {
+		return fmt.Errorf("failed to initialize pprof service: %w", err)
+	}
 	t.initMetrics()
+	t.initBackfillProvider(cfg)
 	t.initBatchProvider(cfg)
 	t.initOPTranslator()
 
@@ -96,7 +101,12 @@ func (t *TranslatorService) initFromCLIConfig(ctx context.Context, version strin
 }
 
 func (t *TranslatorService) initRPCServers(_ context.Context, cfg *CLIConfig) error {
-	settlementChain, err := rpc.Connect(cfg.SettlementChainRPCURL)
+	settlementURL := cfg.SettlementChainRPCURL
+	// If the WS URL is provided, use it instead of the HTTP URL
+	if cfg.SettlementChainRPCURLWS != "" {
+		settlementURL = cfg.SettlementChainRPCURLWS
+	}
+	settlementChain, err := rpc.Connect(settlementURL)
 	if err != nil {
 		return errors.New("failed to initialize settlement chain")
 	}
@@ -155,7 +165,24 @@ func (t *TranslatorService) initBackfillProvider(cfg *CLIConfig) {
 		cfg.CutoverEpochBlock,
 		&http.Client{},
 		t.metricsCollector,
+		t.log,
 	)
+}
+
+func (t *TranslatorService) initPProf(cfg *CLIConfig) error {
+	t.pprofService = oppprof.New(
+		cfg.PprofConfig.ListenEnabled,
+		cfg.PprofConfig.ListenAddr,
+		cfg.PprofConfig.ListenPort,
+		cfg.PprofConfig.ProfileType,
+		cfg.PprofConfig.ProfileDir,
+		cfg.PprofConfig.ProfileFilename,
+	)
+
+	if err := t.pprofService.Start(); err != nil {
+		return fmt.Errorf("failed to start pprof service: %w", err)
+	}
+	return nil
 }
 
 func (t *TranslatorService) initMetrics() {
@@ -164,12 +191,13 @@ func (t *TranslatorService) initMetrics() {
 
 func (t *TranslatorService) initBatchProvider(cfg *CLIConfig) {
 	t.metaBasedBatchProvider = NewMetaBasedBatchProvider(
-		t.settlementChainRPC,
+		t.metaBasedChainRPC,
 		t.sequencingChainRPC,
 		*t.sequencingContractAddress,
 		cfg.SettlementStartBlock,
 		int(cfg.SettlementChainBlockTime.Seconds()),
 		t.metricsCollector,
+		t.log,
 	)
 }
 
@@ -181,6 +209,7 @@ func (t *TranslatorService) initOPTranslator() {
 		t.batcherSigner,
 		t.batchInboxAddress,
 		t.metricsCollector,
+		t.log,
 	)
 }
 
@@ -191,7 +220,7 @@ func (t *TranslatorService) initServer(cfg *CLIConfig) error {
 		cfg.WriteTimeout,
 		cfg.SettlementChainRPCURL,
 		t.opTranslator,
-		cfg.LogLevel,
+		t.log,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to create server: %w", err)
@@ -213,15 +242,21 @@ func (t *TranslatorService) Stop(ctx context.Context) error {
 	if t.stopped.Load() {
 		return ErrAlreadyStopped
 	}
-	log.Info().Msg("Stopping op-translator")
+	t.log.Info("Stopping op-translator")
 
 	t.metaBasedChainRPC.CloseConnection()
 	t.settlementChainRPC.CloseConnection()
 	t.sequencingChainRPC.CloseConnection()
 	t.server.Stop(ctx)
 
+	if t.pprofService != nil {
+		if err := t.pprofService.Stop(ctx); err != nil {
+			return fmt.Errorf("unable to stop pprof service: %w", err)
+		}
+	}
+
 	t.stopped.Store(true)
-	log.Info().Msg("op-translator stopped")
+	t.log.Info("op-translator stopped")
 	return nil
 }
 

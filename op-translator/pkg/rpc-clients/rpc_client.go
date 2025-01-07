@@ -13,7 +13,6 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/rs/zerolog/log"
 )
 
 type IReceiptsFetcher interface {
@@ -25,10 +24,12 @@ type IRawRPCClient interface {
 }
 
 type IETHClient interface {
+	BlockNumber(ctx context.Context) (uint64, error)
 	BlockReceipts(ctx context.Context, blockNrOrHash rpc.BlockNumberOrHash) ([]*ethtypes.Receipt, error)
 	BlockByNumber(ctx context.Context, number *big.Int) (*ethtypes.Block, error)
 	HeaderByNumber(ctx context.Context, number *big.Int) (*ethtypes.Header, error)
 	TransactionReceipt(ctx context.Context, hash common.Hash) (*ethtypes.Receipt, error)
+	ChainID(ctx context.Context) (*big.Int, error)
 	Close()
 }
 
@@ -47,11 +48,25 @@ func NewRPCClient(client IETHClient, rawClient IRawRPCClient, receiptsFetcher IR
 }
 
 func Connect(address string) (*RPCClient, error) {
-	c, err := rpc.Dial(address)
-	if err != nil {
-		return nil, fmt.Errorf("failed to dial address %s: %w", address, err)
+	var c *rpc.Client
+	var err error
+	switch {
+	case address[:2] == "ws":
+		// Use DialWebsocket for WebSocket connections
+		c, err = rpc.DialWebsocket(context.Background(), address, "")
+		if err != nil {
+			return nil, fmt.Errorf("failed to dial WebSocket address %s: %w", address, err)
+		}
+	case address[:4] == "http":
+		// Use Dial for HTTP connections
+		c, err = rpc.Dial(address)
+		if err != nil {
+			return nil, fmt.Errorf("failed to dial HTTP address %s: %w", address, err)
+		}
+	default:
+		return nil, fmt.Errorf("invalid address format: %s (must start with ws or http)", address)
 	}
-	log.Debug().Msgf("RPC connection established: %s", address)
+
 	return NewRPCClient(ethclient.NewClient(c), c, NewReceiptFetcher(c)), nil
 }
 
@@ -61,7 +76,6 @@ func (c *RPCClient) AsEthClient() IETHClient {
 
 func (c *RPCClient) CloseConnection() {
 	c.client.Close()
-	log.Debug().Msg("RPC connection closed")
 }
 
 func (c *RPCClient) GetBlockByNumber(ctx context.Context, number string, withTransactions bool) (types.Block, error) {
@@ -112,7 +126,7 @@ func (c *RPCClient) GetReceiptsByBlocks(ctx context.Context, blocks []*types.Blo
 
 			hashes := make([]common.Hash, len(transactions))
 			for i, tx := range transactions {
-				hashes[i] = common.HexToHash(tx.(string))
+				hashes[i] = common.HexToHash(tx.(string)) //nolint:errcheck // safe to cast to string
 			}
 
 			blockNumber, err := block.GetBlockNumberHex()

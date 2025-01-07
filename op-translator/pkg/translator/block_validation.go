@@ -10,7 +10,7 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/rs/zerolog/log"
+	gethlog "github.com/ethereum/go-ethereum/log"
 )
 
 const (
@@ -47,11 +47,11 @@ type ValidationState struct {
 // This function will get updated for an easier and more efficient block validation once we have made some improvements in the geth repo
 func (m *MetaBasedBatchProvider) ValidateBlock(rawTxns []hexutil.Bytes, txns []*rpc.ParsedTransaction) ([]hexutil.Bytes, error) {
 	if len(rawTxns) != len(txns) {
-		log.Error().Msgf("rawTxns and txns have different lengths: %v != %v", len(rawTxns), len(txns))
+		m.log.Error("rawTxns and txns have different lengths", "rawTxns", len(rawTxns), "txns", len(txns))
 		return []hexutil.Bytes{}, fmt.Errorf("rawTxns and txns have different lengths")
 	}
 	if len(rawTxns) == 0 {
-		log.Debug().Msg("No transactions provided")
+		m.log.Debug("No transactions provided")
 		return []hexutil.Bytes{}, nil
 	}
 	validationState := createInitialBlockState()
@@ -64,18 +64,18 @@ func (m *MetaBasedBatchProvider) ValidateBlock(rawTxns []hexutil.Bytes, txns []*
 		_, err := m.MetaBasedChain.SimulateTransactions(context.Background(), validParsedTxns, "latest")
 		// If simulation error, parse error and update state
 		if err != nil {
-			log.Warn().Err(err).Msg("Error in SimulateTransactions")
+			m.log.Warn("Error in SimulateTransactions", "error", err)
 			validationState, err = ParseValidationErrorAndUpdateState(validationState, err)
 			if err != nil {
-				log.Error().Err(err).Msg("Error in ParseValidationError")
+				m.log.Error("Error in ParseValidationError", "error", err)
 				return []hexutil.Bytes{}, err
 			}
-			validRawTxns, validParsedTxns = ValidateBlockState(validRawTxns, validParsedTxns, validationState)
+			validRawTxns, validParsedTxns = ValidateBlockState(validRawTxns, validParsedTxns, validationState, m.log)
 			continue
 		}
 
 		// Finalize the state after all transactions are validated
-		log.Debug().Interface("validParsedTxns", validParsedTxns).Msg("ValidateBlock end")
+		m.log.Debug("ValidateBlock end", "validParsedTxns", validParsedTxns)
 		return validRawTxns, nil
 	}
 }
@@ -88,7 +88,7 @@ func createInitialBlockState() ValidationState {
 	}
 }
 
-func ValidateBlockState(rawTransactions []hexutil.Bytes, parsedTransactions []*rpc.ParsedTransaction, state ValidationState) ([]hexutil.Bytes, []*rpc.ParsedTransaction) {
+func ValidateBlockState(rawTransactions []hexutil.Bytes, parsedTransactions []*rpc.ParsedTransaction, state ValidationState, log gethlog.Logger) ([]hexutil.Bytes, []*rpc.ParsedTransaction) {
 	validTransactions := []*rpc.ParsedTransaction{}
 	validRawTransactions := []hexutil.Bytes{}
 
@@ -98,7 +98,7 @@ func ValidateBlockState(rawTransactions []hexutil.Bytes, parsedTransactions []*r
 	for i, tx := range parsedTransactions {
 		if isValid, err := validateTransaction(tx, tempState, gasUsedInBlock); !isValid {
 			if err != nil {
-				log.Debug().Interface("parsedTransaction", tx).Err(err).Msg("Transaction validation failed")
+				log.Debug("Transaction validation failed", "parsedTransaction", tx, "error", err)
 			}
 			continue
 		}
@@ -106,7 +106,7 @@ func ValidateBlockState(rawTransactions []hexutil.Bytes, parsedTransactions []*r
 		// Update gas usage and state after successful validation
 		txGas, err := hexutil.DecodeBig(tx.Gas)
 		if err != nil {
-			log.Error().Err(err).Msg("can't convert gas to big int")
+			log.Error("can't convert gas to big int", "error", err)
 			continue
 		}
 		gasUsedInBlock.Add(gasUsedInBlock, txGas)

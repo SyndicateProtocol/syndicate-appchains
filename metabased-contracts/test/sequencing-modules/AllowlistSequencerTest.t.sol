@@ -55,7 +55,6 @@ contract AllowlistSequencingModuleTest is Test {
     }
 
     function testIsNotAllowedForNonAllowedAddress() public {
-        vm.expectRevert(AllowlistSequencingModule.AddressNotAllowed.selector);
-        allowlistSequencer.isAllowed(makeAddr("non-allowed"));
+        assertFalse(allowlistSequencer.isAllowed(makeAddr("non-allowed")));
     }
 }

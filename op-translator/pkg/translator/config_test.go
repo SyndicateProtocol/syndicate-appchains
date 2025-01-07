@@ -5,7 +5,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,8 +16,6 @@ func validConfig() CLIConfig {
 		SettlementChainRPCURL:     "https://example.org",
 		MetaBasedChainRPCURL:      "https://example.io",
 		MetafillerURL:             "https://metafiller.io",
-		LogLevel:                  constants.Info.String(),
-		Pretty:                    false,
 		SequencingContractAddress: "0x0000000000000000000000000000000000000000",
 		BatchInboxAddress:         "0x0000000000000000000000000000000000000000",
 		SettlementStartBlock:      1,
@@ -73,13 +70,6 @@ func TestValidateConfigValues(t *testing.T) {
 				c.MetaBasedChainRPCURL = "invalid meta based chain address"
 			},
 			expectedErrors: []string{"invalid URL for meta based chain address"},
-		},
-		{
-			name: "Invalid log level",
-			configChangeUnderTest: func(c *CLIConfig) {
-				c.LogLevel = "OTHER"
-			},
-			expectedErrors: []string{"invalid log level"},
 		},
 		{
 			name: "Invalid settlementStartBlock",

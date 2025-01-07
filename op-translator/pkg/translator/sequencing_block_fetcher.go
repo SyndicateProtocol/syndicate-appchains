@@ -6,49 +6,51 @@ import (
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/utils"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
-	"github.com/rs/zerolog/log"
+	gethlog "github.com/ethereum/go-ethereum/log"
 )
 
 type SequencingBlockFetcher struct {
-	LastUsedBlock            *types.Block
 	SequencingChainClient    IRPCClient
+	log                      gethlog.Logger
+	LastUsedBlock            *types.Block
 	SettlementChainBlockTime int
 }
 
-func NewSequencingBlockFetcher(sequencingChainClient IRPCClient, settlementChainBlockTime int) *SequencingBlockFetcher {
+func NewSequencingBlockFetcher(sequencingChainClient IRPCClient, settlementChainBlockTime int, log gethlog.Logger) *SequencingBlockFetcher {
 	return &SequencingBlockFetcher{
 		SequencingChainClient:    sequencingChainClient,
 		SettlementChainBlockTime: settlementChainBlockTime,
+		log:                      log,
 	}
 }
 
 func (s *SequencingBlockFetcher) GetLastUsedBlockNumber(startTime int) uint64 {
 	if s.LastUsedBlock == nil {
-		log.Debug().Msg("No last used block found")
+		s.log.Debug("no last used block found")
 		return 0
 	}
 
 	blockNumber, err := s.LastUsedBlock.GetBlockNumber()
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting last used block number")
+		s.log.Error("error getting last used block number", "error", err)
 		return 0
 	}
 
 	blockTimestamp, err := s.LastUsedBlock.GetBlockTimestamp()
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting last used block timestamp")
+		s.log.Error("error getting last used block timestamp", "error", err)
 		return 0
 	}
 
 	nextBlock, err := s.SequencingChainClient.GetBlockByNumber(context.Background(), utils.UInt64ToHex(blockNumber+1), false)
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting next block")
+		s.log.Error("error getting next block", "error", err)
 		return 0
 	}
 
 	nextBlockTimestamp, err := nextBlock.GetBlockTimestamp()
 	if err != nil {
-		log.Error().Err(err).Msg("Error getting next block timestamp")
+		s.log.Error("error getting next block timestamp", "error", err)
 		return 0
 	}
 
@@ -58,7 +60,7 @@ func (s *SequencingBlockFetcher) GetLastUsedBlockNumber(startTime int) uint64 {
 		return blockNumber
 	}
 
-	log.Debug().Msg("Last used block is not valid, returning 0")
+	s.log.Debug("last used block is not valid, returning 0")
 	return 0
 }
 

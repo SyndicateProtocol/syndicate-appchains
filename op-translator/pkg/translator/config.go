@@ -6,34 +6,38 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/constants"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/flags"
+	oplog "github.com/ethereum-optimism/optimism/op-service/log"
+	"github.com/ethereum-optimism/optimism/op-service/oppprof"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/urfave/cli/v2"
 )
 
 type CLIConfig struct {
-	BatchInboxAddress         string
+	PprofConfig               oppprof.CLIConfig
 	LogLevel                  string
 	SequencingChainRPCURL     string
+	SettlementChainRPCURLWS   string
 	MetaBasedChainRPCURL      string
 	MetafillerURL             string
 	SequencingContractAddress string
 	SettlementChainRPCURL     string
 	BatcherPrivateKey         string
+	BatchInboxAddress         string
+	LogConfig                 oplog.CLIConfig
 	SettlementChainID         uint64
-	CutoverEpochBlock         uint64
 	SettlementStartBlock      uint64
 	Port                      int
 	FrameSize                 int
 	SettlementChainBlockTime  time.Duration
 	ReadTimeout               time.Duration
 	WriteTimeout              time.Duration
-	Pretty                    bool
+	CutoverEpochBlock         uint64
 }
 
 func (c *CLIConfig) Check() error {
 	var errs []error
+
 	if c.Port <= 0 {
 		errs = append(errs, errors.New("port must be a positive number"))
 	}
@@ -66,10 +70,6 @@ func (c *CLIConfig) Check() error {
 		errs = append(errs, fmt.Errorf("invalid URL for metafiller: %w", err))
 	}
 
-	if !constants.IsValidLogLevel(c.LogLevel) {
-		errs = append(errs, errors.New("invalid log level"))
-	}
-
 	if !common.IsHexAddress(c.SequencingContractAddress) {
 		errs = append(errs, errors.New("sequencingContractAddress must be a valid hex address"))
 	}
@@ -94,6 +94,17 @@ func (c *CLIConfig) Check() error {
 		errs = append(errs, fmt.Errorf("settlementChainBlockTime must be positive: %d", c.SettlementChainBlockTime))
 	}
 
+	if err := c.PprofConfig.Check(); err != nil {
+		errs = append(errs, err)
+	}
+
+	if c.SettlementChainRPCURLWS != "" {
+		_, err := url.ParseRequestURI(c.SettlementChainRPCURLWS)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("invalid URL for settlement chain address WS: %w", err))
+		}
+	}
+
 	return errors.Join(errs...)
 }
 
@@ -113,11 +124,14 @@ func NewConfig(ctx *cli.Context) *CLIConfig {
 		SettlementChainBlockTime:  ctx.Duration(flags.SettlementChainBlockTime.Name),
 
 		// optional
-		Port:         ctx.Int(flags.Port.Name),
-		FrameSize:    ctx.Int(flags.FrameSize.Name),
-		ReadTimeout:  ctx.Duration(flags.ReadTimeout.Name),
-		WriteTimeout: ctx.Duration(flags.WriteTimeout.Name),
-		Pretty:       ctx.Bool(flags.Pretty.Name),
-		LogLevel:     ctx.String(flags.LogLevel.Name),
+		SettlementChainRPCURLWS: ctx.String(flags.SettlementChainRPCURLWS.Name),
+		Port:                    ctx.Int(flags.Port.Name),
+		FrameSize:               ctx.Int(flags.FrameSize.Name),
+		ReadTimeout:             ctx.Duration(flags.ReadTimeout.Name),
+		WriteTimeout:            ctx.Duration(flags.WriteTimeout.Name),
+
+		// from op-stack
+		LogConfig:   oplog.ReadCLIConfig(ctx),
+		PprofConfig: oppprof.ReadCLIConfig(ctx),
 	}
 }

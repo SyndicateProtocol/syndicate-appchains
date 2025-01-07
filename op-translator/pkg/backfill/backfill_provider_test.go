@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"testing"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/backfill"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/types"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -20,16 +23,17 @@ import (
 func TestGetBackfillFramesMultipleCases(t *testing.T) {
 	mockMetrics := mocks.NewMockMetrics()
 
-	tests := []struct { //nolint:govet // test struct
-		name               string
-		mockResponseData   backfill.BackfillData
+	tests := []struct {
+		mockResponseData   *backfill.BackfillData
 		block              types.Block
+		name               string
 		expectedFrameCount int
+		expectedStatusCode int
 		expectedErr        bool
 	}{
 		{
 			name: "Single Frame - Matching Epoch Hash",
-			mockResponseData: backfill.BackfillData{
+			mockResponseData: &backfill.BackfillData{
 				Data:      []string{"0x1234"},
 				EpochHash: common.HexToHash("0x123"),
 			},
@@ -39,11 +43,12 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 				"transactions": []any{},
 			},
 			expectedFrameCount: 1,
+			expectedStatusCode: http.StatusOK,
 			expectedErr:        false,
 		},
 		{
 			name: "Multiple Frames - Matching Epoch Hash",
-			mockResponseData: backfill.BackfillData{
+			mockResponseData: &backfill.BackfillData{
 				Data:      []string{"0x1234", "0x1234", "0x1234"},
 				EpochHash: common.HexToHash("0x123"),
 			},
@@ -54,10 +59,11 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 			},
 			expectedFrameCount: 3,
 			expectedErr:        false,
+			expectedStatusCode: http.StatusOK,
 		},
 		{
 			name: "Epoch Hash Mismatch",
-			mockResponseData: backfill.BackfillData{
+			mockResponseData: &backfill.BackfillData{
 				Data:      []string{"data"},
 				EpochHash: common.HexToHash("0x456"),
 			},
@@ -68,10 +74,11 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 			},
 			expectedFrameCount: 0,
 			expectedErr:        true,
+			expectedStatusCode: http.StatusOK,
 		},
 		{
 			name: "No Data in Backfill",
-			mockResponseData: backfill.BackfillData{
+			mockResponseData: &backfill.BackfillData{
 				Data:      []string{},
 				EpochHash: common.HexToHash("0x123"),
 			},
@@ -82,16 +89,59 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 			},
 			expectedFrameCount: 0,
 			expectedErr:        false,
+			expectedStatusCode: http.StatusOK,
+		},
+		{
+			name:             "404 Not Found - Genesis Block",
+			mockResponseData: nil,
+			block: types.Block{
+				"number":       "0x0",
+				"hash":         "0x123",
+				"transactions": []any{},
+			},
+			expectedFrameCount: 0,
+			expectedErr:        false,
+			expectedStatusCode: http.StatusNotFound,
+		},
+		{
+			name:             "404 Not Found - Non-Genesis Block",
+			mockResponseData: nil,
+			block: types.Block{
+				"number":       "0x01",
+				"hash":         "0x123",
+				"transactions": []any{},
+			},
+			expectedFrameCount: 0,
+			expectedErr:        true,
+			expectedStatusCode: http.StatusNotFound,
+		},
+		{
+			name:             "Non-200 or Non-404 - Genesis Block",
+			mockResponseData: nil,
+			block: types.Block{
+				"number":       "0x0",
+				"hash":         "0x123",
+				"transactions": []any{},
+			},
+			expectedFrameCount: 0,
+			expectedErr:        true,
+			expectedStatusCode: http.StatusBadRequest,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockHTTPClient := new(mocks.HTTPClientMock)
-			jsonData, err := json.Marshal(tt.mockResponseData)
-			assert.NoError(t, err)
+			var body io.ReadCloser
+			if tt.mockResponseData == nil {
+				body = io.NopCloser(nil)
+			} else {
+				jsonData, err := json.Marshal(tt.mockResponseData)
+				assert.NoError(t, err)
+				body = io.NopCloser(bytes.NewBuffer(jsonData))
+			}
 			mockHTTPClient.On("Do", mock.Anything).Return(&http.Response{
-				StatusCode: http.StatusOK,
-				Body:       io.NopCloser(bytes.NewBuffer(jsonData)),
+				StatusCode: tt.expectedStatusCode,
+				Body:       body,
 				Header:     make(http.Header),
 			}, nil)
 
@@ -102,6 +152,7 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 				0,
 				mockHTTPClient,
 				mockMetrics,
+				testlog.Logger(t, slog.LevelDebug),
 			)
 
 			frames, err := backfillProvider.GetBackfillFrames(ctx, tt.block)
@@ -120,6 +171,61 @@ func TestGetBackfillFramesMultipleCases(t *testing.T) {
 				}
 			}
 			mockHTTPClient.AssertExpectations(t)
+		})
+	}
+}
+
+func TestHandleBackfillProviderError(t *testing.T) {
+	tests := []struct {
+		expectedError  error
+		name           string
+		epochNumber    uint64
+		statusCode     int
+		isGenesisBlock bool
+	}{
+		{
+			name:           "404 Not Found for genesis block",
+			statusCode:     http.StatusNotFound,
+			epochNumber:    0,
+			isGenesisBlock: true,
+			expectedError:  nil,
+		},
+		{
+			name:           "500 Internal Server Error",
+			statusCode:     http.StatusInternalServerError,
+			epochNumber:    1,
+			isGenesisBlock: false,
+			expectedError:  errors.New("received non-200 response from backfill data provider: 500"),
+		},
+		{
+			name:           "404 Not Found for non-genesis block",
+			statusCode:     http.StatusNotFound,
+			epochNumber:    1,
+			isGenesisBlock: false,
+			expectedError:  errors.New("received non-200 response from backfill data provider: 404"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			backfillProvider := backfill.NewBackfillerProvider(
+				"http://metafiller.io",
+				0,
+				0,
+				new(mocks.HTTPClientMock),
+				mocks.NewMockMetrics(),
+				testlog.Logger(t, slog.LevelDebug),
+			)
+
+			resp := &http.Response{
+				StatusCode: tt.statusCode,
+			}
+			err := backfillProvider.HandleBackfillProviderError(resp, tt.epochNumber)
+			if tt.expectedError == nil {
+				assert.NoError(t, err)
+			} else {
+				assert.EqualError(t, err, tt.expectedError.Error())
+			}
 		})
 	}
 }

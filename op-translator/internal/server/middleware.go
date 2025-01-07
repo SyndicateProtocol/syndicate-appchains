@@ -5,20 +5,20 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/rs/zerolog/log"
+	gethlog "github.com/ethereum/go-ethereum/log"
 )
 
-func NoOpMiddleware(next http.HandlerFunc) http.HandlerFunc {
+func NoOpMiddleware(next http.HandlerFunc, log gethlog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		next.ServeHTTP(w, r)
 	}
 }
 
 // VerboseLoggingMiddleware logs the incoming request and the outgoing response
-func VerboseLoggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
+func VerboseLoggingMiddleware(next http.HandlerFunc, log gethlog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Log the request
-		logRequest(r)
+		logRequest(r, log)
 
 		// Create a custom ResponseWriter to capture the response
 		crw := &customResponseWriter{
@@ -31,7 +31,7 @@ func VerboseLoggingMiddleware(next http.HandlerFunc) http.HandlerFunc {
 		next.ServeHTTP(crw, r)
 
 		// Log the response
-		logResponse(r, crw)
+		logResponse(r, crw, log)
 	}
 }
 
@@ -53,7 +53,7 @@ func (crw *customResponseWriter) Write(b []byte) (int, error) {
 }
 
 // logRequest logs the details of the incoming request
-func logRequest(r *http.Request) {
+func logRequest(r *http.Request, log gethlog.Logger) {
 	var body []byte
 	if r.Body != nil {
 		body, _ = io.ReadAll(r.Body)
@@ -61,21 +61,21 @@ func logRequest(r *http.Request) {
 		r.Body = io.NopCloser(bytes.NewBuffer(body))
 	}
 
-	log.Info().
-		Str("method", r.Method).
-		Str("url", r.URL.String()).
-		Str("remote_addr", r.RemoteAddr).
-		Interface("headers", r.Header).
-		Str("body", string(body)).
-		Msg("Incoming request")
+	log.Info("incoming request",
+		"method", r.Method,
+		"url", r.URL.String(),
+		"remote_addr", r.RemoteAddr,
+		"headers", r.Header,
+		"body", string(body),
+	)
 }
 
 // logResponse logs the details of the outgoing response
-func logResponse(r *http.Request, crw *customResponseWriter) {
-	log.Info().
-		Str("method", r.Method).
-		Str("url", r.URL.String()).
-		Int("status", crw.statusCode).
-		Str("body", crw.body.String()).
-		Msg("Outgoing response")
+func logResponse(r *http.Request, crw *customResponseWriter, log gethlog.Logger) {
+	log.Info("outgoing response",
+		"method", r.Method,
+		"url", r.URL.String(),
+		"status", crw.statusCode,
+		"body", crw.body.String(),
+	)
 }

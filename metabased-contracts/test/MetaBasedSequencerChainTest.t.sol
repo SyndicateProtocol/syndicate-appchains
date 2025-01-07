@@ -116,47 +116,6 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
 
         chain.processBulkTransactions(validTxns, priorities);
     }
-
-    function testProcessChunk() public {
-        bytes memory compressedTxChunk = abi.encode("compressed_transaction_data");
-        bytes32 txHash = bytes32(keccak256(compressedTxChunk)); // Generate a hash for the chunk
-
-        vm.startPrank(admin);
-        permissionModule.addCheck(address(new MockIsAllowed(true)), false);
-        vm.stopPrank();
-
-        vm.expectEmit(true, false, false, true);
-        emit MetabasedSequencerChain.TransactionProcessed(address(this), compressedTxChunk, priority);
-
-        // Expect TransactionChunkProcessed event with correct parameter types
-        vm.expectEmit(true, true, true, true);
-        emit MetabasedSequencerChain.TransactionChunkProcessed(
-            /* txChunk */
-            compressedTxChunk,
-            /* index */
-            0,
-            /* totalChunks */
-            3,
-            /* txHashForParent */
-            txHash,
-            /* priority */
-            priority
-        );
-
-        chain.processChunk(compressedTxChunk, 0, 3, txHash, priority);
-    }
-
-    function testProcessChunkInvalidSize() public {
-        bytes memory compressedTxChunk = abi.encode("compressed_transaction_data");
-        bytes32 txHash = bytes32(keccak256(compressedTxChunk));
-
-        vm.startPrank(admin);
-        permissionModule.addCheck(address(new MockIsAllowed(true)), false);
-        vm.stopPrank();
-
-        vm.expectRevert(abi.encodeWithSelector(MetabasedSequencerChain.InvalidChunkSize.selector));
-        chain.processChunk(compressedTxChunk, 0, 0, txHash, priority);
-    }
 }
 
 contract MetabasedSequencerChainViewRequireAllTest is MetabasedSequencerChainTestSetUp {

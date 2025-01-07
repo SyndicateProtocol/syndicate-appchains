@@ -6,7 +6,6 @@ import (
 
 	"github.com/ethereum-optimism/optimism/op-service/metrics"
 	"github.com/ethereum-optimism/optimism/op-service/metrics/doc"
-	txmetrics "github.com/ethereum-optimism/optimism/op-service/txmgr/metrics"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -21,9 +20,6 @@ type Metricer interface {
 	RecordUp()
 
 	// opmetrics.RefMetricer // TODO (SEQ-185): implement a custom version that keeps track of the 3 chains
-
-	// records tx data
-	txmetrics.TxMetricer
 
 	StartBalanceMetrics(l log.Logger, client *ethclient.Client, account common.Address) io.Closer
 }

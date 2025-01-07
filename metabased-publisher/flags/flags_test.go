@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	opservice "github.com/ethereum-optimism/optimism/op-service"
-	"github.com/ethereum-optimism/optimism/op-service/txmgr"
 	"github.com/stretchr/testify/require"
 	"github.com/urfave/cli/v2"
 )
@@ -54,14 +53,10 @@ func TestEnvVarFormat(t *testing.T) {
 		flagName := flag.Names()[0]
 
 		skippedFlags := []string{
-			txmgr.FeeLimitMultiplierFlagName,
-			txmgr.TxSendTimeoutFlagName,
-			txmgr.TxNotInMempoolTimeoutFlagName,
-			SettlementChainRPCURL.Name,
+			BatcherAddress.Name,
 			BatchInboxAddress.Name,
-			SequencingChainRPCURL.Name,
-			SequencingContractAddress.Name,
-			L3RPCURL.Name,
+			OpTranslatorRPCURL.Name,
+			AltDAURL.Name,
 		}
 
 		t.Run(flagName, func(t *testing.T) {

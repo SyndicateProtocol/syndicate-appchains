@@ -3,32 +3,41 @@ package server_test
 import (
 	"bytes"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/internal/server"
 	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
+	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestParseMethod(t *testing.T) {
 	tests := []struct {
-		name       string
-		body       string
-		wantMethod string
+		name          string
+		body          string
+		wantMethod    string
+		expectedError string
 	}{
-		{"Valid method", `{"method": "eth_blockNumber"}`, "eth_blockNumber"},
-		{"Invalid method type", `{"method": 123}`, ""},
-		{"Empty body", `{}`, ""},
-		{"Invalid JSON", `{"method": "eth_blockNumber"`, ""},
+		{"Valid method", `{"method": "eth_blockNumber"}`, "eth_blockNumber", ""},
+		{"Invalid method type", `{"method": 123}`, "", "invalid method type"},
+		{"Empty body", `{}`, "", "invalid method type"},
+		{"Invalid JSON", `{"method": "eth_blockNumber"`, "", "error decoding JSON"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(tt.body))
-			gotMethod := server.ParseMethod(req)
-			assert.Equal(t, tt.wantMethod, gotMethod)
+			gotMethod, err := server.ParseMethod(req)
+			if tt.expectedError != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedError)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.wantMethod, gotMethod)
+			}
 		})
 	}
 }
@@ -38,8 +47,8 @@ func TestHealthEndpoint(t *testing.T) {
 
 	router, err := server.TranslatorHandler(
 		mocks.DefaultTestingConfig.SettlementChainRPCURL,
-		mocks.DefaultTestingConfig.LogLevel,
 		mockTranslator,
+		testlog.Logger(t, slog.LevelDebug),
 	)
 	assert.NoError(t, err)
 
@@ -71,8 +80,8 @@ func TestProxyEndpoint(t *testing.T) {
 
 	router, err := server.TranslatorHandler(
 		mockBackend.URL,
-		mocks.DefaultTestingConfig.LogLevel,
 		mockTranslator,
+		testlog.Logger(t, slog.LevelDebug),
 	)
 	assert.NoError(t, err)
 
@@ -96,8 +105,8 @@ func TestTranslatedEndpoint(t *testing.T) {
 	mockTranslator := &mocks.Translator{}
 	router, err := server.TranslatorHandler(
 		mocks.DefaultTestingConfig.SettlementChainRPCURL,
-		mocks.DefaultTestingConfig.LogLevel,
 		mockTranslator,
+		testlog.Logger(t, slog.LevelDebug),
 	)
 	assert.NoError(t, err)
 
@@ -116,7 +125,9 @@ func TestTranslatedEndpoint(t *testing.T) {
 	var response map[string]any
 	err = json.NewDecoder(resp.Body).Decode(&response)
 	assert.NoError(t, err)
-	assert.Equal(t, "0x123", response["result"].(map[string]any)["block"])
+	blockResult, ok := response["result"].(map[string]any)
+	assert.True(t, ok)
+	assert.Equal(t, "0x123", blockResult["block"])
 }
 
 func TestShouldTranslate(t *testing.T) {
