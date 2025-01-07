@@ -27,8 +27,8 @@ contract SynGasTokenTest is Test {
 
     // Test initial setup
     function test_InitialSetup() public view {
-        assertEq(token.name(), "Syndicate Testnet");
-        assertEq(token.symbol(), "SYNDTEST");
+        assertEq(token.name(), "Syndicate Testnet Holesky");
+        assertEq(token.symbol(), "holSYND");
         assertTrue(token.hasRole(token.DEFAULT_ADMIN_ROLE(), defaultAdmin));
         assertTrue(token.hasRole(token.MINTER_ROLE(), minter));
     }
