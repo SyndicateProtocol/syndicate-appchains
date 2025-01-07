@@ -41,9 +41,7 @@ contract MetabasedFactory_ReleaseCandidate {
         MetabasedSequencerChain_ReleaseCandidate newSequencerChain =
             new MetabasedSequencerChain_ReleaseCandidate(l3ChainId, admin, address(permissionModule));
 
-        emit MetabasedSequencerChainCreated(
-            l3ChainId, address(newSequencerChain), address(permissionModule)
-        );
+        emit MetabasedSequencerChainCreated(l3ChainId, address(newSequencerChain), address(permissionModule));
 
         return address(newSequencerChain);
     }
@@ -54,7 +52,8 @@ contract MetabasedFactory_ReleaseCandidate {
     /// @param l3ChainId The L3 chain ID
     /// @return The address of the newly created MetafillerStorage contract
     function createMetafillerStorage(address admin, address manager, uint256 l3ChainId) public returns (address) {
-        MetafillerStorage_ReleaseCandidate newMetafillerStorage = new MetafillerStorage_ReleaseCandidate(admin, manager, l3ChainId);
+        MetafillerStorage_ReleaseCandidate newMetafillerStorage =
+            new MetafillerStorage_ReleaseCandidate(admin, manager, l3ChainId);
         emit MetafillerStorageCreated(l3ChainId, address(newMetafillerStorage));
         return address(newMetafillerStorage);
     }

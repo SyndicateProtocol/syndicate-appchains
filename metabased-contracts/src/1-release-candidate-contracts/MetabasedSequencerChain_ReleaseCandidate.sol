@@ -13,12 +13,6 @@ contract MetabasedSequencerChain_ReleaseCandidate is SequencingModuleChecker_Rel
     /// @notice Emitted when a new transaction is processed.
     event TransactionProcessed(address indexed sender, bytes data);
 
-    /// @notice Emitted when a chunk of transactions is processed.
-    event TransactionChunkProcessed(bytes txChunk, uint256 index, uint256 totalChunks, bytes32 txHashForParent);
-
-    /// @dev Thrown when an invalid chunk size is provided.
-    error InvalidChunkSize();
-
     /// @notice Constructs the MetabasedSequencerChain contract.
     /// @param _l3ChainId The ID of the L3 chain that this contract is sequencing transactions for.
     /// @param admin The address that will be set as the admin
