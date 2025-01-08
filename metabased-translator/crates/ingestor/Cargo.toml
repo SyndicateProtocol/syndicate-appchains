@@ -13,3 +13,7 @@ pre-commit-hooks = "0.3.0"
 alloy = "0.9.2"
 eyre = "0.6.12"
 tokio = "1.42.0"
+
+
+[lints]
+workspace = true

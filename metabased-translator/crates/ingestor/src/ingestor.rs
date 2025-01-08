@@ -1,13 +1,17 @@
+//! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a consumer using a channel
+
 use alloy::{
     eips::eip1898::BlockNumberOrTag,
     providers::{Provider, ProviderBuilder, RootProvider},
     rpc::types::{Block, BlockTransactionsKind},
     transports::BoxTransport,
 };
-use eyre;
-use std::{error::Error, time::Duration};
+use eyre::{eyre, Error};
+use std::time::Duration;
 use tokio::sync::mpsc;
 
+/// Polls and ingests blocks from an Ethereum chain
+#[derive(Debug)]
 pub struct Ingestor {
     chain: RootProvider<BoxTransport>,
     current_block_number: u64,
@@ -16,12 +20,13 @@ pub struct Ingestor {
 }
 
 impl Ingestor {
+    /// Creates a new ingestor
     pub async fn new(
         rpc_url: &str,
         start_block: u64,
         buffer_size: usize,
         polling_interval: Duration,
-    ) -> Result<(Self, mpsc::Receiver<Block>), Box<dyn Error>> {
+    ) -> Result<(Self, mpsc::Receiver<Block>), Error> {
         let chain = ProviderBuilder::new().on_builtin(rpc_url).await?;
         let (sender, receiver) = mpsc::channel(buffer_size);
         Ok((
@@ -35,7 +40,7 @@ impl Ingestor {
         ))
     }
 
-    async fn get_block(&self, block_number: u64) -> Result<Block, Box<dyn Error>> {
+    async fn get_block(&self, block_number: u64) -> Result<Block, Error> {
         let block = self
             .chain
             .get_block_by_number(
@@ -43,23 +48,21 @@ impl Ingestor {
                 BlockTransactionsKind::Full,
             )
             .await?
-            .ok_or_else(|| eyre::eyre!("Block not found"))?;
+            .ok_or_else(|| eyre!("Block not found"))?;
         Ok(block)
     }
 
-    async fn push_block(&mut self, block: Block) -> Result<(), Box<dyn Error>> {
+    async fn push_block(&mut self, block: Block) -> Result<(), Error> {
         if block.header.inner.number != self.current_block_number {
-            return Err(Box::new(std::io::Error::new(
-                std::io::ErrorKind::InvalidData,
-                "Block number mismatch",
-            )));
+            return Err(eyre!("Block number mismatch"));
         }
         self.sender.send(block.clone()).await?;
         self.current_block_number += 1;
         Ok(())
     }
 
-    pub async fn start_polling(&mut self) -> Result<(), Box<dyn Error>> {
+    /// Starts polling for blocks
+    pub async fn start_polling(&mut self) -> Result<(), Error> {
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
             let block = self.get_block(self.current_block_number).await?;
@@ -104,9 +107,7 @@ mod tests {
         let polling_interval = Duration::from_secs(1);
 
         let (ingestor, receiver) =
-            Ingestor::new(RPC_URL, start_block, buffer_size, polling_interval)
-                .await
-                .expect("Failed to create ingestor");
+            Ingestor::new(RPC_URL, start_block, buffer_size, polling_interval).await?;
 
         assert_eq!(ingestor.current_block_number, start_block);
         assert_eq!(receiver.capacity(), buffer_size);
@@ -160,11 +161,10 @@ mod tests {
         };
 
         let mismatched_block = get_dummy_block(start_block + 1);
-
         let result = ingestor.push_block(mismatched_block).await;
 
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "Block number mismatch");
+        assert_eq!(result.err().unwrap().to_string(), "Block number mismatch");
 
         Ok(())
     }

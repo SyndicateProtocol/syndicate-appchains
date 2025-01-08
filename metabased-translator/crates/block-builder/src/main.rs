@@ -1,3 +1,5 @@
+//! Block builder service for processing and building L3 blocks.
+
 use block_builder::config::cli;
 use block_builder::connectors::anvil::MetaChainProvider;
 use eyre::Result;
@@ -7,8 +9,7 @@ async fn main() -> Result<()> {
     cli::init_tracing_subscriber();
     let config = cli::init_config();
 
-    let mut mchain = MetaChainProvider::with_config(config);
-    mchain.start()?;
+    let mchain = MetaChainProvider::start(config).await?;
 
     mchain.mine_block().await?;
 

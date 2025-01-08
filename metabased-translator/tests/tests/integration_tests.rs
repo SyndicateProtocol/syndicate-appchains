@@ -1,3 +1,5 @@
+//! Integration tests for the metabased stack
+
 use alloy::{
     eips::eip2718::Encodable2718,
     network::{EthereumWallet, TransactionBuilder},
