@@ -19,7 +19,7 @@ deploy-metafiller-storage :; forge create --rpc-url metabased_stratos --private-
 allowlist-metafiller-storage-addresses :; forge script script/AllowlistMetafillerStorageAddresses.s.sol:AllowlistMetafillerStorageAddresses --rpc-url metabased_stratos --private-key ${ETH_PRIVATE_KEY} --legacy --skip-simulation --broadcast -vvv
 
 ## deploy SynGasToken to Sepolia
-deploy-syn-gas-token :; forge create --rpc-url ${ETH_SEPOLIA_RPC_URL} --private-key ${ETH_PRIVATE_KEY} src/token/SynGasToken.sol:SynGasToken --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
+deploy-syn-gas-token :; forge create --rpc-url ${ETH_HOLESKY_RPC_URL} --private-key ${ETH_PRIVATE_KEY} src/token/SynGasToken.sol:SynGasToken --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
 
 
 ## Tx Limit Test
