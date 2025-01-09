@@ -14,10 +14,12 @@ use eyre::Result;
 #[tokio::test]
 #[cfg_attr(not(feature = "e2e-tests"), ignore)]
 async fn test_e2e_counter_contract() -> Result<()> {
-    // simple test scenario:
-    // Bob tries to deploy a counter contract to L3, then tries to increment it
-    // Bob's transactions are sequenced on the sequencing chain
-    // Assert that the counter contract is deployed and that the counter is incremented on the L3 chain
+    /// Simple test scenario:
+    /// Bob tries to deploy a counter contract to L3, then tries to increment it
+    /// Bob's transactions are sequenced on the sequencing chain
+    /// Assert that the counter contract is deployed and that the counter is incremented on the L3 chain
+    async fn test_e2e_counter_contract() -> Result<()> {
+    ...
     let env = TestEnv::new().await?;
 
     let bob_wallet = wallet_from_private_key(&env.accounts().bob.private_key, env.l3_chain_id());
