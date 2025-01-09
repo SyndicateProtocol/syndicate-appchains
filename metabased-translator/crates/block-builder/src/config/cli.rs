@@ -9,7 +9,6 @@ pub fn init_tracing_subscriber() {
         .expect("setting default subscriber failed");
 }
 
-pub fn init_config() -> eyre::Result<Configuration> {
-    let args = Configuration::parse()?;
-    Ok(args)
+pub fn init_config() -> Configuration {
+    Configuration::parse()
 }

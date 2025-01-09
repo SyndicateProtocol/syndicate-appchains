@@ -5,7 +5,7 @@ use eyre::Result;
 #[tokio::main]
 async fn main() -> Result<()> {
     cli::init_tracing_subscriber();
-    let config = cli::init_config()?;
+    let config = cli::init_config();
 
     let mut mchain = MetaChainProvider::with_config(config);
     mchain.start()?;
