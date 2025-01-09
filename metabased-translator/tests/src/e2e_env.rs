@@ -28,7 +28,7 @@ const ENV_SEQUENCER_PRIVATE_KEY: &str = "SEQUENCER_PRIVATE_KEY";
 // specified in .envrc
 const ENV_SETTLEMENT_CHAIN_RPC_URL: &str = "SETTLEMENT_CHAIN_RPC_URL";
 const ENV_SEQUENCING_CHAIN_RPC_URL: &str = "SEQUENCING_CHAIN_RPC_URL";
-const ENV_META_BASED_CHAIN_RPC_URL: &str = "META_BASED_CHAIN_RPC_URL";
+const ENV_METABASED_CHAIN_RPC_URL: &str = "METABASED_CHAIN_RPC_URL";
 const ENV_ROLLUP_TYPE: &str = "ROLLUP_TYPE";
 const ENV_METABASED_CHAIN_CONTRACT_ADDRESS: &str = "METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS";
 
@@ -47,7 +47,7 @@ impl TestEnvConfig {
             rollup_type: RollupType::from_env()?,
             settlement_rpc: Url::from_env_var(ENV_SETTLEMENT_CHAIN_RPC_URL)?,
             sequencing_rpc: Url::from_env_var(ENV_SEQUENCING_CHAIN_RPC_URL)?,
-            l3_rpc: Url::from_env_var(ENV_META_BASED_CHAIN_RPC_URL)?,
+            l3_rpc: Url::from_env_var(ENV_METABASED_CHAIN_RPC_URL)?,
             metabased_chain_contract_address: Address::from_env_var(
                 ENV_METABASED_CHAIN_CONTRACT_ADDRESS,
             )?,
