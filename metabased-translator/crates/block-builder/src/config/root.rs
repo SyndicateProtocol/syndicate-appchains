@@ -1,5 +1,4 @@
 use clap::Parser;
-use serde::Deserialize;
 use std::fmt::Debug;
 
 #[derive(Parser, Debug)]
@@ -28,7 +27,7 @@ pub struct Args {
     pub chain_id: u64,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug)]
 pub struct Configuration {
     pub port: u16,
     pub genesis_timestamp: u64,
@@ -61,7 +60,7 @@ impl Configuration {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use serial_test::serial;
+    use serial_test::serial; // avoids timing issues with parallel tests
     use std::env;
 
     fn create_default_args() -> Args {
