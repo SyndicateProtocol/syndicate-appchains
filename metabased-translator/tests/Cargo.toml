@@ -10,8 +10,14 @@ repository.workspace = true
 
 [dependencies]
 block-builder = { workspace = true }
-alloy = { version = "0.8", features = ["full"] }
-alloy-provider = "0.8.3"
+alloy = { version = "0.9.2", features = ["full"] }
+alloy-signer-local = "0.9.2"
 eyre = "0.6.12"
 reqwest = "0.12.9"
 tokio = { version = "1.42.0", features = ["rt", "rt-multi-thread", "macros"] }
+thiserror = "2.0.9"
+strum = "0.26.3"
+strum_macros = "0.26.4"
+
+[features]
+e2e-tests = []

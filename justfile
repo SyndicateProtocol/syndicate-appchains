@@ -62,6 +62,9 @@ contracts_root := repository_root + "/metabased-contracts"
 # Define root directory of the metabased sequencer project
 sequencer_root := repository_root + "/metabased-sequencer"
 
+# Define root directory of the integration tests
+e2e_tests_root := repository_root + "/metabased-translator/tests"
+
 # Define root directory of the op-translator project
 op_translator_root := repository_root + "/op-translator"
 
@@ -293,7 +296,7 @@ create-envrc:
     "export SETTLEMENT_CHAIN_RPC_URL={{ op_devnet_l2_rpc_url }}\n"\
     "export SETTLEMENT_CHAIN_RPC_URL_WS=wss://base-rpc.publicnode.com # Optional if using WS\n"\
     "export SEQUENCING_CHAIN_RPC_URL={{ arb_orbit_l2_rpc_url }}\n"\
-    "export META_BASED_CHAIN_RPC_URL=http://localhost:8555\n"\
+    "export METABASED_CHAIN_RPC_URL=http://localhost:8555\n"\
     "export METAFILLER_URL=https://staging-metafiller.metabased.org/batch/5101\n"\
     "export SEQUENCING_CONTRACT_ADDRESS=0xD77Aa8b1743326Baeb548357f8334df911A4E58f\n"\
     "export BATCH_INBOX_ADDRESS=0x97395dd253e2d096a0caa62a574895c3c2f2b2e0\n"\
@@ -317,6 +320,7 @@ create-envrc:
     "export METABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_l2_private_key }}\n"\
     "export METABASED_SEQUENCER_PORT={{ metabased_sequencer_port }}\n"\
     "export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x0000000000000000000000000000000000000000"\
+    "export ROLLUP_TYPE=ARB"\
     > {{ envrc_file }}
 
     @echo "Created .envrc file at {{ envrc_file }}"
@@ -636,3 +640,8 @@ _run-arb-nitro-dev-node:
 
     # If no errors, print success message
     echo "Cache Manager deployed and registered successfully. Nitro node is ready..."
+
+e2e-tests: create-envrc
+    @just _log-start "e2e-tests"
+    . {{ envrc_file }} && cd {{ e2e_tests_root }} && cargo test --features e2e-tests
+    @just _log-end "e2e-tests"
