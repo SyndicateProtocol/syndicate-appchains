@@ -1,3 +1,4 @@
+use crate::config::Configuration;
 use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
 use crate::rollups::optimism::frame::to_data;
 use alloy::signers::local::PrivateKeySigner;
@@ -24,10 +25,11 @@ pub struct MetaChainProvider {
 
 impl Default for MetaChainProvider {
     fn default() -> Self {
+        let defaults = Configuration::default();
         Self {
-            port: 8888,
-            chain_id: 84532,
-            genesis_timestamp: 1712500000,
+            port: defaults.port,
+            chain_id: defaults.chain_id,
+            genesis_timestamp: defaults.genesis_timestamp,
             anvil: None,
             base_provider: None,
         }
@@ -35,6 +37,20 @@ impl Default for MetaChainProvider {
 }
 
 impl MetaChainProvider {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn with_config(config: Configuration) -> Self {
+        let default = Self::default();
+        Self {
+            port: config.port,
+            chain_id: config.chain_id,
+            genesis_timestamp: config.genesis_timestamp,
+            ..default
+        }
+    }
+
     pub fn start(&mut self) -> eyre::Result<()> {
         let base_port = self.port;
         let port = find_available_port(base_port, 10)
