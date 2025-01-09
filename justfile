@@ -62,6 +62,9 @@ contracts_root := repository_root + "/metabased-contracts"
 # Define root directory of the metabased sequencer project
 sequencer_root := repository_root + "/metabased-sequencer"
 
+# Define root directory of the integration tests
+e2e_tests_root := repository_root + "/metabased-translator/tests"
+
 # Define root directory of the op-translator project
 op_translator_root := repository_root + "/op-translator"
 
@@ -640,5 +643,5 @@ _run-arb-nitro-dev-node:
 
 e2e-tests: create-envrc
     @just _log-start "e2e-tests"
-    . {{ envrc_file }} && cd {{ sequencer_root }} && cargo run -p interceptor
+    . {{ envrc_file }} && cd {{ e2e_tests_root }} && cargo test --features e2e-tests
     @just _log-end "e2e-tests"
