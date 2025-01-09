@@ -317,6 +317,7 @@ create-envrc:
     "export METABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_l2_private_key }}\n"\
     "export METABASED_SEQUENCER_PORT={{ metabased_sequencer_port }}\n"\
     "export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x0000000000000000000000000000000000000000"\
+    "export ROLLUP_TYPE=ARB"\
     > {{ envrc_file }}
 
     @echo "Created .envrc file at {{ envrc_file }}"
@@ -636,3 +637,8 @@ _run-arb-nitro-dev-node:
 
     # If no errors, print success message
     echo "Cache Manager deployed and registered successfully. Nitro node is ready..."
+
+e2e-tests: create-envrc
+    @just _log-start "e2e-tests"
+    . {{ envrc_file }} && cd {{ sequencer_root }} && cargo run -p interceptor
+    @just _log-end "e2e-tests"
