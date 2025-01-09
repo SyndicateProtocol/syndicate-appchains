@@ -8,10 +8,14 @@ use alloy::{
         Identity, Provider, ProviderBuilder, RootProvider,
     },
     signers::{k256::SecretKey, utils::public_key_to_address, Signer},
+    sol_types::private::Bytes,
     transports::http::Http,
 };
+use alloy_signer_local::LocalSigner;
 use eyre::{eyre, Error};
 use reqwest::{Client, Url};
+use std::str::FromStr;
+use strum_macros::EnumString;
 
 // NOTE: to run these tests, the `e2e-tests` feature must be enabled, like so:
 // `cargo test --features e2e-tests`
@@ -39,45 +43,16 @@ pub struct TestEnvConfig {
 
 impl TestEnvConfig {
     pub fn from_env() -> Result<Self, Error> {
-        // TODO TODO (SEQ-435)
         Ok(Self {
             rollup_type: RollupType::from_env()?,
-            settlement_rpc: Url::parse(&get_env_var(ENV_SETTLEMENT_CHAIN_RPC_URL)?).map_err(
-                |e| {
-                    EnvConfigError::InvalidRpcUrl(
-                        ENV_SETTLEMENT_CHAIN_RPC_URL.to_string(),
-                        e.to_string(),
-                    )
-                },
+            settlement_rpc: Url::from_env_var(ENV_SETTLEMENT_CHAIN_RPC_URL)?,
+            sequencing_rpc: Url::from_env_var(ENV_SEQUENCING_CHAIN_RPC_URL)?,
+            l3_rpc: Url::from_env_var(ENV_META_BASED_CHAIN_RPC_URL)?,
+            metabased_chain_contract_address: Address::from_env_var(
+                ENV_METABASED_CHAIN_CONTRACT_ADDRESS,
             )?,
-            sequencing_rpc: Url::parse(&get_env_var(ENV_SEQUENCING_CHAIN_RPC_URL)?).map_err(
-                |e| {
-                    EnvConfigError::InvalidRpcUrl(
-                        ENV_SEQUENCING_CHAIN_RPC_URL.to_string(),
-                        e.to_string(),
-                    )
-                },
-            )?,
-            l3_rpc: Url::parse(&get_env_var(ENV_META_BASED_CHAIN_RPC_URL)?).map_err(|e| {
-                EnvConfigError::InvalidRpcUrl(
-                    ENV_META_BASED_CHAIN_RPC_URL.to_string(),
-                    e.to_string(),
-                )
-            })?,
-            metabased_chain_contract_address: get_env_var(ENV_METABASED_CHAIN_CONTRACT_ADDRESS)?
-                .parse::<Address>()
-                .map_err(|e| {
-                    EnvConfigError::InvalidAddress(
-                        ENV_METABASED_CHAIN_CONTRACT_ADDRESS.to_string(),
-                        e.to_string(),
-                    )
-                })?,
         })
     }
-}
-
-fn get_env_var(env_var: &str) -> Result<String, Error> {
-    std::env::var(env_var).map_err(|_| eyre!(EnvConfigError::MissingEnvVar(env_var.to_string())))
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -96,27 +71,75 @@ pub enum EnvConfigError {
     InvalidAddress(String, String),
 }
 
-#[derive(Debug)]
+fn get_env_var(env_var: &str) -> Result<String, Error> {
+    std::env::var(env_var).map_err(|_| eyre!(EnvConfigError::MissingEnvVar(env_var.to_string())))
+}
+
+trait FromEnvVar: Sized {
+    fn from_env_var(var_name: &str) -> Result<Self, Error>;
+}
+
+impl FromEnvVar for Url {
+    fn from_env_var(var_name: &str) -> Result<Self, Error> {
+        Url::parse(&get_env_var(var_name)?).map_err(|e| {
+            eyre!(EnvConfigError::InvalidRpcUrl(
+                var_name.to_string(),
+                e.to_string()
+            ))
+        })
+    }
+}
+
+impl FromEnvVar for Address {
+    fn from_env_var(var_name: &str) -> Result<Self, Error> {
+        let addr_str = get_env_var(var_name)?;
+        addr_str.parse::<Address>().map_err(|e| {
+            eyre!(EnvConfigError::InvalidAddress(
+                var_name.to_string(),
+                e.to_string()
+            ))
+        })
+    }
+}
+
+impl FromEnvVar for Account {
+    fn from_env_var(var_name: &str) -> Result<Self, Error> {
+        let private_key_str = get_env_var(var_name)?;
+        let key_str =
+            private_key_str
+                .split("0x")
+                .last()
+                .ok_or(EnvConfigError::InvalidPrivateKey(
+                    var_name.to_string(),
+                    private_key_str.clone(),
+                ))?;
+        let key_hex = hex::decode(key_str).map_err(|_| {
+            EnvConfigError::InvalidPrivateKey(var_name.to_string(), private_key_str.clone())
+        })?;
+        let private_key = SecretKey::from_bytes((&key_hex[..]).into()).map_err(|_| {
+            EnvConfigError::InvalidPrivateKey(var_name.to_string(), private_key_str.clone())
+        })?;
+        let address = public_key_to_address(&(private_key.public_key().into()));
+
+        Ok(Account {
+            private_key,
+            address,
+        })
+    }
+}
+
+#[derive(Debug, EnumString, PartialEq)]
 pub enum RollupType {
+    #[strum(serialize = "OP")]
     Optimism,
+    #[strum(serialize = "ARB")]
     Arbitrum,
 }
 
 impl RollupType {
     pub fn from_env() -> Result<Self, Error> {
-        Ok(Self::try_from(&get_env_var(ENV_ROLLUP_TYPE)?)?)
-    }
-}
-
-impl TryFrom<&String> for RollupType {
-    type Error = EnvConfigError;
-
-    fn try_from(s: &String) -> Result<Self, Self::Error> {
-        match s.as_str() {
-            "OP" => Ok(Self::Optimism),
-            "ARB" => Ok(Self::Arbitrum),
-            other => Err(EnvConfigError::InvalidRollupType(other.to_string())),
-        }
+        Self::from_str(&get_env_var(ENV_ROLLUP_TYPE)?)
+            .map_err(|e| eyre!(EnvConfigError::InvalidRollupType(e.to_string())))
     }
 }
 
@@ -128,37 +151,13 @@ type ProviderWithWallet = FillProvider<
 >;
 
 pub fn wallet_from_private_key(private_key: &SecretKey, chain_id: u64) -> EthereumWallet {
-    let signer =
-        alloy_signer_local::LocalSigner::from(private_key.clone()).with_chain_id(Some(chain_id));
+    let signer = LocalSigner::from(private_key.clone()).with_chain_id(Some(chain_id));
     EthereumWallet::from(signer)
 }
 
 fn provider_with_wallet(url: &Url, private_key: &SecretKey, chain_id: u64) -> ProviderWithWallet {
     let signer = wallet_from_private_key(private_key, chain_id);
     ProviderBuilder::new().wallet(signer).on_http(url.clone())
-}
-
-fn account_from_env(env_var: &str) -> Result<Account, Error> {
-    let private_key_str = std::env::var(env_var)?;
-    let key_str = private_key_str
-        .split("0x")
-        .last()
-        .ok_or(EnvConfigError::InvalidPrivateKey(
-            env_var.to_string(),
-            private_key_str.clone(),
-        ))?;
-    let key_hex = hex::decode(key_str).map_err(|_| {
-        EnvConfigError::InvalidPrivateKey(env_var.to_string(), private_key_str.clone())
-    })?;
-    let private_key = SecretKey::from_bytes((&key_hex[..]).into()).map_err(|_| {
-        EnvConfigError::InvalidPrivateKey(env_var.to_string(), private_key_str.clone())
-    })?;
-    let address = public_key_to_address(&(private_key.public_key().into()));
-
-    Ok(Account {
-        private_key,
-        address,
-    })
 }
 
 #[derive(Debug)]
@@ -214,9 +213,9 @@ impl TestEnv {
         let l3_chain_id = l3_chain.get_chain_id().await?;
 
         let accounts = Accounts {
-            bob: account_from_env(ENV_BOB_PRIVATE_KEY)?,
-            alice: account_from_env(ENV_ALICE_PRIVATE_KEY)?,
-            sequencer: account_from_env(ENV_SEQUENCER_PRIVATE_KEY)?,
+            bob: Account::from_env_var(ENV_BOB_PRIVATE_KEY)?,
+            alice: Account::from_env_var(ENV_ALICE_PRIVATE_KEY)?,
+            sequencer: Account::from_env_var(ENV_SEQUENCER_PRIVATE_KEY)?,
         };
 
         let sequencing_contract = MetabasedSequencerChain::new(
@@ -244,7 +243,6 @@ impl TestEnv {
         Ok(env)
     }
 
-    // Helper to check if all connections are alive
     async fn check_connections(&self) -> Result<(), Error> {
         for provider in [
             &self.settlement_chain,
@@ -257,7 +255,7 @@ impl TestEnv {
     }
 
     // raw_tx is the L3 tx to be sequenced
-    pub async fn sequence_tx(&self, raw_tx: alloy::sol_types::private::Bytes) -> Result<(), Error> {
+    pub async fn sequence_tx(&self, raw_tx: Bytes) -> Result<(), Error> {
         self.sequencing_contract
             .processTransactionRaw(raw_tx)
             .send()

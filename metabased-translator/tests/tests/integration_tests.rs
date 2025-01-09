@@ -11,15 +11,13 @@ use block_builder::contract_bindings::counter::Counter;
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::Result;
 
+/// Simple test scenario:
+/// Bob tries to deploy a counter contract to L3, then tries to increment it
+/// Bob's transactions are sequenced on the sequencing chain
+/// Assert that the counter contract is deployed and that the counter is incremented on the L3 chain
 #[tokio::test]
 #[cfg_attr(not(feature = "e2e-tests"), ignore)]
 async fn test_e2e_counter_contract() -> Result<()> {
-    /// Simple test scenario:
-    /// Bob tries to deploy a counter contract to L3, then tries to increment it
-    /// Bob's transactions are sequenced on the sequencing chain
-    /// Assert that the counter contract is deployed and that the counter is incremented on the L3 chain
-    async fn test_e2e_counter_contract() -> Result<()> {
-    ...
     let env = TestEnv::new().await?;
 
     let bob_wallet = wallet_from_private_key(&env.accounts().bob.private_key, env.l3_chain_id());
@@ -93,10 +91,10 @@ async fn test_e2e_counter_contract() -> Result<()> {
     Ok(())
 }
 
+/// This test is to ensure that the system can resist garbage data being fed to the sequencing contract
 #[tokio::test]
 #[cfg_attr(not(feature = "e2e-tests"), ignore)]
 async fn test_e2e_resist_garbage_data() -> Result<()> {
-    // This test is to ensure that the system can resist garbage data being fed to the sequencing contract
     let env = TestEnv::new().await?;
 
     //
@@ -127,8 +125,6 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
 
     //
     // now try to sequence a valid transaction
-
-    //
     // create and sign a transaction to deploy the counter contract
     let bob_wallet = wallet_from_private_key(&env.accounts().bob.private_key, env.l3_chain_id());
     let nonce = env
@@ -155,9 +151,8 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
 
     //TODO we might need to wait for the L3 to pick up the tx
 
-    // the system is expected to be resilient to garbage data, so only the valid tx should be included in the L3
-
     //
+    // the system is expected to be resilient to garbage data, so only the valid tx should be included in the L3
     // assert the valid tx was picked up by the L3 and the contract was deployed
     let receipt = env
         .l3_chain()
@@ -166,7 +161,6 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
         .unwrap();
     assert!(receipt.status(), "Contract deployment failed");
 
-    //
     // assert the transaction count for the account without balance is 0
     assert_eq!(
         env.l3_chain()
