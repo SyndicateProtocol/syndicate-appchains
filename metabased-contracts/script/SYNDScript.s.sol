@@ -5,20 +5,23 @@ import {Script, console} from "forge-std/Script.sol";
 
 import {SynGasToken, AccessControl} from "src/token/SynGasToken.sol";
 
+// Holesky SYND address
+address constant SYND_ADDRESS = 0x19aaf160dA8985c54bb97adAF9304B5aC7890421;
+
 contract GrantMinterRole is Script {
     AccessControl public synd;
+
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     function run() public {
         vm.startBroadcast();
 
-        require(block.chainid == 17000, "This script is for Holesky testnet");
-
         // add minter addresses below
-        address[] memory minters = new address[](1);
-        minters[0] = address(0); // CHANGE THIS
+        address[] memory minters = new address[](2);
+        minters[0] = 0x4E527486594696a7607Ff3379E21746689a3Fd6d;
+        minters[1] = 0x37D911cBd7bB03521A975EC2dE03ce1dD0156883;
 
-        synd = AccessControl(0x19aaf160dA8985c54bb97adAF9304B5aC7890421);
+        synd = AccessControl(SYND_ADDRESS);
 
         for (uint256 i = 0; i < minters.length; i++) {
             require(minters[i] != address(0), "Invalid address");
@@ -38,16 +41,14 @@ contract MintSYNDToAddresses is Script {
     function run() public {
         vm.startBroadcast();
 
-        require(block.chainid == 17000, "This script is for Holesky testnet");
-
         // add recipient addresses and SYND amount below
         address[] memory recipients = new address[](1);
-        recipients[0] = address(0); // CHANGE THIS
+        recipients[0] = 0x28fAb3A5b69711cc64B09240d2694d9F0f07eBf6;
 
         uint256[] memory amounts = new uint256[](1);
-        amounts[0] = 0; // CHANGE THIS
+        amounts[0] = 10_000e18; // 10K SYND
 
-        synd = SynGasToken(0x19aaf160dA8985c54bb97adAF9304B5aC7890421);
+        synd = SynGasToken(SYND_ADDRESS);
 
         for (uint256 i = 0; i < recipients.length; i++) {
             require(recipients[i] != address(0), "Invalid address");
