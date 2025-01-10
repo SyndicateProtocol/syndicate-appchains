@@ -21,3 +21,6 @@ strum_macros = "0.26.4"
 
 [features]
 e2e-tests = []
+
+[lints]
+workspace = true

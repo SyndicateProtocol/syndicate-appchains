@@ -1,3 +1,5 @@
+//! This module contains the logic for setting up the test environment for e2e tests
+
 use crate::contract_bindings::metabasedsequencerchain::MetabasedSequencerChain;
 use alloy::{
     hex,
@@ -33,16 +35,18 @@ const ENV_ROLLUP_TYPE: &str = "ROLLUP_TYPE";
 const ENV_METABASED_CHAIN_CONTRACT_ADDRESS: &str = "METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS";
 
 #[derive(Debug)]
-pub struct TestEnvConfig {
-    pub rollup_type: RollupType,
-    pub settlement_rpc: Url,
-    pub sequencing_rpc: Url,
-    pub l3_rpc: Url,
-    pub metabased_chain_contract_address: Address,
+struct TestEnvConfig {
+    #[allow(unused)]
+    // NOTE: the rollup_type is not used yet, but should be necessary in the future
+    rollup_type: RollupType,
+    settlement_rpc: Url,
+    sequencing_rpc: Url,
+    l3_rpc: Url,
+    metabased_chain_contract_address: Address,
 }
 
 impl TestEnvConfig {
-    pub fn from_env() -> Result<Self, Error> {
+    fn from_env() -> Result<Self, Error> {
         Ok(Self {
             rollup_type: RollupType::from_env()?,
             settlement_rpc: Url::from_env_var(ENV_SETTLEMENT_CHAIN_RPC_URL)?,
@@ -55,6 +59,7 @@ impl TestEnvConfig {
     }
 }
 
+#[allow(missing_docs)] // self-explanatory
 #[derive(Debug, thiserror::Error)]
 pub enum EnvConfigError {
     #[error("Missing environment variable: '{0}'")]
@@ -81,7 +86,7 @@ trait FromEnvVar: Sized {
 
 impl FromEnvVar for Url {
     fn from_env_var(var_name: &str) -> Result<Self, Error> {
-        Url::parse(&get_env_var(var_name)?).map_err(|e| {
+        Self::parse(&get_env_var(var_name)?).map_err(|e| {
             eyre!(EnvConfigError::InvalidRpcUrl(
                 var_name.to_string(),
                 e.to_string()
@@ -93,7 +98,7 @@ impl FromEnvVar for Url {
 impl FromEnvVar for Address {
     fn from_env_var(var_name: &str) -> Result<Self, Error> {
         let addr_str = get_env_var(var_name)?;
-        addr_str.parse::<Address>().map_err(|e| {
+        addr_str.parse::<Self>().map_err(|e| {
             eyre!(EnvConfigError::InvalidAddress(
                 var_name.to_string(),
                 e.to_string()
@@ -105,14 +110,9 @@ impl FromEnvVar for Address {
 impl FromEnvVar for Account {
     fn from_env_var(var_name: &str) -> Result<Self, Error> {
         let private_key_str = get_env_var(var_name)?;
-        let key_str =
-            private_key_str
-                .split("0x")
-                .last()
-                .ok_or(EnvConfigError::InvalidPrivateKey(
-                    var_name.to_string(),
-                    private_key_str.clone(),
-                ))?;
+        let key_str = private_key_str.split("0x").last().ok_or_else(|| {
+            EnvConfigError::InvalidPrivateKey(var_name.to_string(), private_key_str.clone())
+        })?;
         let key_hex = hex::decode(key_str).map_err(|_| {
             EnvConfigError::InvalidPrivateKey(var_name.to_string(), private_key_str.clone())
         })?;
@@ -121,14 +121,15 @@ impl FromEnvVar for Account {
         })?;
         let address = public_key_to_address(&(private_key.public_key().into()));
 
-        Ok(Account {
+        Ok(Self {
             private_key,
             address,
         })
     }
 }
 
-#[derive(Debug, EnumString, PartialEq)]
+#[allow(missing_docs)] // self-explanatory
+#[derive(Debug, EnumString, PartialEq, Eq)]
 pub enum RollupType {
     #[strum(serialize = "OP")]
     Optimism,
@@ -137,7 +138,7 @@ pub enum RollupType {
 }
 
 impl RollupType {
-    pub fn from_env() -> Result<Self, Error> {
+    fn from_env() -> Result<Self, Error> {
         Self::from_str(&get_env_var(ENV_ROLLUP_TYPE)?)
             .map_err(|e| eyre!(EnvConfigError::InvalidRollupType(e.to_string())))
     }
@@ -145,11 +146,12 @@ impl RollupType {
 
 type ProviderWithWallet = FillProvider<
     JoinFill<Identity, WalletFiller<EthereumWallet>>,
-    RootProvider<Http<reqwest::Client>>,
-    Http<reqwest::Client>,
+    RootProvider<Http<Client>>,
+    Http<Client>,
     Ethereum,
 >;
 
+/// Creates a wallet from a private key and a chain ID
 pub fn wallet_from_private_key(private_key: &SecretKey, chain_id: u64) -> EthereumWallet {
     let signer = LocalSigner::from(private_key.clone()).with_chain_id(Some(chain_id));
     EthereumWallet::from(signer)
@@ -160,12 +162,15 @@ fn provider_with_wallet(url: &Url, private_key: &SecretKey, chain_id: u64) -> Pr
     ProviderBuilder::new().wallet(signer).on_http(url.clone())
 }
 
+#[allow(missing_docs)] // self-explanatory
 #[derive(Debug)]
 pub struct Account {
     pub private_key: SecretKey,
     pub address: Address,
 }
 
+/// A collection of test accounts
+#[allow(missing_docs)] // self-explanatory
 #[derive(Debug)]
 pub struct Accounts {
     pub bob: Account,
@@ -183,9 +188,10 @@ type SequencingContractInstance = MetabasedSequencerChain::MetabasedSequencerCha
     >,
 >;
 
-type HttpProvider = RootProvider<Http<reqwest::Client>>;
+type HttpProvider = RootProvider<Http<Client>>;
 
 #[derive(Debug)]
+/// The test environment - contains all the providers and accounts necessary to write e2e tests
 pub struct TestEnv {
     settlement_chain: HttpProvider,
     sequencing_chain: HttpProvider,
@@ -201,6 +207,7 @@ pub struct TestEnv {
 }
 
 impl TestEnv {
+    /// Creates a new E2E test environment
     pub async fn new() -> Result<Self, Error> {
         let config = TestEnvConfig::from_env()?;
 
@@ -254,7 +261,7 @@ impl TestEnv {
         Ok(())
     }
 
-    // raw_tx is the L3 tx to be sequenced
+    /// Submits a raw L3 transaction to be sequenced
     pub async fn sequence_tx(&self, raw_tx: Bytes) -> Result<(), Error> {
         self.sequencing_contract
             .processTransactionRaw(raw_tx)
@@ -265,32 +272,40 @@ impl TestEnv {
         Ok(())
     }
 
+    //
     // Getters
 
+    /// Returns a reference to the settlement chain provider
     pub const fn settlement_chain(&self) -> &HttpProvider {
         &self.settlement_chain
     }
 
+    /// Returns a reference to the sequencing chain provider
     pub const fn sequencing_chain(&self) -> &HttpProvider {
         &self.sequencing_chain
     }
 
+    /// Returns a reference to the L3 chain provider
     pub const fn l3_chain(&self) -> &HttpProvider {
         &self.l3_chain
     }
 
+    /// Returns the settlement chain ID
     pub const fn settlement_chain_id(&self) -> u64 {
         self.settlement_chain_id
     }
 
+    /// Returns the sequencing chain ID
     pub const fn sequencing_chain_id(&self) -> u64 {
         self.sequencing_chain_id
     }
 
+    /// Returns the L3 chain ID
     pub const fn l3_chain_id(&self) -> u64 {
         self.l3_chain_id
     }
 
+    /// Returns a reference to the test accounts
     pub const fn accounts(&self) -> &Accounts {
         &self.accounts
     }

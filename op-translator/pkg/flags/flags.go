@@ -38,9 +38,9 @@ var (
 	}
 
 	MetaBasedChainRPCURL = &cli.StringFlag{
-		Name:    "meta_based_chain_rpc_url",
-		Usage:   "Meta based chain address",
-		EnvVars: []string{"META_BASED_CHAIN_RPC_URL"},
+		Name:    "metabased_chain_rpc_url",
+		Usage:   "Metabased chain address",
+		EnvVars: []string{"METABASED_CHAIN_RPC_URL"},
 	}
 
 	MetafillerURL = &cli.StringFlag{

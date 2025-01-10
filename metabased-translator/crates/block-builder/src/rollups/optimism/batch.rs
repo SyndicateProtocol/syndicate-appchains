@@ -1,3 +1,7 @@
+//! Batch encoding for Optimism batcher transactions
+//!
+//! This module provides functionality for encoding batches of transactions into frames
+//! that can be submitted by the batcher.
 use crate::rollups::optimism::frame::Frame;
 use alloy_primitives::{Address, Bytes, B256};
 use alloy_rlp::{Buf, Decodable, Encodable, Error as RlpError};
@@ -8,11 +12,11 @@ use std::ops::Div;
 use std::error::Error;
 use std::io::Write;
 
-use eyre::Result;
+use eyre::{eyre, Result};
 
 // Constants
 const BATCH_VERSION_BYTE: u8 = 0x00;
-// Define the Batch struct
+/// Define the Batch struct
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Batch {
     /// Block hash of the previous L2 block
@@ -57,6 +61,7 @@ impl Batch {
         out
     }
 
+    /// Decodes an encoded `Batch`
     pub fn decode(encoded: &[u8]) -> Result<Self, RlpError> {
         let mut buf = encoded;
 
@@ -82,7 +87,7 @@ impl Batch {
         let transactions = Vec::<Vec<u8>>::decode(&mut buf)?;
 
         // Return the decoded Batch
-        Ok(Batch {
+        Ok(Self {
             parent_hash,
             epoch_num,
             epoch_hash,
@@ -123,7 +128,7 @@ fn to_frames(channel: &[u8], frame_size: usize, block_hash: B256) -> Result<Vec<
 
     let id = B256::from(block_hash)[..16]
         .try_into()
-        .expect("16 bytes always fit");
+        .map_err(|_| eyre!("Failed to convert block hash to frame ID"))?;
 
     for (frame_num, i) in (0_u16..).zip((0..channel.len()).step_by(frame_size)) {
         let end = (i + frame_size).min(channel.len());
@@ -141,6 +146,7 @@ fn to_frames(channel: &[u8], frame_size: usize, block_hash: B256) -> Result<Vec<
     Ok(frames)
 }
 
+/// Creates a new batcher transaction
 pub fn new_batcher_tx(from: Address, to: Address, data: Bytes) -> TransactionRequest {
     let input = TransactionInput::new(data);
     TransactionRequest::default().from(from).to(to).input(input)
