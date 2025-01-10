@@ -164,7 +164,7 @@ mod tests {
         let result = ingestor.push_block(mismatched_block).await;
 
         assert!(result.is_err());
-        assert_eq!(result.err().unwrap().to_string(), "Block number mismatch");
+        assert_eq!(result.unwrap_err().to_string(), "Block number mismatch");
 
         Ok(())
     }
