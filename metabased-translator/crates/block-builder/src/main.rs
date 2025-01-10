@@ -1,13 +1,13 @@
 //! Block builder service for processing and building L3 blocks.
 
-use block_builder::config::cli;
+use block_builder::config::{cli, Configuration};
 use block_builder::connectors::anvil::MetaChainProvider;
 use eyre::Result;
 
 #[tokio::main]
 async fn main() -> Result<()> {
     cli::init_tracing_subscriber();
-    let config = cli::init_config();
+    let config = Configuration::parse();
 
     let mchain = MetaChainProvider::start(config).await?;
 

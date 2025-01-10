@@ -1,12 +1,14 @@
+//! Configuration for the block builder service
+
 use clap::Parser;
 use std::fmt::Debug;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
-pub struct Args {
+struct Args {
     /// Port to listen on
     #[arg(short = 'p', long, env = "BLOCK_BUILDER_PORT", default_value_t = 8888)]
-    pub port: u16,
+    port: u16,
 
     // Timestamp of genesis block
     #[arg(
@@ -15,7 +17,7 @@ pub struct Args {
         env = "BLOCK_BUILDER_GENESIS_TIMESTAMP",
         default_value_t = 1712500000
     )]
-    pub genesis_timestamp: u64,
+    genesis_timestamp: u64,
 
     /// Chain ID to use
     #[arg(
@@ -24,13 +26,17 @@ pub struct Args {
         env = "BLOCK_BUILDER_CHAIN_ID",
         default_value_t = 84532
     )]
-    pub chain_id: u64,
+    chain_id: u64,
 }
 
 #[derive(Debug)]
+/// Configuration for the block builder service
 pub struct Configuration {
+    /// Port number number to be used for the anvil instance
     pub port: u16,
+    /// Unix timestamp for the genesis block
     pub genesis_timestamp: u64,
+    /// Chain ID for the network
     pub chain_id: u64,
 }
 
@@ -45,6 +51,20 @@ impl Default for Configuration {
 }
 
 impl Configuration {
+    /// Parses command line arguments and environment variables into a Configuration struct.
+    ///
+    /// # Returns
+    ///
+    /// A new Configuration instance populated with values from CLI args and env vars.
+    /// CLI args take precedence over env vars, which take precedence over defaults.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use block_builder::config::Configuration;
+    ///
+    /// let config = Configuration::parse();
+    /// ```
     pub fn parse() -> Self {
         let args = Args::parse();
         let config = Self {
@@ -75,7 +95,7 @@ mod tests {
     // Modify Configuration::parse for testing
     #[cfg(test)]
     impl Configuration {
-        fn parse_from_args(args: Args) -> Self {
+        const fn parse_from_args(args: Args) -> Self {
             Self {
                 port: args.port,
                 genesis_timestamp: args.genesis_timestamp,
