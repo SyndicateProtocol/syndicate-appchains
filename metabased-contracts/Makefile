@@ -21,6 +21,11 @@ allowlist-metafiller-storage-addresses :; forge script script/AllowlistMetafille
 ## deploy SynGasToken to Sepolia
 deploy-syn-gas-token :; forge create --rpc-url ${ETH_HOLESKY_RPC_URL} --private-key ${ETH_PRIVATE_KEY} src/token/SynGasToken.sol:SynGasToken --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
 
+## grant Minter Role
+grant-minter-role :; forge script script/SYNDScript.s.sol:GrantMinterRole --rpc-url holesky --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+
+# mint SYND to addresses
+mint-synd-to-addresses :; forge script script/SYNDScript.s.sol:MintSYNDToAddresses --rpc-url holesky --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
 ## Tx Limit Test
 # run tx limit test against OP Mainnet or Base Sepolia
