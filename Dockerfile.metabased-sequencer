@@ -6,21 +6,10 @@ FROM rust:latest AS builder
 # Set the working directory for the build
 WORKDIR /app
 
-# First copy workspace root Cargo.toml and interceptor package files
-COPY Cargo.toml Cargo.toml
-COPY metabased-sequencer/interceptor metabased-sequencer/interceptor/
+# Copy the entire workspace at once to maintain correct structure
+COPY . .
 
-# Create dummy source files for workspace members required by interceptor
-RUN mkdir -p metabased-sequencer/interceptor/src && \
-    echo "fn main() {}" > metabased-sequencer/interceptor/src/main.rs
-
-# Build dependencies only for interceptor
-RUN cargo build --release -p interceptor
-
-# Copy actual interceptor source code
-COPY metabased-sequencer/interceptor metabased-sequencer/interceptor/
-
-# Build the interceptor binary
+# Build the interceptor binary and copy to /app/bin
 RUN cargo build --release -p interceptor && \
     mkdir -p /app/bin && \
     cp target/release/interceptor /app/bin/interceptor
