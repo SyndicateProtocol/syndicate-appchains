@@ -10,6 +10,7 @@ on:
       - ".devcontainer/**"
       - ".github/**"
       - "**/justfile"
+      - "**/Cargo.toml"
 
 jobs:
   dry-run-check:
