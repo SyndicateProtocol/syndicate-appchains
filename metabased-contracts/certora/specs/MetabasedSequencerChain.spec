@@ -7,9 +7,9 @@ methods {
     function owner() external returns (address) envfree;
 
     // State-changing functions
-    function processTransactionRaw(bytes memory) external;
-    function processTransaction(bytes memory) external;
-    function processBulkTransactions(bytes[] memory) external;
+    function processTransactionRaw(bytes) external;
+    function processTransaction(bytes) external;
+    function processBulkTransactions(bytes[]) external;
     function updateRequirementModule(address) external;
 }
 
@@ -35,7 +35,7 @@ invariant requirementModuleNotZero()
 /*
  * Rule 3: Only allowed addresses can process transactions
  */
-rule onlyAllowedCanProcess(bytes memory data) {
+rule onlyAllowedCanProcess(bytes data) {
     env e;
 
     // Try to process a transaction
@@ -52,7 +52,7 @@ rule onlyAllowedCanProcess(bytes memory data) {
 /*
  * Rule 4: Consistent behavior between processTransaction and processTransactionRaw
  */
-rule processConsistency(bytes memory data) {
+rule processConsistency(bytes data) {
     env e;
 
     // Record both outcomes
@@ -70,7 +70,7 @@ rule processConsistency(bytes memory data) {
 /*
  * Rule 5: Bulk processing maintains individual transaction properties
  */
-rule bulkProcessingConsistency(bytes[] memory data) {
+rule bulkProcessingConsistency(bytes[] data) {
     env e;
 
     // Process transactions in bulk
@@ -122,7 +122,7 @@ rule moduleUpdateChangesState(address newModule) {
 /*
  * Rule 8: State consistency after transaction processing
  */
-rule stateConsistencyAfterProcessing(bytes memory data) {
+rule stateConsistencyAfterProcessing(bytes data) {
     env e;
     address oldModule = requirementModule();
 
@@ -142,7 +142,7 @@ rule noReentrancy(method f) filtered {
          f.selector == sig:processTransactionRaw(bytes).selector
 } {
     env e;
-    bytes memory data;
+    bytes data;
 
     // Start processing
     f@withrevert(e, data);
