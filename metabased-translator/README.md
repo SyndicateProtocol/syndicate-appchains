@@ -5,14 +5,15 @@ This is a service that ingests L2 transaction data, transforms it into a unified
 It consists of 2 crates: `data-ingestor` and `block-builder`
 
 ## Useful commands
-(From root)
+(From `/metabased-translator` root)
+
 Run all tests:
 ```
 cargo test --all
 ```
 
-Run `block-builder` with logging:
+Run `block-builder` with logging and CLI args:
 ```
-RUST_LOG=info cargo run -p block-builder
+RUST_LOG=info cargo run -p block-builder -- --port 9000 --chain-id 12345 --genesis-timestamp 1712500000
 ```
 `RUST_LOG` can also be `debug` or `trace` for more detail

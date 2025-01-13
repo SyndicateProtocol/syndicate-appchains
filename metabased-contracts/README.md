@@ -64,6 +64,12 @@ $ make deploy-based-sequencerchain-frame
 | RequiredAllModule (Ham)         | 0xAfeA8F68921242A90ae9e35f4DDF0d3769dE3150 |
 | RequiredAllModule (Frame)       | 0x7Bc475096B936Ad04Cfc544FB56aC54B3661beE6 |
 
+#### ETH Holesky
+
+| Contract Name | Address                                    |
+| ------------- | ------------------------------------------ |
+| SynGasToken   | 0x19aaf160dA8985c54bb97adAF9304B5aC7890421 |
+
 #### ETH Sepolia
 
 | Contract Name | Address                                    |

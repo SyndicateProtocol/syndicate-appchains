@@ -22,6 +22,7 @@ op-translator
 bin/
 generated/
 openapi/
+pkg/mod
 
 # Hot Reload (Air)
 tmp

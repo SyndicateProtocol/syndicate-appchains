@@ -1,13 +1,15 @@
-use block_builder::config::cli;
+//! Block builder service for processing and building L3 blocks.
+
+use block_builder::config::{cli, Configuration};
 use block_builder::connectors::anvil::MetaChainProvider;
 use eyre::Result;
 
-// PoC deploying a contract using `anvil_set_code`, then interacting with it
 #[tokio::main]
 async fn main() -> Result<()> {
     cli::init_tracing_subscriber();
-    let mut mchain = MetaChainProvider::default();
-    mchain.start()?;
+    let config = Configuration::parse();
+
+    let mchain = MetaChainProvider::start(config).await?;
 
     mchain.mine_block().await?;
 

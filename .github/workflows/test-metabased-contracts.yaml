@@ -1,4 +1,4 @@
-name: foundry test metabased-contracts
+name: Foundry Tests
 
 on:
   # Run workflow on every push to main. This ensures that cross-service PRs that
@@ -6,7 +6,7 @@ on:
   push:
     branches:
       - main
-  # Only run on PRs that touch metabased-contracts
+  # Only run on PRs that touch metabased-contracts files to avoid unnecessary CI runs
   pull_request:
     paths:
       - "metabased-contracts/**"
@@ -14,14 +14,18 @@ on:
 env:
   FOUNDRY_PROFILE: ci
 
-defaults:
-  run:
-    working-directory: metabased-contracts
-
 jobs:
-  check:
-    name: Foundry project
+  metabased-contracts-foundry-check:
+    strategy:
+      # Enable fail-fast to stop the job immediately if any step fails
+      # This helps catch issues early and prevents wasting CI resources
+      fail-fast: true
+
+    name: Metabased Contracts
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: metabased-contracts
     steps:
       - uses: actions/checkout@v4
         with:
@@ -32,9 +36,17 @@ jobs:
         with:
           version: nightly
 
-      - name: Run Forge build
+      - name: Show Forge version
         run: |
           forge --version
+
+      - name: Run Forge fmt
+        run: |
+          forge fmt --check
+        id: fmt
+
+      - name: Run Forge build
+        run: |
           forge build --sizes
         id: build
 

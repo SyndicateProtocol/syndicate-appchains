@@ -13,12 +13,6 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
     /// @notice Emitted when a new transaction is processed.
     event TransactionProcessed(address indexed sender, bytes data);
 
-    /// @notice Emitted when a chunk of transactions is processed.
-    event TransactionChunkProcessed(bytes txChunk, uint256 index, uint256 totalChunks, bytes32 txHashForParent);
-
-    /// @dev Thrown when an invalid chunk size is provided.
-    error InvalidChunkSize();
-
     /// @notice Constructs the MetabasedSequencerChain contract.
     /// @param _l3ChainId The ID of the L3 chain that this contract is sequencing transactions for.
     /// @param admin The address that will be set as the admin
@@ -52,24 +46,6 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
         for (uint256 i = 0; i < dataCount; i++) {
             emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
         }
-    }
-
-    /// @notice Processes a chunk of transactions from a larger batch.
-    /// @param txChunk the compressed chunked transaction data.
-    /// @param index The starting index for this chunk in the overall batch.
-    /// @param totalChunks The number of transactions to process in this chunk.
-    /// @param txHashForParent The hash of the parent transaction.
-    function processChunk(bytes calldata txChunk, uint256 index, uint256 totalChunks, bytes32 txHashForParent)
-        external
-        onlyWhenAllowed(msg.sender)
-    {
-        if (totalChunks == 0) {
-            revert InvalidChunkSize();
-        }
-
-        emit TransactionProcessed(msg.sender, txChunk);
-
-        emit TransactionChunkProcessed(txChunk, index, totalChunks, txHashForParent);
     }
 
     /// @notice Prepends a zero byte to the transaction data

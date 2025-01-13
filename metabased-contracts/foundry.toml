@@ -9,5 +9,6 @@ base_sepolia = "https://sepolia.base.org"
 syndicate_frame = "https://rpc-frame.syndicate.io"
 metabased_testnet = "${METABASED_SEQUENCER_TESTNET_RPC_URL}"
 metabased_stratos = "https://metabased-stratos.g.alchemy.com/public"
+holesky = "https://ethereum-holesky-rpc.publicnode.com"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

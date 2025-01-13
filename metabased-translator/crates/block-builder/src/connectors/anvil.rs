@@ -1,88 +1,103 @@
+//! Anvil connector for the `MetaChain`
+
+use crate::config::Configuration;
 use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
 use crate::rollups::optimism::frame::to_data;
-use alloy::signers::local::PrivateKeySigner;
-use alloy::transports::http::Http;
-use alloy_network::EthereumWallet;
-use alloy_node_bindings::{Anvil, AnvilInstance};
-use alloy_primitives::{Address, B256, U256};
-use alloy_provider::ext::AnvilApi;
-use alloy_provider::{Provider, ProviderBuilder, RootProvider};
+use alloy::{
+    network::{Ethereum, EthereumWallet},
+    primitives::{Address, B256, U256},
+    signers::local::PrivateKeySigner,
+    transports::http::Http,
+};
+use alloy_node_bindings::Anvil;
+use alloy_provider::{
+    ext::AnvilApi,
+    fillers::{
+        BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
+    },
+    Identity, Provider, ProviderBuilder, RootProvider,
+};
 use alloy_rpc_types::{BlockId, BlockNumberOrTag, BlockTransactionsKind};
+use eyre::eyre;
 use reqwest::{Client, Url};
 use std::net::TcpListener;
 use std::str::FromStr;
 use tracing::info;
 
+type FilledProvider = FillProvider<
+    JoinFill<
+        JoinFill<
+            Identity,
+            JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+        >,
+        WalletFiller<EthereumWallet>,
+    >,
+    RootProvider<Http<Client>>,
+    Http<Client>,
+    Ethereum,
+>;
+
+/// Provider for the `MetaChain`
+#[derive(Debug)]
 pub struct MetaChainProvider {
-    port: u16,
-    chain_id: u64,
-    genesis_timestamp: u64,
-
-    anvil: Option<AnvilInstance>,
-    base_provider: Option<RootProvider<Http<Client>>>,
-}
-
-impl Default for MetaChainProvider {
-    fn default() -> Self {
-        Self {
-            port: 8888,
-            chain_id: 84532,
-            genesis_timestamp: 1712500000,
-            anvil: None,
-            base_provider: None,
-        }
-    }
+    provider: FilledProvider,
 }
 
 impl MetaChainProvider {
-    pub fn start(&mut self) -> eyre::Result<()> {
-        let base_port = self.port;
-        let port = find_available_port(base_port, 10)
-            .ok_or_else(|| eyre::eyre!("No available ports found after 10 attempts"))?;
+    /// Starts the Anvil instance and creates a provider for the `MetaChain`
+    pub async fn start(config: Configuration) -> eyre::Result<Self> {
+        let port = find_available_port(config.port, 10)
+            .ok_or_else(|| eyre!("No available ports found after 10 attempts"))?;
 
-        if port != base_port {
-            info!("Port {} is in use, switching to port {}", base_port, port);
+        if port != config.port {
+            info!("Port {} is in use, switching to port {}", config.port, port);
         }
 
         let anvil = Anvil::new()
             .port(port)
-            .chain_id(self.chain_id)
+            .chain_id(config.chain_id)
             .args(vec![
                 "--base-fee",
                 "0",
                 "--gas-limit",
                 "30000000",
                 "--timestamp",
-                self.genesis_timestamp.to_string().as_str(),
+                config.genesis_timestamp.to_string().as_str(),
                 "--no-mining",
             ])
             .try_spawn()?;
 
-        let provider = ProviderBuilder::new().on_http(Url::parse(anvil.endpoint_url().as_str())?);
+        let signer: PrivateKeySigner =
+            "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d"
+                .parse()
+                .map_err(|e| eyre!("Failed to parse private key: {}", e))?;
 
-        self.anvil = Some(anvil);
-        self.base_provider = Some(provider);
+        let provider = ProviderBuilder::new()
+            .with_recommended_fillers()
+            .wallet(EthereumWallet::from(signer))
+            .on_http(Url::parse(anvil.endpoint_url().as_str())?);
 
-        Ok(())
+        Ok(Self { provider })
     }
 
+    /// Mines a block on the `MetaChain`
     pub async fn mine_block(&self) -> eyre::Result<()> {
         let signer: PrivateKeySigner =
             "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d"
                 .parse()
-                .unwrap();
+                .map_err(|e| eyre!("Failed to parse private key: {}", e))?;
         let wallet = EthereumWallet::from(signer);
 
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
             .wallet(wallet)
-            .on_provider(self.base_provider.as_ref().unwrap());
+            .on_provider(self.provider.clone());
 
         // Set up the batcher and batch inbox
         let batcher = Address::from_str("0x063D87A885a9323831A688645647eD7d0e859C5d")
-            .expect("Failed to parse batcher address");
+            .map_err(|e| eyre!("Failed to parse batcher address: {}", e))?;
         let batch_inbox = Address::from_str("0x97395dd253e2d096a0caa62a574895c3c2f2b2e0")
-            .expect("Failed to parse Batch Inbox address");
+            .map_err(|e| eyre!("Failed to parse Batch Inbox address: {}", e))?;
         let balance = U256::MAX;
         provider.anvil_set_balance(batcher, balance).await?;
 
@@ -92,25 +107,31 @@ impl MetaChainProvider {
                 BlockTransactionsKind::Hashes,
             )
             .await?
-            .expect("Failed to get block");
+            .ok_or_else(|| eyre!("Failed to get block"))?;
 
         info!("Block: {:?}", block);
         let single_batch = Batch {
             parent_hash: B256::from_str(
                 "0xe009262cd1adf34cfaf845fd1c17a6ddb7f97c67b2992cd9f286ff4e1c6ad233",
             )
-            .unwrap(),
+            .map_err(|e| eyre!("Failed to parse parent hash: {}", e))?,
             epoch_num: 0,
             epoch_hash: block.header.hash,
             timestamp: 1712500002,
             transactions: vec![],
         };
-        let frames = single_batch.get_frames(1000000).unwrap();
-        let data = to_data(&frames).unwrap();
+        let frames = single_batch
+            .get_frames(1000000)
+            .map_err(|e| eyre!("Failed to get frames: {}", e))?;
+        let data =
+            to_data(&frames).map_err(|e| eyre!("Failed to convert frames to data: {}", e))?;
 
         let tx = new_batcher_tx(batcher, batch_inbox, data.into());
         info!("Transaction: {:?}", tx);
-        let builder = provider.send_transaction(tx.clone()).await.unwrap();
+        let builder = provider
+            .send_transaction(tx.clone())
+            .await
+            .map_err(|e| eyre!("Failed to send transaction: {}", e))?;
         let hash = *builder.tx_hash();
         info!("Transaction hash: {:?}", hash);
         provider
@@ -130,8 +151,8 @@ pub fn is_port_available(port: u16) -> bool {
     TcpListener::bind(addr).is_ok()
 }
 
-/// Try to find an available port starting from base_port
-/// Increments by 100 each try, up to max_attempts
+/// Try to find an available port starting from `base_port`
+/// Increments by 100 each try, up to `max_attempts`
 pub fn find_available_port(base_port: u16, max_attempts: u16) -> Option<u16> {
     for attempt in 0..max_attempts {
         let port = base_port.saturating_add(attempt * 100);

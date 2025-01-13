@@ -1,4 +1,4 @@
-name: foundry test metabased-translator-contracts
+name: Foundry Tests
 
 on:
   # Run workflow on every push to main. This ensures that cross-service PRs that
@@ -6,7 +6,6 @@ on:
   push:
     branches:
       - main
-      - anvil-poc
   # Only run on PRs that touch metabased-translator/contracts
   pull_request:
     paths:
@@ -16,11 +15,11 @@ env:
   FOUNDRY_PROFILE: ci
 
 jobs:
-  check:
+  metabased-translator-contracts-check:
     strategy:
       fail-fast: true
 
-    name: Foundry project
+    name: Metabased Translator Contracts
     runs-on: ubuntu-latest
     defaults:
       run:

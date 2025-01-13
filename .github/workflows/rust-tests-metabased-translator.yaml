@@ -1,9 +1,8 @@
-name: Rust Tests metabased-sequencer
+name: Rust Tests
 
 on:
   push:
     branches:
-      - anvil-poc
       - main
   pull_request:
     paths:
@@ -17,8 +16,8 @@ defaults:
     working-directory: metabased-translator
 
 jobs:
-  test:
-    name: Run Rust Tests
+  metabased-translator-test:
+    name: Metabased Translator
     runs-on: ubuntu-latest
 
     steps:

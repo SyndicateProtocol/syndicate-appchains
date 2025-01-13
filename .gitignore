@@ -17,6 +17,7 @@
 # Local environment
 .envrc
 .env
+.op-network-config.yaml
 
 # Build files
 bin/
