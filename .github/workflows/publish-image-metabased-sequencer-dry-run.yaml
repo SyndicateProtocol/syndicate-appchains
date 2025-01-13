@@ -1,0 +1,55 @@
+name: Docker Publish Dry Run Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "metabased-sequencer/**"
+      - "Dockerfile.metabased-sequencer"
+
+env:
+  REGISTRY: ghcr.io
+  METABASED_SEQUENCER_IMAGE_NAME: ${{ github.repository }}/metabased-sequencer
+
+jobs:
+  dry-run-sequencer:
+    name: Metabased Sequencer Dry Run
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to the Container registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata for metabased-sequencer
+        id: meta-sequencer
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.METABASED_SEQUENCER_IMAGE_NAME }}
+          tags: |
+            type=sha,format=long
+            type=raw,value=dry-run-test
+
+      - name: Build metabased-sequencer Docker image (no push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.metabased-sequencer
+          push: false
+          platforms: linux/amd64
+          tags: ${{ steps.meta-sequencer.outputs.tags }}
+          labels: ${{ steps.meta-sequencer.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
