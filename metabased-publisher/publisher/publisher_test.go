@@ -116,7 +116,7 @@ func (m *mockAltDAProvider) SetInput(ctx context.Context, img []byte) (altda.Com
 	args := m.Called(ctx, img)
 	val, ok := args.Get(0).(altda.CommitmentData)
 	if !ok {
-		return altda.CommitmentData{}, fmt.Errorf("unexpected type for SetInput return value")
+		return altda.NewGenericCommitment([]byte{}), fmt.Errorf("unexpected type for SetInput return value")
 	}
 	return val, args.Error(1)
 }
