@@ -6,39 +6,24 @@ FROM rust:latest AS builder
 # Set the working directory for the build
 WORKDIR /app
 
-# First copy workspace root Cargo.toml and workspace member Cargo.toml files
+# First copy workspace root Cargo.toml and interceptor package files
 COPY Cargo.toml Cargo.toml
-COPY metabased-sequencer/interceptor/Cargo.toml metabased-sequencer/interceptor/Cargo.toml
-COPY metabased-sequencer/proxy/Cargo.toml metabased-sequencer/proxy/Cargo.toml
-COPY metabased-translator/crates/block-builder/Cargo.toml metabased-translator/crates/block-builder/Cargo.toml
-COPY metabased-translator/crates/ingestor/Cargo.toml metabased-translator/crates/ingestor/Cargo.toml
-COPY metabased-translator/tests/Cargo.toml metabased-translator/tests/Cargo.toml
+COPY metabased-sequencer/interceptor metabased-sequencer/interceptor/
 
-# Create dummy source files for all workspace members
-RUN mkdir -p \
-    metabased-sequencer/interceptor/src \
-    metabased-sequencer/proxy/src \
-    metabased-translator/crates/block-builder/src \
-    metabased-translator/crates/ingestor/src \
-    metabased-translator/tests/src && \
-    echo "fn main() {}" > metabased-sequencer/interceptor/src/main.rs && \
-    echo "fn main() {}" > metabased-sequencer/proxy/src/main.rs && \
-    echo "pub fn main() {}" > metabased-translator/crates/block-builder/src/lib.rs && \
-    echo "pub fn main() {}" > metabased-translator/crates/ingestor/src/lib.rs && \
-    echo "pub fn main() {}" > metabased-translator/tests/src/lib.rs
+# Create dummy source files for workspace members required by interceptor
+RUN mkdir -p metabased-sequencer/interceptor/src && \
+    echo "fn main() {}" > metabased-sequencer/interceptor/src/main.rs
 
-# Copy all source code
-COPY metabased-sequencer metabased-sequencer/
-COPY metabased-translator metabased-translator/
+# Build dependencies only for interceptor
+RUN cargo build --release -p interceptor
+
+# Copy actual interceptor source code
+COPY metabased-sequencer/interceptor metabased-sequencer/interceptor/
 
 # Build the interceptor binary
 RUN cargo build --release -p interceptor && \
-    echo "=== Debug: Listing build artifacts ===" && \
-    echo "Current directory:" && pwd && \
-    echo "Contents of /app/target/release:" && \
-    ls -la /app/target/release/ && \
-    echo "=== End Debug ===" && \
-    cp /app/target/release/interceptor /app/bin/interceptor
+    mkdir -p /app/bin && \
+    cp target/release/interceptor /app/bin/interceptor
 
 # Create directory structure for the final image
 RUN mkdir -p /app/bin
