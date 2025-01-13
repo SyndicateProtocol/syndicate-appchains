@@ -10,10 +10,11 @@ repository.workspace = true
 
 [dependencies]
 pre-commit-hooks = "0.3.0"
-alloy = "0.9.2"
+alloy = { version = "0.8.3", features = ["full"] }
 eyre = "0.6.12"
-tokio = "1.42.0"
-
+tokio = { version = "1.42.0", features = ["rt", "rt-multi-thread", "macros"] }
+env_logger = "0.10" # Use the latest version
+log = "0.4"
 
 [lints]
 workspace = true

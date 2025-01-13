@@ -6,29 +6,38 @@ use alloy::{
     rpc::types::{Block, BlockTransactionsKind},
     transports::BoxTransport,
 };
-use eyre::{eyre, Error};
-use std::time::Duration;
-use tokio::sync::mpsc;
+use eyre::eyre;
+use std::{error::Error, time::Duration};
+use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
 pub struct Ingestor {
     chain: RootProvider<BoxTransport>,
     current_block_number: u64,
-    sender: mpsc::Sender<Block>,
+    sender: Sender<Block>,
     polling_interval: Duration,
 }
 
 impl Ingestor {
-    /// Creates a new ingestor
+    /// Creates a new `Ingestor` instance.
+    ///
+    /// # Arguments
+    /// - `rpc_url`: The RPC endpoint URL of the Ethereum chain.
+    /// - `start_block`: The block number to start polling from.
+    /// - `buffer_size`: The size of the channel buffer for blocks.
+    /// - `polling_interval`: The time interval between each block polling.
+    ///
+    /// # Returns
+    /// A tuple containing the `Ingestor` instance and a `Receiver` for consuming blocks.
     pub async fn new(
         rpc_url: &str,
         start_block: u64,
         buffer_size: usize,
         polling_interval: Duration,
-    ) -> Result<(Self, mpsc::Receiver<Block>), Error> {
+    ) -> Result<(Self, Receiver<Block>), Box<dyn Error>> {
         let chain = ProviderBuilder::new().on_builtin(rpc_url).await?;
-        let (sender, receiver) = mpsc::channel(buffer_size);
+        let (sender, receiver) = channel(buffer_size);
         Ok((
             Self {
                 chain,
@@ -40,32 +49,55 @@ impl Ingestor {
         ))
     }
 
-    async fn get_block(&self, block_number: u64) -> Result<Block, Error> {
+    /// Retrieves a block by its number.
+    ///
+    /// # Arguments
+    /// - `block_number`: The block number to retrieve.
+    ///
+    /// # Returns
+    /// The block retrieved from the chain or an error if the block is not found.
+    async fn get_block(&self, block_number: u64) -> Result<Block, Box<dyn Error>> {
         let block = self
             .chain
             .get_block_by_number(
                 BlockNumberOrTag::from(block_number),
-                BlockTransactionsKind::Full,
+                // TODO (SEQ-472: Determine if we can just use BlockTransactionsKind::Hashes or implement a custom deserializer for OP specific transactions
+                // BlockTransactionsKind::Full will fail when deserializing OP specific transactions.
+                // Either use BlockTransactionsKind::Hashes or implement a custom deserializer for OP specific transactions.
+                BlockTransactionsKind::Hashes,
             )
             .await?
             .ok_or_else(|| eyre!("Block not found"))?;
+        log::info!("[Ingestor] Got block: {:?}", block.header.inner.number);
         Ok(block)
     }
 
-    async fn push_block(&mut self, block: Block) -> Result<(), Error> {
+    /// Sends the retrieved block to the consumer and updates the current block number.
+    ///
+    /// # Arguments
+    /// - `block`: The block to be sent to the consumer.
+    ///
+    /// # Errors
+    /// Returns an error if the block number does not match the expected current block number.
+    async fn push_block(&mut self, block: Block) -> Result<(), Box<dyn Error>> {
         if block.header.inner.number != self.current_block_number {
-            return Err(eyre!("Block number mismatch"));
+            return Err(eyre!("Block number mismatch").into());
         }
         self.sender.send(block.clone()).await?;
         self.current_block_number += 1;
         Ok(())
     }
 
-    /// Starts polling for blocks
-    pub async fn start_polling(&mut self) -> Result<(), Error> {
+    /// Starts the polling process.
+    ///
+    /// Polls for new blocks at the specified interval and sends them to the consumer.
+    pub async fn start_polling(&mut self) -> Result<(), Box<dyn Error>> {
+        log::info!("[Ingestor] Starting polling");
+
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
             let block = self.get_block(self.current_block_number).await?;
+            log::info!("[Ingestor] Pushing block: {:?}", block.header.inner.number);
             self.push_block(block).await?;
             interval.tick().await;
         }
@@ -80,7 +112,6 @@ mod tests {
         rpc::types::{Block, BlockTransactions, Header},
     };
     use eyre::Result;
-    use tokio::sync::mpsc;
 
     const RPC_URL: &str = "https://syndicate.io";
 
@@ -101,7 +132,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_ingestor_new() -> Result<()> {
+    async fn test_ingestor_new() -> Result<(), Box<dyn Error>> {
         let start_block = 100;
         let buffer_size = 10;
         let polling_interval = Duration::from_secs(1);
@@ -116,11 +147,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_poll_block() -> Result<()> {
+    async fn test_poll_block() -> Result<(), Box<dyn Error>> {
         let start_block = 100;
         let polling_interval = Duration::from_secs(1);
 
-        let (sender, mut receiver) = mpsc::channel(10);
+        let (sender, mut receiver) = channel(10);
         let mut ingestor = Ingestor {
             chain: ProviderBuilder::new().on_builtin(RPC_URL).await?,
             current_block_number: start_block,
@@ -148,11 +179,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_poll_block_mismatch_error() -> Result<()> {
+    async fn test_poll_block_mismatch_error() -> Result<(), Box<dyn Error>> {
         let start_block = 100;
         let polling_interval = Duration::from_secs(1);
 
-        let (sender, _) = mpsc::channel(10);
+        let (sender, _) = channel(10);
         let mut ingestor = Ingestor {
             chain: ProviderBuilder::new().on_builtin(RPC_URL).await?,
             current_block_number: start_block,
