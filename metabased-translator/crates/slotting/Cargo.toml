@@ -1,0 +1,23 @@
+[package]
+name = "slotting"
+version.workspace = true
+description = "This crate is responsible for slotting source chain blocks into slots for the block-builder."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[dependencies]
+alloy = { version = "0.9.2", features = ["full"] }
+eyre = "0.6.12"
+tokio = { version = "1.42.0", features = ["rt", "rt-multi-thread", "macros"] }
+
+
+[dev-dependencies]
+test-case = "3"
+serial_test = "3.2.0"
+
+
+[lints]
+workspace = true
