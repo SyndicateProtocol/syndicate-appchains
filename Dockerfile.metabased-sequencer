@@ -27,14 +27,15 @@ RUN mkdir -p \
     echo "pub fn main() {}" > metabased-translator/crates/ingestor/src/lib.rs && \
     echo "pub fn main() {}" > metabased-translator/tests/src/lib.rs
 
-# Now change to the sequencer directory for the rest of the build
-WORKDIR /app/metabased-sequencer
+# Copy all source code
+COPY metabased-sequencer metabased-sequencer/
+COPY metabased-translator metabased-translator/
 
-# Build dependencies only
+# Build the interceptor binary
 RUN cargo build --release -p interceptor
 
-# Now copy the actual source code
-COPY metabased-sequencer metabased-sequencer/
+# Change to the sequencer directory for the runtime setup
+WORKDIR /app/metabased-sequencer
 
 # Stage 2: Create the runtime image
 FROM debian:bookworm-slim
