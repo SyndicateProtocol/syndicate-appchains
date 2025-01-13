@@ -1,5 +1,8 @@
 [workspace]
-members = ["metabased-translator/crates/block-builder", "metabased-translator/crates/ingestor", "metabased-translator/tests",
+members = [
+    "metabased-translator/crates/block-builder",
+    "metabased-translator/crates/ingestor",
+    "metabased-translator/tests",
     "metabased-sequencer/interceptor",
     "metabased-sequencer/proxy",
 ]
