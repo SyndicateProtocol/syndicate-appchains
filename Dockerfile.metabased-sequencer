@@ -6,15 +6,13 @@ FROM rust:latest AS builder
 # Set the working directory
 WORKDIR /app
 
-# First copy workspace root Cargo.toml
-COPY Cargo.toml ./Cargo.toml
-
-# Copy all workspace member Cargo.toml files
-COPY metabased-sequencer/interceptor/Cargo.toml ./metabased-sequencer/interceptor/Cargo.toml
-COPY metabased-sequencer/proxy/Cargo.toml ./metabased-sequencer/proxy/Cargo.toml
-COPY metabased-translator/crates/block-builder/Cargo.toml ./metabased-translator/crates/block-builder/Cargo.toml
-COPY metabased-translator/crates/ingestor/Cargo.toml ./metabased-translator/crates/ingestor/Cargo.toml
-COPY metabased-translator/tests/Cargo.toml ./metabased-translator/tests/Cargo.toml
+# First copy workspace root Cargo.toml and workspace member Cargo.toml files
+COPY Cargo.toml Cargo.toml
+COPY metabased-sequencer/interceptor/Cargo.toml metabased-sequencer/interceptor/Cargo.toml
+COPY metabased-sequencer/proxy/Cargo.toml metabased-sequencer/proxy/Cargo.toml
+COPY metabased-translator/crates/block-builder/Cargo.toml metabased-translator/crates/block-builder/Cargo.toml
+COPY metabased-translator/crates/ingestor/Cargo.toml metabased-translator/crates/ingestor/Cargo.toml
+COPY metabased-translator/tests/Cargo.toml metabased-translator/tests/Cargo.toml
 
 # Create dummy source files for all workspace members
 RUN mkdir -p \
@@ -29,6 +27,7 @@ RUN mkdir -p \
     echo "pub fn main() {}" > metabased-translator/crates/ingestor/src/lib.rs && \
     echo "pub fn main() {}" > metabased-translator/tests/src/lib.rs
 
+# Now change to the sequencer directory for the rest of the build
 WORKDIR /app/metabased-sequencer
 
 # Build dependencies only
