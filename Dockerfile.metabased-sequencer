@@ -6,18 +6,28 @@ FROM rust:latest AS builder
 # Set the working directory
 WORKDIR /app
 
-# First copy just the workspace Cargo.toml
-COPY Cargo.toml ./metabased-sequencer/
-COPY metabased-sequencer/interceptor/Cargo.toml ./metabased-sequencer/interceptor/
-COPY metabased-sequencer/proxy/Cargo.toml ./metabased-sequencer/proxy/
+# First copy workspace root Cargo.toml
+COPY Cargo.toml ./Cargo.toml
 
-# Create dummy source files for dependency caching
-RUN mkdir -p metabased-sequencer/interceptor/src metabased-sequencer/proxy/src && \
+# Copy all workspace member Cargo.toml files
+COPY metabased-sequencer/interceptor/Cargo.toml ./metabased-sequencer/interceptor/Cargo.toml
+COPY metabased-sequencer/proxy/Cargo.toml ./metabased-sequencer/proxy/Cargo.toml
+COPY metabased-translator/crates/block-builder/Cargo.toml ./metabased-translator/crates/block-builder/Cargo.toml
+COPY metabased-translator/crates/ingestor/Cargo.toml ./metabased-translator/crates/ingestor/Cargo.toml
+COPY metabased-translator/tests/Cargo.toml ./metabased-translator/tests/Cargo.toml
+
+# Create dummy source files for all workspace members
+RUN mkdir -p \
+    metabased-sequencer/interceptor/src \
+    metabased-sequencer/proxy/src \
+    metabased-translator/crates/block-builder/src \
+    metabased-translator/crates/ingestor/src \
+    metabased-translator/tests/src && \
     echo "fn main() {}" > metabased-sequencer/interceptor/src/main.rs && \
-    echo "fn main() {}" > metabased-sequencer/proxy/src/main.rs
-
-RUN mkdir -p metabased-sequencer/proxy/src && \
-    echo "fn main() {}" > metabased-sequencer/proxy/src/main.rs
+    echo "fn main() {}" > metabased-sequencer/proxy/src/main.rs && \
+    echo "pub fn main() {}" > metabased-translator/crates/block-builder/src/lib.rs && \
+    echo "pub fn main() {}" > metabased-translator/crates/ingestor/src/lib.rs && \
+    echo "pub fn main() {}" > metabased-translator/tests/src/lib.rs
 
 WORKDIR /app/metabased-sequencer
 
