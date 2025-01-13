@@ -33,7 +33,12 @@ COPY metabased-translator metabased-translator/
 
 # Build the interceptor binary
 WORKDIR /app/metabased-sequencer
-RUN cargo build --release -p interceptor
+RUN cargo build --release -p interceptor && \
+    ls -la target/release/interceptor
+
+# Create directory structure for the final image
+RUN mkdir -p /app/bin && \
+    cp target/release/interceptor /app/bin/
 
 # Return to root directory
 WORKDIR /app
@@ -48,7 +53,7 @@ RUN apt-get update && apt-get install -y ca-certificates openssl libssl-dev && r
 WORKDIR /usr/local/bin
 
 # Copy the compiled binary from the builder stage
-COPY --from=builder /app/metabased-sequencer/target/release/interceptor .
+COPY --from=builder /app/bin/interceptor .
 
 # Ensure the binary has execute permissions
 RUN chmod +x interceptor
