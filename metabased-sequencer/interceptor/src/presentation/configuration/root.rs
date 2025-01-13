@@ -60,7 +60,6 @@ impl Configuration {
     pub fn parse() -> Result<Self, figment::Error> {
         let args = Args::parse();
 
-
         Self::parse_with_args(
             Env::prefixed(ENV_PREFIX), // maps to one without the prefix
             CliArgs::new(args),
@@ -143,13 +142,9 @@ mod tests {
     // Helper function to create an environment with a properly prefixed variable
     fn env_with_prefixed_port(port: u16) -> Env {
         let mut env = std::collections::HashMap::new();
-        env.insert(
-            "METABASED_SEQUENCER_PORT".to_string(),
-            port.to_string()
-        );
+        env.insert("METABASED_SEQUENCER_PORT".to_string(), port.to_string());
         Env::prefixed(ENV_PREFIX)
     }
-
 
     #[test]
     fn test_cli_overrides_prefixed_env_var() {

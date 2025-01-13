@@ -107,9 +107,9 @@ mod tests {
     /// anything outside what's programmed in for the test.
     mod stub {
         use crate::application::Metrics;
+        use crate::presentation::json_rpc_errors::Error;
         use std::fmt::Write;
         use std::time::Duration;
-        use crate::presentation::json_rpc_errors::Error;
 
         impl Metrics for &'static str {
             fn append_send_raw_transaction_with_duration(

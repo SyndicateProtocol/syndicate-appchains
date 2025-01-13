@@ -101,11 +101,7 @@ where
     let start = ctx.stopwatch_service().start();
     let chain = ctx.chain_service();
 
-    with_metrics(
-        metrics,
-        start,
-        handle_send_raw_transaction(params, chain)
-    ).await
+    with_metrics(metrics, start, handle_send_raw_transaction(params, chain)).await
 }
 
 pub async fn handle_send_raw_transaction<Chain>(
@@ -117,8 +113,7 @@ where
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
 {
     let params = SendRawTransactionParams::try_from(params)?;
-    let bytes = hex::decode(&params.raw_tx)
-        .map(Bytes::from)?;
+    let bytes = hex::decode(&params.raw_tx).map(Bytes::from)?;
 
     let tx_hash = application::send_raw_transaction(bytes, chain).await?;
     Ok(tx_hash.encode_hex_with_prefix())
@@ -132,10 +127,7 @@ async fn with_metrics<T>(
 ) -> Result<T, JsonRpcError<()>> {
     let result = f.await;
 
-    metrics.append_send_raw_transaction_with_duration(
-        start.elapsed(),
-        result.as_ref().err(),
-    );
+    metrics.append_send_raw_transaction_with_duration(start.elapsed(), result.as_ref().err());
 
     result.map_err(JsonRpcError::from)
 }
@@ -202,7 +194,10 @@ mod tests {
         );
 
         assert!(services_arc.metrics_service().metrics_called.get());
-        assert_eq!(services_arc.metrics_service().last_error_category.get(), "none");
+        assert_eq!(
+            services_arc.metrics_service().last_error_category.get(),
+            "none"
+        );
     }
 
     #[tokio::test]
@@ -222,7 +217,10 @@ mod tests {
             .contains("invalid params: wrong number of params"));
 
         assert!(services_arc.metrics_service().metrics_called.get());
-        assert_eq!(services_arc.metrics_service().last_error_category.get(), "params_error");
+        assert_eq!(
+            services_arc.metrics_service().last_error_category.get(),
+            "params_error"
+        );
     }
 
     #[tokio::test]
@@ -236,7 +234,10 @@ mod tests {
             .unwrap_err();
 
         assert!(services_arc.metrics_service().metrics_called.get());
-        assert_eq!(services_arc.metrics_service().last_error_category.get(), "params_error");
+        assert_eq!(
+            services_arc.metrics_service().last_error_category.get(),
+            "params_error"
+        );
     }
 
     #[tokio::test]
@@ -253,16 +254,20 @@ mod tests {
             .to_string()
             .contains("invalid input: unable to RLP decode"));
 
-
         assert!(services_arc.metrics_service().metrics_called.get());
-        assert_eq!(services_arc.metrics_service().last_error_category.get(), "validation_error");
+        assert_eq!(
+            services_arc.metrics_service().last_error_category.get(),
+            "validation_error"
+        );
     }
 
     // handler tests
     #[tokio::test]
     async fn test_handle_valid_transaction() {
         let chain = MockChain;
-        let params = Params::new(Some(r#"["0x02f871018319cb1d808502b95ddeef82520894e94f1fa4f27d9d288ffea234bb62e1fbc086ca0c877654752ccd929080c001a0fd107a1713c5b89e4affcf616b2bdc517a70ce9735c4d67d142fd9211f2c6d8ea032fac076f33f22c968380c02331be61da3f157f90e72a121d5fac80313745779"]"#));
+        let params = Params::new(Some(
+            r#"["0x02f871018319cb1d808502b95ddeef82520894e94f1fa4f27d9d288ffea234bb62e1fbc086ca0c877654752ccd929080c001a0fd107a1713c5b89e4affcf616b2bdc517a70ce9735c4d67d142fd9211f2c6d8ea032fac076f33f22c968380c02331be61da3f157f90e72a121d5fac80313745779"]"#,
+        ));
 
         let result = handle_send_raw_transaction(params, &chain).await;
         assert!(result.is_ok());
@@ -323,9 +328,14 @@ mod tests {
     }
 
     impl Metrics for MockMetrics {
-        fn append_send_raw_transaction_with_duration(&self, _duration: Duration, error: Option<&Error>) {
+        fn append_send_raw_transaction_with_duration(
+            &self,
+            _duration: Duration,
+            error: Option<&Error>,
+        ) {
             self.metrics_called.set(true);
-            self.last_error_category.set(error_to_metric_category(error));
+            self.last_error_category
+                .set(error_to_metric_category(error));
         }
 
         fn encode(&self, _writer: &mut impl std::fmt::Write) -> std::fmt::Result {

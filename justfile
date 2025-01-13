@@ -319,7 +319,7 @@ create-envrc:
     "export METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}\n"\
     "export METABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_l2_private_key }}\n"\
     "export METABASED_SEQUENCER_PORT={{ metabased_sequencer_port }}\n"\
-    "export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x0000000000000000000000000000000000000000"\
+    "export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x0000000000000000000000000000000000000000\n"\
     "export ROLLUP_TYPE=ARB"\
     > {{ envrc_file }}
 

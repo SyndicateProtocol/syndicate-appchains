@@ -6,9 +6,9 @@
 //! * A service that defines taking [`Metrics`].
 //! * A generic [`Stopwatch`].
 
+use crate::presentation::json_rpc_errors::Error;
 use std::fmt::{Display, Write};
 use std::time::Duration;
-use crate::presentation::json_rpc_errors::Error;
 
 /// Queries all collected metrics into textual representation and returns as a string.
 pub fn metrics(metrics: &impl Metrics) -> String {
@@ -54,7 +54,12 @@ mod tests {
     }
 
     impl Metrics for DummyMetrics {
-        fn append_send_raw_transaction_with_duration(&self, _duration: Duration, _error: Option<&Error>) {}
+        fn append_send_raw_transaction_with_duration(
+            &self,
+            _duration: Duration,
+            _error: Option<&Error>,
+        ) {
+        }
 
         fn encode(&self, writer: &mut impl Write) -> std::fmt::Result {
             writer.write_str(self.0)

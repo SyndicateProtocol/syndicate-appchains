@@ -1,5 +1,6 @@
 use crate::presentation::json_rpc_errors::InvalidInputError::{
-    InvalidJson, InvalidTransactionSignature, InvalidUint, MissingGasPrice, UnableToRLPDecode, MissingChainID
+    InvalidJson, InvalidTransactionSignature, InvalidUint, MissingChainID, MissingGasPrice,
+    UnableToRLPDecode,
 };
 use crate::presentation::json_rpc_errors::InvalidParamsError::InvalidHex;
 use crate::presentation::json_rpc_errors::Rejection::FeeTooHigh;
@@ -51,7 +52,7 @@ pub enum InvalidInputError {
     InvalidTransactionSignature,
     MissingGasPrice,
     UnableToRLPDecode,
-    MissingChainID
+    MissingChainID,
 }
 
 impl fmt::Display for InvalidParamsError {
@@ -76,7 +77,9 @@ impl fmt::Display for InvalidInputError {
             InvalidTransactionSignature => write!(f, "invalid transaction signature"),
             MissingGasPrice => write!(f, "transaction missing gas price"),
             UnableToRLPDecode => write!(f, "unable to RLP decode"),
-            MissingChainID => {write!(f, "missing chain ID")}
+            MissingChainID => {
+                write!(f, "missing chain ID")
+            }
         }
     }
 }
