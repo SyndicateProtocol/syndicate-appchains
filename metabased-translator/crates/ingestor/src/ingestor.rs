@@ -6,7 +6,7 @@ use alloy::{
     rpc::types::{Block, BlockTransactionsKind},
     transports::BoxTransport,
 };
-use eyre;
+use eyre::eyre;
 use std::{error::Error, time::Duration};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
@@ -20,7 +20,16 @@ pub struct Ingestor {
 }
 
 impl Ingestor {
-    /// Creates a new ingestor
+    /// Creates a new `Ingestor` instance.
+    ///
+    /// # Arguments
+    /// - `rpc_url`: The RPC endpoint URL of the Ethereum chain.
+    /// - `start_block`: The block number to start polling from.
+    /// - `buffer_size`: The size of the channel buffer for blocks.
+    /// - `polling_interval`: The time interval between each block polling.
+    ///
+    /// # Returns
+    /// A tuple containing the `Ingestor` instance and a `Receiver` for consuming blocks.
     pub async fn new(
         rpc_url: &str,
         start_block: u64,
@@ -40,7 +49,14 @@ impl Ingestor {
         ))
     }
 
-    async fn get_block(&self, block_number: u64) -> Result<Block, Error> {
+    /// Retrieves a block by its number.
+    ///
+    /// # Arguments
+    /// - `block_number`: The block number to retrieve.
+    ///
+    /// # Returns
+    /// The block retrieved from the chain or an error if the block is not found.
+    async fn get_block(&self, block_number: u64) -> Result<Block, Box<dyn Error>> {
         let block = self
             .chain
             .get_block_by_number(
@@ -51,20 +67,30 @@ impl Ingestor {
                 BlockTransactionsKind::Hashes,
             )
             .await?
-            .ok_or_else(|| eyre::eyre!("Block not found"))?;
+            .ok_or_else(|| eyre!("Block not found"))?;
         log::info!("[Ingestor] Got block: {:?}", block.header.inner.number);
         Ok(block)
     }
 
-    async fn push_block(&mut self, block: Block) -> Result<(), Error> {
+    /// Sends the retrieved block to the consumer and updates the current block number.
+    ///
+    /// # Arguments
+    /// - `block`: The block to be sent to the consumer.
+    ///
+    /// # Errors
+    /// Returns an error if the block number does not match the expected current block number.
+    async fn push_block(&mut self, block: Block) -> Result<(), Box<dyn Error>> {
         if block.header.inner.number != self.current_block_number {
-            return Err(eyre!("Block number mismatch"));
+            return Err(eyre!("Block number mismatch").into());
         }
         self.sender.send(block.clone()).await?;
         self.current_block_number += 1;
         Ok(())
     }
 
+    /// Starts the polling process.
+    ///
+    /// Polls for new blocks at the specified interval and sends them to the consumer.
     pub async fn start_polling(&mut self) -> Result<(), Box<dyn Error>> {
         log::info!("[Ingestor] Starting polling");
 
@@ -86,7 +112,6 @@ mod tests {
         rpc::types::{Block, BlockTransactions, Header},
     };
     use eyre::Result;
-    use tokio::sync::mpsc;
 
     const RPC_URL: &str = "https://syndicate.io";
 
@@ -107,7 +132,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_ingestor_new() -> Result<()> {
+    async fn test_ingestor_new() -> Result<(), Box<dyn Error>> {
         let start_block = 100;
         let buffer_size = 10;
         let polling_interval = Duration::from_secs(1);
@@ -122,11 +147,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_poll_block() -> Result<()> {
+    async fn test_poll_block() -> Result<(), Box<dyn Error>> {
         let start_block = 100;
         let polling_interval = Duration::from_secs(1);
 
-        let (sender, mut receiver) = mpsc::channel(10);
+        let (sender, mut receiver) = channel(10);
         let mut ingestor = Ingestor {
             chain: ProviderBuilder::new().on_builtin(RPC_URL).await?,
             current_block_number: start_block,
@@ -154,11 +179,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_poll_block_mismatch_error() -> Result<()> {
+    async fn test_poll_block_mismatch_error() -> Result<(), Box<dyn Error>> {
         let start_block = 100;
         let polling_interval = Duration::from_secs(1);
 
-        let (sender, _) = mpsc::channel(10);
+        let (sender, _) = channel(10);
         let mut ingestor = Ingestor {
             chain: ProviderBuilder::new().on_builtin(RPC_URL).await?,
             current_block_number: start_block,
