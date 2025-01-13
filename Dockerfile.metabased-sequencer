@@ -7,7 +7,7 @@ FROM rust:latest AS builder
 WORKDIR /app
 
 # First copy just the workspace Cargo.toml
-COPY metabased-sequencer/Cargo.toml ./metabased-sequencer/
+COPY Cargo.toml ./metabased-sequencer/
 COPY metabased-sequencer/interceptor/Cargo.toml ./metabased-sequencer/interceptor/
 COPY metabased-sequencer/proxy/Cargo.toml ./metabased-sequencer/proxy/
 
