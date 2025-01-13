@@ -11,6 +11,7 @@ import (
 	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/metrics"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	opservice "github.com/ethereum-optimism/optimism/op-service"
+
 	"github.com/ethereum-optimism/optimism/op-service/cliapp"
 	"github.com/ethereum-optimism/optimism/op-service/httputil"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
@@ -45,9 +46,8 @@ func Main(version string) cliapp.LifecycleAction {
 var ErrAlreadyStopped = errors.New("already stopped")
 
 type PublisherService struct {
-	// TODO: op-translator RPC client removed as part of cleanup
-	// opTranslatorClient *rpc.RPCClient
-	metrics metrics.Metricer
+	rpcClient RPCAPI
+	metrics   metrics.Metricer
 	log                gethlog.Logger
 	pprofService       *oppprof.Service
 	altDAClient        *altda.DAClient
@@ -107,12 +107,11 @@ func (p *PublisherService) initMetrics(cfg *CLIConfig) {
 
 // initRPCClient creates the RPC client for the op-translator
 func (p *PublisherService) initRPCClient(cfg *CLIConfig) error {
-	// TODO: op-translator RPC client initialization removed as part of cleanup
-	// opTranslatorClient, err := rpc.Connect(cfg.OpTranslatorRPCURL)
-	// if err != nil {
-	// 	return fmt.Errorf("failed to dial L3 chain RPC: %w", err)
-	// }
-	// p.opTranslatorClient = opTranslatorClient
+	rpcClient, err := NewGethRPCAPI(cfg.OpTranslatorRPCURL)
+	if err != nil {
+		return fmt.Errorf("failed to dial L3 chain RPC: %w", err)
+	}
+	p.rpcClient = rpcClient
 	return nil
 }
 
@@ -168,7 +167,7 @@ func (p *PublisherService) initMetricsServer(cfg *CLIConfig) error {
 
 func (p *PublisherService) initPublisher() {
 	p.publisher = NewPublisher(
-		nil, // TODO: op-translator RPC client removed as part of cleanup
+		p.rpcClient,
 		p.altDAClient,
 		p.batcherAddress,
 		p.batchInboxAddress,
@@ -213,10 +212,11 @@ func (p *PublisherService) Stop(ctx context.Context) error {
 		}
 	}
 
-	// TODO: op-translator RPC client cleanup removed as part of cleanup
-	// if p.opTranslatorClient != nil {
-	// 	p.opTranslatorClient.CloseConnection()
-	// }
+	if p.rpcClient != nil {
+		if closer, ok := p.rpcClient.(*GethRPCAPI); ok {
+			closer.Close()
+		}
+	}
 
 	if result == nil {
 		p.stopped.Store(true)

@@ -2,6 +2,7 @@ package publisher
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -39,7 +40,8 @@ func TestBasic(t *testing.T) {
 	mockAltDAProvider.On("SetInput", mock.Anything, mock.Anything).
 		Return(altda.GenericCommitment{}, nil)
 
-	publisher.Start(context.Background())
+	err := publisher.Start(context.Background())
+	require.NoError(t, err, "Publisher should start without error")
 
 	time.Sleep(20 * time.Millisecond) // wait for the publisher to process the batch (more time than the poll interval)
 	require.Len(t, mockAltDAProvider.Calls, 0)
@@ -54,6 +56,10 @@ func TestBasic(t *testing.T) {
 	time.Sleep(20 * time.Millisecond) // wait for the publisher to process the batch (more time than the poll interval)
 	// assert the altDA provider was called once
 	require.Len(t, mockAltDAProvider.Calls, 1)
+
+	// Clean up
+	err = publisher.Stop()
+	require.NoError(t, err, "Publisher should stop without error")
 }
 
 ////////////////////////////////////////////////////////////
@@ -67,17 +73,29 @@ var _ RPCAPI = (*mockOpTranslatorRPC)(nil)
 
 func (m *mockOpTranslatorRPC) BlockNumber(ctx context.Context) (uint64, error) {
 	args := m.Called(ctx)
-	return args.Get(0).(uint64), args.Error(1)
+	val, ok := args.Get(0).(uint64)
+	if !ok {
+		return 0, fmt.Errorf("unexpected type for BlockNumber return value")
+	}
+	return val, args.Error(1)
 }
 
 func (m *mockOpTranslatorRPC) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
 	args := m.Called(ctx)
-	return args.Get(0).(*types.Block), args.Error(1)
+	val, ok := args.Get(0).(*types.Block)
+	if !ok {
+		return nil, fmt.Errorf("unexpected type for BlockByNumber return value")
+	}
+	return val, args.Error(1)
 }
 
 func (m *mockOpTranslatorRPC) ChainID(ctx context.Context) (*big.Int, error) {
 	args := m.Called(ctx)
-	return args.Get(0).(*big.Int), args.Error(1)
+	val, ok := args.Get(0).(*big.Int)
+	if !ok {
+		return nil, fmt.Errorf("unexpected type for ChainID return value")
+	}
+	return val, args.Error(1)
 }
 
 // Mocked AltDA Provider
@@ -87,10 +105,18 @@ var _ AltDAProvider = (*mockAltDAProvider)(nil)
 
 func (m *mockAltDAProvider) GetInput(ctx context.Context, comm altda.CommitmentData) ([]byte, error) {
 	args := m.Called(ctx, comm)
-	return args.Get(0).([]byte), args.Error(1)
+	val, ok := args.Get(0).([]byte)
+	if !ok {
+		return nil, fmt.Errorf("unexpected type for GetInput return value")
+	}
+	return val, args.Error(1)
 }
 
 func (m *mockAltDAProvider) SetInput(ctx context.Context, img []byte) (altda.CommitmentData, error) {
 	args := m.Called(ctx, img)
-	return args.Get(0).(altda.CommitmentData), args.Error(1)
+	val, ok := args.Get(0).(altda.CommitmentData)
+	if !ok {
+		return altda.CommitmentData{}, fmt.Errorf("unexpected type for SetInput return value")
+	}
+	return val, args.Error(1)
 }
