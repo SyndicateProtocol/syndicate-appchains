@@ -47,7 +47,7 @@ var ErrAlreadyStopped = errors.New("already stopped")
 
 type PublisherService struct {
 	rpcClient         RPCAPI
-	metrics           metrics.Metricer
+	metrics          metrics.Metricer
 	log              gethlog.Logger
 	pprofService     *oppprof.Service
 	altDAClient      *altda.DAClient
@@ -59,7 +59,7 @@ type PublisherService struct {
 	blobUploadTimeout time.Duration
 	stopped          atomic.Bool
 	batchInboxAddress common.Address
-	batcherAddress   common.Address
+	batcherAddress    common.Address
 }
 
 func (p *PublisherService) initFromCLIConfig(_ context.Context, version string, cfg *CLIConfig, log gethlog.Logger) error {
