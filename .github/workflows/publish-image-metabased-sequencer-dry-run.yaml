@@ -3,6 +3,9 @@ name: Docker Publish Dry Run Check
 on:
   pull_request:
     branches: [main]
+    paths:
+      - "metabased-sequencer/**"
+      - "Dockerfile.metabased-sequencer"
 
 env:
   REGISTRY: ghcr.io
