@@ -8,10 +8,13 @@ name: Certora
 on:
   push:
     branches: [main]
+  # Only run on PRs that touch metabased-translator/contracts
   pull_request:
-    branches: [main]
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+    paths:
+      - "../../metabased-translator/block-builder/contracts/**"
+
+env:
+  FOUNDRY_PROFILE: ci
 
 jobs:
   ##############################################################################
@@ -19,7 +22,11 @@ jobs:
   # installation of certora-cli ################################################
   ##############################################################################
   certora:
+    name: Metabased Certora Prover Run
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: metabased-translator/contracts
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -70,5 +77,4 @@ jobs:
       - name: Verify
         env:
           CERTORAKEY: ${{ secrets.CERTORAKEY }}
-        run:
-          certoraRun ./metabased-contracts/certora/conf/MetabasedSequencerChain.conf
+        run: certoraRun ./metabased-contracts/certora/conf/MetabasedSequencerChain.conf
