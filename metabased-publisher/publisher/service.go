@@ -47,17 +47,17 @@ var ErrAlreadyStopped = errors.New("already stopped")
 
 type PublisherService struct {
 	rpcClient         RPCAPI
-	metrics          metrics.Metricer
-	log              gethlog.Logger
-	pprofService     *oppprof.Service
-	altDAClient      *altda.DAClient
-	publisher        *Publisher
-	metricsServer    *httputil.HTTPServer
-	version          string
-	pollInterval     time.Duration
-	networkTimeout   time.Duration
+	metrics           metrics.Metricer
+	log               gethlog.Logger
+	pprofService      *oppprof.Service
+	altDAClient       *altda.DAClient
+	publisher         *Publisher
+	metricsServer     *httputil.HTTPServer
+	version           string
+	pollInterval      time.Duration
+	networkTimeout    time.Duration
 	blobUploadTimeout time.Duration
-	stopped          atomic.Bool
+	stopped           atomic.Bool
 	batchInboxAddress common.Address
 	batcherAddress    common.Address
 }
