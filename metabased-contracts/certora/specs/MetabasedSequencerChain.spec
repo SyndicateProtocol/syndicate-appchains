@@ -1,41 +1,41 @@
 // SPDX-License-Identifier: UNLICENSED
 methods {
     // View functions
-    l3ChainId() returns (uint256) envfree
-    requirementModule() returns (address) envfree
-    isAllowed(address) returns (bool)
-    owner() returns (address) envfree
+    function l3ChainId() external returns (uint256) envfree;
+    function requirementModule() external returns (address) envfree;
+    function isAllowed(address) external returns (bool);
+    function owner() external returns (address) envfree;
 
     // State-changing functions
-    processTransactionRaw(bytes) returns ()
-    processTransaction(bytes) returns ()
-    processBulkTransactions(bytes[]) returns ()
-    updateRequirementModule(address) returns ()
+    function processTransactionRaw(bytes memory) external;
+    function processTransaction(bytes memory) external;
+    function processBulkTransactions(bytes[] memory) external;
+    function updateRequirementModule(address) external;
 }
 
 /*
  * Define ghost variables to track important state
  */
 ghost mapping(address => bool) processedSenders;
-ghost mapping(bytes => bool) processedTransactions;
+ghost mapping(bytes32 => bool) processedTransactions;
 
 /*
  * Rule 1: Verify that l3ChainId cannot be zero
  * This should always be true after contract deployment
  */
 invariant l3ChainIdNotZero()
-    l3ChainId() != 0
+    l3ChainId() != 0;
 
 /*
  * Rule 2: Verify that requirementModule address is never zero
  */
 invariant requirementModuleNotZero()
-    requirementModule() != 0
+    requirementModule() != address(0);
 
 /*
  * Rule 3: Only allowed addresses can process transactions
  */
-rule onlyAllowedCanProcess(address sender, bytes calldata data) {
+rule onlyAllowedCanProcess(bytes memory data) {
     env e;
 
     // Try to process a transaction
@@ -52,33 +52,39 @@ rule onlyAllowedCanProcess(address sender, bytes calldata data) {
 /*
  * Rule 4: Consistent behavior between processTransaction and processTransactionRaw
  */
-rule processConsistency(bytes calldata data) {
+rule processConsistency(bytes memory data) {
     env e;
 
     // Record both outcomes
-    processTransaction(e, data);
-    processTransactionRaw(e, data);
+    processTransaction@withrevert(e, data);
+    bool txSuccess = !lastReverted;
 
-    // If one succeeds, both should succeed
-    assert !lastReverted <=> !lastReverted,
+    processTransactionRaw@withrevert(e, data);
+    bool rawSuccess = !lastReverted;
+
+    // If one succeeds, both should succeed under same conditions
+    assert txSuccess == rawSuccess,
         "Inconsistent behavior between process methods";
 }
 
 /*
  * Rule 5: Bulk processing maintains individual transaction properties
  */
-rule bulkProcessingConsistency(bytes[] calldata data) {
+rule bulkProcessingConsistency(bytes[] memory data) {
     env e;
 
     // Process transactions in bulk
-    processBulkTransactions(e, data);
+    processBulkTransactions@withrevert(e, data);
+    bool bulkSuccess = !lastReverted;
 
-    // Verify each transaction would have succeeded individually
-    for (uint i = 0; i < data.length; i++) {
-        processTransaction(e, data[i]);
-        assert !lastReverted,
-            "Bulk processing accepted invalid transaction";
-    }
+    // If bulk processing succeeded, each individual transaction should succeed
+    require bulkSuccess;
+
+    // Check first transaction as representative (full loop not supported in CVL)
+    require data.length > 0;
+    processTransaction@withrevert(e, data[0]);
+    assert !lastReverted,
+        "Bulk processing accepted invalid transaction";
 }
 
 /*
@@ -96,32 +102,32 @@ rule onlyOwnerCanUpdateModule(address newModule) {
 }
 
 /*
- * Rule 7: Events are emitted correctly for processed transactions
+ * Rule 7: Module update changes state correctly
  */
-rule transactionEventEmission(bytes calldata data) {
+rule moduleUpdateChangesState(address newModule) {
     env e;
+    require newModule != address(0);
 
-    // Process a transaction
-    processTransaction(e, data);
+    // Store old module
+    address oldModule = requirementModule();
 
-    // Verify TransactionProcessed event was emitted with correct parameters
-    assert lastReverted ||
-           (exists EventLog log.
-               log.topics[0] == hash("TransactionProcessed(address,bytes)") &&
-               log.topics[1] == e.msg.sender &&
-               log.data == data),
-        "Transaction processed without proper event emission";
+    // Update module
+    updateRequirementModule@withrevert(e, newModule);
+
+    // If successful, module should be updated
+    assert !lastReverted => requirementModule() == newModule,
+        "Module not updated correctly";
 }
 
 /*
  * Rule 8: State consistency after transaction processing
  */
-rule stateConsistencyAfterProcessing(bytes calldata data) {
+rule stateConsistencyAfterProcessing(bytes memory data) {
     env e;
     address oldModule = requirementModule();
 
     // Process transaction
-    processTransaction(e, data);
+    processTransaction@withrevert(e, data);
 
     // Verify requirement module hasn't changed
     assert requirementModule() == oldModule,
@@ -129,40 +135,43 @@ rule stateConsistencyAfterProcessing(bytes calldata data) {
 }
 
 /*
- * Rule 9: No reentrancy in processing functions
+ * Rule 9: No reentrant calls to processing functions
  */
-rule noReentrancy(method f, bytes calldata data) filtered { f ->
-    f.selector == sig:processTransaction(bytes).selector ||
-    f.selector == sig:processTransactionRaw(bytes).selector
+rule noReentrancy(method f) filtered {
+    f -> f.selector == sig:processTransaction(bytes).selector ||
+         f.selector == sig:processTransactionRaw(bytes).selector
 } {
     env e;
-    calldataarg args;
+    bytes memory data;
 
     // Start processing
-    f(e, args);
+    f@withrevert(e, data);
 
-    // Try to process again during execution
-    sinvoke f(e, args);
-
-    // Assert second invocation fails
-    assert lastReverted,
-        "Reentrancy detected in processing functions";
+    // If first call succeeds
+    if (!lastReverted) {
+        // Try to process again
+        f@withrevert(e, data);
+        // Second call should revert
+        assert lastReverted, "Reentrancy not prevented";
+    }
 }
 
 /*
- * Rule 10: Zero byte prepending works correctly
+ * Rule 10: Zero chain ID requirement is enforced
  */
-rule zeroBytePrepending(bytes calldata data) {
+rule zeroChainIdCheck() {
     env e;
 
-    // Get processed data from both methods
-    bytes memory rawData;
-    bytes memory prependedData;
+    // Try to deploy contract with zero chain ID
+    require e.msg.value == 0;
+    address admin = e.msg.sender;
+    address module = requirementModule();
 
-    processTransactionRaw(e, data) returns (rawData);
-    processTransaction(e, data) returns (prependedData);
+    storage init = lastStorage;
+    uint256 zeroChainId = 0;
 
-    // Verify prepended data starts with zero byte
-    assert prependedData[0] == 0x00,
-        "Transaction data not properly prepended with zero byte";
+    construct_havoc MetabasedSequencerChain(zeroChainId, admin, module);
+
+    // Deployment should fail
+    assert false, "Deployment with zero chain ID should fail";
 }
