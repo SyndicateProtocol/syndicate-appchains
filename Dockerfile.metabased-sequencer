@@ -1,3 +1,4 @@
+#syntax=docker/dockerfile:1.7-labs
 # NOTE: This only builds for the `interceptor` profile
 
 # Stage 1: Build the Rust application
@@ -7,25 +8,22 @@ FROM rust:latest AS builder
 WORKDIR /app
 
 # First copy just the workspace Cargo.toml
-COPY metabased-sequencer/Cargo.toml ./metabased-sequencer/
-COPY metabased-sequencer/interceptor/Cargo.toml ./metabased-sequencer/interceptor/
-COPY metabased-sequencer/proxy/Cargo.toml ./metabased-sequencer/proxy/
+COPY Cargo.toml .
+COPY --parents metabased-sequencer/**/Cargo.toml .
+COPY --parents metabased-translator/**/Cargo.toml .
 
 # Create dummy source files for dependency caching
-RUN mkdir -p metabased-sequencer/interceptor/src metabased-sequencer/proxy/src && \
-    echo "fn main() {}" > metabased-sequencer/interceptor/src/main.rs && \
-    echo "fn main() {}" > metabased-sequencer/proxy/src/main.rs
-
-RUN mkdir -p metabased-sequencer/proxy/src && \
-    echo "fn main() {}" > metabased-sequencer/proxy/src/main.rs
-
-WORKDIR /app/metabased-sequencer
+RUN for path in $(find metabased-translator -name Cargo.toml); do mkdir $(dirname $path)/src && echo "fn main() {}" > $(dirname $path)/src/main.rs; done
+RUN for path in $(find metabased-sequencer -name Cargo.toml); do mkdir $(dirname $path)/src && echo "fn main() {}" > $(dirname $path)/src/main.rs; done
 
 # Build dependencies only
 RUN cargo build --release -p interceptor
 
 # Now copy the actual source code
 COPY metabased-sequencer metabased-sequencer/
+
+# Build the binary
+RUN cargo build --release -p interceptor
 
 # Stage 2: Create the runtime image
 FROM debian:bookworm-slim
@@ -37,7 +35,7 @@ RUN apt-get update && apt-get install -y ca-certificates openssl libssl-dev && r
 WORKDIR /usr/local/bin
 
 # Copy the compiled binary from the builder stage
-COPY --from=builder /app/metabased-sequencer/target/release/interceptor .
+COPY --from=builder /app/target/release/interceptor .
 
 # Ensure the binary has execute permissions
 RUN chmod +x interceptor
