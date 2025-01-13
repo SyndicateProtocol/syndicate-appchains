@@ -1,5 +1,3 @@
-use env_logger;
-use ingestor;
 use std::time::Duration;
 
 #[tokio::main]
