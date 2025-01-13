@@ -15,12 +15,8 @@ format:
 .PHONY: format
 
 build:
-	op-translator metabased-publisher
+	metabased-publisher
 .PHONY: build
-
-op-translator:
-	make -C ./op-translator op-translator
-.PHONY: op-translator
 
 metabased-publisher:
 	make -C ./metabased-publisher metabased-publisher

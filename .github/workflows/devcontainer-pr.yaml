@@ -39,31 +39,6 @@ jobs:
             # Run all verifications
             just -f .devcontainer/justfile verify-all
 
-      #       TODO [SEQ-323]: Can combine this with the above job
-      - name: Run OP-Translator
-        timeout-minutes: 10
-        uses: devcontainers/ci@v0.3
-        with:
-          imageName: ghcr.io/syndicateprotocol/metabased-devcontainer
-          imageTag: cache-pr-${{ github.event.pull_request.number }}
-          # Enable caching
-          push: always
-          # Pull cached images from both main branch and PR branch
-          cacheFrom: |
-            ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
-            ghcr.io/syndicateprotocol/metabased-devcontainer:cache-pr-${{ github.event.pull_request.number }}
-          runCmd: |
-            # Start OP-translator in background
-            just -f .devcontainer/justfile run-op-translator &
-
-            # TODO - requires OP L2 to run first
-      #            # Wait for OP-translator to be ready via health check
-      #            echo "[STATUS] Waiting for OP-translator to be ready..."
-      #            until just -f .devcontainer/justfile op-translator-health-check | grep -q "result"; do
-      #              sleep 10
-      #            done
-      #            echo "[STATUS] op-translator is ready"
-
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
