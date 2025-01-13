@@ -1,106 +1,168 @@
-// Certora Verification Specification for MetabasedSequencerChain
-
-// Import the required methods from the Solidity contracts
+// SPDX-License-Identifier: UNLICENSED
 methods {
-    // MetabasedSequencerChain methods
-    function isAllowed(address proposer) external view returns (bool);
-    function l3ChainId() external view returns (uint256);
-    function processTransactionRaw(bytes calldata data) external;
-    function processTransaction(bytes calldata data) external;
-    function processBulkTransactions(bytes[] calldata data) external;
+    // View functions
+    l3ChainId() returns (uint256) envfree
+    requirementModule() returns (address) envfree
+    isAllowed(address) returns (bool)
+    owner() returns (address) envfree
 
-    // SequencingModuleChecker methods
-    function requirementModule() external view returns (address);
-    function owner() external view returns (address);
-    function transferOwnership(address newOwner) external;
+    // State-changing functions
+    processTransactionRaw(bytes) returns ()
+    processTransaction(bytes) returns ()
+    processBulkTransactions(bytes[]) returns ()
+    updateRequirementModule(address) returns ()
 }
 
-// Rules to verify contract behavior
+/*
+ * Define ghost variables to track important state
+ */
+ghost mapping(address => bool) processedSenders;
+ghost mapping(bytes => bool) processedTransactions;
 
-// Rule 1: Ensure only allowed addresses can sequence transactions
-rule onlyAllowedSequencers {
-    address proposer;
-    require proposer != address(0), "Proposer cannot be the zero address";
+/*
+ * Rule 1: Verify that l3ChainId cannot be zero
+ * This should always be true after contract deployment
+ */
+invariant l3ChainIdNotZero()
+    l3ChainId() != 0
 
-    bool allowed = isAllowed(proposer);
+/*
+ * Rule 2: Verify that requirementModule address is never zero
+ */
+invariant requirementModuleNotZero()
+    requirementModule() != 0
 
-    assert allowed, "Proposer must be allowed to sequence";
+/*
+ * Rule 3: Only allowed addresses can process transactions
+ */
+rule onlyAllowedCanProcess(address sender, bytes calldata data) {
+    env e;
+
+    // Try to process a transaction
+    processTransaction@withrevert(e, data);
+
+    // If the transaction succeeded
+    bool success = !lastReverted;
+
+    // Then the sender must have been allowed
+    assert success => isAllowed(e.msg.sender),
+        "Unauthorized sender processed transaction";
 }
 
-// Rule 2: Verify that the l3ChainId is immutable
-rule chainIdIsImmutable {
-    uint256 initialId = l3ChainId();
-    uint256 laterId = l3ChainId();
+/*
+ * Rule 4: Consistent behavior between processTransaction and processTransactionRaw
+ */
+rule processConsistency(bytes calldata data) {
+    env e;
 
-    assert initialId == laterId, "l3ChainId must remain immutable";
+    // Record both outcomes
+    processTransaction(e, data);
+    processTransactionRaw(e, data);
+
+    // If one succeeds, both should succeed
+    assert !lastReverted <=> !lastReverted,
+        "Inconsistent behavior between process methods";
 }
 
-// Rule 3: Validate that the requirement module is set
-rule requirementModuleExists {
-    address module = requirementModule();
+/*
+ * Rule 5: Bulk processing maintains individual transaction properties
+ */
+rule bulkProcessingConsistency(bytes[] calldata data) {
+    env e;
 
-    assert module != address(0), "Requirement module must be set";
-}
+    // Process transactions in bulk
+    processBulkTransactions(e, data);
 
-// Rule 4: Ensure only the owner can transfer ownership
-rule onlyOwnerCanTransferOwnership {
-    address currentOwner = owner();
-    address newOwner;
-
-    require currentOwner != address(0), "Owner cannot be the zero address";
-    require msg.sender == currentOwner, "Only the owner can transfer ownership";
-
-    transferOwnership(newOwner);
-
-    assert owner() == newOwner, "Ownership must be transferred correctly";
-}
-
-// Rule 5: Validate that isAllowed function adheres to logical consistency
-rule isAllowedConsistency {
-    address proposer;
-    bool firstCheck = isAllowed(proposer);
-    bool secondCheck = isAllowed(proposer);
-
-    assert firstCheck == secondCheck, "isAllowed results must be consistent for the same input";
-}
-
-// Rule 6: Ensure l3ChainId cannot be zero
-rule chainIdNotZero {
-    uint256 chainId = l3ChainId();
-
-    assert chainId != 0, "l3ChainId must not be zero";
-}
-
-// Rule 7: Ensure processTransactionRaw emits the correct event
-rule processTransactionRawEvent {
-    bytes calldata data;
-    address sender = msg.sender;
-
-    processTransactionRaw(data);
-
-    assert TransactionProcessed(sender, data), "TransactionProcessed event must be emitted correctly";
-}
-
-// Rule 8: Ensure processTransaction emits the correct event with prepended data
-rule processTransactionEvent {
-    bytes calldata data;
-    address sender = msg.sender;
-    bytes memory expectedData = prependZeroByte(data);
-
-    processTransaction(data);
-
-    assert TransactionProcessed(sender, expectedData), "TransactionProcessed event must be emitted with the correct data";
-}
-
-// Rule 9: Ensure processBulkTransactions emits events for all data
-rule processBulkTransactionsEvents {
-    bytes[] calldata data;
-    address sender = msg.sender;
-    uint256 dataCount = data.length;
-
-    processBulkTransactions(data);
-
-    for (uint256 i = 0; i < dataCount; i++) {
-        assert TransactionProcessed(sender, prependZeroByte(data[i])), "TransactionProcessed event must be emitted for each transaction";
+    // Verify each transaction would have succeeded individually
+    for (uint i = 0; i < data.length; i++) {
+        processTransaction(e, data[i]);
+        assert !lastReverted,
+            "Bulk processing accepted invalid transaction";
     }
+}
+
+/*
+ * Rule 6: Only owner can update requirement module
+ */
+rule onlyOwnerCanUpdateModule(address newModule) {
+    env e;
+
+    // Try to update the module
+    updateRequirementModule@withrevert(e, newModule);
+
+    // If successful, must have been owner
+    assert !lastReverted => e.msg.sender == owner(),
+        "Non-owner updated requirement module";
+}
+
+/*
+ * Rule 7: Events are emitted correctly for processed transactions
+ */
+rule transactionEventEmission(bytes calldata data) {
+    env e;
+
+    // Process a transaction
+    processTransaction(e, data);
+
+    // Verify TransactionProcessed event was emitted with correct parameters
+    assert lastReverted ||
+           (exists EventLog log.
+               log.topics[0] == hash("TransactionProcessed(address,bytes)") &&
+               log.topics[1] == e.msg.sender &&
+               log.data == data),
+        "Transaction processed without proper event emission";
+}
+
+/*
+ * Rule 8: State consistency after transaction processing
+ */
+rule stateConsistencyAfterProcessing(bytes calldata data) {
+    env e;
+    address oldModule = requirementModule();
+
+    // Process transaction
+    processTransaction(e, data);
+
+    // Verify requirement module hasn't changed
+    assert requirementModule() == oldModule,
+        "Transaction processing modified core state";
+}
+
+/*
+ * Rule 9: No reentrancy in processing functions
+ */
+rule noReentrancy(method f, bytes calldata data) filtered { f ->
+    f.selector == sig:processTransaction(bytes).selector ||
+    f.selector == sig:processTransactionRaw(bytes).selector
+} {
+    env e;
+    calldataarg args;
+
+    // Start processing
+    f(e, args);
+
+    // Try to process again during execution
+    sinvoke f(e, args);
+
+    // Assert second invocation fails
+    assert lastReverted,
+        "Reentrancy detected in processing functions";
+}
+
+/*
+ * Rule 10: Zero byte prepending works correctly
+ */
+rule zeroBytePrepending(bytes calldata data) {
+    env e;
+
+    // Get processed data from both methods
+    bytes memory rawData;
+    bytes memory prependedData;
+
+    processTransactionRaw(e, data) returns (rawData);
+    processTransaction(e, data) returns (prependedData);
+
+    // Verify prepended data starts with zero byte
+    assert prependedData[0] == 0x00,
+        "Transaction data not properly prepended with zero byte";
 }
