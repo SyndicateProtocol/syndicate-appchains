@@ -3,7 +3,7 @@ pragma solidity 0.8.25;
 
 import {AddressStructuredLinkedList} from "src/LinkedList/AddressStructuredLinkedList.sol";
 import {IRequirementModule, PermissionModule} from "src/interfaces/IRequirementModule.sol";
-import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
  * @title RequireAnyModule
