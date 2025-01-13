@@ -38,7 +38,7 @@ func TestBasic(t *testing.T) {
 	mockedL3Call := mockL3.On("BlockNumber", mock.Anything).
 		Return(uint64(0), nil)
 	mockAltDAProvider.On("SetInput", mock.Anything, mock.Anything).
-		Return(altda.GenericCommitment{}, nil)
+		Return(altda.NewGenericCommitment([]byte{}), nil)
 
 	err := publisher.Start(context.Background())
 	require.NoError(t, err, "Publisher should start without error")

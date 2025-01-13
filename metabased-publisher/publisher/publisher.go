@@ -19,12 +19,6 @@ import (
 // TODO (SEQ-186): this should not be configurable - it is dangerous if the value is changed along the way
 const MaxFrameSize = 120_000 - 1
 
-type RPCAPI interface {
-	BlockNumber(ctx context.Context) (uint64, error)
-	BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error)
-	ChainID(ctx context.Context) (*big.Int, error)
-}
-
 type AltDAProvider interface {
 	GetInput(ctx context.Context, comm altda.CommitmentData) ([]byte, error)
 	SetInput(ctx context.Context, img []byte) (altda.CommitmentData, error)
@@ -71,7 +65,7 @@ func NewPublisher(
 	}
 }
 
-func (p *Publisher) Start(ctx context.Context) {
+func (p *Publisher) Start(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	p.ctx = ctx
 	p.cancel = cancel
@@ -89,6 +83,7 @@ func (p *Publisher) Start(ctx context.Context) {
 
 	p.wg.Add(1)
 	go p.loop()
+	return nil
 }
 
 func (p *Publisher) Stop() error {
