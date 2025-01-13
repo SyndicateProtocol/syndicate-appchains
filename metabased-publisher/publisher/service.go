@@ -46,20 +46,20 @@ func Main(version string) cliapp.LifecycleAction {
 var ErrAlreadyStopped = errors.New("already stopped")
 
 type PublisherService struct {
-	rpcClient         RPCAPI
-	metrics          metrics.Metricer
-	log              gethlog.Logger
-	pprofService     *oppprof.Service
-	altDAClient      *altda.DAClient
-	publisher        *Publisher
-	metricsServer    *httputil.HTTPServer
-	version          string
-	pollInterval     time.Duration
-	networkTimeout   time.Duration
+	rpcClient        RPCAPI
+	metrics         metrics.Metricer
+	log             gethlog.Logger
+	pprofService    *oppprof.Service
+	altDAClient     *altda.DAClient
+	publisher       *Publisher
+	metricsServer   *httputil.HTTPServer
+	version         string
+	pollInterval    time.Duration
+	networkTimeout  time.Duration
 	blobUploadTimeout time.Duration
-	stopped          atomic.Bool
+	stopped         atomic.Bool
 	batchInboxAddress common.Address
-	batcherAddress    common.Address
+	batcherAddress   common.Address
 }
 
 func (p *PublisherService) initFromCLIConfig(_ context.Context, version string, cfg *CLIConfig, log gethlog.Logger) error {
