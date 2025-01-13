@@ -18,7 +18,6 @@
 .env
 
 # Build files
-op-translator
 bin/
 generated/
 openapi/

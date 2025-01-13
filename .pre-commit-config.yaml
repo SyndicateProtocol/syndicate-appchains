@@ -5,11 +5,11 @@ repos:
     rev: v1.0.3
     hooks:
       - id: go-fmt-import
-        files: ^(op-translator|metabased-publisher)/
+        files: ^(metabased-publisher)/
       - id: go-vet
-        files: ^(op-translator|metabased-publisher)/
+        files: ^(metabased-publisher)/
       - id: go-lint
-        files: ^(op-translator|metabased-publisher)/
+        files: ^(metabased-publisher)/
       - id: golangci-lint # requires github.com/golangci/golangci-lint
-        files: ^(op-translator|metabased-publisher)/
+        files: ^(metabased-publisher)/
         args: [--config=.golangci.yaml --allow-parallel-runners]
