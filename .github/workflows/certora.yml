@@ -1,0 +1,74 @@
+# This GitHub Action for the Certora Prover is licensed under the MIT License
+# by Syndicate Inc.
+# No other files within this repository are licensed under the MIT License
+# unless the MIT license is stated explicitly at the top of the file.
+
+name: Certora
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  # Allows you to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  ##############################################################################
+  # This job is for running contract verification scripts on the production ####
+  # installation of certora-cli ################################################
+  ##############################################################################
+  certora:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      # Prerequisites for Certora Prover
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "21"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Selecting a toolchain either by action or manual `rustup` calls should
+      # happen before the rust-cache plugin, as it uses the current rustc
+      # version as its cache key
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install Certora Prover
+        run: pip3 install certora-cli==7.22.2
+
+      - name: Install dependencies
+        run: forge install
+
+      # Install solc
+      - name: Install solc
+        run: |
+          pipx install solc-select
+          solc-select install 0.8.25
+          solc-select use 0.8.25
+          ls ~/.solc-select/artifacts/
+          which solc
+
+      - name: Verify
+        env:
+          CERTORAKEY: ${{ secrets.CERTORAKEY }}
+        run:
+          certoraRun ./metabased-contracts/certora/conf/MetabasedSequencerChain.conf
