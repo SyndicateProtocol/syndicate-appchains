@@ -34,11 +34,17 @@ COPY metabased-translator metabased-translator/
 # Build the interceptor binary
 WORKDIR /app/metabased-sequencer
 RUN cargo build --release -p interceptor && \
-    ls -la /app/metabased-sequencer/target/release/interceptor
+    echo "=== Debug: Listing build artifacts ===" && \
+    echo "Current directory:" && pwd && \
+    echo "Contents of target/release:" && \
+    ls -la target/release/ && \
+    echo "Contents of /app/target/release (if exists):" && \
+    ls -la /app/target/release/ || true && \
+    echo "=== End Debug ===" && \
+    cp target/release/interceptor /app/bin/interceptor
 
 # Create directory structure for the final image
-RUN mkdir -p /app/bin && \
-    cp /app/metabased-sequencer/target/release/interceptor /app/bin/
+RUN mkdir -p /app/bin
 
 # Return to root directory
 WORKDIR /app
