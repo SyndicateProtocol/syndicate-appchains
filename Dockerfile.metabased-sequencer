@@ -22,6 +22,9 @@ RUN cargo build --release -p interceptor
 # Now copy the actual source code
 COPY metabased-sequencer metabased-sequencer/
 
+# Build the binary
+RUN cargo build --release -p interceptor
+
 # Stage 2: Create the runtime image
 FROM debian:bookworm-slim
 
