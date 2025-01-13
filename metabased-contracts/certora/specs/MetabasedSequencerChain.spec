@@ -1,5 +1,3 @@
-pragma solidity 0.8.25;
-
 // Certora Verification Specification for MetabasedSequencerChain
 
 // Import the required methods from the Solidity contracts
