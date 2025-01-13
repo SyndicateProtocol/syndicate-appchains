@@ -46,20 +46,20 @@ func Main(version string) cliapp.LifecycleAction {
 var ErrAlreadyStopped = errors.New("already stopped")
 
 type PublisherService struct {
-	rpcClient RPCAPI
-	metrics   metrics.Metricer
-	log                gethlog.Logger
-	pprofService       *oppprof.Service
-	altDAClient        *altda.DAClient
-	publisher          *Publisher
-	metricsServer      *httputil.HTTPServer
-	version            string
-	pollInterval       time.Duration
-	networkTimeout     time.Duration
-	blobUploadTimeout  time.Duration
-	stopped            atomic.Bool
-	batchInboxAddress  common.Address
-	batcherAddress     common.Address
+	rpcClient         RPCAPI
+	metrics           metrics.Metricer
+	log              gethlog.Logger
+	pprofService     *oppprof.Service
+	altDAClient      *altda.DAClient
+	publisher        *Publisher
+	metricsServer    *httputil.HTTPServer
+	version          string
+	pollInterval     time.Duration
+	networkTimeout   time.Duration
+	blobUploadTimeout time.Duration
+	stopped          atomic.Bool
+	batchInboxAddress common.Address
+	batcherAddress   common.Address
 }
 
 func (p *PublisherService) initFromCLIConfig(_ context.Context, version string, cfg *CLIConfig, log gethlog.Logger) error {
@@ -181,7 +181,9 @@ func (p *PublisherService) initPublisher() {
 
 // Start implements cliapp.Lifecycle.
 func (p *PublisherService) Start(ctx context.Context) error {
-	p.publisher.Start(ctx)
+	if err := p.publisher.Start(ctx); err != nil {
+		return fmt.Errorf("failed to start publisher: %w", err)
+	}
 	return nil
 }
 
