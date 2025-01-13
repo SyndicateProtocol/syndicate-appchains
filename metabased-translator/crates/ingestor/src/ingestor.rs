@@ -40,7 +40,8 @@ impl Ingestor {
             .chain
             .get_block_by_number(
                 BlockNumberOrTag::from(block_number),
-                // TODO: BlockTransactionsKind::Full will fail when deserializing OP specific transactions.
+                // TODO (SEQ-472: Determine if we can just use BlockTransactionsKind::Hashes or implement a custom deserializer for OP specific transactions
+                // BlockTransactionsKind::Full will fail when deserializing OP specific transactions.
                 // Either use BlockTransactionsKind::Hashes or implement a custom deserializer for OP specific transactions.
                 BlockTransactionsKind::Hashes,
             )
