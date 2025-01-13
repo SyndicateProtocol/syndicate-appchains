@@ -3,7 +3,7 @@
 # Stage 1: Build the Rust application
 FROM rust:latest AS builder
 
-# Set the working directory
+# Set the working directory for the build
 WORKDIR /app
 
 # First copy workspace root Cargo.toml and workspace member Cargo.toml files
