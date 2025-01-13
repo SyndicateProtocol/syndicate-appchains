@@ -1,12 +1,14 @@
-use alloy_primitives::hex_literal::hex;
 use alloy::primitives::Bytes;
-use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use std::time::Instant;
 use alloy::signers::k256::elliptic_curve::rand_core::RngCore;
+use alloy_primitives::hex_literal::hex;
 use alloy_primitives::{Address, B256, U256};
 use alloy_rlp::{Encodable, RlpDecodable, RlpEncodable};
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use interceptor::infrastructure::{
+    compress_transaction, compress_transactions, decompress_transaction, decompress_transactions,
+};
 use rand::Rng;
-use interceptor::infrastructure::{compress_transaction, compress_transactions, decompress_transaction, decompress_transactions};
+use std::time::Instant;
 
 // Sample transactions used in benchmarks
 const SAMPLE_TX_1: [u8; 110] = hex!("02f86b83014a3407830f4240830f443e825208944e527486594696a7607ff3379e21746689a3fd6d1480c080a0502ec1e72aa5d8e52f2547c3dcb973d6129364828ea54cfd166ea74350a60cd4a02db70ba79cfb18a45d6b415e58aed8947bb66efc1156c2067e59d4ea5c69cfcb");
@@ -14,9 +16,14 @@ const SAMPLE_TX_2: [u8; 132] = hex!("cdb554ea000000000000000000000000b8b904c73d2
 const SAMPLE_TX_3: [u8; 68] = hex!("39509351000000000000000000000000dd2da9ba748722faea8629a215ea47dd15e852f90000000000000000000000000000000000000000000000000429d069189e0000");
 const SAMPLE_TX_4: [u8; 132] = hex!("81813c8b0000000000000000000000000000000000000000000000000000000001026afc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016345785d8a000000000000000000000000000000000000000000000000000000000000671834d8");
 
-fn print_compression_stats(name: &str, original_size: usize, compressed_size: usize,
-                           decompressed_size: usize, compress_time: std::time::Duration,
-                           decompress_time: std::time::Duration) {
+fn print_compression_stats(
+    name: &str,
+    original_size: usize,
+    compressed_size: usize,
+    decompressed_size: usize,
+    compress_time: std::time::Duration,
+    decompress_time: std::time::Duration,
+) {
     let ratio = (1.0 - (compressed_size as f64 / original_size as f64)) * 100.0;
     println!("\n{}", name);
     println!("Compression ratio: {:.2}%", ratio);
@@ -72,7 +79,7 @@ fn bench_single_tx(c: &mut Criterion) {
         compressed_size,
         decompressed_size,
         example_compress_time,
-        example_decompress_time
+        example_decompress_time,
     );
 }
 
@@ -203,7 +210,7 @@ fn bench_batch_multiple_tx(c: &mut Criterion) {
         compressed_size,
         decompressed_size,
         example_compress_time,
-        example_decompress_time
+        example_decompress_time,
     );
 }
 
@@ -214,7 +221,9 @@ fn bench_batch_sizes(c: &mut Criterion) {
         let mut txs = Vec::new();
         txs.push(Bytes::copy_from_slice(&SAMPLE_TX_1));
         for _ in 0..*size {
-            txs.push(Bytes::copy_from_slice(generate_random_raw_transaction_rlp().as_ref()));
+            txs.push(Bytes::copy_from_slice(
+                generate_random_raw_transaction_rlp().as_ref(),
+            ));
         }
 
         // Pre-calculate sizes
@@ -258,7 +267,7 @@ fn bench_batch_sizes(c: &mut Criterion) {
             compressed_size,
             decompressed_size,
             example_compress_time,
-            example_decompress_time
+            example_decompress_time,
         );
     }
     group.finish();

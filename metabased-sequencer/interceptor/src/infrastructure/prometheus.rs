@@ -1,4 +1,5 @@
 use crate::application::Metrics;
+use crate::presentation::json_rpc_errors::Error;
 use prometheus_client::encoding::text::encode;
 use prometheus_client::encoding::EncodeLabelSet;
 use prometheus_client::metrics::counter::Counter;
@@ -7,7 +8,6 @@ use prometheus_client::metrics::histogram::{exponential_buckets, Histogram};
 use prometheus_client::registry::Registry;
 use std::fmt::{Display, Formatter, Write};
 use std::time::Duration;
-use crate::presentation::json_rpc_errors::Error;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
 pub struct Labels {
@@ -67,7 +67,7 @@ pub fn error_to_metric_category(error: Option<&Error>) -> &'static str {
             Error::InvalidParams(_) => "params_error",
             Error::TransactionRejected(_) => "tx_error",
             Error::LimitExceeded => "limit_error",
-        }
+        },
     }
 }
 

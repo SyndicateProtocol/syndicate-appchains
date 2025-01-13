@@ -1,2 +1,144 @@
-[package.metadata.precommit]
-fmt="cargo fmt --all --check --manifest-path metabased-translator/Cargo.toml"
+[workspace]
+members = ["metabased-translator/crates/block-builder", "metabased-translator/crates/ingestor", "metabased-translator/tests",
+    "metabased-sequencer/interceptor",
+    "metabased-sequencer/proxy",
+]
+
+# Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
+# https://doc.rust-lang.org/edition-guide/rust-2021/default-cargo-resolver.html
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.83"
+license = ""
+homepage = ""
+repository = ""
+exclude = [".github/"]
+
+[workspace.dependencies]
+alloy = { version = "0.7.3", features = ["full"] }
+# TODO: Opt into specific features
+jsonrpsee = { version = "0.24.3", features = ["full"] }
+tokio = { version = "1.0", features = ["full"] }
+anyhow = "1.0"
+serde_json = "1.0.128"
+tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"] }
+tracing = "0.1.40"
+clap = { version = "4.5.17", features = ["derive"] }
+hyper = { version = "1.4.1", features = ["full"] }
+bytes = "1.7.1"
+http-body = "1.0.1"
+http-body-util = "0.1"
+pin-project-lite = "0.2.14"
+http = "1.1.0"
+want = { version = "0.3" }
+smallvec = { version = "1.12", features = ["const_generics", "const_new"] }
+futures-util = { version = "0.3", default-features = false }
+futures-channel = { version = "0.3" }
+httparse = { version = "1.8" }
+itoa = { version = "1" }
+h2 = { version = "0.4.2" }
+httpdate = { version = "1.0" }
+reqwest = "0.12.7"
+serde = "1.0.210"
+hyper-util = "0.1.8"
+block-builder = { path = "metabased-translator/crates/block-builder" }
+
+[workspace.metadata.precommit]
+fmt="cargo fmt --all --check"
+
+[workspace.lints.rust]
+missing_debug_implementations = "warn"
+missing_docs = "warn"
+unreachable_pub = "warn"
+unused_must_use = "deny"
+rust_2018_idioms = { level = "deny", priority = -1 }
+unnameable_types = "warn"
+unused_qualifications = "warn"
+
+
+[workspace.lints.clippy]
+# avoid unexpected panics, these are not allowed in production
+unwrap_used = "deny"
+map_unwrap_or = "deny"
+expect_used = "deny"
+# # warns
+missing_const_for_fn = "warn"
+use_self = "warn"
+option_if_let_else = "warn"
+redundant_clone = "warn"
+borrow_as_ptr = "warn"
+branches_sharing_code = "warn"
+clear_with_drain = "warn"
+cloned_instead_of_copied = "warn"
+collection_is_never_read = "warn"
+dbg_macro = "warn"
+derive_partial_eq_without_eq = "warn"
+doc_markdown = "warn"
+empty_line_after_doc_comments = "warn"
+empty_line_after_outer_attr = "warn"
+enum_glob_use = "warn"
+equatable_if_let = "warn"
+explicit_into_iter_loop = "warn"
+explicit_iter_loop = "warn"
+flat_map_option = "warn"
+from_iter_instead_of_collect = "warn"
+if_not_else = "warn"
+if_then_some_else_none = "warn"
+implicit_clone = "warn"
+imprecise_flops = "warn"
+iter_on_empty_collections = "warn"
+iter_on_single_items = "warn"
+iter_with_drain = "warn"
+iter_without_into_iter = "warn"
+large_stack_frames = "warn"
+manual_assert = "warn"
+manual_clamp = "warn"
+manual_is_variant_and = "warn"
+manual_string_new = "warn"
+match_same_arms = "warn"
+mutex_integer = "warn"
+naive_bytecount = "warn"
+needless_bitwise_bool = "warn"
+needless_continue = "warn"
+needless_for_each = "warn"
+needless_pass_by_ref_mut = "warn"
+nonstandard_macro_braces = "warn"
+option_as_ref_cloned = "warn"
+or_fun_call = "warn"
+path_buf_push_overwrite = "warn"
+read_zero_byte_vec = "warn"
+redundant_else = "warn"
+single_char_pattern = "warn"
+string_lit_as_bytes = "warn"
+string_lit_chars_any = "warn"
+suboptimal_flops = "warn"
+suspicious_operation_groupings = "warn"
+trailing_empty_array = "warn"
+trait_duplication_in_bounds = "warn"
+transmute_undefined_repr = "warn"
+trivial_regex = "warn"
+tuple_array_conversions = "warn"
+type_repetition_in_bounds = "warn"
+uninhabited_references = "warn"
+unnecessary_self_imports = "warn"
+unnecessary_struct_initialization = "warn"
+unnested_or_patterns = "warn"
+unused_peekable = "warn"
+unused_rounding = "warn"
+useless_let_if_seq = "warn"
+while_float = "warn"
+zero_sized_map_values = "warn"
+as_ptr_cast_mut = "warn"
+cognitive_complexity = "warn"
+debug_assert_with_mut_call = "warn"
+fallible_impl_from = "warn"
+future_not_send = "warn"
+needless_collect = "warn"
+non_send_fields_in_send_ty = "warn"
+redundant_pub_crate = "warn"
+significant_drop_in_scrutinee = "warn"
+significant_drop_tightening = "warn"
+too_long_first_doc_paragraph = "warn"

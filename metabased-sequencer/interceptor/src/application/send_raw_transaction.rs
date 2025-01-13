@@ -1,16 +1,20 @@
-use std::convert::TryFrom;
 use crate::domain::primitives::Bytes;
 use crate::domain::MetabasedSequencerChainService;
 use crate::presentation::json_rpc_errors::Error;
 use crate::presentation::json_rpc_errors::Error::{InvalidInput, InvalidParams};
-use crate::presentation::json_rpc_errors::InvalidInputError::{MissingChainID, MissingGasPrice, UnableToRLPDecode};
+use crate::presentation::json_rpc_errors::InvalidInputError::{
+    MissingChainID, MissingGasPrice, UnableToRLPDecode,
+};
+use crate::presentation::json_rpc_errors::InvalidParamsError::{
+    MissingParam, NotAnArray, NotHexEncoded, WrongParamCount,
+};
 use crate::presentation::transaction;
 use alloy::consensus::{Transaction, TxEnvelope, TxType};
 use alloy::primitives::private::alloy_rlp::Decodable;
 use alloy::primitives::TxHash;
 use alloy::primitives::U256;
 use jsonrpsee::types::Params;
-use crate::presentation::json_rpc_errors::InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount};
+use std::convert::TryFrom;
 
 /// Sends serialized and signed transaction `tx` using `chain`.
 pub async fn send_raw_transaction<Chain>(encoded: Bytes, chain: &Chain) -> Result<TxHash, Error>
@@ -65,7 +69,8 @@ impl TryFrom<Params<'static>> for SendRawTransactionParams {
             return Err(InvalidParams(WrongParamCount(arr.len())));
         }
         let item = arr.pop().ok_or(InvalidParams(MissingParam))?;
-        let raw_tx = item.as_str()
+        let raw_tx = item
+            .as_str()
             .ok_or(InvalidParams(NotHexEncoded))?
             .to_string();
 
@@ -335,5 +340,4 @@ mod tests {
         let result = SendRawTransactionParams::try_from(params);
         assert!(matches!(result, Err(InvalidParams(NotHexEncoded))));
     }
-
 }
