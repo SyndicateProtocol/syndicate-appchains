@@ -1,0 +1,50 @@
+name: Docker Publish Dry Run
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "metabased-sequencer/**"
+      - "Dockerfile.metabased-sequencer"
+      - "Cargo.toml"  # Include this since it affects the build
+
+env:
+  REGISTRY: ghcr.io
+  METABASED_SEQUENCER_IMAGE_NAME: ${{ github.repository }}/metabased-sequencer
+
+jobs:
+  dry-run-build-metabased-sequencer:
+    name: Metabased Sequencer Build (Dry Run)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract metadata for metabased-sequencer
+        id: meta-sequencer
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.METABASED_SEQUENCER_IMAGE_NAME }}
+          tags: |
+            type=sha,format=long
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build metabased-sequencer Docker image (dry run)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.metabased-sequencer
+          push: false
+          platforms: linux/amd64
+          tags: ${{ steps.meta-sequencer.outputs.tags }}
+          labels: ${{ steps.meta-sequencer.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
