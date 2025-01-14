@@ -194,23 +194,23 @@ func (p *PublisherService) Stop(ctx context.Context) error {
 	}
 	p.log.Info("Stopping publisher")
 
-	var errs []error
+	var errs error
 
 	if p.publisher != nil {
 		if err := p.publisher.Stop(); err != nil {
-			errs = append(errs, fmt.Errorf("failed to stop publisher: %w", err))
+			errs = errors.Join(errs, fmt.Errorf("failed to stop publisher: %w", err))
 		}
 	}
 
 	if p.pprofService != nil {
 		if err := p.pprofService.Stop(ctx); err != nil {
-			errs = append(errs, fmt.Errorf("failed to stop PProf server: %w", err))
+			errs = errors.Join(errs, fmt.Errorf("failed to stop PProf server: %w", err))
 		}
 	}
 
 	if p.metricsServer != nil {
 		if err := p.metricsServer.Stop(ctx); err != nil {
-			errs = append(errs, fmt.Errorf("failed to stop metrics server: %w", err))
+			errs = errors.Join(errs, fmt.Errorf("failed to stop metrics server: %w", err))
 		}
 	}
 
@@ -218,21 +218,11 @@ func (p *PublisherService) Stop(ctx context.Context) error {
 		p.rpcClient.Close()
 	}
 
-	var result error
-	if len(errs) > 0 {
-		// Combine all errors into a single error message
-		var messages []string
-		for _, err := range errs {
-			messages = append(messages, err.Error())
-		}
-		result = fmt.Errorf("multiple errors occurred: %v", messages)
-	}
-
-	if result == nil {
+	if errs == nil {
 		p.stopped.Store(true)
 		p.log.Info("Publisher stopped")
 	}
-	return result
+	return errs
 }
 
 // Stopped implements cliapp.Lifecycle.
@@ -249,11 +239,7 @@ var _ cliapp.Lifecycle = (*PublisherService)(nil)
 func PublisherServiceFromCLIConfig(ctx context.Context, version string, cfg *CLIConfig, log gethlog.Logger) (*PublisherService, error) {
 	var p PublisherService
 	if err := p.initFromCLIConfig(ctx, version, cfg, log); err != nil {
-		stopErr := p.Stop(ctx)
-		if stopErr != nil {
-			return nil, fmt.Errorf("initialization failed: %w, cleanup failed: %w", err, stopErr)
-		}
-		return nil, fmt.Errorf("initialization failed: %w", err)
+		return nil, errors.Join(err, p.Stop(ctx)) // try to clean up our failed initialization attempt
 	}
 	return &p, nil
 }

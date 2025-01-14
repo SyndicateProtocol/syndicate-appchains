@@ -2,7 +2,6 @@ package publisher
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -72,41 +71,25 @@ type mockEthClient struct{ mock.Mock }
 // Verify interface compliance
 var _ RPCClient = (*mockEthClient)(nil)
 
-// mockArg0 is a helper function to safely type assert the first argument
-func mockArg0[T any](args mock.Arguments) T {
-	if len(args) == 0 {
-		var zero T
-		return zero
-	}
-	if args[0] == nil {
-		var zero T
-		return zero
-	}
-	// Use a separate variable to store the type assertion result
-	// This satisfies errcheck by explicitly handling the ok value
-	var val T
-	if args[0] != nil {
-		var ok bool
-		if val, ok = args[0].(T); !ok {
-			panic(fmt.Sprintf("mockArg0: failed to type assert argument to %T", val))
-		}
-	}
-	return val
+// NOTE: this can be re-used, leaving here for now for convenience
+// Args0 returns the first argument of a mock call as a typed value. (used to avoid ignoring the "errcheck" lint everywhere)
+func Args0[T any](args mock.Arguments) T {
+	return args.Get(0).(T) //nolint:errcheck // mock safe cast
 }
 
 func (m *mockEthClient) BlockNumber(ctx context.Context) (uint64, error) {
 	args := m.Called(ctx)
-	return mockArg0[uint64](args), args.Error(1)
+	return Args0[uint64](args), args.Error(1)
 }
 
 func (m *mockEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
 	args := m.Called(ctx, number)
-	return mockArg0[*types.Block](args), args.Error(1)
+	return Args0[*types.Block](args), args.Error(1)
 }
 
 func (m *mockEthClient) ChainID(ctx context.Context) (*big.Int, error) {
 	args := m.Called(ctx)
-	return mockArg0[*big.Int](args), args.Error(1)
+	return Args0[*big.Int](args), args.Error(1)
 }
 
 func (m *mockEthClient) Close() {
@@ -120,10 +103,10 @@ var _ AltDAProvider = (*mockAltDAProvider)(nil)
 
 func (m *mockAltDAProvider) GetInput(ctx context.Context, comm altda.CommitmentData) ([]byte, error) {
 	args := m.Called(ctx, comm)
-	return mockArg0[[]byte](args), args.Error(1)
+	return Args0[[]byte](args), args.Error(1)
 }
 
 func (m *mockAltDAProvider) SetInput(ctx context.Context, img []byte) (altda.CommitmentData, error) {
 	args := m.Called(ctx, img)
-	return mockArg0[altda.CommitmentData](args), args.Error(1)
+	return Args0[altda.CommitmentData](args), args.Error(1)
 }
