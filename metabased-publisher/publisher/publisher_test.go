@@ -83,9 +83,14 @@ func mockArg0[T any](args mock.Arguments) T {
 		var zero T
 		return zero
 	}
-	val, ok := args[0].(T)
-	if !ok {
-		panic(fmt.Sprintf("mockArg0: failed to type assert argument to %T", *new(T)))
+	// Use a separate variable to store the type assertion result
+	// This satisfies errcheck by explicitly handling the ok value
+	var val T
+	if args[0] != nil {
+		var ok bool
+		if val, ok = args[0].(T); !ok {
+			panic(fmt.Sprintf("mockArg0: failed to type assert argument to %T", val))
+		}
 	}
 	return val
 }
