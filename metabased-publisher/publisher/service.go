@@ -26,7 +26,7 @@ import (
 // Main is the entrypoint into the Batch Submitter.
 // This method returns a cliapp.LifecycleAction, to create an op-service CLI-lifecycle-managed batch-submitter with.
 func Main(version string) cliapp.LifecycleAction {
-	return func(cliCtx *cli.Context, closeApp context.CancelFunc) (cliapp.Lifecycle, error) {
+	return func(cliCtx *cli.Context, closeApp context.CancelCauseFunc) (cliapp.Lifecycle, error) {
 		if err := flags.CheckRequired(cliCtx); err != nil {
 			return nil, err
 		}
@@ -47,18 +47,18 @@ func Main(version string) cliapp.LifecycleAction {
 var ErrAlreadyStopped = errors.New("already stopped")
 
 type PublisherService struct {
-	rpcClient         RPCClient
 	metrics           metrics.Metricer
 	log               gethlog.Logger
-	pprofService      *oppprof.Service
-	altDAClient       *altda.DAClient
-	publisher         *Publisher
+	rpcClient         RPCClient
 	metricsServer     *httputil.HTTPServer
+	publisher         *Publisher
+	altDAClient       *altda.DAClient
+	pprofService      *oppprof.Service
 	version           string
 	pollInterval      time.Duration
 	networkTimeout    time.Duration
 	blobUploadTimeout time.Duration
-	stopped           atomic.Value // holds bool
+	stopped           atomic.Bool
 	batchInboxAddress common.Address
 	batcherAddress    common.Address
 }
@@ -189,7 +189,7 @@ func (p *PublisherService) Start(ctx context.Context) error {
 
 // Stop implements cliapp.Lifecycle.
 func (p *PublisherService) Stop(ctx context.Context) error {
-	if v := p.stopped.Load(); v != nil && v.(bool) {
+	if p.stopped.Load() {
 		return ErrAlreadyStopped
 	}
 	p.log.Info("Stopping publisher")
@@ -237,11 +237,7 @@ func (p *PublisherService) Stop(ctx context.Context) error {
 
 // Stopped implements cliapp.Lifecycle.
 func (p *PublisherService) Stopped() bool {
-	v := p.stopped.Load()
-	if v == nil {
-		return false
-	}
-	return v.(bool)
+	return p.stopped.Load()
 }
 
 // guarantees that the cliapp.Lifecycle interface is implemented by PublisherService
@@ -255,9 +251,9 @@ func PublisherServiceFromCLIConfig(ctx context.Context, version string, cfg *CLI
 	if err := p.initFromCLIConfig(ctx, version, cfg, log); err != nil {
 		stopErr := p.Stop(ctx)
 		if stopErr != nil {
-			return nil, fmt.Errorf("initialization failed: %v, cleanup failed: %v", err, stopErr)
+			return nil, fmt.Errorf("initialization failed: %w, cleanup failed: %w", err, stopErr)
 		}
-		return nil, fmt.Errorf("initialization failed: %v", err)
+		return nil, fmt.Errorf("initialization failed: %w", err)
 	}
 	return &p, nil
 }
