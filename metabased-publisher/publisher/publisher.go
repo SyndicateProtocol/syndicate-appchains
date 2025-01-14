@@ -12,13 +12,20 @@ import (
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
 )
 
 // TODO (SEQ-186): this should not be configurable - it is dangerous if the value is changed along the way
 const MaxFrameSize = 120_000 - 1
+
+// RPCClient defines the interface for RPC operations needed by the publisher
+type RPCClient interface {
+	BlockNumber(ctx context.Context) (uint64, error)
+	BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error)
+	ChainID(ctx context.Context) (*big.Int, error)
+	Close()
+}
 
 type AltDAProvider interface {
 	GetInput(ctx context.Context, comm altda.CommitmentData) ([]byte, error)
@@ -31,7 +38,7 @@ type Publisher struct {
 	log                   gethlog.Logger
 	ctx                   context.Context
 	metrics               metrics.Metricer
-	opTranslatorClient    *ethclient.Client
+	opTranslatorClient    RPCClient
 	cancel                context.CancelFunc
 	wg                    sync.WaitGroup
 	latestProcessedBlock  uint64
@@ -43,7 +50,7 @@ type Publisher struct {
 }
 
 func NewPublisher(
-	opTranslatorCLient *ethclient.Client,
+	opTranslatorCLient RPCClient,
 	altDA AltDAProvider,
 	batcherAddress common.Address,
 	batchInboxAddress common.Address,

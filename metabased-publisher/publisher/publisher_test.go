@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
+
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/stretchr/testify/mock"
@@ -72,14 +72,7 @@ func TestBasic(t *testing.T) {
 type mockEthClient struct{ mock.Mock }
 
 // Verify interface compliance
-var _ interface {
-	BlockNumber(ctx context.Context) (uint64, error)
-	BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error)
-	BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error)
-	ChainID(ctx context.Context) (*big.Int, error)
-	Close()
-	Client() *rpc.Client
-} = (*mockEthClient)(nil)
+var _ RPCClient = (*mockEthClient)(nil)
 
 func (m *mockEthClient) BlockNumber(ctx context.Context) (uint64, error) {
 	args := m.Called(ctx)
@@ -91,18 +84,7 @@ func (m *mockEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*ty
 	return args.Get(0).(*types.Block), args.Error(1)
 }
 
-func (m *mockEthClient) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
-	args := m.Called(ctx, hash)
-	return args.Get(0).(*types.Block), args.Error(1)
-}
 
-func (m *mockEthClient) Client() *rpc.Client {
-	args := m.Called()
-	if ret := args.Get(0); ret != nil {
-		return ret.(*rpc.Client)
-	}
-	return nil
-}
 
 func (m *mockEthClient) ChainID(ctx context.Context) (*big.Int, error) {
 	args := m.Called(ctx)

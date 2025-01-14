@@ -47,7 +47,7 @@ func Main(version string) cliapp.LifecycleAction {
 var ErrAlreadyStopped = errors.New("already stopped")
 
 type PublisherService struct {
-	rpcClient         *ethclient.Client
+	rpcClient         RPCClient
 	metrics           metrics.Metricer
 	log               gethlog.Logger
 	pprofService      *oppprof.Service
