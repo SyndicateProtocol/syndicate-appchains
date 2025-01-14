@@ -26,7 +26,7 @@ import (
 // Main is the entrypoint into the Batch Submitter.
 // This method returns a cliapp.LifecycleAction, to create an op-service CLI-lifecycle-managed batch-submitter with.
 func Main(version string) cliapp.LifecycleAction {
-	return func(cliCtx *cli.Context, closeApp context.CancelCauseFunc) (cliapp.Lifecycle, error) {
+	return func(cliCtx *cli.Context, closeApp context.CancelFunc) (cliapp.Lifecycle, error) {
 		if err := flags.CheckRequired(cliCtx); err != nil {
 			return nil, err
 		}
@@ -58,7 +58,7 @@ type PublisherService struct {
 	pollInterval      time.Duration
 	networkTimeout    time.Duration
 	blobUploadTimeout time.Duration
-	stopped           atomic.Bool
+	stopped           atomic.Value // holds bool
 	batchInboxAddress common.Address
 	batcherAddress    common.Address
 }
@@ -66,6 +66,7 @@ type PublisherService struct {
 func (p *PublisherService) initFromCLIConfig(_ context.Context, version string, cfg *CLIConfig, log gethlog.Logger) error {
 	p.version = version
 	p.log = log
+	p.stopped.Store(false) // Initialize atomic.Value
 
 	p.log.Info("Starting publisher with the following config", "config", fmt.Sprintf("%+v", *cfg))
 
@@ -188,33 +189,43 @@ func (p *PublisherService) Start(ctx context.Context) error {
 
 // Stop implements cliapp.Lifecycle.
 func (p *PublisherService) Stop(ctx context.Context) error {
-	if p.stopped.Load() {
+	if v := p.stopped.Load(); v != nil && v.(bool) {
 		return ErrAlreadyStopped
 	}
 	p.log.Info("Stopping publisher")
 
-	var result error
+	var errs []error
 
 	if p.publisher != nil {
 		if err := p.publisher.Stop(); err != nil {
-			result = errors.Join(result, fmt.Errorf("failed to stop publisher: %w", err))
+			errs = append(errs, fmt.Errorf("failed to stop publisher: %w", err))
 		}
 	}
 
 	if p.pprofService != nil {
 		if err := p.pprofService.Stop(ctx); err != nil {
-			result = errors.Join(result, fmt.Errorf("failed to stop PProf server: %w", err))
+			errs = append(errs, fmt.Errorf("failed to stop PProf server: %w", err))
 		}
 	}
 
 	if p.metricsServer != nil {
 		if err := p.metricsServer.Stop(ctx); err != nil {
-			result = errors.Join(result, fmt.Errorf("failed to stop metrics server: %w", err))
+			errs = append(errs, fmt.Errorf("failed to stop metrics server: %w", err))
 		}
 	}
 
 	if p.rpcClient != nil {
 		p.rpcClient.Close()
+	}
+
+	var result error
+	if len(errs) > 0 {
+		// Combine all errors into a single error message
+		var messages []string
+		for _, err := range errs {
+			messages = append(messages, err.Error())
+		}
+		result = fmt.Errorf("multiple errors occurred: %v", messages)
 	}
 
 	if result == nil {
@@ -226,7 +237,11 @@ func (p *PublisherService) Stop(ctx context.Context) error {
 
 // Stopped implements cliapp.Lifecycle.
 func (p *PublisherService) Stopped() bool {
-	return p.stopped.Load()
+	v := p.stopped.Load()
+	if v == nil {
+		return false
+	}
+	return v.(bool)
 }
 
 // guarantees that the cliapp.Lifecycle interface is implemented by PublisherService
@@ -238,7 +253,11 @@ var _ cliapp.Lifecycle = (*PublisherService)(nil)
 func PublisherServiceFromCLIConfig(ctx context.Context, version string, cfg *CLIConfig, log gethlog.Logger) (*PublisherService, error) {
 	var p PublisherService
 	if err := p.initFromCLIConfig(ctx, version, cfg, log); err != nil {
-		return nil, errors.Join(err, p.Stop(ctx)) // try to clean up our failed initialization attempt
+		stopErr := p.Stop(ctx)
+		if stopErr != nil {
+			return nil, fmt.Errorf("initialization failed: %v, cleanup failed: %v", err, stopErr)
+		}
+		return nil, fmt.Errorf("initialization failed: %v", err)
 	}
 	return &p, nil
 }

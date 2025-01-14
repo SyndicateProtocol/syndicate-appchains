@@ -1,6 +1,6 @@
 module github.com/SyndicateProtocol/metabased-rollup
 
-go 1.23
+go 1.18
 
 require (
 	github.com/ethereum-optimism/optimism v1.9.3
