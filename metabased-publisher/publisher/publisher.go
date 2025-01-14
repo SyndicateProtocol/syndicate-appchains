@@ -19,10 +19,12 @@ import (
 // TODO (SEQ-186): this should not be configurable - it is dangerous if the value is changed along the way
 const MaxFrameSize = 120_000 - 1
 
-type RPCAPI interface {
+// RPCClient defines the interface for RPC operations needed by the publisher
+type RPCClient interface {
 	BlockNumber(ctx context.Context) (uint64, error)
 	BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error)
 	ChainID(ctx context.Context) (*big.Int, error)
+	Close()
 }
 
 type AltDAProvider interface {
@@ -36,7 +38,7 @@ type Publisher struct {
 	log                   gethlog.Logger
 	ctx                   context.Context
 	metrics               metrics.Metricer
-	opTranslatorClient    RPCAPI
+	opTranslatorClient    RPCClient
 	cancel                context.CancelFunc
 	wg                    sync.WaitGroup
 	latestProcessedBlock  uint64
@@ -48,7 +50,7 @@ type Publisher struct {
 }
 
 func NewPublisher(
-	opTranslatorCLient RPCAPI,
+	opTranslatorCLient RPCClient,
 	altDA AltDAProvider,
 	batcherAddress common.Address,
 	batchInboxAddress common.Address,

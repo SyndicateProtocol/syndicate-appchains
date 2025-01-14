@@ -9,15 +9,16 @@ import (
 
 	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/flags"
 	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/metrics"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/pkg/rpc-clients"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	opservice "github.com/ethereum-optimism/optimism/op-service"
+
 	"github.com/ethereum-optimism/optimism/op-service/cliapp"
 	"github.com/ethereum-optimism/optimism/op-service/httputil"
 	oplog "github.com/ethereum-optimism/optimism/op-service/log"
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	"github.com/ethereum-optimism/optimism/op-service/oppprof"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/urfave/cli/v2"
 )
@@ -46,25 +47,26 @@ func Main(version string) cliapp.LifecycleAction {
 var ErrAlreadyStopped = errors.New("already stopped")
 
 type PublisherService struct {
-	opTranslatorClient *rpc.RPCClient
-	metrics            metrics.Metricer
-	log                gethlog.Logger
-	pprofService       *oppprof.Service
-	altDAClient        *altda.DAClient
-	publisher          *Publisher
-	metricsServer      *httputil.HTTPServer
-	version            string
-	pollInterval       time.Duration
-	networkTimeout     time.Duration
-	blobUploadTimeout  time.Duration
-	stopped            atomic.Bool
-	batchInboxAddress  common.Address
-	batcherAddress     common.Address
+	metrics           metrics.Metricer
+	log               gethlog.Logger
+	rpcClient         RPCClient
+	metricsServer     *httputil.HTTPServer
+	publisher         *Publisher
+	altDAClient       *altda.DAClient
+	pprofService      *oppprof.Service
+	version           string
+	pollInterval      time.Duration
+	networkTimeout    time.Duration
+	blobUploadTimeout time.Duration
+	stopped           atomic.Bool
+	batchInboxAddress common.Address
+	batcherAddress    common.Address
 }
 
 func (p *PublisherService) initFromCLIConfig(_ context.Context, version string, cfg *CLIConfig, log gethlog.Logger) error {
 	p.version = version
 	p.log = log
+	p.stopped.Store(false) // Initialize atomic.Value
 
 	p.log.Info("Starting publisher with the following config", "config", fmt.Sprintf("%+v", *cfg))
 
@@ -107,11 +109,11 @@ func (p *PublisherService) initMetrics(cfg *CLIConfig) {
 
 // initRPCClient creates the RPC client for the op-translator
 func (p *PublisherService) initRPCClient(cfg *CLIConfig) error {
-	opTranslatorClient, err := rpc.Connect(cfg.OpTranslatorRPCURL)
+	var err error
+	p.rpcClient, err = ethclient.Dial(cfg.OpTranslatorRPCURL)
 	if err != nil {
 		return fmt.Errorf("failed to dial L3 chain RPC: %w", err)
 	}
-	p.opTranslatorClient = opTranslatorClient
 	return nil
 }
 
@@ -167,7 +169,7 @@ func (p *PublisherService) initMetricsServer(cfg *CLIConfig) error {
 
 func (p *PublisherService) initPublisher() {
 	p.publisher = NewPublisher(
-		p.opTranslatorClient.AsEthClient(),
+		p.rpcClient,
 		p.altDAClient,
 		p.batcherAddress,
 		p.batchInboxAddress,
@@ -192,35 +194,35 @@ func (p *PublisherService) Stop(ctx context.Context) error {
 	}
 	p.log.Info("Stopping publisher")
 
-	var result error
+	var errs error
 
 	if p.publisher != nil {
 		if err := p.publisher.Stop(); err != nil {
-			result = errors.Join(result, fmt.Errorf("failed to stop publisher: %w", err))
+			errs = errors.Join(errs, fmt.Errorf("failed to stop publisher: %w", err))
 		}
 	}
 
 	if p.pprofService != nil {
 		if err := p.pprofService.Stop(ctx); err != nil {
-			result = errors.Join(result, fmt.Errorf("failed to stop PProf server: %w", err))
+			errs = errors.Join(errs, fmt.Errorf("failed to stop PProf server: %w", err))
 		}
 	}
 
 	if p.metricsServer != nil {
 		if err := p.metricsServer.Stop(ctx); err != nil {
-			result = errors.Join(result, fmt.Errorf("failed to stop metrics server: %w", err))
+			errs = errors.Join(errs, fmt.Errorf("failed to stop metrics server: %w", err))
 		}
 	}
 
-	if p.opTranslatorClient != nil {
-		p.opTranslatorClient.CloseConnection()
+	if p.rpcClient != nil {
+		p.rpcClient.Close()
 	}
 
-	if result == nil {
+	if errs == nil {
 		p.stopped.Store(true)
 		p.log.Info("Publisher stopped")
 	}
-	return result
+	return errs
 }
 
 // Stopped implements cliapp.Lifecycle.

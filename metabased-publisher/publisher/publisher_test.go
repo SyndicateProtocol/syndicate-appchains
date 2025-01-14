@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/metrics"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common"
@@ -20,7 +19,7 @@ import (
 func TestBasic(t *testing.T) {
 	log := testlog.Logger(t, gethlog.LvlDebug)
 
-	mockL3 := &mockOpTranslatorRPC{}
+	mockL3 := &mockEthClient{}
 	mockAltDAProvider := &mockAltDAProvider{}
 	publisher := NewPublisher(
 		mockL3,
@@ -38,11 +37,12 @@ func TestBasic(t *testing.T) {
 	mockedL3Call := mockL3.On("BlockNumber", mock.Anything).
 		Return(uint64(0), nil)
 	mockAltDAProvider.On("SetInput", mock.Anything, mock.Anything).
-		Return(altda.GenericCommitment{}, nil)
+		Return(altda.NewGenericCommitment([]byte{}), nil)
 
 	publisher.Start(context.Background())
 
 	time.Sleep(20 * time.Millisecond) // wait for the publisher to process the batch (more time than the poll interval)
+
 	require.Len(t, mockAltDAProvider.Calls, 0)
 
 	// progress the L3 block number to 1
@@ -55,6 +55,10 @@ func TestBasic(t *testing.T) {
 	time.Sleep(20 * time.Millisecond) // wait for the publisher to process the batch (more time than the poll interval)
 	// assert the altDA provider was called once
 	require.Len(t, mockAltDAProvider.Calls, 1)
+
+	// Clean up
+	err := publisher.Stop()
+	require.NoError(t, err)
 }
 
 ////////////////////////////////////////////////////////////
@@ -62,23 +66,34 @@ func TestBasic(t *testing.T) {
 ////////////////////////////////////////////////////////////
 
 // Mocked L3 RPC API
-type mockOpTranslatorRPC struct{ mock.Mock }
+type mockEthClient struct{ mock.Mock }
 
-var _ RPCAPI = (*mockOpTranslatorRPC)(nil)
+// Verify interface compliance
+var _ RPCClient = (*mockEthClient)(nil)
 
-func (m *mockOpTranslatorRPC) BlockNumber(ctx context.Context) (uint64, error) {
-	args := m.Called(ctx)
-	return mocks.Args0[uint64](args), args.Error(1)
+// NOTE: this can be re-used, leaving here for now for convenience
+// Args0 returns the first argument of a mock call as a typed value. (used to avoid ignoring the "errcheck" lint everywhere)
+func Args0[T any](args mock.Arguments) T {
+	return args.Get(0).(T) //nolint:errcheck // mock safe cast
 }
 
-func (m *mockOpTranslatorRPC) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+func (m *mockEthClient) BlockNumber(ctx context.Context) (uint64, error) {
 	args := m.Called(ctx)
-	return mocks.Args0[*types.Block](args), args.Error(1)
+	return Args0[uint64](args), args.Error(1)
 }
 
-func (m *mockOpTranslatorRPC) ChainID(ctx context.Context) (*big.Int, error) {
+func (m *mockEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+	args := m.Called(ctx, number)
+	return Args0[*types.Block](args), args.Error(1)
+}
+
+func (m *mockEthClient) ChainID(ctx context.Context) (*big.Int, error) {
 	args := m.Called(ctx)
-	return mocks.Args0[*big.Int](args), args.Error(1)
+	return Args0[*big.Int](args), args.Error(1)
+}
+
+func (m *mockEthClient) Close() {
+	m.Called()
 }
 
 // Mocked AltDA Provider
@@ -88,10 +103,10 @@ var _ AltDAProvider = (*mockAltDAProvider)(nil)
 
 func (m *mockAltDAProvider) GetInput(ctx context.Context, comm altda.CommitmentData) ([]byte, error) {
 	args := m.Called(ctx, comm)
-	return mocks.Args0[[]byte](args), args.Error(1)
+	return Args0[[]byte](args), args.Error(1)
 }
 
 func (m *mockAltDAProvider) SetInput(ctx context.Context, img []byte) (altda.CommitmentData, error) {
 	args := m.Called(ctx, img)
-	return mocks.Args0[altda.CommitmentData](args), args.Error(1)
+	return Args0[altda.CommitmentData](args), args.Error(1)
 }
