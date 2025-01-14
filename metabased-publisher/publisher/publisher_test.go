@@ -2,6 +2,7 @@ package publisher
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -58,7 +59,8 @@ func TestBasic(t *testing.T) {
 	require.Len(t, mockAltDAProvider.Calls, 1)
 
 	// Clean up
-	publisher.Stop()
+	err := publisher.Stop()
+	require.NoError(t, err)
 }
 
 ////////////////////////////////////////////////////////////
@@ -81,7 +83,11 @@ func mockArg0[T any](args mock.Arguments) T {
 		var zero T
 		return zero
 	}
-	return args[0].(T)
+	val, ok := args[0].(T)
+	if !ok {
+		panic(fmt.Sprintf("mockArg0: failed to type assert argument to %T", *new(T)))
+	}
+	return val
 }
 
 func (m *mockEthClient) BlockNumber(ctx context.Context) (uint64, error) {
