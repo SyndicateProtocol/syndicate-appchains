@@ -8,10 +8,11 @@ name: Certora
 on:
   push:
     branches: [main]
-  # Only run on PRs that touch metabased-translator/contracts
+  # Only run on PRs that touch metabased-contracts .sol and .spec files to avoid unnecessary CI runs
   pull_request:
     paths:
-      - "../../metabased-translator/block-builder/contracts/**"
+      - "metabased-contracts/src/**/*.sol"
+      - "metabased-contracts/certora/specs/**/*.spec"
 
 env:
   FOUNDRY_PROFILE: ci
@@ -26,7 +27,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: metabased-translator/contracts
+        working-directory: metabased-contracts
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -77,4 +78,4 @@ jobs:
       - name: Verify
         env:
           CERTORAKEY: ${{ secrets.CERTORAKEY }}
-        run: certoraRun ./metabased-contracts/certora/conf/MetabasedSequencerChain.conf
+        run: certoraRun certora/conf/MetabasedSequencerChain.conf
