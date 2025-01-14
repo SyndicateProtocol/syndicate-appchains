@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
+
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -69,22 +69,34 @@ func TestBasic(t *testing.T) {
 type mockEthClient struct{ mock.Mock }
 
 // Verify interface compliance
-var _ *ethclient.Client = &mockEthClient{}
+var _ RPCClient = (*mockEthClient)(nil)
+
+// mockArg0 is a helper function to safely type assert the first argument
+func mockArg0[T any](args mock.Arguments) T {
+	if len(args) == 0 {
+		var zero T
+		return zero
+	}
+	if args[0] == nil {
+		var zero T
+		return zero
+	}
+	return args[0].(T)
+}
 
 func (m *mockEthClient) BlockNumber(ctx context.Context) (uint64, error) {
 	args := m.Called(ctx)
-	return args.Get(0).(uint64), args.Error(1)
+	return mockArg0[uint64](args), args.Error(1)
 }
 
 func (m *mockEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
 	args := m.Called(ctx, number)
-	return args.Get(0).(*types.Block), args.Error(1)
+	return mockArg0[*types.Block](args), args.Error(1)
 }
-
 
 func (m *mockEthClient) ChainID(ctx context.Context) (*big.Int, error) {
 	args := m.Called(ctx)
-	return args.Get(0).(*big.Int), args.Error(1)
+	return mockArg0[*big.Int](args), args.Error(1)
 }
 
 func (m *mockEthClient) Close() {
@@ -98,10 +110,10 @@ var _ AltDAProvider = (*mockAltDAProvider)(nil)
 
 func (m *mockAltDAProvider) GetInput(ctx context.Context, comm altda.CommitmentData) ([]byte, error) {
 	args := m.Called(ctx, comm)
-	return args.Get(0).([]byte), args.Error(1)
+	return mockArg0[[]byte](args), args.Error(1)
 }
 
 func (m *mockAltDAProvider) SetInput(ctx context.Context, img []byte) (altda.CommitmentData, error) {
 	args := m.Called(ctx, img)
-	return args.Get(0).(altda.CommitmentData), args.Error(1)
+	return mockArg0[altda.CommitmentData](args), args.Error(1)
 }
