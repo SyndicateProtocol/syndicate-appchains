@@ -18,6 +18,7 @@ import (
 	opmetrics "github.com/ethereum-optimism/optimism/op-service/metrics"
 	"github.com/ethereum-optimism/optimism/op-service/oppprof"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/urfave/cli/v2"
 )
@@ -46,7 +47,7 @@ func Main(version string) cliapp.LifecycleAction {
 var ErrAlreadyStopped = errors.New("already stopped")
 
 type PublisherService struct {
-	rpcClient         RPCAPI
+	rpcClient         *ethclient.Client
 	metrics           metrics.Metricer
 	log               gethlog.Logger
 	pprofService      *oppprof.Service
@@ -107,11 +108,11 @@ func (p *PublisherService) initMetrics(cfg *CLIConfig) {
 
 // initRPCClient creates the RPC client for the op-translator
 func (p *PublisherService) initRPCClient(cfg *CLIConfig) error {
-	rpcClient, err := NewGethRPCAPI(cfg.OpTranslatorRPCURL)
+	var err error
+	p.rpcClient, err = ethclient.Dial(cfg.OpTranslatorRPCURL)
 	if err != nil {
 		return fmt.Errorf("failed to dial L3 chain RPC: %w", err)
 	}
-	p.rpcClient = rpcClient
 	return nil
 }
 
@@ -181,9 +182,7 @@ func (p *PublisherService) initPublisher() {
 
 // Start implements cliapp.Lifecycle.
 func (p *PublisherService) Start(ctx context.Context) error {
-	if err := p.publisher.Start(ctx); err != nil {
-		return fmt.Errorf("failed to start publisher: %w", err)
-	}
+	p.publisher.Start(ctx)
 	return nil
 }
 
@@ -215,9 +214,7 @@ func (p *PublisherService) Stop(ctx context.Context) error {
 	}
 
 	if p.rpcClient != nil {
-		if closer, ok := p.rpcClient.(*GethRPCAPI); ok {
-			closer.Close()
-		}
+		p.rpcClient.Close()
 	}
 
 	if result == nil {

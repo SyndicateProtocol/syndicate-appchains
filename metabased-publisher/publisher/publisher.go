@@ -12,6 +12,7 @@ import (
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/pkg/errors"
 )
@@ -30,7 +31,7 @@ type Publisher struct {
 	log                   gethlog.Logger
 	ctx                   context.Context
 	metrics               metrics.Metricer
-	opTranslatorClient    RPCAPI
+	opTranslatorClient    *ethclient.Client
 	cancel                context.CancelFunc
 	wg                    sync.WaitGroup
 	latestProcessedBlock  uint64
@@ -42,7 +43,7 @@ type Publisher struct {
 }
 
 func NewPublisher(
-	opTranslatorCLient RPCAPI,
+	opTranslatorCLient *ethclient.Client,
 	altDA AltDAProvider,
 	batcherAddress common.Address,
 	batchInboxAddress common.Address,
@@ -65,7 +66,7 @@ func NewPublisher(
 	}
 }
 
-func (p *Publisher) Start(ctx context.Context) error {
+func (p *Publisher) Start(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	p.ctx = ctx
 	p.cancel = cancel
@@ -83,7 +84,6 @@ func (p *Publisher) Start(ctx context.Context) error {
 
 	p.wg.Add(1)
 	go p.loop()
-	return nil
 }
 
 func (p *Publisher) Stop() error {

@@ -20,7 +20,7 @@ import (
 func TestBasic(t *testing.T) {
 	log := testlog.Logger(t, gethlog.LvlDebug)
 
-	mockL3 := &mockOpTranslatorRPC{}
+	mockL3 := &mockEthClient{}
 	mockAltDAProvider := &mockAltDAProvider{}
 	publisher := NewPublisher(
 		mockL3,
@@ -40,8 +40,7 @@ func TestBasic(t *testing.T) {
 	mockAltDAProvider.On("SetInput", mock.Anything, mock.Anything).
 		Return(altda.NewGenericCommitment([]byte{}), nil)
 
-	err := publisher.Start(context.Background())
-	require.NoError(t, err, "Publisher should start without error")
+	publisher.Start(context.Background())
 
 	time.Sleep(20 * time.Millisecond) // wait for the publisher to process the batch (more time than the poll interval)
 	require.Len(t, mockAltDAProvider.Calls, 0)
@@ -67,35 +66,25 @@ func TestBasic(t *testing.T) {
 ////////////////////////////////////////////////////////////
 
 // Mocked L3 RPC API
-type mockOpTranslatorRPC struct{ mock.Mock }
+type mockEthClient struct{ mock.Mock }
 
-var _ RPCAPI = (*mockOpTranslatorRPC)(nil)
-
-func (m *mockOpTranslatorRPC) BlockNumber(ctx context.Context) (uint64, error) {
+func (m *mockEthClient) BlockNumber(ctx context.Context) (uint64, error) {
 	args := m.Called(ctx)
-	val, ok := args.Get(0).(uint64)
-	if !ok {
-		return 0, fmt.Errorf("unexpected type for BlockNumber return value")
-	}
-	return val, args.Error(1)
+	return args.Get(0).(uint64), args.Error(1)
 }
 
-func (m *mockOpTranslatorRPC) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
+func (m *mockEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
 	args := m.Called(ctx)
-	val, ok := args.Get(0).(*types.Block)
-	if !ok {
-		return nil, fmt.Errorf("unexpected type for BlockByNumber return value")
-	}
-	return val, args.Error(1)
+	return args.Get(0).(*types.Block), args.Error(1)
 }
 
-func (m *mockOpTranslatorRPC) ChainID(ctx context.Context) (*big.Int, error) {
+func (m *mockEthClient) ChainID(ctx context.Context) (*big.Int, error) {
 	args := m.Called(ctx)
-	val, ok := args.Get(0).(*big.Int)
-	if !ok {
-		return nil, fmt.Errorf("unexpected type for ChainID return value")
-	}
-	return val, args.Error(1)
+	return args.Get(0).(*big.Int), args.Error(1)
+}
+
+func (m *mockEthClient) Close() {
+	m.Called()
 }
 
 // Mocked AltDA Provider
@@ -105,18 +94,10 @@ var _ AltDAProvider = (*mockAltDAProvider)(nil)
 
 func (m *mockAltDAProvider) GetInput(ctx context.Context, comm altda.CommitmentData) ([]byte, error) {
 	args := m.Called(ctx, comm)
-	val, ok := args.Get(0).([]byte)
-	if !ok {
-		return nil, fmt.Errorf("unexpected type for GetInput return value")
-	}
-	return val, args.Error(1)
+	return args.Get(0).([]byte), args.Error(1)
 }
 
 func (m *mockAltDAProvider) SetInput(ctx context.Context, img []byte) (altda.CommitmentData, error) {
 	args := m.Called(ctx, img)
-	val, ok := args.Get(0).(altda.CommitmentData)
-	if !ok {
-		return altda.NewGenericCommitment([]byte{}), fmt.Errorf("unexpected type for SetInput return value")
-	}
-	return val, args.Error(1)
+	return args.Get(0).(altda.CommitmentData), args.Error(1)
 }
