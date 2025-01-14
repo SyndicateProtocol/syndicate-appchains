@@ -4,3 +4,4 @@
 //! that can be submitted by the batcher.
 pub mod batch;
 pub mod frame;
+pub mod optimism_builder;

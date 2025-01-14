@@ -4,6 +4,7 @@ use block_builder::config::{cli, Configuration};
 use block_builder::connectors::anvil::MetaChainProvider;
 use block_builder::rollups::arbitrum::arbitrum_builder::ArbitrumBlockBuilder;
 use block_builder::rollups::utils::sequencing_chain_blocks_to_mbtxs;
+use block_builder::rollups::utils::BlockBuilder;
 use eyre::Result;
 
 #[tokio::main]
@@ -19,7 +20,7 @@ async fn main() -> Result<()> {
     //       - Fund accounts
 
     // Initialize block builder
-    let arb = ArbitrumBlockBuilder::new();
+    let builder = ArbitrumBlockBuilder::new();
 
     //loop
     loop {
@@ -32,7 +33,7 @@ async fn main() -> Result<()> {
         // TODO: [OP / ARB] Process deposit transactions
 
         // [OP / ARB] Build batch
-        let batch_txn = arb.build_batch_txn(mbtxs);
+        let batch_txn = builder.build_batch_txn(mbtxs);
 
         // Submit batch transaction to mchain
         mchain.submit_txn(batch_txn).await?;
