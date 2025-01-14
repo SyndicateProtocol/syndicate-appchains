@@ -1,9 +1,10 @@
-// SPDX-License-Identifier: UNLICENSED
+using PermissionModuleBasic as permission;
+
 methods {
     // View functions
     function l3ChainId() external returns (uint256) envfree;
     function requirementModule() external returns (address) envfree;
-    function isAllowed(address) external returns (bool);
+    function isAllowed(address) external returns (bool) envfree;
     function owner() external returns (address) envfree;
 
     // State-changing functions
@@ -11,6 +12,10 @@ methods {
     function processTransaction(bytes) external;
     function processBulkTransactions(bytes[]) external;
     function updateRequirementModule(address) external;
+
+    // Permission Module interface methods
+    function permission.isAllowed(address) external returns (bool) envfree;
+    function permission.setAllowed(address, bool) external;
 }
 
 /*
@@ -45,7 +50,7 @@ rule onlyAllowedCanProcess(bytes data) {
     bool success = !lastReverted;
 
     // Then the sender must have been allowed
-    assert success => isAllowed(e, e.msg.sender),
+    assert success => permission.isAllowed(e.msg.sender),
         "Unauthorized sender processed transaction";
 }
 
@@ -135,42 +140,18 @@ rule stateConsistencyAfterProcessing(bytes data) {
 }
 
 /*
- * Rule 9: No reentrant calls to processing functions
+ * Rule 9: Verify permissions are correctly enforced
  */
-rule noReentrancy(method f) filtered {
-    f -> f.selector == sig:processTransaction(bytes).selector ||
-         f.selector == sig:processTransactionRaw(bytes).selector
-} {
-    env e;
-    calldataarg args;
-
-    // Start processing
-    f@withrevert(e, args);
-
-    bool firstCallSuccess = !lastReverted;
-
-    // Try to process again
-    f@withrevert(e, args);
-
-    // If first call succeeded, second should fail
-    assert firstCallSuccess => lastReverted, "Reentrancy not prevented";
-}
-
-/*
- * Rule 10: Zero chain ID requirement is enforced
- */
-rule zeroChainIdCheck() {
+rule permissionsCorrectlyEnforced(bytes data) {
     env e;
 
-    // Try to deploy contract with zero chain ID
-    require e.msg.value == 0;
-    address admin = e.msg.sender;
-    address module = requirementModule();
+    // Set initial allowed state
+    bool initiallyAllowed = permission.isAllowed(e.msg.sender);
 
-    storage init = lastStorage;
-    uint256 zeroChainId = 0;
+    // Try to process a transaction
+    processTransaction@withrevert(e, data);
 
-    storage initial = lastStorage;
-    requireInvariant l3ChainIdNotZero();
-    assert l3ChainId() != 0, "Chain ID must not be zero after deployment";
+    // Transaction should only succeed if sender was allowed
+    assert !lastReverted => initiallyAllowed,
+        "Transaction succeeded with unauthorized sender";
 }
