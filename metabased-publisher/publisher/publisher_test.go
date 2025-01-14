@@ -45,6 +45,8 @@ func TestBasic(t *testing.T) {
 	publisher.Start(context.Background())
 
 	time.Sleep(20 * time.Millisecond) // wait for the publisher to process the batch (more time than the poll interval)
+
+	var err error
 	require.Len(t, mockAltDAProvider.Calls, 0)
 
 	// progress the L3 block number to 1
@@ -89,11 +91,6 @@ func (m *mockEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*ty
 	return mocks.Args0[*types.Block](args), args.Error(1)
 }
 
-func (m *mockEthClient) ChainID(ctx context.Context) (*big.Int, error) {
-	args := m.Called(ctx)
-	return mocks.Args0[*big.Int](args), args.Error(1)
-}
-
 func (m *mockEthClient) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
 	args := m.Called(ctx, hash)
 	return mocks.Args0[*types.Block](args), args.Error(1)
@@ -105,6 +102,11 @@ func (m *mockEthClient) Client() *rpc.Client {
 		return ret.(*rpc.Client)
 	}
 	return nil
+}
+
+func (m *mockEthClient) ChainID(ctx context.Context) (*big.Int, error) {
+	args := m.Called(ctx)
+	return mocks.Args0[*big.Int](args), args.Error(1)
 }
 
 func (m *mockEthClient) Close() {
