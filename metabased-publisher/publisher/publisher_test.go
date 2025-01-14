@@ -2,7 +2,6 @@ package publisher
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -12,7 +11,9 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 	gethlog "github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
@@ -43,6 +44,8 @@ func TestBasic(t *testing.T) {
 	publisher.Start(context.Background())
 
 	time.Sleep(20 * time.Millisecond) // wait for the publisher to process the batch (more time than the poll interval)
+
+	var err error
 	require.Len(t, mockAltDAProvider.Calls, 0)
 
 	// progress the L3 block number to 1
@@ -68,14 +71,37 @@ func TestBasic(t *testing.T) {
 // Mocked L3 RPC API
 type mockEthClient struct{ mock.Mock }
 
+// Verify interface compliance
+var _ interface {
+	BlockNumber(ctx context.Context) (uint64, error)
+	BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error)
+	BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error)
+	ChainID(ctx context.Context) (*big.Int, error)
+	Close()
+	Client() *rpc.Client
+} = (*mockEthClient)(nil)
+
 func (m *mockEthClient) BlockNumber(ctx context.Context) (uint64, error) {
 	args := m.Called(ctx)
 	return args.Get(0).(uint64), args.Error(1)
 }
 
 func (m *mockEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
-	args := m.Called(ctx)
+	args := m.Called(ctx, number)
 	return args.Get(0).(*types.Block), args.Error(1)
+}
+
+func (m *mockEthClient) BlockByHash(ctx context.Context, hash common.Hash) (*types.Block, error) {
+	args := m.Called(ctx, hash)
+	return args.Get(0).(*types.Block), args.Error(1)
+}
+
+func (m *mockEthClient) Client() *rpc.Client {
+	args := m.Called()
+	if ret := args.Get(0); ret != nil {
+		return ret.(*rpc.Client)
+	}
+	return nil
 }
 
 func (m *mockEthClient) ChainID(ctx context.Context) (*big.Int, error) {
