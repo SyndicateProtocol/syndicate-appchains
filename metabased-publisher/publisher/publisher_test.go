@@ -7,12 +7,11 @@ import (
 	"time"
 
 	"github.com/SyndicateProtocol/metabased-rollup/metabased-publisher/metrics"
-	"github.com/SyndicateProtocol/metabased-rollup/op-translator/mocks"
 	altda "github.com/ethereum-optimism/optimism/op-alt-da"
 	"github.com/ethereum-optimism/optimism/op-service/testlog"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-
+	"github.com/ethereum/go-ethereum/ethclient"
 	gethlog "github.com/ethereum/go-ethereum/log"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -70,22 +69,22 @@ func TestBasic(t *testing.T) {
 type mockEthClient struct{ mock.Mock }
 
 // Verify interface compliance
-var _ RPCClient = (*mockEthClient)(nil)
+var _ *ethclient.Client = &mockEthClient{}
 
 func (m *mockEthClient) BlockNumber(ctx context.Context) (uint64, error) {
 	args := m.Called(ctx)
-	return mocks.Args0[uint64](args), args.Error(1)
+	return args.Get(0).(uint64), args.Error(1)
 }
 
 func (m *mockEthClient) BlockByNumber(ctx context.Context, number *big.Int) (*types.Block, error) {
 	args := m.Called(ctx, number)
-	return mocks.Args0[*types.Block](args), args.Error(1)
+	return args.Get(0).(*types.Block), args.Error(1)
 }
 
 
 func (m *mockEthClient) ChainID(ctx context.Context) (*big.Int, error) {
 	args := m.Called(ctx)
-	return mocks.Args0[*big.Int](args), args.Error(1)
+	return args.Get(0).(*big.Int), args.Error(1)
 }
 
 func (m *mockEthClient) Close() {
@@ -99,10 +98,10 @@ var _ AltDAProvider = (*mockAltDAProvider)(nil)
 
 func (m *mockAltDAProvider) GetInput(ctx context.Context, comm altda.CommitmentData) ([]byte, error) {
 	args := m.Called(ctx, comm)
-	return mocks.Args0[[]byte](args), args.Error(1)
+	return args.Get(0).([]byte), args.Error(1)
 }
 
 func (m *mockAltDAProvider) SetInput(ctx context.Context, img []byte) (altda.CommitmentData, error) {
 	args := m.Called(ctx, img)
-	return mocks.Args0[altda.CommitmentData](args), args.Error(1)
+	return args.Get(0).(altda.CommitmentData), args.Error(1)
 }
