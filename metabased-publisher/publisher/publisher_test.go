@@ -71,7 +71,7 @@ func TestBasic(t *testing.T) {
 type mockEthClient struct{ mock.Mock }
 
 // Verify interface compliance
-var _ RPCClient = (*mockEthClient)(nil)
+var _ *ethclient.Client = &mockEthClient{}
 
 // mockArg0 is a helper function to safely type assert the first argument
 func mockArg0[T any](args mock.Arguments) T {
