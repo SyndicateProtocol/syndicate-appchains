@@ -4,8 +4,8 @@ use alloy::{
     providers::{Provider, ProviderBuilder, RootProvider},
     transports::BoxTransport,
 };
-use eyre::eyre;
-use std::{error::Error, time::Duration};
+use eyre::{eyre, Error};
+use std::time::Duration;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
 use common::types::{Block, BlockAndReceipts, Receipt};
@@ -37,7 +37,7 @@ impl Ingestor {
         start_block: String,
         buffer_size: usize,
         polling_interval: Duration,
-    ) -> Result<(Self, Receiver<BlockAndReceipts>), Box<dyn Error>> {
+    ) -> Result<(Self, Receiver<BlockAndReceipts>), Error> {
         let chain = ProviderBuilder::new().on_builtin(rpc_url).await?;
         let (sender, receiver) = channel(buffer_size);
         Ok((
@@ -61,7 +61,7 @@ impl Ingestor {
     async fn get_block_and_receipts(
         &self,
         block_number: String,
-    ) -> Result<BlockAndReceipts, Box<dyn Error>> {
+    ) -> Result<BlockAndReceipts, Error> {
         let block: Block = self
             .chain
             .client()
@@ -93,10 +93,7 @@ impl Ingestor {
     ///
     /// # Errors
     /// Returns an error if the block number does not match the expected current block number.
-    async fn push_block_and_receipts(
-        &mut self,
-        block_info: BlockAndReceipts,
-    ) -> Result<(), Box<dyn Error>> {
+    async fn push_block_and_receipts(&mut self, block_info: BlockAndReceipts) -> Result<(), Error> {
         if block_info.block.number != self.current_block_number {
             return Err(eyre!("Block number mismatch").into());
         }
@@ -110,7 +107,7 @@ impl Ingestor {
     ///
     /// Polls for new blocks and receipts at the specified interval and sends them to the consumer.
     #[allow(unreachable_pub)] // TODO: remove when used
-    pub async fn start_polling(&mut self) -> Result<(), Box<dyn Error>> {
+    pub async fn start_polling(&mut self) -> Result<(), Error> {
         log::info!("[Ingestor] Starting polling");
 
         let mut interval = tokio::time::interval(self.polling_interval);
@@ -158,7 +155,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_ingestor_new() -> Result<(), Box<dyn Error>> {
+    async fn test_ingestor_new() -> Result<(), Error> {
         let start_block = "0x12958cb".to_string();
         let buffer_size = 10;
         let polling_interval = Duration::from_secs(1);
@@ -172,7 +169,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_poll_block() -> Result<(), Box<dyn Error>> {
+    async fn test_poll_block() -> Result<(), Error> {
         let start_block = "0x12958cb".to_string();
         let polling_interval = Duration::from_secs(1);
 
@@ -207,7 +204,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_poll_block_mismatch_error() -> Result<(), Box<dyn Error>> {
+    async fn test_poll_block_mismatch_error() -> Result<(), Error> {
         let start_block = "0x12958cb".to_string();
         let polling_interval = Duration::from_secs(1);
 
