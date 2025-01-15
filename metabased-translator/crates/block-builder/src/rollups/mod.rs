@@ -6,5 +6,3 @@ pub mod arbitrum;
 pub mod optimism;
 /// Rollup block builder trait
 pub mod rollup_builder;
-/// Utility functions for rollup block translation
-pub mod utils;
