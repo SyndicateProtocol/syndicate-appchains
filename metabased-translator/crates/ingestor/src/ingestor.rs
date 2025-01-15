@@ -55,8 +55,11 @@ impl Ingestor {
     /// - `block_number`: The block number to retrieve.
     ///
     /// # Returns
-    /// The block retrieved from the chain or an error if the block is not found.
-    async fn get_block(&self, block_number: String) -> Result<BlockAndReceipts, Box<dyn Error>> {
+    /// The block and its receipts.
+    async fn get_block_and_receipts(
+        &self,
+        block_number: String,
+    ) -> Result<BlockAndReceipts, Box<dyn Error>> {
         let block: Block = self
             .chain
             .client()
@@ -72,15 +75,13 @@ impl Ingestor {
             .await?
             .ok_or_else(|| eyre!("Block receipts not found"))?;
 
-        // let test = self.chain.get_block_receipts(block_id).await?;
+        let block_and_receipts = BlockAndReceipts { block, receipts };
 
-        let block_info = BlockAndReceipts {
-            block: block,
-            receipts: receipts,
-        };
-
-        log::info!("[Ingestor] Got block: {:?}", block_info.block.number);
-        Ok(block_info)
+        log::info!(
+            "[Ingestor] Got block: {:?}",
+            block_and_receipts.block.number
+        );
+        Ok(block_and_receipts)
     }
 
     /// Sends the retrieved block to the consumer and updates the current block number.
@@ -90,27 +91,32 @@ impl Ingestor {
     ///
     /// # Errors
     /// Returns an error if the block number does not match the expected current block number.
-    async fn push_block(&mut self, block_info: BlockAndReceipts) -> Result<(), Box<dyn Error>> {
+    async fn push_block_and_receipts(
+        &mut self,
+        block_info: BlockAndReceipts,
+    ) -> Result<(), Box<dyn Error>> {
         if block_info.block.number != self.current_block_number {
             return Err(eyre!("Block number mismatch").into());
         }
         self.sender.send(block_info.clone()).await?;
-        let num = hex_to_u128(&self.current_block_number.clone()).expect("Invalid hex value");
+        let num = hex_to_u128(&self.current_block_number.clone())?;
         self.current_block_number = format!("0x{:x}", num + 1);
         Ok(())
     }
 
     /// Starts the polling process.
     ///
-    /// Polls for new blocks at the specified interval and sends them to the consumer.
+    /// Polls for new blocks and receipts at the specified interval and sends them to the consumer.
     pub async fn start_polling(&mut self) -> Result<(), Box<dyn Error>> {
         log::info!("[Ingestor] Starting polling");
 
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
-            let block_info = self.get_block(self.current_block_number.clone()).await?;
+            let block_info = self
+                .get_block_and_receipts(self.current_block_number.clone())
+                .await?;
             log::info!("[Ingestor] Pushing block: {:?}", block_info.block.number);
-            self.push_block(block_info).await?;
+            self.push_block_and_receipts(block_info).await?;
             interval.tick().await;
         }
     }
@@ -142,11 +148,10 @@ mod tests {
             timestamp: "0xTim".to_string(),
             transactions: vec![],
         };
-        let block_info = BlockAndReceipts {
-            block: block,
+        BlockAndReceipts {
+            block,
             receipts: vec![],
-        };
-        block_info
+        }
     }
 
     #[tokio::test]
@@ -179,7 +184,7 @@ mod tests {
         let block = get_dummy_block_info(start_block.clone());
 
         ingestor
-            .push_block(block)
+            .push_block_and_receipts(block)
             .await
             .expect("Failed to poll block");
 
@@ -215,7 +220,7 @@ mod tests {
             "0x{:x}",
             hex_to_u128(start_block.as_str()).expect("Invalid hex value") + 10,
         ));
-        let result = ingestor.push_block(mismatched_block).await;
+        let result = ingestor.push_block_and_receipts(mismatched_block).await;
 
         assert!(result.is_err());
         assert_eq!(result.unwrap_err().to_string(), "Block number mismatch");

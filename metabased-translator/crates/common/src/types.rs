@@ -1,10 +1,10 @@
 //! # Overview of Structs
 //!
-//! - **BlockAndReceipts**: Contains both a `Block` and the associated list of `Receipt` objects.
-//! - **Block**: Represents an Ethereum block, including details like its hash, number, timestamp, and the transactions it contains.
-//! - **Transaction**: Represents a single transaction within a block, including fields such as the transaction hash, sender/recipient addresses, value, and input data.
-//! - **Receipt**: Contains the result of a transaction, including fields like status, logs, and potentially a contract address if one was created.
-//! - **Log**: Represents an individual log entry emitted by a smart contract during a transaction, containing information such as topics, data, and whether it was removed due to a reorganization.
+//! - **`BlockAndReceipts`**: Contains both a `Block` and the associated list of `Receipt` objects.
+//! - **`Block`**: Represents an Ethereum block, including details like its hash, number, timestamp, and the transactions it contains.
+//! - **`Transaction`**: Represents a single transaction within a block, including fields such as the transaction hash, sender/recipient addresses, value, and input data.
+//! - **`Receipt`**: Contains the result of a transaction, including fields like status, logs, and potentially a contract address if one was created.
+//! - **`Log`**: Represents an individual log entry emitted by a smart contract during a transaction, containing information such as topics, data, and whether it was removed due to a reorganization.
 
 use serde::Deserialize;
 
