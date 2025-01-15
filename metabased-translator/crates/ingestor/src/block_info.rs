@@ -38,12 +38,12 @@ pub struct Block {
     /// The timestamp
     pub timestamp: String, // Unix timestamp for the block
     /// The transactions
-    pub transactions: Vec<MTransaction>, // Adjust based on actual data
+    pub transactions: Vec<Transaction>, // Adjust based on actual data
 }
 
 #[derive(Deserialize, Debug, Clone)]
 /// A struct that contains the transaction
-pub struct MTransaction {
+pub struct Transaction {
     /// The block hash
     #[serde(rename = "blockHash")]
     pub block_hash: String, // Hash of the block where the transaction was included, null if pending
