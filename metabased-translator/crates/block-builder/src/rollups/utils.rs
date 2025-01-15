@@ -13,7 +13,7 @@ pub fn sequencing_chain_blocks_to_mbtxs(_blocks: Vec<String>) -> Vec<Vec<u8>> {
 }
 
 /// Trait for rollup-specific block builders that construct batches from transactions
-pub trait BlockBuilder {
+pub trait RollupBlockBuilder {
     /// Creates a new block builder instance
     fn new() -> Self
     where
