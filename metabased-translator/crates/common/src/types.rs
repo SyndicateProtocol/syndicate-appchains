@@ -20,8 +20,6 @@ pub struct BlockAndReceipts {
 #[derive(Deserialize, Debug, Clone)]
 /// A block from the Ethereum chain.
 pub struct Block {
-    /// A unique identifier for the block.
-    pub nonce: String,
     /// The hash of the block.
     pub hash: String,
     /// The block number.
