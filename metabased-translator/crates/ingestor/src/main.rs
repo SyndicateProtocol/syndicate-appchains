@@ -1,5 +1,6 @@
 //! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a consumer using a channel
 
+mod eth_client;
 mod ingestor;
 
 use eyre::eyre;

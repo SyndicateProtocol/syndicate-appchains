@@ -1,22 +1,19 @@
 //! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a consumer using a channel
 
-use alloy::{
-    providers::{Provider, ProviderBuilder, RootProvider},
-    transports::BoxTransport,
-};
 use eyre::{eyre, Error};
 use log::info;
 use std::num::ParseIntError;
 use std::time::Duration;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
-use common::types::{Block, BlockAndReceipts, Receipt};
+use crate::eth_client::EthClient;
+use common::types::BlockAndReceipts;
 
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
 #[allow(unreachable_pub)] // TODO: remove when used
 pub struct Ingestor {
-    chain: RootProvider<BoxTransport>,
+    client: EthClient,
     current_block_number: String,
     sender: Sender<BlockAndReceipts>,
     polling_interval: Duration,
@@ -40,11 +37,11 @@ impl Ingestor {
         buffer_size: usize,
         polling_interval: Duration,
     ) -> Result<(Self, Receiver<BlockAndReceipts>), Error> {
-        let chain = ProviderBuilder::new().on_builtin(rpc_url).await?;
+        let client = EthClient::new(rpc_url).await?;
         let (sender, receiver) = channel(buffer_size);
         Ok((
             Self {
-                chain,
+                client,
                 current_block_number: start_block,
                 sender,
                 polling_interval,
@@ -64,25 +61,15 @@ impl Ingestor {
         &self,
         block_number: String,
     ) -> Result<BlockAndReceipts, Error> {
-        let block: Block = self
-            .chain
-            .client()
-            .request::<_, Option<Block>>("eth_getBlockByNumber", (block_number.clone(), true))
-            .await?
-            // .map(|mut block| block)
-            .ok_or_else(|| eyre!("Block not found"))?;
+        let block = self
+            .client
+            .get_block_by_number(block_number.clone())
+            .await?;
 
-        let receipts = self
-            .chain
-            .client()
-            .request::<_, Option<Vec<Receipt>>>("eth_getBlockReceipts", (block_number.clone(),))
-            .await?
-            .ok_or_else(|| eyre!("Block receipts not found"))?;
+        let receipts = self.client.get_block_receipts(block_number.clone()).await?;
+        info!("Got block: {:?}", block.number);
 
-        let block_and_receipts = BlockAndReceipts { block, receipts };
-
-        info!("Got block: {:?}", block_and_receipts.block.number);
-        Ok(block_and_receipts)
+        Ok(BlockAndReceipts { block, receipts })
     }
 
     /// Sends the retrieved block to the consumer and updates the current block number.
@@ -172,8 +159,9 @@ mod tests {
         let polling_interval = Duration::from_secs(1);
 
         let (sender, mut receiver) = channel(10);
+        let client = EthClient::new(RPC_URL).await?;
         let mut ingestor = Ingestor {
-            chain: ProviderBuilder::new().on_builtin(RPC_URL).await?,
+            client,
             current_block_number: start_block.clone(),
             sender,
             polling_interval,
@@ -207,8 +195,9 @@ mod tests {
         let polling_interval = Duration::from_secs(1);
 
         let (sender, _) = channel(10);
+        let client = EthClient::new(RPC_URL).await?;
         let mut ingestor = Ingestor {
-            chain: ProviderBuilder::new().on_builtin(RPC_URL).await?,
+            client,
             current_block_number: start_block.clone(),
             sender,
             polling_interval,
