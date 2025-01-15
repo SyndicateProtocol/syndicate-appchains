@@ -46,17 +46,17 @@ pub struct SlotterConfig {
     /// The duration of each slot in milliseconds
     pub slot_duration_ms: u64,
     /// The slot number to start at
-    pub start_slot: u64,
+    pub start_slot_number: u64,
     /// The timestamp to start at
-    pub start_timestamp: u64,
+    pub start_slot_timestamp: u64,
 }
 
 impl Default for SlotterConfig {
     fn default() -> Self {
         Self {
             slot_duration_ms: 2_000, // 2 seconds
-            start_slot: 0,
-            start_timestamp: 0,
+            start_slot_number: 0,
+            start_slot_timestamp: 0,
         }
     }
 }
@@ -107,7 +107,10 @@ impl Slotter {
             status: AtomicU8::new(0),
             slots: {
                 let mut slots = LinkedList::new();
-                slots.push_front(Slot::new(config.start_slot, config.start_timestamp));
+                slots.push_front(Slot::new(
+                    config.start_slot_number,
+                    config.start_slot_timestamp,
+                ));
                 slots
             },
             max_slots,
@@ -206,12 +209,10 @@ impl Slotter {
                 }
                 if slot.timestamp < min_timestamp && slot.state == SlotState::Open {
                     slot.state = SlotState::Unsafe;
-                    if !slot.is_empty() {
-                        sender
-                            .send(slot.clone())
-                            .await
-                            .map_err(|_| eyre!("Failed to send slot"))?;
-                    }
+                    sender
+                        .send(slot.clone())
+                        .await
+                        .map_err(|_| eyre!("Failed to send slot"))?;
                 }
             }
         }
@@ -307,12 +308,10 @@ impl Slotter {
             if let Some(mut slot) = self.slots.pop_back() {
                 if slot.state == SlotState::Open {
                     slot.state = SlotState::Unsafe;
-                    if !slot.is_empty() {
-                        sender
-                            .send(slot)
-                            .await
-                            .map_err(|_| eyre!("Failed to send slot"))?;
-                    }
+                    sender
+                        .send(slot)
+                        .await
+                        .map_err(|_| eyre!("Failed to send slot"))?;
                 }
             }
         }
@@ -406,45 +405,89 @@ mod tests {
 
     #[tokio::test]
     async fn test_slotter() {
+        /* Test scenario:
+         *
+         * Slot 0 [9000-10000]:
+         * ┌───────────────────┐
+         * │ empty             │
+         * └───────────────────┘
+         *
+         * Slot 1 [10001-11000]:
+         * ┌───────────────────┐
+         * │ seq    @ 10001 #1 │
+         * │ seq    @ 11000 #2 │
+         * │ settle @ 10001 #1 │ -> Only marked as Unsafe once the blocks for next slot are received
+         * └───────────────────┘
+         *
+         * Slot 2 [11001-12000]:
+         * ┌───────────────────┐
+         * │ seq    @ 11001 #3 │
+         * │ settle @ 11001 #2 │ -> Shouldn't be received (never marked as unsafe)
+         * └───────────────────┘
+         *
+         * Legend:
+         * @ timestamp
+         * # block number
+         */
         let (seq_tx, seq_rx) = channel(100);
         let (settle_tx, settle_rx) = channel(100);
 
-        let start_timestamp_ms = 1_000;
-        let slot_duration_ms = 2_000; // 2 seconds
+        let slot_start_timestamp_ms = 10_000;
+        let slot_duration_ms = 1_000; // 1 second
 
         let slotter = Slotter::new(
             seq_rx,
             settle_rx,
             SlotterConfig {
                 slot_duration_ms,
-                start_slot: 0,
-                start_timestamp: start_timestamp_ms,
+                start_slot_number: 0,
+                start_slot_timestamp: slot_start_timestamp_ms,
             },
         )
         .await
         .unwrap();
 
         let mut slot_rx = slotter.start().unwrap();
+        assert!(slot_rx.is_empty());
 
-        // Send blocks with small delays to ensure proper processing
-        seq_tx.send(create_test_block(1, 3010)).await.unwrap();
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        // send initial blocks, these should fit in slot 1 and make slot 0 be marked as unsafe
+        seq_tx.send(create_test_block(1, 10_001)).await.unwrap();
 
-        settle_tx.send(create_test_block(1, 3011)).await.unwrap();
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        settle_tx.send(create_test_block(1, 10_002)).await.unwrap();
 
-        seq_tx.send(create_test_block(2, 13005)).await.unwrap();
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        let slot0 = slot_rx.recv().await.unwrap();
+        assert_eq!(slot0.timestamp, slot_start_timestamp_ms);
+        assert_eq!(slot0.slot_number, 0);
+        assert_eq!(slot0.sequencing_chain_blocks.len(), 0);
+        assert_eq!(slot0.settlement_chain_blocks.len(), 0);
+        assert_eq!(slot0.state, SlotState::Unsafe);
 
-        settle_tx.send(create_test_block(2, 13006)).await.unwrap();
+        assert!(slot_rx.is_empty());
 
-        // Wait for slot to be marked unsafe
-        let slot = slot_rx.recv().await.unwrap();
+        // send a block for the settlement chain that should fit in slot 2
+        settle_tx.send(create_test_block(2, 11_001)).await.unwrap(); // this block should be fit in slot 1
 
-        assert_eq!(slot.timestamp, 5000); // First slot after 3010/3011 blocks
-        assert_eq!(slot.slot_number, 2);
-        assert_eq!(slot.sequencing_chain_blocks.len(), 1);
-        assert_eq!(slot.settlement_chain_blocks.len(), 1);
-        assert_eq!(slot.state, SlotState::Unsafe);
+        // slot 1 should still be opened (we haven't received any blocks for the sequencing chain ahead of the slot)
+        assert!(slot_rx.is_empty());
+
+        // send a bock for the sequencing chain that still fits in slot 1
+        seq_tx.send(create_test_block(2, 11_000)).await.unwrap();
+
+        // slot 1 should still be opened (we haven't received any blocks for the sequencing chain ahead of the slot)
+        assert!(slot_rx.is_empty());
+
+        // send a block for the sequencing chain that should fit in slot 2
+        // this should mark slot 1 as unsafe
+        seq_tx.send(create_test_block(3, 11_001)).await.unwrap();
+
+        let slot1 = slot_rx.recv().await.unwrap();
+        assert_eq!(slot1.timestamp, slot_start_timestamp_ms + slot_duration_ms);
+        assert_eq!(slot1.slot_number, 1);
+        assert_eq!(slot1.sequencing_chain_blocks.len(), 2);
+        assert_eq!(slot1.settlement_chain_blocks.len(), 1);
+        assert_eq!(slot1.state, SlotState::Unsafe);
+
+        // slot 2 should still be opened
+        assert!(slot_rx.is_empty());
     }
 }
