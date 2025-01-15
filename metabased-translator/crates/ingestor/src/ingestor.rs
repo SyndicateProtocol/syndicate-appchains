@@ -12,6 +12,7 @@ use common::types::{Block, BlockAndReceipts, Receipt};
 
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
+#[allow(unreachable_pub)] // TODO: remove when used
 pub struct Ingestor {
     chain: RootProvider<BoxTransport>,
     current_block_number: String,
@@ -30,6 +31,7 @@ impl Ingestor {
     ///
     /// # Returns
     /// A tuple containing the `Ingestor` instance and a `Receiver` for consuming blocks.
+    #[allow(unreachable_pub)]
     pub async fn new(
         rpc_url: &str,
         start_block: String,
@@ -107,6 +109,7 @@ impl Ingestor {
     /// Starts the polling process.
     ///
     /// Polls for new blocks and receipts at the specified interval and sends them to the consumer.
+    #[allow(unreachable_pub)] // TODO: remove when used
     pub async fn start_polling(&mut self) -> Result<(), Box<dyn Error>> {
         log::info!("[Ingestor] Starting polling");
 

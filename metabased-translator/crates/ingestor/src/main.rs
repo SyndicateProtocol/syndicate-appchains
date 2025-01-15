@@ -37,6 +37,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .await
             .map_err(|e| eyre!("Failed to create ingestor: {:?}", e))?;
 
+    log::info!("Ingestor created successfully. Ch");
     // Spawn a task to log what the receiver receives
     tokio::spawn(async move {
         while let Some(message) = receiver.recv().await {
