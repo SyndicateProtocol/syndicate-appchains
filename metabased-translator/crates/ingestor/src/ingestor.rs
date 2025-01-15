@@ -95,7 +95,7 @@ impl Ingestor {
     /// Returns an error if the block number does not match the expected current block number.
     async fn push_block_and_receipts(&mut self, block_info: BlockAndReceipts) -> Result<(), Error> {
         if block_info.block.number != self.current_block_number {
-            return Err(eyre!("Block number mismatch").into());
+            return Err(eyre!("Block number mismatch"));
         }
         self.sender.send(block_info.clone()).await?;
         let num = hex_to_u128(&self.current_block_number.clone())?;
@@ -138,7 +138,6 @@ mod tests {
     fn get_dummy_block_info(block_number: String) -> BlockAndReceipts {
         let block: Block = Block {
             hash: "0xHash".to_string(),
-            nonce: "0xNon".to_string(),
             number: block_number,
             parent_hash: "0xPar".to_string(),
             logs_bloom: "0xLog".to_string(),
