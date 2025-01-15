@@ -28,6 +28,7 @@ alloy-network = "0.9.2"
 alloy-node-bindings = "0.9.2"
 pre-commit-hooks = "0.3.0"
 clap = { version = "4.5.23", features = ["derive", "env"] }
+async-trait = "0.1.85"
 
 [dev-dependencies]
 test-case = "3"
