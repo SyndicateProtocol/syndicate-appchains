@@ -9,14 +9,14 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
+types.workspace = true
 alloy = { version = "0.9.2", features = ["full"] }
 eyre = "0.6.12"
 tokio = { version = "1.42.0", features = ["rt", "rt-multi-thread", "macros"] }
 pre-commit-hooks = "0.3.0"
 strum = "0.26.3"
 strum_macros = "0.26.4"
-types.workspace = true
-# types = { workspace = true, path = "../types" }
+thiserror = "2.0.11"
 
 
 [dev-dependencies]

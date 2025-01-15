@@ -1,7 +1,7 @@
 //! Slotting module for metabased-translator
 
 use alloy::rpc::types::Block;
-use eyre::{eyre, Error};
+use eyre::Error;
 use std::{
     cmp::Ordering,
     collections::LinkedList,
@@ -10,6 +10,7 @@ use std::{
         Ordering::{Acquire, Release},
     },
 };
+use thiserror::Error;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::{select, sync::mpsc::channel};
 use types::{BlockInfo, Chain, Slot, SlotState};
@@ -162,10 +163,28 @@ impl Slotter {
                     }
                 };
 
-                if let Err(e) = process_result {
-                    eprintln!("Error processing block: {}", e);
-                    // TODO: handle errors properly
-                    continue;
+                match process_result {
+                    Ok(_) => (),
+                    Err(e) => match e {
+                        SlotterError::ReorgDetected { .. } => {
+                            panic!("Reorgs not yet implemented {e}"); // TODO: implement reorgs
+                        }
+                        SlotterError::BlockNumberSkipped { .. } => {
+                            panic!("Block number skipped {e}"); // TODO decide what to do if a block is skipped
+                        }
+                        SlotterError::BlockTooOld { .. } => {
+                            panic!("Block too old {e}"); // TODO decide what to do if a block is too old
+                        }
+                        SlotterError::NoSlotsAvailable => {
+                            panic!("No slots available. This should never happen - if it does, it's an implementation error. {e}");
+                        }
+                        SlotterError::SlotSendError => {
+                            panic!("Failed to send slot through channel. TODO decide what to do here (likely to occur during shutdown, or the received is blocked)");
+                        }
+                        SlotterError::NonIncreasingTimestamp { .. } => {
+                            panic!("Non-increasing timestamp - this should never happen (where a block is received with the expected block number, but a lower timestamp) {e}");
+                        }
+                    },
                 }
             }
         });
@@ -184,13 +203,12 @@ impl Slotter {
         self.status.store(0, Release);
     }
 
-    // TODO use thiserror
     async fn mark_unsafe_slots(
         &mut self,
         block: Block,
         chain: Chain,
         sender: &Sender<Slot>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), SlotterError> {
         // Get the other chain's latest block timestamp
         let other_chain_timestamp = match chain {
             Chain::Sequencing => self.latest_settlement_chain_block.as_ref(),
@@ -212,7 +230,7 @@ impl Slotter {
                     sender
                         .send(slot.clone())
                         .await
-                        .map_err(|_| eyre!("Failed to send slot"))?;
+                        .map_err(|_| SlotterError::SlotSendError)?;
                 }
             }
         }
@@ -225,14 +243,14 @@ impl Slotter {
         chain: Chain,
         sender: &Sender<Slot>,
         slot_duration_ms: u64,
-    ) -> Result<(), Error> {
+    ) -> Result<(), SlotterError> {
         // TODO try to reduce the number of clone calls
         let block_clone = block_info.block.clone();
-        self.update_latest_block(block_clone.clone(), chain);
+        self.update_latest_block(block_clone.clone(), chain)?;
         let latest_slot = self
             .slots
             .front_mut()
-            .ok_or_else(|| eyre!("No slots available"))?;
+            .ok_or(SlotterError::NoSlotsAvailable)?;
 
         match block_slot_ordering(
             block_info.block.header.timestamp,
@@ -261,7 +279,10 @@ impl Slotter {
                 }
 
                 if !inserted {
-                    return Err(eyre!("Block timestamp {} is less than the latest slot and does not match any slot", block_clone.header.timestamp));
+                    return Err(SlotterError::BlockTooOld {
+                        chain,
+                        block_timestamp: block_clone.header.timestamp,
+                    });
                 }
             }
             Ordering::Equal => match chain {
@@ -288,7 +309,8 @@ impl Slotter {
                 let latest_slot = self
                     .slots
                     .front_mut()
-                    .ok_or_else(|| eyre!("No slots available"))?;
+                    .ok_or(SlotterError::NoSlotsAvailable)?;
+
                 match chain {
                     Chain::Sequencing => latest_slot.sequencing_chain_blocks.push(block_info),
                     Chain::Settlement => latest_slot.settlement_chain_blocks.push(block_info),
@@ -302,7 +324,7 @@ impl Slotter {
     }
 
     // TODO use thiserror
-    async fn cleanup_slots(&mut self, sender: &Sender<Slot>) -> Result<(), Error> {
+    async fn cleanup_slots(&mut self, sender: &Sender<Slot>) -> Result<(), SlotterError> {
         // Clean up old slots
         while self.slots.len() > self.max_slots {
             if let Some(mut slot) = self.slots.pop_back() {
@@ -311,39 +333,48 @@ impl Slotter {
                     sender
                         .send(slot)
                         .await
-                        .map_err(|_| eyre!("Failed to send slot"))?;
+                        .map_err(|_| SlotterError::SlotSendError)?;
                 }
             }
         }
         Ok(())
     }
 
-    // TODO implement reorgs instead of panic
-    fn update_latest_block(&mut self, block: Block, chain: Chain) {
+    fn update_latest_block(&mut self, block: Block, chain: Chain) -> Result<(), SlotterError> {
         if let Some(latest) = match chain {
             Chain::Sequencing => &self.latest_sequencing_chain_block,
             Chain::Settlement => &self.latest_settlement_chain_block,
         } {
-            assert!(
-                block.header.number > latest.header.number,
-                "{} chain block number must increase. Current: #{}, New: #{}",
-                chain,
-                latest.header.number,
-                block.header.number
-            );
-            assert!(
-                block.header.timestamp > latest.header.timestamp,
-                "{} chain timestamp must increase. Current: {}, New: {}",
-                chain,
-                latest.header.timestamp,
-                block.header.timestamp
-            );
+            if block.header.number <= latest.header.number {
+                return Err(SlotterError::ReorgDetected {
+                    chain,
+                    current_block_number: latest.header.number,
+                    received_block_number: block.header.number,
+                });
+            }
+
+            if block.header.number != latest.header.number + 1 {
+                return Err(SlotterError::BlockNumberSkipped {
+                    chain,
+                    current_block_number: latest.header.number,
+                    received_block_number: block.header.number,
+                });
+            }
+
+            if block.header.timestamp <= latest.header.timestamp {
+                return Err(SlotterError::NonIncreasingTimestamp {
+                    chain,
+                    current: latest.header.timestamp,
+                    received: block.header.timestamp,
+                });
+            }
         }
 
         match chain {
             Chain::Sequencing => self.latest_sequencing_chain_block = Some(block),
             Chain::Settlement => self.latest_settlement_chain_block = Some(block),
         }
+        Ok(())
     }
 }
 
@@ -380,10 +411,43 @@ const fn block_slot_ordering(
     }
 }
 
+#[allow(missing_docs)] // self-documenting
+#[derive(Debug, Error)]
+pub enum SlotterError {
+    #[error("No slots available")]
+    NoSlotsAvailable,
+
+    #[error("Failed to send slot through channel")]
+    SlotSendError,
+
+    #[error("Block timestamp {block_timestamp} is less than the latest slot and does not match any slot. is the {chain} chain more than MAX_WAIT(24 hours) behind?")]
+    BlockTooOld { chain: Chain, block_timestamp: u64 },
+
+    #[error("{chain} chain reorg detected. Current: #{current_block_number}, Received: #{received_block_number}")]
+    ReorgDetected {
+        chain: Chain,
+        current_block_number: u64,
+        received_block_number: u64,
+    },
+
+    #[error("{chain} chain block number skipped. Current: #{current_block_number}, Received: #{received_block_number}")]
+    BlockNumberSkipped {
+        chain: Chain,
+        current_block_number: u64,
+        received_block_number: u64,
+    },
+
+    #[error("{chain} chain timestamp must increase. Current: {current}, Received: {received}")]
+    NonIncreasingTimestamp {
+        chain: Chain,
+        current: u64,
+        received: u64,
+    },
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::time::Duration;
 
     fn create_test_block(number: u64, timestamp: u64) -> BlockInfo {
         BlockInfo {
