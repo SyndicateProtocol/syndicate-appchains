@@ -4960,6 +4960,8 @@ dependencies = [
  "eyre",
  "pre-commit-hooks",
  "serial_test",
+ "strum",
+ "strum_macros",
  "test-case",
  "tokio",
 ]

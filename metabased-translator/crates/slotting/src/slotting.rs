@@ -1,6 +1,7 @@
 use alloy::rpc::types::Block;
-use eyre::Error;
+use eyre::{eyre, Error};
 use std::{
+    cmp::Ordering,
     collections::LinkedList,
     sync::{
         atomic::{
@@ -9,11 +10,13 @@ use std::{
         },
         mpsc::{self, Receiver, Sender},
     },
-    thread::JoinHandle,
-    time::Duration,
 };
+use strum::Display;
+use tokio::sync::mpsc::Receiver as TokioReceiver;
+use tokio::{select, task::JoinHandle};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
+#[strum(serialize_all = "lowercase")]
 enum Chain {
     Sequencing,
     Settlement,
@@ -56,6 +59,9 @@ impl Slot {
             state: SlotState::Open,
         }
     }
+    fn is_empty(&self) -> bool {
+        self.sequencing_chain_blocks.is_empty() && self.settlement_chain_blocks.is_empty()
+    }
 }
 
 /// Maximum time to wait for blocks before considering a slot final (24 hours in milliseconds)
@@ -66,8 +72,11 @@ const MAX_WAIT_MS: u64 = 24 * 60 * 60 * 1000;
 pub struct Slotter {
     config: SlotterConfig,
 
-    sequencing_chain_receiver: Receiver<Block>,
-    settlement_chain_receiver: Receiver<Block>,
+    sequencing_chain_receiver: TokioReceiver<Block>,
+    settlement_chain_receiver: TokioReceiver<Block>,
+
+    latest_sequencing_chain_block: Option<Block>,
+    latest_settlement_chain_block: Option<Block>,
 
     /// 0: not started
     /// 1: started
@@ -75,7 +84,7 @@ pub struct Slotter {
     status: AtomicU8,
     thread: Option<JoinHandle<()>>,
 
-    /// Stores the last N slots
+    /// Stores the last N slots (both open and closed)
     slots: LinkedList<Slot>,
 
     /// Maximum number of slots to keep
@@ -83,7 +92,7 @@ pub struct Slotter {
 }
 
 /// Configuration for the slotter
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SlotterConfig {
     /// The duration of each slot in milliseconds
     pub slot_duration_ms: u64,
@@ -103,6 +112,19 @@ impl Default for SlotterConfig {
     }
 }
 
+/// Slots are stored in a linked list ordered by timestamp, with newer slots at the back.
+/// Each slot has a fixed duration and contains blocks from both chains that fall within its window.
+///
+/// ```text
+/// LinkedList:
+/// Back                                                           Front
+/// [Oldest] <-> [Slot N-2] <-> [Slot N-1] <-> [Current Slot] <-> [Newest]
+///
+/// Where:
+/// - max_slots is the number of slots to keep and is determined by `MAX_WAIT_MS` / `slot_duration_ms`, thus if a slot is to be dropped, it must be marked as Safe
+/// - Slots older than max_slots are dropped
+/// - A slot becomes Unsafe when both chains progress past it
+/// ```
 impl Slotter {
     /// Creates a new slotter that receives blocks from two chains and organizes them into slots.
     ///
@@ -121,8 +143,8 @@ impl Slotter {
     /// # Returns
     /// A new Slotter instance that can be started with `start()`
     pub async fn new(
-        sequencing_chain_receiver: Receiver<Block>,
-        settlement_chain_receiver: Receiver<Block>,
+        sequencing_chain_receiver: TokioReceiver<Block>,
+        settlement_chain_receiver: TokioReceiver<Block>,
         config: SlotterConfig,
     ) -> Result<Self, Error> {
         let max_slots = (MAX_WAIT_MS / config.slot_duration_ms) as usize;
@@ -130,10 +152,16 @@ impl Slotter {
         Ok(Self {
             sequencing_chain_receiver,
             settlement_chain_receiver,
-            config,
+            latest_sequencing_chain_block: None,
+            latest_settlement_chain_block: None,
+            config: config.clone(),
             thread: None,
             status: AtomicU8::new(0),
-            slots: LinkedList::new(),
+            slots: {
+                let mut slots = LinkedList::new();
+                slots.push_front(Slot::new(config.start_slot, config.start_timestamp));
+                slots
+            },
             max_slots,
         })
     }
@@ -152,107 +180,53 @@ impl Slotter {
         self.status.store(1, Release);
         let (sender, receiver) = mpsc::channel();
 
-        let join_handle = std::thread::spawn(move || {
-            let mut current_slot = Slot::new(self.config.start_slot, self.config.start_timestamp);
-            let mut pending_blocks: Vec<(Block, Chain)> = Vec::new();
-
-            /// Determines if a block belongs in a slot based on its timestamp.
-            ///
-            /// A block belongs in a slot if its timestamp falls within the window:
-            /// (`slot_timestamp` - `slot_duration`, `slot_timestamp`]
-            ///
-            /// For example, with:
-            /// - `slot_duration` = 12
-            /// - `slot_timestamp` = 1000
-            ///
-            /// The slot will include blocks with timestamps:
-            /// - 988 < timestamp <= 1000
-            ///
-            /// This means each slot processes blocks from the previous time window,
-            /// ensuring blocks are only processed after their slot window is complete.
-            const fn block_belongs_in_slot(
-                block_timestamp_ms: u64,
-                slot_timestamp_ms: u64,
-                slot_duration_ms: u64,
-            ) -> bool {
-                block_timestamp_ms > slot_timestamp_ms.saturating_sub(slot_duration_ms)
-                    && block_timestamp_ms <= slot_timestamp_ms
-            }
-
+        tokio::spawn(async move {
             loop {
                 if self.status.load(Acquire) == 2 {
+                    // TODO graceful shutdown triggered
+                    // - stop processing new blocks
+                    // - go through the slots and save all safe slots to the DB (timestamp < current_time - MAX_WAIT_MS)
+                    // - potentially save all unsafe/opened blocks to the DB, so they can be resumed later
                     return;
                 }
 
-                // Process blocks from both chains
-                for (receiver, chain) in [
-                    (&self.sequencing_chain_receiver, Chain::Sequencing),
-                    (&self.settlement_chain_receiver, Chain::Settlement),
-                ] {
-                    while let Ok(block) = receiver.try_recv() {
-                        if block.header.timestamp
-                            < current_slot
-                                .timestamp
-                                .saturating_sub(self.config.slot_duration_ms)
-                        {
-                            // Block is too old, skip it
-                            // TODO reorg handling
-                            continue;
-                        }
-
-                        if block_belongs_in_slot(
-                            block.header.timestamp,
-                            current_slot.timestamp,
+                let process_result = select! {
+                    Some(block) = self.sequencing_chain_receiver.recv() => {
+                        self.process_block(
+                            block,
+                            Chain::Sequencing,
+                            &sender,
                             self.config.slot_duration_ms,
-                        ) {
-                            Self::process_block(
-                                &mut current_slot,
-                                block,
-                                chain,
-                                &sender,
-                                &mut self.slots,
-                                self.max_slots,
-                            );
-                        } else {
-                            // Block belongs in a future slot
-                            current_slot = Self::advance_slot(
-                                current_slot,
-                                &sender,
-                                &mut self.slots,
-                                self.max_slots,
-                                self.config.slot_duration_ms,
-                            );
-                            pending_blocks.push((block, chain));
+                        )
+                    }
+                    Some(block) = self.settlement_chain_receiver.recv() => {
+                        self.process_block(
+                            block,
+                            Chain::Settlement,
+                            &sender,
+                            self.config.slot_duration_ms,
+                        )
+                    }
+                };
+
+                if let Err(e) = process_result {
+                    eprintln!("Error processing block: {}", e);
+                    // TODO: handle error properly
+                    continue;
+                }
+
+                // Clean up old slots
+                while self.slots.len() > self.max_slots {
+                    if let Some(mut slot) = self.slots.pop_back() {
+                        if slot.state == SlotState::Open {
+                            slot.state = SlotState::Unsafe;
+                            sender.send(slot).expect("Failed to send slot");
                         }
                     }
                 }
-
-                // Process pending blocks
-                pending_blocks.retain(|(block, chain)| {
-                    if block_belongs_in_slot(
-                        block.header.timestamp,
-                        current_slot.timestamp,
-                        self.config.slot_duration_ms,
-                    ) {
-                        Self::process_block(
-                            &mut current_slot,
-                            block.clone(),
-                            *chain,
-                            &sender,
-                            &mut self.slots,
-                            self.max_slots,
-                        );
-                        false
-                    } else {
-                        true
-                    }
-                });
-
-                std::thread::sleep(Duration::from_millis(100)); // TODO make configurable?, maybe there is a better way (like select in go)
             }
         });
 
-        self.thread = Some(join_handle);
         Ok(receiver)
     }
 
@@ -267,68 +241,163 @@ impl Slotter {
         self.status.store(0, Release);
     }
 
-    #[allow(clippy::expect_used)] // TODO revisit
-    fn try_mark_slots_unsafe(
-        slots: &mut LinkedList<Slot>,
-        current_slot: &Slot,
+    // TODO use thiserror
+    // TODO review this func
+    fn mark_unsafe_slots(
+        &mut self,
+        block: &Block,
+        chain: Chain,
         sender: &Sender<Slot>,
-    ) {
-        // If we have blocks from both chains in current slot, mark previous slots as unsafe
-        if !current_slot.sequencing_chain_blocks.is_empty()
-            && !current_slot.settlement_chain_blocks.is_empty()
-        {
-            for slot in slots.iter_mut() {
-                if slot.state == SlotState::Open {
+    ) -> Result<(), Error> {
+        // Get the other chain's latest block timestamp
+        let other_chain_timestamp = match chain {
+            Chain::Sequencing => self.latest_settlement_chain_block.as_ref(),
+            Chain::Settlement => self.latest_sequencing_chain_block.as_ref(),
+        }
+        .map(|b| b.header.timestamp);
+
+        // Only mark slots as unsafe if we have blocks from both chains
+        if let Some(other_timestamp) = other_chain_timestamp {
+            let min_timestamp = other_timestamp.min(block.header.timestamp);
+
+            // Mark slots as unsafe if both chains have progressed past them
+            for slot in &mut self.slots {
+                if slot.timestamp < min_timestamp && slot.state == SlotState::Open {
                     slot.state = SlotState::Unsafe;
-                    sender.send(slot.clone()).expect("Failed to send slot");
+                    sender
+                        .send(slot.clone())
+                        .map_err(|_| eyre!("Failed to send slot"))?;
                 }
             }
         }
+        Ok(())
     }
 
     fn process_block(
-        slot: &mut Slot,
+        &mut self,
         block: Block,
         chain: Chain,
         sender: &Sender<Slot>,
-        slots: &mut LinkedList<Slot>,
-        max_slots: usize,
-    ) {
-        match chain {
-            Chain::Sequencing => slot.sequencing_chain_blocks.push(block),
-            Chain::Settlement => slot.settlement_chain_blocks.push(block),
-        }
-
-        Self::try_mark_slots_unsafe(slots, slot, sender);
-    }
-
-    fn update_slots(slots: &mut LinkedList<Slot>, slot: Slot, max_slots: usize) {
-        slots.push_back(slot);
-        if slots.len() > max_slots {
-            slots.pop_front(); // TODO this means MAX_WAIT has passed, this block should be marked as unsafe and sent to the consumer
-        }
-    }
-
-    fn advance_slot(
-        current: Slot,
-        sender: &Sender<Slot>,
-        slots: &mut LinkedList<Slot>,
-        max_slots: usize,
         slot_duration_ms: u64,
-    ) -> Slot {
-        Self::try_mark_slots_unsafe(slots, &current, sender);
+    ) -> Result<(), Error> {
+        self.update_latest_block(block.clone(), chain);
+        let latest_slot = self
+            .slots
+            .front_mut()
+            .ok_or_else(|| eyre!("No slots available"))?;
 
-        let next_slot = Slot::new(
-            current.slot_number + 1,
-            current.timestamp + slot_duration_ms,
-        );
-        Self::update_slots(slots, current, max_slots);
-        next_slot
+        match block_slot_ordering(
+            block.header.timestamp,
+            latest_slot.timestamp,
+            slot_duration_ms,
+        ) {
+            Ordering::Less => {
+                // TODO handle this (just add the block to the slots it belongs to)
+            }
+            Ordering::Equal => match chain {
+                Chain::Sequencing => latest_slot.sequencing_chain_blocks.push(block),
+                Chain::Settlement => latest_slot.settlement_chain_blocks.push(block),
+            },
+            Ordering::Greater => {
+                let mut latest_timestamp = latest_slot.timestamp;
+                let mut latest_slot_number = latest_slot.slot_number;
+
+                // Create empty slots until we reach or pass the block's timestamp
+                // this accomplishes two things:
+                // - it creates slots for which we might still receive blocks (from the other chain)
+                // - keeps the list full, meaning the max_slots limit will always trigger on the correct max_wait window
+                while latest_timestamp < block.header.timestamp {
+                    let next_timestamp = latest_timestamp + slot_duration_ms;
+                    let next_slot_number = latest_slot_number + 1;
+                    let slot = Slot::new(next_slot_number, next_timestamp);
+                    self.slots.push_front(slot);
+                    latest_timestamp = next_timestamp;
+                    latest_slot_number = next_slot_number;
+                }
+
+                let latest_slot = self
+                    .slots
+                    .front_mut()
+                    .ok_or_else(|| eyre!("No slots available"))?;
+                match chain {
+                    Chain::Sequencing => latest_slot.sequencing_chain_blocks.push(block),
+                    Chain::Settlement => latest_slot.settlement_chain_blocks.push(block),
+                }
+            }
+        }
+
+        self.mark_unsafe_slots(&block, chain, sender)?;
+        Ok(())
+    }
+
+    // TODO implement reorgs instead of panic
+    fn update_latest_block(&mut self, block: Block, chain: Chain) {
+        if let Some(latest) = match chain {
+            Chain::Sequencing => &self.latest_sequencing_chain_block,
+            Chain::Settlement => &self.latest_settlement_chain_block,
+        } {
+            assert!(
+                block.header.number > latest.header.number,
+                "{} chain block number must increase. Current: #{}, New: #{}",
+                chain,
+                latest.header.number,
+                block.header.number
+            );
+            assert!(
+                block.header.timestamp > latest.header.timestamp,
+                "{} chain timestamp must increase. Current: {}, New: {}",
+                chain,
+                latest.header.timestamp,
+                block.header.timestamp
+            );
+        }
+
+        match chain {
+            Chain::Sequencing => self.latest_sequencing_chain_block = Some(block),
+            Chain::Settlement => self.latest_settlement_chain_block = Some(block),
+        }
+    }
+}
+
+/// Determines how a block's timestamp relates to a slot's window.
+///
+/// Returns:
+/// - `Ordering::Less` if block belongs in an earlier slot
+/// - `Ordering::Equal` if block belongs in this slot
+/// - `Ordering::Greater` if block belongs in a later slot
+///
+/// A block belongs in a slot if its timestamp falls within the window:
+/// (`slot_timestamp` - `slot_duration`, `slot_timestamp`]
+///
+/// For example, with:
+/// - `slot_duration` = 12
+/// - `slot_timestamp` = 1000
+///
+/// The slot will include blocks with timestamps:
+/// - 988 < timestamp <= 1000
+///
+const fn block_slot_ordering(
+    block_timestamp_ms: u64,
+    slot_timestamp_ms: u64,
+    slot_duration_ms: u64,
+) -> Ordering {
+    let slot_start = slot_timestamp_ms.saturating_sub(slot_duration_ms);
+
+    if block_timestamp_ms <= slot_start {
+        Ordering::Less
+    } else if block_timestamp_ms <= slot_timestamp_ms {
+        Ordering::Equal
+    } else {
+        Ordering::Greater
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::time::Duration;
+
+    use tokio::sync::mpsc;
+
     use super::*;
 
     fn create_test_block(timestamp: u64) -> Block {
@@ -346,8 +415,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_slotter() {
-        let (seq_tx, seq_rx) = mpsc::channel();
-        let (settle_tx, settle_rx) = mpsc::channel();
+        let (seq_tx, seq_rx) = mpsc::channel(100);
+        let (settle_tx, settle_rx) = mpsc::channel(100);
 
         let start_timestamp_ms = 1_000;
         let slot_duration_ms = 2_000; // 2 seconds
@@ -367,14 +436,14 @@ mod tests {
         let slot_rx = slotter.start().unwrap();
 
         // First block should trigger slot advance since 3010 > 1000+2000
-        seq_tx.send(create_test_block(3010)).unwrap();
+        seq_tx.send(create_test_block(3010)).await.unwrap();
 
         // This should go into the current slot
-        settle_tx.send(create_test_block(3011)).unwrap();
+        settle_tx.send(create_test_block(3011)).await.unwrap();
 
         // These should trigger marking the slot 1 as unsafe
-        seq_tx.send(create_test_block(13005)).unwrap();
-        settle_tx.send(create_test_block(13006)).unwrap();
+        seq_tx.send(create_test_block(13005)).await.unwrap();
+        settle_tx.send(create_test_block(13006)).await.unwrap();
 
         let slot = slot_rx.recv_timeout(Duration::from_secs(1)).unwrap();
         assert_eq!(slot.timestamp, start_timestamp_ms + slot_duration_ms);
