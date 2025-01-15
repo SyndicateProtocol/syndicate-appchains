@@ -1,3 +1,5 @@
+//! Types module for metabased-translator
+
 use alloy::rpc::types::{Block, Log, Transaction};
 use strum::Display;
 

@@ -1,18 +1,17 @@
+//! Slotting module for metabased-translator
+
 use alloy::rpc::types::Block;
 use eyre::{eyre, Error};
 use std::{
     cmp::Ordering,
     collections::LinkedList,
-    sync::{
-        atomic::{
-            AtomicU8,
-            Ordering::{Acquire, Release},
-        },
-        mpsc::{self, Receiver, Sender},
+    sync::atomic::{
+        AtomicU8,
+        Ordering::{Acquire, Release},
     },
 };
-use tokio::select;
-use tokio::sync::mpsc::Receiver as TokioReceiver;
+use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::{select, sync::mpsc::channel};
 use types::{BlockInfo, Chain, Slot, SlotState};
 
 /// Maximum time to wait for blocks before considering a slot final (24 hours in milliseconds)
@@ -23,8 +22,8 @@ const MAX_WAIT_MS: u64 = 24 * 60 * 60 * 1000;
 pub struct Slotter {
     config: SlotterConfig,
 
-    sequencing_chain_receiver: TokioReceiver<BlockInfo>,
-    settlement_chain_receiver: TokioReceiver<BlockInfo>,
+    sequencing_chain_receiver: Receiver<BlockInfo>,
+    settlement_chain_receiver: Receiver<BlockInfo>,
 
     latest_sequencing_chain_block: Option<Block>,
     latest_settlement_chain_block: Option<Block>,
@@ -93,8 +92,8 @@ impl Slotter {
     /// # Returns
     /// A new Slotter instance that can be started with `start()`
     pub async fn new(
-        sequencing_chain_receiver: TokioReceiver<BlockInfo>,
-        settlement_chain_receiver: TokioReceiver<BlockInfo>,
+        sequencing_chain_receiver: Receiver<BlockInfo>,
+        settlement_chain_receiver: Receiver<BlockInfo>,
         config: SlotterConfig,
     ) -> Result<Self, Error> {
         let max_slots = (MAX_WAIT_MS / config.slot_duration_ms) as usize;
@@ -127,7 +126,7 @@ impl Slotter {
     /// TODO implement restore from DB
     pub fn start(mut self) -> Result<Receiver<Slot>, Error> {
         self.status.store(1, Release);
-        let (sender, receiver) = mpsc::channel();
+        let (sender, receiver) = channel(100); // TODO: make this configurable?
 
         tokio::spawn(async move {
             loop {
@@ -147,6 +146,7 @@ impl Slotter {
                             &sender,
                             self.config.slot_duration_ms,
                         )
+                        .await
                     }
                     Some(block) = self.settlement_chain_receiver.recv() => {
                         self.process_block(
@@ -155,12 +155,13 @@ impl Slotter {
                             &sender,
                             self.config.slot_duration_ms,
                         )
+                        .await
                     }
                 };
 
                 if let Err(e) = process_result {
                     eprintln!("Error processing block: {}", e);
-                    // TODO: handle error properly
+                    // TODO: handle errors properly
                     continue;
                 }
             }
@@ -181,8 +182,7 @@ impl Slotter {
     }
 
     // TODO use thiserror
-    // TODO review this func
-    fn mark_unsafe_slots(
+    async fn mark_unsafe_slots(
         &mut self,
         block: Block,
         chain: Chain,
@@ -201,18 +201,24 @@ impl Slotter {
 
             // Mark slots as unsafe if both chains have progressed past them
             for slot in &mut self.slots {
+                if slot.state == SlotState::Unsafe {
+                    break; // assume all blocks past this point are already marked as unsafe
+                }
                 if slot.timestamp < min_timestamp && slot.state == SlotState::Open {
                     slot.state = SlotState::Unsafe;
-                    sender
-                        .send(slot.clone())
-                        .map_err(|_| eyre!("Failed to send slot"))?;
+                    if !slot.is_empty() {
+                        sender
+                            .send(slot.clone())
+                            .await
+                            .map_err(|_| eyre!("Failed to send slot"))?;
+                    }
                 }
             }
         }
         Ok(())
     }
 
-    fn process_block(
+    async fn process_block(
         &mut self,
         block_info: BlockInfo,
         chain: Chain,
@@ -233,7 +239,29 @@ impl Slotter {
             slot_duration_ms,
         ) {
             Ordering::Less => {
-                // TODO handle this (just add the block to the slots it belongs to)
+                // Find the slot this block belongs to
+                let mut inserted = false;
+                for slot in &mut self.slots {
+                    if matches!(
+                        block_slot_ordering(
+                            block_info.block.header.timestamp,
+                            slot.timestamp,
+                            slot_duration_ms,
+                        ),
+                        Ordering::Equal
+                    ) {
+                        match chain {
+                            Chain::Sequencing => slot.sequencing_chain_blocks.push(block_info),
+                            Chain::Settlement => slot.settlement_chain_blocks.push(block_info),
+                        }
+                        inserted = true;
+                        break;
+                    }
+                }
+
+                if !inserted {
+                    return Err(eyre!("Block timestamp {} is less than the latest slot and does not match any slot", block_clone.header.timestamp));
+                }
             }
             Ordering::Equal => match chain {
                 Chain::Sequencing => latest_slot.sequencing_chain_blocks.push(block_info),
@@ -267,21 +295,24 @@ impl Slotter {
             }
         }
 
-        self.mark_unsafe_slots(block_clone, chain, sender)?;
-        self.cleanup_slots(sender)?;
+        self.mark_unsafe_slots(block_clone, chain, sender).await?;
+        self.cleanup_slots(sender).await?;
         Ok(())
     }
 
     // TODO use thiserror
-    fn cleanup_slots(&mut self, sender: &Sender<Slot>) -> Result<(), Error> {
+    async fn cleanup_slots(&mut self, sender: &Sender<Slot>) -> Result<(), Error> {
         // Clean up old slots
         while self.slots.len() > self.max_slots {
             if let Some(mut slot) = self.slots.pop_back() {
                 if slot.state == SlotState::Open {
                     slot.state = SlotState::Unsafe;
-                    sender
-                        .send(slot)
-                        .map_err(|_| eyre!("Failed to send slot"))?;
+                    if !slot.is_empty() {
+                        sender
+                            .send(slot)
+                            .await
+                            .map_err(|_| eyre!("Failed to send slot"))?;
+                    }
                 }
             }
         }
@@ -352,17 +383,15 @@ const fn block_slot_ordering(
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use std::time::Duration;
 
-    use tokio::sync::mpsc;
-
-    use super::*;
-
-    fn create_test_block(timestamp: u64) -> BlockInfo {
+    fn create_test_block(number: u64, timestamp: u64) -> BlockInfo {
         BlockInfo {
             block: Block {
                 header: alloy::rpc::types::Header {
                     inner: alloy::consensus::Header {
+                        number,
                         timestamp,
                         ..Default::default()
                     },
@@ -377,8 +406,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_slotter() {
-        let (seq_tx, seq_rx) = mpsc::channel(100);
-        let (settle_tx, settle_rx) = mpsc::channel(100);
+        let (seq_tx, seq_rx) = channel(100);
+        let (settle_tx, settle_rx) = channel(100);
 
         let start_timestamp_ms = 1_000;
         let slot_duration_ms = 2_000; // 2 seconds
@@ -395,21 +424,25 @@ mod tests {
         .await
         .unwrap();
 
-        let slot_rx = slotter.start().unwrap();
+        let mut slot_rx = slotter.start().unwrap();
 
-        // First block should trigger slot advance since 3010 > 1000+2000
-        seq_tx.send(create_test_block(3010)).await.unwrap();
+        // Send blocks with small delays to ensure proper processing
+        seq_tx.send(create_test_block(1, 3010)).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
 
-        // This should go into the current slot
-        settle_tx.send(create_test_block(3011)).await.unwrap();
+        settle_tx.send(create_test_block(1, 3011)).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
 
-        // These should trigger marking the slot 1 as unsafe
-        seq_tx.send(create_test_block(13005)).await.unwrap();
-        settle_tx.send(create_test_block(13006)).await.unwrap();
+        seq_tx.send(create_test_block(2, 13005)).await.unwrap();
+        tokio::time::sleep(Duration::from_millis(50)).await;
 
-        let slot = slot_rx.recv_timeout(Duration::from_secs(1)).unwrap();
-        assert_eq!(slot.timestamp, start_timestamp_ms + slot_duration_ms);
-        assert_eq!(slot.slot_number, 1);
+        settle_tx.send(create_test_block(2, 13006)).await.unwrap();
+
+        // Wait for slot to be marked unsafe
+        let slot = slot_rx.recv().await.unwrap();
+
+        assert_eq!(slot.timestamp, 5000); // First slot after 3010/3011 blocks
+        assert_eq!(slot.slot_number, 2);
         assert_eq!(slot.sequencing_chain_blocks.len(), 1);
         assert_eq!(slot.settlement_chain_blocks.len(), 1);
         assert_eq!(slot.state, SlotState::Unsafe);
