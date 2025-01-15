@@ -1,16 +1,14 @@
 //! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a consumer using a channel
 
 use alloy::{
-    eips::eip1898::BlockNumberOrTag,
     providers::{Provider, ProviderBuilder, RootProvider},
-    rpc::types::BlockId,
     transports::BoxTransport,
 };
 use eyre::eyre;
 use std::{error::Error, time::Duration};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
-use crate::block_info::{Block, BlockAndReceipts, Receipt};
+use crate::types::{Block, BlockAndReceipts, Receipt};
 
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
@@ -129,7 +127,7 @@ fn u128_to_hex(num: u128) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::block_info::{Block, BlockAndReceipts};
+    use crate::types::{Block, BlockAndReceipts};
 
     use eyre::Result;
 
