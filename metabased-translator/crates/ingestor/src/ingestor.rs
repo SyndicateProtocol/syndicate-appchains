@@ -31,7 +31,7 @@ impl Ingestor {
     ///
     /// # Returns
     /// A tuple containing the `Ingestor` instance and a `Receiver` for consuming blocks.
-    #[allow(unreachable_pub)]
+    #[allow(unreachable_pub)] // TODO: remove when used
     pub async fn new(
         rpc_url: &str,
         start_block: String,
