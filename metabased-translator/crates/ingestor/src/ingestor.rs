@@ -5,6 +5,8 @@ use alloy::{
     transports::BoxTransport,
 };
 use eyre::{eyre, Error};
+use log::info;
+use std::num::ParseIntError;
 use std::time::Duration;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
@@ -79,26 +81,23 @@ impl Ingestor {
 
         let block_and_receipts = BlockAndReceipts { block, receipts };
 
-        log::info!(
-            "[Ingestor] Got block: {:?}",
-            block_and_receipts.block.number
-        );
+        info!("Got block: {:?}", block_and_receipts.block.number);
         Ok(block_and_receipts)
     }
 
     /// Sends the retrieved block to the consumer and updates the current block number.
     ///
     /// # Arguments
-    /// - `block`: The block to be sent to the consumer.
-    ///
-    /// # Errors
-    /// Returns an error if the block number does not match the expected current block number.
-    async fn push_block_and_receipts(&mut self, block_info: BlockAndReceipts) -> Result<(), Error> {
-        if block_info.block.number != self.current_block_number {
+    /// - `block_and_receipts`: The block and its receipts to be sent to the consumer.
+    async fn push_block_and_receipts(
+        &mut self,
+        block_and_receipts: BlockAndReceipts,
+    ) -> Result<(), Error> {
+        if block_and_receipts.block.number != self.current_block_number {
             return Err(eyre!("Block number mismatch"));
         }
-        self.sender.send(block_info.clone()).await?;
-        let num = hex_to_u128(&self.current_block_number.clone())?;
+        self.sender.send(block_and_receipts.clone()).await?;
+        let num = hex_to_u128(&self.current_block_number)?;
         self.current_block_number = format!("0x{:x}", num + 1);
         Ok(())
     }
@@ -108,21 +107,21 @@ impl Ingestor {
     /// Polls for new blocks and receipts at the specified interval and sends them to the consumer.
     #[allow(unreachable_pub)] // TODO: remove when used
     pub async fn start_polling(&mut self) -> Result<(), Error> {
-        log::info!("[Ingestor] Starting polling");
+        info!("Starting polling");
 
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
-            let block_info = self
+            let block_and_receipts = self
                 .get_block_and_receipts(self.current_block_number.clone())
                 .await?;
-            log::info!("[Ingestor] Pushing block: {:?}", block_info.block.number);
-            self.push_block_and_receipts(block_info).await?;
+            info!("Pushing block: {:?}", block_and_receipts.block.number);
+            self.push_block_and_receipts(block_and_receipts).await?;
             interval.tick().await;
         }
     }
 }
 
-fn hex_to_u128(hex: &str) -> Result<u128, std::num::ParseIntError> {
+fn hex_to_u128(hex: &str) -> Result<u128, ParseIntError> {
     u128::from_str_radix(hex.trim_start_matches("0x"), 16)
 }
 
@@ -135,7 +134,7 @@ mod tests {
 
     const RPC_URL: &str = "https://syndicate.io";
 
-    fn get_dummy_block_info(block_number: String) -> BlockAndReceipts {
+    fn get_dummy_block_and_receipts(block_number: String) -> BlockAndReceipts {
         let block: Block = Block {
             hash: "0xHash".to_string(),
             number: block_number,
@@ -180,7 +179,7 @@ mod tests {
             polling_interval,
         };
 
-        let block = get_dummy_block_info(start_block.clone());
+        let block = get_dummy_block_and_receipts(start_block.clone());
 
         ingestor
             .push_block_and_receipts(block)
@@ -215,7 +214,7 @@ mod tests {
             polling_interval,
         };
 
-        let mismatched_block = get_dummy_block_info(format!(
+        let mismatched_block = get_dummy_block_and_receipts(format!(
             "0x{:x}",
             hex_to_u128(start_block.as_str()).expect("Invalid hex value") + 10,
         ));

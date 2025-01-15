@@ -3,9 +3,9 @@
 mod ingestor;
 
 use eyre::eyre;
+use log::info;
 use std::error::Error;
 use std::time::Duration;
-
 /// This function initializes the `Ingestor` to poll blocks from an Ethereum chain
 /// and logs received blocks. It sets up logging, handles errors gracefully, and
 /// spawns a background task to process incoming blocks.
@@ -37,15 +37,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
             .await
             .map_err(|e| eyre!("Failed to create ingestor: {:?}", e))?;
 
-    log::info!("Ingestor created successfully. Ch");
     // Spawn a task to log what the receiver receives
     tokio::spawn(async move {
         while let Some(message) = receiver.recv().await {
-            log::info!(
-                "[Ingestor] Received block number: {:?}",
-                message.block.number
-            );
-            log::info!("[Ingestor] Received block: {:?}", message);
+            info!("Received block number: {:?}", message.block.number);
+            info!("Received block: {:?}", message);
         }
     });
 

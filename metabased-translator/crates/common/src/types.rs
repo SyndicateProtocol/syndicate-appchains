@@ -1,15 +1,9 @@
-//! # Overview of Structs
-//!
-//! - **`BlockAndReceipts`**: Contains both a `Block` and the associated list of `Receipt` objects.
-//! - **`Block`**: Represents an Ethereum block, including details like its hash, number, timestamp, and the transactions it contains.
-//! - **`Transaction`**: Represents a single transaction within a block, including fields such as the transaction hash, sender/recipient addresses, value, and input data.
-//! - **`Receipt`**: Contains the result of a transaction, including fields like status, logs, and potentially a contract address if one was created.
-//! - **`Log`**: Represents an individual log entry emitted by a smart contract during a transaction, containing information such as topics, data, and whether it was removed due to a reorganization.
+//! Common types for the metabased-translator
 
 use serde::Deserialize;
 
 #[derive(Clone, Debug)]
-/// A block and its associated receipts.
+/// **`BlockAndReceipts`**: Contains both a `Block` and the associated list of `Receipt` objects.
 pub struct BlockAndReceipts {
     /// The block data.
     pub block: Block,
@@ -18,7 +12,7 @@ pub struct BlockAndReceipts {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-/// A block from the Ethereum chain.
+/// **`Block`**: Represents an Ethereum block, including details like its hash, number, timestamp, and the transactions it contains.
 pub struct Block {
     /// The hash of the block.
     pub hash: String,
@@ -46,7 +40,7 @@ pub struct Block {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-/// A transaction within a block.
+/// **`Transaction`**: Represents a single transaction within a block, including fields such as the transaction hash, sender/recipient addresses, value, and input data.
 pub struct Transaction {
     /// The hash of the block containing this transaction, or `null` if pending.
     #[serde(rename = "blockHash")]
@@ -72,7 +66,7 @@ pub struct Transaction {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-/// A receipt for a transaction.
+/// **`Receipt`**: Contains the result of a transaction, including fields like status, logs, and potentially a contract address if one was created.
 pub struct Receipt {
     /// The hash of the block containing the transaction.
     #[serde(rename = "blockHash")]
@@ -100,7 +94,7 @@ pub struct Receipt {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-/// A log entry from a transaction.
+/// *`Log`**: Represents an individual log entry emitted by a smart contract during a transaction, containing information such as topics, data, and whether it was removed due to a reorganization.
 pub struct Log {
     /// The hash of the block containing the log, or `null` if pending.
     #[serde(rename = "blockHash")]
@@ -111,19 +105,15 @@ pub struct Log {
     /// The index of the transaction that generated the log, or `null` if pending.
     pub transaction_index: Option<String>,
     /// The address from which the log originated.
-    #[serde(rename = "address")]
     pub address: String,
     /// The index of the log entry, or `null` if pending.
     #[serde(rename = "logIndex")]
     pub log_index: Option<String>,
     /// The data associated with the log.
-    #[serde(rename = "data")]
     pub data: String,
     /// A flag indicating if the log was removed due to a chain reorganization.
-    #[serde(rename = "removed")]
     pub removed: bool,
     /// The topics associated with the log.
-    #[serde(rename = "topics")]
     pub topics: Vec<String>,
     /// The hash of the transaction that generated the log, or `null` if pending.
     #[serde(rename = "transactionHash")]
