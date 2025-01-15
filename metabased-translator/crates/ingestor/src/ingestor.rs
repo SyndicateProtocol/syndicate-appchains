@@ -8,7 +8,7 @@ use eyre::eyre;
 use std::{error::Error, time::Duration};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 
-use crate::types::{Block, BlockAndReceipts, Receipt};
+use common::types::{Block, BlockAndReceipts, Receipt};
 
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
@@ -120,14 +120,10 @@ fn hex_to_u128(hex: &str) -> Result<u128, std::num::ParseIntError> {
     u128::from_str_radix(hex.trim_start_matches("0x"), 16)
 }
 
-fn u128_to_hex(num: u128) -> String {
-    format!("0x{:x}", num)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{Block, BlockAndReceipts};
+    use common::types::{Block, BlockAndReceipts};
 
     use eyre::Result;
 
@@ -193,8 +189,10 @@ mod tests {
             panic!("No block received");
         }
 
-        let next_block =
-            u128_to_hex(hex_to_u128(start_block.as_str()).expect("Invalid hex value") + 1);
+        let next_block = format!(
+            "0x{:x}",
+            hex_to_u128(start_block.as_str()).expect("Invalid hex value") + 1
+        );
 
         assert_eq!(ingestor.current_block_number, next_block);
         Ok(())
@@ -213,7 +211,8 @@ mod tests {
             polling_interval,
         };
 
-        let mismatched_block = get_dummy_block_info(u128_to_hex(
+        let mismatched_block = get_dummy_block_info(format!(
+            "0x{:x}",
             hex_to_u128(start_block.as_str()).expect("Invalid hex value") + 10,
         ));
         let result = ingestor.push_block(mismatched_block).await;

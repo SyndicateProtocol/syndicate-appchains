@@ -1,5 +1,7 @@
 //! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a consumer using a channel
 
+mod ingestor;
+
 use eyre::eyre;
 use std::error::Error;
 use std::time::Duration;
@@ -31,7 +33,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Create the ingestor and receiver
     let (mut ingestor, mut receiver) =
-        ingestor::ingestor::Ingestor::new(rpc_url, start_block, 100, polling_interval)
+        ingestor::Ingestor::new(rpc_url, start_block, 100, polling_interval)
             .await
             .map_err(|e| eyre!("Failed to create ingestor: {:?}", e))?;
 
