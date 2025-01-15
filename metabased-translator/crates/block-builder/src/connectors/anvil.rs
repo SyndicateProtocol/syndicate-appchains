@@ -1,6 +1,6 @@
 //! Anvil connector for the `MetaChain`
 
-use crate::config::Configuration;
+use crate::config::BlockBuilderConfig;
 use alloy::{
     network::{Ethereum, EthereumWallet},
     node_bindings::Anvil,
@@ -43,7 +43,7 @@ pub struct MetaChainProvider {
 
 impl MetaChainProvider {
     /// Starts the Anvil instance and creates a provider for the `MetaChain`
-    pub async fn start(config: Configuration) -> eyre::Result<Self> {
+    pub async fn start(config: BlockBuilderConfig) -> eyre::Result<Self> {
         let port = find_available_port(config.port, 10)
             .ok_or_else(|| eyre!("No available ports found after 10 attempts"))?;
 

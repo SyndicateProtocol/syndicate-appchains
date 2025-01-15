@@ -57,6 +57,7 @@ rand = { version = "0.8.5" }
 url = { version = "2.5.4" }
 http-body-util = "0.1"
 pin-project-lite = "0.2.16"
+async-trait = "0.1.85"
 
 # dev dependencies
 test-case = { version = "3" }

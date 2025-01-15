@@ -1,22 +1,25 @@
 use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
 use crate::rollups::optimism::frame::to_data;
-use crate::rollups::utils::BlockBuilder;
+use crate::rollups::rollup_builder::RollupBlockBuilder;
 use alloy_primitives::{Address, B256};
 use alloy_rpc_types::TransactionRequest;
+use async_trait::async_trait;
+use eyre::{Error, Result};
 use std::str::FromStr;
 
 #[derive(Debug)]
 /// Builder for constructing Optimism blocks from transactions
 pub struct OptimismBlockBuilder;
 
-impl BlockBuilder for OptimismBlockBuilder {
+#[async_trait]
+impl RollupBlockBuilder for OptimismBlockBuilder {
     /// Creates a new Optimism block builder
     fn new() -> Self {
         Self
     }
 
     /// Builds a batch of transactions into an Optimism batch
-    fn build_batch_txn(&self, txs: Vec<Vec<u8>>) -> TransactionRequest {
+    async fn build_batch_txn(&self, txs: Vec<Vec<u8>>) -> Result<TransactionRequest, Error> {
         // TODO: Implement
         let batcher = Address::from_str("0x063D87A885a9323831A688645647eD7d0e859C5d")
             .expect("Failed to parse batcher address");
@@ -37,7 +40,7 @@ impl BlockBuilder for OptimismBlockBuilder {
         let data = to_data(&frames).unwrap();
 
         let tx = new_batcher_tx(batcher, batch_inbox, data.into());
-        tx
+        Ok(tx)
     }
 }
 
@@ -53,12 +56,12 @@ mod tests {
         assert!(matches!(builder, OptimismBlockBuilder));
     }
 
-    #[test]
-    fn test_build_batch_txn() {
+    #[tokio::test]
+    async fn test_build_batch_txn() {
         let builder = OptimismBlockBuilder::new();
         let txs = vec![];
 
-        let tx = builder.build_batch_txn(txs);
+        let tx = builder.build_batch_txn(txs).await.unwrap();
 
         // Verify expected batcher address
         assert_eq!(
