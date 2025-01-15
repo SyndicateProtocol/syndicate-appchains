@@ -1,127 +1,133 @@
-//! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a consumer using a channel
+//! # Overview of Structs
+//!
+//! - **BlockAndReceipts**: Contains both a `Block` and the associated list of `Receipt` objects.
+//! - **Block**: Represents an Ethereum block, including details like its hash, number, timestamp, and the transactions it contains.
+//! - **Transaction**: Represents a single transaction within a block, including fields such as the transaction hash, sender/recipient addresses, value, and input data.
+//! - **Receipt**: Contains the result of a transaction, including fields like status, logs, and potentially a contract address if one was created.
+//! - **Log**: Represents an individual log entry emitted by a smart contract during a transaction, containing information such as topics, data, and whether it was removed due to a reorganization.
 
 use serde::Deserialize;
 
 #[derive(Clone, Debug)]
-/// A struct that contains the block and its receipts
+/// A block and its associated receipts.
 pub struct BlockAndReceipts {
-    /// The block       
+    /// The block data.
     pub block: Block,
-    /// The receipts
+    /// The transaction receipts for the block.
     pub receipts: Vec<Receipt>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-/// A struct that contains the block
+/// A block from the Ethereum chain.
 pub struct Block {
-    /// The nonce
+    /// A unique identifier for the block.
     pub nonce: String,
-    /// The hash                
+    /// The hash of the block.
     pub hash: String,
-    /// The number
+    /// The block number.
     pub number: String,
-    /// The parent hash
+    /// The hash of the parent block.
     #[serde(rename = "parentHash")]
-    pub parent_hash: String, // Hash of the parent block
-    /// The logs bloom
+    pub parent_hash: String,
+    /// The logs bloom filter for the block.
     #[serde(rename = "logsBloom")]
     pub logs_bloom: String,
-    /// The transactions root
+    /// The root hash of the transactions trie.
     #[serde(rename = "transactionsRoot")]
-    pub transactions_root: String, // Root of the transaction trie
-    /// The state root
+    pub transactions_root: String,
+    /// The root hash of the final state trie.
     #[serde(rename = "stateRoot")]
-    pub state_root: String, // Root of the final state trie
-    /// The receipts root
+    pub state_root: String,
+    /// The root hash of the receipts trie.
     #[serde(rename = "receiptsRoot")]
-    pub receipts_root: String, // Root of the receipts trie
-    /// The timestamp
-    pub timestamp: String, // Unix timestamp for the block
-    /// The transactions
-    pub transactions: Vec<Transaction>, // Adjust based on actual data
+    pub receipts_root: String,
+    /// The timestamp when the block was mined, in Unix time.
+    pub timestamp: String,
+    /// The transactions included in the block.
+    pub transactions: Vec<Transaction>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-/// A struct that contains the transaction
+/// A transaction within a block.
 pub struct Transaction {
-    /// The block hash
-    #[serde(rename = "blockHash")]
-    pub block_hash: String, // Hash of the block where the transaction was included, null if pending
-    /// The block number
-    #[serde(rename = "blockNumber")]
-    pub block_number: String, // Block number where the transaction was included, null if pending
-    /// The sender's address
-    pub from: String, // Sender's address
-    /// The hash of the transaction
-    pub hash: String, // Hash of the transaction
-    /// The data sent with the transaction
-    pub input: String, // Data sent with the transaction
-    /// The number of transactions made by the sender
-    pub nonce: String, // Number of transactions made by the sender
-    /// The receiver's address
-    pub to: Option<String>, // Receiver's address, null for contract creation
-    /// The index of the transaction in the block   
-    #[serde(rename = "transactionIndex")]
-    pub transaction_index: String, // Index of the transaction in the block, null if pending
-    /// The value transferred in Wei
-    pub value: String, // Value transferred in Wei
-}
-
-#[derive(Deserialize, Debug, Clone)]
-/// A struct that contains the receipt  
-pub struct Receipt {
-    /// The block hash
+    /// The hash of the block containing this transaction, or `null` if pending.
     #[serde(rename = "blockHash")]
     pub block_hash: String,
-    /// The block number
+    /// The number of the block containing this transaction, or `null` if pending.
     #[serde(rename = "blockNumber")]
     pub block_number: String,
-    /// The sender's address
+    /// The sender's address.
     pub from: String,
-    /// The receiver's address
+    /// The transaction hash.
+    pub hash: String,
+    /// The data payload of the transaction.
+    pub input: String,
+    /// The number of transactions sent by the sender.
+    pub nonce: String,
+    /// The recipient's address, or `null` if the transaction creates a contract.
     pub to: Option<String>,
-    /// The contract address
+    /// The index of this transaction in the block, or `null` if pending.
+    #[serde(rename = "transactionIndex")]
+    pub transaction_index: String,
+    /// The amount of Wei transferred.
+    pub value: String,
+}
+
+#[derive(Deserialize, Debug, Clone)]
+/// A receipt for a transaction.
+pub struct Receipt {
+    /// The hash of the block containing the transaction.
+    #[serde(rename = "blockHash")]
+    pub block_hash: String,
+    /// The number of the block containing the transaction.
+    #[serde(rename = "blockNumber")]
+    pub block_number: String,
+    /// The sender's address.
+    pub from: String,
+    /// The recipient's address.
+    pub to: Option<String>,
+    /// The address of the contract created by the transaction, if applicable.
     #[serde(rename = "contractAddress")]
     pub contract_address: Option<String>,
-    /// The logs
+    /// The logs generated by the transaction.
     pub logs: Vec<Log>,
-    /// The logs bloom
+    /// The logs bloom filter for the transaction.
     #[serde(rename = "logsBloom")]
     pub logs_bloom: String,
-    /// The status
+    /// The transaction's execution status.
     pub status: String,
-    /// The type of the receipt
+    /// The receipt type, if available.
     #[serde(rename = "type")]
     pub receipt_type: Option<String>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-/// A struct that contains the log
+/// A log entry from a transaction.
 pub struct Log {
-    /// The block hash
+    /// The hash of the block containing the log, or `null` if pending.
     #[serde(rename = "blockHash")]
-    pub block_hash: String, // Can be null if pending
-    /// The block number
+    pub block_hash: String,
+    /// The number of the block containing the log, or `null` if pending.
     #[serde(rename = "blockNumber")]
-    pub block_number: String, // Can be null if pending
-    /// The transaction index
-    pub transaction_index: Option<String>, // Can be null if pending
-    /// The address
+    pub block_number: String,
+    /// The index of the transaction that generated the log, or `null` if pending.
+    pub transaction_index: Option<String>,
+    /// The address from which the log originated.
     #[serde(rename = "address")]
-    pub address: String, // Address from which this log originated
-    /// The log index
+    pub address: String,
+    /// The index of the log entry, or `null` if pending.
     #[serde(rename = "logIndex")]
-    pub log_index: Option<String>, // Can be null if pending
-    /// The data
+    pub log_index: Option<String>,
+    /// The data associated with the log.
     #[serde(rename = "data")]
-    pub data: String, // Contains log data
-    /// The removed flag
+    pub data: String,
+    /// A flag indicating if the log was removed due to a chain reorganization.
     #[serde(rename = "removed")]
-    pub removed: bool, // True if removed due to reorganization
-    /// The topics
+    pub removed: bool,
+    /// The topics associated with the log.
     #[serde(rename = "topics")]
-    pub topics: Vec<String>, // Array of topics
-    /// The transaction hash
+    pub topics: Vec<String>,
+    /// The hash of the transaction that generated the log, or `null` if pending.
     #[serde(rename = "transactionHash")]
-    pub transaction_hash: Option<String>, // Transaction hash
+    pub transaction_hash: Option<String>,
 }
