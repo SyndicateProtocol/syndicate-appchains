@@ -23,7 +23,7 @@ use std::time::Duration;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let rpc_url = "https://base.llamarpc.com"; //"https://eth.llamarpc.com";
-    let start_block = 19486923;
+    let start_block = "0x12958cb".to_string();
     let polling_interval = Duration::from_secs(1);
 
     // Initialize the logger
@@ -40,8 +40,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         while let Some(message) = receiver.recv().await {
             log::info!(
                 "[Ingestor] Received block number: {:?}",
-                message.header.inner.number
+                message.block.number
             );
+            log::info!("[Ingestor] Received block: {:?}", message);
         }
     });
 
