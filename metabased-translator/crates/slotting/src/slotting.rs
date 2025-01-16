@@ -469,25 +469,32 @@ mod tests {
 
     #[tokio::test]
     async fn test_slotter() {
-        /* Test scenario:
-         *
-         * Slot 0 [9000-10000]:
-         * ┌───────────────────┐
-         * │ empty             │
-         * └───────────────────┘
-         *
-         * Slot 1 [10001-11000]:
-         * ┌───────────────────┐
-         * │ seq    @ 10001 #1 │
-         * │ seq    @ 11000 #2 │
-         * │ settle @ 10001 #1 │ -> Only marked as Unsafe once the blocks for next slot are received
-         * └───────────────────┘
-         *
-         * Slot 2 [11001-12000]:
-         * ┌───────────────────┐
-         * │ seq    @ 11001 #3 │
-         * │ settle @ 11001 #2 │ -> Shouldn't be received (never marked as unsafe)
-         * └───────────────────┘
+    /// Test scenario:
+    /// ```text
+    /// Slot 0 [9000-10000]:
+    /// ┌───────────────────┐
+    /// │ empty             │
+    /// └───────────────────┘
+    ///
+    /// Slot 1 [10001-11000]:
+    /// ┌───────────────────┐
+    /// │ seq    @ 10001 #1 │
+    /// │ seq    @ 11000 #2 │
+    /// │ settle @ 10001 #1 │ -> Only marked as Unsafe once the blocks for next slot are received
+    /// └───────────────────┘
+    ///
+    /// Slot 2 [11001-12000]:
+    /// ┌───────────────────┐
+    /// │ seq    @ 11001 #3 │
+    /// │ settle @ 11001 #2 │ -> Shouldn't be received (never marked as unsafe)
+    /// └───────────────────┘
+    ///
+    /// Legend:
+    /// @ timestamp
+    /// # block number
+    /// ```
+    #[tokio::test]
+    async fn test_slotter() {
          *
          * Legend:
          * @ timestamp
