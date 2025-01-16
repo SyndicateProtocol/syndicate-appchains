@@ -1,7 +1,6 @@
 //! Slotting module for metabased-translator
 
 use alloy::rpc::types::Block;
-use eyre::Error;
 use std::{
     cmp::Ordering,
     collections::LinkedList,
@@ -11,17 +10,33 @@ use std::{
     },
 };
 use thiserror::Error;
-use tokio::sync::mpsc::{Receiver, Sender};
-use tokio::{select, sync::mpsc::channel};
+use tokio::{
+    select,
+    sync::mpsc::{channel, Receiver, Sender},
+};
 use types::{BlockInfo, Chain, Slot, SlotState};
 
 /// Maximum time to wait for blocks before considering a slot final (24 hours in milliseconds)
 const MAX_WAIT_MS: u64 = 24 * 60 * 60 * 1000;
 
 /// Polls and ingests blocks from an Ethereum chain
+///
+/// Slots are stored in a linked list ordered by timestamp, with newer slots at the back.
+/// Each slot has a fixed duration and contains blocks from both chains that fall within its window.
+///
+/// ```text
+/// LinkedList:
+/// Back                                                           Front
+/// [Oldest] <-> [Slot N-2] <-> [Slot N-1] <-> [Current Slot] <-> [Newest]
+///
+/// Where:
+/// - max_slots is the number of slots to keep and is determined by `MAX_WAIT_MS` / `slot_duration_ms`, thus if a slot is to be dropped, it must be marked as Safe
+/// - Slots older than max_slots are dropped
+/// - A slot becomes Unsafe when both chains progress past it
+/// ```
 #[derive(Debug)]
 pub struct Slotter {
-    config: SlotterConfig,
+    config: Config,
 
     sequencing_chain_receiver: Receiver<BlockInfo>,
     settlement_chain_receiver: Receiver<BlockInfo>,
@@ -43,7 +58,7 @@ pub struct Slotter {
 
 /// Configuration for the slotter
 #[derive(Debug, Clone)]
-pub struct SlotterConfig {
+pub struct Config {
     /// The duration of each slot in milliseconds
     pub slot_duration_ms: u64,
     /// The slot number to start at
@@ -52,7 +67,7 @@ pub struct SlotterConfig {
     pub start_slot_timestamp: u64,
 }
 
-impl Default for SlotterConfig {
+impl Default for Config {
     fn default() -> Self {
         Self {
             slot_duration_ms: 2_000, // 2 seconds
@@ -62,21 +77,8 @@ impl Default for SlotterConfig {
     }
 }
 
-/// Slots are stored in a linked list ordered by timestamp, with newer slots at the back.
-/// Each slot has a fixed duration and contains blocks from both chains that fall within its window.
-///
-/// ```text
-/// LinkedList:
-/// Back                                                           Front
-/// [Oldest] <-> [Slot N-2] <-> [Slot N-1] <-> [Current Slot] <-> [Newest]
-///
-/// Where:
-/// - max_slots is the number of slots to keep and is determined by `MAX_WAIT_MS` / `slot_duration_ms`, thus if a slot is to be dropped, it must be marked as Safe
-/// - Slots older than max_slots are dropped
-/// - A slot becomes Unsafe when both chains progress past it
-/// ```
 impl Slotter {
-    /// Creates a new slotter that receives blocks from two chains and organizes them into slots.
+    /// Creates a new [`Slotter`] that receives blocks from two chains and organizes them into slots.
     ///
     /// # Arguments
     /// * `sequencing_chain_receiver` - Channel receiving blocks from the sequencing chain
@@ -84,22 +86,22 @@ impl Slotter {
     /// * `config` - Configuration for slot timing and initial state
     ///
     /// # Details
-    /// The slotter maintains a window of slots spanning the last 24 hours (`MAX_WAIT_MS`),
-    /// with the number of slots determined by `MAX_WAIT_MS` / `slot_duration_ms`.
+    /// The [`Slotter`] maintains a window of slots spanning the last 24 hours ([`MAX_WAIT_MS`]),
+    /// with the number of slots determined by [`MAX_WAIT_MS`] / `slot_duration_ms`.
     ///
-    /// Each slot contains blocks from both chains whose timestamps fall within the slot's window:
-    /// (`slot_timestamp` `slot_duration`on, `slot_timestamp`]
+    /// Each slot contains blocks from both chains which timestamps fall within the slot's window:
+    /// (`slot_timestamp` - `slot_duration`, `slot_timestamp`]
     ///
     /// # Returns
-    /// A new Slotter instance that can be started with `start()`
+    /// A new [`Slotter`] instance that can be started with `start()`
     pub async fn new(
         sequencing_chain_receiver: Receiver<BlockInfo>,
         settlement_chain_receiver: Receiver<BlockInfo>,
-        config: SlotterConfig,
-    ) -> Result<Self, Error> {
+        config: Config,
+    ) -> Self {
         let max_slots = (MAX_WAIT_MS / config.slot_duration_ms) as usize;
 
-        Ok(Self {
+        Self {
             sequencing_chain_receiver,
             settlement_chain_receiver,
             latest_sequencing_chain_block: None,
@@ -115,20 +117,20 @@ impl Slotter {
                 slots
             },
             max_slots,
-        })
+        }
     }
 
-    /// Starts the slotter in a new thread.
+    /// Starts the [`Slotter`] in a new thread.
     ///
-    /// The slotter will:
+    /// The [`Slotter`] will:
     /// 1. Receive blocks from both sequencing and settlement chains
     /// 2. Place blocks into slots based on their timestamps
     /// 3. Mark slots as unsafe when both chains have progressed past them (or max wait time has passed)
     /// 4. Send completed slots through the returned channel
     ///
-    /// Returns a receiver that will get slots as they are processed.
+    /// # Returns a receiver that will get slots as they are processed.
     /// TODO implement restore from DB
-    pub fn start(mut self) -> Result<Receiver<Slot>, Error> {
+    pub fn start(mut self) -> Receiver<Slot> {
         self.status.store(1, Release);
         let (sender, receiver) = channel(100); // TODO: make this configurable?
 
@@ -189,10 +191,10 @@ impl Slotter {
             }
         });
 
-        Ok(receiver)
+        receiver
     }
 
-    /// Stops the slotter thread.
+    /// Stops the [`Slotter`] thread.
     ///
     /// Note: Currently performs a hard stop. Future implementations will:
     /// - Wait for thread to complete
@@ -203,6 +205,7 @@ impl Slotter {
         self.status.store(0, Release);
     }
 
+    // TODO write doc
     async fn mark_unsafe_slots(
         &mut self,
         block: Block,
@@ -223,7 +226,7 @@ impl Slotter {
             // Mark slots as unsafe if both chains have progressed past them
             for slot in &mut self.slots {
                 if slot.state == SlotState::Unsafe {
-                    break; // assume all blocks past this point are already marked as unsafe
+                    return Ok(()); // assume all blocks past this point are already marked as unsafe
                 }
                 if slot.timestamp < min_timestamp && slot.state == SlotState::Open {
                     slot.state = SlotState::Unsafe;
@@ -467,8 +470,6 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn test_slotter() {
     /// Test scenario:
     /// ```text
     /// Slot 0 [9000-10000]:
@@ -495,11 +496,6 @@ mod tests {
     /// ```
     #[tokio::test]
     async fn test_slotter() {
-         *
-         * Legend:
-         * @ timestamp
-         * # block number
-         */
         let (seq_tx, seq_rx) = channel(100);
         let (settle_tx, settle_rx) = channel(100);
 
@@ -509,16 +505,15 @@ mod tests {
         let slotter = Slotter::new(
             seq_rx,
             settle_rx,
-            SlotterConfig {
+            Config {
                 slot_duration_ms,
                 start_slot_number: 0,
                 start_slot_timestamp: slot_start_timestamp_ms,
             },
         )
-        .await
-        .unwrap();
+        .await;
 
-        let mut slot_rx = slotter.start().unwrap();
+        let mut slot_rx = slotter.start();
         assert!(slot_rx.is_empty());
 
         // send initial blocks, these should fit in slot 1 and make slot 0 be marked as unsafe
