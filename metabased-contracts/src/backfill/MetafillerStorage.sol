@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {AccessControl} from "openzeppelin-contracts/contracts/access/AccessControl.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /// @title MetafillerStorage
 /// @notice This contract is used to emit events containing L3 chain block and transaction data
