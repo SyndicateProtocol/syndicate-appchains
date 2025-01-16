@@ -10,7 +10,9 @@ use http::Method;
 use jsonrpsee::server::middleware::http::ProxyGetRequestLayer;
 use jsonrpsee::server::{RpcServiceBuilder, Server, ServerHandle};
 use jsonrpsee::RpcModule;
+use std::fmt::Debug;
 use std::net::SocketAddr;
+use tracing::info;
 use url::Url;
 
 const METRICS_RPC: &str = "metrics";
@@ -48,16 +50,24 @@ fn create_eth_module<Chain, M, S>(
     services: Services<Chain, M, S>,
 ) -> anyhow::Result<RpcModule<Services<Chain, M, S>>>
 where
-    Chain: MetabasedSequencerChainService + Send + Sync + 'static,
+    Chain: MetabasedSequencerChainService + Send + Sync + Debug + 'static,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
-    M: Metrics + Send + Sync + 'static,
-    S: Stopwatch<Running: RunningStopwatch + Send + Sync + 'static> + Send + Sync + 'static,
+    M: Metrics + Send + Sync + Debug + 'static,
+    S: Stopwatch<Running: RunningStopwatch + Send + Sync + Debug + 'static>
+        + Send
+        + Sync
+        + Debug
+        + 'static,
 {
     let mut module = RpcModule::new(services);
     module.register_async_method("eth_sendRawTransaction", jsonrpc::send_raw_transaction)?;
     module.register_method(METRICS_RPC, jsonrpc::metrics)?;
     module.register_method("health", jsonrpc::health)?;
 
+    info!(
+        "Registered RPC methods: {:#?}",
+        module.method_names().collect::<Vec<_>>()
+    );
     Ok(module)
 }
 
