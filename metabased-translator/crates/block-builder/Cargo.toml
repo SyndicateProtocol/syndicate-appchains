@@ -9,6 +9,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
+common = { workspace = true }
 alloy = { workspace = true, features = [
   "providers",
   "node-bindings",

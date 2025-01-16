@@ -5,13 +5,14 @@ use crate::connectors::anvil::MetaChainProvider;
 use crate::rollups::{
     arbitrum::arbitrum_builder::ArbitrumBlockBuilder, rollup_builder::RollupBlockBuilder,
 };
+use common::types::Slot;
 use eyre::{Error, Result};
 use tokio::sync::mpsc::Receiver as TokioReceiver;
 
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
 pub struct BlockBuilder {
-    slotter_receiver: TokioReceiver<String>,
+    slotter_receiver: TokioReceiver<Slot>,
 
     mchain: MetaChainProvider,
     builder: Box<dyn RollupBlockBuilder>,
@@ -20,7 +21,7 @@ pub struct BlockBuilder {
 impl BlockBuilder {
     /// Create a new block builder
     pub async fn new(
-        slotter_receiver: TokioReceiver<String>,
+        slotter_receiver: TokioReceiver<Slot>,
         config: BlockBuilderConfig,
     ) -> Result<Self, Error> {
         let mchain = MetaChainProvider::start(config).await?;
@@ -42,7 +43,9 @@ impl BlockBuilder {
                 println!("Received slot: {:?}", slot);
 
                 // Process sequencing chain blocks into mB transactions
-                let mbtxs = self.builder.parse_blocks_to_mbtxs(vec![slot]);
+                let mbtxs = self
+                    .builder
+                    .parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
 
                 // TODO: [OP / ARB] Process deposit transactions
 
@@ -99,7 +102,7 @@ mod tests {
         let handle = tokio::spawn(async move { builder.start().await });
 
         // Send a test block
-        let test_slot = "test_slot".to_string();
+        let test_slot = Slot::new(1, 1);
         tx.send(test_slot).await?;
 
         // Give some time for processing

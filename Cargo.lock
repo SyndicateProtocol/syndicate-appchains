@@ -966,6 +966,7 @@ dependencies = [
  "alloy",
  "async-trait",
  "clap",
+ "common",
  "eyre",
  "flate2",
  "reqwest",
