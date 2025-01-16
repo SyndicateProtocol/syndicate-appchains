@@ -8,16 +8,12 @@ use crate::presentation::json_rpc_errors::InvalidInputError::{
 use crate::presentation::json_rpc_errors::InvalidParamsError::{
     MissingParam, NotAnArray, NotHexEncoded, WrongParamCount,
 };
-use crate::presentation::json_rpc_errors::InvalidParamsError::{
-    MissingParam, NotAnArray, NotHexEncoded, WrongParamCount,
-};
 use crate::presentation::transaction;
 use alloy::consensus::{Transaction, TxEnvelope, TxType};
 use alloy::primitives::private::alloy_rlp::Decodable;
 use alloy::primitives::TxHash;
 use alloy::primitives::U256;
 use jsonrpsee::types::Params;
-use std::convert::TryFrom;
 use std::convert::TryFrom;
 use std::fmt::Debug;
 use tracing::Level;
