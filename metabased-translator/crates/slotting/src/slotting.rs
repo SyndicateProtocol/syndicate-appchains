@@ -36,8 +36,8 @@ pub struct Slotter {
     sequencing_chain_rx: Receiver<BlockAndReceipts>,
     settlement_chain_rx: Receiver<BlockAndReceipts>,
 
-    latest_sequencing_chain_block: Option<Block>,
-    latest_settlement_chain_block: Option<Block>,
+    latest_sequencing_chain_block: Option<BlockRef>,
+    latest_settlement_chain_block: Option<BlockRef>,
 
     status: ServiceStatus,
 
@@ -46,6 +46,21 @@ pub struct Slotter {
 
     /// Maximum number of slots to keep
     max_slots: usize,
+}
+
+#[derive(Debug)]
+struct BlockRef {
+    number: u64,
+    timestamp: u64,
+}
+
+impl BlockRef {
+    const fn new(block: &Block) -> Self {
+        Self {
+            number: block.number,
+            timestamp: block.timestamp,
+        }
+    }
 }
 
 /// Configuration for the slotter
@@ -121,7 +136,7 @@ impl Slotter {
     /// 4. Send completed slots through the returned channel
     ///
     /// # Returns a receiver that will get slots as they are processed.
-    /// TODO implement restore from DB
+    /// TODO SEQ-480 - implement restore from DB
     pub fn start(mut self) -> Receiver<Slot> {
         self.status.store(Status::Started);
         let (sender, receiver) = channel(100); // TODO: make this configurable?
@@ -129,7 +144,7 @@ impl Slotter {
         tokio::spawn(async move {
             loop {
                 if self.status.load() == Status::Stopped {
-                    // TODO graceful shutdown triggered
+                    // TODO SEQ-479 - graceful shutdown triggered
                     // - stop processing new blocks
                     // - go through the slots and save all safe slots to the DB (timestamp < current_time - MAX_WAIT_MS)
                     // - potentially save all unsafe/opened blocks to the DB, so they can be resumed later
@@ -192,8 +207,6 @@ impl Slotter {
     /// - Wait for thread to complete
     /// - Write info to DB, so it can be resumed later
     pub fn stop(&mut self) {
-        // TODO graceful shutdown
-        // self.thread.take().unwrap().join().unwrap();
         self.status.store(Status::Stopped);
     }
 
@@ -215,7 +228,7 @@ impl Slotter {
     /// - Returns `SlotterError::SlotSendError` if sending a slot through the channel fails
     async fn mark_unsafe_slots(
         &mut self,
-        block: Block,
+        block_timestamp: u64,
         chain: Chain,
         sender: &Sender<Slot>,
     ) -> Result<(), SlotterError> {
@@ -228,7 +241,7 @@ impl Slotter {
 
         // Only mark slots as unsafe if we have blocks from both chains
         if let Some(other_timestamp) = other_chain_timestamp {
-            let min_timestamp = other_timestamp.min(block.timestamp);
+            let min_timestamp = other_timestamp.min(block_timestamp);
 
             // Mark slots as unsafe if both chains have progressed past them
             for slot in &mut self.slots {
@@ -251,29 +264,20 @@ impl Slotter {
         sender: &Sender<Slot>,
         slot_duration_ms: u64,
     ) -> Result<(), SlotterError> {
-        // TODO try to reduce the number of clone calls
-        let block_clone = block_info.block.clone();
-        self.update_latest_block(block_clone.clone(), chain)?;
+        let block_timestamp = block_info.block.timestamp;
+        self.update_latest_block(&block_info.block, chain)?;
         let latest_slot = self
             .slots
             .front_mut()
             .ok_or(SlotterError::NoSlotsAvailable)?;
 
-        match block_slot_ordering(
-            block_info.block.timestamp,
-            latest_slot.timestamp,
-            slot_duration_ms,
-        ) {
+        match block_slot_ordering(block_timestamp, latest_slot.timestamp, slot_duration_ms) {
             Ordering::Less => {
                 // Find the slot this block belongs to
                 let mut inserted = false;
                 for slot in &mut self.slots {
                     if matches!(
-                        block_slot_ordering(
-                            block_info.block.timestamp,
-                            slot.timestamp,
-                            slot_duration_ms,
-                        ),
+                        block_slot_ordering(block_timestamp, slot.timestamp, slot_duration_ms,),
                         Ordering::Equal
                     ) {
                         match chain {
@@ -288,7 +292,7 @@ impl Slotter {
                 if !inserted {
                     return Err(SlotterError::BlockTooOld {
                         chain,
-                        block_timestamp: block_clone.timestamp,
+                        block_timestamp,
                     });
                 }
             }
@@ -304,7 +308,7 @@ impl Slotter {
                 // this accomplishes two things:
                 // - it creates slots for which we might still receive blocks (from the other chain)
                 // - keeps the list full, meaning the max_slots limit will always trigger on the correct max_wait window
-                while latest_timestamp < block_info.block.timestamp {
+                while latest_timestamp < block_timestamp {
                     let next_timestamp = latest_timestamp + slot_duration_ms;
                     let next_slot_number = latest_slot_number + 1;
                     let slot = Slot::new(next_slot_number, next_timestamp);
@@ -325,12 +329,12 @@ impl Slotter {
             }
         }
 
-        self.mark_unsafe_slots(block_clone, chain, sender).await?;
+        self.mark_unsafe_slots(block_timestamp, chain, sender)
+            .await?;
         self.cleanup_slots(sender).await?;
         Ok(())
     }
 
-    // TODO use thiserror
     async fn cleanup_slots(&mut self, sender: &Sender<Slot>) -> Result<(), SlotterError> {
         // Clean up old slots
         while self.slots.len() > self.max_slots {
@@ -344,10 +348,10 @@ impl Slotter {
         Ok(())
     }
 
-    fn update_latest_block(&mut self, block: Block, chain: Chain) -> Result<(), SlotterError> {
+    fn update_latest_block(&mut self, block: &Block, chain: Chain) -> Result<(), SlotterError> {
         if let Some(latest) = match chain {
-            Chain::Sequencing => &self.latest_sequencing_chain_block,
-            Chain::Settlement => &self.latest_settlement_chain_block,
+            Chain::Sequencing => self.latest_sequencing_chain_block.as_ref(),
+            Chain::Settlement => self.latest_settlement_chain_block.as_ref(),
         } {
             if block.number <= latest.number {
                 return Err(SlotterError::ReorgDetected {
@@ -375,8 +379,8 @@ impl Slotter {
         }
 
         match chain {
-            Chain::Sequencing => self.latest_sequencing_chain_block = Some(block),
-            Chain::Settlement => self.latest_settlement_chain_block = Some(block),
+            Chain::Sequencing => self.latest_sequencing_chain_block = Some(BlockRef::new(block)),
+            Chain::Settlement => self.latest_settlement_chain_block = Some(BlockRef::new(block)),
         }
         Ok(())
     }
