@@ -9,6 +9,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
+common.workspace = true
 alloy = { version = "0.9.2", features = ["full"] }
 eyre = "0.6.12"
 tokio = { version = "1.42.0", features = ["rt", "rt-multi-thread", "macros"] }
