@@ -173,4 +173,12 @@ impl Slot {
     pub fn is_empty(&self) -> bool {
         self.sequencing_chain_blocks.is_empty() && self.settlement_chain_blocks.is_empty()
     }
+
+    /// Adds a block to the slot's chain-specific block list
+    pub fn push_block(&mut self, block: BlockAndReceipts, chain: Chain) {
+        match chain {
+            Chain::Sequencing => self.sequencing_chain_blocks.push(block),
+            Chain::Settlement => self.settlement_chain_blocks.push(block),
+        }
+    }
 }

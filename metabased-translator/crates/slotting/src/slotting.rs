@@ -280,10 +280,7 @@ impl Slotter {
                         block_slot_ordering(block_timestamp, slot.timestamp, slot_duration_ms,),
                         Ordering::Equal
                     ) {
-                        match chain {
-                            Chain::Sequencing => slot.sequencing_chain_blocks.push(block_info),
-                            Chain::Settlement => slot.settlement_chain_blocks.push(block_info),
-                        }
+                        slot.push_block(block_info, chain);
                         inserted = true;
                         break;
                     }
@@ -296,10 +293,7 @@ impl Slotter {
                     });
                 }
             }
-            Ordering::Equal => match chain {
-                Chain::Sequencing => latest_slot.sequencing_chain_blocks.push(block_info),
-                Chain::Settlement => latest_slot.settlement_chain_blocks.push(block_info),
-            },
+            Ordering::Equal => latest_slot.push_block(block_info, chain),
             Ordering::Greater => {
                 let mut latest_timestamp = latest_slot.timestamp;
                 let mut latest_slot_number = latest_slot.slot_number;
@@ -322,10 +316,7 @@ impl Slotter {
                     .front_mut()
                     .ok_or(SlotterError::NoSlotsAvailable)?;
 
-                match chain {
-                    Chain::Sequencing => latest_slot.sequencing_chain_blocks.push(block_info),
-                    Chain::Settlement => latest_slot.settlement_chain_blocks.push(block_info),
-                }
+                latest_slot.push_block(block_info, chain);
             }
         }
 
