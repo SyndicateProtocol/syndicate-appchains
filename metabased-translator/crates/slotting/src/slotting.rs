@@ -33,8 +33,8 @@ const MAX_WAIT_MS: u64 = 24 * 60 * 60 * 1000;
 pub struct Slotter {
     config: Config,
 
-    sequencing_chain_receiver: Receiver<BlockAndReceipts>,
-    settlement_chain_receiver: Receiver<BlockAndReceipts>,
+    sequencing_chain_rx: Receiver<BlockAndReceipts>,
+    settlement_chain_rx: Receiver<BlockAndReceipts>,
 
     latest_sequencing_chain_block: Option<Block>,
     latest_settlement_chain_block: Option<Block>,
@@ -48,7 +48,7 @@ pub struct Slotter {
     max_slots: usize,
 }
 
-/// Configuration for the slotter
+/// Configuration for the slotte    r
 #[derive(Debug, Clone)]
 pub struct Config {
     /// The duration of each slot in milliseconds
@@ -94,8 +94,8 @@ impl Slotter {
         let max_slots = (MAX_WAIT_MS / config.slot_duration_ms) as usize;
 
         Self {
-            sequencing_chain_receiver,
-            settlement_chain_receiver,
+            sequencing_chain_rx: sequencing_chain_receiver,
+            settlement_chain_rx: settlement_chain_receiver,
             latest_sequencing_chain_block: None,
             latest_settlement_chain_block: None,
             config: config.clone(),
@@ -137,7 +137,7 @@ impl Slotter {
                 }
 
                 let process_result = select! {
-                    Some(block) = self.sequencing_chain_receiver.recv() => {
+                    Some(block) = self.sequencing_chain_rx.recv() => {
                         self.process_block(
                             block,
                             Chain::Sequencing,
@@ -146,7 +146,7 @@ impl Slotter {
                         )
                         .await
                     }
-                    Some(block) = self.settlement_chain_receiver.recv() => {
+                    Some(block) = self.settlement_chain_rx.recv() => {
                         self.process_block(
                             block,
                             Chain::Settlement,
