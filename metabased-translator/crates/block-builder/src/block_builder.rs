@@ -47,13 +47,24 @@ impl BlockBuilder {
                 // TODO: [OP / ARB] Process deposit transactions
 
                 // [OP / ARB] Build batch
-                let batch_txn = self.builder.build_batch_txn(mbtxs).await.unwrap();
+                match self.builder.build_batch_txn(mbtxs).await {
+                    Ok(batch_txn) => {
+                        // Submit batch transaction to mchain
+                        if let Err(e) = self.mchain.submit_txn(batch_txn).await {
+                            eprintln!("Error submitting transaction: {}", e);
+                            continue;
+                        }
 
-                // Submit batch transaction to mchain
-                let _ = self.mchain.submit_txn(batch_txn).await;
-
-                // Mine mchain block
-                let _ = self.mchain.mine_block().await;
+                        // Mine mchain block
+                        if let Err(e) = self.mchain.mine_block().await {
+                            eprintln!("Error mining block: {}", e);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Error building batch transaction: {}", e);
+                        continue;
+                    }
+                }
             }
         });
 
