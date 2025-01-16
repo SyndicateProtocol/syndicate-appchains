@@ -154,7 +154,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_poll_block() -> Result<(), Error> {
+    async fn test_get_block_and_receipts() -> Result<(), Error> {
         let start_block = "0x12958cb".to_string();
         let polling_interval = Duration::from_secs(1);
 
@@ -190,7 +190,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_poll_block_mismatch_error() -> Result<(), Error> {
+    async fn test_get_block_and_receipts_mismatch_error() -> Result<(), Error> {
         let start_block = "0x12958cb".to_string();
         let polling_interval = Duration::from_secs(1);
 
