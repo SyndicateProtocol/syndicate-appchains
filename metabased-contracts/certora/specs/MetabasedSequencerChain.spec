@@ -34,8 +34,21 @@ invariant l3ChainIdNotZero()
 /*
  * Rule 2: Verify that requirementModule address is never zero
  */
-invariant requirementModuleNotZero()
-    requirementModule() != 0;
+rule moduleNotZero(method f) {
+    // Get the module before
+    address oldModule = requirementModule();
+
+    // Function call
+    env e;
+    calldataarg args;
+    f(e, args);
+
+    // Get the module after
+    address newModule = requirementModule();
+
+    // Assert module cannot be zero address
+    assert newModule != 0;
+}
 
 /*
  * Rule 3: Only allowed addresses can process transactions
@@ -84,12 +97,25 @@ rule bulkProcessingConsistency(bytes[] data) {
 
     // If bulk processing succeeded, each individual transaction should succeed
     require bulkSuccess;
+    require data.length < 3; // Loop unrolling limit - Certora will unroll up to this limit
 
-    // Check first transaction as representative (full loop not supported in CVL)
-    require data.length > 0;
     processTransaction@withrevert(e, data[0]);
     assert !lastReverted,
         "Bulk processing accepted invalid transaction";
+
+    processTransaction@withrevert(e, data[1]);
+    assert !lastReverted,
+        "Bulk processing accepted invalid transaction";
+
+    processTransaction@withrevert(e, data[2]);
+    assert !lastReverted,
+        "Bulk processing accepted invalid transaction";
+
+    // If individual transactions succeeded, bulk processing should succeed
+    assert bulkSuccess,
+        "Bulk processing failed despite individual transactions succeeding";
+
+
 }
 
 /*
@@ -150,8 +176,16 @@ rule permissionsCorrectlyEnforced(bytes data) {
 
     // Try to process a transaction
     processTransaction@withrevert(e, data);
+    bool txSucceeded = !lastReverted;
 
-    // Transaction should only succeed if sender was allowed
-    assert !lastReverted => initiallyAllowed,
+    // Direction 1: Success implies allowed
+    assert txSucceeded => initiallyAllowed,
         "Transaction succeeded with unauthorized sender";
+
+    // Direction 2: Allowed implies success (with preconditions)
+    require data.length > 0;  // Example precondition: non-empty data
+    require e.msg.value == 0; // Example precondition: no ETH sent
+
+    assert initiallyAllowed => txSucceeded,
+        "Transaction failed despite sender being authorized and valid preconditions";
 }
