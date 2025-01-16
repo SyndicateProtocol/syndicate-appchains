@@ -48,7 +48,7 @@ pub struct Slotter {
     max_slots: usize,
 }
 
-/// Configuration for the slotte    r
+/// Configuration for the slotter
 #[derive(Debug, Clone)]
 pub struct Config {
     /// The duration of each slot in milliseconds
@@ -197,7 +197,22 @@ impl Slotter {
         self.status.store(Status::Stopped);
     }
 
-    // TODO write doc
+    /// Marks slots as unsafe when both chains have progressed past them.
+    ///
+    /// A slot becomes unsafe when both chains have blocks with timestamps greater than the slot's timestamp.
+    /// This indicates that both chains have moved past this slot and no more blocks will be added to it.
+    ///
+    /// # Algorithm
+    /// 1. Gets the latest block timestamp from both chains
+    /// 2. Takes the minimum timestamp between them
+    /// 3. Marks all slots with timestamps less than this minimum as unsafe
+    /// 4. Sends unsafe slots
+    ///
+    /// # Early Returns
+    /// - Returns early if it encounters a slot that's already marked as unsafe (assumes all older slots are also unsafe)
+    ///
+    /// # Errors
+    /// - Returns `SlotterError::SlotSendError` if sending a slot through the channel fails
     async fn mark_unsafe_slots(
         &mut self,
         block: Block,
