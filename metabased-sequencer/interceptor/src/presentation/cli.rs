@@ -1,9 +1,9 @@
+use crate::presentation::configuration::Configuration;
+use crate::presentation::server;
 use core::fmt;
 use std::error::Error;
 use std::fmt::Debug;
 use tracing::info;
-use crate::presentation::configuration::Configuration;
-use crate::presentation::server;
 use tracing_subscriber::{fmt as subscriber_fmt, EnvFilter};
 
 #[derive(Debug)]
@@ -14,7 +14,9 @@ pub enum TracingError {
 impl fmt::Display for TracingError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            TracingError::SubscriberInit(msg) => write!(f, "Failed to initialize subscriber: {}", msg),
+            TracingError::SubscriberInit(msg) => {
+                write!(f, "Failed to initialize subscriber: {}", msg)
+            }
         }
     }
 }
@@ -22,10 +24,7 @@ impl fmt::Display for TracingError {
 impl Error for TracingError {}
 
 pub fn init_tracing_subscriber() -> Result<(), TracingError> {
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| {
-            EnvFilter::new("info")
-        });
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     subscriber_fmt()
         .json()
@@ -46,7 +45,7 @@ pub async fn run() -> anyhow::Result<()> {
         args.chain_rpc_address,
         args.private_key,
     )
-        .await?;
+    .await?;
 
     info!(
         addr = %addr,

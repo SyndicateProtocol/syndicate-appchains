@@ -1,4 +1,3 @@
-use tracing::Level;
 use crate::application;
 use crate::application::{Metrics, RunningStopwatch, SendRawTransactionParams, Stopwatch};
 use crate::domain::primitives::Bytes;
@@ -13,6 +12,7 @@ use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
 use std::sync::Arc;
 use tracing::instrument;
+use tracing::Level;
 
 /// An error type for JSON-RPC endpoints.
 ///

@@ -1,6 +1,3 @@
-use tracing::Level;
-use std::convert::TryFrom;
-use std::fmt::Debug;
 use crate::domain::primitives::Bytes;
 use crate::domain::MetabasedSequencerChainService;
 use crate::presentation::json_rpc_errors::Error;
@@ -11,15 +8,20 @@ use crate::presentation::json_rpc_errors::InvalidInputError::{
 use crate::presentation::json_rpc_errors::InvalidParamsError::{
     MissingParam, NotAnArray, NotHexEncoded, WrongParamCount,
 };
+use crate::presentation::json_rpc_errors::InvalidParamsError::{
+    MissingParam, NotAnArray, NotHexEncoded, WrongParamCount,
+};
 use crate::presentation::transaction;
 use alloy::consensus::{Transaction, TxEnvelope, TxType};
 use alloy::primitives::private::alloy_rlp::Decodable;
 use alloy::primitives::TxHash;
 use alloy::primitives::U256;
 use jsonrpsee::types::Params;
-use tracing::{debug, instrument};
-use crate::presentation::json_rpc_errors::InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount};
 use std::convert::TryFrom;
+use std::convert::TryFrom;
+use std::fmt::Debug;
+use tracing::Level;
+use tracing::{debug, instrument};
 
 /// Sends serialized and signed transaction `tx` using `chain`.
 #[instrument(level = Level::DEBUG, skip(chain), fields(encoded))]
@@ -36,14 +38,13 @@ where
     let mut slice: &[u8] = encoded.as_ref();
     let tx = match TxEnvelope::decode(&mut slice) {
         Ok(tx) => tx,
-        Err(_) =>
-            {
-                let error = InvalidInput(UnableToRLPDecode);
-                debug!(
-                    error = %error
-                );
-                return Err(error)
-            },
+        Err(_) => {
+            let error = InvalidInput(UnableToRLPDecode);
+            debug!(
+                error = %error
+            );
+            return Err(error);
+        }
     };
 
     // 2. Validation:

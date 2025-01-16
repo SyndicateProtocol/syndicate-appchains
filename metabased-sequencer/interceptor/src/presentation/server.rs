@@ -1,4 +1,3 @@
-use std::fmt::Debug;
 use crate::application::{Metrics, RunningStopwatch, Stopwatch};
 use crate::domain::primitives::Address;
 use crate::domain::MetabasedSequencerChainService;
@@ -11,6 +10,7 @@ use http::Method;
 use jsonrpsee::server::middleware::http::ProxyGetRequestLayer;
 use jsonrpsee::server::{RpcServiceBuilder, Server, ServerHandle};
 use jsonrpsee::RpcModule;
+use std::fmt::Debug;
 use std::net::SocketAddr;
 use tracing::info;
 use url::Url;
@@ -53,7 +53,11 @@ where
     Chain: MetabasedSequencerChainService + Send + Sync + Debug + 'static,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
     M: Metrics + Send + Sync + Debug + 'static,
-    S: Stopwatch<Running: RunningStopwatch + Send + Sync + Debug + 'static> + Send + Sync + Debug + 'static,
+    S: Stopwatch<Running: RunningStopwatch + Send + Sync + Debug + 'static>
+        + Send
+        + Sync
+        + Debug
+        + 'static,
 {
     let mut module = RpcModule::new(services);
     module.register_async_method("eth_sendRawTransaction", jsonrpc::send_raw_transaction)?;

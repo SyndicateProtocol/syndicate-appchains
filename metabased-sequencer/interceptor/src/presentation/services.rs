@@ -1,4 +1,3 @@
-use std::fmt::Debug;
 use crate::application::{Metrics, Stopwatch};
 use crate::domain::MetabasedSequencerChainService;
 use crate::infrastructure::{PrometheusMetrics, SolMetabasedSequencerChainService, TokioStopwatch};
@@ -9,6 +8,7 @@ use alloy::providers::fillers::{
 use alloy::providers::{ReqwestProvider, RootProvider};
 use alloy::signers::local::PrivateKeySigner;
 use alloy_primitives::{Address, B256};
+use std::fmt::Debug;
 use url::Url;
 
 #[derive(Debug)]
@@ -56,7 +56,11 @@ pub fn create(
     private_key: B256,
 ) -> anyhow::Result<
     Services<
-        impl MetabasedSequencerChainService<Error = alloy::contract::Error> + Send + Sync + Debug + 'static,
+        impl MetabasedSequencerChainService<Error = alloy::contract::Error>
+            + Send
+            + Sync
+            + Debug
+            + 'static,
         impl Metrics + Send + Sync + Debug + 'static,
         impl Stopwatch<Running: Send + Sync + Debug + 'static> + Send + Sync + Debug + 'static,
     >,

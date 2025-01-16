@@ -8,7 +8,7 @@ use alloy::transports::Transport;
 use async_trait::async_trait;
 use std::marker::PhantomData;
 use std::time::Duration;
-use tracing::{debug_span};
+use tracing::debug_span;
 
 sol! {
     #[derive(Debug, PartialEq, Eq)]
@@ -56,21 +56,23 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
     type Error = alloy::contract::Error;
 
     async fn process_transaction(&self, tx: Bytes) -> Result<TxHash, Self::Error> {
-        let result =
-            debug_span!("process_transaction", account = ?self.account).in_scope(|| async {
-            let pending_tx = self.contract()
-                .processTransaction(tx)
-                .send()
-                .await
-                .map_err(alloy::contract::Error::from)?;
+        let result = debug_span!("process_transaction", account = ?self.account)
+            .in_scope(|| async {
+                let pending_tx = self
+                    .contract()
+                    .processTransaction(tx)
+                    .send()
+                    .await
+                    .map_err(alloy::contract::Error::from)?;
 
-            pending_tx
-                .with_required_confirmations(2)
-                .with_timeout(Some(Duration::from_secs(60)))
-                .watch()
-                .await
-                .map_err(alloy::contract::Error::from)
-        }).await?;
+                pending_tx
+                    .with_required_confirmations(2)
+                    .with_timeout(Some(Duration::from_secs(60)))
+                    .watch()
+                    .await
+                    .map_err(alloy::contract::Error::from)
+            })
+            .await?;
 
         Ok(result)
     }
