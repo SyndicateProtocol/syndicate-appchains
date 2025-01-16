@@ -139,7 +139,7 @@ impl Slotter {
     /// TODO SEQ-480 - implement restore from DB
     pub fn start(mut self) -> Receiver<Slot> {
         self.status.store(Status::Started);
-        let (sender, receiver) = channel(100); // TODO: make this configurable?
+        let (sender, receiver) = channel(100); // TODO SEQ-490 - channel size shouldn't be hardcoded here
 
         tokio::spawn(async move {
             loop {
@@ -176,19 +176,19 @@ impl Slotter {
                     Ok(_) => (),
                     Err(e) => match e {
                         SlotterError::ReorgDetected { .. } => {
-                            panic!("Reorgs not yet implemented {e}"); // TODO: implement reorgs
+                            panic!("Reorgs not yet implemented {e}"); // TODO SEQ-429 - implement reorg handing
                         }
                         SlotterError::BlockNumberSkipped { .. } => {
-                            panic!("Block number skipped {e}"); // TODO decide what to do if a block is skipped
+                            panic!("Block number skipped {e}"); // TODO SEQ-489 - decide what to do if a block is skipped
                         }
                         SlotterError::BlockTooOld { .. } => {
-                            panic!("Block too old {e}"); // TODO decide what to do if a block is too old
+                            panic!("Block too old {e}"); // TODO SEQ-489 - decide what to do if a block is too old
                         }
                         SlotterError::NoSlotsAvailable => {
                             panic!("No slots available. This should never happen - if it does, it's an implementation error. {e}");
                         }
                         SlotterError::SlotSendError(_) => {
-                            panic!("Failed to send slot through channel. TODO decide what to do here (likely to occur during shutdown, or the received is blocked): {e}");
+                            panic!("Failed to send slot through channel: {e}"); // TODO SEQ-489 - decide what to do here (likely to occur during shutdown, or the received is blocked)
                         }
                         SlotterError::NonIncreasingTimestamp { .. } => {
                             panic!("Non-increasing timestamp - this should never happen (where a block is received with the expected block number, but a lower timestamp) {e}");
