@@ -95,7 +95,7 @@ impl Batch {
     }
 
     /// Splits the Batch into frames of a given size
-    pub fn get_frames(&self, frame_size: usize) -> Result<Vec<Frame>, Box<dyn Error>> {
+    pub fn get_frames(&self, frame_size: usize) -> Result<Vec<Frame>> {
         // Step 1: Encode the Batch
         let encoded_batch = self.encode();
 
