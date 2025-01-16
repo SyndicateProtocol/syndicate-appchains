@@ -1,6 +1,6 @@
 //! Slotting module for metabased-translator
 
-use alloy::rpc::types::Block;
+use common::types::{Block, BlockAndReceipts, Chain, Slot, SlotState};
 use std::{
     cmp::Ordering,
     collections::LinkedList,
@@ -14,7 +14,6 @@ use tokio::{
     select,
     sync::mpsc::{channel, Receiver, Sender},
 };
-use types::{BlockInfo, Chain, Slot, SlotState};
 
 /// Maximum time to wait for blocks before considering a slot final (24 hours in milliseconds)
 const MAX_WAIT_MS: u64 = 24 * 60 * 60 * 1000;
@@ -38,8 +37,8 @@ const MAX_WAIT_MS: u64 = 24 * 60 * 60 * 1000;
 pub struct Slotter {
     config: Config,
 
-    sequencing_chain_receiver: Receiver<BlockInfo>,
-    settlement_chain_receiver: Receiver<BlockInfo>,
+    sequencing_chain_receiver: Receiver<BlockAndReceipts>,
+    settlement_chain_receiver: Receiver<BlockAndReceipts>,
 
     latest_sequencing_chain_block: Option<Block>,
     latest_settlement_chain_block: Option<Block>,
@@ -95,8 +94,8 @@ impl Slotter {
     /// # Returns
     /// A new [`Slotter`] instance that can be started with `start()`
     pub async fn new(
-        sequencing_chain_receiver: Receiver<BlockInfo>,
-        settlement_chain_receiver: Receiver<BlockInfo>,
+        sequencing_chain_receiver: Receiver<BlockAndReceipts>,
+        settlement_chain_receiver: Receiver<BlockAndReceipts>,
         config: Config,
     ) -> Self {
         let max_slots = (MAX_WAIT_MS / config.slot_duration_ms) as usize;
@@ -217,11 +216,11 @@ impl Slotter {
             Chain::Sequencing => self.latest_settlement_chain_block.as_ref(),
             Chain::Settlement => self.latest_sequencing_chain_block.as_ref(),
         }
-        .map(|b| b.header.timestamp);
+        .map(|b| b.timestamp);
 
         // Only mark slots as unsafe if we have blocks from both chains
         if let Some(other_timestamp) = other_chain_timestamp {
-            let min_timestamp = other_timestamp.min(block.header.timestamp);
+            let min_timestamp = other_timestamp.min(block.timestamp);
 
             // Mark slots as unsafe if both chains have progressed past them
             for slot in &mut self.slots {
@@ -242,7 +241,7 @@ impl Slotter {
 
     async fn process_block(
         &mut self,
-        block_info: BlockInfo,
+        block_info: BlockAndReceipts,
         chain: Chain,
         sender: &Sender<Slot>,
         slot_duration_ms: u64,
@@ -256,7 +255,7 @@ impl Slotter {
             .ok_or(SlotterError::NoSlotsAvailable)?;
 
         match block_slot_ordering(
-            block_info.block.header.timestamp,
+            block_info.block.timestamp,
             latest_slot.timestamp,
             slot_duration_ms,
         ) {
@@ -266,7 +265,7 @@ impl Slotter {
                 for slot in &mut self.slots {
                     if matches!(
                         block_slot_ordering(
-                            block_info.block.header.timestamp,
+                            block_info.block.timestamp,
                             slot.timestamp,
                             slot_duration_ms,
                         ),
@@ -284,7 +283,7 @@ impl Slotter {
                 if !inserted {
                     return Err(SlotterError::BlockTooOld {
                         chain,
-                        block_timestamp: block_clone.header.timestamp,
+                        block_timestamp: block_clone.timestamp,
                     });
                 }
             }
@@ -300,7 +299,7 @@ impl Slotter {
                 // this accomplishes two things:
                 // - it creates slots for which we might still receive blocks (from the other chain)
                 // - keeps the list full, meaning the max_slots limit will always trigger on the correct max_wait window
-                while latest_timestamp < block_info.block.header.timestamp {
+                while latest_timestamp < block_info.block.timestamp {
                     let next_timestamp = latest_timestamp + slot_duration_ms;
                     let next_slot_number = latest_slot_number + 1;
                     let slot = Slot::new(next_slot_number, next_timestamp);
@@ -348,27 +347,27 @@ impl Slotter {
             Chain::Sequencing => &self.latest_sequencing_chain_block,
             Chain::Settlement => &self.latest_settlement_chain_block,
         } {
-            if block.header.number <= latest.header.number {
+            if block.number <= latest.number {
                 return Err(SlotterError::ReorgDetected {
                     chain,
-                    current_block_number: latest.header.number,
-                    received_block_number: block.header.number,
+                    current_block_number: latest.number,
+                    received_block_number: block.number,
                 });
             }
 
-            if block.header.number != latest.header.number + 1 {
+            if block.number != latest.number + 1 {
                 return Err(SlotterError::BlockNumberSkipped {
                     chain,
-                    current_block_number: latest.header.number,
-                    received_block_number: block.header.number,
+                    current_block_number: latest.number,
+                    received_block_number: block.number,
                 });
             }
 
-            if block.header.timestamp <= latest.header.timestamp {
+            if block.timestamp <= latest.timestamp {
                 return Err(SlotterError::NonIncreasingTimestamp {
                     chain,
-                    current: latest.header.timestamp,
-                    received: block.header.timestamp,
+                    current: latest.timestamp,
+                    received: block.timestamp,
                 });
             }
         }
@@ -451,22 +450,20 @@ pub enum SlotterError {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn create_test_block(number: u64, timestamp: u64) -> BlockInfo {
-        BlockInfo {
+    fn create_test_block(number: u64, timestamp: u64) -> BlockAndReceipts {
+        BlockAndReceipts {
             block: Block {
-                header: alloy::rpc::types::Header {
-                    inner: alloy::consensus::Header {
-                        number,
-                        timestamp,
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                },
-                ..Default::default()
+                hash: "0x0".to_string(),
+                number,
+                parent_hash: "0x0".to_string(),
+                logs_bloom: "0x0".to_string(),
+                transactions_root: "0x0".to_string(),
+                state_root: "0x0".to_string(),
+                receipts_root: "0x0".to_string(),
+                timestamp,
+                transactions: vec![],
             },
-            events: vec![],
-            txs: vec![],
+            receipts: vec![],
         }
     }
 
