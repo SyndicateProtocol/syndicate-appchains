@@ -1,14 +1,10 @@
 //! Slotting module for metabased-translator
 
-use common::types::{Block, BlockAndReceipts, Chain, Slot, SlotState};
-use std::{
-    cmp::Ordering,
-    collections::LinkedList,
-    sync::atomic::{
-        AtomicU8,
-        Ordering::{Acquire, Release},
-    },
+use common::{
+    service_status::{ServiceStatus, Status},
+    types::{Block, BlockAndReceipts, Chain, Slot, SlotState},
 };
+use std::{cmp::Ordering, collections::LinkedList};
 use thiserror::Error;
 use tokio::{
     select,
@@ -43,10 +39,7 @@ pub struct Slotter {
     latest_sequencing_chain_block: Option<Block>,
     latest_settlement_chain_block: Option<Block>,
 
-    /// 0: not started
-    /// 1: started
-    /// 2: stopped
-    status: AtomicU8,
+    status: ServiceStatus,
 
     /// Stores the last N slots (both open and closed)
     slots: LinkedList<Slot>,
@@ -106,7 +99,7 @@ impl Slotter {
             latest_sequencing_chain_block: None,
             latest_settlement_chain_block: None,
             config: config.clone(),
-            status: AtomicU8::new(0),
+            status: ServiceStatus::new(),
             slots: {
                 let mut slots = LinkedList::new();
                 slots.push_front(Slot::new(
@@ -130,12 +123,12 @@ impl Slotter {
     /// # Returns a receiver that will get slots as they are processed.
     /// TODO implement restore from DB
     pub fn start(mut self) -> Receiver<Slot> {
-        self.status.store(1, Release);
+        self.status.store(Status::Started);
         let (sender, receiver) = channel(100); // TODO: make this configurable?
 
         tokio::spawn(async move {
             loop {
-                if self.status.load(Acquire) == 2 {
+                if self.status.load() == Status::Stopped {
                     // TODO graceful shutdown triggered
                     // - stop processing new blocks
                     // - go through the slots and save all safe slots to the DB (timestamp < current_time - MAX_WAIT_MS)
@@ -201,7 +194,7 @@ impl Slotter {
     pub fn stop(&mut self) {
         // TODO graceful shutdown
         // self.thread.take().unwrap().join().unwrap();
-        self.status.store(0, Release);
+        self.status.store(Status::Stopped);
     }
 
     // TODO write doc
