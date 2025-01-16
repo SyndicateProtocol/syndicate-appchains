@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {PermissionModule} from "./interfaces/PermissionModule.sol";
-import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title SequencingModuleChecker
 /// @notice A simplified contract that delegates permission checks to modules

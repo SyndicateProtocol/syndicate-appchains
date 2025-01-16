@@ -2,6 +2,8 @@
 members = [
     "metabased-translator/crates/block-builder",
     "metabased-translator/crates/ingestor",
+    "metabased-translator/crates/slotting",
+    "metabased-translator/crates/common",
     "metabased-translator/tests",
     "metabased-sequencer/interceptor",
     "metabased-sequencer/proxy",
@@ -48,9 +50,12 @@ reqwest = "0.12.7"
 serde = "1.0.210"
 hyper-util = "0.1.8"
 block-builder = { path = "metabased-translator/crates/block-builder" }
+slotting = { path = "metabased-translator/crates/slotting" }
+ingestor = { path = "metabased-translator/crates/ingestor" }
+common = { path = "metabased-translator/crates/common" }
 
 [workspace.metadata.precommit]
-fmt="cargo fmt --all --check"
+fmt = "cargo fmt --all --check"
 
 [workspace.lints.rust]
 missing_debug_implementations = "warn"

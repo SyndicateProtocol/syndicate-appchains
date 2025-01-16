@@ -26,7 +26,7 @@ use std::time::Duration;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let rpc_url = "https://base.llamarpc.com"; //"https://eth.llamarpc.com";
-    let start_block = "0x12958cb".to_string();
+    let start_block = 19486923;
     let polling_interval = Duration::from_secs(1);
 
     // Initialize the logger

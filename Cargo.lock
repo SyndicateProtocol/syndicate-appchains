@@ -2126,6 +2126,8 @@ dependencies = [
  "pre-commit-hooks",
  "serde",
  "serde_json",
+ "strum",
+ "strum_macros",
 ]
 
 [[package]]
@@ -4941,6 +4943,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f92a496fb766b417c996b9c5e57daf2f7ad3b0bebe1ccfca4856390e3d3bb67"
 dependencies = [
  "autocfg",
+]
+
+[[package]]
+name = "slotting"
+version = "0.1.0"
+dependencies = [
+ "common",
+ "eyre",
+ "pre-commit-hooks",
+ "serial_test",
+ "strum",
+ "strum_macros",
+ "test-case",
+ "thiserror 2.0.11",
+ "tokio",
 ]
 
 [[package]]

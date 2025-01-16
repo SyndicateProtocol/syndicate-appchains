@@ -1,6 +1,7 @@
-//! Common types for the metabased-translator
+//! Types module for metabased-translator
 
 use serde::Deserialize;
+use strum_macros::Display;
 
 #[derive(Clone, Debug)]
 /// **`BlockAndReceipts`**: Contains both a `Block` and the associated list of `Receipt` objects.
@@ -17,7 +18,7 @@ pub struct Block {
     /// The hash of the block.
     pub hash: String,
     /// The block number.
-    pub number: String,
+    pub number: u64,
     /// The hash of the parent block.
     #[serde(rename = "parentHash")]
     pub parent_hash: String,
@@ -34,7 +35,7 @@ pub struct Block {
     #[serde(rename = "receiptsRoot")]
     pub receipts_root: String,
     /// The timestamp when the block was mined, in Unix time.
-    pub timestamp: String,
+    pub timestamp: u64,
     /// The transactions included in the block.
     pub transactions: Vec<Transaction>,
 }
@@ -118,4 +119,66 @@ pub struct Log {
     /// The hash of the transaction that generated the log, or `null` if pending.
     #[serde(rename = "transactionHash")]
     pub transaction_hash: Option<String>,
+}
+
+#[allow(missing_docs)] // self-explanatory
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
+#[strum(serialize_all = "lowercase")]
+pub enum Chain {
+    Sequencing,
+    Settlement,
+}
+
+/// The state of a slot describing its finality
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SlotState {
+    /// A slot that is considered final and cannot rollback (we don't expect any underlying chains to reorg this far)
+    Finalized,
+    /// A slot that is considered final according to the source L2s finality guarantees (it can only be rolled back if a L1 reorg happens)
+    Safe,
+    /// A slot that we don't expect to fit more blocks into. It should be considered cannonical unless a reorg happens
+    Unsafe,
+    /// A slot to which incoming blocks might still be added
+    Open,
+}
+
+/// A `Slot` is a collection of source chain blocks  to be sent to the block builder
+#[derive(Debug, Clone)]
+pub struct Slot {
+    /// the number of the slot - `slot_number` == `MetaChain`'s block number
+    pub slot_number: u64,
+    /// the timestamp of the slot
+    pub timestamp: u64,
+    /// the blocks from the sequencing chain to be included in the slot
+    pub sequencing_chain_blocks: Vec<BlockAndReceipts>,
+    /// the blocks from the settlement chain to be included in the slot
+    pub settlement_chain_blocks: Vec<BlockAndReceipts>,
+    /// the finality state of the slot
+    pub state: SlotState,
+}
+
+impl Slot {
+    /// Creates a new slot
+    pub const fn new(number: u64, timestamp: u64) -> Self {
+        Self {
+            slot_number: number,
+            timestamp,
+            sequencing_chain_blocks: Vec::new(),
+            settlement_chain_blocks: Vec::new(),
+            state: SlotState::Open,
+        }
+    }
+
+    /// Checks if the slot is empty (does not include any blocks)
+    pub fn is_empty(&self) -> bool {
+        self.sequencing_chain_blocks.is_empty() && self.settlement_chain_blocks.is_empty()
+    }
+
+    /// Adds a block to the slot's chain-specific block list
+    pub fn push_block(&mut self, block: BlockAndReceipts, chain: Chain) {
+        match chain {
+            Chain::Sequencing => self.sequencing_chain_blocks.push(block),
+            Chain::Settlement => self.settlement_chain_blocks.push(block),
+        }
+    }
 }
