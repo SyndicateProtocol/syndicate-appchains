@@ -8,7 +8,7 @@ use std::{cmp::Ordering, collections::LinkedList};
 use thiserror::Error;
 use tokio::{
     select,
-    sync::mpsc::{channel, Receiver, Sender},
+    sync::mpsc::{channel, error::SendError, Receiver, Sender},
 };
 
 /// Maximum time to wait for blocks before considering a slot final (24 hours in milliseconds)
@@ -172,8 +172,8 @@ impl Slotter {
                         SlotterError::NoSlotsAvailable => {
                             panic!("No slots available. This should never happen - if it does, it's an implementation error. {e}");
                         }
-                        SlotterError::SlotSendError => {
-                            panic!("Failed to send slot through channel. TODO decide what to do here (likely to occur during shutdown, or the received is blocked)");
+                        SlotterError::SlotSendError(_) => {
+                            panic!("Failed to send slot through channel. TODO decide what to do here (likely to occur during shutdown, or the received is blocked): {e}");
                         }
                         SlotterError::NonIncreasingTimestamp { .. } => {
                             panic!("Non-increasing timestamp - this should never happen (where a block is received with the expected block number, but a lower timestamp) {e}");
@@ -222,10 +222,7 @@ impl Slotter {
                 }
                 if slot.timestamp < min_timestamp && slot.state == SlotState::Open {
                     slot.state = SlotState::Unsafe;
-                    sender
-                        .send(slot.clone())
-                        .await
-                        .map_err(|_| SlotterError::SlotSendError)?;
+                    sender.send(slot.clone()).await?
                 }
             }
         }
@@ -325,10 +322,7 @@ impl Slotter {
             if let Some(mut slot) = self.slots.pop_back() {
                 if slot.state == SlotState::Open {
                     slot.state = SlotState::Unsafe;
-                    sender
-                        .send(slot)
-                        .await
-                        .map_err(|_| SlotterError::SlotSendError)?;
+                    sender.send(slot).await?
                 }
             }
         }
@@ -373,6 +367,13 @@ impl Slotter {
     }
 }
 
+/// Automatically map `sender.send(slot).await?` to `SlotterError::SlotSendError`
+impl From<SendError<Slot>> for SlotterError {
+    fn from(e: SendError<Slot>) -> Self {
+        Self::SlotSendError(e)
+    }
+}
+
 /// Determines how a block's timestamp relates to a slot's window.
 ///
 /// Returns:
@@ -412,8 +413,8 @@ pub enum SlotterError {
     #[error("No slots available")]
     NoSlotsAvailable,
 
-    #[error("Failed to send slot through channel")]
-    SlotSendError,
+    #[error("Failed to send slot through channel: {0}")]
+    SlotSendError(SendError<Slot>),
 
     #[error("Block timestamp {block_timestamp} is less than the latest slot and does not match any slot. is the {chain} chain more than MAX_WAIT(24 hours) behind?")]
     BlockTooOld { chain: Chain, block_timestamp: u64 },
