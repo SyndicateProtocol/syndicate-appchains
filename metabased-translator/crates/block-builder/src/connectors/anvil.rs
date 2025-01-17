@@ -39,12 +39,11 @@ type FilledProvider = FillProvider<
     Ethereum,
 >;
 
-/// Provider for the `MetaChain`
+// Anvil is automatically stopped when the `MetaChainProvider` is dropped.
 #[derive(Debug)]
+#[allow(missing_docs)]
 pub struct MetaChainProvider {
-    /// anvil instance
     pub anvil: AnvilInstance,
-    /// provider
     provider: FilledProvider,
 }
 

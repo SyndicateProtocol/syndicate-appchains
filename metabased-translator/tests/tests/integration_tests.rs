@@ -2,7 +2,7 @@
 
 use std::{
     str::FromStr,
-    time::{SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 use alloy::{
@@ -18,12 +18,38 @@ use block_builder::{
     connectors::anvil::MetaChainProvider, contract_bindings::counter::Counter, rollups::arbitrum,
 };
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
-use eyre::{OptionExt, Result};
+use eyre::{eyre, OptionExt, Result};
 use reqwest::Url;
 use tokio::{
     fs::read_to_string,
     process::{Child, Command},
+    time::timeout,
 };
+
+/// Get the project root (relative to closest Cargo.lock file)
+/// ```rust
+/// match project_root::get_project_root() {
+///     Ok(p) => println!("Current project root is {:?}", p),
+///     Err(e) => println!("Error obtaining project root {:?}", e)
+/// };
+/// ```
+fn get_project_root() -> std::io::Result<std::path::PathBuf> {
+    let path = std::env::current_dir()?;
+    let mut path_ancestors = path.as_path().ancestors();
+
+    while let Some(p) = path_ancestors.next() {
+        let has_cargo = std::fs::read_dir(p)?
+            .into_iter()
+            .any(|p| p.unwrap().file_name() == std::ffi::OsString::from("Cargo.lock"));
+        if has_cargo {
+            return Ok(std::path::PathBuf::from(p));
+        }
+    }
+    Err(std::io::Error::new(
+        std::io::ErrorKind::NotFound,
+        "Ran out of places to find Cargo.toml",
+    ))
+}
 
 /// Simple test scenario:
 /// Bob tries to deploy a counter contract to L3, then tries to increment it
@@ -186,31 +212,9 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
     Ok(())
 }
 
-sol! {
-    #[sol(rpc)]
-    contract SequencerInbox {
-        function addSequencerL2BatchFromOrigin(
-            uint256 sequenceNumber,
-            bytes calldata data,
-            uint256 afterDelayedMessagesRead,
-            address gasRefunder,
-            uint256 prevMessageCount,
-            uint256 newMessageCount
-        ) external override refundsGas(gasRefunder, IReader4844(address(0)));
-        uint256 public totalDelayedMessagesRead;
-    }
-
-    #[sol(rpc)]
-    contract Bridge {
-        function delayedMessageCount() external view returns (uint256);
-        function sequencerMessageCount() external view returns (uint256);
-    }
-
-    #[sol(rpc)]
-    contract Inbox {
-        function depositEth() public payable returns (uint256);
-    }
-}
+sol! { #[sol(rpc)] SequencerInbox, "../contracts/src/ISequencerInbox.json" }
+sol! { #[sol(rpc)] Bridge, "../contracts/src/IBridge.json" }
+sol! { #[sol(rpc)] Inbox, "../contracts/src/IInbox.json" }
 
 async fn send_batch<
     T: alloy::transports::Transport + Clone,
@@ -228,14 +232,10 @@ async fn send_batch<
         address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2"),
         &provider,
     );
-    let delayed_messages_read = inbox
-        .totalDelayedMessagesRead()
-        .call()
-        .await?
-        .totalDelayedMessagesRead;
+    let delayed_messages_read = inbox.totalDelayedMessagesRead().call().await?._0;
     let sequencer_message_count = bridge.sequencerMessageCount().call().await?._0;
     inbox
-        .addSequencerL2BatchFromOrigin(
+        .addSequencerL2BatchFromOrigin_1(
             sequencer_message_count, // sequence number
             batch.encode()?.into(),  // data
             delayed_messages_read
@@ -266,10 +266,10 @@ impl Drop for Docker {
 }
 
 async fn launch_nitro_node() -> Result<(MetaChainProvider, Docker)> {
-    let root = project_root::get_project_root()?.join("test_config");
+    let root = get_project_root()?.join("test_config");
     let mchain = MetaChainProvider::start_from_snapshot(
         Default::default(),
-        root.join("rollup")
+        root.join("anvil.json")
             .to_str()
             .ok_or_eyre("failed to convert path to string")?,
     )
@@ -296,7 +296,7 @@ async fn launch_nitro_node() -> Result<(MetaChainProvider, Docker)> {
         .arg("--node.dangerous.disable-blob-reader")
         .arg("--execution.forwarding-target=null")
         .arg("--execution.parent-chain-reader.old-header-timeout=1000h")
-        .arg("--node.inbox-reader.check-delay=1s")
+        .arg("--node.inbox-reader.check-delay=100ms")
         .arg("--node.staker.enable=false")
         .arg("--ensure-rollup-deployment=false")
         .arg("--chain.info-json=".to_string() + &chain_config)
@@ -305,20 +305,18 @@ async fn launch_nitro_node() -> Result<(MetaChainProvider, Docker)> {
         .arg("--log-level=DEBUG")
         .spawn()?;
     let rollup = ProviderBuilder::new().on_http("http://localhost:8547".parse()?);
-    // give it a minute to launch (in case it needs to download the image)
-    for _ in 0..60 {
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-        if rollup.get_chain_id().await.is_ok() {
-            break;
+    // give it two minutes to launch (in case it needs to download the image)
+    return timeout(Duration::from_secs(120), async {
+        while rollup.get_chain_id().await.is_err() {
+            tokio::time::sleep(Duration::from_millis(200)).await;
         }
-    }
-    // return err if fails
-    Ok((mchain, Docker(nitro)))
+        Ok::<_, eyre::Error>((mchain, Docker(nitro)))
+    })
+    .await?;
 }
 
 #[tokio::test]
-#[cfg_attr(not(feature = "e2e-tests"), ignore)]
-async fn test_e2e_nitro_batch() -> Result<()> {
+async fn test_nitro_batch() -> Result<()> {
     let (mchain, _nitro) = launch_nitro_node().await?;
 
     let wallet = EthereumWallet::from(PrivateKeySigner::from_str(
@@ -348,24 +346,18 @@ async fn test_e2e_nitro_batch() -> Result<()> {
         .await?;
 
     // clear the queue of delayed messages
-    send_batch(
-        &arbitrum::batch::Batch(vec![None, None, None, None, None, None, None, None, None]),
-        &provider,
-    )
-    .await?;
+    send_batch(&arbitrum::batch::Batch(vec![None; 9]), &provider).await?;
 
-    // wait for the batch to be processed
+    // wait 200ms for the batch to be processed
+    tokio::time::sleep(Duration::from_millis(200)).await;
     let rollup = ProviderBuilder::new().on_http("http://localhost:8547".parse()?);
-    for _ in 0..10 {
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-        if rollup.get_block_number().await? > 8 {
-            break;
-        }
+    if rollup.get_block_number().await? < 9 {
+        return Err(eyre!("block derivation failed - missing block 9"));
     }
 
     // check that the deposit succeeded
     assert_eq!(
-        provider
+        rollup
             .get_balance(provider.default_signer_address())
             .await?,
         parse_ether("1")?
@@ -391,16 +383,14 @@ async fn test_e2e_nitro_batch() -> Result<()> {
             block_number: 9,
             timestamp: ts,
         },
-        l2msg: vec![tx],
+        l2_msg: vec![tx],
     })]);
     send_batch(&batch, &provider).await?;
 
-    // wait for the batch to be processed
-    for _ in 0..10 {
-        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-        if rollup.get_block_number().await? > 9 {
-            break;
-        }
+    // wait 200ms for the batch to be processed
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    if rollup.get_block_number().await? < 10 {
+        return Err(eyre!("block derivation failed - missing block 10"));
     }
 
     // check that the tx was sequenced
