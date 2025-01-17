@@ -1,5 +1,6 @@
 use alloy_rpc_types::TransactionRequest;
 use async_trait::async_trait;
+use common::types::BlockAndReceipts;
 use eyre::{Error, Result};
 use std::{
     fmt::Debug,
@@ -18,7 +19,7 @@ pub trait RollupBlockBuilder: Debug + Send + Sync + Unpin + 'static {
     async fn build_batch_txn(&self, txs: Vec<Vec<u8>>) -> Result<TransactionRequest, Error>;
 
     /// Parses sequencing chain blocks into meta based transactions
-    fn parse_blocks_to_mbtxs(&self, _blocks: Vec<String>) -> Vec<Vec<u8>> {
+    fn parse_blocks_to_mbtxs(&self, _blocks: Vec<BlockAndReceipts>) -> Vec<Vec<u8>> {
         // TODO: Implement
         vec![]
     }

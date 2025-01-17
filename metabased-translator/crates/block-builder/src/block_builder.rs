@@ -3,15 +3,16 @@
 use crate::config::BlockBuilderConfig;
 use crate::connectors::anvil::MetaChainProvider;
 use crate::rollups::{
-    arbitrum::arbitrum_builder::ArbitrumBlockBuilder, rollup_builder::RollupBlockBuilder,
+    arbitrum::arbitrum_builder::ArbitrumBlockBuilder, shared::rollup_builder::RollupBlockBuilder,
 };
+use common::types::Slot;
 use eyre::{Error, Result};
 use tokio::sync::mpsc::Receiver as TokioReceiver;
 
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
 pub struct BlockBuilder {
-    slotter_receiver: TokioReceiver<String>,
+    slotter_receiver: TokioReceiver<Slot>,
 
     mchain: MetaChainProvider,
     builder: Box<dyn RollupBlockBuilder>,
@@ -20,7 +21,7 @@ pub struct BlockBuilder {
 impl BlockBuilder {
     /// Create a new block builder
     pub async fn new(
-        slotter_receiver: TokioReceiver<String>,
+        slotter_receiver: TokioReceiver<Slot>,
         config: BlockBuilderConfig,
     ) -> Result<Self, Error> {
         let mchain = MetaChainProvider::start(config).await?;
@@ -42,28 +43,30 @@ impl BlockBuilder {
                 println!("Received slot: {:?}", slot);
 
                 // Process sequencing chain blocks into mB transactions
-                let mbtxs = self.builder.parse_blocks_to_mbtxs(vec![slot]);
+                let mbtxs = self
+                    .builder
+                    .parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
 
                 // TODO: [OP / ARB] Process deposit transactions
 
-                // [OP / ARB] Build batch
-                match self.builder.build_batch_txn(mbtxs).await {
-                    Ok(batch_txn) => {
-                        // Submit batch transaction to mchain
-                        if let Err(e) = self.mchain.submit_txn(batch_txn).await {
-                            eprintln!("Error submitting transaction: {}", e);
-                            continue;
-                        }
-
-                        // Mine mchain block
-                        if let Err(e) = self.mchain.mine_block().await {
-                            eprintln!("Error mining block: {}", e);
-                        }
-                    }
+                // [OP / ARB] Build and submit batch
+                let batch_txn = match self.builder.build_batch_txn(mbtxs).await {
+                    Ok(txn) => txn,
                     Err(e) => {
                         eprintln!("Error building batch transaction: {}", e);
                         continue;
                     }
+                };
+
+                // Submit batch transaction to mchain
+                if let Err(e) = self.mchain.submit_txn(batch_txn).await {
+                    eprintln!("Error submitting transaction: {}", e);
+                    continue;
+                }
+
+                // Mine mchain block
+                if let Err(e) = self.mchain.mine_block().await {
+                    eprintln!("Error mining block: {}", e);
                 }
             }
         });
@@ -99,7 +102,7 @@ mod tests {
         let handle = tokio::spawn(async move { builder.start().await });
 
         // Send a test block
-        let test_slot = "test_slot".to_string();
+        let test_slot = Slot::new(1, 1);
         tx.send(test_slot).await?;
 
         // Give some time for processing
