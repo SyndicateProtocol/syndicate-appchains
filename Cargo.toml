@@ -58,9 +58,6 @@ url = { version = "2.5.4" }
 http-body-util = "0.1"
 pin-project-lite = "0.2.16"
 
-pre-commit-hooks = { version = "0.3.0" } # TODO think if we want to keep this
-
-
 # dev dependencies
 test-case = { version = "3" }
 serial_test = { version = "3.2.0" }
