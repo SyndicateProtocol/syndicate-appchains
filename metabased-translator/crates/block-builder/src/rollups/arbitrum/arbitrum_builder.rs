@@ -1,4 +1,11 @@
-use crate::rollups::rollup_builder::RollupBlockBuilder;
+//! Arbitrum block builder implementation
+//!
+//! This module provides functionality for building an Arbitrum batch submitter transaction from a list of transactions.
+//! It implements the [`RollupBlockBuilder`] trait to standardize block construction across different
+//! rollup implementations
+
+use crate::rollups::shared::RollupBlockBuilder;
+use alloy_primitives::Bytes;
 use alloy_rpc_types::TransactionRequest;
 use async_trait::async_trait;
 use eyre::{Error, Result};
@@ -15,7 +22,7 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
     }
 
     /// Builds a batch of transactions into an Arbitrum batch
-    async fn build_batch_txn(&self, _txs: Vec<Vec<u8>>) -> Result<TransactionRequest, Error> {
+    async fn build_batch_txn(&self, _txs: Vec<Bytes>) -> Result<TransactionRequest, Error> {
         // TODO: Implement
         Ok(TransactionRequest::default())
     }

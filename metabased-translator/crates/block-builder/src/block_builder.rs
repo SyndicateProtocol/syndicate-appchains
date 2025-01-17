@@ -3,16 +3,17 @@
 use crate::config::BlockBuilderConfig;
 use crate::connectors::anvil::MetaChainProvider;
 use crate::rollups::{
-    arbitrum::arbitrum_builder::ArbitrumBlockBuilder, rollup_builder::RollupBlockBuilder,
+    arbitrum::arbitrum_builder::ArbitrumBlockBuilder, shared::RollupBlockBuilder,
 };
 use common::types::Slot;
 use eyre::{Error, Result};
-use tokio::sync::mpsc::Receiver as TokioReceiver;
+use tokio::sync::mpsc::Receiver;
+use tracing::{error, info};
 
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
 pub struct BlockBuilder {
-    slotter_receiver: TokioReceiver<Slot>,
+    slotter_rx: Receiver<Slot>,
 
     mchain: MetaChainProvider,
     builder: Box<dyn RollupBlockBuilder>,
@@ -21,7 +22,7 @@ pub struct BlockBuilder {
 impl BlockBuilder {
     /// Create a new block builder
     pub async fn new(
-        slotter_receiver: TokioReceiver<Slot>,
+        slotter_rx: Receiver<Slot>,
         config: BlockBuilderConfig,
     ) -> Result<Self, Error> {
         let mchain = MetaChainProvider::start(config).await?;
@@ -30,48 +31,46 @@ impl BlockBuilder {
         let builder = Box::new(ArbitrumBlockBuilder::new());
 
         Ok(Self {
-            slotter_receiver,
+            slotter_rx,
             mchain,
             builder,
         })
     }
 
     /// Start the block builder
-    pub async fn start(mut self) -> Result<()> {
+    pub async fn start(mut self) {
         tokio::spawn(async move {
-            while let Some(slot) = self.slotter_receiver.recv().await {
-                println!("Received slot: {:?}", slot);
+            while let Some(slot) = self.slotter_rx.recv().await {
+                info!("Received slot: {:?}", slot);
 
                 // Process sequencing chain blocks into mB transactions
                 let mbtxs = self
                     .builder
                     .parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
 
-                // TODO: [OP / ARB] Process deposit transactions
+                // TODO (SEQ-416): [OP / ARB] Process deposit transactions
 
                 // [OP / ARB] Build and submit batch
                 let batch_txn = match self.builder.build_batch_txn(mbtxs).await {
                     Ok(txn) => txn,
                     Err(e) => {
-                        eprintln!("Error building batch transaction: {}", e);
+                        error!("Error building batch transaction: {}", e);
                         continue;
                     }
                 };
 
                 // Submit batch transaction to mchain
                 if let Err(e) = self.mchain.submit_txn(batch_txn).await {
-                    eprintln!("Error submitting transaction: {}", e);
+                    error!("Error submitting transaction: {}", e);
                     continue;
                 }
 
                 // Mine mchain block
                 if let Err(e) = self.mchain.mine_block().await {
-                    eprintln!("Error mining block: {}", e);
+                    error!("Error mining block: {}", e);
                 }
             }
         });
-
-        Ok(())
     }
 }
 
@@ -80,16 +79,6 @@ mod tests {
     use super::*;
     use eyre::Result;
     use tokio::sync::mpsc;
-
-    // #[tokio::test]
-    // async fn test_block_builder_new() -> Result<()> {
-    //     let (_tx, rx) = mpsc::channel(32);
-    //     let config = BlockBuilderConfig::default();
-    //     let builder = BlockBuilder::new(rx, config).await?;
-
-    //     assert!(builder.slotter_receiver.capacity() >= 32);
-    //     Ok(())
-    // }
 
     #[tokio::test]
     async fn test_block_builder_start() -> Result<()> {
@@ -112,22 +101,4 @@ mod tests {
         handle.abort();
         Ok(())
     }
-
-    // #[tokio::test]
-    // async fn test_block_builder_handles_channel_close() -> Result<()> {
-    //     let (tx, rx) = mpsc::channel(32);
-    //     let config = BlockBuilderConfig::default();
-    //     let builder = BlockBuilder::new(rx, config).await?;
-
-    //     let handle = tokio::spawn(async move { builder.start().await });
-
-    //     // Drop sender to simulate channel close
-    //     drop(tx);
-
-    //     // Allow time for processing
-    //     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-    //     handle.abort();
-    //     Ok(())
-    // }
 }

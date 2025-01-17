@@ -26,7 +26,7 @@ pub struct Batch {
     /// The L2 block timestamp of this batch
     pub timestamp: u64,
     /// The L2 block transactions in this batch
-    pub transactions: Vec<Vec<u8>>,
+    pub transactions: Vec<Bytes>,
 }
 
 // Implementation for the Batch struct
@@ -82,7 +82,7 @@ impl Batch {
         let epoch_num = u64::decode(&mut buf)?;
         let epoch_hash = B256::decode(&mut buf)?;
         let timestamp = u64::decode(&mut buf)?;
-        let transactions = Vec::<Vec<u8>>::decode(&mut buf)?;
+        let transactions = Vec::<Bytes>::decode(&mut buf)?;
 
         // Return the decoded Batch
         Ok(Self {
@@ -162,7 +162,7 @@ mod tests {
             epoch_num: 42,
             epoch_hash: B256::repeat_byte(0x22),
             timestamp: 1712500000,
-            transactions: vec![b"tx1".to_vec(), b"tx2".to_vec()],
+            transactions: vec![Bytes::from(b"tx1"), Bytes::from(b"tx2")],
         }
     }
 

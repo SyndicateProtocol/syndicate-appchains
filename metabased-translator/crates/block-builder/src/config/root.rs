@@ -32,7 +32,7 @@ struct Args {
 #[derive(Debug, Clone)]
 /// Configuration for the block builder service
 pub struct BlockBuilderConfig {
-    /// Port number number to be used for the anvil instance
+    /// Port number to be used for the anvil instance
     pub port: u16,
     /// Unix timestamp for the genesis block
     pub genesis_timestamp: u64,
@@ -51,11 +51,11 @@ impl Default for BlockBuilderConfig {
 }
 
 impl BlockBuilderConfig {
-    /// Parses command line arguments and environment variables into a `BlockBuilderConfig` struct.
+    /// Parses command line arguments and environment variables into a [`BlockBuilderConfig`] struct.
     ///
     /// # Returns
     ///
-    /// A new `BlockBuilderConfig` instance populated with values from CLI args and env vars.
+    /// A new [`BlockBuilderConfig`] instance populated with values from CLI args and env vars.
     /// CLI args take precedence over env vars, which take precedence over defaults.
     ///
     /// # Example
