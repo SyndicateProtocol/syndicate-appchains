@@ -18,7 +18,7 @@ use block_builder::{
     connectors::anvil::MetaChainProvider, contract_bindings::counter::Counter, rollups::arbitrum,
 };
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
-use eyre::Result;
+use eyre::{OptionExt, Result};
 use reqwest::Url;
 use tokio::{
     fs::read_to_string,
@@ -117,9 +117,8 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
 
     //
     //try to sequence an invalid transaction (signed, but no balance)
-    let signer_without_balance =
-        PrivateKeySigner::from(SigningKey::from_slice(&[0u8; 32]).unwrap())
-            .with_chain_id(Some(env.l3_chain_id()));
+    let signer_without_balance = PrivateKeySigner::from(SigningKey::from_slice(&[0u8; 32])?)
+        .with_chain_id(Some(env.l3_chain_id()));
     let address_without_balance = signer_without_balance.address();
     let wallet_without_balance = EthereumWallet::from(signer_without_balance);
 
@@ -213,25 +212,6 @@ sol! {
     }
 }
 
-// get project root
-fn get_project_root() -> std::io::Result<std::path::PathBuf> {
-    let path = std::env::current_dir()?;
-    let mut path_ancestors = path.as_path().ancestors();
-
-    while let Some(p) = path_ancestors.next() {
-        let has_cargo = std::fs::read_dir(p)?
-            .into_iter()
-            .any(|p| p.unwrap().file_name() == std::ffi::OsString::from("Cargo.lock"));
-        if has_cargo {
-            return Ok(std::path::PathBuf::from(p));
-        }
-    }
-    Err(std::io::Error::new(
-        std::io::ErrorKind::NotFound,
-        "Ran out of places to find Cargo.toml",
-    ))
-}
-
 async fn send_batch<
     T: alloy::transports::Transport + Clone,
     N: alloy::network::Network,
@@ -239,7 +219,7 @@ async fn send_batch<
 >(
     batch: &arbitrum::batch::Batch,
     provider: &U,
-) {
+) -> Result<()> {
     let inbox = SequencerInbox::new(
         address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"),
         &provider,
@@ -251,53 +231,51 @@ async fn send_batch<
     let delayed_messages_read = inbox
         .totalDelayedMessagesRead()
         .call()
-        .await
-        .unwrap()
+        .await?
         .totalDelayedMessagesRead;
-    let sequencer_message_count = bridge.sequencerMessageCount().call().await.unwrap()._0;
+    let sequencer_message_count = bridge.sequencerMessageCount().call().await?._0;
     inbox
         .addSequencerL2BatchFromOrigin(
-            sequencer_message_count,        // sequence number
-            batch.encode().unwrap().into(), // data
+            sequencer_message_count, // sequence number
+            batch.encode()?.into(),  // data
             delayed_messages_read
                 .checked_add(U256::from(batch.0.iter().filter(|x| x.is_none()).count()))
-                .unwrap(), // after delayed messages read
-            Address::default(),             // gas refunder
-            U256::from(0),                  // prev message count. 0 = ignore this sanity check
-            U256::from(0),                  // new message count
+                .ok_or_eyre("checked add overflow")?, // after delayed messages read
+            Address::default(),      // gas refunder
+            U256::from(0),           // prev message count. 0 = ignore this sanity check
+            U256::from(0),           // new message count
         )
         .send()
-        .await
-        .unwrap()
+        .await?
         .with_required_confirmations(1)
         .watch()
-        .await
-        .unwrap();
+        .await?;
+    Ok(())
 }
 
 struct Docker(Child);
 
 impl Drop for Docker {
     fn drop(&mut self) {
-        std::process::Command::new("kill")
-            .arg(self.0.id().unwrap().to_string())
-            .output()
-            .unwrap();
+        if let Some(x) = self.0.id() {
+            _ = std::process::Command::new("kill")
+                .arg(x.to_string())
+                .output()
+        }
     }
 }
 
-async fn launch_nitro_node() -> (MetaChainProvider, Docker) {
-    let root = get_project_root().unwrap().join("test_config");
+async fn launch_nitro_node() -> Result<(MetaChainProvider, Docker)> {
+    let root = project_root::get_project_root()?.join("test_config");
     let mchain = MetaChainProvider::start_from_snapshot(
         Default::default(),
-        root.join("rollup").to_str().unwrap(),
+        root.join("rollup")
+            .to_str()
+            .ok_or_eyre("failed to convert path to string")?,
     )
-    .await
-    .unwrap();
+    .await?;
 
-    let chain_config = read_to_string(root.join("l2_chain_info.json"))
-        .await
-        .unwrap();
+    let chain_config = read_to_string(root.join("l2_chain_info.json")).await?;
     let nitro = Command::new("docker")
         .kill_on_drop(false) // kill via SIGTERM instead of SIGKILL
         .arg("run")
@@ -325,9 +303,8 @@ async fn launch_nitro_node() -> (MetaChainProvider, Docker) {
         .arg("--http.addr=0.0.0.0")
         .arg("--http.port=8547")
         .arg("--log-level=DEBUG")
-        .spawn()
-        .expect("Failed to spawn child process");
-    let rollup = ProviderBuilder::new().on_http("http://localhost:8547".parse().unwrap());
+        .spawn()?;
+    let rollup = ProviderBuilder::new().on_http("http://localhost:8547".parse()?);
     // give it a minute to launch (in case it needs to download the image)
     for _ in 0..60 {
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
@@ -335,28 +312,26 @@ async fn launch_nitro_node() -> (MetaChainProvider, Docker) {
             break;
         }
     }
-    (mchain, Docker(nitro))
+    // return err if fails
+    Ok((mchain, Docker(nitro)))
 }
 
 #[tokio::test]
 #[cfg_attr(not(feature = "e2e-tests"), ignore)]
-async fn test_e2e_nitro_batch() {
-    let (mchain, _nitro) = launch_nitro_node().await;
+async fn test_e2e_nitro_batch() -> Result<()> {
+    let (mchain, _nitro) = launch_nitro_node().await?;
 
-    let wallet = EthereumWallet::from(
-        PrivateKeySigner::from_str(
-            "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-        )
-        .unwrap(),
-    );
+    let wallet = EthereumWallet::from(PrivateKeySigner::from_str(
+        "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+    )?);
 
     let provider = ProviderBuilder::new()
         .with_recommended_fillers()
         .wallet(&wallet)
-        .on_http(Url::parse(mchain.anvil.endpoint_url().as_str()).unwrap());
+        .on_http(Url::parse(mchain.anvil.endpoint_url().as_str())?);
 
-    provider.anvil_set_auto_mine(true).await.unwrap();
-    //provider.anvil_set_interval_mining(1).await.unwrap();
+    provider.anvil_set_auto_mine(true).await?;
+    //provider.anvil_set_interval_mining(1).await?;
 
     // deposit 1 eth
     let inbox = Inbox::new(
@@ -365,27 +340,25 @@ async fn test_e2e_nitro_batch() {
     );
     inbox
         .depositEth()
-        .value(parse_ether("1").unwrap())
+        .value(parse_ether("1")?)
         .send()
-        .await
-        .unwrap()
+        .await?
         .with_required_confirmations(1)
         .watch()
-        .await
-        .unwrap();
+        .await?;
 
     // clear the queue of delayed messages
     send_batch(
         &arbitrum::batch::Batch(vec![None, None, None, None, None, None, None, None, None]),
         &provider,
     )
-    .await;
+    .await?;
 
     // wait for the batch to be processed
-    let rollup = ProviderBuilder::new().on_http("http://localhost:8547".parse().unwrap());
+    let rollup = ProviderBuilder::new().on_http("http://localhost:8547".parse()?);
     for _ in 0..10 {
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-        if rollup.get_block_number().await.unwrap() > 8 {
+        if rollup.get_block_number().await? > 8 {
             break;
         }
     }
@@ -394,9 +367,8 @@ async fn test_e2e_nitro_batch() {
     assert_eq!(
         provider
             .get_balance(provider.default_signer_address())
-            .await
-            .unwrap(),
-        parse_ether("1").unwrap()
+            .await?,
+        parse_ether("1")?
     );
 
     // include a tx in a batch
@@ -410,14 +382,10 @@ async fn test_e2e_nitro_batch() {
         .with_max_fee_per_gas(100000000)
         .with_max_priority_fee_per_gas(0)
         .build(&wallet)
-        .await
-        .unwrap();
+        .await?;
 
     inner_tx.encode_2718(&mut tx);
-    let ts = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs();
+    let ts = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
     let batch = arbitrum::batch::Batch(vec![Some(arbitrum::batch::L1IncomingMessage {
         header: arbitrum::batch::L1IncomingMessageHeader {
             block_number: 9,
@@ -425,12 +393,12 @@ async fn test_e2e_nitro_batch() {
         },
         l2msg: vec![tx],
     })]);
-    send_batch(&batch, &provider).await;
+    send_batch(&batch, &provider).await?;
 
     // wait for the batch to be processed
     for _ in 0..10 {
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
-        if rollup.get_block_number().await.unwrap() > 9 {
+        if rollup.get_block_number().await? > 9 {
             break;
         }
     }
@@ -441,8 +409,7 @@ async fn test_e2e_nitro_batch() {
             "eth_getBlockByNumber".into(),
             (BlockNumberOrTag::Number(10), true),
         )
-        .await
-        .unwrap();
+        .await?;
     let txs = block
         .as_object()
         .unwrap()
@@ -464,4 +431,5 @@ async fn test_e2e_nitro_batch() {
             .unwrap(),
         &inner_tx.tx_hash().to_string()
     );
+    Ok(())
 }

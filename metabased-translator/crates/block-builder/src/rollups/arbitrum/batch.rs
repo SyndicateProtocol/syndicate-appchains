@@ -1,12 +1,8 @@
 use alloy::primitives::{Address, Bytes};
 use alloy::rpc::types::{TransactionInput, TransactionRequest};
 use base64::prelude::*;
-use eyre::OptionExt;
 use serde::Serialize;
 use serde::Serializer;
-use std::process::Stdio;
-use tokio::io::AsyncWriteExt;
-use tokio::process::Command;
 
 /// Define the `Batch` struct
 /// Each `L1IncomingMessage` is an L2 block. When the message is empty, the block is derived from the next delayed message instead.
@@ -129,22 +125,21 @@ impl Batch {
     #[allow(dead_code)]
     async fn geth_encode(&self) -> eyre::Result<Vec<u8>> {
         let json = serde_json::to_string(&self)?;
-        let mut child = Command::new("docker")
+        let mut child = tokio::process::Command::new("docker")
             .arg("run")
             .arg("-i")
             .arg("--init")
             .arg("--rm")
             .arg("ghcr.io/syndicateprotocol/generate_batch")
-            .stdin(Stdio::piped())
-            .stdout(Stdio::piped())
-            .stderr(Stdio::inherit())
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::inherit())
             .spawn()?;
-        child
-            .stdin
-            .take()
-            .ok_or_eyre("Failed to take child stdin")?
-            .write_all(json.as_bytes())
-            .await?;
+        tokio::io::AsyncWriteExt::write_all(
+            &mut eyre::OptionExt::ok_or_eyre(child.stdin.take(), "Failed to take child stdin")?,
+            json.as_bytes(),
+        )
+        .await?;
         let output = child.wait_with_output().await?;
         Ok(hex::decode(output.stdout)?)
     }
@@ -160,11 +155,6 @@ pub fn new_batcher_tx(from: Address, to: Address, data: Bytes) -> TransactionReq
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::network::{EthereumWallet, TransactionBuilder};
-    use alloy::primitives::U256;
-    use alloy::rlp::Encodable;
-    use alloy::signers::local::PrivateKeySigner;
-    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn test_json_encoding() -> Result<(), serde_json::Error> {
@@ -183,12 +173,14 @@ mod tests {
     #[cfg(target_os = "macos")]
     #[tokio::test]
     async fn test_tx_encode() -> eyre::Result<()> {
-        let signer = PrivateKeySigner::random();
-        let wallet = EthereumWallet::from(signer);
+        use alloy::{network::TransactionBuilder, rlp::Encodable};
+
+        let signer = alloy::signers::local::PrivateKeySigner::random();
+        let wallet = alloy::network::EthereumWallet::from(signer);
         let mut tx = vec![];
         TransactionRequest::default()
             .to(Address::default())
-            .value(U256::from(1))
+            .value(alloy::primitives::U256::from(1))
             .nonce(0)
             .gas_limit(0)
             .max_fee_per_gas(0)
@@ -199,7 +191,9 @@ mod tests {
         let batch = Batch(vec![Some(L1IncomingMessage {
             header: L1IncomingMessageHeader {
                 block_number: 1,
-                timestamp: SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs(),
+                timestamp: std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)?
+                    .as_secs(),
             },
             l2msg: vec![tx],
         })]);

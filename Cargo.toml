@@ -43,6 +43,7 @@ tracing = "0.1.41"
 clap = { version = "4.5.26" }
 hyper = { version = "1.5.2" }
 http = "1.2.0"
+project-root = "0.2.2"
 reqwest = "0.12.12"
 tower = { version = "0.4.0" }               # can't be updated until a new version of jsonrpsee is released
 tower-layer = { version = "0.3.3" }
