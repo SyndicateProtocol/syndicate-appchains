@@ -1,9 +1,9 @@
 //! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a consumer using a channel
 
 use eyre::{eyre, Error};
-use log::info;
 use std::time::Duration;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tracing::info;
 
 use crate::eth_client::EthClient;
 use common::types::BlockAndReceipts;

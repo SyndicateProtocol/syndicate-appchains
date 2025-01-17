@@ -9,10 +9,11 @@ use crate::presentation::json_rpc_errors::InvalidParamsError::{
     MissingParam, NotAnArray, NotHexEncoded, WrongParamCount,
 };
 use crate::presentation::transaction;
-use alloy::consensus::{Transaction, TxEnvelope, TxType};
-use alloy::primitives::private::alloy_rlp::Decodable;
-use alloy::primitives::TxHash;
-use alloy::primitives::U256;
+use alloy::{
+    consensus::{Transaction, TxEnvelope, TxType},
+    primitives::{TxHash, U256},
+    rlp::Decodable,
+};
 use jsonrpsee::types::Params;
 use std::convert::TryFrom;
 use std::fmt::Debug;
@@ -103,17 +104,19 @@ impl TryFrom<Params<'static>> for SendRawTransactionParams {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::primitives::Bytes;
-    use crate::domain::InMemoryMetabasedSequencerChain;
-    use alloy::consensus::{SignableTransaction, TxEip1559, TxEnvelope, TxLegacy};
-    use alloy::network::TxSignerSync;
-    use alloy::primitives::TxKind;
-    use alloy::signers::local::PrivateKeySigner;
-    use alloy_primitives::private::alloy_rlp::Encodable;
-    use alloy_primitives::{b256, PrimitiveSignature};
+    use crate::domain::{primitives::Bytes, InMemoryMetabasedSequencerChain};
+    use alloy::{
+        consensus::{SignableTransaction, TxEip1559, TxEnvelope, TxLegacy},
+        network::TxSignerSync,
+        primitives::{b256, PrimitiveSignature, TxKind},
+        rlp::Encodable,
+        signers::local::PrivateKeySigner,
+    };
     use async_trait::async_trait;
-    use std::fmt::{Debug, Display, Formatter};
-    use std::sync::Arc;
+    use std::{
+        fmt::{Display, Formatter},
+        sync::Arc,
+    };
     use test_case::test_case;
     use tokio::sync::RwLock;
 

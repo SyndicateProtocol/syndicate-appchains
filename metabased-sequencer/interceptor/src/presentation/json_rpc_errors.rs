@@ -1,14 +1,19 @@
-use crate::presentation::json_rpc_errors::InvalidInputError::{
-    InvalidJson, InvalidTransactionSignature, InvalidUint, MissingChainID, MissingGasPrice,
-    UnableToRLPDecode,
+use crate::presentation::json_rpc_errors::{
+    InvalidInputError::{
+        InvalidJson, InvalidTransactionSignature, InvalidUint, MissingChainID, MissingGasPrice,
+        UnableToRLPDecode,
+    },
+    InvalidParamsError::InvalidHex,
+    Rejection::FeeTooHigh,
 };
-use crate::presentation::json_rpc_errors::InvalidParamsError::InvalidHex;
-use crate::presentation::json_rpc_errors::Rejection::FeeTooHigh;
-use crate::presentation::transaction;
-use alloy::hex;
-use alloy_primitives::private::alloy_rlp;
-use std::convert::Infallible;
-use std::fmt;
+use alloy::{
+    contract, hex,
+    primitives::{ruint::ToUintError, SignatureError},
+    rlp,
+};
+use std::{convert::Infallible, fmt};
+
+use super::transaction::TransactionFeeTooHigh;
 
 // Source: https://github.com/MetaMask/rpc-errors/blob/main/src/errors.ts
 #[derive(Debug)]
@@ -26,7 +31,7 @@ pub enum Error {
     MethodNotSupported,
     LimitExceeded,
     Server,
-    Contract(alloy::contract::Error),
+    Contract(contract::Error),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -124,32 +129,32 @@ impl From<hex::FromHexError> for Error {
     }
 }
 
-impl From<alloy_rlp::Error> for Error {
-    fn from(_: alloy_rlp::Error) -> Self {
+impl From<rlp::Error> for Error {
+    fn from(_: rlp::Error) -> Self {
         Error::InvalidInput(UnableToRLPDecode)
     }
 }
 
-impl From<alloy_primitives::SignatureError> for Error {
-    fn from(_: alloy_primitives::SignatureError) -> Self {
+impl From<SignatureError> for Error {
+    fn from(_: SignatureError) -> Self {
         Error::InvalidInput(InvalidTransactionSignature)
     }
 }
 
-impl From<transaction::TransactionFeeTooHigh> for Error {
-    fn from(_: transaction::TransactionFeeTooHigh) -> Self {
+impl From<TransactionFeeTooHigh> for Error {
+    fn from(_: TransactionFeeTooHigh) -> Self {
         Error::TransactionRejected(FeeTooHigh)
     }
 }
 
-impl<T> From<alloy_primitives::ruint::ToUintError<T>> for Error {
-    fn from(_: alloy_primitives::ruint::ToUintError<T>) -> Self {
+impl<T> From<ToUintError<T>> for Error {
+    fn from(_: ToUintError<T>) -> Self {
         Error::InvalidInput(InvalidUint)
     }
 }
 
-impl From<alloy::contract::Error> for Error {
-    fn from(value: alloy::contract::Error) -> Self {
+impl From<contract::Error> for Error {
+    fn from(value: contract::Error) -> Self {
         Self::Contract(value)
     }
 }

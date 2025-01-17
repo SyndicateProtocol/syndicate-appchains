@@ -1,13 +1,11 @@
-use crate::domain::primitives::{Address, Bytes, TxHash};
-use crate::domain::MetabasedSequencerChainService;
+use crate::domain::{
+    primitives::{Address, Bytes, TxHash},
+    MetabasedSequencerChainService,
+};
 use crate::infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance;
-use alloy::network::Network;
-use alloy::providers::Provider;
-use alloy::sol;
-use alloy::transports::Transport;
+use alloy::{network::Network, providers::Provider, sol, transports::Transport};
 use async_trait::async_trait;
-use std::marker::PhantomData;
-use std::time::Duration;
+use std::{marker::PhantomData, time::Duration};
 use tracing::debug_span;
 
 sol! {

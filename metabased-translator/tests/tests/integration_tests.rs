@@ -6,9 +6,8 @@ use alloy::{
     primitives::U256,
     providers::Provider,
     rpc::types::TransactionRequest,
-    signers::{k256::ecdsa::SigningKey, Signer},
+    signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
 };
-use alloy_signer_local::PrivateKeySigner;
 use block_builder::contract_bindings::counter::Counter;
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::Result;

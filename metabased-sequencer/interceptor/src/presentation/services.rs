@@ -1,13 +1,17 @@
 use crate::application::{Metrics, Stopwatch};
 use crate::domain::MetabasedSequencerChainService;
 use crate::infrastructure::{PrometheusMetrics, SolMetabasedSequencerChainService, TokioStopwatch};
-use alloy::network::{Ethereum, EthereumWallet};
-use alloy::providers::fillers::{
-    CachedNonceManager, ChainIdFiller, FillProvider, GasFiller, NonceFiller, WalletFiller,
+use alloy::{
+    network::{Ethereum, EthereumWallet},
+    primitives::{Address, B256},
+    providers::{
+        fillers::{
+            CachedNonceManager, ChainIdFiller, FillProvider, GasFiller, NonceFiller, WalletFiller,
+        },
+        ReqwestProvider, RootProvider,
+    },
+    signers::local::PrivateKeySigner,
 };
-use alloy::providers::{ReqwestProvider, RootProvider};
-use alloy::signers::local::PrivateKeySigner;
-use alloy_primitives::{Address, B256};
 use std::fmt::Debug;
 use url::Url;
 
@@ -54,7 +58,7 @@ pub fn create(
     chain_contract_address: Address,
     chain_rpc_address: Url,
     private_key: B256,
-) -> anyhow::Result<
+) -> eyre::Result<
     Services<
         impl MetabasedSequencerChainService<Error = alloy::contract::Error>
             + Send
@@ -76,7 +80,7 @@ fn create_chain_service(
     chain_contract_address: Address,
     chain_rpc_address: Url,
     private_key: B256,
-) -> anyhow::Result<
+) -> eyre::Result<
     impl MetabasedSequencerChainService<Error = alloy::contract::Error> + Send + Sync + Debug + 'static,
 > {
     // Fillers automatically set some attributes for every transaction sent using this provider.
