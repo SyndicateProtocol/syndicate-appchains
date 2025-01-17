@@ -1,16 +1,29 @@
 //! Integration tests for the metabased stack
 
+use std::{
+    str::FromStr,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
 use alloy::{
-    eips::eip2718::Encodable2718,
+    eips::{eip2718::Encodable2718, BlockNumberOrTag},
     network::{EthereumWallet, TransactionBuilder},
-    primitives::U256,
-    providers::Provider,
+    primitives::{address, utils::parse_ether, Address, U256},
+    providers::{ext::AnvilApi, Provider, ProviderBuilder, WalletProvider},
     rpc::types::TransactionRequest,
     signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
+    sol,
 };
-use block_builder::contract_bindings::counter::Counter;
+use block_builder::{
+    connectors::anvil::MetaChainProvider, contract_bindings::counter::Counter, rollups::arbitrum,
+};
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::Result;
+use reqwest::Url;
+use tokio::{
+    fs::read_to_string,
+    process::{Child, Command},
+};
 
 /// Simple test scenario:
 /// Bob tries to deploy a counter contract to L3, then tries to increment it
@@ -172,4 +185,283 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
     );
 
     Ok(())
+}
+
+sol! {
+    #[sol(rpc)]
+    contract SequencerInbox {
+        function addSequencerL2BatchFromOrigin(
+            uint256 sequenceNumber,
+            bytes calldata data,
+            uint256 afterDelayedMessagesRead,
+            address gasRefunder,
+            uint256 prevMessageCount,
+            uint256 newMessageCount
+        ) external override refundsGas(gasRefunder, IReader4844(address(0)));
+        uint256 public totalDelayedMessagesRead;
+    }
+
+    #[sol(rpc)]
+    contract Bridge {
+        function delayedMessageCount() external view returns (uint256);
+        function sequencerMessageCount() external view returns (uint256);
+    }
+
+    #[sol(rpc)]
+    contract Inbox {
+        function depositEth() public payable returns (uint256);
+    }
+}
+
+// get project root
+fn get_project_root() -> std::io::Result<std::path::PathBuf> {
+    let path = std::env::current_dir()?;
+    let mut path_ancestors = path.as_path().ancestors();
+
+    while let Some(p) = path_ancestors.next() {
+        let has_cargo = std::fs::read_dir(p)?
+            .into_iter()
+            .any(|p| p.unwrap().file_name() == std::ffi::OsString::from("Cargo.lock"));
+        if has_cargo {
+            return Ok(std::path::PathBuf::from(p));
+        }
+    }
+    Err(std::io::Error::new(
+        std::io::ErrorKind::NotFound,
+        "Ran out of places to find Cargo.toml",
+    ))
+}
+
+async fn send_batch<
+    T: alloy::transports::Transport + Clone,
+    N: alloy::network::Network,
+    U: Provider<T, N>,
+>(
+    batch: &arbitrum::batch::Batch,
+    provider: &U,
+) {
+    let inbox = SequencerInbox::new(
+        address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"),
+        &provider,
+    );
+    let bridge = Bridge::new(
+        address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2"),
+        &provider,
+    );
+    let delayed_messages_read = inbox
+        .totalDelayedMessagesRead()
+        .call()
+        .await
+        .unwrap()
+        .totalDelayedMessagesRead;
+    let sequencer_message_count = bridge.sequencerMessageCount().call().await.unwrap()._0;
+    inbox
+        .addSequencerL2BatchFromOrigin(
+            sequencer_message_count,        // sequence number
+            batch.encode().unwrap().into(), // data
+            delayed_messages_read
+                .checked_add(U256::from(batch.0.iter().filter(|x| x.is_none()).count()))
+                .unwrap(), // after delayed messages read
+            Address::default(),             // gas refunder
+            U256::from(0),                  // prev message count. 0 = ignore this sanity check
+            U256::from(0),                  // new message count
+        )
+        .send()
+        .await
+        .unwrap()
+        .with_required_confirmations(1)
+        .watch()
+        .await
+        .unwrap();
+}
+
+struct Docker(Child);
+
+impl Drop for Docker {
+    fn drop(&mut self) {
+        std::process::Command::new("kill")
+            .arg(self.0.id().unwrap().to_string())
+            .output()
+            .unwrap();
+    }
+}
+
+async fn launch_nitro_node() -> (MetaChainProvider, Docker) {
+    let root = get_project_root().unwrap().join("test_config");
+    let mchain = MetaChainProvider::start_from_snapshot(
+        Default::default(),
+        root.join("rollup").to_str().unwrap(),
+    )
+    .await
+    .unwrap();
+
+    let chain_config = read_to_string(root.join("l2_chain_info.json"))
+        .await
+        .unwrap();
+    let nitro = Command::new("docker")
+        .kill_on_drop(false) // kill via SIGTERM instead of SIGKILL
+        .arg("run")
+        .arg("--init")
+        .arg("--rm")
+        .arg("-p")
+        .arg("8547:8547")
+        .arg("offchainlabs/nitro-node:v3.4.0-rc.2-d896e9c-slim")
+        .arg(
+            "--parent-chain.connection.url=".to_string()
+                + mchain
+                    .anvil
+                    .endpoint_url()
+                    .as_str()
+                    .replace("localhost", "host.docker.internal")
+                    .as_str(),
+        )
+        .arg("--node.dangerous.disable-blob-reader")
+        .arg("--execution.forwarding-target=null")
+        .arg("--execution.parent-chain-reader.old-header-timeout=1000h")
+        .arg("--node.inbox-reader.check-delay=1s")
+        .arg("--node.staker.enable=false")
+        .arg("--ensure-rollup-deployment=false")
+        .arg("--chain.info-json=".to_string() + &chain_config)
+        .arg("--http.addr=0.0.0.0")
+        .arg("--http.port=8547")
+        .arg("--log-level=DEBUG")
+        .spawn()
+        .expect("Failed to spawn child process");
+    let rollup = ProviderBuilder::new().on_http("http://localhost:8547".parse().unwrap());
+    // give it a minute to launch (in case it needs to download the image)
+    for _ in 0..60 {
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        if rollup.get_chain_id().await.is_ok() {
+            break;
+        }
+    }
+    (mchain, Docker(nitro))
+}
+
+#[tokio::test]
+#[cfg_attr(not(feature = "e2e-tests"), ignore)]
+async fn test_e2e_nitro_batch() {
+    let (mchain, _nitro) = launch_nitro_node().await;
+
+    let wallet = EthereumWallet::from(
+        PrivateKeySigner::from_str(
+            "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
+        )
+        .unwrap(),
+    );
+
+    let provider = ProviderBuilder::new()
+        .with_recommended_fillers()
+        .wallet(&wallet)
+        .on_http(Url::parse(mchain.anvil.endpoint_url().as_str()).unwrap());
+
+    provider.anvil_set_auto_mine(true).await.unwrap();
+    //provider.anvil_set_interval_mining(1).await.unwrap();
+
+    // deposit 1 eth
+    let inbox = Inbox::new(
+        address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899"),
+        &provider,
+    );
+    inbox
+        .depositEth()
+        .value(parse_ether("1").unwrap())
+        .send()
+        .await
+        .unwrap()
+        .with_required_confirmations(1)
+        .watch()
+        .await
+        .unwrap();
+
+    // clear the queue of delayed messages
+    send_batch(
+        &arbitrum::batch::Batch(vec![None, None, None, None, None, None, None, None, None]),
+        &provider,
+    )
+    .await;
+
+    // wait for the batch to be processed
+    let rollup = ProviderBuilder::new().on_http("http://localhost:8547".parse().unwrap());
+    for _ in 0..10 {
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        if rollup.get_block_number().await.unwrap() > 8 {
+            break;
+        }
+    }
+
+    // check that the deposit succeeded
+    assert_eq!(
+        provider
+            .get_balance(provider.default_signer_address())
+            .await
+            .unwrap(),
+        parse_ether("1").unwrap()
+    );
+
+    // include a tx in a batch
+    let mut tx = vec![];
+    let inner_tx = TransactionRequest::default()
+        .with_to(address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"))
+        .with_value(U256::from(1))
+        .with_nonce(0)
+        .with_gas_limit(100_000)
+        .with_chain_id(13331370)
+        .with_max_fee_per_gas(100000000)
+        .with_max_priority_fee_per_gas(0)
+        .build(&wallet)
+        .await
+        .unwrap();
+
+    inner_tx.encode_2718(&mut tx);
+    let ts = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs();
+    let batch = arbitrum::batch::Batch(vec![Some(arbitrum::batch::L1IncomingMessage {
+        header: arbitrum::batch::L1IncomingMessageHeader {
+            block_number: 9,
+            timestamp: ts,
+        },
+        l2msg: vec![tx],
+    })]);
+    send_batch(&batch, &provider).await;
+
+    // wait for the batch to be processed
+    for _ in 0..10 {
+        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        if rollup.get_block_number().await.unwrap() > 9 {
+            break;
+        }
+    }
+
+    // check that the tx was sequenced
+    let block: serde_json::Value = rollup
+        .raw_request(
+            "eth_getBlockByNumber".into(),
+            (BlockNumberOrTag::Number(10), true),
+        )
+        .await
+        .unwrap();
+    let txs = block
+        .as_object()
+        .unwrap()
+        .get("transactions")
+        .unwrap()
+        .as_array()
+        .unwrap();
+    // the first transaction is the startBlock transaction
+    println!("{:#?}", txs);
+    assert_eq!(txs.len(), 2);
+    // tx hash should match
+    assert_eq!(
+        txs[1]
+            .as_object()
+            .unwrap()
+            .get("hash")
+            .unwrap()
+            .as_str()
+            .unwrap(),
+        &inner_tx.tx_hash().to_string()
+    );
 }

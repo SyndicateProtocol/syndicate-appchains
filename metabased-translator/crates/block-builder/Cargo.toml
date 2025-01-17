@@ -20,14 +20,17 @@ alloy = { workspace = true, features = [
   "signer-local",
 ] }
 eyre = { workspace = true }
-tokio = { workspace = true, features = ["rt-multi-thread"] }
+tokio = { workspace = true, features = ["rt-multi-thread", "process"] }
+serde = { workspace = true }
 serde_json = { workspace = true }
 flate2 = { workspace = true }
 reqwest = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
 tracing = { workspace = true }
 clap = { workspace = true, features = ["env", "derive"] }
-
+base64 = { workspace = true }
+brotli = { workspace = true }
+hex = { workspace = true }
 
 [dev-dependencies]
 serial_test = { workspace = true }
