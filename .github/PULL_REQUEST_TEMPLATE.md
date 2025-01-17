@@ -11,7 +11,7 @@
 ### Breaking changes?
 - **Yes/No:** 
   - <Does this PR introduce any breaking changes (API/schema)?>
-  - <If yes, explain the breaking change and its impact.> 
+  - <If yes, explain the breaking change, its impact, and applicable upgrade steps.> 
 
 ### How can this PR be tested?
 - <Do existing tests cover the change? Do you need to add any (unit, e2e) tests?>
