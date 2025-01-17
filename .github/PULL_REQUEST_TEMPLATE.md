@@ -10,7 +10,7 @@
 
 ### Breaking changes?
 - **Yes/No:** 
-  - <Does this PR introduce any breaking changes (API/schema)?>
+  - <Does this PR introduce any breaking changes (API/config/schema) for node operators?>
   - <If yes, explain the breaking change, its impact, and applicable upgrade steps.> 
 
 ### Anything interesting?
