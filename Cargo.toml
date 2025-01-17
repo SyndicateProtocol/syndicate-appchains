@@ -65,9 +65,6 @@ const_format = { version = "0.2" }
 criterion = { version = "0.5" }
 
 
-[workspace.metadata.precommit]
-fmt = "cargo fmt --all --check"
-
 [workspace.lints.rust]
 missing_debug_implementations = "warn"
 missing_docs = "warn"
