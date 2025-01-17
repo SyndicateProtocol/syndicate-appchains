@@ -1,7 +1,13 @@
+//! Optimism block builder implementation
+//!
+//! This module provides functionality for building an Optimism batcher transaction from a list of transactions.
+//! It implements the [`RollupBlockBuilder`] trait to standardize block construction across different
+//! rollup implementations
+
 use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
 use crate::rollups::optimism::frame::to_data;
-use crate::rollups::rollup_builder::RollupBlockBuilder;
-use alloy_primitives::{Address, B256};
+use crate::rollups::shared::RollupBlockBuilder;
+use alloy_primitives::{Address, Bytes, B256};
 use alloy_rpc_types::TransactionRequest;
 use async_trait::async_trait;
 use eyre::Result;
@@ -19,7 +25,7 @@ impl RollupBlockBuilder for OptimismBlockBuilder {
     }
 
     /// Builds a batch of transactions into an Optimism batch
-    async fn build_batch_txn(&self, txs: Vec<Vec<u8>>) -> Result<TransactionRequest> {
+    async fn build_batch_txn(&self, txs: Vec<Bytes>) -> Result<TransactionRequest> {
         // TODO: Implement
         let batcher = Address::from_str("0x063D87A885a9323831A688645647eD7d0e859C5d")?;
         let batch_inbox = Address::from_str("0x97395dd253e2d096a0caa62a574895c3c2f2b2e0")?;

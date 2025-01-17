@@ -4,5 +4,5 @@
 pub mod arbitrum;
 /// Block builder implementation for Optimism rollups
 pub mod optimism;
-/// Rollup block builder trait
+/// Shared rollup logic and traits
 pub mod shared;

@@ -58,7 +58,6 @@ impl Ingestor {
     /// The block and its receipts.
     async fn get_block_and_receipts(&self, block_number: u64) -> Result<BlockAndReceipts, Error> {
         let block = self.client.get_block_by_number(block_number).await?;
-
         let receipts = self.client.get_block_receipts(block_number).await?;
         info!("Got block: {:?}", block.number);
 
