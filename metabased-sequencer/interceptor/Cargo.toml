@@ -4,50 +4,43 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-async-trait = "0.1"
-alloy = { version = "0.9.2", features = ["full"] }
-dotenv = "=0.14.0"
-figment = { version = "0.10", features = ["env"] }
-jsonrpsee = { version = "0.24.3", features = ["full"] }
-tokio = { version = "1.0", features = ["full"] }
-anyhow = "1.0"
-serde_json = "1.0.128"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"] }
-tracing = { version = "0.1.40", features = ["attributes"] }
-clap = { version = "4.5.17", features = ["derive"] }
-hyper = { version = "1.4.1", features = ["full"] }
-bytes = "1.7.1"
-http-body = "1.0.1"
-http-body-util = "0.1"
-pin-project-lite = "0.2.14"
-http = "1.1.0"
-want = { version = "0.3" }
-smallvec = { version = "1.12", features = ["const_generics", "const_new"] }
-futures-util = { version = "0.3", default-features = false }
-futures-channel = { version = "0.3" }
-httparse = { version = "1.8" }
-itoa = { version = "1" }
-h2 = { version = "0.4.2" }
-httpdate = { version = "1.0" }
-reqwest = "0.12.7"
-serde = "1.0.210"
-hyper-util = "0.1.8"
-alloy-primitives = "0.8.7"
-url = { version = "2", features = ["serde"] }
-rand = "0.8.5"
-flate2 = "1.0.34"
-prometheus-client = "0.23.0"
-hex = "0.4.3"
-alloy-rlp = "0.3.9"
-tower = "=0.4"
-tower-layer = "0.3.3"
-tower-service = "0.3.3"
-pre-commit-hooks = "0.3.0"
+async-trait = { workspace = true }
+alloy = { workspace = true, features = [
+  "rlp",
+  "providers",
+  "rpc-types",
+  "contract",
+  "signers",
+  "signer-local",
+  "k256",
+] }
+alloy-rlp = { workspace = true }
+figment = { workspace = true, features = ["env"] }
+jsonrpsee = { workspace = true, features = ["server"] }
+tokio = { workspace = true }
+eyre = { workspace = true }
+serde_json = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
+tracing = { workspace = true, features = ["attributes"] }
+clap = { workspace = true, features = ["derive"] }
+bytes = { workspace = true }
+http-body-util = { workspace = true }
+pin-project-lite = { workspace = true }
+http = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+url = { workspace = true, features = ["serde"] }
+rand = { workspace = true }
+flate2 = { workspace = true }
+prometheus-client = { workspace = true }
+tower = { workspace = true }
+tower-layer = { workspace = true }
+tower-service = { workspace = true }
 
 [dev-dependencies]
-test-case = "3"
-const_format = "0.2"
-criterion = "0.5"
+test-case = { workspace = true }
+const_format = { workspace = true }
+criterion = { workspace = true }
 
 [[bench]]
 name = "zlib_compression"

@@ -35,7 +35,7 @@ impl<S: Serialize> Display for JsonRpcError<S> {
     }
 }
 
-impl<E: Into<anyhow::Error>> From<E> for JsonRpcError<()> {
+impl<E: Into<eyre::Error>> From<E> for JsonRpcError<()> {
     fn from(value: E) -> Self {
         Self {
             code: -32602,
@@ -174,7 +174,7 @@ mod tests {
     use crate::domain::MetabasedSequencerChainService;
     use crate::infrastructure::error_to_metric_category;
     use crate::presentation::services::Services;
-    use alloy_primitives::Bytes;
+    use alloy::primitives::Bytes;
     use async_trait::async_trait;
     use jsonrpsee::types::Params;
     use std::convert::Infallible;

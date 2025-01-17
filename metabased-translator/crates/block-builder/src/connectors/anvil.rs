@@ -1,27 +1,29 @@
 //! Anvil connector for the `MetaChain`
 
 use crate::config::Configuration;
-use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
-use crate::rollups::optimism::frame::to_data;
+use crate::rollups::optimism::{
+    batch::{new_batcher_tx, Batch},
+    frame::to_data,
+};
 use alloy::{
     network::{Ethereum, EthereumWallet},
+    node_bindings::Anvil,
     primitives::{Address, B256, U256},
+    providers::{
+        ext::AnvilApi,
+        fillers::{
+            BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
+            WalletFiller,
+        },
+        Identity, Provider, ProviderBuilder, RootProvider,
+    },
+    rpc::types::{BlockId, BlockNumberOrTag, BlockTransactionsKind},
     signers::local::PrivateKeySigner,
     transports::http::Http,
 };
-use alloy_node_bindings::Anvil;
-use alloy_provider::{
-    ext::AnvilApi,
-    fillers::{
-        BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller, WalletFiller,
-    },
-    Identity, Provider, ProviderBuilder, RootProvider,
-};
-use alloy_rpc_types::{BlockId, BlockNumberOrTag, BlockTransactionsKind};
 use eyre::eyre;
 use reqwest::{Client, Url};
-use std::net::TcpListener;
-use std::str::FromStr;
+use std::{net::TcpListener, str::FromStr};
 use tracing::info;
 
 type FilledProvider = FillProvider<

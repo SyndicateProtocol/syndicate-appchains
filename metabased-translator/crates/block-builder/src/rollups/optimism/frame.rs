@@ -8,7 +8,7 @@
 //! - A flag indicating if this is the last frame
 //!
 //! The encoded frames are prefixed with a version byte and can be submitted as batcher transactions.
-use alloy_primitives::B128;
+use alloy::primitives::B128;
 use std::io::{self, Write};
 
 const BATCHER_TRANSACTION_VERSION_BYTE: u8 = 0x00;

@@ -1,8 +1,7 @@
-use crate::presentation::configuration::Configuration;
-use crate::presentation::server;
+use crate::presentation::{configuration::Configuration, server};
 use core::fmt;
-use std::error::Error;
-use std::fmt::Debug;
+use eyre::Result;
+use std::{error::Error, fmt::Debug};
 use tracing::info;
 use tracing_subscriber::{fmt as subscriber_fmt, EnvFilter};
 
@@ -37,7 +36,7 @@ pub fn init_tracing_subscriber() -> Result<(), TracingError> {
     Ok(())
 }
 
-pub async fn run() -> anyhow::Result<()> {
+pub async fn run() -> Result<()> {
     let args = Configuration::parse()?;
     let (addr, handle) = server::run(
         args.port,

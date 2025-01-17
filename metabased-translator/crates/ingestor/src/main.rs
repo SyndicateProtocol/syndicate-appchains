@@ -4,9 +4,9 @@ mod eth_client;
 mod ingestor;
 
 use eyre::eyre;
-use log::info;
-use std::error::Error;
-use std::time::Duration;
+use std::{error::Error, time::Duration};
+use tracing::info;
+
 /// This function initializes the `Ingestor` to poll blocks from an Ethereum chain
 /// and logs received blocks. It sets up logging, handles errors gracefully, and
 /// spawns a background task to process incoming blocks.
@@ -28,9 +28,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let rpc_url = "https://base.llamarpc.com"; //"https://eth.llamarpc.com";
     let start_block = 19486923;
     let polling_interval = Duration::from_secs(1);
-
-    // Initialize the logger
-    env_logger::init();
 
     // Create the ingestor and receiver
     let (mut ingestor, mut receiver) =

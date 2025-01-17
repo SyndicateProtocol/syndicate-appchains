@@ -172,7 +172,7 @@ fn is_valid_cm_bits_8_or_15<T: AsRef<[u8]>>(compressed: T) -> Result<(), IoError
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::hex_literal::hex;
+    use alloy::primitives::hex_literal::hex;
     use std::time::Instant;
 
     #[test]

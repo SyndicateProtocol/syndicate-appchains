@@ -131,8 +131,6 @@ mod tests {
         let args = Args::try_parse_from(["my_test_program"]).unwrap();
         assert_eq!(args.port, 9999);
         assert_eq!(args.chain_id, 12345);
-
-        clean_env();
     }
 
     #[test]
@@ -143,8 +141,6 @@ mod tests {
 
         let args = Args::try_parse_from(["my_test_program", "--port", "7777"]).unwrap();
         assert_eq!(args.port, 7777);
-
-        clean_env();
     }
 
     #[test]
@@ -163,7 +159,5 @@ mod tests {
 
         let args = Args::try_parse_from(["test"]).unwrap();
         assert_eq!(args.port, 8888);
-
-        clean_env();
     }
 }
