@@ -454,12 +454,21 @@ pub enum SlotterError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy::primitives::B256;
+    use std::str::FromStr;
+
     fn create_test_block(number: u64, timestamp: u64) -> BlockAndReceipts {
         BlockAndReceipts {
             block: Block {
-                hash: "0x0".to_string(),
+                hash: B256::from_str(
+                    "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                )
+                .unwrap(),
                 number,
-                parent_hash: "0x0".to_string(),
+                parent_hash: B256::from_str(
+                    "0234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                )
+                .unwrap(),
                 logs_bloom: "0x0".to_string(),
                 transactions_root: "0x0".to_string(),
                 state_root: "0x0".to_string(),

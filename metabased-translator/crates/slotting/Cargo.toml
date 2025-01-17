@@ -12,6 +12,7 @@ repository.workspace = true
 common.workspace = true
 eyre = "0.6.12"
 tokio = { version = "1.42.0", features = ["rt", "macros", "sync"] }
+alloy = { version = "0.8.3", features = ["full"] }
 pre-commit-hooks = "0.3.0"
 strum = "0.26.3"
 strum_macros = "0.26.4"
