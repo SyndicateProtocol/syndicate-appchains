@@ -191,15 +191,29 @@ mod tests {
             .build(&wallet)
             .await?
             .encode(&mut tx);
-        let batch = Batch(vec![Some(L1IncomingMessage {
-            header: L1IncomingMessageHeader {
-                block_number: 1,
-                timestamp: std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)?
-                    .as_secs(),
-            },
-            l2_msg: vec![tx],
-        })]);
+        let batch = Batch(vec![
+            Some(L1IncomingMessage {
+                header: L1IncomingMessageHeader {
+                    block_number: 1,
+                    timestamp: 100,
+                },
+                l2_msg: vec![tx.clone()],
+            }),
+            Some(L1IncomingMessage {
+                header: L1IncomingMessageHeader {
+                    block_number: 2,
+                    timestamp: 200,
+                },
+                l2_msg: vec![tx.clone(), tx.clone()],
+            }),
+            Some(L1IncomingMessage {
+                header: L1IncomingMessageHeader {
+                    block_number: 3,
+                    timestamp: 500,
+                },
+                l2_msg: vec![tx],
+            }),
+        ]);
         let b1 = batch.encode()?;
         let b2 = batch.geth_encode().await?;
         assert_eq!(b1[0], b1[0]);

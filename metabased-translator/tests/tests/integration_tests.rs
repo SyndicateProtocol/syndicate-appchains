@@ -27,6 +27,8 @@ use tokio::{
     time::timeout,
 };
 
+use common::types::Block;
+
 /// Get the project root (relative to closest Cargo.lock file)
 /// ```rust
 /// match project_root::get_project_root() {
@@ -353,8 +355,8 @@ async fn test_nitro_batch() -> Result<()> {
     // wait 200ms for the batch to be processed
     tokio::time::sleep(Duration::from_millis(200)).await;
     let rollup = ProviderBuilder::new().on_http("http://localhost:8547".parse()?);
-    if rollup.get_block_number().await? < 9 {
-        return Err(eyre!("block derivation failed - missing block 9"));
+    if rollup.get_block_number().await? != 9 {
+        return Err(eyre!("block derivation failed - not on block 9"));
     }
 
     // check that the deposit succeeded
@@ -391,37 +393,21 @@ async fn test_nitro_batch() -> Result<()> {
 
     // wait 200ms for the batch to be processed
     tokio::time::sleep(Duration::from_millis(200)).await;
-    if rollup.get_block_number().await? < 10 {
-        return Err(eyre!("block derivation failed - missing block 10"));
+    if rollup.get_block_number().await? != 10 {
+        return Err(eyre!("block derivation failed - not on block 10"));
     }
 
     // check that the tx was sequenced
-    let block: serde_json::Value = rollup
+    let block: Block = rollup
         .raw_request(
             "eth_getBlockByNumber".into(),
             (BlockNumberOrTag::Number(10), true),
         )
         .await?;
-    let txs = block
-        .as_object()
-        .unwrap()
-        .get("transactions")
-        .unwrap()
-        .as_array()
-        .unwrap();
     // the first transaction is the startBlock transaction
-    println!("{:#?}", txs);
-    assert_eq!(txs.len(), 2);
+    println!("{:#?}", block.transactions);
+    assert_eq!(block.transactions.len(), 2);
     // tx hash should match
-    assert_eq!(
-        txs[1]
-            .as_object()
-            .unwrap()
-            .get("hash")
-            .unwrap()
-            .as_str()
-            .unwrap(),
-        &inner_tx.tx_hash().to_string()
-    );
+    assert_eq!(block.transactions[1].hash, inner_tx.tx_hash().to_string());
     Ok(())
 }
