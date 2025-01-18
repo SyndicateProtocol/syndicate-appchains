@@ -1,4 +1,5 @@
 //! Integration tests for the metabased stack
+#![allow(missing_docs)]
 
 use std::{
     str::FromStr,
@@ -34,13 +35,9 @@ use tokio::{
 /// };
 /// ```
 fn get_project_root() -> std::io::Result<std::path::PathBuf> {
-    let path = std::env::current_dir()?;
-    let mut path_ancestors = path.as_path().ancestors();
-
-    while let Some(p) = path_ancestors.next() {
-        let has_cargo = std::fs::read_dir(p)?
-            .into_iter()
-            .any(|p| p.unwrap().file_name() == std::ffi::OsString::from("Cargo.lock"));
+    for p in std::env::current_dir()?.as_path().ancestors() {
+        let has_cargo =
+            std::fs::read_dir(p)?.any(|p| p.is_ok_and(|x| x.file_name() == "Cargo.lock"));
         if has_cargo {
             return Ok(std::path::PathBuf::from(p));
         }
@@ -212,9 +209,23 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
     Ok(())
 }
 
-sol! { #[sol(rpc)] SequencerInbox, "../contracts/src/ISequencerInbox.json" }
-sol! { #[sol(rpc)] Bridge, "../contracts/src/IBridge.json" }
-sol! { #[sol(rpc)] Inbox, "../contracts/src/IInbox.json" }
+sol! {
+    #[sol(rpc)]
+    #[allow(clippy::too_many_arguments)]
+    SequencerInbox, "../contracts/src/ISequencerInbox.json"
+}
+
+sol! {
+    #[sol(rpc)]
+    #[allow(clippy::too_many_arguments)]
+    Bridge, "../contracts/src/IBridge.json"
+}
+
+sol! {
+    #[sol(rpc)]
+    #[allow(clippy::too_many_arguments)]
+    Inbox, "../contracts/src/IInbox.json"
+}
 
 async fn send_batch<
     T: alloy::transports::Transport + Clone,
