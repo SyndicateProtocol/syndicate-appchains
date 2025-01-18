@@ -1,6 +1,6 @@
 //! Types module for metabased-translator
 
-use alloy::primitives::{Address, B256};
+use alloy::primitives::{Address, Bytes, B256};
 use hex;
 use serde::de::{self, Deserializer};
 use serde::Deserialize;
@@ -131,11 +131,12 @@ pub struct Log {
     #[serde(rename = "logIndex", deserialize_with = "deserialize_hex_to_u64")]
     pub log_index: u64,
     /// The data associated with the log.
-    pub data: String,
+    pub data: Bytes,
     /// A flag indicating if the log was removed due to a chain reorganization.
     pub removed: bool,
     /// The topics associated with the log.
-    pub topics: Vec<String>,
+    #[serde(deserialize_with = "deserialize_b256_vec")]
+    pub topics: Vec<B256>,
     /// The hash of the transaction that generated the log
     #[serde(rename = "transactionHash", deserialize_with = "deserialize_b256")]
     pub transaction_hash: B256,
@@ -254,4 +255,23 @@ where
         .map_err(|_| de::Error::custom("Failed to convert to a 32-byte array"))?;
 
     Ok(B256::from(array))
+}
+
+fn deserialize_b256_vec<'de, D>(deserializer: D) -> Result<Vec<B256>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let vec: Vec<String> = Deserialize::deserialize(deserializer)?;
+    vec.into_iter()
+        .map(|s| {
+            let decoded = hex::decode(&s.trim_start_matches("0x"))
+                .map_err(|err| de::Error::custom(format!("Failed to decode hex string: {err}")))?;
+
+            let array: [u8; 32] = decoded
+                .try_into()
+                .map_err(|_| de::Error::custom("Failed to convert to a 32-byte array"))?;
+
+            Ok(B256::from(array))
+        })
+        .collect()
 }
