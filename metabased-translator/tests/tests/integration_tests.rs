@@ -292,18 +292,9 @@ async fn launch_nitro_node() -> Result<(MetaChainProvider, Docker)> {
         .arg("run")
         .arg("--init")
         .arg("--rm")
-        .arg("-p")
-        .arg("8547:8547")
+        .arg("--net=host")
         .arg("offchainlabs/nitro-node:v3.4.0-rc.2-d896e9c-slim")
-        .arg(
-            "--parent-chain.connection.url=".to_string()
-                + mchain
-                    .anvil
-                    .endpoint_url()
-                    .as_str()
-                    .replace("localhost", "host.docker.internal")
-                    .as_str(),
-        )
+        .arg("--parent-chain.connection.url=".to_string() + mchain.anvil.endpoint_url().as_str())
         .arg("--node.dangerous.disable-blob-reader")
         .arg("--execution.forwarding-target=null")
         .arg("--execution.parent-chain-reader.old-header-timeout=1000h")
