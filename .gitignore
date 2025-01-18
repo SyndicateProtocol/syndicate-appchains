@@ -20,7 +20,6 @@
 .op-network-config.yaml
 
 # Build files
-bin/
 generated/
 openapi/
 

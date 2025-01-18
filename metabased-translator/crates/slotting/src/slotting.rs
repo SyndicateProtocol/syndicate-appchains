@@ -1,5 +1,6 @@
 //! Slotting module for metabased-translator
 
+use crate::config::SlottingConfig;
 use common::{
     service_status::{ServiceStatus, Status},
     types::{Block, BlockAndReceipts, Chain, Slot, SlotState},
@@ -32,7 +33,7 @@ const MAX_WAIT_MS: u64 = 24 * 60 * 60 * 1000;
 /// ```
 #[derive(Debug)]
 pub struct Slotter {
-    config: Config,
+    config: SlottingConfig,
 
     sequencing_chain_rx: Receiver<BlockAndReceipts>,
     settlement_chain_rx: Receiver<BlockAndReceipts>,
@@ -61,27 +62,6 @@ impl BlockRef {
     }
 }
 
-/// Configuration for the slotter
-#[derive(Debug, Clone)]
-pub struct Config {
-    /// The duration of each slot in milliseconds
-    pub slot_duration_ms: u64,
-    /// The slot number to start at
-    pub start_slot_number: u64,
-    /// The timestamp to start at
-    pub start_slot_timestamp: u64,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            slot_duration_ms: 2_000, // 2 seconds
-            start_slot_number: 0,
-            start_slot_timestamp: 0,
-        }
-    }
-}
-
 impl Slotter {
     /// Creates a new [`Slotter`] that receives blocks from two chains and organizes them into
     /// slots.
@@ -103,7 +83,7 @@ impl Slotter {
     pub async fn new(
         sequencing_chain_receiver: Receiver<BlockAndReceipts>,
         settlement_chain_receiver: Receiver<BlockAndReceipts>,
-        config: Config,
+        config: SlottingConfig,
     ) -> Self {
         let max_slots = (MAX_WAIT_MS / config.slot_duration_ms) as usize;
 
@@ -535,7 +515,7 @@ mod tests {
         let slotter = Slotter::new(
             seq_rx,
             settle_rx,
-            Config {
+            SlottingConfig {
                 slot_duration_ms,
                 start_slot_number: 0,
                 start_slot_timestamp: slot_start_timestamp_ms,

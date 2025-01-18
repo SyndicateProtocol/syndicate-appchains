@@ -14,6 +14,8 @@ common = { workspace = true }
 tokio = { workspace = true, features = ["sync", "macros", "rt"] }
 tracing = { workspace = true }
 thiserror = { workspace = true }
+tracing = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
 
 
 [dev-dependencies]

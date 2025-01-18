@@ -5,6 +5,7 @@ members = [
     "metabased-translator/crates/ingestor",
     "metabased-translator/crates/slotting",
     "metabased-translator/crates/common",
+    "metabased-translator/bin/metabased-translator",
     "metabased-translator/tests",
     "metabased-sequencer/interceptor",
     "metabased-sequencer/proxy",
