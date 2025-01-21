@@ -1,6 +1,5 @@
 use alloy::dyn_abi::{DynSolEvent, DynSolType, DynSolValue};
-use alloy::primitives::{keccak256, Address, Bytes, B256};
-use alloy_primitives::LogData;
+use alloy::primitives::{keccak256, Address, Bytes, LogData, B256};
 use common::types::Log;
 use eyre::{eyre, Error};
 use lazy_static::lazy_static;
@@ -115,6 +114,8 @@ impl MBTransactionParser {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use hex;
+
     fn generate_valid_test_log(contract_address: Address) -> Log {
         // Example data for the test log
         let block_hash = B256::from_slice(

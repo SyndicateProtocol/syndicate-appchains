@@ -6,6 +6,7 @@ mod ingestor;
 use eyre::eyre;
 use std::{error::Error, time::Duration};
 use tracing::info;
+use tracing_subscriber;
 
 /// This function initializes the `Ingestor` to poll blocks from an Ethereum chain
 /// and logs received blocks. It sets up logging, handles errors gracefully, and
@@ -25,6 +26,9 @@ use tracing::info;
 /// A tuple containing the `Ingestor` instance and a `Receiver` for consuming blocks.
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    // Initialize the tracing subscriber
+    tracing_subscriber::fmt().init();
+
     let rpc_url = "https://base.llamarpc.com"; //"https://eth.llamarpc.com";
     let start_block = 19486923;
     let polling_interval = Duration::from_secs(1);
