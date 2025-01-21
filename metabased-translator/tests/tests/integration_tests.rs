@@ -2,6 +2,7 @@
 #![allow(missing_docs)]
 
 use std::{
+    path::PathBuf,
     str::FromStr,
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
@@ -13,10 +14,14 @@ use alloy::{
     providers::{ext::AnvilApi, Provider, ProviderBuilder, WalletProvider},
     rpc::types::TransactionRequest,
     signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
-    sol,
 };
+
 use block_builder::{
-    connectors::anvil::MetaChainProvider, contract_bindings::counter::Counter, rollups::arbitrum,
+    connectors::anvil::MetaChainProvider,
+    contract_bindings::{
+        counter::Counter, ibridge::IBridge, iinbox::IInbox, isequencerinbox::ISequencerInbox,
+    },
+    rollups::arbitrum,
 };
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::{eyre, OptionExt, Result};
@@ -28,27 +33,6 @@ use tokio::{
 };
 
 use common::types::Block;
-
-/// Get the project root (relative to closest Cargo.lock file)
-/// ```rust
-/// match project_root::get_project_root() {
-///     Ok(p) => println!("Current project root is {:?}", p),
-///     Err(e) => println!("Error obtaining project root {:?}", e)
-/// };
-/// ```
-fn get_project_root() -> std::io::Result<std::path::PathBuf> {
-    for p in std::env::current_dir()?.as_path().ancestors() {
-        let has_cargo =
-            std::fs::read_dir(p)?.any(|p| p.is_ok_and(|x| x.file_name() == "Cargo.lock"));
-        if has_cargo {
-            return Ok(std::path::PathBuf::from(p));
-        }
-    }
-    Err(std::io::Error::new(
-        std::io::ErrorKind::NotFound,
-        "Ran out of places to find Cargo.toml",
-    ))
-}
 
 /// Simple test scenario:
 /// Bob tries to deploy a counter contract to L3, then tries to increment it
@@ -211,24 +195,6 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
     Ok(())
 }
 
-sol! {
-    #[sol(rpc)]
-    #[allow(clippy::too_many_arguments)]
-    SequencerInbox, "../contracts/src/ISequencerInbox.json"
-}
-
-sol! {
-    #[sol(rpc)]
-    #[allow(clippy::too_many_arguments)]
-    Bridge, "../contracts/src/IBridge.json"
-}
-
-sol! {
-    #[sol(rpc)]
-    #[allow(clippy::too_many_arguments)]
-    Inbox, "../contracts/src/IInbox.json"
-}
-
 async fn send_batch<
     T: alloy::transports::Transport + Clone,
     N: alloy::network::Network,
@@ -237,11 +203,11 @@ async fn send_batch<
     batch: &arbitrum::batch::Batch,
     provider: &U,
 ) -> Result<()> {
-    let inbox = SequencerInbox::new(
+    let inbox = ISequencerInbox::new(
         address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"),
         &provider,
     );
-    let bridge = Bridge::new(
+    let bridge = IBridge::new(
         address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2"),
         &provider,
     );
@@ -279,7 +245,8 @@ impl Drop for Docker {
 }
 
 async fn launch_nitro_node() -> Result<(MetaChainProvider, Docker)> {
-    let root = get_project_root()?.join("test_config");
+    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config");
+
     let mchain = MetaChainProvider::start_from_snapshot(
         Default::default(),
         root.join("anvil.json")
@@ -336,7 +303,7 @@ async fn test_nitro_batch() -> Result<()> {
     //provider.anvil_set_interval_mining(1).await?;
 
     // deposit 1 eth
-    let inbox = Inbox::new(
+    let inbox = IInbox::new(
         address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899"),
         &provider,
     );
@@ -350,6 +317,8 @@ async fn test_nitro_batch() -> Result<()> {
         .await?;
 
     // clear the queue of delayed messages
+    // The RollupCreator createRollup() function creates 8 retryable tickets to deploy deterministic deployment factories to the rollup
+    // when deployFactoriesToL2 is enabled. The final delayed message is the deposit that we initiate earlier in the test.
     send_batch(&arbitrum::batch::Batch(vec![None; 9]), &provider).await?;
 
     // wait 200ms for the batch to be processed
