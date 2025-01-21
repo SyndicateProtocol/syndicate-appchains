@@ -6,7 +6,7 @@
   - <Provide a brief description of what this PR implements, the problem it solves, or the feature it introduces. Include relevant context as needed.>
 - **Key Changes:**
   - < List out major code changes or functionality modifications in bullet points.>
-- <Goal of this section is for someone to read this in a few months and at-a-glance understand why this change got made + what it is>
+- <Goal of this section: someone reads this in a few months and at-a-glance understands why this change got made + what it is>
 
 ### Breaking changes?
 - **Yes/No:** 
