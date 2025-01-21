@@ -10,6 +10,7 @@ use tokio::{
     select,
     sync::mpsc::{channel, error::SendError, Receiver, Sender},
 };
+use tracing::{debug, error, info};
 
 /// Maximum time to wait for blocks before considering a slot final (24 hours in milliseconds)
 const MAX_WAIT_MS: u64 = 24 * 60 * 60 * 1000;
@@ -140,7 +141,7 @@ impl Slotter {
     pub fn start(mut self) -> Receiver<Slot> {
         self.status.store(Status::Started);
         let (sender, receiver) = channel(100); // TODO SEQ-490 - channel size shouldn't be hardcoded here
-
+        info!("Starting Slotter");
         tokio::spawn(async move {
             loop {
                 if self.status.load() == Status::Stopped {
@@ -148,6 +149,7 @@ impl Slotter {
                     // - stop processing new blocks
                     // - go through the slots and save all safe slots to the DB (timestamp < current_time - MAX_WAIT_MS)
                     // - potentially save all unsafe/opened blocks to the DB, so they can be resumed later
+                    info!("Slotter stopped");
                     return;
                 }
 
@@ -207,6 +209,7 @@ impl Slotter {
     /// - Wait for thread to complete
     /// - Write info to DB, so it can be resumed later
     pub fn stop(&mut self) {
+        info!("Stopping Slotter");
         self.status.store(Status::Stopped);
     }
 
@@ -242,13 +245,16 @@ impl Slotter {
         // Only mark slots as unsafe if we have blocks from both chains
         if let Some(other_timestamp) = other_chain_timestamp {
             let min_timestamp = other_timestamp.min(block_timestamp);
+            debug!(min_timestamp, "Marking slots as unsafe");
 
             // Mark slots as unsafe if both chains have progressed past them
             for slot in &mut self.slots {
                 if slot.state == SlotState::Unsafe {
-                    return Ok(()); // assume all blocks past this point are already marked as unsafe
+                    debug!(%slot, "Found unsafe slot, stopping iteration");
+                    return Ok(());
                 }
                 if slot.timestamp < min_timestamp && slot.state == SlotState::Open {
+                    info!(%slot, "Marking slot as unsafe");
                     slot.state = SlotState::Unsafe;
                     sender.send(slot.clone()).await?
                 }
@@ -270,9 +276,18 @@ impl Slotter {
             .slots
             .front_mut()
             .ok_or(SlotterError::NoSlotsAvailable)?;
+        debug!(
+            ?chain,
+            block_number = block_info.block.number,
+            block_timestamp = block_info.block.timestamp,
+            block_hash = %block_info.block.hash,
+            %latest_slot,
+            "Processing block"
+        );
 
         match block_slot_ordering(block_timestamp, latest_slot.timestamp, slot_duration_ms) {
             Ordering::Less => {
+                debug!("Block belongs to earlier slot");
                 // Find the slot this block belongs to
                 let mut inserted = false;
                 for slot in &mut self.slots {
@@ -280,6 +295,7 @@ impl Slotter {
                         block_slot_ordering(block_timestamp, slot.timestamp, slot_duration_ms,),
                         Ordering::Equal
                     ) {
+                        debug!(%slot, "Block fits in slot");
                         slot.push_block(block_info, chain);
                         inserted = true;
                         break;
@@ -293,8 +309,12 @@ impl Slotter {
                     });
                 }
             }
-            Ordering::Equal => latest_slot.push_block(block_info, chain),
+            Ordering::Equal => {
+                debug!("Block fits in current slot");
+                latest_slot.push_block(block_info, chain)
+            }
             Ordering::Greater => {
+                debug!("Creating new slots to fit block");
                 let mut latest_timestamp = latest_slot.timestamp;
                 let mut latest_slot_number = latest_slot.slot_number;
 
@@ -306,6 +326,7 @@ impl Slotter {
                     let next_timestamp = latest_timestamp + slot_duration_ms;
                     let next_slot_number = latest_slot_number + 1;
                     let slot = Slot::new(next_slot_number, next_timestamp);
+                    debug!(%slot, "Creating new slot");
                     self.slots.push_front(slot);
                     latest_timestamp = next_timestamp;
                     latest_slot_number = next_slot_number;
@@ -315,7 +336,7 @@ impl Slotter {
                     .slots
                     .front_mut()
                     .ok_or(SlotterError::NoSlotsAvailable)?;
-
+                debug!(%latest_slot, "Pushing block to the newly created latest slot");
                 latest_slot.push_block(block_info, chain);
             }
         }
@@ -328,11 +349,15 @@ impl Slotter {
 
     async fn cleanup_slots(&mut self, sender: &Sender<Slot>) -> Result<(), SlotterError> {
         // Clean up old slots
+        debug!("Cleaning up slots");
         while self.slots.len() > self.max_slots {
             if let Some(mut slot) = self.slots.pop_back() {
                 if slot.state == SlotState::Open {
+                    debug!(%slot, "Cleaned up old slot, marking as unsafe and sending");
                     slot.state = SlotState::Unsafe;
                     sender.send(slot).await?
+                } else {
+                    debug!(%slot, "Cleaned up old slot");
                 }
             }
         }
@@ -368,6 +393,14 @@ impl Slotter {
                 });
             }
         }
+
+        debug!(
+            ?chain,
+            block_number = block.number,
+            block_timestamp = block.timestamp,
+            block_hash = %block.hash,
+            "Updated latest block"
+        );
 
         match chain {
             Chain::Sequencing => self.latest_sequencing_chain_block = Some(BlockRef::new(block)),
@@ -454,6 +487,7 @@ pub enum SlotterError {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     fn create_test_block(number: u64, timestamp: u64) -> BlockAndReceipts {
         BlockAndReceipts {
             block: Block {
