@@ -1,11 +1,15 @@
+//! Shared traits and types for rollup-specific block builders.
+//!
+//! This module provides the core [`MBTransactionParser`] trait that defines how
+//! metabased transactions are captured and parsed.
+
 use alloy::dyn_abi::{DynSolEvent, DynSolType, DynSolValue};
 use alloy::primitives::{keccak256, Address, Bytes, LogData, B256};
 use common::types::Log;
 use eyre::{eyre, Error};
-use lazy_static::lazy_static;
 use rlp::Rlp;
 
-/// TransactionProcessed event data
+/// `TransactionProcessed` event data
 #[derive(Debug, Clone)]
 pub struct TransactionProcessed {
     /// The encoded data of the transaction
@@ -14,42 +18,33 @@ pub struct TransactionProcessed {
     pub sender: Address,
 }
 
-/// The ABI for the TransactionProcessed event
-// const TRANSACTION_PROCESSED_ABI: &str = r#"[{"anonymous":false,"inputs":[{"indexed":true,"name":"Sender","type":"address"},{"indexed":false,"name":"EncodedData","type":"bytes"}],"name":"TransactionProcessed","type":"event"}]"#;
-
-/// The signature for the TransactionProcessed event
-const TRANSACTION_PROCESSED_SIG: &str = "TransactionProcessed(address,bytes)";
-
-lazy_static! {
-    static ref TRANSACTION_PROCESSED_SIG_HASH: B256 =
-        keccak256(TRANSACTION_PROCESSED_SIG.as_bytes());
-}
-
 /// The parser for meta-based transactions
 #[derive(Debug)]
 pub struct MBTransactionParser {
     /// The ABI for the sequencing contract
-    // sequencing_contract_abi: DynSolType,
+    event_signature_hash: B256,
     /// The address of the sequencing contract
     sequencing_contract_address: Address,
 }
 
 impl MBTransactionParser {
-    /// Creates a new MBTransactionParser
-    pub fn new(sequencing_contract_address: Address) -> Result<Self, Error> {
+    /// Creates a new `MBTransactionParser`
+    pub fn new(event_signature: &str, sequencing_contract_address: Address) -> Result<Self, Error> {
+        // The signature for the TransactionProcessed event
+        // "TransactionProcessed(address,bytes)";
         Ok(Self {
-            // sequencing_contract_abi,
+            event_signature_hash: keccak256(event_signature.as_bytes()),
             sequencing_contract_address,
         })
     }
 
-    /// Checks if a log is a TransactionProcessed event
+    /// Checks if a log is a `TransactionProcessed` event
     pub fn is_log_transaction_processed(&self, eth_log: Log) -> bool {
         eth_log.address == self.sequencing_contract_address
             && eth_log
                 .topics
                 .first()
-                .map_or(false, |t| *t == *TRANSACTION_PROCESSED_SIG_HASH)
+                .is_some_and(|t| *t == *self.event_signature_hash)
     }
 
     /// Decodes the event data into a vector of transactions
@@ -61,7 +56,7 @@ impl MBTransactionParser {
         let rlp = Rlp::new(&data);
 
         let mut transactions = Vec::new();
-        for item in rlp.iter() {
+        for item in &rlp {
             match item.data() {
                 Ok(transaction) => transactions.push(Bytes::from(transaction.to_vec())),
                 Err(_) => return Err(eyre!("RLP decoding failed for a transaction")),
@@ -80,8 +75,8 @@ impl MBTransactionParser {
 
         let indexed = vec![DynSolType::Address]; // "Sender" is indexed
         let body = DynSolType::Tuple(vec![DynSolType::Bytes]); // "EncodedData" is non-indexed
-        let event = DynSolEvent::new(Some(*TRANSACTION_PROCESSED_SIG_HASH), indexed, body)
-            .expect("Failed to construct DynSolEvent");
+        let event = DynSolEvent::new(Some(self.event_signature_hash), indexed, body)
+            .ok_or_else(|| eyre!("Failed to construct DynSolEvent"))?;
         println!("Event: {:?}", event);
         let log_data = LogData::new_unchecked(eth_log.topics.clone(), eth_log.data.clone());
         println!(
@@ -159,7 +154,9 @@ mod tests {
         let contract_address: Address = "0x000000000000000000000000000000000000abcd"
             .parse()
             .unwrap();
-        let parser: MBTransactionParser = MBTransactionParser::new(contract_address).unwrap();
+        let event_signature = "TransactionProcessed(address,bytes)";
+        let parser: MBTransactionParser =
+            MBTransactionParser::new(event_signature, contract_address).unwrap();
 
         let log = generate_valid_test_log(contract_address);
 

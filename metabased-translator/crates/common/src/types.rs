@@ -247,7 +247,7 @@ where
 {
     let hex_str: String = Deserialize::deserialize(deserializer)?;
 
-    let decoded = hex::decode(&hex_str.trim_start_matches("0x"))
+    let decoded = hex::decode(hex_str.trim_start_matches("0x"))
         .map_err(|err| de::Error::custom(format!("Failed to decode hex string: {err}")))?;
 
     let array: [u8; 32] = decoded
@@ -264,7 +264,7 @@ where
     let vec: Vec<String> = Deserialize::deserialize(deserializer)?;
     vec.into_iter()
         .map(|s| {
-            let decoded = hex::decode(&s.trim_start_matches("0x"))
+            let decoded = hex::decode(s.trim_start_matches("0x"))
                 .map_err(|err| de::Error::custom(format!("Failed to decode hex string: {err}")))?;
 
             let array: [u8; 32] = decoded

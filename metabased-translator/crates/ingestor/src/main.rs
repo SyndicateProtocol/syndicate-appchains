@@ -6,7 +6,6 @@ mod ingestor;
 use eyre::eyre;
 use std::{error::Error, time::Duration};
 use tracing::info;
-use tracing_subscriber;
 
 /// This function initializes the `Ingestor` to poll blocks from an Ethereum chain
 /// and logs received blocks. It sets up logging, handles errors gracefully, and

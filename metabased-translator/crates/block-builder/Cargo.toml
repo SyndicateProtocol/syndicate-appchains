@@ -32,8 +32,6 @@ async-trait = { workspace = true }
 thiserror = { workspace = true}
 hex = { workspace = true }
 rlp = "0.6"
-lazy_static = "1.4"
-
 
 [dev-dependencies]
 serial_test = { workspace = true }
