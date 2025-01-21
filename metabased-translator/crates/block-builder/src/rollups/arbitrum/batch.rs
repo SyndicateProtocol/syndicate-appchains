@@ -54,10 +54,11 @@ enum L2MessageKind {
 }
 
 /// See arbos/arbostypes/incomingmessage.go for the nitro version of this struct.
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Clone, Default)]
 #[serde(rename_all = "camelCase")]
 #[allow(missing_docs)]
 pub struct L1IncomingMessageHeader {
+    // l1 block number
     pub block_number: u64,
     pub timestamp: u64,
 }

@@ -1,11 +1,7 @@
 //! Integration tests for the metabased stack
 #![allow(missing_docs)]
 
-use std::{
-    path::PathBuf,
-    str::FromStr,
-    time::{Duration, SystemTime, UNIX_EPOCH},
-};
+use std::{path::PathBuf, str::FromStr, time::Duration};
 
 use alloy::{
     eips::{eip2718::Encodable2718, BlockNumberOrTag},
@@ -350,12 +346,8 @@ async fn test_nitro_batch() -> Result<()> {
         .await?;
 
     inner_tx.encode_2718(&mut tx);
-    let ts = SystemTime::now().duration_since(UNIX_EPOCH)?.as_secs();
     let batch = arbitrum::batch::Batch(vec![Some(arbitrum::batch::L1IncomingMessage {
-        header: arbitrum::batch::L1IncomingMessageHeader {
-            block_number: 9,
-            timestamp: ts,
-        },
+        header: Default::default(),
         l2_msg: vec![tx],
     })]);
     send_batch(&batch, &provider).await?;
