@@ -27,7 +27,7 @@ impl BlockBuilder {
     ) -> Result<Self, Error> {
         let mchain = MetaChainProvider::start(config).await?;
 
-        // TODO: Dynamically select builder based on config
+        // TODO (SEQ-481): Dynamically select builder based on config
         let builder = Box::new(ArbitrumBlockBuilder::new());
 
         Ok(Self {

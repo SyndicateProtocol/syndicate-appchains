@@ -1,8 +1,11 @@
 //! Configuration for the block builder service
+//! TODO (SEQ-481) Refactor me
 
 use clap::Parser;
 use std::fmt::Debug;
 
+/// CLI args for the block builder service
+/// CLI args take precedence over env vars, which take precedence over defaults.
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -55,8 +58,7 @@ impl BlockBuilderConfig {
     ///
     /// # Returns
     ///
-    /// A new [`BlockBuilderConfig`] instance populated with values from CLI args and env vars.
-    /// CLI args take precedence over env vars, which take precedence over defaults.
+    /// A new [`BlockBuilderConfig`] instance populated with values from CLI [`Args`] and env vars.
     ///
     /// # Example
     ///
