@@ -92,6 +92,7 @@ impl MetaChainProvider {
     }
 
     /// Mines a block on the `MetaChain`
+    // TODO: (SEQ-417): Use the timestamp of the slot for the next mchain block
     pub async fn mine_block(&self) -> eyre::Result<()> {
         self.provider
             .anvil_mine(Some(U256::from(1)), None::<U256>)
