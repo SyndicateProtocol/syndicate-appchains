@@ -7,8 +7,10 @@
 use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
 use crate::rollups::optimism::frame::to_data;
 use crate::rollups::shared::RollupBlockBuilder;
-use alloy_primitives::{Address, Bytes, B256};
-use alloy_rpc_types::TransactionRequest;
+use alloy::{
+    primitives::{Address, Bytes, B256},
+    rpc::types::TransactionRequest,
+};
 use async_trait::async_trait;
 use eyre::Result;
 use std::str::FromStr;
@@ -50,7 +52,7 @@ impl RollupBlockBuilder for OptimismBlockBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::{Address, TxKind};
+    use alloy::primitives::{Address, TxKind};
     use std::str::FromStr;
 
     #[test]

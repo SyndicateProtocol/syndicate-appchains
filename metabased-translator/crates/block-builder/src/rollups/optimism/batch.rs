@@ -10,7 +10,7 @@ use alloy::{
 };
 use eyre::{eyre, Result};
 use flate2::{write::ZlibEncoder, Compression};
-use std::{error::Error, io::Write, ops::Div};
+use std::{io::Write, ops::Div};
 
 // Constants
 const BATCH_VERSION_BYTE: u8 = 0x00;
