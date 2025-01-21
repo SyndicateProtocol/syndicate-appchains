@@ -10,7 +10,7 @@ use alloy::{
 };
 use eyre::{eyre, Result};
 use flate2::{write::ZlibEncoder, Compression};
-use std::{error::Error, io::Write, ops::Div};
+use std::{io::Write, ops::Div};
 
 // Constants
 const BATCH_VERSION_BYTE: u8 = 0x00;
@@ -26,7 +26,7 @@ pub struct Batch {
     /// The L2 block timestamp of this batch
     pub timestamp: u64,
     /// The L2 block transactions in this batch
-    pub transactions: Vec<Vec<u8>>,
+    pub transactions: Vec<Bytes>,
 }
 
 // Implementation for the Batch struct
@@ -82,7 +82,7 @@ impl Batch {
         let epoch_num = u64::decode(&mut buf)?;
         let epoch_hash = B256::decode(&mut buf)?;
         let timestamp = u64::decode(&mut buf)?;
-        let transactions = Vec::<Vec<u8>>::decode(&mut buf)?;
+        let transactions = Vec::<Bytes>::decode(&mut buf)?;
 
         // Return the decoded Batch
         Ok(Self {
@@ -95,7 +95,7 @@ impl Batch {
     }
 
     /// Splits the Batch into frames of a given size
-    pub fn get_frames(&self, frame_size: usize) -> Result<Vec<Frame>, Box<dyn Error>> {
+    pub fn get_frames(&self, frame_size: usize) -> Result<Vec<Frame>> {
         // Step 1: Encode the Batch
         let encoded_batch = self.encode();
 
@@ -162,7 +162,7 @@ mod tests {
             epoch_num: 42,
             epoch_hash: B256::repeat_byte(0x22),
             timestamp: 1712500000,
-            transactions: vec![b"tx1".to_vec(), b"tx2".to_vec()],
+            transactions: vec![Bytes::from(b"tx1"), Bytes::from(b"tx2")],
         }
     }
 

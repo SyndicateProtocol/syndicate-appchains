@@ -1,8 +1,11 @@
 //! Configuration for the block builder service
+//! TODO (SEQ-481) Refactor me
 
 use clap::Parser;
 use std::fmt::Debug;
 
+/// CLI args for the block builder service
+/// CLI args take precedence over env vars, which take precedence over defaults.
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -29,10 +32,10 @@ struct Args {
     chain_id: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Configuration for the block builder service
-pub struct Configuration {
-    /// Port number number to be used for the anvil instance
+pub struct BlockBuilderConfig {
+    /// Port number to be used for the anvil instance
     pub port: u16,
     /// Unix timestamp for the genesis block
     pub genesis_timestamp: u64,
@@ -40,7 +43,7 @@ pub struct Configuration {
     pub chain_id: u64,
 }
 
-impl Default for Configuration {
+impl Default for BlockBuilderConfig {
     fn default() -> Self {
         Self {
             port: 8888,
@@ -50,20 +53,19 @@ impl Default for Configuration {
     }
 }
 
-impl Configuration {
-    /// Parses command line arguments and environment variables into a Configuration struct.
+impl BlockBuilderConfig {
+    /// Parses command line arguments and environment variables into a [`BlockBuilderConfig`] struct.
     ///
     /// # Returns
     ///
-    /// A new Configuration instance populated with values from CLI args and env vars.
-    /// CLI args take precedence over env vars, which take precedence over defaults.
+    /// A new [`BlockBuilderConfig`] instance populated with values from CLI [`Args`] and env vars.
     ///
     /// # Example
     ///
     /// ```
-    /// use block_builder::config::Configuration;
+    /// use block_builder::config::BlockBuilderConfig;
     ///
-    /// let config = Configuration::parse();
+    /// let config = BlockBuilderConfig::parse();
     /// ```
     pub fn parse() -> Self {
         let args = Args::parse();
@@ -84,7 +86,7 @@ mod tests {
     use std::env;
 
     fn create_default_args() -> Args {
-        let default = Configuration::default();
+        let default = BlockBuilderConfig::default();
         Args {
             port: default.port,
             genesis_timestamp: default.genesis_timestamp,
@@ -92,9 +94,9 @@ mod tests {
         }
     }
 
-    // Modify Configuration::parse for testing
+    // Modify BlockBuilderConfig::parse for testing
     #[cfg(test)]
-    impl Configuration {
+    impl BlockBuilderConfig {
         const fn parse_from_args(args: Args) -> Self {
             Self {
                 port: args.port,
@@ -115,7 +117,7 @@ mod tests {
     fn test_default_values() {
         clean_env();
         let args = create_default_args();
-        let config = Configuration::parse_from_args(args);
+        let config = BlockBuilderConfig::parse_from_args(args);
         assert_eq!(config.port, 8888);
         assert_eq!(config.genesis_timestamp, 1712500000);
         assert_eq!(config.chain_id, 84532);

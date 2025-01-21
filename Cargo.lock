@@ -988,9 +988,11 @@ name = "block-builder"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "async-trait",
  "base64",
  "brotli",
  "clap",
+ "common",
  "eyre",
  "flate2",
  "hex",
@@ -998,6 +1000,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serial_test",
+ "thiserror 2.0.11",
  "tokio",
  "tracing",
  "tracing-subscriber",
