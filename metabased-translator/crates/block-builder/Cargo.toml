@@ -29,6 +29,7 @@ tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
 tracing = { workspace = true }
 clap = { workspace = true, features = ["env", "derive"] }
 async-trait = { workspace = true }
+thiserror = { workspace = true}
 
 
 [dev-dependencies]

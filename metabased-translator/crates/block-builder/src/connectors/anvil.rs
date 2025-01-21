@@ -1,5 +1,6 @@
 //! Anvil connector for the `MetaChain`
 
+use crate::block_builder::BlockBuilderError;
 use crate::config::BlockBuilderConfig;
 use alloy::{
     network::{Ethereum, EthereumWallet},
@@ -17,7 +18,6 @@ use alloy::{
     signers::local::PrivateKeySigner,
     transports::http::Http,
 };
-use eyre::eyre;
 use reqwest::Client;
 use std::net::TcpListener;
 use tracing::info;
@@ -44,8 +44,9 @@ pub struct MetaChainProvider {
 impl MetaChainProvider {
     /// Starts the Anvil instance and creates a provider for the `MetaChain`
     pub async fn start(config: BlockBuilderConfig) -> eyre::Result<Self> {
-        let port = find_available_port(config.port, 10)
-            .ok_or_else(|| eyre!("No available ports found after 10 attempts"))?;
+        let port = find_available_port(config.port, 10).ok_or_else(|| {
+            BlockBuilderError::AnvilStartError("No available ports found after 10 attempts")
+        })?;
 
         if port != config.port {
             info!("Port {} is in use, switching to port {}", config.port, port);
@@ -65,10 +66,11 @@ impl MetaChainProvider {
             ])
             .try_spawn()?;
 
+        // TODO (SEQ-481) Move to a config value
         let signer: PrivateKeySigner =
             "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d"
                 .parse()
-                .map_err(|e| eyre!("Failed to parse private key: {}", e))?;
+                .map_err(|_| BlockBuilderError::AnvilStartError("Failed to parse private key"))?;
 
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
@@ -84,7 +86,7 @@ impl MetaChainProvider {
             .provider
             .send_transaction(txn)
             .await
-            .map_err(|e| eyre!("Failed to send transaction: {}", e))?;
+            .map_err(BlockBuilderError::SubmitTxnError)?;
 
         Ok(pending_txn.tx_hash().to_string())
     }
