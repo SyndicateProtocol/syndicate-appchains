@@ -13,3 +13,11 @@ repos:
       - id: golangci-lint # requires github.com/golangci/golangci-lint
         files: ^(metabased-publisher)/
         args: [--config=.golangci.yaml --allow-parallel-runners]
+
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: eeee35a89e69d5772bdee97db1a6a898467b686e
+    hooks:
+      - id: fmt
+        args: ['--all', '--check']
+      - id: clippy
+      - id: cargo-check

@@ -2,6 +2,7 @@ use crate::application::{RunningStopwatch, Stopwatch};
 use std::time::Duration;
 use tokio::time::Instant;
 
+#[derive(Debug)]
 pub struct TokioStopwatch;
 
 impl RunningStopwatch for Instant {

@@ -5,10 +5,12 @@ use crate::connectors::anvil::MetaChainProvider;
 use crate::rollups::{
     arbitrum::arbitrum_builder::ArbitrumBlockBuilder, shared::RollupBlockBuilder,
 };
+use alloy::transports::{RpcError, TransportErrorKind};
 use common::types::Slot;
 use eyre::{Error, Result};
+use thiserror::Error;
 use tokio::sync::mpsc::Receiver;
-use tracing::{error, info};
+use tracing::{error as log_error, info};
 
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
@@ -27,7 +29,7 @@ impl BlockBuilder {
     ) -> Result<Self, Error> {
         let mchain = MetaChainProvider::start(config).await?;
 
-        // TODO: Dynamically select builder based on config
+        // TODO (SEQ-481): Dynamically select builder based on config
         let builder = Box::new(ArbitrumBlockBuilder::new());
 
         Ok(Self {
@@ -54,20 +56,20 @@ impl BlockBuilder {
                 let batch_txn = match self.builder.build_batch_txn(mbtxs).await {
                     Ok(txn) => txn,
                     Err(e) => {
-                        error!("Error building batch transaction: {}", e);
+                        log_error!("Error building batch transaction: {}", e);
                         continue;
                     }
                 };
 
                 // Submit batch transaction to mchain
                 if let Err(e) = self.mchain.submit_txn(batch_txn).await {
-                    error!("Error submitting transaction: {}", e);
+                    log_error!("Error submitting transaction: {}", e);
                     continue;
                 }
 
                 // Mine mchain block
                 if let Err(e) = self.mchain.mine_block().await {
-                    error!("Error mining block: {}", e);
+                    log_error!("Error mining block: {}", e);
                 }
             }
         });
@@ -101,4 +103,14 @@ mod tests {
         handle.abort();
         Ok(())
     }
+}
+
+#[allow(missing_docs)] // self-documenting
+#[derive(Debug, Error)]
+pub enum BlockBuilderError {
+    #[error("Anvil failed to start: {0}")]
+    AnvilStartError(&'static str),
+
+    #[error("Failed to submit transaction to MetaChain: {0}")]
+    SubmitTxnError(RpcError<TransportErrorKind>),
 }

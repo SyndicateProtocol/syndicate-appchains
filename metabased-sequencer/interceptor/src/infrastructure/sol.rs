@@ -1,13 +1,12 @@
-use crate::domain::primitives::{Address, Bytes, TxHash};
-use crate::domain::MetabasedSequencerChainService;
+use crate::domain::{
+    primitives::{Address, Bytes, TxHash},
+    MetabasedSequencerChainService,
+};
 use crate::infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance;
-use alloy::network::Network;
-use alloy::providers::Provider;
-use alloy::sol;
-use alloy::transports::Transport;
+use alloy::{network::Network, providers::Provider, sol, transports::Transport};
 use async_trait::async_trait;
-use std::marker::PhantomData;
-use std::time::Duration;
+use std::{marker::PhantomData, time::Duration};
+use tracing::debug_span;
 
 sol! {
     #[derive(Debug, PartialEq, Eq)]
@@ -55,15 +54,25 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
     type Error = alloy::contract::Error;
 
     async fn process_transaction(&self, tx: Bytes) -> Result<TxHash, Self::Error> {
-        Ok(self
-            .contract()
-            .processTransaction(tx)
-            .send()
-            .await?
-            .with_required_confirmations(2)
-            .with_timeout(Some(Duration::from_secs(60)))
-            .watch()
-            .await?)
+        let result = debug_span!("process_transaction", account = ?self.account)
+            .in_scope(|| async {
+                let pending_tx = self
+                    .contract()
+                    .processTransaction(tx)
+                    .send()
+                    .await
+                    .map_err(alloy::contract::Error::from)?;
+
+                pending_tx
+                    .with_required_confirmations(2)
+                    .with_timeout(Some(Duration::from_secs(60)))
+                    .watch()
+                    .await
+                    .map_err(alloy::contract::Error::from)
+            })
+            .await?;
+
+        Ok(result)
     }
 
     async fn process_bulk_transactions(&self, tx: Vec<Bytes>) -> Result<TxHash, Self::Error> {

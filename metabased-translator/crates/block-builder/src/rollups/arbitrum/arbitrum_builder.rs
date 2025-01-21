@@ -5,8 +5,7 @@
 //! rollup implementations
 
 use crate::rollups::shared::RollupBlockBuilder;
-use alloy_primitives::Bytes;
-use alloy_rpc_types::TransactionRequest;
+use alloy::{primitives::Bytes, rpc::types::TransactionRequest};
 use async_trait::async_trait;
 use eyre::{Error, Result};
 

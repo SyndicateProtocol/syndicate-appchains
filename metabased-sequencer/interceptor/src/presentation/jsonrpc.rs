@@ -11,6 +11,8 @@ use serde::Serialize;
 use std::fmt::{Debug, Display, Formatter};
 use std::future::Future;
 use std::sync::Arc;
+use tracing::instrument;
+use tracing::Level;
 
 /// An error type for JSON-RPC endpoints.
 ///
@@ -33,7 +35,7 @@ impl<S: Serialize> Display for JsonRpcError<S> {
     }
 }
 
-impl<E: Into<anyhow::Error>> From<E> for JsonRpcError<()> {
+impl<E: Into<eyre::Error>> From<E> for JsonRpcError<()> {
     fn from(value: E) -> Self {
         Self {
             code: -32602,
@@ -92,10 +94,10 @@ pub async fn send_raw_transaction<Chain, M, S>(
     _ext: http::Extensions,
 ) -> Result<String, JsonRpcError<()>>
 where
-    Chain: MetabasedSequencerChainService,
-    M: Metrics,
+    Chain: MetabasedSequencerChainService + Debug,
+    M: Metrics + Debug,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
-    S: Stopwatch,
+    S: Stopwatch + Debug,
 {
     let metrics = ctx.metrics_service();
     let start = ctx.stopwatch_service().start();
@@ -104,12 +106,13 @@ where
     with_metrics(metrics, start, handle_send_raw_transaction(params, chain)).await
 }
 
+#[instrument(level = Level::DEBUG, skip(chain), fields(request_id, method = "eth_sendRawTransaction"))]
 pub async fn handle_send_raw_transaction<Chain>(
     params: Params<'static>,
     chain: &Chain,
 ) -> Result<String, Error>
 where
-    Chain: MetabasedSequencerChainService,
+    Chain: MetabasedSequencerChainService + Debug,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
 {
     let params = SendRawTransactionParams::try_from(params)?;
@@ -139,25 +142,26 @@ pub fn metrics<Chain, M, S>(
     _ext: &http::Extensions,
 ) -> String
 where
-    Chain: MetabasedSequencerChainService,
-    M: Metrics,
+    Chain: MetabasedSequencerChainService + Debug,
+    M: Metrics + Debug,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
-    S: Stopwatch,
+    S: Stopwatch + Debug,
 {
     application::metrics(ctx.metrics_service())
 }
 
 /// The JSON-RPC endpoint for health check.
+#[instrument(level = Level::DEBUG, skip(_ctx))]
 pub fn health<Chain, M, S>(
     _params: Params,
     _ctx: &Services<Chain, M, S>,
     _ext: &http::Extensions,
 ) -> Result<String, JsonRpcError<()>>
 where
-    Chain: MetabasedSequencerChainService,
-    M: Metrics,
+    Chain: MetabasedSequencerChainService + Debug,
+    M: Metrics + Debug,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
-    S: Stopwatch,
+    S: Stopwatch + Debug,
 {
     Ok("ok".to_string())
 }
@@ -170,7 +174,7 @@ mod tests {
     use crate::domain::MetabasedSequencerChainService;
     use crate::infrastructure::error_to_metric_category;
     use crate::presentation::services::Services;
-    use alloy_primitives::Bytes;
+    use alloy::primitives::Bytes;
     use async_trait::async_trait;
     use jsonrpsee::types::Params;
     use std::convert::Infallible;
@@ -286,7 +290,7 @@ mod tests {
         assert!(result.is_err());
     }
 
-    #[derive(Default)]
+    #[derive(Default, Debug)]
     struct MockChain;
 
     #[async_trait]
@@ -306,6 +310,7 @@ mod tests {
     unsafe impl Send for MockMetrics {}
     unsafe impl Sync for MockMetrics {}
 
+    #[derive(Debug)]
     struct MockMetrics {
         metrics_called: std::cell::Cell<bool>,
         last_error_category: std::cell::Cell<&'static str>,

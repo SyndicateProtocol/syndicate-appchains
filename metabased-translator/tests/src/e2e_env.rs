@@ -9,11 +9,10 @@ use alloy::{
         fillers::{FillProvider, JoinFill, WalletFiller},
         Identity, Provider, ProviderBuilder, RootProvider,
     },
-    signers::{k256::SecretKey, utils::public_key_to_address, Signer},
+    signers::{k256::SecretKey, local::LocalSigner, utils::public_key_to_address, Signer},
     sol_types::private::Bytes,
     transports::http::Http,
 };
-use alloy_signer_local::LocalSigner;
 use eyre::{eyre, Error};
 use reqwest::{Client, Url};
 use std::str::FromStr;

@@ -3,8 +3,7 @@
 //! This module provides the core [`RollupBlockBuilder`] trait that defines how
 //! different rollup implementations can construct and process their blocks.
 
-use alloy_primitives::Bytes;
-use alloy_rpc_types::TransactionRequest;
+use alloy::{primitives::Bytes, rpc::types::TransactionRequest};
 use async_trait::async_trait;
 use common::types::BlockAndReceipts;
 use eyre::{Error, Result};

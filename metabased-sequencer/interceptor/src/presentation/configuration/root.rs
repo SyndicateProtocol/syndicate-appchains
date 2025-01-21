@@ -1,5 +1,5 @@
 use crate::presentation::configuration::providers::{CliArgs, Logged};
-use alloy_primitives::{Address, B256};
+use alloy::primitives::{Address, B256};
 use clap::Parser;
 use figment::providers::{Env, Serialized};
 use figment::{Figment, Profile, Provider};

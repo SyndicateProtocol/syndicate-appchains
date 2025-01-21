@@ -9,30 +9,47 @@ use crate::presentation::json_rpc_errors::InvalidParamsError::{
     MissingParam, NotAnArray, NotHexEncoded, WrongParamCount,
 };
 use crate::presentation::transaction;
-use alloy::consensus::{Transaction, TxEnvelope, TxType};
-use alloy::primitives::private::alloy_rlp::Decodable;
-use alloy::primitives::TxHash;
-use alloy::primitives::U256;
+use alloy::{
+    consensus::{Transaction, TxEnvelope, TxType},
+    primitives::{TxHash, U256},
+    rlp::Decodable,
+};
 use jsonrpsee::types::Params;
 use std::convert::TryFrom;
+use std::fmt::Debug;
+use tracing::Level;
+use tracing::{debug, instrument};
 
 /// Sends serialized and signed transaction `tx` using `chain`.
+#[instrument(level = Level::DEBUG, skip(chain), fields(encoded))]
 pub async fn send_raw_transaction<Chain>(encoded: Bytes, chain: &Chain) -> Result<TxHash, Error>
 where
-    Chain: MetabasedSequencerChainService,
+    Chain: MetabasedSequencerChainService + Debug,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
 {
+    debug!(
+        bytes_length = encoded.len(),
+        "Starting transaction validation"
+    );
     // 1. Decoding:
     let mut slice: &[u8] = encoded.as_ref();
     let tx = match TxEnvelope::decode(&mut slice) {
         Ok(tx) => tx,
-        Err(_) => return Err(InvalidInput(UnableToRLPDecode)),
+        Err(_) => {
+            let error = InvalidInput(UnableToRLPDecode);
+            debug!(
+                error = %error
+            );
+            return Err(error);
+        }
     };
 
     // 2. Validation:
     //For non-legacy transactions, validate chain ID immediately
     if tx.tx_type() != TxType::Legacy && tx.chain_id().is_none() {
-        return Err(InvalidInput(MissingChainID));
+        let error = InvalidInput(MissingChainID);
+        debug!(error = %error);
+        return Err(error);
     }
 
     tx.recover_signer()?;
@@ -49,8 +66,14 @@ where
         )?;
     }
 
+    debug!("Submitting validated transaction to chain");
     // 3. Submission/forwarding:
-    Ok(chain.process_transaction(encoded).await?)
+    let result = chain.process_transaction(encoded).await?;
+    debug!(
+        tx_hash = ?result,
+        "Chain processed transaction successfully"
+    );
+    Ok(result)
 }
 
 #[derive(Debug)]
@@ -81,17 +104,19 @@ impl TryFrom<Params<'static>> for SendRawTransactionParams {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::primitives::Bytes;
-    use crate::domain::InMemoryMetabasedSequencerChain;
-    use alloy::consensus::{SignableTransaction, TxEip1559, TxEnvelope, TxLegacy};
-    use alloy::network::TxSignerSync;
-    use alloy::primitives::TxKind;
-    use alloy::signers::local::PrivateKeySigner;
-    use alloy_primitives::private::alloy_rlp::Encodable;
-    use alloy_primitives::{b256, PrimitiveSignature};
+    use crate::domain::{primitives::Bytes, InMemoryMetabasedSequencerChain};
+    use alloy::{
+        consensus::{SignableTransaction, TxEip1559, TxEnvelope, TxLegacy},
+        network::TxSignerSync,
+        primitives::{b256, PrimitiveSignature, TxKind},
+        rlp::Encodable,
+        signers::local::PrivateKeySigner,
+    };
     use async_trait::async_trait;
-    use std::fmt::{Debug, Display, Formatter};
-    use std::sync::Arc;
+    use std::{
+        fmt::{Display, Formatter},
+        sync::Arc,
+    };
     use test_case::test_case;
     use tokio::sync::RwLock;
 
@@ -251,6 +276,7 @@ mod tests {
             }
         }
 
+        #[derive(Debug)]
         struct FailingSequencerChain;
 
         #[async_trait]

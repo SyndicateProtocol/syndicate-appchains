@@ -1,8 +1,8 @@
-use alloy::primitives::Bytes;
-use alloy::signers::k256::elliptic_curve::rand_core::RngCore;
-use alloy_primitives::hex_literal::hex;
-use alloy_primitives::{Address, B256, U256};
-use alloy_rlp::{Encodable, RlpDecodable, RlpEncodable};
+use alloy::{
+    primitives::{hex_literal::hex, Address, Bytes, B256, U256},
+    rlp::{Encodable, RlpDecodable, RlpEncodable},
+    signers::k256::elliptic_curve::rand_core::RngCore,
+};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use interceptor::infrastructure::{
     compress_transaction, compress_transactions, decompress_transaction, decompress_transactions,

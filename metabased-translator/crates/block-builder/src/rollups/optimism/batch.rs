@@ -3,15 +3,14 @@
 //! This module provides functionality for encoding batches of transactions into frames
 //! that can be submitted by the batcher.
 use crate::rollups::optimism::frame::Frame;
-use alloy_primitives::{Address, Bytes, B256};
-use alloy_rlp::{Buf, Decodable, Encodable, Error as RlpError};
-use alloy_rpc_types::{TransactionInput, TransactionRequest};
-use flate2::{write::ZlibEncoder, Compression};
-use std::ops::Div;
-
-use std::io::Write;
-
+use alloy::{
+    primitives::{Address, Bytes, B256},
+    rlp::{Buf, Decodable, Encodable, Error as RlpError},
+    rpc::types::{TransactionInput, TransactionRequest},
+};
 use eyre::{eyre, Result};
+use flate2::{write::ZlibEncoder, Compression};
+use std::{io::Write, ops::Div};
 
 // Constants
 const BATCH_VERSION_BYTE: u8 = 0x00;
@@ -40,7 +39,7 @@ impl Batch {
         out.push(BATCH_VERSION_BYTE);
 
         // Step 2: Encode fields as a list
-        let header = alloy_rlp::Header {
+        let header = alloy::rlp::Header {
             list: true,
             payload_length: self.parent_hash.length()
                 + self.epoch_num.length()
@@ -72,7 +71,7 @@ impl Batch {
         }
 
         // Step 2: Decode as a list
-        let header = alloy_rlp::Header::decode(&mut buf)?;
+        let header = alloy::rlp::Header::decode(&mut buf)?;
         if !header.list {
             // TODO: Use discrete error
             return Err(RlpError::Custom("Batch must be an RLP list"));
@@ -101,7 +100,7 @@ impl Batch {
         let encoded_batch = self.encode();
 
         // Step 2: Encode using RLP
-        let rlp_batch = alloy_rlp::encode(&encoded_batch[..]);
+        let rlp_batch = alloy::rlp::encode(&encoded_batch[..]);
 
         // Step 3: Compress using zlib
         let channel = to_channel(&rlp_batch)?;
@@ -155,7 +154,7 @@ pub fn new_batcher_tx(from: Address, to: Address, data: Bytes) -> TransactionReq
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::{Address, Bytes};
+    use alloy::primitives::{Address, Bytes};
 
     fn sample_batch() -> Batch {
         Batch {
