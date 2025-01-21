@@ -3,11 +3,14 @@
 //! This module provides the core [`MBTransactionParser`] trait that defines how
 //! metabased transactions are captured and parsed.
 
-use alloy::dyn_abi::{DynSolEvent, DynSolType, DynSolValue};
-use alloy::primitives::{keccak256, Address, Bytes, LogData, B256};
+use alloy::{
+    dyn_abi::{DynSolEvent, DynSolType, DynSolValue},
+    primitives::{keccak256, Address, Bytes, LogData, B256},
+    rlp::Rlp,
+};
 use common::types::Log;
 use eyre::{eyre, Error};
-use rlp::Rlp;
+// use rlp::Rlp;
 
 /// `TransactionProcessed` event data
 #[derive(Debug, Clone)]
@@ -53,14 +56,12 @@ impl MBTransactionParser {
             return Err(eyre!("No data provided for decoding"));
         }
 
-        let rlp = Rlp::new(&data);
+        let mut rlp =
+            Rlp::new(data.as_ref()).map_err(|_| eyre::eyre!("Failed to initialize RLP"))?;
 
         let mut transactions = Vec::new();
-        for item in &rlp {
-            match item.data() {
-                Ok(transaction) => transactions.push(Bytes::from(transaction.to_vec())),
-                Err(_) => return Err(eyre!("RLP decoding failed for a transaction")),
-            }
+        while let Some(item) = rlp.get_next::<Bytes>()? {
+            transactions.push(item);
         }
 
         Ok(transactions)
