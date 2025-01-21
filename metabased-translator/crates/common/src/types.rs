@@ -1,7 +1,9 @@
 //! Types module for metabased-translator
 
-use alloy::primitives::{Address, Bytes, B256};
-use hex;
+use alloy::{
+    hex,
+    primitives::{Address, Bytes, B256},
+};
 use serde::de::{self, Deserializer};
 use serde::Deserialize;
 use strum_macros::Display;

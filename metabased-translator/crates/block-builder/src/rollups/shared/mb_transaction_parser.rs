@@ -110,7 +110,7 @@ impl MBTransactionParser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use hex;
+    use alloy::hex;
 
     fn generate_valid_test_log(contract_address: Address) -> Log {
         // Example data for the test log

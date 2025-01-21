@@ -969,7 +969,6 @@ dependencies = [
  "common",
  "eyre",
  "flate2",
- "hex",
  "reqwest",
  "serde_json",
  "serial_test",
@@ -1138,7 +1137,6 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "hex",
  "serde",
  "serde_json",
  "strum",

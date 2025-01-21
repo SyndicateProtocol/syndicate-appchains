@@ -30,7 +30,6 @@ tracing = { workspace = true }
 clap = { workspace = true, features = ["env", "derive"] }
 async-trait = { workspace = true }
 thiserror = { workspace = true}
-hex = { workspace = true }
 
 [dev-dependencies]
 serial_test = { workspace = true }
