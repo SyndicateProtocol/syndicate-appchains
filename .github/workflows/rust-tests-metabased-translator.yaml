@@ -23,9 +23,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Install Foundry before Rust setup
+      # Install Foundry (required for Anvil, a local Ethereum node simulator)
+      # Anvil is a critical dependency for metabased-translator tests, particularly
+      # the block builder component which uses it to simulate blockchain operations
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
       
       - name: Verify Foundry Installation
         run: |

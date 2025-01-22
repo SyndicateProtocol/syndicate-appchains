@@ -84,31 +84,8 @@ mod tests {
 
     /// Test the block builder startup and basic functionality
     /// 
-    /// # Dependencies
-    /// This test requires the following external dependencies to be installed and available in PATH:
-    /// - Foundry (nightly version recommended): Required for blockchain development tools
-    ///   - Installation: `curl -L https://foundry.paradigm.xyz | bash`
-    ///   - Then: `foundryup`
-    /// - Anvil: Used for local Ethereum node simulation
-    ///   - Installed automatically with Foundry
-    ///   - Must be available in PATH (typically in ~/.foundry/bin/)
-    /// 
-    /// # Environment Setup
-    /// - Ensure Foundry binaries are in PATH
-    /// - Verify installation with `anvil --version`
-    /// - The test spawns an Anvil instance with custom parameters:
-    ///   - Base fee: 0
-    ///   - Gas limit: 30000000
-    ///   - Custom genesis timestamp
-    ///   - No mining mode
-    /// 
-    /// # Note
-    /// If running in CI, use foundry-toolchain action with nightly version:
-    /// ```yaml
-    /// - uses: foundry-rs/foundry-toolchain@v1
-    ///   with:
-    ///     version: nightly
-    /// ```
+    /// This test requires Anvil (part of Foundry toolchain) to simulate a local Ethereum node.
+    /// The test spawns an Anvil instance with custom parameters for gas and mining settings.
     #[tokio::test]
     async fn test_block_builder_start() -> Result<()> {
         let (tx, rx) = mpsc::channel(32);
