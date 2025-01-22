@@ -28,6 +28,9 @@ jobs:
     defaults:
       run:
         working-directory: metabased-contracts
+    strategy:
+      matrix:
+        rule: ["MetabasedSequencerChain", "AllowlistSequencingModule"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -78,4 +81,4 @@ jobs:
       - name: Verify
         env:
           CERTORAKEY: ${{ secrets.CERTORAKEY }}
-        run: certoraRun certora/conf/MetabasedSequencerChain.conf
+        run: certoraRun certora/conf/${{ matrix.rule }}.conf --wait_for_results=all
