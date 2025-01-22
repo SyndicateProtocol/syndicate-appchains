@@ -4,7 +4,7 @@ use crate::block_builder::BlockBuilderError;
 use crate::config::BlockBuilderConfig;
 use alloy::{
     network::{Ethereum, EthereumWallet},
-    node_bindings::Anvil,
+    node_bindings::{Anvil, AnvilInstance},
     primitives::U256,
     providers::{
         ext::AnvilApi,
@@ -35,15 +35,25 @@ type FilledProvider = FillProvider<
     Ethereum,
 >;
 
-/// Provider for the `MetaChain`
+// Anvil is automatically stopped when the `MetaChainProvider` is dropped.
 #[derive(Debug)]
+#[allow(missing_docs)]
 pub struct MetaChainProvider {
+    pub anvil: AnvilInstance,
     provider: FilledProvider,
 }
 
 impl MetaChainProvider {
     /// Starts the Anvil instance and creates a provider for the `MetaChain`
     pub async fn start(config: BlockBuilderConfig) -> eyre::Result<Self> {
+        Self::start_from_snapshot(config, "").await
+    }
+
+    /// Starts the Anvil instance from a snapshot and creates a provider for the `MetaChain`
+    pub async fn start_from_snapshot(
+        config: BlockBuilderConfig,
+        snapshot: &str,
+    ) -> eyre::Result<Self> {
         let port = find_available_port(config.port, 10).ok_or_else(|| {
             BlockBuilderError::AnvilStartError("No available ports found after 10 attempts")
         })?;
@@ -52,18 +62,27 @@ impl MetaChainProvider {
             info!("Port {} is in use, switching to port {}", config.port, port);
         }
 
+        let ts = config.genesis_timestamp.to_string();
+
+        let mut args = vec![
+            "--base-fee",
+            "0",
+            "--gas-limit",
+            "30000000",
+            "--timestamp",
+            ts.as_str(),
+            "--no-mining",
+        ];
+
+        if !snapshot.is_empty() {
+            args.push("--load-state");
+            args.push(snapshot);
+        }
+
         let anvil = Anvil::new()
             .port(port)
             .chain_id(config.chain_id)
-            .args(vec![
-                "--base-fee",
-                "0",
-                "--gas-limit",
-                "30000000",
-                "--timestamp",
-                config.genesis_timestamp.to_string().as_str(),
-                "--no-mining",
-            ])
+            .args(args)
             .try_spawn()?;
 
         // TODO (SEQ-481) Move to a config value
@@ -77,7 +96,7 @@ impl MetaChainProvider {
             .wallet(EthereumWallet::from(signer))
             .on_http(anvil.endpoint_url());
 
-        Ok(Self { provider })
+        Ok(Self { anvil, provider })
     }
 
     /// Submits a transaction to the `MetaChain`

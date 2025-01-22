@@ -251,7 +251,7 @@ op-update-chain-address: op-deploy-chain create-envrc
 create-op-network-config:
     @just _log-start "create-op-network-config"
 
-    @#! /usr/bin/zsh
+    @#! /usr/bin/env zsh
     @# Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     @set -euxo pipefail
 
@@ -276,7 +276,7 @@ create-op-network-config:
 create-envrc:
     @just _log-start "create-envrc"
 
-    @#! /usr/bin/zsh
+    @#! /usr/bin/env zsh
     @# Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     @set -euxo pipefail
 
@@ -335,7 +335,7 @@ arb-update-chain-address: arb-deploy-chain create-envrc
 update-chain-address: arb-deploy-chain create-envrc
     @just _log-start "update-chain-address"
 
-    #! /usr/bin/zsh
+    #! /usr/bin/env zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
     # Get the contract address from arb deployment file
@@ -434,7 +434,7 @@ arb-network-verify:
     # FAILURE: Recipe failed with "RESPONSE: parameter not set". Script error in capturing network setup response.
     @just _log-start "arb-network-verify"
 
-    #! /usr/bin/zsh
+    #! /usr/bin/env zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
     # Create .envrc file
@@ -515,7 +515,7 @@ transaction-verify:
 verify-all:
     # FAILURE: Recipe will fail as it depends on multiple failing commands (arb-network-verify, arb-health-verify, transaction-verify) which have script errors in their implementations.
     @just _log-start "verify-all"
-    #! /usr/bin/zsh
+    #! /usr/bin/env zsh
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
 
@@ -553,7 +553,7 @@ _log-end command:
 # 4. Port configuration uses justfile variables instead of hardcoded values
 # 5. http.port parameter was added to the docker run command to make port usage explicit
 _run-arb-nitro-dev-node:
-    #!/usr/bin/zsh
+    #!/usr/bin/env zsh
 
     # Start Nitro dev node in the background
     echo "Starting Nitro dev node on {{arb_orbit_l2_port}}..."

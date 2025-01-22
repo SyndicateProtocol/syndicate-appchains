@@ -9,6 +9,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
+common = { workspace = true }
 block-builder = { workspace = true }
 alloy = { workspace = true, features = [
   "providers",
@@ -20,7 +21,7 @@ alloy = { workspace = true, features = [
 ] }
 eyre = { workspace = true }
 reqwest = { workspace = true }
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["fs"] }
 thiserror = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }

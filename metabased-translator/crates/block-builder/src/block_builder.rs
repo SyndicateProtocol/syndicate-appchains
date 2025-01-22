@@ -117,4 +117,7 @@ pub enum BlockBuilderError {
 
     #[error("Failed to submit transaction to MetaChain: {0}")]
     SubmitTxnError(RpcError<TransportErrorKind>),
+
+    #[error("Cannot serialize empty l2 msg")]
+    EmptyL2Message(),
 }
