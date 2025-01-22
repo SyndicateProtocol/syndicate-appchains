@@ -9,7 +9,8 @@ on:
   # Only run on PRs that touch metabased-sequencer
   pull_request:
     paths:
-      - "metabased-sequencer/**"
+      # Temporarily commented out to verify workflow completion
+      # - "metabased-sequencer/**"
 
 env:
   CARGO_TERM_COLOR: always
@@ -29,6 +30,8 @@ jobs:
       # Install Foundry before Rust setup
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
       
       - name: Verify Foundry Installation
         run: |
