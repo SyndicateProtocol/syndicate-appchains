@@ -26,6 +26,14 @@ jobs:
       # Install Foundry before Rust setup
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: '1.7.0'  # Pin to recent stable version known to work with modern toolchains
+
+      # Ensure Foundry binaries are in PATH
+      - name: Add Foundry to PATH
+        run: |
+          echo "$HOME/.foundry/bin" >> $GITHUB_PATH
+          which anvil  # Verify anvil is accessible
 
       - run: rustup toolchain install stable --profile minimal
 
