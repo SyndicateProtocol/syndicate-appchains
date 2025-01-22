@@ -4,8 +4,9 @@
 //! sequencing transactions are captured and parsed.
 
 use alloy::{
-    dyn_abi::{DynSolEvent, DynSolType, DynSolValue},
     primitives::{keccak256, Address, Bytes, LogData, B256},
+    sol,
+    sol_types::SolEvent,
 };
 use common::{
     compression::{get_compression_type, CompressionType},
@@ -57,6 +58,14 @@ pub struct SequencingTransactionParser {
     event_signature_hash: B256,
     /// The address of the sequencing contract
     sequencing_contract_address: Address,
+}
+
+sol! {
+    #[derive(Debug, PartialEq, Eq)]
+    #[sol(rpc)]
+    contract MetabasedSequencerChain {
+        event TransactionProcessed(address indexed sender, bytes encodedTxn);
+    }
 }
 
 const EVENT_SIGNATURE: &str = "TransactionProcessed(address,bytes)";
@@ -112,29 +121,13 @@ impl SequencingTransactionParser {
         if !self.is_log_transaction_processed(eth_log.clone()) {
             return Err(SequencingParserError::InvalidLog);
         }
-
-        let indexed = vec![DynSolType::Address]; // "Sender" is indexed
-        let body = DynSolType::Tuple(vec![DynSolType::Bytes]); // "EncodedData" is non-indexed
-        let event = DynSolEvent::new(Some(self.event_signature_hash), indexed, body)
-            .ok_or(SequencingParserError::DynSolEventCreation)?;
         let log_data = LogData::new_unchecked(eth_log.topics.clone(), eth_log.data.clone());
-        let decoded_event = event
-            .decode_log_data(&log_data, true)
-            .map_err(|_e| SequencingParserError::DynSolEventCreation)?;
-
-        // Ensure the decoded event has the expected structure
-        if decoded_event.body.len() != 1 {
-            return Err(SequencingParserError::UnexpectedDecodedEventStructure);
-        }
-
-        // Extract the transactions from the decoded event body
-        let data = match &decoded_event.body[0] {
-            DynSolValue::Bytes(d) => d.clone(),
-            _ => return Err(SequencingParserError::UnexpectedDataType),
-        };
+        let decoded_event =
+            MetabasedSequencerChain::TransactionProcessed::decode_log_data(&log_data, true)
+                .map_err(|_e| SequencingParserError::DynSolEventCreation)?;
 
         // Decode the transactions
-        let transactions = self.decode_event_data(data.into())?;
+        let transactions = self.decode_event_data(decoded_event.encodedTxn)?;
         Ok(transactions)
     }
 }
