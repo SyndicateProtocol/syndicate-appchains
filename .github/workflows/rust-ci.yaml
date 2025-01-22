@@ -19,17 +19,38 @@ env:
   RUSTFLAGS: "-Dwarnings"
 
 jobs:
-  workspace-checks:
-    name: Workspace Checks
+  clippy:
+    name: Clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      # Install Rust toolchain and components
+      # Install Rust toolchain and clippy
       - name: Install Rust toolchain
         run: |
           rustup toolchain install stable --profile minimal
           rustup component add clippy
+
+      # Cache Cargo dependencies
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Cache entire workspace
+          workspaces: "."
+
+      # Run Clippy checks on entire workspace
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets --all-features
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Rust toolchain
+      - name: Install Rust toolchain
+        run: rustup toolchain install stable --profile minimal
 
       # Cache Cargo dependencies
       - name: Cache dependencies
@@ -50,10 +71,6 @@ jobs:
         run: |
           which anvil
           anvil --version
-
-      # Run Clippy checks on entire workspace
-      - name: Run Clippy
-        run: cargo clippy --workspace --all-targets --all-features
 
       # Run tests on entire workspace
       - name: Run Tests
