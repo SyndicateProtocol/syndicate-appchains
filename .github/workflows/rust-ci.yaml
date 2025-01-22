@@ -5,13 +5,14 @@ on:
   push:
     branches:
       - main
-  # Run on PRs that touch Rust code
+  # Run on PRs that touch Rust code or the workflow itself
   pull_request:
     paths:
       - "metabased-sequencer/**"
       - "metabased-translator/**"
       - "Cargo.toml"
       - "Cargo.lock"
+      - ".github/workflows/rust-ci.yaml"
 
 env:
   CARGO_TERM_COLOR: always
