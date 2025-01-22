@@ -15,7 +15,7 @@ use common::{
 use thiserror::Error;
 
 /// Represents errors that can occur during sequencing transaction parsing.
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum SequencingParserError {
     /// An error occurred while constructing the `DynSolEvent` object.
     #[error("Failed to construct DynSolEvent")]
@@ -31,7 +31,7 @@ pub enum SequencingParserError {
 
     /// The log does not correspond to a `TransactionProcessed` event.
     #[error("Log is not a TransactionProcessed event")]
-    InvalidLog,
+    InvalidLogEvent,
 
     /// The compression type in the provided data is unknown.
     #[error("Unknown compression type: {0:?}")]
@@ -69,8 +69,6 @@ sol! {
 impl SequencingTransactionParser {
     /// Creates a new `SequencingTransactionParser`
     pub const fn new(sequencing_contract_address: Address) -> Self {
-        // The signature for the TransactionProcessed event
-        // "TransactionProcessed(address,bytes)";
         Self {
             sequencing_contract_address,
         }
@@ -113,7 +111,7 @@ impl SequencingTransactionParser {
         eth_log: &Log,
     ) -> Result<Vec<Bytes>, SequencingParserError> {
         if !self.is_log_transaction_processed(eth_log.clone()) {
-            return Err(SequencingParserError::InvalidLog);
+            return Err(SequencingParserError::InvalidLogEvent);
         }
         let log_data = LogData::new_unchecked(eth_log.topics.clone(), eth_log.data.clone());
         let decoded_event =
@@ -233,9 +231,6 @@ mod tests {
 
         let result = parser.get_event_transactions(&log);
         assert!(result.is_err());
-        assert_eq!(
-            result.unwrap_err().to_string(),
-            "Log is not a TransactionProcessed event"
-        );
+        assert_eq!(result.unwrap_err(), SequencingParserError::InvalidLogEvent);
     }
 }

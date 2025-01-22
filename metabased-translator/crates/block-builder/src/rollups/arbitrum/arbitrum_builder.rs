@@ -24,10 +24,7 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
     ///
     /// # Arguments
     /// - `sequencing_contract_address`: The address of the sequencing contract to monitor.
-    fn new(sequencing_contract_address: Address) -> Self
-    where
-        Self: Sized,
-    {
+    fn new(sequencing_contract_address: Address) -> Self {
         let transaction_parser = SequencingTransactionParser::new(sequencing_contract_address);
         Self { transaction_parser }
     }

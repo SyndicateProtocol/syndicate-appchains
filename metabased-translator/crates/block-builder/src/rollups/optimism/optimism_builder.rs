@@ -28,10 +28,7 @@ pub struct OptimismBlockBuilder {
 #[async_trait]
 impl RollupBlockBuilder for OptimismBlockBuilder {
     /// Creates a new Optimism block builder
-    fn new(sequencing_contract_address: Address) -> Self
-    where
-        Self: Sized,
-    {
+    fn new(sequencing_contract_address: Address) -> Self {
         let transaction_parser = SequencingTransactionParser::new(sequencing_contract_address);
         Self { transaction_parser }
     }

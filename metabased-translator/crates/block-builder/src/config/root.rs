@@ -32,7 +32,7 @@ struct Args {
     )]
     chain_id: u64,
 
-    /// Sequencing contract address
+    /// Sequencing contract address on the sequencing chain
     #[arg(
         short = 's',
         long,
