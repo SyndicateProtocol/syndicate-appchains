@@ -9,7 +9,7 @@ on:
   # Only run on PRs that touch metabased-translator/contracts
   pull_request:
     paths:
-      - "../../metabased-translator/block-builder/contracts/**"
+      - "../../metabased-translator/contracts/**"
 
 env:
   FOUNDRY_PROFILE: ci
