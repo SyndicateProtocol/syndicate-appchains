@@ -11,7 +11,35 @@ use common::{
     compression::{get_compression_type, CompressionType},
     types::Log,
 };
-use eyre::{eyre, Error};
+use thiserror::Error;
+
+/// Represents errors that can occur during sequencing transaction parsing.
+#[derive(Debug, Error)]
+pub enum SequencingParserError {
+    /// An error occurred while constructing the `DynSolEvent` object.
+    #[error("Failed to construct DynSolEvent")]
+    DynSolEventCreation,
+
+    /// The decoded event structure does not match the expected format.
+    #[error("Unexpected decoded event structure")]
+    UnexpectedDecodedEventStructure,
+
+    /// The decoded event data contains an unexpected type.
+    #[error("Unexpected type for data")]
+    UnexpectedDataType,
+
+    /// The log does not correspond to a `TransactionProcessed` event.
+    #[error("Log is not a TransactionProcessed event")]
+    InvalidLog,
+
+    /// The compression type in the provided data is unknown.
+    #[error("Unknown compression type: {0:?}")]
+    UnknownCompressionType(u8),
+
+    /// No data was provided for decoding.
+    #[error("No data provided for decoding")]
+    NoDataProvided,
+}
 
 /// `TransactionProcessed` event data
 #[derive(Debug, Clone)]
@@ -35,13 +63,13 @@ const EVENT_SIGNATURE: &str = "TransactionProcessed(address,bytes)";
 
 impl SequencingTransactionParser {
     /// Creates a new `SequencingTransactionParser`
-    pub fn new(sequencing_contract_address: Address) -> Result<Self, Error> {
+    pub fn new(sequencing_contract_address: Address) -> Self {
         // The signature for the TransactionProcessed event
         // "TransactionProcessed(address,bytes)";
-        Ok(Self {
+        Self {
             event_signature_hash: keccak256(EVENT_SIGNATURE.as_bytes()),
             sequencing_contract_address,
-        })
+        }
     }
 
     /// Checks if a log is a `TransactionProcessed` event
@@ -54,9 +82,9 @@ impl SequencingTransactionParser {
     }
 
     /// Decodes the event data into a vector of transactions
-    pub fn decode_event_data(&self, data: Bytes) -> Result<Vec<Bytes>, Error> {
+    pub fn decode_event_data(&self, data: Bytes) -> Result<Vec<Bytes>, SequencingParserError> {
         if data.is_empty() {
-            return Err(eyre!("No data provided for decoding"));
+            return Err(SequencingParserError::NoDataProvided);
         }
 
         let compression_byte = &data[0];
@@ -69,33 +97,40 @@ impl SequencingTransactionParser {
                 transactions.push(Bytes::copy_from_slice(compressed_data));
             }
             CompressionType::Unknown => {
-                return Err(eyre!("Unknown compression type: {:?}", compression_byte));
+                return Err(SequencingParserError::UnknownCompressionType(
+                    *compression_byte,
+                ));
             }
         }
         Ok(transactions)
     }
     /// Decodes the event data into a vector of transactions
-    pub fn get_event_transactions(&self, eth_log: &Log) -> Result<Vec<Bytes>, Error> {
+    pub fn get_event_transactions(
+        &self,
+        eth_log: &Log,
+    ) -> Result<Vec<Bytes>, SequencingParserError> {
         if !self.is_log_transaction_processed(eth_log.clone()) {
-            return Err(eyre!("Log is not a TransactionProcessed event"));
+            return Err(SequencingParserError::InvalidLog);
         }
 
         let indexed = vec![DynSolType::Address]; // "Sender" is indexed
         let body = DynSolType::Tuple(vec![DynSolType::Bytes]); // "EncodedData" is non-indexed
         let event = DynSolEvent::new(Some(self.event_signature_hash), indexed, body)
-            .ok_or_else(|| eyre!("Failed to construct DynSolEvent"))?;
+            .ok_or(SequencingParserError::DynSolEventCreation)?;
         let log_data = LogData::new_unchecked(eth_log.topics.clone(), eth_log.data.clone());
-        let decoded_event = event.decode_log_data(&log_data, true)?;
+        let decoded_event = event
+            .decode_log_data(&log_data, true)
+            .map_err(|_e| SequencingParserError::DynSolEventCreation)?;
 
         // Ensure the decoded event has the expected structure
         if decoded_event.body.len() != 1 {
-            return Err(eyre!("Unexpected decoded event structure"));
+            return Err(SequencingParserError::UnexpectedDecodedEventStructure);
         }
 
         // Extract the transactions from the decoded event body
         let data = match &decoded_event.body[0] {
             DynSolValue::Bytes(d) => d.clone(),
-            _ => return Err(eyre!("Unexpected type for data")),
+            _ => return Err(SequencingParserError::UnexpectedDataType),
         };
 
         // Decode the transactions
@@ -142,9 +177,6 @@ mod tests {
             .unwrap();
 
         let parser = SequencingTransactionParser::new(contract_address);
-
-        assert!(parser.is_ok());
-        let parser = parser.unwrap();
         assert_eq!(parser.sequencing_contract_address, contract_address);
     }
 
@@ -154,7 +186,7 @@ mod tests {
             .parse()
             .unwrap();
         let parser: SequencingTransactionParser =
-            SequencingTransactionParser::new(contract_address).unwrap();
+            SequencingTransactionParser::new(contract_address);
 
         let log = generate_valid_test_log(contract_address);
 
@@ -177,9 +209,7 @@ mod tests {
             "0x000000000000000000000000000000000000abcd"
                 .parse()
                 .unwrap(),
-        )
-        .unwrap();
-
+        );
         let result = parser.decode_event_data(input);
 
         println!("Decoded result: {:?}", result);
@@ -193,7 +223,7 @@ mod tests {
         let contract_address: Address = "0x000000000000000000000000000000000000abcd"
             .parse()
             .unwrap();
-        let parser = SequencingTransactionParser::new(contract_address).unwrap();
+        let parser = SequencingTransactionParser::new(contract_address);
         let log = generate_valid_test_log(contract_address);
         let result = parser.get_event_transactions(&log);
         assert!(result.is_ok());
@@ -207,7 +237,7 @@ mod tests {
         let contract_address: Address = "0x000000000000000000000000000000000000abcd"
             .parse()
             .unwrap();
-        let parser = SequencingTransactionParser::new(contract_address).unwrap();
+        let parser = SequencingTransactionParser::new(contract_address);
 
         let unrelated_contract_address: Address = "0x110000000000000000000000000000000000abcd"
             .parse()

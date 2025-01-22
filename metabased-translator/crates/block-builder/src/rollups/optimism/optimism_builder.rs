@@ -32,10 +32,7 @@ impl RollupBlockBuilder for OptimismBlockBuilder {
     where
         Self: Sized,
     {
-        let transaction_parser = SequencingTransactionParser::new(sequencing_contract_address)
-            .unwrap_or_else(|err| {
-                panic!("Failed to create transaction parser: {}", err);
-            });
+        let transaction_parser = SequencingTransactionParser::new(sequencing_contract_address);
         Self { transaction_parser }
     }
 
