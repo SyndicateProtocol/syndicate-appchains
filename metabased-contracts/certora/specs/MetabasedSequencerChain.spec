@@ -142,7 +142,7 @@ rule moduleUpdateChangesState(address newModule) {
     assert !lastReverted => requirementModule() == newModule,
         "Module not updated correctly";
 }
-// Complimentary rule to the above calling updateRequirementModule without revert
+// Complementary rule to the above calling updateRequirementModule without revert
 rule moduleUpdateConsistency(address newModule) {
     env e;
 
