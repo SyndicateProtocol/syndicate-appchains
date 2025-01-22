@@ -82,6 +82,15 @@ mod tests {
     use eyre::Result;
     use tokio::sync::mpsc;
 
+    /// Test the block builder startup and basic functionality
+    /// 
+    /// # Dependencies
+    /// This test requires the following external dependencies to be installed and available in PATH:
+    /// - Anvil (from Foundry): Used for local Ethereum node simulation
+    /// - Foundry: Required for blockchain development tools
+    /// 
+    /// Ensure these dependencies are properly installed and accessible before running the test.
+    /// The Anvil binary should be available in PATH (typically in ~/.foundry/bin/).
     #[tokio::test]
     async fn test_block_builder_start() -> Result<()> {
         let (tx, rx) = mpsc::channel(32);
