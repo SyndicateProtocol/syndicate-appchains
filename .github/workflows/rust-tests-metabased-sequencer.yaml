@@ -26,6 +26,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Install Foundry before Rust setup
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+      
+      - name: Verify Foundry Installation
+        run: |
+          which anvil
+          anvil --version
+
       # GitHub Actions supports rustup by default, so we can install the toolchain directly
       # selecting a toolchain either by action or manual `rustup` calls should happen
       # before the plugin, as the cache uses the current rustc version as its cache key

@@ -26,8 +26,6 @@ jobs:
       # Install Foundry before Rust setup
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly
       
       - name: Verify Foundry Installation
         run: |
