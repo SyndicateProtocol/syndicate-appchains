@@ -214,7 +214,13 @@ async fn send_batch<
             sequencer_message_count, // sequence number
             batch.encode()?.into(),  // data
             delayed_messages_read
-                .checked_add(U256::from(batch.0.iter().filter(|x| x.is_none()).count()))
+                .checked_add(U256::from(
+                    batch
+                        .0
+                        .iter()
+                        .filter(|x| matches!(x, arbitrum::batch::BatchMessage::Delayed))
+                        .count(),
+                ))
                 .ok_or_eyre("checked add overflow")?, // after delayed messages read
             Address::default(),      // gas refunder
             U256::from(0),           // prev message count. 0 = ignore this sanity check
@@ -315,7 +321,11 @@ async fn test_nitro_batch() -> Result<()> {
     // clear the queue of delayed messages
     // The RollupCreator createRollup() function creates 8 retryable tickets to deploy deterministic deployment factories to the rollup
     // when deployFactoriesToL2 is enabled. The final delayed message is the deposit that we initiate earlier in the test.
-    send_batch(&arbitrum::batch::Batch(vec![None; 9]), &provider).await?;
+    send_batch(
+        &arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed; 9]),
+        &provider,
+    )
+    .await?;
 
     // wait 200ms for the batch to be processed
     tokio::time::sleep(Duration::from_millis(200)).await;
@@ -346,10 +356,12 @@ async fn test_nitro_batch() -> Result<()> {
         .await?;
 
     inner_tx.encode_2718(&mut tx);
-    let batch = arbitrum::batch::Batch(vec![Some(arbitrum::batch::L1IncomingMessage {
-        header: Default::default(),
-        l2_msg: vec![tx],
-    })]);
+    let batch = arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::L2(
+        arbitrum::batch::L1IncomingMessage {
+            header: Default::default(),
+            l2_msg: vec![tx.into()],
+        },
+    )]);
     send_batch(&batch, &provider).await?;
 
     // wait 200ms for the batch to be processed

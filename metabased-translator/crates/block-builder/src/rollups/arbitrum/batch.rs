@@ -1,69 +1,25 @@
-/// Arbitrum rollup block-builder implementation
-///
-/// This module provides functionality for encoding batches of transactions
-/// that can be submitted by the batcher.
+//! Arbitrum rollup block-builder implementation
+//!
+//! This module provides functionality for encoding batches of transactions
+//! that can be submitted by the batcher.
+
+use crate::block_builder::BlockBuilderError;
+use alloy::{primitives::Bytes, rlp};
 use base64::prelude::*;
-use eyre::{eyre, Result};
-use serde::ser::Error;
-use serde::Serialize;
-use serde::Serializer;
-
-/// Each `L1IncomingMessage` is an L2 block. When the message is empty, the block is derived from the next delayed message instead.
-#[derive(Debug, Serialize)]
-pub struct Batch(pub Vec<Option<L1IncomingMessage>>);
-
-/// See arbos/arbostypes/incomingmessage.go for the nitro version of this struct.
-#[derive(Debug, Serialize, Clone)]
-#[serde(rename_all = "camelCase")]
-#[allow(missing_docs)]
-pub struct L1IncomingMessage {
-    pub header: L1IncomingMessageHeader,
-    #[serde(serialize_with = "serialize_l2_msg")]
-    pub l2_msg: Vec<Vec<u8>>,
-}
-
-fn l2_msg_to_bytes(msg: &Vec<Vec<u8>>) -> Result<Vec<u8>> {
-    let mut data = Vec::new();
-    if msg.is_empty() {
-        return Err(eyre!("cannot serialize empty l2 msg"));
-    }
-    if msg.len() > 1 {
-        data.push(L2MessageKind::Batch as u8);
-        for tx in msg {
-            data.extend_from_slice(&tx.len().to_be_bytes());
-            data.push(L2MessageKind::SignedTx as u8);
-            data.extend(tx);
-        }
-    } else {
-        data.push(L2MessageKind::SignedTx as u8);
-        data.extend(&msg[0]);
-    }
-    Ok(data)
-}
-
-fn serialize_l2_msg<S>(msg: &Vec<Vec<u8>>, s: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    s.serialize_str(&BASE64_STANDARD.encode(l2_msg_to_bytes(msg).map_err(S::Error::custom)?))
-}
-
-enum L2MessageKind {
-    Batch = 3,
-    SignedTx = 4,
-}
-
-/// See arbos/arbostypes/incomingmessage.go for the nitro version of this struct.
-#[derive(Debug, Serialize, Clone, Default)]
-#[serde(rename_all = "camelCase")]
-#[allow(missing_docs)]
-pub struct L1IncomingMessageHeader {
-    // l1 block number
-    pub block_number: u64,
-    pub timestamp: u64,
-}
+use eyre::{Error, Result};
+use serde::{ser::Error as _, Serialize, Serializer};
 
 const BROTLI_MESSAGE_HEADER_BYTE: u8 = 0;
+
+/// Each `BatchMessage` corresponds to a L2 block.
+#[derive(Debug, Serialize, Clone)]
+#[serde(untagged)]
+pub enum BatchMessage {
+    /// Message submitted to the delayed inbox contract, eg. a deposit
+    Delayed,
+    /// Message sequenced by the sequencer containing l2 transactions
+    L2(L1IncomingMessage),
+}
 
 enum BatchSegmentKind {
     L2Message = 0,
@@ -73,44 +29,69 @@ enum BatchSegmentKind {
     AdvanceL1BlockNumber = 4,
 }
 
+enum L2MessageKind {
+    Batch = 3,
+    SignedTx = 4,
+}
+
+/// Arbitrum batch
+#[derive(Debug, Serialize)]
+pub struct Batch(pub Vec<BatchMessage>);
+
+/// See arbos/arbostypes/incomingmessage.go for the nitro version of this struct.
+#[derive(Debug, Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+#[allow(missing_docs)]
+pub struct L1IncomingMessage {
+    pub header: L1IncomingMessageHeader,
+    #[serde(serialize_with = "serialize_l2_msg")]
+    pub l2_msg: Vec<Bytes>,
+}
+
+/// See arbos/arbostypes/incomingmessage.go for the nitro version of this struct.
+#[derive(Debug, Serialize, Clone, Default)]
+#[serde(rename_all = "camelCase")]
+#[allow(missing_docs)]
+pub struct L1IncomingMessageHeader {
+    /// l1 block number
+    pub block_number: u64,
+    pub timestamp: u64,
+}
+
 impl Batch {
     /// Encode the `Batch` into RLP calldata
-    pub fn encode(&self) -> Result<Vec<u8>> {
+    pub fn encode(&self) -> Result<Bytes> {
         let mut ts = 0;
         let mut block = 0;
         let mut input = vec![];
         for msg in &self.0 {
-            let mut data = msg.as_ref().map_or_else(
-                || {
-                    Ok::<_, eyre::Error>(alloy::rlp::encode(
-                        BatchSegmentKind::DelayedMessages as u8,
-                    ))
-                },
-                |x| {
+            let mut data = match msg {
+                BatchMessage::Delayed => {
+                    Ok::<_, Error>(rlp::encode(BatchSegmentKind::DelayedMessages as u8))
+                }
+                BatchMessage::L2(x) => {
                     let mut data = vec![];
                     if ts != x.header.timestamp {
                         let mut buffer = vec![];
                         buffer.push(BatchSegmentKind::AdvanceTimestamp as u8);
-                        buffer.append(&mut alloy::rlp::encode(x.header.timestamp.wrapping_sub(ts)));
-                        data.append(&mut alloy::rlp::encode(buffer.as_slice()));
+                        buffer.append(&mut rlp::encode(x.header.timestamp.wrapping_sub(ts)));
+                        data.append(&mut rlp::encode(buffer.as_slice()));
                         ts = x.header.timestamp;
                     }
                     if block != x.header.block_number {
                         let mut buffer = vec![];
                         buffer.push(BatchSegmentKind::AdvanceL1BlockNumber as u8);
-                        buffer.append(&mut alloy::rlp::encode(
-                            x.header.block_number.wrapping_sub(block),
-                        ));
-                        data.append(&mut alloy::rlp::encode(buffer.as_slice()));
+                        buffer.append(&mut rlp::encode(x.header.block_number.wrapping_sub(block)));
+                        data.append(&mut rlp::encode(buffer.as_slice()));
                         block = x.header.block_number;
                     }
                     let mut buffer = vec![];
                     buffer.push(BatchSegmentKind::L2Message as u8);
-                    buffer.append(&mut l2_msg_to_bytes(&x.l2_msg)?);
-                    data.append(&mut alloy::rlp::encode(buffer.as_slice()));
+                    buffer.append(&mut l2_msg_to_bytes(&x.l2_msg)?.into());
+                    data.append(&mut rlp::encode(buffer.as_slice()));
                     Ok(data)
-                },
-            )?;
+                }
+            }?;
             input.append(&mut data);
         }
         let mut out: Vec<u8> = vec![];
@@ -121,13 +102,13 @@ impl Batch {
         )?;
         let mut result = vec![BROTLI_MESSAGE_HEADER_BYTE];
         result.append(&mut out);
-        Ok(result)
+        Ok(result.into())
     }
 
     /// For testing purposes only. Docker image is currently built for arm architecture.
     #[cfg(target_os = "macos")]
     #[cfg(test)]
-    async fn geth_encode(&self) -> Result<Vec<u8>> {
+    async fn geth_encode(&self) -> Result<Bytes> {
         use eyre::OptionExt;
         use tokio::io::AsyncWriteExt;
 
@@ -149,8 +130,34 @@ impl Batch {
             .write_all(json.as_bytes())
             .await?;
         let output = child.wait_with_output().await?;
-        Ok(hex::decode(output.stdout)?)
+        Ok(hex::decode(output.stdout)?.into())
     }
+}
+
+fn l2_msg_to_bytes(msg: &Vec<Bytes>) -> Result<Bytes, BlockBuilderError> {
+    let mut data = Vec::new();
+    if msg.is_empty() {
+        return Err(BlockBuilderError::EmptyL2Message());
+    }
+    if msg.len() > 1 {
+        data.push(L2MessageKind::Batch as u8);
+        for tx in msg {
+            data.extend_from_slice(&tx.len().to_be_bytes());
+            data.push(L2MessageKind::SignedTx as u8);
+            data.extend(tx);
+        }
+    } else {
+        data.push(L2MessageKind::SignedTx as u8);
+        data.extend(&msg[0]);
+    }
+    Ok(data.into())
+}
+
+fn serialize_l2_msg<S>(msg: &Vec<Bytes>, s: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    s.serialize_str(&BASE64_STANDARD.encode(l2_msg_to_bytes(msg).map_err(S::Error::custom)?))
 }
 
 #[cfg(test)]
@@ -159,14 +166,27 @@ mod tests {
 
     #[test]
     fn test_json_encoding() -> Result<(), serde_json::Error> {
-        let batch = Batch(vec![None]);
-        assert_eq!(serde_json::to_string(&batch)?, r#"[null]"#);
+        let batch = Batch(vec![
+            BatchMessage::Delayed,
+            BatchMessage::L2(L1IncomingMessage {
+                header: Default::default(),
+                l2_msg: vec![Default::default()],
+            }),
+            BatchMessage::L2(L1IncomingMessage {
+                header: Default::default(),
+                l2_msg: vec![Default::default(); 2],
+            }),
+        ]);
+        assert_eq!(
+            serde_json::to_string(&batch)?,
+            r#"[null,{"header":{"blockNumber":0,"timestamp":0},"l2Msg":"BA=="},{"header":{"blockNumber":0,"timestamp":0},"l2Msg":"AwAAAAAAAAAABAAAAAAAAAAABA=="}]"#
+        );
         Ok(())
     }
 
     #[tokio::test]
     async fn test_delayed_msg_encode() -> Result<()> {
-        let batch = Batch(vec![None]);
+        let batch = Batch(vec![BatchMessage::Delayed]);
         assert_eq!(batch.encode()?, hex::decode("000b00800203")?);
         Ok(())
     }
@@ -193,26 +213,28 @@ mod tests {
             .await?
             .encode(&mut tx);
         let batch = Batch(vec![
-            Some(L1IncomingMessage {
+            BatchMessage::L2(L1IncomingMessage {
+                header: Default::default(),
+                l2_msg: vec![tx.clone().into(); 2],
+            }),
+            BatchMessage::L2(L1IncomingMessage {
                 header: L1IncomingMessageHeader {
                     block_number: 1,
                     timestamp: 100,
                 },
-                l2_msg: vec![tx.clone()],
+                l2_msg: vec![tx.clone().into(); 3],
             }),
-            Some(L1IncomingMessage {
+            BatchMessage::Delayed,
+            BatchMessage::L2(L1IncomingMessage {
                 header: L1IncomingMessageHeader {
                     block_number: 2,
-                    timestamp: 200,
+                    timestamp: 100,
                 },
-                l2_msg: vec![tx.clone(), tx.clone()],
+                l2_msg: vec![tx.clone().into()],
             }),
-            Some(L1IncomingMessage {
-                header: L1IncomingMessageHeader {
-                    block_number: 3,
-                    timestamp: 500,
-                },
-                l2_msg: vec![tx],
+            BatchMessage::L2(L1IncomingMessage {
+                header: Default::default(),
+                l2_msg: vec![tx.into()],
             }),
         ]);
         let b1 = batch.encode()?;
