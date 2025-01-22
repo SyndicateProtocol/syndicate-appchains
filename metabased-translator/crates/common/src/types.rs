@@ -6,7 +6,6 @@ use alloy::{
 };
 use serde::de::{self, Deserializer};
 use serde::Deserialize;
-use serde_hex::{CompactPfx, SerHex};
 use strum_macros::Display;
 
 #[derive(Clone, Debug)]
@@ -26,7 +25,7 @@ pub struct Block {
     #[serde(deserialize_with = "deserialize_b256")]
     pub hash: B256,
     /// The block number.
-    #[serde(with = "SerHex::<CompactPfx>")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
     pub number: u64,
     /// The hash of the parent block.
     #[serde(deserialize_with = "deserialize_b256")]
@@ -40,7 +39,7 @@ pub struct Block {
     /// The root hash of the receipts trie.
     pub receipts_root: String,
     /// The timestamp when the block was mined, in Unix time.
-    #[serde(with = "SerHex::<CompactPfx>")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
     pub timestamp: u64,
     /// The transactions included in the block.
     pub transactions: Vec<Transaction>,
@@ -54,7 +53,7 @@ pub struct Transaction {
     #[serde(deserialize_with = "deserialize_b256")]
     pub block_hash: B256,
     /// The number of the block containing this transaction, or `null` if pending.
-    #[serde(with = "SerHex::<CompactPfx>")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
     pub block_number: u64,
     /// The sender's address.
     #[serde(deserialize_with = "deserialize_address")]
@@ -65,7 +64,7 @@ pub struct Transaction {
     /// The data payload of the transaction.
     pub input: String,
     /// The number of transactions sent by the sender.
-    #[serde(with = "SerHex::<CompactPfx>")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
     pub nonce: u64,
     /// The recipient's address, or `null` if the transaction creates a contract.
     #[serde(deserialize_with = "deserialize_optional_address")]
@@ -84,7 +83,7 @@ pub struct Receipt {
     #[serde(deserialize_with = "deserialize_b256")]
     pub block_hash: B256,
     /// The number of the block containing the transaction.
-    #[serde(with = "SerHex::<CompactPfx>")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
     pub block_number: u64,
     /// The sender's address.
     #[serde(deserialize_with = "deserialize_address")]
@@ -112,18 +111,18 @@ pub struct Receipt {
 pub struct Log {
     /// The hash of the block containing the log, or `null` if pending.
     #[serde(deserialize_with = "deserialize_b256")]
-    pub block_hash: B256,
+    pub block_hash_test: B256,
     /// The number of the block containing the log, or `null` if pending.
-    #[serde(with = "SerHex::<CompactPfx>")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
     pub block_number: u64,
     /// The index of the transaction that generated the log
-    #[serde(with = "SerHex::<CompactPfx>")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
     pub transaction_index: u64,
     /// The address from which the log originated.
     #[serde(deserialize_with = "deserialize_address")]
     pub address: Address,
     /// The index of the log entry
-    #[serde(with = "SerHex::<CompactPfx>")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
     pub log_index: u64,
     /// The data associated with the log.
     pub data: Bytes,
@@ -223,6 +222,17 @@ where
     } else {
         Ok(None)
     }
+}
+
+fn deserialize_hex_to_u64<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let hex_str: String = Deserialize::deserialize(deserializer)?;
+
+    // Remove "0x" prefix if present, then parse as hexadecimal.
+    u64::from_str_radix(hex_str.trim_start_matches("0x"), 16)
+        .map_err(|err| de::Error::custom(format!("Failed to parse hex to u64: {}", err)))
 }
 
 fn deserialize_b256<'de, D>(deserializer: D) -> Result<B256, D::Error>

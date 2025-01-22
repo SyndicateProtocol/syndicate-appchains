@@ -14,7 +14,6 @@ serde_json = { workspace = true }
 strum = { workspace = true, features = ["derive"] }
 strum_macros = { workspace = true }
 alloy = { workspace = true }
-serde-hex = { workspace = true }
 
 [lints]
 workspace = true
