@@ -27,12 +27,13 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: '1.7.0'  # Pin to recent stable version known to work with modern toolchains
+          version: nightly  # Use nightly version to match project requirements
 
-      # Ensure Foundry binaries are in PATH
-      - name: Add Foundry to PATH
+      # Ensure Foundry binaries are in PATH and verify installation
+      - name: Verify Foundry Installation
         run: |
           echo "$HOME/.foundry/bin" >> $GITHUB_PATH
+          foundryup --version
           which anvil  # Verify anvil is accessible
 
       - run: rustup toolchain install stable --profile minimal
