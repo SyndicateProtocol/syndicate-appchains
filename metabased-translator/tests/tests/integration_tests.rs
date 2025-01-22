@@ -212,7 +212,7 @@ async fn send_batch<
     inbox
         .addSequencerL2BatchFromOrigin_1(
             sequencer_message_count, // sequence number
-            batch.encode()?.into(),  // data
+            batch.encode()?,         // data
             delayed_messages_read
                 .checked_add(U256::from(
                     batch
