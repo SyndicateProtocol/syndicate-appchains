@@ -9,8 +9,7 @@ on:
   # Only run on PRs that touch metabased-sequencer
   pull_request:
     paths:
-      # Temporarily commented out to verify workflow completion
-      # - "metabased-sequencer/**"
+      - "metabased-sequencer/**"
 
 env:
   CARGO_TERM_COLOR: always
