@@ -50,4 +50,4 @@ jobs:
           workspaces: "metabased-sequencer -> target"
 
       - name: Run tests
-        run: cargo test --package interceptor --package proxy
+        run: cargo test --workspace

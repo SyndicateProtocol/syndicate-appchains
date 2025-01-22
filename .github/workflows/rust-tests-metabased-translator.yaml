@@ -44,4 +44,4 @@ jobs:
           workspaces: "metabased-translator -> target"
 
       - name: Run tests
-        run: cargo test --package block-builder --package ingestor --package slotting --package common
+        run: cargo test --workspace
