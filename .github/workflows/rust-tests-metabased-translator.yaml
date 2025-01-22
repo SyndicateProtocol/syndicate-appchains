@@ -26,16 +26,15 @@ jobs:
       # Install Foundry before Rust setup
       - name: Install Foundry
         run: |
-          # Install foundryup
+          # Download and install foundryup
           curl -L https://foundry.paradigm.xyz | bash
-          # Let the installer finish and source the environment
-          source "$HOME/.bashrc"
-          # Now we can use foundryup to install Foundry
-          foundryup
           # Add foundry to PATH for this session
-          export PATH="$PATH:$HOME/.foundry/bin"
+          export PATH="$HOME/.foundry/bin:$PATH"
+          # Source the environment
+          source "$HOME/.bashrc"
+          # Install Foundry using foundryup
+          "$HOME/.foundry/bin/foundryup"
           # Verify installation
-          foundryup --version
           which anvil
           anvil --version
 
