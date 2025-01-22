@@ -381,6 +381,6 @@ async fn test_nitro_batch() -> Result<()> {
     println!("{:#?}", block.transactions);
     assert_eq!(block.transactions.len(), 2);
     // tx hash should match
-    assert_eq!(block.transactions[1].hash, inner_tx.tx_hash().to_string());
+    assert_eq!(block.transactions[1].hash, *inner_tx.tx_hash());
     Ok(())
 }
