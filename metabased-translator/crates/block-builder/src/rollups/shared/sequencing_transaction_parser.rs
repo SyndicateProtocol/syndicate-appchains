@@ -4,7 +4,7 @@
 //! sequencing transactions are captured and parsed.
 
 use alloy::{
-    primitives::{keccak256, Address, Bytes, LogData, B256},
+    primitives::{keccak256, Address, Bytes, LogData},
     sol,
     sol_types::SolEvent,
 };
@@ -54,8 +54,6 @@ pub struct TransactionProcessed {
 /// The parser for meta-based transactions
 #[derive(Debug)]
 pub struct SequencingTransactionParser {
-    /// The ABI for the sequencing contract
-    event_signature_hash: B256,
     /// The address of the sequencing contract
     sequencing_contract_address: Address,
 }
@@ -68,15 +66,12 @@ sol! {
     }
 }
 
-const EVENT_SIGNATURE: &str = "TransactionProcessed(address,bytes)";
-
 impl SequencingTransactionParser {
     /// Creates a new `SequencingTransactionParser`
     pub fn new(sequencing_contract_address: Address) -> Self {
         // The signature for the TransactionProcessed event
         // "TransactionProcessed(address,bytes)";
         Self {
-            event_signature_hash: keccak256(EVENT_SIGNATURE.as_bytes()),
             sequencing_contract_address,
         }
     }
@@ -84,10 +79,9 @@ impl SequencingTransactionParser {
     /// Checks if a log is a `TransactionProcessed` event
     pub fn is_log_transaction_processed(&self, eth_log: Log) -> bool {
         eth_log.address == self.sequencing_contract_address
-            && eth_log
-                .topics
-                .first()
-                .is_some_and(|t| *t == *self.event_signature_hash)
+            && eth_log.topics.first().is_some_and(|t| {
+                *t == keccak256(MetabasedSequencerChain::TransactionProcessed::SIGNATURE.as_bytes())
+            })
     }
 
     /// Decodes the event data into a vector of transactions
@@ -135,7 +129,7 @@ impl SequencingTransactionParser {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::hex;
+    use alloy::{hex, primitives::B256};
 
     const DUMMY_ENCODED_DATA: &[u8] = &hex!(
         "000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000020002000000000000000000000000000000000000000000000000000000000000"
