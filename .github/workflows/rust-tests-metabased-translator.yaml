@@ -25,14 +25,10 @@ jobs:
 
       # Install Foundry before Rust setup
       - name: Install Foundry
-        uses: foundry-rs/foundry-toolchain@v1
-        with:
-          version: nightly  # Use nightly version to match project requirements
-
-      # Ensure Foundry binaries are in PATH and verify installation
-      - name: Verify Foundry Installation
         run: |
-          echo "$HOME/.foundry/bin" >> $GITHUB_PATH
+          curl -L https://foundry.paradigm.xyz | bash
+          export PATH="$PATH:$HOME/.foundry/bin"
+          foundryup
           foundryup --version
           which anvil  # Verify anvil is accessible
 
