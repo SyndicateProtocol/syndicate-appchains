@@ -78,7 +78,6 @@ mod tests {
             Address::from_str("0x1234000000000000000000000000000000000000")
                 .expect("Invalid address format");
         let builder = OptimismBlockBuilder::new(sequencing_contract_address);
-        // Assert that the transaction parser is correctly initialized
         let parser = builder.transaction_parser();
         assert!(
             !std::ptr::eq(parser, std::ptr::null()),

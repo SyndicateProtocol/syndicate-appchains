@@ -112,7 +112,6 @@ mod tests {
     const DUMMY_ENCODED_DATA: &[u8] = &hex!(
         "000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000020002000000000000000000000000000000000000000000000000000000000000"
     );
-    // const DUMMY_TXN: &[u8] = &hex!("0002"); // Compression byte (00) + transaction data (02)
     const DUMMY_TXN_VALUE: &[u8] = &hex!("02");
 
     fn generate_valid_test_log(contract_address: Address) -> Log {
