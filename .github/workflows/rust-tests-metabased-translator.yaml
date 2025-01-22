@@ -27,10 +27,11 @@ jobs:
       - name: Install Foundry
         run: |
           curl -L https://foundry.paradigm.xyz | bash
+          source $HOME/.foundry/bin/foundryup
           export PATH="$PATH:$HOME/.foundry/bin"
-          foundryup
           foundryup --version
           which anvil  # Verify anvil is accessible
+          anvil --version  # Verify anvil works
 
       - run: rustup toolchain install stable --profile minimal
 
