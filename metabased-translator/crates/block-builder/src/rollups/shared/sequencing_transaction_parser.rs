@@ -68,7 +68,7 @@ sol! {
 
 impl SequencingTransactionParser {
     /// Creates a new `SequencingTransactionParser`
-    pub fn new(sequencing_contract_address: Address) -> Self {
+    pub const fn new(sequencing_contract_address: Address) -> Self {
         // The signature for the TransactionProcessed event
         // "TransactionProcessed(address,bytes)";
         Self {
