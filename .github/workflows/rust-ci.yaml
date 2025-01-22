@@ -1,0 +1,78 @@
+name: Rust Workspace CI
+
+on:
+  # Run workflow on every push to main
+  push:
+    branches:
+      - main
+  # Run on PRs that touch Rust code or the workflow itself
+  pull_request:
+    paths:
+      - "metabased-sequencer/**"
+      - "metabased-translator/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/rust-ci.yaml"
+
+env:
+  CARGO_TERM_COLOR: always
+  # Make sure CI fails on all warnings, including Clippy lints
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Rust toolchain and clippy
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup component add clippy
+
+      # Cache Cargo dependencies
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Cache entire workspace
+          workspaces: "."
+
+      # Run Clippy checks on entire workspace
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets --all-features
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Rust toolchain
+      - name: Install Rust toolchain
+        run: rustup toolchain install stable --profile minimal
+
+      # Cache Cargo dependencies
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Cache entire workspace
+          workspaces: "."
+
+      # Install Foundry (required for Anvil, a local Ethereum node simulator)
+      # Anvil is a critical dependency for tests, particularly
+      # the block builder component which uses it to simulate blockchain operations
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+      
+      - name: Verify Foundry Installation
+        run: |
+          which anvil
+          anvil --version
+
+      # Run tests on entire workspace
+      - name: Run Tests
+        run: cargo test --workspace
