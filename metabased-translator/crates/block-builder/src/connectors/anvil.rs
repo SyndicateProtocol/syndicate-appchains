@@ -1,7 +1,6 @@
 //! Anvil connector for the `MetaChain`
 
-use crate::block_builder::BlockBuilderError;
-use crate::config::BlockBuilderConfig;
+use crate::{block_builder::BlockBuilderError, config::BlockBuilderConfig};
 use alloy::{
     network::{Ethereum, EthereumWallet},
     node_bindings::{Anvil, AnvilInstance},
@@ -101,11 +100,8 @@ impl MetaChainProvider {
 
     /// Submits a transaction to the `MetaChain`
     pub async fn submit_txn(&self, txn: TransactionRequest) -> eyre::Result<String> {
-        let pending_txn = self
-            .provider
-            .send_transaction(txn)
-            .await
-            .map_err(BlockBuilderError::SubmitTxnError)?;
+        let pending_txn =
+            self.provider.send_transaction(txn).await.map_err(BlockBuilderError::SubmitTxnError)?;
 
         Ok(pending_txn.tx_hash().to_string())
     }
@@ -113,9 +109,7 @@ impl MetaChainProvider {
     /// Mines a block on the `MetaChain`
     // TODO: (SEQ-417): Use the timestamp of the slot for the next mchain block
     pub async fn mine_block(&self) -> eyre::Result<()> {
-        self.provider
-            .anvil_mine(Some(U256::from(1)), None::<U256>)
-            .await?;
+        self.provider.anvil_mine(Some(U256::from(1)), None::<U256>).await?;
 
         Ok(())
     }
@@ -150,17 +144,11 @@ mod tests {
     async fn test_port_availability_checking() -> eyre::Result<()> {
         // Initial port should be available
         let base_port = 1111;
-        assert!(
-            is_port_available(base_port),
-            "Base port should be available initially"
-        );
+        assert!(is_port_available(base_port), "Base port should be available initially");
 
         // Bind to the port to make it unavailable
         let _listener = TcpListener::bind(format!("127.0.0.1:{}", base_port))?;
-        assert!(
-            !is_port_available(base_port),
-            "Base port should be unavailable after binding"
-        );
+        assert!(!is_port_available(base_port), "Base port should be unavailable after binding");
 
         // Should find next available port
         let port = find_available_port(base_port, 10)
@@ -168,15 +156,8 @@ mod tests {
 
         // Port should be base_port + N*100 where N is 1..10
         assert!(port > base_port, "New port should be higher than base port");
-        assert_eq!(
-            (port - base_port) % 100,
-            0,
-            "Port increment should be multiple of 100"
-        );
-        assert!(
-            port <= base_port + 900,
-            "Port should not exceed max attempts range"
-        );
+        assert_eq!((port - base_port) % 100, 0, "Port increment should be multiple of 100");
+        assert!(port <= base_port + 900, "Port should not exceed max attempts range");
 
         // New port should be available
         assert!(is_port_available(port), "New port should be available");

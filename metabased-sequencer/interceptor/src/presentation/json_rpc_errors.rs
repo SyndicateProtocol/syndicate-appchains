@@ -1,3 +1,4 @@
+use super::transaction::TransactionFeeTooHigh;
 use crate::presentation::json_rpc_errors::{
     InvalidInputError::{
         InvalidJson, InvalidTransactionSignature, InvalidUint, MissingChainID, MissingGasPrice,
@@ -12,8 +13,6 @@ use alloy::{
     rlp,
 };
 use std::{convert::Infallible, fmt};
-
-use super::transaction::TransactionFeeTooHigh;
 
 // Source: https://github.com/MetaMask/rpc-errors/blob/main/src/errors.ts
 #[derive(Debug)]

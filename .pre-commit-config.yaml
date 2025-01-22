@@ -18,6 +18,7 @@ repos:
     rev: eeee35a89e69d5772bdee97db1a6a898467b686e
     hooks:
       - id: fmt
-        args: ['--all', '--check']
+        args: [ '--all', '--check', '--', '--unstable-features' ] # nightly Rust required for `imports_granularity` feature
+        entry: cargo +nightly fmt
       - id: clippy
       - id: cargo-check

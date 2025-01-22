@@ -17,11 +17,15 @@ macro_rules! join_fill {
 
 #[cfg(test)]
 mod tests {
-    use alloy::network::Ethereum;
-    use alloy::providers::fillers::{FillerControlFlow, TxFiller};
-    use alloy::providers::{Network, SendableTx};
-    use alloy::rpc::types::TransactionRequest;
-    use alloy::transports::TransportResult;
+    use alloy::{
+        network::Ethereum,
+        providers::{
+            fillers::{FillerControlFlow, TxFiller},
+            Network, SendableTx,
+        },
+        rpc::types::TransactionRequest,
+        transports::TransportResult,
+    };
 
     #[derive(Clone, Copy, Debug)]
     pub struct DummyGasFiller;

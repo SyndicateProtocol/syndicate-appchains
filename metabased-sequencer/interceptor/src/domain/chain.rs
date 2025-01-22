@@ -27,8 +27,7 @@ pub use tests::InMemoryMetabasedSequencerChain;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::convert::Infallible;
-    use std::sync::Arc;
+    use std::{convert::Infallible, sync::Arc};
     use tokio::sync::RwLock;
 
     /// A test-only fake implementation of [`MetabasedSequencerChainService`].

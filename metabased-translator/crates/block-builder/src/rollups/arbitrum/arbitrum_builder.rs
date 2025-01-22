@@ -1,8 +1,8 @@
 //! Arbitrum block builder implementation
 //!
-//! This module provides functionality for building an Arbitrum batch submitter transaction from a list of transactions.
-//! It implements the [`RollupBlockBuilder`] trait to standardize block construction across different
-//! rollup implementations
+//! This module provides functionality for building an Arbitrum batch submitter transaction from a
+//! list of transactions. It implements the [`RollupBlockBuilder`] trait to standardize block
+//! construction across different rollup implementations
 
 use crate::rollups::shared::{RollupBlockBuilder, SequencingTransactionParser};
 use alloy::{

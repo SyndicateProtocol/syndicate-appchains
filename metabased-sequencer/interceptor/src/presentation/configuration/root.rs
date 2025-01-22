@@ -1,8 +1,10 @@
 use crate::presentation::configuration::providers::{CliArgs, Logged};
 use alloy::primitives::{Address, B256};
 use clap::Parser;
-use figment::providers::{Env, Serialized};
-use figment::{Figment, Profile, Provider};
+use figment::{
+    providers::{Env, Serialized},
+    Figment, Profile, Provider,
+};
 use serde::Deserialize;
 use std::fmt::Debug;
 use url::Url;
@@ -88,9 +90,7 @@ mod tests {
 
     impl Dummy for Serialized<Dict> {
         fn dummy() -> Self {
-            Serialized::defaults(Dict::from(
-                DUMMY_VALUES.map(|(k, v)| (k.to_owned(), v.into())),
-            ))
+            Serialized::defaults(Dict::from(DUMMY_VALUES.map(|(k, v)| (k.to_owned(), v.into()))))
         }
 
         fn dummy_with(key: &'_ str, value: impl Into<Value>) -> Self {

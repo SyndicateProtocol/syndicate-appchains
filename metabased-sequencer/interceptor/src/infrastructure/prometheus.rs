@@ -1,13 +1,17 @@
-use crate::application::Metrics;
-use crate::presentation::json_rpc_errors::Error;
-use prometheus_client::encoding::text::encode;
-use prometheus_client::encoding::EncodeLabelSet;
-use prometheus_client::metrics::counter::Counter;
-use prometheus_client::metrics::family::Family;
-use prometheus_client::metrics::histogram::{exponential_buckets, Histogram};
-use prometheus_client::registry::Registry;
-use std::fmt::{Display, Formatter, Write};
-use std::time::Duration;
+use crate::{application::Metrics, presentation::json_rpc_errors::Error};
+use prometheus_client::{
+    encoding::{text::encode, EncodeLabelSet},
+    metrics::{
+        counter::Counter,
+        family::Family,
+        histogram::{exponential_buckets, Histogram},
+    },
+    registry::Registry,
+};
+use std::{
+    fmt::{Display, Formatter, Write},
+    time::Duration,
+};
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
 pub struct Labels {
@@ -32,11 +36,7 @@ impl PrometheusMetrics {
     pub fn new() -> Self {
         let mut registry = <Registry>::default();
         let rpc_calls = Family::<Labels, Counter>::default();
-        registry.register(
-            "rpc_calls",
-            "Number of RPC method calls received",
-            rpc_calls.clone(),
-        );
+        registry.register("rpc_calls", "Number of RPC method calls received", rpc_calls.clone());
         let rpc_calls_duration = Family::<Labels, Histogram>::new_with_constructor(|| {
             Histogram::new(exponential_buckets(0.01, 2.0, 10))
         });
@@ -46,11 +46,7 @@ impl PrometheusMetrics {
             rpc_calls_duration.clone(),
         );
 
-        Self {
-            registry,
-            rpc_calls,
-            rpc_calls_duration,
-        }
+        Self { registry, rpc_calls, rpc_calls_duration }
     }
 }
 
@@ -87,17 +83,11 @@ impl Metrics for PrometheusMetrics {
         }
 
         self.rpc_calls
-            .get_or_create(&Labels {
-                rpc_method: "eth_sendRawTransaction",
-                error_category,
-            })
+            .get_or_create(&Labels { rpc_method: "eth_sendRawTransaction", error_category })
             .inc();
 
         self.rpc_calls_duration
-            .get_or_create(&Labels {
-                rpc_method: "eth_sendRawTransaction",
-                error_category,
-            })
+            .get_or_create(&Labels { rpc_method: "eth_sendRawTransaction", error_category })
             .observe(duration.as_secs_f64());
     }
 

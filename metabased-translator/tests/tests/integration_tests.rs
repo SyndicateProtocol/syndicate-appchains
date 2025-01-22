@@ -43,10 +43,7 @@ async fn test_e2e_counter_contract() -> Result<()> {
 
     //
     // create and sign a transaction to deploy the counter contract
-    let nonce = env
-        .l3_chain()
-        .get_transaction_count(env.accounts().bob.address)
-        .await?;
+    let nonce = env.l3_chain().get_transaction_count(env.accounts().bob.address).await?;
 
     let counter_deploy_tx = TransactionRequest::default()
         .with_to(env.accounts().bob.address)
@@ -62,8 +59,7 @@ async fn test_e2e_counter_contract() -> Result<()> {
 
     //
     // send bob's raw tx to be sequenced
-    env.sequence_tx(counter_deploy_tx.encoded_2718().into())
-        .await?;
+    env.sequence_tx(counter_deploy_tx.encoded_2718().into()).await?;
 
     //TODO we might need to wait for the L3 to pick up the tx
 
@@ -97,11 +93,8 @@ async fn test_e2e_counter_contract() -> Result<()> {
 
     //
     // assert the tx was picked up by the L3 and the counter was incremented
-    let receipt = env
-        .l3_chain()
-        .get_transaction_receipt(increment_tx.tx_hash().to_owned())
-        .await?
-        .unwrap();
+    let receipt =
+        env.l3_chain().get_transaction_receipt(increment_tx.tx_hash().to_owned()).await?.unwrap();
     assert!(receipt.status(), "Counter increment failed");
 
     let number = counter.number().call().await?._0.to::<u64>();
@@ -110,7 +103,8 @@ async fn test_e2e_counter_contract() -> Result<()> {
     Ok(())
 }
 
-/// This test is to ensure that the system can resist garbage data being fed to the sequencing contract
+/// This test is to ensure that the system can resist garbage data being fed to the sequencing
+/// contract
 #[tokio::test]
 #[cfg_attr(not(feature = "e2e-tests"), ignore)]
 async fn test_e2e_resist_garbage_data() -> Result<()> {
@@ -145,10 +139,7 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
     // now try to sequence a valid transaction
     // create and sign a transaction to deploy the counter contract
     let bob_wallet = wallet_from_private_key(&env.accounts().bob.private_key, env.l3_chain_id());
-    let nonce = env
-        .l3_chain()
-        .get_transaction_count(env.accounts().bob.address)
-        .await?;
+    let nonce = env.l3_chain().get_transaction_count(env.accounts().bob.address).await?;
 
     let counter_deploy_tx = TransactionRequest::default()
         .with_to(env.accounts().bob.address)
@@ -164,14 +155,14 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
 
     //
     // send bob's raw tx to be sequenced
-    env.sequence_tx(counter_deploy_tx.encoded_2718().into())
-        .await?;
+    env.sequence_tx(counter_deploy_tx.encoded_2718().into()).await?;
 
     //TODO we might need to wait for the L3 to pick up the tx
 
     //
-    // the system is expected to be resilient to garbage data, so only the valid tx should be included in the L3
-    // assert the valid tx was picked up by the L3 and the contract was deployed
+    // the system is expected to be resilient to garbage data, so only the valid tx should be
+    // included in the L3 assert the valid tx was picked up by the L3 and the contract was
+    // deployed
     let receipt = env
         .l3_chain()
         .get_transaction_receipt(counter_deploy_tx.tx_hash().to_owned())
@@ -181,9 +172,7 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
 
     // assert the transaction count for the account without balance is 0
     assert_eq!(
-        env.l3_chain()
-            .get_transaction_count(address_without_balance)
-            .await?,
+        env.l3_chain().get_transaction_count(address_without_balance).await?,
         0,
         "Transaction count for the account without balance should be 0"
     );

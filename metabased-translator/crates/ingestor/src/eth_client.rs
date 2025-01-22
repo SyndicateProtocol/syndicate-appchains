@@ -26,7 +26,8 @@ impl EthClient {
     ///
     /// # Returns
     ///
-    /// A result containing the `EthClient` instance if successful, or an error if the connection fails.
+    /// A result containing the `EthClient` instance if successful, or an error if the connection
+    /// fails.
     pub(crate) async fn new(rpc_url: &str) -> Result<Self, Error> {
         let chain = ProviderBuilder::new().on_builtin(rpc_url).await?;
         Ok(Self { chain })

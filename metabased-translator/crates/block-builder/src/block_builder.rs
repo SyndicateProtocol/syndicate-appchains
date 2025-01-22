@@ -1,9 +1,9 @@
 //! Block builder service for processing and building L3 blocks.
 
-use crate::config::BlockBuilderConfig;
-use crate::connectors::anvil::MetaChainProvider;
-use crate::rollups::{
-    arbitrum::arbitrum_builder::ArbitrumBlockBuilder, shared::RollupBlockBuilder,
+use crate::{
+    config::BlockBuilderConfig,
+    connectors::anvil::MetaChainProvider,
+    rollups::{arbitrum::arbitrum_builder::ArbitrumBlockBuilder, shared::RollupBlockBuilder},
 };
 use alloy::transports::{RpcError, TransportErrorKind};
 use common::types::Slot;
@@ -34,11 +34,7 @@ impl BlockBuilder {
             config.sequencing_contract_address,
         ));
 
-        Ok(Self {
-            slotter_rx,
-            mchain,
-            builder,
-        })
+        Ok(Self { slotter_rx, mchain, builder })
     }
 
     /// Start the block builder
@@ -48,9 +44,7 @@ impl BlockBuilder {
                 info!("Received slot: {:?}", slot);
 
                 // Process sequencing chain blocks into mB transactions
-                let mbtxs = self
-                    .builder
-                    .parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
+                let mbtxs = self.builder.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
 
                 // TODO (SEQ-416): [OP / ARB] Process deposit transactions
 
