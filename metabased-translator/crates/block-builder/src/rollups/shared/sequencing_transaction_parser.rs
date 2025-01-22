@@ -1,7 +1,7 @@
 //! Shared traits and types for rollup-specific block builders.
 //!
 //! This module provides the core [`SequencingTransactionParser`] trait that defines how
-//! metabased transactions are captured and parsed.
+//! sequencing transactions are captured and parsed.
 
 use alloy::{
     dyn_abi::{DynSolEvent, DynSolType, DynSolValue},
@@ -12,7 +12,6 @@ use common::{
     types::Log,
 };
 use eyre::{eyre, Error};
-// use rlp::Rlp;
 
 /// `TransactionProcessed` event data
 #[derive(Debug, Clone)]
