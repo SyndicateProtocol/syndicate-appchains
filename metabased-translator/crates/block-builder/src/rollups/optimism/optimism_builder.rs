@@ -47,12 +47,13 @@ impl RollupBlockBuilder for OptimismBlockBuilder {
 
 impl OptimismBlockBuilder {
     /// Creates a new Optimism block builder
-    fn new(sequencing_contract_address: Address) -> Self {
+    pub const fn new(sequencing_contract_address: Address) -> Self {
         let transaction_parser = SequencingTransactionParser::new(sequencing_contract_address);
         Self { transaction_parser }
     }
+
     async fn process_deposited_txns(
-        &mut self,
+        &self,
         _txns: Vec<BlockAndReceipts>,
     ) -> Result<Vec<TransactionRequest>> {
         // TODO: Implement

@@ -4,24 +4,29 @@
 //! list of transactions. It implements the [`RollupBlockBuilder`] trait to standardize block
 //! construction across different rollup implementations
 
-use crate::contract_bindings::ibridge::IBridge::MessageDelivered;
-use crate::contract_bindings::idelayedmessageprovider::IDelayedMessageProvider::{
-    InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
+use crate::{
+    contract_bindings::{
+        ibridge::IBridge::MessageDelivered,
+        idelayedmessageprovider::IDelayedMessageProvider::{
+            InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
+        },
+        isequencerinbox::ISequencerInbox,
+    },
+    rollups::{
+        arbitrum::batch::{Batch, BatchMessage, L1IncomingMessage},
+        shared::{RollupBlockBuilder, SequencingTransactionParser},
+    },
 };
-use crate::contract_bindings::isequencerinbox::ISequencerInbox;
-use crate::rollups::arbitrum::batch::{Batch, BatchMessage, L1IncomingMessage};
-use crate::rollups::shared::RollupBlockBuilder;
-use crate::rollups::shared::SequencingTransactionParser;
-use alloy::sol_types::SolEvent;
 use alloy::{
     primitives::{address, Address, Bytes, FixedBytes, U256},
     rpc::types::TransactionRequest,
-    sol_types::SolCall,
+    sol_types::{SolCall, SolEvent},
 };
 use async_trait::async_trait;
 use common::types::{BlockAndReceipts, Slot};
 use eyre::{Error, Result};
 use std::collections::HashMap;
+use tracing::info;
 
 const MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = MessageDelivered::SIGNATURE_HASH;
 const INBOX_MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = InboxMessageDelivered::SIGNATURE_HASH;
@@ -95,51 +100,51 @@ impl ArbitrumBlockBuilder {
 
     /// Processes settlement chain receipts into delayed messages
     async fn process_delayed_messages(
-        &mut self,
+        &self,
         blocks: Vec<BlockAndReceipts>,
     ) -> Result<Vec<TransactionRequest>> {
         // Create a local map to store message data
         let mut inbox_messages: HashMap<U256, Bytes> = HashMap::new();
 
         // Process all logs in all receipts in all blocks
-        let _delayed_messages = blocks
+        let delayed_messages = blocks
             .iter()
             .flat_map(|block| &block.receipts)
             .flat_map(|receipt| &receipt.logs)
             .filter(|log| Address::from_slice(log.address.as_slice()) == self.delayed_inbox)
             .filter_map(|log| {
                 // Get the first topic (event signature)
-                log.topics
-                    .first()
-                    .map(|topic| {
-                        let topic_bytes = FixedBytes::from_slice(topic.as_slice());
+                log.topics.first().and_then(|topic| {
+                    let topic_bytes = FixedBytes::from_slice(topic.as_slice());
 
-                        if topic_bytes == MSG_DELIVERED_EVENT_HASH {
-                            return Some(log);
-                        }
+                    if topic_bytes == MSG_DELIVERED_EVENT_HASH {
+                        return Some(log);
+                    }
 
-                        if topic_bytes == INBOX_MSG_DELIVERED_EVENT_HASH {
-                            let message_num = U256::from_be_slice(log.topics[1].as_slice());
-                            inbox_messages.insert(message_num, log.data.clone().into());
-                        } else if topic_bytes == INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH {
-                            let message_num = U256::from_be_slice(log.topics[1].as_slice());
+                    if topic_bytes == INBOX_MSG_DELIVERED_EVENT_HASH {
+                        let message_num = U256::from_be_slice(log.topics[1].as_slice());
+                        inbox_messages.insert(message_num, log.data.clone());
+                    } else if topic_bytes == INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH {
+                        let message_num = U256::from_be_slice(log.topics[1].as_slice());
 
-                            // NOTE: This assumes that the blocks and transactions are in order
-                            // not sure if this is always the case, but saves us from looping through
-                            // the blocks to find the correct transaction by hashe
-                            let block_index = (log.block_number - blocks[0].block.number) as usize;
-                            let txn_index = log.transaction_index as usize;
-                            let txn = blocks[block_index].block.transactions[txn_index].clone();
+                        // NOTE: This assumes that the blocks and transactions are in order
+                        // not sure if this is always the case, but saves us from looping through
+                        // the blocks to find the correct transaction by hashe
+                        let block_index = (log.block_number - blocks[0].block.number) as usize;
+                        let txn_index = log.transaction_index as usize;
+                        let txn = blocks[block_index].block.transactions[txn_index].clone();
 
-                            let data = Bytes::from(txn.input);
-                            inbox_messages.insert(message_num, data);
-                        }
+                        let data = Bytes::from(txn.input);
+                        inbox_messages.insert(message_num, data);
+                    }
 
-                        return None;
-                    })
-                    .flatten()
+                    None
+                })
             })
             .collect::<Vec<_>>();
+
+        info!("Inbox messages: {:?}", inbox_messages);
+        info!("Delayed messages: {:?}", delayed_messages);
 
         // Here you can do something with inbox_messages if needed
         // For now we're just collecting them but not using them
