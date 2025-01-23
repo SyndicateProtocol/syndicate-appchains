@@ -984,6 +984,7 @@ dependencies = [
  "brotli",
  "clap",
  "common",
+ "contract-bindings",
  "eyre",
  "flate2",
  "hex",
