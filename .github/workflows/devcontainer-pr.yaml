@@ -1,9 +1,10 @@
 name: Dev Container Tests
 
 on:
-  # Temporarily disabled while we work on the justfile refactor
-  # pull_request:
-  # branches: [ main ]
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
   arb-test:
@@ -37,7 +38,7 @@ jobs:
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-pr-${{ github.event.pull_request.number }}
           runCmd: |
             # Run all verifications
-            just -f .devcontainer/justfile verify-all
+            just verify-all
 
       - name: Upload logs
         if: always()
