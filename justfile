@@ -213,9 +213,7 @@ metabased-sequencer-up: create-envrc
     @just _log-start "metabased-sequencer-up"
 
     @# Check if sequencer is already running by attempting a health check
-    @if curl --silent --fail --location {{ metabased_sequencer_url }} \
-        --header 'Content-Type: application/json' \
-        --data '{"jsonrpc":"2.0","method":"health","id":1}' >/dev/null 2>&1; then \
+    @if just metabased-sequencer-health-check >/dev/null 2>&1; then \
         echo "Metabased sequencer is already running at {{ metabased_sequencer_url }}"; \
     else \
         echo "Starting metabased sequencer..."; \
