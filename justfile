@@ -474,7 +474,7 @@ metabased-sequencer-verify: metabased-sequencer-up
     @just _log-end "metabased-sequencer-verify"
 
 # Sends a new transaction on a new test chain and metabased sequencer
-arb-test-sendRawTransaction: arb-up metabased-sequencer-up
+arb-verify-sendRawTransaction: arb-up metabased-sequencer-up
     @just _log-start "arb-test-sendRawTransaction"
 
     curl --silent --location {{ metabased_sequencer_url }} \
@@ -487,34 +487,6 @@ arb-test-sendRawTransaction: arb-up metabased-sequencer-up
     fi
 
     @just _log-end "arb-test-sendRawTransaction"
-
-# Run transaction test
-# TODO: Fix this script
-transaction-verify:
-    # FAILURE: Recipe failed with "RESPONSE: parameter not set". Script error in capturing transaction test response, similar to arb-network-verify failure.
-    @just _log-start "transaction-verify"
-
-    @echo "[STATUS] Running test transaction..."
-    RESPONSE=$(just arb-test-sendRawTransaction)
-    @echo "Response: $RESPONSE"
-
-    # Check if response contains an error
-    if echo "$RESPONSE" | grep -q '"error"'; then \
-        @echo "[ERROR] Transaction failed with error:" \
-        @echo "$RESPONSE" \
-        exit 1
-    fi
-
-    # Check if response contains expected result
-    if ! echo "$RESPONSE" | grep -q '"result"'; then \
-        @echo "[ERROR] Transaction response missing result field:" \
-        @echo "$RESPONSE" \
-        exit 1
-    fi
-    echo "[STATUS] Test L3 -> Arbitrum L2 transaction completed successfully"
-    exit 0
-
-    @just _log-end "transaction-verify"
 
 # Aggregated command for CI pipeline to run all verifications
 # TODO: Migrate to standard Justfile syntax with one single command + one echo
