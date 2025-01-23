@@ -143,8 +143,10 @@ impl Slotter {
                 if self.status.load() == Status::Stopped {
                     // TODO SEQ-479 - graceful shutdown triggered
                     // - stop processing new blocks
-                    // - go through the slots and save all safe slots to the DB (timestamp < current_time - MAX_WAIT_MS)
-                    // - potentially save all unsafe/opened blocks to the DB, so they can be resumed later
+                    // - go through the slots and save all safe slots to the DB (timestamp <
+                    //   current_time - MAX_WAIT_MS)
+                    // - potentially save all unsafe/opened blocks to the DB, so they can be resumed
+                    //   later
                     info!("Slotter stopped");
                     return;
                 }
