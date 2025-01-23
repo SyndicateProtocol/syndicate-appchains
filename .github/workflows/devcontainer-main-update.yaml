@@ -2,7 +2,17 @@ name: Dev Container Update
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
+
+# If any later dev container updates are pushed, cancel the earlier jobs
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Allow for package uploads to GCR
+permissions:
+  contents: read
+  packages: write
 
 jobs:
   update-cache:
