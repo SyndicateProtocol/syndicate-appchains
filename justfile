@@ -141,7 +141,7 @@ op-down:
     @just _log-end "op-down"
 
 # Starts Arbitrum Orbit devnet if one is not already running
-arb-up: foundry-all
+arb-up: create-envrc foundry-all
     @just _log-start "arb-up"
 
     @# Only run the node if health check fails
@@ -395,11 +395,6 @@ foundry-all: foundry-setup foundry-upgrade contract-deps
 op-all: op-clone foundry-all
     @echo "Post-setup OP script completed successfully. Ready to bring up the OP Stack devnet with op-up."
 
-# Run all Arbitrum setup steps in sequence necessary for `arb-up`
-# TODO: Move foundry-all to arb-up and get rid of this recipe
-arb-network-setup: foundry-all
-    @echo "Post-setup Arbitrum script completed successfully. Ready to bring up the Arbitrum Orbit devnet with arb-up."
-
 arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address run-metabased-sequencer
     @echo "Arbitrum Sequencer setup completed successfully. Running sequencer."
 
@@ -427,26 +422,6 @@ arb-test-sendRawTransaction: arb-health-check sequencer-health-check
     curl --location {{ metabased_sequencer_url }} \
     --header 'Content-Type: application/json' \
     --data '{"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["0xb85902f85682038501808088ffffffffffffffff808080c001a0d555dc3a308d5bde3d5bc665796f9e7d7125c1554667325533fe237c1aa120b5a07d97dae06082d3eb7fa8966b33f6ce51d7127dcddd5da3d8be9c448a72150a90"],"id":1}'
-
-# Setup and verify Arbitrum network configuration
-# TODO: Fix this script
-arb-network-verify:
-    # FAILURE: Recipe failed with "RESPONSE: parameter not set". Script error in capturing network setup response.
-    @just _log-start "arb-network-verify"
-
-    #! /usr/bin/env zsh
-    # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
-    set -euxo pipefail
-    # Create .envrc file
-    just create-envrc
-    [ -f {{ envrc_file }} ] || { echo ".envrc file not created successfully"; exit 1; }
-    # Set up network
-    RESPONSE=$(just arb-network-setup)
-    echo "Network setup: $RESPONSE"
-    if echo "$RESPONSE" || ! grep -q "Ready to bring up the Arbitrum Orbit devnet"; then echo "\[✓\] Network setup succeeded"; else echo "\[✗\] Network setup failed"; exit 1; fi
-    exit 0
-
-    @just _log-end "arb-network-verify"
 
 # Health check for Arbitrum node
 # TODO: Fix this script
