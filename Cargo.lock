@@ -994,7 +994,6 @@ dependencies = [
  "thiserror 2.0.11",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -1178,8 +1177,6 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "serde",
- "serde_json",
- "strum",
  "strum_macros",
 ]
 
@@ -2197,10 +2194,8 @@ dependencies = [
  "http",
  "http-body-util",
  "jsonrpsee",
- "pin-project-lite",
  "prometheus-client",
  "rand",
- "reqwest",
  "serde",
  "serde_json",
  "test-case",
@@ -2926,17 +2921,13 @@ dependencies = [
 name = "proxy"
 version = "0.1.0"
 dependencies = [
- "alloy",
  "bytes",
  "clap",
- "eyre",
  "http",
  "http-body-util",
  "hyper",
- "jsonrpsee",
  "pin-project-lite",
  "reqwest",
- "serde",
  "serde_json",
  "tokio",
  "tracing",
@@ -3575,10 +3566,7 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "common",
- "eyre",
  "serial_test",
- "strum",
- "strum_macros",
  "test-case",
  "thiserror 2.0.11",
  "tokio",

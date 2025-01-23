@@ -26,6 +26,9 @@ thiserror = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 
+[package.metadata.cargo-machete]
+ignored = ["strum"]
+
 [features]
 e2e-tests = []
 
