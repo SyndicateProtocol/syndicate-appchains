@@ -58,6 +58,7 @@ pub struct SequencingTransactionParser {
     sequencing_contract_address: Address,
 }
 
+// TODO SEQ-514: Link TransactionProcessed Event to the real contract MetabasedSequencerChain.sol
 sol! {
     #[derive(Debug, PartialEq, Eq)]
     #[sol(rpc)]
