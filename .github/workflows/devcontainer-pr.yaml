@@ -1,10 +1,12 @@
 name: Dev Container Tests
 
 on:
+  # Run workflow on every push to main
   push:
-    branches: [main]
+    branches:
+      - main
+  # Run workflow on all PRs
   pull_request:
-    branches: [main]
 
 jobs:
   arb-test:
