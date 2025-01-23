@@ -208,12 +208,19 @@ arb-deploy-chain: arb-up
 
     @just _log-end "arb-deploy-chain"
 
-# Runs sequencer
-# TODO: Allow script to detect if the sequencer is already running
+# Runs sequencer if not already running
 metabased-sequencer-up: create-envrc
     @just _log-start "metabased-sequencer-up"
 
-    . {{ envrc_file }} && cd {{ sequencer_root }} && cargo run -p interceptor
+    @# Check if sequencer is already running by attempting a health check
+    @if curl --silent --fail --location {{ metabased_sequencer_url }} \
+        --header 'Content-Type: application/json' \
+        --data '{"jsonrpc":"2.0","method":"health","id":1}' >/dev/null 2>&1; then \
+        echo "Metabased sequencer is already running at {{ metabased_sequencer_url }}"; \
+    else \
+        echo "Starting metabased sequencer..."; \
+        . {{ envrc_file }} && cd {{ sequencer_root }} && cargo run -p interceptor; \
+    fi
 
     @just _log-end "metabased-sequencer-up"
 
