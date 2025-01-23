@@ -15,6 +15,7 @@ alloy = { workspace = true, features = [
   "providers",
   "node-bindings",
   "rpc-types",
+  "rpc-types-anvil",
   "sol-types",
   "rlp",
   "contract",
