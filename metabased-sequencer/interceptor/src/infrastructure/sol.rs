@@ -53,12 +53,7 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
     async fn process_transaction(&self, tx: Bytes) -> Result<TxHash, Self::Error> {
         let result = debug_span!("process_transaction", account = ?self.account)
             .in_scope(|| async {
-                let pending_tx = self
-                    .contract()
-                    .processTransaction(tx)
-                    .send()
-                    .await
-                    .map_err(alloy::contract::Error::from)?;
+                let pending_tx = self.contract().processTransaction(tx).send().await?;
 
                 pending_tx
                     .with_required_confirmations(2)
