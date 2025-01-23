@@ -4,9 +4,9 @@ on:
   push:
     branches: [main]
   pull_request:
-    paths:
-      - "metabased-contracts/src/**/*.sol"
-      - "metabased-contracts/certora/specs/**/*.spec"
+    # paths:
+    # - "metabased-contracts/src/**/*.sol"
+    # - "metabased-contracts/certora/specs/**/*.spec"
 jobs:
   security:
     runs-on: ubuntu-latest
