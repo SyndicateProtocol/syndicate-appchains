@@ -11,6 +11,7 @@ repository.workspace = true
 [dependencies]
 common = { workspace = true }
 block-builder = { workspace = true }
+contract-bindings = { workspace = true }
 alloy = { workspace = true, features = [
   "providers",
   "sol-types",

@@ -1220,6 +1220,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "contract-bindings"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+]
+
+[[package]]
 name = "core-foundation"
 version = "0.9.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1449,6 +1456,7 @@ dependencies = [
  "alloy",
  "block-builder",
  "common",
+ "contract-bindings",
  "eyre",
  "reqwest",
  "strum",

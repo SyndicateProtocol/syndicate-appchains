@@ -1,0 +1,14 @@
+[package]
+name = "contract-bindings"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+alloy = { workspace = true, features = [
+  "providers",
+  "sol-types",
+  "signers",
+  "signer-local",
+  "k256",
+  "contract",
+] }
