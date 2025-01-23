@@ -7,6 +7,8 @@ use core::fmt;
 use std::{error::Error, fmt::Display};
 use tracing_subscriber::{fmt as subscriber_fmt, EnvFilter};
 
+// TODO(SEQ-515): Reconsider location, put me in `bin` ?
+
 #[allow(missing_docs)]
 #[derive(Debug)]
 pub enum TracingError {
