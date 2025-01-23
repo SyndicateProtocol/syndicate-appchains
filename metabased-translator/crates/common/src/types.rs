@@ -118,7 +118,7 @@ pub struct Receipt {
 pub struct Log {
     /// The hash of the block containing the log, or `null` if pending.
     #[serde(deserialize_with = "deserialize_b256")]
-    pub block_hash_test: B256,
+    pub block_hash: B256,
     /// The number of the block containing the log, or `null` if pending.
     #[serde(deserialize_with = "deserialize_hex_to_u64")]
     pub block_number: u64,
