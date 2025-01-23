@@ -448,8 +448,8 @@ metabased-sequencer-health-check:
     @just _log-end "metabased-sequencer-health-check"
 
 # Health check for Arbitrum node
-arb-health-verify: arb-up
-    @just _log-start "arb-health-verify"
+arb-verify: arb-up
+    @just _log-start "arb-verify"
 
     # Check if the Arbitrum node is ready via health check
     @echo "[STATUS] Waiting for Arbitrum node to be ready..."
@@ -458,7 +458,7 @@ arb-health-verify: arb-up
     done
     @echo "[STATUS] Arbitrum node is ready"
 
-    @just _log-end "arb-health-verify"
+    @just _log-end "arb-verify"
 
 # Setup and verify sequencer
 metabased-sequencer-verify: metabased-sequencer-up
@@ -489,26 +489,7 @@ arb-verify-sendRawTransaction: arb-up metabased-sequencer-up
     @just _log-end "arb-test-sendRawTransaction"
 
 # Aggregated command for CI pipeline to run all verifications
-# TODO: Migrate to standard Justfile syntax with one single command + one echo
-verify-all:
-    # FAILURE: Recipe will fail as it depends on multiple failing commands (arb-network-verify, arb-health-verify, transaction-verify) which have script errors in their implementations.
-    @just _log-start "verify-all"
-    #! /usr/bin/env zsh
-    # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
-    set -euxo pipefail
-
-    echo "[STATUS] Starting full verification process..."
-
-    # Run all verification steps in sequence
-    just arb-network-verify
-    just arb-health-verify
-    just sequencer-verify
-    just transaction-verify
-
-    echo "[STATUS] All verification steps completed successfully"
-    exit 0
-
-    @just _log-end "verify-all"
+verify-all: arb-verify metabased-sequencer-verify arb-verify-sendRawTransaction
 
 # Helper functions for command logging
 # Underscores are used to indicate a private function that can be called only
