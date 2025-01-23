@@ -231,14 +231,13 @@ metabased-sequencer-down:
     @just _log-start "metabased-sequencer-down"
 
     @# Stop sequencer if it's running
-    @if curl --silent --fail --location {{ metabased_sequencer_url }} \
-        --header 'Content-Type: application/json' \
-        --data '{"jsonrpc":"2.0","method":"health","id":1}' >/dev/null 2>&1; then \
+    @if just metabased-sequencer-health-check >/dev/null 2>&1; then \
         echo "Stopping metabased sequencer..."; \
-        pkill -f interceptor; \
+        pkill -q -f interceptor; \
+        echo "Metabased sequencer stopped."; \
+    else \
+        echo "Metabased sequencer already stopped."; \
     fi
-
-    @echo "Metabased sequencer stopped."
 
     @just _log-end "metabased-sequencer-down"
 
