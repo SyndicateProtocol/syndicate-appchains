@@ -26,7 +26,8 @@ impl EthClient {
     ///
     /// # Returns
     ///
-    /// A result containing the `EthClient` instance if successful, or an error if the connection fails.
+    /// A result containing the `EthClient` instance if successful, or an error if the connection
+    /// fails.
     pub(crate) async fn new(rpc_url: &str) -> Result<Self, Error> {
         let chain = ProviderBuilder::new().on_builtin(rpc_url).await?;
         Ok(Self { chain })
@@ -42,9 +43,10 @@ impl EthClient {
     ///
     /// A result containing the `Block` if found, or an error if the block is not found.
     pub(crate) async fn get_block_by_number(&self, block_number: u64) -> Result<Block, Error> {
+        let block_number_hex = format!("0x{:x}", block_number);
         self.chain
             .client()
-            .request::<_, Option<Block>>("eth_getBlockByNumber", (block_number, true))
+            .request::<_, Option<Block>>("eth_getBlockByNumber", (block_number_hex, true))
             .await?
             .ok_or_else(|| eyre!("Block not found"))
     }
@@ -62,9 +64,10 @@ impl EthClient {
         &self,
         block_number: u64,
     ) -> Result<Vec<Receipt>, Error> {
+        let block_number_hex = format!("0x{:x}", block_number);
         self.chain
             .client()
-            .request::<_, Option<Vec<Receipt>>>("eth_getBlockReceipts", (block_number,))
+            .request::<_, Option<Vec<Receipt>>>("eth_getBlockReceipts", (block_number_hex,))
             .await?
             .ok_or_else(|| eyre!("Block receipts not found"))
     }

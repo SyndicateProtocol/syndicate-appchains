@@ -1,6 +1,13 @@
 //! Types module for metabased-translator
 
-use serde::Deserialize;
+use alloy::{
+    hex,
+    primitives::{Address, Bytes, B256},
+};
+use serde::{
+    de::{self, Deserializer},
+    Deserialize,
+};
 use std::fmt;
 use strum_macros::Display;
 
@@ -14,112 +21,126 @@ pub struct BlockAndReceipts {
 }
 
 #[derive(Deserialize, Debug, Clone)]
-/// **`Block`**: Represents an Ethereum block, including details like its hash, number, timestamp, and the transactions it contains.
+#[serde(rename_all = "camelCase")]
+/// **`Block`**: Represents an Ethereum block, including details like its hash, number, timestamp,
+/// and the transactions it contains.
 pub struct Block {
     /// The hash of the block.
-    pub hash: String,
+    #[serde(deserialize_with = "deserialize_b256")]
+    pub hash: B256,
     /// The block number.
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
     pub number: u64,
     /// The hash of the parent block.
-    #[serde(rename = "parentHash")]
-    pub parent_hash: String,
+    #[serde(deserialize_with = "deserialize_b256")]
+    pub parent_hash: B256,
     /// The logs bloom filter for the block.
-    #[serde(rename = "logsBloom")]
     pub logs_bloom: String,
     /// The root hash of the transactions trie.
-    #[serde(rename = "transactionsRoot")]
     pub transactions_root: String,
     /// The root hash of the final state trie.
-    #[serde(rename = "stateRoot")]
     pub state_root: String,
     /// The root hash of the receipts trie.
-    #[serde(rename = "receiptsRoot")]
     pub receipts_root: String,
     /// The timestamp when the block was mined, in Unix time.
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
     pub timestamp: u64,
     /// The transactions included in the block.
     pub transactions: Vec<Transaction>,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-/// **`Transaction`**: Represents a single transaction within a block, including fields such as the transaction hash, sender/recipient addresses, value, and input data.
+#[serde(rename_all = "camelCase")]
+/// **`Transaction`**: Represents a single transaction within a block, including fields such as the
+/// transaction hash, sender/recipient addresses, value, and input data.
 pub struct Transaction {
     /// The hash of the block containing this transaction, or `null` if pending.
-    #[serde(rename = "blockHash")]
-    pub block_hash: String,
+    #[serde(deserialize_with = "deserialize_b256")]
+    pub block_hash: B256,
     /// The number of the block containing this transaction, or `null` if pending.
-    #[serde(rename = "blockNumber")]
-    pub block_number: String,
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
+    pub block_number: u64,
     /// The sender's address.
-    pub from: String,
+    #[serde(deserialize_with = "deserialize_address")]
+    pub from: Address,
     /// The transaction hash.
-    pub hash: String,
+    #[serde(deserialize_with = "deserialize_b256")]
+    pub hash: B256,
     /// The data payload of the transaction.
     pub input: String,
     /// The number of transactions sent by the sender.
-    pub nonce: String,
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
+    pub nonce: u64,
     /// The recipient's address, or `null` if the transaction creates a contract.
-    pub to: Option<String>,
-    /// The index of this transaction in the block, or `null` if pending.
-    #[serde(rename = "transactionIndex")]
+    #[serde(deserialize_with = "deserialize_optional_address")]
+    pub to: Option<Address>,
+    /// The index of this transaction in the block.
     pub transaction_index: String,
     /// The amount of Wei transferred.
     pub value: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-/// **`Receipt`**: Contains the result of a transaction, including fields like status, logs, and potentially a contract address if one was created.
+#[serde(rename_all = "camelCase")]
+/// **`Receipt`**: Contains the result of a transaction, including fields like status, logs, and
+/// potentially a contract address if one was created.
 pub struct Receipt {
     /// The hash of the block containing the transaction.
-    #[serde(rename = "blockHash")]
-    pub block_hash: String,
+    #[serde(deserialize_with = "deserialize_b256")]
+    pub block_hash: B256,
     /// The number of the block containing the transaction.
-    #[serde(rename = "blockNumber")]
-    pub block_number: String,
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
+    pub block_number: u64,
     /// The sender's address.
-    pub from: String,
+    #[serde(deserialize_with = "deserialize_address")]
+    pub from: Address,
     /// The recipient's address.
-    pub to: Option<String>,
+    #[serde(deserialize_with = "deserialize_optional_address")]
+    pub to: Option<Address>,
     /// The address of the contract created by the transaction, if applicable.
-    #[serde(rename = "contractAddress")]
-    pub contract_address: Option<String>,
+    #[serde(deserialize_with = "deserialize_optional_address")]
+    pub contract_address: Option<Address>,
     /// The logs generated by the transaction.
     pub logs: Vec<Log>,
     /// The logs bloom filter for the transaction.
-    #[serde(rename = "logsBloom")]
     pub logs_bloom: String,
     /// The transaction's execution status.
     pub status: String,
     /// The receipt type, if available.
     #[serde(rename = "type")]
-    pub receipt_type: Option<String>,
+    pub receipt_type: String,
 }
 
 #[derive(Deserialize, Debug, Clone)]
-/// *`Log`**: Represents an individual log entry emitted by a smart contract during a transaction, containing information such as topics, data, and whether it was removed due to a reorganization.
+#[serde(rename_all = "camelCase")]
+/// *`Log`**: Represents an individual log entry emitted by a smart contract during a transaction,
+/// containing information such as topics, data, and whether it was removed due to a reorganization.
 pub struct Log {
     /// The hash of the block containing the log, or `null` if pending.
-    #[serde(rename = "blockHash")]
-    pub block_hash: String,
+    #[serde(deserialize_with = "deserialize_b256")]
+    pub block_hash_test: B256,
     /// The number of the block containing the log, or `null` if pending.
-    #[serde(rename = "blockNumber")]
-    pub block_number: String,
-    /// The index of the transaction that generated the log, or `null` if pending.
-    pub transaction_index: Option<String>,
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
+    pub block_number: u64,
+    /// The index of the transaction that generated the log
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
+    pub transaction_index: u64,
     /// The address from which the log originated.
-    pub address: String,
-    /// The index of the log entry, or `null` if pending.
-    #[serde(rename = "logIndex")]
-    pub log_index: Option<String>,
+    #[serde(deserialize_with = "deserialize_address")]
+    pub address: Address,
+    /// The index of the log entry
+    #[serde(deserialize_with = "deserialize_hex_to_u64")]
+    pub log_index: u64,
     /// The data associated with the log.
-    pub data: String,
+    pub data: Bytes,
     /// A flag indicating if the log was removed due to a chain reorganization.
     pub removed: bool,
     /// The topics associated with the log.
-    pub topics: Vec<String>,
-    /// The hash of the transaction that generated the log, or `null` if pending.
-    #[serde(rename = "transactionHash")]
-    pub transaction_hash: Option<String>,
+    #[serde(deserialize_with = "deserialize_b256_vec")]
+    pub topics: Vec<B256>,
+    /// The hash of the transaction that generated the log
+    #[serde(deserialize_with = "deserialize_b256")]
+    pub transaction_hash: B256,
 }
 
 #[allow(missing_docs)] // self-explanatory
@@ -134,11 +155,14 @@ pub enum Chain {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
 #[strum(serialize_all = "lowercase")]
 pub enum SlotState {
-    /// A slot that is considered final and cannot rollback (we don't expect any underlying chains to reorg this far)
+    /// A slot that is considered final and cannot rollback (we don't expect any underlying chains
+    /// to reorg this far)
     Finalized,
-    /// A slot that is considered final according to the source L2s finality guarantees (it can only be rolled back if a L1 reorg happens)
+    /// A slot that is considered final according to the source L2s finality guarantees (it can
+    /// only be rolled back if a L1 reorg happens)
     Safe,
-    /// A slot that we don't expect to fit more blocks into. It should be considered cannonical unless a reorg happens
+    /// A slot that we don't expect to fit more blocks into. It should be considered cannonical
+    /// unless a reorg happens
     Unsafe,
     /// A slot to which incoming blocks might still be added
     Open,
@@ -210,4 +234,76 @@ fn format_blocks(blocks: &[BlockAndReceipts]) -> String {
         .map(|b| format!("#{} ({})", b.block.number, b.block.hash))
         .collect::<Vec<_>>()
         .join(", ")
+}
+
+fn deserialize_address<'de, D>(deserializer: D) -> Result<Address, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let address_str: String = Deserialize::deserialize(deserializer)?;
+    let address: Address = address_str
+        .parse()
+        .map_err(|err| de::Error::custom(format!("Failed to parse address: {err}")))?;
+    Ok(address)
+}
+
+fn deserialize_optional_address<'de, D>(deserializer: D) -> Result<Option<Address>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let opt: Option<String> = Option::deserialize(deserializer)?;
+    if let Some(address_str) = opt {
+        let address: Address = address_str
+            .parse()
+            .map_err(|err| de::Error::custom(format!("Failed to parse address: {err}")))?;
+        Ok(Some(address))
+    } else {
+        Ok(None)
+    }
+}
+
+fn deserialize_hex_to_u64<'de, D>(deserializer: D) -> Result<u64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let hex_str: String = Deserialize::deserialize(deserializer)?;
+
+    // Remove "0x" prefix if present, then parse as hexadecimal.
+    u64::from_str_radix(hex_str.trim_start_matches("0x"), 16)
+        .map_err(|err| de::Error::custom(format!("Failed to parse hex to u64: {}", err)))
+}
+
+fn deserialize_b256<'de, D>(deserializer: D) -> Result<B256, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let hex_str: String = Deserialize::deserialize(deserializer)?;
+
+    let decoded = hex::decode(hex_str.trim_start_matches("0x"))
+        .map_err(|err| de::Error::custom(format!("Failed to decode hex string: {err}")))?;
+
+    let array: [u8; 32] = decoded
+        .try_into()
+        .map_err(|_| de::Error::custom("Failed to convert to a 32-byte array"))?;
+
+    Ok(B256::from(array))
+}
+
+fn deserialize_b256_vec<'de, D>(deserializer: D) -> Result<Vec<B256>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let vec: Vec<String> = Deserialize::deserialize(deserializer)?;
+    vec.into_iter()
+        .map(|s| {
+            let decoded = hex::decode(s.trim_start_matches("0x"))
+                .map_err(|err| de::Error::custom(format!("Failed to decode hex string: {err}")))?;
+
+            let array: [u8; 32] = decoded
+                .try_into()
+                .map_err(|_| de::Error::custom("Failed to convert to a 32-byte array"))?;
+
+            Ok(B256::from(array))
+        })
+        .collect()
 }

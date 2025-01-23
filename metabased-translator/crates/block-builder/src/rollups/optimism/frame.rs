@@ -7,7 +7,8 @@
 //! - The frame payload data
 //! - A flag indicating if this is the last frame
 //!
-//! The encoded frames are prefixed with a version byte and can be submitted as batcher transactions.
+//! The encoded frames are prefixed with a version byte and can be submitted as batcher
+//! transactions.
 use alloy::primitives::B128;
 use std::io::{self, Write};
 

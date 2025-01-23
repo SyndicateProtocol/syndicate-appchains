@@ -221,9 +221,7 @@ fn bench_batch_sizes(c: &mut Criterion) {
         let mut txs = Vec::new();
         txs.push(Bytes::copy_from_slice(&SAMPLE_TX_1));
         for _ in 0..*size {
-            txs.push(Bytes::copy_from_slice(
-                generate_random_raw_transaction_rlp().as_ref(),
-            ));
+            txs.push(Bytes::copy_from_slice(generate_random_raw_transaction_rlp().as_ref()));
         }
 
         // Pre-calculate sizes
@@ -273,10 +271,5 @@ fn bench_batch_sizes(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(
-    benches,
-    bench_single_tx,
-    bench_batch_multiple_tx,
-    bench_batch_sizes
-);
+criterion_group!(benches, bench_single_tx, bench_batch_multiple_tx, bench_batch_sizes);
 criterion_main!(benches);

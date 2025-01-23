@@ -9,6 +9,7 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
+alloy = { workspace = true }
 common = { workspace = true }
 eyre = { workspace = true }
 tokio = { workspace = true, features = ["sync", "macros", "rt"] }

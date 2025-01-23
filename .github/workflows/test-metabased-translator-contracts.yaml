@@ -9,7 +9,7 @@ on:
   # Only run on PRs that touch metabased-translator/contracts
   pull_request:
     paths:
-      - "../../metabased-translator/block-builder/contracts/**"
+      - "metabased-translator/contracts/**"
 
 env:
   FOUNDRY_PROFILE: ci
@@ -32,7 +32,7 @@ jobs:
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
-          version: nightly
+          version: stable
 
       - name: Show Forge version
         run: |
