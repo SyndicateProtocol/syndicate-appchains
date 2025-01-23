@@ -15,12 +15,15 @@ tokio = { workspace = true, features = ["sync", "macros", "rt"] }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
-
+strum = { workspace = true }
+strum_macros = { workspace = true }
+rocksdb = { workspace = true }
+derivative = { workspace = true }
 
 [dev-dependencies]
 test-case = { workspace = true }
 serial_test = { workspace = true }
-
+tracing-test = { workspace = true }
 
 [lints]
 workspace = true

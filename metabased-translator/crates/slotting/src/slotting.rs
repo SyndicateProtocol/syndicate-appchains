@@ -2,9 +2,11 @@
 
 use crate::config::SlottingConfig;
 use common::{
+    db::{DbError, TranslatorStore},
     service_status::{ServiceStatus, Status},
     types::{Block, BlockAndReceipts, Chain, Slot, SlotState},
 };
+use derivative::Derivative;
 use std::{cmp::Ordering, collections::LinkedList};
 use thiserror::Error;
 use tokio::{
@@ -31,15 +33,16 @@ const MAX_WAIT_MS: u64 = 24 * 60 * 60 * 1000;
 /// - Slots older than max_slots are dropped
 /// - A slot becomes Unsafe when both chains progress past it
 /// ```
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct Slotter {
     config: SlottingConfig,
 
     sequencing_chain_rx: Receiver<BlockAndReceipts>,
     settlement_chain_rx: Receiver<BlockAndReceipts>,
 
-    latest_sequencing_chain_block: Option<BlockRef>,
-    latest_settlement_chain_block: Option<BlockRef>,
+    latest_sequencing_block: Option<BlockRef>,
+    latest_settlement_block: Option<BlockRef>,
 
     status: ServiceStatus,
 
@@ -48,6 +51,9 @@ pub struct Slotter {
 
     /// Maximum number of slots to keep
     max_slots: usize,
+
+    #[derivative(Debug = "ignore")]
+    store: Box<dyn TranslatorStore + Send + Sync>,
 }
 
 #[derive(Debug)]
@@ -70,6 +76,7 @@ impl Slotter {
     /// * `sequencing_chain_receiver` - Channel receiving blocks from the sequencing chain
     /// * `settlement_chain_receiver` - Channel receiving blocks from the settlement chain
     /// * `config` - Configuration for slot timing and initial state
+    /// * `store` - Storage backend for saving slots
     ///
     /// # Details
     /// The [`Slotter`] maintains a window of slots spanning the last 24 hours ([`MAX_WAIT_MS`]),
@@ -84,23 +91,38 @@ impl Slotter {
         sequencing_chain_receiver: Receiver<BlockAndReceipts>,
         settlement_chain_receiver: Receiver<BlockAndReceipts>,
         config: SlottingConfig,
-    ) -> Self {
+        store: Box<dyn TranslatorStore + Send + Sync>,
+    ) -> Result<Self, SlotterError> {
+        // Get latest slot from DB
+        let latest_slot = store
+            .get_latest_safe_state()
+            .await?
+            .unwrap_or_else(|| Slot::new(config.start_slot_number, config.start_slot_timestamp));
+
+        // Infer latest blocks from slot
+        let latest_sequencing_block =
+            latest_slot.sequencing_chain_blocks.last().map(|block| BlockRef::new(&block.block));
+
+        let latest_settlement_block =
+            latest_slot.settlement_chain_blocks.last().map(|block| BlockRef::new(&block.block));
+
         let max_slots = (MAX_WAIT_MS / config.slot_duration_ms) as usize;
 
-        Self {
+        Ok(Self {
             sequencing_chain_rx: sequencing_chain_receiver,
             settlement_chain_rx: settlement_chain_receiver,
-            latest_sequencing_chain_block: None,
-            latest_settlement_chain_block: None,
-            config: config.clone(),
+            latest_sequencing_block,
+            latest_settlement_block,
+            config,
             status: ServiceStatus::new(),
             slots: {
                 let mut slots = LinkedList::new();
-                slots.push_front(Slot::new(config.start_slot_number, config.start_slot_timestamp));
+                slots.push_front(latest_slot);
                 slots
             },
             max_slots,
-        }
+            store,
+        })
     }
 
     /// Starts the [`Slotter`] in a new thread.
@@ -156,31 +178,25 @@ impl Slotter {
                     Ok(_) => (),
                     Err(e) => match e {
                         SlotterError::ReorgDetected { .. } => {
-                            panic!("Reorgs not yet implemented {e}"); // TODO SEQ-429 - implement
-                                                                      // reorg handing
+                            panic!("Reorgs not yet implemented {e}"); // TODO SEQ-429 - implement reorg handing
                         }
                         SlotterError::BlockNumberSkipped { .. } => {
-                            panic!("Block number skipped {e}"); // TODO SEQ-489 - decide what to do
-                                                                // if a block is skipped
+                            panic!("Block number skipped {e}"); // TODO SEQ-489 - decide what to do if a block is skipped
                         }
                         SlotterError::BlockTooOld { .. } => {
-                            panic!("Block too old {e}"); // TODO SEQ-489 - decide what to do if a
-                                                         // block is too old
+                            panic!("Block too old {e}"); // TODO SEQ-489 - decide what to do if a block is too old
                         }
                         SlotterError::NoSlotsAvailable => {
                             panic!("No slots available. This should never happen - if it does, it's an implementation error. {e}");
                         }
                         SlotterError::SlotSendError(_) => {
-                            panic!("Failed to send slot through channel: {e}"); // TODO SEQ-489 -
-                                                                                // decide what to do
-                                                                                // here (likely to
-                                                                                // occur during
-                                                                                // shutdown, or the
-                                                                                // received is
-                                                                                // blocked)
+                            panic!("Failed to send slot through channel: {e}"); // TODO SEQ-489 - decide what to do here (likely to occur during shutdown, or the received is blocked)
                         }
                         SlotterError::EarlierTimestamp { .. } => {
                             panic!("Earlier timestamp - this should never happen (where a block is received with the expected block number, but a lower timestamp) {e}");
+                        }
+                        SlotterError::DbError(_) => {
+                            panic!("Database error: {e}"); // TODO SEQ-489 - decide what to do here
                         }
                     },
                 }
@@ -225,8 +241,8 @@ impl Slotter {
     ) -> Result<(), SlotterError> {
         // Get the other chain's latest block timestamp
         let other_chain_timestamp = match chain {
-            Chain::Sequencing => self.latest_settlement_chain_block.as_ref(),
-            Chain::Settlement => self.latest_sequencing_chain_block.as_ref(),
+            Chain::Sequencing => self.latest_settlement_block.as_ref(),
+            Chain::Settlement => self.latest_sequencing_block.as_ref(),
         }
         .map(|b| b.timestamp);
 
@@ -303,8 +319,7 @@ impl Slotter {
                 // Create empty slots until we reach or pass the block's timestamp
                 // this accomplishes two things:
                 // - it creates slots for which we might still receive blocks (from the other chain)
-                // - keeps the list full, meaning the max_slots limit will always trigger on the
-                //   correct max_wait window
+                // - keeps the list full, meaning the max_slots limit will always trigger on the correct max_wait window
                 while latest_timestamp < block_timestamp {
                     let next_timestamp = latest_timestamp + slot_duration_ms;
                     let next_slot_number = latest_slot_number + 1;
@@ -326,17 +341,21 @@ impl Slotter {
         Ok(())
     }
 
+    /// `cleanup_slots` will remove slots that are older than the `max_wait_ms` and mark them as safe. (any slots not marked as unsafe until this point will be sent through the channel)
     async fn cleanup_slots(&mut self, sender: &Sender<Slot>) -> Result<(), SlotterError> {
-        // Clean up old slots
         debug!("Cleaning up slots");
         while self.slots.len() > self.max_slots {
             if let Some(mut slot) = self.slots.pop_back() {
-                if slot.state == SlotState::Open {
-                    debug!(%slot, "Cleaned up old slot, marking as unsafe and sending");
-                    slot.state = SlotState::Unsafe;
-                    sender.send(slot).await?
-                } else {
-                    debug!(%slot, "Cleaned up old slot");
+                debug!(%slot, "Cleaning up old slot, marking as safe and sending if open");
+                let prev_state = slot.state;
+                slot.state = SlotState::Safe;
+
+                // Save to DB first
+                self.store.save(&slot.slot_number.to_be_bytes(), &slot).await?;
+
+                // Send clone if was open
+                if prev_state == SlotState::Open {
+                    sender.send(slot.clone()).await?
                 }
             }
         }
@@ -345,8 +364,8 @@ impl Slotter {
 
     fn update_latest_block(&mut self, block: &Block, chain: Chain) -> Result<(), SlotterError> {
         if let Some(latest) = match chain {
-            Chain::Sequencing => self.latest_sequencing_chain_block.as_ref(),
-            Chain::Settlement => self.latest_settlement_chain_block.as_ref(),
+            Chain::Sequencing => self.latest_sequencing_block.as_ref(),
+            Chain::Settlement => self.latest_settlement_block.as_ref(),
         } {
             if block.number <= latest.number {
                 return Err(SlotterError::ReorgDetected {
@@ -382,8 +401,8 @@ impl Slotter {
         );
 
         match chain {
-            Chain::Sequencing => self.latest_sequencing_chain_block = Some(BlockRef::new(block)),
-            Chain::Settlement => self.latest_settlement_chain_block = Some(BlockRef::new(block)),
+            Chain::Sequencing => self.latest_sequencing_block = Some(BlockRef::new(block)),
+            Chain::Settlement => self.latest_settlement_block = Some(BlockRef::new(block)),
         }
         Ok(())
     }
@@ -412,6 +431,7 @@ impl From<SendError<Slot>> for SlotterError {
 ///
 /// The slot will include blocks with timestamps:
 /// - 988 < timestamp <= 1000
+///
 const fn block_slot_ordering(
     block_timestamp_ms: u64,
     slot_timestamp_ms: u64,
@@ -448,10 +468,15 @@ pub enum SlotterError {
 
     #[error("{chain} chain timestamp must not decrease. Current: {current}, Received: {received}")]
     EarlierTimestamp { chain: Chain, current: u64, received: u64 },
+
+    #[error("Database error: {0}")]
+    DbError(#[from] DbError),
 }
 
 #[cfg(test)]
 mod tests {
+    use common::db::RocksDbStore;
+
     use super::*;
     use alloy::primitives::B256;
     use std::str::FromStr;
@@ -461,6 +486,7 @@ mod tests {
     ) -> (Slotter, Sender<BlockAndReceipts>, Sender<BlockAndReceipts>) {
         let (seq_tx, seq_rx) = channel(100);
         let (settle_tx, settle_rx) = channel(100);
+        let store = Box::new(RocksDbStore::new(common::db::test_path().as_str()).unwrap());
 
         let slotter = Slotter::new(
             seq_rx,
@@ -470,8 +496,10 @@ mod tests {
                 start_slot_number: 0,
                 start_slot_timestamp: slot_start_timestamp_ms,
             },
+            store,
         )
-        .await;
+        .await
+        .unwrap();
 
         (slotter, seq_tx, settle_tx)
     }
@@ -524,6 +552,7 @@ mod tests {
     /// # block number
     /// ```
     #[tokio::test]
+    #[tracing_test::traced_test]
     async fn test_slotter() {
         let slot_start_timestamp_ms = 10_000;
         let slot_duration_ms = 1_000;

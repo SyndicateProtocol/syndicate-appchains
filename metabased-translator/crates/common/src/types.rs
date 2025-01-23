@@ -6,12 +6,12 @@ use alloy::{
 };
 use serde::{
     de::{self, Deserializer},
-    Deserialize,
+    Deserialize, Serialize,
 };
 use std::fmt;
 use strum_macros::Display;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 /// **`BlockAndReceipts`**: Contains both a `Block` and the associated list of `Receipt` objects.
 pub struct BlockAndReceipts {
     /// The block data.
@@ -20,7 +20,7 @@ pub struct BlockAndReceipts {
     pub receipts: Vec<Receipt>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 /// **`Block`**: Represents an Ethereum block, including details like its hash, number, timestamp,
 /// and the transactions it contains.
@@ -49,7 +49,7 @@ pub struct Block {
     pub transactions: Vec<Transaction>,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 /// **`Transaction`**: Represents a single transaction within a block, including fields such as the
 /// transaction hash, sender/recipient addresses, value, and input data.
@@ -80,7 +80,7 @@ pub struct Transaction {
     pub value: String,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 /// **`Receipt`**: Contains the result of a transaction, including fields like status, logs, and
 /// potentially a contract address if one was created.
@@ -111,7 +111,7 @@ pub struct Receipt {
     pub receipt_type: String,
 }
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 /// *`Log`**: Represents an individual log entry emitted by a smart contract during a transaction,
 /// containing information such as topics, data, and whether it was removed due to a reorganization.
@@ -152,7 +152,7 @@ pub enum Chain {
 }
 
 /// The state of a slot describing its finality
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, Serialize, Deserialize)]
 #[strum(serialize_all = "lowercase")]
 pub enum SlotState {
     /// A slot that is considered final and cannot rollback (we don't expect any underlying chains
@@ -169,7 +169,7 @@ pub enum SlotState {
 }
 
 /// A `Slot` is a collection of source chain blocks  to be sent to the block builder
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Slot {
     /// the number of the slot - `slot_number` == `MetaChain`'s block number
     pub slot_number: u64,
