@@ -1,6 +1,5 @@
 //! This module contains the logic for setting up the test environment for e2e tests
 
-use crate::contract_bindings::metabasedsequencerchain::MetabasedSequencerChain;
 use alloy::{
     hex,
     network::{Ethereum, EthereumWallet},
@@ -13,6 +12,7 @@ use alloy::{
     sol_types::private::Bytes,
     transports::http::Http,
 };
+use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain;
 use eyre::{eyre, Error};
 use reqwest::{Client, Url};
 use std::str::FromStr;

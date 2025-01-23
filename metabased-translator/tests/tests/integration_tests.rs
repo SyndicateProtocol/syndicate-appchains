@@ -9,14 +9,11 @@ use alloy::{
     rpc::types::TransactionRequest,
     signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
 };
-use block_builder::{
-    connectors::anvil::MetaChainProvider,
-    contract_bindings::{
-        counter::Counter, ibridge::IBridge, iinbox::IInbox, isequencerinbox::ISequencerInbox,
-    },
-    rollups::arbitrum,
-};
+use block_builder::{connectors::anvil::MetaChainProvider, rollups::arbitrum};
 use common::types::Block;
+use contract_bindings::arbitrum::{
+    counter::Counter, ibridge::IBridge, iinbox::IInbox, isequencerinbox::ISequencerInbox,
+};
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::{eyre, OptionExt, Result};
 use reqwest::Url;
