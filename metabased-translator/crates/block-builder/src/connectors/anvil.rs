@@ -122,11 +122,16 @@ impl MetaChainProvider {
     }
 
     /// Submits a transaction to the `MetaChain`
-    pub async fn submit_txn(&self, txn: TransactionRequest) -> Result<String> {
-        let pending_txn =
-            self.provider.send_transaction(txn).await.map_err(BlockBuilderError::SubmitTxnError)?;
+    pub async fn submit_txns(&self, txns: Vec<TransactionRequest>) -> eyre::Result<()> {
+        for txn in txns {
+            let _ = self
+                .provider
+                .send_transaction(txn)
+                .await
+                .map_err(BlockBuilderError::SubmitTxnError)?;
+        }
 
-        Ok(pending_txn.tx_hash().to_string())
+        Ok(())
     }
 
     /// Mines a block on the `MetaChain`

@@ -49,23 +49,20 @@ impl BlockBuilder {
         while let Some(slot) = self.slotter_rx.recv().await {
             info!("Received slot: {:?}", slot);
 
-            // Process sequencing chain blocks into mB transactions
-            let mbtxs = self.builder.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
-
-            // TODO (SEQ-416): [OP / ARB] Process deposit transactions
-
-            // [OP / ARB] Build and submit batch
-            let batch_txn = match self.builder.build_batch_txn(mbtxs).await {
-                Ok(txn) => txn,
+            // [OP / ARB] Build block of MChain transactions from slot
+            let transactions = match self.builder.build_block_from_slot(slot.clone()).await {
+                Ok(transactions) => transactions,
                 Err(e) => {
                     error!("Error building batch transaction: {}", e);
                     continue;
                 }
             };
 
-            // Submit batch transaction to mchain
-            if let Err(e) = self.mchain.submit_txn(batch_txn).await {
-                error!("Error submitting transaction: {}", e);
+            info!("Submitting {} transactions", transactions.len());
+
+            // Submit transactions to mchain
+            if let Err(e) = self.mchain.submit_txns(transactions).await {
+                log_error!("Error submitting transaction: {}", e);
                 continue;
             }
 
