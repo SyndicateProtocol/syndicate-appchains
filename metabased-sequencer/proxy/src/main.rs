@@ -10,7 +10,7 @@ use tokio::{net::TcpListener, task::JoinSet};
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
-#[path = "../benches/support/mod.rs"]
+#[path = "support/mod.rs"]
 mod support;
 use support::TokioIo;
 

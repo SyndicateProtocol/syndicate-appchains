@@ -14,7 +14,6 @@ alloy = { workspace = true, features = [
   "signer-local",
   "k256",
 ] }
-alloy-rlp = { workspace = true }
 figment = { workspace = true, features = ["env"] }
 jsonrpsee = { workspace = true, features = ["server"] }
 tokio = { workspace = true }
@@ -25,9 +24,7 @@ tracing = { workspace = true, features = ["attributes"] }
 clap = { workspace = true, features = ["derive"] }
 bytes = { workspace = true }
 http-body-util = { workspace = true }
-pin-project-lite = { workspace = true }
 http = { workspace = true }
-reqwest = { workspace = true }
 serde = { workspace = true }
 url = { workspace = true, features = ["serde"] }
 rand = { workspace = true }
@@ -38,6 +35,7 @@ tower-layer = { workspace = true }
 tower-service = { workspace = true }
 
 [dev-dependencies]
+alloy-rlp = { workspace = true }
 test-case = { workspace = true }
 const_format = { workspace = true }
 criterion = { workspace = true }

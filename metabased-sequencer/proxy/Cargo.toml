@@ -4,10 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-alloy = { workspace = true }
-jsonrpsee = { workspace = true, features = ["server"] }
 tokio = { workspace = true }
-eyre = { workspace = true }
 serde_json = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
 tracing = { workspace = true }
@@ -18,4 +15,3 @@ http-body-util = { workspace = true }
 pin-project-lite = { workspace = true }
 http = { workspace = true }
 reqwest = { workspace = true }
-serde = { workspace = true }

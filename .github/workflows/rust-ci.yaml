@@ -43,6 +43,37 @@ jobs:
       - name: Run Clippy
         run: cargo clippy --workspace --all-targets --all-features
 
+  fmt:
+    name: Fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Rust toolchain, clippy, and rustfmt
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install nightly --profile minimal
+          rustup component add --toolchain nightly-x86_64-unknown-linux-gnu rustfmt
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Cache entire workspace
+          workspaces: "."
+
+      # Run fmt check on entire workspace
+      - name: Run Fmt
+        run: cargo +nightly fmt --all --check -- --unstable-features
+
+  machete:
+    name: Machete
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Machete
+        uses: bnjbvr/cargo-machete@main
+
   test:
     name: Tests
     runs-on: ubuntu-latest
