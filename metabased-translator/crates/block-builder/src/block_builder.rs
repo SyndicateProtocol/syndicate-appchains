@@ -27,10 +27,12 @@ impl BlockBuilder {
         slotter_rx: Receiver<Slot>,
         config: BlockBuilderConfig,
     ) -> Result<Self, Error> {
-        let mchain = MetaChainProvider::start(config).await?;
+        let mchain = MetaChainProvider::start(config.clone()).await?;
 
         // TODO (SEQ-481): Dynamically select builder based on config
-        let builder = Box::new(ArbitrumBlockBuilder::new());
+        let builder = Box::new(ArbitrumBlockBuilder::new(
+            config.sequencing_contract_address,
+        ));
 
         Ok(Self {
             slotter_rx,
@@ -83,7 +85,6 @@ mod tests {
     use tokio::sync::mpsc;
 
     /// Test the block builder startup and basic functionality
-    /// 
     /// This test requires Anvil (part of Foundry toolchain) to simulate a local Ethereum node.
     /// The test spawns an Anvil instance with custom parameters for gas and mining settings.
     #[tokio::test]

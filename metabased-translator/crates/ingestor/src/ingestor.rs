@@ -58,7 +58,6 @@ impl Ingestor {
     /// The block and its receipts.
     async fn get_block_and_receipts(&self, block_number: u64) -> Result<BlockAndReceipts, Error> {
         let block = self.client.get_block_by_number(block_number).await?;
-
         let receipts = self.client.get_block_receipts(block_number).await?;
         info!("Got block: {:?}", block.number);
 
@@ -103,17 +102,25 @@ impl Ingestor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy::primitives::B256;
     use common::types::{Block, BlockAndReceipts};
+    use std::str::FromStr;
 
     use eyre::Result;
 
     const RPC_URL: &str = "https://syndicate.io";
 
-    fn get_dummy_block_and_receipts(block_number: u64) -> BlockAndReceipts {
+    fn get_dummy_block_and_receipts(number: u64) -> BlockAndReceipts {
         let block: Block = Block {
-            hash: "0xHash".to_string(),
-            number: block_number,
-            parent_hash: "0xPar".to_string(),
+            hash: B256::from_str(
+                "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            )
+            .unwrap(),
+            number,
+            parent_hash: B256::from_str(
+                "0234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            )
+            .unwrap(),
             logs_bloom: "0xLog".to_string(),
             transactions_root: "0xTra".to_string(),
             state_root: "0xSta".to_string(),

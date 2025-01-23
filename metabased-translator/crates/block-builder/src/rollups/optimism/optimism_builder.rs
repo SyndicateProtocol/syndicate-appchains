@@ -4,9 +4,13 @@
 //! It implements the [`RollupBlockBuilder`] trait to standardize block construction across different
 //! rollup implementations
 
-use crate::rollups::optimism::batch::{new_batcher_tx, Batch};
-use crate::rollups::optimism::frame::to_data;
-use crate::rollups::shared::RollupBlockBuilder;
+use crate::rollups::{
+    optimism::{
+        batch::{new_batcher_tx, Batch},
+        frame::to_data,
+    },
+    shared::{RollupBlockBuilder, SequencingTransactionParser},
+};
 use alloy::{
     primitives::{Address, Bytes, B256},
     rpc::types::TransactionRequest,
@@ -17,13 +21,20 @@ use std::str::FromStr;
 
 #[derive(Debug)]
 /// Builder for constructing Optimism blocks from transactions
-pub struct OptimismBlockBuilder;
+pub struct OptimismBlockBuilder {
+    transaction_parser: SequencingTransactionParser,
+}
 
 #[async_trait]
 impl RollupBlockBuilder for OptimismBlockBuilder {
     /// Creates a new Optimism block builder
-    fn new() -> Self {
-        Self
+    fn new(sequencing_contract_address: Address) -> Self {
+        let transaction_parser = SequencingTransactionParser::new(sequencing_contract_address);
+        Self { transaction_parser }
+    }
+
+    fn transaction_parser(&self) -> &SequencingTransactionParser {
+        &self.transaction_parser
     }
 
     /// Builds a batch of transactions into an Optimism batch
@@ -57,13 +68,23 @@ mod tests {
 
     #[test]
     fn test_new_builder() {
-        let builder = OptimismBlockBuilder::new();
-        assert!(matches!(builder, OptimismBlockBuilder));
+        let sequencing_contract_address =
+            Address::from_str("0x1234000000000000000000000000000000000000")
+                .expect("Invalid address format");
+        let builder = OptimismBlockBuilder::new(sequencing_contract_address);
+        let parser = builder.transaction_parser();
+        assert!(
+            !std::ptr::eq(parser, std::ptr::null()),
+            "Transaction parser should not be null"
+        );
     }
 
     #[tokio::test]
     async fn test_build_batch_txn() {
-        let builder = OptimismBlockBuilder::new();
+        let sequencing_contract_address =
+            Address::from_str("0x1234000000000000000000000000000000000000")
+                .expect("Invalid address format");
+        let builder = OptimismBlockBuilder::new(sequencing_contract_address);
         let txs = vec![];
 
         let tx = builder.build_batch_txn(txs).await.unwrap();

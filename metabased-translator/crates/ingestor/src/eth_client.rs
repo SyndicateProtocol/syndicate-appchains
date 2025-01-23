@@ -42,9 +42,10 @@ impl EthClient {
     ///
     /// A result containing the `Block` if found, or an error if the block is not found.
     pub(crate) async fn get_block_by_number(&self, block_number: u64) -> Result<Block, Error> {
+        let block_number_hex = format!("0x{:x}", block_number);
         self.chain
             .client()
-            .request::<_, Option<Block>>("eth_getBlockByNumber", (block_number, true))
+            .request::<_, Option<Block>>("eth_getBlockByNumber", (block_number_hex, true))
             .await?
             .ok_or_else(|| eyre!("Block not found"))
     }
@@ -62,9 +63,10 @@ impl EthClient {
         &self,
         block_number: u64,
     ) -> Result<Vec<Receipt>, Error> {
+        let block_number_hex = format!("0x{:x}", block_number);
         self.chain
             .client()
-            .request::<_, Option<Vec<Receipt>>>("eth_getBlockReceipts", (block_number,))
+            .request::<_, Option<Vec<Receipt>>>("eth_getBlockReceipts", (block_number_hex,))
             .await?
             .ok_or_else(|| eyre!("Block receipts not found"))
     }

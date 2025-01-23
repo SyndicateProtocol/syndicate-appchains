@@ -1,8 +1,9 @@
 //! Configuration for the block builder service
 //! TODO (SEQ-481) Refactor me
 
+use alloy::primitives::Address;
 use clap::Parser;
-use std::fmt::Debug;
+use std::{fmt::Debug, str::FromStr};
 
 /// CLI args for the block builder service
 /// CLI args take precedence over env vars, which take precedence over defaults.
@@ -30,6 +31,21 @@ struct Args {
         default_value_t = 84532
     )]
     chain_id: u64,
+
+    /// Sequencing contract address on the sequencing chain
+    #[arg(
+        short = 's',
+        long,
+        env = "BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS",
+        value_parser = parse_address,
+        default_value = "0x1234000000000000000000000000000000000000"
+    )]
+    sequencing_contract_address: Address,
+}
+
+/// Parse a string into an Ethereum `Address`.
+fn parse_address(value: &str) -> Result<Address, String> {
+    Address::from_str(value).map_err(|_| format!("Invalid address: {}", value))
 }
 
 #[derive(Debug, Clone)]
@@ -41,6 +57,8 @@ pub struct BlockBuilderConfig {
     pub genesis_timestamp: u64,
     /// Chain ID for the network
     pub chain_id: u64,
+    /// Sequencing contract address
+    pub sequencing_contract_address: Address,
 }
 
 impl Default for BlockBuilderConfig {
@@ -49,6 +67,12 @@ impl Default for BlockBuilderConfig {
             port: 8888,
             genesis_timestamp: 1712500000,
             chain_id: 84532, // Base Sepolia
+            sequencing_contract_address: Address::from_str(
+                "0x1234000000000000000000000000000000000000",
+            )
+            .unwrap_or_else(|err| {
+                panic!("Failed to parse default address: {}", err);
+            }),
         }
     }
 }
@@ -73,6 +97,7 @@ impl BlockBuilderConfig {
             port: args.port,
             genesis_timestamp: args.genesis_timestamp,
             chain_id: args.chain_id,
+            sequencing_contract_address: args.sequencing_contract_address,
         };
         tracing::debug!("Got config: {:?}", config);
         config
@@ -91,6 +116,7 @@ mod tests {
             port: default.port,
             genesis_timestamp: default.genesis_timestamp,
             chain_id: default.chain_id,
+            sequencing_contract_address: default.sequencing_contract_address,
         }
     }
 
@@ -102,6 +128,7 @@ mod tests {
                 port: args.port,
                 genesis_timestamp: args.genesis_timestamp,
                 chain_id: args.chain_id,
+                sequencing_contract_address: args.sequencing_contract_address,
             }
         }
     }
@@ -110,6 +137,7 @@ mod tests {
         env::remove_var("BLOCK_BUILDER_PORT");
         env::remove_var("BLOCK_BUILDER_GENESIS_TIMESTAMP");
         env::remove_var("BLOCK_BUILDER_CHAIN_ID");
+        env::remove_var("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS");
     }
 
     #[test]
@@ -121,6 +149,10 @@ mod tests {
         assert_eq!(config.port, 8888);
         assert_eq!(config.genesis_timestamp, 1712500000);
         assert_eq!(config.chain_id, 84532);
+        assert_eq!(
+            config.sequencing_contract_address.to_string(),
+            "0x1234000000000000000000000000000000000000"
+        )
     }
 
     #[test]
