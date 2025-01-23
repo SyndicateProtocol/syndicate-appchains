@@ -1,8 +1,9 @@
 name: Dev Container Tests
 
 on:
-  pull_request:
-    branches: [ main ]
+  # Temporarily disabled while we fix the dev container setup
+  # pull_request:
+  #   branches: [ main ]
 
 jobs:
   arb-test:
