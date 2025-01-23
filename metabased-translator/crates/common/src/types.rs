@@ -8,6 +8,7 @@ use serde::{
     de::{self, Deserializer},
     Deserialize,
 };
+use std::fmt;
 use strum_macros::Display;
 
 #[derive(Clone, Debug)]
@@ -151,7 +152,8 @@ pub enum Chain {
 }
 
 /// The state of a slot describing its finality
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
+#[strum(serialize_all = "lowercase")]
 pub enum SlotState {
     /// A slot that is considered final and cannot rollback (we don't expect any underlying chains
     /// to reorg this far)
@@ -205,6 +207,33 @@ impl Slot {
             Chain::Settlement => self.settlement_chain_blocks.push(block),
         }
     }
+}
+
+impl fmt::Display for Slot {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Slot #{} [ts: {}, state: {}, blocks: {} seq + {} settle]\n  Sequencing blocks: {}\n  Settlement blocks: {}",
+            self.slot_number,
+            self.timestamp,
+            self.state,
+            self.sequencing_chain_blocks.len(),
+            self.settlement_chain_blocks.len(),
+            format_blocks(&self.sequencing_chain_blocks),
+            format_blocks(&self.settlement_chain_blocks),
+        )
+    }
+}
+
+fn format_blocks(blocks: &[BlockAndReceipts]) -> String {
+    if blocks.is_empty() {
+        return "none".to_string();
+    }
+    blocks
+        .iter()
+        .map(|b| format!("#{} ({})", b.block.number, b.block.hash))
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn deserialize_address<'de, D>(deserializer: D) -> Result<Address, D::Error>
