@@ -1177,7 +1177,6 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "clap",
  "serde",
  "serial_test",
  "strum_macros",
@@ -2464,7 +2463,6 @@ dependencies = [
  "thiserror 2.0.11",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

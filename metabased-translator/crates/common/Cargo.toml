@@ -12,7 +12,6 @@ repository.workspace = true
 serde = { workspace = true, features = ["derive"] }
 strum_macros = { workspace = true }
 alloy = { workspace = true }
-clap = {workspace = true, features = ["env", "derive"]}
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
 tracing = { workspace = true, features = ["attributes"] }
 
