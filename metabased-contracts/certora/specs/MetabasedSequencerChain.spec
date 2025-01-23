@@ -7,15 +7,8 @@ methods {
     function isAllowed(address) external returns (bool) envfree;
     function owner() external returns (address) envfree;
 
-    // State-changing functions
-    function processTransactionRaw(bytes) external;
-    function processTransaction(bytes) external;
-    function processBulkTransactions(bytes[]) external;
-    function updateRequirementModule(address) external;
-
     // Permission Module interface methods
     function permission.isAllowed(address) external returns (bool) envfree;
-    function permission.setAllowed(address, bool) external;
 }
 
 /*
@@ -148,6 +141,15 @@ rule moduleUpdateChangesState(address newModule) {
     // If successful, module should be updated
     assert !lastReverted => requirementModule() == newModule,
         "Module not updated correctly";
+}
+// Complementary rule to the above calling updateRequirementModule without revert
+rule moduleUpdateConsistency(address newModule) {
+    env e;
+
+    updateRequirementModule(e, newModule);
+
+    assert requirementModule() == newModule;
+    assert newModule != 0;
 }
 
 /*
