@@ -427,10 +427,16 @@ arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address metabased-se
 # Health check for Arbitrum node. Exits with error if RPC endpoint is not responding
 arb-health-check:
     @just _log-start "arb-health-check"
-    @curl -s -X POST -H "Content-Type: application/json" \
+
+    @if curl -s -X POST -H "Content-Type: application/json" \
     --data '{"jsonrpc":"2.0","method":"net_version","id":1}' \
-    {{ arb_orbit_l2_rpc_url }} \
-    || (echo "RPC endpoint not responding"; exit 1;)
+    {{ arb_orbit_l2_rpc_url }} | grep -q "result"; then \
+        echo "RPC endpoint healthy at {{ arb_orbit_l2_rpc_url }}"; \
+    else \
+        echo "RPC endpoint not responding"; \
+        exit 1; \
+    fi
+
     @just _log-end "arb-health-check"
 
 metabased-sequencer-health-check:
@@ -448,19 +454,15 @@ arb-test-sendRawTransaction: arb-up metabased-sequencer-up
     --data '{"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["0xb85902f85682038501808088ffffffffffffffff808080c001a0d555dc3a308d5bde3d5bc665796f9e7d7125c1554667325533fe237c1aa120b5a07d97dae06082d3eb7fa8966b33f6ce51d7127dcddd5da3d8be9c448a72150a90"],"id":1}'
 
 # Health check for Arbitrum node
-# TODO: Fix this script
-arb-health-verify:
-    # FAILURE: Recipe failed due to zsh syntax error in if condition. The script uses incorrect zsh syntax for the if statement.
+arb-health-verify: arb-up
     @just _log-start "arb-health-verify"
 
-    # Start Arbitrum node in background if not running
-    if nc -z localhost {{ arb_orbit_l2_port }} != "" {just arb-up}
-
-    # Wait for Arbitrum node to be ready via health check
+    # Check if the Arbitrum node is ready via health check
     @echo "[STATUS] Waiting for Arbitrum node to be ready..."
-    until just arb-health-check | grep -q "result"; do sleep 10; done
+    @until just arb-health-check >/dev/null 2>&1; do \
+        sleep 10; \
+    done
     @echo "[STATUS] Arbitrum node is ready"
-    exit 0
 
     @just _log-end "arb-health-verify"
 
