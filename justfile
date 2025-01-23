@@ -405,9 +405,9 @@ arb-health-check:
     || (echo "RPC endpoint not responding"; exit 1;)
     @just _log-end "arb-health-check"
 
-# TODO: Exit with error if not responding
 sequencer-health-check:
     @just _log-start "sequencer-health-check"
+    # Exits with error (exit code 7) if sequencer is not responding
     curl --location {{ metabased_sequencer_url }} \
     --header 'Content-Type: application/json' \
     --data '{"jsonrpc":"2.0","method":"health","id":1}'
