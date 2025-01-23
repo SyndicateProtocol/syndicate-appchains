@@ -13,7 +13,7 @@ concurrency:
 permissions:
   contents: read
   packages: write
-  actions: write # Added to allow canceling redundant workflow runs
+  actions: write # Added to allow canceling older workflow runs
 
 jobs:
   update-cache:
