@@ -63,10 +63,10 @@ mod tests {
         env::remove_var("SLOTTER_START_SLOT_TIMESTAMP");
 
         // Sequencer Chain
-        env::remove_var("SEQUENCER_BUFFER_SIZE");
-        env::remove_var("SEQUENCER_POLLING_INTERVAL_SECS");
-        env::remove_var("SEQUENCER_RPC_URL");
-        env::remove_var("SEQUENCER_START_BLOCK");
+        env::remove_var("SEQUENCING_BUFFER_SIZE");
+        env::remove_var("SEQUENCING_POLLING_INTERVAL_SECS");
+        env::remove_var("SEQUENCING_RPC_URL");
+        env::remove_var("SEQUENCING_START_BLOCK");
 
         // Settlement Chain
         env::remove_var("SETTLEMENT_BUFFER_SIZE");
@@ -106,7 +106,7 @@ mod tests {
         clean_env();
         env::set_var("BLOCK_BUILDER_PORT", "9999");
         env::set_var("SLOTTER_SLOT_DURATION_MS", "3000");
-        env::set_var("SEQUENCER_BUFFER_SIZE", "200");
+        env::set_var("SEQUENCING_BUFFER_SIZE", "200");
 
         let config = MetabasedConfig::try_parse_from(["test"]).unwrap();
         assert_eq!(config.block_builder.port, 9999);
