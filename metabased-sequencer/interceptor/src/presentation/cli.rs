@@ -5,6 +5,7 @@ use std::{error::Error, fmt::Debug};
 use tracing::info;
 use tracing_subscriber::{fmt as subscriber_fmt, EnvFilter};
 
+/// Possible errors that can occur when initializing the tracing subscriber
 #[derive(Debug)]
 pub enum TracingError {
     SubscriberInit(String),

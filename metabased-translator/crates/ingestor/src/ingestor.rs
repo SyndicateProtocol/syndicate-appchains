@@ -1,7 +1,7 @@
 //! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a
 //! consumer using a channel
 
-use crate::eth_client::EthClient;
+use crate::{config::ChainIngestorConfig, eth_client::EthClient};
 use common::types::BlockAndReceipts;
 use eyre::{eyre, Error};
 use std::time::Duration;
@@ -10,7 +10,6 @@ use tracing::info;
 
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
-#[allow(unreachable_pub)] // TODO: remove when used
 pub struct Ingestor {
     client: EthClient,
     current_block_number: u64,
@@ -29,16 +28,20 @@ impl Ingestor {
     ///
     /// # Returns
     /// A tuple containing the `Ingestor` instance and a `Receiver` for consuming blocks.
-    #[allow(unreachable_pub)] // TODO: remove when used
     pub async fn new(
-        rpc_url: &str,
-        start_block: u64,
-        buffer_size: usize,
-        polling_interval: Duration,
+        config: ChainIngestorConfig,
     ) -> Result<(Self, Receiver<BlockAndReceipts>), Error> {
-        let client = EthClient::new(rpc_url).await?;
-        let (sender, receiver) = channel(buffer_size);
-        Ok((Self { client, current_block_number: start_block, sender, polling_interval }, receiver))
+        let client = EthClient::new(&config.rpc_url).await?;
+        let (sender, receiver) = channel(config.buffer_size);
+        Ok((
+            Self {
+                client,
+                current_block_number: config.start_block,
+                sender,
+                polling_interval: config.polling_interval(),
+            },
+            receiver,
+        ))
     }
 
     /// Retrieves a block by its number.
@@ -92,12 +95,30 @@ impl Ingestor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::{ChainIngestorConfig, IngestionPipelineConfig};
     use alloy::primitives::B256;
     use common::types::{Block, BlockAndReceipts};
     use eyre::Result;
     use std::str::FromStr;
 
-    const RPC_URL: &str = "https://syndicate.io";
+    fn test_config() -> IngestionPipelineConfig {
+        IngestionPipelineConfig {
+            sequencing: ChainIngestorConfig {
+                buffer_size: 100,
+                polling_interval_secs: 1,
+                rpc_url: "https://sequencing.io".into(),
+                start_block: 19486923,
+            }
+            .into(),
+            settlement: ChainIngestorConfig {
+                buffer_size: 100,
+                polling_interval_secs: 1,
+                rpc_url: "https://settlement.io".into(),
+                start_block: 19486923,
+            }
+            .into(),
+        }
+    }
 
     fn get_dummy_block_and_receipts(number: u64) -> BlockAndReceipts {
         let block: Block = Block {
@@ -123,14 +144,15 @@ mod tests {
     #[tokio::test]
     async fn test_ingestor_new() -> Result<(), Error> {
         let start_block = 19486923;
-        let buffer_size = 10;
+        let buffer_size = 100;
         let polling_interval = Duration::from_secs(1);
+        let config = test_config();
 
-        let (ingestor, receiver) =
-            Ingestor::new(RPC_URL, start_block, buffer_size, polling_interval).await?;
+        let (ingestor, receiver) = Ingestor::new(config.sequencing.into()).await?;
 
         assert_eq!(ingestor.current_block_number, start_block);
         assert_eq!(receiver.capacity(), buffer_size);
+        assert_eq!(ingestor.polling_interval, polling_interval);
         Ok(())
     }
 
@@ -140,7 +162,7 @@ mod tests {
         let polling_interval = Duration::from_secs(1);
 
         let (sender, mut receiver) = channel(10);
-        let client = EthClient::new(RPC_URL).await?;
+        let client = EthClient::new(test_config().sequencing.sequencing_rpc_url.as_str()).await?;
         let mut ingestor =
             Ingestor { client, current_block_number: start_block, sender, polling_interval };
 

@@ -9,8 +9,6 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-common = { workspace = true }
-contract-bindings = { workspace = true }
 alloy = { workspace = true, features = [
   "providers",
   "node-bindings",
@@ -21,6 +19,8 @@ alloy = { workspace = true, features = [
   "signers",
   "signer-local",
 ] }
+common = { workspace = true }
+contract-bindings = { workspace = true }
 eyre = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "process"] }
 serde = { workspace = true }

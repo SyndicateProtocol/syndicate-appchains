@@ -5,6 +5,7 @@ members = [
     "metabased-translator/crates/ingestor",
     "metabased-translator/crates/slotting",
     "metabased-translator/crates/common",
+    "metabased-translator/bin/metabased-translator",
     "metabased-translator/tests",
     "metabased-sequencer/interceptor",
     "metabased-sequencer/proxy",
@@ -41,7 +42,7 @@ tokio = { version = "1.43" }
 serde = "1.0.217"
 serde-hex = "0.1.0"
 serde_json = "1.0.135"
-tracing-subscriber = { version = "0.3.19" }
+tracing-subscriber = "0.3.19"
 tracing = "0.1.41"
 clap = { version = "4.5.26" }
 hyper = { version = "1.5.2" }
