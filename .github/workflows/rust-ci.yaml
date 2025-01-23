@@ -55,7 +55,6 @@ jobs:
           rustup toolchain install nightly --profile minimal
           rustup component add --toolchain nightly-x86_64-unknown-linux-gnu rustfmt
 
-      # Cache Cargo dependencies
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
         with:
