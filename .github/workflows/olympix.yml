@@ -7,10 +7,6 @@ on:
     # paths:
     # - "metabased-contracts/src/**/*.sol"
     # - "metabased-contracts/certora/specs/**/*.spec"
-
-permissions:
-  pull-requests: write
-
 jobs:
   security:
     runs-on: ubuntu-latest
