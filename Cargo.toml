@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "metabased-translator/contract-bindings",
     "metabased-translator/crates/block-builder",
     "metabased-translator/crates/ingestor",
     "metabased-translator/crates/slotting",
@@ -28,6 +29,7 @@ block-builder = { path = "metabased-translator/crates/block-builder" }
 slotting = { path = "metabased-translator/crates/slotting" }
 ingestor = { path = "metabased-translator/crates/ingestor" }
 common = { path = "metabased-translator/crates/common" }
+contract-bindings = {path = "metabased-translator/contract-bindings"}
 
 alloy = { version = "0.9.2" }
 alloy-rlp = "0.3.11"

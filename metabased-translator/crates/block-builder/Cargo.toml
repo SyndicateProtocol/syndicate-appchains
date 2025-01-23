@@ -10,6 +10,7 @@ repository.workspace = true
 
 [dependencies]
 common = { workspace = true }
+contract-bindings = { workspace = true }
 alloy = { workspace = true, features = [
   "providers",
   "node-bindings",
