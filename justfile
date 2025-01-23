@@ -421,7 +421,7 @@ foundry-all: foundry-setup foundry-upgrade contract-deps
 op-all: op-clone foundry-all
     @echo "Post-setup OP script completed successfully. Ready to bring up the OP Stack devnet with op-up."
 
-arb-sequencer-plus-setup: arb-deploy-chain arb-update-chain-address metabased-sequencer-up
+setup-new-arb-chain-and-metabased-sequencer: arb-down metabased-sequencer-down arb-deploy-chain arb-update-chain-address metabased-sequencer-up
     @echo "Arbitrum Sequencer setup completed successfully. Running sequencer."
 
 # Health check for Arbitrum node. Exits with error if RPC endpoint is not responding
@@ -447,12 +447,6 @@ metabased-sequencer-health-check:
     --data '{"jsonrpc":"2.0","method":"health","id":1}'
     @just _log-end "metabased-sequencer-health-check"
 
-
-arb-test-sendRawTransaction: arb-up metabased-sequencer-up
-    curl --location {{ metabased_sequencer_url }} \
-    --header 'Content-Type: application/json' \
-    --data '{"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["0xb85902f85682038501808088ffffffffffffffff808080c001a0d555dc3a308d5bde3d5bc665796f9e7d7125c1554667325533fe237c1aa120b5a07d97dae06082d3eb7fa8966b33f6ce51d7127dcddd5da3d8be9c448a72150a90"],"id":1}'
-
 # Health check for Arbitrum node
 arb-health-verify: arb-up
     @just _log-start "arb-health-verify"
@@ -467,21 +461,23 @@ arb-health-verify: arb-up
     @just _log-end "arb-health-verify"
 
 # Setup and verify sequencer
-sequencer-verify:
-    @just _log-start "sequencer-verify"
+metabased-sequencer-verify: metabased-sequencer-up
+    @just _log-start "metabased-sequencer-verify"
 
-    # Run sequencer setup and capture logs
-    just arb-sequencer-plus-setup 2>&1 | tee /tmp/sequencer-setup.log
+    # Wait for sequencer to be ready via health check
+    @echo "[STATUS] Waiting for metabased sequencer to be ready..."
+    @until just metabased-sequencer-health-check >/dev/null 2>&1; do \
+        sleep 10; \
+    done
+    @echo "[STATUS] Metabased sequencer is ready"
 
-    # Wait for Rust build to complete
-    @echo "[STATUS] Waiting for sequencer setup to complete..."
-    while ! grep -q "Finished \`dev\` profile" /tmp/sequencer-setup.log; do \
-            echo "[STATUS] Still waiting for Rust build complete..." && sleep 20; \
-     done;
-    @echo "[STATUS] Rust build completed. Sequencer setup completed."
-    exit 0
+    @just _log-end "metabased-sequencer-verify"
 
-    @just _log-end "sequencer-verify"
+# Sends a new transaction on a new test chain and metabased sequencer
+arb-test-sendRawTransaction: setup-new-arb-chain-and-metabased-sequencer
+    curl --location {{ metabased_sequencer_url }} \
+    --header 'Content-Type: application/json' \
+    --data '{"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["0xb85902f85682038501808088ffffffffffffffff808080c001a0d555dc3a308d5bde3d5bc665796f9e7d7125c1554667325533fe237c1aa120b5a07d97dae06082d3eb7fa8966b33f6ce51d7127dcddd5da3d8be9c448a72150a90"],"id":1}'
 
 # Run transaction test
 # TODO: Fix this script
