@@ -30,9 +30,7 @@ impl BlockBuilder {
         let mchain = MetaChainProvider::start(config.clone()).await?;
 
         // TODO (SEQ-481): Dynamically select builder based on config
-        let builder = Box::new(ArbitrumBlockBuilder::new(
-            config.sequencing_contract_address,
-        ));
+        let builder = Box::new(ArbitrumBlockBuilder::new(config.sequencing_contract_address));
 
         Ok(Self { slotter_rx, mchain, builder })
     }

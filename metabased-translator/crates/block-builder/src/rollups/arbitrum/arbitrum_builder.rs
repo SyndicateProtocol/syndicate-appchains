@@ -51,10 +51,7 @@ mod tests {
                 .expect("Invalid address format");
         let builder = ArbitrumBlockBuilder::new(sequencing_contract_address);
         let parser = builder.transaction_parser();
-        assert!(
-            !std::ptr::eq(parser, std::ptr::null()),
-            "Transaction parser should not be null"
-        );
+        assert!(!std::ptr::eq(parser, std::ptr::null()), "Transaction parser should not be null");
     }
 
     #[tokio::test]

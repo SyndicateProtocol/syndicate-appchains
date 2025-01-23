@@ -1,8 +1,6 @@
 //! Integration tests for the metabased stack
 #![allow(missing_docs)]
 
-use std::{path::PathBuf, str::FromStr, time::Duration};
-
 use alloy::{
     eips::{eip2718::Encodable2718, BlockNumberOrTag},
     network::{EthereumWallet, TransactionBuilder},
@@ -11,7 +9,6 @@ use alloy::{
     rpc::types::TransactionRequest,
     signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
 };
-
 use block_builder::{
     connectors::anvil::MetaChainProvider,
     contract_bindings::{
@@ -19,16 +16,16 @@ use block_builder::{
     },
     rollups::arbitrum,
 };
+use common::types::Block;
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::{eyre, OptionExt, Result};
 use reqwest::Url;
+use std::{path::PathBuf, str::FromStr, time::Duration};
 use tokio::{
     fs::read_to_string,
     process::{Child, Command},
     time::timeout,
 };
-
-use common::types::Block;
 
 /// Simple test scenario:
 /// Bob tries to deploy a counter contract to L3, then tries to increment it
@@ -188,14 +185,9 @@ async fn send_batch<
     batch: &arbitrum::batch::Batch,
     provider: &U,
 ) -> Result<()> {
-    let inbox = ISequencerInbox::new(
-        address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"),
-        &provider,
-    );
-    let bridge = IBridge::new(
-        address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2"),
-        &provider,
-    );
+    let inbox =
+        ISequencerInbox::new(address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"), &provider);
+    let bridge = IBridge::new(address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2"), &provider);
     let delayed_messages_read = inbox.totalDelayedMessagesRead().call().await?._0;
     let sequencer_message_count = bridge.sequencerMessageCount().call().await?._0;
     inbox
@@ -228,9 +220,7 @@ struct Docker(Child);
 impl Drop for Docker {
     fn drop(&mut self) {
         if let Some(x) = self.0.id() {
-            _ = std::process::Command::new("kill")
-                .arg(x.to_string())
-                .output()
+            _ = std::process::Command::new("kill").arg(x.to_string()).output()
         }
     }
 }
@@ -240,9 +230,7 @@ async fn launch_nitro_node() -> Result<(MetaChainProvider, Docker)> {
 
     let mchain = MetaChainProvider::start_from_snapshot(
         Default::default(),
-        root.join("anvil.json")
-            .to_str()
-            .ok_or_eyre("failed to convert path to string")?,
+        root.join("anvil.json").to_str().ok_or_eyre("failed to convert path to string")?,
     )
     .await?;
 
@@ -294,10 +282,7 @@ async fn test_nitro_batch() -> Result<()> {
     //provider.anvil_set_interval_mining(1).await?;
 
     // deposit 1 eth
-    let inbox = IInbox::new(
-        address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899"),
-        &provider,
-    );
+    let inbox = IInbox::new(address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899"), &provider);
     inbox
         .depositEth()
         .value(parse_ether("1")?)
@@ -308,13 +293,11 @@ async fn test_nitro_batch() -> Result<()> {
         .await?;
 
     // clear the queue of delayed messages
-    // The RollupCreator createRollup() function creates 8 retryable tickets to deploy deterministic deployment factories to the rollup
-    // when deployFactoriesToL2 is enabled. The final delayed message is the deposit that we initiate earlier in the test.
-    send_batch(
-        &arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed; 9]),
-        &provider,
-    )
-    .await?;
+    // The RollupCreator createRollup() function creates 8 retryable tickets to deploy deterministic
+    // deployment factories to the rollup when deployFactoriesToL2 is enabled. The final delayed
+    // message is the deposit that we initiate earlier in the test.
+    send_batch(&arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed; 9]), &provider)
+        .await?;
 
     // wait 200ms for the batch to be processed
     tokio::time::sleep(Duration::from_millis(200)).await;
@@ -324,12 +307,7 @@ async fn test_nitro_batch() -> Result<()> {
     }
 
     // check that the deposit succeeded
-    assert_eq!(
-        rollup
-            .get_balance(provider.default_signer_address())
-            .await?,
-        parse_ether("1")?
-    );
+    assert_eq!(rollup.get_balance(provider.default_signer_address()).await?, parse_ether("1")?);
 
     // include a tx in a batch
     let mut tx = vec![];
@@ -346,10 +324,7 @@ async fn test_nitro_batch() -> Result<()> {
 
     inner_tx.encode_2718(&mut tx);
     let batch = arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::L2(
-        arbitrum::batch::L1IncomingMessage {
-            header: Default::default(),
-            l2_msg: vec![tx.into()],
-        },
+        arbitrum::batch::L1IncomingMessage { header: Default::default(), l2_msg: vec![tx.into()] },
     )]);
     send_batch(&batch, &provider).await?;
 
@@ -361,10 +336,7 @@ async fn test_nitro_batch() -> Result<()> {
 
     // check that the tx was sequenced
     let block: Block = rollup
-        .raw_request(
-            "eth_getBlockByNumber".into(),
-            (BlockNumberOrTag::Number(10), true),
-        )
+        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(10), true))
         .await?;
     // the first transaction is the startBlock transaction
     println!("{:#?}", block.transactions);

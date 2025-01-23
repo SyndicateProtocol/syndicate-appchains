@@ -218,18 +218,12 @@ mod tests {
                 l2_msg: vec![tx.clone().into(); 2],
             }),
             BatchMessage::L2(L1IncomingMessage {
-                header: L1IncomingMessageHeader {
-                    block_number: 1,
-                    timestamp: 100,
-                },
+                header: L1IncomingMessageHeader { block_number: 1, timestamp: 100 },
                 l2_msg: vec![tx.clone().into(); 3],
             }),
             BatchMessage::Delayed,
             BatchMessage::L2(L1IncomingMessage {
-                header: L1IncomingMessageHeader {
-                    block_number: 2,
-                    timestamp: 100,
-                },
+                header: L1IncomingMessageHeader { block_number: 2, timestamp: 100 },
                 l2_msg: vec![tx.clone().into()],
             }),
             BatchMessage::L2(L1IncomingMessage {

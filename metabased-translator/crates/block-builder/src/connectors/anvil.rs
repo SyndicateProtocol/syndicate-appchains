@@ -78,11 +78,7 @@ impl MetaChainProvider {
             args.push(snapshot);
         }
 
-        let anvil = Anvil::new()
-            .port(port)
-            .chain_id(config.chain_id)
-            .args(args)
-            .try_spawn()?;
+        let anvil = Anvil::new().port(port).chain_id(config.chain_id).args(args).try_spawn()?;
 
         // TODO (SEQ-481) Move to a config value
         let signer: PrivateKeySigner =
