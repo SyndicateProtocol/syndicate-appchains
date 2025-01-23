@@ -98,7 +98,7 @@ mod tests {
 
     #[test]
     fn test_default_parsing() {
-        let config = BlockBuilderConfig::parse_from(&["test"]);
+        let config = BlockBuilderConfig::parse_from(["test"]);
         assert_eq!(config.port, 8888);
         assert_eq!(config.genesis_timestamp, 1712500000);
         assert_eq!(config.chain_id, 84532);

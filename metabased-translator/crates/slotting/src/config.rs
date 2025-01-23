@@ -74,7 +74,7 @@ mod config_tests {
 
     #[test]
     fn test_default_parsing() {
-        let config = SlottingConfig::parse_from(&["test"]);
+        let config = SlottingConfig::parse_from(["test"]);
         assert_eq!(config.slot_duration_ms, 2_000);
         assert_eq!(config.start_slot_number, 0);
         assert_eq!(config.start_slot_timestamp, 0);
