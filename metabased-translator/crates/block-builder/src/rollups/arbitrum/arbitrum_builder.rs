@@ -146,8 +146,9 @@ impl ArbitrumBlockBuilder {
         info!("Inbox messages: {:?}", inbox_messages);
         info!("Delayed messages: {:?}", delayed_messages);
 
-        // Here you can do something with inbox_messages if needed
-        // For now we're just collecting them but not using them
+        // TODO: Process delayed messages into transactions for the MChain
+        // Exact shap of these transactions is dependent on contracts we will use in MChain
+        // - Event emitter vs Full contracts
 
         Ok(vec![])
     }
