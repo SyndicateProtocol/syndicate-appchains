@@ -27,7 +27,7 @@
     // NOTE: We need to update the Rust version with each stable Rust release
     // Targets: x86_64-unknown-linux-gnu (X86 Linux), aarch64-apple-darwin (M series Mac)
     "ghcr.io/devcontainers/features/rust:1": {
-      "version": "nightly-2025-01-23",
+      "version": "nightly-2024-01-23",
       "profile": "default",
       "targets": "x86_64-unknown-linux-gnu,aarch64-apple-darwin"
     },
