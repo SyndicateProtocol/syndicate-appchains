@@ -474,7 +474,7 @@ metabased-sequencer-verify: metabased-sequencer-up
     @just _log-end "metabased-sequencer-verify"
 
 # Sends a new transaction on a new test chain and metabased sequencer
-arb-test-sendRawTransaction: setup-new-arb-chain-and-metabased-sequencer
+arb-test-sendRawTransaction: arb-up metabased-sequencer-up
     @just _log-start "arb-test-sendRawTransaction"
 
     curl --silent --location {{ metabased_sequencer_url }} \
