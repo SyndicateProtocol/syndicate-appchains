@@ -5,13 +5,13 @@
 
 use alloy::{
     primitives::{keccak256, Address, Bytes, LogData},
-    sol,
     sol_types::SolEvent,
 };
 use common::{
     compression::{get_compression_type, CompressionType},
     types::Log,
 };
+use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain::TransactionProcessed;
 use thiserror::Error;
 
 /// Represents errors that can occur during sequencing transaction parsing.
@@ -42,29 +42,11 @@ pub enum SequencingParserError {
     NoDataProvided,
 }
 
-/// `TransactionProcessed` event data
-#[derive(Debug, Clone)]
-pub struct TransactionProcessed {
-    /// The encoded data of the transaction
-    pub encoded_data: Bytes,
-    /// The sender of the transaction
-    pub sender: Address,
-}
-
 /// The parser for meta-based transactions
 #[derive(Debug)]
 pub struct SequencingTransactionParser {
     /// The address of the sequencing contract
     sequencing_contract_address: Address,
-}
-
-// TODO SEQ-514: Link TransactionProcessed Event to the real contract MetabasedSequencerChain.sol
-sol! {
-    #[derive(Debug, PartialEq, Eq)]
-    #[sol(rpc)]
-    contract MetabasedSequencerChain {
-        event TransactionProcessed(address indexed sender, bytes encodedTxn);
-    }
 }
 
 impl SequencingTransactionParser {
@@ -76,9 +58,10 @@ impl SequencingTransactionParser {
     /// Checks if a log is a `TransactionProcessed` event
     pub fn is_log_transaction_processed(&self, eth_log: Log) -> bool {
         eth_log.address == self.sequencing_contract_address &&
-            eth_log.topics.first().is_some_and(|t| {
-                *t == keccak256(MetabasedSequencerChain::TransactionProcessed::SIGNATURE.as_bytes())
-            })
+            eth_log
+                .topics
+                .first()
+                .is_some_and(|t| *t == keccak256(TransactionProcessed::SIGNATURE.as_bytes()))
     }
 
     /// Decodes the event data into a vector of transactions
@@ -111,12 +94,11 @@ impl SequencingTransactionParser {
             return Err(SequencingParserError::InvalidLogEvent);
         }
         let log_data = LogData::new_unchecked(eth_log.topics.clone(), eth_log.data.clone());
-        let decoded_event =
-            MetabasedSequencerChain::TransactionProcessed::decode_log_data(&log_data, true)
-                .map_err(|_e| SequencingParserError::DynSolEventCreation)?;
+        let decoded_event = TransactionProcessed::decode_log_data(&log_data, true)
+            .map_err(|_e| SequencingParserError::DynSolEventCreation)?;
 
         // Decode the transactions
-        let transactions = self.decode_event_data(decoded_event.encodedTxn)?;
+        let transactions = self.decode_event_data(decoded_event.data)?;
         Ok(transactions)
     }
 }
