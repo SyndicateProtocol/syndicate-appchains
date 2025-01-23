@@ -319,7 +319,6 @@ create-envrc:
 
 # Puts arb contract address into localnet ENV file
 # Works by finding the value corresponding to the key in the .envrc, and replacing it with the address found in the `deploy_file`
-# TODO: Requires running RPC. Will handle soon
 arb-update-chain-address: arb-deploy-chain create-envrc
     @just _log-start "arb-update-chain-address"
 
