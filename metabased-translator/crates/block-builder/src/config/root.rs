@@ -24,12 +24,7 @@ struct Args {
     genesis_timestamp: u64,
 
     /// Chain ID to use
-    #[arg(
-        short = 'c',
-        long,
-        env = "BLOCK_BUILDER_CHAIN_ID",
-        default_value_t = 84532
-    )]
+    #[arg(short = 'c', long, env = "BLOCK_BUILDER_CHAIN_ID", default_value_t = 84532)]
     chain_id: u64,
 
     /// Sequencing contract address on the sequencing chain
@@ -78,7 +73,8 @@ impl Default for BlockBuilderConfig {
 }
 
 impl BlockBuilderConfig {
-    /// Parses command line arguments and environment variables into a [`BlockBuilderConfig`] struct.
+    /// Parses command line arguments and environment variables into a [`BlockBuilderConfig`]
+    /// struct.
     ///
     /// # Returns
     ///

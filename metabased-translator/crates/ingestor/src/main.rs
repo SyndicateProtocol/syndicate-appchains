@@ -1,4 +1,5 @@
-//! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a consumer using a channel
+//! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a
+//! consumer using a channel
 
 mod eth_client;
 mod ingestor;
@@ -47,10 +48,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
 
     // Start polling
-    ingestor
-        .start_polling()
-        .await
-        .map_err(|e| eyre!("Failed to start polling: {:?}", e))?;
+    ingestor.start_polling().await.map_err(|e| eyre!("Failed to start polling: {:?}", e))?;
 
     Ok(())
 }

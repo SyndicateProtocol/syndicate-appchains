@@ -29,9 +29,7 @@ pub struct ServiceStatus {
 impl ServiceStatus {
     /// Creates a new [`ServiceStatus`] with the default status of [`Status::NotStarted`]
     pub const fn new() -> Self {
-        Self {
-            status: AtomicU8::new(Status::NotStarted as u8),
-        }
+        Self { status: AtomicU8::new(Status::NotStarted as u8) }
     }
 
     /// Atomically stores a new status value

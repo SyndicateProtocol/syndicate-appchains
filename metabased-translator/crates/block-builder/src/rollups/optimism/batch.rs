@@ -41,11 +41,11 @@ impl Batch {
         // Step 2: Encode fields as a list
         let header = alloy::rlp::Header {
             list: true,
-            payload_length: self.parent_hash.length()
-                + self.epoch_num.length()
-                + self.epoch_hash.length()
-                + self.timestamp.length()
-                + self.transactions.length(),
+            payload_length: self.parent_hash.length() +
+                self.epoch_num.length() +
+                self.epoch_hash.length() +
+                self.timestamp.length() +
+                self.transactions.length(),
         };
         header.encode(&mut out);
 
@@ -85,13 +85,7 @@ impl Batch {
         let transactions = Vec::<Bytes>::decode(&mut buf)?;
 
         // Return the decoded Batch
-        Ok(Self {
-            parent_hash,
-            epoch_num,
-            epoch_hash,
-            timestamp,
-            transactions,
-        })
+        Ok(Self { parent_hash, epoch_num, epoch_hash, timestamp, transactions })
     }
 
     /// Splits the Batch into frames of a given size
@@ -132,12 +126,7 @@ fn to_frames(channel: &[u8], frame_size: usize, block_hash: B256) -> Result<Vec<
         let end = (i + frame_size).min(channel.len());
         let is_last = end == channel.len();
 
-        let frame = Frame {
-            id,
-            frame_num,
-            data: channel[i..end].to_vec(),
-            is_last,
-        };
+        let frame = Frame { id, frame_num, data: channel[i..end].to_vec(), is_last };
         frames.push(frame);
     }
 
@@ -173,10 +162,7 @@ mod tests {
 
         // Ensure encoded batch starts with version byte
         assert_eq!(encoded[0], BATCH_VERSION_BYTE);
-        assert!(
-            encoded.len() > 1,
-            "Encoded batch should have data beyond version byte"
-        );
+        assert!(encoded.len() > 1, "Encoded batch should have data beyond version byte");
     }
 
     #[test]
@@ -198,10 +184,7 @@ mod tests {
         let encoded = batch.encode();
 
         let compressed = to_channel(&encoded).expect("Compression failed");
-        assert!(
-            !compressed.is_empty(),
-            "Compressed data should not be empty"
-        );
+        assert!(!compressed.is_empty(), "Compressed data should not be empty");
     }
 
     #[test]
@@ -210,16 +193,10 @@ mod tests {
         let frames = batch.get_frames(16).expect("Frame splitting failed");
 
         assert!(!frames.is_empty(), "Frames should not be empty");
-        assert!(
-            frames.last().unwrap().is_last,
-            "Last frame should be marked as is_last"
-        );
+        assert!(frames.last().unwrap().is_last, "Last frame should be marked as is_last");
 
         for (i, frame) in frames.iter().enumerate() {
-            assert_eq!(
-                frame.frame_num as usize, i,
-                "Frame numbers should increment sequentially"
-            );
+            assert_eq!(frame.frame_num as usize, i, "Frame numbers should increment sequentially");
         }
     }
 
@@ -260,10 +237,7 @@ mod tests {
         invalid_encoded[0] = 0xFF; // Invalid version byte
 
         let result = Batch::decode(&invalid_encoded);
-        assert!(
-            result.is_err(),
-            "Decoding should fail with invalid version byte"
-        );
+        assert!(result.is_err(), "Decoding should fail with invalid version byte");
     }
 
     #[test]
@@ -272,9 +246,6 @@ mod tests {
         let block_hash = B256::repeat_byte(0x33);
 
         let frames = to_frames(&empty_data, 16, block_hash).expect("Frame splitting failed");
-        assert!(
-            frames.is_empty(),
-            "No frames should be generated for empty data"
-        );
+        assert!(frames.is_empty(), "No frames should be generated for empty data");
     }
 }

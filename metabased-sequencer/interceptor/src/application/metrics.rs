@@ -7,8 +7,10 @@
 //! * A generic [`Stopwatch`].
 
 use crate::presentation::json_rpc_errors::Error;
-use std::fmt::{Display, Write};
-use std::time::Duration;
+use std::{
+    fmt::{Display, Write},
+    time::Duration,
+};
 
 /// Queries all collected metrics into textual representation and returns as a string.
 pub fn metrics(metrics: &impl Metrics) -> String {

@@ -1,10 +1,12 @@
-use crate::application::{Metrics, RunningStopwatch, Stopwatch};
-use crate::domain::{primitives::Address, MetabasedSequencerChainService};
-use crate::presentation::{
-    json_rpc_errors::Error,
-    jsonrpc,
-    services::{self, Services},
-    tower::UnescapeJsonLayer,
+use crate::{
+    application::{Metrics, RunningStopwatch, Stopwatch},
+    domain::{primitives::Address, MetabasedSequencerChainService},
+    presentation::{
+        json_rpc_errors::Error,
+        jsonrpc,
+        services::{self, Services},
+        tower::UnescapeJsonLayer,
+    },
 };
 use alloy::primitives::B256;
 use http::Method;
@@ -65,10 +67,7 @@ where
     module.register_method(METRICS_RPC, jsonrpc::metrics)?;
     module.register_method("health", jsonrpc::health)?;
 
-    info!(
-        "Registered RPC methods: {:#?}",
-        module.method_names().collect::<Vec<_>>()
-    );
+    info!("Registered RPC methods: {:#?}", module.method_names().collect::<Vec<_>>());
     Ok(module)
 }
 
@@ -82,8 +81,7 @@ mod tests {
         use super::*;
         use alloy::primitives::{Bytes, TxHash};
         use async_trait::async_trait;
-        use std::convert::Infallible;
-        use std::time::Duration;
+        use std::{convert::Infallible, time::Duration};
 
         #[async_trait]
         impl MetabasedSequencerChainService for () {
@@ -117,10 +115,8 @@ mod tests {
     /// Stubs provide canned answers to calls made during the test, usually not responding at all to
     /// anything outside what's programmed in for the test.
     mod stub {
-        use crate::application::Metrics;
-        use crate::presentation::json_rpc_errors::Error;
-        use std::fmt::Write;
-        use std::time::Duration;
+        use crate::{application::Metrics, presentation::json_rpc_errors::Error};
+        use std::{fmt::Write, time::Duration};
 
         impl Metrics for &'static str {
             fn append_send_raw_transaction_with_duration(

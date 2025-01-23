@@ -1,6 +1,5 @@
 use alloy::primitives::U256;
-use std::fmt;
-use std::fmt::Debug;
+use std::{fmt, fmt::Debug};
 
 #[derive(Debug, Clone)]
 pub struct TransactionFeeTooHigh {
@@ -62,12 +61,9 @@ mod tests {
 
     #[test]
     fn test_no_cap() {
-        assert!(check_tx_fee(
-            U256::from(1_000_000_000u64),
-            U256::from(21000u64),
-            U256::ZERO
-        )
-        .is_ok());
+        assert!(
+            check_tx_fee(U256::from(1_000_000_000u64), U256::from(21000u64), U256::ZERO).is_ok()
+        );
     }
 
     #[test]

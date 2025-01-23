@@ -1,15 +1,14 @@
 // Copied over from hyperium/hyper for proxy.rs
 
 //! Various runtimes for hyper
+use hyper::rt::{Sleep, Timer};
+use pin_project_lite::pin_project;
 use std::{
     future::Future,
     pin::Pin,
     task::{Context, Poll},
     time::{Duration, Instant},
 };
-
-use hyper::rt::{Sleep, Timer};
-use pin_project_lite::pin_project;
 
 #[derive(Clone)]
 /// An Executor that uses the tokio runtime.
@@ -32,15 +31,11 @@ pub struct TokioTimer;
 
 impl Timer for TokioTimer {
     fn sleep(&self, duration: Duration) -> Pin<Box<dyn Sleep>> {
-        Box::pin(TokioSleep {
-            inner: tokio::time::sleep(duration),
-        })
+        Box::pin(TokioSleep { inner: tokio::time::sleep(duration) })
     }
 
     fn sleep_until(&self, deadline: Instant) -> Pin<Box<dyn Sleep>> {
-        Box::pin(TokioSleep {
-            inner: tokio::time::sleep_until(deadline.into()),
-        })
+        Box::pin(TokioSleep { inner: tokio::time::sleep_until(deadline.into()) })
     }
 
     fn reset(&self, sleep: &mut Pin<Box<dyn Sleep>>, new_deadline: Instant) {

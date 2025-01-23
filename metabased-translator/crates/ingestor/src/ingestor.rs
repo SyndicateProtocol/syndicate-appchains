@@ -1,12 +1,12 @@
-//! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a consumer using a channel
+//! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a
+//! consumer using a channel
 
+use crate::eth_client::EthClient;
+use common::types::BlockAndReceipts;
 use eyre::{eyre, Error};
 use std::time::Duration;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tracing::info;
-
-use crate::eth_client::EthClient;
-use common::types::BlockAndReceipts;
 
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
@@ -38,15 +38,7 @@ impl Ingestor {
     ) -> Result<(Self, Receiver<BlockAndReceipts>), Error> {
         let client = EthClient::new(rpc_url).await?;
         let (sender, receiver) = channel(buffer_size);
-        Ok((
-            Self {
-                client,
-                current_block_number: start_block,
-                sender,
-                polling_interval,
-            },
-            receiver,
-        ))
+        Ok((Self { client, current_block_number: start_block, sender, polling_interval }, receiver))
     }
 
     /// Retrieves a block by its number.
@@ -89,9 +81,7 @@ impl Ingestor {
 
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
-            let block_and_receipts = self
-                .get_block_and_receipts(self.current_block_number)
-                .await?;
+            let block_and_receipts = self.get_block_and_receipts(self.current_block_number).await?;
             info!("Pushing block: {:?}", block_and_receipts.block.number);
             self.push_block_and_receipts(block_and_receipts).await?;
             interval.tick().await;
@@ -104,9 +94,8 @@ mod tests {
     use super::*;
     use alloy::primitives::B256;
     use common::types::{Block, BlockAndReceipts};
-    use std::str::FromStr;
-
     use eyre::Result;
+    use std::str::FromStr;
 
     const RPC_URL: &str = "https://syndicate.io";
 
@@ -128,10 +117,7 @@ mod tests {
             timestamp: 1000000000,
             transactions: vec![],
         };
-        BlockAndReceipts {
-            block,
-            receipts: vec![],
-        }
+        BlockAndReceipts { block, receipts: vec![] }
     }
 
     #[tokio::test]
@@ -155,19 +141,12 @@ mod tests {
 
         let (sender, mut receiver) = channel(10);
         let client = EthClient::new(RPC_URL).await?;
-        let mut ingestor = Ingestor {
-            client,
-            current_block_number: start_block,
-            sender,
-            polling_interval,
-        };
+        let mut ingestor =
+            Ingestor { client, current_block_number: start_block, sender, polling_interval };
 
         let block = get_dummy_block_and_receipts(start_block);
 
-        ingestor
-            .push_block_and_receipts(block)
-            .await
-            .expect("Failed to poll block");
+        ingestor.push_block_and_receipts(block).await.expect("Failed to poll block");
 
         if let Some(BlockAndReceipts { block, .. }) = receiver.recv().await {
             assert_eq!(block.number, start_block);

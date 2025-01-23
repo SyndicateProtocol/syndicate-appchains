@@ -70,15 +70,13 @@ sol! {
 impl SequencingTransactionParser {
     /// Creates a new `SequencingTransactionParser`
     pub const fn new(sequencing_contract_address: Address) -> Self {
-        Self {
-            sequencing_contract_address,
-        }
+        Self { sequencing_contract_address }
     }
 
     /// Checks if a log is a `TransactionProcessed` event
     pub fn is_log_transaction_processed(&self, eth_log: Log) -> bool {
-        eth_log.address == self.sequencing_contract_address
-            && eth_log.topics.first().is_some_and(|t| {
+        eth_log.address == self.sequencing_contract_address &&
+            eth_log.topics.first().is_some_and(|t| {
                 *t == keccak256(MetabasedSequencerChain::TransactionProcessed::SIGNATURE.as_bytes())
             })
     }
@@ -99,9 +97,7 @@ impl SequencingTransactionParser {
                 transactions.push(Bytes::copy_from_slice(compressed_data));
             }
             CompressionType::Unknown => {
-                return Err(SequencingParserError::UnknownCompressionType(
-                    *compression_byte,
-                ));
+                return Err(SequencingParserError::UnknownCompressionType(*compression_byte));
             }
         }
         Ok(transactions)
@@ -158,9 +154,8 @@ mod tests {
     }
     #[tokio::test]
     async fn test_new_parser() {
-        let contract_address: Address = "0x000000000000000000000000000000000000abcd"
-            .parse()
-            .unwrap();
+        let contract_address: Address =
+            "0x000000000000000000000000000000000000abcd".parse().unwrap();
 
         let parser = SequencingTransactionParser::new(contract_address);
         assert_eq!(parser.sequencing_contract_address, contract_address);
@@ -168,9 +163,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_is_log_transaction_processed() {
-        let contract_address: Address = "0x000000000000000000000000000000000000abcd"
-            .parse()
-            .unwrap();
+        let contract_address: Address =
+            "0x000000000000000000000000000000000000abcd".parse().unwrap();
         let parser: SequencingTransactionParser =
             SequencingTransactionParser::new(contract_address);
 
@@ -178,9 +172,8 @@ mod tests {
 
         assert!(parser.is_log_transaction_processed(log));
 
-        let unrelated_contract_address: Address = "0x110000000000000000000000000000000000abcd"
-            .parse()
-            .unwrap();
+        let unrelated_contract_address: Address =
+            "0x110000000000000000000000000000000000abcd".parse().unwrap();
         let unrelated_log = generate_valid_test_log(unrelated_contract_address);
 
         assert!(!parser.is_log_transaction_processed(unrelated_log));
@@ -192,9 +185,7 @@ mod tests {
         let input = Bytes::from([vec![0x0], uncompressed_data.clone()].concat());
 
         let parser = SequencingTransactionParser::new(
-            "0x000000000000000000000000000000000000abcd"
-                .parse()
-                .unwrap(),
+            "0x000000000000000000000000000000000000abcd".parse().unwrap(),
         );
         let result = parser.decode_event_data(input);
 
@@ -206,9 +197,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_event_transactions_valid_log() {
-        let contract_address: Address = "0x000000000000000000000000000000000000abcd"
-            .parse()
-            .unwrap();
+        let contract_address: Address =
+            "0x000000000000000000000000000000000000abcd".parse().unwrap();
         let parser = SequencingTransactionParser::new(contract_address);
         let log = generate_valid_test_log(contract_address);
         let result = parser.get_event_transactions(&log);
@@ -220,14 +210,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_event_transactions_invalid_log() {
-        let contract_address: Address = "0x000000000000000000000000000000000000abcd"
-            .parse()
-            .unwrap();
+        let contract_address: Address =
+            "0x000000000000000000000000000000000000abcd".parse().unwrap();
         let parser = SequencingTransactionParser::new(contract_address);
 
-        let unrelated_contract_address: Address = "0x110000000000000000000000000000000000abcd"
-            .parse()
-            .unwrap();
+        let unrelated_contract_address: Address =
+            "0x110000000000000000000000000000000000abcd".parse().unwrap();
         let log = generate_valid_test_log(unrelated_contract_address);
 
         let result = parser.get_event_transactions(&log);

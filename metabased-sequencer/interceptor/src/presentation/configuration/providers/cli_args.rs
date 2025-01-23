@@ -1,6 +1,8 @@
 use crate::presentation::configuration::root::Args;
-use figment::value::{Dict, Map};
-use figment::{Error, Metadata, Provider};
+use figment::{
+    value::{Dict, Map},
+    Error, Metadata, Provider,
+};
 use std::fmt::{Display, Formatter};
 
 #[derive(Debug)]
@@ -17,10 +19,7 @@ impl Display for CliArgs {
 
 impl CliArgs {
     pub fn new(args: Args) -> Self {
-        Self {
-            args,
-            profile: figment::Profile::Default,
-        }
+        Self { args, profile: figment::Profile::Default }
     }
 }
 
@@ -42,13 +41,7 @@ impl Provider for CliArgs {
     }
 
     fn data(&self) -> Result<Map<figment::Profile, Dict>, Error> {
-        let dict = dict!(
-            self.args,
-            private_key,
-            chain_rpc_address,
-            chain_contract_address,
-            port
-        );
+        let dict = dict!(self.args, private_key, chain_rpc_address, chain_contract_address, port);
 
         Ok(self.profile.collect(dict))
     }

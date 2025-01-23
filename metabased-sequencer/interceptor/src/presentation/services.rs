@@ -1,6 +1,8 @@
-use crate::application::{Metrics, Stopwatch};
-use crate::domain::MetabasedSequencerChainService;
-use crate::infrastructure::{PrometheusMetrics, SolMetabasedSequencerChainService, TokioStopwatch};
+use crate::{
+    application::{Metrics, Stopwatch},
+    domain::MetabasedSequencerChainService,
+    infrastructure::{PrometheusMetrics, SolMetabasedSequencerChainService, TokioStopwatch},
+};
 use alloy::{
     network::{Ethereum, EthereumWallet},
     primitives::{Address, B256},
@@ -34,11 +36,7 @@ where
     S: Stopwatch + Debug,
 {
     pub fn new(chain: Chain, metrics: M, stopwatch: S) -> Self {
-        Self {
-            chain,
-            metrics,
-            stopwatch,
-        }
+        Self { chain, metrics, stopwatch }
     }
 
     pub fn chain_service(&self) -> &Chain {
@@ -97,8 +95,5 @@ fn create_chain_service(
     let rpc: RootProvider<_, Ethereum> = ReqwestProvider::new_http(chain_rpc_address);
     let rpc = FillProvider::new(rpc, filler);
 
-    Ok(SolMetabasedSequencerChainService::new(
-        chain_contract_address,
-        rpc,
-    ))
+    Ok(SolMetabasedSequencerChainService::new(chain_contract_address, rpc))
 }

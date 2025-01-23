@@ -4,8 +4,10 @@ use alloy::{
     hex,
     primitives::{Address, Bytes, B256},
 };
-use serde::de::{self, Deserializer};
-use serde::Deserialize;
+use serde::{
+    de::{self, Deserializer},
+    Deserialize,
+};
 use strum_macros::Display;
 
 #[derive(Clone, Debug)]
@@ -19,7 +21,8 @@ pub struct BlockAndReceipts {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-/// **`Block`**: Represents an Ethereum block, including details like its hash, number, timestamp, and the transactions it contains.
+/// **`Block`**: Represents an Ethereum block, including details like its hash, number, timestamp,
+/// and the transactions it contains.
 pub struct Block {
     /// The hash of the block.
     #[serde(deserialize_with = "deserialize_b256")]
@@ -47,7 +50,8 @@ pub struct Block {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-/// **`Transaction`**: Represents a single transaction within a block, including fields such as the transaction hash, sender/recipient addresses, value, and input data.
+/// **`Transaction`**: Represents a single transaction within a block, including fields such as the
+/// transaction hash, sender/recipient addresses, value, and input data.
 pub struct Transaction {
     /// The hash of the block containing this transaction, or `null` if pending.
     #[serde(deserialize_with = "deserialize_b256")]
@@ -77,7 +81,8 @@ pub struct Transaction {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-/// **`Receipt`**: Contains the result of a transaction, including fields like status, logs, and potentially a contract address if one was created.
+/// **`Receipt`**: Contains the result of a transaction, including fields like status, logs, and
+/// potentially a contract address if one was created.
 pub struct Receipt {
     /// The hash of the block containing the transaction.
     #[serde(deserialize_with = "deserialize_b256")]
@@ -107,7 +112,8 @@ pub struct Receipt {
 
 #[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
-/// *`Log`**: Represents an individual log entry emitted by a smart contract during a transaction, containing information such as topics, data, and whether it was removed due to a reorganization.
+/// *`Log`**: Represents an individual log entry emitted by a smart contract during a transaction,
+/// containing information such as topics, data, and whether it was removed due to a reorganization.
 pub struct Log {
     /// The hash of the block containing the log, or `null` if pending.
     #[serde(deserialize_with = "deserialize_b256")]
@@ -147,11 +153,14 @@ pub enum Chain {
 /// The state of a slot describing its finality
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SlotState {
-    /// A slot that is considered final and cannot rollback (we don't expect any underlying chains to reorg this far)
+    /// A slot that is considered final and cannot rollback (we don't expect any underlying chains
+    /// to reorg this far)
     Finalized,
-    /// A slot that is considered final according to the source L2s finality guarantees (it can only be rolled back if a L1 reorg happens)
+    /// A slot that is considered final according to the source L2s finality guarantees (it can
+    /// only be rolled back if a L1 reorg happens)
     Safe,
-    /// A slot that we don't expect to fit more blocks into. It should be considered cannonical unless a reorg happens
+    /// A slot that we don't expect to fit more blocks into. It should be considered cannonical
+    /// unless a reorg happens
     Unsafe,
     /// A slot to which incoming blocks might still be added
     Open,

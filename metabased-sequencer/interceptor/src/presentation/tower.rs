@@ -1,11 +1,12 @@
-use http::header::CONTENT_TYPE;
-use http::{HeaderValue, Response};
+use http::{header::CONTENT_TYPE, HeaderValue, Response};
 use http_body_util::BodyExt;
 use jsonrpsee::server::{HttpRequest, HttpResponse};
-use std::error::Error;
-use std::future::Future;
-use std::pin::Pin;
-use std::task::{Context, Poll};
+use std::{
+    error::Error,
+    future::Future,
+    pin::Pin,
+    task::{Context, Poll},
+};
 use tower_layer::Layer;
 use tower_service::Service;
 

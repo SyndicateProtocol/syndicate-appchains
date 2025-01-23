@@ -3,6 +3,7 @@
 //! This module provides the core [`RollupBlockBuilder`] trait that defines how
 //! different rollup implementations can construct and process their blocks.
 
+use crate::rollups::shared::SequencingTransactionParser;
 use alloy::{
     primitives::{Address, Bytes},
     rpc::types::TransactionRequest,
@@ -14,8 +15,6 @@ use std::{
     fmt::Debug,
     marker::{Send, Sync},
 };
-
-use crate::rollups::shared::SequencingTransactionParser;
 
 /// Trait for rollup-specific block builders that construct batches from transactions
 #[async_trait]

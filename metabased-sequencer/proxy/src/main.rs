@@ -1,19 +1,12 @@
 // Shamelessly inspired by: https://github.com/hyperium/hyper/blob/master/examples/http_proxy.rs
-use std::net::SocketAddr;
-use std::sync::Arc;
-
 use bytes::Bytes;
 use clap::Parser;
 use http::StatusCode;
-use http_body_util::combinators::BoxBody;
-use http_body_util::{BodyExt, Full};
-use hyper::server::conn::http1;
-use hyper::service::service_fn;
-use hyper::{Request, Response};
+use http_body_util::{combinators::BoxBody, BodyExt, Full};
+use hyper::{server::conn::http1, service::service_fn, Request, Response};
 use reqwest::Client;
-
-use tokio::net::TcpListener;
-use tokio::task::JoinSet;
+use std::{net::SocketAddr, sync::Arc};
+use tokio::{net::TcpListener, task::JoinSet};
 use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 
@@ -38,10 +31,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let proxy_addr: SocketAddr = match config.proxy_address.parse() {
         Ok(addr) => addr,
         Err(e) => {
-            error!(
-                "Failed to parse proxy_address '{}': {}",
-                config.proxy_address, e
-            );
+            error!("Failed to parse proxy_address '{}': {}", config.proxy_address, e);
             std::process::exit(1);
         }
     };
@@ -49,10 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let target_url = match reqwest::Url::parse(&config.target_address) {
         Ok(url) => url.to_string(),
         Err(e) => {
-            error!(
-                "Failed to parse target_address '{}': {}",
-                config.target_address, e
-            );
+            error!("Failed to parse target_address '{}': {}", config.target_address, e);
             std::process::exit(1);
         }
     };
@@ -95,10 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
             let io = TokioIo::new(stream);
             tokio::task::spawn(async move {
-                if let Err(err) = http1::Builder::new()
-                    .serve_connection(io, proxy_service)
-                    .await
-                {
+                if let Err(err) = http1::Builder::new().serve_connection(io, proxy_service).await {
                     println!("Error serving connection: {:?}", err);
                 }
             });
@@ -137,10 +121,7 @@ struct Proxy {
 
 impl Proxy {
     fn new(client: Client, target_uri: String) -> Self {
-        Proxy {
-            client: Arc::new(client),
-            target_uri,
-        }
+        Proxy { client: Arc::new(client), target_uri }
     }
 
     /// Handles incoming HTTP requests and forwards them to the external HTTPS endpoint
@@ -172,13 +153,10 @@ impl Proxy {
         );
 
         let _headers = reqwest::header::HeaderMap::from_iter(
-            headers
-                .iter()
-                .map(|(k, v)| (k.clone(), v.clone()))
-                .chain(std::iter::once((
-                    "X-Forwarded-Host".to_owned().try_into().unwrap(),
-                    req_host.unwrap(),
-                ))),
+            headers.iter().map(|(k, v)| (k.clone(), v.clone())).chain(std::iter::once((
+                "X-Forwarded-Host".to_owned().try_into().unwrap(),
+                req_host.unwrap(),
+            ))),
         );
         let request = self
             .client
@@ -222,15 +200,13 @@ impl Proxy {
                     response_builder = response_builder.header(key, value);
                 }
 
-                let response = response_builder
-                    .body(full(resp_body_bytes))
-                    .unwrap_or_else(|e| {
-                        error!("Failed to build response: {}", e);
-                        Response::builder()
-                            .status(StatusCode::INTERNAL_SERVER_ERROR)
-                            .body(full("Internal Server Error"))
-                            .unwrap()
-                    });
+                let response = response_builder.body(full(resp_body_bytes)).unwrap_or_else(|e| {
+                    error!("Failed to build response: {}", e);
+                    Response::builder()
+                        .status(StatusCode::INTERNAL_SERVER_ERROR)
+                        .body(full("Internal Server Error"))
+                        .unwrap()
+                });
 
                 Ok(response)
             }
@@ -247,7 +223,5 @@ impl Proxy {
 }
 
 fn full<T: Into<Bytes>>(chunk: T) -> BoxBody<Bytes, hyper::Error> {
-    Full::new(chunk.into())
-        .map_err(|never| match never {})
-        .boxed()
+    Full::new(chunk.into()).map_err(|never| match never {}).boxed()
 }
