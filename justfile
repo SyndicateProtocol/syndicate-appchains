@@ -475,9 +475,14 @@ metabased-sequencer-verify: metabased-sequencer-up
 
 # Sends a new transaction on a new test chain and metabased sequencer
 arb-test-sendRawTransaction: setup-new-arb-chain-and-metabased-sequencer
-    curl --location {{ metabased_sequencer_url }} \
+    @just _log-start "arb-test-sendRawTransaction"
+
+    @curl --silent --location {{ metabased_sequencer_url }} \
     --header 'Content-Type: application/json' \
-    --data '{"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["0xb85902f85682038501808088ffffffffffffffff808080c001a0d555dc3a308d5bde3d5bc665796f9e7d7125c1554667325533fe237c1aa120b5a07d97dae06082d3eb7fa8966b33f6ce51d7127dcddd5da3d8be9c448a72150a90"],"id":1}'
+    --data '{"jsonrpc":"2.0","method":"eth_sendRawTransaction","params":["0xb85902f85682038501808088ffffffffffffffff808080c001a0d555dc3a308d5bde3d5bc665796f9e7d7125c1554667325533fe237c1aa120b5a07d97dae06082d3eb7fa8966b33f6ce51d7127dcddd5da3d8be9c448a72150a90"],"id":1}' | \
+    jq '.'
+
+    @just _log-end "arb-test-sendRawTransaction"
 
 # Run transaction test
 # TODO: Fix this script
