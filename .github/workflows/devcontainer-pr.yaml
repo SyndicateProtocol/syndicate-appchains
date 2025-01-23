@@ -1,9 +1,8 @@
 name: Dev Container Tests
 
 on:
-  # Temporarily disabled while we work on the justfile refactor
-  # pull_request:
-  # branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
 jobs:
   arb-test:
