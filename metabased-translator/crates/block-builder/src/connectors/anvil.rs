@@ -102,7 +102,6 @@ impl MetaChainProvider {
     }
 
     /// Mines a block on the `MetaChain`
-    // TODO: (SEQ-417): Use the timestamp of the slot for the next mchain block
     pub async fn mine_block(&self, block_timestamp: u64) -> eyre::Result<()> {
         let opts = MineOptions::Options {
             timestamp: Some(block_timestamp), // seconds
