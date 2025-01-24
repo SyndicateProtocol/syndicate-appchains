@@ -6,7 +6,7 @@ use common::types::BlockAndReceipts;
 use eyre::{eyre, Error};
 use std::time::Duration;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
-use tracing::info;
+use tracing::{debug, error};
 
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
@@ -54,7 +54,7 @@ impl Ingestor {
     async fn get_block_and_receipts(&self, block_number: u64) -> Result<BlockAndReceipts, Error> {
         let block = self.client.get_block_by_number(block_number).await?;
         let receipts = self.client.get_block_receipts(block_number).await?;
-        info!("Got block: {:?}", block.number);
+        debug!("Got block: {:?}", block.number);
 
         Ok(BlockAndReceipts { block, receipts })
     }
@@ -80,13 +80,22 @@ impl Ingestor {
     /// Polls for new blocks and receipts at the specified interval and sends them to the consumer.
     #[allow(unreachable_pub)] // TODO: remove when used
     pub async fn start_polling(&mut self) -> Result<(), Error> {
-        info!("Starting polling");
+        debug!("Starting polling");
 
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
-            let block_and_receipts = self.get_block_and_receipts(self.current_block_number).await?;
-            info!("Pushing block: {:?}", block_and_receipts.block.number);
-            self.push_block_and_receipts(block_and_receipts).await?;
+            match self.get_block_and_receipts(self.current_block_number).await {
+                Ok(block_and_receipts) => {
+                    debug!("Pushing block: {:?}", block_and_receipts.block.number);
+                    if let Err(err) = self.push_block_and_receipts(block_and_receipts).await {
+                        error!("Failed to push block and receipts: {:?}, retrying...", err);
+                    }
+                }
+                Err(err) => {
+                    error!("Failed to fetch block and receipts: {:?}, retrying...", err);
+                }
+            }
+
             interval.tick().await;
         }
     }
