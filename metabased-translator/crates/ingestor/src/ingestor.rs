@@ -201,14 +201,12 @@ mod tests {
         let start_block = 1;
         let polling_interval = Duration::from_millis(10);
 
-        // Create a simple channel for testing.
         let (sender, _) = channel(10);
         let client = EthClient::new(test_config().sequencing.sequencing_rpc_url.as_str()).await?;
 
         let mut ingestor =
             Ingestor { client, current_block_number: start_block, sender, polling_interval };
 
-        // Spawn the polling task.
         let polling_handle = tokio::spawn(async move {
             let result = ingestor.start_polling().await;
             assert!(result.is_ok(), "Polling task failed: {:?}", result);
