@@ -112,6 +112,7 @@ impl Slotter {
     ///    passed)
     /// 4. Send completed slots through the returned channel
     ///
+    /// # Returns a receiver that will get slots as they are processed.
     /// TODO SEQ-480 - implement restore from DB
     pub fn start(mut self) -> Receiver<Slot> {
         self.status.store(Status::Started);
@@ -454,7 +455,6 @@ mod tests {
     use super::*;
     use alloy::primitives::B256;
     use std::str::FromStr;
-    use tokio::sync::mpsc::channel;
     async fn create_slotter(
         slot_start_timestamp_ms: u64,
         slot_duration_ms: u64,
