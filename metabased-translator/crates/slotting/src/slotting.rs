@@ -179,8 +179,8 @@ impl Slotter {
                                                                                 // received is
                                                                                 // blocked)
                         }
-                        SlotterError::NonIncreasingTimestamp { .. } => {
-                            panic!("Non-increasing timestamp - this should never happen (where a block is received with the expected block number, but a lower timestamp) {e}");
+                        SlotterError::EarlierTimestamp { .. } => {
+                            panic!("Earlier timestamp - this should never happen (where a block is received with the expected block number, but a lower timestamp) {e}");
                         }
                     },
                 }
@@ -365,8 +365,8 @@ impl Slotter {
                 });
             }
 
-            if block.timestamp <= latest.timestamp {
-                return Err(SlotterError::NonIncreasingTimestamp {
+            if block.timestamp < latest.timestamp {
+                return Err(SlotterError::EarlierTimestamp {
                     chain,
                     current: latest.timestamp,
                     received: block.timestamp,
@@ -447,8 +447,8 @@ pub enum SlotterError {
     #[error("{chain} chain block number skipped. Current: #{current_block_number}, Received: #{received_block_number}")]
     BlockNumberSkipped { chain: Chain, current_block_number: u64, received_block_number: u64 },
 
-    #[error("{chain} chain timestamp must increase. Current: {current}, Received: {received}")]
-    NonIncreasingTimestamp { chain: Chain, current: u64, received: u64 },
+    #[error("{chain} chain timestamp must not decrease. Current: {current}, Received: {received}")]
+    EarlierTimestamp { chain: Chain, current: u64, received: u64 },
 }
 
 #[cfg(test)]
@@ -456,6 +456,26 @@ mod tests {
     use super::*;
     use alloy::primitives::B256;
     use std::str::FromStr;
+    async fn create_slotter(
+        slot_start_timestamp_ms: u64,
+        slot_duration_ms: u64,
+    ) -> (Slotter, Sender<BlockAndReceipts>, Sender<BlockAndReceipts>) {
+        let (seq_tx, seq_rx) = channel(100);
+        let (settle_tx, settle_rx) = channel(100);
+
+        let slotter = Slotter::new(
+            seq_rx,
+            settle_rx,
+            SlottingConfig {
+                slot_duration_ms,
+                start_slot_number: 0,
+                start_slot_timestamp: slot_start_timestamp_ms,
+            },
+        )
+        .await;
+
+        (slotter, seq_tx, settle_tx)
+    }
 
     fn create_test_block(number: u64, timestamp: u64) -> BlockAndReceipts {
         BlockAndReceipts {
@@ -506,30 +526,17 @@ mod tests {
     /// ```
     #[tokio::test]
     async fn test_slotter() {
-        let (seq_tx, seq_rx) = channel(100);
-        let (settle_tx, settle_rx) = channel(100);
-
         let slot_start_timestamp_ms = 10_000;
-        let slot_duration_ms = 1_000; // 1 second
-
-        let slotter = Slotter::new(
-            seq_rx,
-            settle_rx,
-            SlottingConfig {
-                slot_duration_ms,
-                start_slot_number: 0,
-                start_slot_timestamp: slot_start_timestamp_ms,
-            },
-        )
-        .await;
-
+        let slot_duration_ms = 1_000;
+        let (slotter, seq_tx, set_tx) =
+            create_slotter(slot_start_timestamp_ms, slot_duration_ms).await;
         let mut slot_rx = slotter.start();
         assert!(slot_rx.is_empty());
 
         // send initial blocks, these should fit in slot 1 and make slot 0 be marked as unsafe
         seq_tx.send(create_test_block(1, 10_001)).await.unwrap();
 
-        settle_tx.send(create_test_block(1, 10_002)).await.unwrap();
+        set_tx.send(create_test_block(1, 10_002)).await.unwrap();
 
         let slot0 = slot_rx.recv().await.unwrap();
         assert_eq!(slot0.timestamp, slot_start_timestamp_ms);
@@ -541,7 +548,7 @@ mod tests {
         assert!(slot_rx.is_empty());
 
         // send a block for the settlement chain that should fit in slot 2
-        settle_tx.send(create_test_block(2, 11_001)).await.unwrap(); // this block should be fit in slot 1
+        set_tx.send(create_test_block(2, 11_001)).await.unwrap(); // this block should be fit in slot 1
 
         // slot 1 should still be opened (we haven't received any blocks for the sequencing chain
         // ahead of the slot)
@@ -567,5 +574,87 @@ mod tests {
 
         // slot 2 should still be opened
         assert!(slot_rx.is_empty());
+    }
+
+    #[tokio::test]
+    async fn test_update_latest_block_success_sequencing() {
+        let slot_start_timestamp_ms = 10_000;
+        let slot_duration_ms = 1_000;
+        let (mut slotter, _, _) = create_slotter(slot_start_timestamp_ms, slot_duration_ms).await;
+
+        let block = create_test_block(2, 200);
+
+        slotter.latest_sequencing_chain_block =
+            Some(BlockRef::new(&create_test_block(1, 100).block));
+
+        let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
+
+        assert!(result.is_ok());
+        assert_eq!(slotter.latest_sequencing_chain_block.unwrap().number, 2);
+    }
+
+    #[tokio::test]
+    async fn test_update_latest_block_success_settlement() {
+        let slot_start_timestamp_ms = 10_000;
+        let slot_duration_ms = 1_000;
+        let (mut slotter, _, _) = create_slotter(slot_start_timestamp_ms, slot_duration_ms).await;
+
+        let block = create_test_block(3, 300);
+
+        slotter.latest_settlement_chain_block =
+            Some(BlockRef::new(&create_test_block(2, 200).block));
+
+        let result = slotter.update_latest_block(&block.block, Chain::Settlement);
+
+        assert!(result.is_ok());
+        assert_eq!(slotter.latest_settlement_chain_block.unwrap().number, 3);
+    }
+
+    #[tokio::test]
+    async fn test_reorg_detected() {
+        let slot_start_timestamp_ms = 10_000;
+        let slot_duration_ms = 1_000;
+        let (mut slotter, _, _) = create_slotter(slot_start_timestamp_ms, slot_duration_ms).await;
+
+        let block = create_test_block(1, 50);
+
+        slotter.latest_sequencing_chain_block =
+            Some(BlockRef::new(&create_test_block(2, 10_001).block));
+
+        let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
+
+        assert!(matches!(result, Err(SlotterError::ReorgDetected { .. })));
+    }
+
+    #[tokio::test]
+    async fn test_block_number_skipped() {
+        let slot_start_timestamp_ms = 10_000;
+        let slot_duration_ms = 1_000;
+        let (mut slotter, _, _) = create_slotter(slot_start_timestamp_ms, slot_duration_ms).await;
+
+        let block = create_test_block(4, 400);
+
+        slotter.latest_settlement_chain_block =
+            Some(BlockRef::new(&create_test_block(2, 200).block));
+
+        let result = slotter.update_latest_block(&block.block, Chain::Settlement);
+
+        assert!(matches!(result, Err(SlotterError::BlockNumberSkipped { .. })));
+    }
+
+    #[tokio::test]
+    async fn test_earlier_timestamp() {
+        let slot_start_timestamp_ms = 10_000;
+        let slot_duration_ms = 1_000;
+        let (mut slotter, _, _) = create_slotter(slot_start_timestamp_ms, slot_duration_ms).await;
+
+        let block = create_test_block(2, 50);
+
+        slotter.latest_sequencing_chain_block =
+            Some(BlockRef::new(&create_test_block(1, 100).block));
+
+        let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
+
+        assert!(matches!(result, Err(SlotterError::EarlierTimestamp { .. })));
     }
 }
