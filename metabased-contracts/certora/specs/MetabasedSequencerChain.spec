@@ -191,3 +191,20 @@ rule permissionsCorrectlyEnforced(bytes data) {
     assert initiallyAllowed => txSucceeded,
         "Transaction failed despite sender being authorized and valid preconditions";
 }
+
+/*
+ * Rule 10: Only admin can transfer admin rights
+ */
+rule onlyAdminCanTransfer(address newAdmin) {
+    env e;
+
+    // Store old admin
+    address oldAdmin = admin();
+
+    // Try to transfer admin
+    transferAdmin@withrevert(e, newAdmin);
+
+    // If successful, must have been the current admin
+    assert !lastReverted => e.msg.sender == oldAdmin,
+        "Non-admin transferred admin rights";
+}
