@@ -6,6 +6,7 @@
 
 use crate::{
     contract_bindings::{
+        eventemitter::EventEmitter::{emitEvent2Call, emitEvent3Call},
         ibridge::IBridge::MessageDelivered,
         idelayedmessageprovider::IDelayedMessageProvider::{
             InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
@@ -146,11 +147,65 @@ impl ArbitrumBlockBuilder {
         info!("Inbox messages: {:?}", inbox_messages);
         info!("Delayed messages: {:?}", delayed_messages);
 
-        // TODO: Process delayed messages into transactions for the MChain
-        // Exact shap of these transactions is dependent on contracts we will use in MChain
-        // - Event emitter vs Full contracts
+        let mut delayed_txns: Vec<TransactionRequest> = Vec::new();
 
-        Ok(vec![])
+        // We need 2 events submitted to get Arb to process the delayed messages
+
+        // - MessageDelivered event MessageDelivered( uint256 indexed messageIndex, bytes32 indexed
+        //   beforeInboxAcc, address inbox, uint8 kind, address sender, bytes32 messageDataHash,
+        //   uint256 baseFeeL1, uint64 timestamp
+        // );
+
+        // - InboxMessageDelivered
+        // event InboxMessageDelivered(uint256 indexed messageNum, bytes data);
+
+        // We need to create transactions that when sent to the EventEmitter will emit these events
+
+        for msg_log in delayed_messages {
+            let message_index = U256::from_be_slice(msg_log.topics[1].as_slice());
+            let before_inbox_acc = FixedBytes::from_slice(msg_log.topics[2].as_slice());
+
+            // Get corresponding message data
+            let message_data = inbox_messages
+                .get(&message_index)
+                .ok_or_else(|| Error::msg("Missing inbox message data"))?;
+
+            // Create MessageDelivered event transaction
+            let msg_delivered_tx = TransactionRequest::default().to(msg_log.address).input(
+                emitEvent3Call {
+                    // keccak256("MessageDelivered(uint256,bytes32,address,uint8,address,bytes32,
+                    // uint256,uint64)")
+                    signatureHash: MSG_DELIVERED_EVENT_HASH,
+                    // First indexed param - messageIndex as bytes32
+                    indexed1: FixedBytes::from(message_index.to_be_bytes()),
+                    // Second indexed param - beforeInboxAcc
+                    indexed2: before_inbox_acc,
+                    // Pack the non-indexed parameters into bytes32
+                    nonIndexed: FixedBytes::from_slice(&msg_log.data),
+                }
+                .abi_encode()
+                .into(),
+            );
+
+            // Create InboxMessageDelivered event transaction
+            let inbox_msg_delivered_tx = TransactionRequest::default().to(msg_log.address).input(
+                emitEvent2Call {
+                    // keccak256("InboxMessageDelivered(uint256,bytes)")
+                    signatureHash: INBOX_MSG_DELIVERED_EVENT_HASH,
+                    // First indexed param - messageNum as bytes32
+                    indexed1: FixedBytes::from(message_index.to_be_bytes()),
+                    // Non-indexed param - data as bytes32
+                    nonIndexed: FixedBytes::from_slice(message_data),
+                }
+                .abi_encode()
+                .into(),
+            );
+
+            delayed_txns.push(msg_delivered_tx);
+            delayed_txns.push(inbox_msg_delivered_tx);
+        }
+
+        Ok(delayed_txns)
     }
 
     /// Builds a batch of transactions into an Arbitrum batch
