@@ -232,17 +232,13 @@ mod tests {
 
         polling_handle.abort();
 
-        match polling_handle.await {
-            Err(err) if err.is_cancelled() => {
-                debug!("Polling task was successfully aborted.");
-            }
-            Err(err) => {
-                panic!("Unexpected error when waiting on the polling task: {:?}", err);
-            }
-            Ok(_) => {
-                panic!("Polling task completed unexpectedly when it should have been aborted.");
-            }
-        }
+        let result = polling_handle.await;
+
+        // Assert that the task was canceled successfully
+        assert!(
+            result.is_err() && result.unwrap_err().is_cancelled(),
+            "Expected the polling task to be canceled",
+        );
 
         Ok(())
     }
