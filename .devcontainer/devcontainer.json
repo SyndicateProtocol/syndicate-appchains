@@ -25,11 +25,11 @@
     },
     // Pin Rust version for reproducible builds
     // NOTE: We need to update the Rust version with each stable Rust release
-    // NOTE: Currently using nightly for pre-commit hooks (imports_granularity in rustfmt.toml)
-    //       Will switch back to stable once imports_granularity feature is available in stable Rust
+    // NOTE: Pre-commit hooks require nightly Rust for imports_granularity in rustfmt.toml
+    //       These hooks can be run on the host machine with nightly Rust installed
     // Targets: x86_64-unknown-linux-gnu (X86 Linux), aarch64-apple-darwin (M series Mac)
     "ghcr.io/devcontainers/features/rust:1": {
-      "version": "nightly-2024-01-23",
+      "version": "1.84.0",
       "profile": "default",
       "targets": "x86_64-unknown-linux-gnu,aarch64-apple-darwin"
     },
