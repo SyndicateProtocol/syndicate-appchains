@@ -6,7 +6,7 @@ use common::types::BlockAndReceipts;
 use eyre::{eyre, Error};
 use std::time::Duration;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
-use tracing::info;
+use tracing::{debug, error};
 
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
@@ -54,7 +54,7 @@ impl Ingestor {
     async fn get_block_and_receipts(&self, block_number: u64) -> Result<BlockAndReceipts, Error> {
         let block = self.client.get_block_by_number(block_number).await?;
         let receipts = self.client.get_block_receipts(block_number).await?;
-        info!("Got block: {:?}", block.number);
+        debug!("Got block: {:?}", block.number);
 
         Ok(BlockAndReceipts { block, receipts })
     }
@@ -77,18 +77,53 @@ impl Ingestor {
 
     /// Starts the polling process.
     ///
-    /// Polls for new blocks and receipts at the specified interval and sends them to the consumer.
-    #[allow(unreachable_pub)] // TODO: remove when used
+    /// This asynchronous function continuously polls for new blocks and their receipts
+    /// at a specified interval (`self.polling_interval`). For each block, it fetches the
+    /// block and receipt data using `get_block_and_receipts` and sends the result to the
+    /// consumer via the provided channel.
+    ///
+    /// The polling process runs in an infinite loop, but it is designed to handle two
+    /// key scenarios:
+    /// 1. **Interval Tick**: On each interval tick, the function fetches the next block and
+    ///    receipts, logs relevant details, and pushes the data to the consumer. If fetching or
+    ///    pushing fails, the function retries automatically.
+    /// 2. **Cancellation Signal**: The function listens for cancellation signals (e.g., task
+    ///    abortion or a `ctrl_c` event). When such a signal is received, the polling process
+    ///    gracefully stops.
+    /// # Errors
+    /// This function returns an `Error` if initialization or any critical operation
+    /// fails. Errors during polling (e.g., fetching blocks or pushing data) are logged
+    /// and retried within the loop.
     pub async fn start_polling(&mut self) -> Result<(), Error> {
-        info!("Starting polling");
+        debug!("Starting polling");
 
         let mut interval = tokio::time::interval(self.polling_interval);
+
         loop {
-            let block_and_receipts = self.get_block_and_receipts(self.current_block_number).await?;
-            info!("Pushing block: {:?}", block_and_receipts.block.number);
-            self.push_block_and_receipts(block_and_receipts).await?;
-            interval.tick().await;
+            tokio::select! {
+                _ = interval.tick() => {
+                    match self.get_block_and_receipts(self.current_block_number).await {
+                        Ok(block_and_receipts) => {
+                            debug!("Pushing block: {:?}", block_and_receipts.block.number);
+                            if let Err(err) = self.push_block_and_receipts(block_and_receipts).await {
+                                error!("Failed to push block and receipts: {:?}, retrying...", err);
+                            }
+                        }
+                        Err(err) => {
+                            error!("Failed to fetch block and receipts: {:?}, retrying...", err);
+                        }
+                    }
+                }
+                // Respond to cancellation
+                _ = tokio::signal::ctrl_c() => {
+                    debug!("Polling task was cancelled");
+                    break;
+                }
+            }
         }
+
+        debug!("Polling stopped");
+        Ok(())
     }
 }
 
@@ -175,6 +210,36 @@ mod tests {
         } else {
             panic!("No block received");
         }
+        Ok(())
+    }
+    #[tokio::test]
+    async fn test_start_polling_simple() -> Result<(), Error> {
+        let start_block = 1;
+        let polling_interval = Duration::from_millis(10);
+
+        let (sender, _) = channel(10);
+        let client = EthClient::new(test_config().sequencing.sequencing_rpc_url.as_str()).await?;
+
+        let mut ingestor =
+            Ingestor { client, current_block_number: start_block, sender, polling_interval };
+
+        let polling_handle = tokio::spawn(async move {
+            let result = ingestor.start_polling().await;
+            assert!(result.is_ok(), "Polling task failed: {:?}", result);
+        });
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        polling_handle.abort();
+
+        let result = polling_handle.await;
+
+        // Assert that the task was canceled successfully
+        assert!(
+            result.is_err() && result.unwrap_err().is_cancelled(),
+            "Expected the polling task to be canceled",
+        );
+
         Ok(())
     }
 }
