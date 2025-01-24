@@ -27,10 +27,9 @@
     // NOTE: We need to update the Rust version with each stable Rust release
     // NOTE: Pre-commit hooks require nightly Rust for imports_granularity in rustfmt.toml
     //       These hooks can be run on the host machine with nightly Rust installed
-    // NOTE: Using 1.84 instead of 1.84.0 to allow for any 1.84.X build
     // Targets: x86_64-unknown-linux-gnu (X86 Linux), aarch64-apple-darwin (M series Mac)
     "ghcr.io/devcontainers/features/rust:1": {
-      "version": "1.84",
+      "version": "1.84.0",
       "profile": "default",
       "targets": "x86_64-unknown-linux-gnu,aarch64-apple-darwin"
     },
