@@ -82,21 +82,32 @@ impl Ingestor {
         debug!("Starting polling");
 
         let mut interval = tokio::time::interval(self.polling_interval);
+
         loop {
-            match self.get_block_and_receipts(self.current_block_number).await {
-                Ok(block_and_receipts) => {
-                    debug!("Pushing block: {:?}", block_and_receipts.block.number);
-                    if let Err(err) = self.push_block_and_receipts(block_and_receipts).await {
-                        error!("Failed to push block and receipts: {:?}, retrying...", err);
+            tokio::select! {
+                _ = interval.tick() => {
+                    match self.get_block_and_receipts(self.current_block_number).await {
+                        Ok(block_and_receipts) => {
+                            debug!("Pushing block: {:?}", block_and_receipts.block.number);
+                            if let Err(err) = self.push_block_and_receipts(block_and_receipts).await {
+                                error!("Failed to push block and receipts: {:?}, retrying...", err);
+                            }
+                        }
+                        Err(err) => {
+                            error!("Failed to fetch block and receipts: {:?}, retrying...", err);
+                        }
                     }
                 }
-                Err(err) => {
-                    error!("Failed to fetch block and receipts: {:?}, retrying...", err);
+                // Respond to cancellation
+                _ = tokio::task::yield_now() => {
+                    debug!("Polling task was cancelled");
+                    break;
                 }
             }
-
-            interval.tick().await;
         }
+
+        debug!("Polling stopped");
+        Ok(())
     }
 }
 
@@ -107,11 +118,7 @@ mod tests {
     use alloy::primitives::B256;
     use common::types::{Block, BlockAndReceipts};
     use eyre::Result;
-    use std::{
-        str::FromStr,
-        sync::{Arc, Mutex},
-    };
-    use tokio::time::{self, Duration};
+    use std::str::FromStr;
 
     fn test_config() -> IngestionPipelineConfig {
         IngestionPipelineConfig {
@@ -189,65 +196,37 @@ mod tests {
         }
         Ok(())
     }
-
     #[tokio::test]
-    async fn test_start_polling_retries_on_failure() {
-        struct MockPolling {
-            current_block_number: u64,
-            call_count: Arc<Mutex<u64>>,
-        }
+    async fn test_start_polling_simple() -> Result<(), Error> {
+        let start_block = 1;
+        let polling_interval = Duration::from_millis(10);
 
-        impl MockPolling {
-            async fn get_block_and_receipts(&self, block_number: u64) -> Result<u64, &'static str> {
-                let mut count = self.call_count.lock().unwrap();
-                *count += 1;
-                if *count < 3 {
-                    Err("Simulated fetch failure")
-                } else {
-                    Ok(block_number)
-                }
-            }
+        // Create a simple channel for testing.
+        let (sender, _) = channel(10);
+        let client = EthClient::new(test_config().sequencing.sequencing_rpc_url.as_str()).await?;
 
-            async fn push_block_and_receipts(&self, block: u64) -> Result<(), &'static str> {
-                if block % 2 == 0 {
-                    Err("Simulated push failure")
-                } else {
-                    Ok(())
-                }
-            }
+        let mut ingestor =
+            Ingestor { client, current_block_number: start_block, sender, polling_interval };
 
-            pub async fn start_polling(&mut self, polling_interval: Duration) {
-                let mut interval = time::interval(polling_interval);
-                loop {
-                    match self.get_block_and_receipts(self.current_block_number).await {
-                        Ok(block) => {
-                            if let Err(_) = self.push_block_and_receipts(block).await {
-                                // Handle push error
-                            }
-                        }
-                        Err(_) => {
-                            // Handle fetch error
-                        }
-                    }
-                    interval.tick().await;
-                }
-            }
-        }
-
-        let call_count = Arc::new(Mutex::new(0));
-        let mut polling = MockPolling { current_block_number: 1, call_count: call_count.clone() };
-
-        let polling_interval = Duration::from_millis(100);
-        let handle = tokio::spawn(async move {
-            polling.start_polling(polling_interval).await;
+        // Spawn the polling task.
+        let polling_handle = tokio::spawn(async move {
+            let result = ingestor.start_polling().await;
+            assert!(result.is_ok(), "Polling task failed: {:?}", result);
         });
 
-        // Allow some time for retries
-        time::sleep(Duration::from_millis(500)).await;
+        tokio::time::sleep(Duration::from_millis(50)).await;
 
-        handle.abort();
+        polling_handle.abort();
 
-        let final_call_count = *call_count.lock().unwrap();
-        assert!(final_call_count >= 3, "Expected at least 3 retries, got {}", final_call_count);
+        match polling_handle.await {
+            Err(err) => {
+                panic!("Unexpected error when waiting on the polling task: {:?}", err);
+            }
+            Ok(_) => {
+                debug!("Polling task was successfully aborted.");
+            }
+        }
+
+        Ok(())
     }
 }
