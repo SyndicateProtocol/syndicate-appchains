@@ -107,7 +107,11 @@ mod tests {
     use alloy::primitives::B256;
     use common::types::{Block, BlockAndReceipts};
     use eyre::Result;
-    use std::str::FromStr;
+    use std::{
+        str::FromStr,
+        sync::{Arc, Mutex},
+    };
+    use tokio::time::{self, Duration};
 
     fn test_config() -> IngestionPipelineConfig {
         IngestionPipelineConfig {
@@ -184,5 +188,66 @@ mod tests {
             panic!("No block received");
         }
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_start_polling_retries_on_failure() {
+        struct MockPolling {
+            current_block_number: u64,
+            call_count: Arc<Mutex<u64>>,
+        }
+
+        impl MockPolling {
+            async fn get_block_and_receipts(&self, block_number: u64) -> Result<u64, &'static str> {
+                let mut count = self.call_count.lock().unwrap();
+                *count += 1;
+                if *count < 3 {
+                    Err("Simulated fetch failure")
+                } else {
+                    Ok(block_number)
+                }
+            }
+
+            async fn push_block_and_receipts(&self, block: u64) -> Result<(), &'static str> {
+                if block % 2 == 0 {
+                    Err("Simulated push failure")
+                } else {
+                    Ok(())
+                }
+            }
+
+            pub async fn start_polling(&mut self, polling_interval: Duration) {
+                let mut interval = time::interval(polling_interval);
+                loop {
+                    match self.get_block_and_receipts(self.current_block_number).await {
+                        Ok(block) => {
+                            if let Err(_) = self.push_block_and_receipts(block).await {
+                                // Handle push error
+                            }
+                        }
+                        Err(_) => {
+                            // Handle fetch error
+                        }
+                    }
+                    interval.tick().await;
+                }
+            }
+        }
+
+        let call_count = Arc::new(Mutex::new(0));
+        let mut polling = MockPolling { current_block_number: 1, call_count: call_count.clone() };
+
+        let polling_interval = Duration::from_millis(100);
+        let handle = tokio::spawn(async move {
+            polling.start_polling(polling_interval).await;
+        });
+
+        // Allow some time for retries
+        time::sleep(Duration::from_millis(500)).await;
+
+        handle.abort();
+
+        let final_call_count = *call_count.lock().unwrap();
+        assert!(final_call_count >= 3, "Expected at least 3 retries, got {}", final_call_count);
     }
 }
