@@ -12,9 +12,6 @@ foundry_path := env_var('PATH') + ":" + env_var('HOME') + "/.foundry/bin"
 # Define fully qualified path to forge binary
 forge := env_var('HOME') + "/.foundry/bin/forge"
 
-# Define minimum forge version (annoted by build date since we're using nightly build)
-forge_min_build_date := "2024-10-22"
-
 # Define a non-zero number to identify the layer-3 chain. The Chain ID does not
 # matter as long as it's not attached to a live chain. This chain ID is for the
 # Syndicate testnet, which is not live at this point on this chain ID.
@@ -386,16 +383,29 @@ foundry-setup:
     @just _log-start "foundry-setup"
 
     # Based on https://book.getfoundry.sh/getting-started/installation
-    [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || curl -L https://foundry.paradigm.xyz | bash
+    @if ! command -v foundryup >/dev/null 2>&1; then \
+        curl -L https://foundry.paradigm.xyz | zsh; \
+    else \
+        echo "foundryup is already installed"; \
+    fi
 
     @just _log-end "foundry-setup"
 
 # Install or upgrade Foundry with foundryup
-foundry-upgrade:
+foundry-upgrade: foundry-setup
     @just _log-start "foundry-upgrade"
 
+    # Only run foundryup if forge isn't found or if the installed version is not the latest
     # Based on https://book.getfoundry.sh/getting-started/installation
-    [ "$(date -d $({{ forge }} -V | cut -c 22-40) +%s)" -ge "$(date -d {{ forge_min_build_date }} +%s)" ] || foundryup
+    @if ! command -v forge >/dev/null 2>&1; then \
+        echo "Installing Foundry..."; \
+        foundryup; \
+    elif ! foundryup --list | grep -q "$(forge --version | cut -d' ' -f2)"; then \
+        echo "Updating Foundry..."; \
+        foundryup; \
+    else \
+        echo "Foundry is already at the latest version"; \
+    fi
 
     @just _log-end "foundry-upgrade"
 
