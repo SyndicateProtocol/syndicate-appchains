@@ -392,7 +392,7 @@ foundry-setup:
     @just _log-end "foundry-setup"
 
 # Install or upgrade Foundry with foundryup
-foundry-upgrade:
+foundry-upgrade: foundry-setup
     @just _log-start "foundry-upgrade"
 
     # Only run foundryup if forge isn't found or if the installed version is not the latest
