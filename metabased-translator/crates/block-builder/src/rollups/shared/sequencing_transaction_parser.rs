@@ -123,7 +123,7 @@ mod tests {
         ];
 
         Log {
-            block_hash_test: B256::from([0u8; 32]),
+            block_hash: B256::from([0u8; 32]),
             transaction_hash: B256::from([0u8; 32]),
             transaction_index: 1,
             block_number: 100,

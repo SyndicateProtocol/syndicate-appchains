@@ -4,7 +4,6 @@ use crate::{block_builder::BlockBuilderError, config::BlockBuilderConfig};
 use alloy::{
     network::{Ethereum, EthereumWallet},
     node_bindings::{Anvil, AnvilInstance},
-    primitives::U256,
     providers::{
         ext::AnvilApi,
         fillers::{
@@ -13,7 +12,7 @@ use alloy::{
         },
         Identity, Provider, ProviderBuilder, RootProvider,
     },
-    rpc::types::TransactionRequest,
+    rpc::types::{anvil::MineOptions, TransactionRequest},
     signers::local::PrivateKeySigner,
     transports::http::Http,
 };
@@ -103,9 +102,9 @@ impl MetaChainProvider {
     }
 
     /// Mines a block on the `MetaChain`
-    // TODO: (SEQ-417): Use the timestamp of the slot for the next mchain block
-    pub async fn mine_block(&self) -> eyre::Result<()> {
-        self.provider.anvil_mine(Some(U256::from(1)), None::<U256>).await?;
+    pub async fn mine_block(&self, block_timestamp_secs: u64) -> eyre::Result<()> {
+        let opts = MineOptions::Options { timestamp: Some(block_timestamp_secs), blocks: Some(1) };
+        self.provider.anvil_mine_detailed(Some(opts)).await?;
 
         Ok(())
     }

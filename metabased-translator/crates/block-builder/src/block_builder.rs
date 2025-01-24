@@ -62,7 +62,7 @@ impl BlockBuilder {
                 }
 
                 // Mine mchain block
-                if let Err(e) = self.mchain.mine_block().await {
+                if let Err(e) = self.mchain.mine_block(slot.timestamp).await {
                     log_error!("Error mining block: {}", e);
                 }
             }
