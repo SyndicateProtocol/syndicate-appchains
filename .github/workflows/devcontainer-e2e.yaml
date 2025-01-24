@@ -31,12 +31,11 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           imageName: ghcr.io/syndicateprotocol/metabased-devcontainer
-          imageTag: cache-e2e-${{ github.event.pull_request.number }}
+          imageTag: cache-main
           push: never
-          # Pull cached images from both main branch and PR branch
+          # Pull cached images from main branch
           cacheFrom: |
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
-            ghcr.io/syndicateprotocol/metabased-devcontainer:cache-e2e-${{ github.event.pull_request.number }}
           runCmd: |
             # Run all verifications
             just verify-all
