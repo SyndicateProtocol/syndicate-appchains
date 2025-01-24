@@ -172,7 +172,7 @@ pub enum SlotState {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Slot {
     /// the number of the slot - `slot_number` == `MetaChain`'s block number
-    pub slot_number: u64,
+    pub number: u64,
     /// the timestamp of the slot
     pub timestamp: u64,
     /// the blocks from the sequencing chain to be included in the slot
@@ -187,7 +187,7 @@ impl Slot {
     /// Creates a new slot
     pub const fn new(number: u64, timestamp: u64) -> Self {
         Self {
-            slot_number: number,
+            number,
             timestamp,
             sequencing_chain_blocks: Vec::new(),
             settlement_chain_blocks: Vec::new(),
@@ -214,7 +214,7 @@ impl fmt::Display for Slot {
         write!(
             f,
             "Slot #{} [ts: {}, state: {}, blocks: {} seq + {} settle]\n  Sequencing blocks: {}\n  Settlement blocks: {}",
-            self.slot_number,
+            self.number,
             self.timestamp,
             self.state,
             self.sequencing_chain_blocks.len(),

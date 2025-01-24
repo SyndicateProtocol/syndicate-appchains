@@ -68,6 +68,10 @@ impl BlockRef {
     }
 }
 
+const fn calculate_max_slots(slot_duration_ms: u64) -> usize {
+    (MAX_WAIT_MS / slot_duration_ms) as usize
+}
+
 impl Slotter {
     /// Creates a new [`Slotter`] that receives blocks from two chains and organizes them into
     /// slots.
@@ -93,36 +97,49 @@ impl Slotter {
         config: SlottingConfig,
         store: Box<dyn TranslatorStore + Send + Sync>,
     ) -> Result<Self, SlotterError> {
-        // Get latest slot from DB
-        let latest_slot = store
-            .get_latest_safe_state()
-            .await?
-            .unwrap_or_else(|| Slot::new(config.start_slot_number, config.start_slot_timestamp));
-
-        // Infer latest blocks from slot
-        let latest_sequencing_block =
-            latest_slot.sequencing_chain_blocks.last().map(|block| BlockRef::new(&block.block));
-
-        let latest_settlement_block =
-            latest_slot.settlement_chain_blocks.last().map(|block| BlockRef::new(&block.block));
-
-        let max_slots = (MAX_WAIT_MS / config.slot_duration_ms) as usize;
-
         Ok(Self {
             sequencing_chain_rx: sequencing_chain_receiver,
             settlement_chain_rx: settlement_chain_receiver,
-            latest_sequencing_block,
-            latest_settlement_block,
-            config,
+            latest_sequencing_block: None,
+            latest_settlement_block: None,
             status: ServiceStatus::new(),
             slots: {
                 let mut slots = LinkedList::new();
-                slots.push_front(latest_slot);
+                slots.push_front(Slot::new(config.start_slot_number, config.start_slot_timestamp));
                 slots
             },
-            max_slots,
+            max_slots: calculate_max_slots(config.slot_duration_ms),
+            config,
             store,
         })
+    }
+
+    pub async fn new_from_db(
+        sequencing_chain_receiver: Receiver<BlockAndReceipts>,
+        settlement_chain_receiver: Receiver<BlockAndReceipts>,
+        config: SlottingConfig,
+        store: Box<dyn TranslatorStore + Send + Sync>,
+    ) -> Result<Self, SlotterError> {
+        match store.get_latest().await? {
+            Some(latest) => {
+                let mut slots = LinkedList::new();
+                slots.push_front(latest.slot);
+                Ok(Self {
+                    sequencing_chain_rx: sequencing_chain_receiver,
+                    settlement_chain_rx: settlement_chain_receiver,
+                    latest_sequencing_block: Some(BlockRef::new(&latest.sequencing_block)),
+                    latest_settlement_block: Some(BlockRef::new(&latest.settlement_block)),
+                    status: ServiceStatus::new(),
+                    slots,
+                    max_slots: calculate_max_slots(config.slot_duration_ms),
+                    config,
+                    store,
+                })
+            }
+            None => {
+                Self::new(sequencing_chain_receiver, settlement_chain_receiver, config, store).await
+            }
+        }
     }
 
     /// Starts the [`Slotter`] in a new thread.
@@ -314,7 +331,7 @@ impl Slotter {
             Ordering::Greater => {
                 debug!("Creating new slots to fit block");
                 let mut latest_timestamp = latest_slot.timestamp;
-                let mut latest_slot_number = latest_slot.slot_number;
+                let mut latest_slot_number = latest_slot.number;
 
                 // Create empty slots until we reach or pass the block's timestamp
                 // this accomplishes two things:
@@ -351,7 +368,7 @@ impl Slotter {
                 slot.state = SlotState::Safe;
 
                 // Save to DB first
-                self.store.save(&slot.slot_number.to_be_bytes(), &slot).await?;
+                self.store.save_slot(&slot).await?;
 
                 // Send clone if was open
                 if prev_state == SlotState::Open {
@@ -568,7 +585,7 @@ mod tests {
 
         let slot0 = slot_rx.recv().await.unwrap();
         assert_eq!(slot0.timestamp, slot_start_timestamp_ms);
-        assert_eq!(slot0.slot_number, 0);
+        assert_eq!(slot0.number, 0);
         assert_eq!(slot0.sequencing_chain_blocks.len(), 0);
         assert_eq!(slot0.settlement_chain_blocks.len(), 0);
         assert_eq!(slot0.state, SlotState::Unsafe);
@@ -595,7 +612,7 @@ mod tests {
 
         let slot1 = slot_rx.recv().await.unwrap();
         assert_eq!(slot1.timestamp, slot_start_timestamp_ms + slot_duration_ms);
-        assert_eq!(slot1.slot_number, 1);
+        assert_eq!(slot1.number, 1);
         assert_eq!(slot1.sequencing_chain_blocks.len(), 2);
         assert_eq!(slot1.settlement_chain_blocks.len(), 1);
         assert_eq!(slot1.state, SlotState::Unsafe);
