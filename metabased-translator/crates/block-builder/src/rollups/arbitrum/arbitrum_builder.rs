@@ -4,19 +4,9 @@
 //! list of transactions. It implements the [`RollupBlockBuilder`] trait to standardize block
 //! construction across different rollup implementations
 
-use crate::{
-    contract_bindings::{
-        eventemitter::EventEmitter::{emitEvent2Call, emitEvent3Call},
-        ibridge::IBridge::MessageDelivered,
-        idelayedmessageprovider::IDelayedMessageProvider::{
-            InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
-        },
-        isequencerinbox::ISequencerInbox,
-    },
-    rollups::{
-        arbitrum::batch::{Batch, BatchMessage, L1IncomingMessage},
-        shared::{RollupBlockBuilder, SequencingTransactionParser},
-    },
+use crate::rollups::{
+    arbitrum::batch::{Batch, BatchMessage, L1IncomingMessage},
+    shared::{RollupBlockBuilder, SequencingTransactionParser},
 };
 use alloy::{
     primitives::{address, Address, Bytes, FixedBytes, U256},
@@ -25,6 +15,14 @@ use alloy::{
 };
 use async_trait::async_trait;
 use common::types::{BlockAndReceipts, Slot};
+use contract_bindings::arbitrum::{
+    eventemitter::EventEmitter::{emitEvent2Call, emitEvent3Call},
+    ibridge::IBridge::MessageDelivered,
+    idelayedmessageprovider::IDelayedMessageProvider::{
+        InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
+    },
+    isequencerinbox::ISequencerInbox,
+};
 use eyre::{Error, Result};
 use std::collections::HashMap;
 use tracing::info;
