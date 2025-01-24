@@ -11,7 +11,7 @@ use serde::{
 use std::fmt;
 use strum_macros::Display;
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 /// **`BlockAndReceipts`**: Contains both a `Block` and the associated list of `Receipt` objects.
 pub struct BlockAndReceipts {
     /// The block data.
@@ -20,19 +20,19 @@ pub struct BlockAndReceipts {
     pub receipts: Vec<Receipt>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 /// **`Block`**: Represents an Ethereum block, including details like its hash, number, timestamp,
 /// and the transactions it contains.
 pub struct Block {
     /// The hash of the block.
-    #[serde(deserialize_with = "deserialize_b256")]
+    #[serde(deserialize_with = "deserialize_b256", serialize_with = "serialize_b256")]
     pub hash: B256,
     /// The block number.
-    #[serde(deserialize_with = "deserialize_hex_to_u64")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub number: u64,
     /// The hash of the parent block.
-    #[serde(deserialize_with = "deserialize_b256")]
+    #[serde(deserialize_with = "deserialize_b256", serialize_with = "serialize_b256")]
     pub parent_hash: B256,
     /// The logs bloom filter for the block.
     pub logs_bloom: String,
@@ -43,36 +43,39 @@ pub struct Block {
     /// The root hash of the receipts trie.
     pub receipts_root: String,
     /// The timestamp when the block was mined, in Unix time.
-    #[serde(deserialize_with = "deserialize_hex_to_u64")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub timestamp: u64,
     /// The transactions included in the block.
     pub transactions: Vec<Transaction>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 /// **`Transaction`**: Represents a single transaction within a block, including fields such as the
 /// transaction hash, sender/recipient addresses, value, and input data.
 pub struct Transaction {
     /// The hash of the block containing this transaction, or `null` if pending.
-    #[serde(deserialize_with = "deserialize_b256")]
+    #[serde(deserialize_with = "deserialize_b256", serialize_with = "serialize_b256")]
     pub block_hash: B256,
     /// The number of the block containing this transaction, or `null` if pending.
-    #[serde(deserialize_with = "deserialize_hex_to_u64")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub block_number: u64,
     /// The sender's address.
-    #[serde(deserialize_with = "deserialize_address")]
+    #[serde(deserialize_with = "deserialize_address", serialize_with = "serialize_address")]
     pub from: Address,
     /// The transaction hash.
-    #[serde(deserialize_with = "deserialize_b256")]
+    #[serde(deserialize_with = "deserialize_b256", serialize_with = "serialize_b256")]
     pub hash: B256,
     /// The data payload of the transaction.
     pub input: String,
     /// The number of transactions sent by the sender.
-    #[serde(deserialize_with = "deserialize_hex_to_u64")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub nonce: u64,
     /// The recipient's address, or `null` if the transaction creates a contract.
-    #[serde(deserialize_with = "deserialize_optional_address")]
+    #[serde(
+        deserialize_with = "deserialize_optional_address",
+        serialize_with = "serialize_optional_address"
+    )]
     pub to: Option<Address>,
     /// The index of this transaction in the block.
     pub transaction_index: String,
@@ -80,25 +83,31 @@ pub struct Transaction {
     pub value: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 /// **`Receipt`**: Contains the result of a transaction, including fields like status, logs, and
 /// potentially a contract address if one was created.
 pub struct Receipt {
     /// The hash of the block containing the transaction.
-    #[serde(deserialize_with = "deserialize_b256")]
+    #[serde(deserialize_with = "deserialize_b256", serialize_with = "serialize_b256")]
     pub block_hash: B256,
     /// The number of the block containing the transaction.
-    #[serde(deserialize_with = "deserialize_hex_to_u64")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub block_number: u64,
     /// The sender's address.
-    #[serde(deserialize_with = "deserialize_address")]
+    #[serde(deserialize_with = "deserialize_address", serialize_with = "serialize_address")]
     pub from: Address,
     /// The recipient's address.
-    #[serde(deserialize_with = "deserialize_optional_address")]
+    #[serde(
+        deserialize_with = "deserialize_optional_address",
+        serialize_with = "serialize_optional_address"
+    )]
     pub to: Option<Address>,
     /// The address of the contract created by the transaction, if applicable.
-    #[serde(deserialize_with = "deserialize_optional_address")]
+    #[serde(
+        deserialize_with = "deserialize_optional_address",
+        serialize_with = "serialize_optional_address"
+    )]
     pub contract_address: Option<Address>,
     /// The logs generated by the transaction.
     pub logs: Vec<Log>,
@@ -111,35 +120,36 @@ pub struct Receipt {
     pub receipt_type: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 /// *`Log`**: Represents an individual log entry emitted by a smart contract during a transaction,
 /// containing information such as topics, data, and whether it was removed due to a reorganization.
 pub struct Log {
     /// The hash of the block containing the log, or `null` if pending.
-    #[serde(deserialize_with = "deserialize_b256")]
+    #[serde(deserialize_with = "deserialize_b256", serialize_with = "serialize_b256")]
     pub block_hash: B256,
     /// The number of the block containing the log, or `null` if pending.
-    #[serde(deserialize_with = "deserialize_hex_to_u64")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub block_number: u64,
     /// The index of the transaction that generated the log
-    #[serde(deserialize_with = "deserialize_hex_to_u64")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub transaction_index: u64,
     /// The address from which the log originated.
-    #[serde(deserialize_with = "deserialize_address")]
+    #[serde(deserialize_with = "deserialize_address", serialize_with = "serialize_address")]
     pub address: Address,
     /// The index of the log entry
-    #[serde(deserialize_with = "deserialize_hex_to_u64")]
+    #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub log_index: u64,
     /// The data associated with the log.
+    #[serde(deserialize_with = "deserialize_bytes", serialize_with = "serialize_bytes")]
     pub data: Bytes,
     /// A flag indicating if the log was removed due to a chain reorganization.
     pub removed: bool,
     /// The topics associated with the log.
-    #[serde(deserialize_with = "deserialize_b256_vec")]
+    #[serde(deserialize_with = "deserialize_b256_vec", serialize_with = "serialize_b256_vec")]
     pub topics: Vec<B256>,
     /// The hash of the transaction that generated the log
-    #[serde(deserialize_with = "deserialize_b256")]
+    #[serde(deserialize_with = "deserialize_b256", serialize_with = "serialize_b256")]
     pub transaction_hash: B256,
 }
 
@@ -169,7 +179,7 @@ pub enum SlotState {
 }
 
 /// A `Slot` is a collection of source chain blocks  to be sent to the block builder
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Slot {
     /// the number of the slot - `slot_number` == `MetaChain`'s block number
     pub number: u64,
@@ -306,4 +316,199 @@ where
             Ok(B256::from(array))
         })
         .collect()
+}
+
+fn deserialize_bytes<'de, D>(deserializer: D) -> Result<Bytes, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let hex_str: String = Deserialize::deserialize(deserializer)?;
+    hex::decode(hex_str.trim_start_matches("0x"))
+        .map(Bytes::from)
+        .map_err(|err| de::Error::custom(format!("Failed to decode hex string: {err}")))
+}
+
+fn serialize_b256<S>(b256: &B256, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(&format!("0x{}", hex::encode(b256.as_slice())))
+}
+
+fn serialize_b256_vec<S>(vec: &[B256], serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    use serde::ser::SerializeSeq;
+    let mut seq = serializer.serialize_seq(Some(vec.len()))?;
+    for b256 in vec {
+        seq.serialize_element(&format!("0x{}", hex::encode(b256.as_slice())))?;
+    }
+    seq.end()
+}
+
+fn serialize_address<S>(addr: &Address, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(&format!("0x{}", hex::encode(addr.as_slice())))
+}
+
+fn serialize_optional_address<S>(opt: &Option<Address>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match opt {
+        Some(addr) => serializer.serialize_str(&format!("0x{}", hex::encode(addr.as_slice()))),
+        None => serializer.serialize_none(),
+    }
+}
+
+fn serialize_bytes<S>(bytes: &Bytes, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(&format!("0x{}", hex::encode(bytes)))
+}
+
+fn serialize_hex_u64<S>(num: &u64, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    serializer.serialize_str(&format!("0x{:x}", num))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use alloy::primitives::B256;
+    use hex::FromHex;
+
+    fn create_test_slot() -> Slot {
+        let mut slot = Slot::new(1, 1000);
+
+        // Add sequencing chain block with transaction and receipt
+        slot.sequencing_chain_blocks.push(BlockAndReceipts {
+            block: Block {
+                hash: B256::from_hex(
+                    "0x1234567890123456789012345678901234567890123456789012345678901234",
+                )
+                .unwrap(),
+                number: 100,
+                parent_hash: B256::ZERO,
+                logs_bloom: "0x01".to_string(),
+                transactions_root: "0x02".to_string(),
+                state_root: "0x03".to_string(),
+                receipts_root: "0x04".to_string(),
+                timestamp: 1000,
+                transactions: vec![Transaction {
+                    block_hash: B256::from_hex(
+                        "0x1234567890123456789012345678901234567890123456789012345678901234",
+                    )
+                    .unwrap(),
+                    block_number: 100,
+                    from: Address::from_hex("0x1234567890123456789012345678901234567890").unwrap(),
+                    hash: B256::from_hex(
+                        "0xabcd567890123456789012345678901234567890123456789012345678901234",
+                    )
+                    .unwrap(),
+                    input: "0x123456".to_string(),
+                    nonce: 1,
+                    to: Some(
+                        Address::from_hex("0x9876543210987654321098765432109876543210").unwrap(),
+                    ),
+                    transaction_index: "0x0".to_string(),
+                    value: "0x0".to_string(),
+                }],
+            },
+            receipts: vec![Receipt {
+                block_hash: B256::from_hex(
+                    "0x1234567890123456789012345678901234567890123456789012345678901234",
+                )
+                .unwrap(),
+                block_number: 100,
+                from: Address::from_hex("0x1234567890123456789012345678901234567890").unwrap(),
+                to: Some(Address::from_hex("0x9876543210987654321098765432109876543210").unwrap()),
+                contract_address: None,
+                logs: vec![Log {
+                    block_hash: B256::from_hex(
+                        "0x1234567890123456789012345678901234567890123456789012345678901234",
+                    )
+                    .unwrap(),
+                    block_number: 100,
+                    transaction_index: 0,
+                    address: Address::from_hex("0x1234567890123456789012345678901234567890")
+                        .unwrap(),
+                    log_index: 0,
+                    data: Bytes::from_hex("0xdeadbeef").unwrap(),
+                    removed: false,
+                    topics: vec![B256::from_hex(
+                        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
+                    )
+                    .unwrap()],
+                    transaction_hash: B256::from_hex(
+                        "0xabcd567890123456789012345678901234567890123456789012345678901234",
+                    )
+                    .unwrap(),
+                }],
+                logs_bloom: "0x0".to_string(),
+                status: "0x1".to_string(),
+                receipt_type: "0x0".to_string(),
+            }],
+        });
+
+        // Add settlement chain block
+        slot.settlement_chain_blocks.push(BlockAndReceipts {
+            block: Block {
+                hash: B256::from_hex(
+                    "0x5678901234567890123456789012345678901234567890123456789012345678",
+                )
+                .unwrap(),
+                number: 200,
+                parent_hash: B256::from_hex(
+                    "0x1111111111111111111111111111111111111111111111111111111111111111",
+                )
+                .unwrap(),
+                logs_bloom: "0x05".to_string(),
+                transactions_root: "0x06".to_string(),
+                state_root: "0x07".to_string(),
+                receipts_root: "0x08".to_string(),
+                timestamp: 1100,
+                transactions: vec![],
+            },
+            receipts: vec![],
+        });
+
+        slot
+    }
+
+    #[test]
+    fn test_bincode_serialization() {
+        let slot = create_test_slot();
+        let encoded = bincode::serialize(&slot).unwrap();
+        let decoded: Slot = bincode::deserialize(&encoded).unwrap();
+        assert_eq!(decoded, slot);
+    }
+
+    // TODO remove this test
+    #[test]
+    fn test_bincode_serialization_2() {
+        let slot = create_test_slot();
+        let block = slot.sequencing_chain_blocks[0].clone();
+        let tx = block.block.transactions[0].clone();
+        // slot.sequencing_chain_blocks.remove(0);
+        // slot.settlement_chain_blocks.remove(0);
+        let encoded = bincode::serialize(&tx).unwrap();
+        let decoded: Transaction = bincode::deserialize(&encoded).unwrap();
+        assert_eq!(decoded, tx);
+    }
+
+    #[test]
+    fn test_json_serialization() {
+        let slot = create_test_slot();
+        let json = serde_json::to_string(&slot).unwrap();
+        println!("{}", json);
+        let decoded: Slot = serde_json::from_str(&json).unwrap();
+        assert_eq!(decoded, slot);
+    }
 }

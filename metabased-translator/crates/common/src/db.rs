@@ -121,7 +121,44 @@ pub fn test_path() -> String {
     std::env::temp_dir().join(format!("rocksdb_test_{:x}", hash)).to_str().unwrap().to_string()
 }
 
-// TODO decide if we should use the test_path or in-memory implementation for testing
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::types::BlockAndReceipts;
+    use alloy::primitives::B256;
+
+    fn create_test_block(number: u64) -> Block {
+        Block {
+            hash: B256::ZERO,
+            number,
+            parent_hash: B256::ZERO,
+            logs_bloom: "0x0".to_string(),
+            transactions_root: "0x0".to_string(),
+            state_root: "0x0".to_string(),
+            receipts_root: "0x0".to_string(),
+            timestamp: number * 1000,
+            transactions: vec![],
+        }
+    }
+
+    #[tokio::test]
+    async fn test_save_and_get_latest() {
+        let store = RocksDbStore::new(test_path().as_str()).unwrap();
+        assert!(store.get_latest().await.unwrap().is_none());
+
+        let mut slot = Slot::new(1, 1000);
+        slot.sequencing_chain_blocks
+            .push(BlockAndReceipts { block: create_test_block(1), receipts: vec![] });
+        slot.settlement_chain_blocks
+            .push(BlockAndReceipts { block: create_test_block(2), receipts: vec![] });
+        store.save_slot(&slot).await.unwrap();
+
+        let latest = store.get_latest().await.unwrap().unwrap();
+        assert_eq!(latest.slot.number, 1);
+        assert_eq!(latest.sequencing_block.number, 1);
+        assert_eq!(latest.settlement_block.number, 2);
+    }
+}
 
 // In-memory implementation for testing ------------------------------------------
 
