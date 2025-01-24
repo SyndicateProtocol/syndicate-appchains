@@ -33,7 +33,7 @@ async fn run(
     let sequencing_config = ingestion_config.sequencing;
     let settlement_config = ingestion_config.settlement;
 
-    let (_sequencer_tx, sequencer_rx) =
+    let (mut sequencer_ingestor, sequencer_rx) =
         Ingestor::new(sequencing_config.into()).await.map_err(|e| {
             RuntimeError::Initialization(format!(
                 "Failed to create ingestor for sequencing chain: {}",
@@ -41,7 +41,7 @@ async fn run(
             ))
         })?;
 
-    let (_settlement_tx, settlement_rx) =
+    let (mut settlement_ingestor, settlement_rx) =
         Ingestor::new(settlement_config.into()).await.map_err(|e| {
             RuntimeError::Initialization(format!(
                 "Failed to create ingestor for settlement chain: {}",
@@ -58,6 +58,16 @@ async fn run(
 
     let _ = block_builder.start().await;
     info!("Starting Metabased Translator");
+
+    sequencer_ingestor.start_polling().await.map_err(|e| {
+        error!("Sequencer ingestor error: {}", e);
+        RuntimeError::TaskFailure(e.to_string())
+    })?;
+
+    settlement_ingestor.start_polling().await.map_err(|e| {
+        error!("Settlement ingestor error: {}", e);
+        RuntimeError::TaskFailure(e.to_string())
+    })?;
 
     // TODO(SEQ-515): Improve this
     // // Spawn ingestor task
