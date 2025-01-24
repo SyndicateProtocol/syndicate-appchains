@@ -33,7 +33,7 @@ async fn run(
     let sequencing_config = ingestion_config.sequencing;
     let settlement_config = ingestion_config.settlement;
 
-    let (mut sequencer_ingestor, sequencer_rx) =
+    let (mut sequencing_ingestor, sequencer_rx) =
         Ingestor::new(sequencing_config.into()).await.map_err(|e| {
             RuntimeError::Initialization(format!(
                 "Failed to create ingestor for sequencing chain: {}",
@@ -50,40 +50,30 @@ async fn run(
         })?;
 
     let slotter = Slotter::new(sequencer_rx, settlement_rx, slotting_config);
-    let slotter_rx = slotter.await.start(); // TODO(SEQ-515): refactor me to get the channel without starting the slotter already?
 
-    let block_builder = BlockBuilder::new(slotter_rx, block_builder_config).await.map_err(|e| {
+    // TODO(SEQ-515): refactor me to get the channel without starting the slotter already?
+    // TODO(SEQ-515): slotter assumes that it starts first, or else it errors here
+    let slot_rx = slotter.await.start();
+
+    let block_builder = BlockBuilder::new(slot_rx, block_builder_config).await.map_err(|e| {
         RuntimeError::Initialization(format!("Failed to create block builder: {}", e))
     })?;
 
-    let _ = block_builder.start().await;
     info!("Starting Metabased Translator");
+    let sequencing_ingestor_handle = tokio::spawn(async move {
+        if let Err(e) = sequencing_ingestor.start_polling().await {
+            error!("Ingestor error: {}", e);
+        }
+    });
 
-    sequencer_ingestor.start_polling().await.map_err(|e| {
-        error!("Sequencer ingestor error: {}", e);
-        RuntimeError::TaskFailure(e.to_string())
-    })?;
+    let settlement_ingestor_handle = tokio::spawn(async move {
+        if let Err(e) = settlement_ingestor.start_polling().await {
+            error!("Ingestor error: {}", e);
+        }
+    });
 
-    settlement_ingestor.start_polling().await.map_err(|e| {
-        error!("Settlement ingestor error: {}", e);
-        RuntimeError::TaskFailure(e.to_string())
-    })?;
-
-    // TODO(SEQ-515): Improve this
-    // // Spawn ingestor task
-    // let ingestor_handle = tokio::spawn(async move {
-    //     if let Err(e) = ingestor?.start_polling().await {
-    //         error!("Ingestor error: {}", e);
-    //     }
-    // });
-
-    // TODO(SEQ-515): Improve this
-    // // Spawn block builder task
-    // let block_builder_handle = tokio::spawn(async move {
-    //     if let Err(e) = block_builder.start().await {
-    //         error!("Block builder error: {}", e);
-    //     }
-    // });
+    // TODO(SEQ-515): Block builder doesn't error
+    let block_builder_handle = tokio::spawn(async move { block_builder.start().await });
 
     // Main control loop
     tokio::select! {
@@ -91,19 +81,22 @@ async fn run(
         _ = &mut shutdown_rx => {
             info!("Metabased Translator shutting down...");
         }
-
-        // TODO(SEQ-515): Improve this
-        // // Watch for task completion/errors
-        // res = ingestor_handle => {
-        //     if let Err(e) = res {
-        //         error!("Ingestor task failed: {}", e);
-        //     }
-        // }
-        // res = block_builder_handle => {
-        //     if let Err(e) = res {
-        //         error!("Block builder task failed: {}", e);
-        //     }
-        // }
+        // Watch for task completion/errors
+        res = settlement_ingestor_handle => {
+            if let Err(e) = res {
+                error!("Settlement chain ingestor task failed: {}", e);
+            }
+        }
+        res = sequencing_ingestor_handle => {
+            if let Err(e) = res {
+                error!("Sequencing chain ingestor task failed: {}", e);
+            }
+        }
+        res = block_builder_handle => {
+            if let Err(e) = res {
+                error!("Block builder task failed: {}", e);
+            }
+        }
     }
 
     info!("Metabased Translator shutdown complete");
