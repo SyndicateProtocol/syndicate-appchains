@@ -142,3 +142,20 @@ rule allowlistOperationsPersist(method f, address user) {
         f.selector == sig:removeFromAllowlist(address).selector
     ), "Allowlist changed through non-allowlist function";
 }
+
+/*
+ * Rule 10: Only admin can transfer admin rights
+ */
+rule onlyAdminCanTransfer(address newAdmin) {
+    env e;
+
+    // Store old admin
+    address oldAdmin = admin();
+
+    // Try to transfer admin
+    transferAdmin@withrevert(e, newAdmin);
+
+    // If successful, must have been the current admin
+    assert !lastReverted => e.msg.sender == oldAdmin,
+        "Non-admin transferred admin rights";
+}
