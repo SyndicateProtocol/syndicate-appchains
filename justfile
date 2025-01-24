@@ -389,6 +389,23 @@ foundry-setup:
         echo "foundryup is already installed"; \
     fi
 
+    # Create .zshenv if it doesn't exist and add Foundry bin to PATH
+    @if ! test -f "{{env_var('HOME')}}/.zshenv"; then \
+        touch "{{env_var('HOME')}}/.zshenv" && \
+        echo "Created new .zshenv file"; \
+    fi
+
+    # Add Foundry bin to PATH in .zshenv if it's not already there
+    @if test -f "{{env_var('HOME')}}/.zshenv"; then \
+        if ! grep -q "/.foundry/bin" "{{env_var('HOME')}}/.zshenv"; then \
+            echo 'export PATH="$PATH:{{env_var('HOME')}}/.foundry/bin"' >> "{{env_var('HOME')}}/.zshenv" && \
+            echo "Added Foundry bin to PATH in .zshenv"; \
+            echo "Open a new zsh terminal window to use Foundry" \
+        else \
+            echo "Foundry bin already in PATH in .zshenv"; \
+        fi; \
+    fi
+
     @just _log-end "foundry-setup"
 
 # Install or upgrade Foundry with foundryup
@@ -417,6 +434,7 @@ contracts-setup: foundry-upgrade
     cd {{ metabased_translator_contracts_root }} && forge install
 
     @echo "Foundry and contract dependencies installed"
+    @echo "Open a new zsh terminal window to use Foundry"
 
     @just _log-end "contracts-setup"
 

@@ -67,6 +67,10 @@
   // updateContentCommand is used for steps that update frequently
   // postCreateCommand is used for steps that require environment variables or other private information
   "onCreateCommand": "sudo apt update && sudo apt install -y just netcat-openbsd && mkdir -p ~/.zsh/completions && just --completions zsh > ~/.zsh/completions/just.zsh",
+  // Foundry upgrade is used to update Foundry to the latest version. This is
+  // run at container setup and automatically periodically afterwards
+  // Much of our stack depends on Anvil and other Foundry tools, so we always
+  // want Foundry available on the container
   "updateContentCommand": "just foundry-upgrade",
 
   // Configure tool-specific properties.
