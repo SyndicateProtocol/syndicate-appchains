@@ -1,16 +1,19 @@
 //! Block builder service for processing and building L3 blocks.
 
 use crate::{
-    config::BlockBuilderConfig,
+    config::{BlockBuilderConfig, TargetRollupType},
     connectors::anvil::MetaChainProvider,
-    rollups::{arbitrum::arbitrum_builder::ArbitrumBlockBuilder, shared::RollupBlockBuilder},
+    rollups::{
+        arbitrum::arbitrum_builder::ArbitrumBlockBuilder,
+        optimism::optimism_builder::OptimismBlockBuilder, shared::RollupBlockBuilder,
+    },
 };
 use alloy::transports::{RpcError, TransportErrorKind};
 use common::types::Slot;
 use eyre::{Error, Result};
 use thiserror::Error;
 use tokio::sync::mpsc::Receiver;
-use tracing::{error as log_error, info};
+use tracing::{debug, error};
 
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
@@ -29,8 +32,14 @@ impl BlockBuilder {
     ) -> Result<Self, Error> {
         let mchain = MetaChainProvider::start(config.clone()).await?;
 
-        // TODO (SEQ-515): Dynamically select builder based on config
-        let builder = Box::new(ArbitrumBlockBuilder::new(config.sequencing_contract_address));
+        let builder: Box<dyn RollupBlockBuilder> = match config.target_rollup_type {
+            TargetRollupType::ARBITRUM => {
+                Box::new(ArbitrumBlockBuilder::new(config.sequencing_contract_address))
+            }
+            TargetRollupType::OPTIMISM => {
+                Box::new(OptimismBlockBuilder::new(config.sequencing_contract_address))
+            }
+        };
 
         Ok(Self { slotter_rx, mchain, builder })
     }

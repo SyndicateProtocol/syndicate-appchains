@@ -79,15 +79,9 @@ impl MetaChainProvider {
 
         let anvil = Anvil::new().port(port).chain_id(config.chain_id).args(args).try_spawn()?;
 
-        // TODO (SEQ-515) Move to a config value
-        let signer: PrivateKeySigner =
-            "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d"
-                .parse()
-                .map_err(|_| BlockBuilderError::AnvilStartError("Failed to parse private key"))?;
-
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
-            .wallet(EthereumWallet::from(signer))
+            .wallet(EthereumWallet::from(config.signer_key))
             .on_http(anvil.endpoint_url());
 
         Ok(Self { anvil, provider })

@@ -14,3 +14,6 @@ create-metabased-contract-bindings:
 	mv contract-bindings/metabased/lib.rs contract-bindings/metabased/mod.rs
 .PHONY: create-metabased-contracts-bindings
 
+print-sample-command:
+	cd ../metabased-translator && cargo run --example generate_command
+.PHONY: print-sample-command

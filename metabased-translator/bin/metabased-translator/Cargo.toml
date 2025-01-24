@@ -22,3 +22,7 @@ thiserror = {workspace = true}
 
 [dev-dependencies]
 serial_test = {workspace = true}
+
+[[example]]
+name = "generate_run_command"
+path = "examples/generate_run_command.rs"
