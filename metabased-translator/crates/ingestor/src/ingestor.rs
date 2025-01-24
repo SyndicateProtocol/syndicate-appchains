@@ -99,7 +99,7 @@ impl Ingestor {
                     }
                 }
                 // Respond to cancellation
-                _ = tokio::task::yield_now() => {
+                _ = tokio::signal::ctrl_c() => {
                     debug!("Polling task was cancelled");
                     break;
                 }
@@ -217,11 +217,14 @@ mod tests {
         polling_handle.abort();
 
         match polling_handle.await {
+            Err(err) if err.is_cancelled() => {
+                debug!("Polling task was successfully aborted.");
+            }
             Err(err) => {
                 panic!("Unexpected error when waiting on the polling task: {:?}", err);
             }
             Ok(_) => {
-                debug!("Polling task was successfully aborted.");
+                panic!("Polling task completed unexpectedly when it should have been aborted.");
             }
         }
 
