@@ -1,9 +1,10 @@
 //! Anvil connector for the `MetaChain`
 
-use crate::{block_builder::BlockBuilderError, config::BlockBuilderConfig};
+use crate::{block_builder::BlockBuilderError, config::BlockBuilderConfig, rollups::arbitrum};
 use alloy::{
     network::{Ethereum, EthereumWallet},
     node_bindings::{Anvil, AnvilInstance},
+    primitives::{Address, U256},
     providers::{
         ext::AnvilApi,
         fillers::{
@@ -16,6 +17,8 @@ use alloy::{
     signers::local::PrivateKeySigner,
     transports::http::Http,
 };
+use contract_bindings::arbitrum::rollup::Rollup;
+use eyre::Result;
 use reqwest::Client;
 use std::net::TcpListener;
 use tracing::info;
@@ -38,20 +41,14 @@ type FilledProvider = FillProvider<
 #[allow(missing_docs)]
 pub struct MetaChainProvider {
     pub anvil: AnvilInstance,
-    provider: FilledProvider,
+    pub provider: FilledProvider,
+    pub rollup: Rollup::RollupInstance<Http<Client>, FilledProvider>,
+    pub rollup_info: String,
 }
 
 impl MetaChainProvider {
     /// Starts the Anvil instance and creates a provider for the `MetaChain`
-    pub async fn start(config: BlockBuilderConfig) -> eyre::Result<Self> {
-        Self::start_from_snapshot(config, "").await
-    }
-
-    /// Starts the Anvil instance from a snapshot and creates a provider for the `MetaChain`
-    pub async fn start_from_snapshot(
-        config: BlockBuilderConfig,
-        snapshot: &str,
-    ) -> eyre::Result<Self> {
+    pub async fn start(config: BlockBuilderConfig) -> Result<Self> {
         let port = find_available_port(config.port, 10).ok_or_else(|| {
             BlockBuilderError::AnvilStartError("No available ports found after 10 attempts")
         })?;
@@ -62,7 +59,7 @@ impl MetaChainProvider {
 
         let ts = config.genesis_timestamp.to_string();
 
-        let mut args = vec![
+        let args = vec![
             "--base-fee",
             "0",
             "--gas-limit",
@@ -72,16 +69,11 @@ impl MetaChainProvider {
             "--no-mining",
         ];
 
-        if !snapshot.is_empty() {
-            args.push("--load-state");
-            args.push(snapshot);
-        }
-
         let anvil = Anvil::new().port(port).chain_id(config.chain_id).args(args).try_spawn()?;
 
         // TODO (SEQ-515) Move to a config value
         let signer: PrivateKeySigner =
-            "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d"
+            "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
                 .parse()
                 .map_err(|_| BlockBuilderError::AnvilStartError("Failed to parse private key"))?;
 
@@ -90,11 +82,35 @@ impl MetaChainProvider {
             .wallet(EthereumWallet::from(signer))
             .on_http(anvil.endpoint_url());
 
-        Ok(Self { anvil, provider })
+        let rollup_config = Self::rollup_config(U256::from(config.mchain_id));
+
+        let deploy_tx =
+            Rollup::deploy_builder(&provider, U256::from(config.mchain_id), rollup_config.clone())
+                .send()
+                .await?;
+
+        provider.anvil_set_block_timestamp_interval(1).await?;
+        provider.anvil_mine(Some(U256::from(1)), None::<U256>).await?;
+
+        let receipt = deploy_tx.get_receipt().await?;
+        let rollup = Rollup::new(
+            receipt.contract_address.ok_or(BlockBuilderError::NoContractAddress())?,
+            provider.clone(),
+        );
+
+        let rollup_info = Self::rollup_info(
+            "test",
+            U256::from(config.chain_id),
+            &rollup_config,
+            rollup.address(),
+            U256::from(receipt.block_number.ok_or(BlockBuilderError::NoBlockNumber())?),
+        );
+
+        Ok(Self { anvil, provider, rollup, rollup_info })
     }
 
     /// Submits a transaction to the `MetaChain`
-    pub async fn submit_txn(&self, txn: TransactionRequest) -> eyre::Result<String> {
+    pub async fn submit_txn(&self, txn: TransactionRequest) -> Result<String> {
         let pending_txn =
             self.provider.send_transaction(txn).await.map_err(BlockBuilderError::SubmitTxnError)?;
 
@@ -102,12 +118,120 @@ impl MetaChainProvider {
     }
 
     /// Mines a block on the `MetaChain`
-    pub async fn mine_block(&self, block_timestamp_secs: u64) -> eyre::Result<()> {
-        let opts = MineOptions::Options { timestamp: Some(block_timestamp_secs), blocks: Some(1) };
+    pub async fn mine_block(&self, block_timestamp_secs: u64) -> Result<()> {
+        let opts = MineOptions::Options {
+            timestamp: (block_timestamp_secs > 0).then_some(block_timestamp_secs),
+            blocks: Some(1),
+        };
         let result = self.provider.anvil_mine_detailed(Some(opts)).await;
         info!("{}", format!("Mined block on MetaChain {:?}", result));
         result?;
 
+        Ok(())
+    }
+
+    fn rollup_config(chain_id: U256) -> String {
+        format!(
+            r#"{{
+            "chainId": {},
+            "homesteadBlock": 0,
+            "daoForkBlock": null,
+            "daoForkSupport": true,
+            "eip150Block": 0,
+            "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "eip155Block": 0,
+            "eip158Block": 0,
+            "byzantiumBlock": 0,
+            "constantinopleBlock": 0,
+            "petersburgBlock": 0,
+            "istanbulBlock": 0,
+            "muirGlacierBlock": 0,
+            "berlinBlock": 0,
+            "londonBlock": 0,
+            "clique": {{
+              "period": 0,
+              "epoch": 0
+            }},
+            "arbitrum": {{
+              "EnableArbOS": true,
+              "AllowDebugPrecompiles": false,
+              "DataAvailabilityCommittee": false,
+              "InitialArbOSVersion": 10,
+              "InitialChainOwner": "{}",
+              "GenesisBlockNum": 0
+            }}
+          }}"#,
+            chain_id,
+            Address::ZERO
+        )
+    }
+
+    fn rollup_info(
+        chain_name: &str,
+        chain_id: U256,
+        rollup_config: &str,
+        rollup: &Address,
+        deployed_at: U256,
+    ) -> String {
+        format!(
+            r#"[{{
+    "chain-name": "{}",
+    "parent-chain-id": {},
+    "parent-chain-is-arbitrum": false,
+    "sequencer-url": "",
+    "secondary-forwarding-target": "",
+    "feed-url": "",
+    "secondary-feed-url": "",
+    "das-index-url": "",
+    "has-genesis-state": false,
+    "chain-config": {},
+    "rollup": {{
+      "bridge": "{}",
+      "inbox": "{}",
+      "sequencer-inbox": "{}",
+      "deployed-at": {},
+      "rollup": "{}",
+      "native-token": "{}",
+      "upgrade-executor": "{}",
+      "validator-wallet-creator": "{}"
+    }}
+  }}]"#,
+            chain_name,
+            chain_id,
+            rollup_config,
+            rollup,
+            rollup,
+            rollup,
+            deployed_at,
+            Address::ZERO,
+            Address::ZERO,
+            Address::ZERO,
+            Address::ZERO
+        )
+    }
+
+    /// post a rollup batch to the mchain and mine the next block
+    pub async fn send_batch(&self, batch: &arbitrum::batch::Batch) -> Result<()> {
+        let delayed_messages_read = self.rollup.totalDelayedMessagesRead().call().await?._0;
+        let tx = self
+            .rollup
+            .postBatch(
+                delayed_messages_read
+                    .checked_add(U256::from(
+                        batch
+                            .0
+                            .iter()
+                            .filter(|x| matches!(x, arbitrum::batch::BatchMessage::Delayed))
+                            .count(),
+                    ))
+                    .ok_or(BlockBuilderError::Overflow())?, // after delayed messages read
+                batch.encode()?,
+            )
+            .send()
+            .await?
+            .watch();
+        self.mine_block(0).await?;
+        tx.await?;
         Ok(())
     }
 }
@@ -138,7 +262,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_port_availability_checking() -> eyre::Result<()> {
+    async fn test_port_availability_checking() -> Result<()> {
         // Initial port should be available
         let base_port = 1111;
         assert!(is_port_available(base_port), "Base port should be available initially");

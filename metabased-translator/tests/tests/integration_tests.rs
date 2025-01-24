@@ -5,21 +5,17 @@ use alloy::{
     eips::{eip2718::Encodable2718, BlockNumberOrTag},
     network::{EthereumWallet, TransactionBuilder},
     primitives::{address, utils::parse_ether, Address, U256},
-    providers::{ext::AnvilApi, Provider, ProviderBuilder, WalletProvider},
+    providers::{Provider, ProviderBuilder, WalletProvider},
     rpc::types::TransactionRequest,
     signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
 };
 use block_builder::{connectors::anvil::MetaChainProvider, rollups::arbitrum};
 use common::types::Block;
-use contract_bindings::arbitrum::{
-    counter::Counter, ibridge::IBridge, iinbox::IInbox, isequencerinbox::ISequencerInbox,
-};
+use contract_bindings::arbitrum::counter::Counter;
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
-use eyre::{eyre, OptionExt, Result};
-use reqwest::Url;
-use std::{path::PathBuf, str::FromStr, time::Duration};
+use eyre::{eyre, Result};
+use std::time::Duration;
 use tokio::{
-    fs::read_to_string,
     process::{Child, Command},
     time::timeout,
 };
@@ -174,44 +170,6 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
     Ok(())
 }
 
-async fn send_batch<
-    T: alloy::transports::Transport + Clone,
-    N: alloy::network::Network,
-    U: Provider<T, N>,
->(
-    batch: &arbitrum::batch::Batch,
-    provider: &U,
-) -> Result<()> {
-    let inbox =
-        ISequencerInbox::new(address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"), &provider);
-    let bridge = IBridge::new(address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2"), &provider);
-    let delayed_messages_read = inbox.totalDelayedMessagesRead().call().await?._0;
-    let sequencer_message_count = bridge.sequencerMessageCount().call().await?._0;
-    inbox
-        .addSequencerL2BatchFromOrigin_1(
-            sequencer_message_count, // sequence number
-            batch.encode()?,         // data
-            delayed_messages_read
-                .checked_add(U256::from(
-                    batch
-                        .0
-                        .iter()
-                        .filter(|x| matches!(x, arbitrum::batch::BatchMessage::Delayed))
-                        .count(),
-                ))
-                .ok_or_eyre("checked add overflow")?, // after delayed messages read
-            Address::default(),      // gas refunder
-            U256::from(0),           // prev message count. 0 = ignore this sanity check
-            U256::from(0),           // new message count
-        )
-        .send()
-        .await?
-        .with_required_confirmations(1)
-        .watch()
-        .await?;
-    Ok(())
-}
-
 struct Docker(Child);
 
 impl Drop for Docker {
@@ -223,15 +181,8 @@ impl Drop for Docker {
 }
 
 async fn launch_nitro_node() -> Result<(MetaChainProvider, Docker)> {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config");
+    let mchain = MetaChainProvider::start(Default::default()).await?;
 
-    let mchain = MetaChainProvider::start_from_snapshot(
-        Default::default(),
-        root.join("anvil.json").to_str().ok_or_eyre("failed to convert path to string")?,
-    )
-    .await?;
-
-    let chain_config = read_to_string(root.join("l2_chain_info.json")).await?;
     let nitro = Command::new("docker")
         .kill_on_drop(false) // kill via SIGTERM instead of SIGKILL
         .arg("run")
@@ -246,7 +197,7 @@ async fn launch_nitro_node() -> Result<(MetaChainProvider, Docker)> {
         .arg("--node.inbox-reader.check-delay=100ms")
         .arg("--node.staker.enable=false")
         .arg("--ensure-rollup-deployment=false")
-        .arg("--chain.info-json=".to_string() + &chain_config)
+        .arg("--chain.info-json=".to_string() + &mchain.rollup_info)
         .arg("--http.addr=0.0.0.0")
         .arg("--http.port=8547")
         .arg("--log-level=DEBUG")
@@ -266,45 +217,33 @@ async fn launch_nitro_node() -> Result<(MetaChainProvider, Docker)> {
 async fn test_nitro_batch() -> Result<()> {
     let (mchain, _nitro) = launch_nitro_node().await?;
 
-    let wallet = EthereumWallet::from(PrivateKeySigner::from_str(
-        "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
-    )?);
-
-    let provider = ProviderBuilder::new()
-        .with_recommended_fillers()
-        .wallet(&wallet)
-        .on_http(Url::parse(mchain.anvil.endpoint_url().as_str())?);
-
-    provider.anvil_set_auto_mine(true).await?;
-    //provider.anvil_set_interval_mining(1).await?;
-
     // deposit 1 eth
-    let inbox = IInbox::new(address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899"), &provider);
-    inbox
-        .depositEth()
-        .value(parse_ether("1")?)
+    let tx = mchain
+        .rollup
+        .depositEth(Address::default(), mchain.provider.default_signer_address(), parse_ether("1")?)
         .send()
         .await?
-        .with_required_confirmations(1)
-        .watch()
-        .await?;
+        .watch();
+    mchain.mine_block(0).await?;
+    tx.await?;
 
-    // clear the queue of delayed messages
-    // The RollupCreator createRollup() function creates 8 retryable tickets to deploy deterministic
-    // deployment factories to the rollup when deployFactoriesToL2 is enabled. The final delayed
-    // message is the deposit that we initiate earlier in the test.
-    send_batch(&arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed; 9]), &provider)
+    // send a batch to sequence the deposit. include the init message as well.
+    mchain
+        .send_batch(&arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed; 2]))
         .await?;
 
     // wait 200ms for the batch to be processed
     tokio::time::sleep(Duration::from_millis(200)).await;
     let rollup = ProviderBuilder::new().on_http("http://localhost:8547".parse()?);
-    if rollup.get_block_number().await? != 9 {
-        return Err(eyre!("block derivation failed - not on block 9"));
+    if rollup.get_block_number().await? != 1 {
+        return Err(eyre!("block derivation failed - not on block 1"));
     }
 
     // check that the deposit succeeded
-    assert_eq!(rollup.get_balance(provider.default_signer_address()).await?, parse_ether("1")?);
+    assert_eq!(
+        rollup.get_balance(mchain.provider.default_signer_address()).await?,
+        parse_ether("1")?
+    );
 
     // include a tx in a batch
     let mut tx = vec![];
@@ -316,29 +255,35 @@ async fn test_nitro_batch() -> Result<()> {
         .with_chain_id(13331370)
         .with_max_fee_per_gas(100000000)
         .with_max_priority_fee_per_gas(0)
-        .build(&wallet)
+        .build(&mchain.provider.wallet())
         .await?;
 
     inner_tx.encode_2718(&mut tx);
     let batch = arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::L2(
         arbitrum::batch::L1IncomingMessage { header: Default::default(), l2_msg: vec![tx.into()] },
     )]);
-    send_batch(&batch, &provider).await?;
+    mchain.send_batch(&batch).await?;
 
     // wait 200ms for the batch to be processed
     tokio::time::sleep(Duration::from_millis(200)).await;
-    if rollup.get_block_number().await? != 10 {
-        return Err(eyre!("block derivation failed - not on block 10"));
+    if rollup.get_block_number().await? != 2 {
+        return Err(eyre!("block derivation failed - not on block 2"));
     }
 
     // check that the tx was sequenced
     let block: Block = rollup
-        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(10), true))
+        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
         .await?;
     // the first transaction is the startBlock transaction
     println!("{:#?}", block.transactions);
     assert_eq!(block.transactions.len(), 2);
     // tx hash should match
     assert_eq!(block.transactions[1].hash, *inner_tx.tx_hash());
+    // block should be mined deterministically - hash should be constant
+    // update this hash whenever the test is modified
+    assert_eq!(
+        block.hash.to_string(),
+        "0x96c91c5178f2579ad82fe42eb86d3642871e8afa1b10ad731b626f93df79b2c5"
+    );
     Ok(())
 }

@@ -1,7 +1,0 @@
-Configuration files used for integration tests
-
-anvil.json contains an anvil snapshot of a (meta)chain that has a nitro rollup deployed to it
-l2_chain_info.json contains the chain information for the nitro rollup
-
-Note that the nitro rollup is in a fresh state and has no batches or state roots posted to the metachain.
-It has 8 pending messages in the delayed inbox created at deployment time.

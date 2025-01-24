@@ -10,6 +10,10 @@ use tracing::debug;
 #[derive(Parser, Debug, Clone)]
 pub struct BlockBuilderConfig {
     #[allow(missing_docs)]
+    #[arg(long, env = "BLOCK_BUILDER_MCHAIN_ID", default_value_t = 13331370)]
+    pub mchain_id: u64,
+
+    #[allow(missing_docs)]
     #[arg(short = 'p', long, env = "BLOCK_BUILDER_PORT", default_value_t = 8888)]
     pub port: u16,
 
@@ -41,6 +45,7 @@ fn parse_address(value: &str) -> Result<Address, String> {
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
         Self {
+            mchain_id: 13331370,
             port: 8888,
             genesis_timestamp: 1712500000,
             chain_id: 84532,
@@ -57,12 +62,14 @@ impl Default for BlockBuilderConfig {
 impl BlockBuilderConfig {
     /// Creates a new [`BlockBuilderConfig`] instance.
     pub fn new(
+        mchain_id: u64,
         port: u16,
         genesis_timestamp: u64,
         chain_id: u64,
         sequencing_contract_address: Address,
     ) -> Result<Self, ConfigError> {
-        let config = Self { port, genesis_timestamp, chain_id, sequencing_contract_address };
+        let config =
+            Self { mchain_id, port, genesis_timestamp, chain_id, sequencing_contract_address };
         debug!("Created block builder config: {:?}", config);
         config.validate()?;
         Ok(config)
@@ -111,6 +118,7 @@ mod tests {
     #[test]
     fn test_validate() {
         let config = BlockBuilderConfig {
+            mchain_id: 1234,
             port: 0,
             genesis_timestamp: 1000000,
             chain_id: 12345,
