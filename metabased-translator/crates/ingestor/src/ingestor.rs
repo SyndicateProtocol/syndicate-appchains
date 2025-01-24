@@ -77,7 +77,23 @@ impl Ingestor {
 
     /// Starts the polling process.
     ///
-    /// Polls for new blocks and receipts at the specified interval and sends them to the consumer.
+    /// This asynchronous function continuously polls for new blocks and their receipts
+    /// at a specified interval (`self.polling_interval`). For each block, it fetches the
+    /// block and receipt data using `get_block_and_receipts` and sends the result to the
+    /// consumer via the provided channel.
+    ///
+    /// The polling process runs in an infinite loop, but it is designed to handle two
+    /// key scenarios:
+    /// 1. **Interval Tick**: On each interval tick, the function fetches the next block and
+    ///    receipts, logs relevant details, and pushes the data to the consumer. If fetching or
+    ///    pushing fails, the function retries automatically.
+    /// 2. **Cancellation Signal**: The function listens for cancellation signals (e.g., task
+    ///    abortion or a `ctrl_c` event). When such a signal is received, the polling process
+    ///    gracefully stops.
+    /// # Errors
+    /// This function returns an `Error` if initialization or any critical operation
+    /// fails. Errors during polling (e.g., fetching blocks or pushing data) are logged
+    /// and retried within the loop.
     pub async fn start_polling(&mut self) -> Result<(), Error> {
         debug!("Starting polling");
 
