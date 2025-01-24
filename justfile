@@ -395,10 +395,13 @@ foundry-setup:
 foundry-upgrade:
     @just _log-start "foundry-upgrade"
 
-    # Only run foundryup if the installed version is not the latest
-    @if ! foundryup --list | grep -q "$(forge --version | cut -d' ' -f2)"; then \
+    # Only run foundryup if forge isn't found or if the installed version is not the latest
+    # Based on https://book.getfoundry.sh/getting-started/installation
+    @if ! command -v forge >/dev/null 2>&1; then \
+        echo "Installing Foundry..."; \
+        foundryup; \
+    elif ! foundryup --list | grep -q "$(forge --version | cut -d' ' -f2)"; then \
         echo "Updating Foundry..."; \
-        # Based on https://book.getfoundry.sh/getting-started/installation
         foundryup; \
     else \
         echo "Foundry is already at the latest version"; \
