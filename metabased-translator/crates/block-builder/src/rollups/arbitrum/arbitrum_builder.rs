@@ -16,12 +16,11 @@ use alloy::{
 use async_trait::async_trait;
 use common::types::{BlockAndReceipts, Slot};
 use contract_bindings::arbitrum::{
-    eventemitter::EventEmitter::{emitEvent2Call, emitEvent3Call},
     ibridge::IBridge::MessageDelivered,
     idelayedmessageprovider::IDelayedMessageProvider::{
         InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
     },
-    isequencerinbox::ISequencerInbox,
+    irollup::IRollup,
 };
 use eyre::{Error, Result};
 use std::collections::HashMap;
@@ -35,14 +34,16 @@ const INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH: FixedBytes<32> =
 #[derive(Debug)]
 /// Builder for constructing Arbitrum blocks from transactions
 pub struct ArbitrumBlockBuilder {
+    // MChain rollup address
+    mchain_rollup_address: Address,
+
+    // Sequencing chain address
     transaction_parser: SequencingTransactionParser,
-    sequencer_inbox: Address,
+
+    // Settlement chain address
     delayed_inbox: Address,
 
-    sequence_number: u64,
     delayed_message_count: u64,
-    // previous_message_count: u64,
-    // new_message_count: u64,
 }
 
 impl Default for ArbitrumBlockBuilder {
@@ -52,12 +53,9 @@ impl Default for ArbitrumBlockBuilder {
                 "0xEF741D37485126A379Bfa32b6b260d85a0F00380"
             )),
 
-            sequencer_inbox: address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"),
+            mchain_rollup_address: address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"),
             delayed_inbox: address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"),
-            sequence_number: 0,
             delayed_message_count: 0,
-            // previous_message_count: 0,
-            // new_message_count: 0,
         }
     }
 }
@@ -103,7 +101,7 @@ impl ArbitrumBlockBuilder {
         blocks: Vec<BlockAndReceipts>,
     ) -> Result<Vec<TransactionRequest>> {
         // Create a local map to store message data
-        let mut inbox_messages: HashMap<U256, Bytes> = HashMap::new();
+        let mut message_data: HashMap<U256, Bytes> = HashMap::new();
 
         // Process all logs in all receipts in all blocks
         let delayed_messages = blocks
@@ -122,7 +120,7 @@ impl ArbitrumBlockBuilder {
 
                     if topic_bytes == INBOX_MSG_DELIVERED_EVENT_HASH {
                         let message_num = U256::from_be_slice(log.topics[1].as_slice());
-                        inbox_messages.insert(message_num, log.data.clone());
+                        message_data.insert(message_num, log.data.clone());
                     } else if topic_bytes == INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH {
                         let message_num = U256::from_be_slice(log.topics[1].as_slice());
 
@@ -134,7 +132,7 @@ impl ArbitrumBlockBuilder {
                         let txn = blocks[block_index].block.transactions[txn_index].clone();
 
                         let data = Bytes::from(txn.input);
-                        inbox_messages.insert(message_num, data);
+                        message_data.insert(message_num, data);
                     }
 
                     None
@@ -142,68 +140,33 @@ impl ArbitrumBlockBuilder {
             })
             .collect::<Vec<_>>();
 
-        info!("Inbox messages: {:?}", inbox_messages);
+        info!("Delayed message data: {:?}", message_data);
         info!("Delayed messages: {:?}", delayed_messages);
 
-        let mut delayed_txns: Vec<TransactionRequest> = Vec::new();
-
-        // We need 2 events submitted to get Arb to process the delayed messages
-
-        // - MessageDelivered event MessageDelivered( uint256 indexed messageIndex, bytes32 indexed
-        //   beforeInboxAcc, address inbox, uint8 kind, address sender, bytes32 messageDataHash,
-        //   uint256 baseFeeL1, uint64 timestamp
-        // );
-
-        // - InboxMessageDelivered
-        // event InboxMessageDelivered(uint256 indexed messageNum, bytes data);
-
-        // We need to create transactions that when sent to the EventEmitter will emit these events
+        let mut delayed_msg_txns: Vec<TransactionRequest> = Vec::new();
 
         for msg_log in delayed_messages {
             let message_index = U256::from_be_slice(msg_log.topics[1].as_slice());
-            let before_inbox_acc = FixedBytes::from_slice(msg_log.topics[2].as_slice());
+            let kind = msg_log.data[31] as u8; // kind is a uint8, extract from the last byte of the first 32-byte chunk
+            let sender = Address::from_slice(&msg_log.data[32..52]); // sender is a 20-byte address starting at offset 32
 
             // Get corresponding message data
-            let message_data = inbox_messages
+            let data = message_data
                 .get(&message_index)
                 .ok_or_else(|| Error::msg("Missing inbox message data"))?;
 
-            // Create MessageDelivered event transaction
-            let msg_delivered_tx = TransactionRequest::default().to(msg_log.address).input(
-                emitEvent3Call {
-                    // keccak256("MessageDelivered(uint256,bytes32,address,uint8,address,bytes32,
-                    // uint256,uint64)")
-                    signatureHash: MSG_DELIVERED_EVENT_HASH,
-                    // First indexed param - messageIndex as bytes32
-                    indexed1: FixedBytes::from(message_index.to_be_bytes()),
-                    // Second indexed param - beforeInboxAcc
-                    indexed2: before_inbox_acc,
-                    // Pack the non-indexed parameters into bytes32
-                    nonIndexed: FixedBytes::from_slice(&msg_log.data),
-                }
-                .abi_encode()
-                .into(),
-            );
+            // IRollup
+            let delivered_msg_tx =
+                TransactionRequest::default().to(self.mchain_rollup_address).input(
+                    IRollup::deliverMessageCall { kind, sender, messageData: data.clone() }
+                        .abi_encode()
+                        .into(),
+                );
 
-            // Create InboxMessageDelivered event transaction
-            let inbox_msg_delivered_tx = TransactionRequest::default().to(msg_log.address).input(
-                emitEvent2Call {
-                    // keccak256("InboxMessageDelivered(uint256,bytes)")
-                    signatureHash: INBOX_MSG_DELIVERED_EVENT_HASH,
-                    // First indexed param - messageNum as bytes32
-                    indexed1: FixedBytes::from(message_index.to_be_bytes()),
-                    // Non-indexed param - data as bytes32
-                    nonIndexed: FixedBytes::from_slice(message_data),
-                }
-                .abi_encode()
-                .into(),
-            );
-
-            delayed_txns.push(msg_delivered_tx);
-            delayed_txns.push(inbox_msg_delivered_tx);
+            delayed_msg_txns.push(delivered_msg_tx);
         }
 
-        Ok(delayed_txns)
+        Ok(delayed_msg_txns)
     }
 
     /// Builds a batch of transactions into an Arbitrum batch
@@ -223,16 +186,12 @@ impl ArbitrumBlockBuilder {
 
         // Create the transaction request
         let request = TransactionRequest::default()
-            .to(self.sequencer_inbox) // Sequencer Inbox address
+            .to(self.mchain_rollup_address) // Sequencer Inbox address
             .input(
                 // Encode the function call with parameters
-                ISequencerInbox::addSequencerL2BatchFromOrigin_1Call::new((
-                    U256::from(self.sequence_number),       // sequence number
-                    encoded_batch,                          // batch data
+                IRollup::postBatchCall::new((
                     U256::from(self.delayed_message_count), // after delayed messages read
-                    Address::ZERO,                          // gas refunder
-                    U256::ZERO,                             // prev message count
-                    U256::ZERO,                             // new message count
+                    encoded_batch,                          // batch data
                 ))
                 .abi_encode()
                 .into(), // Convert the tokenized call data to bytes
@@ -265,20 +224,16 @@ mod tests {
         let batch = builder.build_batch_txn(txs).await.unwrap();
 
         // Verify transaction is sent to sequencer inbox
-        assert_eq!(batch.to, Some(TxKind::Call(builder.sequencer_inbox)));
+        assert_eq!(batch.to, Some(TxKind::Call(builder.mchain_rollup_address)));
 
         // For empty batch, should create BatchMessage::Delayed
         let expected_batch = Batch(vec![BatchMessage::Delayed]);
         let expected_encoded = expected_batch.encode().unwrap();
 
         // Verify the input data contains the correct parameters
-        let call_data = ISequencerInbox::addSequencerL2BatchFromOrigin_1Call::new((
-            U256::from(0),    // sequence number
-            expected_encoded, // batch data
+        let call_data = IRollup::postBatchCall::new((
             U256::from(0),    // delayed message count
-            Address::ZERO,    // gas refunder
-            U256::ZERO,       // prev message count
-            U256::ZERO,       // new message count
+            expected_encoded, // batch data
         ))
         .abi_encode();
 
@@ -295,7 +250,7 @@ mod tests {
         let batch = builder.build_batch_txn(txs.clone()).await.unwrap();
 
         // Verify transaction is sent to sequencer inbox
-        assert_eq!(batch.to, Some(TxKind::Call(builder.sequencer_inbox)));
+        assert_eq!(batch.to, Some(TxKind::Call(builder.mchain_rollup_address)));
 
         // For non-empty batch, should create BatchMessage::L2
         let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
@@ -305,13 +260,9 @@ mod tests {
         let expected_encoded = expected_batch.encode().unwrap();
 
         // Verify the input data contains the correct parameters
-        let call_data = ISequencerInbox::addSequencerL2BatchFromOrigin_1Call::new((
-            U256::from(0),    // sequence number
-            expected_encoded, // batch data
+        let call_data = IRollup::postBatchCall::new((
             U256::from(0),    // delayed message count
-            Address::ZERO,    // gas refunder
-            U256::ZERO,       // prev message count
-            U256::ZERO,       // new message count
+            expected_encoded, // batch data
         ))
         .abi_encode();
 

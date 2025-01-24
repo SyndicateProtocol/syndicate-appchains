@@ -13,3 +13,5 @@ create-metabased-contract-bindings:
 	cp -r ../metabased-contracts/out/bindings/src/* contract-bindings/src/metabased
 	mv contract-bindings/src/metabased/lib.rs contract-bindings/src/metabased/mod.rs
 .PHONY: create-metabased-contracts-bindings
+
+
