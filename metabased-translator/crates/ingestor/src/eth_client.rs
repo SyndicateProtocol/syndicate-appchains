@@ -47,7 +47,7 @@ impl EthClient {
             .client()
             .request::<_, Option<Block>>("eth_getBlockByNumber", (block_number_hex, true))
             .await?
-            .ok_or_else(|| eyre!("Block not found"))
+            .ok_or_else(|| eyre!("Block not found {:?}", block_number))
     }
 
     /// Retrieves the receipts of all transactions in a block.
