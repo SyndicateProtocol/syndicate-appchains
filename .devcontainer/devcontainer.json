@@ -67,7 +67,7 @@
   // updateContentCommand is used for steps that update frequently
   // postCreateCommand is used for steps that require environment variables or other private information
   "onCreateCommand": "sudo apt update && sudo apt install -y just netcat-openbsd && mkdir -p ~/.zsh/completions && just --completions zsh > ~/.zsh/completions/just.zsh",
-  "updateContentCommand": "just foundry-all",
+  "updateContentCommand": "just foundry-upgrade",
 
   // Configure tool-specific properties.
   "customizations": {

@@ -138,7 +138,7 @@ op-down:
     @just _log-end "op-down"
 
 # Starts Arbitrum Orbit devnet if one is not already running
-arb-up: create-envrc foundry-all
+arb-up: create-envrc contracts-setup
     @just _log-start "arb-up"
 
     @# Only run the node if health check fails
@@ -409,23 +409,21 @@ foundry-upgrade: foundry-setup
 
     @just _log-end "foundry-upgrade"
 
-# Install dependencies for all monorepo smart contracts via forge
-contract-deps:
-    @just _log-start "contract-deps"
+# Install Foundry and dependencies for all monorepo smart contracts via forge
+contracts-setup: foundry-upgrade
+    @just _log-start "contracts-setup"
     
     cd {{ contracts_root }} && forge install
     cd {{ metabased_translator_contracts_root }} && forge install
 
-    @just _log-end "contract-deps"
-
-# Install Foundry and contract dependencies
-foundry-all: foundry-setup foundry-upgrade contract-deps
     @echo "Foundry and contract dependencies installed"
+
+    @just _log-end "contracts-setup"
 
 # Run all OP steps in sequence
 # We initialize and then spin down the devnet to get the initialization time out
 # of the way upfront
-op-all: op-clone foundry-all
+op-all: op-clone contracts-setup
     @echo "Post-setup OP script completed successfully. Ready to bring up the OP Stack devnet with op-up."
 
 setup-new-arb-chain-and-metabased-sequencer: arb-down metabased-sequencer-down arb-deploy-chain arb-update-chain-address metabased-sequencer-up
