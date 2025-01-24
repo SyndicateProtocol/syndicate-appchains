@@ -13,7 +13,6 @@ use alloy::{
         Identity, Provider, ProviderBuilder, RootProvider,
     },
     rpc::types::{anvil::MineOptions, TransactionRequest},
-    signers::local::PrivateKeySigner,
     transports::http::Http,
 };
 use reqwest::Client;
