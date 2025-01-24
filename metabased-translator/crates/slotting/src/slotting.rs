@@ -180,7 +180,7 @@ impl Slotter {
                                                                                 // blocked)
                         }
                         SlotterError::EarlierTimestamp { .. } => {
-                            panic!("Non-increasing timestamp - this should never happen (where a block is received with the expected block number, but a lower timestamp) {e}");
+                            panic!("Earlier timestamp - this should never happen (where a block is received with the expected block number, but a lower timestamp) {e}");
                         }
                     },
                 }
