@@ -1,6 +1,5 @@
 //! This module contains the logic for setting up the test environment for e2e tests
 
-use crate::contract_bindings::metabasedsequencerchain::MetabasedSequencerChain;
 use alloy::{
     hex,
     network::{Ethereum, EthereumWallet},
@@ -9,11 +8,11 @@ use alloy::{
         fillers::{FillProvider, JoinFill, WalletFiller},
         Identity, Provider, ProviderBuilder, RootProvider,
     },
-    signers::{k256::SecretKey, utils::public_key_to_address, Signer},
+    signers::{k256::SecretKey, local::LocalSigner, utils::public_key_to_address, Signer},
     sol_types::private::Bytes,
     transports::http::Http,
 };
-use alloy_signer_local::LocalSigner;
+use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain;
 use eyre::{eyre, Error};
 use reqwest::{Client, Url};
 use std::str::FromStr;
@@ -86,24 +85,17 @@ trait FromEnvVar: Sized {
 
 impl FromEnvVar for Url {
     fn from_env_var(var_name: &str) -> Result<Self, Error> {
-        Self::parse(&get_env_var(var_name)?).map_err(|e| {
-            eyre!(EnvConfigError::InvalidRpcUrl(
-                var_name.to_string(),
-                e.to_string()
-            ))
-        })
+        Self::parse(&get_env_var(var_name)?)
+            .map_err(|e| eyre!(EnvConfigError::InvalidRpcUrl(var_name.to_string(), e.to_string())))
     }
 }
 
 impl FromEnvVar for Address {
     fn from_env_var(var_name: &str) -> Result<Self, Error> {
         let addr_str = get_env_var(var_name)?;
-        addr_str.parse::<Self>().map_err(|e| {
-            eyre!(EnvConfigError::InvalidAddress(
-                var_name.to_string(),
-                e.to_string()
-            ))
-        })
+        addr_str
+            .parse::<Self>()
+            .map_err(|e| eyre!(EnvConfigError::InvalidAddress(var_name.to_string(), e.to_string())))
     }
 }
 
@@ -121,10 +113,7 @@ impl FromEnvVar for Account {
         })?;
         let address = public_key_to_address(&(private_key.public_key().into()));
 
-        Ok(Self {
-            private_key,
-            address,
-        })
+        Ok(Self { private_key, address })
     }
 }
 
@@ -251,11 +240,7 @@ impl TestEnv {
     }
 
     async fn check_connections(&self) -> Result<(), Error> {
-        for provider in [
-            &self.settlement_chain,
-            &self.sequencing_chain,
-            &self.l3_chain,
-        ] {
+        for provider in [&self.settlement_chain, &self.sequencing_chain, &self.l3_chain] {
             provider.get_block_number().await?;
         }
         Ok(())
@@ -263,12 +248,7 @@ impl TestEnv {
 
     /// Submits a raw L3 transaction to be sequenced
     pub async fn sequence_tx(&self, raw_tx: Bytes) -> Result<(), Error> {
-        self.sequencing_contract
-            .processTransactionRaw(raw_tx)
-            .send()
-            .await?
-            .watch()
-            .await?;
+        self.sequencing_contract.processTransactionRaw(raw_tx).send().await?.watch().await?;
         Ok(())
     }
 

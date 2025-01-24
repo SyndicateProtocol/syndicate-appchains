@@ -1,0 +1,32 @@
+name: "Olympix Integrated Security"
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - "metabased-contracts/src/**/*.sol"
+      - "metabased-contracts/certora/specs/**/*.spec"
+
+permissions:
+  security-events: write
+  actions: read
+  contents: read
+
+jobs:
+  security:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run Olympix Integrated Security
+        uses: olympix/integrated-security@main
+        env:
+          OLYMPIX_API_TOKEN: ${{ secrets.OLYMPIX_API_TOKEN }}
+
+      # Requires GitHub Advanced Security
+      - name: Upload result to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: olympix.sarif

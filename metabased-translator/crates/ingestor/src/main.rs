@@ -1,12 +1,17 @@
-//! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a consumer using a channel
+//! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a
+//! consumer using a channel
 
-mod eth_client;
-mod ingestor;
+// TODO(SEQ-515): remove this duplication, maybe remove main.rs?
+pub mod config;
+pub mod eth_client;
+pub mod ingestor;
 
+use crate::config::ChainIngestorConfig;
 use eyre::eyre;
-use log::info;
-use std::error::Error;
-use std::time::Duration;
+use ingestor::Ingestor;
+use std::{error::Error, time::Duration};
+use tracing::info;
+
 /// This function initializes the `Ingestor` to poll blocks from an Ethereum chain
 /// and logs received blocks. It sets up logging, handles errors gracefully, and
 /// spawns a background task to process incoming blocks.
@@ -25,18 +30,24 @@ use std::time::Duration;
 /// A tuple containing the `Ingestor` instance and a `Receiver` for consuming blocks.
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
+    // TODO SEQ(515): refactor this and use `common` one
+    // Initialize the tracing subscriber
+    tracing_subscriber::fmt().init();
+
     let rpc_url = "https://base.llamarpc.com"; //"https://eth.llamarpc.com";
     let start_block = 19486923;
     let polling_interval = Duration::from_secs(1);
 
-    // Initialize the logger
-    env_logger::init();
+    let config = ChainIngestorConfig {
+        buffer_size: 100,
+        polling_interval_secs: polling_interval.as_secs(),
+        rpc_url: rpc_url.to_string(),
+        start_block,
+    };
 
     // Create the ingestor and receiver
     let (mut ingestor, mut receiver) =
-        ingestor::Ingestor::new(rpc_url, start_block, 100, polling_interval)
-            .await
-            .map_err(|e| eyre!("Failed to create ingestor: {:?}", e))?;
+        Ingestor::new(config).await.map_err(|e| eyre!("Failed to create ingestor: {:?}", e))?;
 
     // Spawn a task to log what the receiver receives
     tokio::spawn(async move {
@@ -47,10 +58,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     });
 
     // Start polling
-    ingestor
-        .start_polling()
-        .await
-        .map_err(|e| eyre!("Failed to start polling: {:?}", e))?;
+    ingestor.start_polling().await.map_err(|e| eyre!("Failed to start polling: {:?}", e))?;
 
     Ok(())
 }

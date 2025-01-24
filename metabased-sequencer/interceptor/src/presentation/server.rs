@@ -1,16 +1,21 @@
-use crate::application::{Metrics, RunningStopwatch, Stopwatch};
-use crate::domain::primitives::Address;
-use crate::domain::MetabasedSequencerChainService;
-use crate::presentation::json_rpc_errors::Error;
-use crate::presentation::services::Services;
-use crate::presentation::tower::UnescapeJsonLayer;
-use crate::presentation::{jsonrpc, services};
+use crate::{
+    application::{Metrics, RunningStopwatch, Stopwatch},
+    domain::{primitives::Address, MetabasedSequencerChainService},
+    presentation::{
+        json_rpc_errors::Error,
+        jsonrpc,
+        services::{self, Services},
+        tower::UnescapeJsonLayer,
+    },
+};
 use alloy::primitives::B256;
 use http::Method;
-use jsonrpsee::server::middleware::http::ProxyGetRequestLayer;
-use jsonrpsee::server::{RpcServiceBuilder, Server, ServerHandle};
-use jsonrpsee::RpcModule;
-use std::net::SocketAddr;
+use jsonrpsee::{
+    server::{middleware::http::ProxyGetRequestLayer, RpcServiceBuilder, Server, ServerHandle},
+    RpcModule,
+};
+use std::{fmt::Debug, net::SocketAddr};
+use tracing::info;
 use url::Url;
 
 const METRICS_RPC: &str = "metrics";
@@ -21,7 +26,7 @@ pub async fn run(
     chain_contract_address: Address,
     chain_rpc_address: Url,
     private_key: B256,
-) -> anyhow::Result<(SocketAddr, ServerHandle)> {
+) -> eyre::Result<(SocketAddr, ServerHandle)> {
     let rpc_middleware = RpcServiceBuilder::new();
     let http_middleware = tower::ServiceBuilder::new()
         .layer(UnescapeJsonLayer::new(|request| {
@@ -46,18 +51,23 @@ pub async fn run(
 
 fn create_eth_module<Chain, M, S>(
     services: Services<Chain, M, S>,
-) -> anyhow::Result<RpcModule<Services<Chain, M, S>>>
+) -> eyre::Result<RpcModule<Services<Chain, M, S>>>
 where
-    Chain: MetabasedSequencerChainService + Send + Sync + 'static,
+    Chain: MetabasedSequencerChainService + Send + Sync + Debug + 'static,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
-    M: Metrics + Send + Sync + 'static,
-    S: Stopwatch<Running: RunningStopwatch + Send + Sync + 'static> + Send + Sync + 'static,
+    M: Metrics + Send + Sync + Debug + 'static,
+    S: Stopwatch<Running: RunningStopwatch + Send + Sync + Debug + 'static>
+        + Send
+        + Sync
+        + Debug
+        + 'static,
 {
     let mut module = RpcModule::new(services);
     module.register_async_method("eth_sendRawTransaction", jsonrpc::send_raw_transaction)?;
     module.register_method(METRICS_RPC, jsonrpc::metrics)?;
     module.register_method("health", jsonrpc::health)?;
 
+    info!("Registered RPC methods: {:#?}", module.method_names().collect::<Vec<_>>());
     Ok(module)
 }
 
@@ -69,10 +79,9 @@ mod tests {
     /// parameter lists.
     mod dummy {
         use super::*;
-        use alloy_primitives::{Bytes, TxHash};
+        use alloy::primitives::{Bytes, TxHash};
         use async_trait::async_trait;
-        use std::convert::Infallible;
-        use std::time::Duration;
+        use std::{convert::Infallible, time::Duration};
 
         #[async_trait]
         impl MetabasedSequencerChainService for () {
@@ -106,10 +115,8 @@ mod tests {
     /// Stubs provide canned answers to calls made during the test, usually not responding at all to
     /// anything outside what's programmed in for the test.
     mod stub {
-        use crate::application::Metrics;
-        use crate::presentation::json_rpc_errors::Error;
-        use std::fmt::Write;
-        use std::time::Duration;
+        use crate::{application::Metrics, presentation::json_rpc_errors::Error};
+        use std::{fmt::Write, time::Duration};
 
         impl Metrics for &'static str {
             fn append_send_raw_transaction_with_duration(

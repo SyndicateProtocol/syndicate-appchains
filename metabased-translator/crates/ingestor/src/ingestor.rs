@@ -1,16 +1,15 @@
-//! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a consumer using a channel
+//! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a
+//! consumer using a channel
 
+use crate::{config::ChainIngestorConfig, eth_client::EthClient};
+use common::types::BlockAndReceipts;
 use eyre::{eyre, Error};
-use log::info;
 use std::time::Duration;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
-
-use crate::eth_client::EthClient;
-use common::types::BlockAndReceipts;
+use tracing::info;
 
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
-#[allow(unreachable_pub)] // TODO: remove when used
 pub struct Ingestor {
     client: EthClient,
     current_block_number: u64,
@@ -29,21 +28,17 @@ impl Ingestor {
     ///
     /// # Returns
     /// A tuple containing the `Ingestor` instance and a `Receiver` for consuming blocks.
-    #[allow(unreachable_pub)] // TODO: remove when used
     pub async fn new(
-        rpc_url: &str,
-        start_block: u64,
-        buffer_size: usize,
-        polling_interval: Duration,
+        config: ChainIngestorConfig,
     ) -> Result<(Self, Receiver<BlockAndReceipts>), Error> {
-        let client = EthClient::new(rpc_url).await?;
-        let (sender, receiver) = channel(buffer_size);
+        let client = EthClient::new(&config.rpc_url).await?;
+        let (sender, receiver) = channel(config.buffer_size);
         Ok((
             Self {
                 client,
-                current_block_number: start_block,
+                current_block_number: config.start_block,
                 sender,
-                polling_interval,
+                polling_interval: config.polling_interval(),
             },
             receiver,
         ))
@@ -58,7 +53,6 @@ impl Ingestor {
     /// The block and its receipts.
     async fn get_block_and_receipts(&self, block_number: u64) -> Result<BlockAndReceipts, Error> {
         let block = self.client.get_block_by_number(block_number).await?;
-
         let receipts = self.client.get_block_receipts(block_number).await?;
         info!("Got block: {:?}", block.number);
 
@@ -90,9 +84,7 @@ impl Ingestor {
 
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
-            let block_and_receipts = self
-                .get_block_and_receipts(self.current_block_number)
-                .await?;
+            let block_and_receipts = self.get_block_and_receipts(self.current_block_number).await?;
             info!("Pushing block: {:?}", block_and_receipts.block.number);
             self.push_block_and_receipts(block_and_receipts).await?;
             interval.tick().await;
@@ -103,17 +95,42 @@ impl Ingestor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::config::{ChainIngestorConfig, IngestionPipelineConfig};
+    use alloy::primitives::B256;
     use common::types::{Block, BlockAndReceipts};
-
     use eyre::Result;
+    use std::str::FromStr;
 
-    const RPC_URL: &str = "https://syndicate.io";
+    fn test_config() -> IngestionPipelineConfig {
+        IngestionPipelineConfig {
+            sequencing: ChainIngestorConfig {
+                buffer_size: 100,
+                polling_interval_secs: 1,
+                rpc_url: "https://sequencing.io".into(),
+                start_block: 19486923,
+            }
+            .into(),
+            settlement: ChainIngestorConfig {
+                buffer_size: 100,
+                polling_interval_secs: 1,
+                rpc_url: "https://settlement.io".into(),
+                start_block: 19486923,
+            }
+            .into(),
+        }
+    }
 
-    fn get_dummy_block_and_receipts(block_number: u64) -> BlockAndReceipts {
+    fn get_dummy_block_and_receipts(number: u64) -> BlockAndReceipts {
         let block: Block = Block {
-            hash: "0xHash".to_string(),
-            number: block_number,
-            parent_hash: "0xPar".to_string(),
+            hash: B256::from_str(
+                "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            )
+            .unwrap(),
+            number,
+            parent_hash: B256::from_str(
+                "0234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            )
+            .unwrap(),
             logs_bloom: "0xLog".to_string(),
             transactions_root: "0xTra".to_string(),
             state_root: "0xSta".to_string(),
@@ -121,23 +138,21 @@ mod tests {
             timestamp: 1000000000,
             transactions: vec![],
         };
-        BlockAndReceipts {
-            block,
-            receipts: vec![],
-        }
+        BlockAndReceipts { block, receipts: vec![] }
     }
 
     #[tokio::test]
     async fn test_ingestor_new() -> Result<(), Error> {
         let start_block = 19486923;
-        let buffer_size = 10;
+        let buffer_size = 100;
         let polling_interval = Duration::from_secs(1);
+        let config = test_config();
 
-        let (ingestor, receiver) =
-            Ingestor::new(RPC_URL, start_block, buffer_size, polling_interval).await?;
+        let (ingestor, receiver) = Ingestor::new(config.sequencing.into()).await?;
 
         assert_eq!(ingestor.current_block_number, start_block);
         assert_eq!(receiver.capacity(), buffer_size);
+        assert_eq!(ingestor.polling_interval, polling_interval);
         Ok(())
     }
 
@@ -147,20 +162,13 @@ mod tests {
         let polling_interval = Duration::from_secs(1);
 
         let (sender, mut receiver) = channel(10);
-        let client = EthClient::new(RPC_URL).await?;
-        let mut ingestor = Ingestor {
-            client,
-            current_block_number: start_block,
-            sender,
-            polling_interval,
-        };
+        let client = EthClient::new(test_config().sequencing.sequencing_rpc_url.as_str()).await?;
+        let mut ingestor =
+            Ingestor { client, current_block_number: start_block, sender, polling_interval };
 
         let block = get_dummy_block_and_receipts(start_block);
 
-        ingestor
-            .push_block_and_receipts(block)
-            .await
-            .expect("Failed to poll block");
+        ingestor.push_block_and_receipts(block).await.expect("Failed to poll block");
 
         if let Some(BlockAndReceipts { block, .. }) = receiver.recv().await {
             assert_eq!(block.number, start_block);

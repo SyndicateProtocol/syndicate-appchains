@@ -1,16 +1,18 @@
-use crate::application;
-use crate::application::{Metrics, RunningStopwatch, SendRawTransactionParams, Stopwatch};
-use crate::domain::primitives::Bytes;
-use crate::domain::MetabasedSequencerChainService;
-use crate::presentation::json_rpc_errors::Error;
-use crate::presentation::services::Services;
-use alloy::hex;
-use alloy::hex::ToHexExt;
+use crate::{
+    application,
+    application::{Metrics, RunningStopwatch, SendRawTransactionParams, Stopwatch},
+    domain::{primitives::Bytes, MetabasedSequencerChainService},
+    presentation::{json_rpc_errors::Error, services::Services},
+};
+use alloy::{hex, hex::ToHexExt};
 use jsonrpsee::types::{ErrorObject, Params};
 use serde::Serialize;
-use std::fmt::{Debug, Display, Formatter};
-use std::future::Future;
-use std::sync::Arc;
+use std::{
+    fmt::{Debug, Display, Formatter},
+    future::Future,
+    sync::Arc,
+};
+use tracing::{instrument, Level};
 
 /// An error type for JSON-RPC endpoints.
 ///
@@ -33,13 +35,9 @@ impl<S: Serialize> Display for JsonRpcError<S> {
     }
 }
 
-impl<E: Into<anyhow::Error>> From<E> for JsonRpcError<()> {
+impl<E: Into<eyre::Error>> From<E> for JsonRpcError<()> {
     fn from(value: E) -> Self {
-        Self {
-            code: -32602,
-            message: value.into().to_string(),
-            data: None,
-        }
+        Self { code: -32602, message: value.into().to_string(), data: None }
     }
 }
 
@@ -52,11 +50,7 @@ impl<S: Serialize> From<JsonRpcError<S>> for ErrorObject<'_> {
 impl From<Error> for JsonRpcError<()> {
     fn from(value: Error) -> Self {
         let code = Self::valid_eth_rpc_codes(&value);
-        JsonRpcError {
-            code,
-            message: value.to_string(),
-            data: None,
-        }
+        JsonRpcError { code, message: value.to_string(), data: None }
     }
 }
 
@@ -92,10 +86,10 @@ pub async fn send_raw_transaction<Chain, M, S>(
     _ext: http::Extensions,
 ) -> Result<String, JsonRpcError<()>>
 where
-    Chain: MetabasedSequencerChainService,
-    M: Metrics,
+    Chain: MetabasedSequencerChainService + Debug,
+    M: Metrics + Debug,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
-    S: Stopwatch,
+    S: Stopwatch + Debug,
 {
     let metrics = ctx.metrics_service();
     let start = ctx.stopwatch_service().start();
@@ -104,12 +98,13 @@ where
     with_metrics(metrics, start, handle_send_raw_transaction(params, chain)).await
 }
 
+#[instrument(level = Level::DEBUG, skip(chain), fields(request_id, method = "eth_sendRawTransaction"))]
 pub async fn handle_send_raw_transaction<Chain>(
     params: Params<'static>,
     chain: &Chain,
 ) -> Result<String, Error>
 where
-    Chain: MetabasedSequencerChainService,
+    Chain: MetabasedSequencerChainService + Debug,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
 {
     let params = SendRawTransactionParams::try_from(params)?;
@@ -139,25 +134,26 @@ pub fn metrics<Chain, M, S>(
     _ext: &http::Extensions,
 ) -> String
 where
-    Chain: MetabasedSequencerChainService,
-    M: Metrics,
+    Chain: MetabasedSequencerChainService + Debug,
+    M: Metrics + Debug,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
-    S: Stopwatch,
+    S: Stopwatch + Debug,
 {
     application::metrics(ctx.metrics_service())
 }
 
 /// The JSON-RPC endpoint for health check.
+#[instrument(level = Level::DEBUG, skip(_ctx))]
 pub fn health<Chain, M, S>(
     _params: Params,
     _ctx: &Services<Chain, M, S>,
     _ext: &http::Extensions,
 ) -> Result<String, JsonRpcError<()>>
 where
-    Chain: MetabasedSequencerChainService,
-    M: Metrics,
+    Chain: MetabasedSequencerChainService + Debug,
+    M: Metrics + Debug,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
-    S: Stopwatch,
+    S: Stopwatch + Debug,
 {
     Ok("ok".to_string())
 }
@@ -165,16 +161,16 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::application::Metrics;
-    use crate::domain::primitives::TxHash;
-    use crate::domain::MetabasedSequencerChainService;
-    use crate::infrastructure::error_to_metric_category;
-    use crate::presentation::services::Services;
-    use alloy_primitives::Bytes;
+    use crate::{
+        application::Metrics,
+        domain::{primitives::TxHash, MetabasedSequencerChainService},
+        infrastructure::error_to_metric_category,
+        presentation::services::Services,
+    };
+    use alloy::primitives::Bytes;
     use async_trait::async_trait;
     use jsonrpsee::types::Params;
-    use std::convert::Infallible;
-    use std::time::Duration;
+    use std::{convert::Infallible, time::Duration};
 
     #[tokio::test]
     async fn test_send_raw_transaction_success() {
@@ -184,20 +180,13 @@ mod tests {
         let params = Params::new(Some(
             r#"["0x02f871018319cb1d808502b95ddeef82520894e94f1fa4f27d9d288ffea234bb62e1fbc086ca0c877654752ccd929080c001a0fd107a1713c5b89e4affcf616b2bdc517a70ce9735c4d67d142fd9211f2c6d8ea032fac076f33f22c968380c02331be61da3f157f90e72a121d5fac80313745779"]"#,
         ));
-        let result = send_raw_transaction(params, services_arc.clone(), Default::default())
-            .await
-            .unwrap();
+        let result =
+            send_raw_transaction(params, services_arc.clone(), Default::default()).await.unwrap();
 
-        assert_eq!(
-            result,
-            "0x1111111111111111111111111111111111111111111111111111111111111111"
-        );
+        assert_eq!(result, "0x1111111111111111111111111111111111111111111111111111111111111111");
 
         assert!(services_arc.metrics_service().metrics_called.get());
-        assert_eq!(
-            services_arc.metrics_service().last_error_category.get(),
-            "none"
-        );
+        assert_eq!(services_arc.metrics_service().last_error_category.get(), "none");
     }
 
     #[tokio::test]
@@ -212,15 +201,10 @@ mod tests {
             .await
             .unwrap_err();
 
-        assert!(err
-            .to_string()
-            .contains("invalid params: wrong number of params"));
+        assert!(err.to_string().contains("invalid params: wrong number of params"));
 
         assert!(services_arc.metrics_service().metrics_called.get());
-        assert_eq!(
-            services_arc.metrics_service().last_error_category.get(),
-            "params_error"
-        );
+        assert_eq!(services_arc.metrics_service().last_error_category.get(), "params_error");
     }
 
     #[tokio::test]
@@ -234,10 +218,7 @@ mod tests {
             .unwrap_err();
 
         assert!(services_arc.metrics_service().metrics_called.get());
-        assert_eq!(
-            services_arc.metrics_service().last_error_category.get(),
-            "params_error"
-        );
+        assert_eq!(services_arc.metrics_service().last_error_category.get(), "params_error");
     }
 
     #[tokio::test]
@@ -250,15 +231,10 @@ mod tests {
             .await
             .unwrap_err();
 
-        assert!(err
-            .to_string()
-            .contains("invalid input: unable to RLP decode"));
+        assert!(err.to_string().contains("invalid input: unable to RLP decode"));
 
         assert!(services_arc.metrics_service().metrics_called.get());
-        assert_eq!(
-            services_arc.metrics_service().last_error_category.get(),
-            "validation_error"
-        );
+        assert_eq!(services_arc.metrics_service().last_error_category.get(), "validation_error");
     }
 
     // handler tests
@@ -286,7 +262,7 @@ mod tests {
         assert!(result.is_err());
     }
 
-    #[derive(Default)]
+    #[derive(Default, Debug)]
     struct MockChain;
 
     #[async_trait]
@@ -306,6 +282,7 @@ mod tests {
     unsafe impl Send for MockMetrics {}
     unsafe impl Sync for MockMetrics {}
 
+    #[derive(Debug)]
     struct MockMetrics {
         metrics_called: std::cell::Cell<bool>,
         last_error_category: std::cell::Cell<&'static str>,
@@ -334,8 +311,7 @@ mod tests {
             error: Option<&Error>,
         ) {
             self.metrics_called.set(true);
-            self.last_error_category
-                .set(error_to_metric_category(error));
+            self.last_error_category.set(error_to_metric_category(error));
         }
 
         fn encode(&self, _writer: &mut impl std::fmt::Write) -> std::fmt::Result {

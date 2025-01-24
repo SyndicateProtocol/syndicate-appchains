@@ -9,11 +9,14 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-pre-commit-hooks = "0.3.0"
-strum = { version = "0.26.3", features = ["derive"] }
-strum_macros = "0.26.4"
+serde = { workspace = true, features = ["derive"] }
+strum_macros = { workspace = true }
+alloy = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
+tracing = { workspace = true, features = ["attributes"] }
+
+[dev-dependencies]
+serial_test = { workspace = true }
 
 [lints]
 workspace = true

@@ -1,5 +1,7 @@
-use figment::value::{Dict, Map};
-use figment::{Error, Metadata, Profile, Provider};
+use figment::{
+    value::{Dict, Map},
+    Error, Metadata, Profile, Provider,
+};
 use std::fmt::Debug;
 use tracing::log;
 
@@ -15,10 +17,7 @@ pub struct Logged<T> {
 
 impl<T> Logged<T> {
     pub fn new(inner: T) -> Self {
-        Self {
-            inner,
-            profile: Profile::Default,
-        }
+        Self { inner, profile: Profile::Default }
     }
 }
 
@@ -29,10 +28,7 @@ impl<T: Provider + Debug> Provider for Logged<T> {
 
     fn data(&self) -> Result<Map<Profile, Dict>, Error> {
         let meta = self.inner.metadata();
-        let source = meta
-            .source
-            .map(|s| format!(" from {s}"))
-            .unwrap_or_default();
+        let source = meta.source.map(|s| format!(" from {s}")).unwrap_or_default();
 
         Ok(self
             .inner

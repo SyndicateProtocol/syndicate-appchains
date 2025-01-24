@@ -1,8 +1,8 @@
-use alloy::primitives::Bytes;
-use alloy::signers::k256::elliptic_curve::rand_core::RngCore;
-use alloy_primitives::hex_literal::hex;
-use alloy_primitives::{Address, B256, U256};
-use alloy_rlp::{Encodable, RlpDecodable, RlpEncodable};
+use alloy::{
+    primitives::{hex_literal::hex, Address, Bytes, B256, U256},
+    rlp::{Encodable, RlpDecodable, RlpEncodable},
+    signers::k256::elliptic_curve::rand_core::RngCore,
+};
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use interceptor::infrastructure::{
     compress_transaction, compress_transactions, decompress_transaction, decompress_transactions,
@@ -221,9 +221,7 @@ fn bench_batch_sizes(c: &mut Criterion) {
         let mut txs = Vec::new();
         txs.push(Bytes::copy_from_slice(&SAMPLE_TX_1));
         for _ in 0..*size {
-            txs.push(Bytes::copy_from_slice(
-                generate_random_raw_transaction_rlp().as_ref(),
-            ));
+            txs.push(Bytes::copy_from_slice(generate_random_raw_transaction_rlp().as_ref()));
         }
 
         // Pre-calculate sizes
@@ -273,10 +271,5 @@ fn bench_batch_sizes(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(
-    benches,
-    bench_single_tx,
-    bench_batch_multiple_tx,
-    bench_batch_sizes
-);
+criterion_group!(benches, bench_single_tx, bench_batch_multiple_tx, bench_batch_sizes);
 criterion_main!(benches);

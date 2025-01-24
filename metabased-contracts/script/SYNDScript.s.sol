@@ -6,7 +6,7 @@ import {Script, console} from "forge-std/Script.sol";
 import {SynGasToken, AccessControl} from "src/token/SynGasToken.sol";
 
 // Holesky SYND address
-address constant SYND_ADDRESS = 0x19aaf160dA8985c54bb97adAF9304B5aC7890421;
+address constant SYND_ADDRESS = 0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba;
 
 contract GrantMinterRole is Script {
     AccessControl public synd;

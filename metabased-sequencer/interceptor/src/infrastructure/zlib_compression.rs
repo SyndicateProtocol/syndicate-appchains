@@ -1,12 +1,11 @@
 use crate::domain;
 use bytes::BytesMut;
 use domain::primitives::Bytes;
-use flate2::read::ZlibDecoder;
-use flate2::write::ZlibEncoder;
-use flate2::Compression;
-use std::convert::Infallible;
-use std::io::Read;
-use std::io::{self, Write};
+use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
+use std::{
+    convert::Infallible,
+    io::{self, Read, Write},
+};
 
 // Valid Zlib CM bits
 const ZLIB_CM8: u8 = 0x08;
@@ -89,10 +88,7 @@ pub fn decompress_transactions(compressed: &Bytes) -> Result<Vec<Bytes>, IoError
 
     // Read number of transactions
     if buffer.len() < 4 {
-        return Err(IoError(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "Invalid compressed data",
-        )));
+        return Err(IoError(io::Error::new(io::ErrorKind::InvalidData, "Invalid compressed data")));
     }
     let num_transactions = u32::from_be_bytes(buffer[0..4].try_into().unwrap());
     pos += 4;
@@ -100,10 +96,7 @@ pub fn decompress_transactions(compressed: &Bytes) -> Result<Vec<Bytes>, IoError
     // Read each transaction
     for _ in 0..num_transactions {
         if pos + 4 > buffer.len() {
-            return Err(IoError(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "Truncated data",
-            )));
+            return Err(IoError(io::Error::new(io::ErrorKind::InvalidData, "Truncated data")));
         }
 
         let tx_len = u32::from_be_bytes(buffer[pos..pos + 4].try_into().unwrap()) as usize;
@@ -133,19 +126,13 @@ fn validate_cm_bits<T: AsRef<[u8]>>(
 
     // Check for empty data first
     if compressed.is_empty() {
-        return Err(IoError(io::Error::new(
-            io::ErrorKind::InvalidData,
-            "Empty compressed data",
-        )));
+        return Err(IoError(io::Error::new(io::ErrorKind::InvalidData, "Empty compressed data")));
     }
 
     // Extract CM bits and check against allowed values
     let cm_bits = compressed[0] & CM_BITS_MASK;
     if !allowed_values.contains(&cm_bits) {
-        return Err(IoError(io::Error::new(
-            io::ErrorKind::InvalidData,
-            error_msg,
-        )));
+        return Err(IoError(io::Error::new(io::ErrorKind::InvalidData, error_msg)));
     }
 
     Ok(())
@@ -172,7 +159,7 @@ fn is_valid_cm_bits_8_or_15<T: AsRef<[u8]>>(compressed: T) -> Result<(), IoError
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy_primitives::hex_literal::hex;
+    use alloy::primitives::hex_literal::hex;
     use std::time::Instant;
 
     #[test]

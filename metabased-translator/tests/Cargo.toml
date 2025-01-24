@@ -9,15 +9,27 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
+common = { workspace = true }
 block-builder = { workspace = true }
-alloy = { version = "0.9.2", features = ["full"] }
-alloy-signer-local = "0.9.2"
-eyre = "0.6.12"
-reqwest = "0.12.9"
-tokio = { version = "1.42.0", features = ["rt", "rt-multi-thread", "macros"] }
-thiserror = "2.0.9"
-strum = "0.26.3"
-strum_macros = "0.26.4"
+contract-bindings = { workspace = true }
+alloy = { workspace = true, features = [
+  "providers",
+  "sol-types",
+  "signers",
+  "signer-local",
+  "k256",
+  "contract",
+] }
+eyre = { workspace = true }
+reqwest = { workspace = true }
+tokio = { workspace = true, features = ["fs"] }
+thiserror = { workspace = true }
+strum = { workspace = true }
+strum_macros = { workspace = true }
+
+[package.metadata.cargo-machete]
+# strum is used via a macro from strum_macros - machete does not detect it
+ignored = ["strum"]
 
 [features]
 e2e-tests = []

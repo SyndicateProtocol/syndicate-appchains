@@ -9,13 +9,14 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
-common.workspace = true
-eyre = "0.6.12"
-alloy = { version = "0.8.3", features = ["full"] }
-tokio = { version = "1.42.0", features = ["full", "test-util", "macros"] }
-env_logger = "0.10"                                                        # Use the latest version
-log = "0.4"
-pre-commit-hooks = "0.3.0"
+alloy = { workspace = true, features = ["providers"] }
+common = { workspace = true }
+eyre = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time", "rt-multi-thread"] }
+tracing = { workspace = true }
+thiserror = { workspace = true }
+tracing-subscriber = { workspace = true }
+clap = { workspace = true, features = ["derive", "env"] }
 
 [lints]
 workspace = true

@@ -1,45 +1,58 @@
-use crate::domain::primitives::Bytes;
-use crate::domain::MetabasedSequencerChainService;
-use crate::presentation::json_rpc_errors::Error;
-use crate::presentation::json_rpc_errors::Error::{InvalidInput, InvalidParams};
-use crate::presentation::json_rpc_errors::InvalidInputError::{
-    MissingChainID, MissingGasPrice, UnableToRLPDecode,
+use crate::{
+    domain::{primitives::Bytes, MetabasedSequencerChainService},
+    presentation::{
+        json_rpc_errors::{
+            Error,
+            Error::{InvalidInput, InvalidParams},
+            InvalidInputError::{MissingChainID, MissingGasPrice, UnableToRLPDecode},
+            InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount},
+        },
+        transaction,
+    },
 };
-use crate::presentation::json_rpc_errors::InvalidParamsError::{
-    MissingParam, NotAnArray, NotHexEncoded, WrongParamCount,
+use alloy::{
+    consensus::{Transaction, TxEnvelope, TxType},
+    primitives::{TxHash, U256},
+    rlp::Decodable,
 };
-use crate::presentation::transaction;
-use alloy::consensus::{Transaction, TxEnvelope, TxType};
-use alloy::primitives::private::alloy_rlp::Decodable;
-use alloy::primitives::TxHash;
-use alloy::primitives::U256;
 use jsonrpsee::types::Params;
-use std::convert::TryFrom;
+use std::{convert::TryFrom, fmt::Debug};
+use tracing::{debug, instrument, Level};
 
 /// Sends serialized and signed transaction `tx` using `chain`.
+#[instrument(level = Level::DEBUG, skip(chain), fields(encoded))]
 pub async fn send_raw_transaction<Chain>(encoded: Bytes, chain: &Chain) -> Result<TxHash, Error>
 where
-    Chain: MetabasedSequencerChainService,
+    Chain: MetabasedSequencerChainService + Debug,
     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
 {
+    debug!(bytes_length = encoded.len(), "Starting transaction validation");
     // 1. Decoding:
     let mut slice: &[u8] = encoded.as_ref();
     let tx = match TxEnvelope::decode(&mut slice) {
         Ok(tx) => tx,
-        Err(_) => return Err(InvalidInput(UnableToRLPDecode)),
+        Err(_) => {
+            let error = InvalidInput(UnableToRLPDecode);
+            debug!(
+                error = %error
+            );
+            return Err(error);
+        }
     };
 
     // 2. Validation:
     //For non-legacy transactions, validate chain ID immediately
     if tx.tx_type() != TxType::Legacy && tx.chain_id().is_none() {
-        return Err(InvalidInput(MissingChainID));
+        let error = InvalidInput(MissingChainID);
+        debug!(error = %error);
+        return Err(error);
     }
 
     tx.recover_signer()?;
 
     if tx.tx_type() == TxType::Legacy {
-        // TODO(SEQ-179): introduce optional global tx cap config. See op-geth's checkTxFee() + RPCTxFeeCap for equivalent
-        // skip check if unset
+        // TODO(SEQ-179): introduce optional global tx cap config. See op-geth's checkTxFee() +
+        // RPCTxFeeCap for equivalent skip check if unset
         let tx_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
         let gas_price = tx.gas_price().ok_or(InvalidInput(MissingGasPrice))?;
         transaction::check_tx_fee(
@@ -49,8 +62,14 @@ where
         )?;
     }
 
+    debug!("Submitting validated transaction to chain");
     // 3. Submission/forwarding:
-    Ok(chain.process_transaction(encoded).await?)
+    let result = chain.process_transaction(encoded).await?;
+    debug!(
+        tx_hash = ?result,
+        "Chain processed transaction successfully"
+    );
+    Ok(result)
 }
 
 #[derive(Debug)]
@@ -69,10 +88,7 @@ impl TryFrom<Params<'static>> for SendRawTransactionParams {
             return Err(InvalidParams(WrongParamCount(arr.len())));
         }
         let item = arr.pop().ok_or(InvalidParams(MissingParam))?;
-        let raw_tx = item
-            .as_str()
-            .ok_or(InvalidParams(NotHexEncoded))?
-            .to_string();
+        let raw_tx = item.as_str().ok_or(InvalidParams(NotHexEncoded))?.to_string();
 
         Ok(Self { raw_tx })
     }
@@ -81,17 +97,19 @@ impl TryFrom<Params<'static>> for SendRawTransactionParams {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::primitives::Bytes;
-    use crate::domain::InMemoryMetabasedSequencerChain;
-    use alloy::consensus::{SignableTransaction, TxEip1559, TxEnvelope, TxLegacy};
-    use alloy::network::TxSignerSync;
-    use alloy::primitives::TxKind;
-    use alloy::signers::local::PrivateKeySigner;
-    use alloy_primitives::private::alloy_rlp::Encodable;
-    use alloy_primitives::{b256, PrimitiveSignature};
+    use crate::domain::{primitives::Bytes, InMemoryMetabasedSequencerChain};
+    use alloy::{
+        consensus::{SignableTransaction, TxEip1559, TxEnvelope, TxLegacy},
+        network::TxSignerSync,
+        primitives::{b256, PrimitiveSignature, TxKind},
+        rlp::Encodable,
+        signers::local::PrivateKeySigner,
+    };
     use async_trait::async_trait;
-    use std::fmt::{Debug, Display, Formatter};
-    use std::sync::Arc;
+    use std::{
+        fmt::{Display, Formatter},
+        sync::Arc,
+    };
     use test_case::test_case;
     use tokio::sync::RwLock;
 
@@ -125,9 +143,7 @@ mod tests {
         let transactions = Arc::new(RwLock::new(Vec::new()));
         let chain = InMemoryMetabasedSequencerChain::new(transactions.clone());
 
-        send_raw_transaction(encoded_tx.clone(), &chain)
-            .await
-            .unwrap();
+        send_raw_transaction(encoded_tx.clone(), &chain).await.unwrap();
 
         let expected_transactions = vec![encoded_tx];
         let actual_transactions = transactions.read().await.clone();
@@ -163,9 +179,7 @@ mod tests {
         let transactions = Arc::new(RwLock::new(Vec::new()));
         let chain = InMemoryMetabasedSequencerChain::new(transactions.clone());
 
-        let error = send_raw_transaction(encoded_tx.clone(), &chain)
-            .await
-            .unwrap_err();
+        let error = send_raw_transaction(encoded_tx.clone(), &chain).await.unwrap_err();
 
         let expected_error = "invalid input: unable to RLP decode";
         let actual_error = error.to_string();
@@ -181,9 +195,7 @@ mod tests {
         let transactions = Arc::new(RwLock::new(Vec::new()));
         let chain = InMemoryMetabasedSequencerChain::new(transactions.clone());
 
-        send_raw_transaction(encoded_tx.clone(), &chain)
-            .await
-            .unwrap();
+        send_raw_transaction(encoded_tx.clone(), &chain).await.unwrap();
 
         let expected_transactions = vec![encoded_tx];
         let actual_transactions = transactions.read().await.clone();
@@ -222,9 +234,7 @@ mod tests {
         let transactions = Arc::new(RwLock::new(Vec::new()));
         let chain = InMemoryMetabasedSequencerChain::new(transactions.clone());
 
-        let error = send_raw_transaction(encoded_tx.clone(), &chain)
-            .await
-            .unwrap_err();
+        let error = send_raw_transaction(encoded_tx.clone(), &chain).await.unwrap_err();
 
         let expected_error = "invalid input: invalid transaction signature";
         let actual_error = error.to_string();
@@ -251,6 +261,7 @@ mod tests {
             }
         }
 
+        #[derive(Debug)]
         struct FailingSequencerChain;
 
         #[async_trait]
@@ -276,9 +287,7 @@ mod tests {
 
         let chain = FailingSequencerChain;
 
-        let error = send_raw_transaction(encoded_tx.clone(), &chain)
-            .await
-            .unwrap_err();
+        let error = send_raw_transaction(encoded_tx.clone(), &chain).await.unwrap_err();
 
         let expected_error = "server error";
         let actual_error = error.to_string();
@@ -294,9 +303,7 @@ mod tests {
         let transactions = Arc::new(RwLock::new(Vec::new()));
         let chain = InMemoryMetabasedSequencerChain::new(transactions.clone());
 
-        let error = send_raw_transaction(encoded_tx.clone(), &chain)
-            .await
-            .unwrap_err();
+        let error = send_raw_transaction(encoded_tx.clone(), &chain).await.unwrap_err();
 
         let expected_error = "transaction rejected: transaction fee too high";
         let actual_error = error.to_string();

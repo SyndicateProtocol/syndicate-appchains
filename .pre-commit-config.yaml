@@ -13,3 +13,32 @@ repos:
       - id: golangci-lint # requires github.com/golangci/golangci-lint
         files: ^(metabased-publisher)/
         args: [--config=.golangci.yaml --allow-parallel-runners]
+
+  - repo: local
+    hooks:
+      - id: fmt
+        name: fmt
+        args: [ '--all', '--check', '--', '--unstable-features' ] # nightly Rust required for `imports_granularity` feature
+        entry: cargo +nightly fmt
+        language: system
+        types: [rust]
+        pass_filenames: false
+      - id: clippy
+        name: clippy
+        args: ["--", "-D", "warnings"]
+        entry: cargo clippy
+        language: system
+        types: [rust]
+        pass_filenames: false
+      - id: cargo-check
+        name: cargo check
+        entry: cargo check
+        language: system
+        types: [rust]
+        pass_filenames: false
+      - id: cargo-machete
+        name: cargo machete
+        entry: cargo machete
+        language: system
+        types: [rust]
+        pass_filenames: false
