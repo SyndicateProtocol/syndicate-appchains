@@ -389,7 +389,13 @@ foundry-setup:
         echo "foundryup is already installed"; \
     fi
 
-    # Add Foundry bin to PATH in .zshenv if it exists
+    # Create .zshenv if it doesn't exist and add Foundry bin to PATH
+    @if ! test -f "{{env_var('HOME')}}/.zshenv"; then \
+        touch "{{env_var('HOME')}}/.zshenv" && \
+        echo "Created new .zshenv file"; \
+    fi
+
+    # Add Foundry bin to PATH in .zshenv if it's not already there
     @if test -f "{{env_var('HOME')}}/.zshenv"; then \
         if ! grep -q "/.foundry/bin" "{{env_var('HOME')}}/.zshenv"; then \
             echo 'export PATH="$PATH:{{env_var('HOME')}}/.foundry/bin"' >> "{{env_var('HOME')}}/.zshenv" && \
