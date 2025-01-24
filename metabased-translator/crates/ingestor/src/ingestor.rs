@@ -78,7 +78,6 @@ impl Ingestor {
     /// Starts the polling process.
     ///
     /// Polls for new blocks and receipts at the specified interval and sends them to the consumer.
-    #[allow(unreachable_pub)] // TODO: remove when used
     pub async fn start_polling(&mut self) -> Result<(), Error> {
         debug!("Starting polling");
 
