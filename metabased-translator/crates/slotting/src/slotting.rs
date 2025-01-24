@@ -4,7 +4,7 @@ use crate::config::SlottingConfig;
 use common::{
     db::{DbError, TranslatorStore},
     service_status::{ServiceStatus, Status},
-    types::{Block, BlockAndReceipts, Chain, Slot, SlotState},
+    types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotState},
 };
 use derivative::Derivative;
 use std::{cmp::Ordering, collections::LinkedList};
@@ -54,18 +54,6 @@ pub struct Slotter {
 
     #[derivative(Debug = "ignore")]
     store: Box<dyn TranslatorStore + Send + Sync>,
-}
-
-#[derive(Debug)]
-struct BlockRef {
-    number: u64,
-    timestamp: u64,
-}
-
-impl BlockRef {
-    const fn new(block: &Block) -> Self {
-        Self { number: block.number, timestamp: block.timestamp }
-    }
 }
 
 const fn calculate_max_slots(slot_duration_ms: u64) -> usize {
@@ -127,8 +115,8 @@ impl Slotter {
                 Ok(Self {
                     sequencing_chain_rx: sequencing_chain_receiver,
                     settlement_chain_rx: settlement_chain_receiver,
-                    latest_sequencing_block: Some(BlockRef::new(&latest.sequencing_block)),
-                    latest_settlement_block: Some(BlockRef::new(&latest.settlement_block)),
+                    latest_sequencing_block: Some(latest.sequencing_block),
+                    latest_settlement_block: Some(latest.settlement_block),
                     status: ServiceStatus::new(),
                     slots,
                     max_slots: calculate_max_slots(config.slot_duration_ms),

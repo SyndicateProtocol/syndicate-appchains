@@ -1,4 +1,4 @@
-use crate::types::{Block, Slot};
+use crate::types::{Block, BlockRef, Slot};
 use async_trait::async_trait;
 use rocksdb::DB;
 use std::hash::{DefaultHasher, Hash, Hasher};
@@ -14,9 +14,9 @@ pub struct SafeState {
     /// The latest slot that was marked as safe
     pub slot: Slot,
     /// The latest block from the sequencing chain that has been slotted
-    pub sequencing_block: Block,
+    pub sequencing_block: BlockRef,
     /// The latest block from the settlement chain that has been slotted
-    pub settlement_block: Block,
+    pub settlement_block: BlockRef,
 }
 
 #[async_trait]
@@ -48,14 +48,15 @@ impl TranslatorStore for RocksDbStore {
     async fn save_slot(&self, slot: &Slot) -> Result<(), DbError> {
         let mut batch = rocksdb::WriteBatch::default();
         batch.put(Self::slot_key(slot.number), bincode::serialize(slot)?);
-        batch.put(
-            KEY_SEQ_LATEST,
-            bincode::serialize(&slot.sequencing_chain_blocks.last().map(|b| &b.block))?,
-        );
-        batch.put(
-            KEY_SETTLE_LATEST,
-            bincode::serialize(&slot.settlement_chain_blocks.last().map(|b| &b.block))?,
-        );
+
+        // Store just the latest block refs
+        if let Some(last_seq) = slot.sequencing_chain_blocks.last() {
+            batch.put(KEY_SEQ_LATEST, bincode::serialize(&BlockRef::new(&last_seq.block))?);
+        }
+        if let Some(last_settle) = slot.settlement_chain_blocks.last() {
+            batch.put(KEY_SETTLE_LATEST, bincode::serialize(&BlockRef::new(&last_settle.block))?);
+        }
+
         self.db.write(batch)?;
         Ok(())
     }
@@ -65,7 +66,7 @@ impl TranslatorStore for RocksDbStore {
         match iter.last().transpose()? {
             None => Ok(None),
             Some((_, v)) => {
-                let slot = bincode::deserialize(&v)?;
+                let slot: Slot = bincode::deserialize(&v)?;
                 let seq = self.db.get(KEY_SEQ_LATEST)?.and_then(|v| bincode::deserialize(&v).ok());
                 let settle =
                     self.db.get(KEY_SETTLE_LATEST)?.and_then(|v| bincode::deserialize(&v).ok());
@@ -147,16 +148,19 @@ mod test {
         assert!(store.get_latest().await.unwrap().is_none());
 
         let mut slot = Slot::new(1, 1000);
-        slot.sequencing_chain_blocks
-            .push(BlockAndReceipts { block: create_test_block(1), receipts: vec![] });
-        slot.settlement_chain_blocks
-            .push(BlockAndReceipts { block: create_test_block(2), receipts: vec![] });
-        store.save_slot(&slot).await.unwrap();
+        let seq_block = create_test_block(1);
+        let settle_block = create_test_block(2);
 
+        slot.sequencing_chain_blocks
+            .push(BlockAndReceipts { block: seq_block.clone(), receipts: vec![] });
+        slot.settlement_chain_blocks
+            .push(BlockAndReceipts { block: settle_block.clone(), receipts: vec![] });
+        store.save_slot(&slot).await.unwrap();
         let latest = store.get_latest().await.unwrap().unwrap();
-        assert_eq!(latest.slot.number, 1);
-        assert_eq!(latest.sequencing_block.number, 1);
-        assert_eq!(latest.settlement_block.number, 2);
+
+        assert_eq!(latest.slot, slot);
+        assert_eq!(latest.sequencing_block, BlockRef::new(&seq_block));
+        assert_eq!(latest.settlement_block, BlockRef::new(&settle_block));
     }
 }
 
