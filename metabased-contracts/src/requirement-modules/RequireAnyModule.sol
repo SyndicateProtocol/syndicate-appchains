@@ -24,6 +24,7 @@ contract RequireAnyModule is IRequirementModule, Ownable {
     error AddressAlreadyExists();
     error AddressDoesNotExist();
 
+    // [Olympix Warning: no parameter validation in constructor] Parameter validation is handled by OpenZeppelin's Ownable
     constructor(address admin) Ownable(admin) {}
 
     function isAllowed(address proposer) external view override returns (bool) {

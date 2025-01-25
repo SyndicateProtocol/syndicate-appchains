@@ -83,4 +83,8 @@ contract AllowlistSequencingModuleTest is Test {
         vm.stopPrank();
         assertEq(allowlistSequencer.admin(), newAdmin);
     }
+
+    function testConstructorSetsCorrectValues() public {
+        assertEq(allowlistSequencer.admin(), admin, "Admin not set correctly");
+    }
 }

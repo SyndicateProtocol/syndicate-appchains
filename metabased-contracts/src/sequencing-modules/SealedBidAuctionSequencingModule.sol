@@ -83,7 +83,8 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
         if (block.timestamp < endTime) revert AuctionNotEnded();
         auctionActive = false;
         if (highestBidder != address(0)) {
-            // solhint-disable-line avoid-low-level-calls
+            // Forward all available gas to treasury to handle ETH transfer
+            // This is intentional as the treasury may be a contract that needs gas to process the payment
             (bool success,) = payable(treasury).call{value: highestBid}("");
             if (!success) revert TransactionFailed();
         }
@@ -152,7 +153,8 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
         uint256 refund = refunds[msg.sender];
         if (refund == 0) revert NoFundsToWithdraw();
         refunds[msg.sender] = 0;
-        // solhint-disable-line avoid-low-level-calls
+        // Forward all available gas to handle ETH transfer
+        // This is intentional as the recipient may be a contract that needs gas to process the refund
         (bool success,) = payable(msg.sender).call{value: refund}("");
         if (!success) revert TransactionFailed();
     }

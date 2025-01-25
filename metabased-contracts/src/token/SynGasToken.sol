@@ -11,7 +11,10 @@ import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20P
 contract SynGasToken is ERC20, AccessControl, ERC20Permit {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
+    // [Olympix Warning: no parameter validation in constructor] Parameter validation is handled by OpenZeppelin's AccessControl
     constructor(address defaultAdmin, address minter) ERC20("Syndicate", "SYND") ERC20Permit("Syndicate") {
+        require(defaultAdmin != address(0), "Default admin cannot be zero address");
+        require(minter != address(0), "Minter cannot be zero address");
         _grantRole(DEFAULT_ADMIN_ROLE, defaultAdmin);
         _grantRole(MINTER_ROLE, minter);
     }

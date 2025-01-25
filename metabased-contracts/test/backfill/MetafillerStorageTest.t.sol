@@ -153,6 +153,12 @@ contract MetafillerStorageTest is Test {
         new MetafillerStorage(admin, manager, 0);
     }
 
+    function testConstructorSetsCorrectValues() public {
+        assertTrue(l3Storage.hasRole(l3Storage.DEFAULT_ADMIN_ROLE(), admin), "Admin role not set correctly");
+        assertTrue(l3Storage.hasRole(l3Storage.MANAGER_ROLE(), manager), "Manager role not set correctly");
+        assertEq(l3Storage.l3ChainId(), 10042001, "Chain ID not set correctly");
+    }
+
     function testGasForIncreasingBatchSizes() public {
         uint256 MAX_GAS_LIMIT = 30_000_000; // Approximate block gas limit
         uint256 BATCH_SIZE_INCREMENT = 100_000; // Increment batch size by 100_000 bytes each iteration

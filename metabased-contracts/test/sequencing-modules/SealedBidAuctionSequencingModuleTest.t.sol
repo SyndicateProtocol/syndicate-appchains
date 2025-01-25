@@ -151,4 +151,16 @@ contract SealedBidAuctionSequencingModuleTest is Test {
         vm.expectRevert(SealedBidAuctionSequencingModule.AuctionNotEnded.selector);
         auction.finalizeAuction();
     }
+
+    function testConstructorSetsCorrectValues() public {
+        assertEq(auction.treasury(), treasury, "Treasury not set correctly");
+        assertEq(auction.auctionType(), "SealedBid", "Auction type not set correctly");
+        assertTrue(auction.auctionActive(), "Auction should be active");
+        assertEq(auction.endTime(), block.timestamp + auctionDuration, "End time not set correctly");
+    }
+
+    function testRevertsOnZeroTreasury() public {
+        vm.expectRevert(SealedBidAuctionSequencingModule.AddressNotAllowed.selector);
+        new SealedBidAuctionSequencingModule(auctionDuration, address(0));
+    }
 }
