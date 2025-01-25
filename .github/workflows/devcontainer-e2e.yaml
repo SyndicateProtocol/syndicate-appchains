@@ -1,4 +1,4 @@
-name: Dev Container Tests
+name: Dev Container E2E Tests
 
 on:
   # Run workflow on every push to main
@@ -8,9 +8,13 @@ on:
   # Run workflow on all PRs
   pull_request:
 
+permissions:
+  contents: read
+  packages: read  # Allows pulling cached container images from GHCR
+
 jobs:
-  arb-test:
-    name: Arbitrum Integration Test
+  metabased-sequencer-test:
+    name: Metabased Sequencer Test
     runs-on: ubuntu-latest
 
     steps:
@@ -31,12 +35,11 @@ jobs:
         uses: devcontainers/ci@v0.3
         with:
           imageName: ghcr.io/syndicateprotocol/metabased-devcontainer
-          imageTag: cache-pr-${{ github.event.pull_request.number }}
+          imageTag: cache-main
           push: never
-          # Pull cached images from both main branch and PR branch
+          # Using cache from .github/workflows/devcontainer-main-update.yaml which builds and maintains the cache-main tag
           cacheFrom: |
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
-            ghcr.io/syndicateprotocol/metabased-devcontainer:cache-pr-${{ github.event.pull_request.number }}
           runCmd: |
             # Run all verifications
             just verify-all
