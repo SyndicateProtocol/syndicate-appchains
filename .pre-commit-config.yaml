@@ -25,14 +25,8 @@ repos:
         pass_filenames: false
       - id: clippy
         name: clippy
-        args: ["--", "-D", "warnings"]
+        args: ["--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"]
         entry: cargo clippy
-        language: system
-        types: [rust]
-        pass_filenames: false
-      - id: cargo-check
-        name: cargo check
-        entry: cargo check
         language: system
         types: [rust]
         pass_filenames: false

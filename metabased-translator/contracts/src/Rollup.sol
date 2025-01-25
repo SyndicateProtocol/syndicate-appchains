@@ -15,8 +15,13 @@ contract Rollup {
     uint64 public constant delaySeconds = 86400;
     uint64 public constant futureSeconds = 3600;
 
+    // IBridge.sol
     bytes32[] public delayedInboxAccs;
+
+    // IBridge.sol
     bytes32[] public sequencerInboxAccs;
+
+    // ISequencerInbox.sol
     uint256 public totalDelayedMessagesRead;
 
     constructor(uint256 chainId, string memory chainConfig) {

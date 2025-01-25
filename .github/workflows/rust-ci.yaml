@@ -49,7 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # Install Rust toolchain, clippy, and rustfmt
+      # Install Rust toolchain and rustfmt
       - name: Install Rust toolchain
         run: |
           rustup toolchain install nightly --profile minimal
@@ -71,8 +71,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Machete
-        uses: bnjbvr/cargo-machete@main
+      # Install Rust toolchain and machete
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install --profile minimal
+          cargo install cargo-machete
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Cache entire workspace
+          workspaces: "."
+
+      # Run machete on entire workspace
+      - name: Run Machete
+        run: cargo machete
 
   test:
     name: Tests
