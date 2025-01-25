@@ -10,6 +10,7 @@ on:
 
 permissions:
   contents: read
+  packages: read  # Allows pulling cached container images from GHCR
 
 jobs:
   metabased-sequencer-test:
