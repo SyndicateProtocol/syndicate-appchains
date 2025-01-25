@@ -19,7 +19,7 @@ contract AllowlistSequencingModuleTest is Test {
     function testAdminCanAddToAllowlist() public {
         vm.startPrank(admin);
         vm.expectEmit(true, false, false, false);
-        emit AllowlistSequencingModule.AddedToAllowlist(user1);
+        emit AllowlistSequencingModule.UserAdded(user1);
         allowlistSequencer.addToAllowlist(user1);
         assertTrue(allowlistSequencer.allowlist(user1));
         vm.stopPrank();
@@ -29,7 +29,7 @@ contract AllowlistSequencingModuleTest is Test {
         vm.startPrank(admin);
         allowlistSequencer.addToAllowlist(user1);
         vm.expectEmit(true, false, false, false);
-        emit AllowlistSequencingModule.RemovedFromAllowlist(user1);
+        emit AllowlistSequencingModule.UserRemoved(user1);
         allowlistSequencer.removeFromAllowlist(user1);
         assertFalse(allowlistSequencer.allowlist(user1));
         vm.stopPrank();
