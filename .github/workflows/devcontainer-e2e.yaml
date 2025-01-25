@@ -1,4 +1,4 @@
-name: Dev Container Tests
+name: Dev Container E2E Tests
 
 on:
   # Run workflow on every push to main
