@@ -36,3 +36,25 @@ repos:
         language: system
         types: [rust]
         pass_filenames: false
+      - id: forge-fmt
+        name: forge fmt
+        entry: forge fmt
+        args: ["--check"]
+        language: system
+        types: [solidity]
+      - id: forge-test-metabased-contracts
+        name: forge test metabased contracts
+        entry: forge test
+        args: ["--root", "metabased-contracts"]
+        language: system
+        types: [solidity]
+        files: ^(metabased-contracts)/
+        pass_filenames: false
+      - id: forge-test-metabased-translator-contracts
+        name: forge test metabased translator contracts
+        entry: forge test
+        args: ["--root", "metabased-translator/contracts"]
+        language: system
+        types: [solidity]
+        files: ^(metabased-translator)/contracts/
+        pass_filenames: false
