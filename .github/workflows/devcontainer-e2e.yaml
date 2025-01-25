@@ -8,6 +8,9 @@ on:
   # Run workflow on all PRs
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   metabased-sequencer-e2e-test:
     name: Metabased Sequencer E2E Test
