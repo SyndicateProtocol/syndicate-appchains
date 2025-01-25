@@ -200,7 +200,7 @@ impl MetaChainProvider {
             chain_id,
             rollup_config,
             rollup,
-            rollup,
+            Address::ZERO,
             rollup,
             deployed_at,
             Address::ZERO,
