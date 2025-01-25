@@ -33,7 +33,7 @@ jobs:
           imageName: ghcr.io/syndicateprotocol/metabased-devcontainer
           imageTag: cache-main
           push: never
-          # Pull cached images from main branch
+          # Using cache from .github/workflows/devcontainer-main-update.yaml which builds and maintains the cache-main tag
           cacheFrom: |
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
           runCmd: |
