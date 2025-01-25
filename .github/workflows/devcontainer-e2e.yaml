@@ -9,8 +9,8 @@ on:
   pull_request:
 
 jobs:
-  arb-test:
-    name: Arbitrum Integration Test
+  metabased-sequencer-e2e-test:
+    name: Metabased Sequencer E2E Test
     runs-on: ubuntu-latest
 
     steps:
