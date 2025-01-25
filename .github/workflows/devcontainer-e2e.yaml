@@ -12,8 +12,8 @@ permissions:
   contents: read
 
 jobs:
-  metabased-sequencer-e2e-test:
-    name: Metabased Sequencer E2E Test
+  metabased-sequencer-test:
+    name: Metabased Sequencer Test
     runs-on: ubuntu-latest
 
     steps:
