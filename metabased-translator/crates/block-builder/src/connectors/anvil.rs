@@ -104,7 +104,9 @@ impl MetaChainProvider {
     /// Mines a block on the `MetaChain`
     pub async fn mine_block(&self, block_timestamp_secs: u64) -> eyre::Result<()> {
         let opts = MineOptions::Options { timestamp: Some(block_timestamp_secs), blocks: Some(1) };
-        self.provider.anvil_mine_detailed(Some(opts)).await?;
+        let result = self.provider.anvil_mine_detailed(Some(opts)).await;
+        info!("{}", format!("Mined block on MetaChain {:?}", result));
+        result?;
 
         Ok(())
     }

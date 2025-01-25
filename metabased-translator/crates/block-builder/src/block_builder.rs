@@ -37,36 +37,34 @@ impl BlockBuilder {
 
     /// Start the block builder
     pub async fn start(mut self) {
-        tokio::spawn(async move {
-            while let Some(slot) = self.slotter_rx.recv().await {
-                info!("Received slot: {:?}", slot);
+        while let Some(slot) = self.slotter_rx.recv().await {
+            info!("Received slot: {:?}", slot);
 
-                // Process sequencing chain blocks into mB transactions
-                let mbtxs = self.builder.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
+            // Process sequencing chain blocks into mB transactions
+            let mbtxs = self.builder.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
 
-                // TODO (SEQ-416): [OP / ARB] Process deposit transactions
+            // TODO (SEQ-416): [OP / ARB] Process deposit transactions
 
-                // [OP / ARB] Build and submit batch
-                let batch_txn = match self.builder.build_batch_txn(mbtxs).await {
-                    Ok(txn) => txn,
-                    Err(e) => {
-                        log_error!("Error building batch transaction: {}", e);
-                        continue;
-                    }
-                };
-
-                // Submit batch transaction to mchain
-                if let Err(e) = self.mchain.submit_txn(batch_txn).await {
-                    log_error!("Error submitting transaction: {}", e);
+            // [OP / ARB] Build and submit batch
+            let batch_txn = match self.builder.build_batch_txn(mbtxs).await {
+                Ok(txn) => txn,
+                Err(e) => {
+                    log_error!("Error building batch transaction: {}", e);
                     continue;
                 }
+            };
 
-                // Mine mchain block
-                if let Err(e) = self.mchain.mine_block(slot.timestamp).await {
-                    log_error!("Error mining block: {}", e);
-                }
+            // Submit batch transaction to mchain
+            if let Err(e) = self.mchain.submit_txn(batch_txn).await {
+                log_error!("Error submitting transaction: {}", e);
+                continue;
             }
-        });
+
+            // Mine mchain block
+            if let Err(e) = self.mchain.mine_block(slot.timestamp).await {
+                log_error!("Error mining block: {}", e);
+            }
+        }
     }
 }
 

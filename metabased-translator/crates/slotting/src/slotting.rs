@@ -186,7 +186,6 @@ impl Slotter {
                 }
             }
         });
-
         receiver
     }
 
