@@ -138,6 +138,21 @@ contract MetafillerStorageTest is Test {
         console.log("Gas used for empty emit:", gasUsed);
     }
 
+    function testRevertsOnZeroAdmin() public {
+        vm.expectRevert("Admin address cannot be 0");
+        new MetafillerStorage(address(0), manager, 10042001);
+    }
+
+    function testRevertsOnZeroManager() public {
+        vm.expectRevert("Manager address cannot be 0");
+        new MetafillerStorage(admin, address(0), 10042001);
+    }
+
+    function testRevertsOnZeroChainId() public {
+        vm.expectRevert("L3 chain ID cannot be 0");
+        new MetafillerStorage(admin, manager, 0);
+    }
+
     function testGasForIncreasingBatchSizes() public {
         uint256 MAX_GAS_LIMIT = 30_000_000; // Approximate block gas limit
         uint256 BATCH_SIZE_INCREMENT = 100_000; // Increment batch size by 100_000 bytes each iteration

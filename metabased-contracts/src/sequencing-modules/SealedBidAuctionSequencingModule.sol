@@ -21,7 +21,9 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
     uint256 public endTime;
     /// @notice The address of the highest bidder.
     address public highestBidder;
-    /// @notice The highest bid amount.
+    /// @notice The highest bid amount, initialized to 0 by design as no bids exist at contract creation.
+    /// @dev [Olympix Warning: uninitialized state variable] This is a false positive as 0 is the correct
+    /// initial value for an auction's highest bid before any bids are placed.
     uint256 public highestBid;
 
     /// @notice Mapping to store bids of each participant.

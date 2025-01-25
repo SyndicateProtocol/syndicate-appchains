@@ -22,6 +22,8 @@ contract MetabasedFactoryTest is Test {
 
     function testCreateSequencerChainWithRequireAll() public {
         RequireAllModule permissionModule = new RequireAllModule(admin);
+        vm.expectEmit(true, true, false, false);
+        emit MetabasedFactory.SequencerChainCreated(l3ChainId, address(0));  // We don't know the exact address yet
         (address sequencerChainAddress) = factory.createMetabasedSequencerChain(l3ChainId, admin, permissionModule);
 
         address permissionModuleAddress = address(permissionModule);
@@ -62,6 +64,8 @@ contract MetabasedFactoryTest is Test {
     }
 
     function testCreateMetafillerStorage() public {
+        vm.expectEmit(true, true, false, false);
+        emit MetabasedFactory.MetafillerStorageCreated(l3ChainId, address(0));  // We don't know the exact address yet
         address metafillerStorageAddress = factory.createMetafillerStorage(admin, manager, l3ChainId);
         assertTrue(metafillerStorageAddress != address(0));
 
@@ -137,30 +141,45 @@ contract MetabasedFactoryTest is Test {
         assertEq(MetabasedSequencerChain(sequencerChain2).l3ChainId(), differentChainId);
     }
 
-    function testZeroAddressAdmin() public {
+    function testRevertsOnZeroAdmin() public {
         RequireAllModule permissionModule = new RequireAllModule(admin);
-        vm.expectRevert();
+        vm.expectRevert("Admin address cannot be zero");
         factory.createMetabasedSequencerChain(l3ChainId, address(0), IRequirementModule(address(permissionModule)));
 
         RequireAnyModule permissionModule2 = new RequireAnyModule(admin);
-        vm.expectRevert();
+        vm.expectRevert("Admin address cannot be zero");
         factory.createMetabasedSequencerChain(l3ChainId, address(0), IRequirementModule(address(permissionModule2)));
 
-        vm.expectRevert();
+        vm.expectRevert("Admin address cannot be zero");
         factory.createAllContractsWithRequireAllModule(address(0), manager, l3ChainId);
 
-        vm.expectRevert();
+        vm.expectRevert("Admin address cannot be zero");
         factory.createAllContractsWithRequireAnyModule(address(0), manager, l3ChainId);
     }
 
-    function testZeroAddressManager() public {
-        vm.expectRevert();
+    function testRevertsOnZeroManager() public {
+        vm.expectRevert("Manager address cannot be zero");
         factory.createMetafillerStorage(admin, address(0), l3ChainId);
 
-        vm.expectRevert();
+        vm.expectRevert("Manager address cannot be zero");
         factory.createAllContractsWithRequireAllModule(admin, address(0), l3ChainId);
 
-        vm.expectRevert();
+        vm.expectRevert("Manager address cannot be zero");
         factory.createAllContractsWithRequireAnyModule(admin, address(0), l3ChainId);
+    }
+
+    function testRevertsOnZeroChainId() public {
+        RequireAllModule permissionModule = new RequireAllModule(admin);
+        vm.expectRevert("L3 chain ID cannot be zero");
+        factory.createMetabasedSequencerChain(0, admin, IRequirementModule(address(permissionModule)));
+
+        vm.expectRevert("L3 chain ID cannot be zero");
+        factory.createMetafillerStorage(admin, manager, 0);
+
+        vm.expectRevert("L3 chain ID cannot be zero");
+        factory.createAllContractsWithRequireAllModule(admin, manager, 0);
+
+        vm.expectRevert("L3 chain ID cannot be zero");
+        factory.createAllContractsWithRequireAnyModule(admin, manager, 0);
     }
 }

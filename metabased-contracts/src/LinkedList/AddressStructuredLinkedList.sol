@@ -234,6 +234,8 @@ library AddressStructuredLinkedList {
      * @return bool true if success, false otherwise
      */
     function _insert(List storage self, address _node, address _new, bool _direction) private returns (bool) {
+        // [Olympix Warning: unused return value] Both nodeExists calls are properly checked in this if condition
+        // The return values determine whether we proceed with the insertion
         if (!nodeExists(self, _new) && nodeExists(self, _node)) {
             address c = self.list[_node][_direction];
             _createLink(self, _node, _new, _direction);

@@ -253,6 +253,8 @@ library BidStructuredLinkedList {
         private
         returns (bool)
     {
+        // [Olympix Warning: unused return value] Both nodeExists calls are properly checked in this if condition
+        // The return values determine whether we proceed with the insertion
         if (!nodeExists(self, _newBid) && nodeExists(self, _node)) {
             uint256 c = self.bidList[_node][_direction];
             self.bidder[_newBid] = _newBidder;

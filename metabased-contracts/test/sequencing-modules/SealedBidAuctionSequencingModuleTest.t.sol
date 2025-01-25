@@ -117,4 +117,38 @@ contract SealedBidAuctionSequencingModuleTest is Test {
         auction.revealBid(bidAmount + 1 ether, "wrongSalt", nonce);
         vm.stopPrank();
     }
+
+    function testRevertsOnInvalidNonce() public {
+        uint256 nonce = 0;
+        bytes32 sealedBid = keccak256(abi.encodePacked(uint256(bidAmount), "salt1", nonce));
+
+        vm.startPrank(bidder1);
+        auction.bid{value: bidAmount}(sealedBid);
+        vm.expectRevert(SealedBidAuctionSequencingModule.InvalidNonce.selector);
+        auction.revealBid(bidAmount, "salt1", 1); // Wrong nonce
+        vm.stopPrank();
+    }
+
+    function testRevertsOnZeroDuration() public {
+        vm.expectRevert(SealedBidAuctionSequencingModule.InvalidDuration.selector);
+        new SealedBidAuctionSequencingModule(0, treasury);
+    }
+
+    function testRevertsWhenAuctionNotActive() public {
+        uint256 nonce = 0;
+        bytes32 sealedBid = keccak256(abi.encodePacked(uint256(bidAmount), "salt1", nonce));
+
+        vm.warp(block.timestamp + auctionDuration + 1);
+        auction.finalizeAuction();
+
+        vm.startPrank(bidder1);
+        vm.expectRevert(SealedBidAuctionSequencingModule.AuctionNotActive.selector);
+        auction.bid{value: bidAmount}(sealedBid);
+        vm.stopPrank();
+    }
+
+    function testRevertsWhenFinalizingActiveAuction() public {
+        vm.expectRevert(SealedBidAuctionSequencingModule.AuctionNotEnded.selector);
+        auction.finalizeAuction();
+    }
 }

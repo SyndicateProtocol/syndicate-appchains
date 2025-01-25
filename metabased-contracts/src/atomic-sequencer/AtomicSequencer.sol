@@ -7,6 +7,8 @@ import {Proxy} from "@openzeppelin/contracts/proxy/Proxy.sol";
 /// @title AtomicSequencer
 /// @notice A wrapper contract that sequences transactions on two MetabasedChain contracts atomically.
 /// Uses DELEGATECALL to maintain the original msg.sender context.
+// [Olympix Warning: unfuzzed variables] The implementation address is immutable and set in constructor.
+// No fuzz testing needed as this follows OpenZeppelin's well-tested proxy pattern.
 contract AtomicSequencer is Proxy {
     /// @notice The implementation contract containing the sequencing logic
     address public immutable implementation;
