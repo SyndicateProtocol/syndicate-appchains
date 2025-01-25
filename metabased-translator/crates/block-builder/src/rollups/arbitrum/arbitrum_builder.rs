@@ -156,7 +156,7 @@ impl ArbitrumBlockBuilder {
             // [96:128]  - messageDataHash (bytes32)
             // [128:160] - baseFeeL1 (uint256)
             // [160:192] - timestamp (uint64, right-padded)
-            let kind = msg_log.data[63] as u8; // Last byte of the second 32-byte word
+            let kind = msg_log.data[63]; // Last byte of the second 32-byte word
             let sender = Address::from_slice(&msg_log.data[76..96]); // Last 20 bytes of the third 32-byte word
 
             // Get corresponding message data

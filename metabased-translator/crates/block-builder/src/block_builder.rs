@@ -13,7 +13,7 @@ use common::types::Slot;
 use eyre::{Error, Result};
 use thiserror::Error;
 use tokio::sync::mpsc::Receiver;
-use tracing::{debug, error as log_error, info};
+use tracing::{debug, error as log_error};
 
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
@@ -47,7 +47,7 @@ impl BlockBuilder {
     /// Start the block builder
     pub async fn start(mut self) {
         while let Some(slot) = self.slotter_rx.recv().await {
-            info!("Received slot: {:?}", slot);
+            debug!("Received slot: {:?}", slot);
 
             // [OP / ARB] Build block of MChain transactions from slot
             let transactions = match self.builder.build_block_from_slot(slot.clone()).await {
@@ -58,7 +58,7 @@ impl BlockBuilder {
                 }
             };
 
-            info!("Submitting {} transactions", transactions.len());
+            debug!("Submitting {} transactions", transactions.len());
 
             // Submit transactions to mchain
             if let Err(e) = self.mchain.submit_txns(transactions).await {
