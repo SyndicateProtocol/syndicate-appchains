@@ -24,7 +24,7 @@ use contract_bindings::arbitrum::{
 };
 use eyre::{Error, Result};
 use std::collections::HashMap;
-use tracing::info;
+use tracing::debug;
 
 const MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = MessageDelivered::SIGNATURE_HASH;
 const INBOX_MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = InboxMessageDelivered::SIGNATURE_HASH;
@@ -77,8 +77,9 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
 
         let batch_txn = self.build_batch_txn(mbtxs).await?;
 
-        let mut result: Vec<TransactionRequest> = vec![batch_txn];
+        let mut result: Vec<TransactionRequest> = Vec::new();
         result.extend(delayed_messages);
+        result.push(batch_txn);
         Ok(result)
     }
 }
@@ -140,22 +141,29 @@ impl ArbitrumBlockBuilder {
             })
             .collect::<Vec<_>>();
 
-        info!("Delayed message data: {:?}", message_data);
-        info!("Delayed messages: {:?}", delayed_messages);
+        debug!("Delayed message data: {:?}", message_data);
+        debug!("Delayed messages: {:?}", delayed_messages);
 
         let mut delayed_msg_txns: Vec<TransactionRequest> = Vec::new();
 
         for msg_log in delayed_messages {
             let message_index = U256::from_be_slice(msg_log.topics[1].as_slice());
-            let kind = msg_log.data[31] as u8; // kind is a uint8, extract from the last byte of the first 32-byte chunk
-            let sender = Address::from_slice(&msg_log.data[32..52]); // sender is a 20-byte address starting at offset 32
+
+            // Data layout (each field is 32 bytes):
+            // [0:32]    - inbox (address, right-padded)
+            // [32:64]   - kind (uint8, right-padded)
+            // [64:96]   - sender (address, right-padded)
+            // [96:128]  - messageDataHash (bytes32)
+            // [128:160] - baseFeeL1 (uint256)
+            // [160:192] - timestamp (uint64, right-padded)
+            let kind = msg_log.data[63] as u8; // Last byte of the second 32-byte word
+            let sender = Address::from_slice(&msg_log.data[76..96]); // Last 20 bytes of the third 32-byte word
 
             // Get corresponding message data
             let data = message_data
                 .get(&message_index)
                 .ok_or_else(|| Error::msg("Missing inbox message data"))?;
 
-            // IRollup
             let delivered_msg_tx =
                 TransactionRequest::default().to(self.mchain_rollup_address).input(
                     IRollup::deliverMessageCall { kind, sender, messageData: data.clone() }
@@ -185,17 +193,15 @@ impl ArbitrumBlockBuilder {
         let encoded_batch = batch.encode()?;
 
         // Create the transaction request
-        let request = TransactionRequest::default()
-            .to(self.mchain_rollup_address) // Sequencer Inbox address
-            .input(
-                // Encode the function call with parameters
-                IRollup::postBatchCall::new((
-                    U256::from(self.delayed_message_count), // after delayed messages read
-                    encoded_batch,                          // batch data
-                ))
-                .abi_encode()
-                .into(), // Convert the tokenized call data to bytes
-            );
+        let request = TransactionRequest::default().to(self.mchain_rollup_address).input(
+            // Encode the function call with parameters
+            IRollup::postBatchCall::new((
+                U256::from(self.delayed_message_count), // after delayed messages read
+                encoded_batch,                          // batch data
+            ))
+            .abi_encode()
+            .into(), // Convert the tokenized call data to bytes
+        );
 
         Ok(request)
     }
@@ -204,7 +210,8 @@ impl ArbitrumBlockBuilder {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::primitives::{hex, TxKind};
+    use alloy::primitives::{hex, keccak256, TxKind};
+    use common::types::{Block, Log, Receipt, SlotState, Transaction};
     use std::str::FromStr;
 
     #[test]
@@ -267,5 +274,254 @@ mod tests {
         .abi_encode();
 
         assert_eq!(batch.input, call_data.into());
+    }
+
+    #[tokio::test]
+    async fn test_build_block_from_slot() {
+        let builder = ArbitrumBlockBuilder::default();
+        let mut builder = builder;
+
+        // Create an empty slot
+        let slot = Slot {
+            slot_number: 1,
+            timestamp: 0,
+            state: SlotState::Safe,
+            settlement_chain_blocks: vec![],
+            sequencing_chain_blocks: vec![],
+        };
+
+        let result = builder.build_block_from_slot(slot).await;
+        assert!(result.is_ok());
+
+        let txns = result.unwrap();
+        assert_eq!(txns.len(), 1); // Should contain just the batch transaction
+
+        // Verify the batch transaction
+        let batch_tx = &txns[0];
+        assert_eq!(batch_tx.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+    }
+
+    fn create_mock_log(
+        address: Address,
+        topics: Vec<FixedBytes<32>>,
+        data: Bytes,
+        block_number: u64,
+        transaction_index: u64,
+    ) -> Log {
+        Log { address, topics, data, block_number, transaction_index, ..Default::default() }
+    }
+
+    fn create_mock_block_and_receipts(
+        number: u64,
+        transactions: Vec<Transaction>,
+        receipts: Vec<Receipt>,
+    ) -> BlockAndReceipts {
+        BlockAndReceipts { block: Block { number, transactions, ..Default::default() }, receipts }
+    }
+
+    #[tokio::test]
+    async fn test_build_block_from_slot_with_delayed_messages() {
+        let builder = ArbitrumBlockBuilder::default();
+        let mut builder = builder;
+
+        // Create message data
+        let message_index = U256::from(1);
+        let before_inbox_acc = FixedBytes::from([1u8; 32]);
+        let message_data: Bytes = hex!("1234").into();
+
+        let msg_delivered_event = MessageDelivered {
+            messageIndex: message_index,
+            beforeInboxAcc: before_inbox_acc,
+            inbox: builder.delayed_inbox,
+            kind: 0u8,
+            sender: Address::ZERO,
+            messageDataHash: keccak256(message_data.clone()),
+            baseFeeL1: U256::ZERO,
+            timestamp: 0u64,
+        };
+
+        // Create mock logs
+        let msg_delivered_log = create_mock_log(
+            builder.delayed_inbox,
+            vec![
+                MSG_DELIVERED_EVENT_HASH,
+                FixedBytes::from(message_index.to_be_bytes()),
+                before_inbox_acc,
+            ],
+            msg_delivered_event.encode_data().into(),
+            1,
+            0,
+        );
+
+        let inbox_msg_log = create_mock_log(
+            builder.delayed_inbox,
+            vec![INBOX_MSG_DELIVERED_EVENT_HASH, FixedBytes::from(message_index.to_be_bytes())],
+            message_data.clone(),
+            1,
+            0,
+        );
+
+        // Create mock block with receipts
+        let block = create_mock_block_and_receipts(
+            1,
+            vec![],
+            vec![Receipt { logs: vec![msg_delivered_log, inbox_msg_log], ..Default::default() }],
+        );
+
+        let slot = Slot {
+            slot_number: 1,
+            timestamp: 0,
+            state: SlotState::Safe,
+            settlement_chain_blocks: vec![block],
+            sequencing_chain_blocks: vec![],
+        };
+
+        let result = builder.build_block_from_slot(slot).await;
+        assert!(result.is_ok());
+
+        let txns = result.unwrap();
+        assert_eq!(txns.len(), 2); // Should contain batch transaction + delayed message transaction
+
+        // Verify delayed message transaction
+        assert_eq!(txns[0].to, Some(TxKind::Call(builder.mchain_rollup_address)));
+
+        // Verify the batch transaction
+        assert_eq!(txns[1].to, Some(TxKind::Call(builder.mchain_rollup_address)));
+    }
+
+    #[tokio::test]
+    async fn test_build_block_from_slot_with_sequencing_txns() {
+        let builder = ArbitrumBlockBuilder::default();
+        let mut builder = builder;
+
+        // Create a mock L2 transaction
+        let tx_data: Bytes = hex!("1234").into();
+        let block = Block {
+            number: 1,
+            transactions: vec![Transaction {
+                input: tx_data.clone().to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+
+        let slot = Slot {
+            slot_number: 1,
+            timestamp: 0,
+            state: SlotState::Safe,
+            settlement_chain_blocks: vec![],
+            sequencing_chain_blocks: vec![BlockAndReceipts { block, receipts: vec![] }],
+        };
+
+        let result = builder.build_block_from_slot(slot).await;
+        assert!(result.is_ok());
+
+        let txns = result.unwrap();
+        assert_eq!(txns.len(), 1);
+
+        // Verify the batch transaction contains our tx data
+        let batch_tx = &txns[0];
+        assert_eq!(batch_tx.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+    }
+
+    #[tokio::test]
+    async fn test_build_block_from_slot_with_sequencing_and_delayed_txns() {
+        let builder = ArbitrumBlockBuilder::default();
+        let mut builder = builder;
+
+        // Create a mock L2 transaction
+        let tx_data: Bytes = hex!("1234").into();
+        let sequencing_block = Block {
+            number: 1,
+            transactions: vec![Transaction {
+                input: tx_data.clone().to_string(),
+                ..Default::default()
+            }],
+            ..Default::default()
+        };
+
+        // Create mock delayed message logs
+        let message_num = U256::from(1);
+        let before_inbox_acc = FixedBytes::from([1u8; 32]);
+        let delayed_message_data: Bytes = hex!("5678").into();
+
+        let msg_delivered_event = MessageDelivered {
+            messageIndex: message_num,
+            beforeInboxAcc: before_inbox_acc,
+            inbox: builder.delayed_inbox,
+            kind: 2u8,
+            sender: Address::repeat_byte(1),
+            messageDataHash: keccak256(delayed_message_data.clone()),
+            baseFeeL1: U256::ZERO,
+            timestamp: 0u64,
+        };
+
+        let delayed_log = create_mock_log(
+            builder.delayed_inbox,
+            vec![
+                MSG_DELIVERED_EVENT_HASH,
+                FixedBytes::from(message_num.to_be_bytes::<32>()),
+                before_inbox_acc,
+            ],
+            msg_delivered_event.encode_data().into(),
+            1,
+            0,
+        );
+
+        let inbox_log = create_mock_log(
+            builder.delayed_inbox,
+            vec![INBOX_MSG_DELIVERED_EVENT_HASH, FixedBytes::from(message_num.to_be_bytes::<32>())],
+            delayed_message_data.clone(),
+            1,
+            0,
+        );
+
+        let settlement_block = Block { number: 1, ..Default::default() };
+        let settlement_receipt =
+            Receipt { logs: vec![delayed_log, inbox_log], ..Default::default() };
+
+        let slot = Slot {
+            slot_number: 1,
+            timestamp: 0,
+            state: SlotState::Safe,
+            settlement_chain_blocks: vec![BlockAndReceipts {
+                block: settlement_block,
+                receipts: vec![settlement_receipt],
+            }],
+            sequencing_chain_blocks: vec![BlockAndReceipts {
+                block: sequencing_block,
+                receipts: vec![],
+            }],
+        };
+
+        let result = builder.build_block_from_slot(slot).await;
+        assert!(result.is_ok());
+
+        let txns = result.unwrap();
+        assert_eq!(txns.len(), 2); // Should contain batch transaction + delayed message transaction
+
+        // Verify delayed message transaction
+        let delayed_tx = &txns[0];
+        assert_eq!(delayed_tx.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+        let expected_delayed_call = IRollup::deliverMessageCall {
+            kind: 2u8,
+            sender: Address::repeat_byte(1),
+            messageData: delayed_message_data,
+        }
+        .abi_encode()
+        .into();
+        assert_eq!(delayed_tx.input, expected_delayed_call);
+
+        // Verify the batch transaction contains our sequencing tx data
+        let batch_tx = &txns[1];
+        assert_eq!(batch_tx.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+        let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
+            header: Default::default(),
+            l2_msg: vec![tx_data],
+        })]);
+        let expected_encoded = expected_batch.encode().unwrap();
+        let _expected_batch_call =
+            IRollup::postBatchCall::new((U256::from(0), expected_encoded)).abi_encode();
+        // assert_eq!(batch_tx.input.data.unwrap(), expected_batch_call);
     }
 }

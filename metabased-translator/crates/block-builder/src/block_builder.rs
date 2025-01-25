@@ -13,7 +13,7 @@ use common::types::Slot;
 use eyre::{Error, Result};
 use thiserror::Error;
 use tokio::sync::mpsc::Receiver;
-use tracing::{error, info};
+use tracing::{debug, error as log_error, info};
 
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
