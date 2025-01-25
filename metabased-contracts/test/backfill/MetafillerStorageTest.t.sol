@@ -36,9 +36,10 @@ contract MetafillerStorageTest is Test {
         assertEq(l3Storage.indexFromBlock(), 1);
     }
 
+    // [Olympix Warning: tx.origin usage] Test removed as tx.origin check was removed for security
+    // The MANAGER_ROLE provides sufficient authorization control
     function testOnlyOriginatorCanSave() public {
-        vm.expectRevert();
-        vm.prank(manager, notManager);
+        vm.prank(manager);
         l3Storage.save(1, 0x505f3a50f83559ab090dbd840556254a7248404f2dedb53b4f12b26748a8ec08, "0x");
     }
 

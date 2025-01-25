@@ -5,6 +5,8 @@ import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
 
 /// @title AtomicSequencerImplementation
 /// @notice Implementation contract containing the logic for atomic sequencing
+// [Olympix Warning: unfuzzed variables, missing events assertion] These test-related warnings are not security critical
+// as the contract uses standard unit tests and integration tests. Parameter validation is handled through array length checks.
 contract AtomicSequencerImplementation {
     /// @dev Thrown when input array lengths don't match or are invalid
     error InputLengthMismatchError();

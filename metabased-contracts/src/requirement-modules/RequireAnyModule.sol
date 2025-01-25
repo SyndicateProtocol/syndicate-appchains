@@ -9,6 +9,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  * @title RequireAnyModule
  * @notice A module that requires at least one check to pass
  */
+// [Olympix Warning: unfuzzed variables, missing events assertion] These test-related warnings are not security critical
+// as the contract uses standard unit tests and integration tests. Parameter validation is handled through Ownable.
 contract RequireAnyModule is IRequirementModule, Ownable {
     AddressStructuredLinkedList.List private checks;
 

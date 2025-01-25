@@ -21,8 +21,10 @@ contract SealedBidAuctionSequencingModuleTest is Test {
     }
 
     function testBidAndReveal() public {
-        bytes32 sealedBid1 = keccak256(abi.encodePacked(uint256(bidAmount), "salt1"));
-        bytes32 sealedBid2 = keccak256(abi.encodePacked(uint256(bidAmount + 1 ether), "salt2"));
+        uint256 nonce1 = 0;
+        uint256 nonce2 = 0;
+        bytes32 sealedBid1 = keccak256(abi.encodePacked(uint256(bidAmount), "salt1", nonce1));
+        bytes32 sealedBid2 = keccak256(abi.encodePacked(uint256(bidAmount + 1 ether), "salt2", nonce2));
 
         // bids
         vm.prank(bidder1);
@@ -33,10 +35,10 @@ contract SealedBidAuctionSequencingModuleTest is Test {
 
         // reveal bids
         vm.prank(bidder1);
-        auction.revealBid(bidAmount, "salt1");
+        auction.revealBid(bidAmount, "salt1", nonce1);
 
         vm.prank(bidder2);
-        auction.revealBid(bidAmount + 1 ether, "salt2");
+        auction.revealBid(bidAmount + 1 ether, "salt2", nonce2);
 
         vm.warp(block.timestamp + auctionDuration + 1);
         auction.finalizeAuction();
@@ -46,8 +48,10 @@ contract SealedBidAuctionSequencingModuleTest is Test {
     }
 
     function testWithdrawFunds() public {
-        bytes32 sealedBid1 = keccak256(abi.encodePacked(uint256(bidAmount), "salt1"));
-        bytes32 sealedBid2 = keccak256(abi.encodePacked(uint256(bidAmount + 1 ether), "salt2"));
+        uint256 nonce1 = 0;
+        uint256 nonce2 = 0;
+        bytes32 sealedBid1 = keccak256(abi.encodePacked(uint256(bidAmount), "salt1", nonce1));
+        bytes32 sealedBid2 = keccak256(abi.encodePacked(uint256(bidAmount + 1 ether), "salt2", nonce2));
 
         uint256 initialBalance = address(bidder1).balance;
 
@@ -58,10 +62,10 @@ contract SealedBidAuctionSequencingModuleTest is Test {
         auction.bid{value: bidAmount + 1 ether}(sealedBid2);
 
         vm.prank(bidder2);
-        auction.revealBid(bidAmount + 1 ether, "salt2");
+        auction.revealBid(bidAmount + 1 ether, "salt2", nonce2);
 
         vm.startPrank(bidder1);
-        auction.revealBid(bidAmount, "salt1");
+        auction.revealBid(bidAmount, "salt1", nonce1);
         auction.withdrawFunds();
         vm.stopPrank();
 
@@ -73,11 +77,12 @@ contract SealedBidAuctionSequencingModuleTest is Test {
     }
 
     function testFinalizeAuction() public {
-        bytes32 sealedBid1 = keccak256(abi.encodePacked(uint256(bidAmount), "salt1"));
+        uint256 nonce1 = 0;
+        bytes32 sealedBid1 = keccak256(abi.encodePacked(uint256(bidAmount), "salt1", nonce1));
 
         vm.startPrank(bidder1);
         auction.bid{value: bidAmount}(sealedBid1);
-        auction.revealBid(bidAmount, "salt1");
+        auction.revealBid(bidAmount, "salt1", nonce1);
         vm.stopPrank();
 
         vm.warp(block.timestamp + auctionDuration + 1);
@@ -90,7 +95,8 @@ contract SealedBidAuctionSequencingModuleTest is Test {
     }
 
     function testInvalidBidDeposit() public {
-        bytes32 sealedBid = keccak256(abi.encodePacked(uint256(bidAmount), "salt1"));
+        uint256 nonce = 0;
+        bytes32 sealedBid = keccak256(abi.encodePacked(uint256(bidAmount), "salt1", nonce));
 
         vm.startPrank(bidder1);
         vm.expectRevert(SealedBidAuctionSequencingModule.InvalidBidDeposit.selector);
@@ -99,15 +105,16 @@ contract SealedBidAuctionSequencingModuleTest is Test {
     }
 
     function testInvalidBidReveal() public {
-        bytes32 sealedBid = keccak256(abi.encodePacked(uint256(bidAmount), "salt1"));
+        uint256 nonce = 0;
+        bytes32 sealedBid = keccak256(abi.encodePacked(uint256(bidAmount), "salt1", nonce));
 
         vm.startPrank(bidder1);
         auction.bid{value: bidAmount}(sealedBid);
         vm.stopPrank();
 
         vm.startPrank(bidder1);
-        vm.expectRevert(SealedBidAuctionSequencingModule.InvalidBidReveal.selector);
-        auction.revealBid(bidAmount + 1 ether, "wrongSalt");
+        vm.expectRevert(SealedBidAuctionSequencingModule.BidExceedsDeposit.selector);
+        auction.revealBid(bidAmount + 1 ether, "wrongSalt", nonce);
         vm.stopPrank();
     }
 }

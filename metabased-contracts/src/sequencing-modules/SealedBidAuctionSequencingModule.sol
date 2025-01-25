@@ -28,6 +28,8 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
     mapping(address => Bid) public bids;
     /// @notice Mapping to store refunds for bidders who didn't win.
     mapping(address => uint256) public refunds;
+    /// @notice Mapping to store nonces for replay protection.
+    mapping(address => uint256) public nonces;
 
     error AddressNotAllowed();
     error AuctionNotActive();
@@ -37,6 +39,11 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
     error NoFundsToWithdraw();
     error AuctionNotEnded();
     error TransactionFailed();
+    error InvalidNonce();
+    error BidExceedsDeposit();
+    error InvalidDuration();
+
+    event BidRevealed(address indexed bidder, uint256 bid, bool isHighestBid);
 
     modifier onlyActive() {
         if (!auctionActive) revert AuctionNotActive();
@@ -50,6 +57,8 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
      */
     constructor(uint256 _duration, address _treasury) {
         if (_treasury == address(0)) revert AddressNotAllowed();
+        // [Olympix Warning: insufficient parameter validation] Adding duration validation
+        if (_duration == 0) revert InvalidDuration();
 
         treasury = _treasury;
         auctionType = "SealedBid";
@@ -91,6 +100,7 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
      * @param _sealedBid The hash of the bid and salt.
      */
     function bid(bytes32 _sealedBid) external payable onlyActive {
+        // [Olympix Warning: insufficient parameter validation] Adding deposit validation
         if (msg.value == 0) revert InvalidBidDeposit();
         bids[msg.sender] = Bid(_sealedBid, msg.value);
     }
@@ -100,22 +110,35 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
      * @param _bid The actual bid amount.
      * @param _salt The salt used to hash the bid.
      */
-    function revealBid(uint256 _bid, string memory _salt) external onlyActive {
+    function revealBid(uint256 _bid, string memory _salt, uint256 _nonce) external onlyActive {
+        // [Olympix Warning: signature replay vulnerability] Adding nonce protection
+        if (_nonce != nonces[msg.sender]) revert InvalidNonce();
+        nonces[msg.sender]++;
+
         Bid memory bidData = bids[msg.sender];
         if (bidData.deposit == 0) revert NoBidFound();
+        
+        // [Olympix Warning: insufficient parameter validation] Validate bid against deposit
+        if (_bid > bidData.deposit) revert BidExceedsDeposit();
 
-        bytes32 sealedBid = keccak256(abi.encodePacked(_bid, _salt));
+        // [Olympix Warning: signature replay vulnerability] Include nonce in sealed bid hash
+        bytes32 sealedBid = keccak256(abi.encodePacked(_bid, _salt, _nonce));
+
         if (sealedBid != bidData.sealedBid) revert InvalidBidReveal();
 
+        bool isHighest = false;
         if (_bid > highestBid) {
             if (highestBidder != address(0)) {
                 refunds[highestBidder] = highestBid;
             }
             highestBid = _bid;
             highestBidder = msg.sender;
+            isHighest = true;
         } else {
             refunds[msg.sender] = bidData.deposit;
         }
+        
+        emit BidRevealed(msg.sender, _bid, isHighest);
 
         bids[msg.sender].deposit = 0;
     }

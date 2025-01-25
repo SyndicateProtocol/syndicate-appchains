@@ -37,6 +37,11 @@ contract MetabasedFactory {
         public
         returns (address sequencerChain)
     {
+        // [Olympix Warning: insufficient parameter validation] Adding parameter validation
+        require(l3ChainId != 0, "L3 chain ID cannot be zero");
+        require(admin != address(0), "Admin address cannot be zero");
+        require(address(permissionModule) != address(0), "Permission module cannot be zero address");
+
         MetabasedSequencerChain newSequencerChain =
             new MetabasedSequencerChain(l3ChainId, admin, address(permissionModule));
 
@@ -51,6 +56,11 @@ contract MetabasedFactory {
     /// @param l3ChainId The L3 chain ID
     /// @return The address of the newly created MetafillerStorage contract
     function createMetafillerStorage(address admin, address manager, uint256 l3ChainId) public returns (address) {
+        // [Olympix Warning: insufficient parameter validation] Adding parameter validation
+        require(admin != address(0), "Admin address cannot be zero");
+        require(manager != address(0), "Manager address cannot be zero");
+        require(l3ChainId != 0, "L3 chain ID cannot be zero");
+
         MetafillerStorage newMetafillerStorage = new MetafillerStorage(admin, manager, l3ChainId);
         emit MetafillerStorageCreated(l3ChainId, address(newMetafillerStorage));
         return address(newMetafillerStorage);
@@ -67,6 +77,11 @@ contract MetabasedFactory {
         public
         returns (address sequencerChain, address metafillerStorage, IRequirementModule permissionModule)
     {
+        // [Olympix Warning: insufficient parameter validation] Adding parameter validation
+        require(admin != address(0), "Admin address cannot be zero");
+        require(manager != address(0), "Manager address cannot be zero");
+        require(l3ChainId != 0, "L3 chain ID cannot be zero");
+
         permissionModule = IRequirementModule(new RequireAllModule(admin));
         (sequencerChain) = createMetabasedSequencerChain(l3ChainId, admin, permissionModule);
         metafillerStorage = createMetafillerStorage(admin, manager, l3ChainId);
@@ -87,6 +102,11 @@ contract MetabasedFactory {
         public
         returns (address sequencerChain, address metafillerStorage, IRequirementModule permissionModule)
     {
+        // [Olympix Warning: insufficient parameter validation] Adding parameter validation
+        require(admin != address(0), "Admin address cannot be zero");
+        require(manager != address(0), "Manager address cannot be zero");
+        require(l3ChainId != 0, "L3 chain ID cannot be zero");
+
         permissionModule = IRequirementModule(new RequireAnyModule(admin));
         (sequencerChain) = createMetabasedSequencerChain(l3ChainId, admin, permissionModule);
         metafillerStorage = createMetafillerStorage(admin, manager, l3ChainId);

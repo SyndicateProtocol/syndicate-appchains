@@ -12,6 +12,8 @@ interface IERC20 {
  * @dev This contract allows sequencing based on the caller's token balance.
  * @dev Useful in case Syndicate releases a token and wants to allow only token holders to sequence.
  */
+// [Olympix Warning: unfuzzed variables, missing events assertion] These test-related warnings are not security critical
+// as the contract uses standard unit tests and integration tests. Parameter validation is handled in constructor.
 contract TokenBalanceSequencingModule is PermissionModule {
     /// @notice The address of the ERC20 token contract.
     address public immutable tokenAddress;
