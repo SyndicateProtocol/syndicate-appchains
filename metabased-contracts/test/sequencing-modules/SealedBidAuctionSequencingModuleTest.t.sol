@@ -35,9 +35,13 @@ contract SealedBidAuctionSequencingModuleTest is Test {
 
         // reveal bids
         vm.prank(bidder1);
+        vm.expectEmit(true, false, false, false);
+        emit SealedBidAuctionSequencingModule.BidRevealed(bidder1, bidAmount, false);
         auction.revealBid(bidAmount, "salt1", nonce1);
 
         vm.prank(bidder2);
+        vm.expectEmit(true, false, false, false);
+        emit SealedBidAuctionSequencingModule.BidRevealed(bidder2, bidAmount + 1 ether, true);
         auction.revealBid(bidAmount + 1 ether, "salt2", nonce2);
 
         vm.warp(block.timestamp + auctionDuration + 1);
@@ -65,6 +69,8 @@ contract SealedBidAuctionSequencingModuleTest is Test {
         auction.revealBid(bidAmount + 1 ether, "salt2", nonce2);
 
         vm.startPrank(bidder1);
+        vm.expectEmit(true, false, false, false);
+        emit SealedBidAuctionSequencingModule.BidRevealed(bidder1, bidAmount, false);
         auction.revealBid(bidAmount, "salt1", nonce1);
         auction.withdrawFunds();
         vm.stopPrank();
@@ -82,6 +88,8 @@ contract SealedBidAuctionSequencingModuleTest is Test {
 
         vm.startPrank(bidder1);
         auction.bid{value: bidAmount}(sealedBid1);
+        vm.expectEmit(true, false, false, false);
+        emit SealedBidAuctionSequencingModule.BidRevealed(bidder1, bidAmount, true);
         auction.revealBid(bidAmount, "salt1", nonce1);
         vm.stopPrank();
 
