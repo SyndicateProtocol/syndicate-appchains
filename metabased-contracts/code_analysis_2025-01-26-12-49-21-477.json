@@ -1,0 +1,60 @@
+{
+  "totalBugs": 5,
+  "files": [
+    {
+      "path": "src/MetabasedFactory.sol",
+      "bugs": [
+        {
+          "line": 14,
+          "column": 5,
+          "severity": "Medium",
+          "confidence": "High",
+          "description": "Test functions fail to assert the emission of expected events, potentially missing critical contract behaviors.",
+          "olympixUrl": "http://detectors.olympixdevsectools.com/article/web3-vulnerability/missing-events-assertion"
+        },
+        {
+          "line": 21,
+          "column": 5,
+          "severity": "Medium",
+          "confidence": "High",
+          "description": "Test functions fail to assert the emission of expected events, potentially missing critical contract behaviors.",
+          "olympixUrl": "http://detectors.olympixdevsectools.com/article/web3-vulnerability/missing-events-assertion"
+        },
+        {
+          "line": 24,
+          "column": 5,
+          "severity": "Medium",
+          "confidence": "High",
+          "description": "Test functions fail to assert the emission of expected events, potentially missing critical contract behaviors.",
+          "olympixUrl": "http://detectors.olympixdevsectools.com/article/web3-vulnerability/missing-events-assertion"
+        }
+      ]
+    },
+    {
+      "path": "src/sequencing-modules/SealedBidAuctionSequencingModule.sol",
+      "bugs": [
+        {
+          "line": 46,
+          "column": 5,
+          "severity": "Medium",
+          "confidence": "High",
+          "description": "Test functions fail to assert the emission of expected events, potentially missing critical contract behaviors.",
+          "olympixUrl": "http://detectors.olympixdevsectools.com/article/web3-vulnerability/missing-events-assertion"
+        }
+      ]
+    },
+    {
+      "path": "src/SequencingModuleChecker.sol",
+      "bugs": [
+        {
+          "line": 13,
+          "column": 5,
+          "severity": "Medium",
+          "confidence": "High",
+          "description": "Test functions fail to assert the emission of expected events, potentially missing critical contract behaviors.",
+          "olympixUrl": "http://detectors.olympixdevsectools.com/article/web3-vulnerability/missing-events-assertion"
+        }
+      ]
+    }
+  ]
+}
