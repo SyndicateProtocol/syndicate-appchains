@@ -152,7 +152,7 @@ contract SealedBidAuctionSequencingModuleTest is Test {
         auction.finalizeAuction();
     }
 
-    function testConstructorSetsCorrectValues() public {
+    function testConstructorSetsCorrectValues() public view {
         assertEq(auction.treasury(), treasury, "Treasury not set correctly");
         assertEq(auction.auctionType(), "SealedBid", "Auction type not set correctly");
         assertTrue(auction.auctionActive(), "Auction should be active");

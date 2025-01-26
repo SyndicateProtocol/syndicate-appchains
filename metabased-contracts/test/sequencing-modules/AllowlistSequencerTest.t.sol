@@ -84,7 +84,7 @@ contract AllowlistSequencingModuleTest is Test {
         assertEq(allowlistSequencer.admin(), newAdmin);
     }
 
-    function testConstructorSetsCorrectValues() public {
+    function testConstructorSetsCorrectValues() public view {
         assertEq(allowlistSequencer.admin(), admin, "Admin not set correctly");
     }
 }

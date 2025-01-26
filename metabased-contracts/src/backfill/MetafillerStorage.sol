@@ -45,10 +45,7 @@ contract MetafillerStorage is AccessControl {
 
     /// @notice Emits a Batch
     /// @param batch: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#batch-format
-    function save(uint256 epochNumber, bytes32 epochHash, bytes calldata batch)
-        external
-        onlyRole(MANAGER_ROLE)
-    {
+    function save(uint256 epochNumber, bytes32, bytes calldata batch) external onlyRole(MANAGER_ROLE) {
         emit EpochRangeProcessed(epochNumber, epochNumber);
     }
 

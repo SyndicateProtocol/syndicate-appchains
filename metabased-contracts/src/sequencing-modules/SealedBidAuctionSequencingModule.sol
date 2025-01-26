@@ -22,8 +22,6 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
     /// @notice The address of the highest bidder.
     address public highestBidder;
     /// @notice The highest bid amount, initialized to 0 by design as no bids exist at contract creation.
-    /// @dev [Olympix Warning: uninitialized state variable] This is a false positive as 0 is the correct
-    /// initial value for an auction's highest bid before any bids are placed.
     uint256 public highestBid;
 
     /// @notice Mapping to store bids of each participant.
@@ -103,7 +101,6 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
      * @param _sealedBid The hash of the bid and salt.
      */
     function bid(bytes32 _sealedBid) external payable onlyActive {
-        // [Olympix Warning: insufficient parameter validation] Adding deposit validation
         if (msg.value == 0) revert InvalidBidDeposit();
         bids[msg.sender] = Bid(_sealedBid, msg.value);
     }
@@ -112,19 +109,17 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
      * @notice Reveals the actual bid and salt, checking it against the sealed bid.
      * @param _bid The actual bid amount.
      * @param _salt The salt used to hash the bid.
+     * @param _nonce the nonce of the bid
      */
     function revealBid(uint256 _bid, string memory _salt, uint256 _nonce) external onlyActive {
-        // [Olympix Warning: signature replay vulnerability] Adding nonce protection
         if (_nonce != nonces[msg.sender]) revert InvalidNonce();
         nonces[msg.sender]++;
 
         Bid memory bidData = bids[msg.sender];
         if (bidData.deposit == 0) revert NoBidFound();
-        
-        // [Olympix Warning: insufficient parameter validation] Validate bid against deposit
+
         if (_bid > bidData.deposit) revert BidExceedsDeposit();
 
-        // [Olympix Warning: signature replay vulnerability] Include nonce in sealed bid hash
         bytes32 sealedBid = keccak256(abi.encodePacked(_bid, _salt, _nonce));
 
         if (sealedBid != bidData.sealedBid) revert InvalidBidReveal();
@@ -140,7 +135,7 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
         } else {
             refunds[msg.sender] = bidData.deposit;
         }
-        
+
         emit BidRevealed(msg.sender, _bid, isHighest);
 
         bids[msg.sender].deposit = 0;

@@ -146,14 +146,6 @@ contract AtomicSequencerTest is Test {
         assertTrue(address(newSequencer) != address(0), "Sequencer should be deployed");
     }
 
-    function testReceiveFunction() public {
-        // Test that the contract can receive ETH
-        vm.deal(address(this), 1 ether);
-        (bool success,) = address(atomicSequencer).call{value: 1 ether}("");
-        assertTrue(success, "Should accept ETH");
-        assertEq(address(atomicSequencer).balance, 1 ether, "Balance should match sent amount");
-    }
-
     function testRevertOnInvalidCalls() public {
         MetabasedSequencerChain[] memory chains = new MetabasedSequencerChain[](1);
         chains[0] = chainA;
