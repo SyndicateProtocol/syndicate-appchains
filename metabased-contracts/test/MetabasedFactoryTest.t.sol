@@ -88,30 +88,30 @@ contract MetabasedFactoryTest is Test {
 
     function testCreateAllContractsWithRequireAll() public {
         vm.recordLogs();
-        
+
         (address sequencerChainAddr, address metafillerStorageAddr, IRequirementModule permissionModuleAddr) =
             factory.createAllContractsWithRequireAllModule(admin, manager, l3ChainId);
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
         bool found = false;
-        
-        for (uint i = 0; i < entries.length; i++) {
+
+        for (uint256 i = 0; i < entries.length; i++) {
             // The event signature for AllContractsCreated
             if (entries[i].topics[0] == keccak256("AllContractsCreated(uint256,address,address,address)")) {
                 // Check indexed parameters (they are in topics)
                 assertEq(address(uint160(uint256(entries[i].topics[1]))), sequencerChainAddr);
                 assertEq(address(uint160(uint256(entries[i].topics[2]))), metafillerStorageAddr);
                 assertEq(address(uint160(uint256(entries[i].topics[3]))), address(permissionModuleAddr));
-                
+
                 // Check non-indexed parameter (in data)
                 (uint256 emittedChainId) = abi.decode(entries[i].data, (uint256));
                 assertEq(emittedChainId, l3ChainId);
-                
+
                 found = true;
                 break;
             }
         }
-        
+
         assertTrue(found, "AllContractsCreated event not found");
 
         assertTrue(sequencerChainAddr != address(0));
@@ -119,10 +119,15 @@ contract MetabasedFactoryTest is Test {
         assertTrue(address(permissionModuleAddr) != address(0));
 
         MetabasedSequencerChain sequencerChainContract = MetabasedSequencerChain(sequencerChainAddr);
-        MetafillerStorage metafillerStorageContract = MetafillerStorage(metafillerStorageAddr);
-        RequireAllModule permissionModuleContract = RequireAllModule(address(permissionModuleAddr));
 
         assertEq(sequencerChainContract.l3ChainId(), l3ChainId);
+        vm.expectEmit(true, false, false, false);
+        emit MetabasedFactory.AllContractsCreated(
+            l3ChainId,
+            0xfD07C974e33dd1626640bA3a5acF0418FaacCA7a,
+            0xD76ffbd1eFF76C510C3a509fE22864688aC3A588,
+            0x7FdB3132Ff7D02d8B9e221c61cC895ce9a4bb773
+        );
         (address sequencerChainAddress, address metafillerStorageAddress, IRequirementModule permissionModuleAddress) =
             factory.createAllContractsWithRequireAllModule(admin, manager, l3ChainId);
 
@@ -150,30 +155,30 @@ contract MetabasedFactoryTest is Test {
 
     function testCreateAllContractsWithRequireAny() public {
         vm.recordLogs();
-        
+
         (address sequencerChainAddr, address metafillerStorageAddr, IRequirementModule permissionModuleAddr) =
             factory.createAllContractsWithRequireAnyModule(admin, manager, l3ChainId);
 
         Vm.Log[] memory entries = vm.getRecordedLogs();
         bool found = false;
-        
-        for (uint i = 0; i < entries.length; i++) {
+
+        for (uint256 i = 0; i < entries.length; i++) {
             // The event signature for AllContractsCreated
             if (entries[i].topics[0] == keccak256("AllContractsCreated(uint256,address,address,address)")) {
                 // Check indexed parameters (they are in topics)
                 assertEq(address(uint160(uint256(entries[i].topics[1]))), sequencerChainAddr);
                 assertEq(address(uint160(uint256(entries[i].topics[2]))), metafillerStorageAddr);
                 assertEq(address(uint160(uint256(entries[i].topics[3]))), address(permissionModuleAddr));
-                
+
                 // Check non-indexed parameter (in data)
                 (uint256 emittedChainId) = abi.decode(entries[i].data, (uint256));
                 assertEq(emittedChainId, l3ChainId);
-                
+
                 found = true;
                 break;
             }
         }
-        
+
         assertTrue(found, "AllContractsCreated event not found");
 
         assertTrue(sequencerChainAddr != address(0));
@@ -181,8 +186,6 @@ contract MetabasedFactoryTest is Test {
         assertTrue(address(permissionModuleAddr) != address(0));
 
         MetabasedSequencerChain sequencerChainContract = MetabasedSequencerChain(sequencerChainAddr);
-        MetafillerStorage metafillerStorageContract = MetafillerStorage(metafillerStorageAddr);
-        RequireAnyModule permissionModuleContract = RequireAnyModule(address(permissionModuleAddr));
 
         assertEq(sequencerChainContract.l3ChainId(), l3ChainId);
         (address sequencerChainAddress, address metafillerStorageAddress, IRequirementModule permissionModuleAddress) =

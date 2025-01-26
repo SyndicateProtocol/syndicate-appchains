@@ -47,9 +47,14 @@ contract SynGasTokenTest is Test {
         token.mint(user, 1000);
     }
 
-    function testFail_MintingWithoutMinterRole() public {
-        vm.prank(user);
+    function test_RevertWhenMintingWithoutMinterRole() public {
+        vm.startPrank(user);
+        bytes memory errorMessage =
+            abi.encodeWithSelector(IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.MINTER_ROLE());
+        vm.expectRevert(errorMessage);
         token.mint(user, 1000);
+
+        vm.stopPrank();
     }
 
     function test_MintingRevertMessage() public {
@@ -80,9 +85,20 @@ contract SynGasTokenTest is Test {
         vm.stopPrank();
     }
 
-    function testFail_NonAdminCannotGrantRole() public {
-        vm.prank(user);
-        token.grantRole(token.MINTER_ROLE(), user);
+    function test_RevertIfNonAdminGrantsRole() public {
+        bytes32 minterRole = token.MINTER_ROLE();
+
+        vm.startPrank(user);
+
+        bytes memory errorMessage = abi.encodeWithSelector(
+            IAccessControl.AccessControlUnauthorizedAccount.selector, user, token.DEFAULT_ADMIN_ROLE()
+        );
+        vm.expectRevert(errorMessage);
+        token.grantRole(minterRole, user);
+
+        assertFalse(token.hasRole(minterRole, user), "User should not have the minter role");
+
+        vm.stopPrank();
     }
 
     // Test permit functionality
