@@ -212,19 +212,16 @@ impl MetaChainProvider {
 
     /// post a rollup batch to the mchain and mine the next block
     pub async fn send_batch(&self, batch: &arbitrum::batch::Batch) -> Result<()> {
-        let delayed_messages_read = self.rollup.totalDelayedMessagesRead().call().await?._0;
         let tx = self
             .rollup
             .postBatch(
-                delayed_messages_read
-                    .checked_add(U256::from(
-                        batch
-                            .0
-                            .iter()
-                            .filter(|x| matches!(x, arbitrum::batch::BatchMessage::Delayed))
-                            .count(),
-                    ))
-                    .ok_or(BlockBuilderError::Overflow())?, // after delayed messages read
+                U256::from(
+                    batch
+                        .0
+                        .iter()
+                        .filter(|x| matches!(x, arbitrum::batch::BatchMessage::Delayed))
+                        .count(),
+                ),
                 batch.encode()?,
             )
             .send()
