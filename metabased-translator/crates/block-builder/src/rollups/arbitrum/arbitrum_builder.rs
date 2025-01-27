@@ -27,11 +27,6 @@ use eyre::Result;
 use std::collections::HashMap;
 use tracing::{debug, error};
 
-// MessageDelivered(indexed uint256,indexed bytes32,address,uint8,address,bytes32,uint256,uint64)
-// Size of a MessageDelivered event in bytes:
-// 6 non-indexed fields (32 bytes each)
-// 6 * 32 = 192 bytes
-const MSG_DELIVERED_EVENT_SIZE: usize = 192;
 const MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = MessageDelivered::SIGNATURE_HASH;
 const INBOX_MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = InboxMessageDelivered::SIGNATURE_HASH;
 const INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH: FixedBytes<32> =
@@ -160,23 +155,17 @@ impl ArbitrumBlockBuilder {
         let mut delayed_msg_txns: Vec<TransactionRequest> = Vec::new();
 
         for msg_log in delayed_messages {
-            // Sanity check that the message data is the correct length
-            if msg_log.data.len() != MSG_DELIVERED_EVENT_SIZE {
-                error!("Invalid message data length: {}", msg_log.data.len());
-                continue;
-            }
+            let msg_delivered = match MessageDelivered::abi_decode_data(&msg_log.data, true) {
+                Ok(decoded) => decoded,
+                Err(e) => {
+                    error!("Failed to decode MessageDelivered event: {}", e);
+                    continue;
+                }
+            };
 
-            let message_index = U256::from_be_slice(msg_log.topics[1].as_slice());
-
-            // Data layout (each field is 32 bytes):
-            // [0:32]    - inbox (address, right-padded)
-            // [32:64]   - kind (uint8, right-padded)
-            // [64:96]   - sender (address, right-padded)
-            // [96:128]  - messageDataHash (bytes32)
-            // [128:160] - baseFeeL1 (uint256)
-            // [160:192] - timestamp (uint64, right-padded)
-            let kind = msg_log.data[63]; // Last byte of the second 32-byte word
-            let sender = Address::from_slice(&msg_log.data[76..96]); // Last 20 bytes of the third 32-byte word
+            let message_index = U256::from_be_slice(msg_log.topics[1].as_slice()); // First indexed field is message index
+            let kind = msg_delivered.1; // Second indexed field is kind
+            let sender = msg_delivered.2;
 
             // Get corresponding message data
             let data = match message_data.get(&message_index) {
