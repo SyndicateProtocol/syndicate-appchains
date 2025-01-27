@@ -3,7 +3,7 @@ pragma solidity 0.8.25;
 
 import {Script, console} from "forge-std/Script.sol";
 
-import {SynGasToken, AccessControl} from "src/token/SynGasToken.sol";
+import {SyndicateToken, AccessControl} from "src/token/SyndicateToken.sol";
 
 // Holesky SYND address
 address constant SYND_ADDRESS = 0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba;
@@ -36,7 +36,7 @@ contract GrantMinterRole is Script {
 }
 
 contract MintSYNDToAddresses is Script {
-    SynGasToken public synd;
+    SyndicateToken public synd;
 
     function run() public {
         vm.startBroadcast();
@@ -48,7 +48,7 @@ contract MintSYNDToAddresses is Script {
         uint256[] memory amounts = new uint256[](1);
         amounts[0] = 10_000e18; // 10K SYND
 
-        synd = SynGasToken(SYND_ADDRESS);
+        synd = SyndicateToken(SYND_ADDRESS);
 
         for (uint256 i = 0; i < recipients.length; i++) {
             require(recipients[i] != address(0), "Invalid address");
