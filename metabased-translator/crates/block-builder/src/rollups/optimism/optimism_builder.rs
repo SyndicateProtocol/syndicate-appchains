@@ -33,10 +33,6 @@ impl RollupBlockBuilder for OptimismBlockBuilder {
         Self { transaction_parser }
     }
 
-    fn transaction_parser(&self) -> &SequencingTransactionParser {
-        &self.transaction_parser
-    }
-
     /// Builds a batch of transactions into an Optimism batch
     async fn build_batch_txn(&self, txs: Vec<Bytes>) -> Result<TransactionRequest> {
         // TODO: Implement
@@ -57,6 +53,10 @@ impl RollupBlockBuilder for OptimismBlockBuilder {
 
         let tx = new_batcher_tx(batcher, batch_inbox, data.into());
         Ok(tx)
+    }
+
+    fn transaction_parser(&self) -> &SequencingTransactionParser {
+        &self.transaction_parser
     }
 }
 

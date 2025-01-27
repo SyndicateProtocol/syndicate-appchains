@@ -1,13 +1,22 @@
 //! Configuration for the block builder service
 
-use alloy::primitives::Address;
-use clap::Parser;
+use alloy::{
+    primitives::Address,
+    signers::{
+        k256::ecdsa::SigningKey,
+        local::{LocalSigner, PrivateKeySigner},
+    },
+};
+use clap::{Parser, ValueEnum};
 use std::{fmt::Debug, str::FromStr};
 use thiserror::Error;
 use tracing::debug;
 
+const DEFAULT_PRIVATE_KEY_SIGNER: &str =
+    "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+
 /// Configuration for the block builder service
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Clone)]
 pub struct BlockBuilderConfig {
     #[allow(missing_docs)]
     #[arg(short = 'p', long, env = "BLOCK_BUILDER_PORT", default_value_t = 8888)]
@@ -31,11 +40,42 @@ pub struct BlockBuilderConfig {
         value_parser = parse_address,
         default_value = "0x1234000000000000000000000000000000000000")]
     pub sequencing_contract_address: Address,
+
+    /// Target rollup type for the [`block-builder`]
+    #[arg(long, env = "BLOCK_BUILDER_TARGET_ROLLUP", default_value = "arbitrum")]
+    pub target_rollup_type: TargetRollupType,
+}
+
+/// Possible target rollup types for the [`block-builder`]
+#[allow(missing_docs)]
+#[derive(Debug, Clone, Parser, ValueEnum)]
+pub enum TargetRollupType {
+    OPTIMISM,
+    ARBITRUM,
 }
 
 /// Parse a string into an Ethereum `Address`.
 fn parse_address(value: &str) -> Result<Address, String> {
     Address::from_str(value).map_err(|_| format!("Invalid address: {}", value))
+}
+
+/// Parse default string into a `PrivateKeySigner`.
+pub fn get_default_private_key_signer() -> LocalSigner<SigningKey> {
+    PrivateKeySigner::from_str(DEFAULT_PRIVATE_KEY_SIGNER)
+        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err))
+}
+
+impl Debug for BlockBuilderConfig {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("BlockBuilderConfig")
+            .field("port", &self.port)
+            .field("genesis_timestamp", &self.genesis_timestamp)
+            .field("chain_id", &self.chain_id)
+            .field("sequencing_contract_address", &self.sequencing_contract_address)
+            .field("target_rollup_type", &self.target_rollup_type)
+            .field("signer_key", &"<private>") // Skip showing private key
+            .finish()
+    }
 }
 
 impl Default for BlockBuilderConfig {
@@ -44,6 +84,7 @@ impl Default for BlockBuilderConfig {
             port: 8888,
             genesis_timestamp: 1712500000,
             chain_id: 84532,
+            target_rollup_type: TargetRollupType::ARBITRUM,
             sequencing_contract_address: Address::from_str(
                 "0x1234000000000000000000000000000000000000",
             )
@@ -61,8 +102,15 @@ impl BlockBuilderConfig {
         genesis_timestamp: u64,
         chain_id: u64,
         sequencing_contract_address: Address,
+        target_rollup_type: TargetRollupType,
     ) -> Result<Self, ConfigError> {
-        let config = Self { port, genesis_timestamp, chain_id, sequencing_contract_address };
+        let config = Self {
+            port,
+            genesis_timestamp,
+            chain_id,
+            sequencing_contract_address,
+            target_rollup_type,
+        };
         debug!("Created block builder config: {:?}", config);
         config.validate()?;
         Ok(config)
@@ -118,6 +166,7 @@ mod tests {
                 "0x1234000000000000000000000000000000000000",
             )
             .unwrap(),
+            target_rollup_type: TargetRollupType::ARBITRUM,
         };
         assert!(matches!(config.validate(), Err(ConfigError::InvalidPort(_))));
     }

@@ -25,3 +25,8 @@ cwd = "./metabased-sequencer/"
 command = "cargo"
 toolchain = "nightly"
 args = ["run", "-p", "interceptor", "--", "--profile", "${PROFILE}"]
+
+[tasks.print-sample-command]
+cwd = "."
+command = "cargo"
+args = ["run", "--example", "generate_run_command"]
