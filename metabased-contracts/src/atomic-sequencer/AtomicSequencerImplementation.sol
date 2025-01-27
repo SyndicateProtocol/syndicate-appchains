@@ -41,7 +41,9 @@ contract AtomicSequencerImplementation {
         MetabasedSequencerChain[] calldata chains,
         bytes[][] calldata transactions
     ) external {
-        require(chains.length == transactions.length, "InputLengthMismatchError");
+        if (chains.length == 0 || chains.length != transactions.length) {
+            revert InputLengthMismatchError();
+        }
 
         for (uint256 i = 0; i < chains.length; i++) {
             chains[i].processBulkTransactions(transactions[i]);
