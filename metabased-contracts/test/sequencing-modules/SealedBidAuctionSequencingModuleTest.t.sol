@@ -21,10 +21,8 @@ contract SealedBidAuctionSequencingModuleTest is Test {
     }
 
     function testBidAndReveal() public {
-        uint256 nonce1 = 0;
-        uint256 nonce2 = 0;
-        bytes32 sealedBid1 = keccak256(abi.encodePacked(uint256(bidAmount), "salt1", nonce1));
-        bytes32 sealedBid2 = keccak256(abi.encodePacked(uint256(bidAmount + 1 ether), "salt2", nonce2));
+        bytes32 sealedBid1 = keccak256(abi.encodePacked(uint256(bidAmount), "salt1"));
+        bytes32 sealedBid2 = keccak256(abi.encodePacked(uint256(bidAmount + 1 ether), "salt2"));
 
         // bids
         vm.prank(bidder1);
@@ -37,12 +35,12 @@ contract SealedBidAuctionSequencingModuleTest is Test {
         vm.prank(bidder1);
         vm.expectEmit(true, false, false, false);
         emit SealedBidAuctionSequencingModule.BidRevealed(bidder1, bidAmount, false);
-        auction.revealBid(bidAmount, "salt1", nonce1);
+        auction.revealBid(bidAmount, "salt1");
 
         vm.prank(bidder2);
         vm.expectEmit(true, false, false, false);
         emit SealedBidAuctionSequencingModule.BidRevealed(bidder2, bidAmount + 1 ether, true);
-        auction.revealBid(bidAmount + 1 ether, "salt2", nonce2);
+        auction.revealBid(bidAmount + 1 ether, "salt2");
 
         vm.warp(block.timestamp + auctionDuration + 1);
         auction.finalizeAuction();
@@ -52,10 +50,8 @@ contract SealedBidAuctionSequencingModuleTest is Test {
     }
 
     function testWithdrawFunds() public {
-        uint256 nonce1 = 0;
-        uint256 nonce2 = 0;
-        bytes32 sealedBid1 = keccak256(abi.encodePacked(uint256(bidAmount), "salt1", nonce1));
-        bytes32 sealedBid2 = keccak256(abi.encodePacked(uint256(bidAmount + 1 ether), "salt2", nonce2));
+        bytes32 sealedBid1 = keccak256(abi.encodePacked(uint256(bidAmount), "salt1"));
+        bytes32 sealedBid2 = keccak256(abi.encodePacked(uint256(bidAmount + 1 ether), "salt2"));
 
         uint256 initialBalance = address(bidder1).balance;
 
@@ -66,12 +62,12 @@ contract SealedBidAuctionSequencingModuleTest is Test {
         auction.bid{value: bidAmount + 1 ether}(sealedBid2);
 
         vm.prank(bidder2);
-        auction.revealBid(bidAmount + 1 ether, "salt2", nonce2);
+        auction.revealBid(bidAmount + 1 ether, "salt2");
 
         vm.startPrank(bidder1);
         vm.expectEmit(true, false, false, false);
         emit SealedBidAuctionSequencingModule.BidRevealed(bidder1, bidAmount, false);
-        auction.revealBid(bidAmount, "salt1", nonce1);
+        auction.revealBid(bidAmount, "salt1");
         auction.withdrawFunds();
         vm.stopPrank();
 
@@ -83,14 +79,13 @@ contract SealedBidAuctionSequencingModuleTest is Test {
     }
 
     function testFinalizeAuction() public {
-        uint256 nonce1 = 0;
-        bytes32 sealedBid1 = keccak256(abi.encodePacked(uint256(bidAmount), "salt1", nonce1));
+        bytes32 sealedBid1 = keccak256(abi.encodePacked(uint256(bidAmount), "salt1"));
 
         vm.startPrank(bidder1);
         auction.bid{value: bidAmount}(sealedBid1);
         vm.expectEmit(true, false, false, false);
         emit SealedBidAuctionSequencingModule.BidRevealed(bidder1, bidAmount, true);
-        auction.revealBid(bidAmount, "salt1", nonce1);
+        auction.revealBid(bidAmount, "salt1");
         vm.stopPrank();
 
         vm.warp(block.timestamp + auctionDuration + 1);
@@ -103,8 +98,7 @@ contract SealedBidAuctionSequencingModuleTest is Test {
     }
 
     function testInvalidBidDeposit() public {
-        uint256 nonce = 0;
-        bytes32 sealedBid = keccak256(abi.encodePacked(uint256(bidAmount), "salt1", nonce));
+        bytes32 sealedBid = keccak256(abi.encodePacked(uint256(bidAmount), "salt1"));
 
         vm.startPrank(bidder1);
         vm.expectRevert(SealedBidAuctionSequencingModule.InvalidBidDeposit.selector);
@@ -113,8 +107,7 @@ contract SealedBidAuctionSequencingModuleTest is Test {
     }
 
     function testInvalidBidReveal() public {
-        uint256 nonce = 0;
-        bytes32 sealedBid = keccak256(abi.encodePacked(uint256(bidAmount), "salt1", nonce));
+        bytes32 sealedBid = keccak256(abi.encodePacked(uint256(bidAmount), "salt1"));
 
         vm.startPrank(bidder1);
         auction.bid{value: bidAmount}(sealedBid);
@@ -122,18 +115,7 @@ contract SealedBidAuctionSequencingModuleTest is Test {
 
         vm.startPrank(bidder1);
         vm.expectRevert(SealedBidAuctionSequencingModule.BidExceedsDeposit.selector);
-        auction.revealBid(bidAmount + 1 ether, "wrongSalt", nonce);
-        vm.stopPrank();
-    }
-
-    function testRevertsOnInvalidNonce() public {
-        uint256 nonce = 0;
-        bytes32 sealedBid = keccak256(abi.encodePacked(uint256(bidAmount), "salt1", nonce));
-
-        vm.startPrank(bidder1);
-        auction.bid{value: bidAmount}(sealedBid);
-        vm.expectRevert(SealedBidAuctionSequencingModule.InvalidNonce.selector);
-        auction.revealBid(bidAmount, "salt1", 1); // Wrong nonce
+        auction.revealBid(bidAmount + 1 ether, "wrongSalt");
         vm.stopPrank();
     }
 
@@ -143,8 +125,7 @@ contract SealedBidAuctionSequencingModuleTest is Test {
     }
 
     function testRevertsWhenAuctionNotActive() public {
-        uint256 nonce = 0;
-        bytes32 sealedBid = keccak256(abi.encodePacked(uint256(bidAmount), "salt1", nonce));
+        bytes32 sealedBid = keccak256(abi.encodePacked(uint256(bidAmount), "salt1"));
 
         vm.warp(block.timestamp + auctionDuration + 1);
         auction.finalizeAuction();

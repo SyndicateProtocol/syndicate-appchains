@@ -28,8 +28,6 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
     mapping(address => Bid) public bids;
     /// @notice Mapping to store refunds for bidders who didn't win.
     mapping(address => uint256) public refunds;
-    /// @notice Mapping to store nonces for replay protection.
-    mapping(address => uint256) public nonces;
 
     error AddressNotAllowed();
     error AuctionNotActive();
@@ -39,7 +37,6 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
     error NoFundsToWithdraw();
     error AuctionNotEnded();
     error TransactionFailed();
-    error InvalidNonce();
     error BidExceedsDeposit();
     error InvalidDuration();
 
@@ -109,18 +106,14 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
      * @notice Reveals the actual bid and salt, checking it against the sealed bid.
      * @param _bid The actual bid amount.
      * @param _salt The salt used to hash the bid.
-     * @param _nonce the nonce of the bid
      */
-    function revealBid(uint256 _bid, string memory _salt, uint256 _nonce) external onlyActive {
-        if (_nonce != nonces[msg.sender]) revert InvalidNonce();
-        nonces[msg.sender]++;
-
+    function revealBid(uint256 _bid, string memory _salt) external onlyActive {
         Bid memory bidData = bids[msg.sender];
         if (bidData.deposit == 0) revert NoBidFound();
 
         if (_bid > bidData.deposit) revert BidExceedsDeposit();
 
-        bytes32 sealedBid = keccak256(abi.encodePacked(_bid, _salt, _nonce));
+        bytes32 sealedBid = keccak256(abi.encodePacked(_bid, _salt));
 
         if (sealedBid != bidData.sealedBid) revert InvalidBidReveal();
 
