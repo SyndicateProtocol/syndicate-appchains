@@ -13,7 +13,7 @@ use common::types::Slot;
 use eyre::{Error, Result};
 use thiserror::Error;
 use tokio::sync::mpsc::Receiver;
-use tracing::{debug, error};
+use tracing::{error, info};
 
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
@@ -58,20 +58,20 @@ impl BlockBuilder {
             let batch_txn = match self.builder.build_batch_txn(mbtxs).await {
                 Ok(txn) => txn,
                 Err(e) => {
-                    log_error!("Error building batch transaction: {}", e);
+                    error!("Error building batch transaction: {}", e);
                     continue;
                 }
             };
 
             // Submit batch transaction to mchain
             if let Err(e) = self.mchain.submit_txn(batch_txn).await {
-                log_error!("Error submitting transaction: {}", e);
+                error!("Error submitting transaction: {}", e);
                 continue;
             }
 
             // Mine mchain block
             if let Err(e) = self.mchain.mine_block(slot.timestamp).await {
-                log_error!("Error mining block: {}", e);
+                error!("Error mining block: {}", e);
             }
         }
     }

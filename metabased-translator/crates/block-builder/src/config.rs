@@ -56,7 +56,7 @@ fn parse_address(value: &str) -> Result<Address, String> {
     Address::from_str(value).map_err(|_| format!("Invalid address: {}", value))
 }
 
-/// Parse a string into an Ethereum `Address`.
+/// Parse a string into a `PrivateKeySigner`.
 fn parse_private_key_signer(value: &str) -> Result<PrivateKeySigner, String> {
     PrivateKeySigner::from_str(value)
         .map_err(|_| format!("Invalid private key for signer: {}", value))
