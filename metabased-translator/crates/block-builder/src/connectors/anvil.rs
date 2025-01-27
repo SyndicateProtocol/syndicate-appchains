@@ -237,10 +237,7 @@ impl MetaChainProvider {
     }
 
     /// Starts the Anvil instance with state persistence and creates a provider for the `MetaChain`
-    pub async fn start_with_state_persistence(
-        config: BlockBuilderConfig,
-        state_path: &str,
-    ) -> eyre::Result<Self> {
+    async fn start_with_state_persistence(config: BlockBuilderConfig) -> eyre::Result<Self> {
         let port = find_available_port(config.port, 10).ok_or_else(|| {
             BlockBuilderError::AnvilStartError("No available ports found after 10 attempts")
         })?;
@@ -250,7 +247,10 @@ impl MetaChainProvider {
         }
 
         let ts = config.genesis_timestamp.to_string();
-        let args = vec![
+        let state_interval = config.anvil_state_interval.to_string();
+        let prune_history = config.anvil_prune_history.to_string();
+
+        let mut args = vec![
             "--base-fee",
             "0",
             "--gas-limit",
@@ -258,11 +258,16 @@ impl MetaChainProvider {
             "--timestamp",
             ts.as_str(),
             "--no-mining",
-            "--state",
-            state_path,
-            "--state-interval",
-            "1",
         ];
+
+        if !config.anvil_state_path.is_empty() {
+            args.push("--state");
+            args.push(&config.anvil_state_path);
+            args.push("--state-interval");
+            args.push(&state_interval);
+            args.push("--prune-history");
+            args.push(&prune_history);
+        }
 
         let anvil = Anvil::new().port(port).chain_id(config.chain_id).args(args).try_spawn()?;
 
@@ -363,23 +368,14 @@ mod tests {
             fs::remove_file(&state_path)?;
         }
 
-        let config = BlockBuilderConfig {
-            port: 8545,
-            chain_id: 31337,
-            genesis_timestamp: 0,
-            sequencing_contract_address: "0x0000000000000000000000000000000000000000".parse()?,
-        };
+        let config = BlockBuilderConfig::default();
 
         // First instance: create blocks
         {
-            let provider = MetaChainProvider::start_with_state_persistence(
-                config.clone(),
-                state_path.to_str().unwrap(),
-            )
-            .await?;
+            let provider = MetaChainProvider::start_with_state_persistence(config.clone()).await?;
 
             // Mine 1000 blocks
-            for i in 0..1000 {
+            for i in 0..1_000 {
                 provider.mine_block(i).await?;
             }
 
@@ -388,9 +384,7 @@ mod tests {
         } // First instance is dropped here
 
         // Second instance: verify blocks
-        let provider =
-            MetaChainProvider::start_with_state_persistence(config, state_path.to_str().unwrap())
-                .await?;
+        let provider = MetaChainProvider::start_with_state_persistence(config).await?;
 
         // Check a few random blocks are accessible
         for block_num in [0, 42, 567, 999, 1000] {

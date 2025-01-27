@@ -1,5 +1,8 @@
 use block_builder::{block_builder::BlockBuilder, config::BlockBuilderConfig};
-use common::tracing::{init_tracing, TracingError};
+use common::{
+    db::{self, TranslatorStore},
+    tracing::{init_tracing, TracingError},
+};
 use eyre::Result;
 use ingestor::{config::IngestionPipelineConfig, ingestor::Ingestor};
 use metabased_translator::config::MetabasedConfig;
@@ -12,6 +15,7 @@ async fn run(
     block_builder_config: BlockBuilderConfig,
     slotting_config: SlottingConfig,
     ingestion_config: IngestionPipelineConfig,
+    db_path: &str,
 ) -> Result<(), RuntimeError> {
     // Create shutdown channel
     let (shutdown_tx, mut shutdown_rx) = oneshot::channel();
@@ -27,9 +31,25 @@ async fn run(
         Ok::<_, RuntimeError>(())
     });
 
+    // Initialize the DB
+    let db = Box::new(
+        db::RocksDbStore::new(db_path)
+            .map_err(|e| RuntimeError::Initialization(format!("Failed to open DB: {e}")))?,
+    );
+    let safe_state = db
+        .get_latest()
+        .await
+        .map_err(|e| RuntimeError::Initialization(format!("Failed to get latest state: {e}")))?;
+
     // Initialize components with their specific configs
-    let sequencing_config = ingestion_config.sequencing;
-    let settlement_config = ingestion_config.settlement;
+    let mut sequencing_config = ingestion_config.sequencing;
+    let mut settlement_config = ingestion_config.settlement;
+
+    // Override start blocks if we're resuming from a database
+    if let Some(safe_state) = &safe_state {
+        sequencing_config.sequencing_start_block = safe_state.sequencing_block.number;
+        settlement_config.settlement_start_block = safe_state.settlement_block.number;
+    }
 
     let (mut sequencing_ingestor, sequencer_rx) =
         Ingestor::new(sequencing_config.into()).await.map_err(|e| {
@@ -47,16 +67,13 @@ async fn run(
             ))
         })?;
 
-    //TODO race a shutdown timer with the component shutdown
-    // like so:
-    // let _ = tokio::time::timeout(std::time::Duration::from_secs(5), shutdown).await;
-
-    // TODO add db path
-    let slotter = Slotter::new(sequencer_rx, settlement_rx, slotting_config);
+    let slotter = Slotter::new(sequencer_rx, settlement_rx, slotting_config, safe_state, db)
+        .await
+        .map_err(|e| RuntimeError::Initialization(format!("Failed to create slotter: {e}")))?;
 
     // TODO(SEQ-515): refactor me to get the channel without starting the slotter already?
     // TODO(SEQ-515): slotter assumes that it starts first, or else it errors here
-    let slot_rx = slotter.await.start();
+    let (slot_rx, slotter_shutdown) = slotter.start();
 
     let block_builder = BlockBuilder::new(slot_rx, block_builder_config).await.map_err(|e| {
         RuntimeError::Initialization(format!("Failed to create block builder: {}", e))
@@ -82,7 +99,19 @@ async fn run(
     tokio::select! {
         // Wait for shutdown signal
         _ = &mut shutdown_rx => {
-            info!("Metabased Translator shutting down...");
+            // gracefully shutdown waits for 5 minutes before forcefully shutting down
+            let _ = tokio::time::timeout(std::time::Duration::from_secs(5*60), async {
+                // TODO complete this
+                info!("Metabased Translator shutting down...");
+                info!("Shutting down sequencing ingestor...");
+                // sequencing_ingestor.shutdown().await;
+                info!("Shutting down settlement ingestor...");
+                // settlement_ingestor.shutdown().await;
+                info!("Shutting down slotter...");
+                slotter_shutdown().await;
+                info!("Shutting down block builder...");
+                // block_builder.shutdown().await;
+            }).await;
         }
         // Watch for task completion/errors
         res = settlement_ingestor_handle => {
@@ -112,16 +141,22 @@ fn main() -> Result<(), RuntimeError> {
     // Parse base config from CLI/env
     let base_config = MetabasedConfig::parse();
 
+    // init the paths for the db and anvil state
+    let db_path = format!("{}/db", base_config.datadir);
+    let anvil_state_path = format!("{}/anvil_state", base_config.datadir);
+    let block_builder_config = BlockBuilderConfig { anvil_state_path, ..base_config.block_builder };
+
     // Create and run async runtime
     tokio::runtime::Runtime::new()
         .map_err(|e| RuntimeError::Initialization(e.to_string()))?
         .block_on(run(
-            base_config.block_builder,
+            block_builder_config,
             base_config.slotter,
             IngestionPipelineConfig {
                 sequencing: base_config.sequencing,
                 settlement: base_config.settlement,
             },
+            db_path.as_str(),
         ))?;
 
     Ok(())

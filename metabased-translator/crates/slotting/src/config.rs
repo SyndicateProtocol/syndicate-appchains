@@ -11,11 +11,6 @@ pub struct SlottingConfig {
     #[arg(long, env = "SLOTTER_SLOT_DURATION_MS", default_value_t = 2_000)]
     pub slot_duration_ms: u64,
 
-    // TODO remove, this should always be 0 at the start, and then taken from DB
-    /// The [`Slotter`] slot number to start from
-    #[arg(long, env = "SLOTTER_START_SLOT_NUMBER", default_value_t = 0)]
-    pub start_slot_number: u64,
-
     /// The timestamp of the [`Slotter`] slot to start from
     #[arg(long, env = "SLOTTER_START_SLOT_TIMESTAMP", default_value_t = 0)]
     pub start_slot_timestamp: u64,
@@ -33,12 +28,8 @@ impl SlottingConfig {
     }
 
     /// Creates a new [`SlottingConfig`] instance
-    pub fn new(
-        slot_duration_ms: u64,
-        start_slot_number: u64,
-        start_slot_timestamp: u64,
-    ) -> Result<Self, ConfigError> {
-        let config = Self { slot_duration_ms, start_slot_number, start_slot_timestamp };
+    pub fn new(slot_duration_ms: u64, start_slot_timestamp: u64) -> Result<Self, ConfigError> {
+        let config = Self { slot_duration_ms, start_slot_timestamp };
         config.validate()?;
         debug!("Created slotting config: {:?}", config);
         Ok(config)
@@ -54,8 +45,7 @@ pub enum ConfigError {
 
 impl Default for SlottingConfig {
     fn default() -> Self {
-        let config =
-            Self { slot_duration_ms: 2_000, start_slot_number: 0, start_slot_timestamp: 0 };
+        let config = Self { slot_duration_ms: 2_000, start_slot_timestamp: 0 };
         debug!("Created default SlottingConfig: {:?}", config);
         config
     }
@@ -69,7 +59,6 @@ mod config_tests {
     fn test_default_slotting_config() {
         let config = SlottingConfig::default();
         assert_eq!(config.slot_duration_ms, 2_000);
-        assert_eq!(config.start_slot_number, 0);
         assert_eq!(config.start_slot_timestamp, 0);
     }
 
@@ -77,32 +66,31 @@ mod config_tests {
     fn test_default_parsing() {
         let config = SlottingConfig::parse_from(["test"]);
         assert_eq!(config.slot_duration_ms, 2_000);
-        assert_eq!(config.start_slot_number, 0);
         assert_eq!(config.start_slot_timestamp, 0);
     }
 
     #[test]
     fn test_new_with_validation() {
         // Valid config
-        let result = SlottingConfig::new(2_000, 0, 0);
+        let result = SlottingConfig::new(2_000, 0);
         assert!(result.is_ok());
 
         // Invalid config
-        let result = SlottingConfig::new(0, 0, 0);
+        let result = SlottingConfig::new(0, 0);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_validation() {
         // Test zero duration
-        let result = SlottingConfig::new(0, 100, 1_000_000);
+        let result = SlottingConfig::new(0, 1_000_000);
         assert!(matches!(
             result.unwrap_err(),
             ConfigError::Invalid { message } if message.contains("duration")
         ));
 
         // Test valid config with non-zero values
-        let result = SlottingConfig::new(2_000, 100, 1_000_000);
+        let result = SlottingConfig::new(2_000, 1_000_000);
         assert!(result.is_ok());
     }
 }

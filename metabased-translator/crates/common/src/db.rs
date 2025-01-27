@@ -115,7 +115,7 @@ pub fn test_path() -> String {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::types::BlockAndReceipts;
+    use crate::types::{Block, BlockAndReceipts};
     use alloy::primitives::B256;
 
     fn create_test_block(number: u64) -> Block {
@@ -153,47 +153,3 @@ mod test {
         assert_eq!(latest.settlement_block, BlockRef::new(&settle_block));
     }
 }
-
-// In-memory implementation for testing ------------------------------------------
-
-// /// In-memory store for testing
-// #[derive(Debug)]
-// pub struct InMemoryStore<T> {
-//     slots: Mutex<BTreeMap<Vec<u8>, T>>,
-// }
-
-// impl<T> InMemoryStore<T> {
-//     pub const fn new() -> Self {
-//         Self {
-//             slots: Mutex::new(BTreeMap::new()),
-//         }
-//     }
-// }
-
-// impl<T> Default for InMemoryStore<T> {
-//     fn default() -> Self {
-//         Self::new()
-//     }
-// }
-
-// #[async_trait]
-// #[allow(clippy::unwrap_used)] // Safe to unwrap in test code
-// impl<T: Serialize + DeserializeOwned + Clone + Send + Sync> Store<T> for InMemoryStore<T> {
-//     async fn save(&self, key: &[u8], value: &T) -> Result<(), DbError> {
-//         self.slots
-//             .lock()
-//             .unwrap()
-//             .insert(key.to_vec(), value.clone());
-//         Ok(())
-//     }
-
-//     async fn get(&self, key: &[u8]) -> Result<Option<T>, DbError> {
-//         let slots = self.slots.lock().unwrap();
-//         Ok(slots.get(key).cloned())
-//     }
-
-//     async fn get_latest(&self) -> Result<Option<T>, DbError> {
-//         let slots = self.slots.lock().unwrap();
-//         Ok(slots.values().next_back().cloned())
-//     }
-// }

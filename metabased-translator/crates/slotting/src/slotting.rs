@@ -2,7 +2,7 @@
 
 use crate::config::SlottingConfig;
 use common::{
-    db::{DbError, TranslatorStore},
+    db::{DbError, SafeState, TranslatorStore},
     types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotState},
 };
 use derivative::Derivative;
@@ -83,48 +83,38 @@ impl Slotter {
         sequencing_chain_receiver: Receiver<BlockAndReceipts>,
         settlement_chain_receiver: Receiver<BlockAndReceipts>,
         config: SlottingConfig,
+        safe_state: Option<SafeState>,
         store: Box<dyn TranslatorStore + Send + Sync>,
     ) -> Result<Self, SlotterError> {
-        Ok(Self {
-            sequencing_chain_rx: sequencing_chain_receiver,
-            settlement_chain_rx: settlement_chain_receiver,
-            latest_sequencing_block: None,
-            latest_settlement_block: None,
-            slots: {
+        match safe_state {
+            Some(safe_state) => {
                 let mut slots = LinkedList::new();
-                slots.push_front(Slot::new(config.start_slot_number, config.start_slot_timestamp));
-                slots
-            },
-            max_slots: calculate_max_slots(config.slot_duration_ms),
-            config,
-            store,
-        })
-    }
-
-    pub async fn new_from_db(
-        sequencing_chain_receiver: Receiver<BlockAndReceipts>,
-        settlement_chain_receiver: Receiver<BlockAndReceipts>,
-        config: SlottingConfig,
-        store: Box<dyn TranslatorStore + Send + Sync>,
-    ) -> Result<Self, SlotterError> {
-        match store.get_latest().await? {
-            Some(latest) => {
-                let mut slots = LinkedList::new();
-                slots.push_front(latest.slot);
+                slots.push_front(safe_state.slot);
                 Ok(Self {
                     sequencing_chain_rx: sequencing_chain_receiver,
                     settlement_chain_rx: settlement_chain_receiver,
-                    latest_sequencing_block: Some(latest.sequencing_block),
-                    latest_settlement_block: Some(latest.settlement_block),
+                    latest_sequencing_block: Some(safe_state.sequencing_block),
+                    latest_settlement_block: Some(safe_state.settlement_block),
                     slots,
                     max_slots: calculate_max_slots(config.slot_duration_ms),
                     config,
                     store,
                 })
             }
-            None => {
-                Self::new(sequencing_chain_receiver, settlement_chain_receiver, config, store).await
-            }
+            None => Ok(Self {
+                sequencing_chain_rx: sequencing_chain_receiver,
+                settlement_chain_rx: settlement_chain_receiver,
+                latest_sequencing_block: None,
+                latest_settlement_block: None,
+                slots: {
+                    let mut slots = LinkedList::new();
+                    slots.push_front(Slot::new(0, config.start_slot_timestamp));
+                    slots
+                },
+                max_slots: calculate_max_slots(config.slot_duration_ms),
+                config,
+                store,
+            }),
         }
     }
 
@@ -495,11 +485,8 @@ mod tests {
         let slotter = Slotter::new(
             seq_rx,
             settle_rx,
-            SlottingConfig {
-                slot_duration_ms,
-                start_slot_number: 0,
-                start_slot_timestamp: slot_start_timestamp_ms,
-            },
+            SlottingConfig { slot_duration_ms, start_slot_timestamp: slot_start_timestamp_ms },
+            None,
             store,
         )
         .await
@@ -694,18 +681,15 @@ mod tests {
 
         let slot_start_timestamp_ms = 10_000;
         let slot_duration_ms = 1_000;
-        let config = SlottingConfig {
-            slot_duration_ms,
-            start_slot_number: 0,
-            start_slot_timestamp: slot_start_timestamp_ms,
-        };
+        let config =
+            SlottingConfig { slot_duration_ms, start_slot_timestamp: slot_start_timestamp_ms };
 
         // Create a fresh DB for this test
         let db_path = common::db::test_path();
         let store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
 
         // Start first slotter instance
-        let slotter = Slotter::new(seq_rx, set_rx, config.clone(), store).await.unwrap();
+        let slotter = Slotter::new(seq_rx, set_rx, config.clone(), None, store).await.unwrap();
         let (mut slot_rx, shutdown) = slotter.start();
 
         // Send some blocks
@@ -749,12 +733,15 @@ mod tests {
         let (new_seq_tx, new_seq_rx) = channel(CHAN_CAPACITY);
         let (new_set_tx, new_settle_rx) = channel(CHAN_CAPACITY);
 
-        // Create new store instance pointing to same DB
+        // Create new store instance pointing to same DB, and get the latest state from the DB
         let resumed_store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
+        let resumed_state = resumed_store.get_latest().await.unwrap();
 
         // Create new slotter that should resume from DB
         let resumed_slotter =
-            Slotter::new_from_db(new_seq_rx, new_settle_rx, config, resumed_store).await.unwrap();
+            Slotter::new(new_seq_rx, new_settle_rx, config, resumed_state, resumed_store)
+                .await
+                .unwrap();
 
         let (mut resumed_slot_rx, _shutdown) = resumed_slotter.start();
 

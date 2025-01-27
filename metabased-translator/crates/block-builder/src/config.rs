@@ -44,6 +44,15 @@ pub struct BlockBuilderConfig {
     /// Target rollup type for the [`block-builder`]
     #[arg(long, env = "BLOCK_BUILDER_TARGET_ROLLUP", default_value = "arbitrum")]
     pub target_rollup_type: TargetRollupType,
+
+    #[arg(long, env = "BLOCK_BUILDER_ANVIL_STATE_PATH", default_value = "")]
+    pub anvil_state_path: String,
+
+    #[arg(long, env = "BLOCK_BUILDER_ANVIL_STATE_INTERVAL", default_value_t = 1)]
+    pub anvil_state_interval: u64,
+
+    #[arg(long, env = "BLOCK_BUILDER_ANVIL_PRUNE_HISTORY", default_value_t = 50)]
+    pub anvil_prune_history: u64,
 }
 
 /// Possible target rollup types for the [`block-builder`]
@@ -93,6 +102,9 @@ impl Default for BlockBuilderConfig {
             .unwrap_or_else(|err| {
                 panic!("Failed to parse default address: {}", err);
             }),
+            anvil_state_path: "./anvil_state".to_string(),
+            anvil_state_interval: 1,
+            anvil_prune_history: 50,
         }
     }
 }
@@ -130,6 +142,12 @@ impl BlockBuilderConfig {
             return Err(ConfigError::InvalidChainId("Chain ID cannot be 0".to_string()));
         }
 
+        if self.anvil_state_path.is_empty() {
+            return Err(ConfigError::InvalidAnvilStatePath(
+                "Anvil state path cannot be empty".to_string(),
+            ));
+        }
+
         Ok(())
     }
 }
@@ -142,6 +160,8 @@ pub enum ConfigError {
     InvalidPort(String),
     #[error("Invalid chain ID: {0}")]
     InvalidChainId(String),
+    #[error("Invalid anvil state path: {0}")]
+    InvalidAnvilStatePath(String),
 }
 
 #[cfg(test)]
