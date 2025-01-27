@@ -12,7 +12,7 @@ repository.workspace = true
 alloy = { workspace = true, features = ["providers"] }
 common = { workspace = true }
 eyre = { workspace = true }
-tokio = { workspace = true, features = ["sync", "time", "rt-multi-thread"] }
+tokio = { workspace = true, features = ["sync", "time", "rt-multi-thread", "signal"] }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 tracing-subscriber = { workspace = true }
