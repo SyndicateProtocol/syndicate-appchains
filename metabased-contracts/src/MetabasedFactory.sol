@@ -64,7 +64,11 @@ contract MetabasedFactory {
     /// @param manager The address that will be the manager role
     /// @param l3ChainId The L3 chain ID
     /// @return The address of the newly created MetafillerStorage contract
-    function createMetafillerStorage(address admin, address manager, uint256 l3ChainId) public  zeroValuesNotAllowed(l3ChainId, admin, manager) returns (address) {
+    function createMetafillerStorage(address admin, address manager, uint256 l3ChainId)
+        public
+        zeroValuesNotAllowed(l3ChainId, admin, manager)
+        returns (address)
+    {
         MetafillerStorage newMetafillerStorage = new MetafillerStorage(admin, manager, l3ChainId);
         emit MetafillerStorageCreated(l3ChainId, address(newMetafillerStorage));
         return address(newMetafillerStorage);
