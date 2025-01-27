@@ -3,7 +3,6 @@
 use crate::config::SlottingConfig;
 use common::{
     db::{DbError, TranslatorStore},
-    service_status::{ServiceStatus, Status},
     types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotState},
 };
 use derivative::Derivative;
@@ -46,8 +45,6 @@ pub struct Slotter {
 
     latest_sequencing_block: Option<BlockRef>,
     latest_settlement_block: Option<BlockRef>,
-
-    status: ServiceStatus, // TODO this can be removed
 
     /// Stores the last N slots (both open and closed)
     slots: LinkedList<Slot>,
@@ -93,7 +90,6 @@ impl Slotter {
             settlement_chain_rx: settlement_chain_receiver,
             latest_sequencing_block: None,
             latest_settlement_block: None,
-            status: ServiceStatus::new(),
             slots: {
                 let mut slots = LinkedList::new();
                 slots.push_front(Slot::new(config.start_slot_number, config.start_slot_timestamp));
@@ -120,7 +116,6 @@ impl Slotter {
                     settlement_chain_rx: settlement_chain_receiver,
                     latest_sequencing_block: Some(latest.sequencing_block),
                     latest_settlement_block: Some(latest.settlement_block),
-                    status: ServiceStatus::new(),
                     slots,
                     max_slots: calculate_max_slots(config.slot_duration_ms),
                     config,
@@ -149,7 +144,6 @@ impl Slotter {
     pub fn start(
         mut self,
     ) -> (Receiver<Slot>, impl FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>>) {
-        self.status.store(Status::Started);
         let (slot_tx, slot_rx) = channel(100);
         let (shutdown_tx, mut shutdown_rx) = oneshot::channel();
 

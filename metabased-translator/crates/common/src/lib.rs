@@ -2,6 +2,5 @@
 
 pub mod compression;
 pub mod db;
-pub mod service_status;
 pub mod tracing;
 pub mod types;
