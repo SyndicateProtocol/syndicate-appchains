@@ -7,9 +7,9 @@ import {RequireAllModule} from "./requirement-modules/RequireAllModule.sol";
 import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
 
-/// @title MetabasedFactory // Sample change TODO: remove 
+/// @title MetabasedFactory
 /// @notice Factory contract for creating MetabasedSequencerChain and related contracts
-contract MetabasedFactory {
+contract MetabasedFactory { // TODO: Sample change, remove after PR
     /// @notice Emitted when a new MetabasedSequencerChain is created
     event MetabasedSequencerChainCreated(
         uint256 indexed l3ChainId,

@@ -29,7 +29,7 @@ jobs:
           args: -f tree --no-incomplete-constructor-tests --no-unfuzzed-local-variables --no-insufficient-parameter-assertion --no-no-parameter-validation-in-constructor --no-unfuzzed-variables --no-missing-revert-reason-tests --no-call-without-gas-budget --no-signature-replay-attacks --no-uninitialized-state-variable --no-unused-return-function-call
       - name: Fail on any bugs found
         run: |
-          total_bugs=$(grep -oP 'Total bugs found: \K[0-9]+' ${{ steps.olympix-integrated-security.outputs.stdout }} || echo 0)
+          total_bugs=$(grep -oP 'Total bugs found: \K[0-9]+' <<< ${{ steps.olympix-integrated-security.outputs.stdout }} || echo 0)
           
           # Fail the job if any bugs are found
           if [ "$total_bugs" -gt 0 ]; then
