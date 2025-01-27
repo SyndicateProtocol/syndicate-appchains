@@ -617,13 +617,12 @@ mod tests {
 
         let block = create_test_block(2, 200);
 
-        slotter.latest_sequencing_chain_block =
-            Some(BlockRef::new(&create_test_block(1, 100).block));
+        slotter.latest_sequencing_block = Some(BlockRef::new(&create_test_block(1, 100).block));
 
         let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
 
         assert!(result.is_ok());
-        assert_eq!(slotter.latest_sequencing_chain_block.unwrap().number, 2);
+        assert_eq!(slotter.latest_sequencing_block.unwrap().number, 2);
     }
 
     #[tokio::test]
@@ -634,13 +633,12 @@ mod tests {
 
         let block = create_test_block(3, 300);
 
-        slotter.latest_settlement_chain_block =
-            Some(BlockRef::new(&create_test_block(2, 200).block));
+        slotter.latest_settlement_block = Some(BlockRef::new(&create_test_block(2, 200).block));
 
         let result = slotter.update_latest_block(&block.block, Chain::Settlement);
 
         assert!(result.is_ok());
-        assert_eq!(slotter.latest_settlement_chain_block.unwrap().number, 3);
+        assert_eq!(slotter.latest_settlement_block.unwrap().number, 3);
     }
 
     #[tokio::test]
@@ -651,8 +649,7 @@ mod tests {
 
         let block = create_test_block(1, 50);
 
-        slotter.latest_sequencing_chain_block =
-            Some(BlockRef::new(&create_test_block(2, 10_001).block));
+        slotter.latest_sequencing_block = Some(BlockRef::new(&create_test_block(2, 10_001).block));
 
         let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
 
@@ -667,8 +664,7 @@ mod tests {
 
         let block = create_test_block(4, 400);
 
-        slotter.latest_settlement_chain_block =
-            Some(BlockRef::new(&create_test_block(2, 200).block));
+        slotter.latest_settlement_block = Some(BlockRef::new(&create_test_block(2, 200).block));
 
         let result = slotter.update_latest_block(&block.block, Chain::Settlement);
 
@@ -683,11 +679,88 @@ mod tests {
 
         let block = create_test_block(2, 50);
 
-        slotter.latest_sequencing_chain_block =
-            Some(BlockRef::new(&create_test_block(1, 100).block));
+        slotter.latest_sequencing_block = Some(BlockRef::new(&create_test_block(1, 100).block));
 
         let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
 
         assert!(matches!(result, Err(SlotterError::EarlierTimestamp { .. })));
+    }
+    #[tracing_test::traced_test]
+    async fn test_slotter_db_shutdown_and_resume() {
+        let (seq_tx, seq_rx) = channel(100);
+        let (settle_tx, settle_rx) = channel(100);
+
+        let slot_start_timestamp_ms = 10_000;
+        let slot_duration_ms = 1_000;
+        let config = SlottingConfig {
+            slot_duration_ms,
+            start_slot_number: 0,
+            start_slot_timestamp: slot_start_timestamp_ms,
+        };
+
+        // Create a fresh DB for this test
+        let db_path = common::db::test_path();
+        let store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
+
+        // Start first slotter instance
+        let mut slotter = Slotter::new(seq_rx, settle_rx, config.clone(), store).await.unwrap();
+        let mut slot_rx = slotter.start();
+
+        // Send some blocks
+        // slot 1
+        seq_tx.send(create_test_block(1, 10_001)).await.unwrap();
+        settle_tx.send(create_test_block(1, 10_002)).await.unwrap();
+
+        // slot 2
+        seq_tx.send(create_test_block(2, 11_001)).await.unwrap();
+        settle_tx.send(create_test_block(2, 11_002)).await.unwrap();
+
+        // This should make slot 0 and 1 unsafe
+        let slot0 = slot_rx.recv().await.unwrap();
+        assert_eq!(slot0.number, 0);
+        assert_eq!(slot0.sequencing_chain_blocks.len(), 0);
+        assert_eq!(slot0.settlement_chain_blocks.len(), 0);
+        assert_eq!(slot0.state, SlotState::Unsafe);
+
+        let slot1 = slot_rx.recv().await.unwrap();
+        assert_eq!(slot1.number, 1);
+        assert_eq!(slot1.sequencing_chain_blocks.len(), 1);
+        assert_eq!(slot1.settlement_chain_blocks.len(), 1);
+        assert_eq!(slot1.state, SlotState::Unsafe);
+
+        // Send blocks that are MAX_WAIT_MS (24 hours) ahead of slot 1's timestamp (10_000), this should make slot 1 safe
+        settle_tx.send(create_test_block(2, slot1.timestamp + MAX_WAIT_MS)).await.unwrap();
+        seq_tx.send(create_test_block(2, slot1.timestamp + MAX_WAIT_MS)).await.unwrap();
+        seq_tx.send(create_test_block(3, slot1.timestamp + MAX_WAIT_MS + 1)).await.unwrap();
+
+        // TODO shutdown slotter .........
+        panic!("TODO");
+
+        // shutdown slotter
+        assert!(slot_rx.is_closed());
+
+        // Create new channels for the resumed slotter
+        let (new_seq_tx, new_seq_rx) = channel(100);
+        let (new_settle_tx, new_settle_rx) = channel(100);
+
+        // Create new store instance pointing to same DB
+        let resumed_store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
+
+        // Create new slotter that should resume from DB
+        let resumed_slotter =
+            Slotter::new_from_db(new_seq_rx, new_settle_rx, config, resumed_store).await.unwrap();
+
+        let mut resumed_slot_rx = resumed_slotter.start();
+
+        // Send new blocks to resumed slotter
+        new_seq_tx.send(create_test_block(4, 12_001)).await.unwrap();
+        new_settle_tx.send(create_test_block(3, 12_002)).await.unwrap();
+
+        // Should get slot 2 marked as unsafe
+        let slot2 = resumed_slot_rx.recv().await.unwrap();
+        assert_eq!(slot2.number, 2);
+        assert_eq!(slot2.state, SlotState::Unsafe);
+        assert_eq!(slot2.sequencing_chain_blocks.len(), 1); // Block #3
+        assert_eq!(slot2.settlement_chain_blocks.len(), 0);
     }
 }

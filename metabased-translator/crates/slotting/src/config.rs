@@ -11,6 +11,7 @@ pub struct SlottingConfig {
     #[arg(long, env = "SLOTTER_SLOT_DURATION_MS", default_value_t = 2_000)]
     pub slot_duration_ms: u64,
 
+    // TODO remove, this should always be 0 at the start, and then taken from DB
     /// The [`Slotter`] slot number to start from
     #[arg(long, env = "SLOTTER_START_SLOT_NUMBER", default_value_t = 0)]
     pub start_slot_number: u64,

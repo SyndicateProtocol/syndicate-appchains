@@ -25,6 +25,9 @@ use reqwest::Client;
 use std::net::TcpListener;
 use tracing::info;
 
+/// Private key used for signing in the MetaChain provider
+const PRIVATE_KEY: &str = "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d";
+
 type FilledProvider = FillProvider<
     JoinFill<
         JoinFill<
@@ -232,6 +235,48 @@ impl MetaChainProvider {
         tx.await?;
         Ok(())
     }
+
+    /// Starts the Anvil instance with state persistence and creates a provider for the `MetaChain`
+    pub async fn start_with_state_persistence(
+        config: BlockBuilderConfig,
+        state_path: &str,
+    ) -> eyre::Result<Self> {
+        let port = find_available_port(config.port, 10).ok_or_else(|| {
+            BlockBuilderError::AnvilStartError("No available ports found after 10 attempts")
+        })?;
+
+        if port != config.port {
+            info!("Port {} is in use, switching to port {}", config.port, port);
+        }
+
+        let ts = config.genesis_timestamp.to_string();
+        let args = vec![
+            "--base-fee",
+            "0",
+            "--gas-limit",
+            "30000000",
+            "--timestamp",
+            ts.as_str(),
+            "--no-mining",
+            "--state",
+            state_path,
+            "--state-interval",
+            "1",
+        ];
+
+        let anvil = Anvil::new().port(port).chain_id(config.chain_id).args(args).try_spawn()?;
+
+        let signer: PrivateKeySigner = PRIVATE_KEY
+            .parse()
+            .map_err(|_| BlockBuilderError::AnvilStartError("Failed to parse private key"))?;
+
+        let provider = ProviderBuilder::new()
+            .with_recommended_fillers()
+            .wallet(EthereumWallet::from(signer))
+            .on_http(anvil.endpoint_url());
+
+        Ok(Self { anvil, provider })
+    }
 }
 
 /// Check if a port is available by attempting to bind to it
@@ -257,8 +302,13 @@ pub fn find_available_port(base_port: u16, max_attempts: u16) -> Option<u16> {
 
 #[cfg(test)]
 mod tests {
+    use alloy::eips::BlockId;
+    use alloy::rpc::types::BlockTransactionsKind;
+
     use super::*;
     use std::env::temp_dir;
+    use std::fs;
+    use std::path::PathBuf;
 
     #[tokio::test]
     async fn test_port_availability_checking() -> Result<()> {
@@ -302,6 +352,64 @@ mod tests {
         provider = MetaChainProvider::start(cfg).await?;
         let new_count = provider.provider.get_block_number().await?;
         assert_eq!(old_count, new_count);
+        Ok(())
+    }
+
+    // TODO continue here, this is pretty broken lol
+    #[tokio::test]
+    async fn test_block_persistence() -> eyre::Result<()> {
+        let state_path = PathBuf::from("test-state.json");
+        if state_path.exists() {
+            fs::remove_file(&state_path)?;
+        }
+
+        let config = BlockBuilderConfig {
+            port: 8545,
+            chain_id: 31337,
+            genesis_timestamp: 0,
+            sequencing_contract_address: "0x0000000000000000000000000000000000000000".parse()?,
+        };
+
+        // First instance: create blocks
+        {
+            let provider = MetaChainProvider::start_with_state_persistence(
+                config.clone(),
+                state_path.to_str().unwrap(),
+            )
+            .await?;
+
+            // Mine 1000 blocks
+            for i in 0..1000 {
+                provider.mine_block(i).await?;
+            }
+
+            // Let anvil write state before dropping
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        } // First instance is dropped here
+
+        // Second instance: verify blocks
+        let provider =
+            MetaChainProvider::start_with_state_persistence(config, state_path.to_str().unwrap())
+                .await?;
+
+        // Check a few random blocks are accessible
+        for block_num in [0, 42, 567, 999, 1000] {
+            let block = provider
+                .provider
+                .get_block(BlockId::Number(block_num.into()), BlockTransactionsKind::Full)
+                .await?;
+            assert!(block.is_some(), "Block {} should be available", block_num);
+            assert_eq!(
+                block.unwrap().header.number,
+                block_num,
+                "Block number mismatch for block {}",
+                block_num
+            );
+        }
+
+        // Cleanup
+        fs::remove_file(state_path)?;
+
         Ok(())
     }
 }
