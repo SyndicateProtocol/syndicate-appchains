@@ -121,7 +121,7 @@ impl MetaChainProvider {
         Ok(Self { anvil, provider, rollup, rollup_info })
     }
 
-    /// Submits a transaction to the `MetaChain`
+    /// Submits a list of transactions to the `MetaChain`
     pub async fn submit_txns(&self, txns: Vec<TransactionRequest>) -> eyre::Result<()> {
         for txn in txns {
             let _ = self

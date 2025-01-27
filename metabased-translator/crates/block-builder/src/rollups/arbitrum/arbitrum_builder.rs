@@ -59,7 +59,6 @@ impl Default for ArbitrumBlockBuilder {
             transaction_parser: SequencingTransactionParser::new(address!(
                 "0xEF741D37485126A379Bfa32b6b260d85a0F00380"
             )),
-
             mchain_rollup_address: address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"),
             delayed_inbox: address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"),
             delayed_message_count: 0,
@@ -80,13 +79,13 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
     ) -> Result<Vec<TransactionRequest>, eyre::Error> {
         let delayed_messages = self.process_delayed_messages(slot.settlement_chain_blocks).await?;
 
-        let mbtxs = self.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
+        let mb_transactions = self.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
 
-        let batch_txn = self.build_batch_txn(mbtxs).await?;
+        let batch_transaction = self.build_batch_txn(mb_transactions).await?;
 
         let mut result: Vec<TransactionRequest> = Vec::new();
         result.extend(delayed_messages);
-        result.push(batch_txn);
+        result.push(batch_transaction);
         Ok(result)
     }
 }
@@ -188,14 +187,14 @@ impl ArbitrumBlockBuilder {
                 }
             };
 
-            let delivered_msg_tx =
+            let delivered_msg_txn =
                 TransactionRequest::default().to(self.mchain_rollup_address).input(
                     IRollup::deliverMessageCall { kind, sender, messageData: data.clone() }
                         .abi_encode()
                         .into(),
                 );
 
-            delayed_msg_txns.push(delivered_msg_tx);
+            delayed_msg_txns.push(delivered_msg_txn);
         }
 
         // Update the delayed message count
@@ -239,6 +238,7 @@ mod tests {
     use super::*;
     use alloy::primitives::{hex, keccak256, TxKind};
     use common::types::{Block, Log, Receipt, SlotState, Transaction};
+    use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain::TransactionProcessed;
     use std::str::FromStr;
 
     #[test]
@@ -324,8 +324,8 @@ mod tests {
         assert_eq!(txns.len(), 1); // Should contain just the batch transaction
 
         // Verify the batch transaction
-        let batch_tx = &txns[0];
-        assert_eq!(batch_tx.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+        let batch_txn = &txns[0];
+        assert_eq!(batch_txn.to, Some(TxKind::Call(builder.mchain_rollup_address)));
     }
 
     fn create_mock_log(
@@ -422,22 +422,29 @@ mod tests {
         let mut builder = builder;
 
         // Create a mock L2 transaction
-        let tx_data: Bytes = hex!("1234").into();
-        let block = Block {
-            number: 1,
-            transactions: vec![Transaction {
-                input: tx_data.clone().to_string(),
-                ..Default::default()
-            }],
-            ..Default::default()
-        };
+        let txn_data: Bytes = hex!("001234").into();
+        let txn_processed_event =
+            TransactionProcessed { sender: Address::ZERO, data: txn_data.clone() };
+
+        let txn_processed_log = create_mock_log(
+            builder.transaction_parser.sequencing_contract_address,
+            vec![TransactionProcessed::SIGNATURE_HASH, Address::ZERO.into_word()],
+            txn_processed_event.encode_data().into(),
+            1,
+            0,
+        );
+        let block =
+            Block { number: 1, transactions: vec![Transaction::default()], ..Default::default() };
 
         let slot = Slot {
             slot_number: 1,
             timestamp: 0,
             state: SlotState::Safe,
             settlement_chain_blocks: vec![],
-            sequencing_chain_blocks: vec![BlockAndReceipts { block, receipts: vec![] }],
+            sequencing_chain_blocks: vec![BlockAndReceipts {
+                block,
+                receipts: vec![Receipt { logs: vec![txn_processed_log], ..Default::default() }],
+            }],
         };
 
         let result = builder.build_block_from_slot(slot).await;
@@ -447,8 +454,17 @@ mod tests {
         assert_eq!(txns.len(), 1);
 
         // Verify the batch transaction contains our tx data
-        let batch_tx = &txns[0];
-        assert_eq!(batch_tx.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+        let batch_txn = &txns[0];
+        assert_eq!(batch_txn.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+        let txn_data_without_prefix = txn_data[1..].to_vec();
+        let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
+            header: Default::default(),
+            l2_msg: vec![txn_data_without_prefix.into()],
+        })]);
+        let expected_encoded = expected_batch.encode().unwrap();
+        let expected_batch_call =
+            IRollup::postBatchCall::new((U256::from(0), expected_encoded)).abi_encode().into();
+        assert_eq!(batch_txn.input, expected_batch_call);
     }
 
     #[tokio::test]
@@ -457,15 +473,21 @@ mod tests {
         let mut builder = builder;
 
         // Create a mock L2 transaction
-        let tx_data: Bytes = hex!("1234").into();
-        let sequencing_block = Block {
-            number: 1,
-            transactions: vec![Transaction {
-                input: tx_data.clone().to_string(),
-                ..Default::default()
-            }],
-            ..Default::default()
-        };
+        let txn_data: Bytes = hex!("001234").into();
+        let txn_processed_event =
+            TransactionProcessed { sender: Address::ZERO, data: txn_data.clone() };
+
+        let txn_processed_log = create_mock_log(
+            builder.transaction_parser.sequencing_contract_address,
+            vec![TransactionProcessed::SIGNATURE_HASH, Address::ZERO.into_word()],
+            txn_processed_event.encode_data().into(),
+            1,
+            0,
+        );
+
+        let sequencing_receipt = Receipt { logs: vec![txn_processed_log], ..Default::default() };
+        let sequencing_block =
+            Block { number: 1, transactions: vec![Transaction::default()], ..Default::default() };
 
         // Create mock delayed message logs
         let message_num = U256::from(1);
@@ -517,7 +539,7 @@ mod tests {
             }],
             sequencing_chain_blocks: vec![BlockAndReceipts {
                 block: sequencing_block,
-                receipts: vec![],
+                receipts: vec![sequencing_receipt],
             }],
         };
 
@@ -540,15 +562,16 @@ mod tests {
         assert_eq!(delayed_tx.input, expected_delayed_call);
 
         // Verify the batch transaction contains our sequencing tx data
-        let batch_tx = &txns[1];
-        assert_eq!(batch_tx.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+        let batch_txn = &txns[1];
+        let txn_data_without_prefix = txn_data[1..].to_vec();
+        assert_eq!(batch_txn.to, Some(TxKind::Call(builder.mchain_rollup_address)));
         let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
             header: Default::default(),
-            l2_msg: vec![tx_data],
+            l2_msg: vec![txn_data_without_prefix.into()],
         })]);
         let expected_encoded = expected_batch.encode().unwrap();
-        let _expected_batch_call =
-            IRollup::postBatchCall::new((U256::from(0), expected_encoded)).abi_encode();
-        // assert_eq!(batch_tx.input.data.unwrap(), expected_batch_call);
+        let expected_batch_call =
+            IRollup::postBatchCall::new((U256::from(1), expected_encoded)).abi_encode().into();
+        assert_eq!(batch_txn.input, expected_batch_call);
     }
 }
