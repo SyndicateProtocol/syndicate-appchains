@@ -47,6 +47,11 @@ async fn run(
             ))
         })?;
 
+    //TODO race a shutdown timer with the component shutdown
+    // like so:
+    // let _ = tokio::time::timeout(std::time::Duration::from_secs(5), shutdown).await;
+
+    // TODO add db path
     let slotter = Slotter::new(sequencer_rx, settlement_rx, slotting_config);
 
     // TODO(SEQ-515): refactor me to get the channel without starting the slotter already?

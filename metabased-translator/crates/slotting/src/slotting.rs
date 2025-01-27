@@ -7,11 +7,14 @@ use common::{
     types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotState},
 };
 use derivative::Derivative;
+use std::future::Future;
+use std::pin::Pin;
 use std::{cmp::Ordering, collections::LinkedList};
 use thiserror::Error;
 use tokio::{
     select,
     sync::mpsc::{channel, error::SendError, Receiver, Sender},
+    sync::oneshot,
 };
 use tracing::{debug, error, info};
 
@@ -139,31 +142,31 @@ impl Slotter {
     ///    passed)
     /// 4. Send completed slots through the returned channel
     ///
-    /// # Returns a receiver that will get slots as they are processed.
-    /// TODO SEQ-480 - implement restore from DB
-    pub fn start(mut self) -> Receiver<Slot> {
+    /// # Returns
+    /// - A tuple containing:
+    ///   - A receiver that will get slots as they are processed
+    ///   - A shutdown function that can be called to stop the slotter
+    pub fn start(
+        mut self,
+    ) -> (Receiver<Slot>, impl FnOnce() -> Pin<Box<dyn Future<Output = ()> + Send>>) {
         self.status.store(Status::Started);
-        let (sender, receiver) = channel(100); // TODO SEQ-490 - channel size shouldn't be hardcoded here
-        info!("Starting Slotter");
-        tokio::spawn(async move {
-            loop {
-                if self.status.load() == Status::Stopped {
-                    // TODO SEQ-479 - graceful shutdown triggered
-                    // - stop processing new blocks
-                    // - go through the slots and save all safe slots to the DB (timestamp <
-                    //   current_time - MAX_WAIT_MS)
-                    // - potentially save all unsafe/opened blocks to the DB, so they can be resumed
-                    //   later
-                    info!("Slotter stopped");
-                    return;
-                }
+        let (slot_tx, slot_rx) = channel(100);
+        let (shutdown_tx, mut shutdown_rx) = oneshot::channel();
 
+        info!("Starting Slotter");
+        let handle = tokio::spawn(async move {
+            loop {
                 let process_result = select! {
+                    _ = &mut shutdown_rx => {
+                        info!("Slotter stopped");
+                        drop(slot_tx); // Ensure channel is closed
+                        return;
+                    }
                     Some(block) = self.sequencing_chain_rx.recv() => {
                         self.process_block(
                             block,
                             Chain::Sequencing,
-                            &sender,
+                            &slot_tx,
                             self.config.slot_duration_ms,
                         )
                         .await
@@ -172,7 +175,7 @@ impl Slotter {
                         self.process_block(
                             block,
                             Chain::Settlement,
-                            &sender,
+                            &slot_tx,
                             self.config.slot_duration_ms,
                         )
                         .await
@@ -207,17 +210,15 @@ impl Slotter {
                 }
             }
         });
-        receiver
-    }
 
-    /// Stops the [`Slotter`] thread.
-    ///
-    /// Note: Currently performs a hard stop. Future implementations will:
-    /// - Wait for thread to complete
-    /// - Write info to DB, so it can be resumed later
-    pub fn stop(&mut self) {
-        info!("Stopping Slotter");
-        self.status.store(Status::Stopped);
+        let shutdown = move || {
+            Box::pin(async move {
+                let _ = shutdown_tx.send(());
+                let _ = handle.await;
+            }) as Pin<Box<dyn Future<Output = ()> + Send>>
+        };
+
+        (slot_rx, shutdown)
     }
 
     /// Marks slots as unsafe when both chains have progressed past them.
@@ -265,7 +266,7 @@ impl Slotter {
                 if slot.timestamp < min_timestamp && slot.state == SlotState::Open {
                     info!(%slot, "Marking slot as unsafe");
                     slot.state = SlotState::Unsafe;
-                    sender.send(slot.clone()).await?
+                    sender.send(slot.clone()).await?;
                 }
             }
         }
@@ -563,7 +564,7 @@ mod tests {
         let slot_duration_ms = 1_000;
         let (slotter, seq_tx, set_tx) =
             create_slotter(slot_start_timestamp_ms, slot_duration_ms).await;
-        let mut slot_rx = slotter.start();
+        let mut slot_rx = slotter.start().0;
         assert!(slot_rx.is_empty());
 
         // send initial blocks, these should fit in slot 1 and make slot 0 be marked as unsafe
@@ -685,10 +686,13 @@ mod tests {
 
         assert!(matches!(result, Err(SlotterError::EarlierTimestamp { .. })));
     }
+
+    #[tokio::test]
     #[tracing_test::traced_test]
     async fn test_slotter_db_shutdown_and_resume() {
-        let (seq_tx, seq_rx) = channel(100);
-        let (settle_tx, settle_rx) = channel(100);
+        const CHAN_CAPACITY: usize = 100;
+        let (seq_tx, seq_rx) = channel(CHAN_CAPACITY);
+        let (set_tx, set_rx) = channel(CHAN_CAPACITY);
 
         let slot_start_timestamp_ms = 10_000;
         let slot_duration_ms = 1_000;
@@ -703,17 +707,17 @@ mod tests {
         let store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
 
         // Start first slotter instance
-        let mut slotter = Slotter::new(seq_rx, settle_rx, config.clone(), store).await.unwrap();
-        let mut slot_rx = slotter.start();
+        let slotter = Slotter::new(seq_rx, set_rx, config.clone(), store).await.unwrap();
+        let (mut slot_rx, shutdown) = slotter.start();
 
         // Send some blocks
         // slot 1
         seq_tx.send(create_test_block(1, 10_001)).await.unwrap();
-        settle_tx.send(create_test_block(1, 10_002)).await.unwrap();
+        set_tx.send(create_test_block(1, 10_002)).await.unwrap();
 
         // slot 2
         seq_tx.send(create_test_block(2, 11_001)).await.unwrap();
-        settle_tx.send(create_test_block(2, 11_002)).await.unwrap();
+        set_tx.send(create_test_block(2, 11_002)).await.unwrap();
 
         // This should make slot 0 and 1 unsafe
         let slot0 = slot_rx.recv().await.unwrap();
@@ -729,19 +733,18 @@ mod tests {
         assert_eq!(slot1.state, SlotState::Unsafe);
 
         // Send blocks that are MAX_WAIT_MS (24 hours) ahead of slot 1's timestamp (10_000), this should make slot 1 safe
-        settle_tx.send(create_test_block(2, slot1.timestamp + MAX_WAIT_MS)).await.unwrap();
-        seq_tx.send(create_test_block(2, slot1.timestamp + MAX_WAIT_MS)).await.unwrap();
+        set_tx.send(create_test_block(3, slot1.timestamp + MAX_WAIT_MS)).await.unwrap();
         seq_tx.send(create_test_block(3, slot1.timestamp + MAX_WAIT_MS + 1)).await.unwrap();
 
-        // TODO shutdown slotter .........
-        panic!("TODO");
+        // wait a bit to make sure the slotter has picked up the blocks
+        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
 
         // shutdown slotter
-        assert!(slot_rx.is_closed());
+        shutdown().await;
 
         // Create new channels for the resumed slotter
-        let (new_seq_tx, new_seq_rx) = channel(100);
-        let (new_settle_tx, new_settle_rx) = channel(100);
+        let (new_seq_tx, new_seq_rx) = channel(CHAN_CAPACITY);
+        let (new_settle_tx, new_settle_rx) = channel(CHAN_CAPACITY);
 
         // Create new store instance pointing to same DB
         let resumed_store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
@@ -750,7 +753,7 @@ mod tests {
         let resumed_slotter =
             Slotter::new_from_db(new_seq_rx, new_settle_rx, config, resumed_store).await.unwrap();
 
-        let mut resumed_slot_rx = resumed_slotter.start();
+        let mut resumed_slot_rx = resumed_slotter.start().0;
 
         // Send new blocks to resumed slotter
         new_seq_tx.send(create_test_block(4, 12_001)).await.unwrap();
