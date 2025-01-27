@@ -25,9 +25,4 @@ jobs:
         env:
           OLYMPIX_API_TOKEN: ${{ secrets.OLYMPIX_API_TOKEN }}
         with:
-          args: --no-incomplete-constructor-tests --no-unfuzzed-local-variables --no-insufficient-parameter-assertion --no-no-parameter-validation-in-constructor --no-unfuzzed-variables --no-missing-revert-reason-tests --no-call-without-gas-budget --no-signature-replay-attacks --no-uninitialized-state-variable --no-unused-return-function-call
-      # Requires GitHub Advanced Security
-      - name: Upload result to GitHub Code Scanning
-        uses: github/codeql-action/upload-sarif@v3
-        with:
-          sarif_file: olympix.sarif
+          args: -f tree --no-incomplete-constructor-tests --no-unfuzzed-local-variables --no-insufficient-parameter-assertion --no-no-parameter-validation-in-constructor --no-unfuzzed-variables --no-missing-revert-reason-tests --no-call-without-gas-budget --no-signature-replay-attacks --no-uninitialized-state-variable --no-unused-return-function-call
