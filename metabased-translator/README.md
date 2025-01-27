@@ -21,6 +21,6 @@ RUST_LOG=info cargo run -p block-builder -- --port 9000 --chain-id 12345 --genes
 
 Run
 ```
-make print-sample-command
+cargo make print-sample-command
 ```
 to see the CLI options needed to run the binary executable, which utilizes the `ingestor`, `slotter`, and `block-builder` crates
