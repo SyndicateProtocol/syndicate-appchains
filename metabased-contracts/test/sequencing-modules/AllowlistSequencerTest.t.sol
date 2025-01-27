@@ -18,6 +18,8 @@ contract AllowlistSequencingModuleTest is Test {
 
     function testAdminCanAddToAllowlist() public {
         vm.startPrank(admin);
+        vm.expectEmit(true, false, false, false);
+        emit AllowlistSequencingModule.UserAdded(user1);
         allowlistSequencer.addToAllowlist(user1);
         assertTrue(allowlistSequencer.allowlist(user1));
         vm.stopPrank();
@@ -26,6 +28,8 @@ contract AllowlistSequencingModuleTest is Test {
     function testAdminCanRemoveFromAllowlist() public {
         vm.startPrank(admin);
         allowlistSequencer.addToAllowlist(user1);
+        vm.expectEmit(true, false, false, false);
+        emit AllowlistSequencingModule.UserRemoved(user1);
         allowlistSequencer.removeFromAllowlist(user1);
         assertFalse(allowlistSequencer.allowlist(user1));
         vm.stopPrank();
@@ -56,5 +60,31 @@ contract AllowlistSequencingModuleTest is Test {
 
     function testIsNotAllowedForNonAllowedAddress() public {
         assertFalse(allowlistSequencer.isAllowed(makeAddr("non-allowed")));
+    }
+
+    function testRevertsOnZeroAddressConstructor() public {
+        vm.expectRevert(AllowlistSequencingModule.AddressNotAllowed.selector);
+        new AllowlistSequencingModule(address(0));
+    }
+
+    function testRevertsOnZeroAddressTransferAdmin() public {
+        vm.startPrank(admin);
+        vm.expectRevert(AllowlistSequencingModule.AddressNotAllowed.selector);
+        allowlistSequencer.transferAdmin(address(0));
+        vm.stopPrank();
+    }
+
+    function testTransferAdminEmitsEvent() public {
+        address newAdmin = makeAddr("newAdmin");
+        vm.startPrank(admin);
+        vm.expectEmit(true, true, false, false);
+        emit AllowlistSequencingModule.AdminTransferred(admin, newAdmin);
+        allowlistSequencer.transferAdmin(newAdmin);
+        vm.stopPrank();
+        assertEq(allowlistSequencer.admin(), newAdmin);
+    }
+
+    function testConstructorSetsCorrectValues() public view {
+        assertEq(allowlistSequencer.admin(), admin, "Admin not set correctly");
     }
 }

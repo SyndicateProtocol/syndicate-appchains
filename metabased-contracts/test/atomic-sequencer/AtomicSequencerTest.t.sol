@@ -140,6 +140,12 @@ contract AtomicSequencerTest is Test {
         assertTrue(success, "failure in processing same chain multiple times");
     }
 
+    function testConstructorDeployment() public {
+        AtomicSequencer newSequencer = new AtomicSequencer();
+        assertTrue(address(newSequencer.implementation()) != address(0), "Implementation should be set");
+        assertTrue(address(newSequencer) != address(0), "Sequencer should be deployed");
+    }
+
     function testRevertOnInvalidCalls() public {
         MetabasedSequencerChain[] memory chains = new MetabasedSequencerChain[](1);
         chains[0] = chainA;
