@@ -54,6 +54,7 @@ pub struct ArbitrumBlockBuilder {
 
 impl Default for ArbitrumBlockBuilder {
     fn default() -> Self {
+        // TODO (SEQ-522): Delete this and refactor tests
         Self {
             transaction_parser: SequencingTransactionParser::new(address!(
                 "0xEF741D37485126A379Bfa32b6b260d85a0F00380"
@@ -96,6 +97,7 @@ impl ArbitrumBlockBuilder {
     /// # Arguments
     /// - `sequencing_contract_address`: The address of the sequencing contract to monitor.
     pub fn new(sequencing_contract_address: Address) -> Self {
+        // TODO (SEQ-522): Implement from config
         Self {
             transaction_parser: SequencingTransactionParser::new(sequencing_contract_address),
             ..Default::default()
