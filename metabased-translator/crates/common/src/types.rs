@@ -202,13 +202,17 @@ fn format_blocks(blocks: &[BlockAndReceipts]) -> String {
         .join(", ")
 }
 
+/// A reference to a block containing just its number and timestamp
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct BlockRef {
+    /// The block number
     pub number: u64,
+    /// The block timestamp
     pub timestamp: u64,
 }
 
 impl BlockRef {
+    /// Creates a new `BlockRef` from a `Block`
     pub const fn new(block: &Block) -> Self {
         Self { number: block.number, timestamp: block.timestamp }
     }

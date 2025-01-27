@@ -6,6 +6,7 @@ use common::types::BlockAndReceipts;
 use eyre::{eyre, Error};
 use std::time::Duration;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::oneshot;
 use tracing::{debug, error};
 
 /// Polls and ingests blocks from an Ethereum chain
@@ -94,13 +95,21 @@ impl Ingestor {
     /// This function returns an `Error` if initialization or any critical operation
     /// fails. Errors during polling (e.g., fetching blocks or pushing data) are logged
     /// and retried within the loop.
-    pub async fn start_polling(&mut self) -> Result<(), Error> {
+    pub async fn start_polling(
+        mut self,
+        mut shutdown_rx: oneshot::Receiver<()>,
+    ) -> Result<(), Error> {
         debug!("Starting polling");
 
         let mut interval = tokio::time::interval(self.polling_interval);
 
         loop {
             tokio::select! {
+                _ = &mut shutdown_rx => {
+                    debug!("Received shutdown signal, stopping polling");
+                    drop(self.sender);
+                    break;
+                }
                 _ = interval.tick() => {
                     match self.get_block_and_receipts(self.current_block_number).await {
                         Ok(block_and_receipts) => {
@@ -113,11 +122,6 @@ impl Ingestor {
                             error!("Failed to fetch block and receipts: {:?}, retrying...", err);
                         }
                     }
-                }
-                // Respond to cancellation
-                _ = tokio::signal::ctrl_c() => {
-                    debug!("Polling task was cancelled");
-                    break;
                 }
             }
         }
@@ -223,22 +227,16 @@ mod tests {
         let mut ingestor =
             Ingestor { client, current_block_number: start_block, sender, polling_interval };
 
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let polling_handle = tokio::spawn(async move {
-            let result = ingestor.start_polling().await;
+            let result = ingestor.start_polling(shutdown_rx).await;
             assert!(result.is_ok(), "Polling task failed: {:?}", result);
         });
 
         tokio::time::sleep(Duration::from_millis(50)).await;
 
-        polling_handle.abort();
-
-        let result = polling_handle.await;
-
-        // Assert that the task was canceled successfully
-        assert!(
-            result.is_err() && result.unwrap_err().is_cancelled(),
-            "Expected the polling task to be canceled",
-        );
+        let _ = shutdown_tx.send(());
+        polling_handle.await?;
 
         Ok(())
     }

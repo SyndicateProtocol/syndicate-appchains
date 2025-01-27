@@ -46,7 +46,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     // Create the ingestor and receiver
-    let (mut ingestor, mut receiver) =
+    let (ingestor, mut receiver) =
         Ingestor::new(config).await.map_err(|e| eyre!("Failed to create ingestor: {:?}", e))?;
 
     // Spawn a task to log what the receiver receives
@@ -57,8 +57,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         }
     });
 
+    let (_shutdown_tx, shutdown_rx) = tokio::sync::oneshot::channel();
     // Start polling
-    ingestor.start_polling().await.map_err(|e| eyre!("Failed to start polling: {:?}", e))?;
+    ingestor
+        .start_polling(shutdown_rx)
+        .await
+        .map_err(|e| eyre!("Failed to start polling: {:?}", e))?;
 
     Ok(())
 }

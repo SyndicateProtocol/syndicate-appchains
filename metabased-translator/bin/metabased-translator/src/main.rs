@@ -17,10 +17,14 @@ async fn run(
     ingestion_config: IngestionPipelineConfig,
     db_path: &str,
 ) -> Result<(), RuntimeError> {
-    // Create shutdown channel
-    let (shutdown_tx, mut shutdown_rx) = oneshot::channel();
+    // Create shutdown channels
+    let (shutdown_tx, shutdown_rx) = oneshot::channel();
+    let (seq_shutdown_tx, seq_shutdown_rx) = oneshot::channel();
+    let (settle_shutdown_tx, settle_shutdown_rx) = oneshot::channel();
+    let (slotter_shutdown_tx, slotter_shutdown_rx) = oneshot::channel();
+    let (builder_shutdown_tx, builder_shutdown_rx) = oneshot::channel();
 
-    // TODO(SEQ-515): Improve Ctrl+C handler
+    // Ctrl-C handler
     let shutdown_tx_clone = shutdown_tx;
     tokio::spawn(async move {
         tokio::signal::ctrl_c().await.map_err(|e| RuntimeError::TaskFailure(e.to_string()))?;
@@ -51,87 +55,75 @@ async fn run(
         settlement_config.settlement_start_block = safe_state.settlement_block.number;
     }
 
-    let (mut sequencing_ingestor, sequencer_rx) =
-        Ingestor::new(sequencing_config.into()).await.map_err(|e| {
-            RuntimeError::Initialization(format!(
-                "Failed to create ingestor for sequencing chain: {}",
-                e
-            ))
-        })?;
+    // Initialize components
+    let (sequencing_ingestor, sequencer_rx) = Ingestor::new(sequencing_config.into()).await?;
 
-    let (mut settlement_ingestor, settlement_rx) =
-        Ingestor::new(settlement_config.into()).await.map_err(|e| {
-            RuntimeError::Initialization(format!(
-                "Failed to create ingestor for settlement chain: {}",
-                e
-            ))
-        })?;
+    let (settlement_ingestor, settlement_rx) = Ingestor::new(settlement_config.into()).await?;
 
-    let slotter = Slotter::new(sequencer_rx, settlement_rx, slotting_config, safe_state, db)
-        .await
-        .map_err(|e| RuntimeError::Initialization(format!("Failed to create slotter: {e}")))?;
+    let (slotter, slot_rx) =
+        Slotter::new(sequencer_rx, settlement_rx, slotting_config, safe_state, db);
 
-    // TODO(SEQ-515): refactor me to get the channel without starting the slotter already?
-    // TODO(SEQ-515): slotter assumes that it starts first, or else it errors here
-    let (slot_rx, slotter_shutdown) = slotter.start();
+    let block_builder = BlockBuilder::new(slot_rx, block_builder_config).await?;
 
-    let block_builder = BlockBuilder::new(slot_rx, block_builder_config).await.map_err(|e| {
-        RuntimeError::Initialization(format!("Failed to create block builder: {}", e))
-    })?;
-
+    // Start components
     info!("Starting Metabased Translator");
-    let sequencing_ingestor_handle = tokio::spawn(async move {
-        if let Err(e) = sequencing_ingestor.start_polling().await {
-            error!("Ingestor error: {}", e);
-        }
-    });
+    let mut sequencing_handle =
+        tokio::spawn(async move { sequencing_ingestor.start_polling(seq_shutdown_rx).await });
+    let mut settlement_handle =
+        tokio::spawn(async move { settlement_ingestor.start_polling(settle_shutdown_rx).await });
+    let mut slotter_handle = tokio::spawn(async move { slotter.start(slotter_shutdown_rx).await });
+    let mut block_builder_handle =
+        tokio::spawn(async move { block_builder.start(builder_shutdown_rx).await });
 
-    let settlement_ingestor_handle = tokio::spawn(async move {
-        if let Err(e) = settlement_ingestor.start_polling().await {
-            error!("Ingestor error: {}", e);
-        }
-    });
-
-    // TODO(SEQ-515): Block builder doesn't error
-    let block_builder_handle = tokio::spawn(async move { block_builder.start().await });
-
-    // Main control loop
+    // Wait for either shutdown signal or task failure
     tokio::select! {
-        // Wait for shutdown signal
-        _ = &mut shutdown_rx => {
-            // gracefully shutdown waits for 5 minutes before forcefully shutting down
-            let _ = tokio::time::timeout(std::time::Duration::from_secs(5*60), async {
-                // TODO complete this
-                info!("Metabased Translator shutting down...");
-                info!("Shutting down sequencing ingestor...");
-                // sequencing_ingestor.shutdown().await;
-                info!("Shutting down settlement ingestor...");
-                // settlement_ingestor.shutdown().await;
+        _ = shutdown_rx => {
+            info!("Received shutdown signal");
+            // Perform graceful shutdown
+            tokio::time::timeout(std::time::Duration::from_secs(5 * 60), async {
+                // 1. Stop ingestors first
+                info!("Shutting down ingestors...");
+                let _ = seq_shutdown_tx.send(());
+                let _ = settle_shutdown_tx.send(());
+                let _ = sequencing_handle.await;
+                let _ = settlement_handle.await;
+
+                // 2. Stop slotter after ingestors are done
                 info!("Shutting down slotter...");
-                slotter_shutdown().await;
+                let _ = slotter_shutdown_tx.send(());
+                let _ = slotter_handle.await;
+
+                // 3. Finally stop block builder
                 info!("Shutting down block builder...");
-                // block_builder.shutdown().await;
-            }).await;
+                let _ = builder_shutdown_tx.send(());
+                let _ = block_builder_handle.await;
+                info!("Metabased Translator shutdown complete");
+            })
+            .await
+            .map_err(|_| RuntimeError::Initialization("Shutdown timeout exceeded".into()))?;
         }
-        // Watch for task completion/errors
-        res = settlement_ingestor_handle => {
+        res = &mut sequencing_handle => {
             if let Err(e) = res {
-                error!("Settlement chain ingestor task failed: {}", e);
+                return Err(RuntimeError::TaskFailure(format!("Sequencing chain ingestor panicked: {}", e)));
             }
         }
-        res = sequencing_ingestor_handle => {
+        res = &mut settlement_handle => {
             if let Err(e) = res {
-                error!("Sequencing chain ingestor task failed: {}", e);
+                return Err(RuntimeError::TaskFailure(format!("Settlement chain ingestor panicked: {}", e)));
             }
         }
-        res = block_builder_handle => {
+        res = &mut slotter_handle => {
             if let Err(e) = res {
-                error!("Block builder task failed: {}", e);
+                return Err(RuntimeError::TaskFailure(format!("Slotter panicked: {}", e)));
+            }
+        }
+        res = &mut block_builder_handle => {
+            if let Err(e) = res {
+                return Err(RuntimeError::TaskFailure(format!("Block builder panicked: {}", e)));
             }
         }
     }
 
-    info!("Metabased Translator shutdown complete");
     Ok(())
 }
 
@@ -195,5 +187,11 @@ impl From<slotting::config::ConfigError> for RuntimeError {
 impl From<ingestor::config::ConfigError> for RuntimeError {
     fn from(err: ingestor::config::ConfigError) -> Self {
         RuntimeError::InvalidConfig(format!("Ingestor config error: {}", err))
+    }
+}
+
+impl From<eyre::Report> for RuntimeError {
+    fn from(err: eyre::Report) -> Self {
+        RuntimeError::TaskFailure(err.to_string())
     }
 }

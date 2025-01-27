@@ -19,10 +19,11 @@ use tracing::{error, info};
 #[derive(Debug)]
 pub struct BlockBuilder {
     slotter_rx: Receiver<Slot>,
-
     mchain: MetaChainProvider,
     builder: Box<dyn RollupBlockBuilder>,
 }
+
+// TODO reorg to latest known safe slot
 
 impl BlockBuilder {
     /// Create a new block builder
@@ -61,7 +62,8 @@ impl BlockBuilder {
                     error!("Error building batch transaction: {}", e);
                     continue;
                 }
-            };
+                Some(slot) = self.slotter_rx.recv() => {
+                    info!("Received slot: {:?}", slot);
 
             // Submit batch transaction to mchain
             if let Err(e) = self.mchain.submit_txn(batch_txn).await {
@@ -90,11 +92,10 @@ mod tests {
     async fn test_block_builder_start() -> Result<()> {
         let (tx, rx) = mpsc::channel(32);
         let config = BlockBuilderConfig::default();
+        let mut builder = BlockBuilder::new(rx, config).await?;
 
-        let builder = BlockBuilder::new(rx, config).await?;
-
-        // Start the block builder in a separate task
-        let handle = tokio::spawn(async move { builder.start().await });
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let handle = tokio::spawn(async move { builder.start(shutdown_rx).await });
 
         // Send a test block
         let test_slot = Slot::new(1, 1);
@@ -104,7 +105,8 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
         // Clean shutdown
-        handle.abort();
+        let _ = shutdown_tx.send(());
+        handle.await?;
         Ok(())
     }
 }

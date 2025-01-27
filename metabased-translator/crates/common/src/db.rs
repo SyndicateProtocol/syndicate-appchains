@@ -1,3 +1,18 @@
+//! The `db` module contains the `TranslatorStore` trait and its implementation for `RocksDB`
+//!
+//! The `TranslatorStore` trait is used to save and retrieve the latest slot and latest blocks from
+//! each chain
+//!
+//! The current implementation relies on `block-builder` saving the full state.
+//! The resume from DB functionality works as follows:
+//! - the lastest known `Safe` `Slot` and the latest slotted block for each chain are taken from the DB
+//! - the Ingestor will start from the lastest slotted block for each chain and continue from there
+//! - the `Slotter` will then start from the lastest known `Safe` `Slot` and continue to slot blocks
+//!   from the chains
+//! - the `BlockBuilder` will reorg the Anvil state to match the latest known safe slot and continue from there
+//!
+//! The `RocksDbStore` implementation is used for the `TranslatorStore` trait
+
 use crate::types::{BlockRef, Slot};
 use async_trait::async_trait;
 use rocksdb::DB;
