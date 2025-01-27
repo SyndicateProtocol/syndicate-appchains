@@ -106,7 +106,7 @@ impl ArbitrumBlockBuilder {
 
     /// Processes settlement chain receipts into delayed messages
     async fn process_delayed_messages(
-        &self,
+        &mut self,
         blocks: Vec<BlockAndReceipts>,
     ) -> Result<Vec<TransactionRequest>> {
         // Create a local map to store message data
@@ -197,6 +197,9 @@ impl ArbitrumBlockBuilder {
 
             delayed_msg_txns.push(delivered_msg_tx);
         }
+
+        // Update the delayed message count
+        self.delayed_message_count += delayed_msg_txns.len() as u64;
 
         Ok(delayed_msg_txns)
     }
