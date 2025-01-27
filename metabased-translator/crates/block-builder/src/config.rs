@@ -1,10 +1,19 @@
 //! Configuration for the block builder service
 
-use alloy::{primitives::Address, signers::local::PrivateKeySigner};
+use alloy::{
+    primitives::Address,
+    signers::{
+        k256::ecdsa::SigningKey,
+        local::{LocalSigner, PrivateKeySigner},
+    },
+};
 use clap::{Parser, ValueEnum};
 use std::{fmt::Debug, str::FromStr};
 use thiserror::Error;
 use tracing::debug;
+
+const DEFAULT_PRIVATE_KEY_SIGNER: &str =
+    "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
 /// Configuration for the block builder service
 #[derive(Parser, Clone)]
@@ -32,12 +41,6 @@ pub struct BlockBuilderConfig {
         default_value = "0x1234000000000000000000000000000000000000")]
     pub sequencing_contract_address: Address,
 
-    /// Sequencing contract address on the sequencing chain
-    #[arg(short = 'k', long, env = "BLOCK_BUILDER_PRIVATE_KEY",
-        value_parser = parse_private_key_signer,
-        default_value = "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")]
-    pub signer_key: PrivateKeySigner,
-
     /// Target rollup type for the [`block-builder`]
     #[arg(long, env = "BLOCK_BUILDER_TARGET_ROLLUP", default_value = "arbitrum")]
     pub target_rollup_type: TargetRollupType,
@@ -56,10 +59,10 @@ fn parse_address(value: &str) -> Result<Address, String> {
     Address::from_str(value).map_err(|_| format!("Invalid address: {}", value))
 }
 
-/// Parse a string into a `PrivateKeySigner`.
-fn parse_private_key_signer(value: &str) -> Result<PrivateKeySigner, String> {
-    PrivateKeySigner::from_str(value)
-        .map_err(|_| format!("Invalid private key for signer: {}", value))
+/// Parse default string into a `PrivateKeySigner`.
+pub fn get_default_private_key_signer() -> LocalSigner<SigningKey> {
+    PrivateKeySigner::from_str(DEFAULT_PRIVATE_KEY_SIGNER)
+        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err))
 }
 
 impl Debug for BlockBuilderConfig {
@@ -81,12 +84,6 @@ impl Default for BlockBuilderConfig {
             port: 8888,
             genesis_timestamp: 1712500000,
             chain_id: 84532,
-            signer_key: PrivateKeySigner::from_str(
-                "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-            )
-            .unwrap_or_else(|err| {
-                panic!("Failed to parse default private key for signer: {}", err);
-            }),
             target_rollup_type: TargetRollupType::ARBITRUM,
             sequencing_contract_address: Address::from_str(
                 "0x1234000000000000000000000000000000000000",
@@ -105,7 +102,6 @@ impl BlockBuilderConfig {
         genesis_timestamp: u64,
         chain_id: u64,
         sequencing_contract_address: Address,
-        signer_key: PrivateKeySigner,
         target_rollup_type: TargetRollupType,
     ) -> Result<Self, ConfigError> {
         let config = Self {
@@ -113,7 +109,6 @@ impl BlockBuilderConfig {
             genesis_timestamp,
             chain_id,
             sequencing_contract_address,
-            signer_key,
             target_rollup_type,
         };
         debug!("Created block builder config: {:?}", config);
@@ -169,10 +164,6 @@ mod tests {
             chain_id: 12345,
             sequencing_contract_address: Address::from_str(
                 "0x1234000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            signer_key: PrivateKeySigner::from_str(
-                "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
             )
             .unwrap(),
             target_rollup_type: TargetRollupType::ARBITRUM,

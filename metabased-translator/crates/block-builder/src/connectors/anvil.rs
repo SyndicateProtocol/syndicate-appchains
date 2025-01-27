@@ -1,6 +1,9 @@
 //! Anvil connector for the `MetaChain`
 
-use crate::{block_builder::BlockBuilderError, config::BlockBuilderConfig};
+use crate::{
+    block_builder::BlockBuilderError,
+    config::{get_default_private_key_signer, BlockBuilderConfig},
+};
 use alloy::{
     network::{Ethereum, EthereumWallet},
     node_bindings::{Anvil, AnvilInstance},
@@ -80,7 +83,7 @@ impl MetaChainProvider {
 
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
-            .wallet(EthereumWallet::from(config.signer_key))
+            .wallet(EthereumWallet::from(get_default_private_key_signer()))
             .on_http(anvil.endpoint_url());
 
         Ok(Self { anvil, provider })
