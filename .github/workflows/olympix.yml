@@ -21,8 +21,19 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Run Olympix Integrated Security
+        id: olympix
         uses: olympix/integrated-security@main
         env:
           OLYMPIX_API_TOKEN: ${{ secrets.OLYMPIX_API_TOKEN }}
         with:
-          args: -f tree --no-incomplete-constructor-tests --no-unfuzzed-local-variables --no-insufficient-parameter-assertion --no-no-parameter-validation-in-constructor --no-unfuzzed-variables --no-missing-revert-reason-tests --no-call-without-gas-budget --no-signature-replay-attacks --no-uninitialized-state-variable --no-unused-return-function-call
+          args: -f tree --no-incomplete-constructor-tests --no-unfuzzed-local-variables --no-insufficient-parameter-assertion --no-no-parameter-validation-in-constructor --no-unfuzzed-variables --no-missing-revert-reason-tests --no-call-without-gas-budget --no-signature-replay-attacks --no-uninitialized-state-variable --no-unused-return-function-call > olympix-output.txt 2>&1
+
+      - name: Check Olympix results
+        run: |
+          if grep -q "Total bugs found: 0" olympix-output.txt; then
+            echo "Olympix found 0 bugs, proceeding."
+          else
+            echo "Olympix reported bugs! Failing..."
+            cat olympix-output.txt
+            exit 1
+          fi
