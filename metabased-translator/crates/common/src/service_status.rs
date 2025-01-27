@@ -26,6 +26,7 @@ pub struct ServiceStatus {
     status: AtomicU8,
 }
 
+// TODO delete me
 impl ServiceStatus {
     /// Creates a new [`ServiceStatus`] with the default status of [`Status::NotStarted`]
     pub const fn new() -> Self {

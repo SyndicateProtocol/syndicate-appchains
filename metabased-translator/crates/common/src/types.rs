@@ -125,11 +125,7 @@ pub enum Chain {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Display, Serialize, Deserialize)]
 #[strum(serialize_all = "lowercase")]
 pub enum SlotState {
-    /// A slot that is considered final and cannot rollback (we don't expect any underlying chains
-    /// to reorg this far)
-    Finalized,
-    /// A slot that is considered final according to the source L2s finality guarantees (it can
-    /// only be rolled back if a L1 reorg happens)
+    /// A slot that is considered final and cannot rollback (blocks that are MAX_WAIT_MS old)
     Safe,
     /// A slot that we don't expect to fit more blocks into. It should be considered cannonical
     /// unless a reorg happens
@@ -183,7 +179,7 @@ impl fmt::Display for Slot {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Slot #{} [ts: {}, state: {}, blocks: {} seq + {} settle]\n  Sequencing blocks: {}\n  Settlement blocks: {}",
+            "Slot #{} [ts: {}, state: {}, blocks: {} seq + {} settle],  Sequencing blocks: {},  Settlement blocks: {}",
             self.number,
             self.timestamp,
             self.state,

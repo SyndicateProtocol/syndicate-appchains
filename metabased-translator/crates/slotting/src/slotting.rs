@@ -47,7 +47,7 @@ pub struct Slotter {
     latest_sequencing_block: Option<BlockRef>,
     latest_settlement_block: Option<BlockRef>,
 
-    status: ServiceStatus,
+    status: ServiceStatus, // TODO this can be removed
 
     /// Stores the last N slots (both open and closed)
     slots: LinkedList<Slot>,
@@ -259,14 +259,18 @@ impl Slotter {
 
             // Mark slots as unsafe if both chains have progressed past them
             for slot in &mut self.slots {
-                if slot.state == SlotState::Unsafe {
-                    debug!(%slot, "Found unsafe slot, stopping iteration");
-                    return Ok(()); // assume all blocks past this point are already marked as unsafe
-                }
-                if slot.timestamp < min_timestamp && slot.state == SlotState::Open {
-                    info!(%slot, "Marking slot as unsafe");
-                    slot.state = SlotState::Unsafe;
-                    sender.send(slot.clone()).await?;
+                match slot.state {
+                    SlotState::Unsafe | SlotState::Safe => {
+                        debug!(%slot, "Found non-open slot, stopping iteration");
+                        return Ok(()); // assume all blocks past this point are already marked as unsafe
+                    }
+                    SlotState::Open => {
+                        if slot.timestamp < min_timestamp {
+                            info!(%slot, "Marking slot as unsafe");
+                            slot.state = SlotState::Unsafe;
+                            sender.send(slot.clone()).await?;
+                        }
+                    }
                 }
             }
         }
@@ -403,7 +407,7 @@ impl Slotter {
             block_number = block.number,
             block_timestamp = block.timestamp,
             block_hash = %block.hash,
-            "Updated latest block"
+            "Updated latest block seen"
         );
 
         match chain {
@@ -564,7 +568,8 @@ mod tests {
         let slot_duration_ms = 1_000;
         let (slotter, seq_tx, set_tx) =
             create_slotter(slot_start_timestamp_ms, slot_duration_ms).await;
-        let mut slot_rx = slotter.start().0;
+        // NOTE: IMPORTANT - keep _shutdown in scope, otherwise `slotter` will be terminated immediatelly
+        let (mut slot_rx, _shutdown) = slotter.start();
         assert!(slot_rx.is_empty());
 
         // send initial blocks, these should fit in slot 1 and make slot 0 be marked as unsafe
@@ -688,7 +693,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[tracing_test::traced_test]
     async fn test_slotter_db_shutdown_and_resume() {
         const CHAN_CAPACITY: usize = 100;
         let (seq_tx, seq_rx) = channel(CHAN_CAPACITY);
@@ -730,21 +734,26 @@ mod tests {
         assert_eq!(slot1.number, 1);
         assert_eq!(slot1.sequencing_chain_blocks.len(), 1);
         assert_eq!(slot1.settlement_chain_blocks.len(), 1);
+        assert_eq!(slot1.sequencing_chain_blocks[0].block.number, 1);
+        assert_eq!(slot1.settlement_chain_blocks[0].block.number, 1);
         assert_eq!(slot1.state, SlotState::Unsafe);
 
-        // Send blocks that are MAX_WAIT_MS (24 hours) ahead of slot 1's timestamp (10_000), this should make slot 1 safe
-        set_tx.send(create_test_block(3, slot1.timestamp + MAX_WAIT_MS)).await.unwrap();
-        seq_tx.send(create_test_block(3, slot1.timestamp + MAX_WAIT_MS + 1)).await.unwrap();
+        // Send blocks that are MAX_WAIT_MS (24 hours) ahead, this should make slots 0, 1 and 2 safe
+        set_tx.send(create_test_block(3, 11_001 + MAX_WAIT_MS)).await.unwrap();
+        // NOTE: don't send a block for the sequencing chain, that would mark all the empty slots as unsafe and atempt to send them over the channel (which would get filled up and stuck)
 
-        // wait a bit to make sure the slotter has picked up the blocks
-        tokio::time::sleep(std::time::Duration::from_millis(50)).await;
+        let slot2 = slot_rx.recv().await.unwrap();
+        assert_eq!(slot2.number, 2);
+        assert_eq!(slot2.sequencing_chain_blocks.len(), 1);
+        assert_eq!(slot2.settlement_chain_blocks.len(), 1);
+        assert_eq!(slot2.state, SlotState::Safe); // slot 2 should be received as safe because slotter thinks MAX_WAIT_MS has passed
 
         // shutdown slotter
         shutdown().await;
 
         // Create new channels for the resumed slotter
         let (new_seq_tx, new_seq_rx) = channel(CHAN_CAPACITY);
-        let (new_settle_tx, new_settle_rx) = channel(CHAN_CAPACITY);
+        let (new_set_tx, new_settle_rx) = channel(CHAN_CAPACITY);
 
         // Create new store instance pointing to same DB
         let resumed_store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
@@ -753,17 +762,23 @@ mod tests {
         let resumed_slotter =
             Slotter::new_from_db(new_seq_rx, new_settle_rx, config, resumed_store).await.unwrap();
 
-        let mut resumed_slot_rx = resumed_slotter.start().0;
+        let (mut resumed_slot_rx, _shutdown) = resumed_slotter.start();
 
-        // Send new blocks to resumed slotter
-        new_seq_tx.send(create_test_block(4, 12_001)).await.unwrap();
-        new_settle_tx.send(create_test_block(3, 12_002)).await.unwrap();
+        // Send new blocks to resumed slotter (since only slot 0,1,2 have been saved to the DB, we should send blocks #3)
+        new_seq_tx.send(create_test_block(3, 12_001)).await.unwrap();
+        new_set_tx.send(create_test_block(3, 12_002)).await.unwrap();
 
-        // Should get slot 2 marked as unsafe
-        let slot2 = resumed_slot_rx.recv().await.unwrap();
-        assert_eq!(slot2.number, 2);
-        assert_eq!(slot2.state, SlotState::Unsafe);
-        assert_eq!(slot2.sequencing_chain_blocks.len(), 1); // Block #3
-        assert_eq!(slot2.settlement_chain_blocks.len(), 0);
+        // sending blocks for slot 4 should mark slot 3 as unsafe
+        new_seq_tx.send(create_test_block(4, 13_001)).await.unwrap();
+        new_set_tx.send(create_test_block(4, 13_002)).await.unwrap();
+
+        // Should get slot 3 marked as unsafe
+        let slot3 = resumed_slot_rx.recv().await.unwrap();
+        assert_eq!(slot3.number, 3);
+        assert_eq!(slot3.state, SlotState::Unsafe);
+        assert_eq!(slot3.sequencing_chain_blocks.len(), 1);
+        assert_eq!(slot3.settlement_chain_blocks.len(), 1);
+        assert_eq!(slot3.sequencing_chain_blocks[0].block.number, 3);
+        assert_eq!(slot3.settlement_chain_blocks[0].block.number, 3);
     }
 }
