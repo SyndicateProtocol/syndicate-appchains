@@ -74,7 +74,7 @@ jobs:
       # Install Rust toolchain and machete
       - name: Install Rust toolchain
         run: |
-          rustup toolchain install --profile minimal
+          rustup toolchain install stable --profile minimal
           cargo install cargo-machete
 
       - name: Cache dependencies
