@@ -20,12 +20,18 @@ use contract_bindings::arbitrum::{
     idelayedmessageprovider::IDelayedMessageProvider::{
         InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
     },
+    iinboxbase::IInboxBase::sendL2MessageFromOriginCall,
     irollup::IRollup,
 };
-use eyre::{Error, Result};
+use eyre::Result;
 use std::collections::HashMap;
-use tracing::debug;
+use tracing::{debug, error};
 
+// MessageDelivered(indexed uint256,indexed bytes32,address,uint8,address,bytes32,uint256,uint64)
+// Size of a MessageDelivered event in bytes:
+// 6 non-indexed fields (32 bytes each)
+// 6 * 32 = 192 bytes
+const MSG_DELIVERED_EVENT_SIZE: usize = 192;
 const MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = MessageDelivered::SIGNATURE_HASH;
 const INBOX_MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = InboxMessageDelivered::SIGNATURE_HASH;
 const INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH: FixedBytes<32> =
@@ -70,7 +76,7 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
     async fn build_block_from_slot(
         &mut self,
         slot: Slot,
-    ) -> Result<Vec<TransactionRequest>, Error> {
+    ) -> Result<Vec<TransactionRequest>, eyre::Error> {
         let delayed_messages = self.process_delayed_messages(slot.settlement_chain_blocks).await?;
 
         let mbtxs = self.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
@@ -110,34 +116,40 @@ impl ArbitrumBlockBuilder {
             .flat_map(|block| &block.receipts)
             .flat_map(|receipt| &receipt.logs)
             .filter(|log| Address::from_slice(log.address.as_slice()) == self.delayed_inbox)
-            .filter_map(|log| {
-                // Get the first topic (event signature)
-                log.topics.first().and_then(|topic| {
-                    let topic_bytes = FixedBytes::from_slice(topic.as_slice());
+            .filter(|log| {
+                let topic_bytes = FixedBytes::from_slice(log.topics[0].as_slice());
 
-                    if topic_bytes == MSG_DELIVERED_EVENT_HASH {
-                        return Some(log);
-                    }
+                match topic_bytes {
+                    MSG_DELIVERED_EVENT_HASH => true,
 
-                    if topic_bytes == INBOX_MSG_DELIVERED_EVENT_HASH {
+                    INBOX_MSG_DELIVERED_EVENT_HASH => {
                         let message_num = U256::from_be_slice(log.topics[1].as_slice());
                         message_data.insert(message_num, log.data.clone());
-                    } else if topic_bytes == INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH {
+                        false
+                    }
+
+                    INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH => {
                         let message_num = U256::from_be_slice(log.topics[1].as_slice());
 
-                        // NOTE: This assumes that the blocks and transactions are in order
-                        // not sure if this is always the case, but saves us from looping through
-                        // the blocks to find the correct transaction by hashe
                         let block_index = (log.block_number - blocks[0].block.number) as usize;
                         let txn_index = log.transaction_index as usize;
                         let txn = blocks[block_index].block.transactions[txn_index].clone();
 
-                        let data = Bytes::from(txn.input);
-                        message_data.insert(message_num, data);
+                        // Decode the transaction input using the contract bindings
+                        match sendL2MessageFromOriginCall::abi_decode(txn.input.as_bytes(), false) {
+                            Ok(decoded) => {
+                                message_data.insert(message_num, decoded.messageData);
+                            }
+                            Err(e) => {
+                                error!("Failed to decode sendL2MessageFromOrigin call: {}", e);
+                            }
+                        }
+
+                        false
                     }
 
-                    None
-                })
+                    _ => false,
+                }
             })
             .collect::<Vec<_>>();
 
@@ -147,6 +159,12 @@ impl ArbitrumBlockBuilder {
         let mut delayed_msg_txns: Vec<TransactionRequest> = Vec::new();
 
         for msg_log in delayed_messages {
+            // Sanity check that the message data is the correct length
+            if msg_log.data.len() != MSG_DELIVERED_EVENT_SIZE {
+                error!("Invalid message data length: {}", msg_log.data.len());
+                continue;
+            }
+
             let message_index = U256::from_be_slice(msg_log.topics[1].as_slice());
 
             // Data layout (each field is 32 bytes):
@@ -160,9 +178,13 @@ impl ArbitrumBlockBuilder {
             let sender = Address::from_slice(&msg_log.data[76..96]); // Last 20 bytes of the third 32-byte word
 
             // Get corresponding message data
-            let data = message_data
-                .get(&message_index)
-                .ok_or_else(|| Error::msg("Missing inbox message data"))?;
+            let data = match message_data.get(&message_index) {
+                Some(data) => data,
+                None => {
+                    error!("Missing inbox message data for message index: {}", message_index);
+                    continue;
+                }
+            };
 
             let delivered_msg_tx =
                 TransactionRequest::default().to(self.mchain_rollup_address).input(
@@ -178,7 +200,7 @@ impl ArbitrumBlockBuilder {
     }
 
     /// Builds a batch of transactions into an Arbitrum batch
-    async fn build_batch_txn(&self, txs: Vec<Bytes>) -> Result<TransactionRequest, Error> {
+    async fn build_batch_txn(&self, txs: Vec<Bytes>) -> Result<TransactionRequest> {
         let batch = if txs.is_empty() {
             Batch(vec![BatchMessage::Delayed])
         } else {
