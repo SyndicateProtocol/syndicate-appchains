@@ -1,10 +1,10 @@
-use crate::types::{Block, BlockRef, Slot};
+use crate::types::{BlockRef, Slot};
 use async_trait::async_trait;
 use rocksdb::DB;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use thiserror::Error;
 
-const PREFIX_SLOT: &[u8] = b"slot/";
+const KEY_SLOT: &[u8] = b"slot/latest";
 const KEY_SEQ_LATEST: &[u8] = b"latest/seq";
 const KEY_SETTLE_LATEST: &[u8] = b"latest/settle";
 
@@ -35,19 +35,13 @@ impl RocksDbStore {
     pub fn new(path: &str) -> Result<Self, DbError> {
         Ok(Self { db: DB::open_default(path)? })
     }
-
-    fn slot_key(slot_number: u64) -> Vec<u8> {
-        let mut key = PREFIX_SLOT.to_vec();
-        key.extend_from_slice(&slot_number.to_be_bytes());
-        key
-    }
 }
 
 #[async_trait]
 impl TranslatorStore for RocksDbStore {
     async fn save_slot(&self, slot: &Slot) -> Result<(), DbError> {
         let mut batch = rocksdb::WriteBatch::default();
-        batch.put(Self::slot_key(slot.number), bincode::serialize(slot)?);
+        batch.put(KEY_SLOT, bincode::serialize(slot)?);
 
         // Store just the latest block refs
         if let Some(last_seq) = slot.sequencing_chain_blocks.last() {
@@ -62,24 +56,20 @@ impl TranslatorStore for RocksDbStore {
     }
 
     async fn get_latest(&self) -> Result<Option<SafeState>, DbError> {
-        let iter = self.db.prefix_iterator(PREFIX_SLOT);
-        match iter.last().transpose()? {
-            None => Ok(None),
-            Some((_, v)) => {
-                let slot: Slot = bincode::deserialize(&v)?;
-                let seq = self.db.get(KEY_SEQ_LATEST)?.and_then(|v| bincode::deserialize(&v).ok());
-                let settle =
-                    self.db.get(KEY_SETTLE_LATEST)?.and_then(|v| bincode::deserialize(&v).ok());
+        let slot_bytes = match self.db.get(KEY_SLOT)? {
+            Some(v) => v,
+            None => return Ok(None),
+        };
 
-                match (seq, settle) {
-                    (Some(seq), Some(settle)) => Ok(Some(SafeState {
-                        slot,
-                        sequencing_block: seq,
-                        settlement_block: settle,
-                    })),
-                    _ => Ok(None),
-                }
+        let slot: Slot = bincode::deserialize(&slot_bytes)?;
+        let seq = self.db.get(KEY_SEQ_LATEST)?.and_then(|v| bincode::deserialize(&v).ok());
+        let settle = self.db.get(KEY_SETTLE_LATEST)?.and_then(|v| bincode::deserialize(&v).ok());
+
+        match (seq, settle) {
+            (Some(seq), Some(settle)) => {
+                Ok(Some(SafeState { slot, sequencing_block: seq, settlement_block: settle }))
             }
+            _ => Ok(None),
         }
     }
 }
