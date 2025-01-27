@@ -165,7 +165,7 @@ impl ArbitrumBlockBuilder {
 
             let message_index = U256::from_be_slice(msg_log.topics[1].as_slice()); // First indexed field is message index
             let kind = msg_delivered.1; // Second indexed field is kind
-            let sender = msg_delivered.2;
+            let sender = msg_delivered.2; // Third indexed field is sender
 
             // Get corresponding message data
             let data = match message_data.get(&message_index) {
