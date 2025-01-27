@@ -21,8 +21,21 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: Run Olympix Integrated Security
+        id: olympix-integrated-security
         uses: olympix/integrated-security@main
         env:
           OLYMPIX_API_TOKEN: ${{ secrets.OLYMPIX_API_TOKEN }}
         with:
           args: -f tree --no-incomplete-constructor-tests --no-unfuzzed-local-variables --no-insufficient-parameter-assertion --no-no-parameter-validation-in-constructor --no-unfuzzed-variables --no-missing-revert-reason-tests --no-call-without-gas-budget --no-signature-replay-attacks --no-uninitialized-state-variable --no-unused-return-function-call
+      - name: Fail on any bugs found
+        run: |
+          total_bugs=$(grep -oP 'Total bugs found: \K[0-9]+' ${{ steps.olympix-integrated-security.outputs.stdout }} || echo 0)
+          
+          # Fail the job if any bugs are found
+          if [ "$total_bugs" -gt 0 ]; then
+            echo "::error::Bugs found: $total_bugs. Please resolve these issues."
+            exit 1
+          else
+            echo "No bugs found. All checks passed."
+          fi
+        shell: bash
