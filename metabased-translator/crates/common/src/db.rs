@@ -15,7 +15,9 @@
 
 use crate::types::{BlockRef, Slot};
 use async_trait::async_trait;
+use bincode;
 use rocksdb::DB;
+use serde_json;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use thiserror::Error;
 
@@ -90,7 +92,7 @@ impl RocksDbStore {
 impl TranslatorStore for RocksDbStore {
     async fn save_slot(&self, slot: &Slot) -> Result<(), DbError> {
         let mut batch = rocksdb::WriteBatch::default();
-        batch.put(KEY_SLOT, bincode::serialize(slot)?);
+        batch.put(KEY_SLOT, serde_json::to_vec(slot)?);
 
         // Store just the latest block refs
         if let Some(last_seq) = slot.sequencing_chain_blocks.last() {
@@ -110,7 +112,7 @@ impl TranslatorStore for RocksDbStore {
             None => return Ok(None),
         };
 
-        let slot: Slot = bincode::deserialize(&slot_bytes)?;
+        let slot: Slot = serde_json::from_slice(&slot_bytes)?;
         let seq = self.db.get(KEY_SEQ_LATEST)?.and_then(|v| bincode::deserialize(&v).ok());
         let settle = self.db.get(KEY_SETTLE_LATEST)?.and_then(|v| bincode::deserialize(&v).ok());
 
@@ -129,8 +131,11 @@ pub enum DbError {
     #[error("Database error: {0}")]
     Db(#[from] rocksdb::Error),
 
-    #[error("Serialization error: {0}")]
-    Serialization(#[from] bincode::Error),
+    #[error("JSON serialization error: {0}")]
+    JsonSerialization(#[from] serde_json::Error),
+
+    #[error("Bincode serialization error: {0}")]
+    BincodeSerialization(#[from] bincode::Error),
 }
 
 // Test utility function, panics are acceptable
@@ -138,24 +143,25 @@ pub enum DbError {
 ///
 /// The path is constructed by:
 /// 1. Getting the caller's source location (file and line)
-/// 2. Appending the current timestamp in nanoseconds
+/// 2. Appending the current timestamp in nanoseconds and thread ID
 /// 3. Hashing the combined string
 /// 4. Creating a path in the system temp directory with format `"rocksdb_test_{hash}"`
 ///
-/// This ensures unique paths for concurrent tests and includes the test location
-/// for debugging.
+/// This ensures unique paths for concurrent tests by including both the test location
+/// and thread ID for debugging.
 #[allow(clippy::unwrap_used)] // Test utility function, panics are acceptable
 pub fn test_path() -> String {
     use std::{
-        panic,
+        panic, thread,
         time::{SystemTime, UNIX_EPOCH},
     };
 
     let location = panic::Location::caller();
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+    let thread_id = thread::current().id();
 
     let mut hasher = DefaultHasher::new();
-    format!("{}:{}", location, timestamp).hash(&mut hasher);
+    format!("{}:{}:{:?}", location, timestamp, thread_id).hash(&mut hasher);
     let hash = hasher.finish();
 
     std::env::temp_dir().join(format!("rocksdb_test_{:x}", hash)).to_str().unwrap().to_string()

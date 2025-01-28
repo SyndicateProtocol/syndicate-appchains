@@ -58,12 +58,9 @@ async fn run(
 
     // Initialize components
     let (sequencing_ingestor, sequencer_rx) = Ingestor::new(sequencing_config.into()).await?;
-
     let (settlement_ingestor, settlement_rx) = Ingestor::new(settlement_config.into()).await?;
-
     let (slotter, slot_rx) =
         Slotter::new(sequencer_rx, settlement_rx, slotting_config, safe_state, db);
-
     let block_builder = BlockBuilder::new(slot_rx, block_builder_config).await?;
 
     // Start components

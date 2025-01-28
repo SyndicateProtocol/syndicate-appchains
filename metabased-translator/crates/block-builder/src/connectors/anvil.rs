@@ -16,10 +16,7 @@ use alloy::{
         },
         Identity, Provider, ProviderBuilder, RootProvider, WalletProvider,
     },
-    rpc::types::{
-        anvil::{MineOptions, ReorgOptions},
-        TransactionRequest,
-    },
+    rpc::types::{anvil::MineOptions, TransactionRequest},
     transports::http::Http,
 };
 use contract_bindings::arbitrum::rollup::Rollup;
@@ -244,22 +241,24 @@ impl MetaChainProvider {
     }
 
     /// Rolls back the chain to a specific block number by performing a reorg
-    pub async fn rollback_to_block(&self, block_number: u64) -> Result<()> {
-        let current_block = self.provider.get_block_number().await?;
-        let depth = current_block - block_number;
-        self.provider.anvil_reorg(ReorgOptions { depth, tx_block_pairs: vec![] }).await?;
+    pub async fn rollback_to_block(&self, _block_number: u64) -> Result<()> {
+        panic!("not implemented"); // TODO SEQ-528
 
-        // Verify we're at the correct block
-        let new_block = self.provider.get_block_number().await?;
-        if new_block != block_number {
-            return Err(eyre::eyre!(
-                "Failed to rollback: expected block {}, got block {}",
-                block_number,
-                new_block
-            ));
-        }
+        // let current_block = self.provider.get_block_number().await?;
+        // let depth = current_block - block_number;
+        // self.provider.anvil_reorg(ReorgOptions { depth, tx_block_pairs: vec![] }).await?;
 
-        Ok(())
+        // // Verify we're at the correct block
+        // let new_block = self.provider.get_block_number().await?;
+        // if new_block != block_number {
+        //     return Err(eyre::eyre!(
+        //         "Failed to rollback: expected block {}, got block {}",
+        //         block_number,
+        //         new_block
+        //     ));
+        // }
+
+        // Ok(())
     }
 }
 

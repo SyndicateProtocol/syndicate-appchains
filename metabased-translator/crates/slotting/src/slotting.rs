@@ -555,12 +555,12 @@ mod tests {
 
         set_tx.send(create_test_block(1, 10_002)).await.unwrap();
 
-        let slot0 = slot_rx.recv().await.unwrap();
-        assert_eq!(slot0.timestamp, slot_start_timestamp_ms);
-        assert_eq!(slot0.number, 0);
-        assert_eq!(slot0.sequencing_chain_blocks.len(), 0);
-        assert_eq!(slot0.settlement_chain_blocks.len(), 0);
-        assert_eq!(slot0.state, SlotState::Unsafe);
+        let slot1 = slot_rx.recv().await.unwrap();
+        assert_eq!(slot1.timestamp, slot_start_timestamp_ms);
+        assert_eq!(slot1.number, 1);
+        assert_eq!(slot1.sequencing_chain_blocks.len(), 0);
+        assert_eq!(slot1.settlement_chain_blocks.len(), 0);
+        assert_eq!(slot1.state, SlotState::Unsafe);
 
         assert!(slot_rx.is_empty());
 
@@ -582,12 +582,12 @@ mod tests {
         // this should mark slot 1 as unsafe
         seq_tx.send(create_test_block(3, 11_001)).await.unwrap();
 
-        let slot1 = slot_rx.recv().await.unwrap();
-        assert_eq!(slot1.timestamp, slot_start_timestamp_ms + slot_duration_ms);
-        assert_eq!(slot1.number, 1);
-        assert_eq!(slot1.sequencing_chain_blocks.len(), 2);
-        assert_eq!(slot1.settlement_chain_blocks.len(), 1);
-        assert_eq!(slot1.state, SlotState::Unsafe);
+        let slot2 = slot_rx.recv().await.unwrap();
+        assert_eq!(slot2.timestamp, slot_start_timestamp_ms + slot_duration_ms);
+        assert_eq!(slot2.number, 2);
+        assert_eq!(slot2.sequencing_chain_blocks.len(), 2);
+        assert_eq!(slot2.settlement_chain_blocks.len(), 1);
+        assert_eq!(slot2.state, SlotState::Unsafe);
 
         // slot 2 should still be opened
         assert!(slot_rx.is_empty());
@@ -691,38 +691,38 @@ mod tests {
         let handle = tokio::spawn(async move { slotter.start(shutdown_rx).await });
 
         // Send some blocks
-        // slot 1
-        seq_tx.send(create_test_block(1, 10_001)).await.unwrap();
-        set_tx.send(create_test_block(1, 10_002)).await.unwrap();
-
         // slot 2
-        seq_tx.send(create_test_block(2, 11_001)).await.unwrap();
-        set_tx.send(create_test_block(2, 11_002)).await.unwrap();
+        seq_tx.send(create_test_block(2, 10_001)).await.unwrap();
+        set_tx.send(create_test_block(2, 10_002)).await.unwrap();
 
-        // This should make slot 0 and 1 unsafe
-        let slot0 = slot_rx.recv().await.unwrap();
-        assert_eq!(slot0.number, 0);
-        assert_eq!(slot0.sequencing_chain_blocks.len(), 0);
-        assert_eq!(slot0.settlement_chain_blocks.len(), 0);
-        assert_eq!(slot0.state, SlotState::Unsafe);
+        // slot 3
+        seq_tx.send(create_test_block(3, 11_001)).await.unwrap();
+        set_tx.send(create_test_block(3, 11_002)).await.unwrap();
 
+        // This should make slot 1 and 2 unsafe
         let slot1 = slot_rx.recv().await.unwrap();
         assert_eq!(slot1.number, 1);
-        assert_eq!(slot1.sequencing_chain_blocks.len(), 1);
-        assert_eq!(slot1.settlement_chain_blocks.len(), 1);
-        assert_eq!(slot1.sequencing_chain_blocks[0].block.number, 1);
-        assert_eq!(slot1.settlement_chain_blocks[0].block.number, 1);
+        assert_eq!(slot1.sequencing_chain_blocks.len(), 0);
+        assert_eq!(slot1.settlement_chain_blocks.len(), 0);
         assert_eq!(slot1.state, SlotState::Unsafe);
-
-        // Send blocks that are MAX_WAIT_MS (24 hours) ahead, this should make slots 0, 1 and 2 safe
-        set_tx.send(create_test_block(3, 11_001 + MAX_WAIT_MS)).await.unwrap();
-        // NOTE: don't send a block for the sequencing chain, that would mark all the empty slots as unsafe and atempt to send them over the channel (which would get filled up and stuck)
 
         let slot2 = slot_rx.recv().await.unwrap();
         assert_eq!(slot2.number, 2);
         assert_eq!(slot2.sequencing_chain_blocks.len(), 1);
         assert_eq!(slot2.settlement_chain_blocks.len(), 1);
-        assert_eq!(slot2.state, SlotState::Safe); // slot 2 should be received as safe because slotter thinks MAX_WAIT_MS has passed
+        assert_eq!(slot2.sequencing_chain_blocks[0].block.number, 2);
+        assert_eq!(slot2.settlement_chain_blocks[0].block.number, 2);
+        assert_eq!(slot2.state, SlotState::Unsafe);
+
+        // Send blocks that are MAX_WAIT_MS (24 hours) ahead, this should make slots 1, 2 and 3 safe
+        set_tx.send(create_test_block(4, 11_001 + MAX_WAIT_MS)).await.unwrap();
+        // NOTE: don't send a block for the sequencing chain, that would mark all the empty slots as unsafe and atempt to send them over the channel (which would get filled up and stuck)
+
+        let slot3 = slot_rx.recv().await.unwrap();
+        assert_eq!(slot3.number, 3);
+        assert_eq!(slot3.sequencing_chain_blocks.len(), 1);
+        assert_eq!(slot3.settlement_chain_blocks.len(), 1);
+        assert_eq!(slot3.state, SlotState::Safe); // slot 3 should be received as safe because slotter thinks MAX_WAIT_MS has passed
 
         // shutdown slotter
         let _ = shutdown_tx.send(());
@@ -743,21 +743,21 @@ mod tests {
         let (_shutdown_tx, shutdown_rx) = oneshot::channel();
         tokio::spawn(async move { resumed_slotter.start(shutdown_rx).await });
 
-        // Send new blocks to resumed slotter (since only slot 0,1,2 have been saved to the DB, we should send blocks #3)
-        new_seq_tx.send(create_test_block(3, 12_001)).await.unwrap();
-        new_set_tx.send(create_test_block(3, 12_002)).await.unwrap();
+        // Send new blocks to resumed slotter (since only slot 0,1,2 have been saved to the DB, we should send blocks #4 (for slot 5))
+        new_seq_tx.send(create_test_block(4, 12_001)).await.unwrap();
+        new_set_tx.send(create_test_block(4, 12_002)).await.unwrap();
 
-        // sending blocks for slot 4 should mark slot 3 as unsafe
-        new_seq_tx.send(create_test_block(4, 13_001)).await.unwrap();
-        new_set_tx.send(create_test_block(4, 13_002)).await.unwrap();
+        // sending blocks for slot 5 should mark slot 4 as unsafe
+        new_seq_tx.send(create_test_block(5, 13_001)).await.unwrap();
+        new_set_tx.send(create_test_block(5, 13_002)).await.unwrap();
 
         // Should get slot 3 marked as unsafe
-        let slot3 = resumed_slot_rx.recv().await.unwrap();
-        assert_eq!(slot3.number, 3);
-        assert_eq!(slot3.state, SlotState::Unsafe);
-        assert_eq!(slot3.sequencing_chain_blocks.len(), 1);
-        assert_eq!(slot3.settlement_chain_blocks.len(), 1);
-        assert_eq!(slot3.sequencing_chain_blocks[0].block.number, 3);
-        assert_eq!(slot3.settlement_chain_blocks[0].block.number, 3);
+        let slot4 = resumed_slot_rx.recv().await.unwrap();
+        assert_eq!(slot4.number, 4);
+        assert_eq!(slot4.state, SlotState::Unsafe);
+        assert_eq!(slot4.sequencing_chain_blocks.len(), 1);
+        assert_eq!(slot4.settlement_chain_blocks.len(), 1);
+        assert_eq!(slot4.sequencing_chain_blocks[0].block.number, 4);
+        assert_eq!(slot4.settlement_chain_blocks[0].block.number, 4);
     }
 }
