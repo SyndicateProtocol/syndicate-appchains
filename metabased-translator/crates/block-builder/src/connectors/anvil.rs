@@ -122,7 +122,7 @@ impl MetaChainProvider {
     }
 
     /// Submits a list of transactions to the `MetaChain`
-    pub async fn submit_txns(&self, txns: Vec<TransactionRequest>) -> eyre::Result<()> {
+    pub async fn submit_txns(&self, txns: Vec<TransactionRequest>) -> Result<()> {
         for txn in txns {
             let _ = self
                 .provider

@@ -13,7 +13,7 @@ use common::types::Slot;
 use eyre::{Error, Result};
 use thiserror::Error;
 use tokio::sync::mpsc::Receiver;
-use tracing::{debug, error as log_error};
+use tracing::{debug, error};
 
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
@@ -62,7 +62,7 @@ impl BlockBuilder {
 
             // Submit transactions to mchain
             if let Err(e) = self.mchain.submit_txns(transactions).await {
-                log_error!("Error submitting transaction: {}", e);
+                error!("Error submitting transaction: {}", e);
                 continue;
             }
 

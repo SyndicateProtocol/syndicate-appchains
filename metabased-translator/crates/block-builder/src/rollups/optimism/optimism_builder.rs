@@ -81,10 +81,6 @@ impl OptimismBlockBuilder {
         let tx = new_batcher_tx(batcher, batch_inbox, data.into());
         Ok(tx)
     }
-
-    fn transaction_parser(&self) -> &SequencingTransactionParser {
-        &self.transaction_parser
-    }
 }
 
 #[cfg(test)]
