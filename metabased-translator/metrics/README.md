@@ -5,7 +5,7 @@ This module provides a robust metrics system for monitoring and analyzing key pe
 ### Key Metrics
 The following metrics are implemented and exposed via the `/metrics` endpoint in the OpenMetrics format:
 
-### Ingestor
+#### Ingestor
 1. **rpc_calls**: Tracks the number of RPC method calls.
    - **Labels**:
      - `label_name`: The RPC identifier or source.
@@ -24,10 +24,10 @@ The following metrics are implemented and exposed via the `/metrics` endpoint in
      - `method`: Always set to `"last_block_fetched"`.
    - **Metric Type**: Gauge
 
-### Slotting
+#### Slotting
 
 TODO SEQ-506
 
-### Block builder
+#### Block builder
 
 TODO SEQ-505

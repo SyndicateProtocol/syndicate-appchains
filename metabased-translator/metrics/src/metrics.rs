@@ -26,7 +26,7 @@ pub struct Labels {
 }
 
 #[derive(Debug)]
-pub struct Metrics {
+pub struct IngestorMetrics {
     rpc_calls: Family<Labels, Counter>,
     rpc_calls_duration: Family<Labels, Histogram>,
     last_block_fetched: Family<Labels, Gauge>,
@@ -37,7 +37,7 @@ pub struct MetricsState {
     pub registry: Registry,
 }
 
-impl Metrics {
+impl IngestorMetrics {
     pub fn new(registry: &mut Registry) -> Self {
         let rpc_calls = Family::<Labels, Counter>::default();
         registry.register("rpc_calls", "Number of RPC method calls done", rpc_calls.clone());

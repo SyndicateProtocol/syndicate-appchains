@@ -9,7 +9,7 @@ pub mod ingestor;
 use crate::config::ChainIngestorConfig;
 use eyre::eyre;
 use ingestor::{Ingestor, IngestorChain};
-use metrics::{metrics::MetricsState, Metrics};
+use metrics::{metrics::MetricsState, IngestorMetrics};
 use prometheus_client::registry::Registry;
 use std::{error::Error, time::Duration};
 use tracing::info;
@@ -48,7 +48,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     };
 
     let mut metrics_state = MetricsState { registry: Registry::default() };
-    let metrics = Metrics::new(&mut metrics_state.registry);
+    let metrics = IngestorMetrics::new(&mut metrics_state.registry);
 
     let chain = IngestorChain::Sequencing;
     // Create the ingestor and receiver

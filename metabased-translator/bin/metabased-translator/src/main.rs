@@ -9,7 +9,7 @@ use metabased_translator::config::MetabasedConfig;
 use metrics::{
     config::MetricsConfig,
     metrics::{start_metrics, MetricsState},
-    Metrics,
+    IngestorMetrics,
 };
 use prometheus_client::registry::Registry;
 use slotting::{config::SlottingConfig, slotting::Slotter};
@@ -39,8 +39,8 @@ async fn run(
 
     // Initialize metrics
     let mut metrics_state = MetricsState { registry: Registry::default() };
-    let sequencing_metrics = Metrics::new(&mut metrics_state.registry);
-    let settlement_metrics = Metrics::new(&mut metrics_state.registry);
+    let sequencing_metrics = IngestorMetrics::new(&mut metrics_state.registry);
+    let settlement_metrics = IngestorMetrics::new(&mut metrics_state.registry);
     let metrics_task: tokio::task::JoinHandle<()> =
         start_metrics(metrics_state, metrics_config.metrics_port).await;
 

@@ -4,7 +4,7 @@
 use crate::{config::ChainIngestorConfig, eth_client::EthClient};
 use common::types::BlockAndReceipts;
 use eyre::{eyre, Error};
-use metrics::Metrics;
+use metrics::IngestorMetrics;
 use std::{fmt, time::Duration};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tracing::{debug, error};
@@ -17,7 +17,7 @@ pub struct Ingestor {
     current_block_number: u64,
     sender: Sender<BlockAndReceipts>,
     polling_interval: Duration,
-    metrics: Metrics,
+    metrics: IngestorMetrics,
 }
 
 /// Ingestor chains
@@ -52,7 +52,7 @@ impl Ingestor {
     pub async fn new(
         chain: IngestorChain,
         config: ChainIngestorConfig,
-        metrics: Metrics,
+        metrics: IngestorMetrics,
     ) -> Result<(Self, Receiver<BlockAndReceipts>), Error> {
         let client = EthClient::new(&config.rpc_url).await?;
         let (sender, receiver) = channel(config.buffer_size);
@@ -178,7 +178,7 @@ mod tests {
     use alloy::primitives::B256;
     use common::types::{Block, BlockAndReceipts};
     use eyre::Result;
-    use metrics::{metrics::MetricsState, Metrics};
+    use metrics::{metrics::MetricsState, IngestorMetrics};
     use prometheus_client::registry::Registry;
     use std::str::FromStr;
 
@@ -230,7 +230,7 @@ mod tests {
         let config = test_config();
 
         let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = Metrics::new(&mut metrics_state.registry);
+        let metrics = IngestorMetrics::new(&mut metrics_state.registry);
 
         let (ingestor, receiver) =
             Ingestor::new(IngestorChain::Sequencing, config.sequencing.into(), metrics).await?;
@@ -249,7 +249,7 @@ mod tests {
         let (sender, mut receiver) = channel(10);
         let client = EthClient::new(test_config().sequencing.sequencing_rpc_url.as_str()).await?;
         let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = Metrics::new(&mut metrics_state.registry);
+        let metrics = IngestorMetrics::new(&mut metrics_state.registry);
         let mut ingestor = Ingestor {
             chain: IngestorChain::Sequencing,
             client,
@@ -278,7 +278,7 @@ mod tests {
         let (sender, _) = channel(10);
         let client = EthClient::new(test_config().sequencing.sequencing_rpc_url.as_str()).await?;
         let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = Metrics::new(&mut metrics_state.registry);
+        let metrics = IngestorMetrics::new(&mut metrics_state.registry);
         let mut ingestor = Ingestor {
             chain: IngestorChain::Sequencing,
             client,
