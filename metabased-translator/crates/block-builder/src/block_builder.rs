@@ -120,4 +120,13 @@ pub enum BlockBuilderError {
 
     #[error("Cannot serialize empty l2 msg")]
     EmptyL2Message(),
+
+    #[error("No contract addr found")]
+    NoContractAddress(),
+
+    #[error("No block number found")]
+    NoBlockNumber(),
+
+    #[error("Overflow error")]
+    Overflow(),
 }

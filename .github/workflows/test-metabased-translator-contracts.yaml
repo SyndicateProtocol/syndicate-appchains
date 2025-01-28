@@ -10,6 +10,7 @@ on:
   pull_request:
     paths:
       - "metabased-translator/contracts/**"
+      - "metabased-translator/contract-bindings/src/arbitrum/**"
 
 env:
   FOUNDRY_PROFILE: ci
@@ -52,3 +53,9 @@ jobs:
         run: |
           forge test -vvv
         id: test
+
+      - name: Check Rust bindings
+        run: |
+          forge bind --alloy
+          mv out/bindings/src/lib.rs out/bindings/src/mod.rs
+          diff -r -q out/bindings/src ../contract-bindings/src/arbitrum

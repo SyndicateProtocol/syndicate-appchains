@@ -1,5 +1,4 @@
 //! Configuration for the block builder service
-
 use alloy::{
     primitives::Address,
     signers::{
@@ -13,16 +12,18 @@ use thiserror::Error;
 use tracing::debug;
 
 const DEFAULT_PRIVATE_KEY_SIGNER: &str =
-    "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 /// Configuration for the block builder service
 #[derive(Parser, Clone)]
+#[allow(missing_docs)]
 pub struct BlockBuilderConfig {
-    #[allow(missing_docs)]
+    #[arg(short = 'f', long, env = "BLOCK_BUILDER_SNAPSHOT_FILE", default_value_t = String::new())]
+    pub file: String,
+
     #[arg(short = 'p', long, env = "BLOCK_BUILDER_PORT", default_value_t = 8888)]
     pub port: u16,
 
-    #[allow(missing_docs)]
     #[arg(
         short = 'g',
         long,
@@ -31,9 +32,8 @@ pub struct BlockBuilderConfig {
     )]
     pub genesis_timestamp: u64,
 
-    #[allow(missing_docs)]
-    #[arg(short = 'c', long, env = "BLOCK_BUILDER_CHAIN_ID", default_value_t = 84532)]
-    pub chain_id: u64,
+    #[arg(short = 'c', long, env = "BLOCK_BUILDER_TARGET_CHAIN_ID", default_value_t = 13331370)]
+    pub target_chain_id: u64,
 
     /// Sequencing contract address on the sequencing chain
     #[arg(short = 's', long, env = "BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS",
@@ -68,9 +68,10 @@ pub fn get_default_private_key_signer() -> LocalSigner<SigningKey> {
 impl Debug for BlockBuilderConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockBuilderConfig")
+            .field("file", &self.file)
             .field("port", &self.port)
             .field("genesis_timestamp", &self.genesis_timestamp)
-            .field("chain_id", &self.chain_id)
+            .field("target_chain_id", &self.target_chain_id)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
             .field("target_rollup_type", &self.target_rollup_type)
             .field("signer_key", &"<private>") // Skip showing private key
@@ -81,9 +82,10 @@ impl Debug for BlockBuilderConfig {
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
         Self {
+            file: String::new(),
             port: 8888,
             genesis_timestamp: 1712500000,
-            chain_id: 84532,
+            target_chain_id: 13331370,
             target_rollup_type: TargetRollupType::ARBITRUM,
             sequencing_contract_address: Address::from_str(
                 "0x1234000000000000000000000000000000000000",
@@ -98,16 +100,18 @@ impl Default for BlockBuilderConfig {
 impl BlockBuilderConfig {
     /// Creates a new [`BlockBuilderConfig`] instance.
     pub fn new(
+        file: String,
         port: u16,
         genesis_timestamp: u64,
-        chain_id: u64,
+        target_chain_id: u64,
         sequencing_contract_address: Address,
         target_rollup_type: TargetRollupType,
     ) -> Result<Self, ConfigError> {
         let config = Self {
+            file,
             port,
             genesis_timestamp,
-            chain_id,
+            target_chain_id,
             sequencing_contract_address,
             target_rollup_type,
         };
@@ -122,7 +126,7 @@ impl BlockBuilderConfig {
             return Err(ConfigError::InvalidPort("Port cannot be 0".to_string()));
         }
 
-        if self.chain_id == 0 {
+        if self.target_chain_id == 0 {
             return Err(ConfigError::InvalidChainId("Chain ID cannot be 0".to_string()));
         }
 
@@ -147,9 +151,10 @@ mod tests {
     #[test]
     fn test_default_parsing() {
         let config = BlockBuilderConfig::parse_from(["test"]);
+        assert_eq!(config.file, "");
         assert_eq!(config.port, 8888);
         assert_eq!(config.genesis_timestamp, 1712500000);
-        assert_eq!(config.chain_id, 84532);
+        assert_eq!(config.target_chain_id, 13331370);
         assert_eq!(
             config.sequencing_contract_address.to_string(),
             "0x1234000000000000000000000000000000000000"
@@ -159,9 +164,10 @@ mod tests {
     #[test]
     fn test_validate() {
         let config = BlockBuilderConfig {
+            file: String::new(),
             port: 0,
             genesis_timestamp: 1000000,
-            chain_id: 12345,
+            target_chain_id: 12345,
             sequencing_contract_address: Address::from_str(
                 "0x1234000000000000000000000000000000000000",
             )
