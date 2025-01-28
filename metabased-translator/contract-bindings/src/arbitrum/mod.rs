@@ -17,7 +17,6 @@ pub mod igasrefunder;
 pub mod iinbox;
 pub mod iinboxbase;
 pub mod iownable;
-pub mod irollup;
 pub mod isequencerinbox;
 pub mod messages;
 pub mod mockerc20;

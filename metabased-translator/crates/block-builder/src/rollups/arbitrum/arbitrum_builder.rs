@@ -14,23 +14,34 @@ use alloy::{
     sol_types::{SolCall, SolEvent},
 };
 use async_trait::async_trait;
-use common::types::{BlockAndReceipts, Slot};
+use common::types::{BlockAndReceipts, Log, Slot};
 use contract_bindings::arbitrum::{
     ibridge::IBridge::MessageDelivered,
     idelayedmessageprovider::IDelayedMessageProvider::{
         InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
     },
     iinboxbase::IInboxBase::sendL2MessageFromOriginCall,
-    irollup::IRollup,
+    rollup::Rollup,
 };
 use eyre::Result;
 use std::collections::HashMap;
+use thiserror::Error;
 use tracing::{debug, error};
 
 const MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = MessageDelivered::SIGNATURE_HASH;
 const INBOX_MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = InboxMessageDelivered::SIGNATURE_HASH;
 const INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH: FixedBytes<32> =
     InboxMessageDeliveredFromOrigin::SIGNATURE_HASH;
+
+#[allow(missing_docs)] // self-documenting
+#[derive(Debug, Error)]
+pub enum ArbitrumBlockBuilderError {
+    #[error("Failed to decode {0}: {1}")]
+    DecodingError(&'static str, eyre::Error),
+
+    #[error("Missing inbox message data for message index: {0}")]
+    MissingInboxMessageData(U256),
+}
 
 #[derive(Debug)]
 /// Builder for constructing Arbitrum blocks from transactions
@@ -137,7 +148,13 @@ impl ArbitrumBlockBuilder {
                                 message_data.insert(message_num, decoded.messageData);
                             }
                             Err(e) => {
-                                error!("Failed to decode sendL2MessageFromOrigin call: {}", e);
+                                error!(
+                                    "{}",
+                                    ArbitrumBlockBuilderError::DecodingError(
+                                        "sendL2MessageFromOriginCall",
+                                        e.into()
+                                    )
+                                );
                             }
                         }
 
@@ -152,44 +169,57 @@ impl ArbitrumBlockBuilder {
         debug!("Delayed message data: {:?}", message_data);
         debug!("Delayed messages: {:?}", delayed_messages);
 
-        let mut delayed_msg_txns: Vec<TransactionRequest> = Vec::new();
-
-        for msg_log in delayed_messages {
-            let msg_delivered = match MessageDelivered::abi_decode_data(&msg_log.data, true) {
-                Ok(decoded) => decoded,
-                Err(e) => {
-                    error!("Failed to decode MessageDelivered event: {}", e);
-                    continue;
+        let delayed_msg_txns: Vec<TransactionRequest> = delayed_messages
+            .iter()
+            .filter_map(|msg_log| {
+                match self.delayed_message_to_mchain_txn(msg_log, message_data.clone()) {
+                    Ok(txn) => Some(txn),
+                    Err(e) => {
+                        error!("Failed to process delayed message: {}", e);
+                        None
+                    }
                 }
-            };
-
-            let message_index = U256::from_be_slice(msg_log.topics[1].as_slice()); // First indexed field is message index
-            let kind = msg_delivered.1; // Second indexed field is kind
-            let sender = msg_delivered.2; // Third indexed field is sender
-
-            // Get corresponding message data
-            let data = match message_data.get(&message_index) {
-                Some(data) => data,
-                None => {
-                    error!("Missing inbox message data for message index: {}", message_index);
-                    continue;
-                }
-            };
-
-            let delivered_msg_txn =
-                TransactionRequest::default().to(self.mchain_rollup_address).input(
-                    IRollup::deliverMessageCall { kind, sender, messageData: data.clone() }
-                        .abi_encode()
-                        .into(),
-                );
-
-            delayed_msg_txns.push(delivered_msg_txn);
-        }
+            })
+            .collect();
 
         // Update the delayed message count
         self.delayed_message_count += delayed_msg_txns.len() as u64;
 
         Ok(delayed_msg_txns)
+    }
+
+    fn delayed_message_to_mchain_txn(
+        &self,
+        log: &Log,
+        message_data: HashMap<U256, Bytes>,
+    ) -> Result<TransactionRequest> {
+        let msg_delivered = match MessageDelivered::abi_decode_data(&log.data, true) {
+            Ok(decoded) => decoded,
+            Err(e) => {
+                return Err(
+                    ArbitrumBlockBuilderError::DecodingError("MessageDelivered", e.into()).into()
+                );
+            }
+        };
+
+        let message_index = U256::from_be_slice(log.topics[1].as_slice()); // First indexed field is message index
+        let kind = msg_delivered.1; // Second non-indexed field is kind
+        let sender = msg_delivered.2; // Third non-indexed field is sender
+
+        let data = match message_data.get(&message_index) {
+            Some(data) => data,
+            None => {
+                return Err(ArbitrumBlockBuilderError::MissingInboxMessageData(message_index).into());
+            }
+        };
+
+        let delivered_msg_txn = TransactionRequest::default().to(self.mchain_rollup_address).input(
+            Rollup::deliverMessageCall { kind, sender, messageData: data.clone() }
+                .abi_encode()
+                .into(),
+        );
+
+        Ok(delivered_msg_txn)
     }
 
     /// Builds a batch of transactions into an Arbitrum batch
@@ -198,7 +228,7 @@ impl ArbitrumBlockBuilder {
             Batch(vec![BatchMessage::Delayed])
         } else {
             Batch(vec![BatchMessage::L2(L1IncomingMessage {
-                // TODO: Add meaningful values for the header
+                // TODO (SEQ-522): Add meaningful values for the header
                 header: Default::default(),
                 l2_msg: txs,
             })])
@@ -210,7 +240,7 @@ impl ArbitrumBlockBuilder {
         // Create the transaction request
         let request = TransactionRequest::default().to(self.mchain_rollup_address).input(
             // Encode the function call with parameters
-            IRollup::postBatchCall::new((
+            Rollup::postBatchCall::new((
                 U256::from(self.delayed_message_count), // after delayed messages read
                 encoded_batch,                          // batch data
             ))
@@ -254,7 +284,7 @@ mod tests {
         let expected_encoded = expected_batch.encode().unwrap();
 
         // Verify the input data contains the correct parameters
-        let call_data = IRollup::postBatchCall::new((
+        let call_data = Rollup::postBatchCall::new((
             U256::from(0),    // delayed message count
             expected_encoded, // batch data
         ))
@@ -283,7 +313,7 @@ mod tests {
         let expected_encoded = expected_batch.encode().unwrap();
 
         // Verify the input data contains the correct parameters
-        let call_data = IRollup::postBatchCall::new((
+        let call_data = Rollup::postBatchCall::new((
             U256::from(0),    // delayed message count
             expected_encoded, // batch data
         ))
@@ -452,7 +482,7 @@ mod tests {
         })]);
         let expected_encoded = expected_batch.encode().unwrap();
         let expected_batch_call =
-            IRollup::postBatchCall::new((U256::from(0), expected_encoded)).abi_encode().into();
+            Rollup::postBatchCall::new((U256::from(0), expected_encoded)).abi_encode().into();
         assert_eq!(batch_txn.input, expected_batch_call);
     }
 
@@ -541,7 +571,7 @@ mod tests {
         // Verify delayed message transaction
         let delayed_tx = &txns[0];
         assert_eq!(delayed_tx.to, Some(TxKind::Call(builder.mchain_rollup_address)));
-        let expected_delayed_call = IRollup::deliverMessageCall {
+        let expected_delayed_call = Rollup::deliverMessageCall {
             kind: 2u8,
             sender: Address::repeat_byte(1),
             messageData: delayed_message_data,
@@ -560,7 +590,129 @@ mod tests {
         })]);
         let expected_encoded = expected_batch.encode().unwrap();
         let expected_batch_call =
-            IRollup::postBatchCall::new((U256::from(1), expected_encoded)).abi_encode().into();
+            Rollup::postBatchCall::new((U256::from(1), expected_encoded)).abi_encode().into();
         assert_eq!(batch_txn.input, expected_batch_call);
+    }
+
+    #[test]
+    fn test_delayed_message_to_mchain_txn_success() {
+        let builder = ArbitrumBlockBuilder::default();
+
+        // Create message data
+        let message_index = U256::from(1);
+        let message_data: Bytes = hex!("1234").into();
+        let mut message_map = HashMap::new();
+        message_map.insert(message_index, message_data.clone());
+
+        // Create MessageDelivered event data
+        let msg_delivered = MessageDelivered {
+            messageIndex: message_index,
+            beforeInboxAcc: FixedBytes::from([1u8; 32]),
+            inbox: builder.delayed_inbox,
+            kind: 2u8,
+            sender: Address::repeat_byte(1),
+            messageDataHash: keccak256(message_data.clone()),
+            baseFeeL1: U256::ZERO,
+            timestamp: 0u64,
+        };
+
+        // Create the log
+        let log = Log {
+            address: builder.delayed_inbox,
+            topics: vec![
+                MSG_DELIVERED_EVENT_HASH,
+                FixedBytes::from(message_index.to_be_bytes::<32>()),
+                FixedBytes::from([1u8; 32]),
+            ],
+            data: msg_delivered.encode_data().into(),
+            block_number: 1,
+            transaction_index: 0,
+            ..Default::default()
+        };
+
+        // Call the function
+        let result = builder.delayed_message_to_mchain_txn(&log, message_map);
+        assert!(result.is_ok());
+
+        let txn = result.unwrap();
+
+        // Verify the transaction
+        assert_eq!(txn.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+
+        // Verify the input data matches expected deliverMessageCall
+        let expected_call = Rollup::deliverMessageCall {
+            kind: 2u8,
+            sender: Address::repeat_byte(1),
+            messageData: message_data,
+        }
+        .abi_encode()
+        .into();
+        assert_eq!(txn.input, expected_call);
+    }
+
+    #[test]
+    fn test_delayed_message_to_mchain_txn_missing_data() {
+        let builder = ArbitrumBlockBuilder::default();
+
+        // Create MessageDelivered event data without corresponding message data
+        let message_index = U256::from(1);
+        let msg_delivered = MessageDelivered {
+            messageIndex: message_index,
+            beforeInboxAcc: FixedBytes::from([1u8; 32]),
+            inbox: builder.delayed_inbox,
+            kind: 2u8,
+            sender: Address::repeat_byte(1),
+            messageDataHash: FixedBytes::from([2u8; 32]),
+            baseFeeL1: U256::ZERO,
+            timestamp: 0u64,
+        };
+
+        let log = Log {
+            address: builder.delayed_inbox,
+            topics: vec![
+                MSG_DELIVERED_EVENT_HASH,
+                FixedBytes::from(message_index.to_be_bytes::<32>()),
+                FixedBytes::from([1u8; 32]),
+            ],
+            data: msg_delivered.encode_data().into(),
+            block_number: 1,
+            transaction_index: 0,
+            ..Default::default()
+        };
+
+        // Empty message data map
+        let message_map = HashMap::new();
+
+        // Call should fail with MissingInboxMessageData error
+        let result = builder.delayed_message_to_mchain_txn(&log, message_map);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err().downcast::<ArbitrumBlockBuilderError>().unwrap(),
+            ArbitrumBlockBuilderError::MissingInboxMessageData(_)
+        ));
+    }
+
+    #[test]
+    fn test_delayed_message_to_mchain_txn_invalid_event_data() {
+        let builder = ArbitrumBlockBuilder::default();
+        let message_map = HashMap::new();
+
+        // Create log with invalid event data
+        let log = Log {
+            address: builder.delayed_inbox,
+            topics: vec![MSG_DELIVERED_EVENT_HASH],
+            data: Bytes::from(vec![1, 2, 3]), // Invalid data that can't be decoded
+            block_number: 1,
+            transaction_index: 0,
+            ..Default::default()
+        };
+
+        // Call should fail with DecodingError
+        let result = builder.delayed_message_to_mchain_txn(&log, message_map);
+        assert!(result.is_err());
+        assert!(matches!(
+            result.unwrap_err().downcast::<ArbitrumBlockBuilderError>().unwrap(),
+            ArbitrumBlockBuilderError::DecodingError(_, _)
+        ));
     }
 }
