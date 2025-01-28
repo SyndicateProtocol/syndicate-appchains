@@ -389,7 +389,7 @@ mod tests {
     #[tokio::test]
     #[ignore] // TODO SEQ-528 unskip
     async fn test_anvil_rollback() -> Result<()> {
-        // TODO TODO SEQ-528 refactor these test-state-paths
+        // TODO SEQ-528 refactor these test-state-paths
         let state_path = PathBuf::from("test-state1.json");
         let config = BlockBuilderConfig {
             anvil_state_path: state_path.to_str().unwrap().to_string(),

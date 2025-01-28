@@ -23,8 +23,6 @@ pub struct BlockBuilder {
     builder: Box<dyn RollupBlockBuilder>,
 }
 
-// TODO reorg to latest known safe slot
-
 impl BlockBuilder {
     /// Create a new block builder
     pub async fn new(
@@ -203,5 +201,5 @@ mod tests {
         Ok(())
     }
 
-    // TODO write a test that asserts for determinism (same slots should yield the same block chain on separate block builders)
+    // TODO SEQ-529 - write a test that asserts for determinism (same slots should yield the same block chain on separate block builders)
 }
