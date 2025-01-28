@@ -9,19 +9,19 @@ use tracing::debug;
 pub struct MetricsConfig {
     #[allow(missing_docs)]
     #[arg(long, env = "METRICS_PORT", default_value_t = 6666)]
-    pub m_port: u16,
+    pub metrics_port: u16,
 }
 
 impl Default for MetricsConfig {
     fn default() -> Self {
-        Self { m_port: 6666 }
+        Self { metrics_port: 6666 }
     }
 }
 
 impl MetricsConfig {
     /// Creates a new [`MetricsConfig`] instance.
-    pub fn new(m_port: u16) -> Result<Self, ConfigError> {
-        let config = Self { m_port };
+    pub fn new(metrics_port: u16) -> Result<Self, ConfigError> {
+        let config = Self { metrics_port };
         debug!("Created metrics builder config: {:?}", config);
         config.validate()?;
         Ok(config)
@@ -29,7 +29,7 @@ impl MetricsConfig {
 
     /// Validates the config values and complains about impossible ones
     pub fn validate(&self) -> Result<(), ConfigError> {
-        if self.m_port == 0 {
+        if self.metrics_port == 0 {
             return Err(ConfigError::InvalidPort("Port cannot be 0".to_string()));
         }
 
@@ -41,7 +41,7 @@ impl MetricsConfig {
 /// Possible errors that can occur when initializing the metrics configuration
 #[derive(Debug, Error)]
 pub enum ConfigError {
-    #[error("Invalid m_port: {0}")]
+    #[error("Invalid metrics_port: {0}")]
     InvalidPort(String),
 }
 
@@ -52,12 +52,12 @@ mod tests {
     #[test]
     fn test_default_parsing() {
         let config = MetricsConfig::parse_from(["test"]);
-        assert_eq!(config.m_port, 6666);
+        assert_eq!(config.metrics_port, 6666);
     }
 
     #[test]
     fn test_validate() {
-        let config = MetricsConfig { m_port: 0 };
+        let config = MetricsConfig { metrics_port: 0 };
         assert!(matches!(config.validate(), Err(ConfigError::InvalidPort(_))));
     }
 }

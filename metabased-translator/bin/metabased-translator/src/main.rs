@@ -42,7 +42,7 @@ async fn run(
     let sequencing_metrics = Metrics::new(&mut metrics_state.registry);
     let settlement_metrics = Metrics::new(&mut metrics_state.registry);
     let metrics_task: tokio::task::JoinHandle<()> =
-        start_metrics(metrics_state, metrics_config.m_port).await;
+        start_metrics(metrics_state, metrics_config.metrics_port).await;
 
     // Initialize components with their specific configs
     let sequencing_config = ingestion_config.sequencing;

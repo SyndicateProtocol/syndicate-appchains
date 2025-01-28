@@ -65,6 +65,7 @@ impl MetabasedConfig {
         add_fields::<SlottingConfig>(&mut cmd);
         add_fields::<SequencingChainConfig>(&mut cmd);
         add_fields::<SettlementChainConfig>(&mut cmd);
+        add_fields::<MetricsConfig>(&mut cmd);
 
         // Remove trailing slash and newline
         cmd.truncate(cmd.len() - 2);
@@ -130,7 +131,7 @@ mod tests {
         assert_eq!(config.settlement.settlement_rpc_url, "http://localhost:8545");
 
         // Metrics
-        assert_eq!(config.metrics.m_port, 6666)
+        assert_eq!(config.metrics.metrics_port, 6666)
     }
 
     #[test]
