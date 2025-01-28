@@ -35,18 +35,52 @@ pub struct SafeState {
 }
 
 #[async_trait]
+/// A trait for storing and retrieving the latest safe state of the translator
+///
+/// The safe state consists of:
+/// - The latest slot that was marked as safe
+/// - The latest block from the sequencing chain that has been slotted
+/// - The latest block from the settlement chain that has been slotted
+///
+/// This state is used to resume the translator after a restart:
+/// - The Ingestor will start from the latest slotted blocks
+/// - The Slotter will start from the latest safe slot
+/// - The BlockBuilder will reorg to match the latest safe slot
 pub trait TranslatorStore {
     /// Saves the latest slot and latest blocks to the database
+    ///
+    /// # Arguments
+    /// * `slot` - The slot to save
+    ///
+    /// # Returns
+    /// * `Ok(())` if the save was successful
+    /// * `Err(DbError)` if there was an error saving to the database
     async fn save_slot(&self, slot: &Slot) -> Result<(), DbError>;
-    /// Returns the latest safe state (latest slot and latest blocks from each chain)
+
+    /// Returns the latest safe state from the database
+    ///
+    /// # Returns
+    /// * `Ok(Some(SafeState))` if a safe state was found in the database
+    /// * `Ok(None)` if no safe state exists yet
+    /// * `Err(DbError)` if there was an error reading from the database
     async fn get_latest(&self) -> Result<Option<SafeState>, DbError>;
 }
 
+/// A RocksDB-backed implementation of the [`TranslatorStore`] trait
+#[derive(Debug)]
 pub struct RocksDbStore {
+    /// The underlying `RocksDB` instance
     db: DB,
 }
 
 impl RocksDbStore {
+    /// Creates a new `RocksDbStore` instance
+    ///
+    /// # Arguments
+    /// * `path` - The path to the `RocksDB` database
+    ///
+    /// # Returns
+    /// * `Result<Self, DbError>` - The new `RocksDbStore` instance
     pub fn new(path: &str) -> Result<Self, DbError> {
         Ok(Self { db: DB::open_default(path)? })
     }

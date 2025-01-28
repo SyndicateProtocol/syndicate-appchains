@@ -16,7 +16,10 @@ use alloy::{
         },
         Identity, Provider, ProviderBuilder, RootProvider, WalletProvider,
     },
-    rpc::types::{anvil::MineOptions, TransactionRequest},
+    rpc::types::{
+        anvil::{MineOptions, ReorgOptions},
+        TransactionRequest,
+    },
     transports::http::Http,
 };
 use contract_bindings::arbitrum::rollup::Rollup;
@@ -24,9 +27,6 @@ use eyre::Result;
 use reqwest::Client;
 use std::net::TcpListener;
 use tracing::info;
-
-/// Private key used for signing in the MetaChain provider
-const PRIVATE_KEY: &str = "fcd8aa9464a41a850d5bbc36cd6c4b6377e308a37869add1c2cf466b8d65826d";
 
 type FilledProvider = FillProvider<
     JoinFill<
@@ -242,6 +242,25 @@ impl MetaChainProvider {
         tx.await?;
         Ok(())
     }
+
+    /// Rolls back the chain to a specific block number by performing a reorg
+    pub async fn rollback_to_block(&self, block_number: u64) -> Result<()> {
+        let current_block = self.provider.get_block_number().await?;
+        let depth = current_block - block_number;
+        self.provider.anvil_reorg(ReorgOptions { depth, tx_block_pairs: vec![] }).await?;
+
+        // Verify we're at the correct block
+        let new_block = self.provider.get_block_number().await?;
+        if new_block != block_number {
+            return Err(eyre::eyre!(
+                "Failed to rollback: expected block {}, got block {}",
+                block_number,
+                new_block
+            ));
+        }
+
+        Ok(())
+    }
 }
 
 /// Check if a port is available by attempting to bind to it
@@ -308,7 +327,7 @@ mod tests {
             anvil_state_path: file.to_str().unwrap().to_string(),
             ..Default::default()
         };
-        _ = std::fs::remove_file(file);
+        _ = fs::remove_file(file);
         let mut provider = MetaChainProvider::start(cfg.clone()).await?;
         provider.mine_block(0).await?;
         let old_count = provider.provider.get_block_number().await?;
@@ -320,23 +339,24 @@ mod tests {
         Ok(())
     }
 
-    // TODO continue here, this is pretty broken lol
     #[tokio::test]
     async fn test_block_persistence() -> Result<()> {
         let state_path = PathBuf::from("test-state.json");
-        if state_path.exists() {
-            fs::remove_file(&state_path)?;
-        }
 
-        let config = BlockBuilderConfig::default();
+        let config = BlockBuilderConfig {
+            anvil_state_path: state_path.to_str().unwrap().to_string(),
+            genesis_timestamp: 999,
+            port: 9889,
+            ..Default::default()
+        };
 
         // First instance: create blocks
         {
-            let provider = MetaChainProvider::start(config.clone()).await?;
+            let chain = MetaChainProvider::start(config.clone()).await?;
 
             // Mine 1000 blocks
-            for i in 0..1_000 {
-                provider.mine_block(i).await?;
+            for i in 1000..2000 {
+                chain.mine_block(i as u64).await?;
             }
 
             // Let anvil write state before dropping
@@ -344,11 +364,11 @@ mod tests {
         } // First instance is dropped here
 
         // Second instance: verify blocks
-        let provider = MetaChainProvider::start(config).await?;
+        let chain = MetaChainProvider::start(config).await?;
 
         // Check a few random blocks are accessible
         for block_num in [0, 42, 567, 999, 1000] {
-            let block = provider
+            let block = chain
                 .provider
                 .get_block(BlockId::Number(block_num.into()), BlockTransactionsKind::Full)
                 .await?;
@@ -363,6 +383,30 @@ mod tests {
 
         // Cleanup
         fs::remove_file(state_path)?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[ignore] // TODO SEQ-528 unskip
+    async fn test_anvil_rollback() -> Result<()> {
+        // TODO TODO SEQ-528 refactor these test-state-paths
+        let state_path = PathBuf::from("test-state1.json");
+        let config = BlockBuilderConfig {
+            anvil_state_path: state_path.to_str().unwrap().to_string(),
+            genesis_timestamp: 999,
+            ..Default::default()
+        };
+
+        let chain = MetaChainProvider::start(config).await?;
+        // Mine 10 blocks
+        for i in 1000..1010 {
+            chain.mine_block(i as u64).await?;
+        }
+
+        chain.rollback_to_block(5).await?;
+        let block_num = chain.provider.get_block_number().await?;
+        assert_eq!(block_num, 5, "Chain should be at block 5");
 
         Ok(())
     }

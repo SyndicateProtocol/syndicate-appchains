@@ -111,7 +111,7 @@ impl Slotter {
                 latest_settlement_block: None,
                 slots: {
                     let mut slots = LinkedList::new();
-                    slots.push_front(Slot::new(0, config.start_slot_timestamp));
+                    slots.push_front(Slot::new(1, config.start_slot_timestamp));
                     slots
                 },
                 max_slots: calculate_max_slots(config.slot_duration_ms),

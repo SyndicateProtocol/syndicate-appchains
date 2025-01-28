@@ -49,10 +49,11 @@ async fn run(
     let mut sequencing_config = ingestion_config.sequencing;
     let mut settlement_config = ingestion_config.settlement;
 
+    let safe_block_number = safe_state.as_ref().map(|state| state.slot.number);
     // Override start blocks if we're resuming from a database
-    if let Some(safe_state) = &safe_state {
-        sequencing_config.sequencing_start_block = safe_state.sequencing_block.number;
-        settlement_config.settlement_start_block = safe_state.settlement_block.number;
+    if let Some(state) = &safe_state {
+        sequencing_config.sequencing_start_block = state.sequencing_block.number;
+        settlement_config.settlement_start_block = state.settlement_block.number;
     }
 
     // Initialize components
@@ -73,7 +74,9 @@ async fn run(
         tokio::spawn(async move { settlement_ingestor.start_polling(settle_shutdown_rx).await });
     let mut slotter_handle = tokio::spawn(async move { slotter.start(slotter_shutdown_rx).await });
     let mut block_builder_handle =
-        tokio::spawn(async move { block_builder.start(builder_shutdown_rx).await });
+        tokio::spawn(
+            async move { block_builder.start(safe_block_number, builder_shutdown_rx).await },
+        );
 
     // Wait for either shutdown signal or task failure
     tokio::select! {

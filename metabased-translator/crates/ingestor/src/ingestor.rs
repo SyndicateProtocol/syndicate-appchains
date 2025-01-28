@@ -224,7 +224,7 @@ mod tests {
         let (sender, _) = channel(10);
         let client = EthClient::new(test_config().sequencing.sequencing_rpc_url.as_str()).await?;
 
-        let mut ingestor =
+        let ingestor =
             Ingestor { client, current_block_number: start_block, sender, polling_interval };
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();

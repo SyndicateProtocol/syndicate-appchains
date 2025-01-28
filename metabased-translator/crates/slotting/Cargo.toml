@@ -27,9 +27,3 @@ tracing-test = { workspace = true }
 
 [lints]
 workspace = true
-
-
-#TODO remove this after testing
-[profile.test]
-opt-level = 0
-debug = true
