@@ -12,7 +12,7 @@ use alloy::transports::{RpcError, TransportErrorKind};
 use common::types::Slot;
 use eyre::{Error, Result};
 use thiserror::Error;
-use tokio::sync::mpsc::Receiver;
+use tokio::sync::{mpsc::Receiver, oneshot};
 use tracing::{error, info};
 
 /// Block builder service for processing and building L3 blocks.
@@ -46,34 +46,41 @@ impl BlockBuilder {
     }
 
     /// Start the block builder
-    pub async fn start(mut self) {
-        while let Some(slot) = self.slotter_rx.recv().await {
-            info!("Received slot: {:?}", slot);
-
-            // Process sequencing chain blocks into mB transactions
-            let mbtxs = self.builder.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
-
-            // TODO (SEQ-416): [OP / ARB] Process deposit transactions
-
-            // [OP / ARB] Build and submit batch
-            let batch_txn = match self.builder.build_batch_txn(mbtxs).await {
-                Ok(txn) => txn,
-                Err(e) => {
-                    error!("Error building batch transaction: {}", e);
-                    continue;
-                }
+    pub async fn start(mut self, mut shutdown_rx: oneshot::Receiver<()>) {
+        loop {
+            tokio::select! {
                 Some(slot) = self.slotter_rx.recv() => {
                     info!("Received slot: {:?}", slot);
 
-            // Submit batch transaction to mchain
-            if let Err(e) = self.mchain.submit_txn(batch_txn).await {
-                error!("Error submitting transaction: {}", e);
-                continue;
-            }
+                    // Process sequencing chain blocks into mB transactions
+                    let mbtxs = self.builder.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
 
-            // Mine mchain block
-            if let Err(e) = self.mchain.mine_block(slot.timestamp).await {
-                error!("Error mining block: {}", e);
+                    // TODO (SEQ-416): [OP / ARB] Process deposit transactions
+
+                    // [OP / ARB] Build and submit batch
+                    let batch_txn = match self.builder.build_batch_txn(mbtxs).await {
+                        Ok(txn) => txn,
+                        Err(e) => {
+                            error!("Error building batch transaction: {}", e);
+                            continue;
+                        }
+                    };
+
+                    // Submit batch transaction to mchain
+                    if let Err(e) = self.mchain.submit_txn(batch_txn).await {
+                        error!("Error submitting transaction: {}", e);
+                        continue;
+                    }
+
+                    // Mine mchain block
+                    if let Err(e) = self.mchain.mine_block(slot.timestamp).await {
+                        error!("Error mining block: {}", e);
+                    }
+                }
+                _ = &mut shutdown_rx => {
+                    info!("Block builder shutting down");
+                    break;
+                }
             }
         }
     }

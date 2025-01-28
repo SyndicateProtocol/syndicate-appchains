@@ -81,9 +81,16 @@ impl MetaChainProvider {
             "--no-mining",
         ];
 
-        if !config.file.is_empty() {
+        let state_interval = config.anvil_state_interval.to_string();
+        let prune_history = config.anvil_prune_history.to_string();
+
+        if !config.anvil_state_path.is_empty() {
             args.push("--state");
-            args.push(&config.file);
+            args.push(&config.anvil_state_path);
+            args.push("--state-interval");
+            args.push(&state_interval);
+            args.push("--prune-history");
+            args.push(&prune_history);
         }
 
         let anvil = Anvil::new().port(port).chain_id(MCHAIN_ID).args(args).try_spawn()?;
@@ -235,53 +242,6 @@ impl MetaChainProvider {
         tx.await?;
         Ok(())
     }
-
-    /// Starts the Anvil instance with state persistence and creates a provider for the `MetaChain`
-    async fn start_with_state_persistence(config: BlockBuilderConfig) -> eyre::Result<Self> {
-        let port = find_available_port(config.port, 10).ok_or_else(|| {
-            BlockBuilderError::AnvilStartError("No available ports found after 10 attempts")
-        })?;
-
-        if port != config.port {
-            info!("Port {} is in use, switching to port {}", config.port, port);
-        }
-
-        let ts = config.genesis_timestamp.to_string();
-        let state_interval = config.anvil_state_interval.to_string();
-        let prune_history = config.anvil_prune_history.to_string();
-
-        let mut args = vec![
-            "--base-fee",
-            "0",
-            "--gas-limit",
-            "30000000",
-            "--timestamp",
-            ts.as_str(),
-            "--no-mining",
-        ];
-
-        if !config.anvil_state_path.is_empty() {
-            args.push("--state");
-            args.push(&config.anvil_state_path);
-            args.push("--state-interval");
-            args.push(&state_interval);
-            args.push("--prune-history");
-            args.push(&prune_history);
-        }
-
-        let anvil = Anvil::new().port(port).chain_id(config.chain_id).args(args).try_spawn()?;
-
-        let signer: PrivateKeySigner = PRIVATE_KEY
-            .parse()
-            .map_err(|_| BlockBuilderError::AnvilStartError("Failed to parse private key"))?;
-
-        let provider = ProviderBuilder::new()
-            .with_recommended_fillers()
-            .wallet(EthereumWallet::from(signer))
-            .on_http(anvil.endpoint_url());
-
-        Ok(Self { anvil, provider })
-    }
 }
 
 /// Check if a port is available by attempting to bind to it
@@ -345,7 +305,7 @@ mod tests {
         let file = temp_dir().join("dump.json");
         let cfg = BlockBuilderConfig {
             port: 9888,
-            file: file.to_str().unwrap().to_string(),
+            anvil_state_path: file.to_str().unwrap().to_string(),
             ..Default::default()
         };
         _ = std::fs::remove_file(file);
@@ -362,7 +322,7 @@ mod tests {
 
     // TODO continue here, this is pretty broken lol
     #[tokio::test]
-    async fn test_block_persistence() -> eyre::Result<()> {
+    async fn test_block_persistence() -> Result<()> {
         let state_path = PathBuf::from("test-state.json");
         if state_path.exists() {
             fs::remove_file(&state_path)?;
@@ -372,7 +332,7 @@ mod tests {
 
         // First instance: create blocks
         {
-            let provider = MetaChainProvider::start_with_state_persistence(config.clone()).await?;
+            let provider = MetaChainProvider::start(config.clone()).await?;
 
             // Mine 1000 blocks
             for i in 0..1_000 {
@@ -384,7 +344,7 @@ mod tests {
         } // First instance is dropped here
 
         // Second instance: verify blocks
-        let provider = MetaChainProvider::start_with_state_persistence(config).await?;
+        let provider = MetaChainProvider::start(config).await?;
 
         // Check a few random blocks are accessible
         for block_num in [0, 42, 567, 999, 1000] {

@@ -18,9 +18,6 @@ const DEFAULT_PRIVATE_KEY_SIGNER: &str =
 #[derive(Parser, Clone)]
 #[allow(missing_docs)]
 pub struct BlockBuilderConfig {
-    #[arg(short = 'f', long, env = "BLOCK_BUILDER_SNAPSHOT_FILE", default_value_t = String::new())]
-    pub file: String,
-
     #[arg(short = 'p', long, env = "BLOCK_BUILDER_PORT", default_value_t = 8888)]
     pub port: u16,
 
@@ -77,13 +74,15 @@ pub fn get_default_private_key_signer() -> LocalSigner<SigningKey> {
 impl Debug for BlockBuilderConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockBuilderConfig")
-            .field("file", &self.file)
             .field("port", &self.port)
             .field("genesis_timestamp", &self.genesis_timestamp)
             .field("target_chain_id", &self.target_chain_id)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
             .field("target_rollup_type", &self.target_rollup_type)
             .field("signer_key", &"<private>") // Skip showing private key
+            .field("anvil_state_path", &self.anvil_state_path)
+            .field("anvil_state_interval", &self.anvil_state_interval)
+            .field("anvil_prune_history", &self.anvil_prune_history)
             .finish()
     }
 }
@@ -91,7 +90,6 @@ impl Debug for BlockBuilderConfig {
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
         Self {
-            file: String::new(),
             port: 8888,
             genesis_timestamp: 1712500000,
             target_chain_id: 13331370,
@@ -102,7 +100,7 @@ impl Default for BlockBuilderConfig {
             .unwrap_or_else(|err| {
                 panic!("Failed to parse default address: {}", err);
             }),
-            anvil_state_path: "./anvil_state".to_string(),
+            anvil_state_path: String::new(),
             anvil_state_interval: 1,
             anvil_prune_history: 50,
         }
@@ -112,20 +110,24 @@ impl Default for BlockBuilderConfig {
 impl BlockBuilderConfig {
     /// Creates a new [`BlockBuilderConfig`] instance.
     pub fn new(
-        file: String,
         port: u16,
         genesis_timestamp: u64,
         target_chain_id: u64,
         sequencing_contract_address: Address,
         target_rollup_type: TargetRollupType,
+        anvil_state_path: String,
+        anvil_state_interval: u64,
+        anvil_prune_history: u64,
     ) -> Result<Self, ConfigError> {
         let config = Self {
-            file,
             port,
             genesis_timestamp,
             target_chain_id,
             sequencing_contract_address,
             target_rollup_type,
+            anvil_state_path,
+            anvil_state_interval,
+            anvil_prune_history,
         };
         debug!("Created block builder config: {:?}", config);
         config.validate()?;
@@ -171,7 +173,6 @@ mod tests {
     #[test]
     fn test_default_parsing() {
         let config = BlockBuilderConfig::parse_from(["test"]);
-        assert_eq!(config.file, "");
         assert_eq!(config.port, 8888);
         assert_eq!(config.genesis_timestamp, 1712500000);
         assert_eq!(config.target_chain_id, 13331370);
@@ -179,12 +180,14 @@ mod tests {
             config.sequencing_contract_address.to_string(),
             "0x1234000000000000000000000000000000000000"
         );
+        assert_eq!(config.anvil_state_path, "");
+        assert_eq!(config.anvil_state_interval, 1);
+        assert_eq!(config.anvil_prune_history, 50);
     }
 
     #[test]
     fn test_validate() {
         let config = BlockBuilderConfig {
-            file: String::new(),
             port: 0,
             genesis_timestamp: 1000000,
             target_chain_id: 12345,
@@ -193,6 +196,9 @@ mod tests {
             )
             .unwrap(),
             target_rollup_type: TargetRollupType::ARBITRUM,
+            anvil_state_path: String::new(),
+            anvil_state_interval: 1,
+            anvil_prune_history: 50,
         };
         assert!(matches!(config.validate(), Err(ConfigError::InvalidPort(_))));
     }
