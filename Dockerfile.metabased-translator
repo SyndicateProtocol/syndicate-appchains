@@ -64,11 +64,24 @@ RUN cp /app/target/$BUILD_PROFILE/metabased-translator /app/translator
 FROM ubuntu:22.04 AS runtime
 WORKDIR /app
 
-# Install runtime dependencies
+# Install runtime dependencies and Foundry prerequisites
 RUN apt-get update && \
     apt-get install -y \
     ca-certificates \
+    curl \
+    build-essential \
+    git \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Foundry
+RUN curl -L https://foundry.paradigm.xyz | bash && \
+    ~/.foundry/bin/foundryup
+
+# Add foundry binaries to PATH
+ENV PATH="/root/.foundry/bin:${PATH}"
+
+# Verify anvil installation
+RUN anvil --version
 
 # Copy binaries from builder
 COPY --from=builder /app/translator /usr/local/bin/metabased-translator
