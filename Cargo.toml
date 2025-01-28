@@ -50,7 +50,6 @@ tracing = "0.1.41"
 clap = { version = "4.5.26" }
 hyper = { version = "1", features = ["full"] }
 http-body-util = "0.1"
-hyper-util = { version = "0.1", features = ["full"] }
 http = "1.2.0"
 reqwest = "0.12.12"
 tower = { version = "0.4.0" }               # can't be updated until a new version of jsonrpsee is released
