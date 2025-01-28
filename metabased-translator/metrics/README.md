@@ -23,3 +23,11 @@ The following metrics are implemented and exposed via the `/metrics` endpoint in
      - `label_name`: The RPC identifier or source.
      - `method`: Always set to `"last_block_fetched"`.
    - **Metric Type**: Gauge
+
+### Slotting
+
+TODO SEQ-506
+
+### Block builder
+
+TODO SEQ-505
