@@ -5,6 +5,7 @@ This module provides a robust metrics system for monitoring and analyzing key pe
 ### Key Metrics
 The following metrics are implemented and exposed via the `/metrics` endpoint in the OpenMetrics format:
 
+### Ingestor
 1. **rpc_calls**: Tracks the number of RPC method calls.
    - **Labels**:
      - `label_name`: The RPC identifier or source.
