@@ -1,4 +1,4 @@
-name: Docker Publish Dry Run Check
+name: Docker Publish Metabased-Translator - Dry Run Check
 
 on:
   pull_request:
@@ -6,6 +6,7 @@ on:
     paths:
       - "metabased-translator/**"
       - "Dockerfile.metabased-translator"
+      - "**/Cargo.toml"
 
 env:
   REGISTRY: ghcr.io

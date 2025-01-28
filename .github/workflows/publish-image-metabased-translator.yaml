@@ -1,4 +1,4 @@
-name: Docker Publish Dry Run Check
+name: Docker Publish Metabased-Translator
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
     paths:
       - "metabased-translator/**"
       - "Dockerfile.metabased-translator"
+      - "**/Cargo.toml"
 
 
 env:
@@ -14,8 +15,8 @@ env:
   METABASED_TRANSLATOR_IMAGE_NAME: ${{ github.repository }}/metabased-translator
 
 jobs:
-  dry-run-metabased-translator:
-    name: Metabased Translator Dry Run
+  publish-image-metabased-translator:
+    name: Metabased Translator image publish
     runs-on: ubuntu-latest
     permissions:
       contents: read
