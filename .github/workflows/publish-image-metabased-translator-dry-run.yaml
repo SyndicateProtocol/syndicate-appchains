@@ -9,7 +9,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  METABASED_TRANSLATOR_IMAGE_NAME: ${{ github.repository }}/metabased-translator-v_${{ github.run_attempt }} #TODO change to /metabased-translator
+  METABASED_TRANSLATOR_IMAGE_NAME: ${{ github.repository }}/metabased-translator
 
 jobs:
   dry-run-metabased-translator:
@@ -47,7 +47,7 @@ jobs:
         with:
           context: .
           file: Dockerfile.metabased-translator
-          push: true #TODO change to false!
+          push: false
           platforms: linux/amd64,linux/arm64
           tags: ${{ steps.mb-translator.outputs.tags }}
           labels: ${{ steps.mb-translator.outputs.labels }}

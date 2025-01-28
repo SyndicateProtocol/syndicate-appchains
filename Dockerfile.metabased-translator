@@ -100,6 +100,5 @@ EXPOSE 8545 8546
 # Set the default binary to run
 ENTRYPOINT ["/usr/local/bin/metabased-translator"]
 
-#TODO add a config.toml with env flags
-## Default arguments can be overridden at runtime
+#TODO add a config.toml with flags
 #CMD ["--config", "/etc/metabased/config.toml"]
