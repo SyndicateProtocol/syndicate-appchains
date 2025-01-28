@@ -201,5 +201,6 @@ mod tests {
         Ok(())
     }
 
-    // TODO SEQ-529 - write a test that asserts for determinism (same slots should yield the same block chain on separate block builders)
+    // TODO SEQ-529 - write a test that asserts for determinism (same slots should yield the same
+    // block chain on separate block builders)
 }

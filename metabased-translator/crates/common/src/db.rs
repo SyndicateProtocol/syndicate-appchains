@@ -5,11 +5,13 @@
 //!
 //! The current implementation relies on `block-builder` saving the full state.
 //! The resume from DB functionality works as follows:
-//! - the lastest known `Safe` `Slot` and the latest slotted block for each chain are taken from the DB
+//! - the lastest known `Safe` `Slot` and the latest slotted block for each chain are taken from the
+//!   DB
 //! - the Ingestor will start from the lastest slotted block for each chain and continue from there
 //! - the `Slotter` will then start from the lastest known `Safe` `Slot` and continue to slot blocks
 //!   from the chains
-//! - the `BlockBuilder` will reorg the Anvil state to match the latest known safe slot and continue from there
+//! - the `BlockBuilder` will reorg the Anvil state to match the latest known safe slot and continue
+//!   from there
 //!
 //! The `RocksDbStore` implementation is used for the `TranslatorStore` trait
 

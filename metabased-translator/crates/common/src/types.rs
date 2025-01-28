@@ -395,8 +395,7 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use alloy::hex::FromHex;
-    use alloy::primitives::B256;
+    use alloy::{hex::FromHex, primitives::B256};
 
     fn create_test_slot() -> Slot {
         let mut slot = Slot::new(1, 1000);
@@ -497,7 +496,8 @@ mod test {
     }
 
     #[test]
-    #[ignore] // NOTE: binary serialization fails. the current way we define the serialization/deserialization logic is only for JSON and there is no way to use the same objects for bincode.
+    #[ignore] // NOTE: binary serialization fails. the current way we define the serialization/deserialization
+              // logic is only for JSON and there is no way to use the same objects for bincode.
     fn test_bincode_serialization() {
         let slot = create_test_slot();
         let encoded = bincode::serialize(&slot).unwrap();

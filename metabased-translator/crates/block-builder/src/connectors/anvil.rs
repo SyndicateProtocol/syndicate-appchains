@@ -285,13 +285,9 @@ pub fn find_available_port(base_port: u16, max_attempts: u16) -> Option<u16> {
 
 #[cfg(test)]
 mod tests {
-    use alloy::eips::BlockId;
-    use alloy::rpc::types::BlockTransactionsKind;
-
     use super::*;
-    use std::env::temp_dir;
-    use std::fs;
-    use std::path::PathBuf;
+    use alloy::{eips::BlockId, rpc::types::BlockTransactionsKind};
+    use std::{env::temp_dir, fs, path::PathBuf};
 
     #[tokio::test]
     async fn test_port_availability_checking() -> Result<()> {

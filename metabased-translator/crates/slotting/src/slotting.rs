@@ -10,8 +10,10 @@ use std::{cmp::Ordering, collections::LinkedList};
 use thiserror::Error;
 use tokio::{
     select,
-    sync::mpsc::{channel, error::SendError, Receiver, Sender},
-    sync::oneshot,
+    sync::{
+        mpsc::{channel, error::SendError, Receiver, Sender},
+        oneshot,
+    },
 };
 use tracing::{debug, error, info};
 
@@ -167,19 +169,27 @@ impl Slotter {
                 Ok(_) => (),
                 Err(e) => match e {
                     SlotterError::ReorgDetected { .. } => {
-                        panic!("Reorgs not yet implemented {e}"); // TODO SEQ-429 - implement reorg handing
+                        panic!("Reorgs not yet implemented {e}"); // TODO SEQ-429 - implement reorg
+                                                                  // handing
                     }
                     SlotterError::BlockNumberSkipped { .. } => {
-                        panic!("Block number skipped {e}"); // TODO SEQ-489 - decide what to do if a block is skipped
+                        panic!("Block number skipped {e}"); // TODO SEQ-489 - decide what to do if a
+                                                            // block is skipped
                     }
                     SlotterError::BlockTooOld { .. } => {
-                        panic!("Block too old {e}"); // TODO SEQ-489 - decide what to do if a block is too old
+                        panic!("Block too old {e}"); // TODO SEQ-489 - decide what to do if a block
+                                                     // is too old
                     }
                     SlotterError::NoSlotsAvailable => {
                         panic!("No slots available. This should never happen - if it does, it's an implementation error. {e}");
                     }
                     SlotterError::SlotSendError(_) => {
-                        panic!("Failed to send slot through channel: {e}"); // TODO SEQ-489 - decide what to do here (likely to occur during shutdown, or the received is blocked)
+                        panic!("Failed to send slot through channel: {e}"); // TODO SEQ-489 - decide
+                                                                            // what to do here
+                                                                            // (likely to occur
+                                                                            // during shutdown, or
+                                                                            // the received is
+                                                                            // blocked)
                     }
                     SlotterError::EarlierTimestamp { .. } => {
                         panic!("Earlier timestamp - this should never happen (where a block is received with the expected block number, but a lower timestamp) {e}");
@@ -232,7 +242,8 @@ impl Slotter {
                 match slot.state {
                     SlotState::Unsafe | SlotState::Safe => {
                         debug!(%slot, "Found non-open slot, stopping iteration");
-                        return Ok(()); // assume all blocks past this point are already marked as unsafe
+                        return Ok(()); // assume all blocks past this point are already marked as
+                                       // unsafe
                     }
                     SlotState::Open => {
                         if slot.timestamp < min_timestamp {
@@ -298,7 +309,8 @@ impl Slotter {
                 // Create empty slots until we reach or pass the block's timestamp
                 // this accomplishes two things:
                 // - it creates slots for which we might still receive blocks (from the other chain)
-                // - keeps the list full, meaning the max_slots limit will always trigger on the correct max_wait window
+                // - keeps the list full, meaning the max_slots limit will always trigger on the
+                //   correct max_wait window
                 while latest_timestamp < block_timestamp {
                     let next_timestamp = latest_timestamp + slot_duration_ms;
                     let next_slot_number = latest_slot_number + 1;
@@ -320,7 +332,8 @@ impl Slotter {
         Ok(())
     }
 
-    /// `cleanup_slots` will remove slots that are older than the `max_wait_ms` and mark them as safe. (any slots not marked as unsafe until this point will be sent through the channel)
+    /// `cleanup_slots` will remove slots that are older than the `max_wait_ms` and mark them as
+    /// safe. (any slots not marked as unsafe until this point will be sent through the channel)
     async fn cleanup_slots(&mut self) -> Result<(), SlotterError> {
         debug!("Cleaning up slots");
         while self.slots.len() > self.max_slots {
@@ -410,7 +423,6 @@ impl From<SendError<Slot>> for SlotterError {
 ///
 /// The slot will include blocks with timestamps:
 /// - 988 < timestamp <= 1000
-///
 const fn block_slot_ordering(
     block_timestamp_ms: u64,
     slot_timestamp_ms: u64,
@@ -454,10 +466,9 @@ pub enum SlotterError {
 
 #[cfg(test)]
 mod tests {
-    use common::db::RocksDbStore;
-
     use super::*;
     use alloy::primitives::B256;
+    use common::db::RocksDbStore;
     use std::str::FromStr;
 
     fn create_slotter(
@@ -545,7 +556,8 @@ mod tests {
     async fn test_slotter() {
         let slot_start_timestamp_ms = 10_000;
         let slot_duration_ms = 1_000;
-        // NOTE: IMPORTANT - keep _shutdown in scope, otherwise `slotter` will be terminated immediatelly
+        // NOTE: IMPORTANT - keep _shutdown in scope, otherwise `slotter` will be terminated
+        // immediatelly
         let (mut slot_rx, seq_tx, set_tx, _shutdown_tx) =
             create_slotter_and_spawn(slot_start_timestamp_ms, slot_duration_ms).await;
         assert!(slot_rx.is_empty());
@@ -716,7 +728,8 @@ mod tests {
 
         // Send blocks that are MAX_WAIT_MS (24 hours) ahead, this should make slots 1, 2 and 3 safe
         set_tx.send(create_test_block(4, 11_001 + MAX_WAIT_MS)).await.unwrap();
-        // NOTE: don't send a block for the sequencing chain, that would mark all the empty slots as unsafe and atempt to send them over the channel (which would get filled up and stuck)
+        // NOTE: don't send a block for the sequencing chain, that would mark all the empty slots as
+        // unsafe and atempt to send them over the channel (which would get filled up and stuck)
 
         let slot3 = slot_rx.recv().await.unwrap();
         assert_eq!(slot3.number, 3);
@@ -743,7 +756,8 @@ mod tests {
         let (_shutdown_tx, shutdown_rx) = oneshot::channel();
         tokio::spawn(async move { resumed_slotter.start(shutdown_rx).await });
 
-        // Send new blocks to resumed slotter (since only slot 0,1,2 have been saved to the DB, we should send blocks #4 (for slot 5))
+        // Send new blocks to resumed slotter (since only slot 0,1,2 have been saved to the DB, we
+        // should send blocks #4 (for slot 5))
         new_seq_tx.send(create_test_block(4, 12_001)).await.unwrap();
         new_set_tx.send(create_test_block(4, 12_002)).await.unwrap();
 

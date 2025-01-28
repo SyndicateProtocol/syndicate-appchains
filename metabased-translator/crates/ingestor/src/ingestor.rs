@@ -5,8 +5,10 @@ use crate::{config::ChainIngestorConfig, eth_client::EthClient};
 use common::types::BlockAndReceipts;
 use eyre::{eyre, Error};
 use std::time::Duration;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
-use tokio::sync::oneshot;
+use tokio::sync::{
+    mpsc::{channel, Receiver, Sender},
+    oneshot,
+};
 use tracing::{debug, error};
 
 /// Polls and ingests blocks from an Ethereum chain
