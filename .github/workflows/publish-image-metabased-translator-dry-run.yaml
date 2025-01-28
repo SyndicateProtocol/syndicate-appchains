@@ -48,7 +48,8 @@ jobs:
           context: .
           file: Dockerfile.metabased-translator
           push: false
-          platforms: linux/amd64,linux/arm64
+          # removed linux/arm64 part, took > 30min on Github Actions
+          platforms: linux/amd64
           tags: ${{ steps.mb-translator.outputs.tags }}
           labels: ${{ steps.mb-translator.outputs.labels }}
           cache-from: type=gha
