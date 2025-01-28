@@ -11,6 +11,7 @@ repository.workspace = true
 [dependencies]
 alloy = { workspace = true, features = ["providers"] }
 common = { workspace = true }
+metrics = { workspace = true}
 eyre = { workspace = true }
 tokio = { workspace = true, features = ["sync", "time", "rt-multi-thread"] }
 tracing = { workspace = true }

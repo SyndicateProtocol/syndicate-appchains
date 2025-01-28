@@ -8,7 +8,8 @@ pub mod ingestor;
 
 use crate::config::ChainIngestorConfig;
 use eyre::eyre;
-use ingestor::Ingestor;
+use ingestor::{Ingestor, IngestorChain};
+use metrics::Metrics;
 use std::{error::Error, time::Duration};
 use tracing::info;
 
@@ -45,9 +46,12 @@ async fn main() -> Result<(), Box<dyn Error>> {
         start_block,
     };
 
+    let metrics = Metrics::new().into();
+    let chain = IngestorChain::Sequencing;
     // Create the ingestor and receiver
-    let (mut ingestor, mut receiver) =
-        Ingestor::new(config).await.map_err(|e| eyre!("Failed to create ingestor: {:?}", e))?;
+    let (mut ingestor, mut receiver) = Ingestor::new(chain, config, metrics)
+        .await
+        .map_err(|e| eyre!("Failed to create ingestor: {:?}", e))?;
 
     // Spawn a task to log what the receiver receives
     tokio::spawn(async move {

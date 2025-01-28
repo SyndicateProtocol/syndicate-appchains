@@ -4,8 +4,13 @@ use crate::config::MetabasedConfig;
 use block_builder::{block_builder::BlockBuilder, config::BlockBuilderConfig};
 use common::tracing::{init_tracing, TracingError};
 use eyre::Result;
-use ingestor::{config::IngestionPipelineConfig, ingestor::Ingestor};
+use ingestor::{
+    config::IngestionPipelineConfig,
+    ingestor::{Ingestor, IngestorChain},
+};
+use metrics::Metrics;
 use slotting::{config::SlottingConfig, slotting::Slotter};
+use std::sync::Arc;
 use tokio::sync::oneshot;
 use tracing::{error, info};
 
@@ -33,21 +38,28 @@ async fn run(
     let sequencing_config = ingestion_config.sequencing;
     let settlement_config = ingestion_config.settlement;
 
+    let sequencing_metrics = Arc::new(Metrics::new());
+    let settlement_metrics = Arc::new(Metrics::new());
+
     let (mut sequencing_ingestor, sequencer_rx) =
-        Ingestor::new(sequencing_config.into()).await.map_err(|e| {
-            RuntimeError::Initialization(format!(
-                "Failed to create ingestor for sequencing chain: {}",
-                e
-            ))
-        })?;
+        Ingestor::new(IngestorChain::Sequencing, sequencing_config.into(), sequencing_metrics)
+            .await
+            .map_err(|e| {
+                RuntimeError::Initialization(format!(
+                    "Failed to create ingestor for sequencing chain: {}",
+                    e
+                ))
+            })?;
 
     let (mut settlement_ingestor, settlement_rx) =
-        Ingestor::new(settlement_config.into()).await.map_err(|e| {
-            RuntimeError::Initialization(format!(
-                "Failed to create ingestor for settlement chain: {}",
-                e
-            ))
-        })?;
+        Ingestor::new(IngestorChain::Settlement, settlement_config.into(), settlement_metrics)
+            .await
+            .map_err(|e| {
+                RuntimeError::Initialization(format!(
+                    "Failed to create ingestor for settlement chain: {}",
+                    e
+                ))
+            })?;
 
     let slotter = Slotter::new(sequencer_rx, settlement_rx, slotting_config);
 
