@@ -11,7 +11,7 @@ use alloy::{
             BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
             WalletFiller,
         },
-        Identity, Provider, ProviderBuilder, RootProvider,
+        Identity, Provider, ProviderBuilder, RootProvider, WalletProvider,
     },
     rpc::types::{anvil::MineOptions, TransactionRequest},
     signers::local::PrivateKeySigner,
@@ -36,7 +36,8 @@ type FilledProvider = FillProvider<
     Ethereum,
 >;
 
-// Anvil is automatically stopped when the `MetaChainProvider` is dropped.
+/// `MetaChainProvider` starts the anvil chain when `start` is called and stops the chain when it
+/// is dropped.
 #[derive(Debug)]
 #[allow(missing_docs)]
 pub struct MetaChainProvider {
@@ -46,8 +47,14 @@ pub struct MetaChainProvider {
     pub rollup_info: String,
 }
 
+/// The chain id of the metachain. This is the same for all rollups.
+pub const MCHAIN_ID: u64 = 84532;
+
 impl MetaChainProvider {
     /// Starts the Anvil instance and creates a provider for the `MetaChain`
+    /// If file in `BlockBuilderConfig` is set to a non-empty string, the anvil node stores and
+    /// loads state from the file. The rollup contract is only deployed to the chain when it is
+    /// newly created and on the genesis block.
     pub async fn start(config: BlockBuilderConfig) -> Result<Self> {
         let port = find_available_port(config.port, 10).ok_or_else(|| {
             BlockBuilderError::AnvilStartError("No available ports found after 10 attempts")
@@ -59,7 +66,7 @@ impl MetaChainProvider {
 
         let ts = config.genesis_timestamp.to_string();
 
-        let args = vec![
+        let mut args = vec![
             "--base-fee",
             "0",
             "--gas-limit",
@@ -69,7 +76,12 @@ impl MetaChainProvider {
             "--no-mining",
         ];
 
-        let anvil = Anvil::new().port(port).chain_id(config.chain_id).args(args).try_spawn()?;
+        if !config.file.is_empty() {
+            args.push("--state");
+            args.push(&config.file);
+        }
+
+        let anvil = Anvil::new().port(port).chain_id(MCHAIN_ID).args(args).try_spawn()?;
 
         // TODO (SEQ-515) Move to a config value
         let signer: PrivateKeySigner =
@@ -82,28 +94,29 @@ impl MetaChainProvider {
             .wallet(EthereumWallet::from(signer))
             .on_http(anvil.endpoint_url());
 
-        let rollup_config = Self::rollup_config(U256::from(config.mchain_id));
+        let rollup_config = Self::rollup_config(U256::from(config.chain_id));
 
         let deploy_tx =
-            Rollup::deploy_builder(&provider, U256::from(config.mchain_id), rollup_config.clone())
-                .send()
-                .await?;
-
+            Rollup::deploy_builder(&provider, U256::from(config.chain_id), rollup_config.clone())
+                .nonce(0)
+                .from(provider.default_signer_address());
+        let contract_addr =
+            deploy_tx.calculate_create_address().ok_or(BlockBuilderError::NoContractAddress())?;
         provider.anvil_set_block_timestamp_interval(1).await?;
-        provider.anvil_mine(Some(U256::from(1)), None::<U256>).await?;
 
-        let receipt = deploy_tx.get_receipt().await?;
-        let rollup = Rollup::new(
-            receipt.contract_address.ok_or(BlockBuilderError::NoContractAddress())?,
-            provider.clone(),
-        );
+        if provider.get_block_number().await? == 0 {
+            _ = deploy_tx.send().await?;
+            provider.anvil_mine(Some(U256::from(1)), None::<U256>).await?;
+        }
+
+        let rollup = Rollup::new(contract_addr, provider.clone());
 
         let rollup_info = Self::rollup_info(
             "test",
-            U256::from(config.chain_id),
+            U256::from(MCHAIN_ID),
             &rollup_config,
             rollup.address(),
-            U256::from(receipt.block_number.ok_or(BlockBuilderError::NoBlockNumber())?),
+            U256::from(1),
         );
 
         Ok(Self { anvil, provider, rollup, rollup_info })
@@ -131,38 +144,37 @@ impl MetaChainProvider {
     }
 
     fn rollup_config(chain_id: U256) -> String {
+        let zero = Address::ZERO;
         format!(
             r#"{{
-            "chainId": {},
-            "homesteadBlock": 0,
-            "daoForkBlock": null,
-            "daoForkSupport": true,
-            "eip150Block": 0,
-            "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-            "eip155Block": 0,
-            "eip158Block": 0,
-            "byzantiumBlock": 0,
-            "constantinopleBlock": 0,
-            "petersburgBlock": 0,
-            "istanbulBlock": 0,
-            "muirGlacierBlock": 0,
-            "berlinBlock": 0,
-            "londonBlock": 0,
-            "clique": {{
-              "period": 0,
-              "epoch": 0
-            }},
-            "arbitrum": {{
-              "EnableArbOS": true,
-              "AllowDebugPrecompiles": false,
-              "DataAvailabilityCommittee": false,
-              "InitialArbOSVersion": 10,
-              "InitialChainOwner": "{}",
-              "GenesisBlockNum": 0
-            }}
-          }}"#,
-            chain_id,
-            Address::ZERO
+              "chainId": {chain_id},
+              "homesteadBlock": 0,
+              "daoForkBlock": null,
+              "daoForkSupport": true,
+              "eip150Block": 0,
+              "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+              "eip155Block": 0,
+              "eip158Block": 0,
+              "byzantiumBlock": 0,
+              "constantinopleBlock": 0,
+              "petersburgBlock": 0,
+              "istanbulBlock": 0,
+              "muirGlacierBlock": 0,
+              "berlinBlock": 0,
+              "londonBlock": 0,
+              "clique": {{
+                "period": 0,
+                "epoch": 0
+              }},
+              "arbitrum": {{
+                "EnableArbOS": true,
+                "AllowDebugPrecompiles": false,
+                "DataAvailabilityCommittee": false,
+                "InitialArbOSVersion": 10,
+                "InitialChainOwner": "{zero}",
+                "GenesisBlockNum": 0
+              }}
+            }}"#
         )
     }
 
@@ -173,40 +185,30 @@ impl MetaChainProvider {
         rollup: &Address,
         deployed_at: U256,
     ) -> String {
+        let zero = Address::ZERO;
         format!(
             r#"[{{
-    "chain-name": "{}",
-    "parent-chain-id": {},
-    "parent-chain-is-arbitrum": false,
-    "sequencer-url": "",
-    "secondary-forwarding-target": "",
-    "feed-url": "",
-    "secondary-feed-url": "",
-    "das-index-url": "",
-    "has-genesis-state": false,
-    "chain-config": {},
-    "rollup": {{
-      "bridge": "{}",
-      "inbox": "{}",
-      "sequencer-inbox": "{}",
-      "deployed-at": {},
-      "rollup": "{}",
-      "native-token": "{}",
-      "upgrade-executor": "{}",
-      "validator-wallet-creator": "{}"
-    }}
-  }}]"#,
-            chain_name,
-            chain_id,
-            rollup_config,
-            rollup,
-            Address::ZERO,
-            rollup,
-            deployed_at,
-            Address::ZERO,
-            Address::ZERO,
-            Address::ZERO,
-            Address::ZERO
+              "chain-name": "{chain_name}",
+              "parent-chain-id": {chain_id},
+              "parent-chain-is-arbitrum": false,
+              "sequencer-url": "",
+              "secondary-forwarding-target": "",
+              "feed-url": "",
+              "secondary-feed-url": "",
+              "das-index-url": "",
+              "has-genesis-state": false,
+              "chain-config": {rollup_config},
+              "rollup": {{
+                "bridge": "{rollup}",
+                "inbox": "{zero}",
+                "sequencer-inbox": "{rollup}",
+                "deployed-at": {deployed_at},
+                "rollup": "{zero}",
+                "native-token": "{zero}",
+                "upgrade-executor": "{zero}",
+                "validator-wallet-creator": "{zero}"
+              }}
+            }}]"#
         )
     }
 
@@ -257,6 +259,7 @@ pub fn find_available_port(base_port: u16, max_attempts: u16) -> Option<u16> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::env::temp_dir;
 
     #[tokio::test]
     async fn test_port_availability_checking() -> Result<()> {
@@ -280,6 +283,26 @@ mod tests {
         // New port should be available
         assert!(is_port_available(port), "New port should be available");
 
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_anvil_resume() -> Result<()> {
+        let file = temp_dir().join("dump.json");
+        let cfg = BlockBuilderConfig {
+            port: 9888,
+            file: file.to_str().unwrap().to_string(),
+            ..Default::default()
+        };
+        _ = std::fs::remove_file(file);
+        let mut provider = MetaChainProvider::start(cfg.clone()).await?;
+        provider.mine_block(0).await?;
+        let old_count = provider.provider.get_block_number().await?;
+        std::process::Command::new("kill").arg(provider.anvil.child().id().to_string()).output()?;
+        provider.anvil.child_mut().wait()?;
+        provider = MetaChainProvider::start(cfg).await?;
+        let new_count = provider.provider.get_block_number().await?;
+        assert_eq!(old_count, new_count);
         Ok(())
     }
 }

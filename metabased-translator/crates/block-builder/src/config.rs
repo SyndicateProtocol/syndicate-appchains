@@ -1,5 +1,4 @@
 //! Configuration for the block builder service
-
 use alloy::primitives::Address;
 use clap::Parser;
 use std::{fmt::Debug, str::FromStr};
@@ -8,16 +7,14 @@ use tracing::debug;
 
 /// Configuration for the block builder service
 #[derive(Parser, Debug, Clone)]
+#[allow(missing_docs)]
 pub struct BlockBuilderConfig {
-    #[allow(missing_docs)]
-    #[arg(long, env = "BLOCK_BUILDER_MCHAIN_ID", default_value_t = 13331370)]
-    pub mchain_id: u64,
+    #[arg(short = 'f', long, env = "BLOCK_BUILDER_SNAPSHOT_FILE", default_value_t = String::new())]
+    pub file: String,
 
-    #[allow(missing_docs)]
     #[arg(short = 'p', long, env = "BLOCK_BUILDER_PORT", default_value_t = 8888)]
     pub port: u16,
 
-    #[allow(missing_docs)]
     #[arg(
         short = 'g',
         long,
@@ -26,8 +23,7 @@ pub struct BlockBuilderConfig {
     )]
     pub genesis_timestamp: u64,
 
-    #[allow(missing_docs)]
-    #[arg(short = 'c', long, env = "BLOCK_BUILDER_CHAIN_ID", default_value_t = 84532)]
+    #[arg(short = 'c', long, env = "BLOCK_BUILDER_CHAIN_ID", default_value_t = 13331370)]
     pub chain_id: u64,
 
     /// Sequencing contract address on the sequencing chain
@@ -45,10 +41,10 @@ fn parse_address(value: &str) -> Result<Address, String> {
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
         Self {
-            mchain_id: 13331370,
+            file: String::new(),
             port: 8888,
             genesis_timestamp: 1712500000,
-            chain_id: 84532,
+            chain_id: 13331370,
             sequencing_contract_address: Address::from_str(
                 "0x1234000000000000000000000000000000000000",
             )
@@ -62,14 +58,13 @@ impl Default for BlockBuilderConfig {
 impl BlockBuilderConfig {
     /// Creates a new [`BlockBuilderConfig`] instance.
     pub fn new(
-        mchain_id: u64,
+        file: String,
         port: u16,
         genesis_timestamp: u64,
         chain_id: u64,
         sequencing_contract_address: Address,
     ) -> Result<Self, ConfigError> {
-        let config =
-            Self { mchain_id, port, genesis_timestamp, chain_id, sequencing_contract_address };
+        let config = Self { file, port, genesis_timestamp, chain_id, sequencing_contract_address };
         debug!("Created block builder config: {:?}", config);
         config.validate()?;
         Ok(config)
@@ -106,9 +101,10 @@ mod tests {
     #[test]
     fn test_default_parsing() {
         let config = BlockBuilderConfig::parse_from(["test"]);
+        assert_eq!(config.file, "");
         assert_eq!(config.port, 8888);
         assert_eq!(config.genesis_timestamp, 1712500000);
-        assert_eq!(config.chain_id, 84532);
+        assert_eq!(config.chain_id, 13331370);
         assert_eq!(
             config.sequencing_contract_address.to_string(),
             "0x1234000000000000000000000000000000000000"
@@ -118,7 +114,7 @@ mod tests {
     #[test]
     fn test_validate() {
         let config = BlockBuilderConfig {
-            mchain_id: 1234,
+            file: String::new(),
             port: 0,
             genesis_timestamp: 1000000,
             chain_id: 12345,

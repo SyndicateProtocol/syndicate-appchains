@@ -84,7 +84,7 @@ mod tests {
         // Block Builder
         assert_eq!(config.block_builder.port, 8888);
         assert_eq!(config.block_builder.genesis_timestamp, 1712500000);
-        assert_eq!(config.block_builder.chain_id, 84532);
+        assert_eq!(config.block_builder.chain_id, 13331370);
 
         // Slotter
         assert_eq!(config.slotter.slot_duration_ms, 2_000);

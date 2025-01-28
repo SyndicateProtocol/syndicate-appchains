@@ -14,9 +14,12 @@ use common::types::Block;
 use contract_bindings::arbitrum::counter::Counter;
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::{eyre, Result};
+use serial_test::serial;
 use std::time::Duration;
 use tokio::{
     process::{Child, Command},
+    runtime::Handle,
+    task,
     time::timeout,
 };
 
@@ -175,7 +178,12 @@ struct Docker(Child);
 impl Drop for Docker {
     fn drop(&mut self) {
         if let Some(x) = self.0.id() {
-            _ = std::process::Command::new("kill").arg(x.to_string()).output()
+            _ = std::process::Command::new("kill").arg(x.to_string()).output();
+            task::block_in_place(move || {
+                Handle::current().block_on(async move {
+                    _ = self.0.wait().await;
+                })
+            })
         }
     }
 }
@@ -213,7 +221,8 @@ async fn launch_nitro_node() -> Result<(MetaChainProvider, Docker)> {
     .await?;
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
+#[serial]
 async fn test_nitro_batch() -> Result<()> {
     let (mchain, _nitro) = launch_nitro_node().await?;
 
@@ -283,7 +292,7 @@ async fn test_nitro_batch() -> Result<()> {
     // update this hash whenever the test is modified
     assert_eq!(
         block.hash.to_string(),
-        "0x96c91c5178f2579ad82fe42eb86d3642871e8afa1b10ad731b626f93df79b2c5"
+        "0x2a1943b2a3a54f4855c2441b6864351e3cc282bd61a005fd0912467adf575951"
     );
     Ok(())
 }

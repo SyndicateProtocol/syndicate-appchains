@@ -1464,6 +1464,7 @@ dependencies = [
  "contract-bindings",
  "eyre",
  "reqwest",
+ "serial_test",
  "strum",
  "strum_macros",
  "thiserror 2.0.11",
