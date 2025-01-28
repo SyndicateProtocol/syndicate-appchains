@@ -109,6 +109,7 @@ impl Default for BlockBuilderConfig {
 
 impl BlockBuilderConfig {
     /// Creates a new [`BlockBuilderConfig`] instance.
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         port: u16,
         genesis_timestamp: u64,

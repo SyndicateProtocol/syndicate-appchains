@@ -165,7 +165,7 @@ pub enum Chain {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Display, Serialize, Deserialize)]
 #[strum(serialize_all = "lowercase")]
 pub enum SlotState {
-    /// A slot that is considered final and cannot rollback (blocks that are MAX_WAIT_MS old)
+    /// A slot that is considered final and cannot rollback (blocks that are `MAX_WAIT_MS` old)
     Safe,
     /// A slot that we don't expect to fit more blocks into. It should be considered cannonical
     /// unless a reorg happens
