@@ -77,13 +77,13 @@ impl Ingestor {
     /// # Returns
     /// The block and its receipts.
     async fn get_block_and_receipts(&self, block_number: u64) -> Result<BlockAndReceipts, Error> {
-        let start_time = std::time::Instant::now();
-
+        let start_time_block = std::time::Instant::now();
         let block = self.client.get_block_by_number(block_number).await?;
-        let duration_block = start_time.elapsed();
+        let duration_block = start_time_block.elapsed();
 
+        let start_time_receipts = std::time::Instant::now();
         let receipts = self.client.get_block_receipts(block_number).await?;
-        let duration_receipts = start_time.elapsed();
+        let duration_receipts = start_time_receipts.elapsed();
 
         self.metrics.record_rpc_call(
             self.chain.to_string(),
