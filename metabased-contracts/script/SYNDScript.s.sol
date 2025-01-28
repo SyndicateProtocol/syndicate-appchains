@@ -5,8 +5,11 @@ import {Script, console} from "forge-std/Script.sol";
 
 import {SynGasToken, AccessControl} from "src/token/SynGasToken.sol";
 
-// Holesky SYND address
+// Holesky SYND address Testnet
 address constant SYND_ADDRESS = 0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba;
+
+// // Holesky SYND address Devnet
+// address constant SYND_ADDRESS = 0x19aaf160dA8985c54bb97adAF9304B5aC7890421;
 
 contract GrantMinterRole is Script {
     AccessControl public synd;
@@ -17,15 +20,17 @@ contract GrantMinterRole is Script {
         vm.startBroadcast();
 
         // add minter addresses below
-        address[] memory minters = new address[](2);
+        address[] memory minters = new address[](4);
         minters[0] = 0x4E527486594696a7607Ff3379E21746689a3Fd6d;
         minters[1] = 0x37D911cBd7bB03521A975EC2dE03ce1dD0156883;
+        minters[2] = 0x9c2F68B133286CFcc8677BD342bc724A0F2E2546;
+        minters[3] = 0x18F33CEf45817C428d98C4E188A770191fDD4B79;
 
         synd = AccessControl(SYND_ADDRESS);
 
         for (uint256 i = 0; i < minters.length; i++) {
             require(minters[i] != address(0), "Invalid address");
-            require(!synd.hasRole(MINTER_ROLE, minters[i]), "MINTER_ROLE already granted to address");
+            // require(!synd.hasRole(MINTER_ROLE, minters[i]), "MINTER_ROLE already granted to address");
 
             synd.grantRole(MINTER_ROLE, minters[i]);
             console.log("Granted MINTER_ROLE to", minters[i]);
@@ -42,11 +47,18 @@ contract MintSYNDToAddresses is Script {
         vm.startBroadcast();
 
         // add recipient addresses and SYND amount below
-        address[] memory recipients = new address[](1);
-        recipients[0] = 0x28fAb3A5b69711cc64B09240d2694d9F0f07eBf6;
+        address[] memory recipients = new address[](4);
+        recipients[0] = 0x19aaf160dA8985c54bb97adAF9304B5aC7890421;
+        recipients[1] = 0x37D911cBd7bB03521A975EC2dE03ce1dD0156883;
+        recipients[2] = 0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba;
+        recipients[3] = 0x28fAb3A5b69711cc64B09240d2694d9F0f07eBf6; // alchemy
 
-        uint256[] memory amounts = new uint256[](1);
-        amounts[0] = 10_000e18; // 10K SYND
+        uint256[] memory amounts = new uint256[](4);
+        // 10K SYND
+        amounts[0] = 10_000e18;
+        amounts[1] = 10_000e18;
+        amounts[2] = 10_000e18;
+        amounts[3] = 10_000e18;
 
         synd = SynGasToken(SYND_ADDRESS);
 
