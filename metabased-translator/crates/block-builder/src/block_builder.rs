@@ -1,16 +1,19 @@
 //! Block builder service for processing and building L3 blocks.
 
 use crate::{
-    config::BlockBuilderConfig,
+    config::{BlockBuilderConfig, TargetRollupType},
     connectors::anvil::MetaChainProvider,
-    rollups::{arbitrum::arbitrum_builder::ArbitrumBlockBuilder, shared::RollupBlockBuilder},
+    rollups::{
+        arbitrum::arbitrum_builder::ArbitrumBlockBuilder,
+        optimism::optimism_builder::OptimismBlockBuilder, shared::RollupBlockBuilder,
+    },
 };
 use alloy::transports::{RpcError, TransportErrorKind};
 use common::types::Slot;
 use eyre::{Error, Result};
 use thiserror::Error;
 use tokio::sync::mpsc::Receiver;
-use tracing::{error as log_error, info};
+use tracing::{error, info};
 
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
@@ -29,8 +32,14 @@ impl BlockBuilder {
     ) -> Result<Self, Error> {
         let mchain = MetaChainProvider::start(config.clone()).await?;
 
-        // TODO (SEQ-515): Dynamically select builder based on config
-        let builder = Box::new(ArbitrumBlockBuilder::new(config.sequencing_contract_address));
+        let builder: Box<dyn RollupBlockBuilder> = match config.target_rollup_type {
+            TargetRollupType::ARBITRUM => {
+                Box::new(ArbitrumBlockBuilder::new(config.sequencing_contract_address))
+            }
+            TargetRollupType::OPTIMISM => {
+                Box::new(OptimismBlockBuilder::new(config.sequencing_contract_address))
+            }
+        };
 
         Ok(Self { slotter_rx, mchain, builder })
     }
@@ -49,20 +58,20 @@ impl BlockBuilder {
             let batch_txn = match self.builder.build_batch_txn(mbtxs).await {
                 Ok(txn) => txn,
                 Err(e) => {
-                    log_error!("Error building batch transaction: {}", e);
+                    error!("Error building batch transaction: {}", e);
                     continue;
                 }
             };
 
             // Submit batch transaction to mchain
             if let Err(e) = self.mchain.submit_txn(batch_txn).await {
-                log_error!("Error submitting transaction: {}", e);
+                error!("Error submitting transaction: {}", e);
                 continue;
             }
 
             // Mine mchain block
             if let Err(e) = self.mchain.mine_block(slot.timestamp).await {
-                log_error!("Error mining block: {}", e);
+                error!("Error mining block: {}", e);
             }
         }
     }
@@ -111,4 +120,13 @@ pub enum BlockBuilderError {
 
     #[error("Cannot serialize empty l2 msg")]
     EmptyL2Message(),
+
+    #[error("No contract addr found")]
+    NoContractAddress(),
+
+    #[error("No block number found")]
+    NoBlockNumber(),
+
+    #[error("Overflow error")]
+    Overflow(),
 }

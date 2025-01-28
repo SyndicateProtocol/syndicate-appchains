@@ -58,7 +58,7 @@ pub mod shortstrings;
 pub mod signedmath;
 pub mod storageslot;
 pub mod strings;
-pub mod syngastoken;
+pub mod syndicatetoken;
 pub mod tokenbalancesequencingmodule;
 pub mod ierc1155errors;
 pub mod ierc20errors;

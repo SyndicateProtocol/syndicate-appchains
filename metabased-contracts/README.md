@@ -71,8 +71,9 @@ $ make deploy-based-sequencerchain-frame
 | SynGasToken (Devnet)   | 0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba |
 | SynGasToken (Testnet)   | 0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba |
 
+
 #### ETH Sepolia
 
 | Contract Name | Address                                    |
 | ------------- | ------------------------------------------ |
-| SynGasToken   | 0x8c8861c1bBd3a47deC0cfc5dc82e4B5E88810BfE |
+| SyndicateToken   | 0x8c8861c1bBd3a47deC0cfc5dc82e4B5E88810BfE |

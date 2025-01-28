@@ -2,11 +2,11 @@
 pragma solidity 0.8.25;
 
 import {Test} from "forge-std/Test.sol";
-import {SynGasToken} from "src/token/SynGasToken.sol";
+import {SyndicateToken} from "src/token/SyndicateToken.sol";
 import {IAccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
-contract SynGasTokenTest is Test {
-    SynGasToken public token;
+contract SyndicateTokenTest is Test {
+    SyndicateToken public token;
 
     address public defaultAdmin;
     address public minter;
@@ -22,7 +22,7 @@ contract SynGasTokenTest is Test {
         minter = address(0x2);
         user = address(0x3);
 
-        token = new SynGasToken(defaultAdmin, minter);
+        token = new SyndicateToken(defaultAdmin, minter);
     }
 
     // Test initial setup
