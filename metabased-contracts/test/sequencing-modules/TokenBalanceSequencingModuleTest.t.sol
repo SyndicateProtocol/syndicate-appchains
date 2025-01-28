@@ -50,4 +50,19 @@ contract TokenBalanceSequencingModuleTest is Test {
         vm.prank(user1);
         assertFalse(tokenBalanceSequencer.isAllowed(user1));
     }
+
+    function testRevertsOnZeroAddress() public {
+        vm.expectRevert("TokenBalanceSequencingModule: zero address");
+        new TokenBalanceSequencingModule(address(0), minimumBalance);
+    }
+
+    function testRevertsOnZeroMinimumBalance() public {
+        vm.expectRevert("TokenBalanceSequencingModule: zero balance");
+        new TokenBalanceSequencingModule(address(token), 0);
+    }
+
+    function testConstructorSetsCorrectValues() public view {
+        assertEq(address(tokenBalanceSequencer.tokenAddress()), address(token), "Token address not set correctly");
+        assertEq(tokenBalanceSequencer.minimumBalance(), minimumBalance, "Minimum balance not set correctly");
+    }
 }

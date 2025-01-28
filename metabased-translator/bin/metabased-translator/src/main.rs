@@ -1,10 +1,8 @@
-mod config;
-
-use crate::config::MetabasedConfig;
 use block_builder::{block_builder::BlockBuilder, config::BlockBuilderConfig};
 use common::tracing::{init_tracing, TracingError};
 use eyre::Result;
 use ingestor::{config::IngestionPipelineConfig, ingestor::Ingestor};
+use metabased_translator::config::MetabasedConfig;
 use slotting::{config::SlottingConfig, slotting::Slotter};
 use tokio::sync::oneshot;
 use tracing::{error, info};

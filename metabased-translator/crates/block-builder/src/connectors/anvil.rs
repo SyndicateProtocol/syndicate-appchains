@@ -1,6 +1,9 @@
 //! Anvil connector for the `MetaChain`
-
-use crate::{block_builder::BlockBuilderError, config::BlockBuilderConfig, rollups::arbitrum};
+use crate::{
+    block_builder::BlockBuilderError,
+    config::{get_default_private_key_signer, BlockBuilderConfig},
+    rollups::arbitrum,
+};
 use alloy::{
     network::{Ethereum, EthereumWallet},
     node_bindings::{Anvil, AnvilInstance},
@@ -14,7 +17,6 @@ use alloy::{
         Identity, Provider, ProviderBuilder, RootProvider, WalletProvider,
     },
     rpc::types::{anvil::MineOptions, TransactionRequest},
-    signers::local::PrivateKeySigner,
     transports::http::Http,
 };
 use contract_bindings::arbitrum::rollup::Rollup;
@@ -83,23 +85,20 @@ impl MetaChainProvider {
 
         let anvil = Anvil::new().port(port).chain_id(MCHAIN_ID).args(args).try_spawn()?;
 
-        // TODO (SEQ-515) Move to a config value
-        let signer: PrivateKeySigner =
-            "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-                .parse()
-                .map_err(|_| BlockBuilderError::AnvilStartError("Failed to parse private key"))?;
-
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
-            .wallet(EthereumWallet::from(signer))
+            .wallet(EthereumWallet::from(get_default_private_key_signer()))
             .on_http(anvil.endpoint_url());
 
-        let rollup_config = Self::rollup_config(U256::from(config.chain_id));
+        let rollup_config = Self::rollup_config(U256::from(config.target_chain_id));
 
-        let deploy_tx =
-            Rollup::deploy_builder(&provider, U256::from(config.chain_id), rollup_config.clone())
-                .nonce(0)
-                .from(provider.default_signer_address());
+        let deploy_tx = Rollup::deploy_builder(
+            &provider,
+            U256::from(config.target_chain_id),
+            rollup_config.clone(),
+        )
+        .nonce(0)
+        .from(provider.default_signer_address());
         let contract_addr =
             deploy_tx.calculate_create_address().ok_or(BlockBuilderError::NoContractAddress())?;
         provider.anvil_set_block_timestamp_interval(1).await?;

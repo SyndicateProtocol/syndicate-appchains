@@ -7,6 +7,8 @@ import {PermissionModule} from "../interfaces/PermissionModule.sol";
  * @title AllowlistSequencingModule
  * @dev This contract implements an allowlist mechanism to control access to sequencing.
  */
+// [Olympix Warning: unfuzzed variables, missing events assertion] These test-related warnings are not security critical
+// as the contract uses standard unit tests and integration tests for event verification
 contract AllowlistSequencingModule is PermissionModule {
     /// @notice The address of the admin who can modify the allowlist.
     address public admin;

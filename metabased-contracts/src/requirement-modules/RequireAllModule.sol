@@ -9,6 +9,8 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
  * @title RequireAllModule
  * @notice A module that requires all checks to pass
  */
+// [Olympix Warning: unfuzzed variables, missing events assertion] These test-related warnings are not security critical
+// as the contract uses standard unit tests and integration tests. Parameter validation is handled through Ownable.
 contract RequireAllModule is IRequirementModule, Ownable {
     AddressStructuredLinkedList.List private checks;
 
@@ -22,6 +24,7 @@ contract RequireAllModule is IRequirementModule, Ownable {
     error AddressAlreadyExists();
     error AddressDoesNotExist();
 
+    // [Olympix Warning: no parameter validation in constructor] Parameter validation is handled by OpenZeppelin's Ownable
     constructor(address admin) Ownable(admin) {}
 
     function isAllowed(address proposer) external view override returns (bool) {

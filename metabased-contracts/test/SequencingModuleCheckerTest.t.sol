@@ -27,6 +27,8 @@ contract SequencingModuleCheckerTest is Test {
         address newModule = address(new RequireAllModule(admin));
 
         vm.prank(admin);
+        vm.expectEmit(true, false, false, false);
+        emit SequencingModuleChecker.RequirementModuleUpdated(newModule);
         manager.updateRequirementModule(newModule);
 
         assertEq(address(manager.requirementModule()), newModule);
