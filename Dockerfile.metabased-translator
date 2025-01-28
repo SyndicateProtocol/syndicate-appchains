@@ -45,17 +45,20 @@ RUN cargo build --profile $BUILD_PROFILE \
     --locked \
     --bin metabased-translator
 
+
+#TODO adapt me if you want interceptor and proxy
 # Build interceptor and proxy
-RUN cargo build --profile $BUILD_PROFILE \
-    --features "$FEATURES" \
-    --locked \
-    --package interceptor \
-    --package proxy
+# RUN cargo build --profile $BUILD_PROFILE \
+#    --features "$FEATURES" \
+#    --locked \
+#    --package interceptor \
+#    --package proxy
 
 # Copy binaries to known locations
-RUN cp /app/target/$BUILD_PROFILE/metabased-translator /app/translator && \
-    cp /app/target/$BUILD_PROFILE/interceptor /app/interceptor && \
-    cp /app/target/$BUILD_PROFILE/proxy /app/proxy
+RUN cp /app/target/$BUILD_PROFILE/metabased-translator /app/translator
+#    && \
+#    cp /app/target/$BUILD_PROFILE/interceptor /app/interceptor && \
+#    cp /app/target/$BUILD_PROFILE/proxy /app/proxy
 
 # Stage 4: Create minimal runtime image
 FROM ubuntu:22.04 AS runtime
@@ -69,8 +72,8 @@ RUN apt-get update && \
 
 # Copy binaries from builder
 COPY --from=builder /app/translator /usr/local/bin/metabased-translator
-COPY --from=builder /app/interceptor /usr/local/bin/metabased-interceptor
-COPY --from=builder /app/proxy /usr/local/bin/metabased-proxy
+#COPY --from=builder /app/interceptor /usr/local/bin/metabased-interceptor
+#COPY --from=builder /app/proxy /usr/local/bin/metabased-proxy
 
 # Create a configuration directory
 RUN mkdir -p /etc/metabased
@@ -83,5 +86,7 @@ EXPOSE 8545 8546
 
 # Set the default binary to run
 ENTRYPOINT ["/usr/local/bin/metabased-translator"]
-# Default arguments can be overridden at runtime
-CMD ["--config", "/etc/metabased/config.toml"]
+
+#TODO add a config.toml with env flags
+## Default arguments can be overridden at runtime
+#CMD ["--config", "/etc/metabased/config.toml"]
