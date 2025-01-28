@@ -8,7 +8,7 @@ import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20P
 
 // [Olympix Warning: unfuzzed variables, missing events assertion] These test-related warnings are not security critical
 // as the contract uses standard unit tests and integration tests. Parameter validation is handled through AccessControl.
-contract SynGasToken is ERC20, AccessControl, ERC20Permit {
+contract SyndicateToken is ERC20, AccessControl, ERC20Permit {
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
 
     // [Olympix Warning: no parameter validation in constructor] Parameter validation is handled by OpenZeppelin's AccessControl
