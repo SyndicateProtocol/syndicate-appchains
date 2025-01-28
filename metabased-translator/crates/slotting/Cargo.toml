@@ -15,9 +15,6 @@ tokio = { workspace = true, features = ["sync", "macros", "rt", "time"] }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 clap = { workspace = true, features = ["env", "derive"] }
-strum = { workspace = true }
-strum_macros = { workspace = true }
-rocksdb = { workspace = true }
 derivative = { workspace = true }
 
 [dev-dependencies]
