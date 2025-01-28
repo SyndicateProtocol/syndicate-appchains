@@ -21,3 +21,4 @@ pub mod isequencerinbox;
 pub mod messages;
 pub mod mockerc20;
 pub mod mockerc721;
+pub mod rollup;

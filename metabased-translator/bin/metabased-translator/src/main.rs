@@ -1,6 +1,3 @@
-mod config;
-
-use crate::config::MetabasedConfig;
 use block_builder::{block_builder::BlockBuilder, config::BlockBuilderConfig};
 use common::tracing::{init_tracing, TracingError};
 use eyre::Result;
@@ -8,6 +5,7 @@ use ingestor::{
     config::IngestionPipelineConfig,
     ingestor::{Ingestor, IngestorChain},
 };
+use metabased_translator::config::MetabasedConfig;
 use metrics::{
     config::MetricsConfig,
     metrics::{start_metrics, MetricsState},
@@ -43,7 +41,6 @@ async fn run(
     let mut metrics_state = MetricsState { registry: Registry::default() };
     let sequencing_metrics = Metrics::new(&mut metrics_state.registry);
     let settlement_metrics = Metrics::new(&mut metrics_state.registry);
-
     let metrics_task: tokio::task::JoinHandle<()> =
         start_metrics(metrics_state, metrics_config.m_port).await;
 

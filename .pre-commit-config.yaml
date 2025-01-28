@@ -25,14 +25,8 @@ repos:
         pass_filenames: false
       - id: clippy
         name: clippy
-        args: ["--", "-D", "warnings"]
+        args: ["--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"]
         entry: cargo clippy
-        language: system
-        types: [rust]
-        pass_filenames: false
-      - id: cargo-check
-        name: cargo check
-        entry: cargo check
         language: system
         types: [rust]
         pass_filenames: false
@@ -41,4 +35,26 @@ repos:
         entry: cargo machete
         language: system
         types: [rust]
+        pass_filenames: false
+      - id: forge-fmt
+        name: forge fmt
+        entry: forge fmt
+        args: ["--check"]
+        language: system
+        types: [solidity]
+      - id: forge-test-metabased-contracts
+        name: forge test metabased contracts
+        entry: forge test
+        args: ["--root", "metabased-contracts"]
+        language: system
+        types: [solidity]
+        files: ^(metabased-contracts)/
+        pass_filenames: false
+      - id: forge-test-metabased-translator-contracts
+        name: forge test metabased translator contracts
+        entry: forge test
+        args: ["--root", "metabased-translator/contracts"]
+        language: system
+        types: [solidity]
+        files: ^(metabased-translator)/contracts/
         pass_filenames: false

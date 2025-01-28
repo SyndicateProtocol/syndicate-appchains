@@ -53,12 +53,16 @@ contract RequireAnyModuleTest is Test {
         address checker = address(new MockIsAllowedTrue());
 
         vm.startPrank(admin);
+        vm.expectEmit(true, true, false, false);
+        emit RequireAnyModule.CheckAdded(checker);
         module.addCheck(checker, true);
 
         address[] memory checks = module.getAllChecks();
         assertEq(checks.length, 1);
         assertEq(checks[0], checker);
 
+        vm.expectEmit(true, true, false, false);
+        emit RequireAnyModule.CheckRemoved(checker);
         module.removeCheck(checker);
         checks = module.getAllChecks();
         assertEq(checks.length, 0);
@@ -124,6 +128,20 @@ contract RequireAnyModuleTest is Test {
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, nonAdmin));
         module.removeCheck(checker);
+        vm.stopPrank();
+    }
+
+    function testRevertsOnZeroAddressAdd() public {
+        vm.startPrank(admin);
+        vm.expectRevert(RequireAnyModule.InvalidAddress.selector);
+        module.addCheck(address(0), true);
+        vm.stopPrank();
+    }
+
+    function testRevertsOnZeroAddressRemove() public {
+        vm.startPrank(admin);
+        vm.expectRevert(RequireAnyModule.InvalidAddress.selector);
+        module.removeCheck(address(0));
         vm.stopPrank();
     }
 }

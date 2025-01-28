@@ -47,6 +47,29 @@ impl MetabasedConfig {
         debug!("Parsed MetabasedConfig: {:?}", config);
         config
     }
+
+    pub fn generate_sample_command() {
+        let mut cmd = String::from("cargo run --bin metabased-translator -- \\\n");
+
+        // Recursively get all fields from flattened configs
+        fn add_fields<T: Parser + 'static>(cmd: &mut String) {
+            let app = T::command();
+            for arg in app.get_arguments() {
+                if let Some(long) = arg.get_long() {
+                    cmd.push_str(&format!("  --{} <{}> \\\n", long, long.to_uppercase()));
+                }
+            }
+        }
+
+        add_fields::<BlockBuilderConfig>(&mut cmd);
+        add_fields::<SlottingConfig>(&mut cmd);
+        add_fields::<SequencingChainConfig>(&mut cmd);
+        add_fields::<SettlementChainConfig>(&mut cmd);
+
+        // Remove trailing slash and newline
+        cmd.truncate(cmd.len() - 2);
+        println!("{}", cmd);
+    }
 }
 
 #[cfg(test)]
@@ -91,7 +114,7 @@ mod tests {
         // Block Builder
         assert_eq!(config.block_builder.port, 8888);
         assert_eq!(config.block_builder.genesis_timestamp, 1712500000);
-        assert_eq!(config.block_builder.chain_id, 84532);
+        assert_eq!(config.block_builder.target_chain_id, 13331370);
 
         // Slotter
         assert_eq!(config.slotter.slot_duration_ms, 2_000);
@@ -132,5 +155,10 @@ mod tests {
 
         let config = MetabasedConfig::try_parse_from(["test", "--port", "7777"]).unwrap();
         assert_eq!(config.block_builder.port, 7777);
+    }
+
+    #[test]
+    fn test_generate_command() {
+        MetabasedConfig::generate_sample_command();
     }
 }

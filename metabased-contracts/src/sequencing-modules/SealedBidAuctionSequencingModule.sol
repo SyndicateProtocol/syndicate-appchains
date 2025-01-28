@@ -21,7 +21,7 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
     uint256 public endTime;
     /// @notice The address of the highest bidder.
     address public highestBidder;
-    /// @notice The highest bid amount.
+    /// @notice The highest bid amount, initialized to 0 by design as no bids exist at contract creation.
     uint256 public highestBid;
 
     /// @notice Mapping to store bids of each participant.
@@ -37,6 +37,10 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
     error NoFundsToWithdraw();
     error AuctionNotEnded();
     error TransactionFailed();
+    error BidExceedsDeposit();
+    error InvalidDuration();
+
+    event BidRevealed(address indexed bidder, uint256 bid, bool isHighestBid);
 
     modifier onlyActive() {
         if (!auctionActive) revert AuctionNotActive();
@@ -50,6 +54,8 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
      */
     constructor(uint256 _duration, address _treasury) {
         if (_treasury == address(0)) revert AddressNotAllowed();
+        // [Olympix Warning: insufficient parameter validation] Adding duration validation
+        if (_duration == 0) revert InvalidDuration();
 
         treasury = _treasury;
         auctionType = "SealedBid";
@@ -72,7 +78,8 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
         if (block.timestamp < endTime) revert AuctionNotEnded();
         auctionActive = false;
         if (highestBidder != address(0)) {
-            // solhint-disable-line avoid-low-level-calls
+            // Forward all available gas to treasury to handle ETH transfer
+            // This is intentional as the treasury may be a contract that needs gas to process the payment
             (bool success,) = payable(treasury).call{value: highestBid}("");
             if (!success) revert TransactionFailed();
         }
@@ -104,18 +111,25 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
         Bid memory bidData = bids[msg.sender];
         if (bidData.deposit == 0) revert NoBidFound();
 
+        if (_bid > bidData.deposit) revert BidExceedsDeposit();
+
         bytes32 sealedBid = keccak256(abi.encodePacked(_bid, _salt));
+
         if (sealedBid != bidData.sealedBid) revert InvalidBidReveal();
 
+        bool isHighest = false;
         if (_bid > highestBid) {
             if (highestBidder != address(0)) {
                 refunds[highestBidder] = highestBid;
             }
             highestBid = _bid;
             highestBidder = msg.sender;
+            isHighest = true;
         } else {
             refunds[msg.sender] = bidData.deposit;
         }
+
+        emit BidRevealed(msg.sender, _bid, isHighest);
 
         bids[msg.sender].deposit = 0;
     }
@@ -127,7 +141,8 @@ contract SealedBidAuctionSequencingModule is PermissionModule {
         uint256 refund = refunds[msg.sender];
         if (refund == 0) revert NoFundsToWithdraw();
         refunds[msg.sender] = 0;
-        // solhint-disable-line avoid-low-level-calls
+        // Forward all available gas to handle ETH transfer
+        // This is intentional as the recipient may be a contract that needs gas to process the refund
         (bool success,) = payable(msg.sender).call{value: refund}("");
         if (!success) revert TransactionFailed();
     }
