@@ -32,8 +32,8 @@ pub enum IngestorChain {
 impl fmt::Display for IngestorChain {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Settlement => write!(f, "Settlement"),
-            Self::Sequencing => write!(f, "Sequencing"),
+            Self::Settlement => write!(f, "Ingestor::Settlement"),
+            Self::Sequencing => write!(f, "Ingestor::Sequencing"),
         }
     }
 }
