@@ -4,4 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-prometheus-client = { workspace = true}
+prometheus-client = { workspace = true }
+axum = { workspace = true }
+tokio ={ workspace = true}
+clap = { workspace = true }
+thiserror ={ workspace = true}
+tracing ={ workspace = true }

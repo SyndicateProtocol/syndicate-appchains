@@ -8,9 +8,13 @@ use ingestor::{
     config::IngestionPipelineConfig,
     ingestor::{Ingestor, IngestorChain},
 };
-use metrics::Metrics;
+use metrics::{
+    config::MetricsConfig,
+    metrics::{start_metrics, MetricsState},
+    Metrics,
+};
+use prometheus_client::registry::Registry;
 use slotting::{config::SlottingConfig, slotting::Slotter};
-use std::sync::Arc;
 use tokio::sync::oneshot;
 use tracing::{error, info};
 
@@ -19,6 +23,7 @@ async fn run(
     block_builder_config: BlockBuilderConfig,
     slotting_config: SlottingConfig,
     ingestion_config: IngestionPipelineConfig,
+    metrics_config: MetricsConfig,
 ) -> Result<(), RuntimeError> {
     // Create shutdown channel
     let (shutdown_tx, mut shutdown_rx) = oneshot::channel();
@@ -34,12 +39,17 @@ async fn run(
         Ok::<_, RuntimeError>(())
     });
 
+    // Initialize metrics
+    let mut metrics_state = MetricsState { registry: Registry::default() };
+    let sequencing_metrics = Metrics::new(&mut metrics_state.registry);
+    let settlement_metrics = Metrics::new(&mut metrics_state.registry);
+
+    let metrics_task: tokio::task::JoinHandle<()> =
+        start_metrics(metrics_state, metrics_config.m_port).await;
+
     // Initialize components with their specific configs
     let sequencing_config = ingestion_config.sequencing;
     let settlement_config = ingestion_config.settlement;
-
-    let sequencing_metrics = Arc::new(Metrics::new());
-    let settlement_metrics = Arc::new(Metrics::new());
 
     let (mut sequencing_ingestor, sequencer_rx) =
         Ingestor::new(IngestorChain::Sequencing, sequencing_config.into(), sequencing_metrics)
@@ -109,6 +119,11 @@ async fn run(
                 error!("Block builder task failed: {}", e);
             }
         }
+        res = metrics_task => {
+            if let Err(e) = res {
+                error!("Metrics task failed: {}", e)
+            }
+        }
     }
 
     info!("Metabased Translator shutdown complete");
@@ -131,6 +146,7 @@ fn main() -> Result<(), RuntimeError> {
                 sequencing: base_config.sequencing,
                 settlement: base_config.settlement,
             },
+            base_config.metrics,
         ))?;
 
     Ok(())
@@ -169,5 +185,11 @@ impl From<slotting::config::ConfigError> for RuntimeError {
 impl From<ingestor::config::ConfigError> for RuntimeError {
     fn from(err: ingestor::config::ConfigError) -> Self {
         RuntimeError::InvalidConfig(format!("Ingestor config error: {}", err))
+    }
+}
+
+impl From<metrics::config::ConfigError> for RuntimeError {
+    fn from(err: metrics::config::ConfigError) -> Self {
+        RuntimeError::InvalidConfig(format!("Metrics config error: {}", err))
     }
 }

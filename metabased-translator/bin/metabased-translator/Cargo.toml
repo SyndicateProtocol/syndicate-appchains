@@ -20,6 +20,7 @@ tracing = {workspace = true}
 tokio = {workspace = true, features = ["signal"]}
 eyre = {workspace = true}
 thiserror = {workspace = true}
+prometheus-client = {workspace = true}
 
 
 

@@ -6,6 +6,7 @@
 use block_builder::config::BlockBuilderConfig;
 use clap::Parser;
 use ingestor::config::{SequencingChainConfig, SettlementChainConfig};
+use metrics::config::MetricsConfig;
 use slotting::config::SlottingConfig;
 use std::fmt::Debug;
 use tracing::debug;
@@ -26,6 +27,9 @@ pub struct MetabasedConfig {
 
     #[command(flatten)]
     pub settlement: SettlementChainConfig,
+
+    #[command(flatten)]
+    pub metrics: MetricsConfig,
 }
 
 impl Default for MetabasedConfig {
@@ -73,6 +77,9 @@ mod tests {
         env::remove_var("SETTLEMENT_POLLING_INTERVAL_SECS");
         env::remove_var("SETTLEMENT_RPC_URL");
         env::remove_var("SETTLEMENT_START_BLOCK");
+
+        // Metrics
+        env::remove_var("METRICS_PORT");
     }
 
     #[test]
@@ -98,6 +105,9 @@ mod tests {
         assert_eq!(config.settlement.settlement_buffer_size, 100);
         assert_eq!(config.settlement.settlement_polling_interval_secs, 1);
         assert_eq!(config.settlement.settlement_rpc_url, "http://localhost:8545");
+
+        // Metrics
+        assert_eq!(config.metrics.m_port, 6666)
     }
 
     #[test]
