@@ -16,6 +16,7 @@ use alloy::{
     rpc::types::TransactionRequest,
 };
 use async_trait::async_trait;
+use common::types::{BlockAndReceipts, Slot};
 use eyre::Result;
 use std::str::FromStr;
 
@@ -27,10 +28,36 @@ pub struct OptimismBlockBuilder {
 
 #[async_trait]
 impl RollupBlockBuilder for OptimismBlockBuilder {
+    async fn build_block_from_slot(&mut self, slot: Slot) -> Result<Vec<TransactionRequest>> {
+        let deposited_txns = self.process_deposited_txns(slot.settlement_chain_blocks).await?;
+
+        let mbtxs = self.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
+
+        let batch_txn = self.build_batch_txn(mbtxs).await?;
+
+        let mut result: Vec<TransactionRequest> = vec![batch_txn];
+        result.extend(deposited_txns);
+        Ok(result)
+    }
+
+    fn transaction_parser(&self) -> &SequencingTransactionParser {
+        &self.transaction_parser
+    }
+}
+
+impl OptimismBlockBuilder {
     /// Creates a new Optimism block builder
-    fn new(sequencing_contract_address: Address) -> Self {
+    pub const fn new(sequencing_contract_address: Address) -> Self {
         let transaction_parser = SequencingTransactionParser::new(sequencing_contract_address);
         Self { transaction_parser }
+    }
+
+    async fn process_deposited_txns(
+        &self,
+        _txns: Vec<BlockAndReceipts>,
+    ) -> Result<Vec<TransactionRequest>> {
+        // TODO: Implement
+        Ok(vec![])
     }
 
     /// Builds a batch of transactions into an Optimism batch
@@ -53,10 +80,6 @@ impl RollupBlockBuilder for OptimismBlockBuilder {
 
         let tx = new_batcher_tx(batcher, batch_inbox, data.into());
         Ok(tx)
-    }
-
-    fn transaction_parser(&self) -> &SequencingTransactionParser {
-        &self.transaction_parser
     }
 }
 

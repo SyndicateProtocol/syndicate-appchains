@@ -4,12 +4,9 @@
 //! different rollup implementations can construct and process their blocks.
 
 use crate::rollups::shared::SequencingTransactionParser;
-use alloy::{
-    primitives::{Address, Bytes},
-    rpc::types::TransactionRequest,
-};
+use alloy::{primitives::Bytes, rpc::types::TransactionRequest};
 use async_trait::async_trait;
-use common::types::BlockAndReceipts;
+use common::types::{BlockAndReceipts, Slot};
 use eyre::{Error, Result};
 use std::{
     fmt::Debug,
@@ -19,20 +16,6 @@ use std::{
 /// Trait for rollup-specific block builders that construct batches from transactions
 #[async_trait]
 pub trait RollupBlockBuilder: Debug + Send + Sync + Unpin + 'static {
-    /// Creates a new block builder instance with a sequencing contract address.
-    ///
-    /// # Arguments
-    /// - `sequencing_contract_address`: The address of the sequencing contract to monitor.
-    ///
-    /// # Returns
-    /// - A new instance of the implementing type.
-    fn new(sequencing_contract_address: Address) -> Self
-    where
-        Self: Sized;
-
-    /// Builds a batch of transactions into a rollup-specific batch transaction
-    async fn build_batch_txn(&self, txs: Vec<Bytes>) -> Result<TransactionRequest, Error>;
-
     /// Parses sequencing chain blocks into metabased transactions.
     ///
     /// By default, this method uses the associated transaction parser to extract
@@ -55,4 +38,8 @@ pub trait RollupBlockBuilder: Debug + Send + Sync + Unpin + 'static {
 
     /// Provides access to the transaction parser used by the block builder.
     fn transaction_parser(&self) -> &SequencingTransactionParser;
+
+    /// Builds a block from a slot
+    async fn build_block_from_slot(&mut self, slot: Slot)
+        -> Result<Vec<TransactionRequest>, Error>;
 }
