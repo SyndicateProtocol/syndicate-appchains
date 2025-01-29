@@ -16,7 +16,7 @@ pub struct SlottingConfig {
     pub start_slot_number: u64,
 
     /// The timestamp of the [`Slotter`] slot to start from
-    #[arg(long, env = "SLOTTER_START_SLOT_TIMESTAMP", default_value_t = 0)]
+    #[arg(long, env = "SLOTTER_START_SLOT_TIMESTAMP", default_value_t = 1712500000 * 1000)]
     pub start_slot_timestamp: u64,
 }
 
@@ -53,10 +53,7 @@ pub enum ConfigError {
 
 impl Default for SlottingConfig {
     fn default() -> Self {
-        let config =
-            Self { slot_duration_ms: 2_000, start_slot_number: 0, start_slot_timestamp: 0 };
-        debug!("Created default SlottingConfig: {:?}", config);
-        config
+        Self::parse_from([""])
     }
 }
 
@@ -69,7 +66,7 @@ mod config_tests {
         let config = SlottingConfig::default();
         assert_eq!(config.slot_duration_ms, 2_000);
         assert_eq!(config.start_slot_number, 0);
-        assert_eq!(config.start_slot_timestamp, 0);
+        assert_eq!(config.start_slot_timestamp, 1712500000000);
     }
 
     #[test]
@@ -77,7 +74,7 @@ mod config_tests {
         let config = SlottingConfig::parse_from(["test"]);
         assert_eq!(config.slot_duration_ms, 2_000);
         assert_eq!(config.start_slot_number, 0);
-        assert_eq!(config.start_slot_timestamp, 0);
+        assert_eq!(config.start_slot_timestamp, 1712500000000);
     }
 
     #[test]

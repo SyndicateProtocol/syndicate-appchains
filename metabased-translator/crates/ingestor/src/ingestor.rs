@@ -57,7 +57,7 @@ impl Ingestor {
                 client,
                 current_block_number: config.start_block,
                 sender,
-                polling_interval: config.polling_interval(),
+                polling_interval: config.polling_interval,
                 metrics,
             },
             receiver,
@@ -136,7 +136,12 @@ impl Ingestor {
     pub async fn start_polling(&mut self) -> Result<(), Error> {
         debug!("Starting polling");
 
-        let mut interval = tokio::time::interval(self.polling_interval);
+        // TODO: use millis instead of seconds.
+        let mut interval = tokio::time::interval(if self.polling_interval.is_zero() {
+            Duration::from_millis(100)
+        } else {
+            self.polling_interval
+        });
 
         loop {
             tokio::select! {
@@ -188,14 +193,14 @@ mod tests {
         IngestionPipelineConfig {
             sequencing: ChainIngestorConfig {
                 buffer_size: 100,
-                polling_interval_secs: 1,
+                polling_interval: Duration::from_secs(1),
                 rpc_url: "https://sequencing.io".into(),
                 start_block: 19486923,
             }
             .into(),
             settlement: ChainIngestorConfig {
                 buffer_size: 100,
-                polling_interval_secs: 1,
+                polling_interval: Duration::from_secs(1),
                 rpc_url: "https://settlement.io".into(),
                 start_block: 19486923,
             }

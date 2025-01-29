@@ -253,11 +253,12 @@ impl Slotter {
 
     async fn process_block(
         &mut self,
-        block_info: BlockAndReceipts,
+        mut block_info: BlockAndReceipts,
         chain: Chain,
         sender: &Sender<Slot>,
         slot_duration_ms: u64,
     ) -> Result<(), SlotterError> {
+        block_info.block.timestamp *= 1000;
         let block_timestamp = block_info.block.timestamp;
         self.update_latest_block(&block_info.block, chain)?;
         let latest_slot = self.slots.front_mut().ok_or(SlotterError::NoSlotsAvailable)?;
@@ -454,6 +455,7 @@ pub enum SlotterError {
 mod tests {
     use super::*;
     use alloy::primitives::B256;
+    use common::tracing::init_tracing;
     use std::str::FromStr;
     async fn create_slotter(
         slot_start_timestamp_ms: u64,
@@ -501,22 +503,22 @@ mod tests {
 
     /// Test scenario:
     /// ```text
-    /// Slot 0 [9000-10000]:
+    /// Slot 0 [9]:
     /// ┌───────────────────┐
     /// │ empty             │
     /// └───────────────────┘
     ///
-    /// Slot 1 [10001-11000]:
+    /// Slot 1 [10]:
     /// ┌───────────────────┐
-    /// │ seq    @ 10001 #1 │
-    /// │ seq    @ 11000 #2 │
-    /// │ settle @ 10001 #1 │ -> Only marked as Unsafe once the blocks for next slot are received
+    /// │ seq    @ 11 #1    │
+    /// │ seq    @ 11 #2    │
+    /// │ settle @ 11 #1    │ -> Only marked as Unsafe once the blocks for next slot are received
     /// └───────────────────┘
     ///
-    /// Slot 2 [11001-12000]:
+    /// Slot 2 [11]:
     /// ┌───────────────────┐
-    /// │ seq    @ 11001 #3 │
-    /// │ settle @ 11001 #2 │ -> Shouldn't be received (never marked as unsafe)
+    /// │ seq    @ 12 #3    │
+    /// │ settle @ 12 #2    │ -> Shouldn't be received (never marked as unsafe)
     /// └───────────────────┘
     ///
     /// Legend:
@@ -525,6 +527,7 @@ mod tests {
     /// ```
     #[tokio::test]
     async fn test_slotter() {
+        init_tracing().unwrap();
         let slot_start_timestamp_ms = 10_000;
         let slot_duration_ms = 1_000;
         let (slotter, seq_tx, set_tx) =
@@ -533,9 +536,9 @@ mod tests {
         assert!(slot_rx.is_empty());
 
         // send initial blocks, these should fit in slot 1 and make slot 0 be marked as unsafe
-        seq_tx.send(create_test_block(1, 10_001)).await.unwrap();
+        seq_tx.send(create_test_block(1, 11)).await.unwrap();
 
-        set_tx.send(create_test_block(1, 10_002)).await.unwrap();
+        set_tx.send(create_test_block(1, 11)).await.unwrap();
 
         let slot0 = slot_rx.recv().await.unwrap();
         assert_eq!(slot0.timestamp, slot_start_timestamp_ms);
@@ -547,14 +550,14 @@ mod tests {
         assert!(slot_rx.is_empty());
 
         // send a block for the settlement chain that should fit in slot 2
-        set_tx.send(create_test_block(2, 11_001)).await.unwrap(); // this block should be fit in slot 1
+        set_tx.send(create_test_block(2, 12)).await.unwrap(); // this block should be fit in slot 1
 
         // slot 1 should still be opened (we haven't received any blocks for the sequencing chain
         // ahead of the slot)
         assert!(slot_rx.is_empty());
 
         // send a bock for the sequencing chain that still fits in slot 1
-        seq_tx.send(create_test_block(2, 11_000)).await.unwrap();
+        seq_tx.send(create_test_block(2, 11)).await.unwrap();
 
         // slot 1 should still be opened (we haven't received any blocks for the sequencing chain
         // ahead of the slot)
@@ -562,7 +565,7 @@ mod tests {
 
         // send a block for the sequencing chain that should fit in slot 2
         // this should mark slot 1 as unsafe
-        seq_tx.send(create_test_block(3, 11_001)).await.unwrap();
+        seq_tx.send(create_test_block(3, 12)).await.unwrap();
 
         let slot1 = slot_rx.recv().await.unwrap();
         assert_eq!(slot1.timestamp, slot_start_timestamp_ms + slot_duration_ms);

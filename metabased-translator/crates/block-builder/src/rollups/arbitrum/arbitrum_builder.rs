@@ -57,8 +57,6 @@ pub struct ArbitrumBlockBuilder {
 
     // Settlement chain address
     delayed_inbox_address: Address,
-
-    delayed_message_count: u64,
 }
 
 impl Default for ArbitrumBlockBuilder {
@@ -105,13 +103,12 @@ impl ArbitrumBlockBuilder {
             ),
             mchain_rollup_address: config.mchain_rollup_address,
             delayed_inbox_address: config.delayed_inbox_address,
-            delayed_message_count: 0,
         }
     }
 
     /// Processes settlement chain receipts into delayed messages
     async fn process_delayed_messages(
-        &mut self,
+        &self,
         blocks: Vec<BlockAndReceipts>,
     ) -> Result<Vec<TransactionRequest>> {
         // Create a local map to store message data
@@ -131,7 +128,22 @@ impl ArbitrumBlockBuilder {
 
                     INBOX_MSG_DELIVERED_EVENT_HASH => {
                         let message_num = U256::from_be_slice(log.topics[1].as_slice());
-                        message_data.insert(message_num, log.data.clone());
+
+                        // Decode the event using the contract bindings
+                        match InboxMessageDelivered::abi_decode_data(&log.data, false) {
+                            Ok(decoded) => {
+                                message_data.insert(message_num, decoded.0);
+                            }
+                            Err(e) => {
+                                error!(
+                                    "{}",
+                                    ArbitrumBlockBuilderError::DecodingError(
+                                        "InboxMessageDelivered",
+                                        e.into()
+                                    )
+                                );
+                            }
+                        }
                         false
                     }
 
@@ -182,9 +194,6 @@ impl ArbitrumBlockBuilder {
             })
             .collect();
 
-        // Update the delayed message count
-        self.delayed_message_count += delayed_msg_txns.len() as u64;
-
         Ok(delayed_msg_txns)
     }
 
@@ -230,6 +239,7 @@ impl ArbitrumBlockBuilder {
         slot_timestamp: u64,
     ) -> Result<TransactionRequest> {
         let batch = if txs.is_empty() {
+            // TODO: do not attempt to mine an empty batch if there are no delayed messages present
             Batch(vec![BatchMessage::Delayed])
         } else {
             Batch(vec![BatchMessage::L2(L1IncomingMessage {
@@ -248,8 +258,7 @@ impl ArbitrumBlockBuilder {
         let request = TransactionRequest::default().to(self.mchain_rollup_address).input(
             // Encode the function call with parameters
             Rollup::postBatchCall::new((
-                U256::from(self.delayed_message_count), // after delayed messages read
-                encoded_batch,                          // batch data
+                encoded_batch, // batch data
             ))
             .abi_encode()
             .into(), // Convert the tokenized call data to bytes
@@ -299,7 +308,6 @@ mod tests {
 
         // Verify the input data contains the correct parameters
         let call_data = Rollup::postBatchCall::new((
-            U256::from(0),    // delayed message count
             expected_encoded, // batch data
         ))
         .abi_encode();
@@ -328,7 +336,6 @@ mod tests {
 
         // Verify the input data contains the correct parameters
         let call_data = Rollup::postBatchCall::new((
-            U256::from(0),    // delayed message count
             expected_encoded, // batch data
         ))
         .abi_encode();
@@ -416,7 +423,9 @@ mod tests {
         let inbox_msg_log = create_mock_log(
             builder.delayed_inbox_address,
             vec![INBOX_MSG_DELIVERED_EVENT_HASH, FixedBytes::from(message_index.to_be_bytes())],
-            message_data.clone(),
+            InboxMessageDelivered { messageNum: message_index, data: message_data }
+                .encode_data()
+                .into(),
             1,
             0,
         );
@@ -496,7 +505,7 @@ mod tests {
         })]);
         let expected_encoded = expected_batch.encode().unwrap();
         let expected_batch_call =
-            Rollup::postBatchCall::new((U256::from(0), expected_encoded)).abi_encode().into();
+            Rollup::postBatchCall::new((expected_encoded,)).abi_encode().into();
         assert_eq!(batch_txn.input, expected_batch_call);
     }
 
@@ -553,7 +562,9 @@ mod tests {
         let inbox_log = create_mock_log(
             builder.delayed_inbox_address,
             vec![INBOX_MSG_DELIVERED_EVENT_HASH, FixedBytes::from(message_num.to_be_bytes::<32>())],
-            delayed_message_data.clone(),
+            InboxMessageDelivered { messageNum: message_num, data: delayed_message_data.clone() }
+                .encode_data()
+                .into(),
             1,
             0,
         );
@@ -604,7 +615,7 @@ mod tests {
         })]);
         let expected_encoded = expected_batch.encode().unwrap();
         let expected_batch_call =
-            Rollup::postBatchCall::new((U256::from(1), expected_encoded)).abi_encode().into();
+            Rollup::postBatchCall::new((expected_encoded,)).abi_encode().into();
         assert_eq!(batch_txn.input, expected_batch_call);
     }
 

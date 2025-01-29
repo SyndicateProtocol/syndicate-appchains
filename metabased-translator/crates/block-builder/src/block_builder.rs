@@ -19,8 +19,8 @@ use tracing::{debug, error};
 #[derive(Debug)]
 pub struct BlockBuilder {
     slotter_rx: Receiver<Slot>,
-
-    mchain: MetaChainProvider,
+    #[allow(missing_docs)]
+    pub mchain: MetaChainProvider,
     builder: Box<dyn RollupBlockBuilder>,
 }
 
@@ -115,13 +115,4 @@ pub enum BlockBuilderError {
 
     #[error("Cannot serialize empty l2 msg")]
     EmptyL2Message(),
-
-    #[error("No contract addr found")]
-    NoContractAddress(),
-
-    #[error("No block number found")]
-    NoBlockNumber(),
-
-    #[error("Overflow error")]
-    Overflow(),
 }

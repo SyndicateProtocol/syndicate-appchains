@@ -25,8 +25,8 @@ pub struct ChainIngestorConfig {
     #[arg(long, env, default_value_t = 100)]
     pub buffer_size: usize,
 
-    #[arg(long, env, default_value_t = 1)]
-    pub polling_interval_secs: u64,
+    #[arg(long, env, default_value = "1s", value_parser = humantime::parse_duration)]
+    pub polling_interval: Duration,
 
     #[arg(long, env, default_value = "http://localhost:8545")]
     pub rpc_url: String,
@@ -47,11 +47,12 @@ pub struct SequencingChainConfig {
 
     /// The interval between each block polling on the sequencing chain
     #[arg(
-        long = "sequencing-polling-interval-secs",
-        env = "SEQUENCING_POLLING_INTERVAL_SECS",
-        default_value_t = 1
+        long = "sequencing-polling-interval",
+        env = "SEQUENCING_POLLING_INTERVAL",
+        default_value = "1s",
+        value_parser = humantime::parse_duration
     )]
-    pub sequencing_polling_interval_secs: u64,
+    pub sequencing_polling_interval: Duration,
 
     /// The RPC URL of the sequencing chain
     #[arg(
@@ -75,17 +76,18 @@ pub struct SettlementChainConfig {
 
     /// The interval between each block polling on the settlement chain
     #[arg(
-        long = "settlement-polling-interval-secs",
-        env = "SETTLEMENT_POLLING_INTERVAL_SECS",
-        default_value_t = 1
+        long = "settlement-polling-interval",
+        env = "SETTLEMENT_POLLING_INTERVAL",
+        default_value = "1s",
+        value_parser = humantime::parse_duration
     )]
-    pub settlement_polling_interval_secs: u64,
+    pub settlement_polling_interval: Duration,
 
     /// The RPC URL of the settlement chain
     #[arg(
         long = "settlement-rpc-url",
         env = "SETTLEMENT_RPC_URL",
-        default_value = "http://localhost:8545"
+        default_value = "http://localhost:8546"
     )]
     pub settlement_rpc_url: String,
 
@@ -98,7 +100,7 @@ impl From<ChainIngestorConfig> for SequencingChainConfig {
     fn from(config: ChainIngestorConfig) -> Self {
         Self {
             sequencing_buffer_size: config.buffer_size,
-            sequencing_polling_interval_secs: config.polling_interval_secs,
+            sequencing_polling_interval: config.polling_interval,
             sequencing_rpc_url: config.rpc_url,
             sequencing_start_block: config.start_block,
         }
@@ -109,7 +111,7 @@ impl From<SequencingChainConfig> for ChainIngestorConfig {
     fn from(config: SequencingChainConfig) -> Self {
         Self {
             buffer_size: config.sequencing_buffer_size,
-            polling_interval_secs: config.sequencing_polling_interval_secs,
+            polling_interval: config.sequencing_polling_interval,
             rpc_url: config.sequencing_rpc_url,
             start_block: config.sequencing_start_block,
         }
@@ -120,7 +122,7 @@ impl From<ChainIngestorConfig> for SettlementChainConfig {
     fn from(config: ChainIngestorConfig) -> Self {
         Self {
             settlement_buffer_size: config.buffer_size,
-            settlement_polling_interval_secs: config.polling_interval_secs,
+            settlement_polling_interval: config.polling_interval,
             settlement_rpc_url: config.rpc_url,
             settlement_start_block: config.start_block,
         }
@@ -131,7 +133,7 @@ impl From<SettlementChainConfig> for ChainIngestorConfig {
     fn from(config: SettlementChainConfig) -> Self {
         Self {
             buffer_size: config.settlement_buffer_size,
-            polling_interval_secs: config.settlement_polling_interval_secs,
+            polling_interval: config.settlement_polling_interval,
             rpc_url: config.settlement_rpc_url,
             start_block: config.settlement_start_block,
         }
@@ -165,19 +167,7 @@ pub enum ConfigError {
 
 impl Default for IngestionPipelineConfig {
     fn default() -> Self {
-        // By default, use 2 different ports for the sequencer and settlement chains
-        let sequencing: SequencingChainConfig = ChainIngestorConfig {
-            rpc_url: "http://localhost:8545".to_string(),
-            ..Default::default()
-        }
-        .into();
-
-        let settlement: SettlementChainConfig = ChainIngestorConfig {
-            rpc_url: "http://localhost:8546".to_string(),
-            ..Default::default()
-        }
-        .into();
-        Self { sequencing, settlement }
+        Self::parse_from([""])
     }
 }
 
@@ -204,12 +194,7 @@ impl IngestionPipelineConfig {
 
 impl Default for ChainIngestorConfig {
     fn default() -> Self {
-        Self {
-            buffer_size: 100,
-            polling_interval_secs: 1,
-            rpc_url: "http://localhost:8545".to_string(),
-            start_block: 0,
-        }
+        Self::parse_from([""])
     }
 }
 
@@ -219,9 +204,9 @@ impl ChainIngestorConfig {
         rpc_url: String,
         start_block: u64,
         buffer_size: usize,
-        polling_interval_secs: u64,
+        polling_interval: Duration,
     ) -> Result<Self, ConfigError> {
-        let config = Self { rpc_url, start_block, buffer_size, polling_interval_secs };
+        let config = Self { rpc_url, start_block, buffer_size, polling_interval };
         debug!("Created chain ingestor config: {:?}", config);
         config.validate()?;
         Ok(config)
@@ -229,7 +214,7 @@ impl ChainIngestorConfig {
 
     /// Validates the configuration
     pub fn validate(&self) -> Result<(), ConfigError> {
-        if self.polling_interval_secs == 0 {
+        if self.polling_interval.is_zero() {
             return Err(ConfigError::InvalidPollingInterval(
                 "Polling interval must be greater than 0".to_string(),
             ));
@@ -243,11 +228,6 @@ impl ChainIngestorConfig {
 
         Ok(())
     }
-
-    /// Returns the polling interval as a [`Duration`]
-    pub const fn polling_interval(&self) -> Duration {
-        Duration::from_secs(self.polling_interval_secs)
-    }
 }
 
 #[cfg(test)]
@@ -255,14 +235,20 @@ mod tests {
     use super::*;
 
     fn test_chain_ingestor_config() -> ChainIngestorConfig {
-        ChainIngestorConfig::new("http://test:8545".to_string(), 100, 10, 5).unwrap()
+        ChainIngestorConfig::new("http://test:8545".to_string(), 100, 10, Duration::from_secs(5))
+            .unwrap()
     }
 
     #[test]
     fn test_chain_ingestor_config_validation() {
         // Valid config
-        let config =
-            ChainIngestorConfig::new("http://localhost:8545".to_string(), 100, 10, 5).unwrap();
+        let config = ChainIngestorConfig::new(
+            "http://localhost:8545".to_string(),
+            100,
+            10,
+            Duration::from_secs(5),
+        )
+        .unwrap();
         assert!(config.validate().is_ok());
 
         // Invalid polling interval
@@ -270,7 +256,7 @@ mod tests {
             rpc_url: "http://localhost:8545".to_string(),
             start_block: 100,
             buffer_size: 10,
-            polling_interval_secs: 0,
+            polling_interval: Duration::from_secs(0),
         };
         assert!(matches!(config.validate(), Err(ConfigError::InvalidPollingInterval(_))));
 
@@ -279,7 +265,7 @@ mod tests {
             rpc_url: "http://localhost:8545".to_string(),
             start_block: 100,
             buffer_size: 0,
-            polling_interval_secs: 5,
+            polling_interval: Duration::from_secs(5),
         };
         assert!(matches!(config.validate(), Err(ConfigError::InvalidBufferSize(_))));
     }
@@ -292,7 +278,7 @@ mod tests {
             rpc_url: "http://test:8545".to_string(),
             start_block: 100,
             buffer_size: 0, // Invalid
-            polling_interval_secs: 5,
+            polling_interval: Duration::from_secs(5),
         };
 
         // Pipeline should fail validation if any component fails
@@ -303,7 +289,7 @@ mod tests {
     #[test]
     fn test_chain_ingestor_config_polling_interval() {
         let config = test_chain_ingestor_config();
-        assert_eq!(config.polling_interval(), Duration::from_secs(5));
+        assert_eq!(config.polling_interval, Duration::from_secs(5));
     }
 
     #[test]
@@ -315,14 +301,14 @@ mod tests {
         assert_eq!(config.rpc_url, cloned.rpc_url);
         assert_eq!(config.start_block, cloned.start_block);
         assert_eq!(config.buffer_size, cloned.buffer_size);
-        assert_eq!(config.polling_interval_secs, cloned.polling_interval_secs);
+        assert_eq!(config.polling_interval, cloned.polling_interval);
     }
 
     #[test]
     fn test_chain_config_conversions() {
         let generic = ChainIngestorConfig {
             buffer_size: 100,
-            polling_interval_secs: 1,
+            polling_interval: Duration::from_secs(1),
             rpc_url: "http://sequencer:8545".to_string(),
             start_block: 0,
         };

@@ -14,6 +14,7 @@ block-builder = { workspace = true }
 contract-bindings = { workspace = true }
 alloy = { workspace = true, features = [
   "providers",
+  "node-bindings",
   "sol-types",
   "signers",
   "signer-local",
@@ -21,11 +22,15 @@ alloy = { workspace = true, features = [
   "contract",
 ] }
 eyre = { workspace = true }
+ingestor = {workspace = true}
+slotting = {workspace = true}
 reqwest = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }
 thiserror = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
+prometheus-client = { workspace = true}
+metrics = { workspace = true}
 
 [dev-dependencies]
 serial_test = { workspace = true }

@@ -34,7 +34,7 @@ pub struct MetabasedConfig {
 
 impl Default for MetabasedConfig {
     fn default() -> Self {
-        let config = Self::parse_from(["test"]);
+        let config = Self::parse_from([""]);
         debug!("Created default MetabasedConfig: {:?}", config);
         config
     }
@@ -77,7 +77,7 @@ impl MetabasedConfig {
 mod tests {
     use super::*;
     use serial_test::serial;
-    use std::env;
+    use std::{env, time::Duration};
 
     fn clean_env() {
         // Block Builder
@@ -120,15 +120,15 @@ mod tests {
         // Slotter
         assert_eq!(config.slotter.slot_duration_ms, 2_000);
         assert_eq!(config.slotter.start_slot_number, 0);
-        assert_eq!(config.slotter.start_slot_timestamp, 0);
+        assert_eq!(config.slotter.start_slot_timestamp, 1712500000000);
 
         // Chains
         assert_eq!(config.sequencing.sequencing_buffer_size, 100);
-        assert_eq!(config.sequencing.sequencing_polling_interval_secs, 1);
+        assert_eq!(config.sequencing.sequencing_polling_interval, Duration::from_secs(1));
         assert_eq!(config.sequencing.sequencing_rpc_url, "http://localhost:8545");
         assert_eq!(config.settlement.settlement_buffer_size, 100);
-        assert_eq!(config.settlement.settlement_polling_interval_secs, 1);
-        assert_eq!(config.settlement.settlement_rpc_url, "http://localhost:8545");
+        assert_eq!(config.settlement.settlement_polling_interval, Duration::from_secs(1));
+        assert_eq!(config.settlement.settlement_rpc_url, "http://localhost:8546");
 
         // Metrics
         assert_eq!(config.metrics.metrics_port, 9090)

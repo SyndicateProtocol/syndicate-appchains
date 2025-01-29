@@ -105,8 +105,7 @@ impl Batch {
         Ok(result.into())
     }
 
-    /// For testing purposes only. Docker image is currently built for arm architecture.
-    #[cfg(target_os = "macos")]
+    /// For testing purposes only.
     #[cfg(test)]
     async fn geth_encode(&self) -> Result<Bytes> {
         use eyre::OptionExt;
@@ -191,7 +190,6 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(target_os = "macos")]
     #[tokio::test]
     async fn test_tx_encode() -> Result<()> {
         use alloy::{

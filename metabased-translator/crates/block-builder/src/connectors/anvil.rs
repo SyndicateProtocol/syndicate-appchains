@@ -1,7 +1,7 @@
 //! Anvil connector for the `MetaChain`
 use crate::{
     block_builder::BlockBuilderError,
-    config::{get_default_private_key_signer, BlockBuilderConfig},
+    config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
     rollups::arbitrum,
 };
 use alloy::{
@@ -14,7 +14,7 @@ use alloy::{
             BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
             WalletFiller,
         },
-        Identity, Provider, ProviderBuilder, RootProvider, WalletProvider,
+        Identity, Provider, ProviderBuilder, RootProvider,
     },
     rpc::types::{anvil::MineOptions, TransactionRequest},
     transports::http::Http,
@@ -25,7 +25,8 @@ use reqwest::Client;
 use std::net::TcpListener;
 use tracing::info;
 
-type FilledProvider = FillProvider<
+#[allow(missing_docs)]
+pub type FilledProvider = FillProvider<
     JoinFill<
         JoinFill<
             Identity,
@@ -89,26 +90,23 @@ impl MetaChainProvider {
             .with_recommended_fillers()
             .wallet(EthereumWallet::from(get_default_private_key_signer()))
             .on_http(anvil.endpoint_url());
+        provider.anvil_set_block_timestamp_interval(1).await?;
 
         let rollup_config = Self::rollup_config(U256::from(config.target_chain_id));
 
-        let deploy_tx = Rollup::deploy_builder(
-            &provider,
-            U256::from(config.target_chain_id),
-            rollup_config.clone(),
-        )
-        .nonce(0)
-        .from(provider.default_signer_address());
-        let contract_addr =
-            deploy_tx.calculate_create_address().ok_or(BlockBuilderError::NoContractAddress())?;
-        provider.anvil_set_block_timestamp_interval(1).await?;
-
         if provider.get_block_number().await? == 0 {
-            _ = deploy_tx.send().await?;
+            _ = Rollup::deploy_builder(
+                &provider,
+                U256::from(config.target_chain_id),
+                rollup_config.clone(),
+            )
+            .nonce(0)
+            .send()
+            .await?;
             provider.anvil_mine(Some(U256::from(1)), None::<U256>).await?;
         }
 
-        let rollup = Rollup::new(contract_addr, provider.clone());
+        let rollup = Rollup::new(get_rollup_contract_address(), provider.clone());
 
         let rollup_info = Self::rollup_info(
             "test",
@@ -218,21 +216,7 @@ impl MetaChainProvider {
 
     /// post a rollup batch to the mchain and mine the next block
     pub async fn send_batch(&self, batch: &arbitrum::batch::Batch) -> Result<()> {
-        let tx = self
-            .rollup
-            .postBatch(
-                U256::from(
-                    batch
-                        .0
-                        .iter()
-                        .filter(|x| matches!(x, arbitrum::batch::BatchMessage::Delayed))
-                        .count(),
-                ),
-                batch.encode()?,
-            )
-            .send()
-            .await?
-            .watch();
+        let tx = self.rollup.postBatch(batch.encode()?).send().await?.watch();
         self.mine_block(0).await?;
         tx.await?;
         Ok(())

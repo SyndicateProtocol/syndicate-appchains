@@ -17,7 +17,7 @@ const DEFAULT_PRIVATE_KEY_SIGNER: &str =
 #[derive(Parser, Clone)]
 #[allow(missing_docs)]
 pub struct BlockBuilderConfig {
-    #[arg(short = 'f', long, env = "BLOCK_BUILDER_SNAPSHOT_FILE", default_value_t = String::new())]
+    #[arg(short = 'f', long, env = "BLOCK_BUILDER_SNAPSHOT_FILE", default_value = "")]
     pub file: String,
 
     #[arg(short = 'p', long, env = "BLOCK_BUILDER_PORT", default_value_t = 8888)]
@@ -37,7 +37,7 @@ pub struct BlockBuilderConfig {
     /// Sequencing contract address on the sequencing chain
     #[arg(short = 's', long, env = "BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS",
         value_parser = parse_address,
-        default_value = "0x0000000000000000000000000000000000000000")]
+        default_value = ROLLUP_CONTRACT_ADDRESS)]
     pub sequencing_contract_address: Address,
 
     /// Target rollup type for the [`block-builder`]
@@ -47,14 +47,13 @@ pub struct BlockBuilderConfig {
     /// Arbitrum rollup address on the m-chain
     #[arg(short = 'm', long, env = "BLOCK_BUILDER_ARBITRUM_MCHAIN_ROLLUP_ADDRESS",
         value_parser = parse_address,
-        // TODO (SEQ-534): Use a default value if possible
-        default_value = "0x0000000000000000000000000000000000000000")]
+        default_value = ROLLUP_CONTRACT_ADDRESS)]
     pub mchain_rollup_address: Address,
 
     /// Delayed inbox address on the settlement chain
     #[arg(short = 'd', long, env = "BLOCK_BUILDER_ARBITRUM_DELAYED_INBOX_ADDRESS",
         value_parser = parse_address,
-        default_value = "0x0000000000000000000000000000000000000000")]
+        default_value = ROLLUP_CONTRACT_ADDRESS)]
     pub delayed_inbox_address: Address,
 }
 
@@ -77,6 +76,13 @@ pub fn get_default_private_key_signer() -> LocalSigner<SigningKey> {
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err))
 }
 
+#[allow(missing_docs)]
+pub fn get_rollup_contract_address() -> Address {
+    get_default_private_key_signer().address().create(0)
+}
+
+const ROLLUP_CONTRACT_ADDRESS: &str = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
+
 impl Debug for BlockBuilderConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockBuilderConfig")
@@ -95,20 +101,7 @@ impl Debug for BlockBuilderConfig {
 
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
-        let default_address = Address::from_str("0x1234000000000000000000000000000000000000")
-            .unwrap_or_else(|err| {
-                panic!("Failed to parse default address: {}", err);
-            });
-        Self {
-            file: String::new(),
-            port: 8888,
-            genesis_timestamp: 1712500000,
-            target_chain_id: 13331370,
-            target_rollup_type: TargetRollupType::ARBITRUM,
-            sequencing_contract_address: default_address,
-            mchain_rollup_address: default_address,
-            delayed_inbox_address: default_address,
-        }
+        Self::parse_from([""])
     }
 }
 
@@ -180,10 +173,7 @@ mod tests {
         assert_eq!(config.port, 8888);
         assert_eq!(config.genesis_timestamp, 1712500000);
         assert_eq!(config.target_chain_id, 13331370);
-        assert_eq!(
-            config.sequencing_contract_address.to_string(),
-            "0x0000000000000000000000000000000000000000"
-        );
+        assert_eq!(config.sequencing_contract_address.to_string(), ROLLUP_CONTRACT_ADDRESS);
     }
 
     #[test]
