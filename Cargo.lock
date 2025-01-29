@@ -2538,6 +2538,7 @@ dependencies = [
  "axum",
  "clap",
  "prometheus-client",
+ "reqwest",
  "thiserror 2.0.11",
  "tokio",
  "tracing",

@@ -113,3 +113,59 @@ pub async fn start_metrics(metrics_state: MetricsState, port: u16) -> tokio::tas
 
     metrics_task
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::StatusCode;
+    use reqwest::Client;
+    use std::time::Duration;
+
+    #[tokio::test]
+    async fn test_record_last_block_fetched() {
+        let mut registry = Registry::default();
+        let ingestor_metrics = IngestorMetrics::new(&mut registry);
+        ingestor_metrics.record_last_block_fetched("test_label".to_string(), 100);
+
+        let gauge = ingestor_metrics.last_block_fetched.get_or_create(&Labels {
+            label_name: "test_label".to_string(),
+            method: "last_block_fetched",
+        });
+        assert_eq!(gauge.get(), 100);
+    }
+
+    #[tokio::test]
+    async fn test_record_rpc_call() {
+        let mut registry = Registry::default();
+        let ingestor_metrics = IngestorMetrics::new(&mut registry);
+
+        ingestor_metrics.record_rpc_call(
+            "test_label".to_string(),
+            "test_method",
+            Duration::from_millis(500),
+        );
+
+        let counter = ingestor_metrics
+            .rpc_calls
+            .get_or_create(&Labels { label_name: "test_label".to_string(), method: "test_method" });
+        assert_eq!(counter.get(), 1);
+    }
+
+    #[tokio::test]
+    async fn test_start_metrics() {
+        let registry = Registry::default();
+        let metrics_state = MetricsState { registry };
+        let port = 9001;
+
+        let handle = start_metrics(metrics_state, port).await;
+
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        let client = Client::new();
+        let response = client.get(format!("http://localhost:{}/metrics", port)).send().await;
+
+        assert!(response.is_ok());
+        assert_eq!(response.unwrap().status(), StatusCode::OK);
+
+        handle.abort();
+    }
+}
