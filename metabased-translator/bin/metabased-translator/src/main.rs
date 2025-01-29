@@ -40,7 +40,7 @@ async fn run(
     // Initialize metrics
     let mut metrics_state = MetricsState { registry };
     let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
-    let metrics_task = start_metrics(metrics_state, metrics_config.metrics_port);
+    let metrics_task = start_metrics(metrics_state, metrics_config.metrics_port).await;
 
     // Initialize components with their specific configs
     let sequencing_config = ingestion_config.sequencing;
