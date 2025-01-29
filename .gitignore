@@ -33,3 +33,6 @@ internal/.DS_Store
 .idea
 
 /target
+
+# Cargo-chef
+recipe.json

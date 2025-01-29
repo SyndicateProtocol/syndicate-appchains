@@ -46,7 +46,7 @@ pub enum SequencingParserError {
 #[derive(Debug)]
 pub struct SequencingTransactionParser {
     /// The address of the sequencing contract
-    sequencing_contract_address: Address,
+    pub sequencing_contract_address: Address,
 }
 
 impl SequencingTransactionParser {
@@ -134,6 +134,7 @@ mod tests {
             topics,
         }
     }
+
     #[tokio::test]
     async fn test_new_parser() {
         let contract_address: Address =

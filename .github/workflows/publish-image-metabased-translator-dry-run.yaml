@@ -1,19 +1,20 @@
-name: Docker Publish Dry Run Check
+name: Docker Publish Metabased-Translator - Dry Run Check
 
 on:
   pull_request:
     branches: [main]
     paths:
-      - "metabased-sequencer/**"
+      - "metabased-translator/**"
       - "Dockerfile"
+      - "**/Cargo.toml"
 
 env:
   REGISTRY: ghcr.io
-  METABASED_SEQUENCER_IMAGE_NAME: ${{ github.repository }}/metabased-sequencer
+  METABASED_TRANSLATOR_IMAGE_NAME: ${{ github.repository }}/metabased-translator
 
 jobs:
-  dry-run-sequencer:
-    name: Metabased Sequencer Dry Run
+  dry-run-metabased-translator:
+    name: Metabased Translator Dry Run
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -33,24 +34,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for metabased-sequencer
-        id: meta-sequencer
+      - name: Extract metadata for metabased-translator
+        id: mb-translator
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.METABASED_SEQUENCER_IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.METABASED_TRANSLATOR_IMAGE_NAME }}
           tags: |
             type=sha,format=long
             type=raw,value=dry-run-test
 
-      - name: Build metabased-sequencer Docker image (no push)
+      - name: Build metabased-translator Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
-          target: interceptor
           file: Dockerfile
+          target: metabased-translator
           push: false
+          # removed linux/arm64 part, took > 30min on Github Actions
           platforms: linux/amd64
-          tags: ${{ steps.meta-sequencer.outputs.tags }}
-          labels: ${{ steps.meta-sequencer.outputs.labels }}
+          tags: ${{ steps.mb-translator.outputs.tags }}
+          labels: ${{ steps.mb-translator.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
