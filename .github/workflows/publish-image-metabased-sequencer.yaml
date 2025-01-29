@@ -1,12 +1,9 @@
-name: Docker Publish
+name: Docker Publish Metabased Sequencer
 
 on:
   push:
     branches:
       - main
-    paths:
-      - "metabased-sequencer/**"
-      - "Dockerfile.metabased-sequencer"
 
 env:
   REGISTRY: ghcr.io
@@ -48,8 +45,9 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile.metabased-sequencer
+          file: Dockerfile
           push: true
+          target: interceptor
           # removed linux/arm64 part, took ~1hr on Github Actions
           platforms: linux/amd64
           tags: ${{ steps.meta-sequencer.outputs.tags }}

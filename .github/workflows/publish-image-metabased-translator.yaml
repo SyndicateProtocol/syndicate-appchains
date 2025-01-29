@@ -4,10 +4,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "metabased-translator/**"
-      - "Dockerfile.metabased-translator"
-      - "**/Cargo.toml"
 
 
 env:
@@ -50,7 +46,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile.metabased-translator
+          file: Dockerfile
+          target: metabased-translator
           push: true
           # removed linux/arm64 part, took > 30min on Github Actions
           platforms: linux/amd64

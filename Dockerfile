@@ -1,3 +1,4 @@
+# NOTE: Multi-target Dockerfile for building and running both Metabased Translator and Interceptor
 # Stage 1: Prepare cargo-chef
 FROM lukemathwalker/cargo-chef:latest-rust-1.84 AS chef
 WORKDIR /app
@@ -45,26 +46,22 @@ RUN cargo build --profile $BUILD_PROFILE \
     --locked \
     --bin metabased-translator
 
-
-#TODO adapt me if you want interceptor and proxy
 # Build interceptor and proxy
-# RUN cargo build --profile $BUILD_PROFILE \
-#    --features "$FEATURES" \
-#    --locked \
-#    --package interceptor \
-#    --package proxy
+RUN cargo build --profile $BUILD_PROFILE \
+    --features "$FEATURES" \
+    --locked \
+    --package interceptor \
+    --package proxy
 
 # Copy binaries to known locations
-RUN cp /app/target/$BUILD_PROFILE/metabased-translator /app/translator
-#    && \
-#    cp /app/target/$BUILD_PROFILE/interceptor /app/interceptor && \
-#    cp /app/target/$BUILD_PROFILE/proxy /app/proxy
+RUN cp /app/target/$BUILD_PROFILE/metabased-translator /app/translator && \
+    cp /app/target/$BUILD_PROFILE/interceptor /app/interceptor
 
-# Stage 4: Create minimal runtime image
-FROM ubuntu:22.04 AS runtime
+# Stage 4: Create metabased-translator runtime image
+FROM ubuntu:22.04 AS metabased-translator
 WORKDIR /app
 
-# Install runtime dependencies and Foundry prerequisites
+# Install metabased-translator dependencies and Foundry prerequisites
 RUN apt-get update && \
     apt-get install -y \
     ca-certificates \
@@ -83,10 +80,8 @@ ENV PATH="/root/.foundry/bin:${PATH}"
 # Verify anvil installation
 RUN anvil --version
 
-# Copy binaries from builder
+# Copy binary from builder and verify
 COPY --from=builder /app/translator /usr/local/bin/metabased-translator
-#COPY --from=builder /app/interceptor /usr/local/bin/metabased-interceptor
-#COPY --from=builder /app/proxy /usr/local/bin/metabased-proxy
 
 # Create a configuration directory
 RUN mkdir -p /etc/metabased
@@ -97,8 +92,37 @@ VOLUME ["/data"]
 # Expose ports (adjust according to your needs)
 EXPOSE 8545 8546
 
-# Set the default binary to run
 ENTRYPOINT ["/usr/local/bin/metabased-translator"]
+# Optional default arguments can be provided via CMD
+LABEL service=metabased-translator
 
-#TODO add a config.toml with flags
-#CMD ["--config", "/etc/metabased/config.toml"]
+# Stage 5: Create interceptor runtime image
+FROM ubuntu:22.04 AS interceptor
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apt-get update && \
+    apt-get install -y \
+    ca-certificates \
+    curl \
+    build-essential \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# NOTE: Foundry is unnecessary for the interceptor. Skipping install
+
+# Copy interceptor binary from builder and verify
+COPY --from=builder /app/interceptor /usr/local/bin/interceptor
+
+# Create a configuration directory
+RUN mkdir -p /etc/interceptor
+
+# Optional: Create volume mount points for persistent data
+VOLUME ["/data"]
+
+# Expose ports (adjust according to your needs)
+EXPOSE 8545 8546
+
+ENTRYPOINT ["/usr/local/bin/interceptor"]
+# Optional default arguments can be provided via CMD
+LABEL service=interceptor

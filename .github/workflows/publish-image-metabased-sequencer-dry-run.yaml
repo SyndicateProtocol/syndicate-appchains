@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - "metabased-sequencer/**"
-      - "Dockerfile.metabased-sequencer"
+      - "Dockerfile"
 
 env:
   REGISTRY: ghcr.io
@@ -46,7 +46,8 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile.metabased-sequencer
+          target: interceptor
+          file: Dockerfile
           push: false
           platforms: linux/amd64
           tags: ${{ steps.meta-sequencer.outputs.tags }}
