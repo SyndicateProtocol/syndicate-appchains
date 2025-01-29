@@ -33,9 +33,7 @@ impl BlockBuilder {
         let mchain = MetaChainProvider::start(config.clone()).await?;
 
         let builder: Box<dyn RollupBlockBuilder> = match config.target_rollup_type {
-            TargetRollupType::ARBITRUM => {
-                Box::new(ArbitrumBlockBuilder::new(config.sequencing_contract_address))
-            }
+            TargetRollupType::ARBITRUM => Box::new(ArbitrumBlockBuilder::new(config)),
             TargetRollupType::OPTIMISM => {
                 Box::new(OptimismBlockBuilder::new(config.sequencing_contract_address))
             }
