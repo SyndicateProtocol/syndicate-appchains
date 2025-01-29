@@ -22,6 +22,7 @@ async fn run(
     slotting_config: SlottingConfig,
     ingestion_config: IngestionPipelineConfig,
     metrics_config: MetricsConfig,
+    registry: Registry,
 ) -> Result<(), RuntimeError> {
     // Create shutdown channel
     let (shutdown_tx, mut shutdown_rx) = oneshot::channel();
@@ -38,7 +39,7 @@ async fn run(
     });
 
     // Initialize metrics
-    let mut metrics_state = MetricsState { registry: Registry::default() };
+    let mut metrics_state = MetricsState { registry };
     let sequencing_metrics = IngestorMetrics::new(&mut metrics_state.registry);
     let settlement_metrics = IngestorMetrics::new(&mut metrics_state.registry);
     let metrics_task: tokio::task::JoinHandle<()> =
@@ -133,6 +134,9 @@ fn main() -> Result<(), RuntimeError> {
     // Parse base config from CLI/env
     let base_config = MetabasedConfig::parse();
 
+    // Initiates the metrics registry
+    let registry = Registry::default();
+
     // Create and run async runtime
     tokio::runtime::Runtime::new()
         .map_err(|e| RuntimeError::Initialization(e.to_string()))?
@@ -144,6 +148,7 @@ fn main() -> Result<(), RuntimeError> {
                 settlement: base_config.settlement,
             },
             base_config.metrics,
+            registry,
         ))?;
 
     Ok(())
