@@ -123,6 +123,12 @@ impl BlockBuilderConfig {
             return Err(ConfigError::InvalidChainId("Chain ID cannot be 0".to_string()));
         }
 
+        if self.sequencing_contract_address == Address::ZERO {
+            return Err(ConfigError::InvalidAddress(
+                "Sequencing contract address cannot be 0".to_string(),
+            ));
+        }
+
         match self.target_rollup_type {
             // Validate Arbitrum specific configuration
             TargetRollupType::ARBITRUM => {
@@ -134,11 +140,6 @@ impl BlockBuilderConfig {
                 if self.delayed_inbox_address == Address::ZERO {
                     return Err(ConfigError::InvalidAddress(
                         "Delayed inbox address cannot be 0".to_string(),
-                    ));
-                }
-                if self.sequencing_contract_address == Address::ZERO {
-                    return Err(ConfigError::InvalidAddress(
-                        "Sequencing contract address cannot be 0".to_string(),
                     ));
                 }
             }
