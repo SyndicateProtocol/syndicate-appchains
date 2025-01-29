@@ -11,6 +11,7 @@ use tokio::sync::oneshot;
 use tracing::{error, info};
 
 // TODO(SEQ-515): Improve this executable, research async tasks
+#[allow(unused_assignments)] // TODO SEQ-528 remove this
 async fn run(
     block_builder_config: BlockBuilderConfig,
     slotting_config: SlottingConfig,
@@ -40,10 +41,12 @@ async fn run(
         db::RocksDbStore::new(db_path)
             .map_err(|e| RuntimeError::Initialization(format!("Failed to open DB: {e}")))?,
     );
-    let safe_state = db
+    let mut safe_state = db
         .get_latest()
         .await
         .map_err(|e| RuntimeError::Initialization(format!("Failed to get latest state: {e}")))?;
+
+    safe_state = None; // TODO SEQ-528 remove this (disables resume from db)
 
     // Initialize components with their specific configs
     let mut sequencing_config = ingestion_config.sequencing;
