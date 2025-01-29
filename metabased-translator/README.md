@@ -51,5 +51,4 @@ Run
 ```
 cargo make print-sample-command
 ```
-
-to see the CLI options needed to run the binary executable, which utilizes the `ingestor`, `slotter`, and `block-builder` crates
+to see the CLI options needed to run the binary executable, which utilizes the `ingestor`, `slotter`, `block-builder` and `metrics` crates
