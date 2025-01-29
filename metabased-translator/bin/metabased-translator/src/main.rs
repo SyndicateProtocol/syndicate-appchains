@@ -12,6 +12,7 @@ use metrics::{
 };
 use prometheus_client::registry::Registry;
 use slotting::{config::SlottingConfig, slotting::Slotter};
+use thiserror::Error;
 use tokio::sync::oneshot;
 use tracing::{error, info};
 
@@ -157,7 +158,22 @@ fn main() -> Result<(), RuntimeError> {
     Ok(())
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Error)]
+pub enum ConfigError {
+    #[error("Block builder config error: {0}")]
+    BlockBuilder(String),
+
+    #[error("Slotter config error: {0}")]
+    Slotter(String),
+
+    #[error("Ingestor config error: {0}")]
+    Ingestor(String),
+
+    #[error("Metrics config error: {0}")]
+    Metrics(String),
+}
+
+#[derive(Debug, Error)]
 pub enum RuntimeError {
     #[error("Failed to initialize component: {0}")]
     Initialization(String),
@@ -174,27 +190,26 @@ impl From<TracingError> for RuntimeError {
         RuntimeError::Initialization(format!("Tracing initialization failed: {}", err))
     }
 }
-
-impl From<block_builder::config::ConfigError> for RuntimeError {
+impl From<block_builder::config::ConfigError> for ConfigError {
     fn from(err: block_builder::config::ConfigError) -> Self {
-        RuntimeError::InvalidConfig(format!("Block builder config error: {}", err))
+        ConfigError::BlockBuilder(format!("{}", err))
     }
 }
 
-impl From<slotting::config::ConfigError> for RuntimeError {
+impl From<slotting::config::ConfigError> for ConfigError {
     fn from(err: slotting::config::ConfigError) -> Self {
-        RuntimeError::InvalidConfig(format!("Slotter config error: {}", err))
+        ConfigError::Slotter(format!("{}", err))
     }
 }
 
-impl From<ingestor::config::ConfigError> for RuntimeError {
+impl From<ingestor::config::ConfigError> for ConfigError {
     fn from(err: ingestor::config::ConfigError) -> Self {
-        RuntimeError::InvalidConfig(format!("Ingestor config error: {}", err))
+        ConfigError::Ingestor(format!("{}", err))
     }
 }
 
-impl From<metrics::config::ConfigError> for RuntimeError {
+impl From<metrics::config::ConfigError> for ConfigError {
     fn from(err: metrics::config::ConfigError) -> Self {
-        RuntimeError::InvalidConfig(format!("Metrics config error: {}", err))
+        ConfigError::Metrics(format!("{}", err))
     }
 }
