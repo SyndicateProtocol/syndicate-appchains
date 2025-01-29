@@ -52,7 +52,7 @@ impl BlockBuilder {
         // Add reorg handling at start
         if let Some(block_number) = known_safe_block_number {
             if let Err(e) = self.mchain.rollback_to_block(block_number).await {
-                error!("Error during startup, unable to reorg to block: {}", e);
+                panic!("Error during startup, unable to reorg to block: {}", e);
             }
         }
 
@@ -65,8 +65,7 @@ impl BlockBuilder {
                     let transactions = match self.builder.build_block_from_slot(slot.clone()).await {
                         Ok(transactions) => transactions,
                         Err(e) => {
-                            error!("Error building batch transaction: {}", e);
-                            continue;
+                            panic!("Error building batch transaction: {}", e);
                         }
                     };
 
@@ -74,13 +73,12 @@ impl BlockBuilder {
 
                     // Submit transactions to mchain
                     if let Err(e) = self.mchain.submit_txns(transactions).await {
-                        error!("Error submitting transaction: {}", e);
-                        continue;
+                        panic!("Error submitting transaction: {}", e);
                     }
 
                     // Mine mchain block
                     if let Err(e) = self.mchain.mine_block(slot.timestamp).await {
-                        error!("Error mining block: {}", e);
+                        panic!("Error mining block: {}", e);
                     }
                 }
                 _ = &mut shutdown_rx => {
@@ -128,13 +126,14 @@ mod tests {
     async fn test_block_builder_start() -> Result<()> {
         let (tx, rx) = mpsc::channel(32);
         let config = BlockBuilderConfig::default();
+        let genesis_ts = config.genesis_timestamp;
         let builder = BlockBuilder::new(rx, config).await?;
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });
 
         // Send a test block
-        let test_slot = Slot::new(1, 1);
+        let test_slot = Slot::new(1, genesis_ts + 1);
         tx.send(test_slot).await?;
 
         // Give some time for processing

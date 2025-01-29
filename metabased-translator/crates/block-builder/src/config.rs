@@ -42,12 +42,15 @@ pub struct BlockBuilderConfig {
     #[arg(long, env = "BLOCK_BUILDER_TARGET_ROLLUP", default_value = "arbitrum")]
     pub target_rollup_type: TargetRollupType,
 
+    // path to the directory where anvil will keep its state
     #[arg(long, env = "BLOCK_BUILDER_ANVIL_STATE_PATH", default_value = "")]
     pub anvil_state_path: String,
 
+    // interval at which anvil saves state to disk (in seconds)
     #[arg(long, env = "BLOCK_BUILDER_ANVIL_STATE_INTERVAL", default_value_t = 1)]
     pub anvil_state_interval: u64,
 
+    // number of states to be kept in memory by anvil
     #[arg(long, env = "BLOCK_BUILDER_ANVIL_PRUNE_HISTORY", default_value_t = 50)]
     pub anvil_prune_history: u64,
 }

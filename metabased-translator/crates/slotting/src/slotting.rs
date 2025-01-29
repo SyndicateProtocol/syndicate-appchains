@@ -90,37 +90,28 @@ impl Slotter {
         store: Box<dyn TranslatorStore + Send + Sync>,
     ) -> (Self, Receiver<Slot>) {
         let (slot_tx, slot_rx) = channel(100);
-        let slotter = match safe_state {
+        let mut slots = LinkedList::new();
+        let (latest_sequencing_block, latest_settlement_block) = match safe_state {
             Some(safe_state) => {
-                let mut slots = LinkedList::new();
                 slots.push_front(safe_state.slot);
-                Self {
-                    sequencing_chain_rx: sequencing_chain_receiver,
-                    settlement_chain_rx: settlement_chain_receiver,
-                    latest_sequencing_block: Some(safe_state.sequencing_block),
-                    latest_settlement_block: Some(safe_state.settlement_block),
-                    slots,
-                    max_slots: calculate_max_slots(config.slot_duration_ms),
-                    config,
-                    sender: slot_tx,
-                    store,
-                }
+                (Some(safe_state.sequencing_block), Some(safe_state.settlement_block))
             }
-            None => Self {
-                sequencing_chain_rx: sequencing_chain_receiver,
-                settlement_chain_rx: settlement_chain_receiver,
-                latest_sequencing_block: None,
-                latest_settlement_block: None,
-                slots: {
-                    let mut slots = LinkedList::new();
-                    slots.push_front(Slot::new(1, config.start_slot_timestamp));
-                    slots
-                },
-                max_slots: calculate_max_slots(config.slot_duration_ms),
-                config,
-                sender: slot_tx,
-                store,
-            },
+            None => {
+                slots.push_front(Slot::new(1, config.start_slot_timestamp));
+                (None, None)
+            }
+        };
+
+        let slotter = Self {
+            sequencing_chain_rx: sequencing_chain_receiver,
+            settlement_chain_rx: settlement_chain_receiver,
+            latest_sequencing_block,
+            latest_settlement_block,
+            slots,
+            max_slots: calculate_max_slots(config.slot_duration_ms),
+            config,
+            sender: slot_tx,
+            store,
         };
         (slotter, slot_rx)
     }
