@@ -1,6 +1,6 @@
 //! Slotting module for metabased-translator
 
-use crate::config::SlottingConfig;
+use crate::{config::SlottingConfig, metrics::SlottingMetrics};
 use common::{
     service_status::{ServiceStatus, Status},
     types::{Block, BlockAndReceipts, Chain, Slot, SlotState},
@@ -48,6 +48,9 @@ pub struct Slotter {
 
     /// Maximum number of slots to keep
     max_slots: usize,
+
+    /// Metrics
+    metrics: SlottingMetrics,
 }
 
 #[derive(Debug)]
@@ -84,6 +87,7 @@ impl Slotter {
         sequencing_chain_receiver: Receiver<BlockAndReceipts>,
         settlement_chain_receiver: Receiver<BlockAndReceipts>,
         config: SlottingConfig,
+        metrics: SlottingMetrics,
     ) -> Self {
         let max_slots = (MAX_WAIT_MS / config.slot_duration_ms) as usize;
 
@@ -100,6 +104,7 @@ impl Slotter {
                 slots
             },
             max_slots,
+            metrics,
         }
     }
 
@@ -115,7 +120,9 @@ impl Slotter {
     /// # Returns a receiver that will get slots as they are processed.
     /// TODO SEQ-480 - implement restore from DB
     pub fn start(mut self) -> Receiver<Slot> {
-        self.status.store(Status::Started);
+        let status = Status::Started;
+        self.status.store(status);
+        self.metrics.update_slotter_status(status as i32);
         let (sender, receiver) = channel(100); // TODO SEQ-490 - channel size shouldn't be hardcoded here
         info!("Starting Slotter");
         tokio::spawn(async move {
@@ -196,7 +203,9 @@ impl Slotter {
     /// - Write info to DB, so it can be resumed later
     pub fn stop(&mut self) {
         info!("Stopping Slotter");
-        self.status.store(Status::Stopped);
+        let status = Status::Stopped;
+        self.status.store(status);
+        self.metrics.update_slotter_status(status as i32);
     }
 
     /// Marks slots as unsafe when both chains have progressed past them.
@@ -454,14 +463,21 @@ pub enum SlotterError {
 mod tests {
     use super::*;
     use alloy::primitives::B256;
+    use prometheus_client::registry::Registry;
     use std::str::FromStr;
+
+    struct MetricsState {
+        /// Prometheus registry
+        pub registry: Registry,
+    }
     async fn create_slotter(
         slot_start_timestamp_ms: u64,
         slot_duration_ms: u64,
     ) -> (Slotter, Sender<BlockAndReceipts>, Sender<BlockAndReceipts>) {
         let (seq_tx, seq_rx) = channel(100);
         let (settle_tx, settle_rx) = channel(100);
-
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = SlottingMetrics::new(&mut metrics_state.registry);
         let slotter = Slotter::new(
             seq_rx,
             settle_rx,
@@ -470,6 +486,7 @@ mod tests {
                 start_slot_number: 0,
                 start_slot_timestamp: slot_start_timestamp_ms,
             },
+            metrics,
         )
         .await;
 

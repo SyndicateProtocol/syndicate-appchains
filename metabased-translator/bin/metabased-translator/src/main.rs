@@ -73,7 +73,7 @@ async fn run(
         ))
     })?;
 
-    let slotter = Slotter::new(sequencer_rx, settlement_rx, slotting_config);
+    let slotter = Slotter::new(sequencer_rx, settlement_rx, slotting_config, metrics.slotting);
 
     // TODO(SEQ-515): refactor me to get the channel without starting the slotter already?
     // TODO(SEQ-515): slotter assumes that it starts first, or else it errors here
