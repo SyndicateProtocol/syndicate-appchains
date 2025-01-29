@@ -1,17 +1,18 @@
-name: Docker Publish Metabased Sequencer
+name: Docker Publish Metabased-Translator
 
 on:
   push:
     branches:
       - main
 
+
 env:
   REGISTRY: ghcr.io
-  METABASED_SEQUENCER_IMAGE_NAME: ${{ github.repository }}/metabased-sequencer
+  METABASED_TRANSLATOR_IMAGE_NAME: ${{ github.repository }}/metabased-translator
 
 jobs:
-  build-and-push-image-metabased-sequencer:
-    name: Metabased Sequencer
+  publish-image-metabased-translator:
+    name: Metabased Translator image publish
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -31,26 +32,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata for metabased-sequencer
-        id: meta-sequencer
+      - name: Extract metadata for metabased-translator
+        id: mb-translator
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.METABASED_SEQUENCER_IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.METABASED_TRANSLATOR_IMAGE_NAME }}
           tags: |
             type=sha,format=long
             type=semver,pattern={{version}}
             type=raw,value=latest,enable={{is_default_branch}}
 
-      - name: Build and push metabased-sequencer Docker image
+      - name: Build and push metabased-translator Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: Dockerfile
+          target: metabased-translator
           push: true
-          target: interceptor
-          # removed linux/arm64 part, took ~1hr on Github Actions
+          # removed linux/arm64 part, took > 30min on Github Actions
           platforms: linux/amd64
-          tags: ${{ steps.meta-sequencer.outputs.tags }}
-          labels: ${{ steps.meta-sequencer.outputs.labels }}
+          tags: ${{ steps.mb-translator.outputs.tags }}
+          labels: ${{ steps.mb-translator.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
