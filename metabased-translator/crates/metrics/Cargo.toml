@@ -1,0 +1,23 @@
+[package]
+name = "metrics"
+version.workspace = true
+description = "Metrics for metabased-translator."
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+
+[dependencies]
+axum = { workspace = true }
+clap = { workspace = true }
+prometheus-client = { workspace = true }
+reqwest = { workspace = true }
+tokio ={ workspace = true}
+thiserror = { workspace = true}
+tracing = { workspace = true }
+
+
+[lints]
+workspace = true

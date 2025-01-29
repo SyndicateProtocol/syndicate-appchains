@@ -5,7 +5,9 @@ use crate::{config::ChainIngestorConfig, eth_client::EthClient};
 use common::types::BlockAndReceipts;
 use eyre::{eyre, Error};
 use metrics::metrics::IngestorMetrics;
-use std::{fmt, time::Duration};
+use std::time::Duration;
+use strum::Display;
+use strum_macros::EnumString;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tracing::{debug, error};
 
@@ -21,31 +23,25 @@ pub struct Ingestor {
 }
 
 /// Ingestor chains
-#[derive(Debug)]
+#[derive(Debug, EnumString, Display)]
 pub enum IngestorChain {
     /// Settlement chain
+    #[strum(serialize = "Ingestor::Settlement")]
     Settlement,
     /// Sequencing chain
+    #[strum(serialize = "Ingestor::Sequencing")]
     Sequencing,
 }
 
-impl fmt::Display for IngestorChain {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Settlement => write!(f, "Ingestor::Settlement"),
-            Self::Sequencing => write!(f, "Ingestor::Sequencing"),
-        }
-    }
-}
-
 impl Ingestor {
-    /// Creates a new `Ingestor` instance.
+    /// Creates a new `Ingestor` instance responsible for polling blocks.
     ///
     /// # Arguments
-    /// - `rpc_url`: The RPC endpoint URL of the Ethereum chain.
-    /// - `start_block`: The block number to start polling from.
-    /// - `buffer_size`: The size of the channel buffer for blocks.
-    /// - `polling_interval`: The time interval between each block polling.
+    /// - `chain`: Specifies whether the ingestor is targeting the `Settlement` or `Sequencing`
+    ///   chain.
+    /// - `config`: Configuration parameters, including the RPC endpoint URL and starting block
+    ///   number.
+    /// - `metrics`: Metrics collection for monitoring ingestion performance.
     ///
     /// # Returns
     /// A tuple containing the `Ingestor` instance and a `Receiver` for consuming blocks.

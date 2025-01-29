@@ -1,3 +1,5 @@
+//! The `metrics` module  handles metrics recording for the metabased translator
+
 use axum::{
     body::Body,
     extract::State,
@@ -17,15 +19,20 @@ use prometheus_client::{
     registry::Registry,
 };
 use std::{sync::Arc, time::Duration};
-use tokio::sync::RwLock;
+use tokio::{net::TcpListener, spawn, sync::RwLock, task::JoinHandle};
 
+/// Structure holding all metrics related to the translator.
 #[derive(Debug)]
 pub struct TranslatorMetrics {
+    /// Metrics for the sequencing ingestor
     pub ingestor_sequencing: IngestorMetrics,
+    /// Metrics for the settlement ingestor
     pub ingestor_settlement: IngestorMetrics,
 }
 
 impl TranslatorMetrics {
+    /// Creates a new `TranslatorMetrics` instance and registers it in the provided Prometheus
+    /// registry.
     pub fn new(registry: &mut Registry) -> Self {
         let ingestor_sequencing = IngestorMetrics::new(registry);
         let ingestor_settlement = IngestorMetrics::new(registry);
@@ -33,11 +40,14 @@ impl TranslatorMetrics {
     }
 }
 
+/// Labels used for Prometheus metric categorization.
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
 pub struct Labels {
     label_name: String,
     method: &'static str,
 }
+
+/// Structure holding metrics related to blockchain data ingestion.
 #[derive(Debug)]
 pub struct IngestorMetrics {
     rpc_calls: Family<Labels, Counter>,
@@ -45,12 +55,15 @@ pub struct IngestorMetrics {
     last_block_fetched: Family<Labels, Gauge>,
 }
 
+/// Structure holding the global metrics state, including the Prometheus registry.
 #[derive(Debug)]
 pub struct MetricsState {
+    /// Prometheus registry
     pub registry: Registry,
 }
 
 impl IngestorMetrics {
+    /// Creates a new `IngestorMetrics` instance and registers metrics in the provided registry.
     pub fn new(registry: &mut Registry) -> Self {
         let rpc_calls = Family::<Labels, Counter>::default();
         registry.register("rpc_calls", "Number of RPC method calls done", rpc_calls.clone());
@@ -74,12 +87,14 @@ impl IngestorMetrics {
         Self { rpc_calls, rpc_calls_duration, last_block_fetched }
     }
 
+    /// Records the last block number fetched for a given label.
     pub fn record_last_block_fetched(&self, label_name: String, block_number: u64) {
         self.last_block_fetched
             .get_or_create(&Labels { label_name, method: "last_block_fetched" })
             .set(block_number as i64);
     }
 
+    /// Records an RPC call event, incrementing counters and measuring duration.
     pub fn record_rpc_call(&self, label_name: String, method: &'static str, duration: Duration) {
         let name = label_name.clone();
         // Increment the counter for the RPC method call
@@ -92,34 +107,54 @@ impl IngestorMetrics {
     }
 }
 
+/// Handler for the `/metrics` endpoint, encoding and returning the Prometheus metrics.
 pub async fn metrics_handler(State(state): State<Arc<RwLock<MetricsState>>>) -> impl IntoResponse {
-    let state = state.read().await;
     let mut buffer = String::new();
-    encode(&mut buffer, &state.registry).unwrap();
+
+    let value = encode(&mut buffer, &state.read().await.registry);
+    if let Err(err) = value {
+        eprintln!("Failed to encode metrics: {}", err);
+        return Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .body(Body::from("Failed to encode metrics"))
+            .unwrap_or_else(|_| Response::new(Body::from("Error encoding metrics state")))
+    }
 
     Response::builder()
         .status(StatusCode::OK)
         .header(CONTENT_TYPE, "application/openmetrics-text; version=1.0.0; charset=utf-8")
         .body(Body::from(buffer))
-        .unwrap()
+        .unwrap_or_else(|_| Response::new(Body::from("Error unwrapping metrics response")))
 }
 
-pub async fn start_metrics(metrics_state: MetricsState, port: u16) -> tokio::task::JoinHandle<()> {
+/// Starts a metrics server on the specified port, serving Prometheus-compatible metrics.
+pub async fn start_metrics(
+    metrics_state: MetricsState,
+    port: u16,
+) -> Result<JoinHandle<()>, Box<dyn std::error::Error>> {
     let state = Arc::new(RwLock::new(metrics_state));
-    let router = Router::new().route("/metrics", get(metrics_handler)).with_state(state); // Create new Arc<Mutex<Registry>> directly
-    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await.unwrap();
-    let metrics_task: tokio::task::JoinHandle<()> =
-        tokio::spawn(async move { axum::serve(listener, router).await.unwrap() });
+    let router = Router::new().route("/metrics", get(metrics_handler)).with_state(state);
 
-    metrics_task
+    let listener = TcpListener::bind(format!("0.0.0.0:{}", port)).await.map_err(|e| {
+        eprintln!("Failed to bind to port {}: {}", port, e);
+        e
+    })?;
+
+    let metrics_task: JoinHandle<()> = spawn(async move {
+        if let Err(e) = axum::serve(listener, router).await {
+            eprintln!("Metrics server failed: {}", e);
+        }
+    });
+
+    Ok(metrics_task)
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use axum::http::StatusCode;
     use reqwest::Client;
     use std::time::Duration;
+    use tokio::time::sleep;
 
     #[tokio::test]
     async fn test_record_last_block_fetched() {
@@ -127,10 +162,13 @@ mod tests {
         let ingestor_metrics = IngestorMetrics::new(&mut registry);
         ingestor_metrics.record_last_block_fetched("test_label".to_string(), 100);
 
-        let gauge = ingestor_metrics.last_block_fetched.get_or_create(&Labels {
-            label_name: "test_label".to_string(),
-            method: "last_block_fetched",
-        });
+        let gauge = ingestor_metrics
+            .last_block_fetched
+            .get_or_create(&Labels {
+                label_name: "test_label".to_string(),
+                method: "last_block_fetched",
+            })
+            .clone();
         assert_eq!(gauge.get(), 100);
     }
 
@@ -147,7 +185,8 @@ mod tests {
 
         let counter = ingestor_metrics
             .rpc_calls
-            .get_or_create(&Labels { label_name: "test_label".to_string(), method: "test_method" });
+            .get_or_create(&Labels { label_name: "test_label".to_string(), method: "test_method" })
+            .clone();
         assert_eq!(counter.get(), 1);
     }
 
@@ -157,14 +196,16 @@ mod tests {
         let metrics_state = MetricsState { registry };
         let port = 9001;
 
-        let handle = start_metrics(metrics_state, port).await;
+        let handle =
+            start_metrics(metrics_state, port).await.expect("Failed to start metrics server");
 
-        tokio::time::sleep(Duration::from_secs(1)).await;
+        sleep(Duration::from_secs(1)).await;
         let client = Client::new();
         let response = client.get(format!("http://localhost:{}/metrics", port)).send().await;
 
         assert!(response.is_ok());
-        assert_eq!(response.unwrap().status(), StatusCode::OK);
+        let status = response.unwrap().status();
+        assert_eq!(status, StatusCode::OK, "Unexpected status code: {:?}", status);
 
         handle.abort();
     }

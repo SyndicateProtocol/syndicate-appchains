@@ -131,7 +131,7 @@ mod tests {
         assert_eq!(config.settlement.settlement_rpc_url, "http://localhost:8545");
 
         // Metrics
-        assert_eq!(config.metrics.metrics_port, 6666)
+        assert_eq!(config.metrics.metrics_port, 9090)
     }
 
     #[test]

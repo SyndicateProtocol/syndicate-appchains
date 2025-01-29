@@ -22,8 +22,6 @@ eyre = {workspace = true}
 thiserror = {workspace = true}
 prometheus-client = {workspace = true}
 
-
-
 [dev-dependencies]
 serial_test = {workspace = true}
 

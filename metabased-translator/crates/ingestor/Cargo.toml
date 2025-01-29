@@ -18,7 +18,9 @@ tracing = { workspace = true }
 thiserror = { workspace = true }
 tracing-subscriber = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
-prometheus-client ={ workspace = true}
+prometheus-client = { workspace = true}
+strum = { workspace = true }
+strum_macros = { workspace = true }
 
 [lints]
 workspace = true

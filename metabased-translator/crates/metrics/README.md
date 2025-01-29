@@ -1,7 +1,5 @@
 ## Metrics
 
-This module provides a robust metrics system for monitoring and analyzing key performance indicators in your application using Prometheus.
-
 ### Key Metrics
 The following metrics are implemented and exposed via the `/metrics` endpoint in the OpenMetrics format:
 

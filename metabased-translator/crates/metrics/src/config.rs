@@ -8,13 +8,13 @@ use tracing::debug;
 #[derive(Parser, Debug, Clone)]
 pub struct MetricsConfig {
     #[allow(missing_docs)]
-    #[arg(long, env = "METRICS_PORT", default_value_t = 6666)]
+    #[arg(long, env = "METRICS_PORT", default_value_t = 9090)]
     pub metrics_port: u16,
 }
 
 impl Default for MetricsConfig {
     fn default() -> Self {
-        Self { metrics_port: 6666 }
+        Self { metrics_port: 9090 }
     }
 }
 
@@ -52,7 +52,7 @@ mod tests {
     #[test]
     fn test_default_parsing() {
         let config = MetricsConfig::parse_from(["test"]);
-        assert_eq!(config.metrics_port, 6666);
+        assert_eq!(config.metrics_port, 9090);
     }
 
     #[test]
