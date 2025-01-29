@@ -329,7 +329,7 @@ impl Slotter {
                 latest_slot.push_block(block_info, chain);
             }
         }
-
+        self.metrics.update_active_slots(self.slots.len());
         self.mark_unsafe_slots(block_timestamp, chain, sender).await?;
         self.cleanup_slots(sender).await?;
         Ok(())
@@ -349,6 +349,7 @@ impl Slotter {
                 }
             }
         }
+        self.metrics.update_active_slots(self.slots.len());
         Ok(())
     }
 
@@ -394,6 +395,7 @@ impl Slotter {
             Chain::Sequencing => self.latest_sequencing_chain_block = Some(BlockRef::new(block)),
             Chain::Settlement => self.latest_settlement_chain_block = Some(BlockRef::new(block)),
         }
+        self.metrics.record_last_block_processed(block.number, chain.to_string());
         Ok(())
     }
 }

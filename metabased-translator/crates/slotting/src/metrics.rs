@@ -1,27 +1,13 @@
 //! The `metrics` module for the ingestor
 
-use prometheus_client::{
-    encoding::EncodeLabelSet,
-    metrics::{family::Family, gauge::Gauge},
-    registry::Registry,
-};
-
-/// Labels used for Prometheus metric categorization.
-#[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
-pub struct Labels {
-    /// Metric label
-    pub label_name: String,
-    /// Metric method
-    pub method: &'static str,
-}
-
+use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
 /// Structure holding metrics related to slotter.
 #[derive(Debug)]
 pub struct SlottingMetrics {
     /// Records last block processed by the sequencing chain
-    pub last_sequencing_block: Family<Labels, Gauge>,
+    pub last_sequencing_block: Gauge,
     /// Records last block processed by the settlement chain
-    pub last_settlement_block: Family<Labels, Gauge>,
+    pub last_settlement_block: Gauge,
     /// Tracks the current number of active slots
     pub active_slots: Gauge,
     /// Tracks the slotter service status
@@ -31,8 +17,8 @@ pub struct SlottingMetrics {
 impl SlottingMetrics {
     /// Creates a new `SlottingMetrics` instance and registers metrics in the provided registry.
     pub fn new(registry: &mut Registry) -> Self {
-        let last_sequencing_block = Family::<Labels, Gauge>::default();
-        let last_settlement_block = Family::<Labels, Gauge>::default();
+        let last_sequencing_block = Gauge::default();
+        let last_settlement_block = Gauge::default();
         let active_slots = Gauge::default();
         let slotter_status = Gauge::default();
 
@@ -64,20 +50,14 @@ impl SlottingMetrics {
     }
 
     /// Records the last block number fetched for a given chain.
-    pub fn record_last_block_processed(&self, label_name: String, block_number: u64, chain: &str) {
-        let method = match chain {
-            "sequencing" => "last_sequencing_block",
-            "settlement" => "last_settlement_block",
-            _ => return,
-        };
-
-        let metric = match chain {
+    pub fn record_last_block_processed(&self, block_number: u64, chain: String) {
+        let metric = match chain.as_str() {
             "sequencing" => &self.last_sequencing_block,
             "settlement" => &self.last_settlement_block,
             _ => return,
         };
 
-        metric.get_or_create(&Labels { label_name, method }).set(block_number as i64);
+        metric.set(block_number as i64);
     }
 
     /// Updates the number of active slots.
