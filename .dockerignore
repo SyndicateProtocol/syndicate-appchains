@@ -1,0 +1,37 @@
+# Rust build artifacts - catching all target directories
+target/
+**/target/
+**/*.rs.bk
+
+# Git directory
+.git/
+.gitignore
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Any other build directories or large files
+node_modules/
+**/node_modules/
+dist/
+build/
+
+# Temp files
+*.tmp
+*.temp
+
+# Log files
+*.log
+logs/
+
+# Any other large artifacts you might have
+*.tar
+*.gz
+*.zip

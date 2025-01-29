@@ -33,12 +33,11 @@ cargo test --lib
 
 Our integration tests pull a docker image from github which requires some authorization setup.
 
-1/ Make sure you have a Personal Access Token (PAT) on github with the `read:packagesDownload` permission
+1. Make sure you have a Personal Access Token (PAT) on github with the `read:packagesDownload` permission
+   - https://github.com/settings/tokens
+   - Pro tip: Check under `~/.git-credentials` if you have one generated already
 
-- https://github.com/settings/tokens
-- Pro tip: Check under `~/.git-credentials` if you have one generated already
-
-2/ Run the following commands to login to docker with the PAT
+2. Run the following commands to login to docker with the PAT
 
 ```
 export CR_PAT="<GITHUB-PAT>"
