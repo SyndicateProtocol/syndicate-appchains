@@ -8,8 +8,7 @@ use ingestor::{
 use metabased_translator::config::MetabasedConfig;
 use metrics::{
     config::MetricsConfig,
-    metrics::{start_metrics, MetricsState},
-    IngestorMetrics,
+    metrics::{start_metrics, MetricsState, TranslatorMetrics},
 };
 use prometheus_client::registry::Registry;
 use slotting::{config::SlottingConfig, slotting::Slotter};
@@ -40,8 +39,7 @@ async fn run(
 
     // Initialize metrics
     let mut metrics_state = MetricsState { registry };
-    let sequencing_metrics = IngestorMetrics::new(&mut metrics_state.registry);
-    let settlement_metrics = IngestorMetrics::new(&mut metrics_state.registry);
+    let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
     let metrics_task: tokio::task::JoinHandle<()> =
         start_metrics(metrics_state, metrics_config.metrics_port).await;
 
@@ -49,25 +47,31 @@ async fn run(
     let sequencing_config = ingestion_config.sequencing;
     let settlement_config = ingestion_config.settlement;
 
-    let (mut sequencing_ingestor, sequencer_rx) =
-        Ingestor::new(IngestorChain::Sequencing, sequencing_config.into(), sequencing_metrics)
-            .await
-            .map_err(|e| {
-                RuntimeError::Initialization(format!(
-                    "Failed to create ingestor for sequencing chain: {}",
-                    e
-                ))
-            })?;
+    let (mut sequencing_ingestor, sequencer_rx) = Ingestor::new(
+        IngestorChain::Sequencing,
+        sequencing_config.into(),
+        metrics.ingestor_sequencing,
+    )
+    .await
+    .map_err(|e| {
+        RuntimeError::Initialization(format!(
+            "Failed to create ingestor for sequencing chain: {}",
+            e
+        ))
+    })?;
 
-    let (mut settlement_ingestor, settlement_rx) =
-        Ingestor::new(IngestorChain::Settlement, settlement_config.into(), settlement_metrics)
-            .await
-            .map_err(|e| {
-                RuntimeError::Initialization(format!(
-                    "Failed to create ingestor for settlement chain: {}",
-                    e
-                ))
-            })?;
+    let (mut settlement_ingestor, settlement_rx) = Ingestor::new(
+        IngestorChain::Settlement,
+        settlement_config.into(),
+        metrics.ingestor_settlement,
+    )
+    .await
+    .map_err(|e| {
+        RuntimeError::Initialization(format!(
+            "Failed to create ingestor for settlement chain: {}",
+            e
+        ))
+    })?;
 
     let slotter = Slotter::new(sequencer_rx, settlement_rx, slotting_config);
 

@@ -17,14 +17,27 @@ use prometheus_client::{
     registry::Registry,
 };
 use std::{sync::Arc, time::Duration};
-use tokio::sync::Mutex;
+use tokio::sync::RwLock;
+
+#[derive(Debug)]
+pub struct TranslatorMetrics {
+    pub ingestor_sequencing: IngestorMetrics,
+    pub ingestor_settlement: IngestorMetrics,
+}
+
+impl TranslatorMetrics {
+    pub fn new(registry: &mut Registry) -> Self {
+        let ingestor_sequencing = IngestorMetrics::new(registry);
+        let ingestor_settlement = IngestorMetrics::new(registry);
+        Self { ingestor_sequencing, ingestor_settlement }
+    }
+}
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
 pub struct Labels {
     label_name: String,
     method: &'static str,
 }
-
 #[derive(Debug)]
 pub struct IngestorMetrics {
     rpc_calls: Family<Labels, Counter>,
@@ -79,8 +92,8 @@ impl IngestorMetrics {
     }
 }
 
-pub async fn metrics_handler(State(state): State<Arc<Mutex<MetricsState>>>) -> impl IntoResponse {
-    let state = state.lock().await;
+pub async fn metrics_handler(State(state): State<Arc<RwLock<MetricsState>>>) -> impl IntoResponse {
+    let state = state.read().await;
     let mut buffer = String::new();
     encode(&mut buffer, &state.registry).unwrap();
 
@@ -92,7 +105,7 @@ pub async fn metrics_handler(State(state): State<Arc<Mutex<MetricsState>>>) -> i
 }
 
 pub async fn start_metrics(metrics_state: MetricsState, port: u16) -> tokio::task::JoinHandle<()> {
-    let state = Arc::new(Mutex::new(metrics_state));
+    let state = Arc::new(RwLock::new(metrics_state));
     let router = Router::new().route("/metrics", get(metrics_handler)).with_state(state); // Create new Arc<Mutex<Registry>> directly
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await.unwrap();
     let metrics_task: tokio::task::JoinHandle<()> =

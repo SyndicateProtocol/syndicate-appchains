@@ -9,7 +9,7 @@ pub mod ingestor;
 use crate::config::ChainIngestorConfig;
 use eyre::eyre;
 use ingestor::{Ingestor, IngestorChain};
-use metrics::{metrics::MetricsState, IngestorMetrics};
+use metrics::metrics::{IngestorMetrics, MetricsState};
 use prometheus_client::registry::Registry;
 use std::{error::Error, time::Duration};
 use tracing::info;

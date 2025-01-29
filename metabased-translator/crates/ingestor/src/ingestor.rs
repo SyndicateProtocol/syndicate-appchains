@@ -4,7 +4,7 @@
 use crate::{config::ChainIngestorConfig, eth_client::EthClient};
 use common::types::BlockAndReceipts;
 use eyre::{eyre, Error};
-use metrics::IngestorMetrics;
+use metrics::metrics::IngestorMetrics;
 use std::{fmt, time::Duration};
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tracing::{debug, error};
@@ -178,7 +178,7 @@ mod tests {
     use alloy::primitives::B256;
     use common::types::{Block, BlockAndReceipts};
     use eyre::Result;
-    use metrics::{metrics::MetricsState, IngestorMetrics};
+    use metrics::metrics::{IngestorMetrics, MetricsState};
     use prometheus_client::registry::Registry;
     use std::str::FromStr;
 
