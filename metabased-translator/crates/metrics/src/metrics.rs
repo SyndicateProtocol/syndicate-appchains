@@ -52,7 +52,7 @@ pub async fn metrics_handler(
 
     Response::builder()
         .status(StatusCode::OK)
-        .header(CONTENT_TYPE, "application/openmetrics-text; version=1.0.0; charset=utf-8")
+        .header(CONTENT_TYPE, "text/plain; version=1.0.0; charset=utf-8")
         .body(Body::from(buffer))
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
 }
