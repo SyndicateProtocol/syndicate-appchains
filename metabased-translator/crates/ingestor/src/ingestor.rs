@@ -1,10 +1,9 @@
 //! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a
 //! consumer using a channel
 
-use crate::{config::ChainIngestorConfig, eth_client::EthClient};
+use crate::{config::ChainIngestorConfig, eth_client::EthClient, metrics::IngestorMetrics};
 use common::types::BlockAndReceipts;
 use eyre::{eyre, Error};
-use metrics::metrics::IngestorMetrics;
 use std::time::Duration;
 use strum::Display;
 use strum_macros::EnumString;
@@ -170,13 +169,20 @@ impl Ingestor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{ChainIngestorConfig, IngestionPipelineConfig};
+    use crate::{
+        config::{ChainIngestorConfig, IngestionPipelineConfig},
+        metrics::IngestorMetrics,
+    };
     use alloy::primitives::B256;
     use common::types::{Block, BlockAndReceipts};
     use eyre::Result;
-    use metrics::metrics::{IngestorMetrics, MetricsState};
     use prometheus_client::registry::Registry;
     use std::str::FromStr;
+
+    struct MetricsState {
+        /// Prometheus registry
+        pub registry: Registry,
+    }
 
     fn test_config() -> IngestionPipelineConfig {
         IngestionPipelineConfig {

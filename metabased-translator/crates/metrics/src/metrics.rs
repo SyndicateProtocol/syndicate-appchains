@@ -8,17 +8,9 @@ use axum::{
     routing::get,
     Router,
 };
-use prometheus_client::{
-    encoding::{text::encode, EncodeLabelSet},
-    metrics::{
-        counter::Counter,
-        family::Family,
-        gauge::Gauge,
-        histogram::{exponential_buckets, Histogram},
-    },
-    registry::Registry,
-};
-use std::{sync::Arc, time::Duration};
+use ingestor::metrics::IngestorMetrics;
+use prometheus_client::{encoding::text::encode, registry::Registry};
+use std::sync::Arc;
 use tokio::sync::RwLock;
 
 /// Structure holding all metrics related to the translator.
@@ -40,71 +32,11 @@ impl TranslatorMetrics {
     }
 }
 
-/// Labels used for Prometheus metric categorization.
-#[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
-pub struct Labels {
-    label_name: String,
-    method: &'static str,
-}
-
-/// Structure holding metrics related to blockchain data ingestion.
-#[derive(Debug)]
-pub struct IngestorMetrics {
-    rpc_calls: Family<Labels, Counter>,
-    rpc_calls_duration: Family<Labels, Histogram>,
-    last_block_fetched: Family<Labels, Gauge>,
-}
-
 /// Structure holding the global metrics state, including the Prometheus registry.
 #[derive(Debug)]
 pub struct MetricsState {
     /// Prometheus registry
     pub registry: Registry,
-}
-
-impl IngestorMetrics {
-    /// Creates a new `IngestorMetrics` instance and registers metrics in the provided registry.
-    pub fn new(registry: &mut Registry) -> Self {
-        let rpc_calls = Family::<Labels, Counter>::default();
-        registry.register("rpc_calls", "Number of RPC method calls done", rpc_calls.clone());
-
-        let rpc_calls_duration = Family::<Labels, Histogram>::new_with_constructor(|| {
-            Histogram::new(exponential_buckets(0.01, 2.0, 10))
-        });
-        registry.register(
-            "rpc_calls_latency",
-            "Latency of RPC method call responses",
-            rpc_calls_duration.clone(),
-        );
-
-        let last_block_fetched = Family::<Labels, Gauge>::default();
-        registry.register(
-            "last_block_fetched",
-            "Tracks the last block number fetched for a specific RPC URL",
-            last_block_fetched.clone(),
-        );
-
-        Self { rpc_calls, rpc_calls_duration, last_block_fetched }
-    }
-
-    /// Records the last block number fetched for a given label.
-    pub fn record_last_block_fetched(&self, label_name: String, block_number: u64) {
-        self.last_block_fetched
-            .get_or_create(&Labels { label_name, method: "last_block_fetched" })
-            .set(block_number as i64);
-    }
-
-    /// Records an RPC call event, incrementing counters and measuring duration.
-    pub fn record_rpc_call(&self, label_name: String, method: &'static str, duration: Duration) {
-        let name = label_name.clone();
-        // Increment the counter for the RPC method call
-        self.rpc_calls.get_or_create(&Labels { label_name: name, method }).inc();
-
-        // Observe the latency of the RPC method call
-        self.rpc_calls_duration
-            .get_or_create(&Labels { label_name, method })
-            .observe(duration.as_secs_f64());
-    }
 }
 
 /// Handler for the `/metrics` endpoint, encoding and returning the Prometheus metrics.
@@ -149,6 +81,7 @@ pub async fn start_metrics(metrics_state: MetricsState, port: u16) -> tokio::tas
 mod tests {
     use super::*;
     use axum::http::StatusCode;
+    use ingestor::metrics::Labels;
     use reqwest::Client;
     use std::time::Duration;
     use tokio::time::sleep;

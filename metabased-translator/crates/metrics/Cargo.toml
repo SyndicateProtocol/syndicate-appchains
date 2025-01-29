@@ -17,6 +17,7 @@ reqwest = { workspace = true }
 tokio ={ workspace = true}
 thiserror = { workspace = true}
 tracing = { workspace = true }
+ingestor = { workspace = true}
 
 
 [lints]

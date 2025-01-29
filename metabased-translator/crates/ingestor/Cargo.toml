@@ -11,12 +11,10 @@ repository.workspace = true
 [dependencies]
 alloy = { workspace = true, features = ["providers"] }
 common = { workspace = true }
-metrics = { workspace = true}
 eyre = { workspace = true }
 tokio = { workspace = true, features = ["sync", "time", "rt-multi-thread", "signal"] }
 tracing = { workspace = true }
 thiserror = { workspace = true }
-tracing-subscriber = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
 prometheus-client = { workspace = true}
 strum = { workspace = true }
