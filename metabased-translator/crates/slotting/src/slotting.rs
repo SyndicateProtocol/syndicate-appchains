@@ -394,6 +394,7 @@ impl Slotter {
             Chain::Settlement => self.latest_settlement_chain_block = Some(BlockRef::new(block)),
         }
         self.metrics.record_last_block_processed(block.number, chain);
+        self.metrics.update_chain_timestamp_lag(block.timestamp, chain);
         Ok(())
     }
 }

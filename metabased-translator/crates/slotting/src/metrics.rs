@@ -1,7 +1,16 @@
 //! The `metrics` module for the Slotting
 
 use common::types::Chain;
-use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
+use prometheus_client::{
+    metrics::{
+        gauge::Gauge,
+        histogram::{exponential_buckets, Histogram},
+    },
+    registry::Registry,
+};
+use std::time::{SystemTime, UNIX_EPOCH};
+use tracing::error;
+
 /// Structure holding metrics related to the Slotting.
 #[derive(Debug)]
 pub struct SlottingMetrics {
@@ -11,6 +20,16 @@ pub struct SlottingMetrics {
     pub last_settlement_block: Gauge,
     /// Tracks the current number of active slots
     pub active_slots: Gauge,
+    /// Tracks the timestamp lag (ms) for the sequencing chain
+    pub sequencing_timestamp_lag_ms: Gauge,
+    /// Tracks the timestamp lag (ms) for the settlement chain
+    pub settlement_timestamp_lag_ms: Gauge,
+    /// Tracks blocks processed per slot
+    pub blocks_per_slot: Histogram,
+    /// Tracks the channel capacity for sequencing chain
+    pub sequencing_channel_capacity: Gauge,
+    /// Tracks the channel capacity for settlement chain
+    pub settlement_channel_capacity: Gauge,
 }
 
 impl SlottingMetrics {
@@ -19,6 +38,11 @@ impl SlottingMetrics {
         let slotting_last_sequencing_block = Gauge::default();
         let slotting_last_settlement_block = Gauge::default();
         let active_slots = Gauge::default();
+        let sequencing_timestamp_lag_ms = Gauge::default();
+        let settlement_timestamp_lag_ms = Gauge::default();
+        let blocks_per_slot = Histogram::new(exponential_buckets(1.0, 2.0, 100));
+        let sequencing_channel_capacity = Gauge::default();
+        let settlement_channel_capacity = Gauge::default();
 
         registry.register(
             "slotting_last_sequencing_block",
@@ -38,10 +62,45 @@ impl SlottingMetrics {
             active_slots.clone(),
         );
 
+        registry.register(
+            "slotting_chain_timestamp_lag_ms_sequencing",
+            "Tracks the timestamp lag (ms) for the sequencing chain",
+            sequencing_timestamp_lag_ms.clone(),
+        );
+
+        registry.register(
+            "slotting_chain_timestamp_lag_ms_settlement",
+            "Tracks the timestamp lag (ms) for the settlement chain",
+            settlement_timestamp_lag_ms.clone(),
+        );
+
+        registry.register(
+            "slotting_blocks_per_slot",
+            "Histogram tracking blocks processed per slot",
+            blocks_per_slot.clone(),
+        );
+
+        registry.register(
+            "slotting_sequencing_channel_capacity",
+            "Tracks the capacity of the sequencing chain channel",
+            sequencing_channel_capacity.clone(),
+        );
+
+        registry.register(
+            "slotting_settlement_channel_capacity",
+            "Tracks the capacity of the settlement chain channel",
+            settlement_channel_capacity.clone(),
+        );
+
         Self {
             last_sequencing_block: slotting_last_sequencing_block,
             last_settlement_block: slotting_last_settlement_block,
             active_slots,
+            sequencing_timestamp_lag_ms,
+            settlement_timestamp_lag_ms,
+            blocks_per_slot,
+            sequencing_channel_capacity,
+            settlement_channel_capacity,
         }
     }
 
@@ -58,6 +117,39 @@ impl SlottingMetrics {
     /// Updates the number of active slots.
     pub fn update_active_slots(&self, slots: usize) {
         self.active_slots.set(slots as i64);
+    }
+
+    /// Updates the timestamp lag metric (current time - latest block timestamp)
+    pub fn update_chain_timestamp_lag(&self, block_timestamp: u64, chain: Chain) {
+        let now = match SystemTime::now().duration_since(UNIX_EPOCH) {
+            Ok(duration) => duration.as_millis() as u64,
+            Err(_) => {
+                error!("System time went backwards.");
+                return;
+            }
+        };
+
+        let lag = now.saturating_sub(block_timestamp); // Avoid negative values
+        let metric = match chain {
+            Chain::Sequencing => &self.sequencing_timestamp_lag_ms,
+            Chain::Settlement => &self.settlement_timestamp_lag_ms,
+        };
+
+        metric.set(lag as i64);
+    }
+
+    /// Records the number of blocks processed per slot.
+    pub fn record_blocks_per_slot(&self, blocks: u64) {
+        self.blocks_per_slot.observe(blocks as f64);
+    }
+
+    /// Updates the channel capacity for a given chain.
+    pub fn update_channel_capacity(&self, capacity: usize, chain: Chain) {
+        let metric = match chain {
+            Chain::Sequencing => &self.sequencing_channel_capacity,
+            Chain::Settlement => &self.settlement_channel_capacity,
+        };
+        metric.set(capacity as i64);
     }
 }
 
