@@ -1,16 +1,16 @@
 //! The `metrics` module for the ingestor
 
 use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
-/// Structure holding metrics related to slotter.
+/// Structure holding metrics related to the Slotting.
 #[derive(Debug)]
 pub struct SlottingMetrics {
-    /// Records last block processed by the sequencing chain
+    /// Records the last sequencing block number processed by the Slotting
     pub last_sequencing_block: Gauge,
-    /// Records last block processed by the settlement chain
+    /// Records the last settlement block number processed by the Slotting
     pub last_settlement_block: Gauge,
     /// Tracks the current number of active slots
     pub active_slots: Gauge,
-    /// Tracks the slotter service status
+    /// Tracks the Slotting service status
     pub slotting_status: Gauge,
 }
 
@@ -24,13 +24,13 @@ impl SlottingMetrics {
 
         registry.register(
             "slotting_last_sequencing_block",
-            "Tracks the last sequencing chain block number processed by the Slotting",
+            "Tracks the last sequencing block number processed by the Slotting",
             slotting_last_sequencing_block.clone(),
         );
 
         registry.register(
             "slotting_last_settlement_block",
-            "Tracks the last settlement chain block number processed by the Slotting",
+            "Tracks the last settlement block number processed by the Slotting",
             slotting_last_settlement_block.clone(),
         );
 
@@ -70,7 +70,7 @@ impl SlottingMetrics {
         self.active_slots.set(slots as i64);
     }
 
-    /// Updates the Slotting status (1 = running, 0 = stopped).
+    /// Updates the Slotting status.
     pub fn update_slotting_status(&self, status: i32) {
         self.slotting_status.set(status as i64);
     }
