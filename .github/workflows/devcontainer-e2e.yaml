@@ -30,7 +30,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Infra + Run Arbitrum L2 + Run Metabased Sequencer + Verify
+      - name: Setup Infra + Run Arbitrum L2 + Run Metabased Sequencer + Verify with test transaction
         timeout-minutes: 15
         uses: devcontainers/ci@v0.3
         with:
@@ -44,7 +44,7 @@ jobs:
             # Run all verifications
             just verify-all
 
-      - name: Run E2E Tests
+      - name: Run Metabased Translator E2E Tests
         timeout-minutes: 10
         uses: devcontainers/ci@v0.3
         with:
