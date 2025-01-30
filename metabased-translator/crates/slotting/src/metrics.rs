@@ -40,7 +40,7 @@ impl SlottingMetrics {
         let active_slots = Gauge::default();
         let sequencing_timestamp_lag_ms = Gauge::default();
         let settlement_timestamp_lag_ms = Gauge::default();
-        let blocks_per_slot = Histogram::new(exponential_buckets(1.0, 2.0, 100));
+        let blocks_per_slot = Histogram::new(exponential_buckets(1.0, 2.0, 8));
         let sequencing_channel_capacity = Gauge::default();
         let settlement_channel_capacity = Gauge::default();
 
