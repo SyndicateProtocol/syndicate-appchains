@@ -216,7 +216,7 @@ impl Slot {
         }
     }
 
-    /// Gets total blocks in Slot
+    /// Returns the total number of blocks across both the sequencing and settlement chains
     pub fn get_total_blocks(&self) -> usize {
         self.sequencing_chain_blocks.len() + self.settlement_chain_blocks.len()
     }
