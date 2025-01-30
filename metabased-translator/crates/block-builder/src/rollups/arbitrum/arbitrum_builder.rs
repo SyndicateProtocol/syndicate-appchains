@@ -84,12 +84,7 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
         let mb_transactions = self.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
 
         let batch_transaction = self
-            .build_batch_txn(
-                mb_transactions,
-                slot.slot_number,
-                slot.timestamp,
-                delayed_messages.len(),
-            )
+            .build_batch_txn(mb_transactions, slot.number, slot.timestamp, delayed_messages.len())
             .await?;
 
         let mut result: Vec<TransactionRequest> = Vec::new();
@@ -352,7 +347,7 @@ mod tests {
 
         // Create an empty slot
         let slot = Slot {
-            slot_number: 1,
+            number: 1,
             timestamp: 0,
             state: SlotState::Safe,
             settlement_chain_blocks: vec![],
@@ -438,7 +433,7 @@ mod tests {
         );
 
         let slot = Slot {
-            slot_number: 1,
+            number: 1,
             timestamp: 0,
             state: SlotState::Safe,
             settlement_chain_blocks: vec![block],
@@ -479,7 +474,7 @@ mod tests {
             Block { number: 1, transactions: vec![Transaction::default()], ..Default::default() };
 
         let slot = Slot {
-            slot_number: 1,
+            number: 1,
             timestamp: 0,
             state: SlotState::Safe,
             settlement_chain_blocks: vec![],
@@ -572,7 +567,7 @@ mod tests {
             Receipt { logs: vec![delayed_log, inbox_log], ..Default::default() };
 
         let slot = Slot {
-            slot_number: 1,
+            number: 1,
             timestamp: 0,
             state: SlotState::Safe,
             settlement_chain_blocks: vec![BlockAndReceipts {

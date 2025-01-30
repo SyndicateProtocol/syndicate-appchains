@@ -1,10 +1,11 @@
 use block_builder::{block_builder::BlockBuilder, config::BlockBuilderConfig};
-use common::tracing::{init_tracing, TracingError};
-use eyre::Result;
-use ingestor::{
-    config::IngestionPipelineConfig,
-    ingestor::{Ingestor, IngestorChain},
+use common::{
+    db::{self, SafeState, TranslatorStore},
+    tracing::{init_tracing, TracingError},
+    types::Chain,
 };
+use eyre::Result;
+use ingestor::{config::IngestionPipelineConfig, ingestor::Ingestor};
 use metabased_translator::config::MetabasedConfig;
 use metrics::{
     config::MetricsConfig,
@@ -17,108 +18,109 @@ use tokio::sync::oneshot;
 use tracing::{error, info};
 
 // TODO(SEQ-515): Improve this executable, research async tasks
+#[allow(unused_assignments)] // TODO SEQ-528 remove this
 async fn run(
     block_builder_config: BlockBuilderConfig,
     slotting_config: SlottingConfig,
     ingestion_config: IngestionPipelineConfig,
+    db_path: &str,
     metrics_config: MetricsConfig,
     registry: Registry,
 ) -> Result<(), RuntimeError> {
-    // Create shutdown channel
-    let (shutdown_tx, mut shutdown_rx) = oneshot::channel();
+    // Create shutdown channels
+    let (main_shutdown_tx, main_shutdown_rx) = oneshot::channel();
+    let (seq_shutdown_tx, seq_shutdown_rx) = oneshot::channel();
+    let (settle_shutdown_tx, settle_shutdown_rx) = oneshot::channel();
+    let (slotter_shutdown_tx, slotter_shutdown_rx) = oneshot::channel();
+    let (builder_shutdown_tx, builder_shutdown_rx) = oneshot::channel();
+    init_ctrl_c_handler(main_shutdown_tx);
 
-    // TODO(SEQ-515): Improve Ctrl+C handler
-    let shutdown_tx_clone = shutdown_tx;
-    tokio::spawn(async move {
-        tokio::signal::ctrl_c().await.map_err(|e| RuntimeError::TaskFailure(e.to_string()))?;
-        info!("Received shutdown signal");
-        shutdown_tx_clone
-            .send(())
-            .map_err(|_| RuntimeError::Shutdown("Failed to send shutdown signal".into()))?;
-        Ok::<_, RuntimeError>(())
-    });
+    // Initialize the DB
+    let (db, mut safe_state) = init_db(db_path).await?;
+    safe_state = None; // TODO SEQ-528 remove this (disables resume from db)
+
+    // Override start blocks if we're resuming from a database
+    let mut sequencing_config = ingestion_config.sequencing;
+    let mut settlement_config = ingestion_config.settlement;
+    if let Some(state) = &safe_state {
+        sequencing_config.sequencing_start_block = state.sequencing_block.number;
+        settlement_config.settlement_start_block = state.settlement_block.number;
+    }
+    let safe_block_number = safe_state.as_ref().map(|state| state.slot.number);
 
     // Initialize metrics
     let mut metrics_state = MetricsState { registry };
     let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
     let metrics_task = start_metrics(metrics_state, metrics_config.metrics_port).await;
 
-    // Initialize components with their specific configs
-    let sequencing_config = ingestion_config.sequencing;
-    let settlement_config = ingestion_config.settlement;
+    // Initialize components
+    let (sequencing_ingestor, sequencing_rx) =
+        Ingestor::new(Chain::Sequencing, sequencing_config.into(), metrics.ingestor_sequencing)
+            .await?;
+    let (settlement_ingestor, settlement_rx) =
+        Ingestor::new(Chain::Settlement, settlement_config.into(), metrics.ingestor_settlement)
+            .await?;
+    let (slotter, slot_rx) =
+        Slotter::new(sequencing_rx, settlement_rx, slotting_config, safe_state, db);
+    let block_builder = BlockBuilder::new(slot_rx, block_builder_config).await?;
 
-    let (mut sequencing_ingestor, sequencer_rx) = Ingestor::new(
-        IngestorChain::Sequencing,
-        sequencing_config.into(),
-        metrics.ingestor_sequencing,
-    )
-    .await
-    .map_err(|e| {
-        RuntimeError::Initialization(format!(
-            "Failed to create ingestor for sequencing chain: {}",
-            e
-        ))
-    })?;
-
-    let (mut settlement_ingestor, settlement_rx) = Ingestor::new(
-        IngestorChain::Settlement,
-        settlement_config.into(),
-        metrics.ingestor_settlement,
-    )
-    .await
-    .map_err(|e| {
-        RuntimeError::Initialization(format!(
-            "Failed to create ingestor for settlement chain: {}",
-            e
-        ))
-    })?;
-
-    let slotter = Slotter::new(sequencer_rx, settlement_rx, slotting_config);
-
-    // TODO(SEQ-515): refactor me to get the channel without starting the slotter already?
-    // TODO(SEQ-515): slotter assumes that it starts first, or else it errors here
-    let slot_rx = slotter.await.start();
-
-    let block_builder = BlockBuilder::new(slot_rx, block_builder_config).await.map_err(|e| {
-        RuntimeError::Initialization(format!("Failed to create block builder: {}", e))
-    })?;
-
+    // Start component tasks
     info!("Starting Metabased Translator");
-    let sequencing_ingestor_handle = tokio::spawn(async move {
-        if let Err(e) = sequencing_ingestor.start_polling().await {
-            error!("Ingestor error: {}", e);
-        }
-    });
+    let mut sequencing_handle =
+        tokio::spawn(async move { sequencing_ingestor.start_polling(seq_shutdown_rx).await });
+    let mut settlement_handle =
+        tokio::spawn(async move { settlement_ingestor.start_polling(settle_shutdown_rx).await });
+    let mut slotter_handle = tokio::spawn(async move { slotter.start(slotter_shutdown_rx).await });
+    let mut block_builder_handle =
+        tokio::spawn(
+            async move { block_builder.start(safe_block_number, builder_shutdown_rx).await },
+        );
 
-    let settlement_ingestor_handle = tokio::spawn(async move {
-        if let Err(e) = settlement_ingestor.start_polling().await {
-            error!("Ingestor error: {}", e);
-        }
-    });
-
-    // TODO(SEQ-515): Block builder doesn't error
-    let block_builder_handle = tokio::spawn(async move { block_builder.start().await });
-
-    // Main control loop
+    // Wait for either shutdown signal or task failure
     tokio::select! {
-        // Wait for shutdown signal
-        _ = &mut shutdown_rx => {
-            info!("Metabased Translator shutting down...");
+        _ = main_shutdown_rx => {
+            info!("Received shutdown signal");
+            // Perform graceful shutdown
+            tokio::time::timeout(std::time::Duration::from_secs(5 * 60), async {
+                // 1. Stop ingestors first
+                info!("Shutting down ingestors...");
+                let _ = seq_shutdown_tx.send(());
+                let _ = settle_shutdown_tx.send(());
+                let _ = sequencing_handle.await;
+                let _ = settlement_handle.await;
+
+                // 2. Stop slotter after ingestors are done
+                info!("Shutting down slotter...");
+                let _ = slotter_shutdown_tx.send(());
+                let _ = slotter_handle.await;
+
+                // 3. Finally stop block builder
+                info!("Shutting down block builder...");
+                let _ = builder_shutdown_tx.send(());
+                let _ = block_builder_handle.await;
+                info!("Metabased Translator shutdown complete");
+            })
+            .await
+            .map_err(|_| RuntimeError::Initialization("Shutdown timeout exceeded".into()))?;
         }
-        // Watch for task completion/errors
-        res = settlement_ingestor_handle => {
+        res = &mut sequencing_handle => {
             if let Err(e) = res {
-                error!("Settlement chain ingestor task failed: {}", e);
+                return Err(RuntimeError::TaskFailure(format!("Sequencing chain ingestor unrecoverable error: {}", e)));
             }
         }
-        res = sequencing_ingestor_handle => {
+        res = &mut settlement_handle => {
             if let Err(e) = res {
-                error!("Sequencing chain ingestor task failed: {}", e);
+                return Err(RuntimeError::TaskFailure(format!("Settlement chain ingestor unrecoverable error: {}", e)));
             }
         }
-        res = block_builder_handle => {
+        res = &mut slotter_handle => {
             if let Err(e) = res {
-                error!("Block builder task failed: {}", e);
+                return Err(RuntimeError::TaskFailure(format!("Slotter unrecoverable error: {}", e)));
+            }
+        }
+        res = &mut block_builder_handle => {
+            if let Err(e) = res {
+                return Err(RuntimeError::TaskFailure(format!("Block builder unrecoverable error: {}", e)));
             }
         }
         res = metrics_task => {
@@ -128,7 +130,6 @@ async fn run(
         }
     }
 
-    info!("Metabased Translator shutdown complete");
     Ok(())
 }
 
@@ -138,6 +139,10 @@ fn main() -> Result<(), RuntimeError> {
     // Parse base config from CLI/env
     let base_config = MetabasedConfig::parse();
 
+    // init the paths for the db and anvil state
+    let db_path = format!("{}/db", base_config.datadir);
+    let anvil_state_path = format!("{}/anvil_state", base_config.datadir);
+    let block_builder_config = BlockBuilderConfig { anvil_state_path, ..base_config.block_builder };
     // Initiates the metrics registry
     let registry = Registry::default();
 
@@ -145,12 +150,13 @@ fn main() -> Result<(), RuntimeError> {
     tokio::runtime::Runtime::new()
         .map_err(|e| RuntimeError::Initialization(e.to_string()))?
         .block_on(run(
-            base_config.block_builder,
+            block_builder_config,
             base_config.slotter,
             IngestionPipelineConfig {
                 sequencing: base_config.sequencing,
                 settlement: base_config.settlement,
             },
+            db_path.as_str(),
             base_config.metrics,
             registry,
         ))?;
@@ -212,4 +218,38 @@ impl From<metrics::config::ConfigError> for ConfigError {
     fn from(err: metrics::config::ConfigError) -> Self {
         ConfigError::Metrics(format!("{}", err))
     }
+}
+
+impl From<eyre::Report> for RuntimeError {
+    fn from(err: eyre::Report) -> Self {
+        RuntimeError::TaskFailure(err.to_string())
+    }
+}
+
+// Add this function before run()
+fn init_ctrl_c_handler(main_shutdown_tx: oneshot::Sender<()>) {
+    tokio::spawn(async move {
+        if let Err(e) = tokio::signal::ctrl_c().await {
+            panic!("Failed to listen for ctrl-c: {}", e);
+        }
+        info!("Received shutdown signal");
+        if main_shutdown_tx.send(()).is_err() {
+            panic!("Failed to send shutdown signal");
+        }
+    });
+}
+
+async fn init_db(
+    db_path: &str,
+) -> Result<(Box<dyn TranslatorStore + Send + Sync>, Option<SafeState>), RuntimeError> {
+    let db = Box::new(
+        db::RocksDbStore::new(db_path)
+            .map_err(|e| RuntimeError::Initialization(format!("Failed to open DB: {e}")))?,
+    );
+    let safe_state = db
+        .get_latest()
+        .await
+        .map_err(|e| RuntimeError::Initialization(format!("Failed to get latest state: {e}")))?;
+
+    Ok((db, safe_state))
 }
