@@ -122,7 +122,7 @@ impl Slotter {
     pub fn start(mut self) -> Receiver<Slot> {
         let status = Status::Started;
         self.status.store(status);
-        self.metrics.update_slotter_status(status as i32);
+        self.metrics.update_slotting_status(status as i32);
         let (sender, receiver) = channel(100); // TODO SEQ-490 - channel size shouldn't be hardcoded here
         info!("Starting Slotter");
         tokio::spawn(async move {
@@ -205,7 +205,7 @@ impl Slotter {
         info!("Stopping Slotter");
         let status = Status::Stopped;
         self.status.store(status);
-        self.metrics.update_slotter_status(status as i32);
+        self.metrics.update_slotting_status(status as i32);
     }
 
     /// Marks slots as unsafe when both chains have progressed past them.
