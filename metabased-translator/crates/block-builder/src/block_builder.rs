@@ -12,9 +12,9 @@ use crate::{
 use alloy::transports::{RpcError, TransportErrorKind};
 use common::types::Slot;
 use eyre::{Error, Result};
-use thiserror::Error;
 use tokio::sync::{mpsc::Receiver, oneshot};
 use tracing::{debug, error, info};
+use url::Url;
 
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
@@ -97,16 +97,27 @@ impl BlockBuilder {
 }
 
 #[allow(missing_docs)] // self-documenting
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum BlockBuilderError {
-    #[error("Anvil failed to start: {0}")]
-    AnvilStartError(&'static str),
+    #[error("Error starting Anvil: {0}")]
+    AnvilStart(AnvilStartError),
 
     #[error("Failed to submit transaction to MetaChain: {0}")]
     SubmitTxnError(RpcError<TransportErrorKind>),
 
     #[error("Cannot serialize empty l2 msg")]
     EmptyL2Message(),
+}
+
+#[allow(missing_docs)] // self-documenting
+#[derive(Debug, thiserror::Error)]
+pub enum AnvilStartError {
+    #[error("Invalid host in mchain_url")]
+    InvalidHost,
+    #[error("No port found in mchain_url")]
+    NoPort,
+    #[error("Requested port in mchain_url {mchain_url:} is unavailable: {port}")]
+    PortUnavailable { mchain_url: Url, port: u16 },
 }
 
 #[cfg(test)]
