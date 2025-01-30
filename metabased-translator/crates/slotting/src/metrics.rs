@@ -1,5 +1,6 @@
 //! The `metrics` module for the Slotting
 
+use common::types::Chain;
 use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
 /// Structure holding metrics related to the Slotting.
 #[derive(Debug)]
@@ -45,11 +46,10 @@ impl SlottingMetrics {
     }
 
     /// Records the last block processed by the Slotting.
-    pub fn record_last_block_processed(&self, block_number: u64, chain: String) {
-        let metric = match chain.as_str() {
-            "sequencing" => &self.last_sequencing_block,
-            "settlement" => &self.last_settlement_block,
-            _ => return,
+    pub fn record_last_block_processed(&self, block_number: u64, chain: Chain) {
+        let metric = match chain {
+            Chain::Sequencing => &self.last_sequencing_block,
+            Chain::Settlement => &self.last_settlement_block,
         };
 
         metric.set(block_number as i64);
@@ -81,13 +81,12 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = SlottingMetrics::new(&mut registry);
 
-        metrics.record_last_block_processed(42, "sequencing".to_string());
+        metrics.record_last_block_processed(42, Chain::Sequencing);
         assert_eq!(metrics.last_sequencing_block.get(), 42);
 
-        metrics.record_last_block_processed(84, "settlement".to_string());
+        metrics.record_last_block_processed(84, Chain::Sequencing);
         assert_eq!(metrics.last_settlement_block.get(), 84);
 
-        metrics.record_last_block_processed(100, "invalid".to_string()); // Should not change anything
         assert_eq!(metrics.last_sequencing_block.get(), 42);
         assert_eq!(metrics.last_settlement_block.get(), 84);
     }

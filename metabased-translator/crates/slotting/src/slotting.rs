@@ -393,7 +393,7 @@ impl Slotter {
             Chain::Sequencing => self.latest_sequencing_chain_block = Some(BlockRef::new(block)),
             Chain::Settlement => self.latest_settlement_chain_block = Some(BlockRef::new(block)),
         }
-        self.metrics.record_last_block_processed(block.number, chain.to_string());
+        self.metrics.record_last_block_processed(block.number, chain);
         Ok(())
     }
 }
