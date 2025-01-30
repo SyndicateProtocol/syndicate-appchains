@@ -1,8 +1,8 @@
 //! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a
 //! consumer using a channel
 
-use crate::{config::ChainIngestorConfig, eth_client::EthClient};
-use common::types::BlockAndReceipts;
+use crate::{config::ChainIngestorConfig, eth_client::EthClient, metrics::IngestorMetrics};
+use common::types::{BlockAndReceipts, Chain};
 use eyre::{eyre, Error};
 use std::time::Duration;
 use tokio::sync::{
@@ -14,34 +14,41 @@ use tracing::{debug, error};
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
 pub struct Ingestor {
+    chain: Chain,
     client: EthClient,
     current_block_number: u64,
     sender: Sender<BlockAndReceipts>,
     polling_interval: Duration,
+    metrics: IngestorMetrics,
 }
 
 impl Ingestor {
-    /// Creates a new `Ingestor` instance.
+    /// Creates a new `Ingestor` instance responsible for polling blocks.
     ///
     /// # Arguments
-    /// - `rpc_url`: The RPC endpoint URL of the Ethereum chain.
-    /// - `start_block`: The block number to start polling from.
-    /// - `buffer_size`: The size of the channel buffer for blocks.
-    /// - `polling_interval`: The time interval between each block polling.
+    /// - `chain`: Specifies whether the ingestor is targeting the `Settlement` or `Sequencing`
+    ///   chain.
+    /// - `config`: Configuration parameters, including the RPC endpoint URL and starting block
+    ///   number.
+    /// - `metrics`: Metrics collection for monitoring ingestion performance.
     ///
     /// # Returns
     /// A tuple containing the `Ingestor` instance and a `Receiver` for consuming blocks.
     pub async fn new(
+        chain: Chain,
         config: ChainIngestorConfig,
+        metrics: IngestorMetrics,
     ) -> Result<(Self, Receiver<BlockAndReceipts>), Error> {
         let client = EthClient::new(&config.rpc_url).await?;
         let (sender, receiver) = channel(config.buffer_size);
         Ok((
             Self {
+                chain,
                 client,
                 current_block_number: config.start_block,
                 sender,
                 polling_interval: config.polling_interval(),
+                metrics,
             },
             receiver,
         ))
@@ -55,8 +62,26 @@ impl Ingestor {
     /// # Returns
     /// The block and its receipts.
     async fn get_block_and_receipts(&self, block_number: u64) -> Result<BlockAndReceipts, Error> {
+        let start_time_block = std::time::Instant::now();
         let block = self.client.get_block_by_number(block_number).await?;
+        let duration_block = start_time_block.elapsed();
+
+        let start_time_receipts = std::time::Instant::now();
         let receipts = self.client.get_block_receipts(block_number).await?;
+        let duration_receipts = start_time_receipts.elapsed();
+
+        self.metrics.record_rpc_call(
+            self.chain.to_string(),
+            "eth_getBlockByNumber",
+            duration_block,
+        );
+
+        self.metrics.record_rpc_call(
+            self.chain.to_string(),
+            "eth_getBlockReceipts",
+            duration_receipts,
+        );
+
         debug!("Got block: {:?}", block.number);
 
         Ok(BlockAndReceipts { block, receipts })
@@ -75,6 +100,7 @@ impl Ingestor {
         }
         self.sender.send(block_and_receipts.clone()).await?;
         self.current_block_number += 1;
+        self.metrics.record_last_block_fetched(self.chain.to_string(), self.current_block_number);
         Ok(())
     }
 
@@ -136,11 +162,20 @@ impl Ingestor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{ChainIngestorConfig, IngestionPipelineConfig};
+    use crate::{
+        config::{ChainIngestorConfig, IngestionPipelineConfig},
+        metrics::IngestorMetrics,
+    };
     use alloy::primitives::B256;
     use common::types::{Block, BlockAndReceipts};
     use eyre::Result;
+    use prometheus_client::registry::Registry;
     use std::str::FromStr;
+
+    struct MetricsState {
+        /// Prometheus registry
+        pub registry: Registry,
+    }
 
     fn test_config() -> IngestionPipelineConfig {
         IngestionPipelineConfig {
@@ -189,7 +224,11 @@ mod tests {
         let polling_interval = Duration::from_secs(1);
         let config = test_config();
 
-        let (ingestor, receiver) = Ingestor::new(config.sequencing.into()).await?;
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = IngestorMetrics::new(&mut metrics_state.registry);
+
+        let (ingestor, receiver) =
+            Ingestor::new(Chain::Sequencing, config.sequencing.into(), metrics).await?;
 
         assert_eq!(ingestor.current_block_number, start_block);
         assert_eq!(receiver.capacity(), buffer_size);
@@ -204,8 +243,16 @@ mod tests {
 
         let (sender, mut receiver) = channel(10);
         let client = EthClient::new(test_config().sequencing.sequencing_rpc_url.as_str()).await?;
-        let mut ingestor =
-            Ingestor { client, current_block_number: start_block, sender, polling_interval };
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = IngestorMetrics::new(&mut metrics_state.registry);
+        let mut ingestor = Ingestor {
+            chain: Chain::Sequencing,
+            client,
+            current_block_number: start_block,
+            sender,
+            polling_interval,
+            metrics,
+        };
 
         let block = get_dummy_block_and_receipts(start_block);
 
@@ -225,9 +272,16 @@ mod tests {
 
         let (sender, _) = channel(10);
         let client = EthClient::new(test_config().sequencing.sequencing_rpc_url.as_str()).await?;
-
-        let ingestor =
-            Ingestor { client, current_block_number: start_block, sender, polling_interval };
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = IngestorMetrics::new(&mut metrics_state.registry);
+        let ingestor = Ingestor {
+            chain: Chain::Sequencing,
+            client,
+            current_block_number: start_block,
+            sender,
+            polling_interval,
+            metrics,
+        };
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let polling_handle = tokio::spawn(async move {

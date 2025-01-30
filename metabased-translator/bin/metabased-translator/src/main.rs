@@ -2,11 +2,18 @@ use block_builder::{block_builder::BlockBuilder, config::BlockBuilderConfig};
 use common::{
     db::{self, SafeState, TranslatorStore},
     tracing::{init_tracing, TracingError},
+    types::Chain,
 };
 use eyre::Result;
 use ingestor::{config::IngestionPipelineConfig, ingestor::Ingestor};
 use metabased_translator::config::MetabasedConfig;
+use metrics::{
+    config::MetricsConfig,
+    metrics::{start_metrics, MetricsState, TranslatorMetrics},
+};
+use prometheus_client::registry::Registry;
 use slotting::{config::SlottingConfig, slotting::Slotter};
+use thiserror::Error;
 use tokio::sync::oneshot;
 use tracing::{error, info};
 
@@ -17,6 +24,8 @@ async fn run(
     slotting_config: SlottingConfig,
     ingestion_config: IngestionPipelineConfig,
     db_path: &str,
+    metrics_config: MetricsConfig,
+    registry: Registry,
 ) -> Result<(), RuntimeError> {
     // Create shutdown channels
     let (main_shutdown_tx, main_shutdown_rx) = oneshot::channel();
@@ -39,9 +48,18 @@ async fn run(
     }
     let safe_block_number = safe_state.as_ref().map(|state| state.slot.number);
 
+    // Initialize metrics
+    let mut metrics_state = MetricsState { registry };
+    let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
+    let metrics_task = start_metrics(metrics_state, metrics_config.metrics_port).await;
+
     // Initialize components
-    let (sequencing_ingestor, sequencing_rx) = Ingestor::new(sequencing_config.into()).await?;
-    let (settlement_ingestor, settlement_rx) = Ingestor::new(settlement_config.into()).await?;
+    let (sequencing_ingestor, sequencing_rx) =
+        Ingestor::new(Chain::Sequencing, sequencing_config.into(), metrics.ingestor_sequencing)
+            .await?;
+    let (settlement_ingestor, settlement_rx) =
+        Ingestor::new(Chain::Settlement, settlement_config.into(), metrics.ingestor_settlement)
+            .await?;
     let (slotter, slot_rx) =
         Slotter::new(sequencing_rx, settlement_rx, slotting_config, safe_state, db);
     let block_builder = BlockBuilder::new(slot_rx, block_builder_config).await?;
@@ -105,6 +123,11 @@ async fn run(
                 return Err(RuntimeError::TaskFailure(format!("Block builder unrecoverable error: {}", e)));
             }
         }
+        res = metrics_task => {
+            if let Err(e) = res {
+                error!("Metrics task failed: {}", e)
+            }
+        }
     }
 
     Ok(())
@@ -120,6 +143,8 @@ fn main() -> Result<(), RuntimeError> {
     let db_path = format!("{}/db", base_config.datadir);
     let anvil_state_path = format!("{}/anvil_state", base_config.datadir);
     let block_builder_config = BlockBuilderConfig { anvil_state_path, ..base_config.block_builder };
+    // Initiates the metrics registry
+    let registry = Registry::default();
 
     // Create and run async runtime
     tokio::runtime::Runtime::new()
@@ -132,12 +157,29 @@ fn main() -> Result<(), RuntimeError> {
                 settlement: base_config.settlement,
             },
             db_path.as_str(),
+            base_config.metrics,
+            registry,
         ))?;
 
     Ok(())
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Error)]
+pub enum ConfigError {
+    #[error("Block builder config error: {0}")]
+    BlockBuilder(String),
+
+    #[error("Slotter config error: {0}")]
+    Slotter(String),
+
+    #[error("Ingestor config error: {0}")]
+    Ingestor(String),
+
+    #[error("Metrics config error: {0}")]
+    Metrics(String),
+}
+
+#[derive(Debug, Error)]
 pub enum RuntimeError {
     #[error("Failed to initialize component: {0}")]
     Initialization(String),
@@ -154,22 +196,27 @@ impl From<TracingError> for RuntimeError {
         RuntimeError::Initialization(format!("Tracing initialization failed: {}", err))
     }
 }
-
-impl From<block_builder::config::ConfigError> for RuntimeError {
+impl From<block_builder::config::ConfigError> for ConfigError {
     fn from(err: block_builder::config::ConfigError) -> Self {
-        RuntimeError::InvalidConfig(format!("Block builder config error: {}", err))
+        ConfigError::BlockBuilder(format!("{}", err))
     }
 }
 
-impl From<slotting::config::ConfigError> for RuntimeError {
+impl From<slotting::config::ConfigError> for ConfigError {
     fn from(err: slotting::config::ConfigError) -> Self {
-        RuntimeError::InvalidConfig(format!("Slotter config error: {}", err))
+        ConfigError::Slotter(format!("{}", err))
     }
 }
 
-impl From<ingestor::config::ConfigError> for RuntimeError {
+impl From<ingestor::config::ConfigError> for ConfigError {
     fn from(err: ingestor::config::ConfigError) -> Self {
-        RuntimeError::InvalidConfig(format!("Ingestor config error: {}", err))
+        ConfigError::Ingestor(format!("{}", err))
+    }
+}
+
+impl From<metrics::config::ConfigError> for ConfigError {
+    fn from(err: metrics::config::ConfigError) -> Self {
+        ConfigError::Metrics(format!("{}", err))
     }
 }
 

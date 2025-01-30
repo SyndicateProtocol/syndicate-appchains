@@ -9,7 +9,6 @@ use alloy::{
 use clap::{Parser, ValueEnum};
 use std::{fmt::Debug, str::FromStr};
 use thiserror::Error;
-use tracing::debug;
 
 const DEFAULT_PRIVATE_KEY_SIGNER: &str =
     "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
@@ -35,12 +34,25 @@ pub struct BlockBuilderConfig {
     /// Sequencing contract address on the sequencing chain
     #[arg(short = 's', long, env = "BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS",
         value_parser = parse_address,
-        default_value = "0x1234000000000000000000000000000000000000")]
+        default_value = "0x0000000000000000000000000000000000000000")]
     pub sequencing_contract_address: Address,
 
     /// Target rollup type for the [`block-builder`]
     #[arg(long, env = "BLOCK_BUILDER_TARGET_ROLLUP", default_value = "arbitrum")]
     pub target_rollup_type: TargetRollupType,
+
+    /// Arbitrum rollup address on the m-chain
+    #[arg(short = 'm', long, env = "BLOCK_BUILDER_ARBITRUM_MCHAIN_ROLLUP_ADDRESS",
+        value_parser = parse_address,
+        // TODO (SEQ-534): Use a default value if possible
+        default_value = "0x0000000000000000000000000000000000000000")]
+    pub mchain_rollup_address: Address,
+
+    /// Delayed inbox address on the settlement chain
+    #[arg(short = 'd', long, env = "BLOCK_BUILDER_ARBITRUM_DELAYED_INBOX_ADDRESS",
+        value_parser = parse_address,
+        default_value = "0x0000000000000000000000000000000000000000")]
+    pub delayed_inbox_address: Address,
 
     // path to the directory where anvil will keep its state
     #[arg(long, env = "BLOCK_BUILDER_ANVIL_STATE_PATH", default_value = "")]
@@ -82,6 +94,8 @@ impl Debug for BlockBuilderConfig {
             .field("target_chain_id", &self.target_chain_id)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
             .field("target_rollup_type", &self.target_rollup_type)
+            .field("mchain_rollup_address", &self.mchain_rollup_address)
+            .field("delayed_inbox_address", &self.delayed_inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
             .field("anvil_state_path", &self.anvil_state_path)
             .field("anvil_state_interval", &self.anvil_state_interval)
@@ -92,17 +106,18 @@ impl Debug for BlockBuilderConfig {
 
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
+        let default_address = Address::from_str("0x1234000000000000000000000000000000000000")
+            .unwrap_or_else(|err| {
+                panic!("Failed to parse default address: {}", err);
+            });
         Self {
             port: 8888,
             genesis_timestamp: 1712500000,
             target_chain_id: 13331370,
             target_rollup_type: TargetRollupType::ARBITRUM,
-            sequencing_contract_address: Address::from_str(
-                "0x1234000000000000000000000000000000000000",
-            )
-            .unwrap_or_else(|err| {
-                panic!("Failed to parse default address: {}", err);
-            }),
+            sequencing_contract_address: default_address,
+            mchain_rollup_address: default_address,
+            delayed_inbox_address: default_address,
             anvil_state_path: String::new(),
             anvil_state_interval: 1,
             anvil_prune_history: 50,
@@ -111,33 +126,6 @@ impl Default for BlockBuilderConfig {
 }
 
 impl BlockBuilderConfig {
-    /// Creates a new [`BlockBuilderConfig`] instance.
-    #[allow(clippy::too_many_arguments)]
-    pub fn new(
-        port: u16,
-        genesis_timestamp: u64,
-        target_chain_id: u64,
-        sequencing_contract_address: Address,
-        target_rollup_type: TargetRollupType,
-        anvil_state_path: String,
-        anvil_state_interval: u64,
-        anvil_prune_history: u64,
-    ) -> Result<Self, ConfigError> {
-        let config = Self {
-            port,
-            genesis_timestamp,
-            target_chain_id,
-            sequencing_contract_address,
-            target_rollup_type,
-            anvil_state_path,
-            anvil_state_interval,
-            anvil_prune_history,
-        };
-        debug!("Created block builder config: {:?}", config);
-        config.validate()?;
-        Ok(config)
-    }
-
     /// Validates the config values and complains about impossible ones
     pub fn validate(&self) -> Result<(), ConfigError> {
         if self.port == 0 {
@@ -146,6 +134,34 @@ impl BlockBuilderConfig {
 
         if self.target_chain_id == 0 {
             return Err(ConfigError::InvalidChainId("Chain ID cannot be 0".to_string()));
+        }
+
+        if self.sequencing_contract_address == Address::ZERO {
+            return Err(ConfigError::InvalidAddress(
+                "Sequencing contract address cannot be 0".to_string(),
+            ));
+        }
+
+        match self.target_rollup_type {
+            // Validate Arbitrum specific configuration
+            TargetRollupType::ARBITRUM => {
+                if self.mchain_rollup_address == Address::ZERO {
+                    return Err(ConfigError::InvalidAddress(
+                        "MChain rollup address cannot be 0".to_string(),
+                    ));
+                }
+                if self.delayed_inbox_address == Address::ZERO {
+                    return Err(ConfigError::InvalidAddress(
+                        "Delayed inbox address cannot be 0".to_string(),
+                    ));
+                }
+            }
+            // Validate Optimism specific configuration
+            TargetRollupType::OPTIMISM => {
+                return Err(ConfigError::UnsupportedRollupType(
+                    "Optimism is not supported yet".to_string(),
+                ));
+            }
         }
 
         if self.anvil_state_path.is_empty() {
@@ -166,6 +182,10 @@ pub enum ConfigError {
     InvalidPort(String),
     #[error("Invalid chain ID: {0}")]
     InvalidChainId(String),
+    #[error("Unsupported rollup type: {0}")]
+    UnsupportedRollupType(String),
+    #[error("Invalid configuration address: {0}")]
+    InvalidAddress(String),
     #[error("Invalid anvil state path: {0}")]
     InvalidAnvilStatePath(String),
 }
@@ -182,7 +202,7 @@ mod tests {
         assert_eq!(config.target_chain_id, 13331370);
         assert_eq!(
             config.sequencing_contract_address.to_string(),
-            "0x1234000000000000000000000000000000000000"
+            "0x0000000000000000000000000000000000000000"
         );
         assert_eq!(config.anvil_state_path, "");
         assert_eq!(config.anvil_state_interval, 1);
@@ -190,20 +210,44 @@ mod tests {
     }
 
     #[test]
-    fn test_validate() {
-        let config = BlockBuilderConfig {
-            port: 0,
-            genesis_timestamp: 1000000,
-            target_chain_id: 12345,
-            sequencing_contract_address: Address::from_str(
-                "0x1234000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            target_rollup_type: TargetRollupType::ARBITRUM,
-            anvil_state_path: String::new(),
-            anvil_state_interval: 1,
-            anvil_prune_history: 50,
-        };
+    fn test_validate_port() {
+        let config = BlockBuilderConfig { port: 0, ..Default::default() };
         assert!(matches!(config.validate(), Err(ConfigError::InvalidPort(_))));
+    }
+
+    #[test]
+    fn test_validate_chain_id() {
+        let config = BlockBuilderConfig { target_chain_id: 0, ..Default::default() };
+        assert!(matches!(config.validate(), Err(ConfigError::InvalidChainId(_))));
+    }
+
+    #[test]
+    fn test_validate_rollup_type() {
+        let config = BlockBuilderConfig {
+            target_rollup_type: TargetRollupType::OPTIMISM,
+            ..Default::default()
+        };
+        assert!(matches!(config.validate(), Err(ConfigError::UnsupportedRollupType(_))));
+    }
+
+    #[test]
+    fn test_validate_mchain_rollup_address() {
+        let config =
+            BlockBuilderConfig { mchain_rollup_address: Address::ZERO, ..Default::default() };
+        assert!(matches!(config.validate(), Err(ConfigError::InvalidAddress(_))));
+    }
+
+    #[test]
+    fn test_validate_delayed_inbox_address() {
+        let config =
+            BlockBuilderConfig { delayed_inbox_address: Address::ZERO, ..Default::default() };
+        assert!(matches!(config.validate(), Err(ConfigError::InvalidAddress(_))));
+    }
+
+    #[test]
+    fn test_validate_sequencing_contract_address() {
+        let config =
+            BlockBuilderConfig { sequencing_contract_address: Address::ZERO, ..Default::default() };
+        assert!(matches!(config.validate(), Err(ConfigError::InvalidAddress(_))));
     }
 }

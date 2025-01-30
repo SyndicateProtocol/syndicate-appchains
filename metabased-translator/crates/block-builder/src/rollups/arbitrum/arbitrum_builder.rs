@@ -4,12 +4,15 @@
 //! list of transactions. It implements the [`RollupBlockBuilder`] trait to standardize block
 //! construction across different rollup implementations
 
-use crate::rollups::{
-    arbitrum::batch::{Batch, BatchMessage, L1IncomingMessage},
-    shared::{RollupBlockBuilder, SequencingTransactionParser},
+use crate::{
+    config::BlockBuilderConfig,
+    rollups::{
+        arbitrum::batch::{Batch, BatchMessage, L1IncomingMessage, L1IncomingMessageHeader},
+        shared::{RollupBlockBuilder, SequencingTransactionParser},
+    },
 };
 use alloy::{
-    primitives::{address, Address, Bytes, FixedBytes, U256},
+    primitives::{Address, Bytes, FixedBytes, U256},
     rpc::types::TransactionRequest,
     sol_types::{SolCall, SolEvent},
 };
@@ -53,22 +56,15 @@ pub struct ArbitrumBlockBuilder {
     transaction_parser: SequencingTransactionParser,
 
     // Settlement chain address
-    delayed_inbox: Address,
+    delayed_inbox_address: Address,
 
     delayed_message_count: u64,
 }
 
 impl Default for ArbitrumBlockBuilder {
     fn default() -> Self {
-        // TODO (SEQ-522): Delete this and refactor tests
-        Self {
-            transaction_parser: SequencingTransactionParser::new(address!(
-                "0xEF741D37485126A379Bfa32b6b260d85a0F00380"
-            )),
-            mchain_rollup_address: address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"),
-            delayed_inbox: address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"),
-            delayed_message_count: 0,
-        }
+        let config = BlockBuilderConfig::default();
+        Self::new(config)
     }
 }
 
@@ -87,7 +83,9 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
 
         let mb_transactions = self.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
 
-        let batch_transaction = self.build_batch_txn(mb_transactions).await?;
+        let batch_transaction = self
+            .build_batch_txn(mb_transactions, slot.number, slot.timestamp, delayed_messages.len())
+            .await?;
 
         let mut result: Vec<TransactionRequest> = Vec::new();
         result.extend(delayed_messages);
@@ -100,12 +98,15 @@ impl ArbitrumBlockBuilder {
     /// Creates a new Arbitrum block builder.
     ///
     /// # Arguments
-    /// - `sequencing_contract_address`: The address of the sequencing contract to monitor.
-    pub fn new(sequencing_contract_address: Address) -> Self {
-        // TODO (SEQ-522): Implement from config
+    /// - `config`: The configuration for the block builder.
+    pub fn new(config: BlockBuilderConfig) -> Self {
         Self {
-            transaction_parser: SequencingTransactionParser::new(sequencing_contract_address),
-            ..Default::default()
+            transaction_parser: SequencingTransactionParser::new(
+                config.sequencing_contract_address,
+            ),
+            mchain_rollup_address: config.mchain_rollup_address,
+            delayed_inbox_address: config.delayed_inbox_address,
+            delayed_message_count: 0,
         }
     }
 
@@ -122,7 +123,7 @@ impl ArbitrumBlockBuilder {
             .iter()
             .flat_map(|block| &block.receipts)
             .flat_map(|receipt| &receipt.logs)
-            .filter(|log| Address::from_slice(log.address.as_slice()) == self.delayed_inbox)
+            .filter(|log| Address::from_slice(log.address.as_slice()) == self.delayed_inbox_address)
             .filter(|log| {
                 let topic_bytes = FixedBytes::from_slice(log.topics[0].as_slice());
 
@@ -223,16 +224,26 @@ impl ArbitrumBlockBuilder {
     }
 
     /// Builds a batch of transactions into an Arbitrum batch
-    async fn build_batch_txn(&self, txs: Vec<Bytes>) -> Result<TransactionRequest> {
-        let batch = if txs.is_empty() {
-            Batch(vec![BatchMessage::Delayed])
-        } else {
-            Batch(vec![BatchMessage::L2(L1IncomingMessage {
-                // TODO (SEQ-522): Add meaningful values for the header
-                header: Default::default(),
+    async fn build_batch_txn(
+        &self,
+        txs: Vec<Bytes>,
+        slot_number: u64,
+        slot_timestamp: u64,
+        delayed_message_count: usize,
+    ) -> Result<TransactionRequest> {
+        let mut messages = vec![BatchMessage::Delayed; delayed_message_count];
+
+        if !txs.is_empty() {
+            messages.push(BatchMessage::L2(L1IncomingMessage {
+                header: L1IncomingMessageHeader {
+                    block_number: slot_number,
+                    timestamp: slot_timestamp,
+                },
                 l2_msg: txs,
-            })])
+            }));
         };
+
+        let batch = Batch(messages);
 
         // Encode the batch data
         let encoded_batch = batch.encode()?;
@@ -265,7 +276,14 @@ mod tests {
         let sequencing_contract_address =
             Address::from_str("0x1234000000000000000000000000000000000000")
                 .expect("Invalid address format");
-        let builder = ArbitrumBlockBuilder::new(sequencing_contract_address);
+        let config = BlockBuilderConfig {
+            sequencing_contract_address,
+            mchain_rollup_address: sequencing_contract_address,
+            delayed_inbox_address: sequencing_contract_address,
+            ..Default::default()
+        };
+
+        let builder = ArbitrumBlockBuilder::new(config);
         let parser = builder.transaction_parser();
         assert!(!std::ptr::eq(parser, std::ptr::null()), "Transaction parser should not be null");
     }
@@ -274,13 +292,13 @@ mod tests {
     async fn test_build_batch_empty_txs() {
         let builder = ArbitrumBlockBuilder::default();
         let txs = vec![];
-        let batch = builder.build_batch_txn(txs).await.unwrap();
+        let batch = builder.build_batch_txn(txs, 0, 0, 0).await.unwrap();
 
         // Verify transaction is sent to sequencer inbox
         assert_eq!(batch.to, Some(TxKind::Call(builder.mchain_rollup_address)));
 
         // For empty batch, should create BatchMessage::Delayed
-        let expected_batch = Batch(vec![BatchMessage::Delayed]);
+        let expected_batch = Batch(vec![]);
         let expected_encoded = expected_batch.encode().unwrap();
 
         // Verify the input data contains the correct parameters
@@ -300,7 +318,7 @@ mod tests {
             hex!("1234").into(), // Sample transaction data
             hex!("5678").into(),
         ];
-        let batch = builder.build_batch_txn(txs.clone()).await.unwrap();
+        let batch = builder.build_batch_txn(txs.clone(), 0, 0, 0).await.unwrap();
 
         // Verify transaction is sent to sequencer inbox
         assert_eq!(batch.to, Some(TxKind::Call(builder.mchain_rollup_address)));
@@ -378,7 +396,7 @@ mod tests {
         let msg_delivered_event = MessageDelivered {
             messageIndex: message_index,
             beforeInboxAcc: before_inbox_acc,
-            inbox: builder.delayed_inbox,
+            inbox: builder.delayed_inbox_address,
             kind: 0u8,
             sender: Address::ZERO,
             messageDataHash: keccak256(message_data.clone()),
@@ -388,7 +406,7 @@ mod tests {
 
         // Create mock logs
         let msg_delivered_log = create_mock_log(
-            builder.delayed_inbox,
+            builder.delayed_inbox_address,
             vec![
                 MSG_DELIVERED_EVENT_HASH,
                 FixedBytes::from(message_index.to_be_bytes()),
@@ -400,7 +418,7 @@ mod tests {
         );
 
         let inbox_msg_log = create_mock_log(
-            builder.delayed_inbox,
+            builder.delayed_inbox_address,
             vec![INBOX_MSG_DELIVERED_EVENT_HASH, FixedBytes::from(message_index.to_be_bytes())],
             message_data.clone(),
             1,
@@ -477,7 +495,7 @@ mod tests {
         assert_eq!(batch_txn.to, Some(TxKind::Call(builder.mchain_rollup_address)));
         let txn_data_without_prefix = txn_data[1..].to_vec();
         let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
-            header: Default::default(),
+            header: L1IncomingMessageHeader { block_number: 1, timestamp: 0 },
             l2_msg: vec![txn_data_without_prefix.into()],
         })]);
         let expected_encoded = expected_batch.encode().unwrap();
@@ -516,7 +534,7 @@ mod tests {
         let msg_delivered_event = MessageDelivered {
             messageIndex: message_num,
             beforeInboxAcc: before_inbox_acc,
-            inbox: builder.delayed_inbox,
+            inbox: builder.delayed_inbox_address,
             kind: 2u8,
             sender: Address::repeat_byte(1),
             messageDataHash: keccak256(delayed_message_data.clone()),
@@ -525,7 +543,7 @@ mod tests {
         };
 
         let delayed_log = create_mock_log(
-            builder.delayed_inbox,
+            builder.delayed_inbox_address,
             vec![
                 MSG_DELIVERED_EVENT_HASH,
                 FixedBytes::from(message_num.to_be_bytes::<32>()),
@@ -537,7 +555,7 @@ mod tests {
         );
 
         let inbox_log = create_mock_log(
-            builder.delayed_inbox,
+            builder.delayed_inbox_address,
             vec![INBOX_MSG_DELIVERED_EVENT_HASH, FixedBytes::from(message_num.to_be_bytes::<32>())],
             delayed_message_data.clone(),
             1,
@@ -584,10 +602,13 @@ mod tests {
         let batch_txn = &txns[1];
         let txn_data_without_prefix = txn_data[1..].to_vec();
         assert_eq!(batch_txn.to, Some(TxKind::Call(builder.mchain_rollup_address)));
-        let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
-            header: Default::default(),
-            l2_msg: vec![txn_data_without_prefix.into()],
-        })]);
+        let expected_batch = Batch(vec![
+            BatchMessage::Delayed,
+            BatchMessage::L2(L1IncomingMessage {
+                header: L1IncomingMessageHeader { block_number: 1, timestamp: 0 },
+                l2_msg: vec![txn_data_without_prefix.into()],
+            }),
+        ]);
         let expected_encoded = expected_batch.encode().unwrap();
         let expected_batch_call =
             Rollup::postBatchCall::new((U256::from(1), expected_encoded)).abi_encode().into();
@@ -608,7 +629,7 @@ mod tests {
         let msg_delivered = MessageDelivered {
             messageIndex: message_index,
             beforeInboxAcc: FixedBytes::from([1u8; 32]),
-            inbox: builder.delayed_inbox,
+            inbox: builder.delayed_inbox_address,
             kind: 2u8,
             sender: Address::repeat_byte(1),
             messageDataHash: keccak256(message_data.clone()),
@@ -618,7 +639,7 @@ mod tests {
 
         // Create the log
         let log = Log {
-            address: builder.delayed_inbox,
+            address: builder.delayed_inbox_address,
             topics: vec![
                 MSG_DELIVERED_EVENT_HASH,
                 FixedBytes::from(message_index.to_be_bytes::<32>()),
@@ -659,7 +680,7 @@ mod tests {
         let msg_delivered = MessageDelivered {
             messageIndex: message_index,
             beforeInboxAcc: FixedBytes::from([1u8; 32]),
-            inbox: builder.delayed_inbox,
+            inbox: builder.delayed_inbox_address,
             kind: 2u8,
             sender: Address::repeat_byte(1),
             messageDataHash: FixedBytes::from([2u8; 32]),
@@ -668,7 +689,7 @@ mod tests {
         };
 
         let log = Log {
-            address: builder.delayed_inbox,
+            address: builder.delayed_inbox_address,
             topics: vec![
                 MSG_DELIVERED_EVENT_HASH,
                 FixedBytes::from(message_index.to_be_bytes::<32>()),
@@ -699,7 +720,7 @@ mod tests {
 
         // Create log with invalid event data
         let log = Log {
-            address: builder.delayed_inbox,
+            address: builder.delayed_inbox_address,
             topics: vec![MSG_DELIVERED_EVENT_HASH],
             data: Bytes::from(vec![1, 2, 3]), // Invalid data that can't be decoded
             block_number: 1,
