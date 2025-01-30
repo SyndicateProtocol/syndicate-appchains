@@ -1,4 +1,4 @@
-//! The `metrics` module for the ingestor
+//! The `metrics` module for the Slotting
 
 use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
 /// Structure holding metrics related to the Slotting.
