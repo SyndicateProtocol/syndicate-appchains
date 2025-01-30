@@ -30,8 +30,8 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup Infra + Run Arbitrum L2 + Run Metabased Sequencer + Test transaction
-        timeout-minutes: 15
+      - name: Setup Infra + Run Arbitrum L2 + Run Metabased Sequencer + Verify
+        timeout-minutes: 10
         uses: devcontainers/ci@v0.3
         with:
           imageName: ghcr.io/syndicateprotocol/metabased-devcontainer
@@ -44,6 +44,16 @@ jobs:
             # Run all verifications
             just verify-all
 
+      - name: Run E2E Tests
+        timeout-minutes: 5
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/syndicateprotocol/metabased-devcontainer
+          imageTag: cache-main
+          push: never
+          cacheFrom: |
+            ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
+          runCmd: |
             # Run E2E tests within our Rust code
             just e2e-tests
 
