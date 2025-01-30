@@ -34,10 +34,11 @@ base64 = { workspace = true }
 brotli = { workspace = true }
 hex = { workspace = true }
 async-trait = { workspace = true }
-thiserror = { workspace = true}
+thiserror = { workspace = true }
 
 [dev-dependencies]
 serial_test = { workspace = true }
+tracing-test = { workspace = true }
 
 [lints]
 workspace = true

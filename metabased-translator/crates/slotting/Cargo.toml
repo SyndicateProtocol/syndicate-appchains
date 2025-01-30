@@ -11,18 +11,18 @@ repository.workspace = true
 [dependencies]
 alloy = { workspace = true }
 common = { workspace = true }
-tokio = { workspace = true, features = ["sync", "macros", "rt"] }
+tokio = { workspace = true, features = ["sync", "macros", "rt", "time"] }
 tracing = { workspace = true }
 thiserror = { workspace = true }
-clap = { workspace = true, features = ["derive"] }
 prometheus-client = { workspace = true}
-
-
+clap = { workspace = true, features = ["env", "derive"] }
+derivative = { workspace = true }
 
 [dev-dependencies]
 test-case = { workspace = true }
 serial_test = { workspace = true }
-
+tracing-test = { workspace = true }
+test-utils = { workspace = true }
 
 [lints]
 workspace = true

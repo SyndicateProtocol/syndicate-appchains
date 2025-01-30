@@ -9,14 +9,21 @@ homepage.workspace = true
 repository.workspace = true
 
 [dependencies]
+rocksdb = { workspace = true }
+bincode = { workspace = true }
+async-trait = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
+thiserror = { workspace = true }
+serde_json = { workspace = true }
 strum_macros = { workspace = true }
-alloy = { workspace = true }
+alloy = { workspace = true, features = ["serde"] }
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
 tracing = { workspace = true, features = ["attributes"] }
 
 [dev-dependencies]
 serial_test = { workspace = true }
+tokio = { workspace = true, features = ["rt", "macros"] }
+test-utils = { workspace = true }
 
 [lints]
 workspace = true

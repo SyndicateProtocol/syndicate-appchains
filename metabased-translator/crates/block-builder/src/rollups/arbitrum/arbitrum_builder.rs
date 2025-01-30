@@ -83,8 +83,9 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
 
         let mb_transactions = self.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
 
-        let batch_transaction =
-            self.build_batch_txn(mb_transactions, slot.slot_number, slot.timestamp).await?;
+        let batch_transaction = self
+            .build_batch_txn(mb_transactions, slot.number, slot.timestamp, delayed_messages.len())
+            .await?;
 
         let mut result: Vec<TransactionRequest> = Vec::new();
         result.extend(delayed_messages);
@@ -228,18 +229,21 @@ impl ArbitrumBlockBuilder {
         txs: Vec<Bytes>,
         slot_number: u64,
         slot_timestamp: u64,
+        delayed_message_count: usize,
     ) -> Result<TransactionRequest> {
-        let batch = if txs.is_empty() {
-            Batch(vec![BatchMessage::Delayed])
-        } else {
-            Batch(vec![BatchMessage::L2(L1IncomingMessage {
+        let mut messages = vec![BatchMessage::Delayed; delayed_message_count];
+
+        if !txs.is_empty() {
+            messages.push(BatchMessage::L2(L1IncomingMessage {
                 header: L1IncomingMessageHeader {
                     block_number: slot_number,
                     timestamp: slot_timestamp,
                 },
                 l2_msg: txs,
-            })])
+            }));
         };
+
+        let batch = Batch(messages);
 
         // Encode the batch data
         let encoded_batch = batch.encode()?;
@@ -288,13 +292,13 @@ mod tests {
     async fn test_build_batch_empty_txs() {
         let builder = ArbitrumBlockBuilder::default();
         let txs = vec![];
-        let batch = builder.build_batch_txn(txs, 0, 0).await.unwrap();
+        let batch = builder.build_batch_txn(txs, 0, 0, 0).await.unwrap();
 
         // Verify transaction is sent to sequencer inbox
         assert_eq!(batch.to, Some(TxKind::Call(builder.mchain_rollup_address)));
 
         // For empty batch, should create BatchMessage::Delayed
-        let expected_batch = Batch(vec![BatchMessage::Delayed]);
+        let expected_batch = Batch(vec![]);
         let expected_encoded = expected_batch.encode().unwrap();
 
         // Verify the input data contains the correct parameters
@@ -314,7 +318,7 @@ mod tests {
             hex!("1234").into(), // Sample transaction data
             hex!("5678").into(),
         ];
-        let batch = builder.build_batch_txn(txs.clone(), 0, 0).await.unwrap();
+        let batch = builder.build_batch_txn(txs.clone(), 0, 0, 0).await.unwrap();
 
         // Verify transaction is sent to sequencer inbox
         assert_eq!(batch.to, Some(TxKind::Call(builder.mchain_rollup_address)));
@@ -343,7 +347,7 @@ mod tests {
 
         // Create an empty slot
         let slot = Slot {
-            slot_number: 1,
+            number: 1,
             timestamp: 0,
             state: SlotState::Safe,
             settlement_chain_blocks: vec![],
@@ -429,7 +433,7 @@ mod tests {
         );
 
         let slot = Slot {
-            slot_number: 1,
+            number: 1,
             timestamp: 0,
             state: SlotState::Safe,
             settlement_chain_blocks: vec![block],
@@ -470,7 +474,7 @@ mod tests {
             Block { number: 1, transactions: vec![Transaction::default()], ..Default::default() };
 
         let slot = Slot {
-            slot_number: 1,
+            number: 1,
             timestamp: 0,
             state: SlotState::Safe,
             settlement_chain_blocks: vec![],
@@ -563,7 +567,7 @@ mod tests {
             Receipt { logs: vec![delayed_log, inbox_log], ..Default::default() };
 
         let slot = Slot {
-            slot_number: 1,
+            number: 1,
             timestamp: 0,
             state: SlotState::Safe,
             settlement_chain_blocks: vec![BlockAndReceipts {
@@ -598,10 +602,13 @@ mod tests {
         let batch_txn = &txns[1];
         let txn_data_without_prefix = txn_data[1..].to_vec();
         assert_eq!(batch_txn.to, Some(TxKind::Call(builder.mchain_rollup_address)));
-        let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
-            header: L1IncomingMessageHeader { block_number: 1, timestamp: 0 },
-            l2_msg: vec![txn_data_without_prefix.into()],
-        })]);
+        let expected_batch = Batch(vec![
+            BatchMessage::Delayed,
+            BatchMessage::L2(L1IncomingMessage {
+                header: L1IncomingMessageHeader { block_number: 1, timestamp: 0 },
+                l2_msg: vec![txn_data_without_prefix.into()],
+            }),
+        ]);
         let expected_encoded = expected_batch.encode().unwrap();
         let expected_batch_call =
             Rollup::postBatchCall::new((U256::from(1), expected_encoded)).abi_encode().into();

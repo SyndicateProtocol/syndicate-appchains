@@ -2,34 +2,24 @@
 //! consumer using a channel
 
 use crate::{config::ChainIngestorConfig, eth_client::EthClient, metrics::IngestorMetrics};
-use common::types::BlockAndReceipts;
+use common::types::{BlockAndReceipts, Chain};
 use eyre::{eyre, Error};
 use std::time::Duration;
-use strum::Display;
-use strum_macros::EnumString;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
+use tokio::sync::{
+    mpsc::{channel, Receiver, Sender},
+    oneshot,
+};
 use tracing::{debug, error};
 
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
 pub struct Ingestor {
-    chain: IngestorChain,
+    chain: Chain,
     client: EthClient,
     current_block_number: u64,
     sender: Sender<BlockAndReceipts>,
     polling_interval: Duration,
     metrics: IngestorMetrics,
-}
-
-/// Ingestor chains
-#[derive(Debug, EnumString, Display)]
-pub enum IngestorChain {
-    /// Settlement chain
-    #[strum(serialize = "Ingestor::Settlement")]
-    Settlement,
-    /// Sequencing chain
-    #[strum(serialize = "Ingestor::Sequencing")]
-    Sequencing,
 }
 
 impl Ingestor {
@@ -45,7 +35,7 @@ impl Ingestor {
     /// # Returns
     /// A tuple containing the `Ingestor` instance and a `Receiver` for consuming blocks.
     pub async fn new(
-        chain: IngestorChain,
+        chain: Chain,
         config: ChainIngestorConfig,
         metrics: IngestorMetrics,
     ) -> Result<(Self, Receiver<BlockAndReceipts>), Error> {
@@ -133,13 +123,21 @@ impl Ingestor {
     /// This function returns an `Error` if initialization or any critical operation
     /// fails. Errors during polling (e.g., fetching blocks or pushing data) are logged
     /// and retried within the loop.
-    pub async fn start_polling(&mut self) -> Result<(), Error> {
+    pub async fn start_polling(
+        mut self,
+        mut shutdown_rx: oneshot::Receiver<()>,
+    ) -> Result<(), Error> {
         debug!("Starting polling");
 
         let mut interval = tokio::time::interval(self.polling_interval);
 
         loop {
             tokio::select! {
+                _ = &mut shutdown_rx => {
+                    debug!("Received shutdown signal, stopping polling");
+                    drop(self.sender);
+                    break;
+                }
                 _ = interval.tick() => {
                     match self.get_block_and_receipts(self.current_block_number).await {
                         Ok(block_and_receipts) => {
@@ -152,11 +150,6 @@ impl Ingestor {
                             error!("Failed to fetch block and receipts: {:?}, retrying...", err);
                         }
                     }
-                }
-                // Respond to cancellation
-                _ = tokio::signal::ctrl_c() => {
-                    debug!("Polling task was cancelled");
-                    break;
                 }
             }
         }
@@ -235,7 +228,7 @@ mod tests {
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
 
         let (ingestor, receiver) =
-            Ingestor::new(IngestorChain::Sequencing, config.sequencing.into(), metrics).await?;
+            Ingestor::new(Chain::Sequencing, config.sequencing.into(), metrics).await?;
 
         assert_eq!(ingestor.current_block_number, start_block);
         assert_eq!(receiver.capacity(), buffer_size);
@@ -253,7 +246,7 @@ mod tests {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
         let mut ingestor = Ingestor {
-            chain: IngestorChain::Sequencing,
+            chain: Chain::Sequencing,
             client,
             current_block_number: start_block,
             sender,
@@ -281,8 +274,8 @@ mod tests {
         let client = EthClient::new(test_config().sequencing.sequencing_rpc_url.as_str()).await?;
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
-        let mut ingestor = Ingestor {
-            chain: IngestorChain::Sequencing,
+        let ingestor = Ingestor {
+            chain: Chain::Sequencing,
             client,
             current_block_number: start_block,
             sender,
@@ -290,22 +283,16 @@ mod tests {
             metrics,
         };
 
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let polling_handle = tokio::spawn(async move {
-            let result = ingestor.start_polling().await;
+            let result = ingestor.start_polling(shutdown_rx).await;
             assert!(result.is_ok(), "Polling task failed: {:?}", result);
         });
 
         tokio::time::sleep(Duration::from_millis(50)).await;
 
-        polling_handle.abort();
-
-        let result = polling_handle.await;
-
-        // Assert that the task was canceled successfully
-        assert!(
-            result.is_err() && result.unwrap_err().is_cancelled(),
-            "Expected the polling task to be canceled",
-        );
+        let _ = shutdown_tx.send(());
+        polling_handle.await?;
 
         Ok(())
     }
