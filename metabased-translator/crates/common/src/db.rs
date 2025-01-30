@@ -20,7 +20,6 @@ use async_trait::async_trait;
 use bincode;
 use rocksdb::DB;
 use serde_json;
-use std::hash::{DefaultHasher, Hash, Hasher};
 use thiserror::Error;
 
 const KEY_SLOT: &[u8] = b"slot/latest";
@@ -151,40 +150,12 @@ pub enum DbError {
     BincodeSerialization(#[from] bincode::Error),
 }
 
-// Test utility function, panics are acceptable
-/// Returns a unique temporary path for `RocksDB` test databases.
-///
-/// The path is constructed by:
-/// 1. Getting the caller's source location (file and line)
-/// 2. Appending the current timestamp in nanoseconds and thread ID
-/// 3. Hashing the combined string
-/// 4. Creating a path in the system temp directory with format `"rocksdb_test_{hash}"`
-///
-/// This ensures unique paths for concurrent tests by including both the test location
-/// and thread ID for debugging.
-#[allow(clippy::unwrap_used)] // Test utility function, panics are acceptable
-pub fn test_path() -> String {
-    use std::{
-        panic, thread,
-        time::{SystemTime, UNIX_EPOCH},
-    };
-
-    let location = panic::Location::caller();
-    let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
-    let thread_id = thread::current().id();
-
-    let mut hasher = DefaultHasher::new();
-    format!("{}:{}:{:?}", location, timestamp, thread_id).hash(&mut hasher);
-    let hash = hasher.finish();
-
-    std::env::temp_dir().join(format!("rocksdb_test_{:x}", hash)).to_str().unwrap().to_string()
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
     use crate::types::{Block, BlockAndReceipts};
     use alloy::primitives::B256;
+    use test_utils::test_path;
 
     fn create_test_block(number: u64) -> Block {
         Block {
@@ -202,7 +173,7 @@ mod test {
 
     #[tokio::test]
     async fn test_save_and_get_latest() {
-        let store = RocksDbStore::new(test_path().as_str()).unwrap();
+        let store = RocksDbStore::new(test_path("rocksdb_test").as_str()).unwrap();
         assert!(store.get_latest().await.unwrap().is_none());
 
         let mut slot = Slot::new(1, 1000);

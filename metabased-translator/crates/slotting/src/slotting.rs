@@ -461,6 +461,7 @@ mod tests {
     use alloy::primitives::B256;
     use common::db::RocksDbStore;
     use std::str::FromStr;
+    use test_utils::test_path;
 
     struct TestSetup {
         slot_rx: Receiver<Slot>,
@@ -488,7 +489,7 @@ mod tests {
     ) -> (Slotter, Receiver<Slot>, Sender<BlockAndReceipts>, Sender<BlockAndReceipts>) {
         let (seq_tx, seq_rx) = channel(100);
         let (settle_tx, settle_rx) = channel(100);
-        let store = Box::new(RocksDbStore::new(common::db::test_path().as_str()).unwrap());
+        let store = Box::new(RocksDbStore::new(test_path("slotting_db").as_str()).unwrap());
 
         let (slotter, slot_rx) = Slotter::new(
             seq_rx,
@@ -691,7 +692,7 @@ mod tests {
             SlottingConfig { slot_duration_ms, start_slot_timestamp: slot_start_timestamp_ms };
 
         // Create a fresh DB for this test
-        let db_path = common::db::test_path();
+        let db_path = test_path("slotting_db");
         let store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
 
         // Start first slotter instance

@@ -23,6 +23,7 @@ tracing = { workspace = true, features = ["attributes"] }
 [dev-dependencies]
 serial_test = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros"] }
+test-utils = { workspace = true }
 
 [lints]
 workspace = true

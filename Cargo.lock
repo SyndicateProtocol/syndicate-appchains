@@ -1248,6 +1248,7 @@ dependencies = [
  "serde_json",
  "serial_test",
  "strum_macros",
+ "test-utils",
  "thiserror 2.0.11",
  "tokio",
  "tracing",
@@ -3764,6 +3765,7 @@ dependencies = [
  "derivative",
  "serial_test",
  "test-case",
+ "test-utils",
  "thiserror 2.0.11",
  "tokio",
  "tracing",
@@ -3994,6 +3996,10 @@ dependencies = [
  "syn 2.0.96",
  "test-case-core",
 ]
+
+[[package]]
+name = "test-utils"
+version = "0.1.0"
 
 [[package]]
 name = "thiserror"
