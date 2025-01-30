@@ -13,8 +13,8 @@ permissions:
   packages: read  # Allows pulling cached container images from GHCR
 
 jobs:
-  metabased-sequencer-test:
-    name: Metabased Sequencer Test
+  metabased-e2e-test:
+    name: Metabased E2E Test
     runs-on: ubuntu-latest
 
     steps:
@@ -43,6 +43,9 @@ jobs:
           runCmd: |
             # Run all verifications
             just verify-all
+
+            # Run E2E tests within our Rust code
+            just e2e-tests
 
       - name: Upload logs
         if: always()
