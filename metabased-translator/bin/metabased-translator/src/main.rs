@@ -60,8 +60,14 @@ async fn run(
     let (settlement_ingestor, settlement_rx) =
         Ingestor::new(Chain::Settlement, settlement_config.into(), metrics.ingestor_settlement)
             .await?;
-    let (slotter, slot_rx) =
-        Slotter::new(sequencing_rx, settlement_rx, slotting_config, safe_state, db);
+    let (slotter, slot_rx) = Slotter::new(
+        sequencing_rx,
+        settlement_rx,
+        slotting_config,
+        safe_state,
+        db,
+        metrics.slotting,
+    );
     let block_builder = BlockBuilder::new(slot_rx, block_builder_config).await?;
 
     // Start component tasks

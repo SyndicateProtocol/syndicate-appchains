@@ -24,7 +24,17 @@ The following metrics are implemented and exposed via the `/metrics` endpoint in
 
 #### Slotting
 
-TODO SEQ-506
+1. **slotting_last_sequencing_block**: Tracks the last block number fetched from the sequencing chain.
+   - **Metric Type**: Gauge
+
+2. **slotting_last_settlement_block**: Tracks the last block number fetched from the settlement chain.
+   - **Metric Type**: Gauge
+
+3. **slotting_active_slots**: Tracks the number of active slots being processed.
+   - **Metric Type**: Gauge
+
+4. **slotting_status**: Indicates the current status of the Slotter (0 = NotStarted, 1 = Started, 2 = Stopped).
+   - **Metric Type**: Gauge
 
 #### Block builder
 

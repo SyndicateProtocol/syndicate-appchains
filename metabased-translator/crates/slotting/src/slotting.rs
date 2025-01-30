@@ -1,6 +1,6 @@
 //! Slotting module for metabased-translator
 
-use crate::config::SlottingConfig;
+use crate::{config::SlottingConfig, metrics::SlottingMetrics};
 use common::{
     db::{DbError, SafeState, TranslatorStore},
     types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotState},
@@ -57,6 +57,9 @@ pub struct Slotter {
 
     #[derivative(Debug = "ignore")]
     store: Box<dyn TranslatorStore + Send + Sync>,
+
+    /// Metrics
+    metrics: SlottingMetrics,
 }
 
 const fn calculate_max_slots(slot_duration_ms: u64) -> usize {
@@ -88,6 +91,7 @@ impl Slotter {
         config: SlottingConfig,
         safe_state: Option<SafeState>,
         store: Box<dyn TranslatorStore + Send + Sync>,
+        metrics: SlottingMetrics,
     ) -> (Self, Receiver<Slot>) {
         let (slot_tx, slot_rx) = channel(100);
         let mut slots = LinkedList::new();
@@ -112,6 +116,7 @@ impl Slotter {
             config,
             sender: slot_tx,
             store,
+            metrics,
         };
         (slotter, slot_rx)
     }
@@ -155,7 +160,10 @@ impl Slotter {
                     .await
                 }
             };
-
+            self.metrics
+                .update_channel_capacity(self.sequencing_chain_rx.capacity(), Chain::Sequencing);
+            self.metrics
+                .update_channel_capacity(self.settlement_chain_rx.capacity(), Chain::Settlement);
             match process_result {
                 Ok(_) => (),
                 Err(e) => match e {
@@ -258,6 +266,7 @@ impl Slotter {
         let block_timestamp = block_info.block.timestamp;
         self.update_latest_block(&block_info.block, chain)?;
         let latest_slot = self.slots.front_mut().ok_or(SlotterError::NoSlotsAvailable)?;
+        self.metrics.record_blocks_per_slot(latest_slot.get_total_blocks() as u64);
         debug!(
             ?chain,
             block_number = block_info.block.number,
@@ -317,7 +326,7 @@ impl Slotter {
                 latest_slot.push_block(block_info, chain);
             }
         }
-
+        self.metrics.update_active_slots(self.slots.len());
         self.mark_unsafe_slots(block_timestamp, chain).await?;
         self.cleanup_slots().await?;
         Ok(())
@@ -342,6 +351,7 @@ impl Slotter {
                 }
             }
         }
+        self.metrics.update_active_slots(self.slots.len());
         Ok(())
     }
 
@@ -387,6 +397,8 @@ impl Slotter {
             Chain::Sequencing => self.latest_sequencing_block = Some(BlockRef::new(block)),
             Chain::Settlement => self.latest_settlement_block = Some(BlockRef::new(block)),
         }
+        self.metrics.record_last_block_processed(block.number, chain);
+        self.metrics.update_chain_timestamp_lag(block.timestamp, chain);
         Ok(())
     }
 }
@@ -459,8 +471,14 @@ pub enum SlotterError {
 mod tests {
     use super::*;
     use alloy::primitives::B256;
-    use common::db::RocksDbStore;
+    use prometheus_client::registry::Registry;
     use std::str::FromStr;
+
+    struct MetricsState {
+        /// Prometheus registry
+        pub registry: Registry,
+    }
+    use common::db::RocksDbStore;
     use test_utils::test_path;
 
     struct TestSetup {
@@ -489,6 +507,8 @@ mod tests {
     ) -> (Slotter, Receiver<Slot>, Sender<BlockAndReceipts>, Sender<BlockAndReceipts>) {
         let (seq_tx, seq_rx) = channel(100);
         let (settle_tx, settle_rx) = channel(100);
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = SlottingMetrics::new(&mut metrics_state.registry);
         let store = Box::new(RocksDbStore::new(test_path("slotting_db").as_str()).unwrap());
 
         let (slotter, slot_rx) = Slotter::new(
@@ -497,6 +517,7 @@ mod tests {
             SlottingConfig { slot_duration_ms, start_slot_timestamp: slot_start_timestamp_ms },
             None,
             store,
+            metrics,
         );
 
         (slotter, slot_rx, seq_tx, settle_tx)
@@ -697,7 +718,10 @@ mod tests {
 
         // Start first slotter instance
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let (slotter, mut slot_rx) = Slotter::new(seq_rx, set_rx, config.clone(), None, store);
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = SlottingMetrics::new(&mut metrics_state.registry);
+        let (slotter, mut slot_rx) =
+            Slotter::new(seq_rx, set_rx, config.clone(), None, store, metrics);
         let handle = tokio::spawn(async move { slotter.start(shutdown_rx).await });
 
         // Send some blocks
@@ -747,9 +771,12 @@ mod tests {
         let resumed_store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
         let resumed_state = resumed_store.get_latest().await.unwrap();
 
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = SlottingMetrics::new(&mut metrics_state.registry);
+
         // Create new slotter that should resume from DB
         let (resumed_slotter, mut resumed_slot_rx) =
-            Slotter::new(new_seq_rx, new_settle_rx, config, resumed_state, resumed_store);
+            Slotter::new(new_seq_rx, new_settle_rx, config, resumed_state, resumed_store, metrics);
 
         let (_shutdown_tx, shutdown_rx) = oneshot::channel();
         tokio::spawn(async move { resumed_slotter.start(shutdown_rx).await });
