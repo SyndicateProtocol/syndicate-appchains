@@ -61,7 +61,18 @@ pub trait TranslatorStore {
     /// * `Err(DbError)` if there was an error saving to the database
     async fn save_slot(&self, slot: &Slot) -> Result<(), DbError>;
 
-    /// Returns the latest safe state from the database
+    /// Returns the latest safe state from the database, if one exists.
+    ///
+    /// The safe state represents the last known safe state (that won't be reorged) of the system,
+    /// including:
+    /// - The latest safe sequencing block
+    /// - The latest safe settlement block
+    /// - The latest safe slot
+    ///
+    /// This is used for resuming the translator from a previous shutdown.
+    ///
+    /// NOTE: if a safe state is not found, or a block is missing for a chain, it is considered that
+    /// the DB is empty and the translator will start from the genesis block/slot
     ///
     /// # Returns
     /// * `Ok(Some(SafeState))` if a safe state was found in the database
