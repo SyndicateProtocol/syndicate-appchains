@@ -10,8 +10,6 @@ pub struct SlottingMetrics {
     pub last_settlement_block: Gauge,
     /// Tracks the current number of active slots
     pub active_slots: Gauge,
-    /// Tracks the Slotting service status
-    pub slotting_status: Gauge,
 }
 
 impl SlottingMetrics {
@@ -20,7 +18,6 @@ impl SlottingMetrics {
         let slotting_last_sequencing_block = Gauge::default();
         let slotting_last_settlement_block = Gauge::default();
         let active_slots = Gauge::default();
-        let slotting_status = Gauge::default();
 
         registry.register(
             "slotting_last_sequencing_block",
@@ -40,17 +37,10 @@ impl SlottingMetrics {
             active_slots.clone(),
         );
 
-        registry.register(
-            "slotting_status",
-            "Indicates the current status of the Slotting (0 = NotStarted, 1 = Started, 2 = Stopped)",
-            slotting_status.clone(),
-        );
-
         Self {
             last_sequencing_block: slotting_last_sequencing_block,
             last_settlement_block: slotting_last_settlement_block,
             active_slots,
-            slotting_status,
         }
     }
 
@@ -69,11 +59,6 @@ impl SlottingMetrics {
     pub fn update_active_slots(&self, slots: usize) {
         self.active_slots.set(slots as i64);
     }
-
-    /// Updates the Slotting status.
-    pub fn update_slotting_status(&self, status: i32) {
-        self.slotting_status.set(status as i64);
-    }
 }
 
 #[cfg(test)]
@@ -89,7 +74,6 @@ mod tests {
         assert_eq!(metrics.last_sequencing_block.get(), 0);
         assert_eq!(metrics.last_settlement_block.get(), 0);
         assert_eq!(metrics.active_slots.get(), 0);
-        assert_eq!(metrics.slotting_status.get(), 0);
     }
 
     #[test]
@@ -118,17 +102,5 @@ mod tests {
 
         metrics.update_active_slots(0);
         assert_eq!(metrics.active_slots.get(), 0);
-    }
-
-    #[test]
-    fn test_update_slotting_status() {
-        let mut registry = Registry::default();
-        let metrics = SlottingMetrics::new(&mut registry);
-
-        metrics.update_slotting_status(1);
-        assert_eq!(metrics.slotting_status.get(), 1);
-
-        metrics.update_slotting_status(0);
-        assert_eq!(metrics.slotting_status.get(), 0);
     }
 }
