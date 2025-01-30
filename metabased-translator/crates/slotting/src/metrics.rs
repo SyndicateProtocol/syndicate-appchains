@@ -157,6 +157,7 @@ impl SlottingMetrics {
 mod tests {
     use super::*;
     use prometheus_client::registry::Registry;
+    use std::time::{SystemTime, UNIX_EPOCH};
 
     #[test]
     fn test_metrics_initialization() {
@@ -176,10 +177,7 @@ mod tests {
         metrics.record_last_block_processed(42, Chain::Sequencing);
         assert_eq!(metrics.last_sequencing_block.get(), 42);
 
-        metrics.record_last_block_processed(84, Chain::Sequencing);
-        assert_eq!(metrics.last_settlement_block.get(), 84);
-
-        assert_eq!(metrics.last_sequencing_block.get(), 42);
+        metrics.record_last_block_processed(84, Chain::Settlement);
         assert_eq!(metrics.last_settlement_block.get(), 84);
     }
 
@@ -193,5 +191,44 @@ mod tests {
 
         metrics.update_active_slots(0);
         assert_eq!(metrics.active_slots.get(), 0);
+    }
+
+    #[test]
+    fn test_update_chain_timestamp_lag() {
+        let mut registry = Registry::default();
+        let metrics = SlottingMetrics::new(&mut registry);
+
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
+        let past_timestamp = now - 5000; // 5 seconds ago
+        metrics.update_chain_timestamp_lag(past_timestamp, Chain::Sequencing);
+        assert!(metrics.sequencing_timestamp_lag_ms.get() >= 5000);
+
+        let past_timestamp = now - 10000; // 10 seconds ago
+        metrics.update_chain_timestamp_lag(past_timestamp, Chain::Settlement);
+        assert!(metrics.settlement_timestamp_lag_ms.get() >= 10000);
+    }
+
+    #[test]
+    fn test_record_blocks_per_slot() {
+        let mut registry = Registry::default();
+        let metrics = SlottingMetrics::new(&mut registry);
+
+        metrics.record_blocks_per_slot(5);
+        metrics.record_blocks_per_slot(10);
+
+        // Indirect validation - Histogram should accept observations without errors
+        metrics.record_blocks_per_slot(20);
+    }
+
+    #[test]
+    fn test_update_channel_capacity() {
+        let mut registry = Registry::default();
+        let metrics = SlottingMetrics::new(&mut registry);
+
+        metrics.update_channel_capacity(50, Chain::Sequencing);
+        assert_eq!(metrics.sequencing_channel_capacity.get(), 50);
+
+        metrics.update_channel_capacity(100, Chain::Settlement);
+        assert_eq!(metrics.settlement_channel_capacity.get(), 100);
     }
 }
