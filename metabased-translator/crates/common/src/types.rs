@@ -215,6 +215,11 @@ impl Slot {
             Chain::Settlement => self.settlement_chain_blocks.push(block),
         }
     }
+
+    /// Gets total blocks in Slot
+    pub fn get_total_blocks(&self) -> usize {
+        self.sequencing_chain_blocks.len() + self.settlement_chain_blocks.len()
+    }
 }
 
 impl fmt::Display for Slot {

@@ -160,7 +160,10 @@ impl Slotter {
                     .await
                 }
             };
-
+            self.metrics
+                .update_channel_capacity(self.sequencing_chain_rx.capacity(), Chain::Sequencing);
+            self.metrics
+                .update_channel_capacity(self.settlement_chain_rx.capacity(), Chain::Settlement);
             match process_result {
                 Ok(_) => (),
                 Err(e) => match e {
@@ -263,6 +266,7 @@ impl Slotter {
         let block_timestamp = block_info.block.timestamp;
         self.update_latest_block(&block_info.block, chain)?;
         let latest_slot = self.slots.front_mut().ok_or(SlotterError::NoSlotsAvailable)?;
+        self.metrics.record_blocks_per_slot(latest_slot.get_total_blocks() as u64);
         debug!(
             ?chain,
             block_number = block_info.block.number,
