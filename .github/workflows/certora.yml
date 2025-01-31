@@ -30,7 +30,14 @@ jobs:
         working-directory: metabased-contracts
     strategy:
       matrix:
-        rule: ["MetabasedSequencerChain", "AllowlistSequencingModule"]
+        rule:
+          [
+            "MetabasedSequencerChain",
+            "AllowlistSequencingModule",
+            "AtomicSequencer",
+            "AtomicSequencerImplementation",
+            "SyndicateToken",
+          ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
