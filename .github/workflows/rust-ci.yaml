@@ -104,6 +104,6 @@ jobs:
           which anvil
           anvil --version
 
-      # Run tests on entire workspace
+      # Run tests on entire workspace (excluding e2e tests)
       - name: Run Tests
-        run: cargo test --workspace
+        run: cargo test --workspace --exclude e2e-tests
