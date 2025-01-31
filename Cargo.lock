@@ -1079,6 +1079,7 @@ dependencies = [
  "eyre",
  "flate2",
  "hex",
+ "prometheus-client",
  "reqwest",
  "serde",
  "serde_json",
@@ -2698,6 +2699,7 @@ version = "0.1.0"
 dependencies = [
  "assert_matches",
  "axum",
+ "block-builder",
  "clap",
  "common",
  "ingestor",

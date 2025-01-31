@@ -15,6 +15,7 @@ use block_builder::{
     block_builder::BlockBuilder,
     config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
     connectors::anvil::{self, MetaChainProvider},
+    metrics::BlockBuilderMetrics,
     rollups::arbitrum,
 };
 use common::{
@@ -331,7 +332,12 @@ async fn e2e_test() -> Result<()> {
     let _slotter_task = Task(tokio::spawn(async move {
         slotter.start(dummy).await;
     }));
-    let block_builder = BlockBuilder::new(slotter_rx, block_builder_cfg).await?;
+    let block_builder = BlockBuilder::new(
+        slotter_rx,
+        block_builder_cfg,
+        BlockBuilderMetrics::new(&mut metrics_state.registry),
+    )
+    .await?;
     let (_nitro, rollup) = launch_nitro_node(&block_builder.mchain).await?;
     let (_dummy, dummy) = tokio::sync::oneshot::channel();
     let _block_builder_task = Task(tokio::spawn(async move {
