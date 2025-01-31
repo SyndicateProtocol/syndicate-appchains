@@ -1,8 +1,7 @@
 //! Anvil connector for the `MetaChain`
 use crate::{
     block_builder::BlockBuilderError,
-    config::{get_default_private_key_signer, BlockBuilderConfig},
-    rollups::arbitrum,
+    config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
 };
 use alloy::{
     network::{Ethereum, EthereumWallet},
@@ -14,7 +13,7 @@ use alloy::{
             BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
             WalletFiller,
         },
-        Identity, Provider, ProviderBuilder, RootProvider, WalletProvider,
+        Identity, Provider, ProviderBuilder, RootProvider,
     },
     rpc::types::{anvil::MineOptions, TransactionRequest},
     transports::http::Http,
@@ -25,7 +24,8 @@ use reqwest::Client;
 use std::net::TcpListener;
 use tracing::info;
 
-type FilledProvider = FillProvider<
+#[allow(missing_docs)]
+pub type FilledProvider = FillProvider<
     JoinFill<
         JoinFill<
             Identity,
@@ -46,7 +46,7 @@ pub struct MetaChainProvider {
     pub anvil: AnvilInstance,
     pub provider: FilledProvider,
     pub rollup: Rollup::RollupInstance<Http<Client>, FilledProvider>,
-    pub rollup_info: String,
+    pub target_chain_id: u64,
 }
 
 /// The chain id of the metachain. This is the same for all rollups.
@@ -78,9 +78,16 @@ impl MetaChainProvider {
             "--no-mining",
         ];
 
-        if !config.file.is_empty() {
+        let state_interval = config.anvil_state_interval.to_string();
+        let prune_history = config.anvil_prune_history.to_string();
+
+        if !config.anvil_state_path.is_empty() {
             args.push("--state");
-            args.push(&config.file);
+            args.push(&config.anvil_state_path);
+            args.push("--state-interval");
+            args.push(&state_interval);
+            args.push("--prune-history");
+            args.push(&prune_history);
         }
 
         let anvil = Anvil::new().port(port).chain_id(MCHAIN_ID).args(args).try_spawn()?;
@@ -89,36 +96,25 @@ impl MetaChainProvider {
             .with_recommended_fillers()
             .wallet(EthereumWallet::from(get_default_private_key_signer()))
             .on_http(anvil.endpoint_url());
-
-        let rollup_config = Self::rollup_config(U256::from(config.target_chain_id));
-
-        let deploy_tx = Rollup::deploy_builder(
-            &provider,
-            U256::from(config.target_chain_id),
-            rollup_config.clone(),
-        )
-        .nonce(0)
-        .from(provider.default_signer_address());
-        let contract_addr =
-            deploy_tx.calculate_create_address().ok_or(BlockBuilderError::NoContractAddress())?;
         provider.anvil_set_block_timestamp_interval(1).await?;
 
+        let rollup_config = Self::rollup_config(config.target_chain_id);
+
         if provider.get_block_number().await? == 0 {
-            _ = deploy_tx.send().await?;
+            _ = Rollup::deploy_builder(
+                &provider,
+                U256::from(config.target_chain_id),
+                rollup_config.clone(),
+            )
+            .nonce(0)
+            .send()
+            .await?;
             provider.anvil_mine(Some(U256::from(1)), None::<U256>).await?;
         }
 
-        let rollup = Rollup::new(contract_addr, provider.clone());
+        let rollup = Rollup::new(get_rollup_contract_address(), provider.clone());
 
-        let rollup_info = Self::rollup_info(
-            "test",
-            U256::from(MCHAIN_ID),
-            &rollup_config,
-            rollup.address(),
-            U256::from(1),
-        );
-
-        Ok(Self { anvil, provider, rollup, rollup_info })
+        Ok(Self { anvil, provider, rollup, target_chain_id: config.target_chain_id })
     }
 
     /// Submits a list of transactions to the `MetaChain`
@@ -147,7 +143,8 @@ impl MetaChainProvider {
         Ok(())
     }
 
-    fn rollup_config(chain_id: U256) -> String {
+    /// Return the on-chain config for a rollup with a given chain id
+    pub fn rollup_config(chain_id: u64) -> String {
         let zero = Address::ZERO;
         format!(
             r#"{{
@@ -182,18 +179,16 @@ impl MetaChainProvider {
         )
     }
 
-    fn rollup_info(
-        chain_name: &str,
-        chain_id: U256,
-        rollup_config: &str,
-        rollup: &Address,
-        deployed_at: U256,
-    ) -> String {
+    /// Get the nitro json configuration data for the rollup
+    pub fn rollup_info(&self, chain_name: &str) -> String {
+        let rollup_config = Self::rollup_config(self.target_chain_id);
+        let rollup = get_rollup_contract_address();
+        let deployed_at: u64 = 1;
         let zero = Address::ZERO;
         format!(
             r#"[{{
               "chain-name": "{chain_name}",
-              "parent-chain-id": {chain_id},
+              "parent-chain-id": {MCHAIN_ID},
               "parent-chain-is-arbitrum": false,
               "sequencer-url": "",
               "secondary-forwarding-target": "",
@@ -216,26 +211,25 @@ impl MetaChainProvider {
         )
     }
 
-    /// post a rollup batch to the mchain and mine the next block
-    pub async fn send_batch(&self, batch: &arbitrum::batch::Batch) -> Result<()> {
-        let tx = self
-            .rollup
-            .postBatch(
-                U256::from(
-                    batch
-                        .0
-                        .iter()
-                        .filter(|x| matches!(x, arbitrum::batch::BatchMessage::Delayed))
-                        .count(),
-                ),
-                batch.encode()?,
-            )
-            .send()
-            .await?
-            .watch();
-        self.mine_block(0).await?;
-        tx.await?;
-        Ok(())
+    /// Rolls back the chain to a specific block number by performing a reorg
+    pub async fn rollback_to_block(&self, _block_number: u64) -> Result<()> {
+        panic!("not implemented"); // TODO SEQ-528
+
+        // let current_block = self.provider.get_block_number().await?;
+        // let depth = current_block - block_number;
+        // self.provider.anvil_reorg(ReorgOptions { depth, tx_block_pairs: vec![] }).await?;
+
+        // // Verify we're at the correct block
+        // let new_block = self.provider.get_block_number().await?;
+        // if new_block != block_number {
+        //     return Err(eyre::eyre!(
+        //         "Failed to rollback: expected block {}, got block {}",
+        //         block_number,
+        //         new_block
+        //     ));
+        // }
+
+        // Ok(())
     }
 }
 
@@ -263,7 +257,8 @@ pub fn find_available_port(base_port: u16, max_attempts: u16) -> Option<u16> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::env::temp_dir;
+    use alloy::{eips::BlockId, rpc::types::BlockTransactionsKind};
+    use std::{env::temp_dir, fs, path::PathBuf};
 
     #[tokio::test]
     async fn test_port_availability_checking() -> Result<()> {
@@ -295,10 +290,10 @@ mod tests {
         let file = temp_dir().join("dump.json");
         let cfg = BlockBuilderConfig {
             port: 9888,
-            file: file.to_str().unwrap().to_string(),
+            anvil_state_path: file.to_str().unwrap().to_string(),
             ..Default::default()
         };
-        _ = std::fs::remove_file(file);
+        _ = fs::remove_file(file);
         let mut provider = MetaChainProvider::start(cfg.clone()).await?;
         provider.mine_block(0).await?;
         let old_count = provider.provider.get_block_number().await?;
@@ -307,6 +302,78 @@ mod tests {
         provider = MetaChainProvider::start(cfg).await?;
         let new_count = provider.provider.get_block_number().await?;
         assert_eq!(old_count, new_count);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_block_persistence() -> Result<()> {
+        let state_path = PathBuf::from("test-state.json");
+
+        let config = BlockBuilderConfig {
+            anvil_state_path: state_path.to_str().unwrap().to_string(),
+            genesis_timestamp: 999,
+            port: 9889,
+            ..Default::default()
+        };
+
+        // First instance: create blocks
+        {
+            let chain = MetaChainProvider::start(config.clone()).await?;
+
+            // Mine 1000 blocks
+            for i in 1000..2000 {
+                chain.mine_block(i as u64).await?;
+            }
+
+            // Let anvil write state before dropping
+            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+        } // First instance is dropped here
+
+        // Second instance: verify blocks
+        let chain = MetaChainProvider::start(config).await?;
+
+        // Check a few random blocks are accessible
+        for block_num in [0, 42, 567, 999, 1000] {
+            let block = chain
+                .provider
+                .get_block(BlockId::Number(block_num.into()), BlockTransactionsKind::Full)
+                .await?;
+            assert!(block.is_some(), "Block {} should be available", block_num);
+            assert_eq!(
+                block.unwrap().header.number,
+                block_num,
+                "Block number mismatch for block {}",
+                block_num
+            );
+        }
+
+        // Cleanup
+        fs::remove_file(state_path)?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[ignore] // TODO SEQ-528 unskip
+    async fn test_anvil_rollback() -> Result<()> {
+        // TODO SEQ-528 refactor these test-state-paths
+        let state_path = PathBuf::from("test-state1.json");
+        let config = BlockBuilderConfig {
+            anvil_state_path: state_path.to_str().unwrap().to_string(),
+            genesis_timestamp: 999,
+            ..Default::default()
+        };
+
+        let chain = MetaChainProvider::start(config).await?;
+        // Mine 10 blocks
+        for i in 1000..1010 {
+            chain.mine_block(i as u64).await?;
+        }
+
+        chain.rollback_to_block(5).await?;
+        let block_num = chain.provider.get_block_number().await?;
+        assert_eq!(block_num, 5, "Chain should be at block 5");
+
         Ok(())
     }
 }

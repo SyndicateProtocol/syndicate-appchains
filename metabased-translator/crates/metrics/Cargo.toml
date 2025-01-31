@@ -12,13 +12,17 @@ repository.workspace = true
 [dependencies]
 axum = { workspace = true }
 clap = { workspace = true }
+common ={ workspace = true }
 prometheus-client = { workspace = true }
 reqwest = { workspace = true }
 tokio ={ workspace = true}
 thiserror = { workspace = true}
 tracing = { workspace = true }
 ingestor = { workspace = true}
+slotting = { workspace = true }
 
+[dev-dependencies]
+assert_matches = { workspace = true }
 
 [lints]
 workspace = true

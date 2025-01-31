@@ -57,9 +57,8 @@ contract Rollup {
         return sequencerInboxAccs[index];
     }
 
-    function postBatch(uint256 delayedMessages, bytes calldata data) public {
-        uint256 afterDelayedMessagesRead = totalDelayedMessagesRead + delayedMessages;
-        if (afterDelayedMessagesRead > delayedInboxAccs.length) revert DelayedTooFar();
+    function postBatch(bytes calldata data) public {
+        uint256 afterDelayedMessagesRead = delayedInboxAccs.length;
         (bytes32 dataHash, IBridge.TimeBounds memory timeBounds) = formCallDataHash(data, afterDelayedMessagesRead);
         uint256 seqMessageIndex = sequencerInboxAccs.length;
         bytes32 beforeAcc = 0;

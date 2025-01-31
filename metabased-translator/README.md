@@ -4,6 +4,42 @@ This is a service that ingests L2 transaction data, organizes the data into slot
 
 It consists of a `common` crate and 3 component crates: `ingestor`, `slotting` and `block-builder`
 
+#### Metachain configuration
+
+The metachain has chain id 84532 and a genesis timestamp of 1712500000.
+
+The rollup contract is deployed to 0x5FbDB2315678afecb367f032d93F642f64180aa3 on the first metachain block
+with the following on-chain configuration:
+{
+   "chainId": 13331370,
+   "homesteadBlock": 0,
+   "daoForkBlock": null,
+   "daoForkSupport": true,
+   "eip150Block": 0,
+   "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+   "eip155Block": 0,
+   "eip158Block": 0,
+   "byzantiumBlock": 0,
+   "constantinopleBlock": 0,
+   "petersburgBlock": 0,
+   "istanbulBlock": 0,
+   "muirGlacierBlock": 0,
+   "berlinBlock": 0,
+   "londonBlock": 0,
+   "clique": {
+      "period": 0,
+      "epoch": 0
+   },
+   "arbitrum": {
+      "EnableArbOS": true,
+      "AllowDebugPrecompiles": false,
+      "DataAvailabilityCommittee": false,
+      "InitialArbOSVersion": 10,
+      "InitialChainOwner": "0x0000000000000000000000000000000000000000",
+      "GenesisBlockNum": 0
+   }
+}
+
 #### Rust configuration
 
 Make sure you are using the nightly rust toolkit

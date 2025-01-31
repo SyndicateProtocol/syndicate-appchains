@@ -12,13 +12,20 @@ repository.workspace = true
 alloy = { workspace = true, features = ["providers"] }
 common = { workspace = true }
 eyre = { workspace = true }
-tokio = { workspace = true, features = ["sync", "time", "rt-multi-thread", "signal"] }
+tokio = { workspace = true, features = [
+  "sync",
+  "time",
+  "rt-multi-thread",
+  "signal",
+] }
 tracing = { workspace = true }
 thiserror = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
-prometheus-client = { workspace = true}
-strum = { workspace = true }
-strum_macros = { workspace = true }
+humantime = { workspace = true }
+prometheus-client = { workspace = true }
+
+[dev-dependencies]
+assert_matches = { workspace = true }
 
 [lints]
 workspace = true

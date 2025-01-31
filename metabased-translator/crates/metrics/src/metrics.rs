@@ -10,6 +10,7 @@ use axum::{
 };
 use ingestor::metrics::IngestorMetrics;
 use prometheus_client::{encoding::text::encode, registry::Registry};
+use slotting::metrics::SlottingMetrics;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -20,6 +21,8 @@ pub struct TranslatorMetrics {
     pub ingestor_sequencing: IngestorMetrics,
     /// Metrics for the settlement ingestor
     pub ingestor_settlement: IngestorMetrics,
+    /// Metrics for the slotting
+    pub slotting: SlottingMetrics,
 }
 
 impl TranslatorMetrics {
@@ -28,7 +31,8 @@ impl TranslatorMetrics {
     pub fn new(registry: &mut Registry) -> Self {
         let ingestor_sequencing = IngestorMetrics::new(registry);
         let ingestor_settlement = IngestorMetrics::new(registry);
-        Self { ingestor_sequencing, ingestor_settlement }
+        let slotting = SlottingMetrics::new(registry);
+        Self { ingestor_sequencing, ingestor_settlement, slotting }
     }
 }
 
@@ -81,6 +85,7 @@ pub async fn start_metrics(metrics_state: MetricsState, port: u16) -> tokio::tas
 mod tests {
     use super::*;
     use axum::http::StatusCode;
+    use common::types::Chain;
     use ingestor::metrics::Labels;
     use reqwest::Client;
     use std::time::Duration;
@@ -90,12 +95,12 @@ mod tests {
     async fn test_record_last_block_fetched() {
         let mut registry = Registry::default();
         let ingestor_metrics = IngestorMetrics::new(&mut registry);
-        ingestor_metrics.record_last_block_fetched("test_label".to_string(), 100);
+        ingestor_metrics.record_last_block_fetched(Chain::Settlement, 100);
 
         let gauge = ingestor_metrics
-            .last_block_fetched
+            .ingestor_last_block_fetched
             .get_or_create(&Labels {
-                label_name: "test_label".to_string(),
+                chain: Chain::Settlement.into(),
                 method: "last_block_fetched",
             })
             .clone();
@@ -108,14 +113,14 @@ mod tests {
         let ingestor_metrics = IngestorMetrics::new(&mut registry);
 
         ingestor_metrics.record_rpc_call(
-            "test_label".to_string(),
+            Chain::Settlement,
             "test_method",
             Duration::from_millis(500),
         );
 
         let counter = ingestor_metrics
-            .rpc_calls
-            .get_or_create(&Labels { label_name: "test_label".to_string(), method: "test_method" })
+            .ingestor_rpc_calls
+            .get_or_create(&Labels { chain: Chain::Settlement.into(), method: "test_method" })
             .clone();
         assert_eq!(counter.get(), 1);
     }
