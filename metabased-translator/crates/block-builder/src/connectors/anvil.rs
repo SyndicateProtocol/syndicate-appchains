@@ -1,10 +1,10 @@
 //! Anvil connector for the `MetaChain`
 use crate::{
-    config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
     block_builder::{
         AnvilStartError::{InvalidHost, NoPort, PortUnavailable},
         BlockBuilderError,
     },
+    config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
     rollups::arbitrum,
 };
 use alloy::{
@@ -123,9 +123,9 @@ impl MetaChainProvider {
                 U256::from(config.target_chain_id),
                 rollup_config.clone(),
             )
-                .nonce(0)
-                .send()
-                .await?;
+            .nonce(0)
+            .send()
+            .await?;
             provider.anvil_mine(Some(U256::from(1)), None::<U256>).await?;
         }
 
