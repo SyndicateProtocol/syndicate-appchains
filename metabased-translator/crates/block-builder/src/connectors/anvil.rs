@@ -290,8 +290,8 @@ mod tests {
         let mut provider = MetaChainProvider::start(cfg.clone()).await?;
         provider.mine_block(0).await?;
         let old_count = provider.provider.get_block_number().await?;
-        std::process::Command::new("kill").arg(provider.anvil.child().id().to_string()).output()?;
-        provider.anvil.child_mut().wait()?;
+        drop(provider); // To explicitly release the port
+
         provider = MetaChainProvider::start(cfg).await?;
         let new_count = provider.provider.get_block_number().await?;
         assert_eq!(old_count, new_count);
