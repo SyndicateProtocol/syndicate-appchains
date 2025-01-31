@@ -13,7 +13,7 @@ pub struct Labels {
 pub struct BlockBuilderMetrics {
     /// Tracks the channel capacity
     pub block_builder_channel_capacity: Gauge,
-    /// Tracks the number of built transactions per slot
+    /// Tracks the number of built transactions
     pub block_builder_transactions_per_slot: Gauge,
     /// Records the last slot number processed by the `BlockBuilder`s
     pub block_builder_last_processed_slot: Gauge,
@@ -54,7 +54,7 @@ impl BlockBuilderMetrics {
         self.block_builder_channel_capacity.set(capacity as i64);
     }
 
-    /// Records the number of transactions per slot
+    /// Records the number of built transactions
     pub fn record_transactions_per_slot(&self, transactions_len: usize) {
         self.block_builder_transactions_per_slot.set(transactions_len as i64);
     }
