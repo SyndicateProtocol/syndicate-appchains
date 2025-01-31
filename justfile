@@ -33,7 +33,7 @@ op_devnet_l2_chain_id := "901"
 arb_orbit_l2_chain_id := "412346"
 
 # Default localnet port
-arb_orbit_l2_port := "8547"
+arb_orbit_l2_port := "9545"
 
 arb_orbit_l2_rpc_url := "http://127.0.0.1:" + arb_orbit_l2_port
 
