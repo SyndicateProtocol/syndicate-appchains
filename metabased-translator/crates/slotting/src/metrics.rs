@@ -140,7 +140,7 @@ mod tests {
         assert_eq!(
             metrics
                 .slotting_last_processed_block
-                .get_or_create(&Labels { chain: "Sequencing" })
+                .get_or_create(&Labels { chain: "sequencing" })
                 .get(),
             0
         );
@@ -156,7 +156,7 @@ mod tests {
         assert_eq!(
             metrics
                 .slotting_last_processed_block
-                .get_or_create(&Labels { chain: "Sequencing" })
+                .get_or_create(&Labels { chain: "sequencing" })
                 .get(),
             42
         );
@@ -165,7 +165,7 @@ mod tests {
         assert_eq!(
             metrics
                 .slotting_last_processed_block
-                .get_or_create(&Labels { chain: "Settlement" })
+                .get_or_create(&Labels { chain: "settlement" })
                 .get(),
             84
         );
@@ -192,14 +192,14 @@ mod tests {
         let past_timestamp = now - 5000; // 5 seconds ago
         metrics.update_chain_timestamp_lag(past_timestamp, Chain::Sequencing);
         assert!(
-            metrics.slotting_timestamp_lag_ms.get_or_create(&Labels { chain: "Sequencing" }).get() >=
+            metrics.slotting_timestamp_lag_ms.get_or_create(&Labels { chain: "sequencing" }).get() >=
                 5000
         );
 
         let past_timestamp = now - 10000; // 10 seconds ago
         metrics.update_chain_timestamp_lag(past_timestamp, Chain::Settlement);
         assert!(
-            metrics.slotting_timestamp_lag_ms.get_or_create(&Labels { chain: "Settlement" }).get() >=
+            metrics.slotting_timestamp_lag_ms.get_or_create(&Labels { chain: "settlement" }).get() >=
                 10000
         );
     }
@@ -222,13 +222,13 @@ mod tests {
 
         metrics.update_channel_capacity(50, Chain::Sequencing);
         assert_eq!(
-            metrics.slotting_channel_capacity.get_or_create(&Labels { chain: "Sequencing" }).get(),
+            metrics.slotting_channel_capacity.get_or_create(&Labels { chain: "sequencing" }).get(),
             50
         );
 
         metrics.update_channel_capacity(100, Chain::Settlement);
         assert_eq!(
-            metrics.slotting_channel_capacity.get_or_create(&Labels { chain: "Settlement" }).get(),
+            metrics.slotting_channel_capacity.get_or_create(&Labels { chain: "settlement" }).get(),
             100
         );
     }
