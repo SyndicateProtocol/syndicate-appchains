@@ -1,11 +1,23 @@
 //! The `eth_client` module provides a client for interacting with an Ethereum-like blockchain.
 
 use alloy::{
-    providers::{Provider, ProviderBuilder, RootProvider},
-    transports::BoxTransport,
+    network::Ethereum,
+    providers::{
+        fillers::{BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller},
+        Identity, Provider, ProviderBuilder, RootProvider,
+    },
 };
 use common::types::{Block, Receipt};
 use eyre::{eyre, Error};
+
+type ChainProvider = FillProvider<
+    JoinFill<
+        Identity,
+        JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+    >,
+    RootProvider,
+    Ethereum,
+>;
 
 /// A client for interacting with an Ethereum-like blockchain.
 ///
@@ -13,7 +25,7 @@ use eyre::{eyre, Error};
 /// by interacting with an Ethereum JSON-RPC endpoint.
 #[derive(Debug)]
 pub struct EthClient {
-    chain: RootProvider<BoxTransport>,
+    chain: ChainProvider,
 }
 
 impl EthClient {

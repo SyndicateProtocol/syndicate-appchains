@@ -3,13 +3,16 @@
 
 use alloy::{
     eips::{eip2718::Encodable2718, BlockNumberOrTag},
-    network::{EthereumWallet, TransactionBuilder},
+    network::{Ethereum, EthereumWallet, TransactionBuilder},
     node_bindings::{Anvil, AnvilInstance},
     primitives::{address, utils::parse_ether, Address, U256},
-    providers::{ext::AnvilApi as _, Provider, ProviderBuilder, RootProvider, WalletProvider},
+    providers::{
+        ext::AnvilApi as _,
+        fillers::{BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller},
+        Identity, Provider, ProviderBuilder, RootProvider, WalletProvider,
+    },
     rpc::types::TransactionRequest,
     signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
-    transports::http::Http,
 };
 use block_builder::{
     block_builder::BlockBuilder,
@@ -34,7 +37,6 @@ use eyre::{eyre, Result};
 use ingestor::{config::IngestionPipelineConfig, ingestor::Ingestor, metrics::IngestorMetrics};
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
-use reqwest::Client;
 use serial_test::serial;
 use slotting::{metrics::SlottingMetrics, slotting::Slotter};
 use std::time::Duration;
@@ -44,6 +46,15 @@ use tokio::{
     task,
     time::timeout,
 };
+
+type HttpProvider = FillProvider<
+    JoinFill<
+        Identity,
+        JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+    >,
+    RootProvider<Ethereum>,
+    Ethereum,
+>;
 
 /// Simple test scenario:
 /// Bob tries to deploy a counter contract to L3, then tries to increment it
@@ -218,9 +229,7 @@ impl Drop for Task {
     }
 }
 
-async fn launch_nitro_node(
-    mchain: &MetaChainProvider,
-) -> Result<(Docker, RootProvider<Http<Client>>)> {
+async fn launch_nitro_node(mchain: &MetaChainProvider) -> Result<(Docker, HttpProvider)> {
     let nitro = Command::new("docker")
         .kill_on_drop(false) // kill via SIGTERM instead of SIGKILL
         .arg("run")
@@ -276,7 +285,7 @@ async fn e2e_test() -> Result<()> {
     .send()
     .await?;
     _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
-    seq_provider.anvil_mine(Some(U256::from(1)), None).await?;
+    seq_provider.anvil_mine(Some(1), None).await?;
 
     // Launch mock settlement chain and deploy contracts
     let (_set_anvil, set_provider) = start_anvil(8546, 20).await?;
@@ -290,7 +299,7 @@ async fn e2e_test() -> Result<()> {
     .nonce(0)
     .send()
     .await?;
-    set_provider.anvil_mine(Some(U256::from(1)), None).await?;
+    set_provider.anvil_mine(Some(1), None).await?;
     let set_rollup = Rollup::new(get_rollup_contract_address(), &set_provider);
 
     // Launch ingestors for the sequencer and settlement chains
@@ -354,8 +363,8 @@ async fn e2e_test() -> Result<()> {
         )
         .send()
         .await?;
-    seq_provider.anvil_mine(Some(U256::from(2)), None).await?;
-    set_provider.anvil_mine(Some(U256::from(2)), None).await?;
+    seq_provider.anvil_mine(Some(2), None).await?;
+    set_provider.anvil_mine(Some(2), None).await?;
     tokio::time::sleep(Duration::from_millis(500)).await;
     assert_eq!(rollup.get_block_number().await?, 1);
     // sequence a regular tx at slot 2
@@ -373,8 +382,8 @@ async fn e2e_test() -> Result<()> {
         .await?;
     inner_tx.encode_2718(&mut tx);
     _ = seq_chain.processTransaction(tx.into()).send().await?;
-    seq_provider.anvil_mine(Some(U256::from(2)), None).await?;
-    set_provider.anvil_mine(Some(U256::from(2)), None).await?;
+    seq_provider.anvil_mine(Some(2), None).await?;
+    set_provider.anvil_mine(Some(2), None).await?;
     tokio::time::sleep(Duration::from_millis(500)).await;
     assert_eq!(rollup.get_block_number().await?, 2);
     // check that the tx was sequenced
@@ -403,7 +412,6 @@ async fn start_anvil(port: u16, chain_id: u64) -> Result<(AnvilInstance, anvil::
     let anvil = Anvil::new().port(port).chain_id(chain_id).args(args).try_spawn()?;
 
     let provider = ProviderBuilder::new()
-        .with_recommended_fillers()
         .wallet(EthereumWallet::from(get_default_private_key_signer()))
         .on_http(anvil.endpoint_url());
     provider.anvil_set_block_timestamp_interval(1).await?;

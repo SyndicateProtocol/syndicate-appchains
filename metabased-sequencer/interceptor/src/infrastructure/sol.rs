@@ -5,7 +5,7 @@ use crate::{
     },
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
-use alloy::{network::Network, providers::Provider, sol, transports::Transport};
+use alloy::{network::Network, providers::Provider, sol};
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
 use tracing::debug_span;
@@ -25,28 +25,25 @@ sol! {
 }
 
 #[derive(Debug)]
-pub struct SolMetabasedSequencerChainService<P: Provider<T, N>, T: Transport + Clone, N: Network> {
+pub struct SolMetabasedSequencerChainService<P: Provider<N>, N: Network> {
     account: Address,
     provider: P,
-    phantom1: PhantomData<T>,
-    phantom2: PhantomData<N>,
+    phantom: PhantomData<N>,
 }
 
-impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
-    SolMetabasedSequencerChainService<P, T, N>
-{
+impl<P: Provider<N>, N: Network> SolMetabasedSequencerChainService<P, N> {
     pub fn new(account: Address, provider: P) -> Self {
-        Self { account, provider, phantom1: Default::default(), phantom2: Default::default() }
+        Self { account, provider, phantom: Default::default() }
     }
 
-    pub fn contract(&self) -> MetabasedSequencerChainInstance<T, &P, N> {
+    pub fn contract(&self) -> MetabasedSequencerChainInstance<(), &P, N> {
         MetabasedSequencerChain::new(self.account, &self.provider)
     }
 }
 
 #[async_trait]
-impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChainService
-    for SolMetabasedSequencerChainService<P, T, N>
+impl<P: Provider<N>, N: Network> MetabasedSequencerChainService
+    for SolMetabasedSequencerChainService<P, N>
 {
     type Error = alloy::contract::Error;
 

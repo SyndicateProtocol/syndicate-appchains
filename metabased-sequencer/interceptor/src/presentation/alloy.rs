@@ -21,7 +21,7 @@ mod tests {
         network::Ethereum,
         providers::{
             fillers::{FillerControlFlow, TxFiller},
-            Network, SendableTx,
+            Network, Provider, SendableTx,
         },
         rpc::types::TransactionRequest,
         transports::TransportResult,
@@ -43,7 +43,7 @@ mod tests {
             }
         }
 
-        async fn prepare<P, T>(
+        async fn prepare<P: Provider<Ethereum>>(
             &self,
             _provider: &P,
             _tx: &<Ethereum as Network>::TransactionRequest,
@@ -76,7 +76,7 @@ mod tests {
             }
         }
 
-        async fn prepare<P, T>(
+        async fn prepare<P: Provider<Ethereum>>(
             &self,
             _provider: &P,
             _tx: &<Ethereum as Network>::TransactionRequest,
@@ -109,7 +109,7 @@ mod tests {
             }
         }
 
-        async fn prepare<P, T>(
+        async fn prepare<P: Provider<Ethereum>>(
             &self,
             _provider: &P,
             _tx: &<Ethereum as Network>::TransactionRequest,

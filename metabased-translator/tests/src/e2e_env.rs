@@ -5,16 +5,18 @@ use alloy::{
     network::{Ethereum, EthereumWallet},
     primitives::Address,
     providers::{
-        fillers::{FillProvider, JoinFill, WalletFiller},
+        fillers::{
+            BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
+            WalletFiller,
+        },
         Identity, Provider, ProviderBuilder, RootProvider,
     },
     signers::{k256::SecretKey, local::LocalSigner, utils::public_key_to_address, Signer},
     sol_types::private::Bytes,
-    transports::http::Http,
 };
 use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain;
 use eyre::{eyre, Error};
-use reqwest::{Client, Url};
+use reqwest::Url;
 use std::str::FromStr;
 use strum_macros::EnumString;
 
@@ -134,9 +136,14 @@ impl RollupType {
 }
 
 type ProviderWithWallet = FillProvider<
-    JoinFill<Identity, WalletFiller<EthereumWallet>>,
-    RootProvider<Http<Client>>,
-    Http<Client>,
+    JoinFill<
+        JoinFill<
+            Identity,
+            JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+        >,
+        WalletFiller<EthereumWallet>,
+    >,
+    RootProvider<Ethereum>,
     Ethereum,
 >;
 
@@ -168,16 +175,28 @@ pub struct Accounts {
 }
 
 type SequencingContractInstance = MetabasedSequencerChain::MetabasedSequencerChainInstance<
-    Http<Client>,
+    (),
     FillProvider<
-        JoinFill<Identity, WalletFiller<EthereumWallet>>,
-        RootProvider<Http<Client>>,
-        Http<Client>,
+        JoinFill<
+            JoinFill<
+                Identity,
+                JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+            >,
+            WalletFiller<EthereumWallet>,
+        >,
+        RootProvider<Ethereum>,
         Ethereum,
     >,
 >;
 
-type HttpProvider = RootProvider<Http<Client>>;
+type HttpProvider = FillProvider<
+    JoinFill<
+        Identity,
+        JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+    >,
+    RootProvider<Ethereum>,
+    Ethereum,
+>;
 
 #[derive(Debug)]
 /// The test environment - contains all the providers and accounts necessary to write e2e tests

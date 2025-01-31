@@ -19,11 +19,9 @@ use alloy::{
         Identity, Provider, ProviderBuilder, RootProvider,
     },
     rpc::types::{anvil::MineOptions, TransactionRequest},
-    transports::http::Http,
 };
 use contract_bindings::arbitrum::rollup::Rollup;
 use eyre::Result;
-use reqwest::Client;
 use std::{net::TcpListener, time::Duration};
 use tracing::{debug, info};
 use url::Host;
@@ -37,9 +35,24 @@ pub type FilledProvider = FillProvider<
         >,
         WalletFiller<EthereumWallet>,
     >,
-    RootProvider<Http<Client>>,
-    Http<Client>,
+    RootProvider,
     Ethereum,
+>;
+
+#[allow(missing_docs)]
+pub type RollupInstance = Rollup::RollupInstance<
+    (),
+    FillProvider<
+        JoinFill<
+            JoinFill<
+                Identity,
+                JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+            >,
+            WalletFiller<EthereumWallet>,
+        >,
+        RootProvider,
+        Ethereum,
+    >,
 >;
 
 /// `MetaChainProvider` starts the anvil chain when `start` is called and stops the chain when it
@@ -49,7 +62,7 @@ pub type FilledProvider = FillProvider<
 pub struct MetaChainProvider {
     pub anvil: AnvilInstance,
     pub provider: FilledProvider,
-    pub rollup: Rollup::RollupInstance<Http<Client>, FilledProvider>,
+    pub rollup: RollupInstance,
     pub target_chain_id: u64,
 }
 
@@ -109,7 +122,6 @@ impl MetaChainProvider {
         debug!("Anvil started at {}:{}", host_str, port);
 
         let provider = ProviderBuilder::new()
-            .with_recommended_fillers()
             .wallet(EthereumWallet::from(get_default_private_key_signer()))
             .on_http(anvil.endpoint_url());
         provider.anvil_set_block_timestamp_interval(1).await?;
@@ -125,7 +137,7 @@ impl MetaChainProvider {
             .nonce(0)
             .send()
             .await?;
-            provider.anvil_mine(Some(U256::from(1)), None::<U256>).await?;
+            provider.anvil_mine(Some(1), None).await?;
         }
 
         let rollup = Rollup::new(get_rollup_contract_address(), provider.clone());
@@ -228,24 +240,11 @@ impl MetaChainProvider {
     }
 
     /// Rolls back the chain to a specific block number by performing a reorg
-    pub async fn rollback_to_block(&self, _block_number: u64) -> Result<()> {
-        panic!("not implemented"); // TODO SEQ-528
-
-        // let current_block = self.provider.get_block_number().await?;
-        // let depth = current_block - block_number;
-        // self.provider.anvil_reorg(ReorgOptions { depth, tx_block_pairs: vec![] }).await?;
-
-        // // Verify we're at the correct block
-        // let new_block = self.provider.get_block_number().await?;
-        // if new_block != block_number {
-        //     return Err(eyre::eyre!(
-        //         "Failed to rollback: expected block {}, got block {}",
-        //         block_number,
-        //         new_block
-        //     ));
-        // }
-
-        // Ok(())
+    pub async fn rollback_to_block(&self, block_number: u64) -> Result<()> {
+        let current_block = self.provider.get_block_number().await?;
+        let depth = current_block - block_number;
+        self.provider.anvil_rollback(Some(depth)).await?;
+        Ok(())
     }
 }
 
@@ -274,7 +273,8 @@ mod tests {
     use super::*;
     use alloy::{eips::BlockId, rpc::types::BlockTransactionsKind};
     use serial_test::serial;
-    use std::{env::temp_dir, fs, path::PathBuf};
+    use std::{env::temp_dir, fs};
+    use test_utils::test_path;
     use url::Url;
 
     #[serial]
@@ -301,7 +301,7 @@ mod tests {
     #[serial]
     #[tokio::test]
     async fn test_block_persistence() -> Result<()> {
-        let state_path = PathBuf::from("test-state.json");
+        let state_path = test_path("anvil_state");
 
         // check is_port_available and wait 2 sec for anvil to start
         if !is_port_available(9888) {
@@ -310,7 +310,7 @@ mod tests {
         }
 
         let config = BlockBuilderConfig {
-            anvil_state_path: state_path.to_str().unwrap().to_string(),
+            anvil_state_path: state_path.clone(),
             genesis_timestamp: 999,
             mchain_url: Url::parse("http://127.0.0.1:9888").expect("Invalid URL"),
             ..Default::default()
@@ -355,12 +355,10 @@ mod tests {
 
     #[serial]
     #[tokio::test]
-    #[ignore] // TODO SEQ-528 unskip
     async fn test_anvil_rollback() -> Result<()> {
-        // TODO SEQ-528 refactor these test-state-paths
-        let state_path = PathBuf::from("test-state1.json");
+        let state_path = test_path("anvil_rollback");
         let config = BlockBuilderConfig {
-            anvil_state_path: state_path.to_str().unwrap().to_string(),
+            anvil_state_path: state_path,
             genesis_timestamp: 999,
             ..Default::default()
         };

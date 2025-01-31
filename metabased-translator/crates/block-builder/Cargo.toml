@@ -42,6 +42,7 @@ url = { workspace = true }
 serial_test = { workspace = true }
 assert_matches = { workspace = true }
 tracing-test = { workspace = true }
+test-utils = { workspace = true }
 
 [lints]
 workspace = true
