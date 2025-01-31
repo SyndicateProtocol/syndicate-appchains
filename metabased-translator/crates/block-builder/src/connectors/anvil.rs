@@ -5,7 +5,6 @@ use crate::{
         BlockBuilderError,
     },
     config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
-    rollups::arbitrum,
 };
 use alloy::{
     network::{Ethereum, EthereumWallet},
