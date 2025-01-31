@@ -24,7 +24,7 @@ use alloy::{
 use contract_bindings::arbitrum::rollup::Rollup;
 use eyre::Result;
 use reqwest::Client;
-use std::net::TcpListener;
+use std::{net::TcpListener, time::Duration};
 use tracing::{debug, info};
 use url::Host;
 
@@ -249,6 +249,17 @@ impl MetaChainProvider {
     }
 }
 
+/// Custom [`Drop`] to make sure the Anvil process is terminated and the port is released.
+impl Drop for MetaChainProvider {
+    fn drop(&mut self) {
+        // Ensure anvil process is terminated
+        let id = self.anvil.child().id();
+        let _ = std::process::Command::new("kill").arg(id.to_string()).output();
+        // Give the port time to be released
+        std::thread::sleep(Duration::from_millis(500));
+    }
+}
+
 /// Check if a port is available by attempting to bind to it
 ///
 /// The port will be used for both HTTP and WebSocket connections, a feature provided by Anvil.
@@ -262,9 +273,11 @@ pub fn is_port_available(port: u16) -> bool {
 mod tests {
     use super::*;
     use alloy::{eips::BlockId, rpc::types::BlockTransactionsKind};
+    use serial_test::serial;
     use std::{env::temp_dir, fs, path::PathBuf};
     use url::Url;
 
+    #[serial]
     #[tokio::test]
     async fn test_anvil_resume() -> Result<()> {
         let file = temp_dir().join("dump.json");
@@ -285,9 +298,16 @@ mod tests {
         Ok(())
     }
 
+    #[serial]
     #[tokio::test]
     async fn test_block_persistence() -> Result<()> {
         let state_path = PathBuf::from("test-state.json");
+
+        // check is_port_available and wait 2 sec for anvil to start
+        if !is_port_available(9888) {
+            info!("Waiting 2sec for anvil to start... at port 9888");
+            tokio::time::sleep(Duration::from_secs(2)).await;
+        }
 
         let config = BlockBuilderConfig {
             anvil_state_path: state_path.to_str().unwrap().to_string(),
@@ -306,7 +326,7 @@ mod tests {
             }
 
             // Let anvil write state before dropping
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            tokio::time::sleep(Duration::from_secs(1)).await;
         } // First instance is dropped here
 
         // Second instance: verify blocks
@@ -333,6 +353,7 @@ mod tests {
         Ok(())
     }
 
+    #[serial]
     #[tokio::test]
     #[ignore] // TODO SEQ-528 unskip
     async fn test_anvil_rollback() -> Result<()> {
