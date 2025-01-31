@@ -44,6 +44,10 @@ The following metrics are implemented and exposed via the `/metrics` endpoint in
    - **Labels**:
      - `chain`: Specifies whether the channel belongs to the Sequencing or Settlement chain.
    - **Metric Type**: Gauge
+  
+6. **slotting_last_slot_created**: Tracks the last slot number created by the Slotting.
+   - **Metric Type**: Gauge
+  
 
 
 #### Block Builder

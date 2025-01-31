@@ -33,6 +33,8 @@ pub struct SlottingMetrics {
     pub slotting_blocks_per_slot: Histogram,
     /// Tracks the channel capacity
     pub slotting_channel_capacity: Family<Labels, Gauge>,
+    /// Tracks the last slot created
+    pub slotting_last_slot_created: Gauge,
 }
 
 impl SlottingMetrics {
@@ -43,6 +45,7 @@ impl SlottingMetrics {
         let slotting_timestamp_lag_ms = Family::<Labels, Gauge>::default();
         let slotting_blocks_per_slot = Histogram::new(exponential_buckets(1.0, 2.0, 8));
         let slotting_channel_capacity = Family::<Labels, Gauge>::default();
+        let slotting_last_slot_created = Gauge::default();
 
         registry.register(
             "slotting_last_processed_block",
@@ -74,12 +77,19 @@ impl SlottingMetrics {
             slotting_channel_capacity.clone(),
         );
 
+        registry.register(
+            "slotting_last_slot_created",
+            "Tracks the last slot created",
+            slotting_last_slot_created.clone(),
+        );
+
         Self {
             slotting_last_processed_block,
             slotting_active_slots,
             slotting_timestamp_lag_ms,
             slotting_blocks_per_slot,
             slotting_channel_capacity,
+            slotting_last_slot_created,
         }
     }
 
@@ -123,6 +133,11 @@ impl SlottingMetrics {
         self.slotting_channel_capacity
             .get_or_create(&Labels { chain: chain.into() })
             .set(capacity as i64);
+    }
+
+    /// Records the last slot number created
+    pub fn record_last_slot(&self, slot_number: u64) {
+        self.slotting_last_slot_created.set(slot_number as i64);
     }
 }
 
@@ -231,5 +246,16 @@ mod tests {
             metrics.slotting_channel_capacity.get_or_create(&Labels { chain: "settlement" }).get(),
             100
         );
+    }
+    #[test]
+    fn test_record_last_slot() {
+        let mut registry = Registry::default();
+        let metrics = SlottingMetrics::new(&mut registry);
+
+        metrics.record_last_slot(42);
+        assert_eq!(metrics.slotting_last_slot_created.get(), 42);
+
+        metrics.record_last_slot(100);
+        assert_eq!(metrics.slotting_last_slot_created.get(), 100);
     }
 }
