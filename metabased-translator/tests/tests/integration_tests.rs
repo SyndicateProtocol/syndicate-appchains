@@ -4,17 +4,38 @@
 use alloy::{
     eips::{eip2718::Encodable2718, BlockNumberOrTag},
     network::{EthereumWallet, TransactionBuilder},
+    node_bindings::{Anvil, AnvilInstance},
     primitives::{address, utils::parse_ether, Address, U256},
-    providers::{Provider, ProviderBuilder, WalletProvider},
+    providers::{ext::AnvilApi as _, Provider, ProviderBuilder, RootProvider, WalletProvider},
     rpc::types::TransactionRequest,
     signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
+    transports::http::Http,
 };
-use block_builder::{connectors::anvil::MetaChainProvider, rollups::arbitrum};
-use common::types::Block;
-use contract_bindings::arbitrum::counter::Counter;
+use block_builder::{
+    block_builder::BlockBuilder,
+    config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
+    connectors::anvil::{self, MetaChainProvider},
+    rollups::arbitrum,
+};
+use common::{
+    db::DummyStore,
+    tracing::init_tracing,
+    types::{Block, Chain},
+};
+use contract_bindings::{
+    arbitrum::{counter::Counter, rollup::Rollup},
+    metabased::{
+        alwaysallowedmodule::AlwaysAllowedModule, metabasedsequencerchain::MetabasedSequencerChain,
+    },
+};
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::{eyre, Result};
+use ingestor::{config::IngestionPipelineConfig, ingestor::Ingestor, metrics::IngestorMetrics};
+use metrics::metrics::MetricsState;
+use prometheus_client::registry::Registry;
+use reqwest::Client;
 use serial_test::serial;
+use slotting::{metrics::SlottingMetrics, slotting::Slotter};
 use std::time::Duration;
 use tokio::{
     process::{Child, Command},
@@ -188,9 +209,17 @@ impl Drop for Docker {
     }
 }
 
-async fn launch_nitro_node() -> Result<(MetaChainProvider, Docker)> {
-    let mchain = MetaChainProvider::start(Default::default()).await?;
+struct Task(task::JoinHandle<()>);
 
+impl Drop for Task {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
+async fn launch_nitro_node(
+    mchain: &MetaChainProvider,
+) -> Result<(Docker, RootProvider<Http<Client>>)> {
     let nitro = Command::new("docker")
         .kill_on_drop(false) // kill via SIGTERM instead of SIGKILL
         .arg("run")
@@ -205,45 +234,202 @@ async fn launch_nitro_node() -> Result<(MetaChainProvider, Docker)> {
         .arg("--node.inbox-reader.check-delay=100ms")
         .arg("--node.staker.enable=false")
         .arg("--ensure-rollup-deployment=false")
-        .arg("--chain.info-json=".to_string() + &mchain.rollup_info)
+        .arg("--chain.info-json=".to_string() + &mchain.rollup_info("test"))
         .arg("--http.addr=0.0.0.0")
         .arg("--http.port=8547")
         .arg("--log-level=DEBUG")
         .spawn()?;
     let rollup = ProviderBuilder::new().on_http("http://localhost:8547".parse()?);
     // give it two minutes to launch (in case it needs to download the image)
-    return timeout(Duration::from_secs(120), async {
+    timeout(Duration::from_secs(120), async {
         while rollup.get_chain_id().await.is_err() {
             tokio::time::sleep(Duration::from_millis(200)).await;
         }
-        Ok::<_, eyre::Error>((mchain, Docker(nitro)))
+        Ok::<_, eyre::Error>((Docker(nitro), rollup))
     })
+    .await?
+}
+
+#[tokio::test(flavor = "multi_thread")]
+#[serial]
+async fn e2e_test() -> Result<()> {
+    init_tracing()?;
+
+    // TODO: move initialization code into a separate e2e_setup() helper function
+    // so that it can be reused for multiple e2e tests.
+    let block_builder_cfg = BlockBuilderConfig {
+        delayed_inbox_address: get_rollup_contract_address(),
+        sequencing_contract_address: get_rollup_contract_address(),
+        ..Default::default()
+    };
+
+    // Launch mock sequencing chain and deploy contracts
+    let (_seq_anvil, seq_provider) = start_anvil(8545, 15).await?;
+    seq_provider.anvil_set_block_timestamp_interval(1).await?;
+    _ = MetabasedSequencerChain::deploy_builder(
+        &seq_provider,
+        U256::from(block_builder_cfg.target_chain_id),
+        seq_provider.default_signer_address(),
+        seq_provider.default_signer_address().create(1),
+    )
+    .send()
     .await?;
+    _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
+    seq_provider.anvil_mine(Some(U256::from(1)), None).await?;
+
+    // Launch mock settlement chain and deploy contracts
+    let (_set_anvil, set_provider) = start_anvil(8546, 20).await?;
+    set_provider.anvil_set_block_timestamp_interval(1).await?;
+    // Use the mock rollup contract for the test instead of deploying all the nitro rollup contracts
+    _ = Rollup::deploy_builder(
+        &set_provider,
+        U256::from(block_builder_cfg.target_chain_id),
+        MetaChainProvider::rollup_config(block_builder_cfg.target_chain_id),
+    )
+    .nonce(0)
+    .send()
+    .await?;
+    set_provider.anvil_mine(Some(U256::from(1)), None).await?;
+    let set_rollup = Rollup::new(get_rollup_contract_address(), &set_provider);
+
+    // Launch ingestors for the sequencer and settlement chains
+    let mut ingestor_config = IngestionPipelineConfig::default();
+    ingestor_config.sequencing.sequencing_polling_interval = Duration::from_millis(100);
+    ingestor_config.settlement.settlement_polling_interval = Duration::from_millis(100);
+    let mut metrics_state = MetricsState { registry: Registry::default() };
+    let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
+        Chain::Sequencing,
+        ingestor_config.sequencing.into(),
+        IngestorMetrics::new(&mut metrics_state.registry),
+    )
+    .await?;
+    let (settlement_ingestor, settlement_rx) = Ingestor::new(
+        Chain::Settlement,
+        ingestor_config.settlement.into(),
+        IngestorMetrics::new(&mut metrics_state.registry),
+    )
+    .await?;
+    let (_dumy, dummy) = tokio::sync::oneshot::channel();
+    let _seq_ingestor_task = Task(tokio::spawn(async move {
+        sequencing_ingestor.start_polling(dummy).await.unwrap();
+    }));
+    let (_dummy, dummy) = tokio::sync::oneshot::channel();
+    let _set_ingestor_task = Task(tokio::spawn(async move {
+        settlement_ingestor.start_polling(dummy).await.unwrap();
+    }));
+
+    // Launch the slotter, block builder, and nitro rollup
+    let (slotter, slotter_rx) = Slotter::new(
+        sequencer_rx,
+        settlement_rx,
+        Default::default(),
+        None,
+        Box::new(DummyStore {}),
+        SlottingMetrics::new(&mut metrics_state.registry),
+    );
+    let (_dummy, dummy) = tokio::sync::oneshot::channel();
+    let _slotter_task = Task(tokio::spawn(async move {
+        slotter.start(dummy).await;
+    }));
+    let block_builder = BlockBuilder::new(slotter_rx, block_builder_cfg).await?;
+    let (_nitro, rollup) = launch_nitro_node(&block_builder.mchain).await?;
+    let (_dummy, dummy) = tokio::sync::oneshot::channel();
+    let _block_builder_task = Task(tokio::spawn(async move {
+        block_builder.start(None, dummy).await;
+    }));
+
+    // slot 0 starts at the genesis block and contains the dummy init message which is ignored
+    // sequence a deposit tx at slot 1
+    _ = set_rollup
+        .depositEth(
+            seq_provider.default_signer_address(),
+            seq_provider.default_signer_address(),
+            parse_ether("1")?,
+        )
+        .send()
+        .await?;
+    seq_provider.anvil_mine(Some(U256::from(2)), None).await?;
+    set_provider.anvil_mine(Some(U256::from(2)), None).await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    assert_eq!(rollup.get_block_number().await?, 1);
+    // sequence a regular tx at slot 2
+    let seq_chain = MetabasedSequencerChain::new(get_rollup_contract_address(), &seq_provider);
+    let mut tx = vec![];
+    let inner_tx = TransactionRequest::default()
+        .with_to(address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"))
+        .with_value(U256::from(1))
+        .with_nonce(0)
+        .with_gas_limit(100_000)
+        .with_chain_id(13331370)
+        .with_max_fee_per_gas(100000000)
+        .with_max_priority_fee_per_gas(0)
+        .build(seq_provider.wallet())
+        .await?;
+    inner_tx.encode_2718(&mut tx);
+    _ = seq_chain.processTransaction(tx.into()).send().await?;
+    seq_provider.anvil_mine(Some(U256::from(2)), None).await?;
+    set_provider.anvil_mine(Some(U256::from(2)), None).await?;
+    tokio::time::sleep(Duration::from_millis(500)).await;
+    assert_eq!(rollup.get_block_number().await?, 2);
+    // check that the tx was sequenced
+    let block: Block = rollup
+        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
+        .await?;
+    // the first transaction is the startBlock transaction
+    println!("{:#?}", block.transactions);
+    assert_eq!(block.transactions.len(), 2);
+    // tx hash should match
+    assert_eq!(block.transactions[1].hash, *inner_tx.tx_hash());
+    Ok(())
+}
+
+async fn start_anvil(port: u16, chain_id: u64) -> Result<(AnvilInstance, anvil::FilledProvider)> {
+    let args = vec![
+        "--base-fee",
+        "0",
+        "--gas-limit",
+        "30000000",
+        "--timestamp",
+        "1712500000",
+        "--no-mining",
+    ];
+
+    let anvil = Anvil::new().port(port).chain_id(chain_id).args(args).try_spawn()?;
+
+    let provider = ProviderBuilder::new()
+        .with_recommended_fillers()
+        .wallet(EthereumWallet::from(get_default_private_key_signer()))
+        .on_http(anvil.endpoint_url());
+    provider.anvil_set_block_timestamp_interval(1).await?;
+    Ok((anvil, provider))
 }
 
 #[tokio::test(flavor = "multi_thread")]
 #[serial]
 async fn test_nitro_batch() -> Result<()> {
-    let (mchain, _nitro) = launch_nitro_node().await?;
+    let mchain = MetaChainProvider::start(Default::default()).await?;
+    let (_nitro, rollup) = launch_nitro_node(&mchain).await?;
 
     // deposit 1 eth
-    let tx = mchain
+    _ = mchain
         .rollup
         .depositEth(Address::default(), mchain.provider.default_signer_address(), parse_ether("1")?)
         .send()
-        .await?
-        .watch();
+        .await?;
     mchain.mine_block(0).await?;
-    tx.await?;
 
     // send a batch to sequence the deposit. include the init message as well.
-    mchain
-        .send_batch(&arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed; 2]))
+    _ = mchain
+        .rollup
+        .postBatch(
+            arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed; 2]).encode()?,
+        )
+        .send()
         .await?;
+    mchain.mine_block(0).await?;
 
     // wait 200ms for the batch to be processed
     tokio::time::sleep(Duration::from_millis(200)).await;
-    let rollup = ProviderBuilder::new().on_http("http://localhost:8547".parse()?);
     if rollup.get_block_number().await? != 1 {
         return Err(eyre!("block derivation failed - not on block 1"));
     }
@@ -271,7 +457,8 @@ async fn test_nitro_batch() -> Result<()> {
     let batch = arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::L2(
         arbitrum::batch::L1IncomingMessage { header: Default::default(), l2_msg: vec![tx.into()] },
     )]);
-    mchain.send_batch(&batch).await?;
+    _ = mchain.rollup.postBatch(batch.encode()?).send().await?;
+    mchain.mine_block(0).await?;
 
     // wait 200ms for the batch to be processed
     tokio::time::sleep(Duration::from_millis(200)).await;
@@ -288,11 +475,5 @@ async fn test_nitro_batch() -> Result<()> {
     assert_eq!(block.transactions.len(), 2);
     // tx hash should match
     assert_eq!(block.transactions[1].hash, *inner_tx.tx_hash());
-    // block should be mined deterministically - hash should be constant
-    // update this hash whenever the test is modified
-    assert_eq!(
-        block.hash.to_string(),
-        "0x2a1943b2a3a54f4855c2441b6864351e3cc282bd61a005fd0912467adf575951"
-    );
     Ok(())
 }

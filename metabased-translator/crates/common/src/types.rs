@@ -187,7 +187,8 @@ pub enum SlotState {
 /// A `Slot` is a collection of source chain blocks  to be sent to the block builder
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct Slot {
-    /// the number of the slot - `slot_number` == `MetaChain`'s block number
+    /// the number of the slot - `slot_number` + `PREMINED_BLOCKS` == `MetaChain`'s block number
+    /// `PREMINED_BLOCKS`, the number of blocks premined on the mchain, is set to 1 currently
     pub number: u64,
     /// the timestamp of the slot
     pub timestamp: u64,

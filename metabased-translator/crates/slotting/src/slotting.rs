@@ -259,10 +259,11 @@ impl Slotter {
 
     async fn process_block(
         &mut self,
-        block_info: BlockAndReceipts,
+        mut block_info: BlockAndReceipts,
         chain: Chain,
         slot_duration_ms: u64,
     ) -> Result<(), SlotterError> {
+        block_info.block.timestamp *= 1000;
         let block_timestamp = block_info.block.timestamp;
         self.update_latest_block(&block_info.block, chain)?;
         let latest_slot = self.slots.front_mut().ok_or(SlotterError::NoSlotsAvailable)?;
@@ -471,8 +472,10 @@ pub enum SlotterError {
 mod tests {
     use super::*;
     use alloy::primitives::B256;
+    use assert_matches::assert_matches;
     use prometheus_client::registry::Registry;
     use std::str::FromStr;
+    use tracing_test::traced_test;
 
     struct MetricsState {
         /// Prometheus registry
@@ -548,22 +551,22 @@ mod tests {
 
     /// Test scenario:
     /// ```text
-    /// Slot 0 [9000-10000]:
+    /// Slot 0 [9]:
     /// ┌───────────────────┐
     /// │ empty             │
     /// └───────────────────┘
     ///
-    /// Slot 1 [10001-11000]:
+    /// Slot 1 [10]:
     /// ┌───────────────────┐
-    /// │ seq    @ 10001 #1 │
-    /// │ seq    @ 11000 #2 │
-    /// │ settle @ 10001 #1 │ -> Only marked as Unsafe once the blocks for next slot are received
+    /// │ seq    @ 11 #1    │
+    /// │ seq    @ 11 #2    │
+    /// │ settle @ 11 #1    │ -> Only marked as Unsafe once the blocks for next slot are received
     /// └───────────────────┘
     ///
-    /// Slot 2 [11001-12000]:
+    /// Slot 2 [11]:
     /// ┌───────────────────┐
-    /// │ seq    @ 11001 #3 │
-    /// │ settle @ 11001 #2 │ -> Shouldn't be received (never marked as unsafe)
+    /// │ seq    @ 12 #3    │
+    /// │ settle @ 12 #2    │ -> Shouldn't be received (never marked as unsafe)
     /// └───────────────────┘
     ///
     /// Legend:
@@ -571,7 +574,7 @@ mod tests {
     /// # block number
     /// ```
     #[tokio::test]
-    #[tracing_test::traced_test]
+    #[traced_test]
     async fn test_slotter() {
         let slot_start_timestamp_ms = 10_000;
         let slot_duration_ms = 1_000;
@@ -582,9 +585,9 @@ mod tests {
         assert!(slot_rx.is_empty());
 
         // send initial blocks, these should fit in slot 1 and make slot 0 be marked as unsafe
-        sequencing_tx.send(create_test_block(1, 10_001)).await.unwrap();
+        sequencing_tx.send(create_test_block(1, 11)).await.unwrap();
 
-        settlement_tx.send(create_test_block(1, 10_002)).await.unwrap();
+        settlement_tx.send(create_test_block(1, 11)).await.unwrap();
 
         let slot1 = slot_rx.recv().await.unwrap();
         assert_eq!(slot1.timestamp, slot_start_timestamp_ms);
@@ -596,14 +599,14 @@ mod tests {
         assert!(slot_rx.is_empty());
 
         // send a block for the settlement chain that should fit in slot 2
-        settlement_tx.send(create_test_block(2, 11_001)).await.unwrap(); // this block should be fit in slot 1
+        settlement_tx.send(create_test_block(2, 12)).await.unwrap(); // this block should be fit in slot 1
 
         // slot 1 should still be opened (we haven't received any blocks for the sequencing chain
         // ahead of the slot)
         assert!(slot_rx.is_empty());
 
         // send a bock for the sequencing chain that still fits in slot 1
-        sequencing_tx.send(create_test_block(2, 11_000)).await.unwrap();
+        sequencing_tx.send(create_test_block(2, 11)).await.unwrap();
 
         // slot 1 should still be opened (we haven't received any blocks for the sequencing chain
         // ahead of the slot)
@@ -611,7 +614,7 @@ mod tests {
 
         // send a block for the sequencing chain that should fit in slot 2
         // this should mark slot 1 as unsafe
-        sequencing_tx.send(create_test_block(3, 11_001)).await.unwrap();
+        sequencing_tx.send(create_test_block(3, 12)).await.unwrap();
 
         let slot2 = slot_rx.recv().await.unwrap();
         assert_eq!(slot2.timestamp, slot_start_timestamp_ms + slot_duration_ms);
@@ -668,7 +671,7 @@ mod tests {
 
         let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
 
-        assert!(matches!(result, Err(SlotterError::ReorgDetected { .. })));
+        assert_matches!(result, Err(SlotterError::ReorgDetected { .. }));
     }
 
     #[tokio::test]
@@ -683,7 +686,7 @@ mod tests {
 
         let result = slotter.update_latest_block(&block.block, Chain::Settlement);
 
-        assert!(matches!(result, Err(SlotterError::BlockNumberSkipped { .. })));
+        assert_matches!(result, Err(SlotterError::BlockNumberSkipped { .. }));
     }
 
     #[tokio::test]
@@ -698,10 +701,11 @@ mod tests {
 
         let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
 
-        assert!(matches!(result, Err(SlotterError::EarlierTimestamp { .. })));
+        assert_matches!(result, Err(SlotterError::EarlierTimestamp { .. }));
     }
 
     #[tokio::test]
+    #[traced_test]
     async fn test_slotter_db_shutdown_and_resume() {
         const CHAN_CAPACITY: usize = 100;
         let (seq_tx, seq_rx) = channel(CHAN_CAPACITY);
@@ -726,12 +730,12 @@ mod tests {
 
         // Send some blocks
         // slot 2
-        seq_tx.send(create_test_block(2, 10_001)).await.unwrap();
-        set_tx.send(create_test_block(2, 10_002)).await.unwrap();
+        seq_tx.send(create_test_block(2, 11)).await.unwrap();
+        set_tx.send(create_test_block(2, 11)).await.unwrap();
 
         // slot 3
-        seq_tx.send(create_test_block(3, 11_001)).await.unwrap();
-        set_tx.send(create_test_block(3, 11_002)).await.unwrap();
+        seq_tx.send(create_test_block(3, 12)).await.unwrap();
+        set_tx.send(create_test_block(3, 12)).await.unwrap();
 
         // This should make slot 1 and 2 unsafe
         let slot1 = slot_rx.recv().await.unwrap();
@@ -749,7 +753,7 @@ mod tests {
         assert_eq!(slot2.state, SlotState::Unsafe);
 
         // Send blocks that are MAX_WAIT_MS (24 hours) ahead, this should make slots 1, 2 and 3 safe
-        set_tx.send(create_test_block(4, 11_001 + MAX_WAIT_MS)).await.unwrap();
+        set_tx.send(create_test_block(4, 12 + MAX_WAIT_MS / 1000)).await.unwrap();
         // NOTE: don't send a block for the sequencing chain, that would mark all the empty slots as
         // unsafe and atempt to send them over the channel (which would get filled up and stuck)
 
@@ -783,12 +787,12 @@ mod tests {
 
         // Send new blocks to resumed slotter (since only slot 0,1,2 have been saved to the DB, we
         // should send blocks #4 (for slot 5))
-        new_seq_tx.send(create_test_block(4, 12_001)).await.unwrap();
-        new_set_tx.send(create_test_block(4, 12_002)).await.unwrap();
+        new_seq_tx.send(create_test_block(4, 13)).await.unwrap();
+        new_set_tx.send(create_test_block(4, 13)).await.unwrap();
 
         // sending blocks for slot 5 should mark slot 4 as unsafe
-        new_seq_tx.send(create_test_block(5, 13_001)).await.unwrap();
-        new_set_tx.send(create_test_block(5, 13_002)).await.unwrap();
+        new_seq_tx.send(create_test_block(5, 14)).await.unwrap();
+        new_set_tx.send(create_test_block(5, 14)).await.unwrap();
 
         // Should get slot 3 marked as unsafe
         let slot4 = resumed_slot_rx.recv().await.unwrap();

@@ -80,6 +80,21 @@ pub trait TranslatorStore {
     async fn get_latest(&self) -> Result<Option<SafeState>, DbError>;
 }
 
+/// Dummy implementation of the [`TranslatorStore`] trait that does nothing
+#[derive(Debug)]
+pub struct DummyStore;
+
+#[async_trait]
+impl TranslatorStore for DummyStore {
+    async fn save_slot(&self, _slot: &Slot) -> Result<(), DbError> {
+        Ok(())
+    }
+
+    async fn get_latest(&self) -> Result<Option<SafeState>, DbError> {
+        Ok(None)
+    }
+}
+
 /// A RocksDB-backed implementation of the [`TranslatorStore`] trait
 #[derive(Debug)]
 pub struct RocksDbStore {

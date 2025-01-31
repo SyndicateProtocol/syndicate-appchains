@@ -1,8 +1,7 @@
 //! Anvil connector for the `MetaChain`
 use crate::{
     block_builder::BlockBuilderError,
-    config::{get_default_private_key_signer, BlockBuilderConfig},
-    rollups::arbitrum,
+    config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
 };
 use alloy::{
     network::{Ethereum, EthereumWallet},
@@ -14,7 +13,7 @@ use alloy::{
             BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
             WalletFiller,
         },
-        Identity, Provider, ProviderBuilder, RootProvider, WalletProvider,
+        Identity, Provider, ProviderBuilder, RootProvider,
     },
     rpc::types::{anvil::MineOptions, TransactionRequest},
     transports::http::Http,
@@ -25,7 +24,8 @@ use reqwest::Client;
 use std::net::TcpListener;
 use tracing::info;
 
-type FilledProvider = FillProvider<
+#[allow(missing_docs)]
+pub type FilledProvider = FillProvider<
     JoinFill<
         JoinFill<
             Identity,
@@ -46,7 +46,7 @@ pub struct MetaChainProvider {
     pub anvil: AnvilInstance,
     pub provider: FilledProvider,
     pub rollup: Rollup::RollupInstance<Http<Client>, FilledProvider>,
-    pub rollup_info: String,
+    pub target_chain_id: u64,
 }
 
 /// The chain id of the metachain. This is the same for all rollups.
@@ -96,36 +96,25 @@ impl MetaChainProvider {
             .with_recommended_fillers()
             .wallet(EthereumWallet::from(get_default_private_key_signer()))
             .on_http(anvil.endpoint_url());
-
-        let rollup_config = Self::rollup_config(U256::from(config.target_chain_id));
-
-        let deploy_tx = Rollup::deploy_builder(
-            &provider,
-            U256::from(config.target_chain_id),
-            rollup_config.clone(),
-        )
-        .nonce(0)
-        .from(provider.default_signer_address());
-        let contract_addr =
-            deploy_tx.calculate_create_address().ok_or(BlockBuilderError::NoContractAddress())?;
         provider.anvil_set_block_timestamp_interval(1).await?;
 
+        let rollup_config = Self::rollup_config(config.target_chain_id);
+
         if provider.get_block_number().await? == 0 {
-            _ = deploy_tx.send().await?;
+            _ = Rollup::deploy_builder(
+                &provider,
+                U256::from(config.target_chain_id),
+                rollup_config.clone(),
+            )
+            .nonce(0)
+            .send()
+            .await?;
             provider.anvil_mine(Some(U256::from(1)), None::<U256>).await?;
         }
 
-        let rollup = Rollup::new(contract_addr, provider.clone());
+        let rollup = Rollup::new(get_rollup_contract_address(), provider.clone());
 
-        let rollup_info = Self::rollup_info(
-            "test",
-            U256::from(MCHAIN_ID),
-            &rollup_config,
-            rollup.address(),
-            U256::from(1),
-        );
-
-        Ok(Self { anvil, provider, rollup, rollup_info })
+        Ok(Self { anvil, provider, rollup, target_chain_id: config.target_chain_id })
     }
 
     /// Submits a list of transactions to the `MetaChain`
@@ -154,7 +143,8 @@ impl MetaChainProvider {
         Ok(())
     }
 
-    fn rollup_config(chain_id: U256) -> String {
+    /// Return the on-chain config for a rollup with a given chain id
+    pub fn rollup_config(chain_id: u64) -> String {
         let zero = Address::ZERO;
         format!(
             r#"{{
@@ -189,18 +179,16 @@ impl MetaChainProvider {
         )
     }
 
-    fn rollup_info(
-        chain_name: &str,
-        chain_id: U256,
-        rollup_config: &str,
-        rollup: &Address,
-        deployed_at: U256,
-    ) -> String {
+    /// Get the nitro json configuration data for the rollup
+    pub fn rollup_info(&self, chain_name: &str) -> String {
+        let rollup_config = Self::rollup_config(self.target_chain_id);
+        let rollup = get_rollup_contract_address();
+        let deployed_at: u64 = 1;
         let zero = Address::ZERO;
         format!(
             r#"[{{
               "chain-name": "{chain_name}",
-              "parent-chain-id": {chain_id},
+              "parent-chain-id": {MCHAIN_ID},
               "parent-chain-is-arbitrum": false,
               "sequencer-url": "",
               "secondary-forwarding-target": "",
@@ -221,28 +209,6 @@ impl MetaChainProvider {
               }}
             }}]"#
         )
-    }
-
-    /// post a rollup batch to the mchain and mine the next block
-    pub async fn send_batch(&self, batch: &arbitrum::batch::Batch) -> Result<()> {
-        let tx = self
-            .rollup
-            .postBatch(
-                U256::from(
-                    batch
-                        .0
-                        .iter()
-                        .filter(|x| matches!(x, arbitrum::batch::BatchMessage::Delayed))
-                        .count(),
-                ),
-                batch.encode()?,
-            )
-            .send()
-            .await?
-            .watch();
-        self.mine_block(0).await?;
-        tx.await?;
-        Ok(())
     }
 
     /// Rolls back the chain to a specific block number by performing a reorg

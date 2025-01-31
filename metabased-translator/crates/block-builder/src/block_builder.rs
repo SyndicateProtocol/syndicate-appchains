@@ -19,7 +19,8 @@ use tracing::{debug, error, info};
 #[derive(Debug)]
 pub struct BlockBuilder {
     slotter_rx: Receiver<Slot>,
-    mchain: MetaChainProvider,
+    #[allow(missing_docs)]
+    pub mchain: MetaChainProvider,
     builder: Box<dyn RollupBlockBuilder>,
 }
 
@@ -99,15 +100,6 @@ pub enum BlockBuilderError {
 
     #[error("Cannot serialize empty l2 msg")]
     EmptyL2Message(),
-
-    #[error("No contract addr found")]
-    NoContractAddress(),
-
-    #[error("No block number found")]
-    NoBlockNumber(),
-
-    #[error("Overflow error")]
-    Overflow(),
 }
 
 #[cfg(test)]
@@ -182,9 +174,10 @@ mod tests {
 
         // resumed builder with the "last known safe slot" as slot2
         let (_shutdown_tx, shutdown_rx) = oneshot::channel();
-        tokio::spawn(
-            async move { resumed_builder.start(Some(test_slot2.number), shutdown_rx).await },
-        );
+        tokio::spawn(async move {
+            // TODO: add PREMINED_BLOCKS to the slot number to get the block number
+            resumed_builder.start(Some(test_slot2.number), shutdown_rx).await
+        });
 
         // Give time for rollback to slot0
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;

@@ -48,6 +48,7 @@ pub enum ConfigError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_default_parsing() {
@@ -58,6 +59,6 @@ mod tests {
     #[test]
     fn test_validate() {
         let config = MetricsConfig { metrics_port: 0 };
-        assert!(matches!(config.validate(), Err(ConfigError::InvalidPort(_))));
+        assert_matches!(config.validate(), Err(ConfigError::InvalidPort(_)));
     }
 }

@@ -38,6 +38,7 @@ thiserror = { workspace = true }
 
 [dev-dependencies]
 serial_test = { workspace = true }
+assert_matches = { workspace = true }
 tracing-test = { workspace = true }
 
 [lints]

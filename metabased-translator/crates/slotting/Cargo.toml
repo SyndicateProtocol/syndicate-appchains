@@ -22,6 +22,7 @@ derivative = { workspace = true }
 test-case = { workspace = true }
 serial_test = { workspace = true }
 tracing-test = { workspace = true }
+assert_matches = { workspace = true }
 test-utils = { workspace = true }
 
 [lints]
