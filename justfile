@@ -604,7 +604,7 @@ _run-arb-nitro-dev-node:
     # If no errors, print success message
     echo "Cache Manager deployed and registered successfully. Nitro node is ready..."
 
-e2e-tests: create-envrc arb-up
+e2e-tests: create-envrc op-up
     @just _log-start "e2e-tests"
     . {{ envrc_file }} && cd {{ e2e_tests_root }} && cargo test --features e2e-tests
     @just _log-end "e2e-tests"
