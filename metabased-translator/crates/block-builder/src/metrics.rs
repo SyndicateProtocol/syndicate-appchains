@@ -64,3 +64,55 @@ impl BlockBuilderMetrics {
         self.block_builder_last_processed_slot.set(slot_number as i64);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use prometheus_client::registry::Registry;
+
+    #[test]
+    fn test_new_metrics_initialization() {
+        let mut registry = Registry::default();
+        let metrics = BlockBuilderMetrics::new(&mut registry);
+
+        assert_eq!(metrics.block_builder_channel_capacity.get(), 0);
+        assert_eq!(metrics.block_builder_transactions_per_slot.get(), 0);
+        assert_eq!(metrics.block_builder_last_processed_slot.get(), 0);
+    }
+
+    #[test]
+    fn test_update_channel_capacity() {
+        let mut registry = Registry::default();
+        let metrics = BlockBuilderMetrics::new(&mut registry);
+
+        metrics.update_channel_capacity(10);
+        assert_eq!(metrics.block_builder_channel_capacity.get(), 10);
+
+        metrics.update_channel_capacity(25);
+        assert_eq!(metrics.block_builder_channel_capacity.get(), 25);
+    }
+
+    #[test]
+    fn test_record_transactions_per_slot() {
+        let mut registry = Registry::default();
+        let metrics = BlockBuilderMetrics::new(&mut registry);
+
+        metrics.record_transactions_per_slot(5);
+        assert_eq!(metrics.block_builder_transactions_per_slot.get(), 5);
+
+        metrics.record_transactions_per_slot(15);
+        assert_eq!(metrics.block_builder_transactions_per_slot.get(), 15);
+    }
+
+    #[test]
+    fn test_record_last_slot() {
+        let mut registry = Registry::default();
+        let metrics = BlockBuilderMetrics::new(&mut registry);
+
+        metrics.record_last_slot(42);
+        assert_eq!(metrics.block_builder_last_processed_slot.get(), 42);
+
+        metrics.record_last_slot(100);
+        assert_eq!(metrics.block_builder_last_processed_slot.get(), 100);
+    }
+}
