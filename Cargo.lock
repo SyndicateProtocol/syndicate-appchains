@@ -836,6 +836,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "assert_matches"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9b34d609dfbaf33d6889b2b7106d3ca345eacad44200913df5ba02bfd31d2ba9"
+
+[[package]]
 name = "async-stream"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1034,6 +1040,7 @@ name = "block-builder"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "assert_matches",
  "async-trait",
  "base64",
  "brotli",
@@ -1047,6 +1054,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serial_test",
+ "slotting",
  "thiserror 2.0.11",
  "tokio",
  "tracing",
@@ -1527,6 +1535,7 @@ dependencies = [
  "strum_macros",
  "thiserror 2.0.11",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -2254,6 +2263,7 @@ name = "ingestor"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "assert_matches",
  "clap",
  "common",
  "eyre",
@@ -2558,6 +2568,7 @@ dependencies = [
 name = "metrics"
 version = "0.1.0"
 dependencies = [
+ "assert_matches",
  "axum",
  "clap",
  "ingestor",
@@ -3710,6 +3721,7 @@ name = "slotting"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "assert_matches",
  "clap",
  "common",
  "serial_test",
@@ -3717,6 +3729,7 @@ dependencies = [
  "thiserror 2.0.11",
  "tokio",
  "tracing",
+ "tracing-test",
 ]
 
 [[package]]
@@ -4239,6 +4252,27 @@ dependencies = [
  "tracing-core",
  "tracing-log",
  "tracing-serde",
+]
+
+[[package]]
+name = "tracing-test"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "557b891436fe0d5e0e363427fc7f217abf9ccd510d5136549847bdcbcd011d68"
+dependencies = [
+ "tracing-core",
+ "tracing-subscriber",
+ "tracing-test-macro",
+]
+
+[[package]]
+name = "tracing-test-macro"
+version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "04659ddb06c87d233c566112c1c9c5b9e98256d9af50ec3bc9c8327f873a7568"
+dependencies = [
+ "quote",
+ "syn 2.0.96",
 ]
 
 [[package]]

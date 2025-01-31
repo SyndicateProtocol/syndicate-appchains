@@ -4,18 +4,23 @@ use clap::Parser;
 use thiserror::Error;
 use tracing::debug;
 
+/// The rollup contract is deployed on block 1, so start slotting at block 2 instead.
+pub const FIRST_SLOT: u64 = 2;
+
 /// Configuration for the slotter
 #[derive(Parser, Debug, Clone)]
 pub struct SlottingConfig {
-    /// The duration of a [`Slotter`] slot in milliseconds
+    /// The duration of a [`Slotter`] slot in milliseconds.
     #[arg(long, env = "SLOTTER_SLOT_DURATION_MS", default_value_t = 2_000)]
     pub slot_duration_ms: u64,
 
-    /// The [`Slotter`] slot number to start from
-    #[arg(long, env = "SLOTTER_START_SLOT_NUMBER", default_value_t = 0)]
+    /// The [`Slotter`] slot number (mchain block) to start from.
+    #[arg(long, env = "SLOTTER_START_SLOT_NUMBER", default_value_t = FIRST_SLOT)]
     pub start_slot_number: u64,
 
-    /// The timestamp of the [`Slotter`] slot to start from
+    /// The epoch timestamp of the [`Slotter`] slot to start from, in milliseconds.
+    /// This is set to the same timestamp as the metachain genesis block by default:
+    /// April 7, 2024
     #[arg(long, env = "SLOTTER_START_SLOT_TIMESTAMP", default_value_t = 1712500000 * 1000)]
     pub start_slot_timestamp: u64,
 }
@@ -53,19 +58,22 @@ pub enum ConfigError {
 
 impl Default for SlottingConfig {
     fn default() -> Self {
-        Self::parse_from([""])
+        let config = Self::parse_from([""]);
+        debug!("Created default SlottingConfig: {:?}", config);
+        config
     }
 }
 
 #[cfg(test)]
 mod config_tests {
     use super::*;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_default_slotting_config() {
         let config = SlottingConfig::default();
         assert_eq!(config.slot_duration_ms, 2_000);
-        assert_eq!(config.start_slot_number, 0);
+        assert_eq!(config.start_slot_number, 2);
         assert_eq!(config.start_slot_timestamp, 1712500000000);
     }
 
@@ -73,7 +81,7 @@ mod config_tests {
     fn test_default_parsing() {
         let config = SlottingConfig::parse_from(["test"]);
         assert_eq!(config.slot_duration_ms, 2_000);
-        assert_eq!(config.start_slot_number, 0);
+        assert_eq!(config.start_slot_number, 2);
         assert_eq!(config.start_slot_timestamp, 1712500000000);
     }
 
@@ -92,10 +100,10 @@ mod config_tests {
     fn test_validation() {
         // Test zero duration
         let result = SlottingConfig::new(0, 100, 1_000_000);
-        assert!(matches!(
+        assert_matches!(
             result.unwrap_err(),
             ConfigError::Invalid { message } if message.contains("duration")
-        ));
+        );
 
         // Test valid config with non-zero values
         let result = SlottingConfig::new(2_000, 100, 1_000_000);

@@ -136,13 +136,7 @@ impl Ingestor {
     pub async fn start_polling(&mut self) -> Result<(), Error> {
         debug!("Starting polling");
 
-        // TODO: use millis instead of seconds.
-        let mut interval = tokio::time::interval(if self.polling_interval.is_zero() {
-            Duration::from_millis(100)
-        } else {
-            self.polling_interval
-        });
-
+        let mut interval = tokio::time::interval(self.polling_interval);
         loop {
             tokio::select! {
                 _ = interval.tick() => {

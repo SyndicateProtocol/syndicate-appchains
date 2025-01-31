@@ -21,5 +21,8 @@ strum = { workspace = true }
 strum_macros = { workspace = true }
 humantime = { workspace = true }
 
+[dev-dependencies]
+assert_matches = { workspace = true }
+
 [lints]
 workspace = true

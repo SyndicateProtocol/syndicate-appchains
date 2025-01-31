@@ -119,7 +119,7 @@ mod tests {
 
         // Slotter
         assert_eq!(config.slotter.slot_duration_ms, 2_000);
-        assert_eq!(config.slotter.start_slot_number, 0);
+        assert_eq!(config.slotter.start_slot_number, 2);
         assert_eq!(config.slotter.start_slot_timestamp, 1712500000000);
 
         // Chains

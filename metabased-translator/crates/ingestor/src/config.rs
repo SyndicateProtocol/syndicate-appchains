@@ -165,6 +165,7 @@ pub enum ConfigError {
     InvalidBufferSize(String),
 }
 
+// uses clap defaults
 impl Default for IngestionPipelineConfig {
     fn default() -> Self {
         Self::parse_from([""])
@@ -192,6 +193,7 @@ impl IngestionPipelineConfig {
     }
 }
 
+// uses clap defaults
 impl Default for ChainIngestorConfig {
     fn default() -> Self {
         Self::parse_from([""])
@@ -233,6 +235,7 @@ impl ChainIngestorConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
 
     fn test_chain_ingestor_config() -> ChainIngestorConfig {
         ChainIngestorConfig::new("http://test:8545".to_string(), 100, 10, Duration::from_secs(5))
@@ -258,7 +261,7 @@ mod tests {
             buffer_size: 10,
             polling_interval: Duration::from_secs(0),
         };
-        assert!(matches!(config.validate(), Err(ConfigError::InvalidPollingInterval(_))));
+        assert_matches!(config.validate(), Err(ConfigError::InvalidPollingInterval(_)));
 
         // Invalid buffer size
         let config = ChainIngestorConfig {
@@ -267,7 +270,7 @@ mod tests {
             buffer_size: 0,
             polling_interval: Duration::from_secs(5),
         };
-        assert!(matches!(config.validate(), Err(ConfigError::InvalidBufferSize(_))));
+        assert_matches!(config.validate(), Err(ConfigError::InvalidBufferSize(_)));
     }
 
     #[test]

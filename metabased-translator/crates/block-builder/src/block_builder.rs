@@ -51,8 +51,7 @@ impl BlockBuilder {
             let transactions = match self.builder.build_block_from_slot(slot.clone()).await {
                 Ok(transactions) => transactions,
                 Err(e) => {
-                    error!("Error building batch transaction: {}", e);
-                    continue;
+                    panic!("Error building batch transaction: {}", e);
                 }
             };
 
@@ -60,13 +59,12 @@ impl BlockBuilder {
 
             // Submit transactions to mchain
             if let Err(e) = self.mchain.submit_txns(transactions).await {
-                error!("Error submitting transaction: {}", e);
-                continue;
+                panic!("Error submitting transaction: {}", e);
             }
 
             // Mine mchain block
             if let Err(e) = self.mchain.mine_block(slot.timestamp).await {
-                error!("Error mining block: {}", e);
+                panic!("Error mining block: {}", e);
             }
         }
     }

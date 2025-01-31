@@ -37,7 +37,7 @@ pub struct BlockBuilderConfig {
     /// Sequencing contract address on the sequencing chain
     #[arg(short = 's', long, env = "BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS",
         value_parser = parse_address,
-        default_value = ROLLUP_CONTRACT_ADDRESS)]
+        default_value = "0x0000000000000000000000000000000000000000")]
     pub sequencing_contract_address: Address,
 
     /// Target rollup type for the [`block-builder`]
@@ -47,13 +47,13 @@ pub struct BlockBuilderConfig {
     /// Arbitrum rollup address on the m-chain
     #[arg(short = 'm', long, env = "BLOCK_BUILDER_ARBITRUM_MCHAIN_ROLLUP_ADDRESS",
         value_parser = parse_address,
-        default_value = ROLLUP_CONTRACT_ADDRESS)]
+        default_value = "0x5FbDB2315678afecb367f032d93F642f64180aa3")]
     pub mchain_rollup_address: Address,
 
     /// Delayed inbox address on the settlement chain
     #[arg(short = 'd', long, env = "BLOCK_BUILDER_ARBITRUM_DELAYED_INBOX_ADDRESS",
         value_parser = parse_address,
-        default_value = ROLLUP_CONTRACT_ADDRESS)]
+        default_value = "0x0000000000000000000000000000000000000000")]
     pub delayed_inbox_address: Address,
 }
 
@@ -80,8 +80,6 @@ pub fn get_default_private_key_signer() -> LocalSigner<SigningKey> {
 pub fn get_rollup_contract_address() -> Address {
     get_default_private_key_signer().address().create(0)
 }
-
-const ROLLUP_CONTRACT_ADDRESS: &str = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 
 impl Debug for BlockBuilderConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -165,6 +163,7 @@ pub enum ConfigError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
 
     #[test]
     fn test_default_parsing() {
@@ -173,48 +172,49 @@ mod tests {
         assert_eq!(config.port, 8888);
         assert_eq!(config.genesis_timestamp, 1712500000);
         assert_eq!(config.target_chain_id, 13331370);
-        assert_eq!(config.sequencing_contract_address.to_string(), ROLLUP_CONTRACT_ADDRESS);
+        assert_eq!(config.sequencing_contract_address, Address::ZERO);
     }
 
     #[test]
     fn test_validate_port() {
         let config = BlockBuilderConfig { port: 0, ..Default::default() };
-        assert!(matches!(config.validate(), Err(ConfigError::InvalidPort(_))));
+        assert_matches!(config.validate(), Err(ConfigError::InvalidPort(_)));
     }
 
     #[test]
     fn test_validate_chain_id() {
         let config = BlockBuilderConfig { target_chain_id: 0, ..Default::default() };
-        assert!(matches!(config.validate(), Err(ConfigError::InvalidChainId(_))));
+        assert_matches!(config.validate(), Err(ConfigError::InvalidChainId(_)));
     }
 
     #[test]
     fn test_validate_rollup_type() {
         let config = BlockBuilderConfig {
             target_rollup_type: TargetRollupType::OPTIMISM,
+            sequencing_contract_address: get_rollup_contract_address(),
             ..Default::default()
         };
-        assert!(matches!(config.validate(), Err(ConfigError::UnsupportedRollupType(_))));
+        assert_matches!(config.validate(), Err(ConfigError::UnsupportedRollupType(_)));
     }
 
     #[test]
     fn test_validate_mchain_rollup_address() {
         let config =
             BlockBuilderConfig { mchain_rollup_address: Address::ZERO, ..Default::default() };
-        assert!(matches!(config.validate(), Err(ConfigError::InvalidAddress(_))));
+        assert_matches!(config.validate(), Err(ConfigError::InvalidAddress(_)));
     }
 
     #[test]
     fn test_validate_delayed_inbox_address() {
         let config =
             BlockBuilderConfig { delayed_inbox_address: Address::ZERO, ..Default::default() };
-        assert!(matches!(config.validate(), Err(ConfigError::InvalidAddress(_))));
+        assert_matches!(config.validate(), Err(ConfigError::InvalidAddress(_)));
     }
 
     #[test]
     fn test_validate_sequencing_contract_address() {
         let config =
             BlockBuilderConfig { sequencing_contract_address: Address::ZERO, ..Default::default() };
-        assert!(matches!(config.validate(), Err(ConfigError::InvalidAddress(_))));
+        assert_matches!(config.validate(), Err(ConfigError::InvalidAddress(_)));
     }
 }

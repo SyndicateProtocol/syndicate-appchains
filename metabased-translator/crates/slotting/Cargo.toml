@@ -20,7 +20,8 @@ clap = { workspace = true, features = ["derive"] }
 [dev-dependencies]
 test-case = { workspace = true }
 serial_test = { workspace = true }
-
+tracing-test = { workspace = true }
+assert_matches = { workspace = true }
 
 [lints]
 workspace = true

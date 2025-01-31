@@ -455,8 +455,10 @@ pub enum SlotterError {
 mod tests {
     use super::*;
     use alloy::primitives::B256;
-    use common::tracing::init_tracing;
+    use assert_matches::assert_matches;
     use std::str::FromStr;
+    use tracing_test::traced_test;
+
     async fn create_slotter(
         slot_start_timestamp_ms: u64,
         slot_duration_ms: u64,
@@ -526,8 +528,8 @@ mod tests {
     /// # block number
     /// ```
     #[tokio::test]
+    #[traced_test]
     async fn test_slotter() {
-        init_tracing().unwrap();
         let slot_start_timestamp_ms = 10_000;
         let slot_duration_ms = 1_000;
         let (slotter, seq_tx, set_tx) =
@@ -625,7 +627,7 @@ mod tests {
 
         let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
 
-        assert!(matches!(result, Err(SlotterError::ReorgDetected { .. })));
+        assert_matches!(result, Err(SlotterError::ReorgDetected { .. }));
     }
 
     #[tokio::test]
@@ -641,7 +643,7 @@ mod tests {
 
         let result = slotter.update_latest_block(&block.block, Chain::Settlement);
 
-        assert!(matches!(result, Err(SlotterError::BlockNumberSkipped { .. })));
+        assert_matches!(result, Err(SlotterError::BlockNumberSkipped { .. }));
     }
 
     #[tokio::test]
@@ -657,6 +659,6 @@ mod tests {
 
         let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
 
-        assert!(matches!(result, Err(SlotterError::EarlierTimestamp { .. })));
+        assert_matches!(result, Err(SlotterError::EarlierTimestamp { .. }));
     }
 }
