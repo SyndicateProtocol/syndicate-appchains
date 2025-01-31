@@ -1,6 +1,9 @@
 //! Anvil connector for the `MetaChain`
 use crate::{
-    block_builder::BlockBuilderError,
+    block_builder::{
+        AnvilStartError::{InvalidHost, NoPort, PortUnavailable},
+        BlockBuilderError,
+    },
     config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
 };
 use alloy::{
@@ -21,8 +24,9 @@ use alloy::{
 use contract_bindings::arbitrum::rollup::Rollup;
 use eyre::Result;
 use reqwest::Client;
-use std::net::TcpListener;
-use tracing::info;
+use std::{net::TcpListener, time::Duration};
+use tracing::{debug, info};
+use url::Host;
 
 #[allow(missing_docs)]
 pub type FilledProvider = FillProvider<
@@ -58,17 +62,28 @@ impl MetaChainProvider {
     /// loads state from the file. The rollup contract is only deployed to the chain when it is
     /// newly created and on the genesis block.
     pub async fn start(config: BlockBuilderConfig) -> Result<Self> {
-        let port = find_available_port(config.port, 10).ok_or_else(|| {
-            BlockBuilderError::AnvilStartError("No available ports found after 10 attempts")
-        })?;
+        let port = config.mchain_url.port().ok_or_else(|| BlockBuilderError::AnvilStart(NoPort))?;
 
-        if port != config.port {
-            info!("Port {} is in use, switching to port {}", config.port, port);
+        if !is_port_available(port) {
+            return Err(BlockBuilderError::AnvilStart(PortUnavailable {
+                mchain_url: config.mchain_url,
+                port,
+            })
+            .into());
         }
 
+        let host_string = match config.mchain_url.host() {
+            Some(Host::Domain(domain)) => domain.to_string(),
+            Some(Host::Ipv4(ip)) => ip.to_string(),
+            Some(Host::Ipv6(ip)) => ip.to_string(),
+            _ => return Err(BlockBuilderError::AnvilStart(InvalidHost).into()),
+        };
+        let host_str = host_string.as_str();
         let ts = config.genesis_timestamp.to_string();
 
         let mut args = vec![
+            "--host",
+            host_str,
             "--base-fee",
             "0",
             "--gas-limit",
@@ -91,6 +106,7 @@ impl MetaChainProvider {
         }
 
         let anvil = Anvil::new().port(port).chain_id(MCHAIN_ID).args(args).try_spawn()?;
+        debug!("Anvil started at {}:{}", host_str, port);
 
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
@@ -101,7 +117,7 @@ impl MetaChainProvider {
         let rollup_config = Self::rollup_config(config.target_chain_id);
 
         if provider.get_block_number().await? == 0 {
-            _ = Rollup::deploy_builder(
+            let _ = Rollup::deploy_builder(
                 &provider,
                 U256::from(config.target_chain_id),
                 rollup_config.clone(),
@@ -233,6 +249,17 @@ impl MetaChainProvider {
     }
 }
 
+/// Custom [`Drop`] to make sure the Anvil process is terminated and the port is released.
+impl Drop for MetaChainProvider {
+    fn drop(&mut self) {
+        // Ensure anvil process is terminated
+        let id = self.anvil.child().id();
+        let _ = std::process::Command::new("kill").arg(id.to_string()).output();
+        // Give the port time to be released
+        std::thread::sleep(Duration::from_millis(500));
+    }
+}
+
 /// Check if a port is available by attempting to bind to it
 ///
 /// The port will be used for both HTTP and WebSocket connections, a feature provided by Anvil.
@@ -242,77 +269,50 @@ pub fn is_port_available(port: u16) -> bool {
     TcpListener::bind(addr).is_ok()
 }
 
-/// Try to find an available port starting from `base_port`
-/// Increments by 100 each try, up to `max_attempts`
-pub fn find_available_port(base_port: u16, max_attempts: u16) -> Option<u16> {
-    for attempt in 0..max_attempts {
-        let port = base_port.saturating_add(attempt * 100);
-        if is_port_available(port) {
-            return Some(port);
-        }
-    }
-    None
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use alloy::{eips::BlockId, rpc::types::BlockTransactionsKind};
+    use serial_test::serial;
     use std::{env::temp_dir, fs, path::PathBuf};
+    use url::Url;
 
-    #[tokio::test]
-    async fn test_port_availability_checking() -> Result<()> {
-        // Initial port should be available
-        let base_port = 1111;
-        assert!(is_port_available(base_port), "Base port should be available initially");
-
-        // Bind to the port to make it unavailable
-        let _listener = TcpListener::bind(format!("127.0.0.1:{}", base_port))?;
-        assert!(!is_port_available(base_port), "Base port should be unavailable after binding");
-
-        // Should find next available port
-        let port = find_available_port(base_port, 10)
-            .ok_or_else(|| eyre::eyre!("Failed to find available port"))?;
-
-        // Port should be base_port + N*100 where N is 1..10
-        assert!(port > base_port, "New port should be higher than base port");
-        assert_eq!((port - base_port) % 100, 0, "Port increment should be multiple of 100");
-        assert!(port <= base_port + 900, "Port should not exceed max attempts range");
-
-        // New port should be available
-        assert!(is_port_available(port), "New port should be available");
-
-        Ok(())
-    }
-
+    #[serial]
     #[tokio::test]
     async fn test_anvil_resume() -> Result<()> {
         let file = temp_dir().join("dump.json");
         let cfg = BlockBuilderConfig {
-            port: 9888,
+            mchain_url: Url::parse("http://127.0.0.1:9888").expect("Invalid URL"),
             anvil_state_path: file.to_str().unwrap().to_string(),
             ..Default::default()
         };
-        _ = fs::remove_file(file);
+        let _ = fs::remove_file(file);
         let mut provider = MetaChainProvider::start(cfg.clone()).await?;
         provider.mine_block(0).await?;
         let old_count = provider.provider.get_block_number().await?;
-        std::process::Command::new("kill").arg(provider.anvil.child().id().to_string()).output()?;
-        provider.anvil.child_mut().wait()?;
+        drop(provider); // To explicitly release the port
+
         provider = MetaChainProvider::start(cfg).await?;
         let new_count = provider.provider.get_block_number().await?;
         assert_eq!(old_count, new_count);
         Ok(())
     }
 
+    #[serial]
     #[tokio::test]
     async fn test_block_persistence() -> Result<()> {
         let state_path = PathBuf::from("test-state.json");
 
+        // check is_port_available and wait 2 sec for anvil to start
+        if !is_port_available(9888) {
+            info!("Waiting 2sec for anvil to start... at port 9888");
+            tokio::time::sleep(Duration::from_secs(2)).await;
+        }
+
         let config = BlockBuilderConfig {
             anvil_state_path: state_path.to_str().unwrap().to_string(),
             genesis_timestamp: 999,
-            port: 9889,
+            mchain_url: Url::parse("http://127.0.0.1:9888").expect("Invalid URL"),
             ..Default::default()
         };
 
@@ -326,7 +326,7 @@ mod tests {
             }
 
             // Let anvil write state before dropping
-            tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            tokio::time::sleep(Duration::from_secs(1)).await;
         } // First instance is dropped here
 
         // Second instance: verify blocks
@@ -353,6 +353,7 @@ mod tests {
         Ok(())
     }
 
+    #[serial]
     #[tokio::test]
     #[ignore] // TODO SEQ-528 unskip
     async fn test_anvil_rollback() -> Result<()> {
