@@ -40,6 +40,8 @@ jobs:
           cacheFrom: |
             ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
           runCmd: |
+            # Start Arbitrum node before running E2E tests
+            just arb-up
             # Run E2E tests within our Rust code
             just e2e-tests
 
