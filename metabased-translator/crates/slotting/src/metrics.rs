@@ -188,8 +188,8 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = SlottingMetrics::new(&mut registry);
 
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
-        let past_timestamp = now - 5000; // 5 seconds ago
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let past_timestamp = now - 5; // 5 seconds ago
         metrics.update_chain_timestamp_lag(past_timestamp, Chain::Sequencing);
         assert!(
             metrics.slotting_timestamp_lag_ms.get_or_create(&Labels { chain: "sequencing" }).get() >=
