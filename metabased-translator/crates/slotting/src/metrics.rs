@@ -2,7 +2,9 @@
 
 use common::types::Chain;
 use prometheus_client::{
+    encoding::EncodeLabelSet,
     metrics::{
+        family::Family,
         gauge::Gauge,
         histogram::{exponential_buckets, Histogram},
     },
@@ -11,112 +13,86 @@ use prometheus_client::{
 use std::time::{SystemTime, UNIX_EPOCH};
 use tracing::error;
 
+/// Labels used for Prometheus metric categorization.
+#[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
+pub struct Labels {
+    /// Sequencing or Settlement
+    pub chain: &'static str,
+}
+
 /// Structure holding metrics related to the Slotting.
 #[derive(Debug)]
 pub struct SlottingMetrics {
-    /// Records the last sequencing block number processed by the Slotting
-    pub last_sequencing_block: Gauge,
-    /// Records the last settlement block number processed by the Slotting
-    pub last_settlement_block: Gauge,
+    /// Records the last block number processed by the Slotting
+    pub slotting_last_processed_block: Family<Labels, Gauge>,
     /// Tracks the current number of active slots
-    pub active_slots: Gauge,
-    /// Tracks the timestamp lag (ms) for the sequencing chain
-    pub sequencing_timestamp_lag_ms: Gauge,
-    /// Tracks the timestamp lag (ms) for the settlement chain
-    pub settlement_timestamp_lag_ms: Gauge,
+    pub slotting_active_slots: Gauge,
+    /// Tracks the timestamp lag (ms)
+    pub slotting_timestamp_lag_ms: Family<Labels, Gauge>,
     /// Tracks blocks processed per slot
-    pub blocks_per_slot: Histogram,
-    /// Tracks the channel capacity for sequencing chain
-    pub sequencing_channel_capacity: Gauge,
-    /// Tracks the channel capacity for settlement chain
-    pub settlement_channel_capacity: Gauge,
+    pub slotting_blocks_per_slot: Histogram,
+    /// Tracks the channel capacity
+    pub slotting_channel_capacity: Family<Labels, Gauge>,
 }
 
 impl SlottingMetrics {
     /// Creates a new `SlottingMetrics` instance and registers metrics in the provided registry.
     pub fn new(registry: &mut Registry) -> Self {
-        let slotting_last_sequencing_block = Gauge::default();
-        let slotting_last_settlement_block = Gauge::default();
-        let active_slots = Gauge::default();
-        let sequencing_timestamp_lag_ms = Gauge::default();
-        let settlement_timestamp_lag_ms = Gauge::default();
-        let blocks_per_slot = Histogram::new(exponential_buckets(1.0, 2.0, 8));
-        let sequencing_channel_capacity = Gauge::default();
-        let settlement_channel_capacity = Gauge::default();
+        let slotting_last_processed_block = Family::<Labels, Gauge>::default();
+        let slotting_active_slots = Gauge::default();
+        let slotting_timestamp_lag_ms = Family::<Labels, Gauge>::default();
+        let slotting_blocks_per_slot = Histogram::new(exponential_buckets(1.0, 2.0, 8));
+        let slotting_channel_capacity = Family::<Labels, Gauge>::default();
 
         registry.register(
-            "slotting_last_sequencing_block",
+            "slotting_last_processed_block",
             "Tracks the last sequencing block number processed by the Slotting",
-            slotting_last_sequencing_block.clone(),
-        );
-
-        registry.register(
-            "slotting_last_settlement_block",
-            "Tracks the last settlement block number processed by the Slotting",
-            slotting_last_settlement_block.clone(),
+            slotting_last_processed_block.clone(),
         );
 
         registry.register(
             "slotting_active_slots",
             "Tracks the number of active slots being processed",
-            active_slots.clone(),
+            slotting_active_slots.clone(),
         );
 
         registry.register(
-            "slotting_chain_timestamp_lag_ms_sequencing",
+            "slotting_timestamp_lag_ms",
             "Tracks the timestamp lag (ms) for the sequencing chain",
-            sequencing_timestamp_lag_ms.clone(),
-        );
-
-        registry.register(
-            "slotting_chain_timestamp_lag_ms_settlement",
-            "Tracks the timestamp lag (ms) for the settlement chain",
-            settlement_timestamp_lag_ms.clone(),
+            slotting_timestamp_lag_ms.clone(),
         );
 
         registry.register(
             "slotting_blocks_per_slot",
             "Histogram tracking blocks processed per slot",
-            blocks_per_slot.clone(),
+            slotting_blocks_per_slot.clone(),
         );
 
         registry.register(
-            "slotting_sequencing_channel_capacity",
+            "slotting_channel_capacity",
             "Tracks the capacity of the sequencing chain channel",
-            sequencing_channel_capacity.clone(),
-        );
-
-        registry.register(
-            "slotting_settlement_channel_capacity",
-            "Tracks the capacity of the settlement chain channel",
-            settlement_channel_capacity.clone(),
+            slotting_channel_capacity.clone(),
         );
 
         Self {
-            last_sequencing_block: slotting_last_sequencing_block,
-            last_settlement_block: slotting_last_settlement_block,
-            active_slots,
-            sequencing_timestamp_lag_ms,
-            settlement_timestamp_lag_ms,
-            blocks_per_slot,
-            sequencing_channel_capacity,
-            settlement_channel_capacity,
+            slotting_last_processed_block,
+            slotting_active_slots,
+            slotting_timestamp_lag_ms,
+            slotting_blocks_per_slot,
+            slotting_channel_capacity,
         }
     }
 
     /// Records the last block processed by the Slotting.
-    pub fn record_last_block_processed(&self, block_number: u64, chain: Chain) {
-        let metric = match chain {
-            Chain::Sequencing => &self.last_sequencing_block,
-            Chain::Settlement => &self.last_settlement_block,
-        };
-
-        metric.set(block_number as i64);
+    pub fn record_last_processed_block(&self, block_number: u64, chain: Chain) {
+        self.slotting_last_processed_block
+            .get_or_create(&Labels { chain: chain.into() })
+            .set(block_number as i64);
     }
 
     /// Updates the number of active slots.
     pub fn update_active_slots(&self, slots: usize) {
-        self.active_slots.set(slots as i64);
+        self.slotting_active_slots.set(slots as i64);
     }
 
     /// Updates the timestamp lag metric (current time - latest block timestamp)
@@ -129,27 +105,24 @@ impl SlottingMetrics {
             }
         };
 
-        let lag = now.saturating_sub(block_timestamp); // Avoid negative values
-        let metric = match chain {
-            Chain::Sequencing => &self.sequencing_timestamp_lag_ms,
-            Chain::Settlement => &self.settlement_timestamp_lag_ms,
-        };
+        let block_timestamp_ms = block_timestamp * 1000; // Convert seconds to milliseconds
 
-        metric.set(lag as i64);
+        let lag = now.saturating_sub(block_timestamp_ms); // Avoid negative values
+        self.slotting_timestamp_lag_ms
+            .get_or_create(&Labels { chain: chain.into() })
+            .set(lag as i64);
     }
 
     /// Records the number of blocks processed per slot.
     pub fn record_blocks_per_slot(&self, blocks: u64) {
-        self.blocks_per_slot.observe(blocks as f64);
+        self.slotting_blocks_per_slot.observe(blocks as f64);
     }
 
     /// Updates the channel capacity for a given chain.
     pub fn update_channel_capacity(&self, capacity: usize, chain: Chain) {
-        let metric = match chain {
-            Chain::Sequencing => &self.sequencing_channel_capacity,
-            Chain::Settlement => &self.settlement_channel_capacity,
-        };
-        metric.set(capacity as i64);
+        self.slotting_channel_capacity
+            .get_or_create(&Labels { chain: chain.into() })
+            .set(capacity as i64);
     }
 }
 
@@ -164,21 +137,38 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = SlottingMetrics::new(&mut registry);
 
-        assert_eq!(metrics.last_sequencing_block.get(), 0);
-        assert_eq!(metrics.last_settlement_block.get(), 0);
-        assert_eq!(metrics.active_slots.get(), 0);
+        assert_eq!(
+            metrics
+                .slotting_last_processed_block
+                .get_or_create(&Labels { chain: "sequencing" })
+                .get(),
+            0
+        );
+        assert_eq!(metrics.slotting_active_slots.get(), 0);
     }
 
     #[test]
-    fn test_record_last_block_processed() {
+    fn test_record_last_processed_block() {
         let mut registry = Registry::default();
         let metrics = SlottingMetrics::new(&mut registry);
 
-        metrics.record_last_block_processed(42, Chain::Sequencing);
-        assert_eq!(metrics.last_sequencing_block.get(), 42);
+        metrics.record_last_processed_block(42, Chain::Sequencing);
+        assert_eq!(
+            metrics
+                .slotting_last_processed_block
+                .get_or_create(&Labels { chain: "sequencing" })
+                .get(),
+            42
+        );
 
-        metrics.record_last_block_processed(84, Chain::Settlement);
-        assert_eq!(metrics.last_settlement_block.get(), 84);
+        metrics.record_last_processed_block(84, Chain::Settlement);
+        assert_eq!(
+            metrics
+                .slotting_last_processed_block
+                .get_or_create(&Labels { chain: "settlement" })
+                .get(),
+            84
+        );
     }
 
     #[test]
@@ -187,10 +177,10 @@ mod tests {
         let metrics = SlottingMetrics::new(&mut registry);
 
         metrics.update_active_slots(10);
-        assert_eq!(metrics.active_slots.get(), 10);
+        assert_eq!(metrics.slotting_active_slots.get(), 10);
 
         metrics.update_active_slots(0);
-        assert_eq!(metrics.active_slots.get(), 0);
+        assert_eq!(metrics.slotting_active_slots.get(), 0);
     }
 
     #[test]
@@ -198,14 +188,20 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = SlottingMetrics::new(&mut registry);
 
-        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_millis() as u64;
-        let past_timestamp = now - 5000; // 5 seconds ago
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+        let past_timestamp = now - 5; // 5 seconds ago
         metrics.update_chain_timestamp_lag(past_timestamp, Chain::Sequencing);
-        assert!(metrics.sequencing_timestamp_lag_ms.get() >= 5000);
+        assert!(
+            metrics.slotting_timestamp_lag_ms.get_or_create(&Labels { chain: "sequencing" }).get() >=
+                5000
+        );
 
         let past_timestamp = now - 10000; // 10 seconds ago
         metrics.update_chain_timestamp_lag(past_timestamp, Chain::Settlement);
-        assert!(metrics.settlement_timestamp_lag_ms.get() >= 10000);
+        assert!(
+            metrics.slotting_timestamp_lag_ms.get_or_create(&Labels { chain: "settlement" }).get() >=
+                10000
+        );
     }
 
     #[test]
@@ -215,9 +211,8 @@ mod tests {
 
         metrics.record_blocks_per_slot(5);
         metrics.record_blocks_per_slot(10);
-
-        // Indirect validation - Histogram should accept observations without errors
         metrics.record_blocks_per_slot(20);
+        // Histogram records values but cannot assert specific values directly
     }
 
     #[test]
@@ -226,9 +221,15 @@ mod tests {
         let metrics = SlottingMetrics::new(&mut registry);
 
         metrics.update_channel_capacity(50, Chain::Sequencing);
-        assert_eq!(metrics.sequencing_channel_capacity.get(), 50);
+        assert_eq!(
+            metrics.slotting_channel_capacity.get_or_create(&Labels { chain: "sequencing" }).get(),
+            50
+        );
 
         metrics.update_channel_capacity(100, Chain::Settlement);
-        assert_eq!(metrics.settlement_channel_capacity.get(), 100);
+        assert_eq!(
+            metrics.slotting_channel_capacity.get_or_create(&Labels { chain: "settlement" }).get(),
+            100
+        );
     }
 }

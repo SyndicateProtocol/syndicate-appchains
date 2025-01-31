@@ -161,6 +161,14 @@ pub enum Chain {
     Settlement,
 }
 
+impl From<Chain> for &'static str {
+    fn from(chain: Chain) -> &'static str {
+        match chain {
+            Chain::Sequencing => "sequencing",
+            Chain::Settlement => "settlement",
+        }
+    }
+}
 /// The state of a slot describing its finality
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Display, Serialize, Deserialize, Default)]
 #[strum(serialize_all = "lowercase")]

@@ -12,6 +12,7 @@ repository.workspace = true
 [dependencies]
 axum = { workspace = true }
 clap = { workspace = true }
+common ={ workspace = true }
 prometheus-client = { workspace = true }
 reqwest = { workspace = true }
 tokio ={ workspace = true}
