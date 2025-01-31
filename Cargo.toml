@@ -7,6 +7,7 @@ members = [
     "metabased-translator/crates/common",
     "metabased-translator/crates/metrics",
     "metabased-translator/bin/metabased-translator",
+    "metabased-translator/bin/debug-translator",
     "metabased-translator/tests",
     "metabased-sequencer/interceptor",
     "metabased-sequencer/proxy",
