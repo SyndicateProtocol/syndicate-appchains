@@ -30,6 +30,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Run Metabased Translator E2E Tests
+        timeout-minutes: 30
+        uses: devcontainers/ci@v0.3
+        with:
+          imageName: ghcr.io/syndicateprotocol/metabased-devcontainer
+          imageTag: cache-main
+          push: never
+          cacheFrom: |
+            ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
+          runCmd: |
+            # Run E2E tests within our Rust code
+            just e2e-tests
+
       - name: Setup Infra + Run Arbitrum L2 + Run Metabased Sequencer + Verify with test transaction
         timeout-minutes: 30
         uses: devcontainers/ci@v0.3
@@ -43,19 +56,6 @@ jobs:
           runCmd: |
             # Run all verifications
             just verify-all
-
-      - name: Run Metabased Translator E2E Tests
-        timeout-minutes: 30
-        uses: devcontainers/ci@v0.3
-        with:
-          imageName: ghcr.io/syndicateprotocol/metabased-devcontainer
-          imageTag: cache-main
-          push: never
-          cacheFrom: |
-            ghcr.io/syndicateprotocol/metabased-devcontainer:cache-main
-          runCmd: |
-            # Run E2E tests within our Rust code
-            just e2e-tests
 
       - name: Upload logs
         if: always()
