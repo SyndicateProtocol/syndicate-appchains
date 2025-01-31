@@ -316,6 +316,7 @@ impl Slotter {
                     let next_timestamp = latest_timestamp + slot_duration_ms;
                     let next_slot_number = latest_slot_number + 1;
                     let slot = Slot::new(next_slot_number, next_timestamp);
+                    self.metrics.record_last_slot(slot.number);
                     debug!(%slot, "Creating new slot");
                     self.slots.push_front(slot);
                     latest_timestamp = next_timestamp;
