@@ -93,8 +93,8 @@ op-clone:
     # once it's fixed
     # If you encounter this error, you can try running `op-reclone` to clean up
     # and re-clone the repository
-    git clone --branch develop --single-branch --depth 1 https://github.com/ethereum-optimism/optimism.git ~/optimism || echo skipping optimism clone
-    git clone --branch optimism --single-branch --depth 1 https://github.com/ethereum-optimism/op-geth.git ~/op-geth || echo skipping op-geth clone
+    git clone --branch develop --single-branch --depth 1 https://github.com/ethereum-optimism/optimism.git /home/vscode/optimism || echo skipping optimism clone
+    git clone --branch optimism --single-branch --depth 1 https://github.com/ethereum-optimism/op-geth.git /home/vscode/op-geth || echo skipping op-geth clone
 
     @just _log-end "op-clone"
 
