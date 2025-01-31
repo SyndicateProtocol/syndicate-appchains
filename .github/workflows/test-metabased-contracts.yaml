@@ -56,9 +56,8 @@ jobs:
           forge test -vvv
         id: test
 
-# TODO: figure out why this is failing and fix it
-#      - name: Check Rust bindings
-#        run: |
-#          forge bind --alloy
-#          mv out/bindings/src/lib.rs out/bindings/src/mod.rs
-#          diff -r -q out/bindings/src ../metabased-translator/contract-bindings/src/metabased
+      - name: Check Rust bindings
+        run: |
+          forge bind --alloy
+          mv out/bindings/src/lib.rs out/bindings/src/mod.rs
+          diff -r out/bindings/src ../metabased-translator/contract-bindings/src/metabased
