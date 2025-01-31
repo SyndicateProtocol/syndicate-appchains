@@ -106,4 +106,4 @@ jobs:
 
       # Run tests on entire workspace (excluding e2e tests)
       - name: Run Tests
-        run: cargo test --workspace --no-default-features
+        run: cargo test --workspace --exclude e2e-tests
