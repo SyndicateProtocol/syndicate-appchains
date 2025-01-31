@@ -2666,6 +2666,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "clap",
+ "common",
  "ingestor",
  "prometheus-client",
  "reqwest",

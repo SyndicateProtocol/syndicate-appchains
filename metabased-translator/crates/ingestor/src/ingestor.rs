@@ -70,17 +70,9 @@ impl Ingestor {
         let receipts = self.client.get_block_receipts(block_number).await?;
         let duration_receipts = start_time_receipts.elapsed();
 
-        self.metrics.record_rpc_call(
-            self.chain.to_string(),
-            "eth_getBlockByNumber",
-            duration_block,
-        );
+        self.metrics.record_rpc_call(self.chain, "eth_getBlockByNumber", duration_block);
 
-        self.metrics.record_rpc_call(
-            self.chain.to_string(),
-            "eth_getBlockReceipts",
-            duration_receipts,
-        );
+        self.metrics.record_rpc_call(self.chain, "eth_getBlockReceipts", duration_receipts);
 
         debug!("Got block: {:?}", block.number);
 
@@ -100,7 +92,7 @@ impl Ingestor {
         }
         self.sender.send(block_and_receipts.clone()).await?;
         self.current_block_number += 1;
-        self.metrics.record_last_block_fetched(self.chain.to_string(), self.current_block_number);
+        self.metrics.record_last_block_fetched(self.chain, self.current_block_number);
         Ok(())
     }
 
