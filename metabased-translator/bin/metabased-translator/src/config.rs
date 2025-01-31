@@ -16,6 +16,9 @@ use tracing::debug;
 #[derive(Parser, Debug, Clone)]
 #[command(version, about)]
 pub struct MetabasedConfig {
+    #[arg(long, env = "DATADIR", default_value = "./datadir")]
+    pub datadir: String,
+
     #[command(flatten)]
     pub block_builder: BlockBuilderConfig,
 
@@ -119,7 +122,6 @@ mod tests {
 
         // Slotter
         assert_eq!(config.slotter.slot_duration_ms, 2_000);
-        assert_eq!(config.slotter.start_slot_number, 2);
         assert_eq!(config.slotter.start_slot_timestamp, 1712500000000);
 
         // Chains

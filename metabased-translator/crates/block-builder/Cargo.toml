@@ -26,7 +26,6 @@ eyre = { workspace = true }
 tokio = { workspace = true, features = ["rt-multi-thread", "process"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
-slotting = {workspace = true}
 flate2 = { workspace = true }
 reqwest = { workspace = true }
 tracing = { workspace = true }
@@ -35,11 +34,12 @@ base64 = { workspace = true }
 brotli = { workspace = true }
 hex = { workspace = true }
 async-trait = { workspace = true }
-thiserror = { workspace = true}
+thiserror = { workspace = true }
 
 [dev-dependencies]
 serial_test = { workspace = true }
 assert_matches = { workspace = true }
+tracing-test = { workspace = true }
 
 [lints]
 workspace = true

@@ -17,7 +17,11 @@ use block_builder::{
     connectors::anvil::{self, MetaChainProvider},
     rollups::arbitrum,
 };
-use common::{tracing::init_tracing, types::Block};
+use common::{
+    db::DummyStore,
+    tracing::init_tracing,
+    types::{Block, Chain},
+};
 use contract_bindings::{
     arbitrum::{counter::Counter, rollup::Rollup},
     metabased::{
@@ -26,16 +30,12 @@ use contract_bindings::{
 };
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::{eyre, Result};
-use ingestor::{
-    config::IngestionPipelineConfig,
-    ingestor::{Ingestor, IngestorChain},
-    metrics::IngestorMetrics,
-};
+use ingestor::{config::IngestionPipelineConfig, ingestor::Ingestor, metrics::IngestorMetrics};
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use reqwest::Client;
 use serial_test::serial;
-use slotting::slotting::Slotter;
+use slotting::{metrics::SlottingMetrics, slotting::Slotter};
 use std::time::Duration;
 use tokio::{
     process::{Child, Command},
@@ -297,27 +297,45 @@ async fn e2e_test() -> Result<()> {
     ingestor_config.sequencing.sequencing_polling_interval = Duration::from_millis(100);
     ingestor_config.settlement.settlement_polling_interval = Duration::from_millis(100);
     let mut metrics_state = MetricsState { registry: Registry::default() };
-    let seq_metrics = IngestorMetrics::new(&mut metrics_state.registry);
-    let set_metrics = IngestorMetrics::new(&mut metrics_state.registry);
-    let (mut sequencing_ingestor, sequencer_rx) =
-        Ingestor::new(IngestorChain::Sequencing, ingestor_config.sequencing.into(), seq_metrics)
-            .await?;
-    let (mut settlement_ingestor, settlement_rx) =
-        Ingestor::new(IngestorChain::Settlement, ingestor_config.settlement.into(), set_metrics)
-            .await?;
+    let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
+        Chain::Sequencing,
+        ingestor_config.sequencing.into(),
+        IngestorMetrics::new(&mut metrics_state.registry),
+    )
+    .await?;
+    let (settlement_ingestor, settlement_rx) = Ingestor::new(
+        Chain::Settlement,
+        ingestor_config.settlement.into(),
+        IngestorMetrics::new(&mut metrics_state.registry),
+    )
+    .await?;
+    let (_dumy, dummy) = tokio::sync::oneshot::channel();
     let _seq_ingestor_task = Task(tokio::spawn(async move {
-        sequencing_ingestor.start_polling().await.unwrap();
+        sequencing_ingestor.start_polling(dummy).await.unwrap();
     }));
+    let (_dummy, dummy) = tokio::sync::oneshot::channel();
     let _set_ingestor_task = Task(tokio::spawn(async move {
-        settlement_ingestor.start_polling().await.unwrap();
+        settlement_ingestor.start_polling(dummy).await.unwrap();
     }));
 
     // Launch the slotter, block builder, and nitro rollup
-    let slotter = Slotter::new(sequencer_rx, settlement_rx, Default::default()).await;
-    let block_builder = BlockBuilder::new(slotter.start(), block_builder_cfg).await?;
+    let (slotter, slotter_rx) = Slotter::new(
+        sequencer_rx,
+        settlement_rx,
+        Default::default(),
+        None,
+        Box::new(DummyStore {}),
+        SlottingMetrics::new(&mut metrics_state.registry),
+    );
+    let (_dummy, dummy) = tokio::sync::oneshot::channel();
+    let _slotter_task = Task(tokio::spawn(async move {
+        slotter.start(dummy).await;
+    }));
+    let block_builder = BlockBuilder::new(slotter_rx, block_builder_cfg).await?;
     let (_nitro, rollup) = launch_nitro_node(&block_builder.mchain).await?;
+    let (_dummy, dummy) = tokio::sync::oneshot::channel();
     let _block_builder_task = Task(tokio::spawn(async move {
-        block_builder.start().await;
+        block_builder.start(None, dummy).await;
     }));
 
     // slot 0 starts at the genesis block and contains the dummy init message which is ignored

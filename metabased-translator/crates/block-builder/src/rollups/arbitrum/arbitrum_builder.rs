@@ -27,11 +27,12 @@ use contract_bindings::arbitrum::{
     rollup::Rollup,
 };
 use eyre::Result;
-use slotting::config::FIRST_SLOT;
 use std::collections::HashMap;
 use thiserror::Error;
 use tracing::{debug, error};
 
+/// The number of blocks that are premined on the mchain (excluding the genesis block).
+const PREMINED_BLOCKS: u64 = 1;
 const MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = MessageDelivered::SIGNATURE_HASH;
 const INBOX_MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = InboxMessageDelivered::SIGNATURE_HASH;
 const INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH: FixedBytes<32> =
@@ -102,20 +103,17 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
 
         let mb_transactions = self.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
 
-        if delayed_messages.is_empty() &&
-            mb_transactions.is_empty() &&
-            slot.slot_number != FIRST_SLOT
-        {
+        if delayed_messages.is_empty() && mb_transactions.is_empty() && slot.number != 1 {
             return Ok(Default::default());
         }
 
         let batch_transaction = self
             .build_batch_txn(
                 mb_transactions,
-                slot.slot_number,
+                slot.number,
                 slot.timestamp,
                 // include the pre-existing init message in the first batch
-                delayed_messages.len() + ((slot.slot_number == FIRST_SLOT) as usize),
+                delayed_messages.len() + ((slot.number == 1) as usize),
             )
             .await?;
 
@@ -297,7 +295,7 @@ impl ArbitrumBlockBuilder {
         if !txs.is_empty() {
             messages.push(BatchMessage::L2(L1IncomingMessage {
                 header: L1IncomingMessageHeader {
-                    block_number: slot_number,
+                    block_number: slot_number + PREMINED_BLOCKS,
                     timestamp: slot_timestamp,
                 },
                 l2_msg: txs,
@@ -381,7 +379,7 @@ mod tests {
 
         // For non-empty batch, should create BatchMessage::L2
         let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
-            header: Default::default(),
+            header: L1IncomingMessageHeader { timestamp: 0, block_number: PREMINED_BLOCKS },
             l2_msg: txs,
         })]);
         let expected_encoded = expected_batch.encode().unwrap();
@@ -396,12 +394,36 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_build_batch_from_first_slot() {
+        let mut builder = ArbitrumBlockBuilder::default();
+
+        // Create an empty slot
+        let slot = Slot {
+            number: 1,
+            timestamp: 0,
+            state: SlotState::Safe,
+            settlement_chain_blocks: vec![],
+            sequencing_chain_blocks: vec![],
+        };
+
+        let result = builder.build_block_from_slot(slot).await;
+        assert!(result.is_ok());
+
+        let txns = result.unwrap();
+        assert_eq!(txns.len(), 1); // Should contain just the batch transaction
+
+        // Verify the batch transaction
+        let batch_txn = &txns[0];
+        assert_eq!(batch_txn.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+    }
+
+    #[tokio::test]
     async fn test_empty_slot() {
         let mut builder = ArbitrumBlockBuilder::default();
 
         // Create an empty slot
         let slot = Slot {
-            slot_number: 1,
+            number: 2,
             timestamp: 0,
             state: SlotState::Safe,
             settlement_chain_blocks: vec![],
@@ -485,7 +507,7 @@ mod tests {
         );
 
         let slot = Slot {
-            slot_number: 1,
+            number: 1,
             timestamp: 0,
             state: SlotState::Safe,
             settlement_chain_blocks: vec![block],
@@ -526,7 +548,7 @@ mod tests {
             Block { number: 1, transactions: vec![Transaction::default()], ..Default::default() };
 
         let slot = Slot {
-            slot_number: 1,
+            number: 1,
             timestamp: 0,
             state: SlotState::Safe,
             settlement_chain_blocks: vec![],
@@ -546,10 +568,13 @@ mod tests {
         let batch_txn = &txns[0];
         assert_eq!(batch_txn.to, Some(TxKind::Call(builder.mchain_rollup_address)));
         let txn_data_without_prefix = txn_data[1..].to_vec();
-        let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
-            header: L1IncomingMessageHeader { block_number: 1, timestamp: 0 },
-            l2_msg: vec![txn_data_without_prefix.into()],
-        })]);
+        let expected_batch = Batch(vec![
+            BatchMessage::Delayed,
+            BatchMessage::L2(L1IncomingMessage {
+                header: L1IncomingMessageHeader { block_number: 1 + PREMINED_BLOCKS, timestamp: 0 },
+                l2_msg: vec![txn_data_without_prefix.into()],
+            }),
+        ]);
         let expected_encoded = expected_batch.encode().unwrap();
         let expected_batch_call =
             Rollup::postBatchCall::new((expected_encoded,)).abi_encode().into();
@@ -621,7 +646,7 @@ mod tests {
             Receipt { logs: vec![delayed_log, inbox_log], ..Default::default() };
 
         let slot = Slot {
-            slot_number: 1,
+            number: 1,
             timestamp: 0,
             state: SlotState::Safe,
             settlement_chain_blocks: vec![BlockAndReceipts {
@@ -658,8 +683,9 @@ mod tests {
         assert_eq!(batch_txn.to, Some(TxKind::Call(builder.mchain_rollup_address)));
         let expected_batch = Batch(vec![
             BatchMessage::Delayed,
+            BatchMessage::Delayed,
             BatchMessage::L2(L1IncomingMessage {
-                header: L1IncomingMessageHeader { block_number: 1, timestamp: 0 },
+                header: L1IncomingMessageHeader { block_number: 1 + PREMINED_BLOCKS, timestamp: 0 },
                 l2_msg: vec![txn_data_without_prefix.into()],
             }),
         ]);

@@ -17,9 +17,6 @@ const DEFAULT_PRIVATE_KEY_SIGNER: &str =
 #[derive(Parser, Clone)]
 #[allow(missing_docs)]
 pub struct BlockBuilderConfig {
-    #[arg(short = 'f', long, env = "BLOCK_BUILDER_SNAPSHOT_FILE", default_value = "")]
-    pub file: String,
-
     #[arg(short = 'p', long, env = "BLOCK_BUILDER_PORT", default_value_t = 8888)]
     pub port: u16,
 
@@ -55,6 +52,18 @@ pub struct BlockBuilderConfig {
         value_parser = parse_address,
         default_value = "0x0000000000000000000000000000000000000000")]
     pub delayed_inbox_address: Address,
+
+    // path to the directory where anvil will keep its state
+    #[arg(long, env = "BLOCK_BUILDER_ANVIL_STATE_PATH", default_value = "")]
+    pub anvil_state_path: String,
+
+    // interval at which anvil saves state to disk (in seconds)
+    #[arg(long, env = "BLOCK_BUILDER_ANVIL_STATE_INTERVAL", default_value_t = 1)]
+    pub anvil_state_interval: u64,
+
+    // number of states to be kept in memory by anvil
+    #[arg(long, env = "BLOCK_BUILDER_ANVIL_PRUNE_HISTORY", default_value_t = 50)]
+    pub anvil_prune_history: u64,
 }
 
 /// Possible target rollup types for the [`block-builder`]
@@ -84,7 +93,6 @@ pub fn get_rollup_contract_address() -> Address {
 impl Debug for BlockBuilderConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockBuilderConfig")
-            .field("file", &self.file)
             .field("port", &self.port)
             .field("genesis_timestamp", &self.genesis_timestamp)
             .field("target_chain_id", &self.target_chain_id)
@@ -93,6 +101,9 @@ impl Debug for BlockBuilderConfig {
             .field("mchain_rollup_address", &self.mchain_rollup_address)
             .field("delayed_inbox_address", &self.delayed_inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
+            .field("anvil_state_path", &self.anvil_state_path)
+            .field("anvil_state_interval", &self.anvil_state_interval)
+            .field("anvil_prune_history", &self.anvil_prune_history)
             .finish()
     }
 }
@@ -142,6 +153,12 @@ impl BlockBuilderConfig {
             }
         }
 
+        if self.anvil_state_path.is_empty() {
+            return Err(ConfigError::InvalidAnvilStatePath(
+                "Anvil state path cannot be empty".to_string(),
+            ));
+        }
+
         Ok(())
     }
 }
@@ -158,6 +175,8 @@ pub enum ConfigError {
     UnsupportedRollupType(String),
     #[error("Invalid configuration address: {0}")]
     InvalidAddress(String),
+    #[error("Invalid anvil state path: {0}")]
+    InvalidAnvilStatePath(String),
 }
 
 #[cfg(test)]
@@ -168,11 +187,16 @@ mod tests {
     #[test]
     fn test_default_parsing() {
         let config = BlockBuilderConfig::parse_from(["test"]);
-        assert_eq!(config.file, "");
         assert_eq!(config.port, 8888);
         assert_eq!(config.genesis_timestamp, 1712500000);
         assert_eq!(config.target_chain_id, 13331370);
-        assert_eq!(config.sequencing_contract_address, Address::ZERO);
+        assert_eq!(
+            config.sequencing_contract_address.to_string(),
+            "0x0000000000000000000000000000000000000000"
+        );
+        assert_eq!(config.anvil_state_path, "");
+        assert_eq!(config.anvil_state_interval, 1);
+        assert_eq!(config.anvil_prune_history, 50);
     }
 
     #[test]
