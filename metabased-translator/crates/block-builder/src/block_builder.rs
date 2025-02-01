@@ -3,6 +3,7 @@
 use crate::{
     config::{BlockBuilderConfig, TargetRollupType},
     connectors::anvil::MetaChainProvider,
+    metrics::BlockBuilderMetrics,
     rollups::{
         arbitrum::arbitrum_builder::ArbitrumBlockBuilder,
         optimism::optimism_builder::OptimismBlockBuilder, shared::RollupBlockBuilder,
@@ -11,9 +12,9 @@ use crate::{
 use alloy::transports::{RpcError, TransportErrorKind};
 use common::types::Slot;
 use eyre::{Error, Result};
-use thiserror::Error;
 use tokio::sync::{mpsc::Receiver, oneshot};
 use tracing::{debug, error, info};
+use url::Url;
 
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
@@ -22,6 +23,7 @@ pub struct BlockBuilder {
     #[allow(missing_docs)]
     pub mchain: MetaChainProvider,
     builder: Box<dyn RollupBlockBuilder>,
+    metrics: BlockBuilderMetrics,
 }
 
 impl BlockBuilder {
@@ -29,6 +31,7 @@ impl BlockBuilder {
     pub async fn new(
         slotter_rx: Receiver<Slot>,
         config: &BlockBuilderConfig,
+        metrics: BlockBuilderMetrics,
     ) -> Result<Self, Error> {
         let mchain = MetaChainProvider::start(config).await?;
 
@@ -39,7 +42,7 @@ impl BlockBuilder {
             }
         };
 
-        Ok(Self { slotter_rx, mchain, builder })
+        Ok(Self { slotter_rx, mchain, builder, metrics })
     }
 
     /// Start the block builder
@@ -56,9 +59,11 @@ impl BlockBuilder {
         }
 
         loop {
+            self.metrics.update_channel_capacity(self.slotter_rx.capacity());
             tokio::select! {
                 Some(slot) = self.slotter_rx.recv() => {
                     debug!("Received slot: {:?}", slot);
+                    self.metrics.record_last_slot(slot.number);
 
                     // [OP / ARB] Build block of MChain transactions from slot
                     let transactions = match self.builder.build_block_from_slot(slot.clone()).await {
@@ -68,7 +73,9 @@ impl BlockBuilder {
                         }
                     };
 
-                    debug!("Submitting {} transactions", transactions.len());
+                    let transactions_len = transactions.len();
+                    self.metrics.record_transactions_per_slot(transactions_len);
+                    debug!("Submitting {} transactions", transactions_len);
 
                     // Submit transactions to mchain
                     if let Err(e) = self.mchain.submit_txns(transactions).await {
@@ -90,10 +97,10 @@ impl BlockBuilder {
 }
 
 #[allow(missing_docs)] // self-documenting
-#[derive(Debug, Error)]
+#[derive(Debug, thiserror::Error)]
 pub enum BlockBuilderError {
-    #[error("Anvil failed to start: {0}")]
-    AnvilStartError(&'static str),
+    #[error("Error starting Anvil: {0}")]
+    AnvilStart(AnvilStartError),
 
     #[error("Failed to submit transaction to MetaChain: {0}")]
     SubmitTxnError(RpcError<TransportErrorKind>),
@@ -102,12 +109,29 @@ pub enum BlockBuilderError {
     EmptyL2Message(),
 }
 
+#[allow(missing_docs)] // self-documenting
+#[derive(Debug, thiserror::Error)]
+pub enum AnvilStartError {
+    #[error("Invalid host in mchain_url")]
+    InvalidHost,
+    #[error("No port found in mchain_url")]
+    NoPort,
+    #[error("Requested port in mchain_url {mchain_url:} is unavailable: {port}")]
+    PortUnavailable { mchain_url: Url, port: u16 },
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use alloy::providers::Provider;
     use eyre::Result;
+    use prometheus_client::registry::Registry;
     use tokio::sync::mpsc;
+
+    struct MetricsState {
+        /// Prometheus registry
+        pub registry: Registry,
+    }
 
     /// Test the block builder startup and basic functionality
     /// This test requires Anvil (part of Foundry toolchain) to simulate a local Ethereum node.
@@ -117,7 +141,9 @@ mod tests {
         let (tx, rx) = mpsc::channel(32);
         let config = BlockBuilderConfig::default();
         let genesis_ts = config.genesis_timestamp;
-        let builder = BlockBuilder::new(rx, &config).await?;
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
+        let builder = BlockBuilder::new(rx, &config, metrics).await?;
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });
@@ -141,7 +167,9 @@ mod tests {
     async fn test_block_builder_resume_from_known_safe_slot() -> Result<()> {
         let (tx, rx) = mpsc::channel(1);
         let config = BlockBuilderConfig::default();
-        let builder = BlockBuilder::new(rx, &config).await?;
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
+        let builder = BlockBuilder::new(rx, &config, metrics).await?;
 
         let provider = builder.mchain.provider.clone();
 
@@ -168,7 +196,8 @@ mod tests {
 
         // Second run: resume builder
         let (_resumed_tx, resumed_rx) = mpsc::channel(1);
-        let resumed_builder = BlockBuilder::new(resumed_rx, &config).await?;
+        let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
+        let resumed_builder = BlockBuilder::new(resumed_rx, &config, metrics).await?;
 
         let resumed_provider = resumed_builder.mchain.provider.clone();
 

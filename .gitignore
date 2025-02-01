@@ -36,3 +36,6 @@ internal/.DS_Store
 
 # Cargo-chef
 recipe.json
+
+# DB files
+datadir/

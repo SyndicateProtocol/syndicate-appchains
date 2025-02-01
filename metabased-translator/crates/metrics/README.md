@@ -32,7 +32,7 @@ The following metrics are implemented and exposed via the `/metrics` endpoint in
 2. **slotting_active_slots**: Tracks the number of active slots being processed.
    - **Metric Type**: Gauge
 
-3. **slotting_timestamp_lag_ms**: Tracks the timestamp lag (ms) for the sequencing chain.
+3. **slotting_timestamp_lag_ms**: Tracks the timestamp lag (ms) for the both chains.
    - **Labels**:
      - `chain`: Specifies whether the block belongs to the Sequencing or Settlement chain.
    - **Metric Type**: Gauge
@@ -40,12 +40,23 @@ The following metrics are implemented and exposed via the `/metrics` endpoint in
 4. **slotting_blocks_per_slot**: Tracks the number of blocks processed per slot.
    - **Metric Type**: Histogram
 
-5. **slotting_channel_capacity**: Tracks the capacity of the sequencing chain channel.
+5. **slotting_channel_capacity**: Tracks the capacity of the chain channel.
    - **Labels**:
      - `chain`: Specifies whether the channel belongs to the Sequencing or Settlement chain.
    - **Metric Type**: Gauge
+  
+6. **slotting_last_slot_created**: Tracks the last slot number created by the Slotting.
+   - **Metric Type**: Gauge
+  
 
 
 #### Block Builder
 
-TODO SEQ-505
+1. **block_builder_transactions_per_slot**: Tracks the number of built metabased transactions.
+   - **Metric Type**: Gauge
+  
+2. **block_builder_last_processed_slot**: Tracks the last slot number processed by the BlockBuilder.
+   - **Metric Type**: Gauge
+  
+3. **block_builder_channel_capacity**: Tracks the capacity of the slot channel.
+   - **Metric Type**: Gauge

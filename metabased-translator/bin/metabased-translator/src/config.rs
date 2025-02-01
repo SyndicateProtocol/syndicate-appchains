@@ -88,7 +88,7 @@ mod tests {
 
     fn clean_env() {
         // Block Builder
-        env::remove_var("BLOCK_BUILDER_PORT");
+        env::remove_var("BLOCK_BUILDER_MCHAIN_URL");
         env::remove_var("BLOCK_BUILDER_GENESIS_TIMESTAMP");
         env::remove_var("BLOCK_BUILDER_CHAIN_ID");
 
@@ -120,7 +120,7 @@ mod tests {
         let config = MetabasedConfig::try_parse_from(["test"]).unwrap();
 
         // Block Builder
-        assert_eq!(config.block_builder.port, 8888);
+        assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:8888/");
         assert_eq!(config.block_builder.genesis_timestamp, 1712500000);
         assert_eq!(config.block_builder.target_chain_id, 13331370);
 
@@ -144,12 +144,12 @@ mod tests {
     #[serial]
     fn test_env_vars_override_defaults() {
         clean_env();
-        env::set_var("BLOCK_BUILDER_PORT", "9999");
+        env::set_var("BLOCK_BUILDER_MCHAIN_URL", "http://127.0.0.1:9999/");
         env::set_var("SLOTTER_SLOT_DURATION_MS", "3000");
         env::set_var("SEQUENCING_BUFFER_SIZE", "200");
 
         let config = MetabasedConfig::try_parse_from(["test"]).unwrap();
-        assert_eq!(config.block_builder.port, 9999);
+        assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:9999/");
         assert_eq!(config.slotter.slot_duration_ms, 3000);
         assert_eq!(config.sequencing.sequencing_buffer_size, 200);
     }
@@ -158,10 +158,11 @@ mod tests {
     #[serial]
     fn test_cli_args_override_env_vars() {
         clean_env();
-        env::set_var("BLOCK_BUILDER_PORT", "9999");
+        env::set_var("BLOCK_BUILDER_MCHAIN_URL", "http://127.0.0.1:9999/");
 
-        let config = MetabasedConfig::try_parse_from(["test", "--port", "7777"]).unwrap();
-        assert_eq!(config.block_builder.port, 7777);
+        let config =
+            MetabasedConfig::try_parse_from(["test", "-u", "http://127.0.0.1:7777/"]).unwrap();
+        assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:7777/");
     }
 
     #[test]

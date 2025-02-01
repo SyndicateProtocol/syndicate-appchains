@@ -35,6 +35,8 @@ brotli = { workspace = true }
 hex = { workspace = true }
 async-trait = { workspace = true }
 thiserror = { workspace = true }
+prometheus-client = { workspace = true }
+url = { workspace = true }
 
 [dev-dependencies]
 serial_test = { workspace = true }

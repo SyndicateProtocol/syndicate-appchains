@@ -318,7 +318,7 @@ impl Slotter {
                 latest_slot.push_block(block_info, chain)
             }
             Ordering::Greater => {
-                info!("Creating new slots to fit block");
+                debug!("Creating new slots to fit block");
                 let mut latest_timestamp = latest_slot.timestamp;
                 let mut latest_slot_number = latest_slot.number;
 
@@ -331,14 +331,15 @@ impl Slotter {
                     let next_timestamp = latest_timestamp + slot_duration_ms;
                     let next_slot_number = latest_slot_number + 1;
                     let slot = Slot::new(next_slot_number, next_timestamp);
-                    info!(%slot, "Creating new slot");
+                    self.metrics.record_last_slot(slot.number);
+                    debug!(%slot, "Creating new slot");
                     self.slots.push_front(slot);
                     latest_timestamp = next_timestamp;
                     latest_slot_number = next_slot_number;
                 }
 
                 let latest_slot = self.slots.front_mut().ok_or(SlotterError::NoSlotsAvailable)?;
-                info!(%latest_slot, "Pushing block to the newly created latest slot");
+                debug!(%latest_slot, "Pushing block to the newly created latest slot");
                 latest_slot.push_block(block_info, chain);
             }
         }
