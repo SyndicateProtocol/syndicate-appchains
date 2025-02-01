@@ -31,7 +31,7 @@ pub struct ChainIngestorConfig {
     #[arg(long, env, default_value = "http://localhost:8545")]
     pub rpc_url: String,
 
-    #[arg(long, env, default_value_t = 0)]
+    #[arg(long, env, default_value_t = 1)]
     pub start_block: u64,
 }
 
@@ -55,11 +55,7 @@ pub struct SequencingChainConfig {
     pub sequencing_polling_interval: Duration,
 
     /// The RPC URL of the sequencing chain
-    #[arg(
-        long = "sequencing-rpc-url",
-        env = "SEQUENCING_RPC_URL",
-        default_value = "http://localhost:8545"
-    )]
+    #[arg(long = "sequencing-rpc-url", env = "SEQUENCING_RPC_URL", default_value = "")]
     pub sequencing_rpc_url: String,
 
     /// The block number to start polling from on the sequencing chain
@@ -84,11 +80,7 @@ pub struct SettlementChainConfig {
     pub settlement_polling_interval: Duration,
 
     /// The RPC URL of the settlement chain
-    #[arg(
-        long = "settlement-rpc-url",
-        env = "SETTLEMENT_RPC_URL",
-        default_value = "http://localhost:8546"
-    )]
+    #[arg(long = "settlement-rpc-url", env = "SETTLEMENT_RPC_URL", default_value = "")]
     pub settlement_rpc_url: String,
 
     /// The block number to start polling from on the settlement chain
@@ -163,6 +155,8 @@ pub enum ConfigError {
     InvalidPollingInterval(String),
     #[error("Invalid buffer size: {0}")]
     InvalidBufferSize(String),
+    #[error("Empty rpc url")]
+    EmptyRpcUrl(),
 }
 
 // uses clap defaults
@@ -226,6 +220,10 @@ impl ChainIngestorConfig {
             return Err(ConfigError::InvalidBufferSize(
                 "Buffer size must be greater than 0".to_string(),
             ));
+        }
+
+        if self.rpc_url.is_empty() {
+            return Err(ConfigError::EmptyRpcUrl());
         }
 
         Ok(())

@@ -131,10 +131,10 @@ mod tests {
         // Chains
         assert_eq!(config.sequencing.sequencing_buffer_size, 100);
         assert_eq!(config.sequencing.sequencing_polling_interval, Duration::from_secs(1));
-        assert_eq!(config.sequencing.sequencing_rpc_url, "http://localhost:8545");
+        assert_eq!(config.sequencing.sequencing_rpc_url, "");
         assert_eq!(config.settlement.settlement_buffer_size, 100);
         assert_eq!(config.settlement.settlement_polling_interval, Duration::from_secs(1));
-        assert_eq!(config.settlement.settlement_rpc_url, "http://localhost:8546");
+        assert_eq!(config.settlement.settlement_rpc_url, "");
 
         // Metrics
         assert_eq!(config.metrics.metrics_port, 9090)

@@ -273,17 +273,14 @@ pub fn is_port_available(port: u16) -> bool {
 mod tests {
     use super::*;
     use alloy::{eips::BlockId, rpc::types::BlockTransactionsKind};
-    use serial_test::serial;
     use std::{env::temp_dir, fs, path::PathBuf};
-    use tracing::info;
     use url::Url;
 
-    #[serial]
     #[tokio::test]
     async fn test_anvil_resume() -> Result<()> {
         let file = temp_dir().join("dump.json");
         let cfg = BlockBuilderConfig {
-            mchain_url: Url::parse("http://127.0.0.1:9888").expect("Invalid URL"),
+            mchain_url: Url::parse("http://127.0.0.1:9188").expect("Invalid URL"),
             anvil_state_path: file.to_str().unwrap().to_string(),
             ..Default::default()
         };
@@ -299,21 +296,14 @@ mod tests {
         Ok(())
     }
 
-    #[serial]
     #[tokio::test]
     async fn test_block_persistence() -> Result<()> {
         let state_path = PathBuf::from("test-state.json");
 
-        // check is_port_available and wait 2 sec for anvil to start
-        if !is_port_available(9888) {
-            info!("Waiting 2sec for anvil to start... at port 9888");
-            tokio::time::sleep(Duration::from_secs(2)).await;
-        }
-
         let config = BlockBuilderConfig {
             anvil_state_path: state_path.to_str().unwrap().to_string(),
             genesis_timestamp: 999,
-            mchain_url: Url::parse("http://127.0.0.1:9888").expect("Invalid URL"),
+            mchain_url: Url::parse("http://127.0.0.1:9288").expect("Invalid URL"),
             ..Default::default()
         };
 
@@ -357,7 +347,6 @@ mod tests {
         Ok(())
     }
 
-    #[serial]
     #[tokio::test]
     #[ignore] // TODO SEQ-528 unskip
     async fn test_anvil_rollback() -> Result<()> {
@@ -366,6 +355,7 @@ mod tests {
         let config = BlockBuilderConfig {
             anvil_state_path: state_path.to_str().unwrap().to_string(),
             genesis_timestamp: 999,
+            mchain_url: "http://127.0.0.1:9388".parse()?,
             ..Default::default()
         };
 

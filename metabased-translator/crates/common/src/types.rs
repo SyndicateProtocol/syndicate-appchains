@@ -67,7 +67,8 @@ pub struct Transaction {
     #[serde(deserialize_with = "deserialize_b256", serialize_with = "serialize_b256")]
     pub hash: B256,
     /// The data payload of the transaction.
-    pub input: String,
+    #[serde(deserialize_with = "deserialize_bytes", serialize_with = "serialize_bytes")]
+    pub input: Bytes,
     /// The number of transactions sent by the sender.
     #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub nonce: u64,
@@ -440,7 +441,7 @@ mod test {
                         "0xabcd567890123456789012345678901234567890123456789012345678901234",
                     )
                     .unwrap(),
-                    input: "0x123456".to_string(),
+                    input: hex::decode("0x123456").unwrap().into(),
                     nonce: 1,
                     to: Some(
                         Address::from_hex("0x9876543210987654321098765432109876543210").unwrap(),

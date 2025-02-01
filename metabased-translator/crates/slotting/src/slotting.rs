@@ -239,12 +239,13 @@ impl Slotter {
             debug!(min_timestamp, "Marking slots as unsafe");
 
             // Mark slots as unsafe if both chains have progressed past them
+            let mut buffer = vec![];
             for slot in &mut self.slots {
                 match slot.state {
                     SlotState::Unsafe | SlotState::Safe => {
                         debug!(%slot, "Found non-open slot, stopping iteration");
-                        return Ok(()); // assume all blocks past this point are already marked as
-                                       // unsafe
+                        break; // assume all blocks past this point are already marked as
+                               // unsafe
                     }
                     SlotState::Open => {
                         if slot.timestamp < min_timestamp {
@@ -253,10 +254,13 @@ impl Slotter {
                             // TODO: remove hack
                             let mut tmp = slot.clone();
                             tmp.timestamp /= 1000;
-                            self.sender.send(tmp).await?;
+                            buffer.push(tmp);
                         }
                     }
                 }
+            }
+            for slot in buffer.into_iter().rev() {
+                self.sender.send(slot).await?;
             }
         }
         Ok(())
@@ -367,7 +371,7 @@ impl Slotter {
                     // TODO: remove hack
                     let mut tmp = slot.clone();
                     tmp.timestamp /= 1000;
-                    self.sender.send(slot.clone()).await?
+                    self.sender.send(tmp).await?
                 }
             }
         }
