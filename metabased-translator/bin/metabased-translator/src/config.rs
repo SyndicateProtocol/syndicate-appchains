@@ -9,7 +9,7 @@ use ingestor::config::{SequencingChainConfig, SettlementChainConfig};
 use metrics::config::MetricsConfig;
 use slotting::config::SlottingConfig;
 use std::fmt::Debug;
-use tracing::debug;
+use tracing::{debug, error};
 
 /// Common config stuct for the Metabased Translator. This contains all possible config options
 /// which other crates can use
@@ -47,6 +47,10 @@ impl MetabasedConfig {
     /// Parse the [`MetabasedConfig`] from configuration sources like CLI args and env vars
     pub fn parse() -> Self {
         let config = <Self as Parser>::parse();
+        if config.slotter.start_slot_timestamp / 1000 < config.block_builder.genesis_timestamp {
+            error!("start slot timestamp cannot be less than the mchain genesis timestamp");
+            std::process::exit(1);
+        }
         debug!("Parsed MetabasedConfig: {:?}", config);
         config
     }

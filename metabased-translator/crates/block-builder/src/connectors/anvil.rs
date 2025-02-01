@@ -22,7 +22,7 @@ use contract_bindings::arbitrum::rollup::Rollup;
 use eyre::Result;
 use reqwest::Client;
 use std::net::TcpListener;
-use tracing::info;
+use tracing::{debug, info};
 
 #[allow(missing_docs)]
 pub type FilledProvider = FillProvider<
@@ -57,7 +57,7 @@ impl MetaChainProvider {
     /// If file in `BlockBuilderConfig` is set to a non-empty string, the anvil node stores and
     /// loads state from the file. The rollup contract is only deployed to the chain when it is
     /// newly created and on the genesis block.
-    pub async fn start(config: BlockBuilderConfig) -> Result<Self> {
+    pub async fn start(config: &BlockBuilderConfig) -> Result<Self> {
         let port = find_available_port(config.port, 10).ok_or_else(|| {
             BlockBuilderError::AnvilStartError("No available ports found after 10 attempts")
         })?;
@@ -96,7 +96,7 @@ impl MetaChainProvider {
             .with_recommended_fillers()
             .wallet(EthereumWallet::from(get_default_private_key_signer()))
             .on_http(anvil.endpoint_url());
-        provider.anvil_set_block_timestamp_interval(1).await?;
+        provider.anvil_set_block_timestamp_interval(0).await?;
 
         let rollup_config = Self::rollup_config(config.target_chain_id);
 
@@ -109,7 +109,7 @@ impl MetaChainProvider {
             .nonce(0)
             .send()
             .await?;
-            provider.anvil_mine(Some(U256::from(1)), None::<U256>).await?;
+            provider.evm_mine(None).await?;
         }
 
         let rollup = Rollup::new(get_rollup_contract_address(), provider.clone());
@@ -137,7 +137,7 @@ impl MetaChainProvider {
             blocks: Some(1),
         };
         let result = self.provider.anvil_mine_detailed(Some(opts)).await;
-        info!("{}", format!("Mined block on MetaChain {:?}", result));
+        debug!("{}", format!("Mined block on MetaChain {:?}", result));
         result?;
 
         Ok(())
@@ -294,12 +294,12 @@ mod tests {
             ..Default::default()
         };
         _ = fs::remove_file(file);
-        let mut provider = MetaChainProvider::start(cfg.clone()).await?;
+        let mut provider = MetaChainProvider::start(&cfg).await?;
         provider.mine_block(0).await?;
         let old_count = provider.provider.get_block_number().await?;
         std::process::Command::new("kill").arg(provider.anvil.child().id().to_string()).output()?;
         provider.anvil.child_mut().wait()?;
-        provider = MetaChainProvider::start(cfg).await?;
+        provider = MetaChainProvider::start(&cfg).await?;
         let new_count = provider.provider.get_block_number().await?;
         assert_eq!(old_count, new_count);
         Ok(())
@@ -318,7 +318,7 @@ mod tests {
 
         // First instance: create blocks
         {
-            let chain = MetaChainProvider::start(config.clone()).await?;
+            let chain = MetaChainProvider::start(&config).await?;
 
             // Mine 1000 blocks
             for i in 1000..2000 {
@@ -330,7 +330,7 @@ mod tests {
         } // First instance is dropped here
 
         // Second instance: verify blocks
-        let chain = MetaChainProvider::start(config).await?;
+        let chain = MetaChainProvider::start(&config).await?;
 
         // Check a few random blocks are accessible
         for block_num in [0, 42, 567, 999, 1000] {
@@ -364,7 +364,7 @@ mod tests {
             ..Default::default()
         };
 
-        let chain = MetaChainProvider::start(config).await?;
+        let chain = MetaChainProvider::start(&config).await?;
         // Mine 10 blocks
         for i in 1000..1010 {
             chain.mine_block(i as u64).await?;

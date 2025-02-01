@@ -63,7 +63,7 @@ pub struct SequencingChainConfig {
     pub sequencing_rpc_url: String,
 
     /// The block number to start polling from on the sequencing chain
-    #[arg(long = "sequencing-start-block", env = "SEQUENCING_START_BLOCK", default_value_t = 0)]
+    #[arg(long = "sequencing-start-block", env = "SEQUENCING_START_BLOCK", default_value_t = 1)]
     pub sequencing_start_block: u64,
 }
 
@@ -92,7 +92,7 @@ pub struct SettlementChainConfig {
     pub settlement_rpc_url: String,
 
     /// The block number to start polling from on the settlement chain
-    #[arg(long = "settlement-start-block", env = "SETTLEMENT_START_BLOCK", default_value_t = 0)]
+    #[arg(long = "settlement-start-block", env = "SETTLEMENT_START_BLOCK", default_value_t = 1)]
     pub settlement_start_block: u64,
 }
 
