@@ -39,3 +39,6 @@ recipe.json
 
 # DB files
 datadir/
+
+# Foundry dependencies
+external/lib
