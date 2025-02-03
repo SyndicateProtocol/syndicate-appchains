@@ -160,12 +160,10 @@ mod tests {
 
         // Block Builder
         assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:8888/");
-        assert_eq!(config.block_builder.genesis_timestamp, 1712500000);
         assert_eq!(config.block_builder.target_chain_id, 13331370);
 
         // Slotter
         assert_eq!(config.slotter.slot_duration_ms, 2_000);
-        assert_eq!(config.slotter.start_slot_timestamp, 1712500000000);
 
         // Chains
         assert_eq!(config.sequencing.sequencing_buffer_size, 100);
