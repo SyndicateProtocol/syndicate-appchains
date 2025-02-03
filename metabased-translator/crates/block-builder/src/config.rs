@@ -208,7 +208,7 @@ mod tests {
             config.mchain_url,
             Url::parse("http://127.0.0.1:8888").expect("Failed to parse default URL")
         );
-        assert_eq!(config.genesis_timestamp, 1712500000);
+        assert_eq!(config.genesis_timestamp, 0); // This is set at runtime
         assert_eq!(config.target_chain_id, 13331370);
         assert_eq!(
             config.sequencing_contract_address.to_string(),
