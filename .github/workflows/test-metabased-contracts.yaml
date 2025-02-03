@@ -56,8 +56,8 @@ jobs:
           forge test -vvv
         id: test
 
-      - name: Check Rust bindings
+      - name: Check Rust contract bindings are up to date
         run: |
           forge bind --alloy
           mv out/bindings/src/lib.rs out/bindings/src/mod.rs
-          diff -r out/bindings/src ../metabased-translator/contract-bindings/src/metabased
+          diff -r out/bindings/src ../metabased-translator/contract-bindings/src/metabased || (echo "Error: Rust contract bindings are out of date. Please run 'make metabased-translator/create-metabased-contract-bindings' to update them." && exit 1)
