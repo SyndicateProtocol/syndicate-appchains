@@ -32,6 +32,12 @@ $ make deploy-based-sequencerchain-frame
 
 ### Deployed Contracts
 
+### Syndicate Exo
+
+| Contract Name           | Address                                    |
+| ----------------------- | ------------------------------------------ |
+| MetabasedFactory        | 0xFEA8A2BA8B760348ea95492516620ad45a299d53 |
+
 #### Base Sepolia
 
 | Contract Name           | Address                                    |
@@ -77,3 +83,4 @@ $ make deploy-based-sequencerchain-frame
 | Contract Name | Address                                    |
 | ------------- | ------------------------------------------ |
 | SyndicateToken   | 0x8c8861c1bBd3a47deC0cfc5dc82e4B5E88810BfE |
+
