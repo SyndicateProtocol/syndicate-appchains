@@ -1,4 +1,5 @@
 methods {
+    function DEFAULT_ADMIN_ROLE() external returns (bytes32) envfree;
     function MINTER_ROLE() external returns (bytes32) envfree;
     function name() external returns (string) envfree;
     function symbol() external returns (string) envfree;
@@ -6,7 +7,10 @@ methods {
     function totalSupply() external returns (uint256) envfree;
     function balanceOf(address) external returns (uint256) envfree;
     function hasRole(bytes32,address) external returns (bool) envfree;
-    function getRoleAdmin(bytes32) external returns (bytes32) envfree;
+    // function getRoleAdmin(bytes32) external returns (bytes32) envfree;
+
+    function grantRole(bytes32,address) external;
+    function revokeRole(bytes32,address) external;
 }
 
 /*
@@ -73,3 +77,76 @@ rule metadataImmutable(method f) {
     assert name() == nameBefore && symbol() == symbolBefore,
         "Token metadata changed";
 }
+
+/*
+ * Rule 5: Token decimals is immutable
+ */
+rule decimalsImmutable(method f) {
+    env e;
+    uint8 decimalsBefore = decimals();
+
+    calldataarg args;
+    f(e,args);
+
+    assert decimals() == decimalsBefore, "Token decimals changed";
+}
+
+/*
+ * Rule 6: Admin can grant minter role
+ */
+rule adminCanGrantMinterRole(address newMinter) {
+    env e;
+
+    // Setup requirements
+    require e.msg.sender != 0;
+    require newMinter != 0;
+    require e.msg.sender != newMinter;  // Prevent self-granting
+    require hasRole(DEFAULT_ADMIN_ROLE(), e.msg.sender);
+
+    // Initial state check
+    require !hasRole(MINTER_ROLE(), newMinter);
+
+    // Grant role
+    grantRole(e, MINTER_ROLE(), newMinter);
+
+    // Verify
+    assert hasRole(MINTER_ROLE(), newMinter),
+        "Admin failed to grant minter role";
+}
+
+/*
+ * Rule 7: Admin can revoke minter role
+ */
+rule adminCanRevokeMinterRole(address minter) {
+   env e;
+   require e.msg.sender != 0;
+   require minter != 0;
+   require hasRole(DEFAULT_ADMIN_ROLE(), e.msg.sender);
+   require hasRole(MINTER_ROLE(), minter);
+
+   bool initiallyHasRole = hasRole(MINTER_ROLE(), minter);
+    require initiallyHasRole;
+
+
+    revokeRole(e, MINTER_ROLE(), minter);
+
+
+    bool finalHasRole = hasRole(MINTER_ROLE(), minter);
+    assert initiallyHasRole && !finalHasRole,
+        "Admin failed to revoke minter role";
+}
+
+/*
+ * Rule 8: Minting zero amount should revert
+ */
+ rule noZeroMint(address to) {
+    env e;
+    require e.msg.sender != 0;
+    require to != 0;
+    require hasRole(MINTER_ROLE(), e.msg.sender);
+
+
+    mint@withrevert(e, to, 0);
+
+    assert lastReverted, "Should not mint zero amount";
+ }
