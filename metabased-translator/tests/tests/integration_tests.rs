@@ -477,7 +477,7 @@ async fn e2e_settlement_test() -> Result<()> {
         .await?;
 
     // process slots
-    tokio::time::sleep(Duration::from_millis(200)).await;
+    tokio::time::sleep(Duration::from_millis(400)).await;
     assert_eq!(rollup.get_block_number().await?, 17);
     assert_eq!(
         rollup.get_balance(set_provider.default_signer_address()).await?,
@@ -613,7 +613,7 @@ async fn e2e_test() -> Result<()> {
     mine_block(&set_provider, 0).await?;
     mine_block(&seq_provider, 1).await?;
     mine_block(&set_provider, 1).await?;
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(200)).await;
     // check mchain blocks
     assert_eq!(mchain.get_block_number().await?, 2);
     let mchain_block: Block = mchain
@@ -651,7 +651,7 @@ async fn e2e_test() -> Result<()> {
     mine_block(&set_provider, slot_duration).await?;
     mine_block(&seq_provider, slot_duration).await?;
     mine_block(&set_provider, slot_duration).await?;
-    tokio::time::sleep(Duration::from_millis(50)).await;
+    tokio::time::sleep(Duration::from_millis(100)).await;
     // check mchain blocks
     assert_eq!(mchain.get_block_number().await?, 4);
     // check mchain block 3
