@@ -60,4 +60,4 @@ jobs:
         run: |
           forge bind --alloy
           mv out/bindings/src/lib.rs out/bindings/src/mod.rs
-          diff -r out/bindings/src ../metabased-translator/contract-bindings/src/metabased || (echo "Error: Rust contract bindings are out of date. Please run 'create-contract-bindings' to update them." && exit 1)
+          diff -r out/bindings/src ../metabased-translator/contract-bindings/src/metabased || (echo "Error: Rust contract bindings are out of date. Please run 'make create-contract-bindings' to update them." && exit 1)
