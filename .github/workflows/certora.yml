@@ -37,6 +37,8 @@ jobs:
             "AtomicSequencer",
             "AtomicSequencerImplementation",
             "SyndicateToken",
+            "RequireAllModule",
+            "RequireAnyModule",
           ]
     steps:
       - name: Checkout repository
