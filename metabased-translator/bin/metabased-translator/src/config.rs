@@ -5,7 +5,11 @@
 
 use block_builder::config::BlockBuilderConfig;
 use clap::Parser;
-use ingestor::config::{SequencingChainConfig, SettlementChainConfig};
+use eyre::{eyre, Error};
+use ingestor::{
+    config::{SequencingChainConfig, SettlementChainConfig},
+    eth_client::EthClient,
+};
 use metrics::config::MetricsConfig;
 use slotting::config::SlottingConfig;
 use std::fmt::Debug;
@@ -44,6 +48,40 @@ impl Default for MetabasedConfig {
 }
 
 impl MetabasedConfig {
+    /// Initializes the configuration, fetching the earliest block timestamp dynamically.
+    pub async fn initialize() -> Result<Self, Error> {
+        let mut config = <Self as Parser>::parse();
+        // Dynamically get initial timestamp
+        let initial_timestamp = config.get_initial_timestamp().await?;
+        // Set start_slot_timestamp to the minimum of both chains
+        config.slotter.start_slot_timestamp = initial_timestamp;
+        config.block_builder.genesis_timestamp = initial_timestamp;
+        Ok(config)
+    }
+
+    async fn get_initial_timestamp(&self) -> Result<u64, Error> {
+        let seq_start_timestamp = fetch_block_timestamp(
+            &self.sequencing.sequencing_rpc_url,
+            self.sequencing.sequencing_start_block,
+        )
+        .await?;
+        let set_start_timestamp = fetch_block_timestamp(
+            &self.settlement.settlement_rpc_url,
+            self.settlement.settlement_start_block,
+        )
+        .await?;
+
+        if seq_start_timestamp < set_start_timestamp {
+            return Err(eyre!(
+            "Invalid blockchain state: settlement chain initial timestamp ({}) is greater than sequencing chain initial timestamp ({})",
+            set_start_timestamp,
+            seq_start_timestamp
+        ));
+        }
+
+        Ok(set_start_timestamp)
+    }
+
     /// Parse the [`MetabasedConfig`] from configuration sources like CLI args and env vars
     pub fn parse() -> Self {
         let config = <Self as Parser>::parse();
@@ -76,6 +114,13 @@ impl MetabasedConfig {
     }
 }
 
+async fn fetch_block_timestamp(rpc_url: &str, block_number: u64) -> Result<u64, Error> {
+    let client = EthClient::new(rpc_url).await?;
+    let block = client.get_block_by_number(block_number).await?;
+    // Ethereum timestamps are in seconds, convert to milliseconds.
+    Ok(block.timestamp * 1000)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -85,13 +130,11 @@ mod tests {
     fn clean_env() {
         // Block Builder
         env::remove_var("BLOCK_BUILDER_MCHAIN_URL");
-        env::remove_var("BLOCK_BUILDER_GENESIS_TIMESTAMP");
         env::remove_var("BLOCK_BUILDER_CHAIN_ID");
 
         // Slotter
         env::remove_var("SLOTTER_SLOT_DURATION_MS");
         env::remove_var("SLOTTER_START_SLOT_NUMBER");
-        env::remove_var("SLOTTER_START_SLOT_TIMESTAMP");
 
         // Sequencer Chain
         env::remove_var("SEQUENCING_BUFFER_SIZE");

@@ -23,12 +23,8 @@ pub struct BlockBuilderConfig {
         value_parser = parse_url)]
     pub mchain_url: Url,
 
-    #[arg(
-        short = 'g',
-        long,
-        env = "BLOCK_BUILDER_GENESIS_TIMESTAMP",
-        default_value_t = 1712500000
-    )]
+    /// This is dynamically set at runtime.
+    #[arg(skip)]
     pub genesis_timestamp: u64,
 
     #[arg(short = 'c', long, env = "BLOCK_BUILDER_TARGET_CHAIN_ID", default_value_t = 13331370)]
@@ -113,7 +109,6 @@ impl Debug for BlockBuilderConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockBuilderConfig")
             .field("mchain_url", &self.mchain_url)
-            .field("genesis_timestamp", &self.genesis_timestamp)
             .field("target_chain_id", &self.target_chain_id)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
             .field("target_rollup_type", &self.target_rollup_type)

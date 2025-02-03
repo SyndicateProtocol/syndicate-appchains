@@ -143,30 +143,35 @@ async fn run(
 fn main() -> Result<(), RuntimeError> {
     init_tracing()?;
 
-    // Parse base config from CLI/env
-    let base_config = MetabasedConfig::parse();
+    // Create and run async runtime
+    let runtime =
+        tokio::runtime::Runtime::new().map_err(|e| RuntimeError::Initialization(e.to_string()))?;
 
-    // init the paths for the db and anvil state
+    // Initialize base config inside the async runtime
+    let base_config = runtime
+        .block_on(MetabasedConfig::initialize())
+        .map_err(|e| RuntimeError::InvalidConfig(e.to_string()))?;
+
+    // Init the paths for the DB and Anvil state
     let db_path = format!("{}/db", base_config.datadir);
     let anvil_state_path = format!("{}/anvil_state", base_config.datadir);
     let block_builder_config = BlockBuilderConfig { anvil_state_path, ..base_config.block_builder };
-    // Initiates the metrics registry
+
+    // Initiate the metrics registry
     let registry = Registry::default();
 
-    // Create and run async runtime
-    tokio::runtime::Runtime::new()
-        .map_err(|e| RuntimeError::Initialization(e.to_string()))?
-        .block_on(run(
-            block_builder_config,
-            base_config.slotter,
-            IngestionPipelineConfig {
-                sequencing: base_config.sequencing,
-                settlement: base_config.settlement,
-            },
-            db_path.as_str(),
-            base_config.metrics,
-            registry,
-        ))?;
+    // Run the async process
+    runtime.block_on(run(
+        block_builder_config,
+        base_config.slotter,
+        IngestionPipelineConfig {
+            sequencing: base_config.sequencing,
+            settlement: base_config.settlement,
+        },
+        db_path.as_str(),
+        base_config.metrics,
+        registry,
+    ))?;
 
     Ok(())
 }

@@ -12,9 +12,8 @@ pub struct SlottingConfig {
     pub slot_duration_ms: u64,
 
     /// The epoch timestamp of the [`Slotter`] slot to start from, in milliseconds.
-    /// This is set to the same timestamp as the metachain genesis block by default:
-    /// April 7, 2024
-    #[arg(long, env = "SLOTTER_START_SLOT_TIMESTAMP", default_value_t = 1712500000 * 1000)]
+    /// This is dynamically set at runtime.
+    #[arg(skip)]
     pub start_slot_timestamp: u64,
 }
 
