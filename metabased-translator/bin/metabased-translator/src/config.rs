@@ -35,21 +35,13 @@ pub struct MetabasedConfig {
     pub metrics: MetricsConfig,
 }
 
-impl Default for MetabasedConfig {
-    fn default() -> Self {
-        let config = Self::parse_from([""]);
-        debug!("Created default MetabasedConfig: {:?}", config);
-        config
-    }
-}
-
 impl MetabasedConfig {
     /// Parse the [`MetabasedConfig`] from configuration sources like CLI args and env vars
     pub fn parse() -> Self {
         let config = <Self as Parser>::parse();
         if config.slotter.start_slot_timestamp / 1000 < config.block_builder.genesis_timestamp {
             error!("start slot timestamp cannot be less than the mchain genesis timestamp");
-            std::process::exit(1);
+            panic!();
         }
         debug!("Parsed MetabasedConfig: {:?}", config);
         config
@@ -91,21 +83,24 @@ mod tests {
         env::remove_var("BLOCK_BUILDER_MCHAIN_URL");
         env::remove_var("BLOCK_BUILDER_GENESIS_TIMESTAMP");
         env::remove_var("BLOCK_BUILDER_CHAIN_ID");
+        env::remove_var("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS");
+        env::remove_var("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS");
+        env::remove_var("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS");
 
         // Slotter
-        env::remove_var("SLOTTER_SLOT_DURATION_MS");
+        env::remove_var("SLOTTER_SLOT_DURATION");
         env::remove_var("SLOTTER_START_SLOT_NUMBER");
         env::remove_var("SLOTTER_START_SLOT_TIMESTAMP");
 
         // Sequencer Chain
         env::remove_var("SEQUENCING_BUFFER_SIZE");
-        env::remove_var("SEQUENCING_POLLING_INTERVAL_SECS");
+        env::remove_var("SEQUENCING_POLLING_INTERVAL");
         env::remove_var("SEQUENCING_RPC_URL");
         env::remove_var("SEQUENCING_START_BLOCK");
 
         // Settlement Chain
         env::remove_var("SETTLEMENT_BUFFER_SIZE");
-        env::remove_var("SETTLEMENT_POLLING_INTERVAL_SECS");
+        env::remove_var("SETTLEMENT_POLLING_INTERVAL");
         env::remove_var("SETTLEMENT_RPC_URL");
         env::remove_var("SETTLEMENT_START_BLOCK");
 
@@ -117,6 +112,14 @@ mod tests {
     #[serial]
     fn test_default_values() {
         clean_env();
+        let zero = "0x0000000000000000000000000000000000000000";
+        env::set_var("SEQUENCING_RPC_URL", "");
+        env::set_var("SETTLEMENT_RPC_URL", "");
+        env::set_var("SEQUENCING_START_BLOCK", "1");
+        env::set_var("SETTLEMENT_START_BLOCK", "1");
+        env::set_var("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", zero);
+        env::set_var("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", zero);
+        env::set_var("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", zero);
         let config = MetabasedConfig::try_parse_from(["test"]).unwrap();
 
         // Block Builder
@@ -125,8 +128,8 @@ mod tests {
         assert_eq!(config.block_builder.target_chain_id, 13331370);
 
         // Slotter
-        assert_eq!(config.slotter.slot_duration_ms, 2_000);
-        assert_eq!(config.slotter.start_slot_timestamp, 1712500000000);
+        assert_eq!(config.slotter.slot_duration, 2);
+        assert_eq!(config.slotter.start_slot_timestamp, 1712500000);
 
         // Chains
         assert_eq!(config.sequencing.sequencing_buffer_size, 100);
@@ -144,13 +147,21 @@ mod tests {
     #[serial]
     fn test_env_vars_override_defaults() {
         clean_env();
+        let zero = "0x0000000000000000000000000000000000000000";
         env::set_var("BLOCK_BUILDER_MCHAIN_URL", "http://127.0.0.1:9999/");
-        env::set_var("SLOTTER_SLOT_DURATION_MS", "3000");
+        env::set_var("SLOTTER_SLOT_DURATION", "3");
         env::set_var("SEQUENCING_BUFFER_SIZE", "200");
+        env::set_var("SEQUENCING_RPC_URL", "");
+        env::set_var("SETTLEMENT_RPC_URL", "");
+        env::set_var("SEQUENCING_START_BLOCK", "1");
+        env::set_var("SETTLEMENT_START_BLOCK", "1");
+        env::set_var("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", zero);
+        env::set_var("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", zero);
+        env::set_var("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", zero);
 
         let config = MetabasedConfig::try_parse_from(["test"]).unwrap();
         assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:9999/");
-        assert_eq!(config.slotter.slot_duration_ms, 3000);
+        assert_eq!(config.slotter.slot_duration, 3);
         assert_eq!(config.sequencing.sequencing_buffer_size, 200);
     }
 
@@ -158,7 +169,15 @@ mod tests {
     #[serial]
     fn test_cli_args_override_env_vars() {
         clean_env();
+        let zero = "0x0000000000000000000000000000000000000000";
         env::set_var("BLOCK_BUILDER_MCHAIN_URL", "http://127.0.0.1:9999/");
+        env::set_var("SEQUENCING_RPC_URL", "");
+        env::set_var("SETTLEMENT_RPC_URL", "");
+        env::set_var("SEQUENCING_START_BLOCK", "1");
+        env::set_var("SETTLEMENT_START_BLOCK", "1");
+        env::set_var("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", zero);
+        env::set_var("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", zero);
+        env::set_var("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", zero);
 
         let config =
             MetabasedConfig::try_parse_from(["test", "-u", "http://127.0.0.1:7777/"]).unwrap();

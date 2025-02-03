@@ -20,18 +20,11 @@ pub struct IngestionPipelineConfig {
 
 /// Configuration for a generic chain ingestor
 #[allow(missing_docs)]
-#[derive(Parser, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct ChainIngestorConfig {
-    #[arg(long, env, default_value_t = 100)]
     pub buffer_size: usize,
-
-    #[arg(long, env, default_value = "1s", value_parser = humantime::parse_duration)]
     pub polling_interval: Duration,
-
-    #[arg(long, env, default_value = "http://localhost:8545")]
     pub rpc_url: String,
-
-    #[arg(long, env, default_value_t = 1)]
     pub start_block: u64,
 }
 
@@ -55,11 +48,11 @@ pub struct SequencingChainConfig {
     pub sequencing_polling_interval: Duration,
 
     /// The RPC URL of the sequencing chain
-    #[arg(long = "sequencing-rpc-url", env = "SEQUENCING_RPC_URL", default_value = "")]
+    #[arg(long = "sequencing-rpc-url", env = "SEQUENCING_RPC_URL")]
     pub sequencing_rpc_url: String,
 
     /// The block number to start polling from on the sequencing chain
-    #[arg(long = "sequencing-start-block", env = "SEQUENCING_START_BLOCK", default_value_t = 1)]
+    #[arg(long = "sequencing-start-block", env = "SEQUENCING_START_BLOCK")]
     pub sequencing_start_block: u64,
 }
 
@@ -80,11 +73,11 @@ pub struct SettlementChainConfig {
     pub settlement_polling_interval: Duration,
 
     /// The RPC URL of the settlement chain
-    #[arg(long = "settlement-rpc-url", env = "SETTLEMENT_RPC_URL", default_value = "")]
+    #[arg(long = "settlement-rpc-url", env = "SETTLEMENT_RPC_URL")]
     pub settlement_rpc_url: String,
 
     /// The block number to start polling from on the settlement chain
-    #[arg(long = "settlement-start-block", env = "SETTLEMENT_START_BLOCK", default_value_t = 1)]
+    #[arg(long = "settlement-start-block", env = "SETTLEMENT_START_BLOCK")]
     pub settlement_start_block: u64,
 }
 
@@ -162,7 +155,17 @@ pub enum ConfigError {
 // uses clap defaults
 impl Default for IngestionPipelineConfig {
     fn default() -> Self {
-        Self::parse_from([""])
+        Self::parse_from([
+            "",
+            "--sequencing-rpc-url",
+            "",
+            "--sequencing-start-block",
+            "1",
+            "--settlement-rpc-url",
+            "",
+            "--settlement-start-block",
+            "1",
+        ])
     }
 }
 
@@ -187,10 +190,14 @@ impl IngestionPipelineConfig {
     }
 }
 
-// uses clap defaults
 impl Default for ChainIngestorConfig {
     fn default() -> Self {
-        Self::parse_from([""])
+        Self {
+            buffer_size: 100,
+            polling_interval: Duration::from_secs(1),
+            rpc_url: "http://localhost:8545".to_string(),
+            start_block: 1,
+        }
     }
 }
 

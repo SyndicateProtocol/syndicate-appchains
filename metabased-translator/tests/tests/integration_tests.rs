@@ -258,6 +258,9 @@ async fn launch_nitro_node(
     .await?
 }
 
+/// This test sends different types of delayed messages
+/// via the inbox contract and ensures that all of them
+/// are sequenced via the metabased translator and show up on the rollup.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_settlement_test() -> Result<()> {
     _ = init_tracing();
@@ -314,9 +317,7 @@ async fn e2e_settlement_test() -> Result<()> {
     }));
 
     // start slotter at the genesis timestamp
-    let slotter_cfg =
-        SlottingConfig { start_slot_timestamp: 1736824187 * 1000, ..Default::default() };
-    let _slot_duration = slotter_cfg.slot_duration_ms / 1000;
+    let slotter_cfg = SlottingConfig { start_slot_timestamp: 1736824187, ..Default::default() };
 
     // Launch the slotter, block builder, and nitro rollup
     let (slotter, slotter_rx) = Slotter::new(
@@ -476,7 +477,7 @@ async fn e2e_settlement_test() -> Result<()> {
         .await?;
 
     // process slots
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    tokio::time::sleep(Duration::from_millis(200)).await;
     assert_eq!(rollup.get_block_number().await?, 17);
     assert_eq!(
         rollup.get_balance(set_provider.default_signer_address()).await?,
@@ -485,6 +486,10 @@ async fn e2e_settlement_test() -> Result<()> {
     Ok(())
 }
 
+/// This test tests the sequencing contract to make sure
+/// blocks sequenced via the sequencing contract show up
+/// on the rollup. It also checks to make sure missing slots
+/// sequence a mchain block that does not include a batch.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_test() -> Result<()> {
     _ = init_tracing();
@@ -553,7 +558,7 @@ async fn e2e_test() -> Result<()> {
     }));
 
     let slotter_cfg = SlottingConfig::default();
-    let slot_duration = slotter_cfg.slot_duration_ms / 1000;
+    let slot_duration = slotter_cfg.slot_duration;
     // Launch the slotter, block builder, and nitro rollup
     let (slotter, slotter_rx) = Slotter::new(
         sequencer_rx,
@@ -727,6 +732,8 @@ async fn load_anvil(port: u16) -> Result<(AnvilInstance, FilledProvider)> {
     Ok((anvil, provider))
 }
 
+/// This test tests that rollup blocks are properly derived from batches created
+/// via the block builder code and posted to the dummy rollup contract.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_nitro_batch() -> Result<()> {
     let block_builder_cfg =

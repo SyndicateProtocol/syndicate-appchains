@@ -36,8 +36,7 @@ pub struct BlockBuilderConfig {
 
     /// Sequencing contract address on the sequencing chain
     #[arg(short = 's', long, env = "BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS",
-        value_parser = parse_address,
-        default_value = "0x0000000000000000000000000000000000000000")]
+        value_parser = parse_address)]
     pub sequencing_contract_address: Address,
 
     /// Target rollup type for the [`block-builder`]
@@ -50,16 +49,15 @@ pub struct BlockBuilderConfig {
         default_value = "0x5FbDB2315678afecb367f032d93F642f64180aa3")]
     pub mchain_rollup_address: Address,
 
+    // TODO(SEQ-555): make bridge and inbox addresses specific to arbitrum
     /// Bridge address on the settlement chain
     #[arg(short = 'b', long, env = "BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS",
-        value_parser = parse_address,
-        default_value = "0x0000000000000000000000000000000000000000")]
+        value_parser = parse_address)]
     pub bridge_address: Address,
 
     /// Inbox address on the settlement chain
     #[arg(short = 'i', long, env = "BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS",
-        value_parser = parse_address,
-        default_value = "0x0000000000000000000000000000000000000000")]
+        value_parser = parse_address)]
     pub inbox_address: Address,
 
     // path to the directory where anvil will keep its state
@@ -136,7 +134,9 @@ impl Debug for BlockBuilderConfig {
 
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
-        Self::parse_from([""])
+        let zero = Address::ZERO.to_string();
+        println!("{}", zero);
+        Self::parse_from(["", "-s", &zero, "-b", &zero, "-i", &zero])
     }
 }
 
@@ -220,7 +220,9 @@ mod tests {
 
     #[test]
     fn test_default_parsing() {
-        let config = BlockBuilderConfig::parse_from(["test"]);
+        let zero = Address::ZERO.to_string();
+        let config =
+            BlockBuilderConfig::parse_from(["test", "-s", &zero, "-b", &zero, "-i", &zero]);
         assert_eq!(
             config.mchain_url,
             Url::parse("http://127.0.0.1:8888").expect("Failed to parse default URL")
