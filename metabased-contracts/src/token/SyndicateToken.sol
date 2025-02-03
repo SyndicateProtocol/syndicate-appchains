@@ -20,6 +20,7 @@ contract SyndicateToken is ERC20, AccessControl, ERC20Permit {
     }
 
     function mint(address to, uint256 amount) public onlyRole(MINTER_ROLE) {
+        require(amount != 0, "Amount cannot be zero");
         _mint(to, amount);
     }
 }
