@@ -49,7 +49,7 @@ pub async fn run() -> Result<()> {
 
     info!(
         addr = %addr,
-        "Interceptor server running"
+        "Metabased Sequencer server running"
     );
 
     // Keep the server running

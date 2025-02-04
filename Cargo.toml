@@ -8,7 +8,7 @@ members = [
     "metabased-translator/crates/metrics",
     "metabased-translator/bin/metabased-translator",
     "metabased-translator/tests",
-    "metabased-sequencer/interceptor",
+    "metabased-sequencer/metabased-sequencer",
     "metabased-sequencer/proxy",
 ]
 
