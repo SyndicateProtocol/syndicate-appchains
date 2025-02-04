@@ -5,7 +5,7 @@
 
 use block_builder::config::BlockBuilderConfig;
 use clap::Parser;
-use eyre::{eyre, Error};
+use eyre::{eyre, Error, Result};
 use ingestor::{
     config::{SequencingChainConfig, SettlementChainConfig},
     eth_client::EthClient,
@@ -50,26 +50,21 @@ impl Default for MetabasedConfig {
 impl MetabasedConfig {
     /// Initializes the configuration, fetching the earliest block timestamp dynamically.
     pub async fn initialize() -> Result<Self, Error> {
-        let mut config = <Self as Parser>::parse();
-        // Dynamically get initial timestamp
-        let initial_timestamp = config.get_initial_timestamp().await?;
-        // Set start_slot_timestamp to the minimum of both chains
-        config.slotter.start_slot_timestamp = initial_timestamp;
-        config.block_builder.genesis_timestamp = initial_timestamp;
+        let config = <Self as Parser>::parse();
         Ok(config)
     }
 
-    async fn get_initial_timestamp(&self) -> Result<u64, Error> {
-        let seq_start_timestamp = fetch_block_timestamp(
-            &self.sequencing.sequencing_rpc_url,
-            self.sequencing.sequencing_start_block,
-        )
-        .await?;
-        let set_start_timestamp = fetch_block_timestamp(
-            &self.settlement.settlement_rpc_url,
-            self.settlement.settlement_start_block,
-        )
-        .await?;
+    pub async fn set_initial_timestamp(
+        &mut self,
+        settlement_client: &EthClient,
+        sequencing_client: &EthClient,
+    ) -> Result<()> {
+        let seq_start_timestamp =
+            fetch_block_timestamp(sequencing_client, self.sequencing.sequencing_start_block)
+                .await?;
+        let set_start_timestamp =
+            fetch_block_timestamp(settlement_client, self.settlement.settlement_start_block)
+                .await?;
 
         if seq_start_timestamp < set_start_timestamp {
             return Err(eyre!(
@@ -78,8 +73,11 @@ impl MetabasedConfig {
             seq_start_timestamp
         ));
         }
+        // Set start_slot_timestamp to the minimum of both chains
+        self.slotter.start_slot_timestamp = set_start_timestamp;
+        self.block_builder.genesis_timestamp = set_start_timestamp;
 
-        Ok(set_start_timestamp)
+        Ok(())
     }
 
     /// Parse the [`MetabasedConfig`] from configuration sources like CLI args and env vars
@@ -114,8 +112,7 @@ impl MetabasedConfig {
     }
 }
 
-async fn fetch_block_timestamp(rpc_url: &str, block_number: u64) -> Result<u64, Error> {
-    let client = EthClient::new(rpc_url).await?;
+async fn fetch_block_timestamp(client: &EthClient, block_number: u64) -> Result<u64, Error> {
     let block = client.get_block_by_number(block_number).await?;
     // Ethereum timestamps are in seconds, convert to milliseconds.
     Ok(block.timestamp * 1000)

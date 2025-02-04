@@ -36,15 +36,15 @@ impl Ingestor {
     /// A tuple containing the `Ingestor` instance and a `Receiver` for consuming blocks.
     pub async fn new(
         chain: Chain,
+        client: &EthClient,
         config: ChainIngestorConfig,
         metrics: IngestorMetrics,
     ) -> Result<(Self, Receiver<BlockAndReceipts>), Error> {
-        let client = EthClient::new(&config.rpc_url).await?;
         let (sender, receiver) = channel(config.buffer_size);
         Ok((
             Self {
                 chain,
-                client,
+                client: client.clone(),
                 current_block_number: config.start_block,
                 sender,
                 polling_interval: config.polling_interval,
@@ -218,8 +218,10 @@ mod tests {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
 
+        let client = &EthClient::new(&config.sequencing.sequencing_rpc_url).await?;
+
         let (ingestor, receiver) =
-            Ingestor::new(Chain::Sequencing, config.sequencing.into(), metrics).await?;
+            Ingestor::new(Chain::Sequencing, client, config.sequencing.into(), metrics).await?;
 
         assert_eq!(ingestor.current_block_number, start_block);
         assert_eq!(receiver.capacity(), buffer_size);

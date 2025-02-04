@@ -31,7 +31,10 @@ use contract_bindings::{
 };
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::{eyre, Result};
-use ingestor::{config::IngestionPipelineConfig, ingestor::Ingestor, metrics::IngestorMetrics};
+use ingestor::{
+    config::IngestionPipelineConfig, eth_client::EthClient, ingestor::Ingestor,
+    metrics::IngestorMetrics,
+};
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use reqwest::Client;
@@ -298,14 +301,18 @@ async fn e2e_test() -> Result<()> {
     ingestor_config.sequencing.sequencing_polling_interval = Duration::from_millis(100);
     ingestor_config.settlement.settlement_polling_interval = Duration::from_millis(100);
     let mut metrics_state = MetricsState { registry: Registry::default() };
+    let settlement_client = &EthClient::new(&ingestor_config.settlement.settlement_rpc_url).await?;
+    let sequencing_client = &EthClient::new(&ingestor_config.sequencing.sequencing_rpc_url).await?;
     let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
         Chain::Sequencing,
+        sequencing_client,
         ingestor_config.sequencing.into(),
         IngestorMetrics::new(&mut metrics_state.registry),
     )
     .await?;
     let (settlement_ingestor, settlement_rx) = Ingestor::new(
         Chain::Settlement,
+        settlement_client,
         ingestor_config.settlement.into(),
         IngestorMetrics::new(&mut metrics_state.registry),
     )

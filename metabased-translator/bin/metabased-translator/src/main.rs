@@ -5,14 +5,11 @@ use common::{
     types::Chain,
 };
 use eyre::Result;
-use ingestor::{config::IngestionPipelineConfig, ingestor::Ingestor};
+use ingestor::{eth_client::EthClient, ingestor::Ingestor};
 use metabased_translator::config::MetabasedConfig;
-use metrics::{
-    config::MetricsConfig,
-    metrics::{start_metrics, MetricsState, TranslatorMetrics},
-};
+use metrics::metrics::{start_metrics, MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
-use slotting::{config::SlottingConfig, slotting::Slotter};
+use slotting::slotting::Slotter;
 use thiserror::Error;
 use tokio::sync::oneshot;
 use tracing::{error, info};
@@ -20,11 +17,8 @@ use tracing::{error, info};
 // TODO(SEQ-515): Improve this executable, research async tasks
 #[allow(unused_assignments)] // TODO SEQ-528 remove this
 async fn run(
-    block_builder_config: BlockBuilderConfig,
-    slotting_config: SlottingConfig,
-    ingestion_config: IngestionPipelineConfig,
+    config: &mut MetabasedConfig,
     db_path: &str,
-    metrics_config: MetricsConfig,
     registry: Registry,
 ) -> Result<(), RuntimeError> {
     // Create shutdown channels
@@ -39,37 +33,53 @@ async fn run(
     let (db, mut safe_state) = init_db(db_path).await?;
     safe_state = None; // TODO SEQ-528 remove this (disables resume from db)
 
+    let mut sequencing_config = config.sequencing.clone();
+    let mut settlement_config = config.settlement.clone();
+
+    // Initialize ETH clients
+    let sequencing_client = &EthClient::new(&sequencing_config.sequencing_rpc_url).await?;
+    let settlement_client = &EthClient::new(&settlement_config.settlement_rpc_url).await?;
+
     // Override start blocks if we're resuming from a database
-    let mut sequencing_config = ingestion_config.sequencing;
-    let mut settlement_config = ingestion_config.settlement;
     if let Some(state) = &safe_state {
         sequencing_config.sequencing_start_block = state.sequencing_block.number;
         settlement_config.settlement_start_block = state.settlement_block.number;
+    } else {
+        // Initial timestamp is only needed if we aren't resuming from db
+        config.set_initial_timestamp(settlement_client, sequencing_client).await?;
     }
     let safe_block_number = safe_state.as_ref().map(|state| state.slot.number);
 
     // Initialize metrics
     let mut metrics_state = MetricsState { registry };
     let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
-    let metrics_task = start_metrics(metrics_state, metrics_config.metrics_port).await;
+    let metrics_task = start_metrics(metrics_state, config.metrics.metrics_port).await;
 
     // Initialize components
-    let (sequencing_ingestor, sequencing_rx) =
-        Ingestor::new(Chain::Sequencing, sequencing_config.into(), metrics.ingestor_sequencing)
-            .await?;
-    let (settlement_ingestor, settlement_rx) =
-        Ingestor::new(Chain::Settlement, settlement_config.into(), metrics.ingestor_settlement)
-            .await?;
+    let (sequencing_ingestor, sequencing_rx) = Ingestor::new(
+        Chain::Sequencing,
+        sequencing_client,
+        sequencing_config.into(),
+        metrics.ingestor_sequencing,
+    )
+    .await?;
+    let (settlement_ingestor, settlement_rx) = Ingestor::new(
+        Chain::Settlement,
+        settlement_client,
+        settlement_config.into(),
+        metrics.ingestor_settlement,
+    )
+    .await?;
     let (slotter, slot_rx) = Slotter::new(
         sequencing_rx,
         settlement_rx,
-        slotting_config,
+        config.slotter.clone(),
         safe_state,
         db,
         metrics.slotting,
     );
     let block_builder =
-        BlockBuilder::new(slot_rx, block_builder_config, metrics.block_builder).await?;
+        BlockBuilder::new(slot_rx, config.block_builder.clone(), metrics.block_builder).await?;
 
     // Start component tasks
     info!("Starting Metabased Translator");
@@ -148,30 +158,21 @@ fn main() -> Result<(), RuntimeError> {
         tokio::runtime::Runtime::new().map_err(|e| RuntimeError::Initialization(e.to_string()))?;
 
     // Initialize base config inside the async runtime
-    let base_config = runtime
+    let mut base_config = runtime
         .block_on(MetabasedConfig::initialize())
         .map_err(|e| RuntimeError::InvalidConfig(e.to_string()))?;
 
     // Init the paths for the DB and Anvil state
     let db_path = format!("{}/db", base_config.datadir);
     let anvil_state_path = format!("{}/anvil_state", base_config.datadir);
-    let block_builder_config = BlockBuilderConfig { anvil_state_path, ..base_config.block_builder };
+    base_config.block_builder =
+        BlockBuilderConfig { anvil_state_path, ..base_config.block_builder };
 
     // Initiate the metrics registry
     let registry = Registry::default();
 
     // Run the async process
-    runtime.block_on(run(
-        block_builder_config,
-        base_config.slotter,
-        IngestionPipelineConfig {
-            sequencing: base_config.sequencing,
-            settlement: base_config.settlement,
-        },
-        db_path.as_str(),
-        base_config.metrics,
-        registry,
-    ))?;
+    runtime.block_on(run(&mut base_config, db_path.as_str(), registry))?;
 
     Ok(())
 }

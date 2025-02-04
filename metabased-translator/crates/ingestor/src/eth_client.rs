@@ -11,7 +11,7 @@ use eyre::{eyre, Error};
 ///
 /// This client is designed to retrieve blockchain data such as blocks and receipts
 /// by interacting with an Ethereum JSON-RPC endpoint.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct EthClient {
     chain: RootProvider<BoxTransport>,
 }
