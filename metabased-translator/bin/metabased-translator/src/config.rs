@@ -254,4 +254,34 @@ mod tests {
         assert_eq!(config.slotter.start_slot_timestamp, 6000000);
         assert_eq!(config.block_builder.genesis_timestamp, 6000000);
     }
+
+    #[tokio::test]
+    async fn test_set_initial_timestamp_fail() {
+        let mut config = MetabasedConfig::default();
+        config.settlement.settlement_start_block = 100;
+        config.sequencing.sequencing_start_block = 200;
+
+        let mut mock_settlement_client = MockRPCClientMock::new();
+        let mut mock_sequencing_client = MockRPCClientMock::new();
+
+        // Mock responses
+        mock_settlement_client
+            .expect_get_block_by_number()
+            .with(eq(100))
+            .times(1)
+            .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
+
+        mock_sequencing_client
+            .expect_get_block_by_number()
+            .with(eq(200))
+            .times(1)
+            .returning(|_| Ok(Block { timestamp: 5000, ..Default::default() }));
+
+        // Run the function
+        let settlement_client = Arc::new(mock_settlement_client);
+        let sequencing_client = Arc::new(mock_sequencing_client);
+        let result = config.set_initial_timestamp(settlement_client, sequencing_client).await;
+
+        assert!(result.is_err());
+    }
 }
