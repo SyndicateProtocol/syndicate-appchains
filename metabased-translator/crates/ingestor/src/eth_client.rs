@@ -4,14 +4,26 @@ use alloy::{
     providers::{Provider, ProviderBuilder, RootProvider},
     transports::BoxTransport,
 };
+use async_trait::async_trait;
 use common::types::{Block, Receipt};
 use eyre::{eyre, Error};
+use std::fmt::Debug;
+
+/// Trait defining methods for interacting with a blockchain
+#[async_trait]
+pub trait RPCClient: Send + Sync + Debug {
+    /// Retrieves a block by its number.
+    async fn get_block_by_number(&self, block_number: u64) -> Result<Block, Error>;
+
+    /// Retrieves the receipts of all transactions in a block.
+    async fn get_block_receipts(&self, block_number: u64) -> Result<Vec<Receipt>, Error>;
+}
 
 /// A client for interacting with an Ethereum-like blockchain.
 ///
 /// This client is designed to retrieve blockchain data such as blocks and receipts
 /// by interacting with an Ethereum JSON-RPC endpoint.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct EthClient {
     chain: RootProvider<BoxTransport>,
 }
@@ -31,17 +43,20 @@ impl EthClient {
         let chain = ProviderBuilder::new().on_builtin(rpc_url).await?;
         Ok(Self { chain })
     }
+}
 
+#[async_trait]
+impl RPCClient for EthClient {
     /// Retrieves a block by its number.
     ///
     /// # Arguments
     ///
-    /// * `block_number` - The number of the block to retrieve as a string.
+    /// * `block_number` - The number of the block to retrieve.
     ///
     /// # Returns
     ///
     /// A result containing the `Block` if found, or an error if the block is not found.
-    pub async fn get_block_by_number(&self, block_number: u64) -> Result<Block, Error> {
+    async fn get_block_by_number(&self, block_number: u64) -> Result<Block, Error> {
         let block_number_hex = format!("0x{:x}", block_number);
         self.chain
             .client()
@@ -54,12 +69,12 @@ impl EthClient {
     ///
     /// # Arguments
     ///
-    /// * `block_number` - The number of the block for which to retrieve receipts as a string.
+    /// * `block_number` - The number of the block for which to retrieve receipts.
     ///
     /// # Returns
     ///
     /// A result containing a vector of `Receipt` if found, or an error if no receipts are found.
-    pub async fn get_block_receipts(&self, block_number: u64) -> Result<Vec<Receipt>, Error> {
+    async fn get_block_receipts(&self, block_number: u64) -> Result<Vec<Receipt>, Error> {
         let block_number_hex = format!("0x{:x}", block_number);
         self.chain
             .client()

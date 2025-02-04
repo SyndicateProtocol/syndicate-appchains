@@ -21,7 +21,8 @@ tokio = {workspace = true, features = ["signal"]}
 eyre = {workspace = true}
 thiserror = {workspace = true}
 prometheus-client = {workspace = true}
-
+async-trait ={ workspace = true }
+mockall ={ workspace = true }
 [dev-dependencies]
 serial_test = {workspace = true}
 

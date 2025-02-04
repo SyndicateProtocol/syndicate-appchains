@@ -1,10 +1,10 @@
 //! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a
 //! consumer using a channel
 
-use crate::{config::ChainIngestorConfig, eth_client::EthClient, metrics::IngestorMetrics};
+use crate::{config::ChainIngestorConfig, eth_client::RPCClient, metrics::IngestorMetrics};
 use common::types::{BlockAndReceipts, Chain};
 use eyre::{eyre, Error};
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use tokio::sync::{
     mpsc::{channel, Receiver, Sender},
     oneshot,
@@ -15,7 +15,7 @@ use tracing::{debug, error};
 #[derive(Debug)]
 pub struct Ingestor {
     chain: Chain,
-    client: EthClient,
+    client: Arc<dyn RPCClient>,
     current_block_number: u64,
     sender: Sender<BlockAndReceipts>,
     polling_interval: Duration,
@@ -36,7 +36,7 @@ impl Ingestor {
     /// A tuple containing the `Ingestor` instance and a `Receiver` for consuming blocks.
     pub async fn new(
         chain: Chain,
-        client: &EthClient,
+        client: Arc<dyn RPCClient>,
         config: ChainIngestorConfig,
         metrics: IngestorMetrics,
     ) -> Result<(Self, Receiver<BlockAndReceipts>), Error> {
@@ -44,7 +44,7 @@ impl Ingestor {
         Ok((
             Self {
                 chain,
-                client: client.clone(),
+                client,
                 current_block_number: config.start_block,
                 sender,
                 polling_interval: config.polling_interval,
@@ -155,6 +155,7 @@ mod tests {
     use super::*;
     use crate::{
         config::{ChainIngestorConfig, IngestionPipelineConfig},
+        eth_client::EthClient,
         metrics::IngestorMetrics,
     };
     use alloy::primitives::B256;
@@ -218,7 +219,8 @@ mod tests {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
 
-        let client = &EthClient::new(&config.sequencing.sequencing_rpc_url).await?;
+        let client: Arc<dyn RPCClient> =
+            Arc::new(EthClient::new(&config.sequencing.sequencing_rpc_url).await?);
 
         let (ingestor, receiver) =
             Ingestor::new(Chain::Sequencing, client, config.sequencing.into(), metrics).await?;
@@ -235,7 +237,8 @@ mod tests {
         let polling_interval = Duration::from_secs(1);
 
         let (sender, mut receiver) = channel(10);
-        let client = EthClient::new(test_config().sequencing.sequencing_rpc_url.as_str()).await?;
+        let client: Arc<dyn RPCClient> =
+            Arc::new(EthClient::new(&test_config().sequencing.sequencing_rpc_url).await?);
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
         let mut ingestor = Ingestor {
@@ -264,7 +267,8 @@ mod tests {
         let polling_interval = Duration::from_millis(10);
 
         let (sender, _) = channel(10);
-        let client = EthClient::new(test_config().sequencing.sequencing_rpc_url.as_str()).await?;
+        let client: Arc<dyn RPCClient> =
+            Arc::new(EthClient::new(&test_config().sequencing.sequencing_rpc_url).await?);
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
         let ingestor = Ingestor {

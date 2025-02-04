@@ -8,11 +8,11 @@ use clap::Parser;
 use eyre::{eyre, Error, Result};
 use ingestor::{
     config::{SequencingChainConfig, SettlementChainConfig},
-    eth_client::EthClient,
+    eth_client::RPCClient,
 };
 use metrics::config::MetricsConfig;
 use slotting::config::SlottingConfig;
-use std::fmt::Debug;
+use std::{fmt::Debug, sync::Arc};
 use tracing::debug;
 
 /// Common config stuct for the Metabased Translator. This contains all possible config options
@@ -56,8 +56,8 @@ impl MetabasedConfig {
 
     pub async fn set_initial_timestamp(
         &mut self,
-        settlement_client: &EthClient,
-        sequencing_client: &EthClient,
+        settlement_client: Arc<dyn RPCClient>,
+        sequencing_client: Arc<dyn RPCClient>,
     ) -> Result<()> {
         let seq_start_timestamp =
             fetch_block_timestamp(sequencing_client, self.sequencing.sequencing_start_block)
@@ -112,7 +112,10 @@ impl MetabasedConfig {
     }
 }
 
-async fn fetch_block_timestamp(client: &EthClient, block_number: u64) -> Result<u64, Error> {
+async fn fetch_block_timestamp(
+    client: Arc<dyn RPCClient>,
+    block_number: u64,
+) -> Result<u64, Error> {
     let block = client.get_block_by_number(block_number).await?;
     // Ethereum timestamps are in seconds, convert to milliseconds.
     Ok(block.timestamp * 1000)
@@ -121,8 +124,12 @@ async fn fetch_block_timestamp(client: &EthClient, block_number: u64) -> Result<
 #[cfg(test)]
 mod tests {
     use super::*;
+    use async_trait::async_trait;
+    use common::types::{Block, Receipt};
+    use mockall::{mock, predicate::*};
     use serial_test::serial;
     use std::{env, time::Duration};
+    use tokio::test;
 
     fn clean_env() {
         // Block Builder
@@ -151,7 +158,7 @@ mod tests {
 
     #[test]
     #[serial]
-    fn test_default_values() {
+    async fn test_default_values() {
         clean_env();
         let config = MetabasedConfig::try_parse_from(["test"]).unwrap();
 
@@ -176,7 +183,7 @@ mod tests {
 
     #[test]
     #[serial]
-    fn test_env_vars_override_defaults() {
+    async fn test_env_vars_override_defaults() {
         clean_env();
         env::set_var("BLOCK_BUILDER_MCHAIN_URL", "http://127.0.0.1:9999/");
         env::set_var("SLOTTER_SLOT_DURATION_MS", "3000");
@@ -190,7 +197,7 @@ mod tests {
 
     #[test]
     #[serial]
-    fn test_cli_args_override_env_vars() {
+    async fn test_cli_args_override_env_vars() {
         clean_env();
         env::set_var("BLOCK_BUILDER_MCHAIN_URL", "http://127.0.0.1:9999/");
 
@@ -200,7 +207,51 @@ mod tests {
     }
 
     #[test]
-    fn test_generate_command() {
+    async fn test_generate_command() {
         MetabasedConfig::generate_sample_command();
+    }
+
+    // Mock RPCClient
+    mock! {
+        #[derive(Debug)]
+        pub RPCClientMock {}
+
+        #[async_trait]
+        impl RPCClient for RPCClientMock {
+            async fn get_block_by_number(&self, block_number: u64) -> Result<Block, Error>;
+            async fn get_block_receipts(&self, block_number: u64) -> Result<Vec<Receipt>, Error>;
+        }
+    }
+
+    #[tokio::test]
+    async fn test_set_initial_timestamp_success() {
+        let mut config = MetabasedConfig::default();
+        config.settlement.settlement_start_block = 100;
+        config.sequencing.sequencing_start_block = 200;
+
+        let mut mock_settlement_client = MockRPCClientMock::new();
+        let mut mock_sequencing_client = MockRPCClientMock::new();
+
+        // Mock responses
+        mock_settlement_client
+            .expect_get_block_by_number()
+            .with(eq(100))
+            .times(1)
+            .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
+
+        mock_sequencing_client
+            .expect_get_block_by_number()
+            .with(eq(200))
+            .times(1)
+            .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
+
+        // Run the function
+        let settlement_client = Arc::new(mock_settlement_client);
+        let sequencing_client = Arc::new(mock_sequencing_client);
+        let result = config.set_initial_timestamp(settlement_client, sequencing_client).await;
+
+        assert!(result.is_ok());
+        assert_eq!(config.slotter.start_slot_timestamp, 6000000);
+        assert_eq!(config.block_builder.genesis_timestamp, 6000000);
     }
 }

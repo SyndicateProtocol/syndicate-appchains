@@ -32,7 +32,9 @@ use contract_bindings::{
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::{eyre, Result};
 use ingestor::{
-    config::IngestionPipelineConfig, eth_client::EthClient, ingestor::Ingestor,
+    config::IngestionPipelineConfig,
+    eth_client::{EthClient, RPCClient},
+    ingestor::Ingestor,
     metrics::IngestorMetrics,
 };
 use metrics::metrics::MetricsState;
@@ -40,14 +42,13 @@ use prometheus_client::registry::Registry;
 use reqwest::Client;
 use serial_test::serial;
 use slotting::{metrics::SlottingMetrics, slotting::Slotter};
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use tokio::{
     process::{Child, Command},
     runtime::Handle,
     task,
     time::timeout,
 };
-
 /// Simple test scenario:
 /// Bob tries to deploy a counter contract to L3, then tries to increment it
 /// Bob's transactions are sequenced on the sequencing chain
@@ -301,8 +302,10 @@ async fn e2e_test() -> Result<()> {
     ingestor_config.sequencing.sequencing_polling_interval = Duration::from_millis(100);
     ingestor_config.settlement.settlement_polling_interval = Duration::from_millis(100);
     let mut metrics_state = MetricsState { registry: Registry::default() };
-    let settlement_client = &EthClient::new(&ingestor_config.settlement.settlement_rpc_url).await?;
-    let sequencing_client = &EthClient::new(&ingestor_config.sequencing.sequencing_rpc_url).await?;
+    let settlement_client: Arc<dyn RPCClient> =
+        Arc::new(EthClient::new(&ingestor_config.sequencing.sequencing_rpc_url).await?);
+    let sequencing_client: Arc<dyn RPCClient> =
+        Arc::new(EthClient::new(&ingestor_config.settlement.settlement_rpc_url).await?);
     let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
         Chain::Sequencing,
         sequencing_client,

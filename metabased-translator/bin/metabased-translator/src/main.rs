@@ -10,6 +10,7 @@ use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::{start_metrics, MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
 use slotting::slotting::Slotter;
+use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::oneshot;
 use tracing::{error, info};
@@ -37,8 +38,8 @@ async fn run(
     let mut settlement_config = config.settlement.clone();
 
     // Initialize ETH clients
-    let sequencing_client = &EthClient::new(&sequencing_config.sequencing_rpc_url).await?;
-    let settlement_client = &EthClient::new(&settlement_config.settlement_rpc_url).await?;
+    let sequencing_client = Arc::new(EthClient::new(&sequencing_config.sequencing_rpc_url).await?);
+    let settlement_client = Arc::new(EthClient::new(&settlement_config.settlement_rpc_url).await?);
 
     // Override start blocks if we're resuming from a database
     if let Some(state) = &safe_state {
@@ -46,7 +47,7 @@ async fn run(
         settlement_config.settlement_start_block = state.settlement_block.number;
     } else {
         // Initial timestamp is only needed if we aren't resuming from db
-        config.set_initial_timestamp(settlement_client, sequencing_client).await?;
+        config.set_initial_timestamp(settlement_client.clone(), sequencing_client.clone()).await?;
     }
     let safe_block_number = safe_state.as_ref().map(|state| state.slot.number);
 
