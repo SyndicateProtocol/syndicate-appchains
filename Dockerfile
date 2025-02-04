@@ -1,4 +1,4 @@
-# NOTE: Multi-target Dockerfile for building and running both Metabased Translator and metabased-sequencer
+# NOTE: Multi-target Dockerfile for building and running both metabased-translator and metabased-sequencer
 # Stage 1: Prepare cargo-chef
 FROM lukemathwalker/cargo-chef:latest-rust-1.84 AS chef
 WORKDIR /app
@@ -55,7 +55,7 @@ RUN cargo build --profile $BUILD_PROFILE \
 
 # Copy binaries to known locations
 RUN cp /app/target/$BUILD_PROFILE/metabased-translator /app/translator && \
-    cp /app/target/$BUILD_PROFILE/metabased-sequencer /app/metabased-sequencer
+    cp /app/target/$BUILD_PROFILE/metabased-sequencer /app/sequencer
 
 # Stage 4: Create metabased-translator runtime image
 FROM ubuntu:22.04 AS metabased-translator
@@ -112,7 +112,7 @@ RUN apt-get update && \
 # NOTE: Foundry is unnecessary for the metabased-sequencer. Skipping install
 
 # Copy metabased-sequencer binary from builder and verify
-COPY --from=builder /app/metabased-sequencer /usr/local/bin/metabased-sequencer
+COPY --from=builder /app/sequencer /usr/local/bin/metabased-sequencer
 
 # Create a configuration directory
 RUN mkdir -p /etc/metabased-sequencer
