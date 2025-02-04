@@ -47,7 +47,7 @@ jobs:
           context: .
           file: Dockerfile
           push: true
-          target: interceptor
+          target: metabased-sequencer
           # removed linux/arm64 part, took ~1hr on Github Actions
           platforms: linux/amd64
           tags: ${{ steps.meta-sequencer.outputs.tags }}

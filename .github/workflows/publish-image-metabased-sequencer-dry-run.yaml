@@ -46,7 +46,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          target: interceptor
+          target: metabased-sequencer
           file: Dockerfile
           push: false
           platforms: linux/amd64

@@ -1,4 +1,4 @@
-# NOTE: Multi-target Dockerfile for building and running both Metabased Translator and Interceptor
+# NOTE: Multi-target Dockerfile for building and running both Metabased Translator and metabased-sequencer
 # Stage 1: Prepare cargo-chef
 FROM lukemathwalker/cargo-chef:latest-rust-1.84 AS chef
 WORKDIR /app
@@ -46,16 +46,16 @@ RUN cargo build --profile $BUILD_PROFILE \
     --locked \
     --bin metabased-translator
 
-# Build interceptor and proxy
+# Build metabased-sequencer and proxy
 RUN cargo build --profile $BUILD_PROFILE \
     --features "$FEATURES" \
     --locked \
-    --package interceptor \
+    --package metabased-sequencer \
     --package proxy
 
 # Copy binaries to known locations
 RUN cp /app/target/$BUILD_PROFILE/metabased-translator /app/translator && \
-    cp /app/target/$BUILD_PROFILE/interceptor /app/interceptor
+    cp /app/target/$BUILD_PROFILE/metabased-sequencer /app/metabased-sequencer
 
 # Stage 4: Create metabased-translator runtime image
 FROM ubuntu:22.04 AS metabased-translator
@@ -96,8 +96,8 @@ ENTRYPOINT ["/usr/local/bin/metabased-translator"]
 # Optional default arguments can be provided via CMD
 LABEL service=metabased-translator
 
-# Stage 5: Create interceptor runtime image
-FROM ubuntu:22.04 AS interceptor
+# Stage 5: Create metabased-sequencer runtime image
+FROM ubuntu:22.04 AS metabased-sequencer
 WORKDIR /app
 
 # Install runtime dependencies
@@ -109,13 +109,13 @@ RUN apt-get update && \
     git \
     && rm -rf /var/lib/apt/lists/*
 
-# NOTE: Foundry is unnecessary for the interceptor. Skipping install
+# NOTE: Foundry is unnecessary for the metabased-sequencer. Skipping install
 
-# Copy interceptor binary from builder and verify
-COPY --from=builder /app/interceptor /usr/local/bin/interceptor
+# Copy metabased-sequencer binary from builder and verify
+COPY --from=builder /app/metabased-sequencer /usr/local/bin/metabased-sequencer
 
 # Create a configuration directory
-RUN mkdir -p /etc/interceptor
+RUN mkdir -p /etc/metabased-sequencer
 
 # Optional: Create volume mount points for persistent data
 VOLUME ["/data"]
@@ -123,6 +123,6 @@ VOLUME ["/data"]
 # Expose ports (adjust according to your needs)
 EXPOSE 8545 8546
 
-ENTRYPOINT ["/usr/local/bin/interceptor"]
+ENTRYPOINT ["/usr/local/bin/metabased-sequencer"]
 # Optional default arguments can be provided via CMD
-LABEL service=interceptor
+LABEL service=metabased-sequencer

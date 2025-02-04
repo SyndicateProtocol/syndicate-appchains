@@ -4,7 +4,7 @@ use alloy::{
     signers::k256::elliptic_curve::rand_core::RngCore,
 };
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use interceptor::infrastructure::{
+use metabased_sequencer::infrastructure::{
     compress_transaction, compress_transactions, decompress_transaction, decompress_transactions,
 };
 use rand::Rng;

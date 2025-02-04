@@ -214,7 +214,7 @@ metabased-sequencer-up: create-envrc
         echo "Metabased sequencer is already running at {{ metabased_sequencer_url }}"; \
     else \
         echo "Starting metabased sequencer..."; \
-        (. {{ envrc_file }} && cd {{ sequencer_root }} && cargo run -p interceptor &); \
+        (. {{ envrc_file }} && cd {{ sequencer_root }} && cargo run -p metabased-sequencer &); \
         echo "Waiting for sequencer to be ready..."; \
         while ! just metabased-sequencer-health-check >/dev/null 2>&1; do \
             sleep 1; \
@@ -230,7 +230,7 @@ metabased-sequencer-down:
     @# Stop sequencer if it's running
     @if just metabased-sequencer-health-check >/dev/null 2>&1; then \
         echo "Stopping metabased sequencer..."; \
-        pkill -q -f interceptor; \
+        pkill -q -f metabased-sequencer; \
         echo "Metabased sequencer stopped."; \
     else \
         echo "Metabased sequencer already stopped."; \
