@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn test_default_parsing() {
-        let config = BlockBuilderConfig::parse_from(["test"]);
+        let config = BlockBuilderConfig::default();
         assert_eq!(
             config.mchain_url,
             Url::parse("http://127.0.0.1:8888").expect("Failed to parse default URL")
