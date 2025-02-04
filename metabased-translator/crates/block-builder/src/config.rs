@@ -135,7 +135,6 @@ impl Debug for BlockBuilderConfig {
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
         let zero = Address::ZERO.to_string();
-        println!("{}", zero);
         Self::parse_from(["", "-s", &zero, "-b", &zero, "-i", &zero])
     }
 }

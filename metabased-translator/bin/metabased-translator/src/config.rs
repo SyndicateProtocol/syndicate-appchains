@@ -39,7 +39,8 @@ impl MetabasedConfig {
     /// Parse the [`MetabasedConfig`] from configuration sources like CLI args and env vars
     pub fn parse() -> Self {
         let config = <Self as Parser>::parse();
-        if config.slotter.start_slot_timestamp / 1000 < config.block_builder.genesis_timestamp {
+        // TODO(SEQ-538): remove this check once the config flags are updated
+        if config.slotter.start_slot_timestamp < config.block_builder.genesis_timestamp {
             error!("start slot timestamp cannot be less than the mchain genesis timestamp");
             panic!();
         }
