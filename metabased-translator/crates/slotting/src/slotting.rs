@@ -1,20 +1,19 @@
 //! Slotting module for metabased-translator
 
-use crate::{config::SlottingConfig, metrics::SlottingMetrics};
+use crate::{config::SlotterConfig, metrics::SlotterMetrics};
 use common::{
     db::{DbError, SafeState, TranslatorStore},
     types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotState},
 };
 use derivative::Derivative;
+use futures::{select_biased, FutureExt, StreamExt};
 use std::{cmp::Ordering, collections::LinkedList};
 use thiserror::Error;
-use tokio::{
-    select,
-    sync::{
-        mpsc::{channel, error::SendError, Receiver, Sender},
-        oneshot,
-    },
+use tokio::sync::{
+    mpsc::{channel, error::SendError, Receiver, Sender},
+    oneshot,
 };
+use tokio_stream::wrappers::ReceiverStream;
 use tracing::{debug, error, info};
 
 /// Maximum time to wait for blocks before considering a slot final (24 hours in seconds)
@@ -39,10 +38,7 @@ const MAX_WAIT: u64 = 24 * 60 * 60;
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Slotter {
-    config: SlottingConfig,
-
-    sequencing_chain_rx: Receiver<BlockAndReceipts>,
-    settlement_chain_rx: Receiver<BlockAndReceipts>,
+    config: SlotterConfig,
 
     latest_sequencing_block: Option<BlockRef>,
     latest_settlement_block: Option<BlockRef>,
@@ -60,7 +56,7 @@ pub struct Slotter {
     store: Box<dyn TranslatorStore + Send + Sync>,
 
     /// Metrics
-    metrics: SlottingMetrics,
+    metrics: SlotterMetrics,
 }
 
 const fn calculate_max_slots(slot_duration: u64) -> usize {
@@ -90,12 +86,10 @@ impl Slotter {
     /// # Returns
     /// A new [`Slotter`] instance that can be started with `start()`
     pub fn new(
-        sequencing_chain_receiver: Receiver<BlockAndReceipts>,
-        settlement_chain_receiver: Receiver<BlockAndReceipts>,
-        config: SlottingConfig,
+        config: SlotterConfig,
         safe_state: Option<SafeState>,
         store: Box<dyn TranslatorStore + Send + Sync>,
-        metrics: SlottingMetrics,
+        metrics: SlotterMetrics,
     ) -> (Self, Receiver<Slot>) {
         let (slot_tx, slot_rx) = channel(100);
         let mut slots = LinkedList::new();
@@ -111,8 +105,6 @@ impl Slotter {
         };
 
         let slotter = Self {
-            sequencing_chain_rx: sequencing_chain_receiver,
-            settlement_chain_rx: settlement_chain_receiver,
             latest_sequencing_block,
             latest_settlement_block,
             slots,
@@ -138,36 +130,51 @@ impl Slotter {
     /// - A tuple containing:
     ///   - A receiver that will get slots as they are processed
     ///   - A shutdown function that can be called to stop the slotter
-    pub async fn start(mut self, mut shutdown_rx: oneshot::Receiver<()>) {
+    pub async fn start(
+        mut self,
+        sequencing_rx: Receiver<BlockAndReceipts>,
+        settlement_rx: Receiver<BlockAndReceipts>,
+        shutdown_rx: oneshot::Receiver<()>,
+    ) {
         info!("Starting Slotter");
+
+        let mut seq_stream =
+            ReceiverStream::new(sequencing_rx).map(|block| (block, Chain::Sequencing)).fuse();
+        let mut set_stream =
+            ReceiverStream::new(settlement_rx).map(|block| (block, Chain::Settlement)).fuse();
+
+        let mut shutdown_rx = shutdown_rx.fuse();
+
         loop {
-            let process_result = select! {
-                _ = &mut shutdown_rx => {
-                    info!("Slotter stopped");
-                    drop(self.sender);
-                    break;
+            let seq_ts = self.latest_sequencing_block.as_ref().map_or(0, |b| b.timestamp);
+            let set_ts = self.latest_settlement_block.as_ref().map_or(0, |b| b.timestamp);
+
+            // prefer to consume from the chain that is lagging behind
+            let process_result = if seq_ts <= set_ts {
+                select_biased! {
+                    _ = shutdown_rx => {
+                        info!("Slotter stopped");
+                        drop(self.sender);
+                        return;
+                    }
+                    data = seq_stream.next() => self.handle_stream_data(data).await,
+                    data = set_stream.next() => self.handle_stream_data(data).await,
                 }
-                Some(block) = self.sequencing_chain_rx.recv() => {
-                    self.process_block(
-                        block,
-                        Chain::Sequencing,
-                        self.config.slot_duration,
-                    )
-                    .await
-                }
-                Some(block) = self.settlement_chain_rx.recv() => {
-                    self.process_block(
-                        block,
-                        Chain::Settlement,
-                        self.config.slot_duration,
-                    )
-                    .await
+            } else {
+                select_biased! {
+                    _ = shutdown_rx => {
+                        info!("Slotter stopped");
+                        drop(self.sender);
+                        return;
+                    }
+                    data = set_stream.next() => self.handle_stream_data(data).await,
+                    data = seq_stream.next() => self.handle_stream_data(data).await,
                 }
             };
-            self.metrics
-                .update_channel_capacity(self.sequencing_chain_rx.capacity(), Chain::Sequencing);
-            self.metrics
-                .update_channel_capacity(self.settlement_chain_rx.capacity(), Chain::Settlement);
+
+            // self.metrics.update_channel_capacity(sequencing_rx.capacity(), Chain::Sequencing);
+            // self.metrics.update_channel_capacity(settlement_rx.capacity(), Chain::Settlement);
+
             match process_result {
                 Ok(_) => (),
                 Err(e) => match e {
@@ -187,12 +194,8 @@ impl Slotter {
                         panic!("No slots available. This should never happen - if it does, it's an implementation error. {e}");
                     }
                     SlotterError::SlotSendError(_) => {
-                        panic!("Failed to send slot through channel: {e}"); // TODO SEQ-489 - decide
-                                                                            // what to do here
-                                                                            // (likely to occur
-                                                                            // during shutdown, or
-                                                                            // the received is
-                                                                            // blocked)
+                        // unrecoverable. on shutdown slotter should stop before block-builder
+                        panic!("Failed to send slot through channel: {e}");
                     }
                     SlotterError::EarlierTimestamp { .. } => {
                         panic!("Earlier timestamp - this should never happen (where a block is received with the expected block number, but a lower timestamp) {e}");
@@ -266,6 +269,21 @@ impl Slotter {
             }
         }
         Ok(())
+    }
+
+    async fn handle_stream_data(
+        &mut self,
+        data: Option<(BlockAndReceipts, Chain)>,
+    ) -> Result<(), SlotterError> {
+        match data {
+            Some((block, chain)) => {
+                self.process_block(block, chain, self.config.slot_duration).await
+            }
+            None => {
+                debug!("Channel closed, likely due to shutdown");
+                Ok(())
+            }
+        }
     }
 
     async fn process_block(
@@ -514,11 +532,12 @@ mod tests {
     }
 
     async fn create_slotter_and_spawn(slot_start_timestamp: u64, slot_duration: u64) -> TestSetup {
-        let (slotter, slot_rx, seq_tx, settle_tx) =
-            create_slotter(slot_start_timestamp, slot_duration);
+        let (slotter, slot_rx) = create_slotter(slot_start_timestamp, slot_duration);
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        tokio::spawn(async move { slotter.start(shutdown_rx).await });
+        let (seq_tx, seq_rx) = channel(100);
+        let (settle_tx, settle_rx) = channel(100);
+        tokio::spawn(async move { slotter.start(seq_rx, settle_rx, shutdown_rx).await });
 
         TestSetup { slot_rx, sequencing_tx: seq_tx, settlement_tx: settle_tx, shutdown_tx }
     }
@@ -526,23 +545,19 @@ mod tests {
     fn create_slotter(
         slot_start_timestamp_ms: u64,
         slot_duration: u64,
-    ) -> (Slotter, Receiver<Slot>, Sender<BlockAndReceipts>, Sender<BlockAndReceipts>) {
-        let (seq_tx, seq_rx) = channel(100);
-        let (settle_tx, settle_rx) = channel(100);
+    ) -> (Slotter, Receiver<Slot>) {
         let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = SlottingMetrics::new(&mut metrics_state.registry);
+        let metrics = SlotterMetrics::new(&mut metrics_state.registry);
         let store = Box::new(RocksDbStore::new(test_path("slotting_db").as_str()).unwrap());
 
         let (slotter, slot_rx) = Slotter::new(
-            seq_rx,
-            settle_rx,
-            SlottingConfig { slot_duration, start_slot_timestamp: slot_start_timestamp_ms },
+            SlotterConfig { slot_duration, start_slot_timestamp: slot_start_timestamp_ms },
             None,
             store,
             metrics,
         );
 
-        (slotter, slot_rx, seq_tx, settle_tx)
+        (slotter, slot_rx)
     }
 
     fn create_test_block(number: u64, timestamp: u64) -> BlockAndReceipts {
@@ -650,7 +665,7 @@ mod tests {
     async fn test_update_latest_block_success_sequencing() {
         let slot_start_timestamp = 10;
         let slot_duration = 1;
-        let (mut slotter, _, _, _) = create_slotter(slot_start_timestamp, slot_duration);
+        let (mut slotter, _) = create_slotter(slot_start_timestamp, slot_duration);
 
         let block = create_test_block(2, 200);
 
@@ -666,7 +681,7 @@ mod tests {
     async fn test_update_latest_block_success_settlement() {
         let slot_start_timestamp = 10;
         let slot_duration = 1;
-        let (mut slotter, _, _, _) = create_slotter(slot_start_timestamp, slot_duration);
+        let (mut slotter, _) = create_slotter(slot_start_timestamp, slot_duration);
 
         let block = create_test_block(3, 300);
 
@@ -682,7 +697,7 @@ mod tests {
     async fn test_reorg_detected() {
         let slot_start_timestamp = 10;
         let slot_duration = 1;
-        let (mut slotter, _, _, _) = create_slotter(slot_start_timestamp, slot_duration);
+        let (mut slotter, _) = create_slotter(slot_start_timestamp, slot_duration);
 
         let block = create_test_block(1, 50);
 
@@ -697,7 +712,7 @@ mod tests {
     async fn test_block_number_skipped() {
         let slot_start_timestamp = 10;
         let slot_duration = 1;
-        let (mut slotter, _, _, _) = create_slotter(slot_start_timestamp, slot_duration);
+        let (mut slotter, _) = create_slotter(slot_start_timestamp, slot_duration);
 
         let block = create_test_block(4, 400);
 
@@ -712,7 +727,7 @@ mod tests {
     async fn test_earlier_timestamp() {
         let slot_start_timestamp = 10;
         let slot_duration = 1;
-        let (mut slotter, _, _, _) = create_slotter(slot_start_timestamp, slot_duration);
+        let (mut slotter, _) = create_slotter(slot_start_timestamp, slot_duration);
 
         let block = create_test_block(2, 50);
 
@@ -732,7 +747,7 @@ mod tests {
 
         let slot_start_timestamp = 10;
         let slot_duration = 1;
-        let config = SlottingConfig { slot_duration, start_slot_timestamp: slot_start_timestamp };
+        let config = SlotterConfig { slot_duration, start_slot_timestamp: slot_start_timestamp };
 
         // Create a fresh DB for this test
         let db_path = test_path("slotting_db");
@@ -741,10 +756,9 @@ mod tests {
         // Start first slotter instance
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = SlottingMetrics::new(&mut metrics_state.registry);
-        let (slotter, mut slot_rx) =
-            Slotter::new(seq_rx, set_rx, config.clone(), None, store, metrics);
-        let handle = tokio::spawn(async move { slotter.start(shutdown_rx).await });
+        let metrics = SlotterMetrics::new(&mut metrics_state.registry);
+        let (slotter, mut slot_rx) = Slotter::new(config.clone(), None, store, metrics);
+        let handle = tokio::spawn(async move { slotter.start(seq_rx, set_rx, shutdown_rx).await });
 
         // Send some blocks
         // slot 2
@@ -794,14 +808,16 @@ mod tests {
         let resumed_state = resumed_store.get_latest().await.unwrap();
 
         let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = SlottingMetrics::new(&mut metrics_state.registry);
+        let metrics = SlotterMetrics::new(&mut metrics_state.registry);
 
         // Create new slotter that should resume from DB
         let (resumed_slotter, mut resumed_slot_rx) =
-            Slotter::new(new_seq_rx, new_settle_rx, config, resumed_state, resumed_store, metrics);
+            Slotter::new(config, resumed_state, resumed_store, metrics);
 
         let (_shutdown_tx, shutdown_rx) = oneshot::channel();
-        tokio::spawn(async move { resumed_slotter.start(shutdown_rx).await });
+        tokio::spawn(
+            async move { resumed_slotter.start(new_seq_rx, new_settle_rx, shutdown_rx).await },
+        );
 
         // Send new blocks to resumed slotter (since only slot 0,1,2 have been saved to the DB, we
         // should send blocks #4 (for slot 5))

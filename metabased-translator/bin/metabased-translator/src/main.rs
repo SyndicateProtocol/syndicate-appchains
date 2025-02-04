@@ -12,7 +12,7 @@ use metrics::{
     metrics::{start_metrics, MetricsState, TranslatorMetrics},
 };
 use prometheus_client::registry::Registry;
-use slotting::{config::SlottingConfig, slotting::Slotter};
+use slotting::{config::SlotterConfig, slotting::Slotter};
 use thiserror::Error;
 use tokio::sync::oneshot;
 use tracing::{error, info};
@@ -21,7 +21,7 @@ use tracing::{error, info};
 #[allow(unused_assignments)] // TODO SEQ-528 remove this
 async fn run(
     block_builder_config: BlockBuilderConfig,
-    slotting_config: SlottingConfig,
+    slotting_config: SlotterConfig,
     ingestion_config: IngestionPipelineConfig,
     db_path: &str,
     metrics_config: MetricsConfig,
@@ -60,14 +60,7 @@ async fn run(
     let (settlement_ingestor, settlement_rx) =
         Ingestor::new(Chain::Settlement, settlement_config.into(), metrics.ingestor_settlement)
             .await?;
-    let (slotter, slot_rx) = Slotter::new(
-        sequencing_rx,
-        settlement_rx,
-        slotting_config,
-        safe_state,
-        db,
-        metrics.slotting,
-    );
+    let (slotter, slot_rx) = Slotter::new(slotting_config, safe_state, db, metrics.slotting);
     let block_builder =
         BlockBuilder::new(slot_rx, &block_builder_config, metrics.block_builder).await?;
 
@@ -77,7 +70,9 @@ async fn run(
         tokio::spawn(async move { sequencing_ingestor.start_polling(seq_shutdown_rx).await });
     let mut settlement_handle =
         tokio::spawn(async move { settlement_ingestor.start_polling(settle_shutdown_rx).await });
-    let mut slotter_handle = tokio::spawn(async move { slotter.start(slotter_shutdown_rx).await });
+    let mut slotter_handle = tokio::spawn(async move {
+        slotter.start(sequencing_rx, settlement_rx, slotter_shutdown_rx).await
+    });
     let mut block_builder_handle =
         tokio::spawn(
             async move { block_builder.start(safe_block_number, builder_shutdown_rx).await },

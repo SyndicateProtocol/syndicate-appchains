@@ -1,29 +1,31 @@
 [package]
-name = "slotting"
-version.workspace = true
-description = "This crate is responsible for slotting source chain blocks into slots for the block-builder."
-edition.workspace = true
+description            = "This crate is responsible for slotting source chain blocks into slots for the block-builder."
+edition.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "slotting"
+repository.workspace   = true
 rust-version.workspace = true
-license.workspace = true
-homepage.workspace = true
-repository.workspace = true
+version.workspace      = true
 
 [dependencies]
-alloy = { workspace = true }
-common = { workspace = true }
-tokio = { workspace = true, features = ["sync", "macros", "rt", "time"] }
-tracing = { workspace = true }
-thiserror = { workspace = true }
-prometheus-client = { workspace = true}
-clap = { workspace = true, features = ["env", "derive"] }
-derivative = { workspace = true }
+alloy             = { workspace = true }
+clap              = { workspace = true, features = ["derive", "env"] }
+common            = { workspace = true }
+derivative        = { workspace = true }
+futures           = { workspace = true, features = ["std"] }
+prometheus-client = { workspace = true }
+thiserror         = { workspace = true }
+tokio             = { workspace = true, features = ["macros", "rt", "sync", "time"] }
+tokio-stream      = { workspace = true }
+tracing           = { workspace = true }
 
 [dev-dependencies]
-test-case = { workspace = true }
-serial_test = { workspace = true }
-tracing-test = { workspace = true }
 assert_matches = { workspace = true }
-test-utils = { workspace = true }
+serial_test    = { workspace = true }
+test-case      = { workspace = true }
+test-utils     = { workspace = true }
+tracing-test   = { workspace = true }
 
 [lints]
 workspace = true

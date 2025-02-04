@@ -22,7 +22,7 @@ pub struct Labels {
 
 /// Structure holding metrics related to the Slotting.
 #[derive(Debug)]
-pub struct SlottingMetrics {
+pub struct SlotterMetrics {
     /// Records the last block number processed by the Slotting
     pub slotting_last_processed_block: Family<Labels, Gauge>,
     /// Tracks the current number of active slots
@@ -37,7 +37,7 @@ pub struct SlottingMetrics {
     pub slotting_last_slot_created: Gauge,
 }
 
-impl SlottingMetrics {
+impl SlotterMetrics {
     /// Creates a new `SlottingMetrics` instance and registers metrics in the provided registry.
     pub fn new(registry: &mut Registry) -> Self {
         let slotting_last_processed_block = Family::<Labels, Gauge>::default();
@@ -150,7 +150,7 @@ mod tests {
     #[test]
     fn test_metrics_initialization() {
         let mut registry = Registry::default();
-        let metrics = SlottingMetrics::new(&mut registry);
+        let metrics = SlotterMetrics::new(&mut registry);
 
         assert_eq!(
             metrics
@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn test_record_last_processed_block() {
         let mut registry = Registry::default();
-        let metrics = SlottingMetrics::new(&mut registry);
+        let metrics = SlotterMetrics::new(&mut registry);
 
         metrics.record_last_processed_block(42, Chain::Sequencing);
         assert_eq!(
@@ -189,7 +189,7 @@ mod tests {
     #[test]
     fn test_update_active_slots() {
         let mut registry = Registry::default();
-        let metrics = SlottingMetrics::new(&mut registry);
+        let metrics = SlotterMetrics::new(&mut registry);
 
         metrics.update_active_slots(10);
         assert_eq!(metrics.slotting_active_slots.get(), 10);
@@ -201,7 +201,7 @@ mod tests {
     #[test]
     fn test_update_chain_timestamp_lag() {
         let mut registry = Registry::default();
-        let metrics = SlottingMetrics::new(&mut registry);
+        let metrics = SlotterMetrics::new(&mut registry);
 
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         let past_timestamp = now - 5; // 5 seconds ago
@@ -222,7 +222,7 @@ mod tests {
     #[test]
     fn test_record_blocks_per_slot() {
         let mut registry = Registry::default();
-        let metrics = SlottingMetrics::new(&mut registry);
+        let metrics = SlotterMetrics::new(&mut registry);
 
         metrics.record_blocks_per_slot(5);
         metrics.record_blocks_per_slot(10);
@@ -233,7 +233,7 @@ mod tests {
     #[test]
     fn test_update_channel_capacity() {
         let mut registry = Registry::default();
-        let metrics = SlottingMetrics::new(&mut registry);
+        let metrics = SlotterMetrics::new(&mut registry);
 
         metrics.update_channel_capacity(50, Chain::Sequencing);
         assert_eq!(
@@ -250,7 +250,7 @@ mod tests {
     #[test]
     fn test_record_last_slot() {
         let mut registry = Registry::default();
-        let metrics = SlottingMetrics::new(&mut registry);
+        let metrics = SlotterMetrics::new(&mut registry);
 
         metrics.record_last_slot(42);
         assert_eq!(metrics.slotting_last_slot_created.get(), 42);

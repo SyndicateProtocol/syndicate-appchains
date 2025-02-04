@@ -35,7 +35,7 @@ use ingestor::{config::IngestionPipelineConfig, ingestor::Ingestor, metrics::Ing
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use reqwest::Client;
-use slotting::{config::SlottingConfig, metrics::SlottingMetrics, slotting::Slotter};
+use slotting::{config::SlotterConfig, metrics::SlotterMetrics, slotting::Slotter};
 use std::time::Duration;
 use tokio::{
     process::{Child, Command},
@@ -317,20 +317,18 @@ async fn e2e_settlement_test() -> Result<()> {
     }));
 
     // start slotter at the genesis timestamp
-    let slotter_cfg = SlottingConfig { start_slot_timestamp: 1736824187, ..Default::default() };
+    let slotter_cfg = SlotterConfig { start_slot_timestamp: 1736824187, ..Default::default() };
 
     // Launch the slotter, block builder, and nitro rollup
     let (slotter, slotter_rx) = Slotter::new(
-        sequencer_rx,
-        settlement_rx,
         slotter_cfg,
         None,
         Box::new(DummyStore {}),
-        SlottingMetrics::new(&mut metrics_state.registry),
+        SlotterMetrics::new(&mut metrics_state.registry),
     );
     let (_dummy, dummy) = tokio::sync::oneshot::channel();
     let _slotter_task = Task(tokio::spawn(async move {
-        slotter.start(dummy).await;
+        slotter.start(sequencer_rx, settlement_rx, dummy).await;
     }));
     let block_builder = BlockBuilder::new(
         slotter_rx,
@@ -557,20 +555,18 @@ async fn e2e_test() -> Result<()> {
         settlement_ingestor.start_polling(dummy).await.unwrap();
     }));
 
-    let slotter_cfg = SlottingConfig::default();
+    let slotter_cfg = SlotterConfig::default();
     let slot_duration = slotter_cfg.slot_duration;
     // Launch the slotter, block builder, and nitro rollup
     let (slotter, slotter_rx) = Slotter::new(
-        sequencer_rx,
-        settlement_rx,
         slotter_cfg,
         None,
         Box::new(DummyStore {}),
-        SlottingMetrics::new(&mut metrics_state.registry),
+        SlotterMetrics::new(&mut metrics_state.registry),
     );
     let (_dummy, dummy) = tokio::sync::oneshot::channel();
     let _slotter_task = Task(tokio::spawn(async move {
-        slotter.start(dummy).await;
+        slotter.start(sequencer_rx, settlement_rx, dummy).await;
     }));
     let block_builder = BlockBuilder::new(
         slotter_rx,
