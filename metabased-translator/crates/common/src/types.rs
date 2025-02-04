@@ -67,7 +67,8 @@ pub struct Transaction {
     #[serde(deserialize_with = "deserialize_b256", serialize_with = "serialize_b256")]
     pub hash: B256,
     /// The data payload of the transaction.
-    pub input: String,
+    #[serde(deserialize_with = "deserialize_bytes", serialize_with = "serialize_bytes")]
+    pub input: Bytes,
     /// The number of transactions sent by the sender.
     #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub nonce: u64,
@@ -187,10 +188,9 @@ pub enum SlotState {
 /// A `Slot` is a collection of source chain blocks  to be sent to the block builder
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct Slot {
-    /// the number of the slot - `slot_number` + `PREMINED_BLOCKS` == `MetaChain`'s block number
-    /// `PREMINED_BLOCKS`, the number of blocks premined on the mchain, is set to 1 currently
+    /// the number of the slot - `slot_number` == `MetaChain`'s block number
     pub number: u64,
-    /// the timestamp of the slot
+    /// the timestamp of the slot in seconds
     pub timestamp: u64,
     /// the blocks from the sequencing chain to be included in the slot
     pub sequencing_chain_blocks: Vec<BlockAndReceipts>,
@@ -441,7 +441,7 @@ mod test {
                         "0xabcd567890123456789012345678901234567890123456789012345678901234",
                     )
                     .unwrap(),
-                    input: "0x123456".to_string(),
+                    input: hex::decode("0x123456").unwrap().into(),
                     nonce: 1,
                     to: Some(
                         Address::from_hex("0x9876543210987654321098765432109876543210").unwrap(),

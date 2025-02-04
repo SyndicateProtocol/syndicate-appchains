@@ -7,21 +7,21 @@ use tracing::debug;
 /// Configuration for the slotter
 #[derive(Parser, Debug, Clone)]
 pub struct SlottingConfig {
-    /// The duration of a [`Slotter`] slot in milliseconds.
-    #[arg(long, env = "SLOTTER_SLOT_DURATION_MS", default_value_t = 2_000)]
-    pub slot_duration_ms: u64,
+    /// The duration of a [`Slotter`] slot in seconds.
+    #[arg(long, env = "SLOTTER_SLOT_DURATION", default_value_t = 2)]
+    pub slot_duration: u64,
 
-    /// The epoch timestamp of the [`Slotter`] slot to start from, in milliseconds.
+    /// The epoch timestamp of the [`Slotter`] slot to start from, in seconds.
     /// This is set to the same timestamp as the metachain genesis block by default:
     /// April 7, 2024
-    #[arg(long, env = "SLOTTER_START_SLOT_TIMESTAMP", default_value_t = 1712500000 * 1000)]
+    #[arg(long, env = "SLOTTER_START_SLOT_TIMESTAMP", default_value_t = 1712500000)]
     pub start_slot_timestamp: u64,
 }
 
 impl SlottingConfig {
     /// Validates the configuration
     pub fn validate(&self) -> Result<(), ConfigError> {
-        if self.slot_duration_ms == 0 {
+        if self.slot_duration == 0 {
             return Err(ConfigError::Invalid {
                 message: "Slot duration must be greater than 0".to_string(),
             });
@@ -30,8 +30,8 @@ impl SlottingConfig {
     }
 
     /// Creates a new [`SlottingConfig`] instance
-    pub fn new(slot_duration_ms: u64, start_slot_timestamp: u64) -> Result<Self, ConfigError> {
-        let config = Self { slot_duration_ms, start_slot_timestamp };
+    pub fn new(slot_duration: u64, start_slot_timestamp: u64) -> Result<Self, ConfigError> {
+        let config = Self { slot_duration, start_slot_timestamp };
         config.validate()?;
         debug!("Created slotting config: {:?}", config);
         Ok(config)
@@ -61,15 +61,15 @@ mod config_tests {
     #[test]
     fn test_default_slotting_config() {
         let config = SlottingConfig::default();
-        assert_eq!(config.slot_duration_ms, 2_000);
-        assert_eq!(config.start_slot_timestamp, 1712500000000);
+        assert_eq!(config.slot_duration, 2);
+        assert_eq!(config.start_slot_timestamp, 1712500000);
     }
 
     #[test]
     fn test_default_parsing() {
         let config = SlottingConfig::parse_from(["test"]);
-        assert_eq!(config.slot_duration_ms, 2_000);
-        assert_eq!(config.start_slot_timestamp, 1712500000000);
+        assert_eq!(config.slot_duration, 2);
+        assert_eq!(config.start_slot_timestamp, 1712500000);
     }
 
     #[test]

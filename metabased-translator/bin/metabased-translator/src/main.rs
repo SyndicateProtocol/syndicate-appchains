@@ -69,7 +69,7 @@ async fn run(
         metrics.slotting,
     );
     let block_builder =
-        BlockBuilder::new(slot_rx, block_builder_config, metrics.block_builder).await?;
+        BlockBuilder::new(slot_rx, &block_builder_config, metrics.block_builder).await?;
 
     // Start component tasks
     info!("Starting Metabased Translator");

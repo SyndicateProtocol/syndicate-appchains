@@ -36,8 +36,7 @@ pub struct BlockBuilderConfig {
 
     /// Sequencing contract address on the sequencing chain
     #[arg(short = 's', long, env = "BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS",
-        value_parser = parse_address,
-        default_value = "0x0000000000000000000000000000000000000000")]
+        value_parser = parse_address)]
     pub sequencing_contract_address: Address,
 
     /// Target rollup type for the [`block-builder`]
@@ -50,11 +49,16 @@ pub struct BlockBuilderConfig {
         default_value = "0x5FbDB2315678afecb367f032d93F642f64180aa3")]
     pub mchain_rollup_address: Address,
 
-    /// Delayed inbox address on the settlement chain
-    #[arg(short = 'd', long, env = "BLOCK_BUILDER_ARBITRUM_DELAYED_INBOX_ADDRESS",
-        value_parser = parse_address,
-        default_value = "0x0000000000000000000000000000000000000000")]
-    pub delayed_inbox_address: Address,
+    // TODO(SEQ-555): make bridge and inbox addresses specific to arbitrum
+    /// Bridge address on the settlement chain
+    #[arg(short = 'b', long, env = "BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS",
+        value_parser = parse_address)]
+    pub bridge_address: Address,
+
+    /// Inbox address on the settlement chain
+    #[arg(short = 'i', long, env = "BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS",
+        value_parser = parse_address)]
+    pub inbox_address: Address,
 
     // path to the directory where anvil will keep its state
     #[arg(long, env = "BLOCK_BUILDER_ANVIL_STATE_PATH", default_value = "")]
@@ -118,7 +122,8 @@ impl Debug for BlockBuilderConfig {
             .field("sequencing_contract_address", &self.sequencing_contract_address)
             .field("target_rollup_type", &self.target_rollup_type)
             .field("mchain_rollup_address", &self.mchain_rollup_address)
-            .field("delayed_inbox_address", &self.delayed_inbox_address)
+            .field("bridge_address", &self.bridge_address)
+            .field("inbox_address", &self.inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
             .field("anvil_state_path", &self.anvil_state_path)
             .field("anvil_state_interval", &self.anvil_state_interval)
@@ -129,7 +134,8 @@ impl Debug for BlockBuilderConfig {
 
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
-        Self::parse_from([""])
+        let zero = Address::ZERO.to_string();
+        Self::parse_from(["", "-s", &zero, "-b", &zero, "-i", &zero])
     }
 }
 
@@ -156,9 +162,14 @@ impl BlockBuilderConfig {
                         "MChain rollup address cannot be 0".to_string(),
                     ));
                 }
-                if self.delayed_inbox_address == Address::ZERO {
+                if self.bridge_address == Address::ZERO {
                     return Err(ConfigError::InvalidAddress(
-                        "Delayed inbox address cannot be 0".to_string(),
+                        "Bridge address cannot be 0".to_string(),
+                    ));
+                }
+                if self.inbox_address == Address::ZERO {
+                    return Err(ConfigError::InvalidAddress(
+                        "Inbox address cannot be 0".to_string(),
                     ));
                 }
             }
@@ -208,7 +219,9 @@ mod tests {
 
     #[test]
     fn test_default_parsing() {
-        let config = BlockBuilderConfig::parse_from(["test"]);
+        let zero = Address::ZERO.to_string();
+        let config =
+            BlockBuilderConfig::parse_from(["test", "-s", &zero, "-b", &zero, "-i", &zero]);
         assert_eq!(
             config.mchain_url,
             Url::parse("http://127.0.0.1:8888").expect("Failed to parse default URL")
@@ -248,9 +261,14 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_delayed_inbox_address() {
-        let config =
-            BlockBuilderConfig { delayed_inbox_address: Address::ZERO, ..Default::default() };
+    fn test_validate_bridge_address() {
+        let config = BlockBuilderConfig { bridge_address: Address::ZERO, ..Default::default() };
+        assert_matches!(config.validate(), Err(ConfigError::InvalidAddress(_)));
+    }
+
+    #[test]
+    fn test_validate_inbox_address() {
+        let config = BlockBuilderConfig { inbox_address: Address::ZERO, ..Default::default() };
         assert_matches!(config.validate(), Err(ConfigError::InvalidAddress(_)));
     }
 

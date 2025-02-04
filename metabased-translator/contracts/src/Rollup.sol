@@ -35,6 +35,8 @@ contract Rollup {
         */
         bytes memory initMsg = abi.encodePacked(chainId, initMsgVersion, currentDataCost, chainConfig);
         deliverMessage(INITIALIZATION_MSG_TYPE, address(0), initMsg);
+        // post a batch containing the initialization message
+        postBatch(hex"000b00800203");
     }
 
     // IBridge.sol
@@ -57,7 +59,7 @@ contract Rollup {
         return sequencerInboxAccs[index];
     }
 
-    function postBatch(bytes calldata data) public {
+    function postBatch(bytes memory data) public {
         uint256 afterDelayedMessagesRead = delayedInboxAccs.length;
         (bytes32 dataHash, IBridge.TimeBounds memory timeBounds) = formCallDataHash(data, afterDelayedMessagesRead);
         uint256 seqMessageIndex = sequencerInboxAccs.length;
@@ -112,7 +114,7 @@ contract Rollup {
     uint256 internal constant HEADER_LENGTH = 40;
 
     // SequencerInbox.sol
-    function formCallDataHash(bytes calldata data, uint256 afterDelayedMessagesRead)
+    function formCallDataHash(bytes memory data, uint256 afterDelayedMessagesRead)
         internal
         view
         returns (bytes32, IBridge.TimeBounds memory)

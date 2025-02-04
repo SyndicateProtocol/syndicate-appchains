@@ -30,10 +30,10 @@ impl BlockBuilder {
     /// Create a new block builder
     pub async fn new(
         slotter_rx: Receiver<Slot>,
-        config: BlockBuilderConfig,
+        config: &BlockBuilderConfig,
         metrics: BlockBuilderMetrics,
     ) -> Result<Self, Error> {
-        let mchain = MetaChainProvider::start(config.clone()).await?;
+        let mchain = MetaChainProvider::start(config).await?;
 
         let builder: Box<dyn RollupBlockBuilder> = match config.target_rollup_type {
             TargetRollupType::ARBITRUM => Box::new(ArbitrumBlockBuilder::new(config)),
@@ -143,7 +143,7 @@ mod tests {
         let genesis_ts = config.genesis_timestamp;
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let builder = BlockBuilder::new(rx, config, metrics).await?;
+        let builder = BlockBuilder::new(rx, &config, metrics).await?;
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });
@@ -169,7 +169,7 @@ mod tests {
         let config = BlockBuilderConfig::default();
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let builder = BlockBuilder::new(rx, config.clone(), metrics).await?;
+        let builder = BlockBuilder::new(rx, &config, metrics).await?;
 
         let provider = builder.mchain.provider.clone();
 
@@ -197,16 +197,15 @@ mod tests {
         // Second run: resume builder
         let (_resumed_tx, resumed_rx) = mpsc::channel(1);
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let resumed_builder = BlockBuilder::new(resumed_rx, config, metrics).await?;
+        let resumed_builder = BlockBuilder::new(resumed_rx, &config, metrics).await?;
 
         let resumed_provider = resumed_builder.mchain.provider.clone();
 
         // resumed builder with the "last known safe slot" as slot2
         let (_shutdown_tx, shutdown_rx) = oneshot::channel();
-        tokio::spawn(async move {
-            // TODO: add PREMINED_BLOCKS to the slot number to get the block number
-            resumed_builder.start(Some(test_slot2.number), shutdown_rx).await
-        });
+        tokio::spawn(
+            async move { resumed_builder.start(Some(test_slot2.number), shutdown_rx).await },
+        );
 
         // Give time for rollback to slot0
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
