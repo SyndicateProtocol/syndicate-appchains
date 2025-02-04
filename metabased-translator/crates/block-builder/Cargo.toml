@@ -1,48 +1,47 @@
 [package]
-name = "block-builder"
-version.workspace = true
-description = "Block builder for metabased-translator."
-edition.workspace = true
+description            = "Block builder for metabased-translator."
+edition.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "block-builder"
+repository.workspace   = true
 rust-version.workspace = true
-license.workspace = true
-homepage.workspace = true
-repository.workspace = true
+version.workspace      = true
 
 [dependencies]
 alloy = { workspace = true, features = [
-  "providers",
+  "contract",
   "node-bindings",
+  "providers",
+  "rlp",
   "rpc-types",
   "rpc-types-anvil",
-  "sol-types",
-  "rlp",
-  "contract",
-  "signers",
   "signer-local",
+  "signers",
+  "sol-types",
 ] }
+async-trait = { workspace = true }
+base64 = { workspace = true }
+brotli = { workspace = true }
+clap = { workspace = true, features = ["derive", "env"] }
 common = { workspace = true }
 contract-bindings = { workspace = true }
 eyre = { workspace = true }
-tokio = { workspace = true, features = ["rt-multi-thread", "process"] }
+flate2 = { workspace = true }
+hex = { workspace = true }
+prometheus-client = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
-flate2 = { workspace = true }
-reqwest = { workspace = true }
-tracing = { workspace = true }
-clap = { workspace = true, features = ["env", "derive"] }
-base64 = { workspace = true }
-brotli = { workspace = true }
-hex = { workspace = true }
-async-trait = { workspace = true }
 thiserror = { workspace = true }
-prometheus-client = { workspace = true }
+tokio = { workspace = true, features = ["process", "rt-multi-thread"] }
+tracing = { workspace = true }
 url = { workspace = true }
 
 [dev-dependencies]
-serial_test = { workspace = true }
 assert_matches = { workspace = true }
-tracing-test = { workspace = true }
-test-utils = { workspace = true }
+serial_test    = { workspace = true }
+test-utils     = { workspace = true }
+tracing-test   = { workspace = true }
 
 [lints]
 workspace = true

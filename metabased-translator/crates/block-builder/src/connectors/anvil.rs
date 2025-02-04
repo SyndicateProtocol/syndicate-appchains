@@ -167,7 +167,6 @@ impl MetaChainProvider {
         let result = self.provider.anvil_mine_detailed(Some(opts)).await;
         info!("{}", format!("Mined block on MetaChain {:?}", result));
         result?;
-
         Ok(())
     }
 
@@ -243,6 +242,10 @@ impl MetaChainProvider {
     pub async fn rollback_to_block(&self, block_number: u64) -> Result<()> {
         let current_block = self.provider.get_block_number().await?;
         let depth = current_block - block_number;
+        info!(
+            "Persisted state is at block: {} resuming from known safe block: {}",
+            current_block, block_number
+        );
         self.provider.anvil_rollback(Some(depth)).await?;
         Ok(())
     }
@@ -346,9 +349,6 @@ mod tests {
                 block_num
             );
         }
-
-        // Cleanup
-        fs::remove_file(state_path)?;
 
         Ok(())
     }

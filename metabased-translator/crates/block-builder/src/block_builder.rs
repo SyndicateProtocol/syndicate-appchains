@@ -126,6 +126,7 @@ mod tests {
     use alloy::providers::Provider;
     use eyre::Result;
     use prometheus_client::registry::Registry;
+    use test_utils::test_path;
     use tokio::sync::mpsc;
 
     struct MetricsState {
@@ -166,7 +167,13 @@ mod tests {
     #[ignore] // TODO SEQ-528 unskip/re-write
     async fn test_block_builder_resume_from_known_safe_slot() -> Result<()> {
         let (tx, rx) = mpsc::channel(1);
-        let config = BlockBuilderConfig::default();
+        let config = BlockBuilderConfig {
+            genesis_timestamp: 999,
+            anvil_state_interval: 1,
+            anvil_state_path: test_path("anvil_state"),
+            mchain_url: Url::parse("http://0.0.0.0:8645").unwrap(),
+            ..BlockBuilderConfig::default()
+        };
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
         let builder = BlockBuilder::new(rx, config.clone(), metrics).await?;
@@ -174,9 +181,9 @@ mod tests {
         let provider = builder.mchain.provider.clone();
 
         // First run: send a few slots
-        let test_slot1 = Slot::new(1, 1000);
-        let test_slot2 = Slot::new(2, 2000);
-        let test_slot3 = Slot::new(3, 3000);
+        let test_slot1 = Slot::new(2, 1000);
+        let test_slot2 = Slot::new(3, 2000);
+        let test_slot3 = Slot::new(4, 3000);
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });
@@ -186,10 +193,11 @@ mod tests {
         tx.send(test_slot3).await?;
 
         // Give time for processing and state to be persisted
-        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
+        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
 
         let latest_block = provider.get_block_number().await?;
-        assert_eq!(latest_block, 3, "Chain should be at block 3");
+
+        assert_eq!(latest_block, 4, "Chain should be at block 3");
 
         let _ = shutdown_tx.send(());
         handle.await?;
@@ -203,10 +211,9 @@ mod tests {
 
         // resumed builder with the "last known safe slot" as slot2
         let (_shutdown_tx, shutdown_rx) = oneshot::channel();
-        tokio::spawn(async move {
-            // TODO: add PREMINED_BLOCKS to the slot number to get the block number
-            resumed_builder.start(Some(test_slot2.number), shutdown_rx).await
-        });
+        tokio::spawn(
+            async move { resumed_builder.start(Some(test_slot2.number), shutdown_rx).await },
+        );
 
         // Give time for rollback to slot0
         tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;

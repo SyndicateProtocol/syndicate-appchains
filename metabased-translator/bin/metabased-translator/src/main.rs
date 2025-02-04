@@ -18,7 +18,6 @@ use tokio::sync::oneshot;
 use tracing::{error, info};
 
 // TODO(SEQ-515): Improve this executable, research async tasks
-#[allow(unused_assignments)] // TODO SEQ-528 remove this
 async fn run(
     block_builder_config: BlockBuilderConfig,
     slotting_config: SlottingConfig,
@@ -36,8 +35,7 @@ async fn run(
     init_ctrl_c_handler(main_shutdown_tx);
 
     // Initialize the DB
-    let (db, mut safe_state) = init_db(db_path).await?;
-    safe_state = None; // TODO SEQ-528 remove this (disables resume from db)
+    let (db, safe_state) = init_db(db_path).await?;
 
     // Override start blocks if we're resuming from a database
     let mut sequencing_config = ingestion_config.sequencing;
