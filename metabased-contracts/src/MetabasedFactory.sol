@@ -58,7 +58,7 @@ contract MetabasedFactory {
         address deployedAddress = Create2.deploy(0, salt, bytecode);
 
         MetabasedSequencerChain newSequencerChain = MetabasedSequencerChain(deployedAddress);
-        newSequencerChain.init(admin, address(permissionModule));
+        newSequencerChain.initialize(admin, address(permissionModule));
         emit MetabasedSequencerChainCreated(l3ChainId, deployedAddress, address(permissionModule));
         return deployedAddress;
     }

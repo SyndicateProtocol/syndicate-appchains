@@ -38,9 +38,9 @@ contract AtomicSequencerTest is Test {
         vm.startPrank(admin);
         permissionModule = new RequireAllModule(admin);
         chainA = new MetabasedSequencerChain(l3ChainIdA);
-        chainA.init(admin, address(permissionModule));
+        chainA.initialize(admin, address(permissionModule));
         chainB = new MetabasedSequencerChain(l3ChainIdB);
-        chainB.init(admin, address(permissionModule));
+        chainB.initialize(admin, address(permissionModule));
         atomicSequencer = new AtomicSequencer();
         permissionModule.addCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
@@ -97,7 +97,7 @@ contract AtomicSequencerTest is Test {
 
     function testProcessMultipleChains() public {
         MetabasedSequencerChain chainC = new MetabasedSequencerChain(10042003);
-        chainC.init(admin, address(permissionModule));
+        chainC.initialize(admin, address(permissionModule));
 
         MetabasedSequencerChain[] memory chains = new MetabasedSequencerChain[](3);
         chains[0] = chainA;

@@ -3,10 +3,11 @@ pragma solidity 0.8.25;
 
 import {PermissionModule} from "./interfaces/PermissionModule.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 /// @title SequencingModuleChecker
 /// @notice A simplified contract that delegates permission checks to modules
-abstract contract SequencingModuleChecker is Ownable, PermissionModule {
+
+abstract contract SequencingModuleChecker is Ownable, PermissionModule, Initializable {
     /// @notice The requirement module that handles checks
     PermissionModule public requirementModule;
 
@@ -19,10 +20,10 @@ abstract contract SequencingModuleChecker is Ownable, PermissionModule {
     // [Olympix Warning: no parameter validation in constructor] Admin validation handled by OpenZeppelin's Ownable
     constructor() Ownable(msg.sender) {}
 
-    /// @notice Initializes the contract
+    /// @notice Initializes the contract by setting a new admin and requirement module
     /// @param admin The address of the admin
     /// @param _requirementModule The address of the requirement module
-    function init(address admin, address _requirementModule) public virtual onlyOwner {
+    function initialize(address admin, address _requirementModule) public virtual initializer onlyOwner {
         if (_requirementModule == address(0)) revert InvalidModuleAddress();
         requirementModule = PermissionModule(_requirementModule);
 

@@ -124,10 +124,10 @@ contract MetabasedFactoryTest is Test {
         assertEq(sequencerChainContract.l3ChainId(), l3ChainId);
 
         uint256 newL3ChainId = 10042002;
-        vm.expectEmit();
+        vm.expectEmit(true, false, false, false);
         emit MetabasedFactory.AllContractsCreated(
             newL3ChainId,
-            0x1e27a102aA9fE75Ef4054B1Ec361e84fc4ff5f26,
+            factory.computeSequencerChainAddress(bytes32(newL3ChainId), newL3ChainId),
             0xD76ffbd1eFF76C510C3a509fE22864688aC3A588,
             0x7FdB3132Ff7D02d8B9e221c61cC895ce9a4bb773
         );
@@ -225,7 +225,7 @@ contract MetabasedFactoryTest is Test {
             l3ChainId, admin, IRequirementModule(address(permissionModule)), bytes32(l3ChainId)
         );
         (address sequencerChain2) = factory.createMetabasedSequencerChain(
-            differentChainId, admin, IRequirementModule(address(permissionModule2)), bytes32(l3ChainId)
+            differentChainId, admin, IRequirementModule(address(permissionModule2)), bytes32(differentChainId)
         );
 
         assertEq(MetabasedSequencerChain(sequencerChain1).l3ChainId(), l3ChainId);
@@ -278,7 +278,7 @@ contract MetabasedFactoryTest is Test {
         factory.createAllContractsWithRequireAnyModule(admin, manager, 0, bytes32(0));
     }
 
-    function testCreateSequencerChainDeterministic() public {
+    function testCreateSequencerChainAddressIsDeterministic() public {
         RequireAllModule permissionModule = new RequireAllModule(admin);
         bytes32 salt = bytes32(l3ChainId);
         address sequencerChainAddress =

@@ -7,7 +7,7 @@ import {Test} from "forge-std/Test.sol";
 
 contract SequencingModuleCheckerMock is SequencingModuleChecker {
     constructor(address _admin, address _masterModule) SequencingModuleChecker() {
-        init(_admin, _masterModule);
+        initialize(_admin, _masterModule);
     }
 }
 
