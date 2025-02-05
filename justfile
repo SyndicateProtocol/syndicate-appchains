@@ -453,9 +453,7 @@ arb-health-check:
 metabased-sequencer-health-check:
     @just _log-start "metabased-sequencer-health-check"
     # Exits with error (exit code 7) if sequencer is not responding
-    curl --location {{ metabased_sequencer_url }} \
-    --header 'Content-Type: application/json' \
-    --data '{"jsonrpc":"2.0","method":"health","id":1}'
+    curl --location {{ metabased_sequencer_url }}/health
     @just _log-end "metabased-sequencer-health-check"
 
 # Health check for Arbitrum node
