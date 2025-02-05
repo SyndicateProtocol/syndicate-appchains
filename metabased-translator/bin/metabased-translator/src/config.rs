@@ -133,7 +133,6 @@ mod tests {
 
         // Slotter
         env::remove_var("SLOTTER_SLOT_DURATION");
-        env::remove_var("SLOTTER_START_SLOT_NUMBER");
 
         // Sequencer Chain
         env::remove_var("SEQUENCING_BUFFER_SIZE");
