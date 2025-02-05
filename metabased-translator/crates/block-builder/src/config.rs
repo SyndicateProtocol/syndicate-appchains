@@ -131,7 +131,9 @@ impl Debug for BlockBuilderConfig {
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
         let zero = Address::ZERO.to_string();
-        Self::parse_from(["", "-s", &zero, "-b", &zero, "-i", &zero])
+        let mut config = Self::parse_from(["", "-s", &zero, "-b", &zero, "-i", &zero]);
+        config.genesis_timestamp = 1712500000;
+        config
     }
 }
 

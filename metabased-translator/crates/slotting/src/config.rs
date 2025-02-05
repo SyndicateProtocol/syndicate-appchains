@@ -46,7 +46,9 @@ pub enum ConfigError {
 
 impl Default for SlottingConfig {
     fn default() -> Self {
-        Self::parse_from([""])
+        let mut config = Self::parse_from([""]);
+        config.start_slot_timestamp = 1712500000;
+        config
     }
 }
 
@@ -66,7 +68,7 @@ mod config_tests {
     fn test_default_parsing() {
         let config = SlottingConfig::parse_from(["test"]);
         assert_eq!(config.slot_duration, 2);
-        assert_eq!(config.start_slot_timestamp, 0);
+        assert_eq!(config.start_slot_timestamp, 1712500000);
     }
 
     #[test]
