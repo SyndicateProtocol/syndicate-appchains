@@ -22,7 +22,7 @@ pub struct TranslatorMetrics {
     pub ingestor_sequencing: IngestorMetrics,
     /// Metrics for the settlement ingestor
     pub ingestor_settlement: IngestorMetrics,
-    /// Metrics for the slotting
+    /// Metrics for the slotter
     pub slotting: SlotterMetrics,
     /// Metrics for the block builder
     pub block_builder: BlockBuilderMetrics,

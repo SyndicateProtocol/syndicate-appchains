@@ -13,11 +13,9 @@ alloy             = { workspace = true }
 clap              = { workspace = true, features = ["derive", "env"] }
 common            = { workspace = true }
 derivative        = { workspace = true }
-futures           = { workspace = true, features = ["std"] }
 prometheus-client = { workspace = true }
 thiserror         = { workspace = true }
 tokio             = { workspace = true, features = ["macros", "rt", "sync", "time"] }
-tokio-stream      = { workspace = true }
 tracing           = { workspace = true }
 
 [dev-dependencies]

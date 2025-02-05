@@ -127,6 +127,7 @@ mod tests {
     use eyre::Result;
     use prometheus_client::registry::Registry;
     use tokio::sync::mpsc;
+    use tracing_test::traced_test;
 
     struct MetricsState {
         /// Prometheus registry
@@ -162,7 +163,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[tracing_test::traced_test]
+    #[traced_test]
     #[ignore] // TODO SEQ-528 unskip/re-write
     async fn test_block_builder_resume_from_known_safe_slot() -> Result<()> {
         let (tx, rx) = mpsc::channel(1);

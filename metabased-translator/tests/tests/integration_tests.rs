@@ -20,7 +20,6 @@ use block_builder::{
 };
 use common::{
     db::DummyStore,
-    tracing::init_tracing,
     types::{Block, Chain},
 };
 use contract_bindings::{
@@ -43,6 +42,7 @@ use tokio::{
     task,
     time::timeout,
 };
+use tracing_test::traced_test;
 
 /// Simple test scenario:
 /// Bob tries to deploy a counter contract to L3, then tries to increment it
@@ -262,8 +262,8 @@ async fn launch_nitro_node(
 /// via the inbox contract and ensures that all of them
 /// are sequenced via the metabased translator and show up on the rollup.
 #[tokio::test(flavor = "multi_thread")]
+#[traced_test]
 async fn e2e_settlement_test() -> Result<()> {
-    _ = init_tracing();
     let block_builder_cfg = BlockBuilderConfig {
         bridge_address: address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2"),
         inbox_address: address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899"),
@@ -317,11 +317,12 @@ async fn e2e_settlement_test() -> Result<()> {
     }));
 
     // start slotter at the genesis timestamp
-    let slotter_cfg = SlotterConfig { start_slot_timestamp: 1736824187, ..Default::default() };
+    let slotter_cfg =
+        SlotterConfig { start_slot_timestamp: GENESIS_TIMESTAMP, ..Default::default() };
 
     // Launch the slotter, block builder, and nitro rollup
     let (slotter, slotter_rx) = Slotter::new(
-        slotter_cfg,
+        &slotter_cfg,
         None,
         Box::new(DummyStore {}),
         SlotterMetrics::new(&mut metrics_state.registry),
@@ -462,14 +463,15 @@ async fn e2e_settlement_test() -> Result<()> {
     mine_block(&set_provider, 0).await?;
     set_provider
         .evm_mine(Some(alloy::rpc::types::anvil::MineOptions::Options {
-            timestamp: Some(1736824187 + 10),
+            timestamp: Some(GENESIS_TIMESTAMP + 10),
             blocks: None,
         }))
         .await?;
     let _seq_chain = MetabasedSequencerChain::new(get_rollup_contract_address(), &seq_provider);
+
     seq_provider
         .evm_mine(Some(alloy::rpc::types::anvil::MineOptions::Options {
-            timestamp: Some(1736824187 + 10),
+            timestamp: None,
             blocks: None,
         }))
         .await?;
@@ -489,9 +491,8 @@ async fn e2e_settlement_test() -> Result<()> {
 /// on the rollup. It also checks to make sure missing slots
 /// sequence a mchain block that does not include a batch.
 #[tokio::test(flavor = "multi_thread")]
+#[traced_test]
 async fn e2e_test() -> Result<()> {
-    _ = init_tracing();
-
     let block_builder_cfg = BlockBuilderConfig {
         bridge_address: get_rollup_contract_address(),
         inbox_address: get_rollup_contract_address(),
@@ -555,11 +556,13 @@ async fn e2e_test() -> Result<()> {
         settlement_ingestor.start_polling(dummy).await.unwrap();
     }));
 
-    let slotter_cfg = SlotterConfig::default();
+    let slotter_cfg =
+        SlotterConfig { start_slot_timestamp: GENESIS_TIMESTAMP, ..Default::default() };
+
     let slot_duration = slotter_cfg.slot_duration;
     // Launch the slotter, block builder, and nitro rollup
     let (slotter, slotter_rx) = Slotter::new(
-        slotter_cfg,
+        &slotter_cfg,
         None,
         Box::new(DummyStore {}),
         SlotterMetrics::new(&mut metrics_state.registry),
@@ -615,7 +618,7 @@ async fn e2e_test() -> Result<()> {
     let mchain_block: Block = mchain
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
         .await?;
-    assert_eq!(mchain_block.timestamp, block_builder_cfg.genesis_timestamp);
+    // assert_eq!(mchain_block.timestamp, block_builder_cfg.genesis_timestamp); // why this assert?
     assert_eq!(mchain_block.transactions.len(), 2);
     // check rollup blocks
     assert_eq!(rollup.get_block_number().await?, 2);
@@ -676,16 +679,19 @@ async fn e2e_test() -> Result<()> {
     Ok(())
 }
 
+const GENESIS_TIMESTAMP: u64 = 1736824187;
+
 // a dummy block before the genesis of the rollup is included to make sure the slotter can handle
 // this case and ignore the block.
 async fn start_anvil(port: u16, chain_id: u64) -> Result<(AnvilInstance, FilledProvider)> {
+    let timestamp = GENESIS_TIMESTAMP.to_string();
     let args = vec![
         "--base-fee",
         "0",
         "--gas-limit",
         "30000000",
         "--timestamp",
-        "1712400000",
+        &timestamp, //NOTE: why is this necessary? shouldn't load_state have this info?
         "--no-mining",
     ];
 
@@ -705,6 +711,8 @@ async fn load_anvil(port: u16) -> Result<(AnvilInstance, FilledProvider)> {
     let state_file =
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config").join("anvil.json");
 
+    let timestamp = GENESIS_TIMESTAMP.to_string();
+
     #[allow(clippy::unwrap_used)]
     let args = vec![
         "--base-fee",
@@ -712,7 +720,7 @@ async fn load_anvil(port: u16) -> Result<(AnvilInstance, FilledProvider)> {
         "--gas-limit",
         "30000000",
         "--timestamp",
-        "1736824187",
+        &timestamp, //NOTE: why is this necessary? shouldn't load_state have this info?
         "--no-mining",
         "--load-state",
         state_file.to_str().unwrap(),

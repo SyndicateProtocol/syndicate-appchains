@@ -21,7 +21,7 @@ use tracing::{error, info};
 #[allow(unused_assignments)] // TODO SEQ-528 remove this
 async fn run(
     block_builder_config: BlockBuilderConfig,
-    slotting_config: SlotterConfig,
+    slotting_config: &SlotterConfig,
     ingestion_config: IngestionPipelineConfig,
     db_path: &str,
     metrics_config: MetricsConfig,
@@ -153,7 +153,7 @@ fn main() -> Result<(), RuntimeError> {
         .map_err(|e| RuntimeError::Initialization(e.to_string()))?
         .block_on(run(
             block_builder_config,
-            base_config.slotter,
+            &base_config.slotter,
             IngestionPipelineConfig {
                 sequencing: base_config.sequencing,
                 settlement: base_config.settlement,
