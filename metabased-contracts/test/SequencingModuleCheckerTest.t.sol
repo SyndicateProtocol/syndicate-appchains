@@ -5,11 +5,7 @@ import {SequencingModuleChecker, Ownable} from "src/SequencingModuleChecker.sol"
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
 import {Test} from "forge-std/Test.sol";
 
-contract SequencingModuleCheckerMock is SequencingModuleChecker {
-    constructor(address _admin, address _masterModule) SequencingModuleChecker() {
-        initialize(_admin, _masterModule);
-    }
-}
+contract SequencingModuleCheckerMock is SequencingModuleChecker {}
 
 contract SequencingModuleCheckerTest is Test {
     SequencingModuleChecker public manager;
@@ -22,7 +18,8 @@ contract SequencingModuleCheckerTest is Test {
         nonAdmin = address(0x456);
 
         masterModule = new RequireAllModule(admin);
-        manager = new SequencingModuleCheckerMock(admin, address(masterModule));
+        manager = new SequencingModuleCheckerMock();
+        manager.initialize(admin, address(masterModule));
     }
 
     function testUpdateMasterModule() public {
