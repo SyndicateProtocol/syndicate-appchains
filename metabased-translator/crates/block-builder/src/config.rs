@@ -130,9 +130,7 @@ impl Debug for BlockBuilderConfig {
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
         let zero = Address::ZERO.to_string();
-        let mut config = Self::parse_from(["", "-s", &zero, "-b", &zero, "-i", &zero]);
-        config.genesis_timestamp = 1712500000;
-        config
+        Self::parse_from(["", "-s", &zero, "-b", &zero, "-i", &zero])
     }
 }
 
@@ -223,7 +221,6 @@ mod tests {
             config.mchain_url,
             Url::parse("http://127.0.0.1:8888").expect("Failed to parse default URL")
         );
-        assert_eq!(config.genesis_timestamp, 1712500000);
         assert_eq!(config.target_chain_id, 13331370);
         assert_eq!(
             config.sequencing_contract_address.to_string(),
