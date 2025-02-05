@@ -46,4 +46,16 @@ contract SequencingModuleCheckerTest is Test {
         vm.expectRevert(SequencingModuleChecker.InvalidModuleAddress.selector);
         manager.updateRequirementModule(address(0));
     }
+
+    function testOnlyInitializedBeforeAllowed() public {
+        SequencingModuleChecker uninitializedManager = new SequencingModuleCheckerMock();
+        vm.expectRevert("SequencingModuleChecker must be initialized before allowed");
+        uninitializedManager.isAllowed(address(0));
+    }
+
+    function testIsAllowedAfterInitialization() public {
+        SequencingModuleChecker initializedManager = new SequencingModuleCheckerMock();
+        initializedManager.initialize(admin, address(masterModule));
+        assertTrue(initializedManager.isAllowed(address(0)));
+    }
 }

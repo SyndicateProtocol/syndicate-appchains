@@ -50,7 +50,7 @@ abstract contract SequencingModuleChecker is Ownable, PermissionModule, Initiali
     /// @return bool indicating if the address is allowed
     function isAllowed(address proposer) public view virtual override returns (bool) {
         // Contract must be initialized before allowed
-        require(_getInitializedVersion() > 0, "SequencingModuleChecker is initializing");
+        require(_getInitializedVersion() > 0, "SequencingModuleChecker must be initialized before allowed");
         return requirementModule.isAllowed(proposer);
     }
 }

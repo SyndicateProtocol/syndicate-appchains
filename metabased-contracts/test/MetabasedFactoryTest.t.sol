@@ -285,4 +285,12 @@ contract MetabasedFactoryTest is Test {
             factory.createMetabasedSequencerChain(l3ChainId, admin, IRequirementModule(address(permissionModule)), salt);
         assertEq(sequencerChainAddress, factory.computeSequencerChainAddress(salt, l3ChainId));
     }
+
+    function testCreateSequencerChainAddressIsDeterministicWithDifferentSaltThanChainId() public {
+        RequireAllModule permissionModule = new RequireAllModule(admin);
+        bytes32 salt = bytes32(l3ChainId + 10);
+        address sequencerChainAddress =
+            factory.createMetabasedSequencerChain(l3ChainId, admin, IRequirementModule(address(permissionModule)), salt);
+        assertEq(sequencerChainAddress, factory.computeSequencerChainAddress(salt, l3ChainId));
+    }
 }
