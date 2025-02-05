@@ -3,6 +3,7 @@ pragma solidity 0.8.25;
 
 import {SequencingModuleChecker, Ownable} from "src/SequencingModuleChecker.sol";
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {Test} from "forge-std/Test.sol";
 
 contract SequencingModuleCheckerMock is SequencingModuleChecker {}
@@ -45,6 +46,11 @@ contract SequencingModuleCheckerTest is Test {
         vm.prank(admin);
         vm.expectRevert(SequencingModuleChecker.InvalidModuleAddress.selector);
         manager.updateRequirementModule(address(0));
+    }
+
+    function testCannotInitializeTwice() public {
+        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        manager.initialize(admin, address(masterModule));
     }
 
     function testOnlyInitializedBeforeAllowed() public {
