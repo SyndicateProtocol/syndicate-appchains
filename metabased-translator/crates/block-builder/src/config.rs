@@ -115,6 +115,7 @@ impl Debug for BlockBuilderConfig {
             .field("mchain_url", &self.mchain_url)
             .field("target_chain_id", &self.target_chain_id)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
+            .field("genesis_timestamp", &self.genesis_timestamp)
             .field("target_rollup_type", &self.target_rollup_type)
             .field("mchain_rollup_address", &self.mchain_rollup_address)
             .field("bridge_address", &self.bridge_address)
