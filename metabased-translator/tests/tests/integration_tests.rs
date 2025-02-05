@@ -765,7 +765,7 @@ async fn test_nitro_batch() -> Result<()> {
     let mut metrics_state = MetricsState { registry: Registry::default() };
     let metrics = MChainMetrics::new(&mut metrics_state.registry);
 
-    let mchain = MetaChainProvider::start(&block_builder_cfg, metrics).await?;
+    let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
     mchain.provider.anvil_set_block_timestamp_interval(1).await?;
     let (_nitro, rollup) = launch_nitro_node(&mchain, 8347).await?;
 

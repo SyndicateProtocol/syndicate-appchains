@@ -76,7 +76,7 @@ impl MetaChainProvider {
     /// If file in `BlockBuilderConfig` is set to a non-empty string, the anvil node stores and
     /// loads state from the file. The rollup contract is only deployed to the chain when it is
     /// newly created and on the genesis block.
-    pub async fn start(config: &BlockBuilderConfig, metrics: MChainMetrics) -> Result<Self> {
+    pub async fn start(config: &BlockBuilderConfig, metrics: &MChainMetrics) -> Result<Self> {
         let port = config.mchain_url.port().ok_or_else(|| BlockBuilderError::AnvilStart(NoPort))?;
 
         if !is_port_available(port) {
@@ -145,7 +145,13 @@ impl MetaChainProvider {
 
         let rollup = Rollup::new(get_rollup_contract_address(), provider.clone());
 
-        Ok(Self { anvil, provider, rollup, target_chain_id: config.target_chain_id, metrics })
+        Ok(Self {
+            anvil,
+            provider,
+            rollup,
+            target_chain_id: config.target_chain_id,
+            metrics: metrics.to_owned(),
+        })
     }
 
     /// Submits a list of transactions to the `MetaChain`
@@ -321,13 +327,13 @@ mod tests {
         let _ = fs::remove_file(file);
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = MChainMetrics::new(&mut metrics_state.registry);
-        let mut provider = MetaChainProvider::start(&cfg, metrics).await?;
+        let mut provider = MetaChainProvider::start(&cfg, &metrics).await?;
         provider.mine_block(0).await?;
         let old_count = provider.provider.get_block_number().await?;
         drop(provider); // To explicitly release the port
 
         let metrics = MChainMetrics::new(&mut metrics_state.registry);
-        provider = MetaChainProvider::start(&cfg, metrics).await?;
+        provider = MetaChainProvider::start(&cfg, &metrics).await?;
         let new_count = provider.provider.get_block_number().await?;
         assert_eq!(old_count, new_count);
         Ok(())
@@ -348,7 +354,7 @@ mod tests {
 
         // First instance: create blocks
         {
-            let chain = MetaChainProvider::start(&config, metrics).await?;
+            let chain = MetaChainProvider::start(&config, &metrics).await?;
 
             // Mine 1000 blocks
             for i in 1000..2000 {
@@ -361,7 +367,7 @@ mod tests {
 
         // Second instance: verify blocks
         let metrics = MChainMetrics::new(&mut metrics_state.registry);
-        let chain = MetaChainProvider::start(&config, metrics).await?;
+        let chain = MetaChainProvider::start(&config, &metrics).await?;
 
         // Check a few random blocks are accessible
         for block_num in [0, 42, 567, 999, 1000] {
@@ -400,7 +406,7 @@ mod tests {
         };
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = MChainMetrics::new(&mut metrics_state.registry);
-        let chain = MetaChainProvider::start(&config, metrics).await?;
+        let chain = MetaChainProvider::start(&config, &metrics).await?;
         // Mine 10 blocks
         for i in 1000..1010 {
             chain.mine_block(i as u64).await?;

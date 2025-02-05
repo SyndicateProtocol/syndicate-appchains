@@ -33,7 +33,7 @@ impl BlockBuilder {
         config: &BlockBuilderConfig,
         metrics: BlockBuilderMetrics,
     ) -> Result<Self, Error> {
-        let mchain = MetaChainProvider::start(config, metrics.mchain_metrics.clone()).await?;
+        let mchain = MetaChainProvider::start(config, &metrics.mchain_metrics).await?;
 
         let builder: Box<dyn RollupBlockBuilder> = match config.target_rollup_type {
             TargetRollupType::ARBITRUM => Box::new(ArbitrumBlockBuilder::new(config)),
