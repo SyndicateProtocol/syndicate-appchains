@@ -13,11 +13,3 @@ lint-fix:
 format:
 	go fmt ./...
 .PHONY: format
-
-build:
-	metabased-publisher
-.PHONY: build
-
-metabased-publisher:
-	make -C ./metabased-publisher metabased-publisher
-.PHONY: metabased-publisher
