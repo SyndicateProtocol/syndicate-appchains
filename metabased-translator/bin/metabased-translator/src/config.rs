@@ -57,23 +57,22 @@ impl MetabasedConfig {
         settlement_client: Arc<dyn RPCClient>,
         sequencing_client: Arc<dyn RPCClient>,
     ) -> Result<()> {
-        let seq_start_timestamp =
-            fetch_block_timestamp(sequencing_client, self.sequencing.sequencing_start_block)
-                .await?;
-        let set_start_timestamp =
-            fetch_block_timestamp(settlement_client, self.settlement.settlement_start_block)
-                .await?;
+        let seq_start_block =
+            sequencing_client.get_block_by_number(self.sequencing.sequencing_start_block).await?;
 
-        if seq_start_timestamp < set_start_timestamp {
+        let set_start_block =
+            settlement_client.get_block_by_number(self.settlement.settlement_start_block).await?;
+
+        if seq_start_block.timestamp < set_start_block.timestamp {
             return Err(eyre!(
             "Invalid blockchain state: settlement chain initial timestamp ({}) is greater than sequencing chain initial timestamp ({})",
-            set_start_timestamp,
-            seq_start_timestamp
+            set_start_block.timestamp,
+            seq_start_block.timestamp
         ));
         }
         // Set start_slot_timestamp to the minimum of both chains
-        self.slotter.start_slot_timestamp = set_start_timestamp;
-        self.block_builder.genesis_timestamp = set_start_timestamp;
+        self.slotter.start_slot_timestamp = seq_start_block.timestamp;
+        self.block_builder.genesis_timestamp = seq_start_block.timestamp;
 
         Ok(())
     }
@@ -113,14 +112,6 @@ impl MetabasedConfig {
         cmd.truncate(cmd.len() - 2);
         println!("{}", cmd);
     }
-}
-
-async fn fetch_block_timestamp(
-    client: Arc<dyn RPCClient>,
-    block_number: u64,
-) -> Result<u64, Error> {
-    let block = client.get_block_by_number(block_number).await?;
-    Ok(block.timestamp)
 }
 
 #[cfg(test)]
