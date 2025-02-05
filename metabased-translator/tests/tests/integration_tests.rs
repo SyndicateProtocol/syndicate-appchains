@@ -32,7 +32,7 @@ use contract_bindings::{
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::{eyre, Result};
 use ingestor::{
-    config::IngestionPipelineConfig,
+    config::{ChainIngestorConfig, IngestionPipelineConfig},
     eth_client::{EthClient, RPCClient},
     ingestor::Ingestor,
     metrics::IngestorMetrics,
@@ -298,6 +298,8 @@ async fn e2e_settlement_test() -> Result<()> {
     ingestor_config.sequencing.sequencing_polling_interval = Duration::from_millis(10);
     ingestor_config.settlement.settlement_rpc_url = "http://localhost:8146".to_string();
     ingestor_config.settlement.settlement_polling_interval = Duration::from_millis(10);
+    let seq_config: ChainIngestorConfig = (&ingestor_config.sequencing).into();
+    let set_config: ChainIngestorConfig = (&ingestor_config.settlement).into();
     let mut metrics_state = MetricsState { registry: Registry::default() };
     let sequencing_client: Arc<dyn RPCClient> =
         Arc::new(EthClient::new(&ingestor_config.sequencing.sequencing_rpc_url).await?);
@@ -306,14 +308,14 @@ async fn e2e_settlement_test() -> Result<()> {
     let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
         Chain::Sequencing,
         sequencing_client,
-        ingestor_config.sequencing.into(),
+        &seq_config,
         IngestorMetrics::new(&mut metrics_state.registry),
     )
     .await?;
     let (settlement_ingestor, settlement_rx) = Ingestor::new(
         Chain::Settlement,
         settlement_client,
-        ingestor_config.settlement.into(),
+        &set_config,
         IngestorMetrics::new(&mut metrics_state.registry),
     )
     .await?;
@@ -327,7 +329,7 @@ async fn e2e_settlement_test() -> Result<()> {
     }));
 
     // start slotter at the genesis timestamp
-    let slotter_cfg = SlottingConfig { start_slot_timestamp: 1736824187, ..Default::default() };
+    let slotter_cfg = &SlottingConfig { start_slot_timestamp: 1736824187, ..Default::default() };
 
     // Launch the slotter, block builder, and nitro rollup
     let (slotter, slotter_rx) = Slotter::new(
@@ -545,6 +547,8 @@ async fn e2e_test() -> Result<()> {
     ingestor_config.sequencing.sequencing_polling_interval = Duration::from_millis(10);
     ingestor_config.settlement.settlement_rpc_url = "http://localhost:8246".to_string();
     ingestor_config.settlement.settlement_polling_interval = Duration::from_millis(10);
+    let seq_config: ChainIngestorConfig = (&ingestor_config.sequencing).into();
+    let set_config: ChainIngestorConfig = (&ingestor_config.settlement).into();
     let mut metrics_state = MetricsState { registry: Registry::default() };
     let sequencing_client: Arc<dyn RPCClient> =
         Arc::new(EthClient::new(&ingestor_config.sequencing.sequencing_rpc_url).await?);
@@ -553,14 +557,14 @@ async fn e2e_test() -> Result<()> {
     let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
         Chain::Sequencing,
         sequencing_client,
-        ingestor_config.sequencing.into(),
+        &seq_config,
         IngestorMetrics::new(&mut metrics_state.registry),
     )
     .await?;
     let (settlement_ingestor, settlement_rx) = Ingestor::new(
         Chain::Settlement,
         settlement_client,
-        ingestor_config.settlement.into(),
+        &set_config,
         IngestorMetrics::new(&mut metrics_state.registry),
     )
     .await?;
@@ -573,7 +577,7 @@ async fn e2e_test() -> Result<()> {
         settlement_ingestor.start_polling(dummy).await.unwrap();
     }));
 
-    let slotter_cfg = SlottingConfig::default();
+    let slotter_cfg = &SlottingConfig::default();
     let slot_duration = slotter_cfg.slot_duration;
     // Launch the slotter, block builder, and nitro rollup
     let (slotter, slotter_rx) = Slotter::new(

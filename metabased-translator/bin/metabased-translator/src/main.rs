@@ -6,7 +6,8 @@ use common::{
 };
 use eyre::Result;
 use ingestor::{
-    eth_client::{EthClient, RPCClientError},
+    config::ChainIngestorConfig,
+    eth_client::{EthClient, RPCClient, RPCClientError},
     ingestor::Ingestor,
 };
 use metabased_translator::config::MetabasedConfig;
@@ -37,28 +38,28 @@ async fn run(
     let (db, mut safe_state) = init_db(db_path).await?;
     safe_state = None; // TODO SEQ-528 remove this (disables resume from db)
 
-    let mut sequencing_config = config.sequencing.clone();
-    let mut settlement_config = config.settlement.clone();
+    // let mut sequencing_config = config.sequencing;
+    // let mut settlement_config = config.settlement;
 
     // Initialize ETH clients
-    let sequencing_client = Arc::new(
-        EthClient::new(&sequencing_config.sequencing_rpc_url)
+    let sequencing_client: Arc<dyn RPCClient> = Arc::new(
+        EthClient::new(&config.sequencing.sequencing_rpc_url)
             .await
             .map_err(RuntimeError::RPCClient)?,
     );
-    let settlement_client = Arc::new(
-        EthClient::new(&settlement_config.settlement_rpc_url)
+    let settlement_client: Arc<dyn RPCClient> = Arc::new(
+        EthClient::new(&config.settlement.settlement_rpc_url)
             .await
             .map_err(RuntimeError::RPCClient)?,
     );
 
     // Override start blocks if we're resuming from a database
     if let Some(state) = &safe_state {
-        sequencing_config.sequencing_start_block = state.sequencing_block.number;
-        settlement_config.settlement_start_block = state.settlement_block.number;
+        config.sequencing.sequencing_start_block = state.sequencing_block.number;
+        config.settlement.settlement_start_block = state.settlement_block.number;
     } else {
         // Initial timestamp is only needed if we aren't resuming from db
-        config.set_initial_timestamp(settlement_client.clone(), sequencing_client.clone()).await?;
+        config.set_initial_timestamp(&settlement_client, &sequencing_client).await?;
     }
     let safe_block_number = safe_state.as_ref().map(|state| state.slot.number);
 
@@ -67,25 +68,27 @@ async fn run(
     let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
     let metrics_task = start_metrics(metrics_state, config.metrics.metrics_port).await;
 
+    let seq_config: ChainIngestorConfig = (&config.sequencing).into();
+    let set_config: ChainIngestorConfig = (&config.settlement).into();
     // Initialize components
     let (sequencing_ingestor, sequencing_rx) = Ingestor::new(
         Chain::Sequencing,
         sequencing_client,
-        sequencing_config.into(),
+        &seq_config,
         metrics.ingestor_sequencing,
     )
     .await?;
     let (settlement_ingestor, settlement_rx) = Ingestor::new(
         Chain::Settlement,
         settlement_client,
-        settlement_config.into(),
+        &set_config,
         metrics.ingestor_settlement,
     )
     .await?;
     let (slotter, slot_rx) = Slotter::new(
         sequencing_rx,
         settlement_rx,
-        config.slotter.clone(),
+        &config.slotter,
         safe_state,
         db,
         metrics.slotting,

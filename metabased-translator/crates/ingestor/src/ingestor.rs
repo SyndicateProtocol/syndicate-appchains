@@ -38,7 +38,7 @@ impl Ingestor {
     pub async fn new(
         chain: Chain,
         client: Arc<dyn RPCClient>,
-        config: ChainIngestorConfig,
+        config: &ChainIngestorConfig,
         metrics: IngestorMetrics,
     ) -> Result<(Self, Receiver<BlockAndReceipts>), Error> {
         let (sender, receiver) = channel(config.buffer_size);
@@ -223,8 +223,9 @@ mod tests {
         let client: Arc<dyn RPCClient> =
             Arc::new(EthClient::new(&config.sequencing.sequencing_rpc_url).await?);
 
+        let config = config.sequencing.into();
         let (ingestor, receiver) =
-            Ingestor::new(Chain::Sequencing, client, config.sequencing.into(), metrics).await?;
+            Ingestor::new(Chain::Sequencing, client, &config, metrics).await?;
 
         assert_eq!(ingestor.current_block_number, start_block);
         assert_eq!(receiver.capacity(), buffer_size);

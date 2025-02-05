@@ -61,8 +61,8 @@ impl MetabasedConfig {
 
     pub async fn set_initial_timestamp(
         &mut self,
-        settlement_client: Arc<dyn RPCClient>,
-        sequencing_client: Arc<dyn RPCClient>,
+        settlement_client: &Arc<dyn RPCClient>,
+        sequencing_client: &Arc<dyn RPCClient>,
     ) -> Result<(), ConfigError> {
         let seq_start_block = sequencing_client
             .get_block_by_number(self.sequencing.sequencing_start_block)
@@ -262,10 +262,10 @@ mod tests {
             .times(1)
             .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
 
-        let settlement_client = Arc::new(mock_settlement_client);
-        let sequencing_client = Arc::new(mock_sequencing_client);
+        let settlement_client: Arc<dyn RPCClient> = Arc::new(mock_settlement_client);
+        let sequencing_client: Arc<dyn RPCClient> = Arc::new(mock_sequencing_client);
 
-        let result = config.set_initial_timestamp(settlement_client, sequencing_client).await;
+        let result = config.set_initial_timestamp(&settlement_client, &sequencing_client).await;
 
         assert!(result.is_ok());
         assert_eq!(config.slotter.start_slot_timestamp, 6000);
@@ -292,10 +292,10 @@ mod tests {
             .times(1)
             .returning(|_| Ok(Block { timestamp: 5000, ..Default::default() }));
 
-        let settlement_client = Arc::new(mock_settlement_client);
-        let sequencing_client = Arc::new(mock_sequencing_client);
+        let settlement_client: Arc<dyn RPCClient> = Arc::new(mock_settlement_client);
+        let sequencing_client: Arc<dyn RPCClient> = Arc::new(mock_sequencing_client);
 
-        let result = config.set_initial_timestamp(settlement_client, sequencing_client).await;
+        let result = config.set_initial_timestamp(&settlement_client, &sequencing_client).await;
 
         assert!(result.is_err());
     }
