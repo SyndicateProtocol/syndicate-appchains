@@ -27,7 +27,7 @@ contract DeployMetabasedFactory is Script {
 
         // create new contracts
         (address sequencerChain, address metafillerStorage, IRequirementModule permissionModule) =
-            metabasedFactory.createAllContractsWithRequireAllModule(admin, manager, l3ChainId);
+            metabasedFactory.createAllContractsWithRequireAllModule(admin, manager, l3ChainId, bytes32(l3ChainId));
 
         console.log("Deployed MetabasedSequencerChain", sequencerChain);
         console.log("Deployed MetafillerStorage", metafillerStorage);
