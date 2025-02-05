@@ -14,7 +14,10 @@ use alloy::{
 use block_builder::{
     block_builder::BlockBuilder,
     config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
-    connectors::anvil::{FilledProvider, MetaChainProvider},
+    connectors::{
+        anvil::{FilledProvider, MetaChainProvider},
+        metrics::MChainMetrics,
+    },
     metrics::BlockBuilderMetrics,
     rollups::arbitrum,
 };
@@ -759,7 +762,10 @@ async fn test_nitro_batch() -> Result<()> {
     let block_builder_cfg =
         BlockBuilderConfig { mchain_url: "http://127.0.0.1:8388".parse()?, ..Default::default() };
 
-    let mchain = MetaChainProvider::start(&block_builder_cfg).await?;
+    let mut metrics_state = MetricsState { registry: Registry::default() };
+    let metrics = MChainMetrics::new(&mut metrics_state.registry);
+
+    let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
     mchain.provider.anvil_set_block_timestamp_interval(1).await?;
     let (_nitro, rollup) = launch_nitro_node(&mchain, 8347).await?;
 
