@@ -70,7 +70,7 @@ impl MetabasedConfig {
             seq_start_block.timestamp
         ));
         }
-        // Set start_slot_timestamp to the minimum of both chains
+
         self.slotter.start_slot_timestamp = seq_start_block.timestamp;
         self.block_builder.genesis_timestamp = seq_start_block.timestamp;
 
