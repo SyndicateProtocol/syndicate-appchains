@@ -271,7 +271,7 @@ contract MetabasedFactoryTest is Test {
 
     function testCreateSequencerChainDeterministic() public {
         bytes32 salt = bytes32(l3ChainId);
-        address sequencerChainAddress = factory.createSequencerChainCreate2(salt, l3ChainId, admin, manager);
+        address sequencerChainAddress = factory.createSequencerChainDeterministic(salt, l3ChainId, admin, manager);
         assertEq(sequencerChainAddress, factory.computeSequencerChainAddress(salt, l3ChainId));
     }
 }

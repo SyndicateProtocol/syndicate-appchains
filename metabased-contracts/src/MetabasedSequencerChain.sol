@@ -22,6 +22,9 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
         l3ChainId = _l3ChainId;
     }
 
+    /// @notice Initializes the contract
+    /// @param admin The address of the admin
+    /// @param masterModule The address of the master module
     function init(address admin, address masterModule) public override onlyOwner {
         super.init(admin, masterModule);
     }

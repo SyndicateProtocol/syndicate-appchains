@@ -116,7 +116,7 @@ contract MetabasedFactory {
         return (sequencerChain, metafillerStorage, permissionModule);
     }
 
-    function createSequencerChainCreate2(bytes32 salt, uint256 chainId, address admin, address permissionModule)
+    function createSequencerChainDeterministic(bytes32 salt, uint256 chainId, address admin, address permissionModule)
         external
         returns (address)
     {
