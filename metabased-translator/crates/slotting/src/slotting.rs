@@ -164,7 +164,7 @@ impl Slotter {
                 }
             };
 
-            // TODO fix
+            // TODO SEQ-570 - fix (channel metrics should probably be tracked on the sender side)
             // self.metrics.update_channel_capacity(sequencing_rx.capacity(), Chain::Sequencing);
             // self.metrics.update_channel_capacity(settlement_rx.capacity(), Chain::Settlement);
 
@@ -926,5 +926,45 @@ mod tests {
         let (slot_num, ts) = Slotter::calculate_slot_position(100, 1000, 1006, 2).unwrap();
         assert_eq!(slot_num, 103); // 3 slots ahead
         assert_eq!(ts, 1006); // 1000 + (3 * 2)
+    }
+
+    #[tokio::test]
+    #[traced_test]
+    async fn test_insert_block_between_slots() {
+        let slot_start_timestamp = 10;
+        let slot_duration = 1;
+        let TestSetup { mut slot_rx, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
+            create_slotter_and_spawn(slot_start_timestamp, slot_duration).await;
+
+        // Create initial slots by sending blocks
+        // Slot ts=10
+        sequencing_tx.send(create_test_block(1, 10)).await.unwrap();
+
+        // Slot ts=12
+        sequencing_tx.send(create_test_block(2, 12)).await.unwrap();
+
+        // Now send a settlement block that should create a new slot between the previous slots -
+        // ts=11
+        settlement_tx.send(create_test_block(1, 11)).await.unwrap();
+
+        // send a settlement block for ts = 15 , meaning slots ts=10,11 should be marked as unsafe
+        settlement_tx.send(create_test_block(2, 15)).await.unwrap();
+
+        // This should trigger slot  to be marked as unsafe
+        let slot10 = slot_rx.recv().await.unwrap();
+        assert_eq!(slot10.number, START_SLOT);
+        assert_eq!(slot10.timestamp, 10);
+        assert_eq!(slot10.sequencing_chain_blocks.len(), 1);
+        assert_eq!(slot10.settlement_chain_blocks.len(), 0);
+        assert_eq!(slot10.sequencing_chain_blocks[0].block.number, 1);
+        assert_eq!(slot10.state, SlotState::Unsafe);
+
+        let slot11 = slot_rx.recv().await.unwrap();
+        assert_eq!(slot11.number, START_SLOT + 1);
+        assert_eq!(slot11.timestamp, 11);
+        assert_eq!(slot11.sequencing_chain_blocks.len(), 0);
+        assert_eq!(slot11.settlement_chain_blocks.len(), 1);
+        assert_eq!(slot11.settlement_chain_blocks[0].block.number, 1);
+        assert_eq!(slot11.state, SlotState::Unsafe);
     }
 }
