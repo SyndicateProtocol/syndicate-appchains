@@ -21,11 +21,12 @@ tokio = {workspace = true, features = ["signal"]}
 eyre = {workspace = true}
 thiserror = {workspace = true}
 prometheus-client = {workspace = true}
-async-trait = {workspace = true }
-mockall = {workspace = true }
 
 [dev-dependencies]
+async-trait = {workspace = true }
+mockall = {workspace = true }
 serial_test = {workspace = true}
+
 
 [[example]]
 name = "generate_run_command"

@@ -5,7 +5,10 @@ use common::{
     types::Chain,
 };
 use eyre::Result;
-use ingestor::{eth_client::EthClient, ingestor::Ingestor};
+use ingestor::{
+    eth_client::{EthClient, RPCClientError},
+    ingestor::Ingestor,
+};
 use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::{start_metrics, MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
@@ -38,8 +41,16 @@ async fn run(
     let mut settlement_config = config.settlement.clone();
 
     // Initialize ETH clients
-    let sequencing_client = Arc::new(EthClient::new(&sequencing_config.sequencing_rpc_url).await?);
-    let settlement_client = Arc::new(EthClient::new(&settlement_config.settlement_rpc_url).await?);
+    let sequencing_client = Arc::new(
+        EthClient::new(&sequencing_config.sequencing_rpc_url)
+            .await
+            .map_err(RuntimeError::RPCClient)?,
+    );
+    let settlement_client = Arc::new(
+        EthClient::new(&settlement_config.settlement_rpc_url)
+            .await
+            .map_err(RuntimeError::RPCClient)?,
+    );
 
     // Override start blocks if we're resuming from a database
     if let Some(state) = &safe_state {
@@ -159,7 +170,7 @@ fn main() -> Result<(), RuntimeError> {
         tokio::runtime::Runtime::new().map_err(|e| RuntimeError::Initialization(e.to_string()))?;
 
     // Initialize base config inside the async runtime
-    let mut base_config = runtime.block_on(MetabasedConfig::initialize());
+    let mut base_config = MetabasedConfig::initialize();
 
     // Init the paths for the DB and Anvil state
     let db_path = format!("{}/db", base_config.datadir);
@@ -195,47 +206,36 @@ pub enum ConfigError {
 pub enum RuntimeError {
     #[error("Failed to initialize component: {0}")]
     Initialization(String),
+
     #[error("Component shutdown error: {0}")]
     Shutdown(String),
+
     #[error("Task error: {0}")]
     TaskFailure(String),
+
     #[error("Invalid config")]
     InvalidConfig(String),
-}
 
-impl From<TracingError> for RuntimeError {
-    fn from(err: TracingError) -> Self {
-        RuntimeError::Initialization(format!("Tracing initialization failed: {}", err))
-    }
-}
-impl From<block_builder::config::ConfigError> for ConfigError {
-    fn from(err: block_builder::config::ConfigError) -> Self {
-        ConfigError::BlockBuilder(format!("{}", err))
-    }
-}
+    #[error(transparent)]
+    Tracing(#[from] TracingError),
 
-impl From<slotting::config::ConfigError> for ConfigError {
-    fn from(err: slotting::config::ConfigError) -> Self {
-        ConfigError::Slotter(format!("{}", err))
-    }
-}
+    #[error(transparent)]
+    BlockBuilderConfig(#[from] block_builder::config::ConfigError),
 
-impl From<ingestor::config::ConfigError> for ConfigError {
-    fn from(err: ingestor::config::ConfigError) -> Self {
-        ConfigError::Ingestor(format!("{}", err))
-    }
-}
+    #[error(transparent)]
+    SlotterConfig(#[from] slotting::config::ConfigError),
 
-impl From<metrics::config::ConfigError> for ConfigError {
-    fn from(err: metrics::config::ConfigError) -> Self {
-        ConfigError::Metrics(format!("{}", err))
-    }
-}
+    #[error(transparent)]
+    IngestorConfig(#[from] ingestor::config::ConfigError),
 
-impl From<eyre::Report> for RuntimeError {
-    fn from(err: eyre::Report) -> Self {
-        RuntimeError::TaskFailure(err.to_string())
-    }
+    #[error(transparent)]
+    TranslatorConfig(#[from] metabased_translator::config::ConfigError),
+
+    #[error(transparent)]
+    RPCClient(#[from] RPCClientError),
+
+    #[error(transparent)]
+    Other(#[from] eyre::Report),
 }
 
 // Add this function before run()

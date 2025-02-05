@@ -28,6 +28,7 @@ impl Ingestor {
     /// # Arguments
     /// - `chain`: Specifies whether the ingestor is targeting the `Settlement` or `Sequencing`
     ///   chain.
+    /// - `client`: An asynchronous RPC client used for fetching block data.
     /// - `config`: Configuration parameters, including the RPC endpoint URL and starting block
     ///   number.
     /// - `metrics`: Metrics collection for monitoring ingestion performance.

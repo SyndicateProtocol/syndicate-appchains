@@ -8,7 +8,7 @@ use clap::Parser;
 use eyre::Result;
 use ingestor::{
     config::{SequencingChainConfig, SettlementChainConfig},
-    eth_client::RPCClient,
+    eth_client::{RPCClient, RPCClientError},
 };
 use metrics::config::MetricsConfig;
 use slotting::config::SlottingConfig;
@@ -18,11 +18,13 @@ use tracing::{debug, error};
 
 #[derive(Error, Debug)]
 pub enum ConfigError {
-    #[error("Invalid blockchain state: settlement chain timestamp ({0}) is greater than sequencing chain timestamp ({1})")]
-    InvalidBlockchainState(u64, u64),
+    #[error(
+        "Settlement chain start timestamp ({0}) is greater than sequencing chain timestamp ({1})"
+    )]
+    SettlementStartBlockTooLate(u64, u64),
 
     #[error("Failed to fetch block data: {0}")]
-    BlockFetchFailure(#[from] eyre::Error),
+    RPCClient(#[from] RPCClientError),
 }
 
 /// Common config stuct for the Metabased Translator. This contains all possible config options
@@ -51,7 +53,7 @@ pub struct MetabasedConfig {
 
 impl MetabasedConfig {
     /// Initializes the configuration by parsing CLI arguments and environment variables.
-    pub async fn initialize() -> Self {
+    pub fn initialize() -> Self {
         let config = <Self as Parser>::parse();
         debug!("Initializing configuration: {:?}", config);
         config
@@ -61,28 +63,27 @@ impl MetabasedConfig {
         &mut self,
         settlement_client: Arc<dyn RPCClient>,
         sequencing_client: Arc<dyn RPCClient>,
-    ) -> Result<()> {
+    ) -> Result<(), ConfigError> {
         let seq_start_block = sequencing_client
             .get_block_by_number(self.sequencing.sequencing_start_block)
             .await
-            .map_err(ConfigError::BlockFetchFailure)?;
+            .map_err(ConfigError::RPCClient)?;
 
         let set_start_block = settlement_client
             .get_block_by_number(self.settlement.settlement_start_block)
             .await
-            .map_err(ConfigError::BlockFetchFailure)?;
+            .map_err(ConfigError::RPCClient)?;
 
         if seq_start_block.timestamp < set_start_block.timestamp {
-            return Err(ConfigError::InvalidBlockchainState(
+            return Err(ConfigError::SettlementStartBlockTooLate(
                 set_start_block.timestamp,
                 seq_start_block.timestamp,
-            )
-            .into());
+            ));
         }
 
-        self.slotter.start_slot_timestamp = seq_start_block.timestamp;
-        self.block_builder.genesis_timestamp = seq_start_block.timestamp;
-        debug!("Genesis timestamp set to: {:?}", seq_start_block.timestamp);
+        self.slotter.start_slot_timestamp = set_start_block.timestamp;
+        self.block_builder.genesis_timestamp = set_start_block.timestamp;
+        debug!("Genesis timestamp set to: {:?}", set_start_block.timestamp);
         Ok(())
     }
 
@@ -116,7 +117,7 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use common::types::{Block, Receipt};
-    use eyre::{Error, Result};
+    use eyre::Result;
     use mockall::{mock, predicate::*};
     use serial_test::serial;
     use std::{env, time::Duration};
@@ -235,8 +236,8 @@ mod tests {
 
         #[async_trait]
         impl RPCClient for RPCClientMock {
-            async fn get_block_by_number(&self, block_number: u64) -> Result<Block, Error>;
-            async fn get_block_receipts(&self, block_number: u64) -> Result<Vec<Receipt>, Error>;
+            async fn get_block_by_number(&self, block_number: u64) -> Result<Block, RPCClientError>;
+            async fn get_block_receipts(&self, block_number: u64) -> Result<Vec<Receipt>, RPCClientError>;
         }
     }
 
