@@ -4,6 +4,7 @@ use crate::{
     presentation::{
         json_rpc_errors::Error,
         jsonrpc,
+        server::Endpoint::{Health, Metrics as MetricsEndpoint},
         services::{self, Services},
         tower::UnescapeJsonLayer,
     },
@@ -18,11 +19,6 @@ use std::{fmt::Debug, net::SocketAddr};
 use tracing::info;
 use url::Url;
 
-const METRICS_RPC: &str = "metrics";
-const METRICS_HTTP: &str = "/metrics";
-const HEALTH_RPC: &str = "health";
-const HEALTH_HTTP: &str = "/health";
-
 pub async fn run(
     port: u16,
     chain_contract_address: Address,
@@ -31,11 +27,14 @@ pub async fn run(
 ) -> eyre::Result<(SocketAddr, ServerHandle)> {
     let rpc_middleware = RpcServiceBuilder::new();
     let http_middleware = tower::ServiceBuilder::new()
-        .layer(ProxyGetRequestLayer::new(HEALTH_HTTP, HEALTH_RPC)?)
+        .layer(ProxyGetRequestLayer::new(Health.http_path(), Health.rpc_method())?)
         .layer(UnescapeJsonLayer::new(|request| {
-            request.uri() == METRICS_HTTP && request.method() == Method::GET
+            request.uri() == MetricsEndpoint.http_path() && request.method() == Method::GET
         }))
-        .layer(ProxyGetRequestLayer::new(METRICS_HTTP, METRICS_RPC)?);
+        .layer(ProxyGetRequestLayer::new(
+            MetricsEndpoint.http_path(),
+            MetricsEndpoint.rpc_method(),
+        )?);
 
     let server = Server::builder()
         .set_http_middleware(http_middleware)
@@ -50,6 +49,28 @@ pub async fn run(
     let handle = server.start(module);
 
     Ok((addr, handle))
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Endpoint {
+    Metrics,
+    Health,
+}
+
+impl Endpoint {
+    pub const fn http_path(&self) -> &'static str {
+        match self {
+            Self::Metrics => "/metrics",
+            Health => "/health",
+        }
+    }
+
+    pub const fn rpc_method(&self) -> &'static str {
+        match self {
+            Self::Metrics => "metrics",
+            Health => "health",
+        }
+    }
 }
 
 fn create_eth_module<Chain, M, S>(
@@ -67,9 +88,8 @@ where
 {
     let mut module = RpcModule::new(services);
     module.register_async_method("eth_sendRawTransaction", jsonrpc::send_raw_transaction)?;
-    module.register_method(METRICS_RPC, jsonrpc::metrics)?;
-    // TODO remove me in favor of existing GET /health
-    module.register_method(HEALTH_RPC, |_, _, _| serde_json::json!({ "health": true }))?;
+    module.register_method(MetricsEndpoint.rpc_method(), jsonrpc::metrics)?;
+    module.register_method(Health.rpc_method(), |_, _, _| serde_json::json!({ "health": true }))?;
 
     info!("Registered RPC methods: {:#?}", module.method_names().collect::<Vec<_>>());
     Ok(module)
@@ -146,7 +166,7 @@ mod tests {
         let expected_response = metrics;
         let actual_response = rpc_module
             .unwrap()
-            .call::<[(); 0], String>(METRICS_RPC, [])
+            .call::<[(); 0], String>(MetricsEndpoint.rpc_method(), [])
             .await
             .expect("Metrics RPC invocation should not fail");
 
@@ -162,7 +182,7 @@ mod tests {
         let expected_response = metrics;
         let actual_response = rpc_module
             .unwrap()
-            .call::<[i32; 1], String>(METRICS_RPC, [0])
+            .call::<[i32; 1], String>(MetricsEndpoint.rpc_method(), [0])
             .await
             .expect("Metrics RPC invocation should not fail");
 
