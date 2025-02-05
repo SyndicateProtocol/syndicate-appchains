@@ -11,7 +11,7 @@ pub struct SlottingConfig {
     #[arg(long, env = "SLOTTER_SLOT_DURATION", default_value_t = 2)]
     pub slot_duration: u64,
 
-    /// The epoch timestamp of the [`Slotter`] slot to start from, in milliseconds.
+    /// The epoch timestamp of the [`Slotter`] slot to start from, in seconds.
     /// This is dynamically set at runtime.
     #[arg(skip)]
     pub start_slot_timestamp: u64,

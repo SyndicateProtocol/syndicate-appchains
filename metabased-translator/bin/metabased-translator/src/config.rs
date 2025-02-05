@@ -120,8 +120,7 @@ async fn fetch_block_timestamp(
     block_number: u64,
 ) -> Result<u64, Error> {
     let block = client.get_block_by_number(block_number).await?;
-    // Ethereum timestamps are in seconds, convert to milliseconds.
-    Ok(block.timestamp * 1000)
+    Ok(block.timestamp)
 }
 
 #[cfg(test)]
@@ -281,8 +280,8 @@ mod tests {
         let result = config.set_initial_timestamp(settlement_client, sequencing_client).await;
 
         assert!(result.is_ok());
-        assert_eq!(config.slotter.start_slot_timestamp, 6000000);
-        assert_eq!(config.block_builder.genesis_timestamp, 6000000);
+        assert_eq!(config.slotter.start_slot_timestamp, 6000);
+        assert_eq!(config.block_builder.genesis_timestamp, 6000);
     }
 
     #[tokio::test]
