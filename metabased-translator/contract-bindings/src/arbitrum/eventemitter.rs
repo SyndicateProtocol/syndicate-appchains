@@ -130,22 +130,22 @@ pub mod EventEmitter {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080604052348015600e575f80fd5b506102d08061001c5f395ff3fe608060405234801561000f575f80fd5b506004361061004a575f3560e01c80633404fee91461004e5780638e347a3a1461006a578063aa7e010a14610086578063addf235e146100a2575b5f80fd5b61006860048036038101906100639190610131565b6100be565b005b610084600480360381019061007f9190610195565b6100ce565b005b6100a0600480360381019061009b919061020c565b6100e0565b005b6100bc60048036038101906100b7919061025c565b6100ee565b005b805f5281838560205fa350505050565b805f528183858760205fa45050505050565b805f52818360205fa2505050565b805f528160205fa15050565b5f80fd5b5f819050919050565b610110816100fe565b811461011a575f80fd5b50565b5f8135905061012b81610107565b92915050565b5f805f8060808587031215610149576101486100fa565b5b5f6101568782880161011d565b94505060206101678782880161011d565b93505060406101788782880161011d565b92505060606101898782880161011d565b91505092959194509250565b5f805f805f60a086880312156101ae576101ad6100fa565b5b5f6101bb8882890161011d565b95505060206101cc8882890161011d565b94505060406101dd8882890161011d565b93505060606101ee8882890161011d565b92505060806101ff8882890161011d565b9150509295509295909350565b5f805f60608486031215610223576102226100fa565b5b5f6102308682870161011d565b93505060206102418682870161011d565b92505060406102528682870161011d565b9150509250925092565b5f8060408385031215610272576102716100fa565b5b5f61027f8582860161011d565b92505060206102908582860161011d565b915050925092905056fea264697066735822122058f64c6914adfe47f06739da018631a71859f9af0f3fc6cb5d1df6a4120f178364736f6c63430008190033
+    ///0x6080604052348015600e575f80fd5b506101bd8061001c5f395ff3fe608060405234801561000f575f80fd5b506004361061004a575f3560e01c80633404fee91461004e5780638e347a3a14610063578063aa7e010a14610076578063addf235e14610089575b5f80fd5b61006161005c3660046100d8565b61009c565b005b610061610071366004610107565b6100ac565b61006161008436600461013e565b6100be565b610061610097366004610167565b6100cc565b805f5281838560205fa350505050565b805f528183858760205fa45050505050565b805f52818360205fa2505050565b805f528160205fa15050565b5f805f80608085870312156100eb575f80fd5b5050823594602084013594506040840135936060013592509050565b5f805f805f60a0868803121561011b575f80fd5b505083359560208501359550604085013594606081013594506080013592509050565b5f805f60608486031215610150575f80fd5b505081359360208301359350604090920135919050565b5f8060408385031215610178575f80fd5b5050803592602090910135915056fea264697066735822122009b5e64eb564258bb23e04d4461606e8d70e2c6c7b2b82f237a4c18144de692d64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4\x80\x15`\x0EW_\x80\xFD[Pa\x02\xD0\x80a\0\x1C_9_\xF3\xFE`\x80`@R4\x80\x15a\0\x0FW_\x80\xFD[P`\x046\x10a\0JW_5`\xE0\x1C\x80c4\x04\xFE\xE9\x14a\0NW\x80c\x8E4z:\x14a\0jW\x80c\xAA~\x01\n\x14a\0\x86W\x80c\xAD\xDF#^\x14a\0\xA2W[_\x80\xFD[a\0h`\x04\x806\x03\x81\x01\x90a\0c\x91\x90a\x011V[a\0\xBEV[\0[a\0\x84`\x04\x806\x03\x81\x01\x90a\0\x7F\x91\x90a\x01\x95V[a\0\xCEV[\0[a\0\xA0`\x04\x806\x03\x81\x01\x90a\0\x9B\x91\x90a\x02\x0CV[a\0\xE0V[\0[a\0\xBC`\x04\x806\x03\x81\x01\x90a\0\xB7\x91\x90a\x02\\V[a\0\xEEV[\0[\x80_R\x81\x83\x85` _\xA3PPPPV[\x80_R\x81\x83\x85\x87` _\xA4PPPPPV[\x80_R\x81\x83` _\xA2PPPV[\x80_R\x81` _\xA1PPV[_\x80\xFD[_\x81\x90P\x91\x90PV[a\x01\x10\x81a\0\xFEV[\x81\x14a\x01\x1AW_\x80\xFD[PV[_\x815\x90Pa\x01+\x81a\x01\x07V[\x92\x91PPV[_\x80_\x80`\x80\x85\x87\x03\x12\x15a\x01IWa\x01Ha\0\xFAV[[_a\x01V\x87\x82\x88\x01a\x01\x1DV[\x94PP` a\x01g\x87\x82\x88\x01a\x01\x1DV[\x93PP`@a\x01x\x87\x82\x88\x01a\x01\x1DV[\x92PP``a\x01\x89\x87\x82\x88\x01a\x01\x1DV[\x91PP\x92\x95\x91\x94P\x92PV[_\x80_\x80_`\xA0\x86\x88\x03\x12\x15a\x01\xAEWa\x01\xADa\0\xFAV[[_a\x01\xBB\x88\x82\x89\x01a\x01\x1DV[\x95PP` a\x01\xCC\x88\x82\x89\x01a\x01\x1DV[\x94PP`@a\x01\xDD\x88\x82\x89\x01a\x01\x1DV[\x93PP``a\x01\xEE\x88\x82\x89\x01a\x01\x1DV[\x92PP`\x80a\x01\xFF\x88\x82\x89\x01a\x01\x1DV[\x91PP\x92\x95P\x92\x95\x90\x93PV[_\x80_``\x84\x86\x03\x12\x15a\x02#Wa\x02\"a\0\xFAV[[_a\x020\x86\x82\x87\x01a\x01\x1DV[\x93PP` a\x02A\x86\x82\x87\x01a\x01\x1DV[\x92PP`@a\x02R\x86\x82\x87\x01a\x01\x1DV[\x91PP\x92P\x92P\x92V[_\x80`@\x83\x85\x03\x12\x15a\x02rWa\x02qa\0\xFAV[[_a\x02\x7F\x85\x82\x86\x01a\x01\x1DV[\x92PP` a\x02\x90\x85\x82\x86\x01a\x01\x1DV[\x91PP\x92P\x92\x90PV\xFE\xA2dipfsX\"\x12 X\xF6Li\x14\xAD\xFEG\xF0g9\xDA\x01\x861\xA7\x18Y\xF9\xAF\x0F?\xC6\xCB]\x1D\xF6\xA4\x12\x0F\x17\x83dsolcC\0\x08\x19\x003",
+        b"`\x80`@R4\x80\x15`\x0EW_\x80\xFD[Pa\x01\xBD\x80a\0\x1C_9_\xF3\xFE`\x80`@R4\x80\x15a\0\x0FW_\x80\xFD[P`\x046\x10a\0JW_5`\xE0\x1C\x80c4\x04\xFE\xE9\x14a\0NW\x80c\x8E4z:\x14a\0cW\x80c\xAA~\x01\n\x14a\0vW\x80c\xAD\xDF#^\x14a\0\x89W[_\x80\xFD[a\0aa\0\\6`\x04a\0\xD8V[a\0\x9CV[\0[a\0aa\0q6`\x04a\x01\x07V[a\0\xACV[a\0aa\0\x846`\x04a\x01>V[a\0\xBEV[a\0aa\0\x976`\x04a\x01gV[a\0\xCCV[\x80_R\x81\x83\x85` _\xA3PPPPV[\x80_R\x81\x83\x85\x87` _\xA4PPPPPV[\x80_R\x81\x83` _\xA2PPPV[\x80_R\x81` _\xA1PPV[_\x80_\x80`\x80\x85\x87\x03\x12\x15a\0\xEBW_\x80\xFD[PP\x825\x94` \x84\x015\x94P`@\x84\x015\x93``\x015\x92P\x90PV[_\x80_\x80_`\xA0\x86\x88\x03\x12\x15a\x01\x1BW_\x80\xFD[PP\x835\x95` \x85\x015\x95P`@\x85\x015\x94``\x81\x015\x94P`\x80\x015\x92P\x90PV[_\x80_``\x84\x86\x03\x12\x15a\x01PW_\x80\xFD[PP\x815\x93` \x83\x015\x93P`@\x90\x92\x015\x91\x90PV[_\x80`@\x83\x85\x03\x12\x15a\x01xW_\x80\xFD[PP\x805\x92` \x90\x91\x015\x91PV\xFE\xA2dipfsX\"\x12 \t\xB5\xE6N\xB5d%\x8B\xB2>\x04\xD4F\x16\x06\xE8\xD7\x0E,l{+\x82\xF27\xA4\xC1\x81D\xDEi-dsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x608060405234801561000f575f80fd5b506004361061004a575f3560e01c80633404fee91461004e5780638e347a3a1461006a578063aa7e010a14610086578063addf235e146100a2575b5f80fd5b61006860048036038101906100639190610131565b6100be565b005b610084600480360381019061007f9190610195565b6100ce565b005b6100a0600480360381019061009b919061020c565b6100e0565b005b6100bc60048036038101906100b7919061025c565b6100ee565b005b805f5281838560205fa350505050565b805f528183858760205fa45050505050565b805f52818360205fa2505050565b805f528160205fa15050565b5f80fd5b5f819050919050565b610110816100fe565b811461011a575f80fd5b50565b5f8135905061012b81610107565b92915050565b5f805f8060808587031215610149576101486100fa565b5b5f6101568782880161011d565b94505060206101678782880161011d565b93505060406101788782880161011d565b92505060606101898782880161011d565b91505092959194509250565b5f805f805f60a086880312156101ae576101ad6100fa565b5b5f6101bb8882890161011d565b95505060206101cc8882890161011d565b94505060406101dd8882890161011d565b93505060606101ee8882890161011d565b92505060806101ff8882890161011d565b9150509295509295909350565b5f805f60608486031215610223576102226100fa565b5b5f6102308682870161011d565b93505060206102418682870161011d565b92505060406102528682870161011d565b9150509250925092565b5f8060408385031215610272576102716100fa565b5b5f61027f8582860161011d565b92505060206102908582860161011d565b915050925092905056fea264697066735822122058f64c6914adfe47f06739da018631a71859f9af0f3fc6cb5d1df6a4120f178364736f6c63430008190033
+    ///0x608060405234801561000f575f80fd5b506004361061004a575f3560e01c80633404fee91461004e5780638e347a3a14610063578063aa7e010a14610076578063addf235e14610089575b5f80fd5b61006161005c3660046100d8565b61009c565b005b610061610071366004610107565b6100ac565b61006161008436600461013e565b6100be565b610061610097366004610167565b6100cc565b805f5281838560205fa350505050565b805f528183858760205fa45050505050565b805f52818360205fa2505050565b805f528160205fa15050565b5f805f80608085870312156100eb575f80fd5b5050823594602084013594506040840135936060013592509050565b5f805f805f60a0868803121561011b575f80fd5b505083359560208501359550604085013594606081013594506080013592509050565b5f805f60608486031215610150575f80fd5b505081359360208301359350604090920135919050565b5f8060408385031215610178575f80fd5b5050803592602090910135915056fea264697066735822122009b5e64eb564258bb23e04d4461606e8d70e2c6c7b2b82f237a4c18144de692d64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4\x80\x15a\0\x0FW_\x80\xFD[P`\x046\x10a\0JW_5`\xE0\x1C\x80c4\x04\xFE\xE9\x14a\0NW\x80c\x8E4z:\x14a\0jW\x80c\xAA~\x01\n\x14a\0\x86W\x80c\xAD\xDF#^\x14a\0\xA2W[_\x80\xFD[a\0h`\x04\x806\x03\x81\x01\x90a\0c\x91\x90a\x011V[a\0\xBEV[\0[a\0\x84`\x04\x806\x03\x81\x01\x90a\0\x7F\x91\x90a\x01\x95V[a\0\xCEV[\0[a\0\xA0`\x04\x806\x03\x81\x01\x90a\0\x9B\x91\x90a\x02\x0CV[a\0\xE0V[\0[a\0\xBC`\x04\x806\x03\x81\x01\x90a\0\xB7\x91\x90a\x02\\V[a\0\xEEV[\0[\x80_R\x81\x83\x85` _\xA3PPPPV[\x80_R\x81\x83\x85\x87` _\xA4PPPPPV[\x80_R\x81\x83` _\xA2PPPV[\x80_R\x81` _\xA1PPV[_\x80\xFD[_\x81\x90P\x91\x90PV[a\x01\x10\x81a\0\xFEV[\x81\x14a\x01\x1AW_\x80\xFD[PV[_\x815\x90Pa\x01+\x81a\x01\x07V[\x92\x91PPV[_\x80_\x80`\x80\x85\x87\x03\x12\x15a\x01IWa\x01Ha\0\xFAV[[_a\x01V\x87\x82\x88\x01a\x01\x1DV[\x94PP` a\x01g\x87\x82\x88\x01a\x01\x1DV[\x93PP`@a\x01x\x87\x82\x88\x01a\x01\x1DV[\x92PP``a\x01\x89\x87\x82\x88\x01a\x01\x1DV[\x91PP\x92\x95\x91\x94P\x92PV[_\x80_\x80_`\xA0\x86\x88\x03\x12\x15a\x01\xAEWa\x01\xADa\0\xFAV[[_a\x01\xBB\x88\x82\x89\x01a\x01\x1DV[\x95PP` a\x01\xCC\x88\x82\x89\x01a\x01\x1DV[\x94PP`@a\x01\xDD\x88\x82\x89\x01a\x01\x1DV[\x93PP``a\x01\xEE\x88\x82\x89\x01a\x01\x1DV[\x92PP`\x80a\x01\xFF\x88\x82\x89\x01a\x01\x1DV[\x91PP\x92\x95P\x92\x95\x90\x93PV[_\x80_``\x84\x86\x03\x12\x15a\x02#Wa\x02\"a\0\xFAV[[_a\x020\x86\x82\x87\x01a\x01\x1DV[\x93PP` a\x02A\x86\x82\x87\x01a\x01\x1DV[\x92PP`@a\x02R\x86\x82\x87\x01a\x01\x1DV[\x91PP\x92P\x92P\x92V[_\x80`@\x83\x85\x03\x12\x15a\x02rWa\x02qa\0\xFAV[[_a\x02\x7F\x85\x82\x86\x01a\x01\x1DV[\x92PP` a\x02\x90\x85\x82\x86\x01a\x01\x1DV[\x91PP\x92P\x92\x90PV\xFE\xA2dipfsX\"\x12 X\xF6Li\x14\xAD\xFEG\xF0g9\xDA\x01\x861\xA7\x18Y\xF9\xAF\x0F?\xC6\xCB]\x1D\xF6\xA4\x12\x0F\x17\x83dsolcC\0\x08\x19\x003",
+        b"`\x80`@R4\x80\x15a\0\x0FW_\x80\xFD[P`\x046\x10a\0JW_5`\xE0\x1C\x80c4\x04\xFE\xE9\x14a\0NW\x80c\x8E4z:\x14a\0cW\x80c\xAA~\x01\n\x14a\0vW\x80c\xAD\xDF#^\x14a\0\x89W[_\x80\xFD[a\0aa\0\\6`\x04a\0\xD8V[a\0\x9CV[\0[a\0aa\0q6`\x04a\x01\x07V[a\0\xACV[a\0aa\0\x846`\x04a\x01>V[a\0\xBEV[a\0aa\0\x976`\x04a\x01gV[a\0\xCCV[\x80_R\x81\x83\x85` _\xA3PPPPV[\x80_R\x81\x83\x85\x87` _\xA4PPPPPV[\x80_R\x81\x83` _\xA2PPPV[\x80_R\x81` _\xA1PPV[_\x80_\x80`\x80\x85\x87\x03\x12\x15a\0\xEBW_\x80\xFD[PP\x825\x94` \x84\x015\x94P`@\x84\x015\x93``\x015\x92P\x90PV[_\x80_\x80_`\xA0\x86\x88\x03\x12\x15a\x01\x1BW_\x80\xFD[PP\x835\x95` \x85\x015\x95P`@\x85\x015\x94``\x81\x015\x94P`\x80\x015\x92P\x90PV[_\x80_``\x84\x86\x03\x12\x15a\x01PW_\x80\xFD[PP\x815\x93` \x83\x015\x93P`@\x90\x92\x015\x91\x90PV[_\x80`@\x83\x85\x03\x12\x15a\x01xW_\x80\xFD[PP\x805\x92` \x90\x91\x015\x91PV\xFE\xA2dipfsX\"\x12 \t\xB5\xE6N\xB5d%\x8B\xB2>\x04\xD4F\x16\x06\xE8\xD7\x0E,l{+\x82\xF27\xA4\xC1\x81D\xDEi-dsolcC\0\x08\x19\x003",
     );
     /**Function with signature `emitEvent1(bytes32,bytes32)` and selector `0xaddf235e`.
 ```solidity
@@ -154,9 +154,7 @@ function emitEvent1(bytes32 signatureHash, bytes32 nonIndexed) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct emitEvent1Call {
-        #[allow(missing_docs)]
         pub signatureHash: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub nonIndexed: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`emitEvent1(bytes32,bytes32)`](emitEvent1Call) function.
@@ -294,11 +292,8 @@ function emitEvent2(bytes32 signatureHash, bytes32 indexed1, bytes32 nonIndexed)
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct emitEvent2Call {
-        #[allow(missing_docs)]
         pub signatureHash: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub indexed1: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub nonIndexed: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`emitEvent2(bytes32,bytes32,bytes32)`](emitEvent2Call) function.
@@ -443,13 +438,9 @@ function emitEvent3(bytes32 signatureHash, bytes32 indexed1, bytes32 indexed2, b
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct emitEvent3Call {
-        #[allow(missing_docs)]
         pub signatureHash: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub indexed1: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub indexed2: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub nonIndexed: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`emitEvent3(bytes32,bytes32,bytes32,bytes32)`](emitEvent3Call) function.
@@ -606,15 +597,10 @@ function emitEvent4(bytes32 signatureHash, bytes32 indexed1, bytes32 indexed2, b
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct emitEvent4Call {
-        #[allow(missing_docs)]
         pub signatureHash: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub indexed1: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub indexed2: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub indexed3: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub nonIndexed: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`emitEvent4(bytes32,bytes32,bytes32,bytes32,bytes32)`](emitEvent4Call) function.
@@ -774,13 +760,9 @@ function emitEvent4(bytes32 signatureHash, bytes32 indexed1, bytes32 indexed2, b
     };
     ///Container for all the [`EventEmitter`](self) function calls.
     pub enum EventEmitterCalls {
-        #[allow(missing_docs)]
         emitEvent1(emitEvent1Call),
-        #[allow(missing_docs)]
         emitEvent2(emitEvent2Call),
-        #[allow(missing_docs)]
         emitEvent3(emitEvent3Call),
-        #[allow(missing_docs)]
         emitEvent4(emitEvent4Call),
     }
     #[automatically_derived]

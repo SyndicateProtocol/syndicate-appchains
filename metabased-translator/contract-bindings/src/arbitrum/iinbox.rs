@@ -1013,7 +1013,6 @@ function allowListEnabled() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowListEnabledReturn {
-        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -1136,7 +1135,6 @@ function bridge() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct bridgeReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1251,16 +1249,13 @@ function calculateRetryableSubmissionFee(uint256 dataLength, uint256 baseFee) ex
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct calculateRetryableSubmissionFeeCall {
-        #[allow(missing_docs)]
         pub dataLength: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub baseFee: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`calculateRetryableSubmissionFee(uint256,uint256)`](calculateRetryableSubmissionFeeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct calculateRetryableSubmissionFeeReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1400,28 +1395,19 @@ function createRetryableTicket(address to, uint256 l2CallValue, uint256 maxSubmi
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createRetryableTicketCall {
-        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub l2CallValue: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub maxSubmissionCost: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub excessFeeRefundAddress: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub callValueRefundAddress: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub gasLimit: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub maxFeePerGas: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`createRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)`](createRetryableTicketCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createRetryableTicketReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1616,7 +1602,6 @@ function depositEth() external payable returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct depositEthReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1737,7 +1722,6 @@ function getProxyAdmin() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getProxyAdminReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1852,9 +1836,7 @@ function initialize(address _bridge, address _sequencerInbox) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initializeCall {
-        #[allow(missing_docs)]
         pub _bridge: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub _sequencerInbox: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`initialize(address,address)`](initializeCall) function.
@@ -1992,14 +1974,12 @@ function isAllowed(address user) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAllowedCall {
-        #[allow(missing_docs)]
         pub user: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAllowedReturn {
-        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2122,7 +2102,6 @@ function maxDataSize() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct maxDataSizeReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2355,7 +2334,6 @@ function postUpgradeInit(address _bridge) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct postUpgradeInitCall {
-        #[allow(missing_docs)]
         pub _bridge: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`postUpgradeInit(address)`](postUpgradeInitCall) function.
@@ -2480,22 +2458,16 @@ function sendContractTransaction(uint256 gasLimit, uint256 maxFeePerGas, address
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendContractTransactionCall {
-        #[allow(missing_docs)]
         pub gasLimit: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub maxFeePerGas: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`sendContractTransaction(uint256,uint256,address,uint256,bytes)`](sendContractTransactionCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendContractTransactionReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2662,20 +2634,15 @@ function sendL1FundedContractTransaction(uint256 gasLimit, uint256 maxFeePerGas,
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendL1FundedContractTransactionCall {
-        #[allow(missing_docs)]
         pub gasLimit: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub maxFeePerGas: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`sendL1FundedContractTransaction(uint256,uint256,address,bytes)`](sendL1FundedContractTransactionCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendL1FundedContractTransactionReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2829,22 +2796,16 @@ function sendL1FundedUnsignedTransaction(uint256 gasLimit, uint256 maxFeePerGas,
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendL1FundedUnsignedTransactionCall {
-        #[allow(missing_docs)]
         pub gasLimit: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub maxFeePerGas: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub nonce: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`sendL1FundedUnsignedTransaction(uint256,uint256,uint256,address,bytes)`](sendL1FundedUnsignedTransactionCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendL1FundedUnsignedTransactionReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3011,22 +2972,16 @@ function sendL1FundedUnsignedTransactionToFork(uint256 gasLimit, uint256 maxFeeP
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendL1FundedUnsignedTransactionToForkCall {
-        #[allow(missing_docs)]
         pub gasLimit: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub maxFeePerGas: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub nonce: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`sendL1FundedUnsignedTransactionToFork(uint256,uint256,uint256,address,bytes)`](sendL1FundedUnsignedTransactionToForkCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendL1FundedUnsignedTransactionToForkReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3193,14 +3148,12 @@ function sendL2Message(bytes memory messageData) external returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendL2MessageCall {
-        #[allow(missing_docs)]
         pub messageData: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`sendL2Message(bytes)`](sendL2MessageCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendL2MessageReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3321,14 +3274,12 @@ function sendL2MessageFromOrigin(bytes memory messageData) external returns (uin
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendL2MessageFromOriginCall {
-        #[allow(missing_docs)]
         pub messageData: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`sendL2MessageFromOrigin(bytes)`](sendL2MessageFromOriginCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendL2MessageFromOriginReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3453,24 +3404,17 @@ function sendUnsignedTransaction(uint256 gasLimit, uint256 maxFeePerGas, uint256
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendUnsignedTransactionCall {
-        #[allow(missing_docs)]
         pub gasLimit: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub maxFeePerGas: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub nonce: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`sendUnsignedTransaction(uint256,uint256,uint256,address,uint256,bytes)`](sendUnsignedTransactionCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendUnsignedTransactionReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3645,24 +3589,17 @@ function sendUnsignedTransactionToFork(uint256 gasLimit, uint256 maxFeePerGas, u
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendUnsignedTransactionToForkCall {
-        #[allow(missing_docs)]
         pub gasLimit: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub maxFeePerGas: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub nonce: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`sendUnsignedTransactionToFork(uint256,uint256,uint256,address,uint256,bytes)`](sendUnsignedTransactionToForkCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendUnsignedTransactionToForkReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3837,22 +3774,16 @@ function sendWithdrawEthToFork(uint256 gasLimit, uint256 maxFeePerGas, uint256 n
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendWithdrawEthToForkCall {
-        #[allow(missing_docs)]
         pub gasLimit: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub maxFeePerGas: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub nonce: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub withdrawTo: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`sendWithdrawEthToFork(uint256,uint256,uint256,uint256,address)`](sendWithdrawEthToForkCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendWithdrawEthToForkReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -4023,7 +3954,6 @@ function sequencerInbox() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sequencerInboxReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -4140,9 +4070,7 @@ function setAllowList(address[] memory user, bool[] memory val) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setAllowListCall {
-        #[allow(missing_docs)]
         pub user: alloy::sol_types::private::Vec<alloy::sol_types::private::Address>,
-        #[allow(missing_docs)]
         pub val: alloy::sol_types::private::Vec<bool>,
     }
     ///Container type for the return parameters of the [`setAllowList(address[],bool[])`](setAllowListCall) function.
@@ -4280,7 +4208,6 @@ function setAllowListEnabled(bool _allowListEnabled) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setAllowListEnabledCall {
-        #[allow(missing_docs)]
         pub _allowListEnabled: bool,
     }
     ///Container type for the return parameters of the [`setAllowListEnabled(bool)`](setAllowListEnabledCall) function.
@@ -4523,28 +4450,19 @@ function unsafeCreateRetryableTicket(address to, uint256 l2CallValue, uint256 ma
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct unsafeCreateRetryableTicketCall {
-        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub l2CallValue: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub maxSubmissionCost: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub excessFeeRefundAddress: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub callValueRefundAddress: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub gasLimit: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub maxFeePerGas: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`unsafeCreateRetryableTicket(address,uint256,uint256,address,address,uint256,uint256,bytes)`](unsafeCreateRetryableTicketCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct unsafeCreateRetryableTicketReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -4730,55 +4648,30 @@ function unsafeCreateRetryableTicket(address to, uint256 l2CallValue, uint256 ma
     };
     ///Container for all the [`IInbox`](self) function calls.
     pub enum IInboxCalls {
-        #[allow(missing_docs)]
         allowListEnabled(allowListEnabledCall),
-        #[allow(missing_docs)]
         bridge(bridgeCall),
-        #[allow(missing_docs)]
         calculateRetryableSubmissionFee(calculateRetryableSubmissionFeeCall),
-        #[allow(missing_docs)]
         createRetryableTicket(createRetryableTicketCall),
-        #[allow(missing_docs)]
         depositEth(depositEthCall),
-        #[allow(missing_docs)]
         getProxyAdmin(getProxyAdminCall),
-        #[allow(missing_docs)]
         initialize(initializeCall),
-        #[allow(missing_docs)]
         isAllowed(isAllowedCall),
-        #[allow(missing_docs)]
         maxDataSize(maxDataSizeCall),
-        #[allow(missing_docs)]
         pause(pauseCall),
-        #[allow(missing_docs)]
         postUpgradeInit(postUpgradeInitCall),
-        #[allow(missing_docs)]
         sendContractTransaction(sendContractTransactionCall),
-        #[allow(missing_docs)]
         sendL1FundedContractTransaction(sendL1FundedContractTransactionCall),
-        #[allow(missing_docs)]
         sendL1FundedUnsignedTransaction(sendL1FundedUnsignedTransactionCall),
-        #[allow(missing_docs)]
         sendL1FundedUnsignedTransactionToFork(sendL1FundedUnsignedTransactionToForkCall),
-        #[allow(missing_docs)]
         sendL2Message(sendL2MessageCall),
-        #[allow(missing_docs)]
         sendL2MessageFromOrigin(sendL2MessageFromOriginCall),
-        #[allow(missing_docs)]
         sendUnsignedTransaction(sendUnsignedTransactionCall),
-        #[allow(missing_docs)]
         sendUnsignedTransactionToFork(sendUnsignedTransactionToForkCall),
-        #[allow(missing_docs)]
         sendWithdrawEthToFork(sendWithdrawEthToForkCall),
-        #[allow(missing_docs)]
         sequencerInbox(sequencerInboxCall),
-        #[allow(missing_docs)]
         setAllowList(setAllowListCall),
-        #[allow(missing_docs)]
         setAllowListEnabled(setAllowListEnabledCall),
-        #[allow(missing_docs)]
         unpause(unpauseCall),
-        #[allow(missing_docs)]
         unsafeCreateRetryableTicket(unsafeCreateRetryableTicketCall),
     }
     #[automatically_derived]
@@ -5518,9 +5411,7 @@ function unsafeCreateRetryableTicket(address to, uint256 l2CallValue, uint256 ma
     }
     ///Container for all the [`IInbox`](self) events.
     pub enum IInboxEvents {
-        #[allow(missing_docs)]
         InboxMessageDelivered(InboxMessageDelivered),
-        #[allow(missing_docs)]
         InboxMessageDeliveredFromOrigin(InboxMessageDeliveredFromOrigin),
     }
     #[automatically_derived]
