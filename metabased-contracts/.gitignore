@@ -13,3 +13,6 @@ docs/
 
 # Certora
 .certora_internal/
+
+# Remappings
+remappings.txt
