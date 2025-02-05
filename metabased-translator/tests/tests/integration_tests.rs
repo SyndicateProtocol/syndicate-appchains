@@ -299,9 +299,9 @@ async fn e2e_settlement_test() -> Result<()> {
     ingestor_config.settlement.settlement_rpc_url = "http://localhost:8146".to_string();
     ingestor_config.settlement.settlement_polling_interval = Duration::from_millis(10);
     let mut metrics_state = MetricsState { registry: Registry::default() };
-    let settlement_client: Arc<dyn RPCClient> =
-        Arc::new(EthClient::new(&ingestor_config.sequencing.sequencing_rpc_url).await?);
     let sequencing_client: Arc<dyn RPCClient> =
+        Arc::new(EthClient::new(&ingestor_config.sequencing.sequencing_rpc_url).await?);
+    let settlement_client: Arc<dyn RPCClient> =
         Arc::new(EthClient::new(&ingestor_config.settlement.settlement_rpc_url).await?);
     let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
         Chain::Sequencing,
