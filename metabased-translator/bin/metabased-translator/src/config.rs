@@ -5,7 +5,7 @@
 
 use block_builder::config::BlockBuilderConfig;
 use clap::Parser;
-use eyre::{eyre, Error, Result};
+use eyre::Result;
 use ingestor::{
     config::{SequencingChainConfig, SettlementChainConfig},
     eth_client::RPCClient,
@@ -13,7 +13,17 @@ use ingestor::{
 use metrics::config::MetricsConfig;
 use slotting::config::SlottingConfig;
 use std::{fmt::Debug, sync::Arc};
+use thiserror::Error;
 use tracing::{debug, error};
+
+#[derive(Error, Debug)]
+pub enum ConfigError {
+    #[error("Invalid blockchain state: settlement chain timestamp ({0}) is greater than sequencing chain timestamp ({1})")]
+    InvalidBlockchainState(u64, u64),
+
+    #[error("Failed to fetch block data: {0}")]
+    BlockFetchFailure(#[from] eyre::Error),
+}
 
 /// Common config stuct for the Metabased Translator. This contains all possible config options
 /// which other crates can use
@@ -40,10 +50,11 @@ pub struct MetabasedConfig {
 }
 
 impl MetabasedConfig {
-    /// Initializes the configuration, fetching the earliest block timestamp dynamically.
-    pub async fn initialize() -> Result<Self, Error> {
+    /// Initializes the configuration by parsing CLI arguments and environment variables.
+    pub async fn initialize() -> Self {
         let config = <Self as Parser>::parse();
-        Ok(config)
+        debug!("Initializing configuration: {:?}", config);
+        config
     }
 
     pub async fn set_initial_timestamp(
@@ -51,36 +62,28 @@ impl MetabasedConfig {
         settlement_client: Arc<dyn RPCClient>,
         sequencing_client: Arc<dyn RPCClient>,
     ) -> Result<()> {
-        let seq_start_block =
-            sequencing_client.get_block_by_number(self.sequencing.sequencing_start_block).await?;
+        let seq_start_block = sequencing_client
+            .get_block_by_number(self.sequencing.sequencing_start_block)
+            .await
+            .map_err(ConfigError::BlockFetchFailure)?;
 
-        let set_start_block =
-            settlement_client.get_block_by_number(self.settlement.settlement_start_block).await?;
+        let set_start_block = settlement_client
+            .get_block_by_number(self.settlement.settlement_start_block)
+            .await
+            .map_err(ConfigError::BlockFetchFailure)?;
 
         if seq_start_block.timestamp < set_start_block.timestamp {
-            return Err(eyre!(
-            "Invalid blockchain state: settlement chain initial timestamp ({}) is greater than sequencing chain initial timestamp ({})",
-            set_start_block.timestamp,
-            seq_start_block.timestamp
-        ));
+            return Err(ConfigError::InvalidBlockchainState(
+                set_start_block.timestamp,
+                seq_start_block.timestamp,
+            )
+            .into());
         }
 
         self.slotter.start_slot_timestamp = seq_start_block.timestamp;
         self.block_builder.genesis_timestamp = seq_start_block.timestamp;
-
+        debug!("Genesis timestamp set to: {:?}", seq_start_block.timestamp);
         Ok(())
-    }
-
-    /// Parse the [`MetabasedConfig`] from configuration sources like CLI args and env vars
-    pub fn parse() -> Self {
-        let config = <Self as Parser>::parse();
-        // TODO(SEQ-538): remove this check once the config flags are updated
-        if config.slotter.start_slot_timestamp < config.block_builder.genesis_timestamp {
-            error!("start slot timestamp cannot be less than the mchain genesis timestamp");
-            panic!();
-        }
-        debug!("Parsed MetabasedConfig: {:?}", config);
-        config
     }
 
     pub fn generate_sample_command() {
@@ -113,6 +116,7 @@ mod tests {
     use super::*;
     use async_trait::async_trait;
     use common::types::{Block, Receipt};
+    use eyre::{Error, Result};
     use mockall::{mock, predicate::*};
     use serial_test::serial;
     use std::{env, time::Duration};
@@ -225,7 +229,6 @@ mod tests {
         MetabasedConfig::generate_sample_command();
     }
 
-    // Mock RPCClient
     mock! {
         #[derive(Debug)]
         pub RPCClientMock {}
@@ -259,9 +262,11 @@ mod tests {
             .times(1)
             .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
 
-        // Run the function
+        // Convert mocks to Arc
         let settlement_client = Arc::new(mock_settlement_client);
         let sequencing_client = Arc::new(mock_sequencing_client);
+
+        // Run the function
         let result = config.set_initial_timestamp(settlement_client, sequencing_client).await;
 
         assert!(result.is_ok());
@@ -284,16 +289,17 @@ mod tests {
             .with(eq(100))
             .times(1)
             .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
-
         mock_sequencing_client
             .expect_get_block_by_number()
             .with(eq(200))
             .times(1)
             .returning(|_| Ok(Block { timestamp: 5000, ..Default::default() }));
 
-        // Run the function
+        // Convert mocks to Arc
         let settlement_client = Arc::new(mock_settlement_client);
         let sequencing_client = Arc::new(mock_sequencing_client);
+
+        // Run the function
         let result = config.set_initial_timestamp(settlement_client, sequencing_client).await;
 
         assert!(result.is_err());

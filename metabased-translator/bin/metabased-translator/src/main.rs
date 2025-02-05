@@ -159,9 +159,7 @@ fn main() -> Result<(), RuntimeError> {
         tokio::runtime::Runtime::new().map_err(|e| RuntimeError::Initialization(e.to_string()))?;
 
     // Initialize base config inside the async runtime
-    let mut base_config = runtime
-        .block_on(MetabasedConfig::initialize())
-        .map_err(|e| RuntimeError::InvalidConfig(e.to_string()))?;
+    let mut base_config = runtime.block_on(MetabasedConfig::initialize());
 
     // Init the paths for the DB and Anvil state
     let db_path = format!("{}/db", base_config.datadir);
