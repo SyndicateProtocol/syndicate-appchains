@@ -6,7 +6,9 @@ import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
 import {Test} from "forge-std/Test.sol";
 
 contract SequencingModuleCheckerMock is SequencingModuleChecker {
-    constructor(address _admin, address _masterModule) SequencingModuleChecker(_admin, _masterModule) {}
+    constructor(address _admin, address _masterModule) SequencingModuleChecker() {
+        init(_admin, _masterModule);
+    }
 }
 
 contract SequencingModuleCheckerTest is Test {

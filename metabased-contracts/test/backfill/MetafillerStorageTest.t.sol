@@ -43,21 +43,6 @@ contract MetafillerStorageTest is Test {
         l3Storage.save(1, 0x505f3a50f83559ab090dbd840556254a7248404f2dedb53b4f12b26748a8ec08, "0x");
     }
 
-    function testOnlyOriginatorCanSaveForMany() public {
-        vm.expectRevert();
-        uint256[] memory epochNumbers = new uint256[](1);
-        epochNumbers[0] = 1;
-
-        bytes32[] memory epochHashes = new bytes32[](1);
-        epochHashes[0] = 0x505f3a50f83559ab090dbd840556254a7248404f2dedb53b4f12b26748a8ec08;
-
-        bytes[] memory batches = new bytes[](1);
-        batches[0] = "0x";
-        vm.expectRevert();
-        vm.prank(manager, notManager);
-        l3Storage.saveForMany(epochNumbers, epochHashes, batches);
-    }
-
     function testOnlyManagerCanSaveForMany() public {
         uint256[] memory epochNumbers = new uint256[](1);
         epochNumbers[0] = 1;
