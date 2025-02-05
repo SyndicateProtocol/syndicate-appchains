@@ -49,6 +49,8 @@ abstract contract SequencingModuleChecker is Ownable, PermissionModule, Initiali
     /// @param proposer The address to check permissions for
     /// @return bool indicating if the address is allowed
     function isAllowed(address proposer) public view virtual override returns (bool) {
+        // Contract must be initialized before allowed
+        require(_getInitializedVersion() > 0, "SequencingModuleChecker is initializing");
         return requirementModule.isAllowed(proposer);
     }
 }
