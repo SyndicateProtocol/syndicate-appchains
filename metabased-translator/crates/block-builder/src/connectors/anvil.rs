@@ -5,6 +5,7 @@ use crate::{
         BlockBuilderError,
     },
     config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
+    connectors::metrics::MChainMetrics,
 };
 use alloy::{
     network::{Ethereum, EthereumWallet},
@@ -22,11 +23,24 @@ use alloy::{
     transports::http::Http,
 };
 use contract_bindings::arbitrum::rollup::Rollup;
-use eyre::Result;
+use eyre::{Error, Result};
 use reqwest::Client;
 use std::{net::TcpListener, time::Duration};
-use tracing::debug;
+use thiserror::Error;
+use tracing::{debug, error};
 use url::Host;
+
+/// Possible errors when mining a block
+#[derive(Debug, Error)]
+pub enum MineBlockError {
+    /// Block list is empty
+    #[error("Mining operation returned an empty block list")]
+    EmptyBlockList,
+
+    /// Failed to mine block
+    #[error("Failed to mine block: {0}")]
+    MiningFailed(#[from] Error),
+}
 
 #[allow(missing_docs)]
 pub type FilledProvider = FillProvider<
@@ -51,6 +65,7 @@ pub struct MetaChainProvider {
     pub provider: FilledProvider,
     pub rollup: Rollup::RollupInstance<Http<Client>, FilledProvider>,
     pub target_chain_id: u64,
+    pub metrics: MChainMetrics,
 }
 
 /// The chain id of the metachain. This is the same for all rollups.
@@ -61,7 +76,7 @@ impl MetaChainProvider {
     /// If file in `BlockBuilderConfig` is set to a non-empty string, the anvil node stores and
     /// loads state from the file. The rollup contract is only deployed to the chain when it is
     /// newly created and on the genesis block.
-    pub async fn start(config: &BlockBuilderConfig) -> Result<Self> {
+    pub async fn start(config: &BlockBuilderConfig, metrics: MChainMetrics) -> Result<Self> {
         let port = config.mchain_url.port().ok_or_else(|| BlockBuilderError::AnvilStart(NoPort))?;
 
         if !is_port_available(port) {
@@ -130,7 +145,7 @@ impl MetaChainProvider {
 
         let rollup = Rollup::new(get_rollup_contract_address(), provider.clone());
 
-        Ok(Self { anvil, provider, rollup, target_chain_id: config.target_chain_id })
+        Ok(Self { anvil, provider, rollup, target_chain_id: config.target_chain_id, metrics })
     }
 
     /// Submits a list of transactions to the `MetaChain`
@@ -147,16 +162,29 @@ impl MetaChainProvider {
     }
 
     /// Mines a block on the `MetaChain`
-    pub async fn mine_block(&self, block_timestamp_secs: u64) -> Result<()> {
+    pub async fn mine_block(&self, block_timestamp_secs: u64) -> Result<(), MineBlockError> {
         let opts = MineOptions::Options {
             timestamp: (block_timestamp_secs > 0).then_some(block_timestamp_secs),
             blocks: Some(1),
         };
         let result = self.provider.anvil_mine_detailed(Some(opts)).await;
         debug!("{}", format!("Mined block on MetaChain {:?}", result));
-        result?;
-
-        Ok(())
+        match result {
+            Ok(mut mined_blocks) if !mined_blocks.is_empty() => {
+                let first_block = mined_blocks.remove(0); // Extract the first block
+                debug!("Mined block on MetaChain {:?}", first_block);
+                self.metrics.record_last_block_mined(first_block);
+                Ok(())
+            }
+            Ok(_) => {
+                error!("Mining succeeded but returned an empty block list");
+                Err(MineBlockError::EmptyBlockList)
+            }
+            Err(e) => {
+                error!("Failed to mine block: {:?}", e);
+                Err(MineBlockError::MiningFailed(e.into()))
+            }
+        }
     }
 
     /// Return the on-chain config for a rollup with a given chain id
@@ -273,8 +301,14 @@ pub fn is_port_available(port: u16) -> bool {
 mod tests {
     use super::*;
     use alloy::{eips::BlockId, rpc::types::BlockTransactionsKind};
+    use prometheus_client::registry::Registry;
     use std::{env::temp_dir, fs, path::PathBuf};
     use url::Url;
+
+    struct MetricsState {
+        /// Prometheus registry
+        pub registry: Registry,
+    }
 
     #[tokio::test]
     async fn test_anvil_resume() -> Result<()> {
@@ -285,12 +319,15 @@ mod tests {
             ..Default::default()
         };
         let _ = fs::remove_file(file);
-        let mut provider = MetaChainProvider::start(&cfg).await?;
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = MChainMetrics::new(&mut metrics_state.registry);
+        let mut provider = MetaChainProvider::start(&cfg, metrics).await?;
         provider.mine_block(0).await?;
         let old_count = provider.provider.get_block_number().await?;
         drop(provider); // To explicitly release the port
 
-        provider = MetaChainProvider::start(&cfg).await?;
+        let metrics = MChainMetrics::new(&mut metrics_state.registry);
+        provider = MetaChainProvider::start(&cfg, metrics).await?;
         let new_count = provider.provider.get_block_number().await?;
         assert_eq!(old_count, new_count);
         Ok(())
@@ -306,10 +343,12 @@ mod tests {
             mchain_url: Url::parse("http://127.0.0.1:9288").expect("Invalid URL"),
             ..Default::default()
         };
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = MChainMetrics::new(&mut metrics_state.registry);
 
         // First instance: create blocks
         {
-            let chain = MetaChainProvider::start(&config).await?;
+            let chain = MetaChainProvider::start(&config, metrics).await?;
 
             // Mine 1000 blocks
             for i in 1000..2000 {
@@ -321,7 +360,8 @@ mod tests {
         } // First instance is dropped here
 
         // Second instance: verify blocks
-        let chain = MetaChainProvider::start(&config).await?;
+        let metrics = MChainMetrics::new(&mut metrics_state.registry);
+        let chain = MetaChainProvider::start(&config, metrics).await?;
 
         // Check a few random blocks are accessible
         for block_num in [0, 42, 567, 999, 1000] {
@@ -358,8 +398,9 @@ mod tests {
             mchain_url: "http://127.0.0.1:9388".parse()?,
             ..Default::default()
         };
-
-        let chain = MetaChainProvider::start(&config).await?;
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = MChainMetrics::new(&mut metrics_state.registry);
+        let chain = MetaChainProvider::start(&config, metrics).await?;
         // Mine 10 blocks
         for i in 1000..1010 {
             chain.mine_block(i as u64).await?;

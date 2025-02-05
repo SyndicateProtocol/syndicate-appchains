@@ -1,5 +1,6 @@
 //! The `metrics` module for the `BlockBuilder`
 
+use crate::connectors::metrics::MChainMetrics;
 use prometheus_client::{encoding::EncodeLabelSet, metrics::gauge::Gauge, registry::Registry};
 /// Labels used for Prometheus metric categorization.
 #[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
@@ -9,7 +10,7 @@ pub struct Labels {
 }
 
 /// Structure holding metrics related to the `BlockBuilder`.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BlockBuilderMetrics {
     /// Tracks the channel capacity
     pub block_builder_channel_capacity: Gauge,
@@ -17,6 +18,8 @@ pub struct BlockBuilderMetrics {
     pub block_builder_transactions_per_slot: Gauge,
     /// Records the last slot number processed by the `BlockBuilder`s
     pub block_builder_last_processed_slot: Gauge,
+    /// `MChain` metrics
+    pub mchain_metrics: MChainMetrics,
 }
 
 impl BlockBuilderMetrics {
@@ -42,10 +45,13 @@ impl BlockBuilderMetrics {
             block_builder_last_processed_slot.clone(),
         );
 
+        let mchain_metrics = MChainMetrics::new(registry);
+
         Self {
             block_builder_channel_capacity,
             block_builder_transactions_per_slot,
             block_builder_last_processed_slot,
+            mchain_metrics,
         }
     }
 
