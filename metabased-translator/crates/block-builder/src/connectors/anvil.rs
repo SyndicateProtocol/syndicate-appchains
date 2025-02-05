@@ -173,7 +173,7 @@ impl MetaChainProvider {
             Ok(mut mined_blocks) if !mined_blocks.is_empty() => {
                 let first_block = mined_blocks.remove(0); // Extract the first block
                 debug!("Mined block on MetaChain {:?}", first_block);
-                self.metrics.record_last_block_mined(first_block);
+                self.metrics.record_last_block_mined(&first_block);
                 Ok(())
             }
             Ok(_) => {
