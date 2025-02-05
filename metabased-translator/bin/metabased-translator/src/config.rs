@@ -249,7 +249,6 @@ mod tests {
         let mut mock_settlement_client = MockRPCClientMock::new();
         let mut mock_sequencing_client = MockRPCClientMock::new();
 
-        // Mock responses
         mock_settlement_client
             .expect_get_block_by_number()
             .with(eq(100))
@@ -262,11 +261,9 @@ mod tests {
             .times(1)
             .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
 
-        // Convert mocks to Arc
         let settlement_client = Arc::new(mock_settlement_client);
         let sequencing_client = Arc::new(mock_sequencing_client);
 
-        // Run the function
         let result = config.set_initial_timestamp(settlement_client, sequencing_client).await;
 
         assert!(result.is_ok());
@@ -283,7 +280,6 @@ mod tests {
         let mut mock_settlement_client = MockRPCClientMock::new();
         let mut mock_sequencing_client = MockRPCClientMock::new();
 
-        // Mock responses
         mock_settlement_client
             .expect_get_block_by_number()
             .with(eq(100))
@@ -295,11 +291,9 @@ mod tests {
             .times(1)
             .returning(|_| Ok(Block { timestamp: 5000, ..Default::default() }));
 
-        // Convert mocks to Arc
         let settlement_client = Arc::new(mock_settlement_client);
         let sequencing_client = Arc::new(mock_sequencing_client);
 
-        // Run the function
         let result = config.set_initial_timestamp(settlement_client, sequencing_client).await;
 
         assert!(result.is_err());
