@@ -92,7 +92,7 @@ impl Slotter {
     pub fn new(
         sequencing_chain_receiver: Receiver<BlockAndReceipts>,
         settlement_chain_receiver: Receiver<BlockAndReceipts>,
-        config: SlottingConfig,
+        config: &SlottingConfig,
         safe_state: Option<SafeState>,
         store: Box<dyn TranslatorStore + Send + Sync>,
         metrics: SlottingMetrics,
@@ -117,7 +117,7 @@ impl Slotter {
             latest_settlement_block,
             slots,
             max_slots: calculate_max_slots(config.slot_duration),
-            config,
+            config: config.to_owned(),
             sender: slot_tx,
             store,
             metrics,
@@ -536,7 +536,7 @@ mod tests {
         let (slotter, slot_rx) = Slotter::new(
             seq_rx,
             settle_rx,
-            SlottingConfig { slot_duration, start_slot_timestamp: slot_start_timestamp_ms },
+            &SlottingConfig { slot_duration, start_slot_timestamp: slot_start_timestamp_ms },
             None,
             store,
             metrics,
@@ -742,8 +742,7 @@ mod tests {
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = SlottingMetrics::new(&mut metrics_state.registry);
-        let (slotter, mut slot_rx) =
-            Slotter::new(seq_rx, set_rx, config.clone(), None, store, metrics);
+        let (slotter, mut slot_rx) = Slotter::new(seq_rx, set_rx, &config, None, store, metrics);
         let handle = tokio::spawn(async move { slotter.start(shutdown_rx).await });
 
         // Send some blocks
@@ -798,7 +797,7 @@ mod tests {
 
         // Create new slotter that should resume from DB
         let (resumed_slotter, mut resumed_slot_rx) =
-            Slotter::new(new_seq_rx, new_settle_rx, config, resumed_state, resumed_store, metrics);
+            Slotter::new(new_seq_rx, new_settle_rx, &config, resumed_state, resumed_store, metrics);
 
         let (_shutdown_tx, shutdown_rx) = oneshot::channel();
         tokio::spawn(async move { resumed_slotter.start(shutdown_rx).await });

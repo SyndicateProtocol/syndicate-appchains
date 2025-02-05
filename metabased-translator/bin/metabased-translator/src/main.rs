@@ -5,14 +5,16 @@ use common::{
     types::Chain,
 };
 use eyre::Result;
-use ingestor::{config::IngestionPipelineConfig, ingestor::Ingestor};
-use metabased_translator::config::MetabasedConfig;
-use metrics::{
-    config::MetricsConfig,
-    metrics::{start_metrics, MetricsState, TranslatorMetrics},
+use ingestor::{
+    config::ChainIngestorConfig,
+    eth_client::{EthClient, RPCClient, RPCClientError},
+    ingestor::Ingestor,
 };
+use metabased_translator::config::MetabasedConfig;
+use metrics::metrics::{start_metrics, MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
-use slotting::{config::SlottingConfig, slotting::Slotter};
+use slotting::slotting::Slotter;
+use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::oneshot;
 use tracing::{error, info};
@@ -20,11 +22,8 @@ use tracing::{error, info};
 // TODO(SEQ-515): Improve this executable, research async tasks
 #[allow(unused_assignments)] // TODO SEQ-528 remove this
 async fn run(
-    block_builder_config: BlockBuilderConfig,
-    slotting_config: SlottingConfig,
-    ingestion_config: IngestionPipelineConfig,
+    config: &mut MetabasedConfig,
     db_path: &str,
-    metrics_config: MetricsConfig,
     registry: Registry,
 ) -> Result<(), RuntimeError> {
     // Create shutdown channels
@@ -39,37 +38,63 @@ async fn run(
     let (db, mut safe_state) = init_db(db_path).await?;
     safe_state = None; // TODO SEQ-528 remove this (disables resume from db)
 
+    // let mut sequencing_config = config.sequencing;
+    // let mut settlement_config = config.settlement;
+
+    // Initialize ETH clients
+    let sequencing_client: Arc<dyn RPCClient> = Arc::new(
+        EthClient::new(&config.sequencing.sequencing_rpc_url)
+            .await
+            .map_err(RuntimeError::RPCClient)?,
+    );
+    let settlement_client: Arc<dyn RPCClient> = Arc::new(
+        EthClient::new(&config.settlement.settlement_rpc_url)
+            .await
+            .map_err(RuntimeError::RPCClient)?,
+    );
+
     // Override start blocks if we're resuming from a database
-    let mut sequencing_config = ingestion_config.sequencing;
-    let mut settlement_config = ingestion_config.settlement;
     if let Some(state) = &safe_state {
-        sequencing_config.sequencing_start_block = state.sequencing_block.number;
-        settlement_config.settlement_start_block = state.settlement_block.number;
+        config.sequencing.sequencing_start_block = state.sequencing_block.number;
+        config.settlement.settlement_start_block = state.settlement_block.number;
+    } else {
+        // Initial timestamp is only needed if we aren't resuming from db
+        config.set_initial_timestamp(&settlement_client, &sequencing_client).await?;
     }
     let safe_block_number = safe_state.as_ref().map(|state| state.slot.number);
 
     // Initialize metrics
     let mut metrics_state = MetricsState { registry };
     let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
-    let metrics_task = start_metrics(metrics_state, metrics_config.metrics_port).await;
+    let metrics_task = start_metrics(metrics_state, config.metrics.metrics_port).await;
 
+    let seq_config: ChainIngestorConfig = (&config.sequencing).into();
+    let set_config: ChainIngestorConfig = (&config.settlement).into();
     // Initialize components
-    let (sequencing_ingestor, sequencing_rx) =
-        Ingestor::new(Chain::Sequencing, sequencing_config.into(), metrics.ingestor_sequencing)
-            .await?;
-    let (settlement_ingestor, settlement_rx) =
-        Ingestor::new(Chain::Settlement, settlement_config.into(), metrics.ingestor_settlement)
-            .await?;
+    let (sequencing_ingestor, sequencing_rx) = Ingestor::new(
+        Chain::Sequencing,
+        sequencing_client,
+        &seq_config,
+        metrics.ingestor_sequencing,
+    )
+    .await?;
+    let (settlement_ingestor, settlement_rx) = Ingestor::new(
+        Chain::Settlement,
+        settlement_client,
+        &set_config,
+        metrics.ingestor_settlement,
+    )
+    .await?;
     let (slotter, slot_rx) = Slotter::new(
         sequencing_rx,
         settlement_rx,
-        slotting_config,
+        &config.slotter,
         safe_state,
         db,
         metrics.slotting,
     );
     let block_builder =
-        BlockBuilder::new(slot_rx, &block_builder_config, metrics.block_builder).await?;
+        BlockBuilder::new(slot_rx, &config.block_builder, metrics.block_builder).await?;
 
     // Start component tasks
     info!("Starting Metabased Translator");
@@ -143,30 +168,24 @@ async fn run(
 fn main() -> Result<(), RuntimeError> {
     init_tracing()?;
 
-    // Parse base config from CLI/env
-    let base_config = MetabasedConfig::parse();
+    // Create and run async runtime
+    let runtime =
+        tokio::runtime::Runtime::new().map_err(|e| RuntimeError::Initialization(e.to_string()))?;
 
-    // init the paths for the db and anvil state
+    // Initialize base config inside the async runtime
+    let mut base_config = MetabasedConfig::initialize();
+
+    // Init the paths for the DB and Anvil state
     let db_path = format!("{}/db", base_config.datadir);
     let anvil_state_path = format!("{}/anvil_state", base_config.datadir);
-    let block_builder_config = BlockBuilderConfig { anvil_state_path, ..base_config.block_builder };
-    // Initiates the metrics registry
+    base_config.block_builder =
+        BlockBuilderConfig { anvil_state_path, ..base_config.block_builder };
+
+    // Initiate the metrics registry
     let registry = Registry::default();
 
-    // Create and run async runtime
-    tokio::runtime::Runtime::new()
-        .map_err(|e| RuntimeError::Initialization(e.to_string()))?
-        .block_on(run(
-            block_builder_config,
-            base_config.slotter,
-            IngestionPipelineConfig {
-                sequencing: base_config.sequencing,
-                settlement: base_config.settlement,
-            },
-            db_path.as_str(),
-            base_config.metrics,
-            registry,
-        ))?;
+    // Run the async process
+    runtime.block_on(run(&mut base_config, db_path.as_str(), registry))?;
 
     Ok(())
 }
@@ -190,47 +209,36 @@ pub enum ConfigError {
 pub enum RuntimeError {
     #[error("Failed to initialize component: {0}")]
     Initialization(String),
+
     #[error("Component shutdown error: {0}")]
     Shutdown(String),
+
     #[error("Task error: {0}")]
     TaskFailure(String),
+
     #[error("Invalid config")]
     InvalidConfig(String),
-}
 
-impl From<TracingError> for RuntimeError {
-    fn from(err: TracingError) -> Self {
-        RuntimeError::Initialization(format!("Tracing initialization failed: {}", err))
-    }
-}
-impl From<block_builder::config::ConfigError> for ConfigError {
-    fn from(err: block_builder::config::ConfigError) -> Self {
-        ConfigError::BlockBuilder(format!("{}", err))
-    }
-}
+    #[error(transparent)]
+    Tracing(#[from] TracingError),
 
-impl From<slotting::config::ConfigError> for ConfigError {
-    fn from(err: slotting::config::ConfigError) -> Self {
-        ConfigError::Slotter(format!("{}", err))
-    }
-}
+    #[error(transparent)]
+    BlockBuilderConfig(#[from] block_builder::config::ConfigError),
 
-impl From<ingestor::config::ConfigError> for ConfigError {
-    fn from(err: ingestor::config::ConfigError) -> Self {
-        ConfigError::Ingestor(format!("{}", err))
-    }
-}
+    #[error(transparent)]
+    SlotterConfig(#[from] slotting::config::ConfigError),
 
-impl From<metrics::config::ConfigError> for ConfigError {
-    fn from(err: metrics::config::ConfigError) -> Self {
-        ConfigError::Metrics(format!("{}", err))
-    }
-}
+    #[error(transparent)]
+    IngestorConfig(#[from] ingestor::config::ConfigError),
 
-impl From<eyre::Report> for RuntimeError {
-    fn from(err: eyre::Report) -> Self {
-        RuntimeError::TaskFailure(err.to_string())
-    }
+    #[error(transparent)]
+    TranslatorConfig(#[from] metabased_translator::config::ConfigError),
+
+    #[error(transparent)]
+    RPCClient(#[from] RPCClientError),
+
+    #[error(transparent)]
+    Other(#[from] eyre::Report),
 }
 
 // Add this function before run()

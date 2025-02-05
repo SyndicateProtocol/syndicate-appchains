@@ -23,7 +23,10 @@ thiserror = {workspace = true}
 prometheus-client = {workspace = true}
 
 [dev-dependencies]
+async-trait = {workspace = true }
+mockall = {workspace = true }
 serial_test = {workspace = true}
+
 
 [[example]]
 name = "generate_run_command"
