@@ -56,8 +56,8 @@ mod tests {
         /// # Example
         /// ```
         /// # #[tokio::main] async fn main() -> Result<(), Box<dyn std::error::Error>> {
-        /// # use interceptor::domain::primitives::Bytes;
-        /// # use interceptor::domain::{InMemoryMetabasedSequencerChain, MetabasedSequencerChainService};
+        /// # use metabased_sequencer::domain::primitives::Bytes;
+        /// # use metabased_sequencer::domain::{InMemoryMetabasedSequencerChain, MetabasedSequencerChainService};
         /// use std::sync::Arc;
         /// use tokio::sync::RwLock;
         ///

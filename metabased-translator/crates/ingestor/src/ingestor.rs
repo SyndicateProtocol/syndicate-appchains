@@ -138,7 +138,7 @@ impl Ingestor {
                             }
                         }
                         Err(err) => {
-                            error!("Failed to fetch block and receipts: {:?}, retrying...", err);
+                            debug!("Failed to fetch block and receipts: {:?}, retrying...", err);
                         }
                     }
                 }

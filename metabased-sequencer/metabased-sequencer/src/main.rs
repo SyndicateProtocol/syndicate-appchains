@@ -1,5 +1,5 @@
 use eyre::Result;
-use interceptor::presentation::cli;
+use metabased_sequencer::presentation::cli;
 
 #[tokio::main]
 async fn main() -> Result<()> {
