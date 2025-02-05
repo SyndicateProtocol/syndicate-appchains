@@ -29,6 +29,7 @@ pub async fn run(
 ) -> eyre::Result<(SocketAddr, ServerHandle)> {
     let rpc_middleware = RpcServiceBuilder::new();
     let http_middleware = tower::ServiceBuilder::new()
+        .layer(ProxyGetRequestLayer::new("/health", "health_check")?)
         .layer(UnescapeJsonLayer::new(|request| {
             request.uri() == METRICS_HTTP && request.method() == Method::GET
         }))
@@ -41,7 +42,8 @@ pub async fn run(
         .await?;
 
     let services = services::create(chain_contract_address, chain_rpc_address, private_key)?;
-    let module = create_eth_module(services)?;
+    let mut module = create_eth_module(services)?;
+    module.register_method("health_check", |_, _, _| serde_json::json!({ "health": true }))?;
 
     let addr = server.local_addr()?;
     let handle = server.start(module);
@@ -65,6 +67,7 @@ where
     let mut module = RpcModule::new(services);
     module.register_async_method("eth_sendRawTransaction", jsonrpc::send_raw_transaction)?;
     module.register_method(METRICS_RPC, jsonrpc::metrics)?;
+    // TODO remove me in favor of existing GET /health
     module.register_method("health", jsonrpc::health)?;
 
     info!("Registered RPC methods: {:#?}", module.method_names().collect::<Vec<_>>());

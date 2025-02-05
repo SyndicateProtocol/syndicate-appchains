@@ -142,6 +142,7 @@ where
     application::metrics(ctx.metrics_service())
 }
 
+// TODO remove me in favor of existing GET /health
 /// The JSON-RPC endpoint for health check.
 #[instrument(level = Level::DEBUG, skip(_ctx))]
 pub fn health<Chain, M, S>(
