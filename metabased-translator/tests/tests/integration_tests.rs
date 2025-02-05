@@ -488,7 +488,7 @@ async fn e2e_settlement_test() -> Result<()> {
 
     // process slots
     tokio::time::sleep(Duration::from_millis(400)).await;
-    // assert_eq!(rollup.get_block_number().await?, 17);
+    assert_eq!(rollup.get_block_number().await?, 17);
     assert_eq!(
         rollup.get_balance(set_provider.default_signer_address()).await?,
         parse_ether("4.6000316")?
@@ -636,7 +636,7 @@ async fn e2e_test() -> Result<()> {
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
         .await?;
     assert_eq!(mchain_block.timestamp, block_builder_cfg.genesis_timestamp);
-    // assert_eq!(mchain_block.transactions.len(), 2);
+    assert_eq!(mchain_block.transactions.len(), 2);
     // check rollup blocks
     assert_eq!(rollup.get_block_number().await?, 2);
     // check the first rollup block
