@@ -6,6 +6,7 @@ import {MetafillerStorage} from "./backfill/MetafillerStorage.sol";
 import {RequireAllModule} from "./requirement-modules/RequireAllModule.sol";
 import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
 import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
+import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
 /// @title MetabasedFactory
 /// @notice Factory contract for creating MetabasedSequencerChain and related contracts
@@ -51,9 +52,8 @@ contract MetabasedFactory {
         zeroValuesNotAllowed(l3ChainId, admin, address(permissionModule))
         returns (address sequencerChain)
     {
-        MetabasedSequencerChain newSequencerChain =
-            new MetabasedSequencerChain(l3ChainId, admin, address(permissionModule));
-
+        MetabasedSequencerChain newSequencerChain = new MetabasedSequencerChain(l3ChainId);
+        newSequencerChain.init(admin, address(permissionModule));
         emit MetabasedSequencerChainCreated(l3ChainId, address(newSequencerChain), address(permissionModule));
 
         return address(newSequencerChain);
@@ -114,5 +114,25 @@ contract MetabasedFactory {
         emit AllContractsCreated(l3ChainId, sequencerChain, metafillerStorage, address(permissionModule));
 
         return (sequencerChain, metafillerStorage, permissionModule);
+    }
+
+    function createSequencerChainCreate2(bytes32 salt, uint256 chainId, address admin, address permissionModule)
+        external
+        returns (address)
+    {
+        bytes memory bytecode = getBytecode(chainId);
+        address deployedAddress = Create2.deploy(0, salt, bytecode);
+
+        MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(deployedAddress);
+        sequencerChain.init(admin, permissionModule);
+        return deployedAddress;
+    }
+
+    function computeSequencerChainAddress(bytes32 salt, uint256 chainId) external view returns (address) {
+        return Create2.computeAddress(salt, keccak256(getBytecode(chainId)));
+    }
+
+    function getBytecode(uint256 chainId) internal pure returns (bytes memory) {
+        return abi.encodePacked(type(MetabasedSequencerChain).creationCode, abi.encode(chainId));
     }
 }

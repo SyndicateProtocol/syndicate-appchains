@@ -53,7 +53,8 @@ contract DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule is Script {
         console.log("Deployed RequireAllModule", address(permissionModule));
 
         // Deploy sequencer with permission module
-        sequencerChain = new MetabasedSequencerChain(l3ChainId, admin, address(permissionModule));
+        sequencerChain = new MetabasedSequencerChain(l3ChainId);
+        sequencerChain.init(admin, address(permissionModule));
         console.log("Deployed MetabasedSequencerChain", address(sequencerChain));
 
         // Deploy and add always allowed module
