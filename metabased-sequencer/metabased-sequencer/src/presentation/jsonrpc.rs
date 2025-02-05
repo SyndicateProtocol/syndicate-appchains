@@ -144,20 +144,20 @@ where
 
 // TODO remove me in favor of existing GET /health
 /// The JSON-RPC endpoint for health check.
-#[instrument(level = Level::DEBUG, skip(_ctx))]
-pub fn health<Chain, M, S>(
-    _params: Params,
-    _ctx: &Services<Chain, M, S>,
-    _ext: &http::Extensions,
-) -> Result<String, JsonRpcError<()>>
-where
-    Chain: MetabasedSequencerChainService + Debug,
-    M: Metrics + Debug,
-    Error: From<<Chain as MetabasedSequencerChainService>::Error>,
-    S: Stopwatch + Debug,
-{
-    Ok("ok".to_string())
-}
+// #[instrument(level = Level::DEBUG, skip(_ctx))]
+// pub fn health<Chain, M, S>(
+//     _params: Params,
+//     _ctx: &Services<Chain, M, S>,
+//     _ext: &http::Extensions,
+// ) -> Result<String, JsonRpcError<()>>
+// where
+//     Chain: MetabasedSequencerChainService + Debug,
+//     M: Metrics + Debug,
+//     Error: From<<Chain as MetabasedSequencerChainService>::Error>,
+//     S: Stopwatch + Debug,
+// {
+//     Ok("ok".to_string())
+// }
 
 #[cfg(test)]
 mod tests {

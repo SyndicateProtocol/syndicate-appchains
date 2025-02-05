@@ -20,6 +20,8 @@ use url::Url;
 
 const METRICS_RPC: &str = "metrics";
 const METRICS_HTTP: &str = "/metrics";
+const HEALTH_RPC: &str = "health";
+const HEALTH_HTTP: &str = "/health";
 
 pub async fn run(
     port: u16,
@@ -29,7 +31,7 @@ pub async fn run(
 ) -> eyre::Result<(SocketAddr, ServerHandle)> {
     let rpc_middleware = RpcServiceBuilder::new();
     let http_middleware = tower::ServiceBuilder::new()
-        .layer(ProxyGetRequestLayer::new("/health", "health_check")?)
+        .layer(ProxyGetRequestLayer::new(HEALTH_HTTP, HEALTH_RPC)?)
         .layer(UnescapeJsonLayer::new(|request| {
             request.uri() == METRICS_HTTP && request.method() == Method::GET
         }))
@@ -42,8 +44,7 @@ pub async fn run(
         .await?;
 
     let services = services::create(chain_contract_address, chain_rpc_address, private_key)?;
-    let mut module = create_eth_module(services)?;
-    module.register_method("health_check", |_, _, _| serde_json::json!({ "health": true }))?;
+    let module = create_eth_module(services)?;
 
     let addr = server.local_addr()?;
     let handle = server.start(module);
@@ -68,7 +69,7 @@ where
     module.register_async_method("eth_sendRawTransaction", jsonrpc::send_raw_transaction)?;
     module.register_method(METRICS_RPC, jsonrpc::metrics)?;
     // TODO remove me in favor of existing GET /health
-    module.register_method("health", jsonrpc::health)?;
+    module.register_method(HEALTH_RPC, |_, _, _| serde_json::json!({ "health": true }))?;
 
     info!("Registered RPC methods: {:#?}", module.method_names().collect::<Vec<_>>());
     Ok(module)
