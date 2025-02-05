@@ -1,4 +1,4 @@
-name: Build and Push Sequencer Docker Image to Github and Google Registries
+name: Build and Push Translator Docker Image to Github and Google Registries
 on:
   push: #TODO fix me to push on main
 #    branches:
@@ -8,7 +8,7 @@ env:
   GOOGLE_REGISTRY: europe-west6-docker.pkg.dev
   PROJECT_ID: metabased-testnet
   REPO_NAME: metabased-rollup
-  SERVICE_NAME: metabased-sequencer
+  SERVICE_NAME: metabased-translator
   WORKLOAD_IDENTITY_PROVIDER: projects/112197761096/locations/global/workloadIdentityPools/cloud-run-github-pool/providers/id-001
 
 jobs:
@@ -30,11 +30,24 @@ jobs:
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Debug Info
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Repository Owner: ${{ github.repository_owner }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Ref: ${{ github.ref }}"
+
       - name: Configure Google Cloud credentials
         uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
           service_account: 'cloud-run-service-account@metabased-testnet.iam.gserviceaccount.com'
+
+      - name: Debug Google Auth
+        run: |
+          gcloud auth list
+          gcloud config get-value project
+          gcloud config get-value account
 
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
@@ -42,6 +55,11 @@ jobs:
       - name: Configure docker auth for GAR
         run: |
           gcloud auth configure-docker ${{ env.GOOGLE_REGISTRY }} --quiet
+
+      - name: Debug Docker Config
+        run: |
+          cat ~/.docker/config.json
+          docker info
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -67,7 +85,7 @@ jobs:
           context: .
           platforms: linux/amd64
           push: true
-          target: metabased-sequencer
+          target: metabased-translator
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
