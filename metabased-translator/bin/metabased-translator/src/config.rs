@@ -39,12 +39,6 @@ pub struct MetabasedConfig {
     pub metrics: MetricsConfig,
 }
 
-impl Default for MetabasedConfig {
-    fn default() -> Self {
-        Self::parse()
-    }
-}
-
 impl MetabasedConfig {
     /// Initializes the configuration, fetching the earliest block timestamp dynamically.
     pub async fn initialize() -> Result<Self, Error> {
@@ -122,7 +116,7 @@ mod tests {
     use mockall::{mock, predicate::*};
     use serial_test::serial;
     use std::{env, time::Duration};
-    use tokio::test;
+    use tokio;
 
     fn clean_env() {
         // Block Builder
@@ -154,7 +148,7 @@ mod tests {
 
     #[test]
     #[serial]
-    async fn test_default_values() {
+    fn test_default_values() {
         clean_env();
         let zero = "0x0000000000000000000000000000000000000000";
         env::set_var("SEQUENCING_RPC_URL", "");
@@ -187,7 +181,7 @@ mod tests {
 
     #[test]
     #[serial]
-    async fn test_env_vars_override_defaults() {
+    fn test_env_vars_override_defaults() {
         clean_env();
         let zero = "0x0000000000000000000000000000000000000000";
         env::set_var("BLOCK_BUILDER_MCHAIN_URL", "http://127.0.0.1:9999/");
@@ -209,7 +203,7 @@ mod tests {
 
     #[test]
     #[serial]
-    async fn test_cli_args_override_env_vars() {
+    fn test_cli_args_override_env_vars() {
         clean_env();
         let zero = "0x0000000000000000000000000000000000000000";
         env::set_var("BLOCK_BUILDER_MCHAIN_URL", "http://127.0.0.1:9999/");
@@ -227,7 +221,7 @@ mod tests {
     }
 
     #[test]
-    async fn test_generate_command() {
+    fn test_generate_command() {
         MetabasedConfig::generate_sample_command();
     }
 
