@@ -1,6 +1,7 @@
 //! Slotting module for metabased-translator
 
 use crate::{config::SlotterConfig, metrics::SlotterMetrics};
+use alloy::primitives::B256;
 use common::{
     db::{DbError, SafeState, TranslatorStore},
     types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotState},
@@ -44,6 +45,10 @@ pub struct Slotter {
 
     latest_sequencing_block: Option<BlockRef>,
     latest_settlement_block: Option<BlockRef>,
+    min_chain_head_timestamp: u64,
+
+    /// Timestamp of the last saved safe slot
+    safe_timestamp: u64,
 
     /// Stores all open and unsafe slots
     slots: LinkedList<Slot>,
@@ -87,8 +92,10 @@ impl Slotter {
     ) -> (Self, Receiver<Slot>) {
         let (slot_tx, slot_rx) = channel(100);
         let mut slots = LinkedList::new();
+        let mut safe_timestamp = 0;
         let (latest_sequencing_block, latest_settlement_block) = match safe_state {
             Some(safe_state) => {
+                safe_timestamp = safe_state.slot.timestamp;
                 slots.push_front(safe_state.slot);
                 (Some(safe_state.sequencing_block), Some(safe_state.settlement_block))
             }
@@ -101,11 +108,13 @@ impl Slotter {
         let slotter = Self {
             latest_sequencing_block,
             latest_settlement_block,
+            safe_timestamp,
             slots,
             slot_duration: config.slot_duration,
             sender: slot_tx,
             store,
             metrics,
+            min_chain_head_timestamp: 0, // TODO calculate from latest_slots
         };
         (slotter, slot_rx)
     }
@@ -173,8 +182,7 @@ impl Slotter {
                                                             // block is skipped
                     }
                     SlotterError::BlockTooOld { .. } => {
-                        panic!("Block too old {e}"); // TODO SEQ-489 - decide what to do if a block
-                                                     // is too old
+                        panic!("Block too old {e}");
                     }
                     SlotterError::NoSlotsAvailable(_) => {
                         panic!("No slots available. This should never happen - if it does, it's an implementation error. {e}");
@@ -185,6 +193,9 @@ impl Slotter {
                     }
                     SlotterError::EarlierTimestamp { .. } => {
                         panic!("Earlier timestamp - this should never happen (where a block is received with the expected block number, but a lower timestamp) {e}");
+                    }
+                    SlotterError::BlockBeforeSafeTimestamp { .. } => {
+                        panic!("Block before safe timestamp - this should never happen (where a block is received with a timestamp before the safe timestamp) {e}");
                     }
                     SlotterError::DbError(_) => {
                         panic!("Database error: {e}"); // TODO SEQ-489 - decide what to do here
@@ -218,46 +229,30 @@ impl Slotter {
     ///
     /// # Errors
     /// - Returns `SlotterError::SlotSendError` if sending a slot through the channel fails
-    async fn mark_unsafe_slots(
-        &mut self,
-        block_timestamp: u64,
-        chain: Chain,
-    ) -> Result<(), SlotterError> {
-        // Get the other chain's latest block timestamp
-        let other_chain_timestamp = match chain {
-            Chain::Sequencing => self.latest_settlement_block.as_ref(),
-            Chain::Settlement => self.latest_sequencing_block.as_ref(),
-        }
-        .map(|b| b.timestamp);
-
-        // Only mark slots as unsafe if we have blocks from both chains
-        if let Some(other_timestamp) = other_chain_timestamp {
-            let min_timestamp = other_timestamp.min(block_timestamp);
-            debug!(min_timestamp, "Marking slots as unsafe");
-
-            // Mark slots as unsafe if both chains have progressed past them.
-            // buffer is used to reverse the list of unsafe slots
-            // so that they are sent from oldest to newest over the channel.
-            let mut buffer = vec![];
-            for slot in &mut self.slots {
-                match slot.state {
-                    SlotState::Unsafe | SlotState::Safe => {
-                        debug!(%slot, "Found non-open slot, stopping iteration");
-                        break; // assume all blocks past this point are already marked as unsafe
-                    }
-                    SlotState::Open => {
-                        if slot.timestamp < min_timestamp {
-                            debug!(%slot, "Marking slot as unsafe");
-                            slot.state = SlotState::Unsafe;
-                            buffer.push(slot.clone());
-                        }
+    async fn mark_unsafe_slots(&mut self) -> Result<(), SlotterError> {
+        debug!(min_timestamp = self.min_chain_head_timestamp, "Marking slots as unsafe");
+        // Mark slots as unsafe if both chains have progressed past them.
+        // buffer is used to reverse the list of unsafe slots
+        // so that they are sent from oldest to newest over the channel.
+        let mut buffer = vec![];
+        for slot in &mut self.slots {
+            match slot.state {
+                SlotState::Unsafe | SlotState::Safe => {
+                    debug!(%slot, "Found non-open slot, stopping iteration");
+                    break; // assume all blocks past this point are already marked as unsafe
+                }
+                SlotState::Open => {
+                    if slot.timestamp < self.min_chain_head_timestamp {
+                        debug!(%slot, "Marking slot as unsafe");
+                        slot.state = SlotState::Unsafe;
+                        buffer.push(slot.clone());
                     }
                 }
             }
-            for slot in buffer.into_iter().rev() {
-                debug!(%slot, "Sending slot");
-                self.sender.send(slot).await?;
-            }
+        }
+        for slot in buffer.into_iter().rev() {
+            debug!(%slot, "Sending slot");
+            self.sender.send(slot).await?;
         }
         Ok(())
     }
@@ -267,8 +262,17 @@ impl Slotter {
         block_info: BlockAndReceipts,
         chain: Chain,
     ) -> Result<(), SlotterError> {
+        if block_info.block.timestamp < self.safe_timestamp {
+            return Err(SlotterError::BlockBeforeSafeTimestamp {
+                chain,
+                safe_timestamp: self.safe_timestamp,
+                block_timestamp: block_info.block.timestamp,
+                block_number: block_info.block.number,
+                block_hash: block_info.block.hash,
+            });
+        }
+
         let block_timestamp = block_info.block.timestamp;
-        let block_number = block_info.block.number;
         self.update_latest_block(&block_info.block, chain)?;
         let latest_slot = self
             .slots
@@ -287,49 +291,9 @@ impl Slotter {
         match block_slot_ordering(block_timestamp, latest_slot.timestamp, self.slot_duration) {
             Ordering::Less => {
                 debug!("Block belongs to an earlier slot");
-                let mut inserted = false;
-
-                let (target_slot_number, target_timestamp) = Self::calculate_slot_position(
-                    latest_slot.number,
-                    latest_slot.timestamp,
-                    block_timestamp,
-                    self.slot_duration,
-                )?;
-
-                // Find the right position to insert the new slot
-                for (idx, slot) in self.slots.iter_mut().enumerate() {
-                    match block_slot_ordering(block_timestamp, slot.timestamp, self.slot_duration) {
-                        Ordering::Equal => {
-                            debug!(%slot, "Found matching slot, adding block");
-                            slot.push_block(block_info, chain);
-                            inserted = true;
-                            break;
-                        }
-                        Ordering::Less => {
-                            // Keep looking for the right slot
-                        }
-                        Ordering::Greater => {
-                            // We've gone too far, insert new slot before this one
-                            let mut new_slot = Slot::new(target_slot_number, target_timestamp);
-                            debug!(%new_slot, "Creating new slot between existing slots");
-                            new_slot.push_block(block_info, chain);
-
-                            // Split list at idx, insert new slot, then reattach tail
-                            let mut tail = self.slots.split_off(idx);
-                            self.slots.push_back(new_slot);
-                            self.slots.append(&mut tail);
-
-                            inserted = true;
-                            break;
-                        }
-                    }
-                }
-
-                if !inserted {
-                    // TODO remove this error - this shouldn't happen anymore... just create the
-                    // slot at the end of the list...
-                    return Err(SlotterError::BlockTooOld { chain, block_number, block_timestamp });
-                }
+                let latest_num = latest_slot.number;
+                let latest_ts = latest_slot.timestamp;
+                self.insert_block_into_previous_slot(block_info, chain, latest_num, latest_ts)?;
             }
             Ordering::Equal => {
                 debug!("Block fits in current slot");
@@ -353,34 +317,81 @@ impl Slotter {
             }
         }
         self.metrics.update_active_slots(self.slots.len());
-        self.mark_unsafe_slots(block_timestamp, chain).await?;
+        if self.min_chain_head_timestamp == 0 {
+            debug!(
+                "No blocks seen for both chains yet, skipping cleanup and marking slots as unsafe"
+            );
+            return Ok(());
+        }
+        self.mark_unsafe_slots().await?;
         self.cleanup_slots().await?;
         Ok(())
+    }
+
+    fn insert_block_into_previous_slot(
+        &mut self,
+        block_info: BlockAndReceipts,
+        chain: Chain,
+        latest_slot_number: u64,
+        latest_slot_timestamp: u64,
+    ) -> Result<(), SlotterError> {
+        let (target_slot_number, target_timestamp) = Self::calculate_slot_position(
+            latest_slot_number,
+            latest_slot_timestamp,
+            block_info.block.timestamp,
+            self.slot_duration,
+        )?;
+
+        // Find the right position to insert the new slot
+        for (idx, slot) in self.slots.iter_mut().enumerate() {
+            match block_slot_ordering(
+                block_info.block.timestamp,
+                slot.timestamp,
+                self.slot_duration,
+            ) {
+                Ordering::Equal => {
+                    debug!(%slot, "Found matching slot, adding block");
+                    slot.push_block(block_info, chain);
+                    return Ok(());
+                }
+                Ordering::Less => {
+                    // Keep looking for the right slot
+                }
+                Ordering::Greater => {
+                    // We've gone too far, insert new slot before this one
+                    let mut new_slot = Slot::new(target_slot_number, target_timestamp);
+                    debug!(%new_slot, "Creating new slot between existing slots");
+                    new_slot.push_block(block_info, chain);
+
+                    // Split list at idx, insert new slot, then reattach tail
+                    let mut tail = self.slots.split_off(idx);
+                    self.slots.push_back(new_slot);
+                    self.slots.append(&mut tail);
+
+                    return Ok(());
+                }
+            }
+        }
+
+        // with the current logic, this should never happen. Since we always keep the ealiest known
+        // unsafe block for each chain, getting here would require a souce chain to send a
+        // timstamp in the past, which would be caught elsewhere
+        Err(SlotterError::BlockTooOld {
+            chain,
+            block_number: block_info.block.number,
+            block_timestamp: block_info.block.timestamp,
+        })
     }
 
     /// `cleanup_slots` will mark slots as safe if both chains have progressed `MAX_WAIT` seconds
     /// past them and we have seen blocks from both chains after that point.
     async fn cleanup_slots(&mut self) -> Result<(), SlotterError> {
         debug!("Checking for slots to mark as safe");
-
-        // Get latest blocks from both chains
-        let (seq_block, set_block) =
-            match (&self.latest_sequencing_block, &self.latest_settlement_block) {
-                (Some(seq), Some(set)) => (seq, set),
-                _ => {
-                    debug!("No blocks seen for both chains yet, skipping cleanup");
-                    return Ok(());
-                }
-            };
-
-        // Get the minimum timestamp between the latest blocks from both chains
-        let min_chain_head_timestamp = seq_block.timestamp.min(set_block.timestamp);
-
         // Check slots from oldest to newest (back to front)
         while let Some(slot) = self.slots.back() {
             // Has 24h passed since this slot's timestamp?
             // If we can't mark this slot as safe, we can't mark newer ones either
-            if slot.timestamp + MAX_WAIT_SEC > min_chain_head_timestamp ||
+            if slot.timestamp + MAX_WAIT_SEC > self.min_chain_head_timestamp ||
                 slot.state == SlotState::Open
             {
                 break;
@@ -395,6 +406,7 @@ impl Slotter {
 
             debug!(%slot, "Saving safe slot to DB");
             slot.state = SlotState::Safe;
+            self.safe_timestamp = slot.timestamp;
             self.store.save_slot(&slot).await?;
         }
 
@@ -444,6 +456,14 @@ impl Slotter {
             Chain::Sequencing => self.latest_sequencing_block = Some(BlockRef::new(block)),
             Chain::Settlement => self.latest_settlement_block = Some(BlockRef::new(block)),
         }
+
+        // Update min_chain_head_timestamp if we have blocks from both chains
+        if let (Some(seq), Some(set)) =
+            (&self.latest_sequencing_block, &self.latest_settlement_block)
+        {
+            self.min_chain_head_timestamp = seq.timestamp.min(set.timestamp);
+        }
+
         self.metrics.record_last_processed_block(block.number, chain);
         self.metrics.update_chain_timestamp_lag(block.timestamp, chain);
         Ok(())
@@ -536,7 +556,7 @@ pub enum SlotterError {
     #[error("Failed to send slot through channel: {0}")]
     SlotSendError(#[from] SendError<Slot>),
 
-    #[error("Block timestamp {block_timestamp}, number {block_number} for {chain} chain is in the past ")]
+    #[error("Block timestamp {block_timestamp}, number {block_number} for {chain} chain is in the past - this should never happen")]
     BlockTooOld { chain: Chain, block_number: u64, block_timestamp: u64 },
 
     #[error("{chain} chain reorg detected. Current: #{current_block_number}, Received: #{received_block_number}")]
@@ -547,6 +567,15 @@ pub enum SlotterError {
 
     #[error("{chain} chain timestamp must not decrease. Current: {current}, Received: {received}")]
     EarlierTimestamp { chain: Chain, current: u64, received: u64 },
+
+    #[error("Block timestamp is before the safe timestamp. Safe timestamp: {safe_timestamp}, Block timestamp: {block_timestamp}, Block number: {block_number}, Block hash: {block_hash}")]
+    BlockBeforeSafeTimestamp {
+        chain: Chain,
+        safe_timestamp: u64,
+        block_timestamp: u64,
+        block_number: u64,
+        block_hash: B256,
+    },
 
     #[error("Database error: {0}")]
     DbError(#[from] DbError),
@@ -564,7 +593,7 @@ mod tests {
     use alloy::primitives::B256;
     use assert_matches::assert_matches;
     use prometheus_client::registry::Registry;
-    use std::str::FromStr;
+    use std::{str::FromStr, time::Duration};
     use tracing_test::traced_test;
 
     struct MetricsState {
@@ -927,6 +956,11 @@ mod tests {
 
         // Slot ts=12
         sequencing_tx.send(create_test_block(2, 12)).await.unwrap();
+
+        // NOTE: this is necessary to ensure that the slotter has time to process the previous
+        // blocks, otherwise the biased select will ensure the slots will be processed in order of
+        // timstamp (and that won't trigger the code in `insert_block_into_previous_slot`)
+        tokio::time::sleep(Duration::from_millis(20)).await;
 
         // Now send a settlement block that should create a new slot between the previous slots -
         // ts=11
