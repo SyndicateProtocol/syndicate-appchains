@@ -59,7 +59,8 @@ jobs:
           tags: |
             type=sha,format=long
             type=semver,pattern={{version}}
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=true
+# TODO change me back to enable={{is_default_branch}}
 
       - name: Build and push
         uses: docker/build-push-action@v6

@@ -1,0 +1,19 @@
+steps:
+  # Deploy container image to Cloud Run
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: "deploy-sequencer"
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "metabased-sequencer"  # service name
+      - "--image"
+      - "europe-west6-docker.pkg.dev/metabased-testnet/cloud-run-source-deploy/metabased-rollup/metabased-sequencer:latest"
+      - "--region"
+      - "europe-west6"
+
+images:
+  - "europe-west6-docker.pkg.dev/metabased-testnet/cloud-run-source-deploy/metabased-rollup/metabased-sequencer"
+
+options:
+  logging: CLOUD_LOGGING_ONLY
