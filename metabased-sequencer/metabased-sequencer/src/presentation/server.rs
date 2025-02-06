@@ -39,7 +39,7 @@ pub async fn run(
     let server = Server::builder()
         .set_http_middleware(http_middleware)
         .set_rpc_middleware(rpc_middleware)
-        .build(format!("127.0.0.1:{port}"))
+        .build(format!("0.0.0.0:{port}"))
         .await?;
 
     let services = services::create(chain_contract_address, chain_rpc_address, private_key)?;
@@ -47,6 +47,7 @@ pub async fn run(
 
     let addr = server.local_addr()?;
     let handle = server.start(module);
+    info!("Server started at: {}", addr);
 
     Ok((addr, handle))
 }

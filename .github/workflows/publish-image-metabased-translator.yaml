@@ -1,57 +1,18 @@
-name: Docker Publish Metabased-Translator
-
+name: Build + Push Translator Image to Github and Google Registries
 on:
   push:
     branches:
       - main
 
-
-env:
-  REGISTRY: ghcr.io
-  METABASED_TRANSLATOR_IMAGE_NAME: ${{ github.repository }}/metabased-translator
+permissions:
+  contents: read
+  id-token: write
+  packages: write
 
 jobs:
-  publish-image-metabased-translator:
-    name: Metabased Translator image publish
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata for metabased-translator
-        id: mb-translator
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.METABASED_TRANSLATOR_IMAGE_NAME }}
-          tags: |
-            type=sha,format=long
-            type=semver,pattern={{version}}
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build and push metabased-translator Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile
-          target: metabased-translator
-          push: true
-          # removed linux/arm64 part, took > 30min on Github Actions
-          platforms: linux/amd64
-          tags: ${{ steps.mb-translator.outputs.tags }}
-          labels: ${{ steps.mb-translator.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+  build-and-push:
+    uses: ./.github/workflows/docker-build-core.yaml
+    with:
+      do_push: true
+      target_name: metabased-translator
+    secrets: inherit
