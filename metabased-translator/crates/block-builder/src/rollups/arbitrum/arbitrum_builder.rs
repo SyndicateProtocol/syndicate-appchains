@@ -240,10 +240,9 @@ impl ArbitrumBlockBuilder {
         let message_index = U256::from_be_slice(log.topics[1].as_slice()); // First indexed field is message index
         let kind = msg_delivered.1; // Second non-indexed field is kind
         if kind == L1MessageType::Initialize as u8 {
-            return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(
-                L1MessageType::Initialize,
-            )
-            .into());
+            return Err(
+                ArbitrumBlockBuilderError::DelayedMessageIgnored(L1MessageType::Initialize).into()
+            );
         }
         if kind == L1MessageType::BatchPostingReport as u8 {
             return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(
@@ -251,10 +250,10 @@ impl ArbitrumBlockBuilder {
             )
             .into());
         }
-        if kind != L1MessageType::L2Message as u8
-            && kind != L1MessageType::L2FundedByL1 as u8
-            && kind != L1MessageType::SubmitRetryable as u8
-            && kind != L1MessageType::EthDeposit as u8
+        if kind != L1MessageType::L2Message as u8 &&
+            kind != L1MessageType::L2FundedByL1 as u8 &&
+            kind != L1MessageType::SubmitRetryable as u8 &&
+            kind != L1MessageType::EthDeposit as u8
         {
             panic!("unexpected message kind={}", kind);
         }
@@ -263,9 +262,7 @@ impl ArbitrumBlockBuilder {
         let data = match message_data.get(&message_index) {
             Some(data) => data,
             None => {
-                return Err(
-                    ArbitrumBlockBuilderError::MissingInboxMessageData(message_index).into()
-                );
+                return Err(ArbitrumBlockBuilderError::MissingInboxMessageData(message_index).into());
             }
         };
 
