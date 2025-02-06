@@ -44,22 +44,22 @@ pub mod MockIsAllowedFalse {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080604052348015600e575f80fd5b5060af80601a5f395ff3fe6080604052348015600e575f80fd5b50600436106026575f3560e01c8063babcc53914602a575b5f80fd5b603a6035366004604e565b505f90565b604051901515815260200160405180910390f35b5f60208284031215605d575f80fd5b81356001600160a01b03811681146072575f80fd5b939250505056fea2646970667358221220522ab7ab6ed8b526948d80533275dc2bf7ceee7944a0d53558c3f90edb167c5864736f6c63430008190033
+    ///0x6080604052348015600e575f80fd5b506101558061001c5f395ff3fe608060405234801561000f575f80fd5b5060043610610029575f3560e01c8063babcc5391461002d575b5f80fd5b610047600480360381019061004291906100c1565b61005d565b6040516100549190610106565b60405180910390f35b5f919050565b5f80fd5b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f61009082610067565b9050919050565b6100a081610086565b81146100aa575f80fd5b50565b5f813590506100bb81610097565b92915050565b5f602082840312156100d6576100d5610063565b5b5f6100e3848285016100ad565b91505092915050565b5f8115159050919050565b610100816100ec565b82525050565b5f6020820190506101195f8301846100f7565b9291505056fea2646970667358221220be37aac580084764b977f9a12b04cc00d5c318e36b103df7d5f322d47245c4d864736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4\x80\x15`\x0EW_\x80\xFD[P`\xAF\x80`\x1A_9_\xF3\xFE`\x80`@R4\x80\x15`\x0EW_\x80\xFD[P`\x046\x10`&W_5`\xE0\x1C\x80c\xBA\xBC\xC59\x14`*W[_\x80\xFD[`:`56`\x04`NV[P_\x90V[`@Q\x90\x15\x15\x81R` \x01`@Q\x80\x91\x03\x90\xF3[_` \x82\x84\x03\x12\x15`]W_\x80\xFD[\x815`\x01`\x01`\xA0\x1B\x03\x81\x16\x81\x14`rW_\x80\xFD[\x93\x92PPPV\xFE\xA2dipfsX\"\x12 R*\xB7\xABn\xD8\xB5&\x94\x8D\x80S2u\xDC+\xF7\xCE\xEEyD\xA0\xD55X\xC3\xF9\x0E\xDB\x16|XdsolcC\0\x08\x19\x003",
+        b"`\x80`@R4\x80\x15`\x0EW_\x80\xFD[Pa\x01U\x80a\0\x1C_9_\xF3\xFE`\x80`@R4\x80\x15a\0\x0FW_\x80\xFD[P`\x046\x10a\0)W_5`\xE0\x1C\x80c\xBA\xBC\xC59\x14a\0-W[_\x80\xFD[a\0G`\x04\x806\x03\x81\x01\x90a\0B\x91\x90a\0\xC1V[a\0]V[`@Qa\0T\x91\x90a\x01\x06V[`@Q\x80\x91\x03\x90\xF3[_\x91\x90PV[_\x80\xFD[_s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x90P\x91\x90PV[_a\0\x90\x82a\0gV[\x90P\x91\x90PV[a\0\xA0\x81a\0\x86V[\x81\x14a\0\xAAW_\x80\xFD[PV[_\x815\x90Pa\0\xBB\x81a\0\x97V[\x92\x91PPV[_` \x82\x84\x03\x12\x15a\0\xD6Wa\0\xD5a\0cV[[_a\0\xE3\x84\x82\x85\x01a\0\xADV[\x91PP\x92\x91PPV[_\x81\x15\x15\x90P\x91\x90PV[a\x01\0\x81a\0\xECV[\x82RPPV[_` \x82\x01\x90Pa\x01\x19_\x83\x01\x84a\0\xF7V[\x92\x91PPV\xFE\xA2dipfsX\"\x12 \xBE7\xAA\xC5\x80\x08Gd\xB9w\xF9\xA1+\x04\xCC\0\xD5\xC3\x18\xE3k\x10=\xF7\xD5\xF3\"\xD4rE\xC4\xD8dsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x6080604052348015600e575f80fd5b50600436106026575f3560e01c8063babcc53914602a575b5f80fd5b603a6035366004604e565b505f90565b604051901515815260200160405180910390f35b5f60208284031215605d575f80fd5b81356001600160a01b03811681146072575f80fd5b939250505056fea2646970667358221220522ab7ab6ed8b526948d80533275dc2bf7ceee7944a0d53558c3f90edb167c5864736f6c63430008190033
+    ///0x608060405234801561000f575f80fd5b5060043610610029575f3560e01c8063babcc5391461002d575b5f80fd5b610047600480360381019061004291906100c1565b61005d565b6040516100549190610106565b60405180910390f35b5f919050565b5f80fd5b5f73ffffffffffffffffffffffffffffffffffffffff82169050919050565b5f61009082610067565b9050919050565b6100a081610086565b81146100aa575f80fd5b50565b5f813590506100bb81610097565b92915050565b5f602082840312156100d6576100d5610063565b5b5f6100e3848285016100ad565b91505092915050565b5f8115159050919050565b610100816100ec565b82525050565b5f6020820190506101195f8301846100f7565b9291505056fea2646970667358221220be37aac580084764b977f9a12b04cc00d5c318e36b103df7d5f322d47245c4d864736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4\x80\x15`\x0EW_\x80\xFD[P`\x046\x10`&W_5`\xE0\x1C\x80c\xBA\xBC\xC59\x14`*W[_\x80\xFD[`:`56`\x04`NV[P_\x90V[`@Q\x90\x15\x15\x81R` \x01`@Q\x80\x91\x03\x90\xF3[_` \x82\x84\x03\x12\x15`]W_\x80\xFD[\x815`\x01`\x01`\xA0\x1B\x03\x81\x16\x81\x14`rW_\x80\xFD[\x93\x92PPPV\xFE\xA2dipfsX\"\x12 R*\xB7\xABn\xD8\xB5&\x94\x8D\x80S2u\xDC+\xF7\xCE\xEEyD\xA0\xD55X\xC3\xF9\x0E\xDB\x16|XdsolcC\0\x08\x19\x003",
+        b"`\x80`@R4\x80\x15a\0\x0FW_\x80\xFD[P`\x046\x10a\0)W_5`\xE0\x1C\x80c\xBA\xBC\xC59\x14a\0-W[_\x80\xFD[a\0G`\x04\x806\x03\x81\x01\x90a\0B\x91\x90a\0\xC1V[a\0]V[`@Qa\0T\x91\x90a\x01\x06V[`@Q\x80\x91\x03\x90\xF3[_\x91\x90PV[_\x80\xFD[_s\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x16\x90P\x91\x90PV[_a\0\x90\x82a\0gV[\x90P\x91\x90PV[a\0\xA0\x81a\0\x86V[\x81\x14a\0\xAAW_\x80\xFD[PV[_\x815\x90Pa\0\xBB\x81a\0\x97V[\x92\x91PPV[_` \x82\x84\x03\x12\x15a\0\xD6Wa\0\xD5a\0cV[[_a\0\xE3\x84\x82\x85\x01a\0\xADV[\x91PP\x92\x91PPV[_\x81\x15\x15\x90P\x91\x90PV[a\x01\0\x81a\0\xECV[\x82RPPV[_` \x82\x01\x90Pa\x01\x19_\x83\x01\x84a\0\xF7V[\x92\x91PPV\xFE\xA2dipfsX\"\x12 \xBE7\xAA\xC5\x80\x08Gd\xB9w\xF9\xA1+\x04\xCC\0\xD5\xC3\x18\xE3k\x10=\xF7\xD5\xF3\"\xD4rE\xC4\xD8dsolcC\0\x08\x19\x003",
     );
     /**Function with signature `isAllowed(address)` and selector `0xbabcc539`.
 ```solidity
@@ -68,12 +68,14 @@ function isAllowed(address) external pure returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAllowedCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAllowedReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -187,6 +189,7 @@ function isAllowed(address) external pure returns (bool);
     };
     ///Container for all the [`MockIsAllowedFalse`](self) function calls.
     pub enum MockIsAllowedFalseCalls {
+        #[allow(missing_docs)]
         isAllowed(isAllowedCall),
     }
     #[automatically_derived]
