@@ -1,4 +1,4 @@
-# Deploys an image to Cloud Run that already exists as part of a previous step.
+# Deploys an image to Cloud Run that already exists as part of a separate workflow
 steps:
   # Deploy container image to Cloud Run
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
@@ -7,7 +7,7 @@ steps:
     args:
       - "run"
       - "deploy"
-      - "metabased-sequencer"  # service name
+      - "metabased-sequencer-internal"  # Cloud Run service name
       - "--image"
       - "europe-west6-docker.pkg.dev/metabased-testnet/cloud-run-source-deploy/metabased-rollup/metabased-sequencer:latest"
       - "--region"

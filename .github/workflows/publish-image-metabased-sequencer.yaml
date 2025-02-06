@@ -1,8 +1,9 @@
 name: Build & Push Sequencer Image + Trigger Cloud Run Deployment
 on:
   push:
-    branches:
-      - main
+#    TODO
+#    branches:
+#      - main
 
 permissions:
   contents: read
