@@ -1,12 +1,12 @@
 name: Build Sequencer Image to Github and Google Registries - Dry run Check
 
 on:
-  push:
-#  pull_request:
-#    branches: [ main ]
-#    paths:
-#      - "metabased-sequencer/**"
-#      - "Dockerfile"
+  pull_request:
+    branches: [ main ]
+    paths:
+      - "metabased-sequencer/**"
+      - "Dockerfile"
+      - ".github/workflows/**"
 
 permissions:
   contents: read

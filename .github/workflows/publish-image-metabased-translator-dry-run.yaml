@@ -7,6 +7,7 @@ on:
       - "metabased-translator/**"
       - "Dockerfile"
       - "**/Cargo.toml"
+      - ".github/workflows/**"
 
 permissions:
   contents: read
