@@ -145,10 +145,10 @@ impl Slotter {
             let process_result = select! {
                 biased;
                 Some(block) = first_rx.recv() => {
-                    self.process_block(block, first_chain, self.slot_duration).await
+                    self.process_block(block, first_chain).await
                 }
                 Some(block) = second_rx.recv() => {
-                    self.process_block(block, second_chain, self.slot_duration).await
+                    self.process_block(block, second_chain).await
                 }
                 _ = &mut shutdown_rx => {
                     info!("Slotter stopped: {}", self);
@@ -266,7 +266,6 @@ impl Slotter {
         &mut self,
         block_info: BlockAndReceipts,
         chain: Chain,
-        slot_duration_ms: u64,
     ) -> Result<(), SlotterError> {
         let block_timestamp = block_info.block.timestamp;
         let block_number = block_info.block.number;
@@ -285,7 +284,7 @@ impl Slotter {
             "Processing block"
         );
 
-        match block_slot_ordering(block_timestamp, latest_slot.timestamp, slot_duration_ms) {
+        match block_slot_ordering(block_timestamp, latest_slot.timestamp, self.slot_duration) {
             Ordering::Less => {
                 debug!("Block belongs to an earlier slot");
                 let mut inserted = false;
@@ -294,12 +293,12 @@ impl Slotter {
                     latest_slot.number,
                     latest_slot.timestamp,
                     block_timestamp,
-                    slot_duration_ms,
+                    self.slot_duration,
                 )?;
 
                 // Find the right position to insert the new slot
                 for (idx, slot) in self.slots.iter_mut().enumerate() {
-                    match block_slot_ordering(block_timestamp, slot.timestamp, slot_duration_ms) {
+                    match block_slot_ordering(block_timestamp, slot.timestamp, self.slot_duration) {
                         Ordering::Equal => {
                             debug!(%slot, "Found matching slot, adding block");
                             slot.push_block(block_info, chain);
@@ -343,7 +342,7 @@ impl Slotter {
                     latest_slot.number,
                     latest_slot.timestamp,
                     block_timestamp,
-                    slot_duration_ms,
+                    self.slot_duration,
                 )?;
 
                 let mut slot = Slot::new(target_slot_number, target_timestamp);
