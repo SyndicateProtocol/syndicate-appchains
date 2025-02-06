@@ -20,8 +20,8 @@ abstract contract SequencingModuleChecker is Ownable, PermissionModule, Initiali
     // [Olympix Warning: no parameter validation in constructor] Admin validation handled by OpenZeppelin's Ownable
     constructor() Ownable(msg.sender) {}
 
-    /// @notice Initializes the contract by a requirement module and new admin
-    /// @param admin The address of the admin
+    /// @notice Initializes the contract with a new admin and a requirement module
+    /// @param admin The address of the new admin
     /// @param _requirementModule The address of the requirement module
     function initialize(address admin, address _requirementModule) external initializer onlyOwner {
         if (_requirementModule == address(0)) revert InvalidModuleAddress();
