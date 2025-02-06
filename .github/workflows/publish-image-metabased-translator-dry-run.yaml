@@ -15,5 +15,5 @@ jobs:
     uses: ./.github/workflows/docker-build-core.yaml
     with:
       do_push: false
-      service_name: metabased-translator
+      target_name: metabased-translator
     secrets: inherit

@@ -10,7 +10,7 @@ jobs:
     uses: ./.github/workflows/docker-build-core.yaml
     with:
       do_push: true
-      service_name: metabased-sequencer
+      target_name: metabased-sequencer
     secrets: inherit
 
   # Trigger Cloud Run here to prevent race condition

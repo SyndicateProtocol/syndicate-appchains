@@ -14,5 +14,5 @@ jobs:
     uses: ./.github/workflows/docker-build-core.yaml
     with:
       do_push: false
-      service_name: metabased-sequencer
+      target_name: metabased-sequencer
     secrets: inherit
