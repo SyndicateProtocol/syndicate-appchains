@@ -1,9 +1,8 @@
 name: Build + Push Translator Image to Github and Google Registries
 on:
   push:
-#    TODO
-#    branches:
-#      - main
+    branches:
+      - main
 
 permissions:
   contents: read

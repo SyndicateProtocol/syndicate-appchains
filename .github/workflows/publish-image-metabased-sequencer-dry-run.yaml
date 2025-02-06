@@ -2,7 +2,6 @@ name: Build Sequencer Image to Github and Google Registries - Dry run Check
 
 on:
   push:
-#    TODO
 #  pull_request:
 #    branches: [ main ]
 #    paths:
@@ -15,7 +14,7 @@ permissions:
   packages: write
 
 jobs:
-  build-and-push:
+  build-no-push:
     uses: ./.github/workflows/docker-build-core.yaml
     with:
       do_push: false

@@ -1,14 +1,12 @@
 name: Build Translator Image to Github and Google Registries - Dry run Check
 
 on:
-  push:
-#    TODO
-#  pull_request:
-#    branches: [main]
-#    paths:
-#      - "metabased-translator/**"
-#      - "Dockerfile"
-#      - "**/Cargo.toml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "metabased-translator/**"
+      - "Dockerfile"
+      - "**/Cargo.toml"
 
 permissions:
   contents: read
@@ -16,7 +14,7 @@ permissions:
   packages: write
 
 jobs:
-  build-and-push:
+  build-no-push:
     uses: ./.github/workflows/docker-build-core.yaml
     with:
       do_push: false

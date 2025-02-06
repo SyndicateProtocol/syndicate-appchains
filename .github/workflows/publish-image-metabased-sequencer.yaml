@@ -1,7 +1,6 @@
 name: Build & Push Sequencer Image + Trigger Cloud Run Deployment
 on:
   push:
-#    TODO
 #    branches:
 #      - main
 
