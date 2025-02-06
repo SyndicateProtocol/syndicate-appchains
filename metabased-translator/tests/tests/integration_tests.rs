@@ -7,7 +7,7 @@ use alloy::{
     node_bindings::{Anvil, AnvilInstance},
     primitives::{address, utils::parse_ether, Address, U256},
     providers::{ext::AnvilApi as _, Provider, ProviderBuilder, RootProvider, WalletProvider},
-    rpc::types::TransactionRequest,
+    rpc::types::{BlockTransactionsKind, TransactionRequest},
     signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
     transports::http::Http,
 };
@@ -502,12 +502,13 @@ async fn e2e_settlement_test() -> Result<()> {
 /// sequence a mchain block that does not include a batch.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_test() -> Result<()> {
-    init_test_tracing("info")?;
+    init_test_tracing("debug")?;
     let block_builder_cfg = BlockBuilderConfig {
         bridge_address: get_rollup_contract_address(),
         inbox_address: get_rollup_contract_address(),
         mchain_url: "http://127.0.0.1:8288".parse()?,
         sequencing_contract_address: get_rollup_contract_address(),
+        genesis_timestamp: GENESIS_TIMESTAMP,
         ..Default::default()
     };
 
@@ -574,8 +575,21 @@ async fn e2e_test() -> Result<()> {
         settlement_ingestor.start_polling(dummy).await.unwrap();
     }));
 
+    // start the slotting at the earliest block that will be ingested (as it's done in the actual
+    // metabased-translator binary)
+    let ingestion_start_block = ingestor_config.settlement.settlement_start_block;
+    let ingestion_start_ts = set_provider
+        .get_block_by_number(
+            BlockNumberOrTag::Number(ingestion_start_block),
+            BlockTransactionsKind::Hashes,
+        )
+        .await?
+        .unwrap()
+        .header
+        .timestamp;
+
     let slotter_cfg =
-        SlotterConfig { start_slot_timestamp: GENESIS_TIMESTAMP, ..Default::default() };
+        SlotterConfig { start_slot_timestamp: ingestion_start_ts, ..Default::default() };
 
     let slot_duration = slotter_cfg.slot_duration;
     // Launch the slotter, block builder, and nitro rollup
@@ -636,7 +650,7 @@ async fn e2e_test() -> Result<()> {
     let mchain_block: Block = mchain
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
         .await?;
-    // assert_eq!(mchain_block.timestamp, block_builder_cfg.genesis_timestamp); // why this assert?
+    assert_eq!(mchain_block.timestamp, block_builder_cfg.genesis_timestamp);
     assert_eq!(mchain_block.transactions.len(), 2);
     // check rollup blocks
     assert_eq!(rollup.get_block_number().await?, 2);
@@ -699,8 +713,6 @@ async fn e2e_test() -> Result<()> {
 
 const GENESIS_TIMESTAMP: u64 = 1736824187;
 
-// a dummy block before the genesis of the rollup is included to make sure the slotter can handle
-// this case and ignore the block.
 async fn start_anvil(port: u16, chain_id: u64) -> Result<(AnvilInstance, FilledProvider)> {
     let timestamp = GENESIS_TIMESTAMP.to_string();
     let args = vec![
@@ -719,8 +731,6 @@ async fn start_anvil(port: u16, chain_id: u64) -> Result<(AnvilInstance, FilledP
         .with_recommended_fillers()
         .wallet(EthereumWallet::from(get_default_private_key_signer()))
         .on_http(anvil.endpoint_url());
-    mine_block(&provider, 50000).await?;
-    mine_block(&provider, 50000).await?;
     provider.anvil_set_block_timestamp_interval(0).await?;
     Ok((anvil, provider))
 }

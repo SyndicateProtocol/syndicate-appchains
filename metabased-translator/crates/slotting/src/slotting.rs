@@ -249,10 +249,7 @@ impl Slotter {
                         if slot.timestamp < min_timestamp {
                             debug!(%slot, "Marking slot as unsafe");
                             slot.state = SlotState::Unsafe;
-                            if !slot.is_empty() {
-                                // skip the inital slot that might be empty
-                                buffer.push(slot.clone());
-                            }
+                            buffer.push(slot.clone());
                         }
                     }
                 }
