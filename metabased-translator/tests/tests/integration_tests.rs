@@ -271,7 +271,7 @@ async fn launch_nitro_node(
 /// are sequenced via the metabased translator and show up on the rollup.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_settlement_test() -> Result<()> {
-    init_test_tracing(Level::INFO);
+    let _ = init_test_tracing(Level::INFO);
     let block_builder_cfg = BlockBuilderConfig {
         bridge_address: address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2"),
         inbox_address: address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899"),
@@ -333,8 +333,10 @@ async fn e2e_settlement_test() -> Result<()> {
     }));
 
     // start slotter at the genesis timestamp
-    let slotter_cfg =
-        SlotterConfig { start_slot_timestamp: GENESIS_TIMESTAMP, ..Default::default() };
+    let slotter_cfg = SlotterConfig {
+        start_slot_timestamp: GENESIS_TIMESTAMP,
+        slot_duration: 100_000, // to reduce the number of empty slots
+    };
 
     // Launch the slotter, block builder, and nitro rollup
     let (slotter, slotter_rx) = Slotter::new(
@@ -479,23 +481,29 @@ async fn e2e_settlement_test() -> Result<()> {
     mine_block(&set_provider, 0).await?;
 
     // mine blocks with timestamp high enough to mark the slot as unsafe
+    let ts = set_provider
+        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap()
+        .header
+        .timestamp;
+
     set_provider
         .evm_mine(Some(Options {
-            timestamp: Some(GENESIS_TIMESTAMP + 1_000_000_000),
+            timestamp: Some(ts + slotter_cfg.slot_duration + 1),
             blocks: None,
         }))
         .await?;
-    let _seq_chain = MetabasedSequencerChain::new(get_rollup_contract_address(), &seq_provider);
-
     seq_provider
         .evm_mine(Some(Options {
-            timestamp: Some(GENESIS_TIMESTAMP + 1_000_000_000),
+            timestamp: Some(ts + slotter_cfg.slot_duration + 1),
             blocks: None,
         }))
         .await?;
 
     // process slots
     tokio::time::sleep(Duration::from_millis(400)).await;
+
     assert_eq!(rollup.get_block_number().await?, 17);
     assert_eq!(
         rollup.get_balance(set_provider.default_signer_address()).await?,
@@ -510,7 +518,7 @@ async fn e2e_settlement_test() -> Result<()> {
 /// sequence a mchain block that does not include a batch.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_test() -> Result<()> {
-    init_test_tracing(Level::INFO);
+    let _ = init_test_tracing(Level::INFO);
     let block_builder_cfg = BlockBuilderConfig {
         bridge_address: get_rollup_contract_address(),
         inbox_address: get_rollup_contract_address(),
