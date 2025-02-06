@@ -4,6 +4,7 @@ on:
     branches:
       - main
 
+
 permissions:
   contents: read
   id-token: write
@@ -26,6 +27,9 @@ jobs:
       id-token: 'write'
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
       - name: Configure Google Cloud credentials
         uses: google-github-actions/auth@v2
         with:
@@ -39,4 +43,5 @@ jobs:
         run: |
           gcloud builds triggers run deploy-metabased-sequencer \
             --region=global \
-            --project=metabased-testnet
+            --project=metabased-testnet \
+            --branch=${GITHUB_REF#refs/heads/}
