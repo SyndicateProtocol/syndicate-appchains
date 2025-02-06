@@ -42,5 +42,5 @@ jobs:
         run: |
           gcloud builds triggers run deploy-metabased-sequencer \
             --region=global \
-            --project=metabased-testnet
+            --project=metabased-testnet \
             --branch=${GITHUB_REF#refs/heads/}
