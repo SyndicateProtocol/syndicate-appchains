@@ -274,16 +274,20 @@ async fn e2e_settlement_test() -> Result<()> {
 
     // Launch mock sequencing chain and deploy contracts
     let (_seq_anvil, seq_provider) = start_anvil(8145, 15).await?;
-    _ = MetabasedSequencerChain::deploy_builder(
+    let sequencer_chain_address = MetabasedSequencerChain::deploy_builder(
         &seq_provider,
         U256::from(block_builder_cfg.target_chain_id),
-        seq_provider.default_signer_address(),
-        seq_provider.default_signer_address().create(1),
     )
-    .send()
+    .deploy()
     .await?;
-    _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
+    let always_allowed_module_address = AlwaysAllowedModule::deploy_builder(&seq_provider).deploy().await?;
+    let sequencer_chain_instance = MetabasedSequencerChain::new(sequencer_chain_address, &seq_provider);
+    _ = sequencer_chain_instance.initialize(
+        seq_provider.default_signer_address(),
+        always_allowed_module_address,
+    ).send().await?;
     mine_block(&seq_provider, 0).await?;
+
 
     // Load settlement chain from state dump
     let (_set_anvil, set_provider) = load_anvil(8146).await?;
@@ -502,17 +506,21 @@ async fn e2e_test() -> Result<()> {
         ..Default::default()
     };
 
+    
     // Launch mock sequencing chain and deploy contracts
     let (_seq_anvil, seq_provider) = start_anvil(8245, 15).await?;
-    _ = MetabasedSequencerChain::deploy_builder(
+    let sequencer_chain_address = MetabasedSequencerChain::deploy_builder(
         &seq_provider,
         U256::from(block_builder_cfg.target_chain_id),
-        seq_provider.default_signer_address(),
-        seq_provider.default_signer_address().create(1),
     )
-    .send()
+    .deploy()
     .await?;
-    _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
+    let always_allowed_module_address = AlwaysAllowedModule::deploy_builder(&seq_provider).deploy().await?;
+    let sequencer_chain_instance = MetabasedSequencerChain::new(sequencer_chain_address, &seq_provider);
+    _ = sequencer_chain_instance.initialize(
+        seq_provider.default_signer_address(),
+        always_allowed_module_address,
+    ).send().await?;
     mine_block(&seq_provider, 0).await?;
 
     // Launch mock settlement chain and deploy contracts
