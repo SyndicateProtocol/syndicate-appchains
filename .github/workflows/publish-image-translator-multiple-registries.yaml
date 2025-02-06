@@ -1,8 +1,8 @@
 name: Build and Push Translator Docker Image to Github and Google Registries
 on:
-  push: #TODO fix me to push on main
-#    branches:
-#      - main
+  push:
+    branches:
+      - main
 
 env:
   GOOGLE_REGISTRY: europe-west6-docker.pkg.dev
