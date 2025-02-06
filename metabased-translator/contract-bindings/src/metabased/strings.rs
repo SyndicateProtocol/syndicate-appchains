@@ -53,22 +53,22 @@ pub mod Strings {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6055604b600b8282823980515f1a607314603f577f4e487b71000000000000000000000000000000000000000000000000000000005f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220b71f3f391a806a179b2833d66601983b5b5839b60994f4185bcc188d43790ecf64736f6c63430008190033
+    ///0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220cafaf0f16948d03419f0730290ee3ad6642be4ab23d91cfeaf42ef2c2cfd5c9464736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`U`K`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`?W\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB7\x1F?9\x1A\x80j\x17\x9B(3\xD6f\x01\x98;[X9\xB6\t\x94\xF4\x18[\xCC\x18\x8DCy\x0E\xCFdsolcC\0\x08\x19\x003",
+        b"`U`2`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`&WcNH{q`\xE0\x1B_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xCA\xFA\xF0\xF1iH\xD04\x19\xF0s\x02\x90\xEE:\xD6d+\xE4\xAB#\xD9\x1C\xFE\xAFB\xEF,,\xFD\\\x94dsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220b71f3f391a806a179b2833d66601983b5b5839b60994f4185bcc188d43790ecf64736f6c63430008190033
+    ///0x730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220cafaf0f16948d03419f0730290ee3ad6642be4ab23d91cfeaf42ef2c2cfd5c9464736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB7\x1F?9\x1A\x80j\x17\x9B(3\xD6f\x01\x98;[X9\xB6\t\x94\xF4\x18[\xCC\x18\x8DCy\x0E\xCFdsolcC\0\x08\x19\x003",
+        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xCA\xFA\xF0\xF1iH\xD04\x19\xF0s\x02\x90\xEE:\xD6d+\xE4\xAB#\xD9\x1C\xFE\xAFB\xEF,,\xFD\\\x94dsolcC\0\x08\x19\x003",
     );
     /**Custom error with signature `StringsInsufficientHexLength(uint256,uint256)` and selector `0xe22e27eb`.
 ```solidity
@@ -77,9 +77,7 @@ error StringsInsufficientHexLength(uint256 value, uint256 length);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct StringsInsufficientHexLength {
-        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub length: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -289,11 +287,8 @@ error StringsInvalidChar();
     };
     ///Container for all the [`Strings`](self) custom errors.
     pub enum StringsErrors {
-        #[allow(missing_docs)]
         StringsInsufficientHexLength(StringsInsufficientHexLength),
-        #[allow(missing_docs)]
         StringsInvalidAddressFormat(StringsInvalidAddressFormat),
-        #[allow(missing_docs)]
         StringsInvalidChar(StringsInvalidChar),
     }
     #[automatically_derived]

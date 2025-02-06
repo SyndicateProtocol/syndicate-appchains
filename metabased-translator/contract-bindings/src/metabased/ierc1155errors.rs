@@ -157,13 +157,9 @@ error ERC1155InsufficientBalance(address sender, uint256 balance, uint256 needed
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC1155InsufficientBalance {
-        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub balance: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub needed: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -260,7 +256,6 @@ error ERC1155InvalidApprover(address approver);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC1155InvalidApprover {
-        #[allow(missing_docs)]
         pub approver: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -331,9 +326,7 @@ error ERC1155InvalidArrayLength(uint256 idsLength, uint256 valuesLength);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC1155InvalidArrayLength {
-        #[allow(missing_docs)]
         pub idsLength: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub valuesLength: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -418,7 +411,6 @@ error ERC1155InvalidOperator(address operator);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC1155InvalidOperator {
-        #[allow(missing_docs)]
         pub operator: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -489,7 +481,6 @@ error ERC1155InvalidReceiver(address receiver);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC1155InvalidReceiver {
-        #[allow(missing_docs)]
         pub receiver: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -560,7 +551,6 @@ error ERC1155InvalidSender(address sender);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC1155InvalidSender {
-        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -631,9 +621,7 @@ error ERC1155MissingApprovalForAll(address operator, address owner);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC1155MissingApprovalForAll {
-        #[allow(missing_docs)]
         pub operator: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -713,19 +701,12 @@ error ERC1155MissingApprovalForAll(address operator, address owner);
     };
     ///Container for all the [`IERC1155Errors`](self) custom errors.
     pub enum IERC1155ErrorsErrors {
-        #[allow(missing_docs)]
         ERC1155InsufficientBalance(ERC1155InsufficientBalance),
-        #[allow(missing_docs)]
         ERC1155InvalidApprover(ERC1155InvalidApprover),
-        #[allow(missing_docs)]
         ERC1155InvalidArrayLength(ERC1155InvalidArrayLength),
-        #[allow(missing_docs)]
         ERC1155InvalidOperator(ERC1155InvalidOperator),
-        #[allow(missing_docs)]
         ERC1155InvalidReceiver(ERC1155InvalidReceiver),
-        #[allow(missing_docs)]
         ERC1155InvalidSender(ERC1155InvalidSender),
-        #[allow(missing_docs)]
         ERC1155MissingApprovalForAll(ERC1155MissingApprovalForAll),
     }
     #[automatically_derived]

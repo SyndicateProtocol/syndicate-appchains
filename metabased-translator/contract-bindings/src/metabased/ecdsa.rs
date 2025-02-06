@@ -54,22 +54,22 @@ pub mod ECDSA {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6055604b600b8282823980515f1a607314603f577f4e487b71000000000000000000000000000000000000000000000000000000005f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea264697066735822122082032d3ea3c2b9054d2387a521484693db6767cae9678aebac5ada43dc39cca064736f6c63430008190033
+    ///0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea264697066735822122071e78080085fbf92018a9235ec3aadfa38b4e0b9d5daad4b6c5ae900129c8f6e64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`U`K`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`?W\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x82\x03->\xA3\xC2\xB9\x05M#\x87\xA5!HF\x93\xDBgg\xCA\xE9g\x8A\xEB\xACZ\xDAC\xDC9\xCC\xA0dsolcC\0\x08\x19\x003",
+        b"`U`2`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`&WcNH{q`\xE0\x1B_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 q\xE7\x80\x80\x08_\xBF\x92\x01\x8A\x925\xEC:\xAD\xFA8\xB4\xE0\xB9\xD5\xDA\xADKlZ\xE9\0\x12\x9C\x8FndsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x730000000000000000000000000000000000000000301460806040525f80fdfea264697066735822122082032d3ea3c2b9054d2387a521484693db6767cae9678aebac5ada43dc39cca064736f6c63430008190033
+    ///0x730000000000000000000000000000000000000000301460806040525f80fdfea264697066735822122071e78080085fbf92018a9235ec3aadfa38b4e0b9d5daad4b6c5ae900129c8f6e64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x82\x03->\xA3\xC2\xB9\x05M#\x87\xA5!HF\x93\xDBgg\xCA\xE9g\x8A\xEB\xACZ\xDAC\xDC9\xCC\xA0dsolcC\0\x08\x19\x003",
+        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 q\xE7\x80\x80\x08_\xBF\x92\x01\x8A\x925\xEC:\xAD\xFA8\xB4\xE0\xB9\xD5\xDA\xADKlZ\xE9\0\x12\x9C\x8FndsolcC\0\x08\x19\x003",
     );
     /**Custom error with signature `ECDSAInvalidSignature()` and selector `0xf645eedf`.
 ```solidity
@@ -142,7 +142,6 @@ error ECDSAInvalidSignatureLength(uint256 length);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ECDSAInvalidSignatureLength {
-        #[allow(missing_docs)]
         pub length: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -217,7 +216,6 @@ error ECDSAInvalidSignatureS(bytes32 s);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ECDSAInvalidSignatureS {
-        #[allow(missing_docs)]
         pub s: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -283,11 +281,8 @@ error ECDSAInvalidSignatureS(bytes32 s);
     };
     ///Container for all the [`ECDSA`](self) custom errors.
     pub enum ECDSAErrors {
-        #[allow(missing_docs)]
         ECDSAInvalidSignature(ECDSAInvalidSignature),
-        #[allow(missing_docs)]
         ECDSAInvalidSignatureLength(ECDSAInvalidSignatureLength),
-        #[allow(missing_docs)]
         ECDSAInvalidSignatureS(ECDSAInvalidSignatureS),
     }
     #[automatically_derived]
