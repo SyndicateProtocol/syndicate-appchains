@@ -80,5 +80,5 @@ jobs:
         if: success()
         run: |
           gcloud builds triggers run deploy-metabased-sequencer \
-            --region=europe-west6 \
+            --region=global \
             --project=metabased-testnet
