@@ -33,9 +33,8 @@ thiserror = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
-serial_test  = { workspace = true }
-tracing      = { workspace = true }
-tracing-test = { workspace = true }
+serial_test = { workspace = true }
+tracing     = { workspace = true }
 
 [package.metadata.cargo-machete]
 # strum is used via a macro from strum_macros - machete does not detect it

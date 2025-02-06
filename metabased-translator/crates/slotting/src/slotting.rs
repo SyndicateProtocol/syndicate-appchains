@@ -45,7 +45,7 @@ pub struct Slotter {
     latest_sequencing_block: Option<BlockRef>,
     latest_settlement_block: Option<BlockRef>,
 
-    /// Stores all open and closed slots
+    /// Stores all open and unsafe slots
     slots: LinkedList<Slot>,
 
     /// Sender for sending slots to the consumer
@@ -151,7 +151,7 @@ impl Slotter {
                     self.process_block(block, second_chain, self.slot_duration).await
                 }
                 _ = &mut shutdown_rx => {
-                    info!("Slotter stopped");
+                    info!("Slotter stopped: {}", self);
                     drop(self.sender);
                     break;
                 }
@@ -330,6 +330,8 @@ impl Slotter {
                 }
 
                 if !inserted {
+                    // TODO remove this error - this shouldn't happen anymore... just create the
+                    // slot at the end of the list...
                     return Err(SlotterError::BlockTooOld { chain, block_number, block_timestamp });
                 }
             }
@@ -481,6 +483,19 @@ impl Slotter {
             .ok_or(SlotterError::TimestampOverflow)?;
 
         Ok((target_slot_number, target_timestamp))
+    }
+}
+
+impl std::fmt::Display for Slotter {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "Slotter[slots_len:{}, slot_duration:{}ms, latest_seq:{}, latest_set:{}]",
+            self.slots.len(),
+            self.slot_duration,
+            self.latest_sequencing_block.as_ref().map_or("none".to_string(), |b| b.to_string()),
+            self.latest_settlement_block.as_ref().map_or("none".to_string(), |b| b.to_string())
+        )
     }
 }
 

@@ -20,6 +20,7 @@ use block_builder::{
 };
 use common::{
     db::DummyStore,
+    tracing::init_test_tracing,
     types::{Block, Chain},
 };
 use contract_bindings::{
@@ -42,7 +43,6 @@ use tokio::{
     task,
     time::timeout,
 };
-use tracing_test::traced_test;
 
 /// Simple test scenario:
 /// Bob tries to deploy a counter contract to L3, then tries to increment it
@@ -244,7 +244,7 @@ async fn launch_nitro_node(
         .arg("--chain.info-json=".to_string() + &mchain.rollup_info("test"))
         .arg("--http.addr=0.0.0.0")
         .arg("--http.port=".to_string() + &port.to_string())
-        .arg("--log-level=DEBUG")
+        .arg("--log-level=info")
         .spawn()?;
     let rollup = ProviderBuilder::new()
         .on_http(("http://localhost:".to_string() + &port.to_string()).parse()?);
@@ -262,8 +262,8 @@ async fn launch_nitro_node(
 /// via the inbox contract and ensures that all of them
 /// are sequenced via the metabased translator and show up on the rollup.
 #[tokio::test(flavor = "multi_thread")]
-#[traced_test]
 async fn e2e_settlement_test() -> Result<()> {
+    init_test_tracing("info")?;
     let block_builder_cfg = BlockBuilderConfig {
         bridge_address: address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2"),
         inbox_address: address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899"),
@@ -469,12 +469,7 @@ async fn e2e_settlement_test() -> Result<()> {
         .await?;
     let _seq_chain = MetabasedSequencerChain::new(get_rollup_contract_address(), &seq_provider);
 
-    seq_provider
-        .evm_mine(Some(alloy::rpc::types::anvil::MineOptions::Options {
-            timestamp: None,
-            blocks: None,
-        }))
-        .await?;
+    seq_provider.evm_mine(None).await?;
 
     // process slots
     tokio::time::sleep(Duration::from_millis(400)).await;
@@ -491,8 +486,8 @@ async fn e2e_settlement_test() -> Result<()> {
 /// on the rollup. It also checks to make sure missing slots
 /// sequence a mchain block that does not include a batch.
 #[tokio::test(flavor = "multi_thread")]
-#[traced_test]
 async fn e2e_test() -> Result<()> {
+    init_test_tracing("info")?;
     let block_builder_cfg = BlockBuilderConfig {
         bridge_address: get_rollup_contract_address(),
         inbox_address: get_rollup_contract_address(),
@@ -691,7 +686,7 @@ async fn start_anvil(port: u16, chain_id: u64) -> Result<(AnvilInstance, FilledP
         "--gas-limit",
         "30000000",
         "--timestamp",
-        &timestamp, //NOTE: why is this necessary? shouldn't load_state have this info?
+        &timestamp,
         "--no-mining",
     ];
 

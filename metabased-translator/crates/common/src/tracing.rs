@@ -42,6 +42,15 @@ pub fn init_tracing() -> Result<(), TracingError> {
     Ok(())
 }
 
+/// Initializes a tracing subscriber for testing purposes
+pub fn init_test_tracing(level: &str) -> Result<(), TracingError> {
+    subscriber_fmt()
+        .with_env_filter(EnvFilter::new(level))
+        .try_init()
+        .map_err(|e| TracingError::SubscriberInit(format!("{:?}", e)))?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
