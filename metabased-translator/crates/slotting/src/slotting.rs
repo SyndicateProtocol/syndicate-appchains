@@ -68,22 +68,6 @@ const START_SLOT: u64 = 0;
 impl Slotter {
     /// Creates a new [`Slotter`] that receives blocks from two chains and organizes them into
     /// slots.
-    ///
-    /// # Arguments
-    /// * `sequencing_chain_receiver` - Channel receiving blocks from the sequencing chain
-    /// * `settlement_chain_receiver` - Channel receiving blocks from the settlement chain
-    /// * `config` - Configuration for slot timing and initial state
-    /// * `store` - Storage backend for saving slots
-    ///
-    /// # Details
-    /// The [`Slotter`] maintains a window of slots spanning the last 24 hours ([`MAX_WAIT`]),
-    /// with the number of slots determined by [`MAX_WAIT`] / `slot_duration`.
-    ///
-    /// Each slot contains blocks from both chains which timestamps fall within the slot's window:
-    /// (`slot_timestamp` - `slot_duration`, `slot_timestamp`]
-    ///
-    /// # Returns
-    /// A new [`Slotter`] instance that can be started with `start()`
     pub fn new(
         config: &SlotterConfig,
         safe_state: Option<SafeState>,
@@ -128,10 +112,7 @@ impl Slotter {
     ///    passed)
     /// 4. Send completed slots through the returned channel
     ///
-    /// # Returns
-    /// - A tuple containing:
-    ///   - A receiver that will get slots as they are processed
-    ///   - A shutdown function that can be called to stop the slotter
+    /// The receiver that was created during [`Slotter::new`] will get slots as they are processed
     pub async fn start(
         mut self,
         mut sequencing_rx: Receiver<BlockAndReceipts>,

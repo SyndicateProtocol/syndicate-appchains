@@ -85,7 +85,7 @@ async fn run(
         metrics.ingestor_settlement,
     )
     .await?;
-    let (slotter, slot_rx) = Slotter::new(&config.slotter, safe_state, db, metrics.slotting);
+    let (slotter, slot_rx) = Slotter::new(&config.slotter, safe_state, db, metrics.slotter);
     let block_builder =
         BlockBuilder::new(slot_rx, &config.block_builder, metrics.block_builder).await?;
 

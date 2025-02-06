@@ -23,7 +23,7 @@ pub struct TranslatorMetrics {
     /// Metrics for the settlement ingestor
     pub ingestor_settlement: IngestorMetrics,
     /// Metrics for the slotter
-    pub slotting: SlotterMetrics,
+    pub slotter: SlotterMetrics,
     /// Metrics for the block builder
     pub block_builder: BlockBuilderMetrics,
 }
@@ -36,7 +36,7 @@ impl TranslatorMetrics {
         let ingestor_settlement = IngestorMetrics::new(registry);
         let slotting = SlotterMetrics::new(registry);
         let block_builder = BlockBuilderMetrics::new(registry);
-        Self { ingestor_sequencing, ingestor_settlement, slotting, block_builder }
+        Self { ingestor_sequencing, ingestor_settlement, slotter: slotting, block_builder }
     }
 }
 

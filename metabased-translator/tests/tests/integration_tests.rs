@@ -7,7 +7,7 @@ use alloy::{
     node_bindings::{Anvil, AnvilInstance},
     primitives::{address, utils::parse_ether, Address, U256},
     providers::{ext::AnvilApi as _, Provider, ProviderBuilder, RootProvider, WalletProvider},
-    rpc::types::{BlockTransactionsKind, TransactionRequest},
+    rpc::types::{anvil::MineOptions::Options, BlockTransactionsKind, TransactionRequest},
     signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
     transports::http::Http,
 };
@@ -51,6 +51,7 @@ use tokio::{
     task,
     time::timeout,
 };
+use tracing::Level;
 /// Simple test scenario:
 /// Bob tries to deploy a counter contract to L3, then tries to increment it
 /// Bob's transactions are sequenced on the sequencing chain
@@ -270,7 +271,7 @@ async fn launch_nitro_node(
 /// are sequenced via the metabased translator and show up on the rollup.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_settlement_test() -> Result<()> {
-    init_test_tracing("info")?;
+    init_test_tracing(Level::INFO);
     let block_builder_cfg = BlockBuilderConfig {
         bridge_address: address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2"),
         inbox_address: address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899"),
@@ -476,15 +477,22 @@ async fn e2e_settlement_test() -> Result<()> {
         .await?;
 
     mine_block(&set_provider, 0).await?;
+
+    // mine blocks with timestamp high enough to mark the slot as unsafe
     set_provider
-        .evm_mine(Some(alloy::rpc::types::anvil::MineOptions::Options {
-            timestamp: Some(GENESIS_TIMESTAMP + 10),
+        .evm_mine(Some(Options {
+            timestamp: Some(GENESIS_TIMESTAMP + 1_000_000_000),
             blocks: None,
         }))
         .await?;
     let _seq_chain = MetabasedSequencerChain::new(get_rollup_contract_address(), &seq_provider);
 
-    seq_provider.evm_mine(None).await?;
+    seq_provider
+        .evm_mine(Some(Options {
+            timestamp: Some(GENESIS_TIMESTAMP + 1_000_000_000),
+            blocks: None,
+        }))
+        .await?;
 
     // process slots
     tokio::time::sleep(Duration::from_millis(400)).await;
@@ -502,7 +510,7 @@ async fn e2e_settlement_test() -> Result<()> {
 /// sequence a mchain block that does not include a batch.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_test() -> Result<()> {
-    init_test_tracing("info")?;
+    init_test_tracing(Level::INFO);
     let block_builder_cfg = BlockBuilderConfig {
         bridge_address: get_rollup_contract_address(),
         inbox_address: get_rollup_contract_address(),
@@ -739,16 +747,12 @@ async fn load_anvil(port: u16) -> Result<(AnvilInstance, FilledProvider)> {
     let state_file =
         std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config").join("anvil.json");
 
-    let timestamp = GENESIS_TIMESTAMP.to_string();
-
     #[allow(clippy::unwrap_used)]
     let args = vec![
         "--base-fee",
         "0",
         "--gas-limit",
         "30000000",
-        "--timestamp",
-        &timestamp,
         "--no-mining",
         "--load-state",
         state_file.to_str().unwrap(),
