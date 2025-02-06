@@ -11,6 +11,8 @@ steps:
       - "europe-west6-docker.pkg.dev/metabased-testnet/cloud-run-source-deploy/metabased-rollup/metabased-sequencer:latest"
       - "--region"
       - "europe-west6"
+      - "--service-account"
+      - "cloud-run-service-account@metabased-testnet.iam.gserviceaccount.com"
 
 images:
   - "europe-west6-docker.pkg.dev/metabased-testnet/cloud-run-source-deploy/metabased-rollup/metabased-sequencer"
