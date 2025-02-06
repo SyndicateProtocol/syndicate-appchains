@@ -23,12 +23,8 @@ pub struct BlockBuilderConfig {
         value_parser = parse_url)]
     pub mchain_url: Url,
 
-    #[arg(
-        short = 'g',
-        long,
-        env = "BLOCK_BUILDER_GENESIS_TIMESTAMP",
-        default_value_t = 1712500000
-    )]
+    /// This is dynamically set at runtime.
+    #[arg(skip)]
     pub genesis_timestamp: u64,
 
     #[arg(short = 'c', long, env = "BLOCK_BUILDER_TARGET_CHAIN_ID", default_value_t = 13331370)]
@@ -117,9 +113,9 @@ impl Debug for BlockBuilderConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockBuilderConfig")
             .field("mchain_url", &self.mchain_url)
-            .field("genesis_timestamp", &self.genesis_timestamp)
             .field("target_chain_id", &self.target_chain_id)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
+            .field("genesis_timestamp", &self.genesis_timestamp)
             .field("target_rollup_type", &self.target_rollup_type)
             .field("mchain_rollup_address", &self.mchain_rollup_address)
             .field("bridge_address", &self.bridge_address)
@@ -135,7 +131,9 @@ impl Debug for BlockBuilderConfig {
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
         let zero = Address::ZERO.to_string();
-        Self::parse_from(["", "-s", &zero, "-b", &zero, "-i", &zero])
+        let mut config = Self::parse_from(["", "-s", &zero, "-b", &zero, "-i", &zero]);
+        config.genesis_timestamp = 1712500000;
+        config
     }
 }
 
@@ -226,7 +224,6 @@ mod tests {
             config.mchain_url,
             Url::parse("http://127.0.0.1:8888").expect("Failed to parse default URL")
         );
-        assert_eq!(config.genesis_timestamp, 1712500000);
         assert_eq!(config.target_chain_id, 13331370);
         assert_eq!(
             config.sequencing_contract_address.to_string(),

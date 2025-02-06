@@ -14,7 +14,10 @@ use alloy::{
 use block_builder::{
     block_builder::BlockBuilder,
     config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
-    connectors::anvil::{FilledProvider, MetaChainProvider},
+    connectors::{
+        anvil::{FilledProvider, MetaChainProvider},
+        metrics::MChainMetrics,
+    },
     metrics::BlockBuilderMetrics,
     rollups::arbitrum,
 };
@@ -31,19 +34,23 @@ use contract_bindings::{
 };
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::{eyre, Result};
-use ingestor::{config::IngestionPipelineConfig, ingestor::Ingestor, metrics::IngestorMetrics};
+use ingestor::{
+    config::{ChainIngestorConfig, IngestionPipelineConfig},
+    eth_client::{EthClient, RPCClient},
+    ingestor::Ingestor,
+    metrics::IngestorMetrics,
+};
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use reqwest::Client;
 use slotting::{config::SlotterConfig, metrics::SlotterMetrics, slotting::Slotter};
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 use tokio::{
     process::{Child, Command},
     runtime::Handle,
     task,
     time::timeout,
 };
-
 /// Simple test scenario:
 /// Bob tries to deploy a counter contract to L3, then tries to increment it
 /// Bob's transactions are sequenced on the sequencing chain
@@ -294,16 +301,24 @@ async fn e2e_settlement_test() -> Result<()> {
     ingestor_config.sequencing.sequencing_polling_interval = Duration::from_millis(10);
     ingestor_config.settlement.settlement_rpc_url = "http://localhost:8146".to_string();
     ingestor_config.settlement.settlement_polling_interval = Duration::from_millis(10);
+    let seq_config: ChainIngestorConfig = (&ingestor_config.sequencing).into();
+    let set_config: ChainIngestorConfig = (&ingestor_config.settlement).into();
     let mut metrics_state = MetricsState { registry: Registry::default() };
+    let sequencing_client: Arc<dyn RPCClient> =
+        Arc::new(EthClient::new(&ingestor_config.sequencing.sequencing_rpc_url).await?);
+    let settlement_client: Arc<dyn RPCClient> =
+        Arc::new(EthClient::new(&ingestor_config.settlement.settlement_rpc_url).await?);
     let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
         Chain::Sequencing,
-        ingestor_config.sequencing.into(),
+        sequencing_client,
+        &seq_config,
         IngestorMetrics::new(&mut metrics_state.registry),
     )
     .await?;
     let (settlement_ingestor, settlement_rx) = Ingestor::new(
         Chain::Settlement,
-        ingestor_config.settlement.into(),
+        settlement_client,
+        &set_config,
         IngestorMetrics::new(&mut metrics_state.registry),
     )
     .await?;
@@ -529,16 +544,24 @@ async fn e2e_test() -> Result<()> {
     ingestor_config.sequencing.sequencing_polling_interval = Duration::from_millis(10);
     ingestor_config.settlement.settlement_rpc_url = "http://localhost:8246".to_string();
     ingestor_config.settlement.settlement_polling_interval = Duration::from_millis(10);
+    let seq_config: ChainIngestorConfig = (&ingestor_config.sequencing).into();
+    let set_config: ChainIngestorConfig = (&ingestor_config.settlement).into();
     let mut metrics_state = MetricsState { registry: Registry::default() };
+    let sequencing_client: Arc<dyn RPCClient> =
+        Arc::new(EthClient::new(&ingestor_config.sequencing.sequencing_rpc_url).await?);
+    let settlement_client: Arc<dyn RPCClient> =
+        Arc::new(EthClient::new(&ingestor_config.settlement.settlement_rpc_url).await?);
     let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
         Chain::Sequencing,
-        ingestor_config.sequencing.into(),
+        sequencing_client,
+        &seq_config,
         IngestorMetrics::new(&mut metrics_state.registry),
     )
     .await?;
     let (settlement_ingestor, settlement_rx) = Ingestor::new(
         Chain::Settlement,
-        ingestor_config.settlement.into(),
+        settlement_client,
+        &set_config,
         IngestorMetrics::new(&mut metrics_state.registry),
     )
     .await?;
@@ -738,7 +761,10 @@ async fn test_nitro_batch() -> Result<()> {
     let block_builder_cfg =
         BlockBuilderConfig { mchain_url: "http://127.0.0.1:8388".parse()?, ..Default::default() };
 
-    let mchain = MetaChainProvider::start(&block_builder_cfg).await?;
+    let mut metrics_state = MetricsState { registry: Registry::default() };
+    let metrics = MChainMetrics::new(&mut metrics_state.registry);
+
+    let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
     mchain.provider.anvil_set_block_timestamp_interval(1).await?;
     let (_nitro, rollup) = launch_nitro_node(&mchain, 8347).await?;
 

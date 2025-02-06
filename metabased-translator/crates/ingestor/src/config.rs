@@ -125,6 +125,28 @@ impl From<SettlementChainConfig> for ChainIngestorConfig {
     }
 }
 
+impl From<&SequencingChainConfig> for ChainIngestorConfig {
+    fn from(config: &SequencingChainConfig) -> Self {
+        Self {
+            buffer_size: config.sequencing_buffer_size,
+            polling_interval: config.sequencing_polling_interval,
+            rpc_url: config.sequencing_rpc_url.clone(),
+            start_block: config.sequencing_start_block,
+        }
+    }
+}
+
+impl From<&SettlementChainConfig> for ChainIngestorConfig {
+    fn from(config: &SettlementChainConfig) -> Self {
+        Self {
+            buffer_size: config.settlement_buffer_size,
+            polling_interval: config.settlement_polling_interval,
+            rpc_url: config.settlement_rpc_url.clone(),
+            start_block: config.settlement_start_block,
+        }
+    }
+}
+
 impl SequencingChainConfig {
     #[allow(missing_docs)]
     pub fn validate(&self) -> Result<(), ConfigError> {

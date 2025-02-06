@@ -4,8 +4,37 @@ use alloy::{
     providers::{Provider, ProviderBuilder, RootProvider},
     transports::BoxTransport,
 };
+use async_trait::async_trait;
 use common::types::{Block, Receipt};
-use eyre::{eyre, Error};
+use eyre::eyre;
+use std::fmt::Debug;
+use thiserror::Error;
+
+/// Errors that can occur while interacting with the Ethereum RPC client.
+#[derive(Debug, Error)]
+pub enum RPCClientError {
+    /// Error returned when a block is not found for the given block number.
+    #[error("Block {0} not found")]
+    BlockNotFound(u64),
+
+    /// Error returned when transaction receipts for a block are not found.
+    #[error("Receipts for block {0} not found")]
+    BlockReceiptsNotFound(u64),
+
+    /// Generic RPC communication failure
+    #[error("RPC request failed: {0}")]
+    RpcError(#[source] eyre::Error),
+}
+
+/// Trait defining methods for interacting with a blockchain
+#[async_trait]
+pub trait RPCClient: Send + Sync + Debug {
+    /// Retrieves a block by its number.
+    async fn get_block_by_number(&self, block_number: u64) -> Result<Block, RPCClientError>;
+
+    /// Retrieves the receipts of all transactions in a block.
+    async fn get_block_receipts(&self, block_number: u64) -> Result<Vec<Receipt>, RPCClientError>;
+}
 
 /// A client for interacting with an Ethereum-like blockchain.
 ///
@@ -27,44 +56,53 @@ impl EthClient {
     ///
     /// A result containing the `EthClient` instance if successful, or an error if the connection
     /// fails.
-    pub async fn new(rpc_url: &str) -> Result<Self, Error> {
-        let chain = ProviderBuilder::new().on_builtin(rpc_url).await?;
+    pub async fn new(rpc_url: &str) -> Result<Self, RPCClientError> {
+        let chain = ProviderBuilder::new()
+            .on_builtin(rpc_url)
+            .await
+            .map_err(|e| RPCClientError::RpcError(eyre!(e)))?;
+
         Ok(Self { chain })
     }
+}
 
+#[async_trait]
+impl RPCClient for EthClient {
     /// Retrieves a block by its number.
     ///
     /// # Arguments
     ///
-    /// * `block_number` - The number of the block to retrieve as a string.
+    /// * `block_number` - The number of the block to retrieve.
     ///
     /// # Returns
     ///
     /// A result containing the `Block` if found, or an error if the block is not found.
-    pub async fn get_block_by_number(&self, block_number: u64) -> Result<Block, Error> {
+    async fn get_block_by_number(&self, block_number: u64) -> Result<Block, RPCClientError> {
         let block_number_hex = format!("0x{:x}", block_number);
         self.chain
             .client()
             .request::<_, Option<Block>>("eth_getBlockByNumber", (block_number_hex, true))
-            .await?
-            .ok_or_else(|| eyre!("Block not found {:?}", block_number))
+            .await
+            .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
+            .ok_or_else(|| RPCClientError::BlockNotFound(block_number))
     }
 
     /// Retrieves the receipts of all transactions in a block.
     ///
     /// # Arguments
     ///
-    /// * `block_number` - The number of the block for which to retrieve receipts as a string.
+    /// * `block_number` - The number of the block for which to retrieve receipts.
     ///
     /// # Returns
     ///
     /// A result containing a vector of `Receipt` if found, or an error if no receipts are found.
-    pub async fn get_block_receipts(&self, block_number: u64) -> Result<Vec<Receipt>, Error> {
+    async fn get_block_receipts(&self, block_number: u64) -> Result<Vec<Receipt>, RPCClientError> {
         let block_number_hex = format!("0x{:x}", block_number);
         self.chain
             .client()
             .request::<_, Option<Vec<Receipt>>>("eth_getBlockReceipts", (block_number_hex,))
-            .await?
-            .ok_or_else(|| eyre!("Block receipts not found"))
+            .await
+            .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
+            .ok_or_else(|| RPCClientError::BlockReceiptsNotFound(block_number))
     }
 }
