@@ -82,22 +82,22 @@ pub mod SafeCast {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6055604b600b8282823980515f1a607314603f577f4e487b71000000000000000000000000000000000000000000000000000000005f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea26469706673582212202ad991e80ed1990b45075b16b8458b9ea9f370bd08bada03eb4d676cbf966e3d64736f6c63430008190033
+    ///0x6055604b600b8282823980515f1a607314603f577f4e487b71000000000000000000000000000000000000000000000000000000005f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea26469706673582212208658d2c00d3d9829ed7e1de5949b5d4c80462e68145a50c0e364d89e6a4f827f64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`U`K`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`?W\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 *\xD9\x91\xE8\x0E\xD1\x99\x0BE\x07[\x16\xB8E\x8B\x9E\xA9\xF3p\xBD\x08\xBA\xDA\x03\xEBMgl\xBF\x96n=dsolcC\0\x08\x19\x003",
+        b"`U`K`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`?W\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x86X\xD2\xC0\r=\x98)\xED~\x1D\xE5\x94\x9B]L\x80F.h\x14ZP\xC0\xE3d\xD8\x9EjO\x82\x7FdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x730000000000000000000000000000000000000000301460806040525f80fdfea26469706673582212202ad991e80ed1990b45075b16b8458b9ea9f370bd08bada03eb4d676cbf966e3d64736f6c63430008190033
+    ///0x730000000000000000000000000000000000000000301460806040525f80fdfea26469706673582212208658d2c00d3d9829ed7e1de5949b5d4c80462e68145a50c0e364d89e6a4f827f64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 *\xD9\x91\xE8\x0E\xD1\x99\x0BE\x07[\x16\xB8E\x8B\x9E\xA9\xF3p\xBD\x08\xBA\xDA\x03\xEBMgl\xBF\x96n=dsolcC\0\x08\x19\x003",
+        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x86X\xD2\xC0\r=\x98)\xED~\x1D\xE5\x94\x9B]L\x80F.h\x14ZP\xC0\xE3d\xD8\x9EjO\x82\x7FdsolcC\0\x08\x19\x003",
     );
     /**Custom error with signature `SafeCastOverflowedIntDowncast(uint8,int256)` and selector `0x327269a7`.
 ```solidity
