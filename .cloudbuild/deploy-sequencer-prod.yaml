@@ -1,3 +1,4 @@
+# Deploys an image to Cloud Run that already exists as part of a previous step.
 steps:
   # Deploy container image to Cloud Run
   - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"

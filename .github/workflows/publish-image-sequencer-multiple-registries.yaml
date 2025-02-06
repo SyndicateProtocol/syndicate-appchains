@@ -62,7 +62,6 @@ jobs:
             type=raw,value=latest,enable=true
 # TODO change me back to enable={{is_default_branch}}
 
-
       - name: Build and push
         uses: docker/build-push-action@v6
         with:
@@ -74,3 +73,12 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      # Trigger Cloud Run here to prevent race condition
+      - name: Trigger Cloud Run Deployment
+        # TODO add in below:      && github.ref == 'refs/heads/main'
+        if: success()
+        run: |
+          gcloud builds triggers run deploy-metabased-sequencer \
+            --region=europe-west6 \
+            --project=metabased-testnet
