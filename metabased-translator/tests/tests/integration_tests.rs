@@ -502,7 +502,7 @@ async fn e2e_settlement_test() -> Result<()> {
 /// sequence a mchain block that does not include a batch.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_test() -> Result<()> {
-    init_test_tracing("debug")?;
+    init_test_tracing("info")?;
     let block_builder_cfg = BlockBuilderConfig {
         bridge_address: get_rollup_contract_address(),
         inbox_address: get_rollup_contract_address(),
@@ -748,7 +748,7 @@ async fn load_anvil(port: u16) -> Result<(AnvilInstance, FilledProvider)> {
         "--gas-limit",
         "30000000",
         "--timestamp",
-        &timestamp, //NOTE: why is this necessary? shouldn't load_state have this info?
+        &timestamp,
         "--no-mining",
         "--load-state",
         state_file.to_str().unwrap(),
