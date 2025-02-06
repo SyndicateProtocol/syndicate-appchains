@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-push:
-    uses: ./.github/workflows/docker-build-core.yml
+    uses: ./.github/workflows/docker-build-core.yaml
     with:
       do_push: true
       service_name: metabased-translator
