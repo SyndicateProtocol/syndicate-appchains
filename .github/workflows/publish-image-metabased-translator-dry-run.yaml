@@ -10,6 +10,11 @@ on:
 #      - "Dockerfile"
 #      - "**/Cargo.toml"
 
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
 jobs:
   build-and-push:
     uses: ./.github/workflows/docker-build-core.yaml
