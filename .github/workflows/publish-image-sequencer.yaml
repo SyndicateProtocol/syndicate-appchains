@@ -77,7 +77,8 @@ jobs:
 
       # Trigger Cloud Run here to prevent race condition
       - name: Trigger Cloud Run Deployment
-        if: success() && github.ref == 'refs/heads/main'
+#         && github.ref == 'refs/heads/main'
+        if: success()
         run: |
           gcloud builds triggers run deploy-metabased-sequencer \
             --region=global \
