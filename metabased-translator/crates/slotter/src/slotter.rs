@@ -7,7 +7,7 @@ use common::{
     types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotState},
 };
 use derivative::Derivative;
-use std::{cmp::Ordering, collections::LinkedList};
+use std::{cmp::Ordering, collections::VecDeque};
 use thiserror::Error;
 use tokio::{
     select,
@@ -51,7 +51,7 @@ pub struct Slotter {
     safe_timestamp: u64,
 
     /// Stores all open and unsafe slots
-    slots: LinkedList<Slot>,
+    slots: VecDeque<Slot>,
 
     /// Sender for sending slots to the consumer
     sender: Sender<Slot>,
@@ -75,7 +75,7 @@ impl Slotter {
         metrics: SlotterMetrics,
     ) -> (Self, Receiver<Slot>) {
         let (slot_tx, slot_rx) = channel(100);
-        let mut slots = LinkedList::new();
+        let mut slots = VecDeque::new();
         let mut safe_timestamp = 0;
         let (latest_sequencing_block, latest_settlement_block) = match safe_state {
             Some(safe_state) => {
