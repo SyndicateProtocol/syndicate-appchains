@@ -1,7 +1,7 @@
 use block_builder::{block_builder::BlockBuilder, config::BlockBuilderConfig};
 use common::{
     db::{self, SafeState, TranslatorStore},
-    tracing::{init_tracing, TracingError},
+    tracing::{init_tracing, init_tracing_with_chain, TracingError},
     types::Chain,
 };
 use eyre::Result;
@@ -161,14 +161,12 @@ async fn run(
 }
 
 fn main() -> Result<(), RuntimeError> {
-    init_tracing()?;
+    let mut base_config = MetabasedConfig::initialize();
+    init_tracing_with_chain(base_config.block_builder.target_chain_id)?;
 
     // Create and run async runtime
     let runtime =
         tokio::runtime::Runtime::new().map_err(|e| RuntimeError::Initialization(e.to_string()))?;
-
-    // Initialize base config inside the async runtime
-    let mut base_config = MetabasedConfig::initialize();
 
     // Init the paths for the DB and Anvil state
     let db_path = format!("{}/db", base_config.datadir);
