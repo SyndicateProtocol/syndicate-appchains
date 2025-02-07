@@ -35,7 +35,8 @@ impl Display for TracingError {
 
 impl Error for TracingError {}
 
-/// A wrapper around a JSON formatter that appends `chain_id` to every event.
+/// A wrapper around a JSON formatter that iterates `extra_fields` and appends them all to every
+/// event.
 struct CustomJsonFormatter<F> {
     inner: F,
     /// Extra fields to append as (key, value) pairs.
@@ -141,6 +142,16 @@ mod tests {
     #[test]
     fn test_init_tracing() {
         let result = init_tracing();
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_init_tracing_with_extra_fields() {
+        let extra_fields = vec![
+            ("chain_id".to_string(), serde_json::json!(555)),
+            ("env".to_string(), serde_json::json!("production")),
+        ];
+        let result = init_tracing_with_extra_fields(extra_fields);
         assert!(result.is_ok());
     }
 }
