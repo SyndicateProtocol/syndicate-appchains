@@ -111,22 +111,6 @@ pub fn init_tracing_with_extra_fields(
     Ok(())
 }
 
-// /// Initializes a tracing subscriber
-// pub fn init_tracing() -> Result<(), TracingError> {
-//     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_|
-// EnvFilter::new("info"));
-//
-//     subscriber_fmt()
-//         .json()
-//         .with_target(true)
-//         .with_max_level(Level::DEBUG)
-//         .with_env_filter(env_filter)
-//         .try_init()
-//         .map_err(|e| TracingError::SubscriberInit(format!("{:?}", e)))?;
-//
-//     Ok(())
-// }
-
 /// Initializes a tracing subscriber for testing purposes
 pub fn init_test_tracing(level: Level) -> Result<(), TracingError> {
     subscriber_fmt()
@@ -144,7 +128,7 @@ mod tests {
     fn test_init_tracing_with_extra_fields() {
         let extra_fields = vec![
             ("chain_id".to_string(), serde_json::json!(555)),
-            ("env".to_string(), serde_json::json!("production")),
+            ("env".to_string(), serde_json::json!("my_computer")),
         ];
         let result = init_tracing_with_extra_fields(extra_fields);
         println!("result: {:?}", result);
