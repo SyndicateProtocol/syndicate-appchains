@@ -1607,7 +1607,7 @@ dependencies = [
  "prometheus-client",
  "reqwest",
  "serial_test",
- "slotting",
+ "slotter",
  "strum",
  "strum_macros",
  "thiserror 2.0.11",
@@ -2703,7 +2703,7 @@ dependencies = [
  "mockall",
  "prometheus-client",
  "serial_test",
- "slotting",
+ "slotter",
  "thiserror 2.0.11",
  "tokio",
  "tracing",
@@ -2721,7 +2721,7 @@ dependencies = [
  "ingestor",
  "prometheus-client",
  "reqwest",
- "slotting",
+ "slotter",
  "thiserror 2.0.11",
  "tokio",
  "tracing",
@@ -3932,7 +3932,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "slotting"
+name = "slotter"
 version = "0.1.0"
 dependencies = [
  "alloy",

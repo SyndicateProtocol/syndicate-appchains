@@ -43,7 +43,7 @@ use ingestor::{
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use reqwest::Client;
-use slotting::{config::SlotterConfig, metrics::SlotterMetrics, slotting::Slotter};
+use slotter::{config::SlotterConfig, metrics::SlotterMetrics, Slotter};
 use std::{sync::Arc, time::Duration};
 use tokio::{
     process::{Child, Command},
@@ -591,7 +591,7 @@ async fn e2e_test() -> Result<()> {
         settlement_ingestor.start_polling(dummy).await.unwrap();
     }));
 
-    // start the slotting at the earliest block that will be ingested (as it's done in the actual
+    // start the slotter at the earliest block that will be ingested (as it's done in the actual
     // metabased-translator binary)
     let ingestion_start_block = ingestor_config.settlement.settlement_start_block;
     let ingestion_start_ts = set_provider

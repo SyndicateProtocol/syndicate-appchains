@@ -11,7 +11,7 @@ use axum::{
 use block_builder::metrics::BlockBuilderMetrics;
 use ingestor::metrics::IngestorMetrics;
 use prometheus_client::{encoding::text::encode, registry::Registry};
-use slotting::metrics::SlotterMetrics;
+use slotter::metrics::SlotterMetrics;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -34,9 +34,9 @@ impl TranslatorMetrics {
     pub fn new(registry: &mut Registry) -> Self {
         let ingestor_sequencing = IngestorMetrics::new(registry);
         let ingestor_settlement = IngestorMetrics::new(registry);
-        let slotting = SlotterMetrics::new(registry);
+        let slotter = SlotterMetrics::new(registry);
         let block_builder = BlockBuilderMetrics::new(registry);
-        Self { ingestor_sequencing, ingestor_settlement, slotter: slotting, block_builder }
+        Self { ingestor_sequencing, ingestor_settlement, slotter, block_builder }
     }
 }
 

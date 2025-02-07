@@ -7,7 +7,7 @@ members = [
     "metabased-translator/crates/common",
     "metabased-translator/crates/ingestor",
     "metabased-translator/crates/metrics",
-    "metabased-translator/crates/slotting",
+    "metabased-translator/crates/slotter",
     "metabased-translator/tests",
 
 ]
@@ -32,7 +32,7 @@ common            = { path = "metabased-translator/crates/common" }
 contract-bindings = { path = "metabased-translator/contract-bindings" }
 ingestor          = { path = "metabased-translator/crates/ingestor" }
 metrics           = { path = "metabased-translator/crates/metrics" }
-slotting          = { path = "metabased-translator/crates/slotting" }
+slotter           = { path = "metabased-translator/crates/slotter" }
 test-utils        = { path = "metabased-translator/crates/test-utils" }
 
 alloy              = { version = "0.9.2" }
@@ -77,11 +77,10 @@ url                = { version = "2.5.4" }
 # dev dependencies
 const_format = { version = "0.2" }
 criterion    = { version = "0.5" }
+mockall      = "0.13.1"
 serial_test  = { version = "3.2.0" }
 test-case    = { version = "3" }
 tracing-test = { version = "0.2.5" }
-mockall = "0.13.1"
-
 
 
 [workspace.lints.rust]

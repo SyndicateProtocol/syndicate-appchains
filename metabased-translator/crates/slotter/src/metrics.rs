@@ -1,4 +1,4 @@
-//! The `metrics` module for the Slotting
+//! The `metrics` module for the Slotter
 
 use common::types::Chain;
 use prometheus_client::{
@@ -20,89 +20,89 @@ pub struct Labels {
     pub chain: &'static str,
 }
 
-/// Structure holding metrics related to the Slotting.
+/// Structure holding metrics related to the Slotter.
 #[derive(Debug)]
 pub struct SlotterMetrics {
-    /// Records the last block number processed by the Slotting
-    pub slotting_last_processed_block: Family<Labels, Gauge>,
+    /// Records the last block number processed by the Slotter
+    pub slotter_last_processed_block: Family<Labels, Gauge>,
     /// Tracks the current number of active slots
-    pub slotting_active_slots: Gauge,
+    pub slotter_active_slots: Gauge,
     /// Tracks the timestamp lag (ms)
-    pub slotting_timestamp_lag_ms: Family<Labels, Gauge>,
+    pub slotter_timestamp_lag_ms: Family<Labels, Gauge>,
     /// Tracks blocks processed per slot
-    pub slotting_blocks_per_slot: Histogram,
+    pub slotter_blocks_per_slot: Histogram,
     /// Tracks the channel capacity
-    pub slotting_channel_capacity: Family<Labels, Gauge>,
+    pub slotter_channel_capacity: Family<Labels, Gauge>,
     /// Tracks the last slot created
-    pub slotting_last_slot_created: Gauge,
+    pub slotter_last_slot_created: Gauge,
 }
 
 impl SlotterMetrics {
-    /// Creates a new `SlottingMetrics` instance and registers metrics in the provided registry.
+    /// Creates a new `SlotterMetrics` instance and registers metrics in the provided registry.
     pub fn new(registry: &mut Registry) -> Self {
-        let slotting_last_processed_block = Family::<Labels, Gauge>::default();
-        let slotting_active_slots = Gauge::default();
-        let slotting_timestamp_lag_ms = Family::<Labels, Gauge>::default();
-        let slotting_blocks_per_slot = Histogram::new(exponential_buckets(1.0, 2.0, 8));
-        let slotting_channel_capacity = Family::<Labels, Gauge>::default();
-        let slotting_last_slot_created = Gauge::default();
+        let slotter_last_processed_block = Family::<Labels, Gauge>::default();
+        let slotter_active_slots = Gauge::default();
+        let slotter_timestamp_lag_ms = Family::<Labels, Gauge>::default();
+        let slotter_blocks_per_slot = Histogram::new(exponential_buckets(1.0, 2.0, 8));
+        let slotter_channel_capacity = Family::<Labels, Gauge>::default();
+        let slotter_last_slot_created = Gauge::default();
 
         registry.register(
-            "slotting_last_processed_block",
-            "Tracks the last sequencing block number processed by the Slotting",
-            slotting_last_processed_block.clone(),
+            "slotter_last_processed_block",
+            "Tracks the last sequencing block number processed by the Slotter",
+            slotter_last_processed_block.clone(),
         );
 
         registry.register(
-            "slotting_active_slots",
+            "slotter_active_slots",
             "Tracks the number of active slots being processed",
-            slotting_active_slots.clone(),
+            slotter_active_slots.clone(),
         );
 
         registry.register(
-            "slotting_timestamp_lag_ms",
+            "slotter_timestamp_lag_ms",
             "Tracks the timestamp lag (ms) for the sequencing chain",
-            slotting_timestamp_lag_ms.clone(),
+            slotter_timestamp_lag_ms.clone(),
         );
 
         registry.register(
-            "slotting_blocks_per_slot",
+            "slotter_blocks_per_slot",
             "Histogram tracking blocks processed per slot",
-            slotting_blocks_per_slot.clone(),
+            slotter_blocks_per_slot.clone(),
         );
 
         registry.register(
-            "slotting_channel_capacity",
+            "slotter_channel_capacity",
             "Tracks the capacity of the sequencing chain channel",
-            slotting_channel_capacity.clone(),
+            slotter_channel_capacity.clone(),
         );
 
         registry.register(
-            "slotting_last_slot_created",
+            "slotter_last_slot_created",
             "Tracks the last slot created",
-            slotting_last_slot_created.clone(),
+            slotter_last_slot_created.clone(),
         );
 
         Self {
-            slotting_last_processed_block,
-            slotting_active_slots,
-            slotting_timestamp_lag_ms,
-            slotting_blocks_per_slot,
-            slotting_channel_capacity,
-            slotting_last_slot_created,
+            slotter_last_processed_block,
+            slotter_active_slots,
+            slotter_timestamp_lag_ms,
+            slotter_blocks_per_slot,
+            slotter_channel_capacity,
+            slotter_last_slot_created,
         }
     }
 
-    /// Records the last block processed by the Slotting.
+    /// Records the last block processed by the Slotter.
     pub fn record_last_processed_block(&self, block_number: u64, chain: Chain) {
-        self.slotting_last_processed_block
+        self.slotter_last_processed_block
             .get_or_create(&Labels { chain: chain.into() })
             .set(block_number as i64);
     }
 
     /// Updates the number of active slots.
     pub fn update_active_slots(&self, slots: usize) {
-        self.slotting_active_slots.set(slots as i64);
+        self.slotter_active_slots.set(slots as i64);
     }
 
     /// Updates the timestamp lag metric (current time - latest block timestamp)
@@ -118,26 +118,26 @@ impl SlotterMetrics {
         let block_timestamp_ms = block_timestamp * 1000; // Convert seconds to milliseconds
 
         let lag = now.saturating_sub(block_timestamp_ms); // Avoid negative values
-        self.slotting_timestamp_lag_ms
+        self.slotter_timestamp_lag_ms
             .get_or_create(&Labels { chain: chain.into() })
             .set(lag as i64);
     }
 
     /// Records the number of blocks processed per slot.
     pub fn record_blocks_per_slot(&self, blocks: u64) {
-        self.slotting_blocks_per_slot.observe(blocks as f64);
+        self.slotter_blocks_per_slot.observe(blocks as f64);
     }
 
     /// Updates the channel capacity for a given chain.
     pub fn update_channel_capacity(&self, capacity: usize, chain: Chain) {
-        self.slotting_channel_capacity
+        self.slotter_channel_capacity
             .get_or_create(&Labels { chain: chain.into() })
             .set(capacity as i64);
     }
 
     /// Records the last slot number created
     pub fn record_last_slot(&self, slot_number: u64) {
-        self.slotting_last_slot_created.set(slot_number as i64);
+        self.slotter_last_slot_created.set(slot_number as i64);
     }
 }
 
@@ -154,12 +154,12 @@ mod tests {
 
         assert_eq!(
             metrics
-                .slotting_last_processed_block
+                .slotter_last_processed_block
                 .get_or_create(&Labels { chain: "sequencing" })
                 .get(),
             0
         );
-        assert_eq!(metrics.slotting_active_slots.get(), 0);
+        assert_eq!(metrics.slotter_active_slots.get(), 0);
     }
 
     #[test]
@@ -170,7 +170,7 @@ mod tests {
         metrics.record_last_processed_block(42, Chain::Sequencing);
         assert_eq!(
             metrics
-                .slotting_last_processed_block
+                .slotter_last_processed_block
                 .get_or_create(&Labels { chain: "sequencing" })
                 .get(),
             42
@@ -179,7 +179,7 @@ mod tests {
         metrics.record_last_processed_block(84, Chain::Settlement);
         assert_eq!(
             metrics
-                .slotting_last_processed_block
+                .slotter_last_processed_block
                 .get_or_create(&Labels { chain: "settlement" })
                 .get(),
             84
@@ -192,10 +192,10 @@ mod tests {
         let metrics = SlotterMetrics::new(&mut registry);
 
         metrics.update_active_slots(10);
-        assert_eq!(metrics.slotting_active_slots.get(), 10);
+        assert_eq!(metrics.slotter_active_slots.get(), 10);
 
         metrics.update_active_slots(0);
-        assert_eq!(metrics.slotting_active_slots.get(), 0);
+        assert_eq!(metrics.slotter_active_slots.get(), 0);
     }
 
     #[test]
@@ -207,14 +207,14 @@ mod tests {
         let past_timestamp = now - 5; // 5 seconds ago
         metrics.update_chain_timestamp_lag(past_timestamp, Chain::Sequencing);
         assert!(
-            metrics.slotting_timestamp_lag_ms.get_or_create(&Labels { chain: "sequencing" }).get() >=
+            metrics.slotter_timestamp_lag_ms.get_or_create(&Labels { chain: "sequencing" }).get() >=
                 5000
         );
 
         let past_timestamp = now - 10000; // 10 seconds ago
         metrics.update_chain_timestamp_lag(past_timestamp, Chain::Settlement);
         assert!(
-            metrics.slotting_timestamp_lag_ms.get_or_create(&Labels { chain: "settlement" }).get() >=
+            metrics.slotter_timestamp_lag_ms.get_or_create(&Labels { chain: "settlement" }).get() >=
                 10000
         );
     }
@@ -237,13 +237,13 @@ mod tests {
 
         metrics.update_channel_capacity(50, Chain::Sequencing);
         assert_eq!(
-            metrics.slotting_channel_capacity.get_or_create(&Labels { chain: "sequencing" }).get(),
+            metrics.slotter_channel_capacity.get_or_create(&Labels { chain: "sequencing" }).get(),
             50
         );
 
         metrics.update_channel_capacity(100, Chain::Settlement);
         assert_eq!(
-            metrics.slotting_channel_capacity.get_or_create(&Labels { chain: "settlement" }).get(),
+            metrics.slotter_channel_capacity.get_or_create(&Labels { chain: "settlement" }).get(),
             100
         );
     }
@@ -253,9 +253,9 @@ mod tests {
         let metrics = SlotterMetrics::new(&mut registry);
 
         metrics.record_last_slot(42);
-        assert_eq!(metrics.slotting_last_slot_created.get(), 42);
+        assert_eq!(metrics.slotter_last_slot_created.get(), 42);
 
         metrics.record_last_slot(100);
-        assert_eq!(metrics.slotting_last_slot_created.get(), 100);
+        assert_eq!(metrics.slotter_last_slot_created.get(), 100);
     }
 }

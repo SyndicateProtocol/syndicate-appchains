@@ -31,7 +31,7 @@ impl BlockBuilderMetrics {
 
         registry.register(
             "block_builder_channel_capacity",
-            "Tracks the capacity of the slotting channel",
+            "Tracks the capacity of the slotter channel",
             block_builder_channel_capacity.clone(),
         );
         registry.register(
