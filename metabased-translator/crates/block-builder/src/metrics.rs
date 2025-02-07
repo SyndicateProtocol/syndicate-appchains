@@ -12,8 +12,6 @@ pub struct Labels {
 /// Structure holding metrics related to the `BlockBuilder`.
 #[derive(Debug, Clone)]
 pub struct BlockBuilderMetrics {
-    /// Tracks the channel capacity
-    pub block_builder_channel_capacity: Gauge,
     /// Tracks the number of built transactions
     pub block_builder_transactions_per_slot: Gauge,
     /// Records the last slot number processed by the `BlockBuilder`s
@@ -25,15 +23,9 @@ pub struct BlockBuilderMetrics {
 impl BlockBuilderMetrics {
     /// Creates a new `BlockBuilderMetrics` instance and registers metrics in the provided registry.
     pub fn new(registry: &mut Registry) -> Self {
-        let block_builder_channel_capacity = Gauge::default();
         let block_builder_transactions_per_slot = Gauge::default();
         let block_builder_last_processed_slot = Gauge::default();
 
-        registry.register(
-            "block_builder_channel_capacity",
-            "Tracks the capacity of the slotter channel",
-            block_builder_channel_capacity.clone(),
-        );
         registry.register(
             "block_builder_transactions_per_slot",
             "Tracks the number of built transactions per slot",
@@ -48,18 +40,11 @@ impl BlockBuilderMetrics {
         let mchain_metrics = MChainMetrics::new(registry);
 
         Self {
-            block_builder_channel_capacity,
             block_builder_transactions_per_slot,
             block_builder_last_processed_slot,
             mchain_metrics,
         }
     }
-
-    /// Updates the channel capacity
-    pub fn update_channel_capacity(&self, capacity: usize) {
-        self.block_builder_channel_capacity.set(capacity as i64);
-    }
-
     /// Records the number of built transactions
     pub fn record_transactions_per_slot(&self, transactions_len: usize) {
         self.block_builder_transactions_per_slot.set(transactions_len as i64);
@@ -81,21 +66,8 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = BlockBuilderMetrics::new(&mut registry);
 
-        assert_eq!(metrics.block_builder_channel_capacity.get(), 0);
         assert_eq!(metrics.block_builder_transactions_per_slot.get(), 0);
         assert_eq!(metrics.block_builder_last_processed_slot.get(), 0);
-    }
-
-    #[test]
-    fn test_update_channel_capacity() {
-        let mut registry = Registry::default();
-        let metrics = BlockBuilderMetrics::new(&mut registry);
-
-        metrics.update_channel_capacity(10);
-        assert_eq!(metrics.block_builder_channel_capacity.get(), 10);
-
-        metrics.update_channel_capacity(25);
-        assert_eq!(metrics.block_builder_channel_capacity.get(), 25);
     }
 
     #[test]

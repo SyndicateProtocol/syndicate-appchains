@@ -74,6 +74,7 @@ impl Ingestor {
         self.metrics.record_rpc_call(self.chain, "eth_getBlockByNumber", duration_block);
 
         self.metrics.record_rpc_call(self.chain, "eth_getBlockReceipts", duration_receipts);
+        self.metrics.record_last_block_fetched(self.chain, block.number);
 
         debug!("Got block: {:?}", block.number);
 
@@ -93,7 +94,7 @@ impl Ingestor {
         }
         self.sender.send(block_and_receipts.clone()).await?;
         self.current_block_number += 1;
-        self.metrics.record_last_block_fetched(self.chain, self.current_block_number);
+        self.metrics.update_channel_capacity(self.chain, self.sender.capacity());
         Ok(())
     }
 
