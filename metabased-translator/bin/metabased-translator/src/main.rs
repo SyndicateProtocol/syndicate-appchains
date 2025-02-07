@@ -183,10 +183,7 @@ fn main() -> Result<(), RuntimeError> {
 }
 
 fn get_extra_fields_for_logging(base_config: MetabasedConfig) -> Vec<(String, Value)> {
-    vec![
-        ("chain_id".to_string(), json!(base_config.block_builder.target_chain_id)),
-        ("env".to_string(), json!("production")),
-    ]
+    vec![("chain_id".to_string(), json!(base_config.block_builder.target_chain_id))]
 }
 
 #[derive(Debug, Error)]
