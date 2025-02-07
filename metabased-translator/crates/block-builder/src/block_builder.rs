@@ -59,7 +59,6 @@ impl BlockBuilder {
         }
 
         loop {
-            self.metrics.update_channel_capacity(self.slotter_rx.capacity());
             tokio::select! {
                 Some(slot) = self.slotter_rx.recv() => {
                     debug!("Received slot: {:?}", slot);

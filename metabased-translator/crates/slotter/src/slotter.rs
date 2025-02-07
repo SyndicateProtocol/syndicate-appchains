@@ -140,10 +140,6 @@ impl Slotter {
                 }
             };
 
-            // TODO SEQ-570 - fix (channel metrics should be tracked on the sender side)
-            // self.metrics.update_channel_capacity(sequencing_rx.capacity(), Chain::Sequencing);
-            // self.metrics.update_channel_capacity(settlement_rx.capacity(), Chain::Settlement);
-
             match process_result {
                 Ok(_) => (),
                 Err(e) => match e {
@@ -238,6 +234,7 @@ impl Slotter {
         for slot in buffer.into_iter().rev() {
             debug!(%slot, "Sending slot");
             self.sender.send(slot).await?;
+            self.metrics.update_channel_capacity(self.sender.capacity());
         }
         Ok(())
     }
