@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "metabased-sequencer/metabased-sequencer",
+    "metabased-sequencer/proxy",
     "metabased-translator/bin/metabased-translator",
     "metabased-translator/contract-bindings",
     "metabased-translator/crates/block-builder",
@@ -9,7 +10,6 @@ members = [
     "metabased-translator/crates/metrics",
     "metabased-translator/crates/slotter",
     "metabased-translator/tests",
-
 ]
 
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
