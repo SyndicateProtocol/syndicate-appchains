@@ -11,7 +11,7 @@ use ingestor::{
     eth_client::{RPCClient, RPCClientError},
 };
 use metrics::config::MetricsConfig;
-use slotting::config::SlotterConfig;
+use slotter::config::SlotterConfig;
 use std::{fmt::Debug, sync::Arc};
 use thiserror::Error;
 use tracing::{debug, error};

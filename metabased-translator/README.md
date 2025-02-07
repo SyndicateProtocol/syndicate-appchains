@@ -2,7 +2,7 @@
 
 This is a service that ingests L2 transaction data, organizes the data into slots, transforms it into a unified format to be mined by an Anvil node, then mines it and makes it available to rollup frameworks.
 
-It consists of a `common` crate and 3 component crates: `ingestor`, `slotting` and `block-builder`
+It consists of a `common` crate and 3 component crates: `ingestor`, `slotter` and `block-builder`
 
 #### Metachain configuration
 

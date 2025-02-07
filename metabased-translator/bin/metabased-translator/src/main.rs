@@ -13,7 +13,7 @@ use ingestor::{
 use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::{start_metrics, MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
-use slotting::slotting::Slotter;
+use slotter::Slotter;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::oneshot;
@@ -221,7 +221,7 @@ pub enum RuntimeError {
     BlockBuilderConfig(#[from] block_builder::config::ConfigError),
 
     #[error(transparent)]
-    SlotterConfig(#[from] slotting::config::ConfigError),
+    SlotterConfig(#[from] slotter::config::ConfigError),
 
     #[error(transparent)]
     IngestorConfig(#[from] ingestor::config::ConfigError),

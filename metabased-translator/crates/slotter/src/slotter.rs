@@ -1,4 +1,4 @@
-//! Slotting module for metabased-translator
+//! Slotter module for metabased-translator
 
 use crate::{config::SlotterConfig, metrics::SlotterMetrics};
 use alloy::primitives::B256;
@@ -21,7 +21,7 @@ use tracing::{debug, error, info};
 /// Maximum time to wait for blocks before considering a slot final (24 hours in seconds)
 /// A slot becomes safe if both chains have progressed `MAX_WAIT_SEC` seconds past the slot's
 /// timestamp
-pub const MAX_WAIT_SEC: u64 = 24 * 60 * 60;
+const MAX_WAIT_SEC: u64 = 24 * 60 * 60;
 
 /// Polls and ingests blocks from an Ethereum chain
 ///
@@ -173,12 +173,6 @@ impl Slotter {
                     }
                     SlotterError::DbError(_) => {
                         panic!("Database error: {e}"); // TODO SEQ-489 - decide what to do here
-                    }
-                    SlotterError::SlotNumberOverflow => {
-                        panic!("Slot number overflow - this should never happen unless timestamps are extremely far apart, or a block was received for a slot in the past (before START_SLOT)");
-                    }
-                    SlotterError::TimestampOverflow => {
-                        panic!("Timestamp overflow - this should never happen unless timestamps are extremely far apart");
                     }
                 },
             }
@@ -482,7 +476,7 @@ const fn block_slot_ordering(
 
 #[allow(missing_docs)] // self-documenting
 #[derive(Debug, Error)]
-pub enum SlotterError {
+enum SlotterError {
     #[error("No slots available {0}")]
     NoSlotsAvailable(String),
 
@@ -512,12 +506,6 @@ pub enum SlotterError {
 
     #[error("Database error: {0}")]
     DbError(#[from] DbError),
-
-    #[error("Slot number overflow")]
-    SlotNumberOverflow,
-
-    #[error("Timestamp overflow")]
-    TimestampOverflow,
 }
 
 #[cfg(test)]

@@ -1,4 +1,4 @@
-//! Configuration for the slotting module
+//! Configuration for the slotter module
 
 use clap::Parser;
 use thiserror::Error;
@@ -28,11 +28,11 @@ impl SlotterConfig {
         Ok(())
     }
 
-    /// Creates a new [`SlottingConfig`] instance
+    /// Creates a new [`SlotterConfig`] instance
     pub fn new(slot_duration: u64, start_slot_timestamp: u64) -> Result<Self, ConfigError> {
         let config = Self { slot_duration, start_slot_timestamp };
         config.validate()?;
-        debug!("Created slotting config: {:?}", config);
+        debug!("Created slotter config: {:?}", config);
         Ok(config)
     }
 }
@@ -58,7 +58,7 @@ mod config_tests {
     use assert_matches::assert_matches;
 
     #[test]
-    fn test_default_slotting_config() {
+    fn test_default_slotter_config() {
         let config = SlotterConfig::default();
         assert_eq!(config.slot_duration, 2);
         assert_eq!(config.start_slot_timestamp, 1712500000);

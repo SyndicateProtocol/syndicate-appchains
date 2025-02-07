@@ -1,31 +1,31 @@
 [package]
-name = "metabased-translator"
-version.workspace = true
-edition.workspace = true
+edition.workspace      = true
+license.workspace      = true
+name                   = "metabased-translator"
 rust-version.workspace = true
-license.workspace = true
+version.workspace      = true
 
 [[bin]]
 name = "metabased-translator"
 path = "src/main.rs"
 
 [dependencies]
-block-builder = {workspace = true}
-metrics = { workspace = true}
-ingestor = {workspace = true}
-slotting = {workspace = true}
-common = {workspace = true}
-clap = {workspace = true}
-tracing = {workspace = true}
-tokio = {workspace = true, features = ["signal"]}
-eyre = {workspace = true}
-thiserror = {workspace = true}
-prometheus-client = {workspace = true}
+block-builder     = { workspace = true }
+clap              = { workspace = true }
+common            = { workspace = true }
+eyre              = { workspace = true }
+ingestor          = { workspace = true }
+metrics           = { workspace = true }
+prometheus-client = { workspace = true }
+slotter           = { workspace = true }
+thiserror         = { workspace = true }
+tokio             = { workspace = true, features = ["signal"] }
+tracing           = { workspace = true }
 
 [dev-dependencies]
-async-trait = {workspace = true }
-mockall = {workspace = true }
-serial_test = {workspace = true}
+async-trait = { workspace = true }
+mockall     = { workspace = true }
+serial_test = { workspace = true }
 
 
 [[example]]
