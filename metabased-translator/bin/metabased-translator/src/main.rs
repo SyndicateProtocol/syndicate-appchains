@@ -1,7 +1,7 @@
 use block_builder::{block_builder::BlockBuilder, config::BlockBuilderConfig};
 use common::{
     db::{self, SafeState, TranslatorStore},
-    tracing::{init_tracing_with_chain, TracingError},
+    tracing::{init_tracing_with_extra_fields, TracingError},
     types::Chain,
 };
 use eyre::Result;
@@ -13,6 +13,7 @@ use ingestor::{
 use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::{start_metrics, MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
+use serde_json::{json, Value};
 use slotter::Slotter;
 use std::sync::Arc;
 use thiserror::Error;
@@ -37,9 +38,6 @@ async fn run(
     // Initialize the DB
     let (db, mut safe_state) = init_db(db_path).await?;
     safe_state = None; // TODO SEQ-528 remove this (disables resume from db)
-
-    // let mut sequencing_config = config.sequencing;
-    // let mut settlement_config = config.settlement;
 
     // Initialize ETH clients
     let sequencing_client: Arc<dyn RPCClient> = Arc::new(
@@ -162,7 +160,8 @@ async fn run(
 
 fn main() -> Result<(), RuntimeError> {
     let mut base_config = MetabasedConfig::initialize();
-    init_tracing_with_chain(base_config.block_builder.target_chain_id)?;
+    let extra_fields = get_extra_fields_for_logging(base_config.clone());
+    init_tracing_with_extra_fields(extra_fields)?;
 
     // Create and run async runtime
     let runtime =
@@ -181,6 +180,13 @@ fn main() -> Result<(), RuntimeError> {
     runtime.block_on(run(&mut base_config, db_path.as_str(), registry))?;
 
     Ok(())
+}
+
+fn get_extra_fields_for_logging(base_config: MetabasedConfig) -> Vec<(String, Value)> {
+    vec![
+        ("chain_id".to_string(), json!(base_config.block_builder.target_chain_id)),
+        ("env".to_string(), json!("production")),
+    ]
 }
 
 #[derive(Debug, Error)]

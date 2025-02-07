@@ -36,16 +36,16 @@ impl Display for TracingError {
 impl Error for TracingError {}
 
 /// A wrapper around a JSON formatter that appends `chain_id` to every event.
-struct ChainIdJsonFormatter<F> {
+struct CustomJsonFormatter<F> {
     inner: F,
-    chain_id: u64,
+    /// Extra fields to append as (key, value) pairs.
+    extra_fields: Vec<(String, serde_json::Value)>,
 }
 
-impl<S, N, F> FormatEvent<S, N> for ChainIdJsonFormatter<F>
+impl<S, N, F> FormatEvent<S, N> for CustomJsonFormatter<F>
 where
     S: Subscriber + for<'a> tracing_subscriber::registry::LookupSpan<'a>,
-    // N is the inner field formatter (for JSON, for example)
-    N: for<'a> FormatFields<'a> + 'static,
+    N: for<'a> FormatFields<'a> + 'static, // Inner field formatter (e.g. JSON)
     F: FormatEvent<S, N>,
 {
     fn format_event(
@@ -63,33 +63,43 @@ where
             self.inner.format_event(ctx, buf_writer, event)?;
         }
 
-        // Now, insert the "chain_id" field into the JSON output.
-        // This example assumes the JSON output is an object that ends with `}` (or "}\n").
-        if buf.ends_with("}\n") {
-            buf.truncate(buf.len() - 2); // Remove "}\n"
-            writeln!(writer, "{}, \"chain_id\": {} }}", buf, self.chain_id)
+        // We assume the output is a JSON object ending with a closing brace.
+        // Remove the trailing "}" (or "}\n") so we can insert extra fields.
+        let ends_with_newline = buf.ends_with("}\n");
+        if ends_with_newline {
+            buf.truncate(buf.len() - 2); // remove "}\n"
         } else if buf.ends_with('}') {
-            buf.pop(); // Remove the final '}'
-            write!(writer, "{}, \"chain_id\": {} }}", buf, self.chain_id)
+            buf.pop(); // remove the final '}'
         } else {
-            // Fallback: just write the original output.
-            writer.write_str(&buf)
+            // If the output is not a JSON object, just write it out.
+            return writer.write_str(&buf);
+        }
+
+        // Append the extra fields.
+        // (Each extra field is added with a preceding comma.)
+        for (key, value) in &self.extra_fields {
+            write!(writer, ", \"{}\": {}", key, value)?;
+        }
+
+        // Close the JSON object.
+        if ends_with_newline {
+            writeln!(writer, "}}") // close with a newline
+        } else {
+            write!(writer, "}}")
         }
     }
 }
 
 /// TODO docs
-pub fn init_tracing_with_chain(chain_id: u64) -> Result<(), TracingError> {
+pub fn init_tracing_with_extra_fields(
+    extra_fields: Vec<(String, serde_json::Value)>,
+) -> Result<(), TracingError> {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-
-    // Create the inner JSON formatter by wrapping Json in the Format adapter.
     let json_formatter = Format::default().json().with_target(true);
 
-    // Wrap the JSON formatter in our custom formatter that appends the chain_id field.
-    let chain_formatter = ChainIdJsonFormatter { inner: json_formatter, chain_id };
+    let custom_formatter = CustomJsonFormatter { inner: json_formatter, extra_fields };
 
-    // Build the formatting layer using our custom event formatter.
-    let fmt_layer = subscriber_fmt::layer().event_format(chain_formatter);
+    let fmt_layer = subscriber_fmt::layer().event_format(custom_formatter);
 
     tracing_subscriber::registry()
         .with(fmt_layer)
