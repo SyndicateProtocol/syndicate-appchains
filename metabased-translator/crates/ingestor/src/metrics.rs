@@ -106,3 +106,70 @@ impl IngestorMetrics {
             .set(capacity as i64);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use prometheus_client::registry::Registry;
+    use std::time::Duration;
+
+    #[test]
+    fn test_metrics_initialization() {
+        let mut registry = Registry::default();
+        let metrics = IngestorMetrics::new(&mut registry);
+
+        assert_eq!(
+            metrics
+                .ingestor_rpc_calls
+                .get_or_create(&MethodLabel { chain: "sequencing", method: "eth_getBlockByNumber" })
+                .get(),
+            0
+        );
+    }
+
+    #[test]
+    fn test_record_last_block_fetched() {
+        let mut registry = Registry::default();
+        let metrics = IngestorMetrics::new(&mut registry);
+
+        metrics.record_last_block_fetched(Chain::Sequencing, 100);
+
+        let value = metrics
+            .ingestor_last_block_fetched
+            .get_or_create(&MethodLabel { chain: "sequencing", method: "last_block_fetched" })
+            .get();
+
+        assert_eq!(value, 100);
+    }
+
+    #[test]
+    fn test_record_rpc_call() {
+        let mut registry = Registry::default();
+        let metrics = IngestorMetrics::new(&mut registry);
+        let duration = Duration::from_millis(500);
+
+        metrics.record_rpc_call(Chain::Settlement, "get_balance", duration);
+
+        let counter_value = metrics
+            .ingestor_rpc_calls
+            .get_or_create(&MethodLabel { chain: "settlement", method: "get_balance" })
+            .get();
+
+        assert_eq!(counter_value, 1);
+    }
+
+    #[test]
+    fn test_update_channel_capacity() {
+        let mut registry = Registry::default();
+        let metrics = IngestorMetrics::new(&mut registry);
+
+        metrics.update_channel_capacity(Chain::Sequencing, 75);
+
+        let capacity_value = metrics
+            .ingestor_channel_capacity
+            .get_or_create(&ChainLabel { chain: "sequencing" })
+            .get();
+
+        assert_eq!(capacity_value, 75);
+    }
+}
