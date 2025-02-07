@@ -32,7 +32,7 @@ pub struct SlotterMetrics {
     /// Tracks blocks processed per slot
     pub slotter_blocks_per_slot: Histogram,
     /// Tracks the channel capacity
-    pub slotter_channel_capacity: Family<Labels, Gauge>,
+    pub slotter_channel_capacity: Gauge,
     /// Tracks the last slot created
     pub slotter_last_slot_created: Gauge,
 }
@@ -44,7 +44,7 @@ impl SlotterMetrics {
         let slotter_active_slots = Gauge::default();
         let slotter_timestamp_lag_ms = Family::<Labels, Gauge>::default();
         let slotter_blocks_per_slot = Histogram::new(exponential_buckets(1.0, 2.0, 8));
-        let slotter_channel_capacity = Family::<Labels, Gauge>::default();
+        let slotter_channel_capacity = Gauge::default();
         let slotter_last_slot_created = Gauge::default();
 
         registry.register(
@@ -128,11 +128,9 @@ impl SlotterMetrics {
         self.slotter_blocks_per_slot.observe(blocks as f64);
     }
 
-    /// Updates the channel capacity for a given chain.
-    pub fn update_channel_capacity(&self, capacity: usize, chain: Chain) {
-        self.slotter_channel_capacity
-            .get_or_create(&Labels { chain: chain.into() })
-            .set(capacity as i64);
+    /// Updates the channel capacity
+    pub fn update_channel_capacity(&self, capacity: usize) {
+        self.slotter_channel_capacity.set(capacity as i64);
     }
 
     /// Records the last slot number created
@@ -235,18 +233,10 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = SlotterMetrics::new(&mut registry);
 
-        metrics.update_channel_capacity(50, Chain::Sequencing);
-        assert_eq!(
-            metrics.slotter_channel_capacity.get_or_create(&Labels { chain: "sequencing" }).get(),
-            50
-        );
-
-        metrics.update_channel_capacity(100, Chain::Settlement);
-        assert_eq!(
-            metrics.slotter_channel_capacity.get_or_create(&Labels { chain: "settlement" }).get(),
-            100
-        );
+        metrics.update_channel_capacity(50);
+        assert_eq!(metrics.slotter_channel_capacity.get(), 50);
     }
+
     #[test]
     fn test_record_last_slot() {
         let mut registry = Registry::default();

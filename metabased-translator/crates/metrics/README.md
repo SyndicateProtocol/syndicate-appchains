@@ -21,6 +21,11 @@ The following metrics are implemented and exposed via the `/metrics` endpoint in
      - `chain`: Specifies whether the call is related to the Sequencing or Settlement chain.
      - `method`: Always set to `"last_block_fetched"`.
    - **Metric Type**: Gauge
+  
+4. **ingestor_channel_capacity**: Tracks the capacity of the chain channel.
+   - **Labels**:
+     - `chain`: Specifies whether the channel belongs to the Sequencing or Settlement chain.
+   - **Metric Type**: Gauge
 
 #### Slotter
 
@@ -40,15 +45,12 @@ The following metrics are implemented and exposed via the `/metrics` endpoint in
 4. **slotter_blocks_per_slot**: Tracks the number of blocks processed per slot.
    - **Metric Type**: Histogram
 
-5. **slotter_channel_capacity**: Tracks the capacity of the chain channel.
-   - **Labels**:
-     - `chain`: Specifies whether the channel belongs to the Sequencing or Settlement chain.
+5. **slotter_channel_capacity**: Tracks the capacity of the slot channel.
    - **Metric Type**: Gauge
   
 6. **slotter_last_slot_created**: Tracks the last slot number created by the Slotter.
    - **Metric Type**: Gauge
   
-
 
 #### Block Builder
 
@@ -56,7 +58,4 @@ The following metrics are implemented and exposed via the `/metrics` endpoint in
    - **Metric Type**: Gauge
   
 2. **block_builder_last_processed_slot**: Tracks the last slot number processed by the BlockBuilder.
-   - **Metric Type**: Gauge
-  
-3. **block_builder_channel_capacity**: Tracks the capacity of the slot channel.
    - **Metric Type**: Gauge
