@@ -36,7 +36,7 @@ impl Display for TracingError {
 impl Error for TracingError {}
 
 /// A wrapper around a JSON formatter that iterates `extra_fields` and appends them all to every
-/// event.
+/// log event.
 struct CustomJsonFormatter<F> {
     inner: F,
     /// Extra fields to append as (key, value) pairs.
@@ -111,20 +111,21 @@ pub fn init_tracing_with_extra_fields(
     Ok(())
 }
 
-/// Initializes a tracing subscriber
-pub fn init_tracing() -> Result<(), TracingError> {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
-
-    subscriber_fmt()
-        .json()
-        .with_target(true)
-        .with_max_level(Level::DEBUG)
-        .with_env_filter(env_filter)
-        .try_init()
-        .map_err(|e| TracingError::SubscriberInit(format!("{:?}", e)))?;
-
-    Ok(())
-}
+// /// Initializes a tracing subscriber
+// pub fn init_tracing() -> Result<(), TracingError> {
+//     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_|
+// EnvFilter::new("info"));
+//
+//     subscriber_fmt()
+//         .json()
+//         .with_target(true)
+//         .with_max_level(Level::DEBUG)
+//         .with_env_filter(env_filter)
+//         .try_init()
+//         .map_err(|e| TracingError::SubscriberInit(format!("{:?}", e)))?;
+//
+//     Ok(())
+// }
 
 /// Initializes a tracing subscriber for testing purposes
 pub fn init_test_tracing(level: Level) -> Result<(), TracingError> {
@@ -140,18 +141,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_init_tracing() {
-        let result = init_tracing();
-        assert!(result.is_ok());
-    }
-
-    #[test]
     fn test_init_tracing_with_extra_fields() {
         let extra_fields = vec![
             ("chain_id".to_string(), serde_json::json!(555)),
             ("env".to_string(), serde_json::json!("production")),
         ];
         let result = init_tracing_with_extra_fields(extra_fields);
+        println!("result: {:?}", result);
         assert!(result.is_ok());
     }
 }
