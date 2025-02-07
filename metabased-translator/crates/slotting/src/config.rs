@@ -6,7 +6,7 @@ use tracing::debug;
 
 /// Configuration for the slotter
 #[derive(Parser, Debug, Clone)]
-pub struct SlottingConfig {
+pub struct SlotterConfig {
     /// The duration of a [`Slotter`] slot in seconds.
     #[arg(long, env = "SLOTTER_SLOT_DURATION", default_value_t = 2)]
     pub slot_duration: u64,
@@ -17,7 +17,7 @@ pub struct SlottingConfig {
     pub start_slot_timestamp: u64,
 }
 
-impl SlottingConfig {
+impl SlotterConfig {
     /// Validates the configuration
     pub fn validate(&self) -> Result<(), ConfigError> {
         if self.slot_duration == 0 {
@@ -44,7 +44,7 @@ pub enum ConfigError {
     Invalid { message: String },
 }
 
-impl Default for SlottingConfig {
+impl Default for SlotterConfig {
     fn default() -> Self {
         let mut config = Self::parse_from([""]);
         config.start_slot_timestamp = 1712500000;
@@ -59,14 +59,14 @@ mod config_tests {
 
     #[test]
     fn test_default_slotting_config() {
-        let config = SlottingConfig::default();
+        let config = SlotterConfig::default();
         assert_eq!(config.slot_duration, 2);
         assert_eq!(config.start_slot_timestamp, 1712500000);
     }
 
     #[test]
     fn test_default_parsing() {
-        let config = SlottingConfig::parse_from(["test"]);
+        let config = SlotterConfig::parse_from(["test"]);
         assert_eq!(config.slot_duration, 2);
         assert_eq!(config.start_slot_timestamp, 0);
     }
@@ -74,25 +74,25 @@ mod config_tests {
     #[test]
     fn test_new_with_validation() {
         // Valid config
-        let result = SlottingConfig::new(2_000, 0);
+        let result = SlotterConfig::new(2_000, 0);
         assert!(result.is_ok());
 
         // Invalid config
-        let result = SlottingConfig::new(0, 0);
+        let result = SlotterConfig::new(0, 0);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_validation() {
         // Test zero duration
-        let result = SlottingConfig::new(0, 1_000_000);
+        let result = SlotterConfig::new(0, 1_000_000);
         assert_matches!(
             result.unwrap_err(),
             ConfigError::Invalid { message } if message.contains("duration")
         );
 
         // Test valid config with non-zero values
-        let result = SlottingConfig::new(2_000, 1_000_000);
+        let result = SlotterConfig::new(2_000, 1_000_000);
         assert!(result.is_ok());
     }
 }

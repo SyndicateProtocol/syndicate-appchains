@@ -1,40 +1,40 @@
 [package]
-name = "e2e-tests"
-version.workspace = true
-description = "e2e tests for metabased-translator."
-edition.workspace = true
+description            = "e2e tests for metabased-translator."
+edition.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "e2e-tests"
+repository.workspace   = true
 rust-version.workspace = true
-license.workspace = true
-homepage.workspace = true
-repository.workspace = true
+version.workspace      = true
 
 [dependencies]
-common = { workspace = true }
-block-builder = { workspace = true }
-contract-bindings = { workspace = true }
 alloy = { workspace = true, features = [
-  "providers",
-  "node-bindings",
-  "sol-types",
-  "signers",
-  "signer-local",
-  "k256",
   "contract",
+  "k256",
+  "node-bindings",
+  "providers",
+  "signer-local",
+  "signers",
+  "sol-types",
 ] }
+block-builder = { workspace = true }
+common = { workspace = true }
+contract-bindings = { workspace = true }
 eyre = { workspace = true }
-ingestor = {workspace = true}
-slotting = {workspace = true}
+ingestor = { workspace = true }
+metrics = { workspace = true }
+prometheus-client = { workspace = true }
 reqwest = { workspace = true }
-tokio = { workspace = true, features = ["fs"] }
-thiserror = { workspace = true }
+slotting = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
-prometheus-client = { workspace = true}
-metrics = { workspace = true}
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["fs"] }
 
 [dev-dependencies]
 serial_test = { workspace = true }
-tracing = { workspace = true }
+tracing     = { workspace = true }
 
 [package.metadata.cargo-machete]
 # strum is used via a macro from strum_macros - machete does not detect it

@@ -11,7 +11,7 @@ use ingestor::{
     eth_client::{RPCClient, RPCClientError},
 };
 use metrics::config::MetricsConfig;
-use slotting::config::SlottingConfig;
+use slotting::config::SlotterConfig;
 use std::{fmt::Debug, sync::Arc};
 use thiserror::Error;
 use tracing::{debug, error};
@@ -39,7 +39,7 @@ pub struct MetabasedConfig {
     pub block_builder: BlockBuilderConfig,
 
     #[command(flatten)]
-    pub slotter: SlottingConfig,
+    pub slotter: SlotterConfig,
 
     #[command(flatten)]
     pub sequencing: SequencingChainConfig,
@@ -101,7 +101,7 @@ impl MetabasedConfig {
         }
 
         add_fields::<BlockBuilderConfig>(&mut cmd);
-        add_fields::<SlottingConfig>(&mut cmd);
+        add_fields::<SlotterConfig>(&mut cmd);
         add_fields::<SequencingChainConfig>(&mut cmd);
         add_fields::<SettlementChainConfig>(&mut cmd);
         add_fields::<MetricsConfig>(&mut cmd);

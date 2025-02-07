@@ -7,7 +7,7 @@ use alloy::{
     node_bindings::{Anvil, AnvilInstance},
     primitives::{address, utils::parse_ether, Address, U256},
     providers::{ext::AnvilApi as _, Provider, ProviderBuilder, RootProvider, WalletProvider},
-    rpc::types::TransactionRequest,
+    rpc::types::{anvil::MineOptions::Options, BlockTransactionsKind, TransactionRequest},
     signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
     transports::http::Http,
 };
@@ -23,7 +23,7 @@ use block_builder::{
 };
 use common::{
     db::DummyStore,
-    tracing::init_tracing,
+    tracing::init_test_tracing,
     types::{Block, Chain},
 };
 use contract_bindings::{
@@ -43,7 +43,7 @@ use ingestor::{
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use reqwest::Client;
-use slotting::{config::SlottingConfig, metrics::SlottingMetrics, slotting::Slotter};
+use slotting::{config::SlotterConfig, metrics::SlotterMetrics, slotting::Slotter};
 use std::{sync::Arc, time::Duration};
 use tokio::{
     process::{Child, Command},
@@ -51,6 +51,7 @@ use tokio::{
     task,
     time::timeout,
 };
+use tracing::Level;
 /// Simple test scenario:
 /// Bob tries to deploy a counter contract to L3, then tries to increment it
 /// Bob's transactions are sequenced on the sequencing chain
@@ -251,7 +252,7 @@ async fn launch_nitro_node(
         .arg("--chain.info-json=".to_string() + &mchain.rollup_info("test"))
         .arg("--http.addr=0.0.0.0")
         .arg("--http.port=".to_string() + &port.to_string())
-        .arg("--log-level=DEBUG")
+        .arg("--log-level=info")
         .spawn()?;
     let rollup = ProviderBuilder::new()
         .on_http(("http://localhost:".to_string() + &port.to_string()).parse()?);
@@ -270,7 +271,7 @@ async fn launch_nitro_node(
 /// are sequenced via the metabased translator and show up on the rollup.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_settlement_test() -> Result<()> {
-    _ = init_tracing();
+    let _ = init_test_tracing(Level::INFO);
     let block_builder_cfg = BlockBuilderConfig {
         bridge_address: address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2"),
         inbox_address: address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899"),
@@ -332,20 +333,21 @@ async fn e2e_settlement_test() -> Result<()> {
     }));
 
     // start slotter at the genesis timestamp
-    let slotter_cfg = &SlottingConfig { start_slot_timestamp: 1736824187, ..Default::default() };
+    let slotter_cfg = SlotterConfig {
+        start_slot_timestamp: GENESIS_TIMESTAMP,
+        slot_duration: 100_000, // to reduce the number of empty slots
+    };
 
     // Launch the slotter, block builder, and nitro rollup
     let (slotter, slotter_rx) = Slotter::new(
-        sequencer_rx,
-        settlement_rx,
-        slotter_cfg,
+        &slotter_cfg,
         None,
         Box::new(DummyStore {}),
-        SlottingMetrics::new(&mut metrics_state.registry),
+        SlotterMetrics::new(&mut metrics_state.registry),
     );
     let (_dummy, dummy) = tokio::sync::oneshot::channel();
     let _slotter_task = Task(tokio::spawn(async move {
-        slotter.start(dummy).await;
+        slotter.start(sequencer_rx, settlement_rx, dummy).await;
     }));
     let block_builder = BlockBuilder::new(
         slotter_rx,
@@ -477,22 +479,31 @@ async fn e2e_settlement_test() -> Result<()> {
         .await?;
 
     mine_block(&set_provider, 0).await?;
+
+    // mine blocks with timestamp high enough to mark the slot as unsafe
+    let ts = set_provider
+        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap()
+        .header
+        .timestamp;
+
     set_provider
-        .evm_mine(Some(alloy::rpc::types::anvil::MineOptions::Options {
-            timestamp: Some(1736824187 + 10),
+        .evm_mine(Some(Options {
+            timestamp: Some(ts + slotter_cfg.slot_duration + 1),
             blocks: None,
         }))
         .await?;
-    let _seq_chain = MetabasedSequencerChain::new(get_rollup_contract_address(), &seq_provider);
     seq_provider
-        .evm_mine(Some(alloy::rpc::types::anvil::MineOptions::Options {
-            timestamp: Some(1736824187 + 10),
+        .evm_mine(Some(Options {
+            timestamp: Some(ts + slotter_cfg.slot_duration + 1),
             blocks: None,
         }))
         .await?;
 
     // process slots
     tokio::time::sleep(Duration::from_millis(400)).await;
+
     assert_eq!(rollup.get_block_number().await?, 17);
     assert_eq!(
         rollup.get_balance(set_provider.default_signer_address()).await?,
@@ -507,13 +518,13 @@ async fn e2e_settlement_test() -> Result<()> {
 /// sequence a mchain block that does not include a batch.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_test() -> Result<()> {
-    _ = init_tracing();
-
+    let _ = init_test_tracing(Level::INFO);
     let block_builder_cfg = BlockBuilderConfig {
         bridge_address: get_rollup_contract_address(),
         inbox_address: get_rollup_contract_address(),
         mchain_url: "http://127.0.0.1:8288".parse()?,
         sequencing_contract_address: get_rollup_contract_address(),
+        genesis_timestamp: GENESIS_TIMESTAMP,
         ..Default::default()
     };
 
@@ -580,20 +591,33 @@ async fn e2e_test() -> Result<()> {
         settlement_ingestor.start_polling(dummy).await.unwrap();
     }));
 
-    let slotter_cfg = &SlottingConfig::default();
+    // start the slotting at the earliest block that will be ingested (as it's done in the actual
+    // metabased-translator binary)
+    let ingestion_start_block = ingestor_config.settlement.settlement_start_block;
+    let ingestion_start_ts = set_provider
+        .get_block_by_number(
+            BlockNumberOrTag::Number(ingestion_start_block),
+            BlockTransactionsKind::Hashes,
+        )
+        .await?
+        .unwrap()
+        .header
+        .timestamp;
+
+    let slotter_cfg =
+        SlotterConfig { start_slot_timestamp: ingestion_start_ts, ..Default::default() };
+
     let slot_duration = slotter_cfg.slot_duration;
     // Launch the slotter, block builder, and nitro rollup
     let (slotter, slotter_rx) = Slotter::new(
-        sequencer_rx,
-        settlement_rx,
-        slotter_cfg,
+        &slotter_cfg,
         None,
         Box::new(DummyStore {}),
-        SlottingMetrics::new(&mut metrics_state.registry),
+        SlotterMetrics::new(&mut metrics_state.registry),
     );
     let (_dummy, dummy) = tokio::sync::oneshot::channel();
     let _slotter_task = Task(tokio::spawn(async move {
-        slotter.start(dummy).await;
+        slotter.start(sequencer_rx, settlement_rx, dummy).await;
     }));
     let block_builder = BlockBuilder::new(
         slotter_rx,
@@ -703,16 +727,17 @@ async fn e2e_test() -> Result<()> {
     Ok(())
 }
 
-// a dummy block before the genesis of the rollup is included to make sure the slotter can handle
-// this case and ignore the block.
+const GENESIS_TIMESTAMP: u64 = 1736824187;
+
 async fn start_anvil(port: u16, chain_id: u64) -> Result<(AnvilInstance, FilledProvider)> {
+    let timestamp = GENESIS_TIMESTAMP.to_string();
     let args = vec![
         "--base-fee",
         "0",
         "--gas-limit",
         "30000000",
         "--timestamp",
-        "1712400000",
+        &timestamp,
         "--no-mining",
     ];
 
@@ -722,8 +747,6 @@ async fn start_anvil(port: u16, chain_id: u64) -> Result<(AnvilInstance, FilledP
         .with_recommended_fillers()
         .wallet(EthereumWallet::from(get_default_private_key_signer()))
         .on_http(anvil.endpoint_url());
-    mine_block(&provider, 50000).await?;
-    mine_block(&provider, 50000).await?;
     provider.anvil_set_block_timestamp_interval(0).await?;
     Ok((anvil, provider))
 }
@@ -738,8 +761,6 @@ async fn load_anvil(port: u16) -> Result<(AnvilInstance, FilledProvider)> {
         "0",
         "--gas-limit",
         "30000000",
-        "--timestamp",
-        "1736824187",
         "--no-mining",
         "--load-state",
         state_file.to_str().unwrap(),

@@ -85,14 +85,7 @@ async fn run(
         metrics.ingestor_settlement,
     )
     .await?;
-    let (slotter, slot_rx) = Slotter::new(
-        sequencing_rx,
-        settlement_rx,
-        &config.slotter,
-        safe_state,
-        db,
-        metrics.slotting,
-    );
+    let (slotter, slot_rx) = Slotter::new(&config.slotter, safe_state, db, metrics.slotter);
     let block_builder =
         BlockBuilder::new(slot_rx, &config.block_builder, metrics.block_builder).await?;
 
@@ -102,7 +95,9 @@ async fn run(
         tokio::spawn(async move { sequencing_ingestor.start_polling(seq_shutdown_rx).await });
     let mut settlement_handle =
         tokio::spawn(async move { settlement_ingestor.start_polling(settle_shutdown_rx).await });
-    let mut slotter_handle = tokio::spawn(async move { slotter.start(slotter_shutdown_rx).await });
+    let mut slotter_handle = tokio::spawn(async move {
+        slotter.start(sequencing_rx, settlement_rx, slotter_shutdown_rx).await
+    });
     let mut block_builder_handle =
         tokio::spawn(
             async move { block_builder.start(safe_block_number, builder_shutdown_rx).await },

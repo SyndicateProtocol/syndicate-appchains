@@ -5,6 +5,7 @@
 
 use core::fmt;
 use std::{error::Error, fmt::Display};
+use tracing::Level;
 use tracing_subscriber::{fmt as subscriber_fmt, EnvFilter};
 
 // TODO(SEQ-515): Reconsider location, put me in `bin` ?
@@ -34,11 +35,20 @@ pub fn init_tracing() -> Result<(), TracingError> {
     subscriber_fmt()
         .json()
         .with_target(true)
-        .with_max_level(tracing::Level::DEBUG)
+        .with_max_level(Level::DEBUG)
         .with_env_filter(env_filter)
         .try_init()
         .map_err(|e| TracingError::SubscriberInit(format!("{:?}", e)))?;
 
+    Ok(())
+}
+
+/// Initializes a tracing subscriber for testing purposes
+pub fn init_test_tracing(level: Level) -> Result<(), TracingError> {
+    subscriber_fmt()
+        .with_env_filter(EnvFilter::new(level.to_string()))
+        .try_init()
+        .map_err(|e| TracingError::SubscriberInit(format!("{:?}", e)))?;
     Ok(())
 }
 

@@ -235,7 +235,7 @@ impl fmt::Display for Slot {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Slot #{} [ts: {}, state: {}, blocks: {} seq + {} settle]\n  Sequencing blocks: {}\n  Settlement blocks: {}",
+            "Slot #{} [ts: {}, state: {}, blocks: {} seq + {} settle],  Sequencing blocks: {},  Settlement blocks: {}",
             self.number,
             self.timestamp,
             self.state,
@@ -273,6 +273,12 @@ impl BlockRef {
     /// Creates a new `BlockRef` from a `Block`
     pub const fn new(block: &Block) -> Self {
         Self { number: block.number, timestamp: block.timestamp, hash: block.hash }
+    }
+}
+
+impl fmt::Display for BlockRef {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "number: {}, ts: {}, hash: {}", self.number, self.timestamp, self.hash)
     }
 }
 
