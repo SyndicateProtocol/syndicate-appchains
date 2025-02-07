@@ -1,7 +1,7 @@
 use block_builder::{block_builder::BlockBuilder, config::BlockBuilderConfig};
 use common::{
     db::{self, SafeState, TranslatorStore},
-    tracing::{init_tracing, init_tracing_with_chain, TracingError},
+    tracing::{init_tracing_with_chain, TracingError},
     types::Chain,
 };
 use eyre::Result;
