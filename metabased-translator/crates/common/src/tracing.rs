@@ -90,7 +90,7 @@ where
     }
 }
 
-/// TODO docs
+/// Initializes a default tracing subscriber with additional fields to include in every log event
 pub fn init_tracing_with_extra_fields(
     extra_fields: Vec<(String, serde_json::Value)>,
 ) -> Result<(), TracingError> {
