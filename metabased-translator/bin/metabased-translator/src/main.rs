@@ -182,6 +182,7 @@ fn main() -> Result<(), RuntimeError> {
     Ok(())
 }
 
+/// These fields will be added to every log event for additional context. Add more as needed
 fn get_extra_fields_for_logging(base_config: MetabasedConfig) -> Vec<(String, Value)> {
     vec![("chain_id".to_string(), json!(base_config.block_builder.target_chain_id))]
 }
