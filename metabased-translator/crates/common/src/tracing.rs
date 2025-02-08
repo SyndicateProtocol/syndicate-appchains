@@ -55,39 +55,24 @@ where
         mut writer: Writer<'_>,
         event: &Event<'_>,
     ) -> fmt::Result {
-        // Create a temporary buffer.
+        // Get the original JSON output
         let mut buf = String::new();
-        {
-            // Wrap the temporary buffer in a Writer.
-            let buf_writer = Writer::new(&mut buf);
-            // Use the inner formatter to write the event.
-            self.inner.format_event(ctx, buf_writer, event)?;
+        let buf_writer = Writer::new(&mut buf);
+        self.inner.format_event(ctx, buf_writer, event)?;
+
+        // Parse the original JSON
+        let mut json: serde_json::Value = serde_json::from_str(&buf).map_err(|_| fmt::Error)?;
+
+        // Add extra fields to the JSON object
+        if let serde_json::Value::Object(ref mut map) = json {
+            for (key, value) in &self.extra_fields {
+                map.insert(key.clone(), value.clone());
+            }
         }
 
-        // We assume the output is a JSON object ending with a closing brace.
-        // Remove the trailing "}" (or "}\n") so we can insert extra fields.
-        let ends_with_newline = buf.ends_with("}\n");
-        if ends_with_newline {
-            buf.truncate(buf.len() - 2); // remove "}\n"
-        } else if buf.ends_with('}') {
-            buf.pop(); // remove the final '}'
-        } else {
-            // If the output is not a JSON object, just write it out.
-            return writer.write_str(&buf);
-        }
-
-        // Append the extra fields.
-        // (Each extra field is added with a preceding comma.)
-        for (key, value) in &self.extra_fields {
-            write!(writer, ", \"{}\": {}", key, value)?;
-        }
-
-        // Close the JSON object.
-        if ends_with_newline {
-            writeln!(writer, "}}") // close with a newline
-        } else {
-            write!(writer, "}}")
-        }
+        // Write the modified JSON with a newline
+        writeln!(writer, "{}", json)?;
+        Ok(())
     }
 }
 
@@ -131,7 +116,6 @@ mod tests {
             ("env".to_string(), serde_json::json!("my_computer")),
         ];
         let result = init_tracing_with_extra_fields(extra_fields);
-        println!("result: {:?}", result);
         assert!(result.is_ok());
     }
 }
