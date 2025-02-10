@@ -440,13 +440,27 @@ impl Slotter {
                 }
                 Ordering::Greater => {
                     // We've gone too far, insert new slot before this one
+                    let mut slots_to_insert = Vec::new();
+
                     let mut new_slot = Slot::new(target_slot_number, target_timestamp);
                     debug!(%new_slot, "Creating new slot between existing slots");
                     new_slot.push_block(block_info, chain);
+                    slots_to_insert.push(new_slot);
 
-                    // Split list at idx, insert new slot, then reattach tail
+                    // Create empty slots between latest and target if needed
+                    if target_slot_number > slot.number + 1 {
+                        // Create empty slot right before the target slot
+                        let empty_slot = Slot::new(
+                            target_slot_number - 1,
+                            target_timestamp - self.slot_duration,
+                        );
+                        debug!(%empty_slot, "Created empty slot before target");
+                        slots_to_insert.push(empty_slot);
+                    }
+
+                    // Split list at idx, insert new slots, then reattach tail
                     let mut tail = self.slots.split_off(idx);
-                    self.slots.push_back(new_slot);
+                    self.slots.extend(slots_to_insert);
                     self.slots.append(&mut tail);
 
                     return Ok(());
