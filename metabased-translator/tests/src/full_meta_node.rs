@@ -198,7 +198,7 @@ pub struct MetaNode {
 }
 
 impl MetaNode {
-    // We need 3 ports to run a full meta node
+    // We need 4 ports to run a full meta node
     // - MChain
     // - Mock Sequencing Chain
     // - Mock Settlement Chain
@@ -210,15 +210,15 @@ impl MetaNode {
 
         // Define the addresses of the bridge and inbox contracts depedning on whether we
         // are loading in the full set of Arb contracts or not
-        let mut bridge_address = get_rollup_contract_address();
-        let mut inbox_address = get_rollup_contract_address();
-        if pre_loaded {
-            bridge_address = PRELOAD_BRIDGE_ADDRESS;
-            inbox_address = PRELOAD_INBOX_ADDRESS;
-        }
+        let bridge_address =
+            if pre_loaded { PRELOAD_BRIDGE_ADDRESS } else { get_rollup_contract_address() };
+        let inbox_address =
+            if pre_loaded { PRELOAD_INBOX_ADDRESS } else { get_rollup_contract_address() };
 
         let _ = init_test_tracing(Level::INFO);
-        let mchain_port = port_tracker.next_port().unwrap();
+        let mchain_port = port_tracker
+            .next_port()
+            .ok_or_else(|| eyre::eyre!("Failed to acquire port for mchain"))?;
         let block_builder_cfg = BlockBuilderConfig {
             bridge_address,
             inbox_address,
@@ -229,7 +229,9 @@ impl MetaNode {
         };
 
         // Launch mock sequencing chain and deploy contracts
-        let seq_port = port_tracker.next_port().unwrap();
+        let seq_port = port_tracker
+            .next_port()
+            .ok_or_else(|| eyre::eyre!("Failed to acquire port for sequencing"))?;
         let (seq_anvil, seq_provider) = start_anvil(seq_port, 15).await?;
         _ = MetabasedSequencerChain::deploy_builder(
             &seq_provider,
@@ -248,7 +250,9 @@ impl MetaNode {
             MetabasedSequencerChain::new(get_rollup_contract_address(), provider_clone);
 
         // Launch mock settlement chain
-        let set_port = port_tracker.next_port().unwrap();
+        let set_port = port_tracker
+            .next_port()
+            .ok_or_else(|| eyre::eyre!("Failed to acquire port for settlement"))?;
         let (set_anvil, set_provider);
         if pre_loaded {
             // If flag is set, load the anvil state from a file
@@ -299,11 +303,11 @@ impl MetaNode {
         .await?;
         let (seq_ingestor_tx, seq_ingestor_rx) = tokio::sync::oneshot::channel();
         let ingestor_task_1 = Task(tokio::spawn(async move {
-            sequencing_ingestor.start_polling(seq_ingestor_rx).await.unwrap();
+            let _ = sequencing_ingestor.start_polling(seq_ingestor_rx).await;
         }));
         let (set_ingestor_tx, set_ingestor_rx) = tokio::sync::oneshot::channel();
         let ingestor_task_2 = Task(tokio::spawn(async move {
-            settlement_ingestor.start_polling(set_ingestor_rx).await.unwrap();
+            let _ = settlement_ingestor.start_polling(set_ingestor_rx).await;
         }));
 
         // Start slotter at the genesis timestamp
@@ -329,8 +333,11 @@ impl MetaNode {
         .await?;
         let mchain_provider = block_builder.mchain.provider.clone();
 
+        let nitro_port = port_tracker
+            .next_port()
+            .ok_or_else(|| eyre::eyre!("Failed to acquire port for nitro"))?;
         let (nitro_docker, metabased_rollup) =
-            launch_nitro_node(&block_builder.mchain, port_tracker.next_port().unwrap()).await?;
+            launch_nitro_node(&block_builder.mchain, nitro_port).await?;
         let (builder_tx, builder_rx) = tokio::sync::oneshot::channel();
         let block_builder_task = Task(tokio::spawn(async move {
             block_builder.start(None, builder_rx).await;

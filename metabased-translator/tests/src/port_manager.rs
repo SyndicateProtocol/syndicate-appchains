@@ -23,9 +23,9 @@ pub struct PortManager {
 /// A singleton that manages port allocation for the test suite
 impl PortManager {
     /// Returns the singleton instance of the port manager
-    pub fn instance() -> &'static PortManager {
+    pub fn instance() -> &'static Self {
         static MANAGER: OnceLock<PortManager> = OnceLock::new();
-        MANAGER.get_or_init(|| PortManager { next_port: AtomicU16::new(8200) })
+        MANAGER.get_or_init(|| Self { next_port: AtomicU16::new(8200) })
     }
 
     /// Acquires a range of ports
@@ -38,7 +38,7 @@ impl PortManager {
             let end = current.checked_add(count).ok_or(PortError::PortExhausted)?;
 
             // Check if any port in range is already in use
-            let ports_available = (current..end).all(|p| is_port_available(p));
+            let ports_available = (current..end).all(is_port_available);
 
             if ports_available {
                 // Try to atomically claim the range
@@ -69,13 +69,11 @@ pub struct PortRange {
 impl PortRange {
     /// Returns the next port in the range
     pub fn next_port(&mut self) -> Option<u16> {
-        if self.start < self.end {
+        (self.start < self.end).then(|| {
             let port = self.start;
             self.start += 1;
-            Some(port)
-        } else {
-            None
-        }
+            port
+        })
     }
 }
 
