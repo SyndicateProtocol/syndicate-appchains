@@ -198,15 +198,13 @@ pub struct MetaNode {
 }
 
 impl MetaNode {
-    // We need 4 ports to run a full meta node
-    // - MChain
-    // - Mock Sequencing Chain
-    // - Mock Settlement Chain
-    // - Nitro Rollup
-    const PORT_COUNT: u16 = 4;
-
     pub async fn new(pre_loaded: bool) -> Result<Self> {
-        let mut port_tracker = PortManager::instance().acquire_port_range(Self::PORT_COUNT)?;
+        // We need 4 ports to run a full meta node
+        // - MChain
+        // - Mock Sequencing Chain
+        // - Mock Settlement Chain
+        // - Nitro Rollup;
+        let port_tracker = PortManager::instance();
 
         // Define the addresses of the bridge and inbox contracts depedning on whether we
         // are loading in the full set of Arb contracts or not
@@ -216,9 +214,7 @@ impl MetaNode {
             if pre_loaded { PRELOAD_INBOX_ADDRESS } else { get_rollup_contract_address() };
 
         let _ = init_test_tracing(Level::INFO);
-        let mchain_port = port_tracker
-            .next_port()
-            .ok_or_else(|| eyre::eyre!("Failed to acquire port for mchain"))?;
+        let mchain_port = port_tracker.next_port();
         let block_builder_cfg = BlockBuilderConfig {
             bridge_address,
             inbox_address,
@@ -229,9 +225,7 @@ impl MetaNode {
         };
 
         // Launch mock sequencing chain and deploy contracts
-        let seq_port = port_tracker
-            .next_port()
-            .ok_or_else(|| eyre::eyre!("Failed to acquire port for sequencing"))?;
+        let seq_port = port_tracker.next_port();
         let (seq_anvil, seq_provider) = start_anvil(seq_port, 15).await?;
         _ = MetabasedSequencerChain::deploy_builder(
             &seq_provider,
@@ -250,9 +244,7 @@ impl MetaNode {
             MetabasedSequencerChain::new(get_rollup_contract_address(), provider_clone);
 
         // Launch mock settlement chain
-        let set_port = port_tracker
-            .next_port()
-            .ok_or_else(|| eyre::eyre!("Failed to acquire port for settlement"))?;
+        let set_port = port_tracker.next_port();
         let (set_anvil, set_provider);
         if pre_loaded {
             // If flag is set, load the anvil state from a file
@@ -333,9 +325,7 @@ impl MetaNode {
         .await?;
         let mchain_provider = block_builder.mchain.provider.clone();
 
-        let nitro_port = port_tracker
-            .next_port()
-            .ok_or_else(|| eyre::eyre!("Failed to acquire port for nitro"))?;
+        let nitro_port = port_tracker.next_port();
         let (nitro_docker, metabased_rollup) =
             launch_nitro_node(&block_builder.mchain, nitro_port).await?;
         let (builder_tx, builder_rx) = tokio::sync::oneshot::channel();

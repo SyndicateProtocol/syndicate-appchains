@@ -8,6 +8,8 @@ use std::{
     },
 };
 
+const MAX_PORTS: u16 = 65534;
+
 /// Check if a port is available by attempting to bind to it
 fn is_port_available(port: u16) -> bool {
     let addr = format!("127.0.0.1:{}", port);
@@ -28,62 +30,22 @@ impl PortManager {
         MANAGER.get_or_init(|| Self { next_port: AtomicU16::new(8200) })
     }
 
-    /// Acquires a range of ports
-    pub fn acquire_port_range(&self, count: u16) -> Result<PortRange, PortError> {
+    /// Returns the next available port
+    pub fn next_port(&self) -> u16 {
         let mut attempts = 0;
         const MAX_ATTEMPTS: u32 = 100;
 
         while attempts < MAX_ATTEMPTS {
-            let current = self.next_port.load(Ordering::Relaxed);
-            let end = current.checked_add(count).ok_or(PortError::PortExhausted)?;
+            let next = self.next_port.fetch_add(1, Ordering::Relaxed);
+            assert!(next <= MAX_PORTS, "Port range exhausted");
 
-            // Check if any port in range is already in use
-            let ports_available = (current..end).all(is_port_available);
-
-            if ports_available {
-                // Try to atomically claim the range
-                if self
-                    .next_port
-                    .compare_exchange(current, end, Ordering::SeqCst, Ordering::Relaxed)
-                    .is_ok()
-                {
-                    return Ok(PortRange { start: current, end });
-                }
+            if is_port_available(next) {
+                return next;
             }
 
             attempts += 1;
         }
 
-        Err(PortError::NoAvailablePorts)
+        panic!("Failed to acquire port after {} attempts", MAX_ATTEMPTS);
     }
-}
-
-/// A range of ports
-#[derive(Debug)]
-pub struct PortRange {
-    start: u16,
-    end: u16,
-}
-
-/// A range of ports
-impl PortRange {
-    /// Returns the next port in the range
-    pub fn next_port(&mut self) -> Option<u16> {
-        (self.start < self.end).then(|| {
-            let port = self.start;
-            self.start += 1;
-            port
-        })
-    }
-}
-
-/// An error that occurs when managing ports
-#[derive(Debug, thiserror::Error)]
-pub enum PortError {
-    /// No available ports after maximum attempts
-    #[error("No available ports after maximum attempts")]
-    NoAvailablePorts,
-    /// Port range exhausted
-    #[error("Port range exhausted")]
-    PortExhausted,
 }
