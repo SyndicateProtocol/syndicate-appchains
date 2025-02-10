@@ -53,3 +53,10 @@ repos:
         types: [solidity]
         files: ^(metabased-translator)/contracts/
         pass_filenames: false
+      - id: contract-bindings
+        name: contract bindings
+        entry: make -C metabased-translator create-contract-bindings
+        language: system
+        types: [solidity]
+        files: ^(metabased-contracts|metabased-translator/contracts)/
+        pass_filenames: false
