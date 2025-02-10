@@ -126,14 +126,14 @@ contract MetabasedFactory {
     /// @param salt The salt to use for the deployment
     /// @param chainId The ID of the L3 chain
     /// @return The address of the MetabasedSequencerChain contract
-    function computeSequencerChainAddress(bytes32 salt, uint256 chainId) external view returns (address) {
+    function computeSequencerChainAddress(bytes32 salt, uint256 chainId) public view returns (address) {
         return Create2.computeAddress(salt, keccak256(getBytecode(chainId)));
     }
 
     /// @notice Returns the bytecode of the MetabasedSequencerChain contract
     /// @param chainId The ID of the L3 chain
     /// @return The bytecode of the MetabasedSequencerChain contract
-    function getBytecode(uint256 chainId) internal pure returns (bytes memory) {
+    function getBytecode(uint256 chainId) public pure returns (bytes memory) {
         return abi.encodePacked(type(MetabasedSequencerChain).creationCode, abi.encode(chainId));
     }
 }
