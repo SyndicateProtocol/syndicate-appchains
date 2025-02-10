@@ -175,6 +175,12 @@ impl Slotter {
                     SlotterError::TimestampOverflow => {
                         panic!("Timestamp overflow - this should never happen unless timestamps are extremely far apart");
                     }
+                    SlotterError::SlotNumberOverflow => {
+                        panic!("Slot number overflow - this should never happen unless timestamps are extremely far apart, or a block was received for a slot in the past (before START_SLOT)");
+                    }
+                    SlotterError::TimestampOverflow => {
+                        panic!("Timestamp overflow - this should never happen unless timestamps are extremely far apart");
+                    }
                 },
             }
         }
