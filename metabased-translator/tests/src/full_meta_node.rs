@@ -175,8 +175,8 @@ pub struct MetaNode {
 
     pub mchain_provider: FilledProvider,
 
-    ingestor_task_1: Task,
-    ingestor_task_2: Task,
+    sequencer_ingestor_task: Task,
+    settlement_ingestor_task: Task,
     block_builder_task: Task,
     slotter_task: Task,
 
@@ -294,11 +294,11 @@ impl MetaNode {
         )
         .await?;
         let (seq_ingestor_tx, seq_ingestor_rx) = tokio::sync::oneshot::channel();
-        let ingestor_task_1 = Task(tokio::spawn(async move {
+        let sequencer_ingestor_task = Task(tokio::spawn(async move {
             let _ = sequencing_ingestor.start_polling(seq_ingestor_rx).await;
         }));
         let (set_ingestor_tx, set_ingestor_rx) = tokio::sync::oneshot::channel();
-        let ingestor_task_2 = Task(tokio::spawn(async move {
+        let settlement_ingestor_task = Task(tokio::spawn(async move {
             let _ = settlement_ingestor.start_polling(set_ingestor_rx).await;
         }));
 
@@ -344,8 +344,8 @@ impl MetaNode {
 
             mchain_provider,
 
-            ingestor_task_1,
-            ingestor_task_2,
+            sequencer_ingestor_task,
+            settlement_ingestor_task,
             block_builder_task,
             slotter_task,
 
@@ -386,8 +386,8 @@ impl MetaNode {
 
 impl Drop for MetaNode {
     fn drop(&mut self) {
-        self.ingestor_task_1.0.abort();
-        self.ingestor_task_2.0.abort();
+        self.sequencer_ingestor_task.0.abort();
+        self.settlement_ingestor_task.0.abort();
         self.block_builder_task.0.abort();
         self.slotter_task.0.abort();
     }
