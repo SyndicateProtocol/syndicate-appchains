@@ -148,8 +148,7 @@ impl Slotter {
                                                                   // handing
                     }
                     SlotterError::BlockNumberSkipped { .. } => {
-                        panic!("Block number skipped {e}"); // TODO SEQ-489 - decide what to do if a
-                                                            // block is skipped
+                        panic!("Block number skipped {e}");
                     }
                     SlotterError::BlockTooOld { .. } => {
                         panic!("Block too old {e}");
@@ -168,7 +167,7 @@ impl Slotter {
                         panic!("Block before safe timestamp - this should never happen (where a block is received with a timestamp before the safe timestamp) {e}");
                     }
                     SlotterError::DbError(_) => {
-                        panic!("Database error: {e}"); // TODO SEQ-489 - decide what to do here
+                        panic!("Database error: {e}");
                     }
                     SlotterError::SlotNumberOverflow => {
                         panic!("Slot number overflow - this should never happen unless timestamps are extremely far apart, or a block was received for a slot in the past (before START_SLOT)");
