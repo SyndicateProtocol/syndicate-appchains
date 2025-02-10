@@ -326,7 +326,6 @@ async fn e2e_settlement_test() -> Result<()> {
         parse_ether("4.6000316")?
     );
 
-    drop(meta_node);
     Ok(())
 }
 
@@ -443,7 +442,6 @@ async fn e2e_test() -> Result<()> {
     // balance should match
     assert_eq!(meta_node.metabased_rollup.get_balance(test_addr).await?, parse_ether("1")?);
 
-    drop(meta_node);
     Ok(())
 }
 
