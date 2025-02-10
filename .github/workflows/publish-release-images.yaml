@@ -1,0 +1,51 @@
+name: Publish Release Images
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
+jobs:
+  publish-sequencer:
+    uses: ./.github/workflows/docker-build-core.yaml
+    with:
+      do_push: true
+      target_name: metabased-sequencer
+    secrets: inherit
+
+  publish-translator:
+    uses: ./.github/workflows/docker-build-core.yaml
+    with:
+      do_push: true
+      target_name: metabased-translator
+    secrets: inherit
+
+  cloud-run-deployment:
+    needs: [publish-sequencer]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure Google Cloud credentials
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/112197761096/locations/global/workloadIdentityPools/cloud-run-github-pool/providers/id-001
+          service_account: 'cloud-run-service-account@metabased-testnet.iam.gserviceaccount.com'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Trigger Cloud Run Deployment
+        run: |
+          gcloud builds triggers run deploy-metabased-sequencer \
+            --region=global \
+            --project=metabased-testnet \
+            --branch=${GITHUB_REF#refs/heads/}
