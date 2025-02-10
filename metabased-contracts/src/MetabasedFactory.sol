@@ -46,7 +46,7 @@ contract MetabasedFactory {
     /// @param l3ChainId the l3 chain the contract refers to
     /// @param admin The address that will be the admin
     /// @param permissionModule The address of the permission module
-    /// @param salt The salt to use for the deployment
+    /// @param salt The salt to use for the deployment, this should be the l3ChainId if it has not been previously used
     /// @return sequencerChain The address of the newly created MetabasedSequencerChain
     function createMetabasedSequencerChain(
         uint256 l3ChainId,
