@@ -180,7 +180,7 @@ pub struct MetaNode {
     block_builder_task: Task,
     slotter_task: Task,
 
-    // Refferences to keep the processes/tasks alive
+    // References to keep the processes/tasks alive
     #[allow(dead_code)]
     seq_anvil: AnvilInstance,
     #[allow(dead_code)]
