@@ -336,6 +336,7 @@ async fn e2e_settlement_test() -> Result<()> {
     let slotter_cfg = SlotterConfig {
         start_slot_timestamp: GENESIS_TIMESTAMP,
         slot_duration: 100_000, // to reduce the number of empty slots
+        settlement_delay: 0,
     };
 
     // Launch the slotter, block builder, and nitro rollup
@@ -604,8 +605,11 @@ async fn e2e_test() -> Result<()> {
         .header
         .timestamp;
 
-    let slotter_cfg =
-        SlotterConfig { start_slot_timestamp: ingestion_start_ts, ..Default::default() };
+    let slotter_cfg = SlotterConfig {
+        start_slot_timestamp: ingestion_start_ts,
+        settlement_delay: 0,
+        ..Default::default()
+    };
 
     let slot_duration = slotter_cfg.slot_duration;
     // Launch the slotter, block builder, and nitro rollup
