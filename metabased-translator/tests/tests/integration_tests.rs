@@ -4,54 +4,27 @@
 use alloy::{
     eips::{eip2718::Encodable2718, BlockNumberOrTag},
     network::{EthereumWallet, TransactionBuilder},
-    node_bindings::{Anvil, AnvilInstance},
     primitives::{address, utils::parse_ether, Address, U256},
-    providers::{ext::AnvilApi as _, Provider, ProviderBuilder, RootProvider, WalletProvider},
-    rpc::types::{anvil::MineOptions::Options, BlockTransactionsKind, TransactionRequest},
+    providers::{ext::AnvilApi as _, Provider, WalletProvider},
+    rpc::types::TransactionRequest,
     signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
-    transports::http::Http,
 };
 use block_builder::{
-    block_builder::BlockBuilder,
-    config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
-    connectors::{
-        anvil::{FilledProvider, MetaChainProvider},
-        metrics::MChainMetrics,
-    },
-    metrics::BlockBuilderMetrics,
+    config::{get_rollup_contract_address, BlockBuilderConfig},
+    connectors::{anvil::MetaChainProvider, metrics::MChainMetrics},
     rollups::arbitrum,
 };
-use common::{
-    db::DummyStore,
-    tracing::init_test_tracing,
-    types::{Block, Chain},
+use common::types::Block;
+use contract_bindings::arbitrum::{counter::Counter, iinbox::IInbox, rollup::Rollup};
+use e2e_tests::{
+    e2e_env::{wallet_from_private_key, TestEnv},
+    full_meta_node::{launch_nitro_node, MetaNode, GENESIS_TIMESTAMP, PRELOAD_INBOX_ADDRESS},
 };
-use contract_bindings::{
-    arbitrum::{counter::Counter, iinbox::IInbox, rollup::Rollup},
-    metabased::{
-        alwaysallowedmodule::AlwaysAllowedModule, metabasedsequencerchain::MetabasedSequencerChain,
-    },
-};
-use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::{eyre, Result};
-use ingestor::{
-    config::{ChainIngestorConfig, IngestionPipelineConfig},
-    eth_client::{EthClient, RPCClient},
-    ingestor::Ingestor,
-    metrics::IngestorMetrics,
-};
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
-use reqwest::Client;
-use slotter::{config::SlotterConfig, metrics::SlotterMetrics, Slotter};
-use std::{sync::Arc, time::Duration};
-use tokio::{
-    process::{Child, Command},
-    runtime::Handle,
-    task,
-    time::timeout,
-};
-use tracing::Level;
+use std::time::Duration;
+
 /// Simple test scenario:
 /// Bob tries to deploy a counter contract to L3, then tries to increment it
 /// Bob's transactions are sequenced on the sequencing chain
@@ -202,214 +175,68 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
     Ok(())
 }
 
-struct Docker(Child);
-
-impl Drop for Docker {
-    fn drop(&mut self) {
-        if let Some(x) = self.0.id() {
-            _ = std::process::Command::new("kill").arg(x.to_string()).output();
-            task::block_in_place(move || {
-                Handle::current().block_on(async move {
-                    _ = self.0.wait().await;
-                })
-            })
-        }
-    }
-}
-
-struct Task(task::JoinHandle<()>);
-
-impl Drop for Task {
-    fn drop(&mut self) {
-        self.0.abort();
-    }
-}
-
-async fn mine_block(provider: &FilledProvider, delay: u64) -> Result<()> {
-    provider.anvil_set_block_timestamp_interval(delay).await?;
-    provider.evm_mine(None).await?;
-    Ok(())
-}
-
-async fn launch_nitro_node(
-    mchain: &MetaChainProvider,
-    port: u64,
-) -> Result<(Docker, RootProvider<Http<Client>>)> {
-    let nitro = Command::new("docker")
-        .kill_on_drop(false) // kill via SIGTERM instead of SIGKILL
-        .arg("run")
-        .arg("--init")
-        .arg("--rm")
-        .arg("--net=host")
-        .arg("offchainlabs/nitro-node:v3.4.0-d896e9c-slim")
-        .arg("--parent-chain.connection.url=".to_string() + mchain.anvil.endpoint_url().as_str())
-        .arg("--node.dangerous.disable-blob-reader")
-        .arg("--execution.forwarding-target=null")
-        .arg("--execution.parent-chain-reader.old-header-timeout=1000h")
-        .arg("--node.inbox-reader.check-delay=10ms")
-        .arg("--node.staker.enable=false")
-        .arg("--ensure-rollup-deployment=false")
-        .arg("--chain.info-json=".to_string() + &mchain.rollup_info("test"))
-        .arg("--http.addr=0.0.0.0")
-        .arg("--http.port=".to_string() + &port.to_string())
-        .arg("--log-level=info")
-        .spawn()?;
-    let rollup = ProviderBuilder::new()
-        .on_http(("http://localhost:".to_string() + &port.to_string()).parse()?);
-    // give it two minutes to launch (in case it needs to download the image)
-    timeout(Duration::from_secs(120), async {
-        while rollup.get_chain_id().await.is_err() {
-            tokio::time::sleep(Duration::from_millis(10)).await;
-        }
-        Ok::<_, eyre::Error>((Docker(nitro), rollup))
-    })
-    .await?
-}
-
 /// This test sends different types of delayed messages
 /// via the inbox contract and ensures that all of them
 /// are sequenced via the metabased translator and show up on the rollup.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_settlement_test() -> Result<()> {
-    let _ = init_test_tracing(Level::INFO);
-    let block_builder_cfg = BlockBuilderConfig {
-        bridge_address: address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2"),
-        inbox_address: address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899"),
-        mchain_url: "http://127.0.0.1:8188".parse()?,
-        sequencing_contract_address: get_rollup_contract_address(),
-        ..Default::default()
-    };
+    // Start the meta node (port index 0, pre-loaded with the full set of Arb contracts)
+    let meta_node = MetaNode::new(true).await?;
+    // Grab the wallet address for the test
+    let wallet_address = meta_node.settlement_provider.default_signer_address();
 
-    // Launch mock sequencing chain and deploy contracts
-    let (_seq_anvil, seq_provider) = start_anvil(8145, 15).await?;
-    _ = MetabasedSequencerChain::deploy_builder(
-        &seq_provider,
-        U256::from(block_builder_cfg.target_chain_id),
-        seq_provider.default_signer_address(),
-        seq_provider.default_signer_address().create(1),
-    )
-    .send()
-    .await?;
-    _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
-    mine_block(&seq_provider, 0).await?;
-
-    // Load settlement chain from state dump
-    let (_set_anvil, set_provider) = load_anvil(8146).await?;
-
-    // Launch ingestors for the sequencer and settlement chains
-    let mut ingestor_config = IngestionPipelineConfig::default();
-    ingestor_config.sequencing.sequencing_rpc_url = "http://localhost:8145".to_string();
-    ingestor_config.sequencing.sequencing_polling_interval = Duration::from_millis(10);
-    ingestor_config.settlement.settlement_rpc_url = "http://localhost:8146".to_string();
-    ingestor_config.settlement.settlement_polling_interval = Duration::from_millis(10);
-    let seq_config: ChainIngestorConfig = (&ingestor_config.sequencing).into();
-    let set_config: ChainIngestorConfig = (&ingestor_config.settlement).into();
-    let mut metrics_state = MetricsState { registry: Registry::default() };
-    let sequencing_client: Arc<dyn RPCClient> =
-        Arc::new(EthClient::new(&ingestor_config.sequencing.sequencing_rpc_url).await?);
-    let settlement_client: Arc<dyn RPCClient> =
-        Arc::new(EthClient::new(&ingestor_config.settlement.settlement_rpc_url).await?);
-    let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
-        Chain::Sequencing,
-        sequencing_client,
-        &seq_config,
-        IngestorMetrics::new(&mut metrics_state.registry),
-    )
-    .await?;
-    let (settlement_ingestor, settlement_rx) = Ingestor::new(
-        Chain::Settlement,
-        settlement_client,
-        &set_config,
-        IngestorMetrics::new(&mut metrics_state.registry),
-    )
-    .await?;
-    let (_dumy, dummy) = tokio::sync::oneshot::channel();
-    let _seq_ingestor_task = Task(tokio::spawn(async move {
-        sequencing_ingestor.start_polling(dummy).await.unwrap();
-    }));
-    let (_dummy, dummy) = tokio::sync::oneshot::channel();
-    let _set_ingestor_task = Task(tokio::spawn(async move {
-        settlement_ingestor.start_polling(dummy).await.unwrap();
-    }));
-
-    // start slotter at the genesis timestamp
-    let slotter_cfg = SlotterConfig {
-        start_slot_timestamp: GENESIS_TIMESTAMP,
-        slot_duration: 100_000, // to reduce the number of empty slots
-    };
-
-    // Launch the slotter, block builder, and nitro rollup
-    let (slotter, slotter_rx) = Slotter::new(
-        &slotter_cfg,
-        None,
-        Box::new(DummyStore {}),
-        SlotterMetrics::new(&mut metrics_state.registry),
-    );
-    let (_dummy, dummy) = tokio::sync::oneshot::channel();
-    let _slotter_task = Task(tokio::spawn(async move {
-        slotter.start(sequencer_rx, settlement_rx, dummy).await;
-    }));
-    let block_builder = BlockBuilder::new(
-        slotter_rx,
-        &block_builder_cfg,
-        BlockBuilderMetrics::new(&mut metrics_state.registry),
-    )
-    .await?;
-    let (_nitro, rollup) = launch_nitro_node(&block_builder.mchain, 8147).await?;
-    let (_dummy, dummy) = tokio::sync::oneshot::channel();
-    let _block_builder_task = Task(tokio::spawn(async move {
-        block_builder.start(None, dummy).await;
-    }));
-
-    // sequence a deposit (unaliased address)
-    // deposit is from the arbos address and does not increment the nonce
-    let inbox = IInbox::new(address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899"), &set_provider);
+    // Send a deposit (unaliased address) delayed message
+    // Deposit is from the arbos address and does not increment the nonce
+    let inbox = IInbox::new(PRELOAD_INBOX_ADDRESS, &meta_node.settlement_provider);
     _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
 
-    // sequence l2 signed messages (unaliased address)
     const L2_MESSAGE_KIND_SIGNED_TX: u8 = 4;
     let gas_limit: u64 = 100_000;
     let max_fee_per_gas: u128 = 100_000_000;
+
+    // Send l2 signed messages (unaliased address)
+    // Message (not from origin)
     let mut inner_tx = vec![];
     TransactionRequest::default()
         .with_to(Address::ZERO)
         .with_value(parse_ether("0.1")?)
         .with_nonce(0)
         .with_gas_limit(gas_limit)
-        .with_chain_id(block_builder_cfg.target_chain_id)
+        .with_chain_id(meta_node.chain_id)
         .with_max_fee_per_gas(max_fee_per_gas)
         .with_max_priority_fee_per_gas(0)
-        .build(set_provider.wallet())
+        .build(meta_node.settlement_provider.wallet())
         .await?
         .encode_2718(&mut inner_tx);
     let mut tx = vec![L2_MESSAGE_KIND_SIGNED_TX];
     tx.append(&mut inner_tx);
     _ = inbox.sendL2Message(tx.into()).send().await?;
-
+    // Message From Origin
     inner_tx = vec![];
     TransactionRequest::default()
         .with_to(Address::ZERO)
         .with_value(parse_ether("0.1")?)
         .with_nonce(1)
         .with_gas_limit(gas_limit)
-        .with_chain_id(block_builder_cfg.target_chain_id)
+        .with_chain_id(meta_node.chain_id)
         .with_max_fee_per_gas(max_fee_per_gas)
         .with_max_priority_fee_per_gas(0)
-        .build(set_provider.wallet())
+        .build(meta_node.settlement_provider.wallet())
         .await?
         .encode_2718(&mut inner_tx);
     tx = vec![L2_MESSAGE_KIND_SIGNED_TX];
     tx.append(&mut inner_tx);
     _ = inbox.sendL2MessageFromOrigin(tx.into()).send().await?;
 
-    // sequence retryable tickets that are automatically redeemed (aliased address)
+    // Send retryable tickets that are automatically redeemed (aliased address)
+    // Safe Retryable Ticket
     _ = inbox
         .createRetryableTicket(
-            set_provider.default_signer_address(),
+            wallet_address,
             U256::ZERO,
             parse_ether("0.00001")?,
-            set_provider.default_signer_address(),
-            set_provider.default_signer_address(),
+            wallet_address,
+            wallet_address,
             U256::from(gas_limit),
             U256::from(max_fee_per_gas),
             Default::default(),
@@ -417,13 +244,14 @@ async fn e2e_settlement_test() -> Result<()> {
         .value(parse_ether("1")?)
         .send()
         .await?;
+    // Unsafe Retryable Ticket
     _ = inbox
         .unsafeCreateRetryableTicket(
-            set_provider.default_signer_address(),
+            wallet_address,
             U256::ZERO,
             parse_ether("0.00001")?,
-            set_provider.default_signer_address(),
-            set_provider.default_signer_address(),
+            wallet_address,
+            wallet_address,
             U256::from(gas_limit),
             U256::from(max_fee_per_gas),
             Default::default(),
@@ -432,83 +260,73 @@ async fn e2e_settlement_test() -> Result<()> {
         .send()
         .await?;
 
-    // sequence l2 unsigned messages (aliased address)
+    // Send 2 l2 unsigned messages (aliased address)
+    // Unsigned Transaction
     _ = inbox
         .sendUnsignedTransaction(
             U256::from(gas_limit),
             U256::from(max_fee_per_gas),
             U256::from(2),
-            set_provider.default_signer_address(),
+            wallet_address,
             parse_ether("0.9")?,
             Default::default(),
         )
         .send()
         .await?;
+    // Contract Transaction
     _ = inbox
         .sendContractTransaction(
             U256::from(gas_limit),
             U256::from(max_fee_per_gas),
-            set_provider.default_signer_address(),
+            wallet_address,
             parse_ether("0.9")?,
             Default::default(),
         )
         .send()
         .await?;
 
-    // sequence l2fundedbyl1 messages (aliased address)
+    // Send 2 l2 funded by l1 messages (aliased address)
+    // Funded Unsigned Transaction
     _ = inbox
         .sendL1FundedUnsignedTransaction(
             U256::from(gas_limit),
             U256::from(max_fee_per_gas),
             U256::from(4),
-            set_provider.default_signer_address(),
+            wallet_address,
             Default::default(),
         )
         .value(parse_ether("1")?)
         .send()
         .await?;
+    // Funded Contract Transaction
     _ = inbox
         .sendL1FundedContractTransaction(
             U256::from(gas_limit),
             U256::from(max_fee_per_gas),
-            set_provider.default_signer_address(),
+            wallet_address,
             Default::default(),
         )
         .value(parse_ether("1")?)
         .send()
         .await?;
+    meta_node.mine_set_blocks(0).await?;
 
-    mine_block(&set_provider, 0).await?;
+    // Mine blocks to process the slot
+    meta_node.mine_next_slot().await?;
 
-    // mine blocks with timestamp high enough to mark the slot as unsafe
-    let ts = set_provider
-        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
-        .await?
-        .unwrap()
-        .header
-        .timestamp;
+    // Process the slot
+    tokio::time::sleep(Duration::from_millis(500)).await;
 
-    set_provider
-        .evm_mine(Some(Options {
-            timestamp: Some(ts + slotter_cfg.slot_duration + 1),
-            blocks: None,
-        }))
-        .await?;
-    seq_provider
-        .evm_mine(Some(Options {
-            timestamp: Some(ts + slotter_cfg.slot_duration + 1),
-            blocks: None,
-        }))
-        .await?;
-
-    // process slots
-    tokio::time::sleep(Duration::from_millis(400)).await;
-
-    assert_eq!(rollup.get_block_number().await?, 17);
+    assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 17);
     assert_eq!(
-        rollup.get_balance(set_provider.default_signer_address()).await?,
+        meta_node
+            .metabased_rollup
+            .get_balance(meta_node.settlement_provider.default_signer_address())
+            .await?,
         parse_ether("4.6000316")?
     );
+
+    drop(meta_node);
     Ok(())
 }
 
@@ -518,170 +336,65 @@ async fn e2e_settlement_test() -> Result<()> {
 /// sequence a mchain block that does not include a batch.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_test() -> Result<()> {
-    let _ = init_test_tracing(Level::INFO);
-    let block_builder_cfg = BlockBuilderConfig {
-        bridge_address: get_rollup_contract_address(),
-        inbox_address: get_rollup_contract_address(),
-        mchain_url: "http://127.0.0.1:8288".parse()?,
-        sequencing_contract_address: get_rollup_contract_address(),
-        genesis_timestamp: GENESIS_TIMESTAMP,
-        ..Default::default()
-    };
+    // Start the meta node (port index 1, no pre-loaded contracts)
+    let meta_node = MetaNode::new(false).await?;
+    // Setup the settlement rollup contract
+    let set_rollup = Rollup::new(get_rollup_contract_address(), &meta_node.settlement_provider);
 
-    // Launch mock sequencing chain and deploy contracts
-    let (_seq_anvil, seq_provider) = start_anvil(8245, 15).await?;
-    _ = MetabasedSequencerChain::deploy_builder(
-        &seq_provider,
-        U256::from(block_builder_cfg.target_chain_id),
-        seq_provider.default_signer_address(),
-        seq_provider.default_signer_address().create(1),
-    )
-    .send()
-    .await?;
-    _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
-    mine_block(&seq_provider, 0).await?;
-
-    // Launch mock settlement chain and deploy contracts
-    let (_set_anvil, set_provider) = start_anvil(8246, 20).await?;
-    // Use the mock rollup contract for the test instead of deploying all the nitro rollup contracts
-    _ = Rollup::deploy_builder(
-        &set_provider,
-        U256::from(block_builder_cfg.target_chain_id),
-        MetaChainProvider::rollup_config(block_builder_cfg.target_chain_id),
-    )
-    .nonce(0)
-    .send()
-    .await?;
-    mine_block(&set_provider, 0).await?;
-    let set_rollup = Rollup::new(get_rollup_contract_address(), &set_provider);
-
-    // Launch ingestors for the sequencer and settlement chains
-    let mut ingestor_config = IngestionPipelineConfig::default();
-    ingestor_config.sequencing.sequencing_rpc_url = "http://localhost:8245".to_string();
-    ingestor_config.sequencing.sequencing_polling_interval = Duration::from_millis(10);
-    ingestor_config.settlement.settlement_rpc_url = "http://localhost:8246".to_string();
-    ingestor_config.settlement.settlement_polling_interval = Duration::from_millis(10);
-    let seq_config: ChainIngestorConfig = (&ingestor_config.sequencing).into();
-    let set_config: ChainIngestorConfig = (&ingestor_config.settlement).into();
-    let mut metrics_state = MetricsState { registry: Registry::default() };
-    let sequencing_client: Arc<dyn RPCClient> =
-        Arc::new(EthClient::new(&ingestor_config.sequencing.sequencing_rpc_url).await?);
-    let settlement_client: Arc<dyn RPCClient> =
-        Arc::new(EthClient::new(&ingestor_config.settlement.settlement_rpc_url).await?);
-    let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
-        Chain::Sequencing,
-        sequencing_client,
-        &seq_config,
-        IngestorMetrics::new(&mut metrics_state.registry),
-    )
-    .await?;
-    let (settlement_ingestor, settlement_rx) = Ingestor::new(
-        Chain::Settlement,
-        settlement_client,
-        &set_config,
-        IngestorMetrics::new(&mut metrics_state.registry),
-    )
-    .await?;
-    let (_dumy, dummy) = tokio::sync::oneshot::channel();
-    let _seq_ingestor_task = Task(tokio::spawn(async move {
-        sequencing_ingestor.start_polling(dummy).await.unwrap();
-    }));
-    let (_dummy, dummy) = tokio::sync::oneshot::channel();
-    let _set_ingestor_task = Task(tokio::spawn(async move {
-        settlement_ingestor.start_polling(dummy).await.unwrap();
-    }));
-
-    // start the slotter at the earliest block that will be ingested (as it's done in the actual
-    // metabased-translator binary)
-    let ingestion_start_block = ingestor_config.settlement.settlement_start_block;
-    let ingestion_start_ts = set_provider
-        .get_block_by_number(
-            BlockNumberOrTag::Number(ingestion_start_block),
-            BlockTransactionsKind::Hashes,
-        )
-        .await?
-        .unwrap()
-        .header
-        .timestamp;
-
-    let slotter_cfg =
-        SlotterConfig { start_slot_timestamp: ingestion_start_ts, ..Default::default() };
-
-    let slot_duration = slotter_cfg.slot_duration;
-    // Launch the slotter, block builder, and nitro rollup
-    let (slotter, slotter_rx) = Slotter::new(
-        &slotter_cfg,
-        None,
-        Box::new(DummyStore {}),
-        SlotterMetrics::new(&mut metrics_state.registry),
-    );
-    let (_dummy, dummy) = tokio::sync::oneshot::channel();
-    let _slotter_task = Task(tokio::spawn(async move {
-        slotter.start(sequencer_rx, settlement_rx, dummy).await;
-    }));
-    let block_builder = BlockBuilder::new(
-        slotter_rx,
-        &block_builder_cfg,
-        BlockBuilderMetrics::new(&mut metrics_state.registry),
-    )
-    .await?;
-    let mchain = block_builder.mchain.provider.clone();
-    let (_nitro, rollup) = launch_nitro_node(&block_builder.mchain, 8247).await?;
-    let (_dummy, dummy) = tokio::sync::oneshot::channel();
-    let _block_builder_task = Task(tokio::spawn(async move {
-        block_builder.start(None, dummy).await;
-    }));
-
-    // sequence a deposit and regular tx at slot 1 (mchain block 2, rollup block 1-2)
+    // Send a deposit and a regular tx at slot 1 (mchain block 2, rollup block 1)
     _ = set_rollup
         .depositEth(
-            seq_provider.default_signer_address(),
-            seq_provider.default_signer_address(),
+            meta_node.sequencing_provider.default_signer_address(),
+            meta_node.sequencing_provider.default_signer_address(),
             parse_ether("1")?,
         )
         .send()
         .await?;
-    let seq_chain = MetabasedSequencerChain::new(get_rollup_contract_address(), &seq_provider);
+
+    // Send a sequenced tx at slot 1 (mchain block 2, rollup 2)
     let mut tx = vec![];
     let inner_tx = TransactionRequest::default()
         .with_to(address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"))
         .with_value(U256::from(1))
         .with_nonce(0)
         .with_gas_limit(100_000)
-        .with_chain_id(block_builder_cfg.target_chain_id)
+        .with_chain_id(meta_node.chain_id)
         .with_max_fee_per_gas(100000000)
         .with_max_priority_fee_per_gas(0)
-        .build(seq_provider.wallet())
+        .build(meta_node.sequencing_provider.wallet())
         .await?;
     inner_tx.encode_2718(&mut tx);
-    _ = seq_chain.processTransaction(tx.into()).send().await?;
+    _ = meta_node.sequencing_contract.processTransaction(tx.into()).send().await?;
+
     // insert a block to slot 1 @ ts 0, slot 2 @ ts 1. mine slot 1 -> mchain block 2.
-    mine_block(&seq_provider, 0).await?;
-    mine_block(&set_provider, 0).await?;
-    mine_block(&seq_provider, 1).await?;
-    mine_block(&set_provider, 1).await?;
+    meta_node.mine_both(0).await?;
+    meta_node.mine_next_slot().await?;
     tokio::time::sleep(Duration::from_millis(200)).await;
+
     // check mchain blocks
-    assert_eq!(mchain.get_block_number().await?, 2);
-    let mchain_block: Block = mchain
+    assert_eq!(meta_node.mchain_provider.get_block_number().await?, 2);
+    let mchain_block: Block = meta_node
+        .mchain_provider
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
         .await?;
-    assert_eq!(mchain_block.timestamp, block_builder_cfg.genesis_timestamp);
+    assert_eq!(mchain_block.timestamp, GENESIS_TIMESTAMP);
     assert_eq!(mchain_block.transactions.len(), 2);
     // check rollup blocks
-    assert_eq!(rollup.get_block_number().await?, 2);
+    assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 2);
     // check the first rollup block
-    let rollup_block: Block = rollup
+    let rollup_block: Block = meta_node
+        .metabased_rollup
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(1), true))
         .await?;
-    assert_eq!(rollup_block.timestamp, block_builder_cfg.genesis_timestamp);
+    assert_eq!(rollup_block.timestamp, GENESIS_TIMESTAMP);
     // the first transaction is the startBlock transaction
     assert_eq!(rollup_block.transactions.len(), 2);
     // check the second rollup block
-    let rollup_block: Block = rollup
+    let rollup_block: Block = meta_node
+        .metabased_rollup
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
         .await?;
-    assert_eq!(rollup_block.timestamp, block_builder_cfg.genesis_timestamp);
+    assert_eq!(rollup_block.timestamp, GENESIS_TIMESTAMP);
     // the first transaction is the startBlock transaction
     assert_eq!(rollup_block.transactions.len(), 2);
     // tx hash should match
@@ -691,89 +404,47 @@ async fn e2e_test() -> Result<()> {
 
     // Send another delayed message one slot out. The missing slot should sequence an empty block.
     _ = set_rollup
-        .depositEth(seq_provider.default_signer_address(), test_addr, parse_ether("1")?)
+        .depositEth(
+            meta_node.sequencing_provider.default_signer_address(),
+            test_addr,
+            parse_ether("1")?,
+        )
         .send()
         .await?;
-    mine_block(&seq_provider, slot_duration).await?;
-    mine_block(&set_provider, slot_duration).await?;
-    mine_block(&seq_provider, slot_duration).await?;
-    mine_block(&set_provider, slot_duration).await?;
+    meta_node.mine_next_slot().await?;
+    meta_node.mine_next_slot().await?;
     tokio::time::sleep(Duration::from_millis(100)).await;
+
     // check mchain blocks
-    assert_eq!(mchain.get_block_number().await?, 4);
+    assert_eq!(meta_node.mchain_provider.get_block_number().await?, 4);
     // check mchain block 3
-    let mchain_block: Block = mchain
+    let mchain_block: Block = meta_node
+        .mchain_provider
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(3), true))
         .await?;
-    assert_eq!(mchain_block.timestamp, block_builder_cfg.genesis_timestamp + slot_duration);
+    assert_eq!(mchain_block.timestamp, GENESIS_TIMESTAMP + meta_node.slot_duration);
     assert_eq!(mchain_block.transactions.len(), 0);
     // check mchain block 4
-    let mchain_block: Block = mchain
+    let mchain_block: Block = meta_node
+        .mchain_provider
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(4), true))
         .await?;
-    assert_eq!(mchain_block.timestamp, block_builder_cfg.genesis_timestamp + slot_duration * 2);
+    assert_eq!(mchain_block.timestamp, GENESIS_TIMESTAMP + meta_node.slot_duration * 2);
     assert_eq!(mchain_block.transactions.len(), 2);
     // check rollup block 3
-    assert_eq!(rollup.get_block_number().await?, 3);
-    let rollup_block: Block = rollup
+    assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 3);
+    let rollup_block: Block = meta_node
+        .metabased_rollup
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(3), true))
         .await?;
-    assert_eq!(rollup_block.timestamp, block_builder_cfg.genesis_timestamp + slot_duration * 2);
+    assert_eq!(rollup_block.timestamp, GENESIS_TIMESTAMP + meta_node.slot_duration * 2);
     // the first transaction is the startBlock transaction
     assert_eq!(rollup_block.transactions.len(), 2);
     // balance should match
-    assert_eq!(rollup.get_balance(test_addr).await?, parse_ether("1")?);
+    assert_eq!(meta_node.metabased_rollup.get_balance(test_addr).await?, parse_ether("1")?);
 
+    drop(meta_node);
     Ok(())
-}
-
-const GENESIS_TIMESTAMP: u64 = 1736824187;
-
-async fn start_anvil(port: u16, chain_id: u64) -> Result<(AnvilInstance, FilledProvider)> {
-    let timestamp = GENESIS_TIMESTAMP.to_string();
-    let args = vec![
-        "--base-fee",
-        "0",
-        "--gas-limit",
-        "30000000",
-        "--timestamp",
-        &timestamp,
-        "--no-mining",
-    ];
-
-    let anvil = Anvil::new().port(port).chain_id(chain_id).args(args).try_spawn()?;
-
-    let provider = ProviderBuilder::new()
-        .with_recommended_fillers()
-        .wallet(EthereumWallet::from(get_default_private_key_signer()))
-        .on_http(anvil.endpoint_url());
-    provider.anvil_set_block_timestamp_interval(0).await?;
-    Ok((anvil, provider))
-}
-
-async fn load_anvil(port: u16) -> Result<(AnvilInstance, FilledProvider)> {
-    let state_file =
-        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config").join("anvil.json");
-
-    #[allow(clippy::unwrap_used)]
-    let args = vec![
-        "--base-fee",
-        "0",
-        "--gas-limit",
-        "30000000",
-        "--no-mining",
-        "--load-state",
-        state_file.to_str().unwrap(),
-    ];
-
-    let anvil = Anvil::new().port(port).chain_id(31337).args(args).try_spawn()?;
-
-    let provider = ProviderBuilder::new()
-        .with_recommended_fillers()
-        .wallet(EthereumWallet::from(get_default_private_key_signer()))
-        .on_http(anvil.endpoint_url());
-    provider.anvil_set_block_timestamp_interval(0).await?;
-    Ok((anvil, provider))
 }
 
 /// This test tests that rollup blocks are properly derived from batches created
@@ -848,10 +519,9 @@ async fn test_nitro_batch() -> Result<()> {
     let block: Block = rollup
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
         .await?;
-    // the first transaction is the startBlock transaction
-    println!("{:#?}", block.transactions);
     assert_eq!(block.transactions.len(), 2);
     // tx hash should match
     assert_eq!(block.transactions[1].hash, *inner_tx.tx_hash());
+
     Ok(())
 }

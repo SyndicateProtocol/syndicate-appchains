@@ -141,7 +141,6 @@ impl ArbitrumBlockBuilder {
     ) -> Result<Vec<TransactionRequest>> {
         // Create a local map to store message data
         let mut message_data: HashMap<U256, Bytes> = HashMap::new();
-
         // Process all bridge logs in all receipts in all blocks
         let delayed_messages = blocks
             .iter()

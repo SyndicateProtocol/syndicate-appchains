@@ -31,8 +31,6 @@ strum = { workspace = true }
 strum_macros = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }
-
-[dev-dependencies]
 serial_test = { workspace = true }
 tracing     = { workspace = true }
 
