@@ -23,7 +23,7 @@ use contract_bindings::{
         metabasedsequencerchain::MetabasedSequencerChain::{self, MetabasedSequencerChainInstance},
     },
 };
-use eyre::Result;
+use eyre::{eyre, Result};
 use ingestor::{
     config::ChainIngestorConfig,
     eth_client::{EthClient, RPCClient},
