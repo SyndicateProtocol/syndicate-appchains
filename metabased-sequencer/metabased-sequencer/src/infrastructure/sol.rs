@@ -6,7 +6,11 @@ use crate::{
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
 use alloy::{
-    hex, network::Network, primitives::U256, providers::Provider, sol,
+    hex,
+    network::Network,
+    primitives::U256,
+    providers::Provider,
+    sol,
     transports::{RpcError, Transport},
 };
 use async_trait::async_trait;
