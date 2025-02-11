@@ -56,10 +56,6 @@ pub struct BlockBuilderConfig {
         value_parser = parse_address)]
     pub inbox_address: Address,
 
-    // path to the directory where anvil will keep its state
-    #[arg(long, env = "BLOCK_BUILDER_ANVIL_STATE_PATH", default_value = "")]
-    pub anvil_state_path: String,
-
     // interval at which anvil saves state to disk (in seconds)
     #[arg(long, env = "BLOCK_BUILDER_ANVIL_STATE_INTERVAL", default_value_t = 1)]
     pub anvil_state_interval: u64,
@@ -121,7 +117,6 @@ impl Debug for BlockBuilderConfig {
             .field("bridge_address", &self.bridge_address)
             .field("inbox_address", &self.inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
-            .field("anvil_state_path", &self.anvil_state_path)
             .field("anvil_state_interval", &self.anvil_state_interval)
             .field("anvil_prune_history", &self.anvil_prune_history)
             .finish()
@@ -179,12 +174,6 @@ impl BlockBuilderConfig {
             }
         }
 
-        if self.anvil_state_path.is_empty() {
-            return Err(ConfigError::InvalidAnvilStatePath(
-                "Anvil state path cannot be empty".to_string(),
-            ));
-        }
-
         Ok(())
     }
 }
@@ -229,7 +218,6 @@ mod tests {
             config.sequencing_contract_address.to_string(),
             "0x0000000000000000000000000000000000000000"
         );
-        assert_eq!(config.anvil_state_path, "");
         assert_eq!(config.anvil_state_interval, 1);
         assert_eq!(config.anvil_prune_history, 50);
     }

@@ -3,7 +3,7 @@
 use crate::{config::SlotterConfig, metrics::SlotterMetrics};
 use alloy::primitives::B256;
 use common::{
-    db::{DbError, SafeState, TranslatorStore},
+    db::{DbError, KnownState, TranslatorStore},
     types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotState},
 };
 use derivative::Derivative;
@@ -71,18 +71,18 @@ impl Slotter {
     /// slots.
     pub fn new(
         config: &SlotterConfig,
-        safe_state: Option<SafeState>,
+        known_state: Option<KnownState>,
         store: Box<dyn TranslatorStore + Send + Sync>,
         metrics: SlotterMetrics,
     ) -> (Self, Receiver<Slot>) {
         let (slot_tx, slot_rx) = channel(100);
         let mut slots = VecDeque::new();
         let mut safe_timestamp = 0;
-        let (latest_sequencing_block, latest_settlement_block) = match safe_state {
-            Some(safe_state) => {
-                safe_timestamp = safe_state.slot.timestamp;
-                slots.push_front(safe_state.slot);
-                (Some(safe_state.sequencing_block), Some(safe_state.settlement_block))
+        let (latest_sequencing_block, latest_settlement_block) = match known_state {
+            Some(known_state) => {
+                safe_timestamp = known_state.slot.timestamp;
+                slots.push_front(known_state.slot);
+                (Some(known_state.sequencing_block), Some(known_state.settlement_block))
             }
             None => {
                 slots.push_front(Slot::new(START_SLOT, config.start_slot_timestamp));
@@ -245,6 +245,7 @@ impl Slotter {
             }
         }
         for slot in buffer.into_iter().rev() {
+            self.store.save_unsafe_slot(&slot).await?;
             debug!(%slot, "Sending slot");
             self.sender.send(slot).await?;
             self.metrics.update_channel_capacity(self.sender.capacity());
@@ -359,7 +360,7 @@ impl Slotter {
             debug!(%slot, "Saving safe slot to DB");
             slot.state = SlotState::Safe;
             self.safe_timestamp = slot.timestamp;
-            self.store.save_slot(&slot).await?;
+            self.store.save_safe_slot(&slot).await?;
         }
 
         self.metrics.update_active_slots(self.slots.len());
@@ -858,7 +859,7 @@ mod tests {
 
     #[tokio::test]
     #[traced_test]
-    async fn test_slotter_db_shutdown_and_resume() {
+    async fn test_slotter_db_shutdown_and_resume_safe() {
         const CHAN_CAPACITY: usize = 100;
         let (seq_tx, seq_rx) = channel(CHAN_CAPACITY);
         let (set_tx, set_rx) = channel(CHAN_CAPACITY);
@@ -924,7 +925,7 @@ mod tests {
 
         // Create new store instance pointing to same DB, and get the latest state from the DB
         let resumed_store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
-        let resumed_state = resumed_store.get_latest().await.unwrap().unwrap();
+        let resumed_state = resumed_store.get_safe_state().await.unwrap().unwrap();
         assert_eq!(resumed_state.slot.number, START_SLOT + 2);
         assert_eq!(resumed_state.sequencing_block.number, 3);
         assert_eq!(resumed_state.settlement_block.number, 3);
@@ -958,6 +959,85 @@ mod tests {
         assert_eq!(slot4.settlement_chain_blocks.len(), 1);
         assert_eq!(slot4.sequencing_chain_blocks[0].block.number, 4);
         assert_eq!(slot4.settlement_chain_blocks[0].block.number, 4);
+    }
+
+    #[tokio::test]
+    #[traced_test]
+    async fn test_slotter_db_shutdown_and_resume_unsafe() {
+        const CHAN_CAPACITY: usize = 100;
+        let (seq_tx, seq_rx) = channel(CHAN_CAPACITY);
+        let (set_tx, set_rx) = channel(CHAN_CAPACITY);
+
+        let start_slot_timestamp = 0;
+        let slot_duration = 10;
+        let config = SlotterConfig { slot_duration, start_slot_timestamp, settlement_delay: 0 };
+
+        // Create a fresh DB for this test
+        let db_path = test_path("slotter_db_unsafe");
+        let store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
+
+        // Start first slotter instance
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = SlotterMetrics::new(&mut metrics_state.registry);
+        let (slotter, mut slot_rx) = Slotter::new(&config, None, store, metrics);
+        let handle = tokio::spawn(async move { slotter.start(seq_rx, set_rx, shutdown_rx).await });
+
+        // Send blocks that will create unsafe slots
+        for i in 1..11 {
+            seq_tx.send(create_test_block(i, i * 10)).await.unwrap();
+            set_tx.send(create_test_block(i, i * 10)).await.unwrap();
+        }
+
+        // Drain the channel of safe slots
+        while let Ok(slot) = slot_rx.try_recv() {
+            if slot.state == SlotState::Safe {
+                continue;
+            }
+            assert_eq!(slot.state, SlotState::Unsafe);
+        }
+
+        // Shutdown slotter - this should save the latest unsafe state
+        let _ = shutdown_tx.send(());
+        handle.await.unwrap();
+
+        // Create new store instance pointing to same DB
+        let resumed_store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
+        let resumed_state = resumed_store.get_unsafe_state().await.unwrap().unwrap();
+
+        // Verify the latest unsafe state was saved
+        assert_eq!(resumed_state.sequencing_block.number, 9);
+        assert_eq!(resumed_state.settlement_block.number, 9);
+        assert_eq!(resumed_state.slot.timestamp, 90);
+        assert_eq!(resumed_state.slot.number, START_SLOT + 9);
+
+        // Create new slotter that should resume from unsafe state
+        let (new_seq_tx, new_seq_rx) = channel(CHAN_CAPACITY);
+        let (new_set_tx, new_settle_rx) = channel(CHAN_CAPACITY);
+
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = SlotterMetrics::new(&mut metrics_state.registry);
+        let (resumed_slotter, mut resumed_slot_rx) =
+            Slotter::new(&config, Some(resumed_state), resumed_store, metrics);
+
+        let (_shutdown_tx, shutdown_rx) = oneshot::channel();
+        tokio::spawn(
+            async move { resumed_slotter.start(new_seq_rx, new_settle_rx, shutdown_rx).await },
+        );
+
+        // Send new blocks to resumed slotter
+        new_seq_tx.send(create_test_block(10, 100)).await.unwrap();
+        new_set_tx.send(create_test_block(10, 100)).await.unwrap();
+
+        new_seq_tx.send(create_test_block(11, 110)).await.unwrap();
+        new_set_tx.send(create_test_block(11, 110)).await.unwrap();
+
+        // Verify we can continue processing from the unsafe state
+        let slot = resumed_slot_rx.recv().await.unwrap();
+        assert_eq!(slot.number, START_SLOT + 10);
+        assert_eq!(slot.timestamp, 100);
+        assert_eq!(slot.sequencing_chain_blocks[0].block.number, 10);
+        assert_eq!(slot.settlement_chain_blocks[0].block.number, 10);
     }
 
     #[tokio::test]

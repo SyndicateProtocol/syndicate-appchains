@@ -76,7 +76,11 @@ impl MetaChainProvider {
     /// If file in `BlockBuilderConfig` is set to a non-empty string, the anvil node stores and
     /// loads state from the file. The rollup contract is only deployed to the chain when it is
     /// newly created and on the genesis block.
-    pub async fn start(config: &BlockBuilderConfig, metrics: &MChainMetrics) -> Result<Self> {
+    pub async fn start(
+        config: &BlockBuilderConfig,
+        datadir: &str,
+        metrics: &MChainMetrics,
+    ) -> Result<Self> {
         let port = config.mchain_url.port().ok_or_else(|| BlockBuilderError::AnvilStart(NoPort))?;
 
         if !is_port_available(port) {
@@ -110,10 +114,11 @@ impl MetaChainProvider {
 
         let state_interval = config.anvil_state_interval.to_string();
         let prune_history = config.anvil_prune_history.to_string();
+        let anvil_state_path = format!("{}/anvil_state", datadir);
 
-        if !config.anvil_state_path.is_empty() {
+        if !datadir.is_empty() {
             args.push("--state");
-            args.push(&config.anvil_state_path);
+            args.push(&anvil_state_path);
             args.push("--state-interval");
             args.push(&state_interval);
             args.push("--prune-history");
@@ -263,7 +268,7 @@ impl MetaChainProvider {
 
     /// Rolls back the chain to a specific block number by performing a reorg
     pub async fn rollback_to_block(&self, _block_number: u64) -> Result<()> {
-        panic!("not implemented"); // TODO SEQ-528
+        panic!("rollback not implemented"); // TODO SEQ-528
 
         // let current_block = self.provider.get_block_number().await?;
         // let depth = current_block - block_number;
@@ -308,7 +313,7 @@ mod tests {
     use super::*;
     use alloy::{eips::BlockId, rpc::types::BlockTransactionsKind};
     use prometheus_client::registry::Registry;
-    use std::{env::temp_dir, fs, path::PathBuf};
+    use test_utils::test_path;
     use url::Url;
 
     struct MetricsState {
@@ -318,22 +323,20 @@ mod tests {
 
     #[tokio::test]
     async fn test_anvil_resume() -> Result<()> {
-        let file = temp_dir().join("dump.json");
+        let datadir = test_path("datadir");
         let cfg = BlockBuilderConfig {
             mchain_url: Url::parse("http://127.0.0.1:9188").expect("Invalid URL"),
-            anvil_state_path: file.to_str().unwrap().to_string(),
             ..Default::default()
         };
-        let _ = fs::remove_file(file);
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = MChainMetrics::new(&mut metrics_state.registry);
-        let mut provider = MetaChainProvider::start(&cfg, &metrics).await?;
+        let mut provider = MetaChainProvider::start(&cfg, &datadir, &metrics).await?;
         provider.mine_block(0).await?;
         let old_count = provider.provider.get_block_number().await?;
         drop(provider); // To explicitly release the port
 
         let metrics = MChainMetrics::new(&mut metrics_state.registry);
-        provider = MetaChainProvider::start(&cfg, &metrics).await?;
+        provider = MetaChainProvider::start(&cfg, &datadir, &metrics).await?;
         let new_count = provider.provider.get_block_number().await?;
         assert_eq!(old_count, new_count);
         Ok(())
@@ -341,10 +344,9 @@ mod tests {
 
     #[tokio::test]
     async fn test_block_persistence() -> Result<()> {
-        let state_path = PathBuf::from("test-state.json");
+        let datadir = test_path("datadir");
 
         let config = BlockBuilderConfig {
-            anvil_state_path: state_path.to_str().unwrap().to_string(),
             genesis_timestamp: 999,
             mchain_url: Url::parse("http://127.0.0.1:9288").expect("Invalid URL"),
             ..Default::default()
@@ -354,7 +356,7 @@ mod tests {
 
         // First instance: create blocks
         {
-            let chain = MetaChainProvider::start(&config, &metrics).await?;
+            let chain = MetaChainProvider::start(&config, &datadir, &metrics).await?;
 
             // Mine 1000 blocks
             for i in 1000..2000 {
@@ -367,7 +369,7 @@ mod tests {
 
         // Second instance: verify blocks
         let metrics = MChainMetrics::new(&mut metrics_state.registry);
-        let chain = MetaChainProvider::start(&config, &metrics).await?;
+        let chain = MetaChainProvider::start(&config, &datadir, &metrics).await?;
 
         // Check a few random blocks are accessible
         for block_num in [0, 42, 567, 999, 1000] {
@@ -384,29 +386,21 @@ mod tests {
             );
         }
 
-        // Drop chain before cleanup
-        drop(chain);
-
-        // Cleanup
-        fs::remove_file(state_path)?;
-
         Ok(())
     }
 
     #[tokio::test]
     #[ignore] // TODO SEQ-528 unskip
     async fn test_anvil_rollback() -> Result<()> {
-        // TODO SEQ-528 refactor these test-state-paths
-        let state_path = PathBuf::from("test-state1.json");
         let config = BlockBuilderConfig {
-            anvil_state_path: state_path.to_str().unwrap().to_string(),
             genesis_timestamp: 999,
             mchain_url: "http://127.0.0.1:9388".parse()?,
             ..Default::default()
         };
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = MChainMetrics::new(&mut metrics_state.registry);
-        let chain = MetaChainProvider::start(&config, &metrics).await?;
+        let datadir = test_path("datadir");
+        let chain = MetaChainProvider::start(&config, &datadir, &metrics).await?;
         // Mine 10 blocks
         for i in 1000..1010 {
             chain.mine_block(i as u64).await?;
@@ -415,6 +409,55 @@ mod tests {
         chain.rollback_to_block(5).await?;
         let block_num = chain.provider.get_block_number().await?;
         assert_eq!(block_num, 5, "Chain should be at block 5");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    #[ignore] // just for debugging
+    async fn test_anvil_stop_resume() -> Result<()> {
+        let datadir = test_path("datadir_dump_test");
+        let genesis_ts = 1000;
+        let config = BlockBuilderConfig {
+            mchain_url: Url::parse("http://127.0.0.1:9488").expect("Invalid URL"),
+            genesis_timestamp: genesis_ts,
+            ..Default::default()
+        };
+
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = MChainMetrics::new(&mut metrics_state.registry);
+        let provider = MetaChainProvider::start(&config, &datadir, &metrics).await?;
+
+        // Mine some blocks with increasing timestamps
+        for i in 1..100_000 {
+            provider.mine_block(genesis_ts + (i * 1000)).await?;
+        }
+        let original_block = provider.provider.get_block_number().await?;
+
+        drop(provider);
+
+        // Second instance: restore state
+        let metrics = MChainMetrics::new(&mut metrics_state.registry);
+        let provider = MetaChainProvider::start(&config, &datadir, &metrics).await?;
+
+        // Verify state was restored correctly
+        let restored_block = provider.provider.get_block_number().await?;
+        assert_eq!(original_block, restored_block, "Block number should match after restore");
+
+        // Check random historical blocks are accessible
+        for block_num in [42, 567, 12345, 50000, 100_000] {
+            let block = provider
+                .provider
+                .get_block(BlockId::Number(block_num.into()), BlockTransactionsKind::Full)
+                .await?;
+            assert!(block.is_some(), "Block {} should be available", block_num);
+            assert_eq!(
+                block.unwrap().header.number,
+                block_num,
+                "Block number mismatch for block {}",
+                block_num
+            );
+        }
 
         Ok(())
     }

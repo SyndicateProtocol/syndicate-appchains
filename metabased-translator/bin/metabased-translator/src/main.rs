@@ -1,6 +1,6 @@
-use block_builder::{block_builder::BlockBuilder, config::BlockBuilderConfig};
+use block_builder::block_builder::BlockBuilder;
 use common::{
-    db::{self, SafeState, TranslatorStore},
+    db::{self, KnownState, TranslatorStore},
     tracing::{init_tracing_with_extra_fields, TracingError},
     types::Chain,
 };
@@ -18,7 +18,7 @@ use slotter::Slotter;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::oneshot;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 // TODO(SEQ-515): Improve this executable, research async tasks
 #[allow(unused_assignments)] // TODO SEQ-528 remove this
@@ -35,9 +35,8 @@ async fn run(
     let (builder_shutdown_tx, builder_shutdown_rx) = oneshot::channel();
     init_ctrl_c_handler(main_shutdown_tx);
 
-    // Initialize the DB
-    let (db, mut safe_state) = init_db(db_path).await?;
-    safe_state = None; // TODO SEQ-528 remove this (disables resume from db)
+    // Initialize the DB with the restore flag
+    let (db, safe_state) = init_db(db_path, config.restore_from_safe_state).await?;
 
     // Initialize ETH clients
     let sequencing_client: Arc<dyn RPCClient> = Arc::new(
@@ -53,9 +52,11 @@ async fn run(
 
     // Override start blocks if we're resuming from a database
     if let Some(state) = &safe_state {
+        debug!(%state.slot, %state.sequencing_block, %state.settlement_block, "Resuming from known state in DB");
         config.sequencing.sequencing_start_block = state.sequencing_block.number;
         config.settlement.settlement_start_block = state.settlement_block.number;
     } else {
+        debug!("No known state found in DB, starting from configured start blocks");
         // Initial timestamp is only needed if we aren't resuming from db
         config.set_initial_timestamp(&settlement_client, &sequencing_client).await?;
     }
@@ -84,8 +85,13 @@ async fn run(
     )
     .await?;
     let (slotter, slot_rx) = Slotter::new(&config.slotter, safe_state, db, metrics.slotter);
-    let block_builder =
-        BlockBuilder::new(slot_rx, &config.block_builder, metrics.block_builder).await?;
+    let block_builder = BlockBuilder::new(
+        slot_rx,
+        &config.block_builder,
+        config.datadir.as_str(),
+        metrics.block_builder,
+    )
+    .await?;
 
     // Start component tasks
     info!("Starting Metabased Translator");
@@ -169,10 +175,6 @@ fn main() -> Result<(), RuntimeError> {
 
     // Init the paths for the DB and Anvil state
     let db_path = format!("{}/db", base_config.datadir);
-    let anvil_state_path = format!("{}/anvil_state", base_config.datadir);
-    base_config.block_builder =
-        BlockBuilderConfig { anvil_state_path, ..base_config.block_builder };
-
     // Initiate the metrics registry
     let registry = Registry::default();
 
@@ -253,15 +255,24 @@ fn init_ctrl_c_handler(main_shutdown_tx: oneshot::Sender<()>) {
 
 async fn init_db(
     db_path: &str,
-) -> Result<(Box<dyn TranslatorStore + Send + Sync>, Option<SafeState>), RuntimeError> {
+    restore_from_safe_state: bool,
+) -> Result<(Box<dyn TranslatorStore + Send + Sync>, Option<KnownState>), RuntimeError> {
     let db = Box::new(
         db::RocksDbStore::new(db_path)
             .map_err(|e| RuntimeError::Initialization(format!("Failed to open DB: {e}")))?,
     );
-    let safe_state = db
-        .get_latest()
-        .await
-        .map_err(|e| RuntimeError::Initialization(format!("Failed to get latest state: {e}")))?;
+
+    let safe_state = if restore_from_safe_state {
+        debug!("Resuming from latest safe state");
+        db.get_safe_state().await.map_err(|e| {
+            RuntimeError::Initialization(format!("Failed to get latest safe state: {e}"))
+        })?
+    } else {
+        debug!("Resuming from latest unsafe state");
+        db.get_unsafe_state().await.map_err(|e| {
+            RuntimeError::Initialization(format!("Failed to get latest unsafe state: {e}"))
+        })?
+    };
 
     Ok((db, safe_state))
 }

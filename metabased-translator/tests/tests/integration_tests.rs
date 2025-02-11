@@ -25,6 +25,7 @@ use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use std::time::Duration;
+use test_utils::test_path;
 
 /// Simple test scenario:
 /// Bob tries to deploy a counter contract to L3, then tries to increment it
@@ -459,8 +460,8 @@ async fn test_nitro_batch() -> Result<()> {
 
     let mut metrics_state = MetricsState { registry: Registry::default() };
     let metrics = MChainMetrics::new(&mut metrics_state.registry);
-
-    let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
+    let datadir = test_path("datadir");
+    let mchain = MetaChainProvider::start(&block_builder_cfg, &datadir, &metrics).await?;
     mchain.provider.anvil_set_block_timestamp_interval(1).await?;
     let (_nitro, rollup) = launch_nitro_node(&mchain, 8347).await?;
 
