@@ -39,7 +39,6 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
         format!("0x{}", hex::encode(tx))
     }
 
-
     pub fn new(account: Address, provider: P) -> Self {
         Self { account, provider, phantom1: Default::default(), phantom2: Default::default() }
     }

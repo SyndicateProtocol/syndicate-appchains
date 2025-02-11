@@ -20,10 +20,11 @@ use std::{convert::TryFrom, fmt::Debug};
 use tracing::{debug, instrument, Level};
 
 /// Sends serialized and signed transaction `tx` using `chain`.
-#[instrument(level = Level::DEBUG, skip(chain), fields(
-    tx_data = ?format!("0x{}", hex::encode(&encoded)),
-    tx_size = encoded.len()
-))]
+#[instrument(
+    level = Level::DEBUG,
+    skip(chain),
+    fields(tx_data = ?format!("0x{}", hex::encode(&encoded)), tx_size = encoded.len())
+)]
 pub async fn send_raw_transaction<Chain>(encoded: Bytes, chain: &Chain) -> Result<TxHash, Error>
 where
     Chain: MetabasedSequencerChainService + Debug,
