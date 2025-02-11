@@ -5,8 +5,7 @@ use crate::{
     },
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
-use alloy::hex;
-use alloy::{network::Network, providers::Provider, sol, transports::Transport};
+use alloy::{hex, network::Network, providers::Provider, sol, transports::Transport};
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
 use tracing::debug_span;
@@ -77,7 +76,8 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
                     Err(alloy::contract::Error::from(e))
                 }
             }
-        }).await?;
+        })
+        .await?;
 
         Ok(result)
     }
@@ -91,10 +91,7 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
             tx_data = ?txs.iter().map(|tx| Self::format_tx_data(tx)).collect::<Vec<_>>()
         )
         .in_scope(|| async {
-            let pending_tx = self.contract()
-                .processBulkTransactions(txs)
-                .send()
-                .await?;
+            let pending_tx = self.contract().processBulkTransactions(txs).send().await?;
 
             match pending_tx
                 .with_required_confirmations(2)
