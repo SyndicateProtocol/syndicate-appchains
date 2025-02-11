@@ -163,7 +163,10 @@ mod tests {
 
     #[async_trait]
     impl Provider<MockProvider, Ethereum> for MockProvider {
-        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::transport::TransportError> {
+        async fn get_balance(
+            &self,
+            _address: Address,
+        ) -> Result<U256, alloy::transport::TransportError> {
             Ok(*self.balance.lock().await)
         }
     }
@@ -172,11 +175,7 @@ mod tests {
     async fn test_get_balance() {
         let expected_balance = U256::from(100);
         let provider = MockProvider::new(expected_balance);
-        let service = SolMetabasedSequencerChainService::new(
-            Address::random(),
-            provider,
-        );
-        
+        let service = SolMetabasedSequencerChainService::new(Address::random(), provider);
         let balance = service.get_balance().await.unwrap();
         assert_eq!(balance, expected_balance);
     }
