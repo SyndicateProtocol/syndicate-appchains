@@ -2,12 +2,13 @@
 pragma solidity 0.8.25;
 
 import {PermissionModule} from "./interfaces/PermissionModule.sol";
+import {NotInitializedModule} from "./sequencing-modules/NotInitializedModule.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+
 /// @title SequencingModuleChecker
 /// @notice A simplified contract that delegates permission checks to modules
 
-abstract contract SequencingModuleChecker is Ownable, PermissionModule, Initializable {
+abstract contract SequencingModuleChecker is Ownable, PermissionModule {
     /// @notice The requirement module that handles checks
     PermissionModule public requirementModule;
 
@@ -15,18 +16,24 @@ abstract contract SequencingModuleChecker is Ownable, PermissionModule, Initiali
 
     error InvalidModuleAddress();
     error NotAllowed(address batchSubmitter);
+    error AlreadyInitialized();
+
+    bool internal hasBeenInitialized = false;
 
     /// @dev Constructor function
     // [Olympix Warning: no parameter validation in constructor] Admin validation handled by OpenZeppelin's Ownable
-    constructor() Ownable(msg.sender) {}
+    constructor() Ownable(msg.sender) {
+        requirementModule = new NotInitializedModule();
+    }
 
     /// @notice Initializes the contract with a new admin and a requirement module
     /// @param admin The address of the new admin
     /// @param _requirementModule The address of the requirement module
-    function initialize(address admin, address _requirementModule) external initializer onlyOwner {
+    function initialize(address admin, address _requirementModule) external onlyOwner {
+        if (hasBeenInitialized) revert AlreadyInitialized();
         if (_requirementModule == address(0)) revert InvalidModuleAddress();
+        hasBeenInitialized = true;
         requirementModule = PermissionModule(_requirementModule);
-
         transferOwnership(admin);
     }
 
@@ -49,8 +56,6 @@ abstract contract SequencingModuleChecker is Ownable, PermissionModule, Initiali
     /// @param proposer The address to check permissions for
     /// @return bool indicating if the address is allowed
     function isAllowed(address proposer) public view virtual override returns (bool) {
-        // Contract must be initialized before allowed
-        require(_getInitializedVersion() > 0, "SequencingModuleChecker must be initialized before allowed");
         return requirementModule.isAllowed(proposer);
     }
 }

@@ -294,7 +294,7 @@ contract MetabasedFactoryTest is Test {
         assertEq(sequencerChainAddress, factory.computeSequencerChainAddress(salt, l3ChainId));
     }
 
-    function testGetBytecode() public {
+    function testGetBytecode() public view {
         bytes memory bytecode = factory.getBytecode(l3ChainId);
         bytes memory expectedBytecode =
             abi.encodePacked(type(MetabasedSequencerChain).creationCode, abi.encode(l3ChainId));

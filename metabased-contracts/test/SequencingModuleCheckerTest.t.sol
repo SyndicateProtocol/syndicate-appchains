@@ -49,14 +49,14 @@ contract SequencingModuleCheckerTest is Test {
     }
 
     function testCannotInitializeTwice() public {
-        vm.expectRevert(Initializable.InvalidInitialization.selector);
+        vm.prank(admin);
+        vm.expectRevert(SequencingModuleChecker.AlreadyInitialized.selector);
         manager.initialize(admin, address(masterModule));
     }
 
-    function testOnlyInitializedBeforeAllowed() public {
+    function testNotInitialized() public {
         SequencingModuleChecker uninitializedManager = new SequencingModuleCheckerMock();
-        vm.expectRevert("SequencingModuleChecker must be initialized before allowed");
-        uninitializedManager.isAllowed(address(0));
+        assertFalse(uninitializedManager.isAllowed(address(0)));
     }
 
     function testIsAllowedAfterInitialization() public {

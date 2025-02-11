@@ -43,6 +43,7 @@ pub mod metafillerstorage;
 pub mod mockerc20;
 pub mod mockerc721;
 pub mod nonces;
+pub mod notinitializedmodule;
 pub mod ownable;
 pub mod panic;
 pub mod permissionmodule;
