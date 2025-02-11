@@ -105,7 +105,8 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
                     Err(alloy::contract::Error::from(e))
                 }
             }
-        }).await
+        })
+        .await
     }
 
     // TODO (SEQ-248): Implement bulk transactions
