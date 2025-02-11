@@ -77,12 +77,22 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
             {
                 Ok(hash) => {
                     // Add balance logging after successful transaction
-                    if let Ok(balance) = self.get_balance().await {
-                        debug!(
-                            account = ?self.account,
-                            balance = ?balance,
-                            "Sequencer balance after transaction"
-                        );
+                    match self.get_balance().await {
+                        Ok(balance) => {
+                            let balance_eth = balance.as_u128() as f64 / 1e18;
+                            info!(
+                                account = ?self.account,
+                                balance_eth = balance_eth,
+                                "Sequencer balance after transaction"
+                            );
+                        }
+                        Err(e) => {
+                            info!(
+                                account = ?self.account,
+                                error = ?e,
+                                "Could not fetch sequencer balance after transaction"
+                            );
+                        }
                     }
                     Ok(hash)
                 }
@@ -116,12 +126,22 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
             {
                 Ok(hash) => {
                     // Add balance logging after successful bulk transaction
-                    if let Ok(balance) = self.get_balance().await {
-                        debug!(
-                            account = ?self.account,
-                            balance = ?balance,
-                            "Sequencer balance after bulk transaction"
-                        );
+                    match self.get_balance().await {
+                        Ok(balance) => {
+                            let balance_eth = balance.as_u128() as f64 / 1e18;
+                            info!(
+                                account = ?self.account,
+                                balance_eth = balance_eth,
+                                "Sequencer balance after bulk transaction"
+                            );
+                        }
+                        Err(e) => {
+                            info!(
+                                account = ?self.account,
+                                error = ?e,
+                                "Could not fetch sequencer balance after bulk transaction"
+                            );
+                        }
                     }
                     Ok(hash)
                 }
