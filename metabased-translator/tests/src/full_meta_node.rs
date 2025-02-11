@@ -241,7 +241,7 @@ impl MetaNode {
             Some(address) => address,
             None => {
                 eprintln!("Deployment failed: No contract address found.");
-                return Err("Deployment failed: No contract address found.".into());
+                return Err(eyre!("Deployment failed: No contract address found."));
             }
         };
 
