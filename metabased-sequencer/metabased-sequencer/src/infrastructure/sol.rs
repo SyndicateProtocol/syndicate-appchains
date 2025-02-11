@@ -6,8 +6,7 @@ use crate::{
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
 use alloy::{
-    hex,
-    json_rpc,
+    hex, json_rpc,
     network::Network,
     primitives::U256,
     providers::Provider,
@@ -229,10 +228,7 @@ mod tests {
     async fn test_get_balance() {
         let expected_balance = U256::from(100);
         let provider = MockProvider::new(expected_balance);
-        let service = SolMetabasedSequencerChainService::new(
-            Address::default(),
-            provider,
-        );
+        let service = SolMetabasedSequencerChainService::new(Address::default(), provider);
         let balance = service.get_balance().await.unwrap();
         assert_eq!(balance, expected_balance);
     }
