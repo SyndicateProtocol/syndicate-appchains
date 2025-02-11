@@ -12,7 +12,7 @@ use alloy::{
     primitives::U256,
     providers::{Provider, RootProvider},
     sol,
-    transports::{RpcError, Transport, TransportError, TransportFut, TransportResult},
+    transports::{Transport, TransportError, TransportFut, TransportResult},
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, sync::Arc, task::Poll, time::Duration};
