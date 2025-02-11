@@ -10,10 +10,9 @@ use alloy::{
     json_rpc::packet::{RequestPacket, ResponsePacket},
     network::Network,
     primitives::U256,
-    providers::{Provider, RootProvider},
+    providers::{Provider, RootProvider, RpcError},
     sol,
     transports::{Transport, TransportError, TransportFut, TransportResult},
-    providers::RpcError,
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, sync::Arc, task::Poll, time::Duration};
