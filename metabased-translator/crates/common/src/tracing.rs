@@ -9,7 +9,7 @@ use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::{
     fmt as subscriber_fmt,
     fmt::{
-        format::{Format, Writer},
+        format::{Format, JsonFields, Writer},
         FmtContext, FormatEvent, FormatFields,
     },
     layer::SubscriberExt,
@@ -85,7 +85,8 @@ pub fn init_tracing_with_extra_fields(
 
     let custom_formatter = CustomJsonFormatter { inner: json_formatter, extra_fields };
 
-    let fmt_layer = subscriber_fmt::layer().event_format(custom_formatter);
+    let fmt_layer =
+        subscriber_fmt::layer().event_format(custom_formatter).fmt_fields(JsonFields::default());
 
     tracing_subscriber::registry()
         .with(fmt_layer)
