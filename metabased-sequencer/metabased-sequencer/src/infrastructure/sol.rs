@@ -6,23 +6,16 @@ use crate::{
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
 use alloy::{
-    hex, json_rpc,
+    hex,
     network::Network,
     primitives::U256,
     providers::Provider,
+    rpc::RpcError,
     sol,
-    transport::TransportError,
-    transports::{BoxTransport, Transport},
+    transports::Transport,
 };
 use async_trait::async_trait;
-use std::{
-    future::Future,
-    marker::PhantomData,
-    pin::Pin,
-    task::{Context, Poll},
-    time::Duration,
-};
-use tower_service::Service;
+use std::{marker::PhantomData, time::Duration};
 use tracing::{debug_span, info};
 
 sol! {
@@ -195,33 +188,15 @@ mod tests {
     }
 
     #[async_trait]
-    impl<N: Network> Provider<BoxTransport, N> for MockProvider {
-        fn root(&self) -> &alloy::providers::RootProvider<BoxTransport, N> {
-            unimplemented!("Mock provider does not implement root")
-        }
-
-        async fn get_balance(&self, _address: Address) -> Result<U256, TransportError> {
+    impl<N: Network> Provider<N> for MockProvider {
+        async fn get_balance(&self, _address: Address) -> Result<U256, RpcError> {
             Ok(*self.balance.lock().await)
         }
     }
 
     impl Transport for MockProvider {
-        type Error = TransportError;
+        type Error = RpcError;
     }
-
-    #[async_trait]
-    impl Service<json_rpc::Request> for MockProvider {
-        type Response = json_rpc::Response;
-        type Error = TransportError;
-        type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
-
-        fn poll_ready(&mut self, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
-            Poll::Ready(Ok(()))
-        }
-
-        fn call(&mut self, _: json_rpc::Request) -> Self::Future {
-            Box::pin(async { unimplemented!("Mock provider does not implement transport") })
-        }
     }
 
     #[tokio::test]
