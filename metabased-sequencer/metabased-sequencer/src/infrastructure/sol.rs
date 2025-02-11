@@ -201,10 +201,7 @@ mod tests {
     impl<N: Network> Transport for MockProvider {
         type Error = alloy::contract::Error;
 
-        async fn call(
-            &self,
-            _: alloy_json_rpc::Request,
-        ) -> Result<alloy_json_rpc::Response, Self::Error> {
+        async fn call(&self, _: alloy_json_rpc::Request) -> Result<alloy_json_rpc::Response, Self::Error> {
             unimplemented!("Mock provider does not implement transport")
         }
     }
