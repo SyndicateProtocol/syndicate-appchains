@@ -63,19 +63,16 @@ impl Ingestor {
     /// # Returns
     /// The block and its receipts.
     async fn get_block_and_receipts(&self, block_number: u64) -> Result<BlockAndReceipts, Error> {
-        let block_and_receipt = self.client.get_blocks_and_receipts(block_number).await?;
-        // let start_time_block = std::time::Instant::now();
-        // let block = self.client.get_block_by_number(block_number).await?;
-        // let duration_block = start_time_block.elapsed();
+        let start_time = std::time::Instant::now();
 
-        // let start_time_receipts = std::time::Instant::now();
-        // let receipts = self.client.get_block_receipts(block_number).await?;
-        // let duration_receipts = start_time_receipts.elapsed();
+        let block_and_receipt = self.client.get_block_and_receipts(block_number).await?;
+        let duration = start_time.elapsed();
 
-        // self.metrics.record_rpc_call(self.chain, "eth_getBlockByNumber", duration_block);
-
-        // self.metrics.record_rpc_call(self.chain, "eth_getBlockReceipts", duration_receipts);
-        // self.metrics.record_last_block_fetched(self.chain, block.number);
+        self.metrics.record_rpc_call(
+            self.chain,
+            "batch: eth_getBlockByNumber + eth_getBlockReceipts ",
+            duration,
+        );
 
         debug!("Got block: {:?}", block_and_receipt.block.number);
 

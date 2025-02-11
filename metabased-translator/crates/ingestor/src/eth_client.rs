@@ -9,6 +9,7 @@ use common::types::{Block, BlockAndReceipts, Receipt};
 use eyre::eyre;
 use std::fmt::Debug;
 use thiserror::Error;
+use tracing::debug;
 use url;
 
 /// Errors that can occur while interacting with the Ethereum RPC client.
@@ -33,11 +34,8 @@ pub trait RPCClient: Send + Sync + Debug {
     /// Retrieves a block by its number.
     async fn get_block_by_number(&self, block_number: u64) -> Result<Block, RPCClientError>;
 
-    /// Retrieves the receipts of all transactions in a block.
-    async fn get_block_receipts(&self, block_number: u64) -> Result<Vec<Receipt>, RPCClientError>;
-
-    /// Retrieves multiple blocks and receipts in batch.
-    async fn get_blocks_and_receipts(
+    /// Retrieves the blocks and its receipts in a batch call.
+    async fn get_block_and_receipts(
         &self,
         block_number: u64,
     ) -> Result<BlockAndReceipts, RPCClientError>;
@@ -91,7 +89,7 @@ impl RPCClient for EthClient {
             .ok_or_else(|| RPCClientError::BlockNotFound(block_number))
     }
 
-    /// Retrieves the receipts of all transactions in a block.
+    /// Retrieves the block & receipts of all transactions in a block.
     ///
     /// # Arguments
     ///
@@ -99,20 +97,12 @@ impl RPCClient for EthClient {
     ///
     /// # Returns
     ///
-    /// A result containing a vector of `Receipt` if found, or an error if no receipts are found.
-    async fn get_block_receipts(&self, block_number: u64) -> Result<Vec<Receipt>, RPCClientError> {
-        let block_number_hex = format!("0x{:x}", block_number);
-        self.client
-            .request::<_, Option<Vec<Receipt>>>("eth_getBlockReceipts", (block_number_hex,))
-            .await
-            .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
-            .ok_or_else(|| RPCClientError::BlockReceiptsNotFound(block_number))
-    }
-
-    async fn get_blocks_and_receipts(
+    /// A result containing a `BlockAndReceipts` object if found, or an error if not found.
+    async fn get_block_and_receipts(
         &self,
         block_number: u64,
     ) -> Result<BlockAndReceipts, RPCClientError> {
+        debug!("get_blocks_and_receipts {}", block_number);
         let mut batch = self.client.new_batch();
 
         let block_fut = batch
@@ -124,8 +114,11 @@ impl RPCClient for EthClient {
             .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
             .map_resp(|resp: Vec<Receipt>| resp);
 
+        batch.send().await.map_err(|e| RPCClientError::RpcError(eyre!(e)))?;
+
         let (block, receipts) = tokio::try_join!(block_fut, receipt_fut)
             .map_err(|e| RPCClientError::RpcError(eyre!(e)))?;
+        debug!("get_blocks_and_receipts response: {:?} & {:?}", block, receipts);
 
         Ok(BlockAndReceipts { block, receipts })
     }
