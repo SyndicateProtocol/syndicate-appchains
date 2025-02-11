@@ -11,7 +11,7 @@ use alloy::{
     primitives::U256,
     providers::Provider,
     sol,
-    transports::Transport,
+    transports::{Transport, BoxTransport},
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
@@ -187,25 +187,28 @@ mod tests {
     }
 
     #[async_trait]
-    impl<N: Network> Provider<MockProvider, N> for MockProvider {
-        fn root(&self) -> &alloy::providers::RootProvider<MockProvider, N> {
+    impl<N: Network> Provider<BoxTransport, N> for MockProvider {
+        fn root(&self) -> &alloy::providers::RootProvider<BoxTransport, N> {
             unimplemented!("Mock provider does not implement root")
         }
 
-        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
+        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::transport::TransportError> {
             Ok(*self.balance.lock().await)
         }
     }
 
     #[async_trait]
-    impl<N: Network> Transport for MockProvider {
-        type Error = alloy::contract::Error;
+    impl<N: Network> tower_service::Service<alloy_json_rpc::packet::RequestPacket> for MockProvider {
+        type Response = alloy_json_rpc::packet::ResponsePacket;
+        type Error = alloy::transport::TransportError;
+        type Future = std::pin::Pin<Box<dyn std::future::Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
-        async fn call(
-            &self,
-            _: alloy_json_rpc::Request,
-        ) -> Result<alloy_json_rpc::Response, Self::Error> {
-            unimplemented!("Mock provider does not implement transport")
+        fn poll_ready(&mut self, _: &mut std::task::Context<'_>) -> std::task::Poll<Result<(), Self::Error>> {
+            std::task::Poll::Ready(Ok(()))
+        }
+
+        fn call(&mut self, _: alloy_json_rpc::packet::RequestPacket) -> Self::Future {
+            Box::pin(async { unimplemented!("Mock provider does not implement transport") })
         }
     }
 
