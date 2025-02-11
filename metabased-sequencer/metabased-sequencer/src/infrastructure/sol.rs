@@ -9,13 +9,12 @@ use alloy::{
     hex,
     network::Network,
     primitives::U256,
-    providers::{Provider, RootProvider},
+    providers::Provider,
     sol,
-    transports::{RpcError, Transport, TransportErrorKind},
+    transports::Transport,
 };
 use async_trait::async_trait;
-use std::{marker::PhantomData, sync::Arc, time::Duration};
-use tokio::sync::Mutex;
+use std::{marker::PhantomData, time::Duration};
 use tracing::{debug_span, info};
 
 sol! {
@@ -190,7 +189,10 @@ mod tests {
             unimplemented!("Mock provider does not implement root")
         }
 
-        async fn get_balance(&self, _address: Address) -> Result<U256, RpcError<TransportErrorKind>> {
+        async fn get_balance(
+            &self,
+            _address: Address,
+        ) -> Result<U256, RpcError<TransportErrorKind>> {
             Ok(*self.balance.lock().await)
         }
     }
