@@ -79,10 +79,10 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
                     // Add balance logging after successful transaction
                     match self.get_balance().await {
                         Ok(balance) => {
-                            let balance_eth = balance.low_u128() as f64 / 1e18;
+                            let balance_synd = balance.to_ethers().to_f64().unwrap_or(0.0);
                             info!(
                                 account = ?self.account,
-                                balance_eth = balance_eth,
+                                balance_synd = balance_synd,
                                 "Sequencer balance after transaction"
                             );
                         }
@@ -128,10 +128,10 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
                     // Add balance logging after successful bulk transaction
                     match self.get_balance().await {
                         Ok(balance) => {
-                            let balance_eth = balance.low_u128() as f64 / 1e18;
+                            let balance_synd = balance.to_ethers().to_f64().unwrap_or(0.0);
                             info!(
                                 account = ?self.account,
-                                balance_eth = balance_eth,
+                                balance_synd = balance_synd,
                                 "Sequencer balance after bulk transaction"
                             );
                         }
@@ -164,7 +164,7 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::{network::Ethereum, providers::Provider};
+    use alloy::{network::Network, providers::Provider};
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
@@ -180,7 +180,7 @@ mod tests {
     }
 
     #[async_trait]
-    impl Provider<MockProvider, Ethereum> for MockProvider {
+    impl<N: Network> Provider<MockProvider, N> for MockProvider {
         async fn get_balance(
             &self,
             _address: Address,
