@@ -214,9 +214,13 @@ mod tests {
     impl Service<json_rpc::Request> for MockProvider {
         type Response = json_rpc::Response;
         type Error = TransportError;
-        type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
+        type Future =
+            Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send>>;
 
-        fn poll_ready(&mut self, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+        fn poll_ready(
+            &mut self,
+            _: &mut Context<'_>,
+        ) -> Poll<Result<(), Self::Error>> {
             Poll::Ready(Ok(()))
         }
 
@@ -229,7 +233,8 @@ mod tests {
     async fn test_get_balance() {
         let expected_balance = U256::from(100);
         let provider = MockProvider::new(expected_balance);
-        let service = SolMetabasedSequencerChainService::new(Address::default(), provider);
+        let service =
+            SolMetabasedSequencerChainService::new(Address::default(), provider);
         let balance = service.get_balance().await.unwrap();
         assert_eq!(balance, expected_balance);
     }
