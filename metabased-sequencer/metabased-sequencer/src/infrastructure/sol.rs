@@ -10,8 +10,7 @@ use alloy::{
     transports::{RpcError, Transport},
 };
 use async_trait::async_trait;
-use std::{marker::PhantomData, sync::Arc, time::Duration};
-use tokio::sync::Mutex;
+use std::{marker::PhantomData, time::Duration};
 use tracing::{debug_span, info};
 
 sol! {
