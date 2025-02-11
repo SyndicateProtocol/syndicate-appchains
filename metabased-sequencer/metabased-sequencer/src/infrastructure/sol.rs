@@ -79,7 +79,7 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
                     // Add balance logging after successful transaction
                     match self.get_balance().await {
                         Ok(balance) => {
-                            let balance_synd = balance.to_ethers().to_f64().unwrap_or(0.0);
+                            let balance_synd = (balance.as_limbs()[0] as f64) / 1e18;
                             info!(
                                 account = ?self.account,
                                 balance_synd = balance_synd,
@@ -128,7 +128,7 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
                     // Add balance logging after successful bulk transaction
                     match self.get_balance().await {
                         Ok(balance) => {
-                            let balance_synd = balance.to_ethers().to_f64().unwrap_or(0.0);
+                            let balance_synd = (balance.as_limbs()[0] as f64) / 1e18;
                             info!(
                                 account = ?self.account,
                                 balance_synd = balance_synd,
