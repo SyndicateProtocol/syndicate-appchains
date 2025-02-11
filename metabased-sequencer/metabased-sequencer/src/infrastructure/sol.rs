@@ -8,10 +8,10 @@ use crate::{
 use alloy::{
     hex,
     network::Network,
-    primitives::{B256, U256},
-    providers::{Provider, RootProvider},
+    primitives::U256,
+    providers::Provider,
     sol,
-    transports::{Transport, TransportError},
+    transports::Transport,
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
@@ -188,21 +188,18 @@ mod tests {
 
     #[async_trait]
     impl<N: Network> Provider<MockProvider, N> for MockProvider {
-        fn root(&self) -> &RootProvider<MockProvider, N> {
+        fn root(&self) -> &alloy::providers::RootProvider<MockProvider, N> {
             unimplemented!("Mock provider does not implement root")
         }
 
-        async fn get_balance(
-            &self,
-            _address: Address,
-        ) -> Result<U256, TransportError> {
+        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
             Ok(*self.balance.lock().await)
         }
     }
 
     #[async_trait]
     impl<N: Network> Transport for MockProvider {
-        type Error = TransportError;
+        type Error = alloy::contract::Error;
 
         async fn call(
             &self,
@@ -216,7 +213,7 @@ mod tests {
     async fn test_get_balance() {
         let expected_balance = U256::from(100);
         let provider = MockProvider::new(expected_balance);
-        let service = SolMetabasedSequencerChainService::new(Address::new(B256::random()), provider);
+        let service = SolMetabasedSequencerChainService::new(Address::default(), provider);
         let balance = service.get_balance().await.unwrap();
         assert_eq!(balance, expected_balance);
     }
