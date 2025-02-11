@@ -36,6 +36,7 @@ use prometheus_client::registry::Registry;
 use reqwest::Client;
 use slotter::{metrics::SlotterMetrics, Slotter};
 use std::{sync::Arc, time::Duration};
+use test_utils::test_path;
 use tokio::{
     process::{Child, Command},
     runtime::Handle,
@@ -319,9 +320,11 @@ impl MetaNode {
             slotter.start(sequencer_rx, settlement_rx, shutdown_slotter_rx).await;
         }));
 
+        let datadir = test_path("datadir");
         let block_builder = BlockBuilder::new(
             slotter_rx,
             &block_builder_cfg,
+            &datadir,
             BlockBuilderMetrics::new(&mut metrics_state.registry),
         )
         .await?;

@@ -1,4 +1,7 @@
-use std::hash::{DefaultHasher, Hash, Hasher};
+use std::{
+    fs,
+    hash::{DefaultHasher, Hash, Hasher},
+};
 
 /// Returns a unique temporary path for tests.
 ///
@@ -24,5 +27,8 @@ pub fn test_path(prefix: &str) -> String {
     format!("{}:{}:{:?}", location, timestamp, thread_id).hash(&mut hasher);
     let hash = hasher.finish();
 
-    std::env::temp_dir().join(format!("{}_{:x}", prefix, hash)).to_str().unwrap().to_string()
+    let dir =
+        std::env::temp_dir().join(format!("{}_{:x}", prefix, hash)).to_str().unwrap().to_string();
+    fs::create_dir_all(&dir).unwrap();
+    dir
 }
