@@ -56,11 +56,13 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
     type Error = alloy::contract::Error;
 
     async fn process_transaction(&self, tx: Bytes) -> Result<TxHash, Self::Error> {
-        let result = debug_span!("process_transaction",
+        let result = debug_span!(
+            "process_transaction",
             account = ?self.account,
             tx_data = ?Self::format_tx_data(&tx),
             tx_size = tx.len()
-        ).in_scope(|| async {
+        )
+        .in_scope(|| async {
             let pending_tx = self.contract().processTransaction(tx).send().await?;
 
             match pending_tx
@@ -81,12 +83,14 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
     }
 
     async fn process_bulk_transactions(&self, txs: Vec<Bytes>) -> Result<TxHash, Self::Error> {
-        debug_span!("process_bulk_transactions",
+        debug_span!(
+            "process_bulk_transactions",
             account = ?self.account,
             tx_count = txs.len(),
             total_size = txs.iter().map(|tx| tx.len()).sum::<usize>(),
             tx_data = ?txs.iter().map(|tx| Self::format_tx_data(tx)).collect::<Vec<_>>()
-        ).in_scope(|| async {
+        )
+        .in_scope(|| async {
             let pending_tx = self.contract()
                 .processBulkTransactions(txs)
                 .send()

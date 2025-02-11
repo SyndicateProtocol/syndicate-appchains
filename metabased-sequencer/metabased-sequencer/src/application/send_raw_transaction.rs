@@ -24,7 +24,10 @@ use tracing::{debug, instrument, Level};
 #[instrument(
     level = Level::DEBUG,
     skip(chain),
-    fields(tx_data = ?format!("0x{}", hex::encode(&encoded)), tx_size = encoded.len())
+    fields(
+        tx_data = ?format!("0x{}", hex::encode(&encoded)),
+        tx_size = encoded.len()
+    )
 )]
 pub async fn send_raw_transaction<Chain>(encoded: Bytes, chain: &Chain) -> Result<TxHash, Error>
 where
