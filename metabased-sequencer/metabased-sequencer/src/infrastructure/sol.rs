@@ -13,6 +13,7 @@ use alloy::{
     providers::{Provider, RootProvider},
     sol,
     transports::{Transport, TransportError, TransportFut, TransportResult},
+    providers::RpcError,
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, sync::Arc, task::Poll, time::Duration};
