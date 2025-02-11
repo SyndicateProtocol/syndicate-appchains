@@ -5,10 +5,12 @@ use crate::{
     },
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
-use alloy::{hex, network::Network, providers::Provider, sol, transports::Transport};
+use alloy::{
+    hex, network::Network, primitives::U256, providers::Provider, sol, transports::Transport,
+};
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
-use tracing::debug_span;
+use tracing::{debug_span, error, info, warn};
 
 sol! {
     #[derive(Debug, PartialEq, Eq)]
@@ -46,6 +48,32 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
     pub fn contract(&self) -> MetabasedSequencerChainInstance<T, &P, N> {
         MetabasedSequencerChain::new(self.account, &self.provider)
     }
+
+    /// Gets the current balance of the sequencer account
+    async fn get_balance(&self) -> Result<U256, alloy::contract::Error> {
+        Ok(self.provider.get_balance(self.account).await?)
+    }
+
+    /// Logs the current balance of the sequencer account with context
+    async fn log_sequencer_balance(&self, context: &str) {
+        match self.get_balance().await {
+            Ok(balance) => {
+                let balance_synd = (balance.as_limbs()[0] as f64) / 1e18;
+                info!(
+                    account = ?self.account,
+                    balance_synd = balance_synd,
+                    "Sequencer wallet balance {}", context
+                );
+            }
+            Err(e) => {
+                warn!(
+                    account = ?self.account,
+                    error = ?e,
+                    "Could not fetch sequencer wallet balance {}", context
+                );
+            }
+        }
+    }
 }
 
 #[async_trait]
@@ -70,9 +98,12 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
                 .watch()
                 .await
             {
-                Ok(hash) => Ok(hash),
+                Ok(hash) => {
+                    self.log_sequencer_balance("after transaction").await;
+                    Ok(hash)
+                }
                 Err(e) => {
-                    tracing::error!(error = ?e, "Transaction submission failed");
+                    error!(error = ?e, "Transaction submission failed");
                     Err(alloy::contract::Error::from(e))
                 }
             }
@@ -99,9 +130,12 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
                 .watch()
                 .await
             {
-                Ok(hash) => Ok(hash),
+                Ok(hash) => {
+                    self.log_sequencer_balance("after bulk transaction").await;
+                    Ok(hash)
+                }
                 Err(e) => {
-                    tracing::error!(error = ?e, "Bulk transaction submission failed");
+                    error!(error = ?e, "Bulk transaction submission failed");
                     Err(alloy::contract::Error::from(e))
                 }
             }
@@ -114,4 +148,52 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
     // {     self.contract().processBulkTransactionsCompressed(txns).call().await?;
     //     Ok(())
     // }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy::{
+        network::Ethereum,
+        providers::{ProviderCall::BoxedFuture, RootProvider, RpcWithBlock},
+        transports::BoxTransport,
+    };
+
+    #[derive(Debug, Clone)]
+    struct MockProvider {
+        balance: U256,
+    }
+
+    impl MockProvider {
+        fn new(balance: U256) -> Self {
+            Self { balance }
+        }
+    }
+
+    impl Provider<BoxTransport, Ethereum> for MockProvider {
+        fn root(&self) -> &RootProvider<BoxTransport, Ethereum> {
+            todo!() // Don't need this for our Mock
+        }
+
+        fn get_balance(
+            &self,
+            _address: Address,
+        ) -> RpcWithBlock<BoxTransport, Address, U256, U256, fn(U256) -> U256> {
+            let balance = self.balance;
+            RpcWithBlock::new_provider(move |_block_id| {
+                let fut = Box::pin(async move { Ok(balance) });
+                BoxedFuture(fut)
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn test_get_balance() {
+        let expected_balance = U256::from(100);
+        let provider = MockProvider::new(expected_balance);
+        let service: SolMetabasedSequencerChainService<MockProvider, BoxTransport, Ethereum> =
+            SolMetabasedSequencerChainService::new(Address::default(), provider);
+        let balance = service.get_balance().await.unwrap();
+        assert_eq!(balance, expected_balance);
+    }
 }
