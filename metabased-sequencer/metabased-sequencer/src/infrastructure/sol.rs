@@ -56,41 +56,35 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
     type Error = alloy::contract::Error;
 
     async fn process_transaction(&self, tx: Bytes) -> Result<TxHash, Self::Error> {
-        let result = debug_span!("process_transaction", 
+        let result = debug_span!("process_transaction",
             account = ?self.account,
             tx_data = ?Self::format_tx_data(&tx),
             tx_size = tx.len()
-        )
-            .in_scope(|| async {
-                let pending_tx = self.contract().processTransaction(tx).send().await?;
+        ).in_scope(|| async {
+            let pending_tx = self.contract().processTransaction(tx).send().await?;
 
-                pending_tx
-                    .with_required_confirmations(2)
-                    .with_timeout(Some(Duration::from_secs(60)))
-                    .watch()
-                    .await
-                    .map_err(|e| {
-                        tracing::error!(
-                            error = ?e,
-                            "Transaction submission failed"
-                        );
-                        e
-                    })
-                    .map_err(alloy::contract::Error::from)
-            })
-            .await?;
+            pending_tx
+                .with_required_confirmations(2)
+                .with_timeout(Some(Duration::from_secs(60)))
+                .watch()
+                .await
+                .map_err(|e| {
+                    tracing::error!(error = ?e, "Transaction submission failed");
+                    e
+                })
+                .map_err(alloy::contract::Error::from)
+        }).await?;
 
         Ok(result)
     }
 
     async fn process_bulk_transactions(&self, txs: Vec<Bytes>) -> Result<TxHash, Self::Error> {
-        debug_span!("process_bulk_transactions", 
+        debug_span!("process_bulk_transactions",
             account = ?self.account,
             tx_count = txs.len(),
             total_size = txs.iter().map(|tx| tx.len()).sum::<usize>(),
             tx_data = ?txs.iter().map(|tx| Self::format_tx_data(tx)).collect::<Vec<_>>()
-        )
-        .in_scope(|| async {
+        ).in_scope(|| async {
             self.contract()
                 .processBulkTransactions(txs)
                 .send()
@@ -100,14 +94,10 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
                 .watch()
                 .await
                 .map_err(|e| {
-                    tracing::error!(
-                        error = ?e,
-                        "Bulk transaction submission failed"
-                    );
+                    tracing::error!(error = ?e, "Bulk transaction submission failed");
                     e
                 })
-        })
-        .await
+        }).await
     }
 
     // TODO (SEQ-248): Implement bulk transactions
