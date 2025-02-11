@@ -7,7 +7,7 @@ use block_builder::config::BlockBuilderConfig;
 use clap::Parser;
 use eyre::Result;
 use ingestor::{
-    config::{SequencingChainConfig, SettlementChainConfig},
+    config::{ChainIngestorConfig, SequencingChainConfig, SettlementChainConfig},
     eth_client::{RPCClient, RPCClientError},
 };
 use metrics::config::MetricsConfig;
@@ -109,6 +109,20 @@ impl MetabasedConfig {
         // Remove trailing slash and newline
         cmd.truncate(cmd.len() - 2);
         println!("{}", cmd);
+    }
+}
+
+impl Default for MetabasedConfig {
+    fn default() -> Self {
+        let ingestor_config = ChainIngestorConfig::default();
+        Self {
+            datadir: "./datadir".to_string(),
+            block_builder: BlockBuilderConfig::default(),
+            slotter: SlotterConfig::default(),
+            sequencing: ingestor_config.clone().into(),
+            settlement: ingestor_config.into(),
+            metrics: MetricsConfig::default(),
+        }
     }
 }
 

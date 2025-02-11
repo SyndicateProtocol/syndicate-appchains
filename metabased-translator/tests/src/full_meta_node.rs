@@ -25,15 +25,16 @@ use contract_bindings::{
 };
 use eyre::Result;
 use ingestor::{
-    config::{ChainIngestorConfig, IngestionPipelineConfig},
+    config::ChainIngestorConfig,
     eth_client::{EthClient, RPCClient},
     ingestor::Ingestor,
     metrics::IngestorMetrics,
 };
+use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use reqwest::Client;
-use slotter::{config::SlotterConfig, metrics::SlotterMetrics, Slotter};
+use slotter::{metrics::SlotterMetrics, Slotter};
 use std::{sync::Arc, time::Duration};
 use tokio::{
     process::{Child, Command},
@@ -198,7 +199,7 @@ pub struct MetaNode {
 }
 
 impl MetaNode {
-    pub async fn new(pre_loaded: bool) -> Result<Self> {
+    pub async fn new(pre_loaded: bool, config: MetabasedConfig) -> Result<Self> {
         // We need 4 ports to run a full meta node
         // - MChain
         // - Mock Sequencing Chain
@@ -221,7 +222,7 @@ impl MetaNode {
             mchain_url: format!("http://127.0.0.1:{}", mchain_port).parse()?,
             sequencing_contract_address: get_rollup_contract_address(),
             genesis_timestamp: GENESIS_TIMESTAMP,
-            ..Default::default()
+            ..config.block_builder
         };
 
         // Launch mock sequencing chain and deploy contracts
@@ -267,18 +268,18 @@ impl MetaNode {
         }
 
         // Launch ingestors for the sequencer and settlement chains
-        let mut ingestor_config = IngestionPipelineConfig::default();
-        ingestor_config.sequencing.sequencing_rpc_url = format!("http://localhost:{}", seq_port);
-        ingestor_config.sequencing.sequencing_polling_interval = Duration::from_millis(10);
-        ingestor_config.settlement.settlement_rpc_url = format!("http://localhost:{}", set_port);
-        ingestor_config.settlement.settlement_polling_interval = Duration::from_millis(10);
-        let seq_config: ChainIngestorConfig = (&ingestor_config.sequencing).into();
-        let set_config: ChainIngestorConfig = (&ingestor_config.settlement).into();
+
+        let mut seq_config: ChainIngestorConfig = (&config.sequencing).into();
+        let mut set_config: ChainIngestorConfig = (&config.settlement).into();
+        seq_config.rpc_url = format!("http://localhost:{}", seq_port);
+        seq_config.polling_interval = Duration::from_millis(10);
+        set_config.rpc_url = format!("http://localhost:{}", set_port);
+        set_config.polling_interval = Duration::from_millis(10);
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let sequencing_client: Arc<dyn RPCClient> =
-            Arc::new(EthClient::new(&ingestor_config.sequencing.sequencing_rpc_url).await?);
+            Arc::new(EthClient::new(&seq_config.rpc_url).await?);
         let settlement_client: Arc<dyn RPCClient> =
-            Arc::new(EthClient::new(&ingestor_config.settlement.settlement_rpc_url).await?);
+            Arc::new(EthClient::new(&set_config.rpc_url).await?);
         let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
             Chain::Sequencing,
             sequencing_client,
@@ -303,8 +304,8 @@ impl MetaNode {
         }));
 
         // Start slotter at the genesis timestamp
-        let slotter_cfg =
-            SlotterConfig { start_slot_timestamp: GENESIS_TIMESTAMP, ..Default::default() };
+        let mut slotter_cfg = config.slotter;
+        slotter_cfg.start_slot_timestamp = GENESIS_TIMESTAMP;
 
         // Launch the slotter, block builder, and nitro rollup
         let (slotter, slotter_rx) = Slotter::new(
@@ -317,6 +318,7 @@ impl MetaNode {
         let slotter_task = Task(tokio::spawn(async move {
             slotter.start(sequencer_rx, settlement_rx, shutdown_slotter_rx).await;
         }));
+
         let block_builder = BlockBuilder::new(
             slotter_rx,
             &block_builder_cfg,

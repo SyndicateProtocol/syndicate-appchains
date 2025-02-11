@@ -21,6 +21,7 @@ use e2e_tests::{
     full_meta_node::{launch_nitro_node, MetaNode, GENESIS_TIMESTAMP, PRELOAD_INBOX_ADDRESS},
 };
 use eyre::{eyre, Result};
+use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use std::time::Duration;
@@ -181,7 +182,9 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_settlement_test() -> Result<()> {
     // Start the meta node (port index 0, pre-loaded with the full set of Arb contracts)
-    let meta_node = MetaNode::new(true).await?;
+    let mut config = MetabasedConfig::default();
+    config.slotter.settlement_delay = 0;
+    let meta_node = MetaNode::new(true, config).await?;
     // Grab the wallet address for the test
     let wallet_address = meta_node.settlement_provider.default_signer_address();
 
@@ -336,7 +339,9 @@ async fn e2e_settlement_test() -> Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_test() -> Result<()> {
     // Start the meta node (port index 1, no pre-loaded contracts)
-    let meta_node = MetaNode::new(false).await?;
+    let mut config = MetabasedConfig::default();
+    config.slotter.settlement_delay = 0;
+    let meta_node = MetaNode::new(false, config).await?;
     // Setup the settlement rollup contract
     let set_rollup = Rollup::new(get_rollup_contract_address(), &meta_node.settlement_provider);
 

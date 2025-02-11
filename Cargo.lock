@@ -1603,6 +1603,7 @@ dependencies = [
  "contract-bindings",
  "eyre",
  "ingestor",
+ "metabased-translator",
  "metrics",
  "prometheus-client",
  "reqwest",

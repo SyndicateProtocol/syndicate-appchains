@@ -32,7 +32,7 @@ pub struct ChainIngestorConfig {
 // SettlementChainConfig here
 
 /// Configuration for the sequencing chain
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, Default)]
 pub struct SequencingChainConfig {
     /// The size of the buffer used to store incoming blocks
     #[arg(long = "sequencing-buffer-size", env = "SEQUENCING_BUFFER_SIZE", default_value_t = 100)]
@@ -57,7 +57,7 @@ pub struct SequencingChainConfig {
 }
 
 /// Configuration for the settlement chain
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, Default)]
 pub struct SettlementChainConfig {
     /// The size of the buffer used to store incoming blocks
     #[arg(long = "settlement-buffer-size", env = "SETTLEMENT_BUFFER_SIZE", default_value_t = 100)]
