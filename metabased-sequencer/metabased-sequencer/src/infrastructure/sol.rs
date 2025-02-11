@@ -10,14 +10,21 @@ use alloy::{
     json_rpc::packet::{RequestPacket, ResponsePacket},
     network::Network,
     primitives::U256,
-    providers::{Provider, RootProvider, RpcError},
+    providers::Provider,
     sol,
-    transports::{Transport, TransportError, TransportFut, TransportResult},
+    transports::{RpcError, Transport, TransportError, TransportErrorKind, TransportFut},
 };
 use async_trait::async_trait;
-use std::{marker::PhantomData, sync::Arc, task::Poll, time::Duration};
+use std::{
+    future::Future,
+    marker::PhantomData,
+    pin::Pin,
+    task::{Context, Poll},
+    time::Duration,
+};
 use tokio::sync::Mutex;
 use tower_service::Service;
+use tracing::{debug_span, info};
 use tracing::{debug_span, info};
 
 sol! {
@@ -187,32 +194,29 @@ mod tests {
     }
 
     #[async_trait]
-    impl<N: Network> Provider<N> for MockProvider {
+    impl<N: Network + Service<RequestPacket>> Provider<N> for MockProvider {
         fn root(&self) -> &RootProvider<N> {
             unimplemented!("Mock provider does not implement root")
         }
 
-        async fn get_balance(&self, _address: Address) -> Result<U256, RpcError<TransportError>> {
+        async fn get_balance(&self, _address: Address) -> Result<U256, RpcError<TransportErrorKind>> {
             Ok(*self.balance.lock().await)
         }
     }
 
     impl Service<RequestPacket> for MockProvider {
         type Response = ResponsePacket;
-        type Error = TransportError;
-        type Future = TransportFut<'static>;
+        type Error = RpcError<TransportErrorKind>;
+        type Future = Pin<Box<dyn Future<Output = Result<ResponsePacket, Self::Error>> + Send + 'static>>;
 
-        fn poll_ready(&mut self, _: &mut std::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
+        fn poll_ready(&mut self, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
             Poll::Ready(Ok(()))
         }
 
         fn call(&mut self, _: RequestPacket) -> Self::Future {
-            unimplemented!("Mock provider does not implement call")
+            Box::pin(async { unimplemented!("Mock provider does not implement call") })
         }
     }
-
-    impl Transport for MockProvider {
-        type Error = TransportError;
     }
 
     #[tokio::test]
