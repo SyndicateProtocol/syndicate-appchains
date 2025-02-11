@@ -5,14 +5,7 @@ use crate::{
     },
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
-use alloy::{
-    hex,
-    network::Network,
-    primitives::U256,
-    providers::Provider,
-    sol,
-    transports::Transport,
-};
+use alloy::{hex, network::Network, primitives::U256, providers::Provider, sol, transports::Transport};
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
 use tracing::{debug_span, info};
@@ -182,9 +175,7 @@ mod tests {
 
     impl MockProvider {
         fn new(balance: U256) -> Self {
-            Self {
-                balance: Arc::new(Mutex::new(balance)),
-            }
+            Self { balance: Arc::new(Mutex::new(balance)) }
         }
     }
 
