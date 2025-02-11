@@ -209,3 +209,4 @@ mod tests {
         assert_eq!(balance, expected_balance);
     }
 }
+}
