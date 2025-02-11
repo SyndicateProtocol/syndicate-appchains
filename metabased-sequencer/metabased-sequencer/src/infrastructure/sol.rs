@@ -5,6 +5,10 @@ use crate::{
     },
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
+use crate::domain::{
+    primitives::{Address, Bytes, TxHash},
+    MetabasedSequencerChainService,
+};
 use alloy::{
     hex,
     network::Network,
@@ -15,10 +19,9 @@ use alloy::{
     transports::Transport,
 };
 use async_trait::async_trait;
-use std::{marker::PhantomData, time::Duration};
+use std::{marker::PhantomData, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 use tracing::{debug_span, info};
-use std::sync::Arc;
 
 sol! {
     #[derive(Debug, PartialEq, Eq)]
@@ -195,7 +198,6 @@ mod tests {
 
     impl Transport for MockProvider {
         type Error = RpcError;
-    }
     }
 
     #[tokio::test]
