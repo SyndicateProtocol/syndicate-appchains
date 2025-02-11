@@ -46,6 +46,11 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
     pub fn contract(&self) -> MetabasedSequencerChainInstance<T, &P, N> {
         MetabasedSequencerChain::new(self.account, &self.provider)
     }
+
+    /// Gets the current balance of the sequencer account
+    async fn get_balance(&self) -> Result<U256, alloy::contract::Error> {
+        Ok(self.provider.get_balance(self.account).await?)
+    }
 }
 
 #[async_trait]
@@ -70,7 +75,17 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
                 .watch()
                 .await
             {
-                Ok(hash) => Ok(hash),
+                Ok(hash) => {
+                    // Add balance logging after successful transaction
+                    if let Ok(balance) = self.get_balance().await {
+                        debug!(
+                            account = ?self.account,
+                            balance = ?balance,
+                            "Sequencer balance after transaction"
+                        );
+                    }
+                    Ok(hash)
+                }
                 Err(e) => {
                     tracing::error!(error = ?e, "Transaction submission failed");
                     Err(alloy::contract::Error::from(e))
@@ -99,7 +114,17 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
                 .watch()
                 .await
             {
-                Ok(hash) => Ok(hash),
+                Ok(hash) => {
+                    // Add balance logging after successful bulk transaction
+                    if let Ok(balance) = self.get_balance().await {
+                        debug!(
+                            account = ?self.account,
+                            balance = ?balance,
+                            "Sequencer balance after bulk transaction"
+                        );
+                    }
+                    Ok(hash)
+                }
                 Err(e) => {
                     tracing::error!(error = ?e, "Bulk transaction submission failed");
                     Err(alloy::contract::Error::from(e))
@@ -114,4 +139,45 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
     // {     self.contract().processBulkTransactionsCompressed(txns).call().await?;
     //     Ok(())
     // }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy::{network::Ethereum, providers::Provider};
+    use std::sync::Arc;
+    use tokio::sync::Mutex;
+
+    #[derive(Debug, Clone)]
+    struct MockProvider {
+        balance: Arc<Mutex<U256>>,
+    }
+
+    impl MockProvider {
+        fn new(balance: U256) -> Self {
+            Self {
+                balance: Arc::new(Mutex::new(balance)),
+            }
+        }
+    }
+
+    #[async_trait]
+    impl Provider<MockProvider, Ethereum> for MockProvider {
+        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::transport::TransportError> {
+            Ok(*self.balance.lock().await)
+        }
+    }
+
+    #[tokio::test]
+    async fn test_get_balance() {
+        let expected_balance = U256::from(100);
+        let provider = MockProvider::new(expected_balance);
+        let service = SolMetabasedSequencerChainService::new(
+            Address::random(),
+            provider,
+        );
+        
+        let balance = service.get_balance().await.unwrap();
+        assert_eq!(balance, expected_balance);
+    }
 }
