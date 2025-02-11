@@ -120,7 +120,8 @@ RUN mkdir -p /etc/metabased-sequencer
 # Optional: Create volume mount points for persistent data
 VOLUME ["/data"]
 
-# Expose ports (adjust according to your needs)
+# Expose ports
+# NOTE: GCP Cloud Run defaults to 8080 so this line is unnecessary for such deployment
 EXPOSE 8545 8546
 
 ENTRYPOINT ["/usr/local/bin/metabased-sequencer"]

@@ -1,31 +1,26 @@
 exclude: vendor|\.pb\.go
 
 repos:
-  - repo: https://github.com/Bahjat/pre-commit-golang
-    rev: v1.0.3
-    hooks:
-      - id: go-fmt-import
-        files: ^(metabased-publisher)/
-      - id: go-vet
-        files: ^(metabased-publisher)/
-      - id: go-lint
-        files: ^(metabased-publisher)/
-      - id: golangci-lint # requires github.com/golangci/golangci-lint
-        files: ^(metabased-publisher)/
-        args: [--config=.golangci.yaml --allow-parallel-runners]
-
   - repo: local
     hooks:
       - id: fmt
         name: fmt
-        args: [ '--all', '--check', '--', '--unstable-features' ] # nightly Rust required for `imports_granularity` feature
+        args: ["--all", "--check", "--", "--unstable-features"] # nightly Rust required for `imports_granularity` feature
         entry: cargo +nightly fmt
         language: system
         types: [rust]
         pass_filenames: false
       - id: clippy
         name: clippy
-        args: ["--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"]
+        args:
+          [
+            "--workspace",
+            "--all-targets",
+            "--all-features",
+            "--",
+            "-D",
+            "warnings",
+          ]
         entry: cargo clippy
         language: system
         types: [rust]

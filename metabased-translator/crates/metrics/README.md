@@ -21,34 +21,36 @@ The following metrics are implemented and exposed via the `/metrics` endpoint in
      - `chain`: Specifies whether the call is related to the Sequencing or Settlement chain.
      - `method`: Always set to `"last_block_fetched"`.
    - **Metric Type**: Gauge
-
-#### Slotting
-
-1. **slotting_last_processed_block**: Tracks the last block number processed by the Slotting.
-   - **Labels**:
-     - `chain`: Specifies whether the block belongs to the Sequencing or Settlement chain.
-   - **Metric Type**: Gauge
-
-2. **slotting_active_slots**: Tracks the number of active slots being processed.
-   - **Metric Type**: Gauge
-
-3. **slotting_timestamp_lag_ms**: Tracks the timestamp lag (ms) for the both chains.
-   - **Labels**:
-     - `chain`: Specifies whether the block belongs to the Sequencing or Settlement chain.
-   - **Metric Type**: Gauge
-
-4. **slotting_blocks_per_slot**: Tracks the number of blocks processed per slot.
-   - **Metric Type**: Histogram
-
-5. **slotting_channel_capacity**: Tracks the capacity of the chain channel.
+  
+4. **ingestor_channel_capacity**: Tracks the capacity of the chain channel.
    - **Labels**:
      - `chain`: Specifies whether the channel belongs to the Sequencing or Settlement chain.
    - **Metric Type**: Gauge
-  
-6. **slotting_last_slot_created**: Tracks the last slot number created by the Slotting.
+
+#### Slotter
+
+1. **slotter_last_processed_block**: Tracks the last block number processed by the Slotter.
+   - **Labels**:
+     - `chain`: Specifies whether the block belongs to the Sequencing or Settlement chain.
+   - **Metric Type**: Gauge
+
+2. **slotter_active_slots**: Tracks the number of active slots being processed.
+   - **Metric Type**: Gauge
+
+3. **slotter_timestamp_lag_ms**: Tracks the timestamp lag (ms) for the both chains.
+   - **Labels**:
+     - `chain`: Specifies whether the block belongs to the Sequencing or Settlement chain.
+   - **Metric Type**: Gauge
+
+4. **slotter_blocks_per_slot**: Tracks the number of blocks processed per slot.
+   - **Metric Type**: Histogram
+
+5. **slotter_channel_capacity**: Tracks the capacity of the slot channel.
    - **Metric Type**: Gauge
   
-
+6. **slotter_last_slot_created**: Tracks the last slot number created by the Slotter.
+   - **Metric Type**: Gauge
+  
 
 #### Block Builder
 
@@ -56,7 +58,4 @@ The following metrics are implemented and exposed via the `/metrics` endpoint in
    - **Metric Type**: Gauge
   
 2. **block_builder_last_processed_slot**: Tracks the last slot number processed by the BlockBuilder.
-   - **Metric Type**: Gauge
-  
-3. **block_builder_channel_capacity**: Tracks the capacity of the slot channel.
    - **Metric Type**: Gauge

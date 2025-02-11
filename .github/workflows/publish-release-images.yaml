@@ -1,9 +1,8 @@
-name: Build & Push Sequencer Image + Trigger Cloud Run Deployment
-on:
-  push:
-    branches:
-      - main
+name: Publish Release Images
 
+on:
+  release:
+    types: [published]
 
 permissions:
   contents: read
@@ -11,21 +10,26 @@ permissions:
   packages: write
 
 jobs:
-  build-and-push:
+  publish-sequencer:
     uses: ./.github/workflows/docker-build-core.yaml
     with:
       do_push: true
       target_name: metabased-sequencer
     secrets: inherit
 
-  # Trigger Cloud Run here to prevent race condition
+  publish-translator:
+    uses: ./.github/workflows/docker-build-core.yaml
+    with:
+      do_push: true
+      target_name: metabased-translator
+    secrets: inherit
+
   cloud-run-deployment:
-    needs: build-and-push
+    needs: [publish-sequencer]
     runs-on: ubuntu-latest
     permissions:
       contents: 'read'
       id-token: 'write'
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

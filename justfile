@@ -321,10 +321,6 @@ create-envrc:
     "export OP_TRANSLATOR_RPC_URL={{ op_translator_url }}\n"\
     "export OP_TRANSLATOR_LOG_LEVEL=debug\n"\
     "export OP_TRANSLATOR_PRETTY=true\n"\
-    "# metabased-publisher\n"\
-    "export MB_PUBLISHER_POLL_INTERVAL=1m\n"\
-    "export MB_PUBLISHER_NETWORK_TIMEOUT=30s\n"\
-    "export MB_PUBLISHER_BLOB_UPLOAD_TIMEOUT=10m\n"\
     "# metabased-sequencer\n"\
     "export METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}\n"\
     "export METABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_l2_private_key }}\n"\
@@ -369,14 +365,6 @@ update-chain-address: arb-deploy-chain create-envrc
     exit 0
 
     @just _log-end "update-chain-address"
-
-# Runs Go install for Go projects within the monorepo
-go-install:
-    @just _log-start "go-install"
-
-    # go install {{ repository_root }}/metabased-publisher/cmd
-
-    @just _log-end "go-install"
 
 # Install foundryup (Foundry installer)
 foundry-setup:
@@ -465,9 +453,7 @@ arb-health-check:
 metabased-sequencer-health-check:
     @just _log-start "metabased-sequencer-health-check"
     # Exits with error (exit code 7) if sequencer is not responding
-    curl --location {{ metabased_sequencer_url }} \
-    --header 'Content-Type: application/json' \
-    --data '{"jsonrpc":"2.0","method":"health","id":1}'
+    curl --location {{ metabased_sequencer_url }}/health
     @just _log-end "metabased-sequencer-health-check"
 
 # Health check for Arbitrum node

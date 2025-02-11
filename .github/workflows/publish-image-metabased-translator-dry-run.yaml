@@ -1,4 +1,4 @@
-name: Docker Publish Metabased-Translator - Dry Run Check
+name: Build Translator Image to Github and Google Registries - Dry run Check
 
 on:
   pull_request:
@@ -7,52 +7,17 @@ on:
       - "metabased-translator/**"
       - "Dockerfile"
       - "**/Cargo.toml"
+      - ".github/workflows/**"
 
-env:
-  REGISTRY: ghcr.io
-  METABASED_TRANSLATOR_IMAGE_NAME: ${{ github.repository }}/metabased-translator
+permissions:
+  contents: read
+  id-token: write
+  packages: write
 
 jobs:
-  dry-run-metabased-translator:
-    name: Metabased Translator Dry Run
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to the Container registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata for metabased-translator
-        id: mb-translator
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.METABASED_TRANSLATOR_IMAGE_NAME }}
-          tags: |
-            type=sha,format=long
-            type=raw,value=dry-run-test
-
-      - name: Build metabased-translator Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile
-          target: metabased-translator
-          push: false
-          # removed linux/arm64 part, took > 30min on Github Actions
-          platforms: linux/amd64
-          tags: ${{ steps.mb-translator.outputs.tags }}
-          labels: ${{ steps.mb-translator.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+  build-no-push:
+    uses: ./.github/workflows/docker-build-core.yaml
+    with:
+      do_push: false
+      target_name: metabased-translator
+    secrets: inherit

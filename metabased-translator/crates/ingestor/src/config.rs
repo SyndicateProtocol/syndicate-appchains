@@ -32,7 +32,7 @@ pub struct ChainIngestorConfig {
 // SettlementChainConfig here
 
 /// Configuration for the sequencing chain
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, Default)]
 pub struct SequencingChainConfig {
     /// The size of the buffer used to store incoming blocks
     #[arg(long = "sequencing-buffer-size", env = "SEQUENCING_BUFFER_SIZE", default_value_t = 100)]
@@ -57,7 +57,7 @@ pub struct SequencingChainConfig {
 }
 
 /// Configuration for the settlement chain
-#[derive(Parser, Debug, Clone)]
+#[derive(Parser, Debug, Clone, Default)]
 pub struct SettlementChainConfig {
     /// The size of the buffer used to store incoming blocks
     #[arg(long = "settlement-buffer-size", env = "SETTLEMENT_BUFFER_SIZE", default_value_t = 100)]
@@ -120,6 +120,28 @@ impl From<SettlementChainConfig> for ChainIngestorConfig {
             buffer_size: config.settlement_buffer_size,
             polling_interval: config.settlement_polling_interval,
             rpc_url: config.settlement_rpc_url,
+            start_block: config.settlement_start_block,
+        }
+    }
+}
+
+impl From<&SequencingChainConfig> for ChainIngestorConfig {
+    fn from(config: &SequencingChainConfig) -> Self {
+        Self {
+            buffer_size: config.sequencing_buffer_size,
+            polling_interval: config.sequencing_polling_interval,
+            rpc_url: config.sequencing_rpc_url.clone(),
+            start_block: config.sequencing_start_block,
+        }
+    }
+}
+
+impl From<&SettlementChainConfig> for ChainIngestorConfig {
+    fn from(config: &SettlementChainConfig) -> Self {
+        Self {
+            buffer_size: config.settlement_buffer_size,
+            polling_interval: config.settlement_polling_interval,
+            rpc_url: config.settlement_rpc_url.clone(),
             start_block: config.settlement_start_block,
         }
     }

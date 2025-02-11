@@ -1,15 +1,15 @@
 [workspace]
 members = [
-    "metabased-translator/contract-bindings",
-    "metabased-translator/crates/block-builder",
-    "metabased-translator/crates/ingestor",
-    "metabased-translator/crates/slotting",
-    "metabased-translator/crates/common",
-    "metabased-translator/crates/metrics",
-    "metabased-translator/bin/metabased-translator",
-    "metabased-translator/tests",
     "metabased-sequencer/metabased-sequencer",
     "metabased-sequencer/proxy",
+    "metabased-translator/bin/metabased-translator",
+    "metabased-translator/contract-bindings",
+    "metabased-translator/crates/block-builder",
+    "metabased-translator/crates/common",
+    "metabased-translator/crates/ingestor",
+    "metabased-translator/crates/metrics",
+    "metabased-translator/crates/slotter",
+    "metabased-translator/tests",
 ]
 
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
@@ -17,161 +17,163 @@ members = [
 resolver = "2"
 
 [workspace.package]
-version = "0.1.0"
-edition = "2021"
+edition      = "2021"
+exclude      = [".github/"]
+homepage     = ""
+license      = ""
+repository   = ""
 rust-version = "1.84"
-license = ""
-homepage = ""
-repository = ""
-exclude = [".github/"]
+version      = "0.1.0"
 
 [workspace.dependencies]
 
-block-builder = { path = "metabased-translator/crates/block-builder" }
-slotting = { path = "metabased-translator/crates/slotting" }
-ingestor = { path = "metabased-translator/crates/ingestor" }
-common = { path = "metabased-translator/crates/common" }
-contract-bindings = { path = "metabased-translator/contract-bindings" }
-metrics = { path = "metabased-translator/crates/metrics" }
-test-utils = { path = "metabased-translator/crates/test-utils" }
+block-builder        = { path = "metabased-translator/crates/block-builder" }
+common               = { path = "metabased-translator/crates/common" }
+contract-bindings    = { path = "metabased-translator/contract-bindings" }
+ingestor             = { path = "metabased-translator/crates/ingestor" }
+metabased-translator = { path = "metabased-translator/bin/metabased-translator" }
+metrics              = { path = "metabased-translator/crates/metrics" }
+slotter              = { path = "metabased-translator/crates/slotter" }
+test-utils           = { path = "metabased-translator/crates/test-utils" }
 
-alloy = { version = "0.9.2" }
-alloy-rlp = "0.3.11"
-assert_matches = "1.5.0"
-axum = "0.8.1"
-base64 = "0.22.1"
-brotli = "7.0.0"
-hex = "0.4.3"
-jsonrpsee = { version = "0.24.7" }
-tokio = { version = "1.43" }
-serde = "1.0.217"
-serde-hex = "0.1.0"
-serde_json = "1.0.135"
+alloy              = { version = "0.9.2" }
+alloy-rlp          = "0.3.11"
+assert_matches     = "1.5.0"
+async-trait        = { version = "0.1" }
+axum               = "0.8.1"
+base64             = "0.22.1"
+bincode            = "1.3"
+brotli             = "7.0.0"
+bytes              = "1.9.0"
+clap               = { version = "4.5.26" }
+derivative         = "2.2"
+eyre               = { version = "0.6.12" }
+figment            = { version = "0.10.19" }
+flate2             = { version = "1.0.35" }
+hex                = "0.4.3"
+http               = "1.2.0"
+http-body-util     = "0.1"
+humantime          = "2.1.0"
+hyper              = { version = "1.5.2" }
+jsonrpsee          = { version = "0.24.7" }
+pin-project-lite   = "0.2.16"
+prometheus-client  = { version = "0.23.1" }
+rand               = { version = "0.8.5" }
+reqwest            = "0.12.12"
+rocksdb            = "0.23.0"
+serde              = "1.0.217"
+serde-hex          = "0.1.0"
+serde_json         = "1.0.135"
+strum              = "0.26.3"
+strum_macros       = "0.26.4"
+thiserror          = { version = "2.0.11" }
+tokio              = { version = "1.43" }
+tower              = { version = "0.4.0" }   # can't be updated until a new version of jsonrpsee is released
+tower-layer        = { version = "0.3.3" }
+tower-service      = { version = "0.3.3" }
+tracing            = "0.1.41"
 tracing-subscriber = "0.3.19"
-tracing = "0.1.41"
-clap = { version = "4.5.26" }
-hyper = { version = "1.5.2" }
-http-body-util = "0.1"
-http = "1.2.0"
-reqwest = "0.12.12"
-tower = { version = "0.4.0" }              # can't be updated until a new version of jsonrpsee is released
-tower-layer = { version = "0.3.3" }
-tower-service = { version = "0.3.3" }
-figment = { version = "0.10.19" }
-async-trait = { version = "0.1" }
-flate2 = { version = "1.0.35" }
-prometheus-client = { version = "0.23.1" }
-eyre = { version = "0.6.12" }
-thiserror = { version = "2.0.11" }
-strum = "0.26.3"
-strum_macros = "0.26.4"
-bytes = "1.9.0"
-rand = { version = "0.8.5" }
-url = { version = "2.5.4" }
-pin-project-lite = "0.2.16"
-humantime = "2.1.0"
-rocksdb = "0.23.0"
-derivative = "2.2"
-bincode = "1.3"
+url                = { version = "2.5.4" }
 
 # dev dependencies
-test-case = { version = "3" }
-serial_test = { version = "3.2.0" }
 const_format = { version = "0.2" }
-criterion = { version = "0.5" }
+criterion    = { version = "0.5" }
+mockall      = "0.13.1"
+serial_test  = { version = "3.2.0" }
+test-case    = { version = "3" }
 tracing-test = { version = "0.2.5" }
 
 
 [workspace.lints.rust]
 missing_debug_implementations = "warn"
-missing_docs = "warn"
-unreachable_pub = "warn"
-unused_must_use = "deny"
-rust_2018_idioms = { level = "deny", priority = -1 }
-unnameable_types = "warn"
-unused_qualifications = "warn"
+missing_docs                  = "warn"
+rust_2018_idioms              = { level = "deny", priority = -1 }
+unnameable_types              = "warn"
+unreachable_pub               = "warn"
+unused_must_use               = "deny"
+unused_qualifications         = "warn"
 
 
 [workspace.lints.clippy]
 # avoid unexpected panics, these are not allowed in production
-unwrap_used = "deny"
+expect_used   = "deny"
 map_unwrap_or = "deny"
-expect_used = "deny"
+unwrap_used   = "deny"
 # # warns
-missing_const_for_fn = "warn"
-use_self = "warn"
-option_if_let_else = "warn"
-redundant_clone = "warn"
-borrow_as_ptr = "warn"
-branches_sharing_code = "warn"
-clear_with_drain = "warn"
-cloned_instead_of_copied = "warn"
-collection_is_never_read = "warn"
-dbg_macro = "warn"
-derive_partial_eq_without_eq = "warn"
-doc_markdown = "warn"
-empty_line_after_doc_comments = "warn"
-empty_line_after_outer_attr = "warn"
-enum_glob_use = "warn"
-equatable_if_let = "warn"
-explicit_into_iter_loop = "warn"
-explicit_iter_loop = "warn"
-flat_map_option = "warn"
-from_iter_instead_of_collect = "warn"
-if_not_else = "warn"
-if_then_some_else_none = "warn"
-implicit_clone = "warn"
-imprecise_flops = "warn"
-iter_on_empty_collections = "warn"
-iter_on_single_items = "warn"
-iter_with_drain = "warn"
-iter_without_into_iter = "warn"
-large_stack_frames = "warn"
-manual_assert = "warn"
-manual_clamp = "warn"
-manual_is_variant_and = "warn"
-manual_string_new = "warn"
-match_same_arms = "warn"
-mutex_integer = "warn"
-naive_bytecount = "warn"
-needless_bitwise_bool = "warn"
-needless_continue = "warn"
-needless_for_each = "warn"
-needless_pass_by_ref_mut = "warn"
-nonstandard_macro_braces = "warn"
-option_as_ref_cloned = "warn"
-or_fun_call = "warn"
-path_buf_push_overwrite = "warn"
-read_zero_byte_vec = "warn"
-redundant_else = "warn"
-single_char_pattern = "warn"
-string_lit_as_bytes = "warn"
-string_lit_chars_any = "warn"
-suboptimal_flops = "warn"
-suspicious_operation_groupings = "warn"
-trailing_empty_array = "warn"
-trait_duplication_in_bounds = "warn"
-transmute_undefined_repr = "warn"
-trivial_regex = "warn"
-tuple_array_conversions = "warn"
-type_repetition_in_bounds = "warn"
-uninhabited_references = "warn"
-unnecessary_self_imports = "warn"
+as_ptr_cast_mut                   = "warn"
+borrow_as_ptr                     = "warn"
+branches_sharing_code             = "warn"
+clear_with_drain                  = "warn"
+cloned_instead_of_copied          = "warn"
+cognitive_complexity              = "warn"
+collection_is_never_read          = "warn"
+dbg_macro                         = "warn"
+debug_assert_with_mut_call        = "warn"
+derive_partial_eq_without_eq      = "warn"
+doc_markdown                      = "warn"
+empty_line_after_doc_comments     = "warn"
+empty_line_after_outer_attr       = "warn"
+enum_glob_use                     = "warn"
+equatable_if_let                  = "warn"
+explicit_into_iter_loop           = "warn"
+explicit_iter_loop                = "warn"
+fallible_impl_from                = "warn"
+flat_map_option                   = "warn"
+from_iter_instead_of_collect      = "warn"
+future_not_send                   = "warn"
+if_not_else                       = "warn"
+if_then_some_else_none            = "warn"
+implicit_clone                    = "warn"
+imprecise_flops                   = "warn"
+iter_on_empty_collections         = "warn"
+iter_on_single_items              = "warn"
+iter_with_drain                   = "warn"
+iter_without_into_iter            = "warn"
+large_stack_frames                = "warn"
+manual_assert                     = "warn"
+manual_clamp                      = "warn"
+manual_is_variant_and             = "warn"
+manual_string_new                 = "warn"
+match_same_arms                   = "warn"
+missing_const_for_fn              = "warn"
+mutex_integer                     = "warn"
+naive_bytecount                   = "warn"
+needless_bitwise_bool             = "warn"
+needless_collect                  = "warn"
+needless_continue                 = "warn"
+needless_for_each                 = "warn"
+needless_pass_by_ref_mut          = "warn"
+non_send_fields_in_send_ty        = "warn"
+nonstandard_macro_braces          = "warn"
+option_as_ref_cloned              = "warn"
+option_if_let_else                = "warn"
+or_fun_call                       = "warn"
+path_buf_push_overwrite           = "warn"
+read_zero_byte_vec                = "warn"
+redundant_clone                   = "warn"
+redundant_else                    = "warn"
+redundant_pub_crate               = "warn"
+significant_drop_in_scrutinee     = "warn"
+significant_drop_tightening       = "warn"
+single_char_pattern               = "warn"
+string_lit_as_bytes               = "warn"
+string_lit_chars_any              = "warn"
+suboptimal_flops                  = "warn"
+suspicious_operation_groupings    = "warn"
+too_long_first_doc_paragraph      = "warn"
+trailing_empty_array              = "warn"
+trait_duplication_in_bounds       = "warn"
+transmute_undefined_repr          = "warn"
+trivial_regex                     = "warn"
+tuple_array_conversions           = "warn"
+type_repetition_in_bounds         = "warn"
+uninhabited_references            = "warn"
+unnecessary_self_imports          = "warn"
 unnecessary_struct_initialization = "warn"
-unnested_or_patterns = "warn"
-unused_peekable = "warn"
-unused_rounding = "warn"
-useless_let_if_seq = "warn"
-while_float = "warn"
-zero_sized_map_values = "warn"
-as_ptr_cast_mut = "warn"
-cognitive_complexity = "warn"
-debug_assert_with_mut_call = "warn"
-fallible_impl_from = "warn"
-future_not_send = "warn"
-needless_collect = "warn"
-non_send_fields_in_send_ty = "warn"
-redundant_pub_crate = "warn"
-significant_drop_in_scrutinee = "warn"
-significant_drop_tightening = "warn"
-too_long_first_doc_paragraph = "warn"
+unnested_or_patterns              = "warn"
+unused_peekable                   = "warn"
+unused_rounding                   = "warn"
+use_self                          = "warn"
+useless_let_if_seq                = "warn"
+while_float                       = "warn"
+zero_sized_map_values             = "warn"

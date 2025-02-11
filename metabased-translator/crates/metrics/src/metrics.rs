@@ -11,7 +11,7 @@ use axum::{
 use block_builder::metrics::BlockBuilderMetrics;
 use ingestor::metrics::IngestorMetrics;
 use prometheus_client::{encoding::text::encode, registry::Registry};
-use slotting::metrics::SlottingMetrics;
+use slotter::metrics::SlotterMetrics;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
@@ -22,8 +22,8 @@ pub struct TranslatorMetrics {
     pub ingestor_sequencing: IngestorMetrics,
     /// Metrics for the settlement ingestor
     pub ingestor_settlement: IngestorMetrics,
-    /// Metrics for the slotting
-    pub slotting: SlottingMetrics,
+    /// Metrics for the slotter
+    pub slotter: SlotterMetrics,
     /// Metrics for the block builder
     pub block_builder: BlockBuilderMetrics,
 }
@@ -34,9 +34,9 @@ impl TranslatorMetrics {
     pub fn new(registry: &mut Registry) -> Self {
         let ingestor_sequencing = IngestorMetrics::new(registry);
         let ingestor_settlement = IngestorMetrics::new(registry);
-        let slotting = SlottingMetrics::new(registry);
+        let slotter = SlotterMetrics::new(registry);
         let block_builder = BlockBuilderMetrics::new(registry);
-        Self { ingestor_sequencing, ingestor_settlement, slotting, block_builder }
+        Self { ingestor_sequencing, ingestor_settlement, slotter, block_builder }
     }
 }
 
@@ -90,7 +90,7 @@ mod tests {
     use super::*;
     use axum::http::StatusCode;
     use common::types::Chain;
-    use ingestor::metrics::Labels;
+    use ingestor::metrics::MethodLabel;
     use reqwest::Client;
     use std::time::Duration;
     use tokio::time::sleep;
@@ -103,7 +103,7 @@ mod tests {
 
         let gauge = ingestor_metrics
             .ingestor_last_block_fetched
-            .get_or_create(&Labels {
+            .get_or_create(&MethodLabel {
                 chain: Chain::Settlement.into(),
                 method: "last_block_fetched",
             })
@@ -124,7 +124,7 @@ mod tests {
 
         let counter = ingestor_metrics
             .ingestor_rpc_calls
-            .get_or_create(&Labels { chain: Chain::Settlement.into(), method: "test_method" })
+            .get_or_create(&MethodLabel { chain: Chain::Settlement.into(), method: "test_method" })
             .clone();
         assert_eq!(counter.get(), 1);
     }

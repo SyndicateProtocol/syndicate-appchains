@@ -23,6 +23,7 @@ thiserror = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
 humantime = { workspace = true }
 prometheus-client = { workspace = true }
+async-trait ={ workspace = true }
 
 [dev-dependencies]
 assert_matches = { workspace = true }

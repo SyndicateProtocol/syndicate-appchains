@@ -33,7 +33,7 @@ impl BlockBuilder {
         config: &BlockBuilderConfig,
         metrics: BlockBuilderMetrics,
     ) -> Result<Self, Error> {
-        let mchain = MetaChainProvider::start(config).await?;
+        let mchain = MetaChainProvider::start(config, &metrics.mchain_metrics).await?;
 
         let builder: Box<dyn RollupBlockBuilder> = match config.target_rollup_type {
             TargetRollupType::ARBITRUM => Box::new(ArbitrumBlockBuilder::new(config)),
@@ -59,7 +59,6 @@ impl BlockBuilder {
         }
 
         loop {
-            self.metrics.update_channel_capacity(self.slotter_rx.capacity());
             tokio::select! {
                 Some(slot) = self.slotter_rx.recv() => {
                     debug!("Received slot: {:?}", slot);
@@ -127,6 +126,7 @@ mod tests {
     use eyre::Result;
     use prometheus_client::registry::Registry;
     use tokio::sync::mpsc;
+    use tracing_test::traced_test;
 
     struct MetricsState {
         /// Prometheus registry
@@ -162,7 +162,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[tracing_test::traced_test]
+    #[traced_test]
     #[ignore] // TODO SEQ-528 unskip/re-write
     async fn test_block_builder_resume_from_known_safe_slot() -> Result<()> {
         let (tx, rx) = mpsc::channel(1);

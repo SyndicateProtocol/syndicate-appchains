@@ -1,0 +1,29 @@
+[package]
+description            = "This crate is responsible for receiving source chain blocks and organize them into slots for the block-builder."
+edition.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "slotter"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[dependencies]
+alloy             = { workspace = true }
+clap              = { workspace = true, features = ["derive", "env"] }
+common            = { workspace = true }
+derivative        = { workspace = true }
+prometheus-client = { workspace = true }
+thiserror         = { workspace = true }
+tokio             = { workspace = true, features = ["macros", "rt", "sync", "time"] }
+tracing           = { workspace = true }
+
+[dev-dependencies]
+assert_matches = { workspace = true }
+serial_test    = { workspace = true }
+test-case      = { workspace = true }
+test-utils     = { workspace = true }
+tracing-test   = { workspace = true }
+
+[lints]
+workspace = true
