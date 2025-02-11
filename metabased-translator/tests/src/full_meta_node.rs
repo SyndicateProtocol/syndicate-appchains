@@ -236,6 +236,7 @@ impl MetaNode {
         .await?;
         let always_allowed_contract =
             AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
+        mine_block(&seq_provider, 0).await?;
         let receipt = always_allowed_contract.get_receipt().await?;
         let always_allowed_module_address = match receipt.contract_address {
             Some(address) => address,
@@ -245,8 +246,6 @@ impl MetaNode {
             }
         };
 
-        mine_block(&seq_provider, 0).await?;
-
         // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
         let sequencing_contract =
@@ -255,6 +254,7 @@ impl MetaNode {
             .initialize(seq_provider.default_signer_address(), always_allowed_module_address)
             .send()
             .await?;
+        mine_block(&seq_provider, 0).await?;
 
         // Launch mock settlement chain
         let set_port = port_tracker.next_port();
