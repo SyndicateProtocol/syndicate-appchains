@@ -217,7 +217,6 @@ mod tests {
             Box::pin(async { unimplemented!("Mock provider does not implement call") })
         }
     }
-    }
 
     #[tokio::test]
     async fn test_get_balance() {
