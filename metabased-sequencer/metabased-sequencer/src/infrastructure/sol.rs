@@ -5,6 +5,7 @@ use crate::{
     },
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
+use alloy::hex;
 use alloy::{network::Network, providers::Provider, sol, transports::Transport};
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
@@ -96,6 +97,7 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
                     tracing::error!(error = ?e, "Bulk transaction submission failed");
                     e
                 })
+                .map_err(alloy::contract::Error::from)
         }).await
     }
 

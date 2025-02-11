@@ -12,6 +12,7 @@ use crate::{
 };
 use alloy::{
     consensus::{Transaction, TxEnvelope, TxType},
+    hex,
     primitives::{TxHash, U256},
     rlp::Decodable,
 };
