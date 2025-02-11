@@ -7,14 +7,17 @@ use crate::{
 };
 use alloy::{
     hex,
+    json_rpc::packet::{RequestPacket, ResponsePacket},
     network::Network,
     primitives::U256,
-    providers::Provider,
+    providers::{Provider, RootProvider},
     sol,
-    transports::{RpcError, Transport},
+    transports::{RpcError, Transport, TransportError, TransportFut, TransportResult},
 };
 use async_trait::async_trait;
-use std::{marker::PhantomData, time::Duration};
+use std::{marker::PhantomData, sync::Arc, task::Poll, time::Duration};
+use tokio::sync::Mutex;
+use tower_service::Service;
 use tracing::{debug_span, info};
 
 sol! {
@@ -185,13 +188,31 @@ mod tests {
 
     #[async_trait]
     impl<N: Network> Provider<N> for MockProvider {
-        async fn get_balance(&self, _address: Address) -> Result<U256, RpcError> {
+        fn root(&self) -> &RootProvider<N> {
+            unimplemented!("Mock provider does not implement root")
+        }
+
+        async fn get_balance(&self, _address: Address) -> Result<U256, RpcError<TransportError>> {
             Ok(*self.balance.lock().await)
         }
     }
 
+    impl Service<RequestPacket> for MockProvider {
+        type Response = ResponsePacket;
+        type Error = TransportError;
+        type Future = TransportFut<'static>;
+
+        fn poll_ready(&mut self, _: &mut std::task::Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn call(&mut self, _: RequestPacket) -> Self::Future {
+            unimplemented!("Mock provider does not implement call")
+        }
+    }
+
     impl Transport for MockProvider {
-        type Error = RpcError;
+        type Error = TransportError;
     }
 
     #[tokio::test]
