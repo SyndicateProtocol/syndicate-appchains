@@ -63,16 +63,18 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
         ).in_scope(|| async {
             let pending_tx = self.contract().processTransaction(tx).send().await?;
 
-            pending_tx
+            match pending_tx
                 .with_required_confirmations(2)
                 .with_timeout(Some(Duration::from_secs(60)))
                 .watch()
                 .await
-                .map_err(|e| {
+            {
+                Ok(hash) => Ok(hash),
+                Err(e) => {
                     tracing::error!(error = ?e, "Transaction submission failed");
-                    e
-                })
-                .map_err(alloy::contract::Error::from)
+                    Err(alloy::contract::Error::from(e))
+                }
+            }
         }).await?;
 
         Ok(result)
@@ -85,19 +87,23 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
             total_size = txs.iter().map(|tx| tx.len()).sum::<usize>(),
             tx_data = ?txs.iter().map(|tx| Self::format_tx_data(tx)).collect::<Vec<_>>()
         ).in_scope(|| async {
-            self.contract()
+            let pending_tx = self.contract()
                 .processBulkTransactions(txs)
                 .send()
-                .await?
+                .await?;
+
+            match pending_tx
                 .with_required_confirmations(2)
                 .with_timeout(Some(Duration::from_secs(60)))
                 .watch()
                 .await
-                .map_err(|e| {
+            {
+                Ok(hash) => Ok(hash),
+                Err(e) => {
                     tracing::error!(error = ?e, "Bulk transaction submission failed");
-                    e
-                })
-                .map_err(alloy::contract::Error::from)
+                    Err(alloy::contract::Error::from(e))
+                }
+            }
         }).await
     }
 
