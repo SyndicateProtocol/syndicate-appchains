@@ -10,11 +10,15 @@ use eyre::eyre;
 use std::fmt::Debug;
 use thiserror::Error;
 use tracing::debug;
-use url;
+use url::Url;
 
 /// Errors that can occur while interacting with the Ethereum RPC client.
 #[derive(Debug, Error)]
 pub enum RPCClientError {
+    /// Error returned when the RPC URL isn't valid
+    #[error("Invalid RPC URL {0}")]
+    InvalidRpcURL(String),
+
     /// Error returned when a block is not found for the given block number.
     #[error("Block {0} not found")]
     BlockNotFound(u64),
@@ -62,9 +66,9 @@ impl EthClient {
     /// A result containing the `EthClient` instance if successful, or an error if the connection
     /// fails.
     pub async fn new(rpc_url: &str) -> Result<Self, RPCClientError> {
-        let client = ClientBuilder::default().http(
-            rpc_url.parse().map_err(|e: url::ParseError| RPCClientError::RpcError(eyre!(e)))?,
-        );
+        let url =
+            Url::parse(rpc_url).map_err(|_e| RPCClientError::InvalidRpcURL(rpc_url.to_string()))?;
+        let client = ClientBuilder::default().http(url);
         Ok(Self { client })
     }
 }
@@ -103,14 +107,16 @@ impl RPCClient for EthClient {
         block_number: u64,
     ) -> Result<BlockAndReceipts, RPCClientError> {
         debug!("get_blocks_and_receipts {}", block_number);
+        let block_number_hex = format!("0x{:x}", block_number);
+
         let mut batch = self.client.new_batch();
 
         let block_fut = batch
-            .add_call("eth_getBlockByNumber", &(block_number, true))
+            .add_call("eth_getBlockByNumber", &(block_number_hex.clone(), true))
             .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
             .map_resp(|resp: Block| resp);
         let receipt_fut = batch
-            .add_call("eth_getBlockReceipts", &[block_number])
+            .add_call("eth_getBlockReceipts", &[block_number_hex])
             .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
             .map_resp(|resp: Vec<Receipt>| resp);
 
