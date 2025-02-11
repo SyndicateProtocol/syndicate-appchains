@@ -5,14 +5,7 @@ use crate::{
     },
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
-use alloy::{
-    hex,
-    network::Network,
-    primitives::{U256, B256},
-    providers::{Provider, RootProvider},
-    sol,
-    transports::{Transport, TransportError},
-};
+use alloy::{hex, network::Network, primitives::{U256, B256}, providers::{Provider, RootProvider}, sol, transports::{Transport, TransportError}};
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
 use tracing::{debug_span, info};
@@ -204,7 +197,10 @@ mod tests {
     impl<N: Network> Transport for MockProvider {
         type Error = TransportError;
 
-        async fn call(&self, _: alloy_json_rpc::Request) -> Result<alloy_json_rpc::Response, Self::Error> {
+        async fn call(
+            &self,
+            _: alloy_json_rpc::Request,
+        ) -> Result<alloy_json_rpc::Response, Self::Error> {
             unimplemented!("Mock provider does not implement transport")
         }
     }
