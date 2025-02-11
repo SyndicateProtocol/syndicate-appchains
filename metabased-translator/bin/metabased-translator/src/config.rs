@@ -130,7 +130,7 @@ impl Default for MetabasedConfig {
 mod tests {
     use super::*;
     use async_trait::async_trait;
-    use common::types::{Block, Receipt};
+    use common::types::{Block, BlockAndReceipts, Receipt};
     use eyre::Result;
     use mockall::{mock, predicate::*};
     use serial_test::serial;
@@ -251,6 +251,9 @@ mod tests {
         impl RPCClient for RPCClientMock {
             async fn get_block_by_number(&self, block_number: u64) -> Result<Block, RPCClientError>;
             async fn get_block_receipts(&self, block_number: u64) -> Result<Vec<Receipt>, RPCClientError>;
+             async fn get_blocks_and_receipts( &self,
+        block_number: u64,
+    ) -> Result<BlockAndReceipts, RPCClientError>;
         }
     }
 
