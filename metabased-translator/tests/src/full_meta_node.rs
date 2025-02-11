@@ -237,8 +237,10 @@ impl MetaNode {
         let always_allowed_contract =
             AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
         let receipt = always_allowed_contract.get_receipt().await?;
-        let always_allowed_module_address =
-            receipt.contract_address.expect("Always allowed module address is zero");
+        let always_allowed_module_address = receipt
+            .contract_address
+            .ok_or_else(|| anyhow::anyhow!("Deployment failed: No contract address found."))?;
+
         mine_block(&seq_provider, 0).await?;
 
         // Setup the sequencing contract
