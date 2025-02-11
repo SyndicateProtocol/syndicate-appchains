@@ -221,9 +221,7 @@ mod tests {
         }
 
         fn call(&mut self, _: json_rpc::Request) -> Self::Future {
-            Box::pin(async {
-                unimplemented!("Mock provider does not implement transport")
-            })
+            Box::pin(async { unimplemented!("Mock provider does not implement transport") })
         }
     }
 
