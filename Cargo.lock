@@ -2703,7 +2703,6 @@ dependencies = [
  "metrics",
  "mockall",
  "prometheus-client",
- "serde_json",
  "serial_test",
  "slotter",
  "thiserror 2.0.11",

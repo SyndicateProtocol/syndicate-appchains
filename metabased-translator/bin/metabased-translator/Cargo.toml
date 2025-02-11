@@ -21,7 +21,6 @@ slotter           = { workspace = true }
 thiserror         = { workspace = true }
 tokio             = { workspace = true, features = ["signal"] }
 tracing           = { workspace = true }
-serde_json        = { workspace = true }
 
 [dev-dependencies]
 async-trait = { workspace = true }

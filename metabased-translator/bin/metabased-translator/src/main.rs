@@ -1,7 +1,7 @@
 use block_builder::{block_builder::BlockBuilder, config::BlockBuilderConfig};
 use common::{
     db::{self, SafeState, TranslatorStore},
-    tracing::{init_tracing_with_extra_fields, TracingError},
+    tracing::{init_tracing, TracingError},
     types::Chain,
 };
 use eyre::Result;
@@ -13,7 +13,6 @@ use ingestor::{
 use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::{start_metrics, MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
-use serde_json::{json, Value};
 use slotter::Slotter;
 use std::sync::Arc;
 use thiserror::Error;
@@ -38,6 +37,9 @@ async fn run(
     // Initialize the DB
     let (db, mut safe_state) = init_db(db_path).await?;
     safe_state = None; // TODO SEQ-528 remove this (disables resume from db)
+
+    // let mut sequencing_config = config.sequencing;
+    // let mut settlement_config = config.settlement;
 
     // Initialize ETH clients
     let sequencing_client: Arc<dyn RPCClient> = Arc::new(
@@ -159,13 +161,14 @@ async fn run(
 }
 
 fn main() -> Result<(), RuntimeError> {
-    let mut base_config = MetabasedConfig::initialize();
-    let extra_fields = get_extra_fields_for_logging(base_config.clone());
-    init_tracing_with_extra_fields(extra_fields)?;
+    init_tracing()?;
 
     // Create and run async runtime
     let runtime =
         tokio::runtime::Runtime::new().map_err(|e| RuntimeError::Initialization(e.to_string()))?;
+
+    // Initialize base config inside the async runtime
+    let mut base_config = MetabasedConfig::initialize();
 
     // Init the paths for the DB and Anvil state
     let db_path = format!("{}/db", base_config.datadir);
@@ -180,11 +183,6 @@ fn main() -> Result<(), RuntimeError> {
     runtime.block_on(run(&mut base_config, db_path.as_str(), registry))?;
 
     Ok(())
-}
-
-/// These extra fields are added to every log event for additional context. Add more as needed
-fn get_extra_fields_for_logging(base_config: MetabasedConfig) -> Vec<(String, Value)> {
-    vec![("chain_id".to_string(), json!(base_config.block_builder.target_chain_id))]
 }
 
 #[derive(Debug, Error)]
