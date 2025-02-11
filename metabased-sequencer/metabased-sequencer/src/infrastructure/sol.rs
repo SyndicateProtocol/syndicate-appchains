@@ -5,18 +5,9 @@ use crate::{
     },
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
-use crate::domain::{
-    primitives::{Address, Bytes, TxHash},
-    MetabasedSequencerChainService,
-};
 use alloy::{
-    hex,
-    network::Network,
-    primitives::U256,
-    providers::Provider,
-    rpc::RpcError,
-    sol,
-    transports::Transport,
+    hex, network::Network, primitives::U256, providers::Provider, sol,
+    transports::{RpcError, Transport},
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, sync::Arc, time::Duration};
