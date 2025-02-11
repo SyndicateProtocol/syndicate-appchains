@@ -16,7 +16,9 @@ use alloy::{
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
+use tokio::sync::Mutex;
 use tracing::{debug_span, info};
+use std::sync::Arc;
 
 sol! {
     #[derive(Debug, PartialEq, Eq)]
@@ -172,9 +174,6 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::{network::Network, providers::Provider};
-    use std::sync::Arc;
-    use tokio::sync::Mutex;
 
     #[derive(Debug, Clone)]
     struct MockProvider {
