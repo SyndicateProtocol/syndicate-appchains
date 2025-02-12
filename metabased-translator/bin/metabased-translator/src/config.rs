@@ -253,7 +253,6 @@ mod tests {
             async fn get_block_by_number(&self, block_number: BlockTag) -> Result<Block, RPCClientError>;
             async fn get_block_and_receipts(&self, block_number: u64) -> Result<BlockAndReceipts, RPCClientError>;
             async fn get_multiple_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
-
         }
     }
 

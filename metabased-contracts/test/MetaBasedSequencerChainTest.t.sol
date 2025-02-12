@@ -32,7 +32,8 @@ contract MetabasedSequencerChainTestSetUp is Test {
         vm.startPrank(admin);
         permissionModule = new RequireAllModule(admin);
         permissionModuleAny = new RequireAnyModule(admin);
-        chain = new MetabasedSequencerChain(l3ChainId, admin, address(permissionModule));
+        chain = new MetabasedSequencerChain(l3ChainId);
+        chain.initialize(admin, address(permissionModule));
         vm.stopPrank();
     }
 }
