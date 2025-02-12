@@ -23,6 +23,9 @@ use tracing::{debug, error, info};
 /// timestamp
 const MAX_WAIT_SEC: u64 = 24 * 60 * 60;
 
+/// The first slot number to use
+const START_SLOT: u64 = 2;
+
 /// Polls and ingests blocks from an Ethereum chain
 ///
 /// Slots are stored in a linked list ordered by timestamp, with newer slots at the back.
@@ -63,8 +66,6 @@ pub struct Slotter {
     /// Metrics
     metrics: SlotterMetrics,
 }
-
-const START_SLOT: u64 = 2;
 
 impl Slotter {
     /// Creates a new [`Slotter`] that receives blocks from two chains and organizes them into

@@ -337,6 +337,7 @@ impl MetaNode {
             slotter_rx,
             &block_builder_cfg,
             &datadir,
+            slotter_cfg.slot_duration,
             BlockBuilderMetrics::new(&mut metrics_state.registry),
         )
         .await?;

@@ -27,6 +27,7 @@ pub struct BlockBuilder {
     pub mchain: MetaChainProvider,
     builder: Box<dyn RollupBlockBuilder>,
     metrics: BlockBuilderMetrics,
+    slot_duration_sec: u64,
 }
 
 impl BlockBuilder {
@@ -35,6 +36,7 @@ impl BlockBuilder {
         slotter_rx: Receiver<Slot>,
         config: &BlockBuilderConfig,
         datadir: &str,
+        slot_duration_sec: u64,
         metrics: BlockBuilderMetrics,
     ) -> Result<Self, Error> {
         let mchain = MetaChainProvider::start(config, datadir, &metrics.mchain_metrics).await?;
@@ -46,7 +48,7 @@ impl BlockBuilder {
             }
         };
 
-        Ok(Self { slotter_rx, mchain, builder, metrics })
+        Ok(Self { slotter_rx, mchain, builder, metrics, slot_duration_sec })
     }
 
     /// Validates and rolls back to a known block number if necessary
@@ -109,15 +111,38 @@ impl BlockBuilder {
                     self.metrics.record_transactions_per_slot(transactions_len);
                     debug!("Submitting {} transactions", transactions_len);
 
+
+
+                    // Fill gap with empty blocks if needed
+                    let mut block_number = self.get_current_block_number().await;
+                    while block_number < slot.number-1 {
+                        let empty_block_timestamp = slot.timestamp - ((slot.number - block_number) * self.slot_duration_sec);
+                        debug!("Mining empty block {} with timestamp {}", block_number + 1, empty_block_timestamp);
+
+                        if let Err(e) = self.mchain.mine_block(empty_block_timestamp).await {
+                            panic!("Error mining block: {}", e);
+                        }
+                        block_number += 1;
+                    }
                     // Submit transactions to mchain
                     if let Err(e) = self.mchain.submit_txns(transactions).await {
                         panic!("Error submitting transaction: {}", e);
                     }
 
-                    // Mine mchain block
+                    // Mine the actual block with slot timestamp
                     if let Err(e) = self.mchain.mine_block(slot.timestamp).await {
                         panic!("Error mining block: {}", e);
                     }
+
+                    let current_block = self.get_current_block_number().await;
+                    assert_eq!(
+                        current_block,
+                        slot.number,
+                        "Mined block number {} does not match slot number {}",
+                        current_block,
+                        slot.number
+                    );
+                    debug!("Mined block: {:?} from slot: {:?}", current_block, slot.number);
                 }
                 _ = &mut shutdown_rx => {
                     info!("Block builder shutting down");
@@ -126,6 +151,12 @@ impl BlockBuilder {
                 }
             }
         }
+    }
+
+    async fn get_current_block_number(&self) -> u64 {
+        self.mchain.provider.get_block_number().await.unwrap_or_else(|e| {
+            panic!("Error getting current block number: {}", e);
+        })
     }
 }
 
@@ -143,6 +174,9 @@ pub enum BlockBuilderError {
 
     #[error("Error resuming from block: {0}")]
     ResumeFromBlock(String),
+
+    #[error("Error mining block: {0}")]
+    MineBlock(String),
 }
 
 #[allow(missing_docs)] // self-documenting
@@ -182,13 +216,13 @@ mod tests {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
         let datadir = test_path("datadir");
-        let builder = BlockBuilder::new(rx, &config, &datadir, metrics).await?;
+        let builder = BlockBuilder::new(rx, &config, &datadir, 2, metrics).await?;
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });
 
         // Send a test block
-        let test_slot = Slot::new(1, genesis_ts + 1);
+        let test_slot = Slot::new(2, genesis_ts + 1);
         tx.send(test_slot).await?;
 
         // Give some time for processing
@@ -209,7 +243,7 @@ mod tests {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
         let datadir = test_path("datadir");
-        let builder = BlockBuilder::new(rx, &config, &datadir, metrics).await?;
+        let builder = BlockBuilder::new(rx, &config, &datadir, 2, metrics).await?;
 
         let provider = builder.mchain.provider.clone();
 
@@ -238,7 +272,7 @@ mod tests {
         let (_resumed_tx, resumed_rx) = mpsc::channel(1);
         let datadir = test_path("datadir");
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let resumed_builder = BlockBuilder::new(resumed_rx, &config, &datadir, metrics).await?;
+        let resumed_builder = BlockBuilder::new(resumed_rx, &config, &datadir, 2, metrics).await?;
 
         let resumed_provider = resumed_builder.mchain.provider.clone();
 
