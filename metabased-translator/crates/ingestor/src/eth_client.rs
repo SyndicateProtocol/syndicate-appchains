@@ -9,7 +9,7 @@ use common::types::{Block, BlockAndReceipts, BlockTag, Receipt};
 use eyre::eyre;
 use std::fmt::Debug;
 use thiserror::Error;
-use tracing::debug;
+use tracing::info;
 use url::Url;
 
 /// Errors that can occur while interacting with the Ethereum RPC client.
@@ -159,6 +159,12 @@ impl RPCClient for EthClient {
         &self,
         block_numbers: Vec<u64>,
     ) -> Result<Vec<BlockAndReceipts>, RPCClientError> {
+        info!(
+            "get_blocks_and_receipts from block {:?} to {:?}",
+            block_numbers[0],
+            block_numbers[block_numbers.len() - 1]
+        );
+
         let mut batch = self.client.new_batch();
         let mut block_futures = Vec::new();
         let mut receipt_futures = Vec::new();
@@ -188,7 +194,7 @@ impl RPCClient for EthClient {
             results.push(BlockAndReceipts { block, receipts });
         }
 
-        debug!("get_blocks_and_receipts response: {:?}", results);
+        info!("get_blocks_and_receipts response: {:?}", results.len());
 
         Ok(results)
     }

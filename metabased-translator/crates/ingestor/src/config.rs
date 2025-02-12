@@ -26,6 +26,7 @@ pub struct ChainIngestorConfig {
     pub polling_interval: Duration,
     pub rpc_url: String,
     pub start_block: u64,
+    pub syncing_batch_size: u64,
 }
 
 // Due to `clap` not supporting prefixes, we need to redefine the SequencingChainConfig and
@@ -54,6 +55,14 @@ pub struct SequencingChainConfig {
     /// The block number to start polling from on the sequencing chain
     #[arg(long = "sequencing-start-block", env = "SEQUENCING_START_BLOCK")]
     pub sequencing_start_block: u64,
+
+    /// The batch size used to sync the m-chain
+    #[arg(
+        long = "sequencing-syncing-batch-size",
+        env = "SEQUENCING_SYNCING_BATCH_SIZE",
+        default_value_t = 50
+    )]
+    pub sequencing_syncing_batch_size: u64,
 }
 
 /// Configuration for the settlement chain
@@ -79,6 +88,14 @@ pub struct SettlementChainConfig {
     /// The block number to start polling from on the settlement chain
     #[arg(long = "settlement-start-block", env = "SETTLEMENT_START_BLOCK")]
     pub settlement_start_block: u64,
+
+    /// The batch size used to sync the m-chain
+    #[arg(
+        long = "settlement-syncing-batch-size",
+        env = "SETTLEMENT_SYNCING_BATCH_SIZE",
+        default_value_t = 50
+    )]
+    pub settlement_syncing_batch_size: u64,
 }
 
 impl From<ChainIngestorConfig> for SequencingChainConfig {
@@ -88,6 +105,7 @@ impl From<ChainIngestorConfig> for SequencingChainConfig {
             sequencing_polling_interval: config.polling_interval,
             sequencing_rpc_url: config.rpc_url,
             sequencing_start_block: config.start_block,
+            sequencing_syncing_batch_size: config.syncing_batch_size,
         }
     }
 }
@@ -99,6 +117,7 @@ impl From<SequencingChainConfig> for ChainIngestorConfig {
             polling_interval: config.sequencing_polling_interval,
             rpc_url: config.sequencing_rpc_url,
             start_block: config.sequencing_start_block,
+            syncing_batch_size: config.sequencing_syncing_batch_size,
         }
     }
 }
@@ -110,6 +129,7 @@ impl From<ChainIngestorConfig> for SettlementChainConfig {
             settlement_polling_interval: config.polling_interval,
             settlement_rpc_url: config.rpc_url,
             settlement_start_block: config.start_block,
+            settlement_syncing_batch_size: config.syncing_batch_size,
         }
     }
 }
@@ -121,6 +141,7 @@ impl From<SettlementChainConfig> for ChainIngestorConfig {
             polling_interval: config.settlement_polling_interval,
             rpc_url: config.settlement_rpc_url,
             start_block: config.settlement_start_block,
+            syncing_batch_size: config.settlement_syncing_batch_size,
         }
     }
 }
@@ -132,6 +153,7 @@ impl From<&SequencingChainConfig> for ChainIngestorConfig {
             polling_interval: config.sequencing_polling_interval,
             rpc_url: config.sequencing_rpc_url.clone(),
             start_block: config.sequencing_start_block,
+            syncing_batch_size: config.sequencing_syncing_batch_size,
         }
     }
 }
@@ -143,6 +165,7 @@ impl From<&SettlementChainConfig> for ChainIngestorConfig {
             polling_interval: config.settlement_polling_interval,
             rpc_url: config.settlement_rpc_url.clone(),
             start_block: config.settlement_start_block,
+            syncing_batch_size: config.settlement_syncing_batch_size,
         }
     }
 }
@@ -219,6 +242,7 @@ impl Default for ChainIngestorConfig {
             polling_interval: Duration::from_secs(1),
             rpc_url: "http://localhost:8545".to_string(),
             start_block: 1,
+            syncing_batch_size: 50,
         }
     }
 }
@@ -230,8 +254,10 @@ impl ChainIngestorConfig {
         start_block: u64,
         buffer_size: usize,
         polling_interval: Duration,
+        syncing_batch_size: u64,
     ) -> Result<Self, ConfigError> {
-        let config = Self { rpc_url, start_block, buffer_size, polling_interval };
+        let config =
+            Self { rpc_url, start_block, buffer_size, polling_interval, syncing_batch_size };
         debug!("Created chain ingestor config: {:?}", config);
         config.validate()?;
         Ok(config)
@@ -265,8 +291,14 @@ mod tests {
     use assert_matches::assert_matches;
 
     fn test_chain_ingestor_config() -> ChainIngestorConfig {
-        ChainIngestorConfig::new("http://test:8545".to_string(), 100, 10, Duration::from_secs(5))
-            .unwrap()
+        ChainIngestorConfig::new(
+            "http://test:8545".to_string(),
+            100,
+            10,
+            Duration::from_secs(5),
+            50,
+        )
+        .unwrap()
     }
 
     #[test]
@@ -277,6 +309,7 @@ mod tests {
             100,
             10,
             Duration::from_secs(5),
+            50,
         )
         .unwrap();
         assert!(config.validate().is_ok());
@@ -287,6 +320,7 @@ mod tests {
             start_block: 100,
             buffer_size: 10,
             polling_interval: Duration::from_secs(0),
+            syncing_batch_size: 50,
         };
         assert_matches!(config.validate(), Err(ConfigError::InvalidPollingInterval(_)));
 
@@ -296,6 +330,7 @@ mod tests {
             start_block: 100,
             buffer_size: 0,
             polling_interval: Duration::from_secs(5),
+            syncing_batch_size: 50,
         };
         assert_matches!(config.validate(), Err(ConfigError::InvalidBufferSize(_)));
     }
@@ -309,6 +344,7 @@ mod tests {
             start_block: 100,
             buffer_size: 0, // Invalid
             polling_interval: Duration::from_secs(5),
+            syncing_batch_size: 50,
         };
 
         // Pipeline should fail validation if any component fails
@@ -341,6 +377,7 @@ mod tests {
             polling_interval: Duration::from_secs(1),
             rpc_url: "http://sequencer:8545".to_string(),
             start_block: 0,
+            syncing_batch_size: 50,
         };
 
         let specific: SequencingChainConfig = generic.into();

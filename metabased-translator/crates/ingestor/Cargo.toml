@@ -28,6 +28,9 @@ url = { workspace = true }
 
 [dev-dependencies]
 assert_matches = { workspace = true }
+async-trait = { workspace = true }
+mockall     = { workspace = true }
+
 
 [lints]
 workspace = true

@@ -2353,6 +2353,7 @@ dependencies = [
  "common",
  "eyre",
  "humantime",
+ "mockall",
  "prometheus-client",
  "thiserror 2.0.11",
  "tokio",

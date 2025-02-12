@@ -9,9 +9,8 @@ use tokio::sync::{
     mpsc::{channel, Receiver, Sender},
     oneshot,
 };
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
-const BLOCK_DIFF_THRESHOLD: u64 = 50;
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
 pub struct Ingestor {
@@ -19,6 +18,7 @@ pub struct Ingestor {
     client: Arc<dyn RPCClient>,
     current_block_number: u64,
     initial_chain_head: u64,
+    syncing_batch_size: u64,
     sender: Sender<BlockAndReceipts>,
     polling_interval: Duration,
     metrics: IngestorMetrics,
@@ -52,6 +52,7 @@ impl Ingestor {
                 client,
                 current_block_number: config.start_block,
                 initial_chain_head: chain_head.number,
+                syncing_batch_size: config.syncing_batch_size,
                 sender,
                 polling_interval: config.polling_interval,
                 metrics,
@@ -97,6 +98,8 @@ impl Ingestor {
         }
         self.sender.send(block_and_receipts.clone()).await?;
         self.current_block_number += 1;
+        info!("CURRENT BLOCK {:?}", self.current_block_number);
+        info!("update_channel_capacity {:?}", self.sender.capacity());
         self.metrics.update_channel_capacity(self.chain, self.sender.capacity());
         Ok(())
     }
@@ -135,8 +138,8 @@ impl Ingestor {
                     break;
                 }
                 _ = interval.tick() => {
-                 if self.initial_chain_head.saturating_sub(self.current_block_number) > BLOCK_DIFF_THRESHOLD {
-                        let block_numbers: Vec<u64> = (self.current_block_number..self.current_block_number + BLOCK_DIFF_THRESHOLD).collect();
+                 if self.initial_chain_head.saturating_sub(self.current_block_number) > self.syncing_batch_size {
+                        let block_numbers: Vec<u64> = (self.current_block_number..self.current_block_number + self.syncing_batch_size).collect();
                         match self.client.get_multiple_blocks_and_receipts(block_numbers).await {
                             Ok(blocks) => {
                                 for block in blocks {
@@ -175,12 +178,14 @@ mod tests {
     use super::*;
     use crate::{
         config::{ChainIngestorConfig, IngestionPipelineConfig},
-        eth_client::EthClient,
+        eth_client::{EthClient, RPCClientError},
         metrics::IngestorMetrics,
     };
     use alloy::primitives::B256;
+    use async_trait::async_trait;
     use common::types::{Block, BlockAndReceipts};
     use eyre::Result;
+    use mockall::{mock, predicate::*};
     use prometheus_client::registry::Registry;
     use std::str::FromStr;
 
@@ -196,6 +201,7 @@ mod tests {
                 polling_interval: Duration::from_secs(1),
                 rpc_url: "https://sequencing.io".into(),
                 start_block: 19486923,
+                syncing_batch_size: 50,
             }
             .into(),
             settlement: ChainIngestorConfig {
@@ -203,6 +209,7 @@ mod tests {
                 polling_interval: Duration::from_secs(1),
                 rpc_url: "https://settlement.io".into(),
                 start_block: 19486923,
+                syncing_batch_size: 50,
             }
             .into(),
         }
@@ -229,26 +236,44 @@ mod tests {
         BlockAndReceipts { block, receipts: vec![] }
     }
 
+    mock! {
+        #[derive(Debug)]
+        pub RPCClientMock {}
+
+        #[async_trait]
+        impl RPCClient for RPCClientMock {
+            async fn get_block_by_number(&self, block_number: BlockTag) -> Result<Block, RPCClientError>;
+            async fn get_block_and_receipts(&self, block_number: u64) -> Result<BlockAndReceipts, RPCClientError>;
+            async fn get_multiple_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
+        }
+    }
+
     #[tokio::test]
     async fn test_ingestor_new() -> Result<(), Error> {
         let start_block = 19486923;
+        let chain_head = start_block + 10;
         let buffer_size = 100;
         let polling_interval = Duration::from_secs(1);
         let config = test_config();
 
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
-
-        let client: Arc<dyn RPCClient> =
-            Arc::new(EthClient::new(&config.sequencing.sequencing_rpc_url).await?);
-
         let config = config.sequencing.into();
+
+        let mut mock = MockRPCClientMock::new();
+        mock.expect_get_block_by_number()
+            .with(eq(BlockTag::Latest))
+            .times(1)
+            .returning(move |_| Ok(Block { number: chain_head, ..Default::default() }));
+
+        let client: Arc<dyn RPCClient> = Arc::new(mock);
         let (ingestor, receiver) =
             Ingestor::new(Chain::Sequencing, client, &config, metrics).await?;
 
         assert_eq!(ingestor.current_block_number, start_block);
         assert_eq!(receiver.capacity(), buffer_size);
         assert_eq!(ingestor.polling_interval, polling_interval);
+        assert_eq!(ingestor.initial_chain_head, chain_head);
         Ok(())
     }
 
@@ -267,6 +292,7 @@ mod tests {
             client,
             current_block_number: start_block,
             initial_chain_head: start_block + 100,
+            syncing_batch_size: 50,
             sender,
             polling_interval,
             metrics,
@@ -298,6 +324,7 @@ mod tests {
             client,
             current_block_number: start_block,
             initial_chain_head: start_block + 100,
+            syncing_batch_size: 50,
             sender,
             polling_interval,
             metrics,
