@@ -112,37 +112,34 @@ async fn run(
     // Wait for either shutdown signal or task failure
     tokio::select! {
         _ = main_shutdown_rx => {
-            info!("Received shutdown signal");
             // Perform graceful shutdown
-            tokio::time::timeout(std::time::Duration::from_secs(5 * 60), async {
-                // 1. Stop ingestors first
-                info!("Shutting down ingestors...");
-                let _ = seq_shutdown_tx.send(());
-                let _ = settle_shutdown_tx.send(());
-                if let Err(e) = sequencing_handle.await {
-                    error!("Error shutting down sequencing ingestor: {}", e);
-                }
-                if let Err(e) = settlement_handle.await {
-                    error!("Error shutting down settlement ingestor: {}", e);
-                }
+            info!("Received shutdown signal");
 
-                // 2. Stop slotter after ingestors are done
-                info!("Shutting down slotter...");
-                let _ = slotter_shutdown_tx.send(());
-                if let Err(e) = slotter_handle.await {
-                    error!("Error shutting down slotter: {}", e);
-                }
+            // 1. Stop ingestors first
+            info!("Shutting down ingestors...");
+            let _ = seq_shutdown_tx.send(());
+            let _ = settle_shutdown_tx.send(());
+            if let Err(e) = sequencing_handle.await {
+                error!("Error shutting down sequencing ingestor: {}", e);
+            }
+            if let Err(e) = settlement_handle.await {
+                error!("Error shutting down settlement ingestor: {}", e);
+            }
 
-                // 3. Finally stop block builder
-                info!("Shutting down block builder...");
-                let _ = builder_shutdown_tx.send(());
-                if let Err(e) = block_builder_handle.await {
-                    error!("Error shutting down block builder: {}", e);
-                }
-                info!("Metabased Translator shutdown complete");
-            })
-            .await
-            .map_err(|_| RuntimeError::Initialization("Shutdown timeout exceeded".into()))?;
+            // 2. Stop slotter after ingestors are done
+            info!("Shutting down slotter...");
+            let _ = slotter_shutdown_tx.send(());
+            if let Err(e) = slotter_handle.await {
+                error!("Error shutting down slotter: {}", e);
+            }
+
+            // 3. Finally stop block builder
+            info!("Shutting down block builder...");
+            let _ = builder_shutdown_tx.send(());
+            if let Err(e) = block_builder_handle.await {
+                error!("Error shutting down block builder: {}", e);
+            }
+            info!("Metabased Translator shutdown complete");
         }
         res = &mut sequencing_handle => {
             if let Err(e) = res {
