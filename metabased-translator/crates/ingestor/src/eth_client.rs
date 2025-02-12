@@ -5,7 +5,7 @@ use alloy::{
     transports::http::{Client, Http},
 };
 use async_trait::async_trait;
-use common::types::{Block, BlockAndReceipts, Receipt};
+use common::types::{Block, BlockAndReceipts, BlockTag, Receipt};
 use eyre::eyre;
 use std::fmt::Debug;
 use thiserror::Error;
@@ -21,7 +21,7 @@ pub enum RPCClientError {
 
     /// Error returned when a block is not found for the given block number.
     #[error("Block {0} not found")]
-    BlockNotFound(u64),
+    BlockNotFound(String),
 
     /// Error returned when transaction receipts for a block are not found.
     #[error("Receipts for block {0} not found")]
@@ -36,7 +36,10 @@ pub enum RPCClientError {
 #[async_trait]
 pub trait RPCClient: Send + Sync + Debug {
     /// Retrieves a block by its number.
-    async fn get_block_by_number(&self, block_number: u64) -> Result<Block, RPCClientError>;
+    async fn get_block_by_number(
+        &self,
+        block_identifier: BlockTag,
+    ) -> Result<Block, RPCClientError>;
 
     /// Retrieves the blocks and its receipts in a batch call.
     async fn get_block_and_receipts(
@@ -90,13 +93,16 @@ impl RPCClient for EthClient {
     /// # Returns
     ///
     /// A result containing the `Block` if found, or an error if the block is not found.
-    async fn get_block_by_number(&self, block_number: u64) -> Result<Block, RPCClientError> {
-        let block_number_hex = format!("0x{:x}", block_number);
+    async fn get_block_by_number(
+        &self,
+        block_identifier: BlockTag,
+    ) -> Result<Block, RPCClientError> {
+        let block_param = block_identifier.to_rpc_param();
         self.client
-            .request::<_, Option<Block>>("eth_getBlockByNumber", (block_number_hex, true))
+            .request::<_, Option<Block>>("eth_getBlockByNumber", (block_param.clone(), true))
             .await
             .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
-            .ok_or_else(|| RPCClientError::BlockNotFound(block_number))
+            .ok_or_else(|| RPCClientError::BlockNotFound(block_param))
     }
 
     /// Retrieves the block & receipts of all transactions in a block.

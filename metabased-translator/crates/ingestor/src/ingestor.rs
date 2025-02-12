@@ -2,7 +2,7 @@
 //! consumer using a channel
 
 use crate::{config::ChainIngestorConfig, eth_client::RPCClient, metrics::IngestorMetrics};
-use common::types::{BlockAndReceipts, Chain};
+use common::types::{BlockAndReceipts, BlockTag, Chain};
 use eyre::{eyre, Error};
 use std::{sync::Arc, time::Duration};
 use tokio::sync::{
@@ -11,12 +11,14 @@ use tokio::sync::{
 };
 use tracing::{debug, error};
 
+const BLOCK_DIFF_THRESHOLD: u64 = 50;
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
 pub struct Ingestor {
     chain: Chain,
     client: Arc<dyn RPCClient>,
     current_block_number: u64,
+    initial_chain_head: u64,
     sender: Sender<BlockAndReceipts>,
     polling_interval: Duration,
     metrics: IngestorMetrics,
@@ -42,11 +44,14 @@ impl Ingestor {
         metrics: IngestorMetrics,
     ) -> Result<(Self, Receiver<BlockAndReceipts>), Error> {
         let (sender, receiver) = channel(config.buffer_size);
+        let client_clone = client.clone();
+        let chain_head = client_clone.get_block_by_number(BlockTag::Latest).await?;
         Ok((
             Self {
                 chain,
                 client,
                 current_block_number: config.start_block,
+                initial_chain_head: chain_head.number,
                 sender,
                 polling_interval: config.polling_interval,
                 metrics,
@@ -130,6 +135,21 @@ impl Ingestor {
                     break;
                 }
                 _ = interval.tick() => {
+                 if self.initial_chain_head.saturating_sub(self.current_block_number) > BLOCK_DIFF_THRESHOLD {
+                        let block_numbers: Vec<u64> = (self.current_block_number..self.current_block_number + BLOCK_DIFF_THRESHOLD).collect();
+                        match self.client.get_multiple_blocks_and_receipts(block_numbers).await {
+                            Ok(blocks) => {
+                                for block in blocks {
+                                    if let Err(err) = self.push_block_and_receipts(block).await {
+                                        error!("Failed to push block and receipts: {:?}, retrying...", err);
+                                    }
+                                }
+                            }
+                            Err(err) => {
+                                error!("Failed to fetch multiple blocks and receipts: {:?}, retrying...", err);
+                            }
+                        }
+                    } else {
                     match self.get_block_and_receipts(self.current_block_number).await {
                         Ok(block_and_receipts) => {
                             debug!("Pushing block: {:?}", block_and_receipts.block.number);
@@ -140,7 +160,7 @@ impl Ingestor {
                         Err(err) => {
                             debug!("Failed to fetch block and receipts: {:?}, retrying...", err);
                         }
-                    }
+                    }}
                 }
             }
         }
@@ -246,6 +266,7 @@ mod tests {
             chain: Chain::Sequencing,
             client,
             current_block_number: start_block,
+            initial_chain_head: start_block + 100,
             sender,
             polling_interval,
             metrics,
@@ -276,6 +297,7 @@ mod tests {
             chain: Chain::Sequencing,
             client,
             current_block_number: start_block,
+            initial_chain_head: start_block + 100,
             sender,
             polling_interval,
             metrics,
