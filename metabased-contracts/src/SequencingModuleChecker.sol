@@ -2,10 +2,12 @@
 pragma solidity 0.8.25;
 
 import {PermissionModule} from "./interfaces/PermissionModule.sol";
+import {NotInitializedModule} from "./sequencing-modules/NotInitializedModule.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title SequencingModuleChecker
 /// @notice A simplified contract that delegates permission checks to modules
+
 abstract contract SequencingModuleChecker is Ownable, PermissionModule {
     /// @notice The requirement module that handles checks
     PermissionModule public requirementModule;
@@ -14,14 +16,25 @@ abstract contract SequencingModuleChecker is Ownable, PermissionModule {
 
     error InvalidModuleAddress();
     error NotAllowed(address batchSubmitter);
+    error AlreadyInitialized();
+
+    bool internal hasBeenInitialized = false;
 
     /// @dev Constructor function
-    /// @param admin The address that will be set as the admin
-    /// @param _requirementModule The address of the requirement module
     // [Olympix Warning: no parameter validation in constructor] Admin validation handled by OpenZeppelin's Ownable
-    constructor(address admin, address _requirementModule) Ownable(admin) {
+    constructor() Ownable(msg.sender) {
+        requirementModule = new NotInitializedModule();
+    }
+
+    /// @notice Initializes the contract with a new admin and a requirement module
+    /// @param admin The address of the new admin
+    /// @param _requirementModule The address of the requirement module
+    function initialize(address admin, address _requirementModule) external onlyOwner {
+        if (hasBeenInitialized) revert AlreadyInitialized();
         if (_requirementModule == address(0)) revert InvalidModuleAddress();
+        hasBeenInitialized = true;
         requirementModule = PermissionModule(_requirementModule);
+        transferOwnership(admin);
     }
 
     /// @notice Updates the requirement module
