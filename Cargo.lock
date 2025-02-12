@@ -1076,6 +1076,7 @@ dependencies = [
  "clap",
  "common",
  "contract-bindings",
+ "derivative",
  "eyre",
  "flate2",
  "hex",

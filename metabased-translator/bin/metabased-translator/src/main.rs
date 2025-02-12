@@ -84,12 +84,13 @@ async fn run(
         metrics.ingestor_settlement,
     )
     .await?;
-    let (slotter, slot_rx) = Slotter::new(&config.slotter, safe_state, db, metrics.slotter);
+    let (slotter, slot_rx) = Slotter::new(&config.slotter, safe_state, db.clone(), metrics.slotter);
     let block_builder = BlockBuilder::new(
         slot_rx,
         &config.block_builder,
         config.datadir.as_str(),
         config.slotter.slot_duration,
+        db,
         metrics.block_builder,
     )
     .await?;
@@ -265,8 +266,8 @@ fn init_ctrl_c_handler(main_shutdown_tx: oneshot::Sender<()>) {
 async fn init_db(
     db_path: &str,
     restore_from_safe_state: bool,
-) -> Result<(Box<dyn TranslatorStore + Send + Sync>, Option<KnownState>), RuntimeError> {
-    let db = Box::new(
+) -> Result<(Arc<dyn TranslatorStore + Send + Sync>, Option<KnownState>), RuntimeError> {
+    let db = Arc::new(
         db::RocksDbStore::new(db_path)
             .map_err(|e| RuntimeError::Initialization(format!("Failed to open DB: {e}")))?,
     );

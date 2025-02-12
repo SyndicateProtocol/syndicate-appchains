@@ -13,21 +13,27 @@ use alloy::{
     providers::Provider,
     transports::{RpcError, TransportErrorKind},
 };
-use common::types::Slot;
+use common::{db::TranslatorStore, types::Slot};
+use derivative::Derivative;
 use eyre::{Error, Result};
+use std::sync::Arc;
 use tokio::sync::{mpsc::Receiver, oneshot};
 use tracing::{debug, error, info};
 use url::Url;
 
 /// Block builder service for processing and building L3 blocks.
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct BlockBuilder {
     slotter_rx: Receiver<Slot>,
     #[allow(missing_docs)]
     pub mchain: MetaChainProvider,
     builder: Box<dyn RollupBlockBuilder>,
-    metrics: BlockBuilderMetrics,
     slot_duration_sec: u64,
+    metrics: BlockBuilderMetrics,
+
+    #[derivative(Debug = "ignore")]
+    store: Arc<dyn TranslatorStore + Send + Sync>,
 }
 
 impl BlockBuilder {
@@ -37,6 +43,7 @@ impl BlockBuilder {
         config: &BlockBuilderConfig,
         datadir: &str,
         slot_duration_sec: u64,
+        store: Arc<dyn TranslatorStore + Send + Sync>,
         metrics: BlockBuilderMetrics,
     ) -> Result<Self, Error> {
         let mchain = MetaChainProvider::start(config, datadir, &metrics.mchain_metrics).await?;
@@ -48,7 +55,7 @@ impl BlockBuilder {
             }
         };
 
-        Ok(Self { slotter_rx, mchain, builder, metrics, slot_duration_sec })
+        Ok(Self { slotter_rx, mchain, builder, metrics, slot_duration_sec, store })
     }
 
     /// Validates and rolls back to a known block number if necessary
@@ -141,6 +148,9 @@ impl BlockBuilder {
                         slot.number
                     );
                     debug!("Mined block: {:?} from slot: {:?}", current_block, slot.number);
+                    if let Err(e) = self.store.save_unsafe_slot(&slot).await {
+                        panic!("Error saving slot: {}", e);
+                    }
                 }
                 _ = &mut shutdown_rx => {
                     drop(self.mchain);
@@ -192,6 +202,7 @@ pub enum AnvilStartError {
 mod tests {
     use super::*;
     use alloy::providers::Provider;
+    use common::db::RocksDbStore;
     use eyre::Result;
     use prometheus_client::registry::Registry;
     use test_utils::test_path;
@@ -214,7 +225,9 @@ mod tests {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
         let datadir = test_path("datadir");
-        let builder = BlockBuilder::new(rx, &config, &datadir, 2, metrics).await?;
+        let db_path = test_path("db");
+        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
+        let builder = BlockBuilder::new(rx, &config, &datadir, 2, store, metrics).await?;
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });
@@ -241,7 +254,9 @@ mod tests {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
         let datadir = test_path("datadir");
-        let builder = BlockBuilder::new(rx, &config, &datadir, 2, metrics).await?;
+        let db_path = test_path("db");
+        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
+        let builder = BlockBuilder::new(rx, &config, &datadir, 2, store, metrics).await?;
 
         let provider = builder.mchain.provider.clone();
 
@@ -270,7 +285,9 @@ mod tests {
         let (_resumed_tx, resumed_rx) = mpsc::channel(1);
         let datadir = test_path("datadir");
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let resumed_builder = BlockBuilder::new(resumed_rx, &config, &datadir, 2, metrics).await?;
+        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
+        let resumed_builder =
+            BlockBuilder::new(resumed_rx, &config, &datadir, 2, store, metrics).await?;
 
         let resumed_provider = resumed_builder.mchain.provider.clone();
 

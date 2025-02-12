@@ -25,7 +25,7 @@ use alloy::{
 use contract_bindings::arbitrum::rollup::Rollup;
 use eyre::{Error, Result};
 use reqwest::Client;
-use std::{net::TcpListener, time::Duration};
+use std::net::TcpListener;
 use thiserror::Error;
 use tracing::{debug, error};
 use url::Host;
@@ -302,6 +302,7 @@ mod tests {
     use super::*;
     use alloy::{eips::BlockId, rpc::types::BlockTransactionsKind};
     use prometheus_client::registry::Registry;
+    use std::time::Duration;
     use test_utils::test_path;
     use url::Url;
 

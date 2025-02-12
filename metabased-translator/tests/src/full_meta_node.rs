@@ -324,7 +324,7 @@ impl MetaNode {
         let (slotter, slotter_rx) = Slotter::new(
             &slotter_cfg,
             None,
-            Box::new(DummyStore {}),
+            Arc::new(DummyStore {}),
             SlotterMetrics::new(&mut metrics_state.registry),
         );
         let (shutdown_slotter_tx, shutdown_slotter_rx) = tokio::sync::oneshot::channel();
@@ -338,6 +338,7 @@ impl MetaNode {
             &block_builder_cfg,
             &datadir,
             slotter_cfg.slot_duration,
+            Arc::new(DummyStore {}),
             BlockBuilderMetrics::new(&mut metrics_state.registry),
         )
         .await?;

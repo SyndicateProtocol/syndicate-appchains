@@ -7,7 +7,7 @@ use common::{
     types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotState},
 };
 use derivative::Derivative;
-use std::{cmp::Ordering, collections::VecDeque};
+use std::{cmp::Ordering, collections::VecDeque, sync::Arc};
 use thiserror::Error;
 use tokio::{
     select,
@@ -61,7 +61,7 @@ pub struct Slotter {
     sender: Sender<Slot>,
 
     #[derivative(Debug = "ignore")]
-    store: Box<dyn TranslatorStore + Send + Sync>,
+    store: Arc<dyn TranslatorStore + Send + Sync>,
 
     /// Metrics
     metrics: SlotterMetrics,
@@ -73,7 +73,7 @@ impl Slotter {
     pub fn new(
         config: &SlotterConfig,
         known_state: Option<KnownState>,
-        store: Box<dyn TranslatorStore + Send + Sync>,
+        store: Arc<dyn TranslatorStore + Send + Sync>,
         metrics: SlotterMetrics,
     ) -> (Self, Receiver<Slot>) {
         let (slot_tx, slot_rx) = channel(100);
@@ -248,7 +248,6 @@ impl Slotter {
             }
         }
         for slot in buffer.into_iter().rev() {
-            self.store.save_unsafe_slot(&slot).await?;
             debug!(%slot, "Sending slot");
             self.sender.send(slot).await?;
             self.metrics.update_channel_capacity(self.sender.capacity());
@@ -666,7 +665,7 @@ mod tests {
     fn create_slotter(config: &SlotterConfig) -> (Slotter, Receiver<Slot>) {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = SlotterMetrics::new(&mut metrics_state.registry);
-        let store = Box::new(RocksDbStore::new(test_path("slotter_db").as_str()).unwrap());
+        let store = Arc::new(RocksDbStore::new(test_path("slotter_db").as_str()).unwrap());
 
         let (slotter, slot_rx) = Slotter::new(config, None, store, metrics);
 
@@ -889,7 +888,7 @@ mod tests {
 
         // Create a fresh DB for this test
         let db_path = test_path("slotter_db");
-        let store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
+        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
 
         // Start first slotter instance
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
@@ -943,7 +942,7 @@ mod tests {
         let (new_set_tx, new_settle_rx) = channel(CHAN_CAPACITY);
 
         // Create new store instance pointing to same DB, and get the latest state from the DB
-        let resumed_store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
+        let resumed_store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
         let resumed_state = resumed_store.get_safe_state().await.unwrap().unwrap();
         assert_eq!(resumed_state.slot.number, START_SLOT + 2);
         assert_eq!(resumed_state.sequencing_block.number, 3);
@@ -993,7 +992,7 @@ mod tests {
 
         // Create a fresh DB for this test
         let db_path = test_path("slotter_db_unsafe");
-        let store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
+        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
 
         // Start first slotter instance
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
@@ -1021,7 +1020,7 @@ mod tests {
         handle.await.unwrap();
 
         // Create new store instance pointing to same DB
-        let resumed_store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
+        let resumed_store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
         let resumed_state = resumed_store.get_unsafe_state().await.unwrap().unwrap();
 
         // Verify the latest unsafe state was saved
