@@ -6,8 +6,7 @@ use crate::{
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
 use alloy::{
-    hex, network::{Ethereum, Network}, primitives::U256, providers::{Provider, RootProvider}, sol,
-    transports::{BoxTransport, Transport},
+    hex, network::Network, primitives::U256, providers::Provider, sol, transports::Transport,
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
@@ -180,13 +179,9 @@ mod tests {
     }
 
     #[async_trait]
-    impl Provider<BoxTransport, Ethereum> for MockProvider {
-        fn root(&self) -> &RootProvider<BoxTransport, Ethereum> {
-            unimplemented!("Mock provider does not implement root")
-        }
-
-        async fn get_balance(&self, _address: Address) -> alloy::providers::RpcWithBlock<BoxTransport, Address, U256> {
-            unimplemented!("Mock provider does not implement get_balance")
+    impl<T: Transport + Clone> Provider<T> for MockProvider {
+        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
+            Ok(self.balance)
         }
     }
 
@@ -194,8 +189,7 @@ mod tests {
     async fn test_get_balance() {
         let expected_balance = U256::from(100);
         let provider = MockProvider::new(expected_balance);
-        let service: SolMetabasedSequencerChainService<MockProvider, BoxTransport, Ethereum> = 
-            SolMetabasedSequencerChainService::new(Address::default(), provider);
+        let service = SolMetabasedSequencerChainService::new(Address::default(), provider);
         let balance = service.get_balance().await.unwrap();
         assert_eq!(balance, expected_balance);
     }
