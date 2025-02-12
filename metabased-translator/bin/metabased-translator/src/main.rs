@@ -53,8 +53,8 @@ async fn run(
     // Override start blocks if we're resuming from a database
     if let Some(state) = &safe_state {
         debug!(%state.slot, %state.sequencing_block, %state.settlement_block, "Resuming from known state in DB");
-        config.sequencing.sequencing_start_block = state.sequencing_block.number;
-        config.settlement.settlement_start_block = state.settlement_block.number;
+        config.sequencing.sequencing_start_block = state.sequencing_block.number + 1;
+        config.settlement.settlement_start_block = state.settlement_block.number + 1;
     } else {
         debug!("No known state found in DB, starting from configured start blocks");
         // Initial timestamp is only needed if we aren't resuming from db
@@ -118,18 +118,26 @@ async fn run(
                 info!("Shutting down ingestors...");
                 let _ = seq_shutdown_tx.send(());
                 let _ = settle_shutdown_tx.send(());
-                let _ = sequencing_handle.await;
-                let _ = settlement_handle.await;
+                if let Err(e) = sequencing_handle.await {
+                    error!("Error shutting down sequencing ingestor: {}", e);
+                }
+                if let Err(e) = settlement_handle.await {
+                    error!("Error shutting down settlement ingestor: {}", e);
+                }
 
                 // 2. Stop slotter after ingestors are done
                 info!("Shutting down slotter...");
                 let _ = slotter_shutdown_tx.send(());
-                let _ = slotter_handle.await;
+                if let Err(e) = slotter_handle.await {
+                    error!("Error shutting down slotter: {}", e);
+                }
 
                 // 3. Finally stop block builder
                 info!("Shutting down block builder...");
                 let _ = builder_shutdown_tx.send(());
-                let _ = block_builder_handle.await;
+                if let Err(e) = block_builder_handle.await {
+                    error!("Error shutting down block builder: {}", e);
+                }
                 info!("Metabased Translator shutdown complete");
             })
             .await

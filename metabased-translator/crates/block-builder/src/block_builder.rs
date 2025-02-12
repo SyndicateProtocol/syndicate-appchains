@@ -66,7 +66,7 @@ impl BlockBuilder {
 
         if known_block_number > current_block_number {
             return Err(BlockBuilderError::ResumeFromBlock(format!(
-                "Known block number {} is greater than the current mchain block number {}",
+                "Known block(slot) number {} is greater than the current mchain block number {}",
                 known_block_number, current_block_number
             )));
         }
@@ -111,8 +111,6 @@ impl BlockBuilder {
                     self.metrics.record_transactions_per_slot(transactions_len);
                     debug!("Submitting {} transactions", transactions_len);
 
-
-
                     // Fill gap with empty blocks if needed
                     let mut block_number = self.get_current_block_number().await;
                     while block_number < slot.number-1 {
@@ -145,8 +143,8 @@ impl BlockBuilder {
                     debug!("Mined block: {:?} from slot: {:?}", current_block, slot.number);
                 }
                 _ = &mut shutdown_rx => {
-                    info!("Block builder shutting down");
                     drop(self.mchain);
+                    info!("Block builder stopped");
                     return;
                 }
             }

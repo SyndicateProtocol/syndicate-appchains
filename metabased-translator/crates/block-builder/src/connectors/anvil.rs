@@ -288,17 +288,6 @@ impl MetaChainProvider {
     }
 }
 
-/// Custom [`Drop`] to make sure the Anvil process is terminated and the port is released.
-impl Drop for MetaChainProvider {
-    fn drop(&mut self) {
-        // Ensure anvil process is terminated
-        let id = self.anvil.child().id();
-        let _ = std::process::Command::new("kill").arg(id.to_string()).output();
-        // Give the port time to be released
-        std::thread::sleep(Duration::from_millis(500));
-    }
-}
-
 /// Check if a port is available by attempting to bind to it
 ///
 /// The port will be used for both HTTP and WebSocket connections, a feature provided by Anvil.

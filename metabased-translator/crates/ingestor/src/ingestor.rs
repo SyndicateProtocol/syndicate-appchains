@@ -127,9 +127,9 @@ impl Ingestor {
         loop {
             tokio::select! {
                 _ = &mut shutdown_rx => {
-                    debug!("Received shutdown signal, stopping polling");
                     drop(self.sender);
-                    break;
+                    debug!("{} ingestor stopped", self.chain);
+                    return Ok(());
                 }
                 _ = interval.tick() => {
                     match self.get_block_and_receipts(self.current_block_number).await {
@@ -146,9 +146,6 @@ impl Ingestor {
                 }
             }
         }
-
-        debug!("Polling stopped");
-        Ok(())
     }
 }
 
