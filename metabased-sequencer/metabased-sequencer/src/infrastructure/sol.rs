@@ -11,7 +11,7 @@ use alloy::{
     primitives::U256,
     providers::Provider,
     sol,
-    transports::Transport,
+    transports::{BoxTransport, Transport},
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
@@ -185,19 +185,17 @@ mod tests {
     }
 
     #[async_trait]
-    impl<N: Network> Provider<N> for MockProvider {
+    impl<N: Network> Provider<BoxTransport, N> for MockProvider {
         async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
             Ok(*self.balance.lock().await)
         }
     }
 
-    impl Transport for MockProvider {}
-
     #[tokio::test]
     async fn test_get_balance() {
         let expected_balance = U256::from(100);
         let provider = MockProvider::new(expected_balance);
-        let service: SolMetabasedSequencerChainService<MockProvider, MockProvider, alloy::network::Ethereum> = 
+        let service: SolMetabasedSequencerChainService<MockProvider, BoxTransport, alloy::network::Ethereum> = 
             SolMetabasedSequencerChainService::new(Address::default(), provider);
         let balance = service.get_balance().await.unwrap();
         assert_eq!(balance, expected_balance);
