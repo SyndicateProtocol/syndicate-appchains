@@ -23,7 +23,7 @@ use contract_bindings::{
         metabasedsequencerchain::MetabasedSequencerChain::{self, MetabasedSequencerChainInstance},
     },
 };
-use eyre::Result;
+use eyre::{eyre, Result};
 use ingestor::{
     config::ChainIngestorConfig,
     eth_client::{EthClient, RPCClient},
@@ -232,18 +232,30 @@ impl MetaNode {
         _ = MetabasedSequencerChain::deploy_builder(
             &seq_provider,
             U256::from(block_builder_cfg.target_chain_id),
-            seq_provider.default_signer_address(),
-            seq_provider.default_signer_address().create(1),
         )
         .send()
         .await?;
-        _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
+        let always_allowed_contract =
+            AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
         mine_block(&seq_provider, 0).await?;
+        let receipt = always_allowed_contract.get_receipt().await?;
+        let always_allowed_module_address = match receipt.contract_address {
+            Some(address) => address,
+            None => {
+                eprintln!("Deployment failed: No contract address found.");
+                return Err(eyre!("Deployment failed: No contract address found."));
+            }
+        };
 
         // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
         let sequencing_contract =
             MetabasedSequencerChain::new(get_rollup_contract_address(), provider_clone);
+        _ = sequencing_contract
+            .initialize(seq_provider.default_signer_address(), always_allowed_module_address)
+            .send()
+            .await?;
+        mine_block(&seq_provider, 0).await?;
 
         // Launch mock settlement chain
         let set_port = port_tracker.next_port();

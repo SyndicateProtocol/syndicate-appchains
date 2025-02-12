@@ -3,11 +3,10 @@ pragma solidity 0.8.25;
 
 import {SequencingModuleChecker, Ownable} from "src/SequencingModuleChecker.sol";
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
+import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {Test} from "forge-std/Test.sol";
 
-contract SequencingModuleCheckerMock is SequencingModuleChecker {
-    constructor(address _admin, address _masterModule) SequencingModuleChecker(_admin, _masterModule) {}
-}
+contract SequencingModuleCheckerMock is SequencingModuleChecker {}
 
 contract SequencingModuleCheckerTest is Test {
     SequencingModuleChecker public manager;
@@ -20,7 +19,8 @@ contract SequencingModuleCheckerTest is Test {
         nonAdmin = address(0x456);
 
         masterModule = new RequireAllModule(admin);
-        manager = new SequencingModuleCheckerMock(admin, address(masterModule));
+        manager = new SequencingModuleCheckerMock();
+        manager.initialize(admin, address(masterModule));
     }
 
     function testUpdateMasterModule() public {
@@ -46,5 +46,22 @@ contract SequencingModuleCheckerTest is Test {
         vm.prank(admin);
         vm.expectRevert(SequencingModuleChecker.InvalidModuleAddress.selector);
         manager.updateRequirementModule(address(0));
+    }
+
+    function testCannotInitializeTwice() public {
+        vm.prank(admin);
+        vm.expectRevert(SequencingModuleChecker.AlreadyInitialized.selector);
+        manager.initialize(admin, address(masterModule));
+    }
+
+    function testNotInitialized() public {
+        SequencingModuleChecker uninitializedManager = new SequencingModuleCheckerMock();
+        assertFalse(uninitializedManager.isAllowed(address(0)));
+    }
+
+    function testIsAllowedAfterInitialization() public {
+        SequencingModuleChecker initializedManager = new SequencingModuleCheckerMock();
+        initializedManager.initialize(admin, address(masterModule));
+        assertTrue(initializedManager.isAllowed(address(0)));
     }
 }
