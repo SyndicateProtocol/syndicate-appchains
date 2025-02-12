@@ -9,12 +9,12 @@ use alloy::{
     hex,
     network::Network,
     primitives::U256,
-    providers::Provider,
+    providers::{Provider, RootProvider},
     sol,
     transports::{BoxTransport, Transport},
 };
 use async_trait::async_trait;
-use std::{marker::PhantomData, time::Duration};
+use std::{marker::PhantomData, sync::Arc, time::Duration};
 use tokio::sync::Mutex;
 use tracing::{debug_span, info};
 
@@ -186,6 +186,10 @@ mod tests {
 
     #[async_trait]
     impl<N: Network> Provider<BoxTransport, N> for MockProvider {
+        fn root(&self) -> &RootProvider<BoxTransport, N> {
+            unimplemented!("Mock provider does not implement root")
+        }
+
         async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
             Ok(*self.balance.lock().await)
         }
