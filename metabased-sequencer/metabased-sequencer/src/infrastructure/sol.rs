@@ -185,8 +185,12 @@ mod tests {
 
     #[async_trait]
     impl<T: Transport + Clone> Provider<T> for MockProvider {
-        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
-            Ok(self.balance)
+        fn root(&self) -> &RootProvider<T> {
+            unimplemented!("Mock provider does not implement root")
+        }
+
+        async fn get_balance<'a>(&'a self, _address: Address) -> alloy::providers::RpcWithBlock<T, Address, U256> {
+            unimplemented!("Mock provider does not implement get_balance")
         }
     }
 
@@ -194,7 +198,8 @@ mod tests {
     async fn test_get_balance() {
         let expected_balance = U256::from(100);
         let provider = MockProvider::new(expected_balance);
-        let service = SolMetabasedSequencerChainService::new(Address::default(), provider);
+        let service: SolMetabasedSequencerChainService<MockProvider, alloy::transports::BoxTransport, alloy::network::Ethereum> =
+            SolMetabasedSequencerChainService::new(Address::default(), provider);
         let balance = service.get_balance().await.unwrap();
         assert_eq!(balance, expected_balance);
     }
