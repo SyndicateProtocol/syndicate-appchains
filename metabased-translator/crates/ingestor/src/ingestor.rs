@@ -65,18 +65,18 @@ impl Ingestor {
     async fn get_block_and_receipts(&self, block_number: u64) -> Result<BlockAndReceipts, Error> {
         let start_time = std::time::Instant::now();
 
-        let block_and_receipt = self.client.get_block_and_receipts(block_number).await?;
+        let block_and_receipts = self.client.get_block_and_receipts(block_number).await?;
         let duration = start_time.elapsed();
 
         self.metrics.record_rpc_call(
             self.chain,
-            "batch: eth_getBlockByNumber + eth_getBlockReceipts ",
+            "batch: eth_getBlockByNumber + eth_getBlockReceipts",
             duration,
         );
 
-        debug!("Got block: {:?}", block_and_receipt.block.number);
+        debug!("Got block: {:?}", block_and_receipts.block.number);
 
-        Ok(block_and_receipt)
+        Ok(block_and_receipts)
     }
 
     /// Sends the retrieved block to the consumer and updates the current block number.
