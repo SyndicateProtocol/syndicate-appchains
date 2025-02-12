@@ -1,7 +1,7 @@
 //! Block builder service for processing and building L3 blocks.
 
 use crate::{
-    config::{BlockBuilderConfig, TargetRollupType},
+    config::{get_slot_tracker_contract_address, BlockBuilderConfig, TargetRollupType},
     connectors::anvil::MetaChainProvider,
     metrics::BlockBuilderMetrics,
     rollups::{
@@ -9,12 +9,26 @@ use crate::{
         optimism::optimism_builder::OptimismBlockBuilder, shared::RollupBlockBuilder,
     },
 };
-use alloy::transports::{RpcError, TransportErrorKind};
+use alloy::{
+    primitives::U256,
+    providers::Provider,
+    rpc::types::{BlockNumberOrTag, BlockTransactionsKind, TransactionRequest},
+    sol_types::SolCall,
+    transports::{RpcError, TransportErrorKind},
+};
 use common::types::Slot;
-use eyre::{Error, Result};
+use contract_bindings::arbitrum::slottracker::SlotTracker;
+use eyre::{eyre, Error, Result};
 use tokio::sync::{mpsc::Receiver, oneshot};
 use tracing::{debug, error, info};
 use url::Url;
+
+struct SlotInfo {
+    number: u64,
+    timestamp: u64,
+    latest_sequencing_block_number: u64,
+    latest_settlement_block_number: u64,
+}
 
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
@@ -45,6 +59,41 @@ impl BlockBuilder {
         Ok(Self { slotter_rx, mchain, builder, metrics })
     }
 
+    pub async fn get_latest_slot(&self) -> Result<SlotInfo> {
+        // Create the call data for getSlotInfo()
+        let tx = TransactionRequest::default()
+            .to(get_slot_tracker_contract_address())
+            .input(SlotTracker::getSlotInfoCall::new(()).abi_encode().into());
+
+        // Use the provider to make the call
+        let info = self.mchain.provider.call(&tx).await?;
+
+        let latest_block = self
+            .mchain
+            .provider
+            .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+            .await?
+            .ok_or(eyre!("No block found"))?;
+
+        // Decode the response
+        let decoded = SlotTracker::getSlotInfoCall::abi_decode_returns(&info, true)?;
+
+        Ok(SlotInfo {
+            number: decoded._0.to::<u64>(),
+            timestamp: latest_block.header.timestamp,
+            latest_sequencing_block_number: decoded
+                ._1
+                .last()
+                .ok_or(eyre!("No sequencing blocks"))?
+                .to::<u64>(),
+            latest_settlement_block_number: decoded
+                ._2
+                .last()
+                .ok_or(eyre!("No settlement blocks"))?
+                .to::<u64>(),
+        })
+    }
+
     /// Start the block builder
     pub async fn start(
         mut self,
@@ -64,6 +113,24 @@ impl BlockBuilder {
                     debug!("Received slot: {:?}", slot);
                     self.metrics.record_last_slot(slot.number);
 
+                    // Get block numbers from BlockAndReceipts
+                    let sequencing_block_numbers: Vec<U256> = slot.sequencing_chain_blocks
+                        .iter()
+                        .map(|block_and_receipts| U256::from(block_and_receipts.block.number))
+                        .collect();
+
+                    let settlement_block_numbers: Vec<U256> = slot.settlement_chain_blocks
+                        .iter()
+                        .map(|block_and_receipts| U256::from(block_and_receipts.block.number))
+                        .collect();
+
+                    // Slot Info Transaction
+                    let slot_tx = TransactionRequest::default().to(get_slot_tracker_contract_address()).input(
+                        SlotTracker::setSlotInfoCall::new((U256::from(slot.number), sequencing_block_numbers, settlement_block_numbers))
+                        .abi_encode()
+                        .into(),
+                    );
+
                     // [OP / ARB] Build block of MChain transactions from slot
                     let transactions = match self.builder.build_block_from_slot(slot.clone()).await {
                         Ok(transactions) => transactions,
@@ -77,7 +144,9 @@ impl BlockBuilder {
                     debug!("Submitting {} transactions", transactions_len);
 
                     // Submit transactions to mchain
-                    if let Err(e) = self.mchain.submit_txns(transactions).await {
+                    let mut all_transactions = vec![slot_tx];
+                    all_transactions.extend(transactions);
+                    if let Err(e) = self.mchain.submit_txns(all_transactions).await {
                         panic!("Error submitting transaction: {}", e);
                     }
 

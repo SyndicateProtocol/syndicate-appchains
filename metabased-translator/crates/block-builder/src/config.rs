@@ -109,6 +109,11 @@ pub fn get_rollup_contract_address() -> Address {
     get_default_private_key_signer().address().create(0)
 }
 
+#[allow(missing_docs)]
+pub fn get_slot_tracker_contract_address() -> Address {
+    get_default_private_key_signer().address().create(1)
+}
+
 impl Debug for BlockBuilderConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockBuilderConfig")

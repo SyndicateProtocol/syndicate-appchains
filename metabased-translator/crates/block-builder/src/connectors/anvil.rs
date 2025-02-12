@@ -4,7 +4,10 @@ use crate::{
         AnvilStartError::{InvalidHost, NoPort, PortUnavailable},
         BlockBuilderError,
     },
-    config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
+    config::{
+        get_default_private_key_signer, get_rollup_contract_address,
+        get_slot_tracker_contract_address, BlockBuilderConfig,
+    },
     connectors::metrics::MChainMetrics,
 };
 use alloy::{
@@ -22,7 +25,7 @@ use alloy::{
     rpc::types::{anvil::MineOptions, TransactionRequest},
     transports::http::Http,
 };
-use contract_bindings::arbitrum::rollup::Rollup;
+use contract_bindings::arbitrum::{rollup::Rollup, slottracker::SlotTracker};
 use eyre::{Error, Result};
 use reqwest::Client;
 use std::{net::TcpListener, time::Duration};
@@ -140,6 +143,8 @@ impl MetaChainProvider {
             .nonce(0)
             .send()
             .await?;
+            let _ = SlotTracker::deploy_builder(&provider).nonce(1).send().await?;
+
             provider.evm_mine(None).await?;
         }
 
