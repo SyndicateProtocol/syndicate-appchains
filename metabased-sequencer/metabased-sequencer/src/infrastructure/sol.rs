@@ -9,13 +9,12 @@ use alloy::{
     hex,
     network::Network,
     primitives::U256,
-    providers::{Provider, RootProvider},
+    providers::Provider,
     sol,
-    transports::{BoxTransport, Transport},
+    transports::Transport,
 };
 use async_trait::async_trait;
-use std::{marker::PhantomData, sync::Arc, time::Duration};
-use tokio::sync::Mutex;
+use std::{marker::PhantomData, time::Duration};
 use tracing::{debug_span, info};
 
 sol! {
@@ -175,23 +174,19 @@ mod tests {
 
     #[derive(Debug, Clone)]
     struct MockProvider {
-        balance: Arc<Mutex<U256>>,
+        balance: std::cell::RefCell<U256>,
     }
 
     impl MockProvider {
         fn new(balance: U256) -> Self {
-            Self { balance: Arc::new(Mutex::new(balance)) }
+            Self { balance: std::cell::RefCell::new(balance) }
         }
     }
 
     #[async_trait]
-    impl<N: Network> Provider<BoxTransport, N> for MockProvider {
-        fn root(&self) -> &RootProvider<BoxTransport, N> {
-            unimplemented!("Mock provider does not implement root")
-        }
-
+    impl<N: Network> Provider<N> for MockProvider {
         async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
-            Ok(*self.balance.lock().await)
+            Ok(self.balance.get_ref().clone())
         }
     }
 
