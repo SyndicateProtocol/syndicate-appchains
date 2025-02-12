@@ -189,8 +189,8 @@ mod tests {
             unimplemented!("Mock provider does not implement root")
         }
 
-        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
-            Ok(self.balance)
+        async fn get_balance(&self, _address: Address) -> alloy::providers::RpcWithBlock<N, Address, U256> {
+            unimplemented!("Mock provider does not implement get_balance")
         }
     }
 
