@@ -7,16 +7,14 @@ use crate::{
 };
 use alloy::{
     hex,
-    json_rpc::packet::{RequestPacket, ResponsePacket},
     network::{Ethereum, Network},
     primitives::U256,
     providers::{Provider, RootProvider},
     sol,
-    transports::{BoxTransport, RpcError, Transport, TransportErrorKind},
+    transports::{BoxTransport, Transport},
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
-use tower_service::Service;
 use tracing::{debug_span, info};
 
 sol! {
@@ -191,8 +189,8 @@ mod tests {
             unimplemented!("Mock provider does not implement root")
         }
 
-        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
-            Ok(self.balance)
+        async fn get_balance<'a>(&'a self, _address: Address) -> alloy::providers::RpcWithBlock<BoxTransport, Address, U256> {
+            unimplemented!("Mock provider does not implement get_balance")
         }
     }
 
