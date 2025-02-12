@@ -7,11 +7,11 @@ use crate::{
 };
 use alloy::{
     hex,
-    network::Network,
+    network::{Ethereum, Network},
     primitives::U256,
-    providers::Provider,
+    providers::{Provider, RootProvider},
     sol,
-    transports::Transport,
+    transports::{BoxTransport, Transport},
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
@@ -184,9 +184,13 @@ mod tests {
     }
 
     #[async_trait]
-    impl<T: Transport + Clone> Provider<T> for MockProvider {
-        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
-            Ok(self.balance)
+    impl Provider<BoxTransport, Ethereum> for MockProvider {
+        fn root(&self) -> &RootProvider<BoxTransport> {
+            unimplemented!("Mock provider does not implement root")
+        }
+
+        async fn get_balance(&self, _address: Address) -> alloy::providers::RpcWithBlock<BoxTransport, Address, U256> {
+            unimplemented!("Mock provider does not implement get_balance")
         }
     }
 
