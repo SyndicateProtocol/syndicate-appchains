@@ -7,14 +7,23 @@ use crate::{
 };
 use alloy::{
     hex,
+    json_rpc::packet::{RequestPacket, ResponsePacket},
     network::Network,
     primitives::U256,
-    providers::Provider,
+    providers::{Provider, RootProvider},
     sol,
-    transports::Transport,
+    transports::{BoxTransport, RpcError, Transport, TransportErrorKind, TransportFut},
 };
 use async_trait::async_trait;
-use std::{marker::PhantomData, time::Duration};
+use std::{
+    future::Future,
+    marker::PhantomData,
+    pin::Pin,
+    sync::{Arc, RwLock},
+    task::{Context, Poll},
+    time::Duration,
+};
+use tower_service::Service;
 use tracing::{debug_span, info};
 
 sol! {
@@ -174,19 +183,37 @@ mod tests {
 
     #[derive(Debug, Clone)]
     struct MockProvider {
-        balance: std::cell::RefCell<U256>,
+        balance: Arc<RwLock<U256>>,
     }
 
     impl MockProvider {
         fn new(balance: U256) -> Self {
-            Self { balance: std::cell::RefCell::new(balance) }
+            Self { balance: Arc::new(RwLock::new(balance)) }
+        }
+    }
+
+    impl Service<RequestPacket> for MockProvider {
+        type Response = ResponsePacket;
+        type Error = RpcError<TransportErrorKind>;
+        type Future = Pin<Box<dyn Future<Output = Result<Self::Response, Self::Error>> + Send + 'static>>;
+
+        fn poll_ready(&mut self, _: &mut Context<'_>) -> Poll<Result<(), Self::Error>> {
+            Poll::Ready(Ok(()))
+        }
+
+        fn call(&mut self, _: RequestPacket) -> Self::Future {
+            Box::pin(async { unimplemented!("Mock provider does not implement call") })
         }
     }
 
     #[async_trait]
-    impl<N: Network> Provider<N> for MockProvider {
+    impl<N: Network> Provider<BoxTransport, N> for MockProvider {
+        fn root(&self) -> &RootProvider<BoxTransport, N> {
+            unimplemented!("Mock provider does not implement root")
+        }
+
         async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
-            Ok(self.balance.get_ref().clone())
+            Ok(*self.balance.read().unwrap())
         }
     }
 
