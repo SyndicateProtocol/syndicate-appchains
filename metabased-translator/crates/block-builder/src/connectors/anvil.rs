@@ -25,7 +25,7 @@ use alloy::{
 use contract_bindings::arbitrum::rollup::Rollup;
 use eyre::{Error, Result};
 use reqwest::Client;
-use std::net::TcpListener;
+use std::{net::TcpListener, time::Duration};
 use thiserror::Error;
 use tracing::{debug, error};
 use url::Host;
@@ -285,6 +285,17 @@ impl MetaChainProvider {
         // }
 
         // Ok(())
+    }
+}
+
+/// Custom [`Drop`] to make sure the Anvil process is terminated and the port is released.
+impl Drop for MetaChainProvider {
+    fn drop(&mut self) {
+        // Ensure anvil process is terminated
+        let id = self.anvil.child().id();
+        let _ = std::process::Command::new("kill").arg(id.to_string()).output();
+        // Give the port time to be released
+        std::thread::sleep(Duration::from_millis(500));
     }
 }
 
