@@ -185,7 +185,10 @@ mod tests {
 
     #[async_trait]
     impl Provider<BoxTransport, Ethereum> for MockProvider {
-        async fn get_balance(&self, _address: Address) -> alloy::providers::RpcWithBlock<BoxTransport, Address, U256> {
+        async fn get_balance(
+            &self,
+            _address: Address,
+        ) -> alloy::providers::RpcWithBlock<BoxTransport, Address, U256> {
             unimplemented!("Mock provider does not implement get_balance")
         }
     }
