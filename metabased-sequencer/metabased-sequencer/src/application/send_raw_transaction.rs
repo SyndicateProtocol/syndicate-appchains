@@ -12,6 +12,7 @@ use crate::{
 };
 use alloy::{
     consensus::{Transaction, TxEnvelope, TxType},
+    hex,
     primitives::{TxHash, U256},
     rlp::Decodable,
 };
@@ -20,7 +21,14 @@ use std::{convert::TryFrom, fmt::Debug};
 use tracing::{debug, instrument, Level};
 
 /// Sends serialized and signed transaction `tx` using `chain`.
-#[instrument(level = Level::DEBUG, skip(chain), fields(encoded))]
+#[instrument(
+    level = Level::DEBUG,
+    skip(chain),
+    fields(
+        tx_data = ?format!("0x{}", hex::encode(&encoded)),
+        tx_size = encoded.len()
+    )
+)]
 pub async fn send_raw_transaction<Chain>(encoded: Bytes, chain: &Chain) -> Result<TxHash, Error>
 where
     Chain: MetabasedSequencerChainService + Debug,
@@ -34,7 +42,8 @@ where
         Err(_) => {
             let error = InvalidInput(UnableToRLPDecode);
             debug!(
-                error = %error
+                error = %error,
+                "Transaction decoding failed"
             );
             return Err(error);
         }
@@ -44,17 +53,36 @@ where
     //For non-legacy transactions, validate chain ID immediately
     if tx.tx_type() != TxType::Legacy && tx.chain_id().is_none() {
         let error = InvalidInput(MissingChainID);
-        debug!(error = %error);
+        debug!(
+            error = %error,
+            tx_type = ?tx.tx_type(),
+            "Transaction validation failed: missing chain ID"
+        );
         return Err(error);
     }
 
-    tx.recover_signer()?;
+    tx.recover_signer().map_err(|e| {
+        debug!(
+            error = ?e,
+            tx_type = ?tx.tx_type(),
+            "Transaction validation failed: invalid signature"
+        );
+        e
+    })?;
 
     if tx.tx_type() == TxType::Legacy {
         // TODO(SEQ-179): introduce optional global tx cap config. See op-geth's checkTxFee() +
         // RPCTxFeeCap for equivalent skip check if unset
         let tx_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
-        let gas_price = tx.gas_price().ok_or(InvalidInput(MissingGasPrice))?;
+        let gas_price = tx.gas_price().ok_or_else(|| {
+            let error = InvalidInput(MissingGasPrice);
+            debug!(
+                error = %error,
+                tx_type = ?tx.tx_type(),
+                "Transaction validation failed: missing gas price"
+            );
+            error
+        })?;
         transaction::check_tx_fee(
             U256::try_from(gas_price)?,
             U256::try_from(tx.gas_limit())?,
