@@ -15,10 +15,8 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
 
     /// @notice Constructs the MetabasedSequencerChain contract.
     /// @param _l3ChainId The ID of the L3 chain that this contract is sequencing transactions for.
-    /// @param admin The address that will be set as the admin
-    /// @param masterModule The address of the master permission module
     // [Olympix Warning: no parameter validation in constructor] Admin and masterModule validation handled by SequencingModuleChecker
-    constructor(uint256 _l3ChainId, address admin, address masterModule) SequencingModuleChecker(admin, masterModule) {
+    constructor(uint256 _l3ChainId) SequencingModuleChecker() {
         // chain id zero has no replay protection : https://eips.ethereum.org/EIPS/eip-3788
         require(_l3ChainId != 0, "L3 chain ID cannot be 0");
         l3ChainId = _l3ChainId;

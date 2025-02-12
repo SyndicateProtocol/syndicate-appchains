@@ -27,7 +27,7 @@ contract DeployMetabasedFactory is Script {
 
         // create new contracts
         (address sequencerChain, address metafillerStorage, IRequirementModule permissionModule) =
-            metabasedFactory.createAllContractsWithRequireAllModule(admin, manager, l3ChainId);
+            metabasedFactory.createAllContractsWithRequireAllModule(admin, manager, l3ChainId, bytes32(l3ChainId));
 
         console.log("Deployed MetabasedSequencerChain", sequencerChain);
         console.log("Deployed MetafillerStorage", metafillerStorage);
@@ -53,7 +53,8 @@ contract DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule is Script {
         console.log("Deployed RequireAllModule", address(permissionModule));
 
         // Deploy sequencer with permission module
-        sequencerChain = new MetabasedSequencerChain(l3ChainId, admin, address(permissionModule));
+        sequencerChain = new MetabasedSequencerChain(l3ChainId);
+        sequencerChain.initialize(admin, address(permissionModule));
         console.log("Deployed MetabasedSequencerChain", address(sequencerChain));
 
         // Deploy and add always allowed module
