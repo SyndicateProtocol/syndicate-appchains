@@ -46,8 +46,8 @@ contract AgentValidationModule is PermissionModule {
             (
                 address agentAddress,
                 bool isPermitted,
-                ,  // name
-                   // additionalData
+                , // name
+                    // additionalData
             ) = agentApplication.getApplicant(i);
 
             if (agentAddress == proposer && isPermitted) {
