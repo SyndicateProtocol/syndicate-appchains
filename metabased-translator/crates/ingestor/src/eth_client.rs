@@ -43,6 +43,12 @@ pub trait RPCClient: Send + Sync + Debug {
         &self,
         block_number: u64,
     ) -> Result<BlockAndReceipts, RPCClientError>;
+
+    /// Retrieves multiple blocks & its receipts in a batch call
+    async fn get_multiple_blocks_and_receipts(
+        &self,
+        block_numbers: Vec<u64>,
+    ) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
 }
 
 /// A client for interacting with an Ethereum-like blockchain.
@@ -127,5 +133,61 @@ impl RPCClient for EthClient {
         debug!("get_blocks_and_receipts response: {:?} & {:?}", block, receipts);
 
         Ok(BlockAndReceipts { block, receipts })
+    }
+
+    /// Retrieves blocks and their receipts for multiple block numbers in a single batch request.
+    ///
+    /// This function sends batch RPC calls to fetch both the block data and the receipts of all
+    /// transactions in the specified blocks, reducing the number of network requests.
+    ///
+    /// # Arguments
+    ///
+    /// * `block_numbers` - A vector of block numbers for which to retrieve blocks and receipts.
+    ///
+    /// # Returns
+    ///
+    /// A result containing a vector of `BlockAndReceipts` objects if successful, or an
+    /// `RPCClientError` if any request fails.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `RPCClientError` if there is an issue with the RPC request, batch execution,
+    /// or response parsing.
+    async fn get_multiple_blocks_and_receipts(
+        &self,
+        block_numbers: Vec<u64>,
+    ) -> Result<Vec<BlockAndReceipts>, RPCClientError> {
+        let mut batch = self.client.new_batch();
+        let mut block_futures = Vec::new();
+        let mut receipt_futures = Vec::new();
+
+        for block_number in &block_numbers {
+            let block_number_hex = format!("0x{:x}", block_number);
+
+            let block_fut = batch
+                .add_call("eth_getBlockByNumber", &(block_number_hex.clone(), true))
+                .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
+                .map_resp(|resp: Block| resp);
+            let receipt_fut = batch
+                .add_call("eth_getBlockReceipts", &[block_number_hex])
+                .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
+                .map_resp(|resp: Vec<Receipt>| resp);
+
+            block_futures.push(block_fut);
+            receipt_futures.push(receipt_fut);
+        }
+
+        batch.send().await.map_err(|e| RPCClientError::RpcError(eyre!(e)))?;
+
+        let mut results = Vec::new();
+        for (block_fut, receipt_fut) in block_futures.into_iter().zip(receipt_futures.into_iter()) {
+            let (block, receipts) = tokio::try_join!(block_fut, receipt_fut)
+                .map_err(|e| RPCClientError::RpcError(eyre!(e)))?;
+            results.push(BlockAndReceipts { block, receipts });
+        }
+
+        debug!("get_blocks_and_receipts response: {:?}", results);
+
+        Ok(results)
     }
 }
