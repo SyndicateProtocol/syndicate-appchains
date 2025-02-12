@@ -11,7 +11,7 @@ use alloy::{
     primitives::U256,
     providers::{Provider, RootProvider},
     sol,
-    transports::Transport,
+    transports::{BoxTransport, Transport},
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
@@ -184,8 +184,8 @@ mod tests {
     }
 
     #[async_trait]
-    impl<N: Network> Provider<N> for MockProvider {
-        fn root(&self) -> &RootProvider<N> {
+    impl<N: Network> Provider<BoxTransport, N> for MockProvider {
+        fn root(&self) -> &RootProvider<BoxTransport, N> {
             unimplemented!("Mock provider does not implement root")
         }
 
