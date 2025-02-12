@@ -18,7 +18,7 @@ use slotter::Slotter;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::oneshot;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 // TODO(SEQ-515): Improve this executable, research async tasks
 #[allow(unused_assignments)] // TODO SEQ-528 remove this
@@ -162,6 +162,7 @@ fn main() -> Result<(), RuntimeError> {
     let mut base_config = MetabasedConfig::initialize();
     let extra_fields = get_extra_fields_for_logging(base_config.clone());
     init_tracing_with_extra_fields(extra_fields)?;
+    debug!("Base configuration {:?}", base_config);
 
     // Create and run async runtime
     let runtime =

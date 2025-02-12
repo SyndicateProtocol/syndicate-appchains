@@ -54,9 +54,7 @@ pub struct MetabasedConfig {
 impl MetabasedConfig {
     /// Initializes the configuration by parsing CLI arguments and environment variables.
     pub fn initialize() -> Self {
-        let config = <Self as Parser>::parse();
-        debug!("Initializing configuration: {:?}", config);
-        config
+        <Self as Parser>::parse()
     }
 
     pub async fn set_initial_timestamp(
