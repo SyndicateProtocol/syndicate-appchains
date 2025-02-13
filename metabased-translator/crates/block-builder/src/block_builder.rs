@@ -9,21 +9,31 @@ use crate::{
         optimism::optimism_builder::OptimismBlockBuilder, shared::RollupBlockBuilder,
     },
 };
-use alloy::transports::{RpcError, TransportErrorKind};
-use common::types::Slot;
+use alloy::{
+    providers::Provider,
+    transports::{RpcError, TransportErrorKind},
+};
+use common::{db::TranslatorStore, types::Slot};
+use derivative::Derivative;
 use eyre::{Error, Result};
+use std::sync::Arc;
 use tokio::sync::{mpsc::Receiver, oneshot};
 use tracing::{debug, error, info};
 use url::Url;
 
 /// Block builder service for processing and building L3 blocks.
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct BlockBuilder {
     slotter_rx: Receiver<Slot>,
     #[allow(missing_docs)]
     pub mchain: MetaChainProvider,
     builder: Box<dyn RollupBlockBuilder>,
+    slot_duration_sec: u64,
     metrics: BlockBuilderMetrics,
+
+    #[derivative(Debug = "ignore")]
+    store: Arc<dyn TranslatorStore + Send + Sync>,
 }
 
 impl BlockBuilder {
@@ -31,9 +41,12 @@ impl BlockBuilder {
     pub async fn new(
         slotter_rx: Receiver<Slot>,
         config: &BlockBuilderConfig,
+        datadir: &str,
+        slot_duration_sec: u64,
+        store: Arc<dyn TranslatorStore + Send + Sync>,
         metrics: BlockBuilderMetrics,
     ) -> Result<Self, Error> {
-        let mchain = MetaChainProvider::start(config, &metrics.mchain_metrics).await?;
+        let mchain = MetaChainProvider::start(config, datadir, &metrics.mchain_metrics).await?;
 
         let builder: Box<dyn RollupBlockBuilder> = match config.target_rollup_type {
             TargetRollupType::ARBITRUM => Box::new(ArbitrumBlockBuilder::new(config)),
@@ -42,24 +55,53 @@ impl BlockBuilder {
             }
         };
 
-        Ok(Self { slotter_rx, mchain, builder, metrics })
+        Ok(Self { slotter_rx, mchain, builder, metrics, slot_duration_sec, store })
+    }
+
+    /// Validates and rolls back to a known block number if necessary
+    async fn resume_from_block(
+        &self,
+        known_block_number: Option<u64>,
+    ) -> Result<(), BlockBuilderError> {
+        let Some(known_block_number) = known_block_number else {
+            return Ok(());
+        };
+
+        let current_block_number = self.mchain.provider.get_block_number().await.map_err(|e| {
+            BlockBuilderError::ResumeFromBlock(format!("Error getting current block number: {}", e))
+        })?;
+
+        if known_block_number > current_block_number {
+            return Err(BlockBuilderError::ResumeFromBlock(format!(
+                "Known block(slot) number {} is greater than the current mchain block number {}",
+                known_block_number, current_block_number
+            )));
+        }
+
+        // rollback to block if necessary
+        if known_block_number < current_block_number {
+            self.mchain.rollback_to_block(known_block_number).await.map_err(|e| {
+                BlockBuilderError::ResumeFromBlock(format!("Unable to reorg to block: {}", e))
+            })?;
+        }
+
+        Ok(())
     }
 
     /// Start the block builder
     pub async fn start(
         mut self,
-        known_safe_block_number: Option<u64>,
+        known_block_number: Option<u64>,
         mut shutdown_rx: oneshot::Receiver<()>,
     ) {
-        // Add reorg handling at start
-        if let Some(block_number) = known_safe_block_number {
-            if let Err(e) = self.mchain.rollback_to_block(block_number).await {
-                panic!("Error during startup, unable to reorg to block: {}", e);
-            }
+        // resume from known state
+        if let Err(e) = self.resume_from_block(known_block_number).await {
+            panic!("Failed to validate and rollback: {}", e);
         }
 
         loop {
             tokio::select! {
+                biased; // biased allows us to process everything that's in the channel before shutting down
                 Some(slot) = self.slotter_rx.recv() => {
                     debug!("Received slot: {:?}", slot);
                     self.metrics.record_last_slot(slot.number);
@@ -76,22 +118,53 @@ impl BlockBuilder {
                     self.metrics.record_transactions_per_slot(transactions_len);
                     debug!("Submitting {} transactions", transactions_len);
 
+                    // Fill gap with empty blocks if needed
+                    let mut block_number = self.get_current_block_number().await;
+                    while block_number < slot.number-1 {
+                        let empty_block_timestamp = slot.timestamp - ((slot.number - block_number) * self.slot_duration_sec);
+                        debug!("Mining empty block {} with timestamp {}", block_number + 1, empty_block_timestamp);
+
+                        if let Err(e) = self.mchain.mine_block(empty_block_timestamp).await {
+                            panic!("Error mining block: {}", e);
+                        }
+                        block_number += 1;
+                    }
                     // Submit transactions to mchain
                     if let Err(e) = self.mchain.submit_txns(transactions).await {
                         panic!("Error submitting transaction: {}", e);
                     }
 
-                    // Mine mchain block
+                    // Mine the actual block with slot timestamp
                     if let Err(e) = self.mchain.mine_block(slot.timestamp).await {
                         panic!("Error mining block: {}", e);
                     }
+
+                    let current_block = self.get_current_block_number().await;
+                    assert_eq!(
+                        current_block,
+                        slot.number,
+                        "Mined block number {} does not match slot number {}",
+                        current_block,
+                        slot.number
+                    );
+                    debug!("Mined block: {:?} from slot: {:?}", current_block, slot.number);
+                    if let Err(e) = self.store.save_unsafe_slot(&slot).await {
+                        panic!("Error saving slot: {}", e);
+                    }
                 }
                 _ = &mut shutdown_rx => {
-                    info!("Block builder shutting down");
-                    break;
+                    drop(self.mchain);
+                    info!("Block builder stopped");
+                    return;
                 }
             }
         }
+    }
+
+    async fn get_current_block_number(&self) -> u64 {
+        self.mchain.provider.get_block_number().await.unwrap_or_else(|e| {
+            panic!("Error getting current block number: {}", e);
+        })
     }
 }
 
@@ -106,6 +179,12 @@ pub enum BlockBuilderError {
 
     #[error("Cannot serialize empty l2 msg")]
     EmptyL2Message(),
+
+    #[error("Error resuming from block: {0}")]
+    ResumeFromBlock(String),
+
+    #[error("Error mining block: {0}")]
+    MineBlock(String),
 }
 
 #[allow(missing_docs)] // self-documenting
@@ -123,8 +202,10 @@ pub enum AnvilStartError {
 mod tests {
     use super::*;
     use alloy::providers::Provider;
+    use common::db::RocksDbStore;
     use eyre::Result;
     use prometheus_client::registry::Registry;
+    use test_utils::test_path;
     use tokio::sync::mpsc;
     use tracing_test::traced_test;
 
@@ -143,13 +224,16 @@ mod tests {
         let genesis_ts = config.genesis_timestamp;
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let builder = BlockBuilder::new(rx, &config, metrics).await?;
+        let datadir = test_path("datadir");
+        let db_path = test_path("db");
+        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
+        let builder = BlockBuilder::new(rx, &config, &datadir, 2, store, metrics).await?;
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });
 
         // Send a test block
-        let test_slot = Slot::new(1, genesis_ts + 1);
+        let test_slot = Slot::new(2, genesis_ts + 1);
         tx.send(test_slot).await?;
 
         // Give some time for processing
@@ -169,7 +253,10 @@ mod tests {
         let config = BlockBuilderConfig::default();
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let builder = BlockBuilder::new(rx, &config, metrics).await?;
+        let datadir = test_path("datadir");
+        let db_path = test_path("db");
+        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
+        let builder = BlockBuilder::new(rx, &config, &datadir, 2, store, metrics).await?;
 
         let provider = builder.mchain.provider.clone();
 
@@ -196,8 +283,11 @@ mod tests {
 
         // Second run: resume builder
         let (_resumed_tx, resumed_rx) = mpsc::channel(1);
+        let datadir = test_path("datadir");
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let resumed_builder = BlockBuilder::new(resumed_rx, &config, metrics).await?;
+        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
+        let resumed_builder =
+            BlockBuilder::new(resumed_rx, &config, &datadir, 2, store, metrics).await?;
 
         let resumed_provider = resumed_builder.mchain.provider.clone();
 

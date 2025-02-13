@@ -1,6 +1,6 @@
-use block_builder::{block_builder::BlockBuilder, config::BlockBuilderConfig};
+use block_builder::block_builder::BlockBuilder;
 use common::{
-    db::{self, SafeState, TranslatorStore},
+    db::{self, KnownState, TranslatorStore},
     tracing::{init_tracing_with_extra_fields, TracingError},
     types::Chain,
 };
@@ -35,9 +35,8 @@ async fn run(
     let (builder_shutdown_tx, builder_shutdown_rx) = oneshot::channel();
     init_ctrl_c_handler(main_shutdown_tx);
 
-    // Initialize the DB
-    let (db, mut safe_state) = init_db(db_path).await?;
-    safe_state = None; // TODO SEQ-528 remove this (disables resume from db)
+    // Initialize the DB with the restore flag
+    let (db, safe_state) = init_db(db_path, config.restore_from_safe_state).await?;
 
     // Initialize ETH clients
     let sequencing_client: Arc<dyn RPCClient> = Arc::new(
@@ -53,9 +52,11 @@ async fn run(
 
     // Override start blocks if we're resuming from a database
     if let Some(state) = &safe_state {
-        config.sequencing.sequencing_start_block = state.sequencing_block.number;
-        config.settlement.settlement_start_block = state.settlement_block.number;
+        debug!(%state.slot, %state.sequencing_block, %state.settlement_block, "Resuming from known state in DB");
+        config.sequencing.sequencing_start_block = state.sequencing_block.number + 1;
+        config.settlement.settlement_start_block = state.settlement_block.number + 1;
     } else {
+        debug!("No known state found in DB, starting from configured start blocks");
         // Initial timestamp is only needed if we aren't resuming from db
         config.set_initial_timestamp(&settlement_client, &sequencing_client).await?;
     }
@@ -83,9 +84,16 @@ async fn run(
         metrics.ingestor_settlement,
     )
     .await?;
-    let (slotter, slot_rx) = Slotter::new(&config.slotter, safe_state, db, metrics.slotter);
-    let block_builder =
-        BlockBuilder::new(slot_rx, &config.block_builder, metrics.block_builder).await?;
+    let (slotter, slot_rx) = Slotter::new(&config.slotter, safe_state, db.clone(), metrics.slotter);
+    let block_builder = BlockBuilder::new(
+        slot_rx,
+        &config.block_builder,
+        config.datadir.as_str(),
+        config.slotter.slot_duration,
+        db,
+        metrics.block_builder,
+    )
+    .await?;
 
     // Start component tasks
     info!("Starting Metabased Translator");
@@ -104,29 +112,34 @@ async fn run(
     // Wait for either shutdown signal or task failure
     tokio::select! {
         _ = main_shutdown_rx => {
-            info!("Received shutdown signal");
             // Perform graceful shutdown
-            tokio::time::timeout(std::time::Duration::from_secs(5 * 60), async {
-                // 1. Stop ingestors first
-                info!("Shutting down ingestors...");
-                let _ = seq_shutdown_tx.send(());
-                let _ = settle_shutdown_tx.send(());
-                let _ = sequencing_handle.await;
-                let _ = settlement_handle.await;
+            info!("Received shutdown signal");
 
-                // 2. Stop slotter after ingestors are done
-                info!("Shutting down slotter...");
-                let _ = slotter_shutdown_tx.send(());
-                let _ = slotter_handle.await;
+            // 1. Stop ingestors first
+            info!("Shutting down ingestors...");
+            let _ = seq_shutdown_tx.send(());
+            let _ = settle_shutdown_tx.send(());
+            if let Err(e) = sequencing_handle.await {
+                error!("Error shutting down sequencing ingestor: {}", e);
+            }
+            if let Err(e) = settlement_handle.await {
+                error!("Error shutting down settlement ingestor: {}", e);
+            }
 
-                // 3. Finally stop block builder
-                info!("Shutting down block builder...");
-                let _ = builder_shutdown_tx.send(());
-                let _ = block_builder_handle.await;
-                info!("Metabased Translator shutdown complete");
-            })
-            .await
-            .map_err(|_| RuntimeError::Initialization("Shutdown timeout exceeded".into()))?;
+            // 2. Stop slotter after ingestors are done
+            info!("Shutting down slotter...");
+            let _ = slotter_shutdown_tx.send(());
+            if let Err(e) = slotter_handle.await {
+                error!("Error shutting down slotter: {}", e);
+            }
+
+            // 3. Finally stop block builder
+            info!("Shutting down block builder...");
+            let _ = builder_shutdown_tx.send(());
+            if let Err(e) = block_builder_handle.await {
+                error!("Error shutting down block builder: {}", e);
+            }
+            info!("Metabased Translator shutdown complete");
         }
         res = &mut sequencing_handle => {
             if let Err(e) = res {
@@ -170,10 +183,6 @@ fn main() -> Result<(), RuntimeError> {
 
     // Init the paths for the DB and Anvil state
     let db_path = format!("{}/db", base_config.datadir);
-    let anvil_state_path = format!("{}/anvil_state", base_config.datadir);
-    base_config.block_builder =
-        BlockBuilderConfig { anvil_state_path, ..base_config.block_builder };
-
     // Initiate the metrics registry
     let registry = Registry::default();
 
@@ -254,15 +263,24 @@ fn init_ctrl_c_handler(main_shutdown_tx: oneshot::Sender<()>) {
 
 async fn init_db(
     db_path: &str,
-) -> Result<(Box<dyn TranslatorStore + Send + Sync>, Option<SafeState>), RuntimeError> {
-    let db = Box::new(
+    restore_from_safe_state: bool,
+) -> Result<(Arc<dyn TranslatorStore + Send + Sync>, Option<KnownState>), RuntimeError> {
+    let db = Arc::new(
         db::RocksDbStore::new(db_path)
             .map_err(|e| RuntimeError::Initialization(format!("Failed to open DB: {e}")))?,
     );
-    let safe_state = db
-        .get_latest()
-        .await
-        .map_err(|e| RuntimeError::Initialization(format!("Failed to get latest state: {e}")))?;
+
+    let safe_state = if restore_from_safe_state {
+        debug!("Resuming from latest safe state");
+        db.get_safe_state().await.map_err(|e| {
+            RuntimeError::Initialization(format!("Failed to get latest safe state: {e}"))
+        })?
+    } else {
+        debug!("Resuming from latest unsafe state");
+        db.get_unsafe_state().await.map_err(|e| {
+            RuntimeError::Initialization(format!("Failed to get latest unsafe state: {e}"))
+        })?
+    };
 
     Ok((db, safe_state))
 }

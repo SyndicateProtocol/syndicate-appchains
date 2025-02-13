@@ -3,11 +3,11 @@
 use crate::{config::SlotterConfig, metrics::SlotterMetrics};
 use alloy::primitives::B256;
 use common::{
-    db::{DbError, SafeState, TranslatorStore},
+    db::{DbError, KnownState, TranslatorStore},
     types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotState},
 };
 use derivative::Derivative;
-use std::{cmp::Ordering, collections::VecDeque};
+use std::{cmp::Ordering, collections::VecDeque, sync::Arc};
 use thiserror::Error;
 use tokio::{
     select,
@@ -22,6 +22,9 @@ use tracing::{debug, error, info};
 /// A slot becomes safe if both chains have progressed `MAX_WAIT_SEC` seconds past the slot's
 /// timestamp
 const MAX_WAIT_SEC: u64 = 24 * 60 * 60;
+
+/// The first slot number to use
+const START_SLOT: u64 = 2;
 
 /// Polls and ingests blocks from an Ethereum chain
 ///
@@ -58,31 +61,31 @@ pub struct Slotter {
     sender: Sender<Slot>,
 
     #[derivative(Debug = "ignore")]
-    store: Box<dyn TranslatorStore + Send + Sync>,
+    store: Arc<dyn TranslatorStore + Send + Sync>,
 
     /// Metrics
     metrics: SlotterMetrics,
 }
-
-const START_SLOT: u64 = 2;
 
 impl Slotter {
     /// Creates a new [`Slotter`] that receives blocks from two chains and organizes them into
     /// slots.
     pub fn new(
         config: &SlotterConfig,
-        safe_state: Option<SafeState>,
-        store: Box<dyn TranslatorStore + Send + Sync>,
+        known_state: Option<KnownState>,
+        store: Arc<dyn TranslatorStore + Send + Sync>,
         metrics: SlotterMetrics,
     ) -> (Self, Receiver<Slot>) {
         let (slot_tx, slot_rx) = channel(100);
         let mut slots = VecDeque::new();
         let mut safe_timestamp = 0;
-        let (latest_sequencing_block, latest_settlement_block) = match safe_state {
-            Some(safe_state) => {
-                safe_timestamp = safe_state.slot.timestamp;
-                slots.push_front(safe_state.slot);
-                (Some(safe_state.sequencing_block), Some(safe_state.settlement_block))
+        let (latest_sequencing_block, latest_settlement_block) = match known_state {
+            Some(known_state) => {
+                if known_state.slot.state == SlotState::Safe {
+                    safe_timestamp = known_state.slot.timestamp;
+                }
+                slots.push_front(known_state.slot);
+                (Some(known_state.sequencing_block), Some(known_state.settlement_block))
             }
             None => {
                 slots.push_front(Slot::new(START_SLOT, config.start_slot_timestamp));
@@ -142,8 +145,8 @@ impl Slotter {
                     self.process_block(block, second_chain).await
                 }
                 _ = &mut shutdown_rx => {
-                    info!("Slotter stopped: {}", self);
                     drop(self.sender);
+                    info!("Slotter stopped");
                     return;
                 }
             };
@@ -359,7 +362,7 @@ impl Slotter {
             debug!(%slot, "Saving safe slot to DB");
             slot.state = SlotState::Safe;
             self.safe_timestamp = slot.timestamp;
-            self.store.save_slot(&slot).await?;
+            self.store.save_safe_slot(&slot).await?;
         }
 
         self.metrics.update_active_slots(self.slots.len());
@@ -429,20 +432,20 @@ impl Slotter {
         latest_slot_number: u64,
         latest_slot_timestamp: u64,
     ) -> Result<(), SlotterError> {
+        let block_timestamp = match chain {
+            Chain::Settlement => block_info.block.timestamp + self.settlement_delay,
+            Chain::Sequencing => block_info.block.timestamp,
+        };
         let (target_slot_number, target_timestamp) = calculate_slot_position(
             latest_slot_number,
             latest_slot_timestamp,
-            block_info.block.timestamp,
+            block_timestamp,
             self.slot_duration,
         )?;
 
         // Find the right position to insert the new slot
         for (idx, slot) in self.slots.iter_mut().enumerate() {
-            match block_slot_ordering(
-                block_info.block.timestamp,
-                slot.timestamp,
-                self.slot_duration,
-            ) {
+            match block_slot_ordering(block_timestamp, slot.timestamp, self.slot_duration) {
                 Ordering::Equal => {
                     debug!(%slot, "Found matching slot, adding block");
                     slot.push_block(block_info, chain);
@@ -486,6 +489,15 @@ impl Slotter {
         // timstamp in the past, which would be caught elsewhere
         Err(SlotterError::BlockTooOld {
             chain,
+            latest_sequencing_block: self
+                .latest_sequencing_block
+                .as_ref()
+                .map_or("none".to_string(), |b| b.to_string()),
+            latest_settlement_block: self
+                .latest_settlement_block
+                .as_ref()
+                .map_or("none".to_string(), |b| b.to_string()),
+            slots: self.slots.iter().map(|s| s.to_string()).collect::<Vec<String>>().join("| "),
             block_number: block_info.block.number,
             block_timestamp: block_info.block.timestamp,
         })
@@ -578,8 +590,15 @@ enum SlotterError {
     #[error("Failed to send slot through channel: {0}")]
     SlotSendError(#[from] SendError<Slot>),
 
-    #[error("Block timestamp {block_timestamp}, number {block_number} for {chain} chain is in the past - this should never happen")]
-    BlockTooOld { chain: Chain, block_number: u64, block_timestamp: u64 },
+    #[error("Block timestamp {block_timestamp}, number {block_number} for {chain} chain is in the past - this should never happen. Latest sequencing block: {latest_sequencing_block}, latest settlement block: {latest_settlement_block}, slots: {slots}")]
+    BlockTooOld {
+        slots: String,
+        latest_sequencing_block: String,
+        latest_settlement_block: String,
+        chain: Chain,
+        block_number: u64,
+        block_timestamp: u64,
+    },
 
     #[error("{chain} chain reorg detected. Current: #{current_block_number}, Received: #{received_block_number}")]
     ReorgDetected { chain: Chain, current_block_number: u64, received_block_number: u64 },
@@ -646,7 +665,7 @@ mod tests {
     fn create_slotter(config: &SlotterConfig) -> (Slotter, Receiver<Slot>) {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = SlotterMetrics::new(&mut metrics_state.registry);
-        let store = Box::new(RocksDbStore::new(test_path("slotter_db").as_str()).unwrap());
+        let store = Arc::new(RocksDbStore::new(test_path("slotter_db").as_str()).unwrap());
 
         let (slotter, slot_rx) = Slotter::new(config, None, store, metrics);
 
@@ -858,7 +877,7 @@ mod tests {
 
     #[tokio::test]
     #[traced_test]
-    async fn test_slotter_db_shutdown_and_resume() {
+    async fn test_slotter_db_shutdown_and_resume_safe() {
         const CHAN_CAPACITY: usize = 100;
         let (seq_tx, seq_rx) = channel(CHAN_CAPACITY);
         let (set_tx, set_rx) = channel(CHAN_CAPACITY);
@@ -869,7 +888,7 @@ mod tests {
 
         // Create a fresh DB for this test
         let db_path = test_path("slotter_db");
-        let store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
+        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
 
         // Start first slotter instance
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
@@ -923,8 +942,8 @@ mod tests {
         let (new_set_tx, new_settle_rx) = channel(CHAN_CAPACITY);
 
         // Create new store instance pointing to same DB, and get the latest state from the DB
-        let resumed_store = Box::new(RocksDbStore::new(db_path.as_str()).unwrap());
-        let resumed_state = resumed_store.get_latest().await.unwrap().unwrap();
+        let resumed_store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
+        let resumed_state = resumed_store.get_safe_state().await.unwrap().unwrap();
         assert_eq!(resumed_state.slot.number, START_SLOT + 2);
         assert_eq!(resumed_state.sequencing_block.number, 3);
         assert_eq!(resumed_state.settlement_block.number, 3);

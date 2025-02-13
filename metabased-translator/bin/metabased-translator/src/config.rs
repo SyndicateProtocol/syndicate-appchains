@@ -49,6 +49,9 @@ pub struct MetabasedConfig {
 
     #[command(flatten)]
     pub metrics: MetricsConfig,
+
+    #[arg(long, env = "RESTORE_FROM_SAFE_STATE", default_value = "false")]
+    pub restore_from_safe_state: bool,
 }
 
 impl MetabasedConfig {
@@ -120,6 +123,7 @@ impl Default for MetabasedConfig {
             sequencing: ingestor_config.clone().into(),
             settlement: ingestor_config.into(),
             metrics: MetricsConfig::default(),
+            restore_from_safe_state: false,
         }
     }
 }
