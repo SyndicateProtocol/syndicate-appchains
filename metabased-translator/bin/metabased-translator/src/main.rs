@@ -159,17 +159,15 @@ async fn run(
 }
 
 fn main() -> Result<(), RuntimeError> {
-    let mut base_config = match MetabasedConfig::initialize() {
-        Ok(config) => config,
-        Err(e) => {
-            eprintln!("Failed to initialize MetabasedConfig: {}", e);
-            std::process::exit(1);
-        }
-    };
-
+    let mut base_config = MetabasedConfig::initialize();
     let extra_fields = get_extra_fields_for_logging(base_config.clone());
     init_tracing_with_extra_fields(extra_fields)?;
+
     debug!("Base configuration {:?}", base_config);
+    if let Err(e) = base_config.validate() {
+        error!("Failed to initialize MetabasedConfig: {}", e);
+        std::process::exit(1);
+    };
 
     // Create and run async runtime
     let runtime =

@@ -66,10 +66,8 @@ pub struct MetabasedConfig {
 
 impl MetabasedConfig {
     /// Initializes the configuration by parsing CLI arguments and environment variables.
-    pub fn initialize() -> Result<Self, ConfigError> {
-        let config = <Self as Parser>::parse();
-        config.validate()?;
-        Ok(config)
+    pub fn initialize() -> Self {
+        <Self as Parser>::parse()
     }
 
     /// Validate MetabasedConfig
