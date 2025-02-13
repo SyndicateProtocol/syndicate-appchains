@@ -2,9 +2,14 @@
 //! consumer using a channel
 
 use crate::{config::ChainIngestorConfig, eth_client::RPCClient, metrics::IngestorMetrics};
-use common::types::{BlockAndReceipts, BlockTag, Chain};
+use alloy::rpc::types::BlockNumberOrTag;
+use common::types::{BlockAndReceipts, Chain};
 use eyre::{eyre, Error};
-use std::{sync::Arc, time::Duration};
+use std::{
+    cmp::{max, min},
+    sync::Arc,
+    time::Duration,
+};
 use tokio::sync::{
     mpsc::{channel, Receiver, Sender},
     oneshot,
@@ -45,7 +50,7 @@ impl Ingestor {
     ) -> Result<(Self, Receiver<BlockAndReceipts>), Error> {
         let (sender, receiver) = channel(config.buffer_size);
         let client_clone = client.clone();
-        let chain_head = client_clone.get_block_by_number(BlockTag::Latest).await?;
+        let chain_head = client_clone.get_block_by_number(BlockNumberOrTag::Latest).await?;
         Ok((
             Self {
                 chain,
@@ -59,30 +64,6 @@ impl Ingestor {
             },
             receiver,
         ))
-    }
-
-    /// Retrieves a block by its number.
-    ///
-    /// # Arguments
-    /// - `block_number`: The block number to retrieve.
-    ///
-    /// # Returns
-    /// The block and its receipts.
-    async fn get_block_and_receipts(&self, block_number: u64) -> Result<BlockAndReceipts, Error> {
-        let start_time = std::time::Instant::now();
-
-        let block_and_receipts = self.client.get_block_and_receipts(block_number).await?;
-        let duration = start_time.elapsed();
-
-        self.metrics.record_rpc_call(
-            self.chain,
-            "batch: eth_getBlockByNumber + eth_getBlockReceipts",
-            duration,
-        );
-
-        debug!("Got block: {:?}", block_and_receipts.block.number);
-
-        Ok(block_and_receipts)
     }
 
     /// Sends the retrieved block to the consumer and updates the current block number.
@@ -105,9 +86,7 @@ impl Ingestor {
     /// Starts the polling process.
     ///
     /// This asynchronous function continuously polls for new blocks and their receipts
-    /// at a specified interval (`self.polling_interval`). For each block, it fetches the
-    /// block and receipt data using `get_block_and_receipts` and sends the result to the
-    /// consumer via the provided channel.
+    /// at a specified interval (`self.polling_interval`).
     ///
     /// The polling process runs in an infinite loop, but it is designed to handle two
     /// key scenarios:
@@ -136,7 +115,7 @@ impl Ingestor {
                     break;
                 }
                 _ = interval.tick() => {
-                    self.poll_blocks().await;
+                    self.fetch_and_push_batch().await;
                 }
             }
         }
@@ -145,23 +124,15 @@ impl Ingestor {
         Ok(())
     }
 
-    async fn poll_blocks(&mut self) {
-        if self.should_fetch_batch() {
-            self.fetch_and_push_batch().await
-        } else {
-            self.fetch_and_push_single_block().await
-        }
-    }
-
-    const fn should_fetch_batch(&self) -> bool {
-        self.initial_chain_head.saturating_sub(self.current_block_number) >= self.syncing_batch_size
-    }
-
     async fn fetch_and_push_batch(&mut self) {
         let block_numbers = (self.current_block_number..
-            self.current_block_number + self.syncing_batch_size)
+            min(
+                max(self.initial_chain_head, self.current_block_number) + 1,
+                self.current_block_number + self.syncing_batch_size,
+            ))
             .collect();
-        match self.client.get_multiple_blocks_and_receipts(block_numbers).await {
+
+        match self.client.batch_get_blocks_and_receipts(block_numbers).await {
             Ok(blocks) => {
                 for block in blocks {
                     if let Err(err) = self.push_block_and_receipts(block).await {
@@ -171,20 +142,6 @@ impl Ingestor {
             }
             Err(err) => {
                 error!("Failed to fetch multiple blocks and receipts: {:?}", err);
-            }
-        }
-    }
-
-    async fn fetch_and_push_single_block(&mut self) {
-        match self.get_block_and_receipts(self.current_block_number).await {
-            Ok(block_and_receipts) => {
-                debug!("Pushing block: {:?}", block_and_receipts.block.number);
-                if let Err(err) = self.push_block_and_receipts(block_and_receipts).await {
-                    error!("Failed to push block and receipts: {:?}, retrying...", err);
-                }
-            }
-            Err(err) => {
-                error!("Failed to fetch block and receipts: {:?}, retrying...", err);
             }
         }
     }
@@ -198,9 +155,9 @@ mod tests {
         eth_client::{EthClient, RPCClientError},
         metrics::IngestorMetrics,
     };
-    use alloy::primitives::B256;
+    use alloy::{primitives::B256, rpc::types::BlockNumberOrTag};
     use async_trait::async_trait;
-    use common::types::{Block, BlockAndReceipts, BlockTag};
+    use common::types::{Block, BlockAndReceipts};
     use eyre::Result;
     use mockall::{mock, predicate::*};
     use prometheus_client::registry::Registry;
@@ -259,9 +216,8 @@ mod tests {
 
         #[async_trait]
         impl RPCClient for RPCClientMock {
-            async fn get_block_by_number(&self, block_number: BlockTag) -> Result<Block, RPCClientError>;
-            async fn get_block_and_receipts(&self, block_number: u64) -> Result<BlockAndReceipts, RPCClientError>;
-            async fn get_multiple_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
+            async fn get_block_by_number(&self, block_number: BlockNumberOrTag) -> Result<Block, RPCClientError>;
+            async fn batch_get_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
         }
     }
 
@@ -279,7 +235,7 @@ mod tests {
 
         let mut mock = MockRPCClientMock::new();
         mock.expect_get_block_by_number()
-            .with(eq(BlockTag::Latest))
+            .with(eq(BlockNumberOrTag::Latest))
             .times(1)
             .returning(move |_| Ok(Block { number: chain_head, ..Default::default() }));
 
@@ -295,7 +251,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_block_and_receipts() -> Result<(), Error> {
+    async fn test_push_block_and_receipts() -> Result<(), Error> {
         let start_block = 19486923;
         let polling_interval = Duration::from_secs(1);
 
@@ -375,7 +331,7 @@ mod tests {
         let mut mock_client = MockRPCClientMock::new();
 
         mock_client
-            .expect_get_multiple_blocks_and_receipts()
+            .expect_batch_get_blocks_and_receipts()
             .withf(move |block_numbers| block_numbers.len() == syncing_batch_size as usize)
             .times(1)
             .returning(move |block_numbers| {
@@ -383,8 +339,8 @@ mod tests {
             });
 
         mock_client
-            .expect_get_block_and_receipts()
-            .with(eq(chain_head))
+            .expect_batch_get_blocks_and_receipts()
+            .with(eq(vec![chain_head]))
             .returning(move |_| Err(RPCClientError::BlockNotFound(chain_head.to_string())));
 
         let client: Arc<dyn RPCClient> = Arc::new(mock_client);
@@ -422,23 +378,5 @@ mod tests {
         polling_handle.await?;
 
         Ok(())
-    }
-    #[tokio::test]
-    async fn test_should_fetch_batch() {
-        let ingestor = Ingestor {
-            chain: Chain::Sequencing,
-            client: Arc::new(MockRPCClientMock::new()),
-            current_block_number: 100,
-            initial_chain_head: 200,
-            syncing_batch_size: 50,
-            sender: channel(10).0,
-            polling_interval: Duration::from_secs(1),
-            metrics: IngestorMetrics::new(&mut Registry::default()),
-        };
-
-        assert!(ingestor.should_fetch_batch());
-
-        let ingestor = Ingestor { initial_chain_head: 140, ..ingestor };
-        assert!(!ingestor.should_fetch_batch());
     }
 }

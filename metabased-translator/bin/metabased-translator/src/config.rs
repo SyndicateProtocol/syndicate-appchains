@@ -3,9 +3,9 @@
 //! This module contains all possible configuration options for the Metabased Translator. Different
 //! crates each inherit a subset of these options to configure themselves
 
+use alloy::rpc::types::BlockNumberOrTag;
 use block_builder::config::BlockBuilderConfig;
 use clap::Parser;
-use common::types::BlockTag;
 use eyre::Result;
 use ingestor::{
     config::{ChainIngestorConfig, SequencingChainConfig, SettlementChainConfig},
@@ -64,12 +64,12 @@ impl MetabasedConfig {
         sequencing_client: &Arc<dyn RPCClient>,
     ) -> Result<(), ConfigError> {
         let seq_start_block = sequencing_client
-            .get_block_by_number(BlockTag::Number(self.sequencing.sequencing_start_block))
+            .get_block_by_number(BlockNumberOrTag::Number(self.sequencing.sequencing_start_block))
             .await
             .map_err(ConfigError::RPCClient)?;
 
         let set_start_block = settlement_client
-            .get_block_by_number(BlockTag::Number(self.settlement.settlement_start_block))
+            .get_block_by_number(BlockNumberOrTag::Number(self.settlement.settlement_start_block))
             .await
             .map_err(ConfigError::RPCClient)?;
 
@@ -128,8 +128,9 @@ impl Default for MetabasedConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy::rpc::types::BlockNumberOrTag;
     use async_trait::async_trait;
-    use common::types::{Block, BlockAndReceipts, BlockTag};
+    use common::types::{Block, BlockAndReceipts};
     use eyre::Result;
     use mockall::{mock, predicate::*};
     use serial_test::serial;
@@ -248,9 +249,8 @@ mod tests {
 
         #[async_trait]
         impl RPCClient for RPCClientMock {
-            async fn get_block_by_number(&self, block_number: BlockTag) -> Result<Block, RPCClientError>;
-            async fn get_block_and_receipts(&self, block_number: u64) -> Result<BlockAndReceipts, RPCClientError>;
-            async fn get_multiple_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
+            async fn get_block_by_number(&self, block_number: BlockNumberOrTag) -> Result<Block, RPCClientError>;
+            async fn batch_get_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
         }
     }
 
@@ -265,13 +265,13 @@ mod tests {
 
         mock_settlement_client
             .expect_get_block_by_number()
-            .with(eq(BlockTag::Number(100)))
+            .with(eq(BlockNumberOrTag::Number(100)))
             .times(1)
             .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
 
         mock_sequencing_client
             .expect_get_block_by_number()
-            .with(eq(BlockTag::Number(200)))
+            .with(eq(BlockNumberOrTag::Number(200)))
             .times(1)
             .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
 
@@ -296,12 +296,12 @@ mod tests {
 
         mock_settlement_client
             .expect_get_block_by_number()
-            .with(eq(BlockTag::Number(100)))
+            .with(eq(BlockNumberOrTag::Number(100)))
             .times(1)
             .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
         mock_sequencing_client
             .expect_get_block_by_number()
-            .with(eq(BlockTag::Number(200)))
+            .with(eq(BlockNumberOrTag::Number(200)))
             .times(1)
             .returning(|_| Ok(Block { timestamp: 5000, ..Default::default() }));
 

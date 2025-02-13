@@ -10,6 +10,7 @@ name = "metabased-translator"
 path = "src/main.rs"
 
 [dependencies]
+alloy             = { workspace = true }
 block-builder     = { workspace = true }
 clap              = { workspace = true }
 common            = { workspace = true }
@@ -17,11 +18,11 @@ eyre              = { workspace = true }
 ingestor          = { workspace = true }
 metrics           = { workspace = true }
 prometheus-client = { workspace = true }
+serde_json        = { workspace = true }
 slotter           = { workspace = true }
 thiserror         = { workspace = true }
 tokio             = { workspace = true, features = ["signal"] }
 tracing           = { workspace = true }
-serde_json        = { workspace = true }
 
 [dev-dependencies]
 async-trait = { workspace = true }

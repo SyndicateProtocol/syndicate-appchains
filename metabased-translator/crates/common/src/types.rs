@@ -414,45 +414,6 @@ where
     serializer.serialize_str(&format!("0x{:x}", num))
 }
 
-/// Block tags
-#[derive(Debug, PartialEq, Eq)]
-pub enum BlockTag {
-    /// The most recent block in the canonical chain observed by the client, this block may be
-    /// re-orged out of the canonical chain even under healthy/normal conditions.
-    Latest,
-    /// The lowest numbered block the client has available. Intuitively, you can think of this as
-    /// the first block created.
-    Earliest,
-    /// A sample next block built by the client on top of latest and containing the set of
-    /// transactions usually taken from local mempool. Intuitively, you can think of these as
-    /// blocks that have not been mined yet.
-    Pending,
-    /// The most recent crypto-economically secure block, cannot be re-orged outside of manual
-    /// intervention driven by community coordination. Intuitively, this block is “unlikely” to be
-    /// re-orged.
-    Safe,
-    /// The most recent crypto-economically secure block, that has been accepted by >2/3 of
-    /// validators. Cannot be re-orged outside of manual intervention driven by community
-    /// coordination. Intuitively, this block is very unlikely to be re-orged.
-    Finalized,
-    /// Block number
-    Number(u64),
-}
-
-impl BlockTag {
-    /// Converts a `BlockTag` to a valid rpc parameter
-    pub fn to_rpc_param(&self) -> String {
-        match self {
-            Self::Latest => "latest".to_string(),
-            Self::Earliest => "earliest".to_string(),
-            Self::Pending => "pending".to_string(),
-            Self::Safe => "safe".to_string(),
-            Self::Finalized => "finalized".to_string(),
-            Self::Number(num) => format!("0x{:x}", num),
-        }
-    }
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
