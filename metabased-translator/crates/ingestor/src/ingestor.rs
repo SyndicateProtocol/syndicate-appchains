@@ -138,38 +138,57 @@ impl Ingestor {
                     break;
                 }
                 _ = interval.tick() => {
-                 if self.initial_chain_head.saturating_sub(self.current_block_number) >= self.syncing_batch_size {
-                        let block_numbers: Vec<u64> = (self.current_block_number..self.current_block_number + self.syncing_batch_size).collect();
-                        match self.client.get_multiple_blocks_and_receipts(block_numbers).await {
-                            Ok(blocks) => {
-                                for block in blocks {
-                                    if let Err(err) = self.push_block_and_receipts(block).await {
-                                        error!("Failed to push block and receipts: {:?}, retrying...", err);
-                                    }
-                                }
-                            }
-                            Err(err) => {
-                                error!("Failed to fetch multiple blocks and receipts: {:?}, retrying...", err);
-                            }
-                        }
-                    } else {
-                    match self.get_block_and_receipts(self.current_block_number).await {
-                        Ok(block_and_receipts) => {
-                            debug!("Pushing block: {:?}", block_and_receipts.block.number);
-                            if let Err(err) = self.push_block_and_receipts(block_and_receipts).await {
-                                error!("Failed to push block and receipts: {:?}, retrying...", err);
-                            }
-                        }
-                        Err(err) => {
-                            debug!("Failed to fetch block and receipts: {:?}, retrying...", err);
-                        }
-                    }}
+                    self.poll_blocks().await;
                 }
             }
         }
 
         debug!("Polling stopped");
         Ok(())
+    }
+
+    async fn poll_blocks(&mut self) {
+        if self.should_fetch_batch() {
+            self.fetch_and_push_batch().await
+        } else {
+            self.fetch_and_push_single_block().await
+        }
+    }
+
+    const fn should_fetch_batch(&self) -> bool {
+        self.initial_chain_head.saturating_sub(self.current_block_number) >= self.syncing_batch_size
+    }
+
+    async fn fetch_and_push_batch(&mut self) {
+        let block_numbers = (self.current_block_number..
+            self.current_block_number + self.syncing_batch_size)
+            .collect();
+        match self.client.get_multiple_blocks_and_receipts(block_numbers).await {
+            Ok(blocks) => {
+                for block in blocks {
+                    if let Err(err) = self.push_block_and_receipts(block).await {
+                        error!("Failed to push block and receipts: {:?}, retrying...", err);
+                    }
+                }
+            }
+            Err(err) => {
+                error!("Failed to fetch multiple blocks and receipts: {:?}", err);
+            }
+        }
+    }
+
+    async fn fetch_and_push_single_block(&mut self) {
+        match self.get_block_and_receipts(self.current_block_number).await {
+            Ok(block_and_receipts) => {
+                debug!("Pushing block: {:?}", block_and_receipts.block.number);
+                if let Err(err) = self.push_block_and_receipts(block_and_receipts).await {
+                    error!("Failed to push block and receipts: {:?}, retrying...", err);
+                }
+            }
+            Err(err) => {
+                error!("Failed to fetch block and receipts: {:?}, retrying...", err);
+            }
+        }
     }
 }
 
@@ -405,5 +424,23 @@ mod tests {
         polling_handle.await?;
 
         Ok(())
+    }
+    #[tokio::test]
+    async fn test_should_fetch_batch() {
+        let ingestor = Ingestor {
+            chain: Chain::Sequencing,
+            client: Arc::new(MockRPCClientMock::new()),
+            current_block_number: 100,
+            initial_chain_head: 200,
+            syncing_batch_size: 50,
+            sender: channel(10).0,
+            polling_interval: Duration::from_secs(1),
+            metrics: IngestorMetrics::new(&mut Registry::default()),
+        };
+
+        assert!(ingestor.should_fetch_batch());
+
+        let ingestor = Ingestor { initial_chain_head: 140, ..ingestor };
+        assert!(!ingestor.should_fetch_batch());
     }
 }

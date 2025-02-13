@@ -194,8 +194,6 @@ impl RPCClient for EthClient {
             results.push(BlockAndReceipts { block, receipts });
         }
 
-        info!("get_blocks_and_receipts response: {:?}", results.len());
-
         Ok(results)
     }
 }
