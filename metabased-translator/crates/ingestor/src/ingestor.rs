@@ -138,7 +138,7 @@ impl Ingestor {
                     break;
                 }
                 _ = interval.tick() => {
-                 if self.initial_chain_head.saturating_sub(self.current_block_number) > self.syncing_batch_size {
+                 if self.initial_chain_head.saturating_sub(self.current_block_number) >= self.syncing_batch_size {
                         let block_numbers: Vec<u64> = (self.current_block_number..self.current_block_number + self.syncing_batch_size).collect();
                         match self.client.get_multiple_blocks_and_receipts(block_numbers).await {
                             Ok(blocks) => {
@@ -183,7 +183,7 @@ mod tests {
     };
     use alloy::primitives::B256;
     use async_trait::async_trait;
-    use common::types::{Block, BlockAndReceipts};
+    use common::types::{Block, BlockAndReceipts, BlockTag};
     use eyre::Result;
     use mockall::{mock, predicate::*};
     use prometheus_client::registry::Registry;
@@ -337,6 +337,69 @@ mod tests {
         });
 
         tokio::time::sleep(Duration::from_millis(50)).await;
+
+        let _ = shutdown_tx.send(());
+        polling_handle.await?;
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_start_polling_batching() -> Result<(), Error> {
+        let start_block = 100;
+        let syncing_batch_size = 5;
+        let chain_head = start_block + 5;
+        let polling_interval = Duration::from_millis(10);
+
+        let (sender, mut receiver) = channel(10);
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = IngestorMetrics::new(&mut metrics_state.registry);
+
+        let mut mock_client = MockRPCClientMock::new();
+
+        mock_client
+            .expect_get_multiple_blocks_and_receipts()
+            .withf(move |block_numbers| block_numbers.len() == syncing_batch_size as usize)
+            .times(1)
+            .returning(move |block_numbers| {
+                Ok(block_numbers.iter().map(|&num| get_dummy_block_and_receipts(num)).collect())
+            });
+
+        mock_client
+            .expect_get_block_and_receipts()
+            .with(eq(chain_head))
+            .returning(move |_| Err(RPCClientError::BlockNotFound(chain_head.to_string())));
+
+        let client: Arc<dyn RPCClient> = Arc::new(mock_client);
+        let ingestor = Ingestor {
+            chain: Chain::Sequencing,
+            client,
+            current_block_number: start_block,
+            initial_chain_head: chain_head,
+            syncing_batch_size,
+            sender,
+            polling_interval,
+            metrics,
+        };
+
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let polling_handle = tokio::spawn(async move {
+            let result = ingestor.start_polling(shutdown_rx).await;
+            assert!(result.is_ok(), "Polling task failed: {:?}", result);
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+
+        let mut received_blocks = Vec::new();
+        while let Ok(block) = receiver.try_recv() {
+            received_blocks.push(block.block.number);
+        }
+
+        assert_eq!(received_blocks.len(), syncing_batch_size as usize);
+        assert_eq!(
+            received_blocks,
+            (start_block..start_block + syncing_batch_size).collect::<Vec<_>>()
+        );
 
         let _ = shutdown_tx.send(());
         polling_handle.await?;
