@@ -62,9 +62,14 @@ pub struct BlockBuilderConfig {
     pub anvil_state_interval: u64,
 
     // number of states to be saved on disk
-    // default is 100
-    #[arg(long, env = "BLOCK_BUILDER_ANVIL_MAX_PERSISTED_STATES", default_value_t = 100)]
+    // default is 1000
+    #[arg(long, env = "BLOCK_BUILDER_ANVIL_MAX_PERSISTED_STATES", default_value_t = 1000)]
     pub max_persisted_states: u64,
+
+    // number of blocks to keep in memory (must set max_persisted_states to 0)
+    // default is 1000
+    #[arg(long, env = "BLOCK_BUILDER_ANVIL_PRUNE_HISTORY", default_value_t = 1000)]
+    pub prune_history: u64,
 }
 
 /// Possible target rollup types for the [`block-builder`]
@@ -121,6 +126,7 @@ impl Debug for BlockBuilderConfig {
             .field("signer_key", &"<private>") // Skip showing private key
             .field("anvil_state_interval", &self.anvil_state_interval)
             .field("anvil_max_persisted_states", &self.max_persisted_states)
+            .field("anvil_prune_history", &self.prune_history)
             .finish()
     }
 }
@@ -221,7 +227,8 @@ mod tests {
             "0x0000000000000000000000000000000000000000"
         );
         assert_eq!(config.anvil_state_interval, 300);
-        assert_eq!(config.max_persisted_states, 100);
+        assert_eq!(config.max_persisted_states, 1000);
+        assert_eq!(config.prune_history, 1000);
     }
 
     #[test]
