@@ -113,7 +113,7 @@ impl MetaChainProvider {
         ];
 
         let state_interval = config.anvil_state_interval.to_string();
-        let prune_history = config.anvil_prune_history.to_string();
+        let max_persisted_states = config.max_persisted_states.to_string();
         let anvil_state_path = format!("{}/anvil_state", datadir);
 
         if !datadir.is_empty() {
@@ -121,8 +121,8 @@ impl MetaChainProvider {
             args.push(&anvil_state_path);
             args.push("--state-interval");
             args.push(&state_interval);
-            args.push("--prune-history");
-            args.push(&prune_history);
+            args.push("--max-persisted-states");
+            args.push(&max_persisted_states);
         }
 
         let anvil = Anvil::new().port(port).chain_id(MCHAIN_ID).args(args).try_spawn()?;

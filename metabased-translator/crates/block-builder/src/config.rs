@@ -57,12 +57,14 @@ pub struct BlockBuilderConfig {
     pub inbox_address: Address,
 
     // interval at which anvil saves state to disk (in seconds)
-    #[arg(long, env = "BLOCK_BUILDER_ANVIL_STATE_INTERVAL", default_value_t = 1)]
+    // default is 300 seconds (5 minutes)
+    #[arg(long, env = "BLOCK_BUILDER_ANVIL_STATE_INTERVAL", default_value_t = 300)]
     pub anvil_state_interval: u64,
 
-    // number of states to be kept in memory by anvil
-    #[arg(long, env = "BLOCK_BUILDER_ANVIL_PRUNE_HISTORY", default_value_t = 50)]
-    pub anvil_prune_history: u64,
+    // number of states to be saved on disk
+    // default is 100
+    #[arg(long, env = "BLOCK_BUILDER_ANVIL_MAX_PERSISTED_STATES", default_value_t = 100)]
+    pub max_persisted_states: u64,
 }
 
 /// Possible target rollup types for the [`block-builder`]
@@ -118,7 +120,7 @@ impl Debug for BlockBuilderConfig {
             .field("inbox_address", &self.inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
             .field("anvil_state_interval", &self.anvil_state_interval)
-            .field("anvil_prune_history", &self.anvil_prune_history)
+            .field("anvil_max_persisted_states", &self.max_persisted_states)
             .finish()
     }
 }
@@ -218,8 +220,8 @@ mod tests {
             config.sequencing_contract_address.to_string(),
             "0x0000000000000000000000000000000000000000"
         );
-        assert_eq!(config.anvil_state_interval, 1);
-        assert_eq!(config.anvil_prune_history, 50);
+        assert_eq!(config.anvil_state_interval, 300);
+        assert_eq!(config.max_persisted_states, 100);
     }
 
     #[test]
