@@ -7,6 +7,7 @@ pub mod accesscontrol;
 pub mod addbatchtransactionstometabasedsequencerchaincontract;
 pub mod addressstructuredlinkedlist;
 pub mod agentapplication;
+pub mod idreamsequencer;
 pub mod agentclaimnft;
 pub mod idreamagentnft;
 pub mod agentvalidationmodule;
