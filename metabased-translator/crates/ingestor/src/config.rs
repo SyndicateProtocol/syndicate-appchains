@@ -195,6 +195,8 @@ pub enum ConfigError {
     InvalidBufferSize(String),
     #[error("Empty rpc url")]
     EmptyRpcUrl(),
+    #[error("Invalid batch size: {0}")]
+    InvalidBatchSize(String),
 }
 
 // uses clap defaults
@@ -279,6 +281,14 @@ impl ChainIngestorConfig {
 
         if self.rpc_url.is_empty() {
             return Err(ConfigError::EmptyRpcUrl());
+        }
+
+        // See docs for more context https://docs.alchemy.com/reference/batch-requests
+        if self.syncing_batch_size > 1000 {
+            return Err(ConfigError::InvalidBatchSize(format!(
+                "Batch size must not be greater than 1000, found: {}",
+                self.syncing_batch_size
+            )));
         }
 
         Ok(())

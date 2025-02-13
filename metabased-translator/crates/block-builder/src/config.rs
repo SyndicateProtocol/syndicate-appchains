@@ -179,12 +179,6 @@ impl BlockBuilderConfig {
             }
         }
 
-        if self.anvil_state_path.is_empty() {
-            return Err(ConfigError::InvalidAnvilStatePath(
-                "Anvil state path cannot be empty".to_string(),
-            ));
-        }
-
         Ok(())
     }
 }

@@ -12,6 +12,7 @@ use common::types::{Block, BlockAndReceipts, Receipt};
 use eyre::eyre;
 use std::fmt::Debug;
 use thiserror::Error;
+use tracing::warn;
 use url::Url;
 
 /// Errors that can occur while interacting with the Ethereum RPC client.
@@ -132,11 +133,21 @@ impl RPCClient for EthClient {
             let block_fut = batch
                 .add_call("eth_getBlockByNumber", &(block_number_hex.clone(), true))
                 .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
-                .map_resp(|resp: Block| resp);
+                .map_resp(move |resp: Option<Block>| {
+                    if resp.is_none() {
+                        warn!("Block not available for number: {}", block_number.clone());
+                    }
+                    resp
+                });
             let receipt_fut = batch
                 .add_call("eth_getBlockReceipts", &[block_number_hex])
                 .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
-                .map_resp(|resp: Vec<Receipt>| resp);
+                .map_resp(|resp: Option<Vec<Receipt>>| {
+                    if resp.is_none() {
+                        warn!("Receipts not available for block number: {}", block_number.clone());
+                    }
+                    resp
+                });
 
             block_futures.push(block_fut);
             receipt_futures.push(receipt_fut);
@@ -146,9 +157,12 @@ impl RPCClient for EthClient {
 
         let mut results = Vec::new();
         for (block_fut, receipt_fut) in block_futures.into_iter().zip(receipt_futures.into_iter()) {
-            let (block, receipts) = tokio::try_join!(block_fut, receipt_fut)
+            let (block_opt, receipts_opt) = tokio::try_join!(block_fut, receipt_fut)
                 .map_err(|e| RPCClientError::RpcError(eyre!(e)))?;
-            results.push(BlockAndReceipts { block, receipts });
+
+            if let (Some(block), Some(receipts)) = (block_opt, receipts_opt) {
+                results.push(BlockAndReceipts { block, receipts });
+            }
         }
 
         Ok(results)

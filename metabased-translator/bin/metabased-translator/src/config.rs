@@ -26,6 +26,18 @@ pub enum ConfigError {
 
     #[error("Failed to fetch block data: {0}")]
     RPCClient(#[from] RPCClientError),
+
+    #[error("Block builder configuration error: {0}")]
+    BlockBuilder(#[from] block_builder::config::ConfigError),
+
+    #[error("Slotter configuration error: {0}")]
+    Slotter(#[from] slotter::config::ConfigError),
+
+    #[error("Ingestor chain configuration error: {0}")]
+    Ingestor(#[from] ingestor::config::ConfigError),
+
+    #[error("Metrics configuration error: {0}")]
+    Metrics(#[from] metrics::config::ConfigError),
 }
 
 /// Common config stuct for the Metabased Translator. This contains all possible config options
@@ -54,8 +66,20 @@ pub struct MetabasedConfig {
 
 impl MetabasedConfig {
     /// Initializes the configuration by parsing CLI arguments and environment variables.
-    pub fn initialize() -> Self {
-        <Self as Parser>::parse()
+    pub fn initialize() -> Result<Self, ConfigError> {
+        let config = <Self as Parser>::parse();
+        config.validate()?;
+        Ok(config)
+    }
+
+    /// Validate MetabasedConfig
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        self.block_builder.validate().map_err(ConfigError::BlockBuilder)?;
+        self.slotter.validate().map_err(ConfigError::Slotter)?;
+        self.sequencing.validate().map_err(ConfigError::Ingestor)?;
+        self.settlement.validate().map_err(ConfigError::Ingestor)?;
+        self.metrics.validate().map_err(ConfigError::Metrics)?;
+        Ok(())
     }
 
     pub async fn set_initial_timestamp(
