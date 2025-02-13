@@ -3,6 +3,7 @@
 //! This module contains all possible configuration options for the Metabased Translator. Different
 //! crates each inherit a subset of these options to configure themselves
 
+use alloy::rpc::types::BlockNumberOrTag;
 use block_builder::config::BlockBuilderConfig;
 use clap::Parser;
 use eyre::Result;
@@ -25,6 +26,18 @@ pub enum ConfigError {
 
     #[error("Failed to fetch block data: {0}")]
     RPCClient(#[from] RPCClientError),
+
+    #[error("Block builder configuration error: {0}")]
+    BlockBuilder(#[from] block_builder::config::ConfigError),
+
+    #[error("Slotter configuration error: {0}")]
+    Slotter(#[from] slotter::config::ConfigError),
+
+    #[error("Ingestor chain configuration error: {0}")]
+    Ingestor(#[from] ingestor::config::ConfigError),
+
+    #[error("Metrics configuration error: {0}")]
+    Metrics(#[from] metrics::config::ConfigError),
 }
 
 /// Common config stuct for the Metabased Translator. This contains all possible config options
@@ -60,18 +73,28 @@ impl MetabasedConfig {
         <Self as Parser>::parse()
     }
 
+    /// Validate MetabasedConfig
+    pub fn validate(&self) -> Result<(), ConfigError> {
+        self.block_builder.validate().map_err(ConfigError::BlockBuilder)?;
+        self.slotter.validate().map_err(ConfigError::Slotter)?;
+        self.sequencing.validate().map_err(ConfigError::Ingestor)?;
+        self.settlement.validate().map_err(ConfigError::Ingestor)?;
+        self.metrics.validate().map_err(ConfigError::Metrics)?;
+        Ok(())
+    }
+
     pub async fn set_initial_timestamp(
         &mut self,
         settlement_client: &Arc<dyn RPCClient>,
         sequencing_client: &Arc<dyn RPCClient>,
     ) -> Result<(), ConfigError> {
         let seq_start_block = sequencing_client
-            .get_block_by_number(self.sequencing.sequencing_start_block)
+            .get_block_by_number(BlockNumberOrTag::Number(self.sequencing.sequencing_start_block))
             .await
             .map_err(ConfigError::RPCClient)?;
 
         let set_start_block = settlement_client
-            .get_block_by_number(self.settlement.settlement_start_block)
+            .get_block_by_number(BlockNumberOrTag::Number(self.settlement.settlement_start_block))
             .await
             .map_err(ConfigError::RPCClient)?;
 
@@ -131,6 +154,7 @@ impl Default for MetabasedConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy::rpc::types::BlockNumberOrTag;
     use async_trait::async_trait;
     use common::types::{Block, BlockAndReceipts};
     use eyre::Result;
@@ -251,9 +275,8 @@ mod tests {
 
         #[async_trait]
         impl RPCClient for RPCClientMock {
-            async fn get_block_by_number(&self, block_number: u64) -> Result<Block, RPCClientError>;
-            async fn get_block_and_receipts(&self, block_number: u64) -> Result<BlockAndReceipts, RPCClientError>;
-
+            async fn get_block_by_number(&self, block_number: BlockNumberOrTag) -> Result<Block, RPCClientError>;
+            async fn batch_get_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
         }
     }
 
@@ -268,13 +291,13 @@ mod tests {
 
         mock_settlement_client
             .expect_get_block_by_number()
-            .with(eq(100))
+            .with(eq(BlockNumberOrTag::Number(100)))
             .times(1)
             .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
 
         mock_sequencing_client
             .expect_get_block_by_number()
-            .with(eq(200))
+            .with(eq(BlockNumberOrTag::Number(200)))
             .times(1)
             .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
 
@@ -299,12 +322,12 @@ mod tests {
 
         mock_settlement_client
             .expect_get_block_by_number()
-            .with(eq(100))
+            .with(eq(BlockNumberOrTag::Number(100)))
             .times(1)
             .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
         mock_sequencing_client
             .expect_get_block_by_number()
-            .with(eq(200))
+            .with(eq(BlockNumberOrTag::Number(200)))
             .times(1)
             .returning(|_| Ok(Block { timestamp: 5000, ..Default::default() }));
 

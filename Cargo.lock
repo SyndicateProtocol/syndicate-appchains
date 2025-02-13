@@ -2355,6 +2355,7 @@ dependencies = [
  "common",
  "eyre",
  "humantime",
+ "mockall",
  "prometheus-client",
  "thiserror 2.0.11",
  "tokio",
@@ -2697,6 +2698,7 @@ dependencies = [
 name = "metabased-translator"
 version = "0.1.0"
 dependencies = [
+ "alloy",
  "async-trait",
  "block-builder",
  "clap",
