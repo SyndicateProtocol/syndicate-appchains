@@ -221,7 +221,7 @@ impl MetaChainProvider {
                 "EnableArbOS": true,
                 "AllowDebugPrecompiles": false,
                 "DataAvailabilityCommittee": false,
-                "InitialArbOSVersion": 10,
+                "InitialArbOSVersion": 32,
                 "InitialChainOwner": "{zero}",
                 "GenesisBlockNum": 0
               }}
