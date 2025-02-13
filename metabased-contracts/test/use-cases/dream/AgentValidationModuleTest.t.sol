@@ -70,18 +70,35 @@ contract AgentValidationModuleTest is Test {
     }
 
     function test_IsAllowedForApprovedAgent() public {
+        address dreamSequencer = makeAddr("dreamSequencer");
         // Add an agent and approve them
         vm.startPrank(admin);
-        agentApplication.addApplicant("Test Agent", agent, "", true);
+        uint256 applicantId = agentApplication.addApplicant("Test Agent", agent, "");
+
+        // Mock the Dream Sequencer contract
+        vm.etch(dreamSequencer, hex"00");
+        vm.mockCall(dreamSequencer, abi.encodeWithSignature("addAllowedMinter(address)", agent), abi.encode());
+        agentApplication.setDreamSequencer(dreamSequencer);
+        agentApplication.approveApplicant(applicantId);
         vm.stopPrank();
 
         assertTrue(validationModule.isAllowed(agent));
     }
 
-    function test_IsAllowedForNonApprovedAgent() public {
-        // Add an agent but don't approve them
+    function test_IsAllowedForDeniedAgent() public {
+        // Add an agent and deny them
         vm.startPrank(admin);
-        agentApplication.addApplicant("Test Agent", agent, "", false);
+        uint256 applicantId = agentApplication.addApplicant("Test Agent", agent, "");
+        agentApplication.denyApplicant(applicantId);
+        vm.stopPrank();
+
+        assertFalse(validationModule.isAllowed(agent));
+    }
+
+    function test_IsAllowedForPendingAgent() public {
+        // Add an agent (defaults to pending)
+        vm.startPrank(admin);
+        agentApplication.addApplicant("Test Agent", agent, "");
         vm.stopPrank();
 
         assertFalse(validationModule.isAllowed(agent));

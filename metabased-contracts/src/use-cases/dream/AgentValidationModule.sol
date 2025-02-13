@@ -4,6 +4,9 @@ pragma solidity 0.8.25;
 import {PermissionModule} from "../../interfaces/PermissionModule.sol";
 import {AgentApplication} from "./AgentApplication.sol";
 
+/// @title AgentValidationModule
+/// @notice Validates Dream agent permissions for transaction submission
+/// @dev Integrates with AgentApplication contract to check if an agent is approved to submit transactions
 contract AgentValidationModule is PermissionModule {
     AgentApplication public immutable agentApplication;
     address public admin;
@@ -42,18 +45,7 @@ contract AgentValidationModule is PermissionModule {
     /// @param proposer The address attempting to submit the transaction
     /// @return bool indicating if the transaction is allowed
     function isAllowed(address proposer) external view override returns (bool) {
-        for (uint256 i = 0; i < agentApplication.applicantCount(); i++) {
-            (
-                address agentAddress,
-                bool isPermitted,
-                , // name
-                    // additionalData
-            ) = agentApplication.getApplicant(i);
-
-            if (agentAddress == proposer && isPermitted) {
-                return true;
-            }
-        }
-        return false;
+        if (proposer == address(0)) return false;
+        return agentApplication.isPermittedByAddress(proposer);
     }
 }
