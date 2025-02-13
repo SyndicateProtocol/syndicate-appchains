@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {Test} from "forge-std/Test.sol";
-import {AgentApplication} from "src/use-cases/dream/AgentApplication.sol";
+import {AgentApplication, IMetabasedSequencerChain} from "src/use-cases/dream/AgentApplication.sol";
 import {AgentValidationModule} from "src/use-cases/dream/AgentValidationModule.sol";
 
 contract AgentValidationModuleTest is Test {
@@ -12,6 +12,11 @@ contract AgentValidationModuleTest is Test {
     address public admin;
     address public agent;
     address public nonAgent;
+    address public sequencerChain;
+    address public agentClaimNFTOwner;
+    address public agentClaimNFTAddress;
+
+    bytes constant TEST_DATA = "test data";
 
     event AdminTransferred(address indexed previousAdmin, address indexed newAdmin);
 
@@ -19,11 +24,30 @@ contract AgentValidationModuleTest is Test {
         admin = makeAddr("admin");
         agent = makeAddr("agent");
         nonAgent = makeAddr("nonAgent");
+        sequencerChain = makeAddr("sequencerChain");
+        agentClaimNFTOwner = makeAddr("agentClaimNFTOwner");
+        agentClaimNFTAddress = makeAddr("agentClaimNFTAddress");
+
+        // Mock the sequencer chain
+        vm.etch(sequencerChain, hex"00");
 
         vm.startPrank(admin);
-        agentApplication = new AgentApplication(admin);
+        agentApplication = new AgentApplication(admin, sequencerChain, agentClaimNFTOwner, agentClaimNFTAddress);
         validationModule = new AgentValidationModule(admin, address(agentApplication));
         vm.stopPrank();
+    }
+
+    function _mockSequencerCall(address agentAddress) internal {
+        bytes memory grantCalldata = abi.encodeWithSignature("grantClaimPermission(address)", agentAddress);
+        bytes memory expectedCalldata = abi.encodePacked(
+            agentClaimNFTOwner, agentClaimNFTAddress, uint256(0), uint256(grantCalldata.length), grantCalldata
+        );
+
+        vm.mockCall(
+            sequencerChain,
+            abi.encodeWithSelector(IMetabasedSequencerChain.processTransaction.selector, expectedCalldata),
+            ""
+        );
     }
 
     function test_Constructor() public view {
@@ -70,35 +94,21 @@ contract AgentValidationModuleTest is Test {
     }
 
     function test_IsAllowedForApprovedAgent() public {
-        address dreamSequencer = makeAddr("dreamSequencer");
-        // Add an agent and approve them
+        // Approve an agent
         vm.startPrank(admin);
-        uint256 applicantId = agentApplication.addApplicant("Test Agent", agent, "");
-
-        // Mock the Dream Sequencer contract
-        vm.etch(dreamSequencer, hex"00");
-        vm.mockCall(dreamSequencer, abi.encodeWithSignature("addAllowedMinter(address)", agent), abi.encode());
-        agentApplication.setDreamSequencer(dreamSequencer);
-        agentApplication.approveApplicant(applicantId);
+        _mockSequencerCall(agent);
+        agentApplication.approveApplicant(agent, TEST_DATA);
         vm.stopPrank();
 
         assertTrue(validationModule.isAllowed(agent));
     }
 
     function test_IsAllowedForDeniedAgent() public {
-        // Add an agent and deny them
+        // First approve then deny an agent
         vm.startPrank(admin);
-        uint256 applicantId = agentApplication.addApplicant("Test Agent", agent, "");
+        _mockSequencerCall(agent);
+        uint256 applicantId = agentApplication.approveApplicant(agent, TEST_DATA);
         agentApplication.denyApplicant(applicantId);
-        vm.stopPrank();
-
-        assertFalse(validationModule.isAllowed(agent));
-    }
-
-    function test_IsAllowedForPendingAgent() public {
-        // Add an agent (defaults to pending)
-        vm.startPrank(admin);
-        agentApplication.addApplicant("Test Agent", agent, "");
         vm.stopPrank();
 
         assertFalse(validationModule.isAllowed(agent));
@@ -106,5 +116,9 @@ contract AgentValidationModuleTest is Test {
 
     function test_IsAllowedForNonExistentAgent() public view {
         assertFalse(validationModule.isAllowed(nonAgent));
+    }
+
+    function test_IsAllowedForZeroAddress() public view {
+        assertFalse(validationModule.isAllowed(address(0)));
     }
 }

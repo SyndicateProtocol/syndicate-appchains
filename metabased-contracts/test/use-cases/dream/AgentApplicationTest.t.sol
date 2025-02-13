@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {Test} from "forge-std/Test.sol";
-import {AgentApplication, Ownable} from "src/use-cases/dream/AgentApplication.sol";
+import {AgentApplication, Ownable, IMetabasedSequencerChain} from "src/use-cases/dream/AgentApplication.sol";
 
 contract AgentApplicationTest is Test {
     AgentApplication public application;
@@ -12,110 +12,180 @@ contract AgentApplicationTest is Test {
 
     address public admin;
     address public agent;
+    address public sequencerChain;
+    address public agentClaimNFTOwner;
+    address public agentClaimNFTAddress;
+
+    // Test data
+    bytes constant TEST_DATA = "test data";
 
     event ApplicantAdded(
         uint256 indexed applicantId,
-        string name,
         address indexed agentAddress,
         bytes additionalData,
         AgentApplication.ApplicationStatus status
     );
     event ApplicantStatusUpdated(uint256 indexed applicantId, AgentApplication.ApplicationStatus status);
+    event AgentClaimNFTOwnerUpdated(address indexed oldOwner, address indexed newOwner);
+    event AgentClaimNFTAddressUpdated(address indexed oldAddress, address indexed newAddress);
 
     function setUp() public {
         admin = makeAddr("admin");
         agent = makeAddr("agent");
+        sequencerChain = makeAddr("sequencerChain");
+        agentClaimNFTOwner = makeAddr("agentClaimNFTOwner");
+        agentClaimNFTAddress = makeAddr("agentClaimNFTAddress");
+
+        // Mock the sequencer chain
+        vm.etch(sequencerChain, hex"00");
 
         vm.startPrank(admin);
-        application = new AgentApplication(admin);
+        application = new AgentApplication(admin, sequencerChain, agentClaimNFTOwner, agentClaimNFTAddress);
         vm.stopPrank();
+    }
+
+    function _getExpectedGrantClaimCalldata(address agentAddress) internal view returns (bytes memory) {
+        bytes memory grantCalldata = abi.encodeWithSignature("grantClaimPermission(address)", agentAddress);
+        return abi.encodePacked(
+            agentClaimNFTOwner, agentClaimNFTAddress, uint256(0), uint256(grantCalldata.length), grantCalldata
+        );
     }
 
     function test_Constructor() public view {
         assertEq(application.owner(), admin);
+        assertEq(address(application.sequencerChain()), sequencerChain);
+        assertEq(application.agentClaimNFTOwner(), agentClaimNFTOwner);
+        assertEq(application.agentClaimNFTAddress(), agentClaimNFTAddress);
     }
 
-    function test_AddApplicant() public {
-        string memory name = "Test Agent";
-        bytes memory additionalData = "test data";
-
+    function test_RevertWhen_ConstructorZeroAddress() public {
         vm.startPrank(admin);
-        vm.expectEmit(true, true, false, true);
-        emit ApplicantAdded(0, name, agent, additionalData, PENDING);
 
-        uint256 applicantId = application.addApplicant(name, agent, additionalData);
+        vm.expectRevert(AgentApplication.InvalidAddress.selector);
+        new AgentApplication(admin, address(0), agentClaimNFTOwner, agentClaimNFTAddress);
 
-        (
-            address returnedAddress,
-            AgentApplication.ApplicationStatus returnedStatus,
-            string memory returnedName,
-            bytes memory returnedData
-        ) = application.getApplicant(applicantId);
+        vm.expectRevert(AgentApplication.InvalidAddress.selector);
+        new AgentApplication(admin, sequencerChain, address(0), agentClaimNFTAddress);
 
-        assertEq(returnedAddress, agent);
-        assertEq(uint256(returnedStatus), uint256(PENDING));
-        assertEq(returnedName, name);
-        assertEq(returnedData, additionalData);
-        assertEq(applicantId, 0);
+        vm.expectRevert(AgentApplication.InvalidAddress.selector);
+        new AgentApplication(admin, sequencerChain, agentClaimNFTOwner, address(0));
         vm.stopPrank();
     }
 
-    function test_RevertWhen_AddApplicantWithZeroAddress() public {
+    function test_SetAgentClaimNFTOwner() public {
+        address newOwner = makeAddr("newOwner");
+
+        vm.startPrank(admin);
+        vm.expectEmit(true, true, false, false);
+        emit AgentClaimNFTOwnerUpdated(agentClaimNFTOwner, newOwner);
+
+        application.setAgentClaimNFTOwner(newOwner);
+        assertEq(application.agentClaimNFTOwner(), newOwner);
+        vm.stopPrank();
+    }
+
+    function test_SetAgentClaimNFTAddress() public {
+        address newAddress = makeAddr("newAddress");
+
+        vm.startPrank(admin);
+        vm.expectEmit(true, true, false, false);
+        emit AgentClaimNFTAddressUpdated(agentClaimNFTAddress, newAddress);
+
+        application.setAgentClaimNFTAddress(newAddress);
+        assertEq(application.agentClaimNFTAddress(), newAddress);
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_SetAgentClaimNFTOwnerZeroAddress() public {
         vm.startPrank(admin);
         vm.expectRevert(AgentApplication.InvalidAddress.selector);
-        application.addApplicant("Test", address(0), "");
+        application.setAgentClaimNFTOwner(address(0));
         vm.stopPrank();
     }
 
-    function test_RevertWhen_NonOwnerAddsApplicant() public {
+    function test_RevertWhen_SetAgentClaimNFTAddressZeroAddress() public {
+        vm.startPrank(admin);
+        vm.expectRevert(AgentApplication.InvalidAddress.selector);
+        application.setAgentClaimNFTAddress(address(0));
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_NonOwnerSetsAgentClaimNFTOwner() public {
         vm.startPrank(agent);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, agent));
-        application.addApplicant("Test", agent, "");
+        application.setAgentClaimNFTOwner(makeAddr("newOwner"));
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_NonOwnerSetsAgentClaimNFTAddress() public {
+        vm.startPrank(agent);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, agent));
+        application.setAgentClaimNFTAddress(makeAddr("newAddress"));
         vm.stopPrank();
     }
 
     function test_ApproveApplicant() public {
-        address dreamSequencer = makeAddr("dreamSequencer");
-        // First add an applicant
+        bytes memory expectedCalldata = _getExpectedGrantClaimCalldata(agent);
+
+        vm.mockCall(
+            sequencerChain,
+            abi.encodeWithSelector(IMetabasedSequencerChain.processTransaction.selector, expectedCalldata),
+            ""
+        );
+
         vm.startPrank(admin);
-        uint256 applicantId = application.addApplicant("Test", agent, "");
+        vm.expectCall(
+            sequencerChain,
+            abi.encodeWithSelector(IMetabasedSequencerChain.processTransaction.selector, expectedCalldata)
+        );
 
-        // Mock the Dream Sequencer contract
-        vm.etch(dreamSequencer, hex"00");
-        vm.mockCall(dreamSequencer, abi.encodeWithSignature("addAllowedMinter(address)", agent), abi.encode());
-        application.setDreamSequencer(dreamSequencer);
+        vm.expectEmit(true, true, false, true);
+        emit ApplicantAdded(0, agent, TEST_DATA, APPROVED);
 
-        // Then approve them
-        vm.expectEmit(true, false, false, true);
-        emit ApplicantStatusUpdated(applicantId, APPROVED);
+        uint256 applicantId = application.approveApplicant(agent, TEST_DATA);
 
-        application.approveApplicant(applicantId);
+        (address returnedAddress, AgentApplication.ApplicationStatus returnedStatus, bytes memory returnedData) =
+            application.getApplicant(applicantId);
 
-        (, AgentApplication.ApplicationStatus status,,) = application.getApplicant(applicantId);
-        assertEq(uint256(status), uint256(APPROVED));
+        assertEq(returnedAddress, agent);
+        assertEq(uint256(returnedStatus), uint256(APPROVED));
+        assertEq(returnedData, TEST_DATA);
+        assertEq(applicantId, 0);
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_ApproveApplicantWithZeroAddress() public {
+        vm.startPrank(admin);
+        vm.expectRevert(AgentApplication.InvalidAddress.selector);
+        application.approveApplicant(address(0), TEST_DATA);
+        vm.stopPrank();
+    }
+
+    function test_RevertWhen_NonOwnerApprovesApplicant() public {
+        vm.startPrank(agent);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, agent));
+        application.approveApplicant(agent, TEST_DATA);
         vm.stopPrank();
     }
 
     function test_DenyApplicant() public {
-        // First add an applicant
-        vm.startPrank(admin);
-        uint256 applicantId = application.addApplicant("Test", agent, "");
+        bytes memory expectedCalldata = _getExpectedGrantClaimCalldata(agent);
+        vm.mockCall(
+            sequencerChain,
+            abi.encodeWithSelector(IMetabasedSequencerChain.processTransaction.selector, expectedCalldata),
+            ""
+        );
 
-        // Then deny them
+        vm.startPrank(admin);
+        uint256 applicantId = application.approveApplicant(agent, TEST_DATA);
+
         vm.expectEmit(true, false, false, true);
         emit ApplicantStatusUpdated(applicantId, DENIED);
 
         application.denyApplicant(applicantId);
 
-        (, AgentApplication.ApplicationStatus status,,) = application.getApplicant(applicantId);
+        (, AgentApplication.ApplicationStatus status,) = application.getApplicant(applicantId);
         assertEq(uint256(status), uint256(DENIED));
-        vm.stopPrank();
-    }
-
-    function test_RevertWhen_ApproveNonExistentApplicant() public {
-        vm.startPrank(admin);
-        vm.expectRevert(AgentApplication.ApplicantNotFound.selector);
-        application.approveApplicant(999);
         vm.stopPrank();
     }
 
@@ -126,21 +196,16 @@ contract AgentApplicationTest is Test {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_NonOwnerApprovesApplicant() public {
-        vm.startPrank(admin);
-        uint256 applicantId = application.addApplicant("Test", agent, "");
-        vm.stopPrank();
-
-        vm.startPrank(agent);
-        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, agent));
-        application.approveApplicant(applicantId);
-        vm.stopPrank();
-    }
-
     function test_RevertWhen_NonOwnerDeniesApplicant() public {
-        vm.startPrank(admin);
-        uint256 applicantId = application.addApplicant("Test", agent, "");
-        vm.stopPrank();
+        bytes memory expectedCalldata = _getExpectedGrantClaimCalldata(agent);
+        vm.mockCall(
+            sequencerChain,
+            abi.encodeWithSelector(IMetabasedSequencerChain.processTransaction.selector, expectedCalldata),
+            ""
+        );
+
+        vm.prank(admin);
+        uint256 applicantId = application.approveApplicant(agent, TEST_DATA);
 
         vm.startPrank(agent);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, agent));
@@ -149,23 +214,22 @@ contract AgentApplicationTest is Test {
     }
 
     function test_GetApplicant() public {
-        string memory name = "Test Agent";
-        bytes memory additionalData = "test data";
+        bytes memory expectedCalldata = _getExpectedGrantClaimCalldata(agent);
+        vm.mockCall(
+            sequencerChain,
+            abi.encodeWithSelector(IMetabasedSequencerChain.processTransaction.selector, expectedCalldata),
+            ""
+        );
 
         vm.startPrank(admin);
-        uint256 applicantId = application.addApplicant(name, agent, additionalData);
+        uint256 applicantId = application.approveApplicant(agent, TEST_DATA);
 
-        (
-            address returnedAddress,
-            AgentApplication.ApplicationStatus returnedStatus,
-            string memory returnedName,
-            bytes memory returnedData
-        ) = application.getApplicant(applicantId);
+        (address returnedAddress, AgentApplication.ApplicationStatus returnedStatus, bytes memory returnedData) =
+            application.getApplicant(applicantId);
 
         assertEq(returnedAddress, agent);
-        assertEq(uint256(returnedStatus), uint256(PENDING));
-        assertEq(returnedName, name);
-        assertEq(returnedData, additionalData);
+        assertEq(uint256(returnedStatus), uint256(APPROVED));
+        assertEq(returnedData, TEST_DATA);
         vm.stopPrank();
     }
 
@@ -175,88 +239,81 @@ contract AgentApplicationTest is Test {
     }
 
     function test_ApplicantCount() public {
+        bytes memory expectedCalldata = _getExpectedGrantClaimCalldata(makeAddr("agent1"));
+        vm.mockCall(
+            sequencerChain,
+            abi.encodeWithSelector(IMetabasedSequencerChain.processTransaction.selector, expectedCalldata),
+            ""
+        );
+
         assertEq(application.applicantCount(), 0);
 
         vm.startPrank(admin);
-        application.addApplicant("Test1", makeAddr("agent1"), "");
+        application.approveApplicant(makeAddr("agent1"), TEST_DATA);
         assertEq(application.applicantCount(), 1);
 
-        application.addApplicant("Test2", makeAddr("agent2"), "");
+        expectedCalldata = _getExpectedGrantClaimCalldata(makeAddr("agent2"));
+        vm.mockCall(
+            sequencerChain,
+            abi.encodeWithSelector(IMetabasedSequencerChain.processTransaction.selector, expectedCalldata),
+            ""
+        );
+
+        application.approveApplicant(makeAddr("agent2"), TEST_DATA);
         assertEq(application.applicantCount(), 2);
         vm.stopPrank();
     }
 
     function test_IsPermittedById() public {
-        address dreamSequencer = makeAddr("dreamSequencer");
+        bytes memory expectedCalldata = _getExpectedGrantClaimCalldata(agent);
+        vm.mockCall(
+            sequencerChain,
+            abi.encodeWithSelector(IMetabasedSequencerChain.processTransaction.selector, expectedCalldata),
+            ""
+        );
+
         vm.startPrank(admin);
-        uint256 applicantId = application.addApplicant("Test", agent, "");
-
-        // Mock the Dream Sequencer contract
-        vm.etch(dreamSequencer, hex"00");
-        vm.mockCall(dreamSequencer, abi.encodeWithSignature("addAllowedMinter(address)", agent), abi.encode());
-        application.setDreamSequencer(dreamSequencer);
-
-        application.approveApplicant(applicantId);
+        uint256 applicantId = application.approveApplicant(agent, TEST_DATA);
         assertTrue(application.isPermittedById(applicantId));
+
+        application.denyApplicant(applicantId);
+        assertFalse(application.isPermittedById(applicantId));
         vm.stopPrank();
     }
 
     function test_IsPermittedByAddress() public {
-        address dreamSequencer = makeAddr("dreamSequencer");
+        bytes memory expectedCalldata = _getExpectedGrantClaimCalldata(agent);
+        vm.mockCall(
+            sequencerChain,
+            abi.encodeWithSelector(IMetabasedSequencerChain.processTransaction.selector, expectedCalldata),
+            ""
+        );
+
         vm.startPrank(admin);
-        application.addApplicant("Test", agent, "");
-
-        // Mock the Dream Sequencer contract
-        vm.etch(dreamSequencer, hex"00");
-        vm.mockCall(dreamSequencer, abi.encodeWithSignature("addAllowedMinter(address)", agent), abi.encode());
-        application.setDreamSequencer(dreamSequencer);
-
-        application.approveApplicant(0);
+        application.approveApplicant(agent, TEST_DATA);
         assertTrue(application.isPermittedByAddress(agent));
+
+        application.denyApplicant(0);
+        assertFalse(application.isPermittedByAddress(agent));
         vm.stopPrank();
     }
 
-    function test_RevertWhen_DuplicateAgentApplication() public {
+    function test_IsPermittedByAddress_ZeroAddress() public view {
+        assertFalse(application.isPermittedByAddress(address(0)));
+    }
+
+    function test_RevertWhen_DuplicateAgentApproval() public {
+        bytes memory expectedCalldata = _getExpectedGrantClaimCalldata(agent);
+        vm.mockCall(
+            sequencerChain,
+            abi.encodeWithSelector(IMetabasedSequencerChain.processTransaction.selector, expectedCalldata),
+            ""
+        );
+
         vm.startPrank(admin);
-        application.addApplicant("Test1", agent, "");
+        application.approveApplicant(agent, TEST_DATA);
         vm.expectRevert(AgentApplication.AgentAlreadyApplied.selector);
-        application.addApplicant("Test2", agent, "");
-        vm.stopPrank();
-    }
-
-    function test_GetApplicantById() public {
-        vm.startPrank(admin);
-        uint256 applicantId = application.addApplicant("Test", agent, "");
-        (address returnedAddress, AgentApplication.ApplicationStatus status, string memory name,) =
-            application.getApplicant(applicantId);
-        assertEq(returnedAddress, agent);
-        assertEq(uint256(status), uint256(PENDING));
-        assertEq(name, "Test");
-        vm.stopPrank();
-    }
-
-    function test_RevertWhen_ApproveWithoutDreamSequencer() public {
-        vm.startPrank(admin);
-        uint256 applicantId = application.addApplicant("Test", agent, "");
-        vm.expectRevert(AgentApplication.DreamSequencerNotSet.selector);
-        application.approveApplicant(applicantId);
-        vm.stopPrank();
-    }
-
-    function test_DreamSequencerIntegration() public {
-        address dreamSequencer = makeAddr("dreamSequencer");
-        vm.startPrank(admin);
-
-        // Mock the Dream Sequencer contract
-        vm.etch(dreamSequencer, hex"00");
-        vm.mockCall(dreamSequencer, abi.encodeWithSignature("addAllowedMinter(address)", agent), abi.encode());
-        vm.expectCall(dreamSequencer, abi.encodeWithSignature("addAllowedMinter(address)", agent));
-
-        // Set up and approve applicant
-        uint256 applicantId = application.addApplicant("Test", agent, "");
-        application.setDreamSequencer(dreamSequencer);
-        application.approveApplicant(applicantId);
-
+        application.approveApplicant(agent, TEST_DATA);
         vm.stopPrank();
     }
 }

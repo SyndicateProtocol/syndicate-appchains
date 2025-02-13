@@ -2,13 +2,16 @@
 pragma solidity 0.8.25;
 
 import {PermissionModule} from "../../interfaces/PermissionModule.sol";
-import {AgentApplication} from "./AgentApplication.sol";
+
+interface IAgentApplication {
+    function isPermittedByAddress(address) external view returns (bool);
+}
 
 /// @title AgentValidationModule
 /// @notice Validates Dream agent permissions for transaction submission
-/// @dev Integrates with AgentApplication contract to check if an agent is approved to submit transactions
+/// @dev Checks in AgentApplication contract if an agent is approved to submit transactions
 contract AgentValidationModule is PermissionModule {
-    AgentApplication public immutable agentApplication;
+    IAgentApplication public immutable agentApplication;
     address public admin;
 
     event AdminTransferred(address indexed previousAdmin, address indexed newAdmin);
@@ -21,7 +24,7 @@ contract AgentValidationModule is PermissionModule {
             revert InvalidAddress();
         }
         admin = _admin;
-        agentApplication = AgentApplication(_agentApplication);
+        agentApplication = IAgentApplication(_agentApplication);
     }
 
     modifier onlyAdmin() {
