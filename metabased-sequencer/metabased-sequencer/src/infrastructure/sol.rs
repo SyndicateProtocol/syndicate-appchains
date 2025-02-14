@@ -190,11 +190,8 @@ mod tests {
             unimplemented!("Mock provider does not implement root")
         }
 
-        fn get_balance<'a>(&'a self, _address: Address) -> alloy::providers::RpcWithBlock<'a, T, Address, U256> {
-            let balance = self.balance;
-            alloy::providers::RpcWithBlock::new_provider(move |_| {
-                alloy::providers::ProviderCall::ready(Ok(balance))
-            })
+        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
+            Ok(self.balance)
         }
     }
 
