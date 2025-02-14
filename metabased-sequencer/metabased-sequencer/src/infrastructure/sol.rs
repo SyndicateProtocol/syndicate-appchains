@@ -176,6 +176,10 @@ mod tests {
         fn new(balance: U256) -> Self {
             Self { balance }
         }
+
+        fn get_balance(&self) -> U256 {
+            self.balance
+        }
     }
 
     #[async_trait]
@@ -185,7 +189,8 @@ mod tests {
         }
 
         fn get_balance(&self, _address: Address) -> RpcWithBlock<T, Address, U256> {
-            self.client().request("eth_getBalance", _address).into()
+            let balance = self.get_balance();
+            RpcWithBlock::new(self.client().request("eth_getBalance", _address), balance)
         }
     }
 
