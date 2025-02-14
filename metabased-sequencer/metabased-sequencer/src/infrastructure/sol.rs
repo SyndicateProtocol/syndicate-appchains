@@ -5,7 +5,14 @@ use crate::{
     },
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
-use alloy::{hex, network::Network, primitives::{Address, U256}, providers::{Provider, ProviderCall, RootProvider, RpcWithBlock}, sol, transports::Transport};
+use alloy::{
+    hex,
+    network::Network,
+    primitives::{Address, U256},
+    providers::{Provider, ProviderCall, RootProvider, RpcWithBlock},
+    sol,
+    transports::Transport,
+};
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
 use tracing::{debug_span, info};
@@ -199,7 +206,7 @@ mod tests {
             alloy::transports::BoxTransport,
             alloy::network::Ethereum,
         > = SolMetabasedSequencerChainService::new(Address::default(), provider);
-        let balance = service.get_balance().await.unwrap();
+        let balance = service.get_balance().await?.await?.await?;
         assert_eq!(balance, expected_balance);
     }
 }
