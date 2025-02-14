@@ -186,7 +186,7 @@ mod tests {
     #[async_trait]
     impl<T: Transport + Clone> Provider<T> for MockProvider {
         fn root(&self) -> &RootProvider<T> {
-            panic!("Mock provider does not implement root")
+            unimplemented!("Mock provider does not implement root")
         }
 
         async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
