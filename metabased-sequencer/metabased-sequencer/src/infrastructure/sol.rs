@@ -5,14 +5,7 @@ use crate::{
     },
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
-use alloy::{
-    hex,
-    network::Network,
-    primitives::{Address, U256},
-    providers::{Provider, ProviderCall, RootProvider, RpcWithBlock},
-    sol,
-    transports::Transport,
-};
+use alloy::{hex, network::Network, primitives::{Address, U256}, providers::{Provider, ProviderCall, RootProvider, RpcWithBlock}, sol, transports::Transport};
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
 use tracing::{debug_span, info};
@@ -184,8 +177,8 @@ mod tests {
         }
     }
 
-    impl<T: Transport + Clone> Provider<T> for MockProvider {
-        fn root(&self) -> &RootProvider<T> {
+    impl<T: Transport + Clone + Send + Sync + 'static> Provider<T, alloy::network::Ethereum> for MockProvider {
+        fn root(&self) -> &RootProvider<T, alloy::network::Ethereum> {
             unimplemented!("Mock provider does not implement root")
         }
 
