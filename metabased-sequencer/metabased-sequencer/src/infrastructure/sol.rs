@@ -189,7 +189,7 @@ mod tests {
             unimplemented!("Mock provider does not implement root")
         }
 
-        fn get_balance(&self, _address: Address) -> RpcWithBlock<'_, T, Address, U256> {
+        fn get_balance(&self, _address: Address) -> RpcWithBlock<T, Address, U256> {
             RpcWithBlock::new_provider(|_| {
                 ProviderCall::ready(Ok(self.balance))
             })
