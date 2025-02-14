@@ -56,7 +56,7 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
 
     /// Gets the current balance of the sequencer account
     async fn get_balance(&self) -> Result<U256, alloy::contract::Error> {
-        Ok(self.provider.get_balance(self.account).await?.await?)
+        Ok(self.provider.get_balance(self.account).await.await?)
     }
 }
 
@@ -206,7 +206,7 @@ mod tests {
             alloy::transports::BoxTransport,
             alloy::network::Ethereum,
         > = SolMetabasedSequencerChainService::new(Address::default(), provider);
-        let balance = service.get_balance().await?.await?.await?;
+        let balance = service.get_balance().await.unwrap();
         assert_eq!(balance, expected_balance);
     }
 }
