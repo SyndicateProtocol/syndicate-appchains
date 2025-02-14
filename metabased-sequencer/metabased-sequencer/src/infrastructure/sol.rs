@@ -189,8 +189,7 @@ mod tests {
         }
 
         fn get_balance(&self, _address: Address) -> RpcWithBlock<T, Address, U256> {
-            let balance = self.get_balance();
-            RpcWithBlock::new(self.client().request("eth_getBalance", _address), balance)
+            RpcWithBlock::new_value(self.balance)
         }
     }
 
