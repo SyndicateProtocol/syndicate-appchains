@@ -9,9 +9,10 @@ use alloy::{
     hex,
     network::Network,
     primitives::U256,
-    providers::{Provider, ProviderCall},
-    transports::{RpcResult, Transport},
+    providers::Provider,
+    rpc::RpcCall,
     sol,
+    transports::Transport,
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
@@ -196,7 +197,7 @@ mod tests {
         }
 
         fn get_balance(&self, _address: Address) -> RpcWithBlock<T, Address, U256> {
-            RpcWithBlock::new_rpc(ProviderCall::RpcCall(RpcResult::Success(self.balance)))
+            RpcWithBlock::new_rpc(RpcCall::new(Ok(self.balance)))
         }
     }
 
