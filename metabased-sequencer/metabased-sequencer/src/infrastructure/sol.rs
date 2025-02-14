@@ -5,7 +5,15 @@ use crate::{
     },
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
-use alloy::{hex, network::Network, primitives::U256, providers::Provider, sol, transports::Transport};
+use alloy::{
+    hex,
+    network::Network,
+    primitives::U256,
+    providers::{Provider, RpcCall},
+    rpc::RpcResult,
+    sol,
+    transports::Transport,
+};
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
 use tracing::{debug_span, info};
@@ -189,7 +197,7 @@ mod tests {
         }
 
         fn get_balance(&self, _address: Address) -> RpcWithBlock<T, Address, U256> {
-            RpcWithBlock::new_rpc(alloy::rpc::RpcCall::new(Ok(self.balance)))
+            RpcWithBlock::new_rpc(RpcCall::new(RpcResult::Success(self.balance)))
         }
     }
 
