@@ -9,7 +9,8 @@ use alloy::{
     hex,
     network::{Ethereum, Network},
     primitives::U256,
-    providers::{Provider, ProviderCall, RootProvider},
+    providers::{Provider, ProviderCall, RootProvider, RpcWithBlock},
+    rpc_client::RpcClient,
     sol,
     transports::Transport,
 };
@@ -174,20 +175,23 @@ mod tests {
 
     #[derive(Debug, Clone)]
     #[allow(dead_code)]
-    struct MockProvider {
+    struct MockProvider<T: Transport + Clone> {
         balance: U256,
+        root: RootProvider<T, Ethereum>,
     }
 
-    impl MockProvider {
+    impl<T: Transport + Clone> MockProvider<T> {
         fn new(balance: U256) -> Self {
-            Self { balance }
+            let client = alloy::rpc::RpcClient::new(T::default(), true);
+            let root = RootProvider::new(client);
+            Self { balance, root }
         }
     }
 
     #[async_trait]
-    impl<T: Transport + Clone> Provider<T, Ethereum> for MockProvider {
+    impl<T: Transport + Clone + std::default::Default> Provider<T, Ethereum> for MockProvider<T> {
         fn root(&self) -> &RootProvider<T, Ethereum> {
-            unimplemented!("Mock provider does not implement root")
+            &self.root
         }
 
         fn get_balance(&self, _address: Address) -> RpcWithBlock<T, Address, U256> {
@@ -199,9 +203,9 @@ mod tests {
     #[tokio::test]
     async fn test_get_balance() {
         let expected_balance = U256::from(100);
-        let provider = MockProvider::new(expected_balance);
+        let provider = MockProvider::<alloy::transports::BoxTransport>::new(expected_balance);
         let service: SolMetabasedSequencerChainService<
-            MockProvider,
+            MockProvider<alloy::transports::BoxTransport>,
             alloy::transports::BoxTransport,
             alloy::network::Ethereum,
         > = SolMetabasedSequencerChainService::new(Address::default(), provider);
