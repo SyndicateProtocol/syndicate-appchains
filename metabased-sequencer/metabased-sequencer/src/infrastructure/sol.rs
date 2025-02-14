@@ -49,7 +49,8 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
 
     /// Gets the current balance of the sequencer account
     async fn get_balance(&self) -> Result<U256, alloy::contract::Error> {
-        Ok(self.provider.get_balance(self.account).await?.await?)
+        let balance = self.provider.get_balance(self.account).await;
+        Ok(balance.await?.await?)
     }
 }
 
@@ -184,7 +185,7 @@ mod tests {
 
         fn get_balance(&self, _address: Address) -> RpcWithBlock<'_, T, Address, U256> {
             let balance = self.balance;
-            RpcWithBlock::new_provider(|_| {
+            RpcWithBlock::new_provider(move |_| {
                 ProviderCall::ready(Ok(balance))
             })
         }
