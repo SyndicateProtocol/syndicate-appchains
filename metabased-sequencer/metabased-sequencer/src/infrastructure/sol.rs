@@ -7,7 +7,7 @@ use crate::{
 };
 use alloy::{
     hex,
-    network::Network,
+    network::{Ethereum, Network},
     primitives::{Address, U256},
     providers::{Provider, ProviderCall, RootProvider, RpcWithBlock},
     sol,
@@ -186,8 +186,8 @@ mod tests {
     }
 
     #[async_trait]
-    impl<T: Transport + Clone + Send + Sync + 'static> Provider<T> for MockProvider {
-        fn root(&self) -> &RootProvider<T> {
+    impl<T: Transport + Clone + Send + Sync + 'static> Provider<T, Ethereum> for MockProvider {
+        fn root(&self) -> &RootProvider<T, Ethereum> {
             unimplemented!("Mock provider does not implement root")
         }
 
