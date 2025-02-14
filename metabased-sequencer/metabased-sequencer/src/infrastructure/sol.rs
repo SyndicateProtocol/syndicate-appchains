@@ -177,19 +177,14 @@ mod tests {
         }
     }
 
-    impl<T: Transport + Clone> Provider<T, alloy::network::Ethereum> for MockProvider {
+    #[async_trait]
+    impl<T: Transport + Clone + Send + Sync> Provider<T, alloy::network::Ethereum> for MockProvider {
         fn root(&self) -> &alloy::providers::RootProvider<T, alloy::network::Ethereum> {
             unimplemented!("Mock provider does not implement root")
         }
 
-        fn get_balance(
-            &self,
-            _address: Address,
-        ) -> alloy::providers::RpcWithBlock<'_, T, Address, U256> {
-            let balance = self.balance;
-            alloy::providers::RpcWithBlock::new_provider(move |_| {
-                alloy::providers::ProviderCall::ready(Ok(balance))
-            })
+        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
+            Ok(self.balance)
         }
     }
 
