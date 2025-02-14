@@ -8,7 +8,7 @@ use crate::{
 use alloy::{
     hex,
     network::Network,
-    primitives::U256,
+    primitives::{Address, U256},
     providers::{Provider, ProviderCall, RootProvider, RpcWithBlock},
     sol,
     transports::Transport,
