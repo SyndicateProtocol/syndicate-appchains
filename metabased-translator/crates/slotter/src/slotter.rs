@@ -250,7 +250,7 @@ impl Slotter {
             }
         }
         for slot in buffer.into_iter().rev() {
-            trace!(%slot, "Sending slot");
+            debug!(%slot, "Sending slot");
             self.sender.send(slot).await?;
             self.metrics.update_channel_capacity(self.sender.capacity());
         }
