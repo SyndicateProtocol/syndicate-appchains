@@ -6,7 +6,7 @@
 -include .env
 
 # deploy MetabasedFactory to Base Sepolia
-deploy-metabased-factory :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedFactory --rpc-url metabased_stratos --private-key ${ETH_PRIVATE_KEY} --skip-simulation --legacy --broadcast -vv
+deploy-metabased-factory :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedFactory --rpc-url exo --private-key ${ETH_PRIVATE_KEY} --skip-simulation --broadcast -vv
 
 # deploy DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule to Metabased Testnet
 deploy-metabased-sequencerchain-plus-setup-with-always-allow-module :; forge script script/DeployContractsForSequencerChain.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url metabased_stratos --private-key ${ETH_PRIVATE_KEY} --skip-simulation --legacy --broadcast -vv
