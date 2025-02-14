@@ -9,8 +9,7 @@ use alloy::{
     hex,
     network::Network,
     primitives::U256,
-    providers::{Provider, RootProvider},
-    rpc::RpcClient,
+    providers::{Provider, RootProvider, RpcClient},
     transports::{RpcResult, Transport},
     sol,
 };
@@ -196,7 +195,7 @@ mod tests {
             &self.root
         }
 
-        async fn get_balance<'a>(&'a self, _address: Address) -> RpcResult<U256> {
+        async fn get_balance(&self, _address: Address) -> RpcResult<U256, alloy::rpc::Error> {
             Ok(self.balance)
         }
     }
@@ -206,7 +205,7 @@ mod tests {
         let expected_balance = U256::from(100);
         let provider = MockProvider::new(expected_balance);
         let service: SolMetabasedSequencerChainService<
-            MockProvider,
+            MockProvider<alloy::transports::BoxTransport>,
             alloy::transports::BoxTransport,
             alloy::network::Ethereum,
         > = SolMetabasedSequencerChainService::new(Address::default(), provider);
