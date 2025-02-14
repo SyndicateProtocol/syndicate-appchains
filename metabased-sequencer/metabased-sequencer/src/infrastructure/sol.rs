@@ -6,12 +6,7 @@ use crate::{
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
 use alloy::{
-    hex,
-    network::Network,
-    primitives::U256,
-    providers::Provider,
-    sol,
-    transports::Transport
+    hex, network::Network, primitives::U256, providers::Provider, sol, transports::Transport,
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
@@ -189,10 +184,10 @@ mod tests {
             unimplemented!("Mock provider does not implement root")
         }
 
-        fn get_balance<'a>(
-            &'a self,
+        fn get_balance(
+            &self,
             _address: Address,
-        ) -> alloy::providers::RpcWithBlock<'a, T, Address, U256> {
+        ) -> alloy::providers::RpcWithBlock<T, Address, U256> {
             let balance = self.balance;
             alloy::providers::RpcWithBlock::new_provider(move |_| {
                 alloy::providers::ProviderCall::ready(Ok(balance))
