@@ -9,7 +9,7 @@ use alloy::{
     hex,
     network::{Ethereum, Network},
     primitives::U256,
-    providers::{Provider, ProviderCall, RootProvider, RpcWithBlock},
+    providers::{Provider, RpcWithBlock},
     sol,
     transports::Transport,
 };
