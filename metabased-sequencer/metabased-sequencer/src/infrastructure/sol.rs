@@ -9,8 +9,8 @@ use alloy::{
     hex,
     network::Network,
     primitives::U256,
-    providers::{Provider, RootProvider, RpcClient},
-    transports::{RpcResult, Transport},
+    providers::{Provider, RootProvider},
+    transports::Transport,
     sol,
 };
 use async_trait::async_trait;
@@ -177,25 +177,21 @@ mod tests {
     #[allow(dead_code)]
     struct MockProvider<T: Transport + Clone> {
         balance: U256,
-        root: RootProvider<T, alloy::network::Ethereum>,
     }
 
     impl<T: Transport + Clone> MockProvider<T> {
         fn new(balance: U256) -> Self {
-            Self {
-                balance,
-                root: RootProvider::new(RpcClient::new()),
-            }
+            Self { balance }
         }
     }
 
     #[async_trait]
     impl<T: Transport + Clone> Provider<T, alloy::network::Ethereum> for MockProvider<T> {
         fn root(&self) -> &RootProvider<T, alloy::network::Ethereum> {
-            &self.root
+            unimplemented!("Mock provider does not implement root")
         }
 
-        async fn get_balance(&self, _address: Address) -> RpcResult<U256, alloy::rpc::Error> {
+        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
             Ok(self.balance)
         }
     }
