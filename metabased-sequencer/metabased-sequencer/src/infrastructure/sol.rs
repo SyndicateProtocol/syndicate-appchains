@@ -9,7 +9,7 @@ use alloy::{
     hex,
     network::Network,
     primitives::U256,
-    providers::{Provider, RootProvider},
+    providers::Provider,
     transports::Transport,
     sol,
 };
@@ -171,22 +171,22 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::providers::{RootProvider, RpcWithBlock};
+    use alloy::providers::RootProvider;
 
     #[derive(Debug, Clone)]
     #[allow(dead_code)]
-    struct MockProvider<T: Transport + Clone> {
+    struct MockProvider {
         balance: U256,
     }
 
-    impl<T: Transport + Clone> MockProvider<T> {
+    impl MockProvider {
         fn new(balance: U256) -> Self {
             Self { balance }
         }
     }
 
     #[async_trait]
-    impl<T: Transport + Clone> Provider<T, alloy::network::Ethereum> for MockProvider<T> {
+    impl<T: Transport + Clone> Provider<T, alloy::network::Ethereum> for MockProvider {
         fn root(&self) -> &RootProvider<T, alloy::network::Ethereum> {
             unimplemented!("Mock provider does not implement root")
         }
@@ -201,7 +201,7 @@ mod tests {
         let expected_balance = U256::from(100);
         let provider = MockProvider::new(expected_balance);
         let service: SolMetabasedSequencerChainService<
-            MockProvider<alloy::transports::BoxTransport>,
+            MockProvider,
             alloy::transports::BoxTransport,
             alloy::network::Ethereum,
         > = SolMetabasedSequencerChainService::new(Address::default(), provider);
