@@ -10,9 +10,9 @@ use alloy::{
     network::Network,
     primitives::U256,
     providers::{Provider, RootProvider},
-    rpc::RpcResult,
+    rpc::RpcClient,
+    transports::{RpcResult, Transport},
     sol,
-    transports::Transport,
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
@@ -176,27 +176,27 @@ mod tests {
 
     #[derive(Debug, Clone)]
     #[allow(dead_code)]
-    struct MockProvider {
+    struct MockProvider<T: Transport + Clone> {
         balance: U256,
         root: RootProvider<T, alloy::network::Ethereum>,
     }
 
-    impl MockProvider {
+    impl<T: Transport + Clone> MockProvider<T> {
         fn new(balance: U256) -> Self {
             Self {
                 balance,
-                root: RootProvider::new(),
+                root: RootProvider::new(RpcClient::new()),
             }
         }
     }
 
     #[async_trait]
-    impl<T: Transport + Clone> Provider<T, alloy::network::Ethereum> for MockProvider {
+    impl<T: Transport + Clone> Provider<T, alloy::network::Ethereum> for MockProvider<T> {
         fn root(&self) -> &RootProvider<T, alloy::network::Ethereum> {
             &self.root
         }
 
-        async fn get_balance(&self, _address: Address) -> RpcResult<U256> {
+        async fn get_balance<'a>(&'a self, _address: Address) -> RpcResult<U256> {
             Ok(self.balance)
         }
     }
