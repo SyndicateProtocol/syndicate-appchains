@@ -182,7 +182,7 @@ mod tests {
 
     impl<T: Transport + Clone> MockProvider<T> {
         fn new(balance: U256) -> Self {
-            let client = alloy::rpc::RpcClient::new(T::default(), true);
+            let client = RpcClient::new(T::default(), true);
             let root = RootProvider::new(client);
             Self { balance, root }
         }
