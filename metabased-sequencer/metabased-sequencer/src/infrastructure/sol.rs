@@ -7,7 +7,7 @@ use crate::{
 };
 use alloy::{
     hex,
-    network::{Ethereum, Network},
+    network::Network,
     primitives::U256,
     providers::{Provider, ProviderCall, RpcWithBlock},
     sol,
