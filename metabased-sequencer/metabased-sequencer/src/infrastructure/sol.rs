@@ -6,9 +6,12 @@ use crate::{
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
 use alloy::{
-    hex, network::Network, primitives::U256,
+    hex,
+    network::Network,
+    primitives::U256,
     providers::{Provider, RootProvider, RpcWithBlock},
-    sol, transports::Transport,
+    sol,
+    transports::Transport,
 };
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
