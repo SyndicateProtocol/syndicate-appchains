@@ -17,7 +17,10 @@ use serde_json::{json, Value};
 use slotter::Slotter;
 use std::sync::Arc;
 use thiserror::Error;
-use tokio::sync::oneshot;
+use tokio::{
+    signal::unix::{signal, SignalKind},
+    sync::oneshot,
+};
 use tracing::{debug, error, info};
 
 // TODO(SEQ-515): Improve this executable, research async tasks
@@ -33,7 +36,7 @@ async fn run(
     let (settle_shutdown_tx, settle_shutdown_rx) = oneshot::channel();
     let (slotter_shutdown_tx, slotter_shutdown_rx) = oneshot::channel();
     let (builder_shutdown_tx, builder_shutdown_rx) = oneshot::channel();
-    init_ctrl_c_handler(main_shutdown_tx);
+    init_signal_handler(main_shutdown_tx);
 
     // Initialize the DB with the restore flag
     let (db, safe_state) = init_db(db_path, config.restore_from_safe_state).await?;
@@ -253,13 +256,22 @@ pub enum RuntimeError {
     Other(#[from] eyre::Report),
 }
 
-// Add this function before run()
-fn init_ctrl_c_handler(main_shutdown_tx: oneshot::Sender<()>) {
+fn init_signal_handler(main_shutdown_tx: oneshot::Sender<()>) {
     tokio::spawn(async move {
-        if let Err(e) = tokio::signal::ctrl_c().await {
-            panic!("Failed to listen for ctrl-c: {}", e);
+        let mut sigint =
+            signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
+        let mut sigterm =
+            signal(SignalKind::terminate()).expect("Failed to register SIGTERM handler");
+
+        tokio::select! {
+            _ = sigint.recv() => {
+                info!("Received SIGINT (Ctrl+C), initiating shutdown...");
+            }
+            _ = sigterm.recv() => {
+                info!("Received SIGTERM, initiating shutdown...");
+            }
         }
-        info!("Received shutdown signal");
+
         if main_shutdown_tx.send(()).is_err() {
             panic!("Failed to send shutdown signal");
         }
