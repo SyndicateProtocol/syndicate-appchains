@@ -9,10 +9,11 @@ use alloy::{
     hex,
     network::Network,
     primitives::U256,
-    providers::{Provider, RootProvider},
+    providers::Provider,
     sol,
     transports::Transport,
 };
+use alloy::providers::RootProvider;
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
 use tracing::{debug_span, info};
