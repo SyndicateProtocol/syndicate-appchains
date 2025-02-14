@@ -184,8 +184,8 @@ mod tests {
         }
     }
 
-    impl<T: Transport + Clone + Send + Sync + 'static> Provider<T, alloy::network::Ethereum> for MockProvider {
-        fn root(&self) -> &RootProvider<T, alloy::network::Ethereum> {
+    impl<T: Transport + Clone> Provider<T> for MockProvider {
+        fn root(&self) -> &RootProvider<T> {
             unimplemented!("Mock provider does not implement root")
         }
 
