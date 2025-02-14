@@ -55,7 +55,7 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
     }
 
     /// Gets the current balance of the sequencer account
-    async fn get_balance(&self) -> Result<U256, alloy::contract::Error> {
+    pub async fn get_balance(&self) -> Result<U256, alloy::contract::Error> {
         let balance = self.provider.get_balance(self.account);
         Ok(balance.await?.await?)
     }
@@ -185,7 +185,6 @@ mod tests {
         }
     }
 
-    #[async_trait]
     impl<T: Transport + Clone + Send + Sync + 'static> Provider<T, Ethereum> for MockProvider {
         fn root(&self) -> &RootProvider<T, Ethereum> {
             unimplemented!("Mock provider does not implement root")
