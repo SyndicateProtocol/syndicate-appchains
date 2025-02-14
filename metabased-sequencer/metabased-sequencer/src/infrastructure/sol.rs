@@ -9,7 +9,7 @@ use alloy::{
     hex,
     network::Network,
     primitives::U256,
-    providers::{Provider, RootProvider, RpcWithBlock},
+    providers::Provider,
     sol,
     transports::Transport,
 };
@@ -173,6 +173,7 @@ mod tests {
     use super::*;
 
     #[derive(Debug, Clone)]
+    #[allow(dead_code)]
     struct MockProvider {
         balance: U256,
     }
