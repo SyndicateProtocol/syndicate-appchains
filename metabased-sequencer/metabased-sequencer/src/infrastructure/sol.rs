@@ -5,9 +5,7 @@ use crate::{
     },
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
-use alloy::{
-    hex, network::Network, primitives::U256, providers::Provider, sol, transports::Transport,
-};
+use alloy::{hex, network::Network, primitives::U256, providers::Provider, sol, transports::Transport};
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
 use tracing::{debug_span, info};
@@ -187,7 +185,7 @@ mod tests {
         fn get_balance(
             &self,
             _address: Address,
-        ) -> alloy::providers::RpcWithBlock<T, Address, U256> {
+        ) -> alloy::providers::RpcWithBlock<'_, T, Address, U256> {
             let balance = self.balance;
             alloy::providers::RpcWithBlock::new_provider(move |_| {
                 alloy::providers::ProviderCall::ready(Ok(balance))
