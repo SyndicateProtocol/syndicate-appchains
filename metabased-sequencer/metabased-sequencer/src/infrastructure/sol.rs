@@ -56,8 +56,8 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
 
     /// Gets the current balance of the sequencer account
     async fn get_balance(&self) -> Result<U256, alloy::contract::Error> {
-        let balance = self.provider.get_balance(self.account);
-        Ok(balance.await?.await?)
+        let balance = self.provider.get_balance(self.account).await?;
+        Ok(balance)
     }
 }
 
