@@ -192,7 +192,7 @@ mod tests {
         }
 
         fn get_balance(&self, _address: Address) -> RpcWithBlock<T, Address, U256> {
-            unimplemented!("Mock provider does not implement get_balance")
+            self.client().request("eth_getBalance", _address).into()
         }
     }
 
