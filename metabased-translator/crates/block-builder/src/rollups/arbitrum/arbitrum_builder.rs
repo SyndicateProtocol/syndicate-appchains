@@ -100,6 +100,7 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
         slot: Slot,
     ) -> Result<Vec<TransactionRequest>, eyre::Error> {
         let delayed_messages = self.process_delayed_messages(slot.settlement_chain_blocks).await?;
+        debug!("Delayed messages: {:?}", delayed_messages);
 
         let mb_transactions = self.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
 
@@ -286,7 +287,6 @@ impl ArbitrumBlockBuilder {
     ) -> Result<TransactionRequest> {
         if delayed_message_count > 0 {
             info!("Adding {} delayed messages to batch", delayed_message_count);
-            debug!("Delayed messages: {:?}", delayed_message_count);
         }
         let mut messages = vec![BatchMessage::Delayed; delayed_message_count];
 
@@ -303,7 +303,7 @@ impl ArbitrumBlockBuilder {
         };
 
         let batch = Batch(messages);
-        debug!("Batch: {:?}", batch);
+        debug!("New Batch: {:?}", batch);
 
         // Encode the batch data
         let encoded_batch = batch.encode()?;
