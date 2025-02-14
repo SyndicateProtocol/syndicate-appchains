@@ -189,7 +189,7 @@ mod tests {
         }
 
         fn get_balance(&self, _address: Address) -> RpcWithBlock<T, Address, U256> {
-            RpcWithBlock::new_value(self.balance)
+            RpcWithBlock::new_rpc(alloy::rpc::RpcCall::new(Ok(self.balance)))
         }
     }
 
