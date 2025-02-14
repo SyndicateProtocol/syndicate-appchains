@@ -74,7 +74,7 @@ impl Drop for Docker {
     }
 }
 
-async fn start_anvil(port: u16, chain_id: u64) -> Result<(AnvilInstance, FilledProvider)> {
+pub async fn start_anvil(port: u16, chain_id: u64) -> Result<(AnvilInstance, FilledProvider)> {
     let timestamp = GENESIS_TIMESTAMP.to_string();
     let args = vec![
         "--base-fee",
@@ -184,9 +184,9 @@ pub struct MetaNode {
 
     // References to keep the processes/tasks alive
     #[allow(dead_code)]
-    seq_anvil: AnvilInstance,
+    pub seq_anvil: AnvilInstance,
     #[allow(dead_code)]
-    set_anvil: AnvilInstance,
+    pub set_anvil: AnvilInstance,
     #[allow(dead_code)]
     nitro_docker: Docker,
     #[allow(dead_code)]
