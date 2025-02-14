@@ -195,7 +195,6 @@ mod tests {
                 ProviderCall::ready(Ok(balance))
             })
         }
-    }        }
     }
 
     #[tokio::test]
