@@ -193,7 +193,7 @@ mod tests {
             &self.root
         }
 
-        fn get_balance(&self, address: Address) -> RpcWithBlock<'_, T, Address, U256> {
+        fn get_balance(&self, address: Address) -> RpcWithBlock<'_, T, Address, U256, U256> {
             let balance = self.balance;
             RpcWithBlock::new_provider(move |_| {
                 ProviderCall::ready(Ok(balance))
