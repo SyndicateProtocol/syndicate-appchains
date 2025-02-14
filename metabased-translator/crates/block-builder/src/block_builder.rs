@@ -18,7 +18,7 @@ use derivative::Derivative;
 use eyre::{Error, Result};
 use std::sync::Arc;
 use tokio::sync::{mpsc::Receiver, oneshot};
-use tracing::{debug, error, info};
+use tracing::{error, info, trace};
 use url::Url;
 
 /// Block builder service for processing and building L3 blocks.
@@ -64,6 +64,7 @@ impl BlockBuilder {
         known_block_number: Option<u64>,
     ) -> Result<(), BlockBuilderError> {
         let Some(known_block_number) = known_block_number else {
+            info!("No known block number to resume from, starting from genesis");
             return Ok(());
         };
 
@@ -84,7 +85,7 @@ impl BlockBuilder {
                 BlockBuilderError::ResumeFromBlock(format!("Unable to reorg to block: {}", e))
             })?;
         }
-
+        info!("Resumed from block: {}", known_block_number);
         Ok(())
     }
 
@@ -103,7 +104,7 @@ impl BlockBuilder {
             tokio::select! {
                 biased; // biased allows us to process everything that's in the channel before shutting down
                 Some(slot) = self.slotter_rx.recv() => {
-                    debug!("Received slot: {:?}", slot);
+                    trace!("Received slot: {:?}", slot);
                     self.metrics.record_last_slot(slot.number);
 
                     // [OP / ARB] Build block of MChain transactions from slot
@@ -115,14 +116,14 @@ impl BlockBuilder {
                     };
 
                     let transactions_len = transactions.len();
+                    trace!("Submitting {} transactions", transactions_len);
                     self.metrics.record_transactions_per_slot(transactions_len);
-                    debug!("Submitting {} transactions", transactions_len);
 
                     // Fill gap with empty blocks if needed
                     let mut block_number = self.get_current_block_number().await;
                     while block_number < slot.number-1 {
                         let empty_block_timestamp = slot.timestamp - ((slot.number - block_number) * self.slot_duration_sec);
-                        debug!("Mining empty block {} with timestamp {}", block_number + 1, empty_block_timestamp);
+                        trace!("Mining empty block {} with timestamp {}", block_number + 1, empty_block_timestamp);
 
                         if let Err(e) = self.mchain.mine_block(empty_block_timestamp).await {
                             panic!("Error mining block: {}", e);
@@ -147,7 +148,7 @@ impl BlockBuilder {
                         current_block,
                         slot.number
                     );
-                    debug!("Mined block: {:?} from slot: {:?}", current_block, slot.number);
+                    trace!("Mined block: {:?} from slot: {:?}", current_block, slot.number);
                     if let Err(e) = self.store.save_unsafe_slot(&slot).await {
                         panic!("Error saving slot: {}", e);
                     }

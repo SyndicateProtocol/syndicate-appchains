@@ -29,7 +29,7 @@ use contract_bindings::arbitrum::{
 use eyre::Result;
 use std::collections::HashMap;
 use thiserror::Error;
-use tracing::{debug, error};
+use tracing::{debug, error, info, trace};
 
 const MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = MessageDelivered::SIGNATURE_HASH;
 const INBOX_MSG_DELIVERED_EVENT_HASH: FixedBytes<32> = InboxMessageDelivered::SIGNATURE_HASH;
@@ -104,6 +104,7 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
         let mb_transactions = self.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
 
         if delayed_messages.is_empty() && mb_transactions.is_empty() {
+            trace!("No delayed messages or MB transactions, skipping block");
             return Ok(Default::default());
         }
 
@@ -204,8 +205,9 @@ impl ArbitrumBlockBuilder {
                     _ => {}
                 }
             });
-        debug!("Delayed message data: {:?}", message_data);
-        debug!("Delayed messages: {:?}", delayed_messages);
+
+        trace!("Delayed message data: {:?}", message_data);
+        trace!("Delayed messages: {:?}", delayed_messages);
 
         let delayed_msg_txns: Vec<TransactionRequest> = delayed_messages
             .filter_map(|msg_log| {
@@ -282,9 +284,15 @@ impl ArbitrumBlockBuilder {
         slot_timestamp: u64,
         delayed_message_count: usize,
     ) -> Result<TransactionRequest> {
+        if delayed_message_count > 0 {
+            info!("Adding {} delayed messages to batch", delayed_message_count);
+            debug!("Delayed messages: {:?}", delayed_message_count);
+        }
         let mut messages = vec![BatchMessage::Delayed; delayed_message_count];
 
         if !txs.is_empty() {
+            info!("Adding {} sequenced transactions to batch", txs.len());
+            debug!("Sequenced transactions: {:?}", txs);
             messages.push(BatchMessage::L2(L1IncomingMessage {
                 header: L1IncomingMessageHeader {
                     block_number: slot_number,
@@ -295,6 +303,7 @@ impl ArbitrumBlockBuilder {
         };
 
         let batch = Batch(messages);
+        debug!("Batch: {:?}", batch);
 
         // Encode the batch data
         let encoded_batch = batch.encode()?;

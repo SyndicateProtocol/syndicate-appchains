@@ -52,11 +52,11 @@ async fn run(
 
     // Override start blocks if we're resuming from a database
     if let Some(state) = &safe_state {
-        debug!(%state.slot, %state.sequencing_block, %state.settlement_block, "Resuming from known state in DB");
+        info!(%state.slot, %state.sequencing_block, %state.settlement_block, "Resuming from known state in DB");
         config.sequencing.sequencing_start_block = state.sequencing_block.number + 1;
         config.settlement.settlement_start_block = state.settlement_block.number + 1;
     } else {
-        debug!("No known state found in DB, starting from configured start blocks");
+        info!("No known state found in DB, starting from configured start blocks");
         // Initial timestamp is only needed if we aren't resuming from db
         config.set_initial_timestamp(&settlement_client, &sequencing_client).await?;
     }
