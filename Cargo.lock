@@ -2668,6 +2668,7 @@ name = "metabased-sequencer"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "alloy-provider",
  "alloy-rlp",
  "async-trait",
  "bytes",
