@@ -12,7 +12,7 @@ use common::types::{Block, BlockAndReceipts, Receipt};
 use eyre::eyre;
 use std::fmt::Debug;
 use thiserror::Error;
-use tracing::warn;
+use tracing::trace;
 use url::Url;
 
 /// Errors that can occur while interacting with the Ethereum RPC client.
@@ -135,7 +135,7 @@ impl RPCClient for EthClient {
                 .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
                 .map_resp(move |resp: Option<Block>| {
                     if resp.is_none() {
-                        warn!("Block not available for number: {}", block_number.clone());
+                        trace!("Block not available for number: {}", block_number.clone());
                     }
                     resp
                 });
@@ -144,7 +144,7 @@ impl RPCClient for EthClient {
                 .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
                 .map_resp(|resp: Option<Vec<Receipt>>| {
                     if resp.is_none() {
-                        warn!("Receipts not available for block number: {}", block_number.clone());
+                        trace!("Receipts not available for block number: {}", block_number.clone());
                     }
                     resp
                 });

@@ -14,7 +14,7 @@ use tokio::sync::{
     mpsc::{channel, Receiver, Sender},
     oneshot,
 };
-use tracing::{debug, error};
+use tracing::{error, info, trace};
 
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
@@ -104,14 +104,14 @@ impl Ingestor {
         mut self,
         mut shutdown_rx: oneshot::Receiver<()>,
     ) -> Result<(), Error> {
-        debug!("Starting polling");
+        info!("Starting polling for {}", self.chain);
 
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
             tokio::select! {
                 _ = &mut shutdown_rx => {
                     drop(self.sender);
-                    debug!("{} ingestor stopped", self.chain);
+                    info!("{} ingestor stopped", self.chain);
                     return Ok(());
                 }
                 _ = interval.tick() => {
@@ -128,6 +128,7 @@ impl Ingestor {
                 self.current_block_number + self.syncing_batch_size,
             ))
             .collect();
+        trace!("Fetching blocks {:?} on {}", block_numbers, self.chain);
 
         match self.client.batch_get_blocks_and_receipts(block_numbers).await {
             Ok(blocks) => {

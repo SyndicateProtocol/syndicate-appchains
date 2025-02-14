@@ -27,7 +27,7 @@ use eyre::{Error, Result};
 use reqwest::Client;
 use std::{net::TcpListener, time::Duration};
 use thiserror::Error;
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 use url::Host;
 
 /// Possible errors when mining a block
@@ -134,7 +134,7 @@ impl MetaChainProvider {
 
         debug!("Anvil args: {:?}", args);
         let anvil = Anvil::new().port(port).chain_id(MCHAIN_ID).args(args).try_spawn()?;
-        debug!("Anvil started at {}:{}", host_str, port);
+        info!("Anvil started at {}:{}", host_str, port);
 
         let provider = ProviderBuilder::new()
             .with_recommended_fillers()
