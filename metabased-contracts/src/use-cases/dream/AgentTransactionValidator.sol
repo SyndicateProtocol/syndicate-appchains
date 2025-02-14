@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {IMetabasedSequencerChain} from "./AgentApplication.sol";
-
+import {console} from "forge-std/console.sol";
 /// @title IAgentApplication
 /// @notice Interface for agent application status checks
 interface IAgentApplication {
@@ -39,6 +39,7 @@ contract AgentTransactionValidator {
         assembly {
             from := shr(96, calldataload(data.offset))
         }
+        console.log("from", from);
 
         // Check if the from address is permitted
         if (!agentApplication.isPermittedByAddress(from)) {
