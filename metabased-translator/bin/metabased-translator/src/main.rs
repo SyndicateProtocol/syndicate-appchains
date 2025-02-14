@@ -24,7 +24,6 @@ use tokio::{
 use tracing::{debug, error, info};
 
 // TODO(SEQ-515): Improve this executable, research async tasks
-#[allow(unused_assignments)] // TODO SEQ-528 remove this
 async fn run(
     config: &mut MetabasedConfig,
     db_path: &str,
