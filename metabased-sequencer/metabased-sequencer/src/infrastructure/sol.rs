@@ -9,8 +9,7 @@ use alloy::{
     hex,
     network::Network,
     primitives::U256,
-    providers::Provider,
-    rpc::RpcCall,
+    providers::{Provider, ProviderCall},
     sol,
     transports::Transport,
 };
@@ -197,7 +196,7 @@ mod tests {
         }
 
         fn get_balance(&self, _address: Address) -> RpcWithBlock<T, Address, U256> {
-            RpcWithBlock::new_rpc(RpcCall::new(Ok(self.balance)))
+            RpcWithBlock::new_provider(|_| ProviderCall::RpcCall(Ok(self.balance)))
         }
     }
 
