@@ -171,6 +171,7 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy::providers::{RootProvider, RpcWithBlock};
 
     #[derive(Debug, Clone)]
     #[allow(dead_code)]
