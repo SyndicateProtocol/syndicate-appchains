@@ -16,7 +16,7 @@ use tokio::{
         oneshot,
     },
 };
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, trace};
 
 /// Maximum time to wait for blocks before considering a slot final (24 hours in seconds)
 /// A slot becomes safe if both chains have progressed `MAX_WAIT_SEC` seconds past the slot's
@@ -135,6 +135,8 @@ impl Slotter {
         loop {
             let (first_rx, first_chain, second_rx, second_chain) =
                 self.prioritize_lagging_chain(&mut sequencing_rx, &mut settlement_rx);
+
+            trace!("Prioritized lagging chain: {:?}", first_chain);
 
             let process_result = select! {
                 biased;
@@ -292,17 +294,17 @@ impl Slotter {
 
         match block_slot_ordering(block_timestamp, latest_slot.timestamp, self.slot_duration) {
             Ordering::Less => {
-                debug!("Block belongs to an earlier slot");
+                trace!("Block belongs to an earlier slot");
                 let latest_num = latest_slot.number;
                 let latest_ts = latest_slot.timestamp;
                 self.insert_block_into_previous_slot(block_info, chain, latest_num, latest_ts)?;
             }
             Ordering::Equal => {
-                debug!("Block fits in current slot");
+                trace!("Block fits in current slot");
                 latest_slot.push_block(block_info, chain)
             }
             Ordering::Greater => {
-                debug!("Creating new slot for block");
+                trace!("Creating new slot for block");
                 let (target_slot_number, target_timestamp) = calculate_slot_position(
                     latest_slot.number,
                     latest_slot.timestamp,
@@ -322,13 +324,13 @@ impl Slotter {
                 let mut slot = Slot::new(target_slot_number, target_timestamp);
                 self.metrics.record_last_slot(slot.number);
                 slot.push_block(block_info, chain);
-                debug!(%slot, "Created new slot");
+                trace!(%slot, "Created new slot");
                 self.slots.push_front(slot);
             }
         }
         self.metrics.update_active_slots(self.slots.len());
         if self.min_chain_head_timestamp == 0 {
-            debug!(
+            trace!(
                 "No blocks seen for both chains yet, skipping cleanup and marking slots as unsafe"
             );
             return Ok(());
@@ -341,7 +343,11 @@ impl Slotter {
     /// `cleanup_slots` will mark slots as safe if both chains have progressed `MAX_WAIT` seconds
     /// past them and we have seen blocks from both chains after that point.
     async fn cleanup_slots(&mut self) -> Result<(), SlotterError> {
-        debug!("Checking for slots to mark as safe");
+        debug!(
+            "Checking for slots to mark as safe 24 hours before {}",
+            self.min_chain_head_timestamp
+        );
+
         // Check slots from oldest to newest (back to front)
         while let Some(slot) = self.slots.back() {
             // Has 24h passed since this slot's timestamp?
@@ -359,7 +365,7 @@ impl Slotter {
                 )
             })?;
 
-            debug!(%slot, "Saving safe slot to DB");
+            trace!(%slot, "Saving safe slot to DB");
             slot.state = SlotState::Safe;
             self.safe_timestamp = slot.timestamp;
             self.store.save_safe_slot(&slot).await?;
@@ -399,7 +405,7 @@ impl Slotter {
             }
         }
 
-        debug!(
+        trace!(
             ?chain,
             block_number = block.number,
             block_timestamp = block.timestamp,
@@ -447,7 +453,7 @@ impl Slotter {
         for (idx, slot) in self.slots.iter_mut().enumerate() {
             match block_slot_ordering(block_timestamp, slot.timestamp, self.slot_duration) {
                 Ordering::Equal => {
-                    debug!(%slot, "Found matching slot, adding block");
+                    trace!(%slot, "Found matching slot, adding block");
                     slot.push_block(block_info, chain);
                     return Ok(());
                 }
@@ -459,7 +465,7 @@ impl Slotter {
                     let mut slots_to_insert = Vec::new();
 
                     let mut new_slot = Slot::new(target_slot_number, target_timestamp);
-                    debug!(%new_slot, "Creating new slot between existing slots");
+                    trace!(%new_slot, "Creating new slot between existing slots");
                     new_slot.push_block(block_info, chain);
                     slots_to_insert.push(new_slot);
 
@@ -470,7 +476,7 @@ impl Slotter {
                             target_slot_number - 1,
                             target_timestamp - self.slot_duration,
                         );
-                        debug!(%empty_slot, "Created empty slot before target");
+                        trace!(%empty_slot, "Created empty slot before target");
                         slots_to_insert.push(empty_slot);
                     }
 
