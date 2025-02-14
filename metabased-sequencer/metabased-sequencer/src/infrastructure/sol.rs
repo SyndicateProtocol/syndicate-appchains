@@ -177,17 +177,21 @@ mod tests {
     #[allow(dead_code)]
     struct MockProvider {
         balance: U256,
+        root: RootProvider<alloy::transports::BoxTransport, Ethereum>,
     }
 
     impl MockProvider {
         fn new(balance: U256) -> Self {
-            Self { balance }
+            let transport = alloy::transports::BoxTransport::new(alloy::transports::EmptyTransport);
+            let client = alloy_rpc_client::RpcClient::new(transport, true);
+            let root = RootProvider::new(client);
+            Self { balance, root }
         }
     }
 
     impl<T: Transport + Clone + Send + Sync + 'static> Provider<T, Ethereum> for MockProvider {
         fn root(&self) -> &RootProvider<T, Ethereum> {
-            unimplemented!("Mock provider does not implement root")
+            &self.root
         }
 
         fn get_balance(&self, _address: Address) -> RpcWithBlock<'_, T, Address, U256> {
