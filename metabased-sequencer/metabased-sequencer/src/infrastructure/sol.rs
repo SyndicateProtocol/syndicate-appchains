@@ -9,7 +9,7 @@ use alloy::{
     hex,
     network::Network,
     primitives::U256,
-    providers::{Provider, RootProvider},
+    providers::Provider,
     sol,
     transports::Transport,
 };
@@ -187,11 +187,11 @@ mod tests {
 
     #[async_trait]
     impl<T: Transport + Clone> Provider<T, alloy::network::Ethereum> for MockProvider {
-        fn root(&self) -> &RootProvider<T, alloy::network::Ethereum> {
+        fn root(&self) -> &alloy::providers::RootProvider<T, alloy::network::Ethereum> {
             unimplemented!("Mock provider does not implement root")
         }
 
-        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
+        async fn get_balance<'a>(&'a self, _address: Address) -> Result<U256, alloy::contract::Error> {
             Ok(self.balance)
         }
     }
