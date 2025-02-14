@@ -9,7 +9,7 @@ use alloy::{
     hex,
     network::{Ethereum, Network},
     primitives::U256,
-    providers::{Provider, RootProvider},
+    providers::{Provider, ProviderCall, RootProvider, RpcWithBlock},
     sol,
     transports::Transport,
 };
@@ -190,8 +190,9 @@ mod tests {
             unimplemented!("Mock provider does not implement root")
         }
 
-        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
-            Ok(self.balance)
+        fn get_balance(&self, _address: Address) -> RpcWithBlock<T, Address, U256> {
+            let balance = self.balance;
+            RpcWithBlock::new_provider(move |_| ProviderCall::ready(Ok(balance)))
         }
     }
 
