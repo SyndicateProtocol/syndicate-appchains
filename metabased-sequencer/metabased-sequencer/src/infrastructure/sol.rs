@@ -9,8 +9,7 @@ use alloy::{
     hex,
     network::{Ethereum, Network},
     primitives::U256,
-    providers::{Provider, ProviderCall, RootProvider, RpcWithBlock},
-    rpc_client::RpcClient,
+    providers::{Provider, RootProvider},
     sol,
     transports::Transport,
 };
@@ -175,37 +174,33 @@ mod tests {
 
     #[derive(Debug, Clone)]
     #[allow(dead_code)]
-    struct MockProvider<T: Transport + Clone> {
+    struct MockProvider {
         balance: U256,
-        root: RootProvider<T, Ethereum>,
     }
 
-    impl<T: Transport + Clone> MockProvider<T> {
+    impl MockProvider {
         fn new(balance: U256) -> Self {
-            let client = RpcClient::new(T::default(), true);
-            let root = RootProvider::new(client);
-            Self { balance, root }
+            Self { balance }
         }
     }
 
     #[async_trait]
-    impl<T: Transport + Clone + std::default::Default> Provider<T, Ethereum> for MockProvider<T> {
+    impl<T: Transport + Clone> Provider<T, Ethereum> for MockProvider {
         fn root(&self) -> &RootProvider<T, Ethereum> {
-            &self.root
+            unimplemented!("Mock provider does not implement root")
         }
 
-        fn get_balance(&self, _address: Address) -> RpcWithBlock<T, Address, U256> {
-            let balance = self.balance;
-            RpcWithBlock::new_provider(move |_| ProviderCall::ready(Ok(balance)))
+        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
+            Ok(self.balance)
         }
     }
 
     #[tokio::test]
     async fn test_get_balance() {
         let expected_balance = U256::from(100);
-        let provider = MockProvider::<alloy::transports::BoxTransport>::new(expected_balance);
+        let provider = MockProvider::new(expected_balance);
         let service: SolMetabasedSequencerChainService<
-            MockProvider<alloy::transports::BoxTransport>,
+            MockProvider,
             alloy::transports::BoxTransport,
             alloy::network::Ethereum,
         > = SolMetabasedSequencerChainService::new(Address::default(), provider);
