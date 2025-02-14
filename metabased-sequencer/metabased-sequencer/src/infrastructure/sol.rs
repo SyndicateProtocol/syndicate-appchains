@@ -9,11 +9,10 @@ use alloy::{
     hex,
     network::Network,
     primitives::U256,
-    providers::Provider,
+    providers::{Provider, RootProvider},
     sol,
     transports::Transport,
 };
-use alloy::providers::RootProvider;
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
 use tracing::{debug_span, info};
@@ -190,10 +189,7 @@ mod tests {
             unimplemented!("Mock provider does not implement root")
         }
 
-        async fn get_balance(
-            &self,
-            _address: Address,
-        ) -> Result<U256, alloy::contract::Error> {
+        async fn get_balance(&self, _address: Address) -> Result<U256, alloy::contract::Error> {
             Ok(self.balance)
         }
     }
