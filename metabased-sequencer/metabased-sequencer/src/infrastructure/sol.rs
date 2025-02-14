@@ -7,7 +7,7 @@ use crate::{
 };
 use alloy::{
     hex, network::Network, primitives::U256,
-    providers::{Provider, RootProvider},
+    providers::{Provider, RootProvider, RpcWithBlock},
     sol, transports::Transport,
 };
 use async_trait::async_trait;
@@ -186,7 +186,7 @@ mod tests {
             unimplemented!("Mock provider does not implement root")
         }
 
-        async fn get_balance(&self, _address: Address) -> RpcWithBlock<T, Address, U256> {
+        fn get_balance(&self, address: Address) -> RpcWithBlock<T, Address, U256> {
             unimplemented!("Mock provider does not implement get_balance")
         }
     }
