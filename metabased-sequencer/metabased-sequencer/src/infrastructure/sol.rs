@@ -180,14 +180,19 @@ mod tests {
     }
 
     #[async_trait]
-    impl<T: Transport + Clone> Provider<T, Ethereum> for MockProvider {
-        fn root(&self) -> &RootProvider<T, Ethereum> {
+    impl<T: Transport + Clone> Provider<T, alloy::network::Ethereum> for MockProvider {
+        fn root(&self) -> &alloy::providers::RootProvider<T, alloy::network::Ethereum> {
             unimplemented!("Mock provider does not implement root")
         }
 
-        fn get_balance(&self, _address: Address) -> RpcWithBlock<T, Address, U256> {
+        fn get_balance(
+            &self,
+            _address: Address,
+        ) -> alloy::providers::RpcWithBlock<T, Address, U256> {
             let balance = self.balance;
-            RpcWithBlock::new_provider(move |_| ProviderCall::ready(Ok(balance)))
+            alloy::providers::RpcWithBlock::new_provider(move |_| {
+                alloy::providers::ProviderCall::ready(Ok(balance))
+            })
         }
     }
 
