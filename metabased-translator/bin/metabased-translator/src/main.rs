@@ -206,21 +206,6 @@ fn get_extra_fields_for_logging(base_config: MetabasedConfig) -> Vec<(String, Va
 }
 
 #[derive(Debug, Error)]
-pub enum ConfigError {
-    #[error("Block builder config error: {0}")]
-    BlockBuilder(String),
-
-    #[error("Slotter config error: {0}")]
-    Slotter(String),
-
-    #[error("Ingestor config error: {0}")]
-    Ingestor(String),
-
-    #[error("Metrics config error: {0}")]
-    Metrics(String),
-}
-
-#[derive(Debug, Error)]
 pub enum RuntimeError {
     #[error("Failed to initialize component: {0}")]
     Initialization(String),
