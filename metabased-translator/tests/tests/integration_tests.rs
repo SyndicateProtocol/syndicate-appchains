@@ -18,15 +18,19 @@ use common::types::Block;
 use contract_bindings::arbitrum::{counter::Counter, iinbox::IInbox, rollup::Rollup};
 use e2e_tests::{
     e2e_env::{wallet_from_private_key, TestEnv},
-    full_meta_node::{launch_nitro_node, MetaNode, GENESIS_TIMESTAMP, PRELOAD_INBOX_ADDRESS},
+    full_meta_node::{
+        launch_nitro_node, start_anvil, MetaNode, GENESIS_TIMESTAMP, PRELOAD_INBOX_ADDRESS,
+    },
+    port_manager::PortManager,
 };
 use eyre::{eyre, Result};
 use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
-use std::time::Duration;
+use serial_test::serial;
+use std::{process::Command, time::Duration};
 use test_utils::test_path;
-use tokio::time::sleep;
+use tokio::{process::Command as TokioCommand, time::sleep};
 
 /// Simple test scenario:
 /// Bob tries to deploy a counter contract to L3, then tries to increment it
@@ -529,4 +533,70 @@ async fn test_nitro_batch() -> Result<()> {
     assert_eq!(block.transactions[1].hash, *inner_tx.tx_hash());
 
     Ok(())
+}
+
+async fn run_metabased_translator(signal: &str) -> Result<()> {
+    let port_tracker = PortManager::instance();
+    let seq_port = port_tracker.next_port();
+    let (_seq_instance, _seq_provider) = start_anvil(seq_port, 15).await?;
+    let set_port = port_tracker.next_port();
+    let (_set_instance, _set_provider) = start_anvil(set_port, 20).await?;
+
+    sleep(Duration::from_millis(3000)).await;
+
+    let mut metabased_process = TokioCommand::new("cargo")
+        .arg("run")
+        .arg("--bin")
+        .arg("metabased-translator")
+        .current_dir("../bin/metabased-translator")
+        .arg("--") // <-- This separates Cargo arguments from binary arguments
+        .args([
+            "--sequencing-contract-address",
+            "0x0000000000000000000000000000000000000001",
+            "--bridge-address",
+            "0x0000000000000000000000000000000000000002",
+            "--inbox-address",
+            "0x0000000000000000000000000000000000000003",
+            "--sequencing-rpc-url",
+            &format!("http://localhost:{}", seq_port),
+            "--sequencing-start-block",
+            "0",
+            "--settlement-rpc-url",
+            &format!("http://localhost:{}", set_port),
+            "--settlement-start-block",
+            "0",
+        ])
+        .spawn()?;
+
+    // Wait for some time to ensure the process is running
+    sleep(Duration::from_millis(3000)).await;
+
+    let pid = metabased_process.id().ok_or_else(|| eyre::eyre!("Failed to get process ID"))?;
+
+    Command::new("kill").arg(signal).arg(pid.to_string()).status()?;
+
+    metabased_process.wait().await?;
+
+    match metabased_process.try_wait()? {
+        Some(status) => {
+            assert!(status.success(), "Metabased process did not exit cleanly");
+        }
+        None => {
+            panic!("Metabased process is still running after {}", signal);
+        }
+    }
+
+    Ok(())
+}
+
+#[tokio::test]
+#[serial]
+async fn test_metabased_sigterm() -> Result<()> {
+    run_metabased_translator("-TERM").await
+}
+
+#[tokio::test]
+#[serial]
+async fn test_metabased_sigint() -> Result<()> {
+    run_metabased_translator("-INT").await
 }
