@@ -2,6 +2,7 @@
 pragma solidity 0.8.25;
 
 import {IMetabasedSequencerChain} from "./AgentApplication.sol";
+import {RLPTxDecoder} from "./RLP/RLPTxDecoder.sol";
 
 /// @title IAgentApplication
 /// @notice Interface for agent application status checks
@@ -33,12 +34,7 @@ contract AgentTransactionValidator {
     /// @notice Process a transaction after validating the 'from' address
     /// @param data The transaction data to process
     function processTransaction(bytes calldata data) external {
-        if (data.length < 20) revert InvalidTransactionData();
-
-        address from;
-        assembly {
-            from := shr(96, calldataload(data.offset))
-        }
+        address from = RLPTxDecoder.decodeTx(data);
 
         // Check if the from address is permitted
         if (!agentApplication.isPermittedByAddress(from)) {
