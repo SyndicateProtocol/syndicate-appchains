@@ -134,7 +134,7 @@ impl SlotterMetrics {
     }
 
     /// Records the last slot number created
-    pub fn record_last_slot(&self, slot_number: u64) {
+    pub fn record_last_slot_created(&self, slot_number: u64) {
         self.slotter_last_slot_created.set(slot_number as i64);
     }
 }
@@ -242,10 +242,10 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = SlotterMetrics::new(&mut registry);
 
-        metrics.record_last_slot(42);
+        metrics.record_last_slot_created(42);
         assert_eq!(metrics.slotter_last_slot_created.get(), 42);
 
-        metrics.record_last_slot(100);
+        metrics.record_last_slot_created(100);
         assert_eq!(metrics.slotter_last_slot_created.get(), 100);
     }
 }

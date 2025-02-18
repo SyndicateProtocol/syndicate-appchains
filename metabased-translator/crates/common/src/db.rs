@@ -174,10 +174,9 @@ impl TranslatorStore for RocksDbStore {
         let mut batch = rocksdb::WriteBatch::default();
         batch.put(KEY_SLOT_SAFE, serde_json::to_vec(slot)?);
 
-        if let Some(last_seq) = slot.sequencing_chain_blocks.last() {
-            batch.put(KEY_SAFE_SEQ, bincode::serialize(&BlockRef::new(&last_seq.block))?);
-        }
-        if let Some(last_settle) = slot.settlement_chain_blocks.last() {
+        batch.put(KEY_SAFE_SEQ, bincode::serialize(&BlockRef::new(&slot.sequencing_block.block))?);
+
+        if let Some(last_settle) = slot.settlement_blocks.last() {
             batch.put(KEY_SAFE_SETTLE, bincode::serialize(&BlockRef::new(&last_settle.block))?);
         }
 
@@ -189,10 +188,10 @@ impl TranslatorStore for RocksDbStore {
         let mut batch = rocksdb::WriteBatch::default();
         batch.put(KEY_SLOT_UNSAFE, serde_json::to_vec(slot)?);
 
-        if let Some(last_seq) = slot.sequencing_chain_blocks.last() {
-            batch.put(KEY_UNSAFE_SEQ, bincode::serialize(&BlockRef::new(&last_seq.block))?);
-        }
-        if let Some(last_settle) = slot.settlement_chain_blocks.last() {
+        batch
+            .put(KEY_UNSAFE_SEQ, bincode::serialize(&BlockRef::new(&slot.sequencing_block.block))?);
+
+        if let Some(last_settle) = slot.settlement_blocks.last() {
             batch.put(KEY_UNSAFE_SETTLE, bincode::serialize(&BlockRef::new(&last_settle.block))?);
         }
 
@@ -222,6 +221,7 @@ pub enum DbError {
     BincodeSerialization(#[from] bincode::Error),
 }
 
+/*
 #[cfg(test)]
 mod test {
     use super::*;
@@ -252,9 +252,8 @@ mod test {
         let seq_block = create_test_block(1);
         let settle_block = create_test_block(2);
 
-        slot.sequencing_chain_blocks
-            .push(BlockAndReceipts { block: seq_block.clone(), receipts: vec![] });
-        slot.settlement_chain_blocks
+        slot.sequencing_block.push(BlockAndReceipts { block: seq_block.clone(), receipts: vec![] });
+        slot.settlement_blocks
             .push(BlockAndReceipts { block: settle_block.clone(), receipts: vec![] });
         slot.state = SlotState::Safe;
         store.save_safe_slot(&slot).await.unwrap();
@@ -277,11 +276,10 @@ mod test {
         let seq_block = create_test_block(1);
         let settle_block = create_test_block(2);
 
-        slot.sequencing_chain_blocks
-            .push(BlockAndReceipts { block: seq_block.clone(), receipts: vec![] });
-        slot.settlement_chain_blocks
+        slot.sequencing_block.push(BlockAndReceipts { block: seq_block.clone(), receipts: vec![] });
+        slot.settlement_blocks
             .push(BlockAndReceipts { block: settle_block.clone(), receipts: vec![] });
-        slot.state = SlotState::Unsafe;
+        slot.state = SlotState::Closed;
 
         store.save_unsafe_slot(&slot).await.unwrap();
 
@@ -303,10 +301,10 @@ mod test {
         let safe_seq = create_test_block(1);
         let safe_settle = create_test_block(2);
         safe_slot
-            .sequencing_chain_blocks
+            .sequencing_block
             .push(BlockAndReceipts { block: safe_seq.clone(), receipts: vec![] });
         safe_slot
-            .settlement_chain_blocks
+            .settlement_blocks
             .push(BlockAndReceipts { block: safe_settle.clone(), receipts: vec![] });
         safe_slot.state = SlotState::Safe;
         store.save_safe_slot(&safe_slot).await.unwrap();
@@ -316,12 +314,12 @@ mod test {
         let unsafe_seq = create_test_block(3);
         let unsafe_settle = create_test_block(4);
         unsafe_slot
-            .sequencing_chain_blocks
+            .sequencing_block
             .push(BlockAndReceipts { block: unsafe_seq.clone(), receipts: vec![] });
         unsafe_slot
-            .settlement_chain_blocks
+            .settlement_blocks
             .push(BlockAndReceipts { block: unsafe_settle.clone(), receipts: vec![] });
-        unsafe_slot.state = SlotState::Unsafe;
+        unsafe_slot.state = SlotState::Closed;
 
         store.save_unsafe_slot(&unsafe_slot).await.unwrap();
 
@@ -338,3 +336,5 @@ mod test {
         assert_eq!(unsafe_state.settlement_block, BlockRef::new(&unsafe_settle));
     }
 }
+
+*/

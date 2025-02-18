@@ -179,7 +179,7 @@ pub enum SlotState {
     Safe,
     /// A slot that we don't expect to fit more blocks into. It should be considered cannonical
     /// unless a reorg happens
-    Unsafe,
+    Closed,
     /// A slot to which incoming blocks might still be added
     #[default]
     Open,
@@ -193,41 +193,28 @@ pub struct Slot {
     /// the timestamp of the slot in seconds
     pub timestamp: u64,
     /// the blocks from the sequencing chain to be included in the slot
-    pub sequencing_chain_blocks: Vec<BlockAndReceipts>,
+    pub sequencing_block: BlockAndReceipts,
     /// the blocks from the settlement chain to be included in the slot
-    pub settlement_chain_blocks: Vec<BlockAndReceipts>,
+    pub settlement_blocks: Vec<BlockAndReceipts>,
     /// the finality state of the slot
     pub state: SlotState,
 }
 
 impl Slot {
     /// Creates a new slot
-    pub const fn new(number: u64, timestamp: u64) -> Self {
+    pub const fn new(number: u64, timestamp: u64, sequencing_block: BlockAndReceipts) -> Self {
         Self {
             number,
             timestamp,
-            sequencing_chain_blocks: Vec::new(),
-            settlement_chain_blocks: Vec::new(),
+            sequencing_block,
+            settlement_blocks: Vec::new(),
             state: SlotState::Open,
         }
     }
 
-    /// Checks if the slot is empty (does not include any blocks)
-    pub fn is_empty(&self) -> bool {
-        self.sequencing_chain_blocks.is_empty() && self.settlement_chain_blocks.is_empty()
-    }
-
     /// Adds a block to the slot's chain-specific block list
-    pub fn push_block(&mut self, block: BlockAndReceipts, chain: Chain) {
-        match chain {
-            Chain::Sequencing => self.sequencing_chain_blocks.push(block),
-            Chain::Settlement => self.settlement_chain_blocks.push(block),
-        }
-    }
-
-    /// Returns the total number of blocks across both the sequencing and settlement chains
-    pub fn get_total_blocks(&self) -> usize {
-        self.sequencing_chain_blocks.len() + self.settlement_chain_blocks.len()
+    pub fn push_settlement_block(&mut self, block: BlockAndReceipts) {
+        self.settlement_blocks.push(block)
     }
 }
 
@@ -235,14 +222,13 @@ impl fmt::Display for Slot {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Slot #{} [ts: {}, state: {}, blocks: {} seq + {} settle],  Sequencing blocks: {},  Settlement blocks: {}",
+            "Slot #{} [ts: {}, state: {}],  Sequencing block: {},  Settlement blocks (total: {}): {}",
             self.number,
             self.timestamp,
             self.state,
-            self.sequencing_chain_blocks.len(),
-            self.settlement_chain_blocks.len(),
-            format_blocks(&self.sequencing_chain_blocks),
-            format_blocks(&self.settlement_chain_blocks),
+            format_block(&self.sequencing_block),
+            self.settlement_blocks.len(),
+            format_blocks(&self.settlement_blocks),
         )
     }
 }
@@ -251,11 +237,16 @@ fn format_blocks(blocks: &[BlockAndReceipts]) -> String {
     if blocks.is_empty() {
         return "none".to_string();
     }
-    blocks
-        .iter()
-        .map(|b| format!("#{} ({})", b.block.number, b.block.hash))
-        .collect::<Vec<_>>()
-        .join(", ")
+    blocks.iter().map(format_block).collect::<Vec<_>>().join(", ")
+}
+
+fn format_block(b: &BlockAndReceipts) -> String {
+    format!(
+        "number: {}, hash: {}, total_receipts: {}",
+        b.block.number,
+        b.block.hash,
+        b.receipts.len()
+    )
 }
 
 /// A reference to a block containing just its number and timestamp
@@ -420,10 +411,8 @@ mod test {
     use alloy::{hex::FromHex, primitives::B256};
 
     fn create_test_slot() -> Slot {
-        let mut slot = Slot::new(1, 1000);
-
         // Add sequencing chain block with transaction and receipt
-        slot.sequencing_chain_blocks.push(BlockAndReceipts {
+        let sequencing_block = BlockAndReceipts {
             block: Block {
                 hash: B256::from_hex(
                     "0x1234567890123456789012345678901234567890123456789012345678901234",
@@ -490,10 +479,12 @@ mod test {
                 status: "0x1".to_string(),
                 receipt_type: "0x0".to_string(),
             }],
-        });
+        };
+
+        let mut slot = Slot::new(1, 1000, sequencing_block);
 
         // Add settlement chain block
-        slot.settlement_chain_blocks.push(BlockAndReceipts {
+        slot.settlement_blocks.push(BlockAndReceipts {
             block: Block {
                 hash: B256::from_hex(
                     "0x5678901234567890123456789012345678901234567890123456789012345678",
