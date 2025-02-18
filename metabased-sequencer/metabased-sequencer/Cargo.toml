@@ -35,12 +35,10 @@ tower-layer = { workspace = true }
 tower-service = { workspace = true }
 
 [dev-dependencies]
-alloy-json-rpc = {workspace = true}
 alloy-rlp = { workspace = true }
 test-case = { workspace = true }
 const_format = { workspace = true }
 criterion = { workspace = true }
-mockall = { workspace = true }
 
 [[bench]]
 name = "zlib_compression"
