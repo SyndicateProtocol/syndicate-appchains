@@ -173,7 +173,9 @@ pub struct MetaNode {
     pub metabased_rollup: RootProvider<Http<Client>>,
 
     pub chain_id: u64,
-    pub slot_duration: u64,
+
+    pub set_block_interval: u64,
+    pub seq_block_interval: u64,
 
     pub mchain_provider: FilledProvider,
 
@@ -316,13 +318,9 @@ impl MetaNode {
             let _ = settlement_ingestor.start_polling(set_ingestor_rx).await;
         }));
 
-        // Start slotter at the genesis timestamp
-        let mut slotter_cfg = config.slotter;
-        slotter_cfg.start_slot_timestamp = GENESIS_TIMESTAMP;
-
         // Launch the slotter, block builder, and nitro rollup
         let (slotter, slotter_rx) = Slotter::new(
-            &slotter_cfg,
+            &config.slotter,
             None,
             Arc::new(DummyStore {}),
             SlotterMetrics::new(&mut metrics_state.registry),
@@ -337,7 +335,6 @@ impl MetaNode {
             slotter_rx,
             &block_builder_cfg,
             &datadir,
-            slotter_cfg.slot_duration,
             Arc::new(DummyStore {}),
             BlockBuilderMetrics::new(&mut metrics_state.registry),
         )
@@ -359,7 +356,9 @@ impl MetaNode {
             metabased_rollup,
 
             chain_id: block_builder_cfg.target_chain_id,
-            slot_duration: slotter_cfg.slot_duration,
+
+            set_block_interval: 2,
+            seq_block_interval: 2,
 
             mchain_provider,
 
@@ -396,8 +395,8 @@ impl MetaNode {
     }
 
     pub async fn mine_next_slot(&self) -> Result<()> {
-        self.mine_seq_blocks(self.slot_duration).await?;
-        self.mine_set_blocks(self.slot_duration).await?;
+        self.mine_seq_blocks(self.set_block_interval).await?;
+        self.mine_set_blocks(self.set_block_interval).await?;
 
         Ok(())
     }

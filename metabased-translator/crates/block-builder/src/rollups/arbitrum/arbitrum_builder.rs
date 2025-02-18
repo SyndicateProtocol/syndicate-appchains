@@ -102,7 +102,7 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
         let delayed_messages = self.process_delayed_messages(slot.settlement_blocks).await?;
         debug!("Delayed messages: {:?}", delayed_messages);
 
-        let mb_transactions = self.parse_blocks_to_mbtxs(slot.sequencing_block);
+        let mb_transactions = self.parse_block_to_mbtxs(slot.sequencing_block);
 
         if delayed_messages.is_empty() && mb_transactions.is_empty() {
             trace!("No delayed messages or MB transactions, skipping block");
@@ -404,7 +404,7 @@ mod tests {
             timestamp: 0,
             state: SlotState::Safe,
             settlement_blocks: vec![],
-            sequencing_block: vec![],
+            sequencing_block: BlockAndReceipts::default(),
         };
 
         let result = builder.build_block_from_slot(slot).await;
@@ -488,7 +488,7 @@ mod tests {
             timestamp: 0,
             state: SlotState::Safe,
             settlement_blocks: vec![block],
-            sequencing_block: vec![],
+            sequencing_block: BlockAndReceipts::default(),
         };
 
         let result = builder.build_block_from_slot(slot).await;
@@ -529,10 +529,10 @@ mod tests {
             timestamp: 0,
             state: SlotState::Safe,
             settlement_blocks: vec![],
-            sequencing_block: vec![BlockAndReceipts {
+            sequencing_block: BlockAndReceipts {
                 block,
                 receipts: vec![Receipt { logs: vec![txn_processed_log], ..Default::default() }],
-            }],
+            },
         };
 
         let result = builder.build_block_from_slot(slot).await;
@@ -627,10 +627,10 @@ mod tests {
                 block: settlement_block,
                 receipts: vec![settlement_receipt],
             }],
-            sequencing_block: vec![BlockAndReceipts {
+            sequencing_block: BlockAndReceipts {
                 block: sequencing_block,
                 receipts: vec![sequencing_receipt],
-            }],
+            },
         };
 
         let result = builder.build_block_from_slot(slot).await;

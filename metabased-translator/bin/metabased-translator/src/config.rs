@@ -105,7 +105,6 @@ impl MetabasedConfig {
             ));
         }
 
-        self.slotter.start_slot_timestamp = set_start_block.timestamp;
         self.block_builder.genesis_timestamp = set_start_block.timestamp;
         debug!("Genesis timestamp set to: {:?}", set_start_block.timestamp);
         Ok(())
@@ -209,7 +208,7 @@ mod tests {
         assert_eq!(config.block_builder.target_chain_id, 13331370);
 
         // Slotter
-        assert_eq!(config.slotter.slot_duration, 2);
+        assert_eq!(config.slotter.settlement_delay, 60);
 
         // Chains
         assert_eq!(config.sequencing.sequencing_buffer_size, 100);
@@ -241,7 +240,6 @@ mod tests {
 
         let config = MetabasedConfig::try_parse_from(["test"]).unwrap();
         assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:9999/");
-        assert_eq!(config.slotter.slot_duration, 3);
         assert_eq!(config.sequencing.sequencing_buffer_size, 200);
     }
 
@@ -307,7 +305,6 @@ mod tests {
         let result = config.set_initial_timestamp(&settlement_client, &sequencing_client).await;
 
         assert!(result.is_ok());
-        assert_eq!(config.slotter.start_slot_timestamp, 6000);
         assert_eq!(config.block_builder.genesis_timestamp, 6000);
     }
 

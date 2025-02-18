@@ -427,14 +427,14 @@ async fn e2e_test() -> Result<()> {
         .mchain_provider
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(3), true))
         .await?;
-    assert_eq!(mchain_block.timestamp, GENESIS_TIMESTAMP + meta_node.slot_duration);
+    assert_eq!(mchain_block.timestamp, GENESIS_TIMESTAMP + meta_node.seq_block_interval);
     assert_eq!(mchain_block.transactions.len(), 0);
     // check mchain block 4
     let mchain_block: Block = meta_node
         .mchain_provider
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(4), true))
         .await?;
-    assert_eq!(mchain_block.timestamp, GENESIS_TIMESTAMP + meta_node.slot_duration * 2);
+    assert_eq!(mchain_block.timestamp, GENESIS_TIMESTAMP + meta_node.seq_block_interval * 2);
     assert_eq!(mchain_block.transactions.len(), 2);
     // check rollup block 3
     assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 3);
@@ -442,7 +442,7 @@ async fn e2e_test() -> Result<()> {
         .metabased_rollup
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(3), true))
         .await?;
-    assert_eq!(rollup_block.timestamp, GENESIS_TIMESTAMP + meta_node.slot_duration * 2);
+    assert_eq!(rollup_block.timestamp, GENESIS_TIMESTAMP + meta_node.seq_block_interval * 2);
     // the first transaction is the startBlock transaction
     assert_eq!(rollup_block.transactions.len(), 2);
     // balance should match

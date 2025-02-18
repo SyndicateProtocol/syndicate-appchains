@@ -31,7 +31,7 @@ impl RollupBlockBuilder for OptimismBlockBuilder {
     async fn build_block_from_slot(&mut self, slot: Slot) -> Result<Vec<TransactionRequest>> {
         let deposited_txns = self.process_deposited_txns(slot.settlement_blocks).await?;
 
-        let mbtxs = self.parse_blocks_to_mbtxs(slot.sequencing_block);
+        let mbtxs = self.parse_block_to_mbtxs(slot.sequencing_block);
 
         let batch_txn = self.build_batch_txn(mbtxs).await?;
 
