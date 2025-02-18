@@ -184,9 +184,9 @@ pub struct MetaNode {
 
     // References to keep the processes/tasks alive
     #[allow(dead_code)]
-    pub seq_anvil: AnvilInstance,
+    seq_anvil: AnvilInstance,
     #[allow(dead_code)]
-    pub set_anvil: AnvilInstance,
+    set_anvil: AnvilInstance,
     #[allow(dead_code)]
     nitro_docker: Docker,
     #[allow(dead_code)]
