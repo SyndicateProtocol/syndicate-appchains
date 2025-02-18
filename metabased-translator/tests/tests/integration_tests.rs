@@ -1,5 +1,4 @@
 //! Integration tests for the metabased stack
-#![allow(missing_docs)]
 
 use alloy::{
     eips::{eip2718::Encodable2718, BlockNumberOrTag},
@@ -26,6 +25,7 @@ use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use std::time::Duration;
 use test_utils::test_path;
+use tokio::time::sleep;
 
 /// Simple test scenario:
 /// Bob tries to deploy a counter contract to L3, then tries to increment it
@@ -319,7 +319,7 @@ async fn e2e_settlement_test() -> Result<()> {
     meta_node.mine_next_slot().await?;
 
     // Process the slot
-    tokio::time::sleep(Duration::from_millis(500)).await;
+    sleep(Duration::from_millis(500)).await;
 
     assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 17);
     assert_eq!(
@@ -374,7 +374,7 @@ async fn e2e_test() -> Result<()> {
     // insert a block to slot 1 @ ts 0, slot 2 @ ts 1. mine slot 1 -> mchain block 2.
     meta_node.mine_both(0).await?;
     meta_node.mine_next_slot().await?;
-    tokio::time::sleep(Duration::from_millis(200)).await;
+    sleep(Duration::from_millis(200)).await;
 
     // check mchain blocks
     assert_eq!(meta_node.mchain_provider.get_block_number().await?, 2);
@@ -418,7 +418,7 @@ async fn e2e_test() -> Result<()> {
         .await?;
     meta_node.mine_next_slot().await?;
     meta_node.mine_next_slot().await?;
-    tokio::time::sleep(Duration::from_millis(100)).await;
+    sleep(Duration::from_millis(100)).await;
 
     // check mchain blocks
     assert_eq!(meta_node.mchain_provider.get_block_number().await?, 4);
@@ -482,7 +482,7 @@ async fn test_nitro_batch() -> Result<()> {
     mchain.mine_block(0).await?;
 
     // wait 20ms for the batch to be processed
-    tokio::time::sleep(Duration::from_millis(20)).await;
+    sleep(Duration::from_millis(20)).await;
     if rollup.get_block_number().await? != 1 {
         return Err(eyre!("block derivation failed - not on block 1"));
     }
@@ -514,7 +514,7 @@ async fn test_nitro_batch() -> Result<()> {
     mchain.mine_block(0).await?;
 
     // wait 20ms for the batch to be processed
-    tokio::time::sleep(Duration::from_millis(20)).await;
+    sleep(Duration::from_millis(20)).await;
     if rollup.get_block_number().await? != 2 {
         return Err(eyre!("block derivation failed - not on block 2"));
     }

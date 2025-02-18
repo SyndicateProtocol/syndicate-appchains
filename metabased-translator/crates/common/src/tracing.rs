@@ -96,7 +96,6 @@ pub fn init_tracing_with_extra_fields(
 
     Ok(())
 }
-
 /// Initializes a tracing subscriber for testing purposes
 pub fn init_test_tracing(level: Level) -> Result<(), TracingError> {
     subscriber_fmt()

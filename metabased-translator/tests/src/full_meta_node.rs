@@ -74,7 +74,7 @@ impl Drop for Docker {
     }
 }
 
-async fn start_anvil(port: u16, chain_id: u64) -> Result<(AnvilInstance, FilledProvider)> {
+pub async fn start_anvil(port: u16, chain_id: u64) -> Result<(AnvilInstance, FilledProvider)> {
     let timestamp = GENESIS_TIMESTAMP.to_string();
     let args = vec![
         "--base-fee",

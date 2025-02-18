@@ -1609,6 +1609,7 @@ dependencies = [
  "metrics",
  "prometheus-client",
  "reqwest",
+ "serial_test",
  "slotter",
  "strum",
  "strum_macros",
