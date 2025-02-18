@@ -542,7 +542,7 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
     let set_port = port_tracker.next_port();
     let (_set_instance, _set_provider) = start_anvil(set_port, 20).await?;
 
-    sleep(Duration::from_millis(3000)).await;
+    sleep(Duration::from_millis(1000)).await;
 
     let mut metabased_process = TokioCommand::new("cargo")
         .arg("run")

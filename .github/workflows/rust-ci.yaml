@@ -105,9 +105,8 @@ jobs:
           which anvil
           anvil --version
 
-      # Build before running tests
-      - name: Build
-        run: cargo build
+      - name: Precompile Tests
+        run: cargo test --workspace --no-run
 
       # Run tests on entire workspace
       - name: Run Tests
