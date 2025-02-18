@@ -242,8 +242,10 @@ pub enum RuntimeError {
 
 fn init_signal_handler(main_shutdown_tx: oneshot::Sender<()>) {
     tokio::spawn(async move {
+        // SIGINT is triggered when the user presses Ctrl+C in the terminal
         let mut sigint =
             signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
+        // SIGTERM is typically sent when stopping a Docker container
         let mut sigterm =
             signal(SignalKind::terminate()).expect("Failed to register SIGTERM handler");
 
