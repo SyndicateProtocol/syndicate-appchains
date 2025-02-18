@@ -3,14 +3,6 @@ pragma solidity 0.8.25;
 
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-/// @title IMetabasedSequencerChain
-/// @notice Interface for the MetabasedSequencerChain contract
-interface IMetabasedSequencerChain {
-    /// @notice Process a transaction
-    /// @param data The transaction data to process
-    function processTransaction(bytes calldata data) external;
-}
-
 /// @title AgentApplication
 /// @notice Manages the application process for Dream agents
 /// @dev Controls agent permissions and status with admin management
@@ -36,17 +28,11 @@ contract AgentApplication is Ownable {
     mapping(address => uint256) public agentToApplicantId;
     uint256 public applicantCount;
 
-    IMetabasedSequencerChain public immutable sequencerChain;
-    address public agentClaimNFTOwner;
-    address public agentClaimNFTAddress;
-
     // Events
     event ApplicantAdded(
         uint256 indexed applicantId, address indexed agentAddress, bytes additionalData, ApplicationStatus status
     );
     event ApplicantStatusUpdated(uint256 indexed applicantId, ApplicationStatus status);
-    event AgentClaimNFTOwnerUpdated(address indexed oldOwner, address indexed newOwner);
-    event AgentClaimNFTAddressUpdated(address indexed oldAddress, address indexed newAddress);
 
     // Errors
     error ApplicantNotFound();
@@ -55,38 +41,7 @@ contract AgentApplication is Ownable {
 
     /// @notice Initialize the contract with necessary addresses
     /// @param admin The admin address for the contract
-    /// @param _sequencerChain The MetabasedSequencerChain contract address
-    /// @param _agentClaimNFTOwner The owner address of the AgentClaimNFT contract
-    /// @param _agentClaimNFTAddress The AgentClaimNFT contract address
-    constructor(address admin, address _sequencerChain, address _agentClaimNFTOwner, address _agentClaimNFTAddress)
-        Ownable(admin)
-    {
-        if (_sequencerChain == address(0) || _agentClaimNFTOwner == address(0) || _agentClaimNFTAddress == address(0)) {
-            revert InvalidAddress();
-        }
-
-        sequencerChain = IMetabasedSequencerChain(_sequencerChain);
-        agentClaimNFTOwner = _agentClaimNFTOwner;
-        agentClaimNFTAddress = _agentClaimNFTAddress;
-    }
-
-    /// @notice Update the AgentClaimNFT owner address
-    /// @param newOwner The new owner address
-    function setAgentClaimNFTOwner(address newOwner) external onlyOwner {
-        if (newOwner == address(0)) revert InvalidAddress();
-        address oldOwner = agentClaimNFTOwner;
-        agentClaimNFTOwner = newOwner;
-        emit AgentClaimNFTOwnerUpdated(oldOwner, newOwner);
-    }
-
-    /// @notice Update the AgentClaimNFT contract address
-    /// @param newAddress The new contract address
-    function setAgentClaimNFTAddress(address newAddress) external onlyOwner {
-        if (newAddress == address(0)) revert InvalidAddress();
-        address oldAddress = agentClaimNFTAddress;
-        agentClaimNFTAddress = newAddress;
-        emit AgentClaimNFTAddressUpdated(oldAddress, newAddress);
-    }
+    constructor(address admin) Ownable(admin) {}
 
     /// @notice Approves a new agent and grants claim permission
     /// @param agentAddress The address of the agent to approve
@@ -100,24 +55,24 @@ contract AgentApplication is Ownable {
         if (agentAddress == address(0)) revert InvalidAddress();
 
         uint256 existingId = agentToApplicantId[agentAddress];
-        if (existingId != 0 || applicants[0].agentAddress == agentAddress) {
+
+        if (existingId != 0 && applicants[existingId].isValid) {
             revert AgentAlreadyApplied();
         }
 
-        applicantId = applicantCount++;
+        applicantCount++;
+        applicantId = applicantCount;
+
         applicants[applicantId] = Applicant({
             agentAddress: agentAddress,
             status: ApplicationStatus.APPROVED,
             isValid: true,
             additionalData: additionalData
         });
+
         agentToApplicantId[agentAddress] = applicantId;
 
         emit ApplicantAdded(applicantId, agentAddress, additionalData, ApplicationStatus.APPROVED);
-
-        // Process the grantClaimPermission transaction through the sequencer chain
-        bytes memory fullCalldata = _constructGrantClaimCalldata(agentAddress);
-        sequencerChain.processTransaction(fullCalldata);
     }
 
     /// @notice Deny an applicant's application
@@ -128,21 +83,6 @@ contract AgentApplication is Ownable {
 
         applicant.status = ApplicationStatus.DENIED;
         emit ApplicantStatusUpdated(applicantId, ApplicationStatus.DENIED);
-    }
-
-    /// @notice Constructs the calldata for granting claim permission
-    /// @param agentAddress The address of the agent to grant permission to
-    /// @return The constructed calldata for the sequencer
-    function _constructGrantClaimCalldata(address agentAddress) internal view returns (bytes memory) {
-        bytes memory grantCalldata = abi.encodeWithSignature("grantClaimPermission(address)", agentAddress);
-
-        return abi.encodePacked(
-            agentClaimNFTOwner, // from address
-            agentClaimNFTAddress, // to address
-            uint256(0), // value
-            uint256(grantCalldata.length), // length of the calldata
-            grantCalldata // actual calldata
-        );
     }
 
     /// @notice Check if an applicant is permitted by their ID
