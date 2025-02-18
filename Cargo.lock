@@ -79,7 +79,7 @@ dependencies = [
  "alloy-serde",
  "alloy-signer",
  "alloy-signer-local",
- "alloy-transport 0.9.2",
+ "alloy-transport",
  "alloy-transport-http",
 ]
 
@@ -140,7 +140,7 @@ dependencies = [
  "alloy-provider",
  "alloy-rpc-types-eth",
  "alloy-sol-types",
- "alloy-transport 0.9.2",
+ "alloy-transport",
  "futures",
  "futures-util",
  "thiserror 2.0.11",
@@ -372,7 +372,7 @@ dependencies = [
  "alloy-rpc-types-eth",
  "alloy-signer",
  "alloy-signer-local",
- "alloy-transport 0.9.2",
+ "alloy-transport",
  "alloy-transport-http",
  "async-stream",
  "async-trait",
@@ -424,7 +424,7 @@ checksum = "d06a292b37e182e514903ede6e623b9de96420e8109ce300da288a96d88b7e4b"
 dependencies = [
  "alloy-json-rpc 0.9.2",
  "alloy-primitives",
- "alloy-transport 0.9.2",
+ "alloy-transport",
  "alloy-transport-http",
  "futures",
  "pin-project",
@@ -630,32 +630,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "alloy-transport"
-version = "0.11.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5a8d762eadce3e9b65eac09879430c6f4fce3736cac3cac123f9b1bf435ddd13"
-dependencies = [
- "alloy-json-rpc 0.11.1",
- "base64",
- "futures-utils-wasm",
- "serde",
- "serde_json",
- "thiserror 2.0.11",
- "tokio",
- "tower 0.5.2",
- "tracing",
- "url",
- "wasmtimer",
-]
-
-[[package]]
 name = "alloy-transport-http"
 version = "0.9.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e1509599021330a31c4a6816b655e34bf67acb1cc03c564e09fd8754ff6c5de"
 dependencies = [
  "alloy-json-rpc 0.9.2",
- "alloy-transport 0.9.2",
+ "alloy-transport",
  "reqwest",
  "serde_json",
  "tower 0.5.2",
@@ -2703,7 +2684,6 @@ dependencies = [
  "alloy",
  "alloy-json-rpc 0.11.1",
  "alloy-rlp",
- "alloy-transport 0.11.1",
  "async-trait",
  "bytes",
  "clap",
