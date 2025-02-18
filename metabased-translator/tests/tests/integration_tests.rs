@@ -27,6 +27,7 @@ use eyre::{eyre, Result};
 use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
+use reqwest::Client;
 use serial_test::serial;
 use std::{process::Command, time::Duration};
 use test_utils::test_path;
@@ -535,14 +536,28 @@ async fn test_nitro_batch() -> Result<()> {
     Ok(())
 }
 
+async fn wait_for_service(url: &str) -> Result<()> {
+    let client = Client::new();
+    loop {
+        match client.get(url).send().await {
+            Ok(response) if response.status().is_success() => {
+                println!("Metabased-translator is now running.");
+                return Ok(());
+            }
+            _ => {
+                println!("Waiting for metabased-translator to start...");
+                sleep(Duration::from_millis(500)).await;
+            }
+        }
+    }
+}
+
 async fn run_metabased_translator(signal: &str) -> Result<()> {
     let port_tracker = PortManager::instance();
     let seq_port = port_tracker.next_port();
     let (_seq_instance, _seq_provider) = start_anvil(seq_port, 15).await?;
     let set_port = port_tracker.next_port();
     let (_set_instance, _set_provider) = start_anvil(set_port, 20).await?;
-
-    sleep(Duration::from_millis(1000)).await;
 
     let mut metabased_process = TokioCommand::new("cargo")
         .arg("run")
@@ -568,8 +583,8 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
         ])
         .spawn()?;
 
-    // Wait for some time to ensure the process is running
-    sleep(Duration::from_millis(5000)).await;
+    // Wait for metabased-translator to be ready. We can do that by hitting the metrics endpoint
+    wait_for_service("http://localhost:9090/metrics").await?;
 
     let pid = metabased_process.id().ok_or_else(|| eyre::eyre!("Failed to get process ID"))?;
 

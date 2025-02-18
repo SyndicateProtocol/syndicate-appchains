@@ -16,7 +16,6 @@ on:
 
 env:
   CARGO_TERM_COLOR: always
-  CARGO_INCREMENTAL: 0
   # Make sure CI fails on all warnings, including Clippy lints
   RUSTFLAGS: "-Dwarnings"
 
@@ -106,9 +105,6 @@ jobs:
           which anvil
           anvil --version
 
-      - name: Precompile Tests
-        run: cargo test --workspace --no-run
-
       # Run tests on entire workspace
       - name: Run Tests
-        run: cargo test --workspace --release --frozen
+        run: cargo test --workspace
