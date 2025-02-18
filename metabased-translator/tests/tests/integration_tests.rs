@@ -549,7 +549,7 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
         .arg("--bin")
         .arg("metabased-translator")
         .current_dir("../bin/metabased-translator")
-        .arg("--") // <-- This separates Cargo arguments from binary arguments
+        .arg("--")
         .args([
             "--sequencing-contract-address",
             "0x0000000000000000000000000000000000000001",
@@ -569,7 +569,7 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
         .spawn()?;
 
     // Wait for some time to ensure the process is running
-    sleep(Duration::from_millis(3000)).await;
+    sleep(Duration::from_millis(5000)).await;
 
     let pid = metabased_process.id().ok_or_else(|| eyre::eyre!("Failed to get process ID"))?;
 
