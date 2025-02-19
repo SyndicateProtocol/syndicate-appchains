@@ -78,6 +78,10 @@ impl Ingestor {
         block_and_receipts: BlockAndReceipts,
     ) -> Result<(), Error> {
         if block_and_receipts.block.number != self.current_block_number {
+            error!(
+                "Block number mismatch on chain {:?}. Current block {:?}. Got {:?}",
+                self.chain, self.current_block_number, block_and_receipts.block.number
+            );
             return Err(eyre!("Block number mismatch"));
         }
         self.sender.send(block_and_receipts.clone()).await?;
@@ -131,7 +135,7 @@ impl Ingestor {
                 self.current_block_number + self.syncing_batch_size,
             ))
             .collect();
-        trace!("Fetching blocks {:?} on {}", block_numbers, self.chain);
+        trace!("Fetching blocks {:?} on {:?}", block_numbers, self.chain);
 
         let start_time = Instant::now();
         match self.client.batch_get_blocks_and_receipts(block_numbers).await {
@@ -144,12 +148,18 @@ impl Ingestor {
                 );
                 for block in blocks {
                     if let Err(err) = self.push_block_and_receipts(block).await {
-                        error!("Failed to push block and receipts: {:?}, retrying...", err);
+                        error!(
+                            "Failed to push block and receipts for chain {:?}: {:?}, retrying...",
+                            self.chain, err
+                        );
                     }
                 }
             }
             Err(err) => {
-                error!("Failed to fetch multiple blocks and receipts: {:?}", err);
+                error!(
+                    "Failed to fetch multiple blocks and receipts for chain {:?}: {:?}",
+                    self.chain, err
+                );
             }
         }
     }
@@ -264,8 +274,9 @@ mod tests {
         let polling_interval = Duration::from_secs(1);
 
         let (sender, mut receiver) = channel(10);
-        let client: Arc<dyn RPCClient> =
-            Arc::new(EthClient::new(&test_config().sequencing.sequencing_rpc_url).await?);
+        let client: Arc<dyn RPCClient> = Arc::new(
+            EthClient::new(&test_config().sequencing.sequencing_rpc_url, Chain::Sequencing).await?,
+        );
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
         let mut ingestor = Ingestor {
@@ -296,8 +307,9 @@ mod tests {
         let polling_interval = Duration::from_millis(10);
 
         let (sender, _) = channel(10);
-        let client: Arc<dyn RPCClient> =
-            Arc::new(EthClient::new(&test_config().sequencing.sequencing_rpc_url).await?);
+        let client: Arc<dyn RPCClient> = Arc::new(
+            EthClient::new(&test_config().sequencing.sequencing_rpc_url, Chain::Sequencing).await?,
+        );
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
         let ingestor = Ingestor {
