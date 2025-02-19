@@ -27,6 +27,7 @@ metabased-translator = { workspace = true }
 metrics = { workspace = true }
 prometheus-client = { workspace = true }
 reqwest = { workspace = true }
+serial_test = { workspace = true }
 slotter = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
@@ -35,15 +36,12 @@ thiserror = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }
 tracing = { workspace = true }
 
-[dev-dependencies]
-serial_test = { workspace = true }
-
 [package.metadata.cargo-machete]
 # strum is used via a macro from strum_macros - machete does not detect it
 ignored = ["strum"]
 
 [features]
-e2e-tests = []
+env-tests = []
 
 [lints]
 workspace = true
