@@ -37,5 +37,5 @@ METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS
 Then, the tests can be run with:
 
 ```bash
-cargo test --features env-tests environment_  
+cargo test --package e2e-tests --test environment_tests --features env-tests
 ```
