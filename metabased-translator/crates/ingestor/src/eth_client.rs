@@ -137,7 +137,7 @@ impl RPCClient for EthClient {
                 .map_resp(move |resp: Option<Block>| {
                     if resp.is_none() {
                         trace!(
-                            "Block #{} not available. Chain: {}",
+                            "Block #{:?} not available on {:?} chain.",
                             block_number.clone(),
                             self.chain
                         );
@@ -150,7 +150,7 @@ impl RPCClient for EthClient {
                 .map_resp(|resp: Option<Vec<Receipt>>| {
                     if resp.is_none() {
                         trace!(
-                            "Receipts not available for block #{}. Chain: {}",
+                            "Receipts not available for block #{:?} on {:?} chain.",
                             block_number.clone(),
                             self.chain
                         );
