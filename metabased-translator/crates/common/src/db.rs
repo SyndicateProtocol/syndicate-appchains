@@ -227,6 +227,7 @@ mod test {
     use super::*;
     use crate::types::{Block, BlockAndReceipts, SlotState};
     use alloy::primitives::B256;
+    use std::sync::Arc;
     use test_utils::test_path;
 
     fn create_test_block(number: u64) -> Block {
@@ -253,9 +254,9 @@ mod test {
         let settle_block = create_test_block(2);
 
         slot.sequencing_chain_blocks
-            .push(BlockAndReceipts { block: seq_block.clone(), receipts: vec![] });
+            .push(Arc::new(BlockAndReceipts { block: seq_block.clone(), receipts: vec![] }));
         slot.settlement_chain_blocks
-            .push(BlockAndReceipts { block: settle_block.clone(), receipts: vec![] });
+            .push(Arc::new(BlockAndReceipts { block: settle_block.clone(), receipts: vec![] }));
         slot.state = SlotState::Safe;
         store.save_safe_slot(&slot).await.unwrap();
 
@@ -278,9 +279,9 @@ mod test {
         let settle_block = create_test_block(2);
 
         slot.sequencing_chain_blocks
-            .push(BlockAndReceipts { block: seq_block.clone(), receipts: vec![] });
+            .push(Arc::new(BlockAndReceipts { block: seq_block.clone(), receipts: vec![] }));
         slot.settlement_chain_blocks
-            .push(BlockAndReceipts { block: settle_block.clone(), receipts: vec![] });
+            .push(Arc::new(BlockAndReceipts { block: settle_block.clone(), receipts: vec![] }));
         slot.state = SlotState::Unsafe;
 
         store.save_unsafe_slot(&slot).await.unwrap();
@@ -304,10 +305,10 @@ mod test {
         let safe_settle = create_test_block(2);
         safe_slot
             .sequencing_chain_blocks
-            .push(BlockAndReceipts { block: safe_seq.clone(), receipts: vec![] });
+            .push(Arc::new(BlockAndReceipts { block: safe_seq.clone(), receipts: vec![] }));
         safe_slot
             .settlement_chain_blocks
-            .push(BlockAndReceipts { block: safe_settle.clone(), receipts: vec![] });
+            .push(Arc::new(BlockAndReceipts { block: safe_settle.clone(), receipts: vec![] }));
         safe_slot.state = SlotState::Safe;
         store.save_safe_slot(&safe_slot).await.unwrap();
 
@@ -317,10 +318,10 @@ mod test {
         let unsafe_settle = create_test_block(4);
         unsafe_slot
             .sequencing_chain_blocks
-            .push(BlockAndReceipts { block: unsafe_seq.clone(), receipts: vec![] });
+            .push(Arc::new(BlockAndReceipts { block: unsafe_seq.clone(), receipts: vec![] }));
         unsafe_slot
             .settlement_chain_blocks
-            .push(BlockAndReceipts { block: unsafe_settle.clone(), receipts: vec![] });
+            .push(Arc::new(BlockAndReceipts { block: unsafe_settle.clone(), receipts: vec![] }));
         unsafe_slot.state = SlotState::Unsafe;
 
         store.save_unsafe_slot(&unsafe_slot).await.unwrap();

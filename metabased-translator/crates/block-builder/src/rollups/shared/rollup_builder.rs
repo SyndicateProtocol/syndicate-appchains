@@ -11,6 +11,7 @@ use eyre::{Error, Result};
 use std::{
     fmt::Debug,
     marker::{Send, Sync},
+    sync::Arc,
 };
 
 /// Trait for rollup-specific block builders that construct batches from transactions
@@ -26,12 +27,12 @@ pub trait RollupBlockBuilder: Debug + Send + Sync + Unpin + 'static {
     ///
     /// # Returns
     /// A vector of extracted transactions in raw `Bytes` format.
-    fn parse_blocks_to_mbtxs(&self, input: Vec<BlockAndReceipts>) -> Vec<Bytes> {
+    fn parse_blocks_to_mbtxs(&self, input: Vec<Arc<BlockAndReceipts>>) -> Vec<Bytes> {
         input
-            .into_iter()
-            .flat_map(|block| block.receipts)
-            .flat_map(|receipt| receipt.logs)
-            .filter_map(|log| self.transaction_parser().get_event_transactions(&log).ok())
+            .iter()
+            .flat_map(|block| block.receipts.iter())
+            .flat_map(|receipt| receipt.logs.iter())
+            .filter_map(|log| self.transaction_parser().get_event_transactions(log).ok())
             .flatten()
             .collect()
     }

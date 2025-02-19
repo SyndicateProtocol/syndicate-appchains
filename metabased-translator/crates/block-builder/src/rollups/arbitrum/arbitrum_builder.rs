@@ -27,7 +27,7 @@ use contract_bindings::arbitrum::{
     rollup::Rollup,
 };
 use eyre::Result;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use thiserror::Error;
 use tracing::{debug, error, info, trace};
 
@@ -139,7 +139,7 @@ impl ArbitrumBlockBuilder {
     /// Processes settlement chain receipts into delayed messages
     async fn process_delayed_messages(
         &self,
-        blocks: Vec<BlockAndReceipts>,
+        blocks: Vec<Arc<BlockAndReceipts>>,
     ) -> Result<Vec<TransactionRequest>> {
         // Create a local map to store message data
         let mut message_data: HashMap<U256, Bytes> = HashMap::new();
@@ -428,8 +428,11 @@ mod tests {
         number: u64,
         transactions: Vec<Transaction>,
         receipts: Vec<Receipt>,
-    ) -> BlockAndReceipts {
-        BlockAndReceipts { block: Block { number, transactions, ..Default::default() }, receipts }
+    ) -> Arc<BlockAndReceipts> {
+        Arc::new(BlockAndReceipts {
+            block: Block { number, transactions, ..Default::default() },
+            receipts,
+        })
     }
 
     #[tokio::test]
@@ -529,10 +532,10 @@ mod tests {
             timestamp: 0,
             state: SlotState::Safe,
             settlement_chain_blocks: vec![],
-            sequencing_chain_blocks: vec![BlockAndReceipts {
+            sequencing_chain_blocks: vec![Arc::new(BlockAndReceipts {
                 block,
                 receipts: vec![Receipt { logs: vec![txn_processed_log], ..Default::default() }],
-            }],
+            })],
         };
 
         let result = builder.build_block_from_slot(slot).await;
@@ -623,14 +626,14 @@ mod tests {
             number: 1,
             timestamp: 0,
             state: SlotState::Safe,
-            settlement_chain_blocks: vec![BlockAndReceipts {
+            settlement_chain_blocks: vec![Arc::new(BlockAndReceipts {
                 block: settlement_block,
                 receipts: vec![settlement_receipt],
-            }],
-            sequencing_chain_blocks: vec![BlockAndReceipts {
+            })],
+            sequencing_chain_blocks: vec![Arc::new(BlockAndReceipts {
                 block: sequencing_block,
                 receipts: vec![sequencing_receipt],
-            }],
+            })],
         };
 
         let result = builder.build_block_from_slot(slot).await;

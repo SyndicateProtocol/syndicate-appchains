@@ -126,8 +126,8 @@ impl Slotter {
     /// The receiver that was created during [`Slotter::new`] will get slots as they are processed
     pub async fn start(
         mut self,
-        mut sequencing_rx: Receiver<BlockAndReceipts>,
-        mut settlement_rx: Receiver<BlockAndReceipts>,
+        mut sequencing_rx: Receiver<Arc<BlockAndReceipts>>,
+        mut settlement_rx: Receiver<Arc<BlockAndReceipts>>,
         mut shutdown_rx: oneshot::Receiver<()>,
     ) {
         info!("Starting Slotter");
@@ -195,10 +195,14 @@ impl Slotter {
 
     fn prioritize_lagging_chain<'a>(
         &self,
-        sequencing_rx: &'a mut Receiver<BlockAndReceipts>,
-        settlement_rx: &'a mut Receiver<BlockAndReceipts>,
-    ) -> (&'a mut Receiver<BlockAndReceipts>, Chain, &'a mut Receiver<BlockAndReceipts>, Chain)
-    {
+        sequencing_rx: &'a mut Receiver<Arc<BlockAndReceipts>>,
+        settlement_rx: &'a mut Receiver<Arc<BlockAndReceipts>>,
+    ) -> (
+        &'a mut Receiver<Arc<BlockAndReceipts>>,
+        Chain,
+        &'a mut Receiver<Arc<BlockAndReceipts>>,
+        Chain,
+    ) {
         let seq_ts = self.latest_sequencing_block.as_ref().map_or(0, |b| b.timestamp);
         let set_ts = self.latest_settlement_block.as_ref().map_or(0, |b| b.timestamp);
 
@@ -259,7 +263,7 @@ impl Slotter {
 
     async fn process_block(
         &mut self,
-        block_info: BlockAndReceipts,
+        block_info: Arc<BlockAndReceipts>,
         chain: Chain,
     ) -> Result<(), SlotterError> {
         if block_info.block.timestamp < self.safe_timestamp {
@@ -315,7 +319,7 @@ impl Slotter {
                 if target_slot_number > latest_slot.number + 1 {
                     // create a single empty slot right behind the new slot (this will allow the
                     // empty slot to be marked as unsafe before the new slot and accelerate
-                    // confimations on the mchain)
+                    // confirmations on the mchain)
                     let new_slot =
                         Slot::new(target_slot_number - 1, target_timestamp - self.slot_duration);
                     self.slots.push_front(new_slot);
@@ -433,7 +437,7 @@ impl Slotter {
 
     fn insert_block_into_previous_slot(
         &mut self,
-        block_info: BlockAndReceipts,
+        block_info: Arc<BlockAndReceipts>,
         chain: Chain,
         latest_slot_number: u64,
         latest_slot_timestamp: u64,
@@ -490,9 +494,9 @@ impl Slotter {
             }
         }
 
-        // with the current logic, this should never happen. Since we always keep the ealiest known
-        // unsafe block for each chain, getting here would require a souce chain to send a
-        // timstamp in the past, which would be caught elsewhere
+        // with the current logic, this should never happen. Since we always keep the earliest known
+        // unsafe block for each chain, getting here would require a source chain to send a
+        // timestamp in the past, which would be caught elsewhere
         Err(SlotterError::BlockTooOld {
             chain,
             latest_sequencing_block: self
@@ -652,8 +656,8 @@ mod tests {
 
     struct TestSetup {
         slot_rx: Receiver<Slot>,
-        sequencing_tx: Sender<BlockAndReceipts>,
-        settlement_tx: Sender<BlockAndReceipts>,
+        sequencing_tx: Sender<Arc<BlockAndReceipts>>,
+        settlement_tx: Sender<Arc<BlockAndReceipts>>,
         shutdown_tx: oneshot::Sender<()>,
     }
 
@@ -678,8 +682,8 @@ mod tests {
         (slotter, slot_rx)
     }
 
-    fn create_test_block(number: u64, timestamp: u64) -> BlockAndReceipts {
-        BlockAndReceipts {
+    fn create_test_block(number: u64, timestamp: u64) -> Arc<BlockAndReceipts> {
+        Arc::new(BlockAndReceipts {
             block: Block {
                 hash: B256::from_str(
                     "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
@@ -698,7 +702,7 @@ mod tests {
                 transactions: vec![],
             },
             receipts: vec![],
-        }
+        })
     }
 
     /// Test scenario:
