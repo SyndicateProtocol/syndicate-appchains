@@ -18,6 +18,10 @@ interface IAgentApplication {
     /// @param agentAddress The address to check
     /// @return bool indicating if the agent is permitted
     function isPermittedByAddress(address agentAddress) external view returns (bool);
+
+    /// @notice Get the owner of the contract
+    /// @return The owner address
+    function owner() external view returns (address);
 }
 
 /// @title AgentTransactionValidator
@@ -31,7 +35,6 @@ contract AgentTransactionValidator {
     IMetabasedSequencerChain public immutable sequencerChain;
 
     error Unauthorized();
-    error InvalidTransactionData();
 
     constructor(address _agentApplication, address _sequencerChain) {
         agentApplication = IAgentApplication(_agentApplication);
@@ -45,7 +48,8 @@ contract AgentTransactionValidator {
 
         // Check if the from address is permitted
         if (!agentApplication.isPermittedByAddress(from)) {
-            revert Unauthorized();
+            // then must be owner of the AgentApplication contract, otherwise revert
+            if (from != agentApplication.owner()) revert Unauthorized();
         }
 
         // Forward the transaction to the sequencer chain
