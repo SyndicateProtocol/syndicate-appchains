@@ -141,7 +141,8 @@ fn l2_msg_to_bytes(msg: &Vec<Bytes>) -> Result<Bytes, BlockBuilderError> {
     if msg.len() > 1 {
         data.push(L2MessageKind::Batch as u8);
         for tx in msg {
-            data.extend_from_slice(&tx.len().to_be_bytes());
+            // total length is tx.len() + 1 due to the SignedTx header byte
+            data.extend_from_slice(&(tx.len() + 1).to_be_bytes());
             data.push(L2MessageKind::SignedTx as u8);
             data.extend(tx);
         }
@@ -178,7 +179,7 @@ mod tests {
         ]);
         assert_eq!(
             serde_json::to_string(&batch)?,
-            r#"[null,{"header":{"blockNumber":0,"timestamp":0},"l2Msg":"BA=="},{"header":{"blockNumber":0,"timestamp":0},"l2Msg":"AwAAAAAAAAAABAAAAAAAAAAABA=="}]"#
+            r#"[null,{"header":{"blockNumber":0,"timestamp":0},"l2Msg":"BA=="},{"header":{"blockNumber":0,"timestamp":0},"l2Msg":"AwAAAAAAAAABBAAAAAAAAAABBA=="}]"#
         );
         Ok(())
     }
