@@ -15,7 +15,7 @@
 //!
 //! The `RocksDbStore` implementation is used for the `TranslatorStore` trait
 
-use crate::types::{BlockRef, Slot};
+use crate::types::{BlockAndReceipts, BlockRef, Slot};
 use async_trait::async_trait;
 use bincode;
 use rocksdb::DB;
@@ -221,7 +221,6 @@ pub enum DbError {
     BincodeSerialization(#[from] bincode::Error),
 }
 
-/*
 #[cfg(test)]
 mod test {
     use super::*;
@@ -248,11 +247,12 @@ mod test {
         let store = RocksDbStore::new(test_path("rocksdb_test_safe").as_str()).unwrap();
         assert!(store.get_safe_state().await.unwrap().is_none());
 
-        let mut slot = Slot::new(1, 1000);
+        let mut slot =
+            Slot::new(1, 1000, BlockAndReceipts { block: create_test_block(1), receipts: vec![] });
         let seq_block = create_test_block(1);
         let settle_block = create_test_block(2);
 
-        slot.sequencing_block.push(BlockAndReceipts { block: seq_block.clone(), receipts: vec![] });
+        slot.sequencing_block = BlockAndReceipts { block: seq_block.clone(), receipts: vec![] };
         slot.settlement_blocks
             .push(BlockAndReceipts { block: settle_block.clone(), receipts: vec![] });
         slot.state = SlotState::Safe;
@@ -272,11 +272,12 @@ mod test {
         let store = RocksDbStore::new(test_path("rocksdb_test_unsafe").as_str()).unwrap();
         assert!(store.get_unsafe_state().await.unwrap().is_none());
 
-        let mut slot = Slot::new(1, 1000);
+        let mut slot =
+            Slot::new(1, 1000, BlockAndReceipts { block: create_test_block(1), receipts: vec![] });
         let seq_block = create_test_block(1);
         let settle_block = create_test_block(2);
 
-        slot.sequencing_block.push(BlockAndReceipts { block: seq_block.clone(), receipts: vec![] });
+        slot.sequencing_block = BlockAndReceipts { block: seq_block.clone(), receipts: vec![] };
         slot.settlement_blocks
             .push(BlockAndReceipts { block: settle_block.clone(), receipts: vec![] });
         slot.state = SlotState::Closed;
@@ -297,12 +298,11 @@ mod test {
         let store = RocksDbStore::new(test_path("rocksdb_test_both").as_str()).unwrap();
 
         // Create and save safe state
-        let mut safe_slot = Slot::new(1, 1000);
+        let mut safe_slot =
+            Slot::new(1, 1000, BlockAndReceipts { block: create_test_block(1), receipts: vec![] });
         let safe_seq = create_test_block(1);
         let safe_settle = create_test_block(2);
-        safe_slot
-            .sequencing_block
-            .push(BlockAndReceipts { block: safe_seq.clone(), receipts: vec![] });
+        safe_slot.sequencing_block = BlockAndReceipts { block: safe_seq.clone(), receipts: vec![] };
         safe_slot
             .settlement_blocks
             .push(BlockAndReceipts { block: safe_settle.clone(), receipts: vec![] });
@@ -310,12 +310,12 @@ mod test {
         store.save_safe_slot(&safe_slot).await.unwrap();
 
         // Create and save unsafe state
-        let mut unsafe_slot = Slot::new(2, 2000);
+        let mut unsafe_slot =
+            Slot::new(2, 2000, BlockAndReceipts { block: create_test_block(3), receipts: vec![] });
         let unsafe_seq = create_test_block(3);
         let unsafe_settle = create_test_block(4);
-        unsafe_slot
-            .sequencing_block
-            .push(BlockAndReceipts { block: unsafe_seq.clone(), receipts: vec![] });
+        unsafe_slot.sequencing_block =
+            BlockAndReceipts { block: unsafe_seq.clone(), receipts: vec![] };
         unsafe_slot
             .settlement_blocks
             .push(BlockAndReceipts { block: unsafe_settle.clone(), receipts: vec![] });
@@ -336,5 +336,3 @@ mod test {
         assert_eq!(unsafe_state.settlement_block, BlockRef::new(&unsafe_settle));
     }
 }
-
-*/

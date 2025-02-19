@@ -222,9 +222,9 @@ impl Slotter {
             block_number = block_info.block.number,
             block_timestamp = block_info.block.timestamp,
             block_hash = %block_info.block.hash,
-            ?latest_slot,
             "Processing block"
         );
+        trace!("latest_slot: {:?}", latest_slot);
 
         match chain {
             Chain::Sequencing => {
@@ -272,7 +272,7 @@ impl Slotter {
         }
         self.metrics.update_active_slots(self.slots.len());
         if self.min_chain_head_timestamp == 0 {
-            trace!(
+            debug!(
                 "No blocks seen for both chains yet, skipping cleanup and marking slots as unsafe"
             );
             return Ok(());
@@ -409,17 +409,18 @@ impl Slotter {
         for slot in self.iter_from_oldest_open() {
             if ts > slot.timestamp {
                 if slot.state == SlotState::Open {
-                    trace!(%slot, "slot closed");
+                    debug!(slot_number = slot.number, "slot closed");
+                    trace!("slot: {:?}", slot);
                     slot.state = SlotState::Closed;
                     sender.send(slot.clone()).await?;
                     closed_slots += 1;
                 }
                 continue;
             }
-            slot.push_settlement_block(set_block.clone()); // TODO try to remove clone
-            trace!(%slot, "block added to the slot");
+            slot.push_settlement_block(set_block.clone());
+            debug!(slot_number = slot.number, "block added to the slot");
+            trace!("slot: {:?}", slot);
             inserted = true;
-            // Update index to skip the slots we just closed
             break;
         }
 
@@ -429,7 +430,7 @@ impl Slotter {
 
         if !inserted {
             self.unassigned_settlement_blocks.push_back(set_block);
-            trace!("block added to the unassigned list");
+            debug!("block added to the unassigned list");
         }
         Ok(())
     }

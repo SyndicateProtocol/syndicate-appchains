@@ -17,7 +17,7 @@ pub struct SlotterConfig {
 
 impl SlotterConfig {
     /// Validates the configuration
-    pub fn validate(&self) -> Result<(), ConfigError> {
+    pub const fn validate(&self) -> Result<(), ConfigError> {
         Ok(())
     }
 

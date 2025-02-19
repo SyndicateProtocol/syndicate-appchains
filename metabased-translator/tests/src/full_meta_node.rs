@@ -15,7 +15,7 @@ use block_builder::{
     connectors::anvil::{FilledProvider, MetaChainProvider},
     metrics::BlockBuilderMetrics,
 };
-use common::{db::DummyStore, tracing::init_test_tracing, types::Chain};
+use common::{db::DummyStore, types::Chain};
 use contract_bindings::{
     arbitrum::rollup::Rollup,
     metabased::{
@@ -43,7 +43,6 @@ use tokio::{
     task,
     time::timeout,
 };
-use tracing::Level;
 
 pub const GENESIS_TIMESTAMP: u64 = 1736824187;
 pub const PRELOAD_INBOX_ADDRESS: Address = address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899");
@@ -174,9 +173,6 @@ pub struct MetaNode {
 
     pub chain_id: u64,
 
-    pub set_block_interval: u64,
-    pub seq_block_interval: u64,
-
     pub mchain_provider: FilledProvider,
 
     sequencer_ingestor_task: Task,
@@ -217,7 +213,6 @@ impl MetaNode {
         let inbox_address =
             if pre_loaded { PRELOAD_INBOX_ADDRESS } else { get_rollup_contract_address() };
 
-        let _ = init_test_tracing(Level::INFO);
         let mchain_port = port_tracker.next_port();
         let block_builder_cfg = BlockBuilderConfig {
             bridge_address,
@@ -357,9 +352,6 @@ impl MetaNode {
 
             chain_id: block_builder_cfg.target_chain_id,
 
-            set_block_interval: 2,
-            seq_block_interval: 2,
-
             mchain_provider,
 
             sequencer_ingestor_task,
@@ -378,26 +370,19 @@ impl MetaNode {
         })
     }
 
-    pub async fn mine_seq_blocks(&self, delay: u64) -> Result<()> {
+    pub async fn mine_seq_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.sequencing_provider, delay).await?;
         Ok(())
     }
 
-    pub async fn mine_set_blocks(&self, delay: u64) -> Result<()> {
+    pub async fn mine_set_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.settlement_provider, delay).await?;
         Ok(())
     }
 
     pub async fn mine_both(&self, delay: u64) -> Result<()> {
-        self.mine_seq_blocks(delay).await?;
-        self.mine_set_blocks(delay).await?;
-        Ok(())
-    }
-
-    pub async fn mine_next_slot(&self) -> Result<()> {
-        self.mine_seq_blocks(self.set_block_interval).await?;
-        self.mine_set_blocks(self.set_block_interval).await?;
-
+        self.mine_seq_block(delay).await?;
+        self.mine_set_block(delay).await?;
         Ok(())
     }
 }
