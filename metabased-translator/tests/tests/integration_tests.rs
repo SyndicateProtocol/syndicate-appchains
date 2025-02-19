@@ -380,7 +380,7 @@ async fn e2e_test() -> Result<()> {
 
     // mine 1 seq block to close the opened slot
     meta_node.mine_set_block(1).await?;
-    sleep(Duration::from_millis(100)).await;
+    sleep(Duration::from_millis(200)).await;
 
     // check mchain blocks
     assert_eq!(meta_node.mchain_provider.get_block_number().await?, 4);
@@ -430,7 +430,7 @@ async fn e2e_test() -> Result<()> {
     // and another settlement block to close the slot
     meta_node.mine_set_block(60).await?;
 
-    sleep(Duration::from_millis(100)).await;
+    sleep(Duration::from_millis(200)).await;
 
     // check mchain blocks
     assert_eq!(meta_node.mchain_provider.get_block_number().await?, 5);
