@@ -5,6 +5,7 @@ use eyre::Result;
 use reqwest::Client;
 use serial_test::serial;
 use std::{process::Command, time::Duration};
+use test_utils::test_path;
 use tokio::{process::Command as TokioCommand, time::sleep};
 
 async fn wait_for_service(url: &str) -> Result<()> {
@@ -51,6 +52,8 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
             &format!("http://localhost:{}", set_port),
             "--settlement-start-block",
             "0",
+            "--datadir",
+            test_path("translator").as_str(),
         ])
         .spawn()?;
 
