@@ -59,11 +59,11 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
         match self.get_balance().await {
             Ok(balance) => {
                 let decimals = U256::from(18); // ETH has 18 decimals
-                let balance_synd = format_units_uint(&balance, &decimals);
+                let balance_in_eth = format_units_uint(&balance, &decimals);
                 info!(
                     account = ?self.account,
                     balance_wei = ?balance,
-                    balance_synd,
+                    balance_in_eth,
                     "Sequencer wallet balance {}", context
                 );
             }
