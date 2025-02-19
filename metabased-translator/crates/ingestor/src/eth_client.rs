@@ -135,7 +135,11 @@ impl RPCClient for EthClient {
                 .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
                 .map_resp(move |resp: Option<Block>| {
                     if resp.is_none() {
-                        trace!("Block not available for number: {}", block_number.clone());
+                        trace!(
+                            "Block #{} not available. RPC URL: {}",
+                            block_number.clone(),
+                            self.client.transport().url()
+                        );
                     }
                     resp
                 });
@@ -144,7 +148,11 @@ impl RPCClient for EthClient {
                 .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
                 .map_resp(|resp: Option<Vec<Receipt>>| {
                     if resp.is_none() {
-                        trace!("Receipts not available for block number: {}", block_number.clone());
+                        trace!(
+                            "Receipts not available for block #{}. RPC URL: {}",
+                            block_number.clone(),
+                            self.client.transport().url()
+                        );
                     }
                     resp
                 });
