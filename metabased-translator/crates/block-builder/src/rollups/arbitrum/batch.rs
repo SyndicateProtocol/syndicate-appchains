@@ -178,7 +178,7 @@ mod tests {
         ]);
         assert_eq!(
             serde_json::to_string(&batch)?,
-            r#"[null,{"header":{"blockNumber":0,"timestamp":0},"l2Msg":"BA=="},{"header":{"blockNumber":0,"timestamp":0},"l2Msg":"AwAAAAAAAAAABAAAAAAAAAAABA=="}]"#
+            r#"[null,{"header":{"blockNumber":0,"timestamp":0},"l2Msg":"BA=="},{"header":{"blockNumber":0,"timestamp":0},"l2Msg":"AwAAAAAAAAABBAAAAAAAAAABBA=="}]"#
         );
         Ok(())
     }
