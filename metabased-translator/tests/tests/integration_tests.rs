@@ -534,14 +534,14 @@ async fn test_nitro_batch() -> Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn test_nitro_batch_two_tx() -> Result<()> {
     let block_builder_cfg =
-        BlockBuilderConfig { mchain_url: "http://127.0.0.1:8388".parse()?, ..Default::default() };
+        BlockBuilderConfig { mchain_url: "http://127.0.0.1:8488".parse()?, ..Default::default() };
 
     let mut metrics_state = MetricsState { registry: Registry::default() };
     let metrics = MChainMetrics::new(&mut metrics_state.registry);
     let datadir = test_path("datadir");
     let mchain = MetaChainProvider::start(&block_builder_cfg, &datadir, &metrics).await?;
     mchain.provider.anvil_set_block_timestamp_interval(1).await?;
-    let (_nitro, rollup) = launch_nitro_node(&mchain, 8347).await?;
+    let (_nitro, rollup) = launch_nitro_node(&mchain, 8447).await?;
 
     // deposit 1 eth
     _ = mchain
