@@ -79,7 +79,7 @@ impl Ingestor {
     ) -> Result<(), Error> {
         if block_and_receipts.block.number != self.current_block_number {
             error!(
-                "Block number missmatch on chain {:?}. Current block {:?}. Got {:?}",
+                "Block number mismatch on chain {:?}. Current block {:?}. Got {:?}",
                 self.chain, self.current_block_number, block_and_receipts.block.number
             );
             return Err(eyre!("Block number mismatch"));
@@ -274,8 +274,9 @@ mod tests {
         let polling_interval = Duration::from_secs(1);
 
         let (sender, mut receiver) = channel(10);
-        let client: Arc<dyn RPCClient> =
-            Arc::new(EthClient::new(&test_config().sequencing.sequencing_rpc_url).await?);
+        let client: Arc<dyn RPCClient> = Arc::new(
+            EthClient::new(&test_config().sequencing.sequencing_rpc_url, Chain::Sequencing).await?,
+        );
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
         let mut ingestor = Ingestor {
@@ -306,8 +307,9 @@ mod tests {
         let polling_interval = Duration::from_millis(10);
 
         let (sender, _) = channel(10);
-        let client: Arc<dyn RPCClient> =
-            Arc::new(EthClient::new(&test_config().sequencing.sequencing_rpc_url).await?);
+        let client: Arc<dyn RPCClient> = Arc::new(
+            EthClient::new(&test_config().sequencing.sequencing_rpc_url, Chain::Sequencing).await?,
+        );
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
         let ingestor = Ingestor {

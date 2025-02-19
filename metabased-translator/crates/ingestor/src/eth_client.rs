@@ -8,7 +8,7 @@ use alloy::{
     transports::http::{Client, Http},
 };
 use async_trait::async_trait;
-use common::types::{Block, BlockAndReceipts, Receipt};
+use common::types::{Block, BlockAndReceipts, Chain, Receipt};
 use eyre::eyre;
 use std::fmt::Debug;
 use thiserror::Error;
@@ -58,6 +58,7 @@ pub trait RPCClient: Send + Sync + Debug {
 #[derive(Debug)]
 pub struct EthClient {
     client: RpcClient<Http<Client>>,
+    chain: Chain,
 }
 
 impl EthClient {
@@ -71,11 +72,11 @@ impl EthClient {
     ///
     /// A result containing the `EthClient` instance if successful, or an error if the connection
     /// fails.
-    pub async fn new(rpc_url: &str) -> Result<Self, RPCClientError> {
+    pub async fn new(rpc_url: &str, chain: Chain) -> Result<Self, RPCClientError> {
         let url =
             Url::parse(rpc_url).map_err(|_e| RPCClientError::InvalidRpcURL(rpc_url.to_string()))?;
         let client = ClientBuilder::default().http(url);
-        Ok(Self { client })
+        Ok(Self { client, chain })
     }
 }
 
@@ -136,9 +137,9 @@ impl RPCClient for EthClient {
                 .map_resp(move |resp: Option<Block>| {
                     if resp.is_none() {
                         trace!(
-                            "Block #{} not available. RPC URL: {}",
+                            "Block #{} not available. Chain: {}",
                             block_number.clone(),
-                            self.client.transport().url()
+                            self.chain
                         );
                     }
                     resp
@@ -149,9 +150,9 @@ impl RPCClient for EthClient {
                 .map_resp(|resp: Option<Vec<Receipt>>| {
                     if resp.is_none() {
                         trace!(
-                            "Receipts not available for block #{}. RPC URL: {}",
+                            "Receipts not available for block #{}. Chain: {}",
                             block_number.clone(),
-                            self.client.transport().url()
+                            self.chain
                         );
                     }
                     resp

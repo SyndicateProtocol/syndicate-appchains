@@ -290,9 +290,9 @@ impl MetaNode {
         set_config.polling_interval = Duration::from_millis(10);
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let sequencing_client: Arc<dyn RPCClient> =
-            Arc::new(EthClient::new(&seq_config.rpc_url).await?);
+            Arc::new(EthClient::new(&seq_config.rpc_url, Chain::Sequencing).await?);
         let settlement_client: Arc<dyn RPCClient> =
-            Arc::new(EthClient::new(&set_config.rpc_url).await?);
+            Arc::new(EthClient::new(&set_config.rpc_url, Chain::Settlement).await?);
         let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
             Chain::Sequencing,
             sequencing_client,
