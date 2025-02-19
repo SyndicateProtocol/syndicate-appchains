@@ -43,11 +43,11 @@ contract AgentApplication is Ownable {
     /// @param admin The admin address for the contract
     constructor(address admin) Ownable(admin) {}
 
-    /// @notice Approves a new agent and grants claim permission
+    /// @notice Adds a new agent
     /// @param agentAddress The address of the agent to approve
     /// @param additionalData Any additional data about the agent
     /// @return applicantId The ID assigned to the new applicant
-    function approveApplicant(address agentAddress, bytes calldata additionalData)
+    function addApplicant(address agentAddress, bytes calldata additionalData)
         external
         onlyOwner
         returns (uint256 applicantId)
@@ -65,23 +65,47 @@ contract AgentApplication is Ownable {
 
         applicants[applicantId] = Applicant({
             agentAddress: agentAddress,
-            status: ApplicationStatus.APPROVED,
+            status: ApplicationStatus.PENDING,
             isValid: true,
             additionalData: additionalData
         });
 
         agentToApplicantId[agentAddress] = applicantId;
 
-        emit ApplicantAdded(applicantId, agentAddress, additionalData, ApplicationStatus.APPROVED);
+        emit ApplicantAdded(applicantId, agentAddress, additionalData, ApplicationStatus.PENDING);
+    }
+
+    /// @notice Approves an agent and grants claim permission
+    /// @param agentAddress The address of the agent to approve
+    /// @return applicantId The ID assigned to the new applicant
+    function approveApplicant(address agentAddress) external onlyOwner returns (uint256 applicantId) {
+        if (agentAddress == address(0)) revert InvalidAddress();
+
+        applicantId = agentToApplicantId[agentAddress];
+
+        if (applicantId == 0 || !applicants[applicantId].isValid) {
+            revert ApplicantNotFound();
+        }
+
+        applicants[applicantId].status = ApplicationStatus.APPROVED;
+
+        emit ApplicantStatusUpdated(applicantId, ApplicationStatus.APPROVED);
     }
 
     /// @notice Deny an applicant's application
-    /// @param applicantId The ID of the applicant to deny
-    function denyApplicant(uint256 applicantId) external onlyOwner {
-        Applicant storage applicant = applicants[applicantId];
-        if (!applicant.isValid) revert ApplicantNotFound();
+    /// @param agentAddress The address of the agent to deny
+    /// @return applicantId The ID of the denied applicant
+    function denyApplicant(address agentAddress) external onlyOwner returns (uint256 applicantId) {
+        if (agentAddress == address(0)) revert InvalidAddress();
 
-        applicant.status = ApplicationStatus.DENIED;
+        applicantId = agentToApplicantId[agentAddress];
+
+        if (applicantId == 0 || !applicants[applicantId].isValid) {
+            revert ApplicantNotFound();
+        }
+
+        applicants[applicantId].status = ApplicationStatus.DENIED;
+
         emit ApplicantStatusUpdated(applicantId, ApplicationStatus.DENIED);
     }
 
@@ -103,19 +127,41 @@ contract AgentApplication is Ownable {
         return applicant.isValid && applicant.status == ApplicationStatus.APPROVED;
     }
 
-    /// @notice Get all applicant information
+    /// @notice Get all applicant information given the applicant ID
     /// @param applicantId The ID of the applicant
+    /// @return applicantId The ID of the applicant
     /// @return agentAddress The address of the applicant
     /// @return status The application status
     /// @return additionalData Any additional data about the applicant
-    function getApplicant(uint256 applicantId)
+    function getApplicantById(uint256 applicantId)
         external
         view
-        returns (address agentAddress, ApplicationStatus status, bytes memory additionalData)
+        returns (uint256, address agentAddress, ApplicationStatus status, bytes memory additionalData)
     {
         Applicant storage applicant = applicants[applicantId];
         if (!applicant.isValid) revert ApplicantNotFound();
 
-        return (applicant.agentAddress, applicant.status, applicant.additionalData);
+        return (applicantId, applicant.agentAddress, applicant.status, applicant.additionalData);
+    }
+
+    /// @notice Get all applicant information given the agent address
+    /// @param agentAddress The address of the applicant
+    /// @return applicantId The ID of the applicant
+    /// @return agentAddress The address of the applicant
+    /// @return status The application status
+    /// @return additionalData Any additional data about the applicant
+    function getApplicantByAddress(address agentAddress)
+        external
+        view
+        returns (uint256 applicantId, address, ApplicationStatus status, bytes memory additionalData)
+    {
+        if (agentAddress == address(0)) revert InvalidAddress();
+
+        applicantId = agentToApplicantId[agentAddress];
+        Applicant storage applicant = applicants[applicantId];
+
+        if (!applicant.isValid) revert ApplicantNotFound();
+
+        return (applicantId, agentAddress, applicant.status, applicant.additionalData);
     }
 }
