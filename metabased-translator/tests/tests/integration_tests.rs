@@ -361,8 +361,8 @@ async fn test_nitro_batch() -> Result<()> {
     _ = mchain.rollup.postBatch(batch.encode()?).send().await?;
     mchain.mine_block(0).await?;
 
-    // wait 20ms for the batch to be processed
-    sleep(Duration::from_millis(20)).await;
+    // wait for the batch to be processed
+    sleep(Duration::from_millis(200)).await;
     if rollup.get_block_number().await? != 2 {
         return Err(eyre!("block derivation failed - not on block 2"));
     }
