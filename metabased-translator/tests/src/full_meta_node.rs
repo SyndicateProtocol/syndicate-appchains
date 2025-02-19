@@ -15,7 +15,7 @@ use block_builder::{
     connectors::anvil::{FilledProvider, MetaChainProvider},
     metrics::BlockBuilderMetrics,
 };
-use common::{db::DummyStore, tracing::init_test_tracing, types::Chain};
+use common::{db::RocksDbStore, tracing::init_test_tracing, types::Chain};
 use contract_bindings::{
     arbitrum::rollup::Rollup,
     metabased::{
@@ -200,6 +200,7 @@ pub struct MetaNode {
 }
 
 impl MetaNode {
+    #[allow(clippy::unwrap_used)] // test utility
     pub async fn new(pre_loaded: bool, config: MetabasedConfig) -> Result<Self> {
         // We need 4 ports to run a full meta node
         // - MChain
@@ -316,6 +317,10 @@ impl MetaNode {
             let _ = settlement_ingestor.start_polling(set_ingestor_rx).await;
         }));
 
+        // new DB
+        let db_path = test_path("db");
+        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
+
         // Start slotter at the genesis timestamp
         let mut slotter_cfg = config.slotter;
         slotter_cfg.start_slot_timestamp = GENESIS_TIMESTAMP;
@@ -324,7 +329,7 @@ impl MetaNode {
         let (slotter, slotter_rx) = Slotter::new(
             &slotter_cfg,
             None,
-            Arc::new(DummyStore {}),
+            store.clone(),
             SlotterMetrics::new(&mut metrics_state.registry),
         );
         let (shutdown_slotter_tx, shutdown_slotter_rx) = tokio::sync::oneshot::channel();
@@ -338,7 +343,7 @@ impl MetaNode {
             &block_builder_cfg,
             &datadir,
             slotter_cfg.slot_duration,
-            Arc::new(DummyStore {}),
+            store,
             BlockBuilderMetrics::new(&mut metrics_state.registry),
         )
         .await?;
