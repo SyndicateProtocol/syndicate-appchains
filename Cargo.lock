@@ -314,9 +314,9 @@ dependencies = [
 
 [[package]]
 name = "alloy-primitives"
-version = "0.8.19"
+version = "0.8.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec878088ec6283ce1e90d280316aadd3d6ce3de06ff63d68953c855e7e447e92"
+checksum = "478bedf4d24e71ea48428d1bc278553bd7c6ae07c30ca063beb0b09fe58a9e74"
 dependencies = [
  "alloy-rlp",
  "bytes",
@@ -2668,6 +2668,7 @@ name = "metabased-sequencer"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "alloy-primitives",
  "alloy-rlp",
  "async-trait",
  "bytes",
