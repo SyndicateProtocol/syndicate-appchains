@@ -15,7 +15,7 @@
 //!
 //! The `RocksDbStore` implementation is used for the `TranslatorStore` trait
 
-use crate::types::{BlockAndReceipts, BlockRef, Slot};
+use crate::types::{BlockRef, Slot};
 use async_trait::async_trait;
 use bincode;
 use rocksdb::DB;
