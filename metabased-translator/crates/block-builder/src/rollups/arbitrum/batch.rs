@@ -141,7 +141,7 @@ fn l2_msg_to_bytes(msg: &Vec<Bytes>) -> Result<Bytes, BlockBuilderError> {
     if msg.len() > 1 {
         data.push(L2MessageKind::Batch as u8);
         for tx in msg {
-            data.extend_from_slice(&tx.len().to_be_bytes());
+            data.extend_from_slice(&(tx.len() + 1).to_be_bytes());
             data.push(L2MessageKind::SignedTx as u8);
             data.extend(tx);
         }

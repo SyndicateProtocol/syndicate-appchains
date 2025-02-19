@@ -529,3 +529,99 @@ async fn test_nitro_batch() -> Result<()> {
 
     Ok(())
 }
+
+/// Regression test
+#[tokio::test(flavor = "multi_thread")]
+async fn test_nitro_batch_two_tx() -> Result<()> {
+    let block_builder_cfg =
+        BlockBuilderConfig { mchain_url: "http://127.0.0.1:8388".parse()?, ..Default::default() };
+
+    let mut metrics_state = MetricsState { registry: Registry::default() };
+    let metrics = MChainMetrics::new(&mut metrics_state.registry);
+    let datadir = test_path("datadir");
+    let mchain = MetaChainProvider::start(&block_builder_cfg, &datadir, &metrics).await?;
+    mchain.provider.anvil_set_block_timestamp_interval(1).await?;
+    let (_nitro, rollup) = launch_nitro_node(&mchain, 8347).await?;
+
+    // deposit 1 eth
+    _ = mchain
+        .rollup
+        .depositEth(Address::default(), mchain.provider.default_signer_address(), parse_ether("1")?)
+        .send()
+        .await?;
+    mchain.mine_block(0).await?;
+
+    // send a batch to sequence the deposit.
+    _ = mchain
+        .rollup
+        .postBatch(arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?)
+        .send()
+        .await?;
+    mchain.mine_block(0).await?;
+
+    // wait 20ms for the batch to be processed
+    sleep(Duration::from_millis(20)).await;
+    if rollup.get_block_number().await? != 1 {
+        return Err(eyre!("block derivation failed - not on block 1"));
+    }
+
+    // check that the deposit succeeded
+    assert_eq!(
+        rollup.get_balance(mchain.provider.default_signer_address()).await?,
+        parse_ether("1")?
+    );
+
+    // include two tx in a batch
+    let mut tx = vec![];
+    let mut tx2 = vec![];
+    let inner_tx = TransactionRequest::default()
+        .with_to(address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"))
+        .with_value(U256::from(0))
+        .with_nonce(0)
+        .with_gas_limit(100_000)
+        .with_chain_id(block_builder_cfg.target_chain_id)
+        .with_max_fee_per_gas(100000000)
+        .with_max_priority_fee_per_gas(0)
+        .build(&mchain.provider.wallet())
+        .await?;
+
+    let second_tx = TransactionRequest::default()
+        .with_to(address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"))
+        .with_value(U256::from(0))
+        .with_nonce(1)
+        .with_gas_limit(100_000)
+        .with_chain_id(block_builder_cfg.target_chain_id)
+        .with_max_fee_per_gas(100000000)
+        .with_max_priority_fee_per_gas(0)
+        .build(&mchain.provider.wallet())
+        .await?;
+
+    second_tx.encode_2718(&mut tx2);
+
+    inner_tx.encode_2718(&mut tx);
+    let batch = arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::L2(
+        arbitrum::batch::L1IncomingMessage {
+            header: Default::default(),
+            l2_msg: vec![tx.into(), tx2.into()],
+        },
+    )]);
+    _ = mchain.rollup.postBatch(batch.encode()?).send().await?;
+    mchain.mine_block(0).await?;
+
+    // wait 20ms for the batch to be processed
+    sleep(Duration::from_millis(20)).await;
+    if rollup.get_block_number().await? != 2 {
+        return Err(eyre!("block derivation failed - not on block 2"));
+    }
+
+    // check that the tx was sequenced
+    let block: Block = rollup
+        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
+        .await?;
+    assert_eq!(block.transactions.len(), 3);
+    // tx hash should match
+    assert_eq!(block.transactions[1].hash, *inner_tx.tx_hash());
+    assert_eq!(block.transactions[2].hash, *second_tx.tx_hash());
+
+    Ok(())
+}
