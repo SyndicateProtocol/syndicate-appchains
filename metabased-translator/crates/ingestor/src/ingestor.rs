@@ -79,7 +79,7 @@ impl Ingestor {
     ) -> Result<(), Error> {
         if block_and_receipts.block.number != self.current_block_number {
             error!(
-                "Block number missmatch on chain {}. Current block {}. Got {}",
+                "Block number missmatch on chain {:?}. Current block {:?}. Got {:?}",
                 self.chain, self.current_block_number, block_and_receipts.block.number
             );
             return Err(eyre!("Block number mismatch"));
