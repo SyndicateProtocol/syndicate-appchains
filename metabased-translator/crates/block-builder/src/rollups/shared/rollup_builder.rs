@@ -41,6 +41,8 @@ pub trait RollupBlockBuilder: Debug + Send + Sync + Unpin + 'static {
     fn transaction_parser(&self) -> &SequencingTransactionParser;
 
     /// Builds a block from a slot
-    async fn build_block_from_slot(&mut self, slot: Slot)
-        -> Result<Vec<TransactionRequest>, Error>;
+    async fn build_block_from_slot(
+        &mut self,
+        slot: &Slot,
+    ) -> Result<Vec<TransactionRequest>, Error>;
 }

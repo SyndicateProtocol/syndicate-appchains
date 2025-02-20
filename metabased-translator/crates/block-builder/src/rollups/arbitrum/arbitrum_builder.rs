@@ -97,12 +97,13 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
     /// Builds a block from a slot
     async fn build_block_from_slot(
         &mut self,
-        slot: Slot,
+        slot: &Slot,
     ) -> Result<Vec<TransactionRequest>, eyre::Error> {
-        let delayed_messages = self.process_delayed_messages(slot.settlement_chain_blocks).await?;
+        let delayed_messages =
+            self.process_delayed_messages(slot.settlement_chain_blocks.clone()).await?;
         debug!("Delayed messages: {:?}", delayed_messages);
 
-        let mb_transactions = self.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
+        let mb_transactions = self.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks.clone());
 
         if delayed_messages.is_empty() && mb_transactions.is_empty() {
             trace!("No delayed messages or MB transactions, skipping block");
@@ -407,7 +408,7 @@ mod tests {
             sequencing_chain_blocks: vec![],
         };
 
-        let result = builder.build_block_from_slot(slot).await;
+        let result = builder.build_block_from_slot(&slot).await;
         assert!(result.is_ok());
 
         let txns = result.unwrap();
@@ -494,7 +495,7 @@ mod tests {
             sequencing_chain_blocks: vec![],
         };
 
-        let result = builder.build_block_from_slot(slot).await;
+        let result = builder.build_block_from_slot(&slot).await;
         assert!(result.is_ok());
 
         let txns = result.unwrap();
@@ -538,7 +539,7 @@ mod tests {
             })],
         };
 
-        let result = builder.build_block_from_slot(slot).await;
+        let result = builder.build_block_from_slot(&slot).await;
         assert!(result.is_ok());
 
         let txns = result.unwrap();
@@ -636,7 +637,7 @@ mod tests {
             })],
         };
 
-        let result = builder.build_block_from_slot(slot).await;
+        let result = builder.build_block_from_slot(&slot).await;
         assert!(result.is_ok());
 
         let txns = result.unwrap();

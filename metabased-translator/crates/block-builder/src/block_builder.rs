@@ -25,7 +25,7 @@ use url::Url;
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct BlockBuilder {
-    slotter_rx: Receiver<Slot>,
+    slotter_rx: Receiver<Arc<Slot>>,
     #[allow(missing_docs)]
     pub mchain: MetaChainProvider,
     builder: Box<dyn RollupBlockBuilder>,
@@ -39,7 +39,7 @@ pub struct BlockBuilder {
 impl BlockBuilder {
     /// Create a new block builder
     pub async fn new(
-        slotter_rx: Receiver<Slot>,
+        slotter_rx: Receiver<Arc<Slot>>,
         config: &BlockBuilderConfig,
         datadir: &str,
         slot_duration_sec: u64,
@@ -108,7 +108,7 @@ impl BlockBuilder {
                     self.metrics.record_last_slot(slot.number);
 
                     // [OP / ARB] Build block of MChain transactions from slot
-                    let transactions = match self.builder.build_block_from_slot(slot.clone()).await {
+                    let transactions = match self.builder.build_block_from_slot(&slot).await {
                         Ok(transactions) => transactions,
                         Err(e) => {
                             panic!("Error building batch transaction: {}", e);
@@ -234,7 +234,7 @@ mod tests {
         let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });
 
         // Send a test block
-        let test_slot = Slot::new(2, genesis_ts + 1);
+        let test_slot = Arc::new(Slot::new(2, genesis_ts + 1));
         tx.send(test_slot).await?;
 
         // Give some time for processing
@@ -262,9 +262,9 @@ mod tests {
         let provider = builder.mchain.provider.clone();
 
         // First run: send a few slots
-        let test_slot1 = Slot::new(1, 1000);
-        let test_slot2 = Slot::new(2, 2000);
-        let test_slot3 = Slot::new(3, 3000);
+        let test_slot1 = Arc::new(Slot::new(1, 1000));
+        let test_slot2 = Arc::new(Slot::new(2, 2000));
+        let test_slot3 = Arc::new(Slot::new(3, 3000));
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });

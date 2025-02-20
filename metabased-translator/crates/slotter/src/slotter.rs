@@ -58,7 +58,7 @@ pub struct Slotter {
     slots: VecDeque<Slot>,
 
     /// Sender for sending slots to the consumer
-    sender: Sender<Slot>,
+    sender: Sender<Arc<Slot>>,
 
     #[derivative(Debug = "ignore")]
     store: Arc<dyn TranslatorStore + Send + Sync>,
@@ -75,7 +75,7 @@ impl Slotter {
         known_state: Option<KnownState>,
         store: Arc<dyn TranslatorStore + Send + Sync>,
         metrics: SlotterMetrics,
-    ) -> (Self, Receiver<Slot>) {
+    ) -> (Self, Receiver<Arc<Slot>>) {
         let (slot_tx, slot_rx) = channel(100);
         let mut slots = VecDeque::new();
         let mut safe_timestamp = 0;
@@ -188,6 +188,9 @@ impl Slotter {
                     SlotterError::TimestampOverflow => {
                         panic!("Timestamp overflow - this should never happen unless timestamps are extremely far apart");
                     }
+                    SlotterError::SlotArcSendError(_) => {
+                        panic!("Failed to send slot through channel (Arc) {e}");
+                    }
                 },
             }
         }
@@ -255,7 +258,8 @@ impl Slotter {
         }
         for slot in buffer.into_iter().rev() {
             debug!(%slot, "Sending slot");
-            self.sender.send(slot).await?;
+            let arc_slot = Arc::new(slot);
+            self.sender.send(arc_slot).await?;
             self.metrics.update_channel_capacity(self.sender.capacity());
         }
         Ok(())
@@ -636,6 +640,9 @@ enum SlotterError {
 
     #[error("Timestamp overflow")]
     TimestampOverflow,
+
+    #[error("Failed to send slot (Arc) through channel: {0}")]
+    SlotArcSendError(#[from] SendError<Arc<Slot>>),
 }
 
 #[cfg(test)]
@@ -655,7 +662,7 @@ mod tests {
     use test_utils::test_path;
 
     struct TestSetup {
-        slot_rx: Receiver<Slot>,
+        slot_rx: Receiver<Arc<Slot>>,
         sequencing_tx: Sender<Arc<BlockAndReceipts>>,
         settlement_tx: Sender<Arc<BlockAndReceipts>>,
         shutdown_tx: oneshot::Sender<()>,
@@ -672,7 +679,7 @@ mod tests {
         TestSetup { slot_rx, sequencing_tx: seq_tx, settlement_tx: settle_tx, shutdown_tx }
     }
 
-    fn create_slotter(config: &SlotterConfig) -> (Slotter, Receiver<Slot>) {
+    fn create_slotter(config: &SlotterConfig) -> (Slotter, Receiver<Arc<Slot>>) {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = SlotterMetrics::new(&mut metrics_state.registry);
         let store = Arc::new(RocksDbStore::new(test_path("slotter_db").as_str()).unwrap());

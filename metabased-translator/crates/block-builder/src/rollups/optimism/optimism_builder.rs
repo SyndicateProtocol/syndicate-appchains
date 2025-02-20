@@ -28,10 +28,11 @@ pub struct OptimismBlockBuilder {
 
 #[async_trait]
 impl RollupBlockBuilder for OptimismBlockBuilder {
-    async fn build_block_from_slot(&mut self, slot: Slot) -> Result<Vec<TransactionRequest>> {
-        let deposited_txns = self.process_deposited_txns(slot.settlement_chain_blocks).await?;
+    async fn build_block_from_slot(&mut self, slot: &Slot) -> Result<Vec<TransactionRequest>> {
+        let deposited_txns =
+            self.process_deposited_txns(slot.settlement_chain_blocks.clone()).await?;
 
-        let mbtxs = self.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks);
+        let mbtxs = self.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks.clone());
 
         let batch_txn = self.build_batch_txn(mbtxs).await?;
 
