@@ -25,7 +25,7 @@ use alloy::{
 use contract_bindings::arbitrum::rollup::Rollup;
 use eyre::{Error, Result};
 use reqwest::Client;
-use std::{net::TcpListener, time::Duration};
+use std::net::TcpListener;
 use thiserror::Error;
 use tracing::{debug, error, info};
 use url::Host;
@@ -296,17 +296,6 @@ impl MetaChainProvider {
     }
 }
 
-/// Custom [`Drop`] to make sure the Anvil process is terminated and the port is released.
-impl Drop for MetaChainProvider {
-    fn drop(&mut self) {
-        // Ensure anvil process is terminated
-        let id = self.anvil.child().id();
-        let _ = std::process::Command::new("kill").arg(id.to_string()).output();
-        // Give the port time to be released
-        std::thread::sleep(Duration::from_millis(500));
-    }
-}
-
 /// Check if a port is available by attempting to bind to it
 ///
 /// The port will be used for both HTTP and WebSocket connections, a feature provided by Anvil.
@@ -314,6 +303,18 @@ impl Drop for MetaChainProvider {
 pub fn is_port_available(port: u16) -> bool {
     let addr = format!("127.0.0.1:{}", port);
     TcpListener::bind(addr).is_ok()
+}
+
+/// Custom [`Drop`] to make sure the Anvil process is terminated and the port is released.
+#[cfg(test)]
+impl Drop for MetaChainProvider {
+    fn drop(&mut self) {
+        // Ensure anvil process is terminated
+        let id = self.anvil.child().id();
+        let _ = std::process::Command::new("kill").arg(id.to_string()).output();
+        // Give the port time to be released
+        std::thread::sleep(std::time::Duration::from_millis(500));
+    }
 }
 
 #[cfg(test)]
