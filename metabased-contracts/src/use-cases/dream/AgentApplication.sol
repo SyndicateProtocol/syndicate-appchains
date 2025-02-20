@@ -68,7 +68,7 @@ contract AgentApplication is AccessControl {
             revert AgentAlreadyApplied();
         }
 
-        applicantCount++;
+        ++applicantCount;
         applicantId = applicantCount;
 
         applicants[applicantId] = Applicant({
