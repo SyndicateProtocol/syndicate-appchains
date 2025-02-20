@@ -19,9 +19,12 @@ interface IAgentApplication {
     /// @return bool indicating if the agent is permitted
     function isPermittedByAddress(address agentAddress) external view returns (bool);
 
-    /// @notice Get the owner of the contract
-    /// @return The owner address
-    function owner() external view returns (address);
+    /// @notice The admin role for the AgentApplication contract
+    function ADMIN_ROLE() external view returns (bytes32);
+
+    /// @notice Check if an agent has a role
+    /// @dev Returns `true` if `account` has been granted `role`.
+    function hasRole(bytes32 role, address account) external view returns (bool);
 }
 
 /// @title AgentTransactionValidator
@@ -49,7 +52,8 @@ contract AgentTransactionValidator {
         // Check if the from address is permitted
         if (!agentApplication.isPermittedByAddress(from)) {
             // then must be owner of the AgentApplication contract, otherwise revert
-            if (from != agentApplication.owner()) revert Unauthorized();
+            bytes32 adminRole = agentApplication.ADMIN_ROLE();
+            if (!agentApplication.hasRole(adminRole, from)) revert Unauthorized();
         }
 
         // Forward the transaction to the sequencer chain

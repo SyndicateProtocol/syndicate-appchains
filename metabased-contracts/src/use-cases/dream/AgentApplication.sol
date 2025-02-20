@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /// @title AgentApplication
 /// @notice Manages the application process for Dream agents
 /// @dev Controls agent permissions and status with admin management
-contract AgentApplication is Ownable {
+contract AgentApplication is AccessControl {
+    // Role definitions
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
+
     enum ApplicationStatus {
         PENDING,
         APPROVED,
@@ -41,7 +44,12 @@ contract AgentApplication is Ownable {
 
     /// @notice Initialize the contract with necessary addresses
     /// @param admin The admin address for the contract
-    constructor(address admin) Ownable(admin) {}
+    constructor(address admin) {
+        if (admin == address(0)) revert InvalidAddress();
+
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(ADMIN_ROLE, admin);
+    }
 
     /// @notice Adds a new agent
     /// @param agentAddress The address of the agent to approve
@@ -49,7 +57,7 @@ contract AgentApplication is Ownable {
     /// @return applicantId The ID assigned to the new applicant
     function addApplicant(address agentAddress, bytes calldata additionalData)
         external
-        onlyOwner
+        onlyRole(ADMIN_ROLE)
         returns (uint256 applicantId)
     {
         if (agentAddress == address(0)) revert InvalidAddress();
@@ -78,7 +86,7 @@ contract AgentApplication is Ownable {
     /// @notice Approves an agent and grants claim permission
     /// @param agentAddress The address of the agent to approve
     /// @return applicantId The ID assigned to the new applicant
-    function approveApplicant(address agentAddress) external onlyOwner returns (uint256 applicantId) {
+    function approveApplicant(address agentAddress) external onlyRole(ADMIN_ROLE) returns (uint256 applicantId) {
         if (agentAddress == address(0)) revert InvalidAddress();
 
         applicantId = agentToApplicantId[agentAddress];
@@ -95,7 +103,7 @@ contract AgentApplication is Ownable {
     /// @notice Deny an applicant's application
     /// @param agentAddress The address of the agent to deny
     /// @return applicantId The ID of the denied applicant
-    function denyApplicant(address agentAddress) external onlyOwner returns (uint256 applicantId) {
+    function denyApplicant(address agentAddress) external onlyRole(ADMIN_ROLE) returns (uint256 applicantId) {
         if (agentAddress == address(0)) revert InvalidAddress();
 
         applicantId = agentToApplicantId[agentAddress];
