@@ -19,9 +19,9 @@ use tokio::{
 use tracing::{debug, error, info, trace};
 
 /// Maximum time to wait for blocks before considering a slot final (24 hours in seconds)
-/// A slot becomes safe if both chains have progressed `MAX_WAIT_SEC` seconds past the slot's
-/// timestamp
-const MAX_WAIT_SEC: u64 = 24 * 60 * 60;
+/// A slot becomes safe if both chains have progressed `SLOT_SAFETY_WINDOW_SEC` seconds past the
+/// slot's timestamp
+const SLOT_SAFETY_WINDOW_SEC: u64 = 24 * 60 * 60;
 
 /// The first slot number to use
 const START_SLOT: u64 = 2;
@@ -29,18 +29,16 @@ const START_SLOT: u64 = 2;
 /// Polls and ingests blocks from an Ethereum chain
 ///
 /// Slots are stored in a linked list ordered by timestamp, with newer slots at the back.
-/// Each slot has a fixed duration and contains blocks from both chains that fall within its window.
 ///
 /// ```text
 /// LinkedList:
 /// Front                                                           Back
 /// [Oldest] <-> [Slot N-2] <-> [Slot N-1] <-> [Current Slot] <-> [Newest]
 ///
-/// Where:
-/// - max_slots is the number of slots to keep and is determined by `MAX_WAIT_SEC` / `slot_duration_ms`, thus if a slot is to be dropped, it must be marked as Safe
-/// - Slots older than max_slots are dropped
-/// - A slot becomes Closed when both chains progress past it
-/// ```
+/// - A slot is created when a new sequencing block is received
+/// - Settlement blocks are delayed by a configured time (settlement_delay)
+/// - A slot becomes Closed when we see a settlement block that cannot fit into it (the block's timestamp (plus delay) is further in the future than the slot's timestamp)
+///  ```
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct Slotter {
@@ -57,7 +55,7 @@ pub struct Slotter {
     slots: VecDeque<Slot>,
 
     /// Index of the oldest open slot
-    oldest_open_slot_idx: Option<usize>,
+    oldest_open_slot_idx: usize,
 
     /// Unassigned settlement blocks
     unassigned_settlement_blocks: VecDeque<BlockAndReceipts>,
@@ -112,7 +110,7 @@ impl Slotter {
             store,
             metrics,
             min_chain_head_timestamp,
-            oldest_open_slot_idx: None,
+            oldest_open_slot_idx: 0,
         };
         (slotter, slot_rx)
     }
@@ -215,8 +213,6 @@ impl Slotter {
     ) -> Result<(), SlotterError> {
         self.update_latest_block(&block_info.block, chain)?;
 
-        let latest_slot = self.slots.back_mut();
-
         debug!(
             ?chain,
             block_number = block_info.block.number,
@@ -224,64 +220,17 @@ impl Slotter {
             block_hash = %block_info.block.hash,
             "Processing block"
         );
-        trace!("latest_slot: {:?}", latest_slot);
 
         match chain {
             Chain::Sequencing => {
-                // Each sequencer block creates a new slot
-                let slot_number = match latest_slot {
-                    Some(slot) => slot.number + 1,
-                    None => START_SLOT,
-                };
-                let slot_timestamp = block_info.block.timestamp;
-
-                // Create a new slot for this sequencer block
-                let mut new_slot = Slot::new(slot_number, slot_timestamp, block_info);
-
-                // check if any unassigned settlement blocks belong in this slot
-                // if so, add them to the slot and remove them from the unassigned list
-                // otherwise, add the slot to the front of the list
-                let mut closed = false;
-                while let Some(set_block) = self.unassigned_settlement_blocks.front() {
-                    if self.settlement_timestamp(set_block) > slot_timestamp {
-                        // we have seen a settlement block that belongs in a later slot, this one
-                        // can be closed
-                        closed = true;
-                        break;
-                    }
-                    let block = self.unassigned_settlement_blocks.pop_front().ok_or_else(|| {
-                        SlotterError::NoSlotsAvailable(
-                            "Slot disappeared between front() and pop_front()".to_string(),
-                        )
-                    })?;
-                    new_slot.push_settlement_block(block);
-                }
-                if closed {
-                    new_slot.state = SlotState::Closed;
-                    self.sender.send(new_slot.clone()).await?;
-                }
-                debug!(%new_slot, "new slot created");
-
-                // Add the new slot
-                self.slots.push_back(new_slot);
-                self.metrics.record_last_slot_created(slot_number);
+                self.process_sequencing_block(block_info).await?;
             }
             Chain::Settlement => {
-                self.insert_settlement_block_into_slot(block_info).await?;
+                self.process_settlement_block(block_info).await?;
             }
         }
-        self.metrics.update_active_slots(self.slots.len());
         if self.min_chain_head_timestamp == 0 {
-            debug!(
-                "No blocks seen for both chains yet, skipping cleanup and marking slots as unsafe"
-            );
-            return Ok(());
-        }
-        self.metrics.update_active_slots(self.slots.len());
-        if self.min_chain_head_timestamp == 0 {
-            debug!(
-                "No blocks seen for both chains yet, skipping cleanup and marking slots as unsafe"
-            );
+            debug!("No blocks seen for both chains yet, skipping cleanup");
             return Ok(());
         }
 
@@ -290,8 +239,9 @@ impl Slotter {
         Ok(())
     }
 
-    /// `cleanup_slots` will mark slots as safe if both chains have progressed `MAX_WAIT` seconds
-    /// past them and we have seen blocks from both chains after that point.
+    /// `cleanup_slots` will mark slots as safe if both chains have progressed
+    /// `SLOT_SAFETY_WINDOW_SEC` seconds past them and we have seen blocks from both chains
+    /// after that point.
     async fn cleanup_slots(&mut self) -> Result<(), SlotterError> {
         trace!("Checking for slots to mark as safe");
         // Check slots from oldest to newest (front to back)
@@ -300,7 +250,7 @@ impl Slotter {
         while let Some(slot) = self.slots.front() {
             // Has 24h passed since this slot's timestamp?
             // If we can't mark this slot as safe, we can't mark newer ones either
-            if slot.timestamp + MAX_WAIT_SEC > self.min_chain_head_timestamp ||
+            if slot.timestamp + SLOT_SAFETY_WINDOW_SEC > self.min_chain_head_timestamp ||
                 slot.state == SlotState::Open
             {
                 break;
@@ -323,8 +273,7 @@ impl Slotter {
         // Update index after removing slots
         if slots_removed > 0 {
             //TODO add a test for this
-            self.oldest_open_slot_idx =
-                self.oldest_open_slot_idx.map(|idx| idx.saturating_sub(slots_removed));
+            self.oldest_open_slot_idx = self.oldest_open_slot_idx.saturating_sub(slots_removed);
         }
 
         self.metrics.update_active_slots(self.slots.len());
@@ -397,7 +346,50 @@ impl Slotter {
         Ok(())
     }
 
-    async fn insert_settlement_block_into_slot(
+    async fn process_sequencing_block(
+        &mut self,
+        block_info: BlockAndReceipts,
+    ) -> Result<(), SlotterError> {
+        let latest_slot = self.slots.back_mut();
+        trace!("latest_slot: {:?}", latest_slot);
+
+        // Each sequencer block creates a new slot
+        let slot_number = match latest_slot {
+            Some(slot) => slot.number + 1,
+            None => START_SLOT,
+        };
+        let slot_timestamp = block_info.block.timestamp;
+
+        // Create a new slot for this sequencer block
+        let mut new_slot = Slot::new(slot_number, slot_timestamp, block_info);
+
+        // check if any unassigned settlement blocks belong in this slot
+        // if so, add them to the slot and remove them from the unassigned list
+        // otherwise, add the slot to the front of the list
+        while let Some(set_block) = self.unassigned_settlement_blocks.front() {
+            if self.settlement_timestamp(set_block) > slot_timestamp {
+                // we have seen a settlement block that belongs in a later slot, this one
+                // can be closed
+                new_slot.state = SlotState::Closed;
+                self.sender.send(new_slot.clone()).await?;
+                break;
+            }
+            let block = self.unassigned_settlement_blocks.pop_front().ok_or_else(|| {
+                SlotterError::NoSlotsAvailable(
+                    "Slot disappeared between front() and pop_front()".to_string(),
+                )
+            })?;
+            new_slot.push_settlement_block(block);
+        }
+        debug!(%new_slot, "new slot created");
+
+        // Add the new slot
+        self.slots.push_back(new_slot);
+        self.metrics.record_last_slot_created(slot_number);
+        Ok(())
+    }
+
+    async fn process_settlement_block(
         &mut self,
         set_block: BlockAndReceipts,
     ) -> Result<(), SlotterError> {
@@ -418,14 +410,18 @@ impl Slotter {
                 continue;
             }
             slot.push_settlement_block(set_block.clone());
-            debug!(slot_number = slot.number, "block added to the slot");
+            debug!(
+                slot_number = slot.number,
+                block_number = set_block.block.number,
+                "block added to the slot"
+            );
             trace!("slot: {:?}", slot);
             inserted = true;
             break;
         }
 
         if closed_slots > 0 {
-            self.oldest_open_slot_idx = self.oldest_open_slot_idx.map(|idx| idx + closed_slots);
+            self.oldest_open_slot_idx += closed_slots;
         }
 
         if !inserted {
@@ -436,8 +432,7 @@ impl Slotter {
     }
 
     fn iter_from_oldest_open(&mut self) -> impl Iterator<Item = &mut Slot> {
-        let start_idx = self.oldest_open_slot_idx.unwrap_or(0);
-        self.slots.range_mut(start_idx..)
+        self.slots.range_mut(self.oldest_open_slot_idx..)
     }
 }
 
@@ -744,10 +739,10 @@ mod tests {
         assert_eq!(slot1.settlement_blocks[0].block.number, 1);
         assert_eq!(slot1.state, SlotState::Closed);
 
-        // Send blocks that are MAX_WAIT_SEC (24 hours) ahead, this should make all previous slots
-        // as Safe
-        set_tx.send(create_test_block(3, 30 + MAX_WAIT_SEC)).await.unwrap();
-        seq_tx.send(create_test_block(3, 30 + MAX_WAIT_SEC)).await.unwrap();
+        // Send blocks that are SLOT_SAFETY_WINDOW_SEC (24 hours) ahead, this should make all
+        // previous slots as Safe
+        set_tx.send(create_test_block(3, 30 + SLOT_SAFETY_WINDOW_SEC)).await.unwrap();
+        seq_tx.send(create_test_block(3, 30 + SLOT_SAFETY_WINDOW_SEC)).await.unwrap();
 
         // drain the channel
         let _handle = tokio::spawn(async move {

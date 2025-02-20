@@ -177,7 +177,7 @@ pub enum SlotState {
     /// A slot that is considered final and cannot rollback (blocks that are more than
     /// `MAX_WAIT_MS` old)
     Safe,
-    /// A slot that we don't expect to fit more blocks into. It should be considered cannonical
+    /// A slot that we don't expect to fit more blocks into. It should be considered canonical
     /// unless a reorg happens
     Closed,
     /// A slot to which incoming blocks might still be added

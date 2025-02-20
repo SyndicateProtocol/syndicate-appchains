@@ -117,7 +117,6 @@ impl BlockBuilder {
                     trace!("Submitting {} transactions", transactions_len);
                     self.metrics.record_transactions_per_slot(transactions_len);
 
-                    // Fill gap with empty blocks if needed
                     let  block_number = self.get_current_block_number().await;
                     assert!(slot.number == block_number + 1, "Unexpected slot number, got {}, expected {}", slot.number, block_number + 1);
 
