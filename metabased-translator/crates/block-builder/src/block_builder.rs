@@ -153,14 +153,11 @@ impl BlockBuilder {
 
                     // Verify transactions are all included and succeeded
                     // TODO: check to make sure the tx hashes match
-                    let receipts: Vec<common::types::Receipt> = self.mchain.provider.raw_request("eth_getBlockReceipts".into(), (BlockNumberOrTag::Latest,)).await.unwrap();
-                    if receipts.len() != transactions_len {
-                        panic!("expected {:#?} receipts, got {:#?}", transactions_len, receipts);
-                    }
+                    let receipts: Vec<common::types::Receipt> = self.mchain.provider.raw_request("eth_getBlockReceipts".into(), (BlockNumberOrTag::Number(current_block),)).await.unwrap_or_else(|e|panic!("Failed to fetch receipts for block {:#?}: {:#?}", current_block, e));
+                    assert!(receipts.len() == transactions_len, "expected {:#?} receipts, got {:#?}", transactions_len, receipts);
+
                     for r in receipts {
-                        if r.status != 1 {
-                            panic!("tx failed: {:#?}", r);
-                        }
+                        assert!(r.status == 1, "tx failed: {:#?}", r);
                     }
 
                     if let Err(e) = self.store.save_unsafe_slot(&slot).await {

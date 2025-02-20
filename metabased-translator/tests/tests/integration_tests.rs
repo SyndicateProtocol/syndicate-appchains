@@ -2,11 +2,10 @@
 
 use alloy::{
     eips::{eip2718::Encodable2718, BlockNumberOrTag},
-    network::{EthereumWallet, TransactionBuilder},
-    primitives::{address, utils::parse_ether, Address, BlockTimestamp, U256},
+    network::TransactionBuilder,
+    primitives::{address, utils::parse_ether, Address, U256},
     providers::{ext::AnvilApi as _, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, TransactionRequest},
-    signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
 };
 use block_builder::{
     config::{get_rollup_contract_address, BlockBuilderConfig},
@@ -19,19 +18,22 @@ use block_builder::{
 use common::types::Block;
 use contract_bindings::arbitrum::{iinbox::IInbox, rollup::Rollup};
 use e2e_tests::full_meta_node::{
-    launch_nitro_node, mine_block, start_anvil, start_reth, MetaNode, PRELOAD_INBOX_ADDRESS,
+    launch_nitro_node, mine_block, start_reth, MetaNode, PRELOAD_INBOX_ADDRESS,
 };
 use eyre::{eyre, Result};
 use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
+use serial_test::serial;
 use std::time::Duration;
 use tokio::time::sleep;
 
 /// This test sends different types of delayed messages
 /// via the inbox contract and ensures that all of them
 /// are sequenced via the metabased translator and show up on the rollup.
+/// TODO: remove the serial attribute once the reth port conflicts are fixed.
 #[tokio::test(flavor = "multi_thread")]
+#[serial]
 async fn e2e_settlement_test() -> Result<()> {
     // Start the meta node (port index 0, pre-loaded with the full set of Arb contracts)
     let mut config = MetabasedConfig::default();
@@ -183,7 +185,7 @@ async fn e2e_settlement_test() -> Result<()> {
 
     // Mine blocks to process the slot
     meta_node.mine_next_slot().await?;
-    sleep(Duration::from_millis(500)).await;
+    sleep(Duration::from_millis(1000)).await;
 
     assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 17);
     assert_eq!(
@@ -201,7 +203,9 @@ async fn e2e_settlement_test() -> Result<()> {
 /// blocks sequenced via the sequencing contract show up
 /// on the rollup. It also checks to make sure missing slots
 /// sequence a mchain block that does not include a batch.
+/// TODO: remove the serial attribute once the reth port conflicts are fixed.
 #[tokio::test(flavor = "multi_thread")]
+#[serial]
 async fn e2e_test() -> Result<()> {
     // Start the meta node (port index 1, no pre-loaded contracts)
     let mut config = MetabasedConfig::default();
@@ -238,7 +242,7 @@ async fn e2e_test() -> Result<()> {
     // insert a block to slot 1 @ ts 0, slot 2 @ ts 1. mine slot 1 -> mchain block 2.
     meta_node.mine_both(0).await?;
     meta_node.mine_next_slot().await?;
-    sleep(Duration::from_millis(200)).await;
+    sleep(Duration::from_millis(1000)).await;
 
     // check mchain blocks
     assert_eq!(meta_node.mchain_provider.get_block_number().await?, 2);
@@ -282,7 +286,7 @@ async fn e2e_test() -> Result<()> {
         .await?;
     meta_node.mine_next_slot().await?;
     meta_node.mine_next_slot().await?;
-    sleep(Duration::from_millis(100)).await;
+    sleep(Duration::from_millis(2000)).await;
 
     // check mchain blocks
     assert_eq!(meta_node.mchain_provider.get_block_number().await?, 4);
@@ -317,7 +321,9 @@ async fn e2e_test() -> Result<()> {
 
 /// This test tests that rollup blocks are properly derived from batches created
 /// via the block builder code and posted to the dummy rollup contract.
+/// TODO: remove the serial attribute once the reth port conflicts are fixed
 #[tokio::test(flavor = "multi_thread")]
+#[serial]
 async fn test_nitro_batch() -> Result<()> {
     let block_builder_cfg =
         BlockBuilderConfig { mchain_url: "http://127.0.0.1:8388".parse()?, ..Default::default() };
@@ -394,14 +400,16 @@ async fn test_nitro_batch() -> Result<()> {
 }
 
 /// Regression test
+/// TODO: remove the serial attribute once the reth port conflicts are fixed
 #[tokio::test(flavor = "multi_thread")]
+#[serial]
 async fn test_nitro_batch_two_tx() -> Result<()> {
     let block_builder_cfg =
         BlockBuilderConfig { mchain_url: "http://127.0.0.1:8488".parse()?, ..Default::default() };
 
     let mut metrics_state = MetricsState { registry: Registry::default() };
     let metrics = MChainMetrics::new(&mut metrics_state.registry);
-    let (_mchain, _) = start_anvil(block_builder_cfg.mchain_url.port().unwrap(), MCHAIN_ID).await?;
+    let _mchain = start_reth(block_builder_cfg.mchain_url.port().unwrap(), MCHAIN_ID).await?;
     let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
     let (_nitro, rollup) = launch_nitro_node(&mchain, 8447).await?;
 

@@ -109,7 +109,7 @@ impl MetaChainProvider {
             let tx = txn
                 .with_chain_id(MCHAIN_ID)
                 .gas_limit(1000000)
-                .max_fee_per_gas(0)
+                .max_fee_per_gas(1000000000)
                 .max_priority_fee_per_gas(0)
                 .nonce(nonce)
                 .build(self.provider.wallet())
