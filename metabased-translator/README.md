@@ -6,7 +6,7 @@ It consists of a `common` crate and 3 component crates: `ingestor`, `slotter` an
 
 #### Metachain configuration
 
-The metachain has chain id 84532 and a genesis timestamp of 1712500000.
+The metachain has chain id 84532 and a genesis timestamp of 0.
 
 The rollup contract is deployed to 0x5FbDB2315678afecb367f032d93F642f64180aa3 on the first metachain block
 with the following on-chain configuration:

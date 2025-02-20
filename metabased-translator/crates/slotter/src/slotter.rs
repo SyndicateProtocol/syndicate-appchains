@@ -282,6 +282,7 @@ impl Slotter {
             .slots
             .front_mut()
             .ok_or(SlotterError::NoSlotsAvailable("slot collection is empty".to_string()))?;
+
         self.metrics.record_blocks_per_slot(latest_slot.get_total_blocks() as u64);
         debug!(
             ?chain,
@@ -540,15 +541,15 @@ impl std::fmt::Display for Slotter {
 /// The slot will include blocks with timestamps:
 /// - 988 < timestamp <= 1000
 const fn block_slot_ordering(
-    block_timestamp_ms: u64,
-    slot_timestamp_ms: u64,
-    slot_duration_ms: u64,
+    block_timestamp: u64,
+    slot_timestamp: u64,
+    slot_duration: u64,
 ) -> Ordering {
-    let slot_start = slot_timestamp_ms.saturating_sub(slot_duration_ms);
+    let slot_start = slot_timestamp.saturating_sub(slot_duration - 1);
 
-    if block_timestamp_ms <= slot_start {
+    if block_timestamp < slot_start {
         Ordering::Less
-    } else if block_timestamp_ms <= slot_timestamp_ms {
+    } else if block_timestamp <= slot_timestamp {
         Ordering::Equal
     } else {
         Ordering::Greater

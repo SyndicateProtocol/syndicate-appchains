@@ -1,5 +1,6 @@
 //! Integration tests for the metabased-translator handling termination signals
 
+use block_builder::connectors::anvil::MCHAIN_ID;
 use e2e_tests::{full_meta_node::start_anvil, port_manager::PortManager};
 use eyre::Result;
 use reqwest::Client;
@@ -31,6 +32,7 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
     let set_port = port_tracker.next_port();
     let (_set_instance, _set_provider) = start_anvil(set_port, 20).await?;
 
+    let (_mchain, _) = start_anvil(8888, MCHAIN_ID).await?;
     let mut metabased_process = TokioCommand::new("cargo")
         .arg("run")
         .arg("--bin")

@@ -82,6 +82,8 @@ pub struct Transaction {
     pub transaction_index: String,
     /// The amount of Wei transferred.
     pub value: String,
+    /// The amount of gas
+    pub gas: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
@@ -115,10 +117,20 @@ pub struct Receipt {
     /// The logs bloom filter for the transaction.
     pub logs_bloom: String,
     /// The transaction's execution status.
-    pub status: String,
+    #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
+    pub status: u64,
     /// The receipt type, if available.
     #[serde(rename = "type")]
     pub receipt_type: String,
+    /// Transaction index in block
+    #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
+    pub transaction_index: u64,
+    /// Transaction hash
+    #[serde(deserialize_with = "deserialize_b256", serialize_with = "serialize_b256")]
+    pub transaction_hash: B256,
+    /// Gas used
+    #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
+    pub gas_used: u64,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
@@ -417,7 +429,10 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use alloy::{hex::FromHex, primitives::B256};
+    use alloy::{
+        hex::FromHex,
+        primitives::{fixed_bytes, B256},
+    };
 
     fn create_test_slot() -> Slot {
         let mut slot = Slot::new(1, 1000);
@@ -454,6 +469,7 @@ mod test {
                     ),
                     transaction_index: "0x0".to_string(),
                     value: "0x0".to_string(),
+                    gas: "0x0".to_string(),
                 }],
             },
             receipts: vec![Receipt {
@@ -487,8 +503,13 @@ mod test {
                     .unwrap(),
                 }],
                 logs_bloom: "0x0".to_string(),
-                status: "0x1".to_string(),
+                status: 1,
                 receipt_type: "0x0".to_string(),
+                transaction_index: 0,
+                transaction_hash: fixed_bytes!(
+                    "0xabcd567890123456789012345678901234567890123456789012345678901234"
+                ),
+                gas_used: 0,
             }],
         });
 

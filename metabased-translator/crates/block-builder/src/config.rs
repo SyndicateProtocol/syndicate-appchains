@@ -23,10 +23,6 @@ pub struct BlockBuilderConfig {
         value_parser = parse_url)]
     pub mchain_url: Url,
 
-    /// This is dynamically set at runtime.
-    #[arg(skip)]
-    pub genesis_timestamp: u64,
-
     #[arg(short = 'c', long, env = "BLOCK_BUILDER_TARGET_CHAIN_ID", default_value_t = 13331370)]
     pub target_chain_id: u64,
 
@@ -55,21 +51,6 @@ pub struct BlockBuilderConfig {
     #[arg(short = 'i', long, env = "BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS",
         value_parser = parse_address)]
     pub inbox_address: Address,
-
-    // interval at which anvil saves state to disk (in seconds)
-    // default is 300 seconds (5 minutes)
-    #[arg(long, env = "BLOCK_BUILDER_ANVIL_STATE_INTERVAL", default_value_t = 300)]
-    pub anvil_state_interval: u64,
-
-    // number of states to be saved on disk
-    // default is 1000
-    #[arg(long, env = "BLOCK_BUILDER_ANVIL_MAX_PERSISTED_STATES", default_value_t = 1000)]
-    pub max_persisted_states: u64,
-
-    // number of blocks to keep in memory (must set max_persisted_states to 0)
-    // default is 1000
-    #[arg(long, env = "BLOCK_BUILDER_ANVIL_PRUNE_HISTORY", default_value_t = 1000)]
-    pub prune_history: u64,
 }
 
 /// Possible target rollup types for the [`block-builder`]
@@ -118,15 +99,11 @@ impl Debug for BlockBuilderConfig {
             .field("mchain_url", &self.mchain_url)
             .field("target_chain_id", &self.target_chain_id)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
-            .field("genesis_timestamp", &self.genesis_timestamp)
             .field("target_rollup_type", &self.target_rollup_type)
             .field("mchain_rollup_address", &self.mchain_rollup_address)
             .field("bridge_address", &self.bridge_address)
             .field("inbox_address", &self.inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
-            .field("anvil_state_interval", &self.anvil_state_interval)
-            .field("anvil_max_persisted_states", &self.max_persisted_states)
-            .field("anvil_prune_history", &self.prune_history)
             .finish()
     }
 }
@@ -134,9 +111,7 @@ impl Debug for BlockBuilderConfig {
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
         let zero = Address::ZERO.to_string();
-        let mut config = Self::parse_from(["", "-s", &zero, "-b", &zero, "-i", &zero]);
-        config.genesis_timestamp = 1712500000;
-        config
+        Self::parse_from(["", "-s", &zero, "-b", &zero, "-i", &zero])
     }
 }
 
@@ -226,9 +201,6 @@ mod tests {
             config.sequencing_contract_address.to_string(),
             "0x0000000000000000000000000000000000000000"
         );
-        assert_eq!(config.anvil_state_interval, 300);
-        assert_eq!(config.max_persisted_states, 1000);
-        assert_eq!(config.prune_history, 1000);
     }
 
     #[test]

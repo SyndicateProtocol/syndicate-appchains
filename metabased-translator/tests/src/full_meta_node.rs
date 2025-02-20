@@ -3,10 +3,12 @@
 
 use crate::port_manager::PortManager;
 use alloy::{
+    eips::BlockNumberOrTag,
     network::EthereumWallet,
     node_bindings::{Anvil, AnvilInstance},
     primitives::{address, Address, U256},
     providers::{ext::AnvilApi as _, Provider, ProviderBuilder, RootProvider, WalletProvider},
+    rpc::types::anvil::MineOptions,
     transports::http::Http,
 };
 use block_builder::{
@@ -45,7 +47,6 @@ use tokio::{
 };
 use tracing::Level;
 
-pub const GENESIS_TIMESTAMP: u64 = 1736824187;
 pub const PRELOAD_INBOX_ADDRESS: Address = address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899");
 pub const PRELOAD_BRIDGE_ADDRESS: Address = address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2");
 
@@ -74,60 +75,59 @@ impl Drop for Docker {
     }
 }
 
+pub async fn start_reth(port: u16, chain_id: u64) -> Result<Docker> {
+    let reth = Command::new("docker")
+        .kill_on_drop(false) // kill via SIGTERM instead of SIGKILL
+        .arg("run")
+        .arg("--init")
+        .arg("--rm")
+        .arg("--net=host")
+        .arg("reth")
+        .arg("node")
+        .arg("--dev")
+        .arg("--http")
+        .arg("--http.port=".to_string() + &port.to_string())
+        .arg("--http.api=eth,anvil")
+        .spawn()?;
+    let rollup = ProviderBuilder::new()
+        .on_http(("http://localhost:".to_string() + &port.to_string()).parse()?);
+    // give it two minutes to launch (in case it needs to download the image)
+    timeout(Duration::from_secs(120), async {
+        while rollup.get_chain_id().await.is_err() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+        Ok::<_, eyre::Error>(Docker(reth))
+    })
+    .await?
+}
+
 pub async fn start_anvil(port: u16, chain_id: u64) -> Result<(AnvilInstance, FilledProvider)> {
-    let timestamp = GENESIS_TIMESTAMP.to_string();
-    let args = vec![
-        "--base-fee",
-        "0",
-        "--gas-limit",
-        "30000000",
-        "--timestamp",
-        &timestamp,
-        "--no-mining",
-    ];
+    start_anvil_with_args(port, chain_id, Default::default()).await
+}
 
-    let anvil = Anvil::new().port(port).chain_id(chain_id).args(args).try_spawn()?;
+pub async fn start_anvil_with_args(
+    port: u16,
+    chain_id: u64,
+    args: &[&str],
+) -> Result<(AnvilInstance, FilledProvider)> {
+    let mut cmd =
+        vec!["--base-fee", "0", "--gas-limit", "30000000", "--timestamp", "0", "--no-mining"];
+    cmd.extend_from_slice(args);
+    let anvil = Anvil::new().port(port).chain_id(chain_id).args(cmd).try_spawn()?;
 
     let provider = ProviderBuilder::new()
         .with_recommended_fillers()
         .wallet(EthereumWallet::from(get_default_private_key_signer()))
         .on_http(anvil.endpoint_url());
-    provider.anvil_set_block_timestamp_interval(0).await?;
     Ok((anvil, provider))
 }
 
-async fn mine_block(provider: &FilledProvider, delay: u64) -> Result<()> {
-    provider.anvil_set_block_timestamp_interval(delay).await?;
-    provider.evm_mine(None).await?;
+pub async fn mine_block(provider: &FilledProvider, delay: u64) -> Result<()> {
+    let block: common::types::Block = provider
+        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Latest, true))
+        .await?;
+    provider.evm_mine(Some(MineOptions::Timestamp(Some(block.timestamp + delay)))).await?;
     Ok(())
-}
-
-async fn load_anvil(port: u16) -> Result<(AnvilInstance, FilledProvider)> {
-    let state_file =
-        std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config").join("anvil.json");
-    let timestamp = GENESIS_TIMESTAMP.to_string();
-
-    #[allow(clippy::unwrap_used)]
-    let args = vec![
-        "--base-fee",
-        "0",
-        "--gas-limit",
-        "30000000",
-        "--no-mining",
-        "--load-state",
-        state_file.to_str().unwrap(),
-        "--timestamp",
-        &timestamp,
-    ];
-
-    let anvil = Anvil::new().port(port).chain_id(31337).args(args).try_spawn()?;
-
-    let provider = ProviderBuilder::new()
-        .with_recommended_fillers()
-        .wallet(EthereumWallet::from(get_default_private_key_signer()))
-        .on_http(anvil.endpoint_url());
-    provider.anvil_set_block_timestamp_interval(0).await?;
-    Ok((anvil, provider))
 }
 
 pub async fn launch_nitro_node(
@@ -141,7 +141,7 @@ pub async fn launch_nitro_node(
         .arg("--rm")
         .arg("--net=host")
         .arg("offchainlabs/nitro-node:v3.4.0-d896e9c-slim")
-        .arg("--parent-chain.connection.url=".to_string() + mchain.anvil.endpoint_url().as_str())
+        .arg("--parent-chain.connection.url=".to_string() + mchain.mchain_url.as_str())
         .arg("--node.dangerous.disable-blob-reader")
         .arg("--execution.forwarding-target=null")
         .arg("--execution.parent-chain-reader.old-header-timeout=1000h")
@@ -151,7 +151,7 @@ pub async fn launch_nitro_node(
         .arg("--chain.info-json=".to_string() + &mchain.rollup_info("test"))
         .arg("--http.addr=0.0.0.0")
         .arg("--http.port=".to_string() + &port.to_string())
-        .arg("--log-level=info")
+        .arg("--log-level=debug")
         .spawn()?;
     let rollup = ProviderBuilder::new()
         .on_http(("http://localhost:".to_string() + &port.to_string()).parse()?);
@@ -175,11 +175,17 @@ pub struct MetaNode {
     pub chain_id: u64,
     pub slot_duration: u64,
 
+    pub mchain: Docker,
     pub mchain_provider: FilledProvider,
+    pub rollup: Rollup::RollupInstance<Http<Client>, FilledProvider>,
 
+    #[allow(dead_code)]
     sequencer_ingestor_task: Task,
+    #[allow(dead_code)]
     settlement_ingestor_task: Task,
+    #[allow(dead_code)]
     block_builder_task: Task,
+    #[allow(dead_code)]
     slotter_task: Task,
 
     // References to keep the processes/tasks alive
@@ -223,7 +229,6 @@ impl MetaNode {
             inbox_address,
             mchain_url: format!("http://127.0.0.1:{}", mchain_port).parse()?,
             sequencing_contract_address: get_rollup_contract_address(),
-            genesis_timestamp: GENESIS_TIMESTAMP,
             ..config.block_builder
         };
 
@@ -264,7 +269,16 @@ impl MetaNode {
         if pre_loaded {
             // If flag is set, load the anvil state from a file
             // This is the full set of Arb contracts
-            (set_anvil, set_provider) = load_anvil(set_port).await?;
+            let state_file = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("config")
+                .join("anvil.json");
+
+            (set_anvil, set_provider) = start_anvil_with_args(
+                set_port,
+                31337,
+                &["--load-state", state_file.to_str().unwrap()],
+            )
+            .await?;
         } else {
             // If not use our mock Rollup contract for easier testing
             (set_anvil, set_provider) = start_anvil(set_port, 20).await?;
@@ -321,13 +335,9 @@ impl MetaNode {
         let db_path = test_path("db");
         let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
 
-        // Start slotter at the genesis timestamp
-        let mut slotter_cfg = config.slotter;
-        slotter_cfg.start_slot_timestamp = GENESIS_TIMESTAMP;
-
         // Launch the slotter, block builder, and nitro rollup
         let (slotter, slotter_rx) = Slotter::new(
-            &slotter_cfg,
+            &config.slotter,
             None,
             store.clone(),
             SlotterMetrics::new(&mut metrics_state.registry),
@@ -337,17 +347,29 @@ impl MetaNode {
             slotter.start(sequencer_rx, settlement_rx, shutdown_slotter_rx).await;
         }));
 
-        let datadir = test_path("datadir");
+        /*
+            let (mchain, _) = start_anvil(
+                block_builder_cfg.mchain_url.port().unwrap(),
+                block_builder::connectors::anvil::MCHAIN_ID,
+            )
+            .await?;
+        */
+        let mchain = start_reth(
+            block_builder_cfg.mchain_url.port().unwrap(),
+            block_builder::connectors::anvil::MCHAIN_ID,
+        )
+        .await?;
+
         let block_builder = BlockBuilder::new(
             slotter_rx,
             &block_builder_cfg,
-            &datadir,
-            slotter_cfg.slot_duration,
+            config.slotter.slot_duration,
             store,
             BlockBuilderMetrics::new(&mut metrics_state.registry),
         )
         .await?;
         let mchain_provider = block_builder.mchain.provider.clone();
+        let rollup = block_builder.mchain.rollup.clone();
 
         let nitro_port = port_tracker.next_port();
         let (nitro_docker, metabased_rollup) =
@@ -364,9 +386,11 @@ impl MetaNode {
             metabased_rollup,
 
             chain_id: block_builder_cfg.target_chain_id,
-            slot_duration: slotter_cfg.slot_duration,
+            slot_duration: config.slotter.slot_duration,
 
+            mchain,
             mchain_provider,
+            rollup,
 
             sequencer_ingestor_task,
             settlement_ingestor_task,
@@ -405,14 +429,5 @@ impl MetaNode {
         self.mine_set_blocks(self.slot_duration).await?;
 
         Ok(())
-    }
-}
-
-impl Drop for MetaNode {
-    fn drop(&mut self) {
-        self.sequencer_ingestor_task.0.abort();
-        self.settlement_ingestor_task.0.abort();
-        self.block_builder_task.0.abort();
-        self.slotter_task.0.abort();
     }
 }

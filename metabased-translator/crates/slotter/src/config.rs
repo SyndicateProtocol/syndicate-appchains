@@ -57,9 +57,7 @@ pub enum ConfigError {
 
 impl Default for SlotterConfig {
     fn default() -> Self {
-        let mut config = Self::parse_from([""]);
-        config.start_slot_timestamp = 1712500000;
-        config
+        Self::parse_from([""])
     }
 }
 
@@ -72,7 +70,7 @@ mod config_tests {
     fn test_default_slotter_config() {
         let config = SlotterConfig::default();
         assert_eq!(config.slot_duration, 2);
-        assert_eq!(config.start_slot_timestamp, 1712500000);
+        assert_eq!(config.start_slot_timestamp, 0);
     }
 
     #[test]

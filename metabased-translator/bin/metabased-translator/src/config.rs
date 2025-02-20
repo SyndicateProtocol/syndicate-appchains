@@ -15,7 +15,7 @@ use metrics::config::MetricsConfig;
 use slotter::config::SlotterConfig;
 use std::{fmt::Debug, sync::Arc};
 use thiserror::Error;
-use tracing::{debug, error};
+use tracing::error;
 
 #[derive(Error, Debug)]
 pub enum ConfigError {
@@ -106,8 +106,6 @@ impl MetabasedConfig {
         }
 
         self.slotter.start_slot_timestamp = set_start_block.timestamp;
-        self.block_builder.genesis_timestamp = set_start_block.timestamp;
-        debug!("Genesis timestamp set to: {:?}", set_start_block.timestamp);
         Ok(())
     }
 
@@ -308,7 +306,6 @@ mod tests {
 
         assert!(result.is_ok());
         assert_eq!(config.slotter.start_slot_timestamp, 6000);
-        assert_eq!(config.block_builder.genesis_timestamp, 6000);
     }
 
     #[tokio::test]

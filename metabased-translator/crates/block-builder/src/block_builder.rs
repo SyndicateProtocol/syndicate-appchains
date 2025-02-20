@@ -10,6 +10,7 @@ use crate::{
     },
 };
 use alloy::{
+    eips::BlockNumberOrTag,
     providers::Provider,
     transports::{RpcError, TransportErrorKind},
 };
@@ -41,12 +42,11 @@ impl BlockBuilder {
     pub async fn new(
         slotter_rx: Receiver<Slot>,
         config: &BlockBuilderConfig,
-        datadir: &str,
         slot_duration_sec: u64,
         store: Arc<dyn TranslatorStore + Send + Sync>,
         metrics: BlockBuilderMetrics,
     ) -> Result<Self, Error> {
-        let mchain = MetaChainProvider::start(config, datadir, &metrics.mchain_metrics).await?;
+        let mchain = MetaChainProvider::start(config, &metrics.mchain_metrics).await?;
 
         let builder: Box<dyn RollupBlockBuilder> = match config.target_rollup_type {
             TargetRollupType::ARBITRUM => Box::new(ArbitrumBlockBuilder::new(config)),
@@ -130,6 +130,7 @@ impl BlockBuilder {
                         }
                         block_number += 1;
                     }
+
                     // Submit transactions to mchain
                     if let Err(e) = self.mchain.submit_txns(transactions).await {
                         panic!("Error submitting transaction: {}", e);
@@ -149,6 +150,19 @@ impl BlockBuilder {
                         slot.number
                     );
                     trace!("Mined block: {:?} from slot: {:?}", current_block, slot.number);
+
+                    // Verify transactions are all included and succeeded
+                    // TODO: check to make sure the tx hashes match
+                    let receipts: Vec<common::types::Receipt> = self.mchain.provider.raw_request("eth_getBlockReceipts".into(), (BlockNumberOrTag::Latest,)).await.unwrap();
+                    if receipts.len() != transactions_len {
+                        panic!("expected {:#?} receipts, got {:#?}", transactions_len, receipts);
+                    }
+                    for r in receipts {
+                        if r.status != 1 {
+                            panic!("tx failed: {:#?}", r);
+                        }
+                    }
+
                     if let Err(e) = self.store.save_unsafe_slot(&slot).await {
                         panic!("Error saving slot: {}", e);
                     }
@@ -215,37 +229,6 @@ mod tests {
         pub registry: Registry,
     }
 
-    /// Test the block builder startup and basic functionality
-    /// This test requires Anvil (part of Foundry toolchain) to simulate a local Ethereum node.
-    /// The test spawns an Anvil instance with custom parameters for gas and mining settings.
-    #[tokio::test]
-    async fn test_block_builder_start() -> Result<()> {
-        let (tx, rx) = mpsc::channel(32);
-        let config = BlockBuilderConfig::default();
-        let genesis_ts = config.genesis_timestamp;
-        let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let datadir = test_path("datadir");
-        let db_path = test_path("db");
-        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
-        let builder = BlockBuilder::new(rx, &config, &datadir, 2, store, metrics).await?;
-
-        let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });
-
-        // Send a test block
-        let test_slot = Slot::new(2, genesis_ts + 1);
-        tx.send(test_slot).await?;
-
-        // Give some time for processing
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-        // Clean shutdown
-        let _ = shutdown_tx.send(());
-        handle.await?;
-        Ok(())
-    }
-
     #[tokio::test]
     #[traced_test]
     #[ignore] // TODO SEQ-528 unskip/re-write
@@ -254,10 +237,9 @@ mod tests {
         let config = BlockBuilderConfig::default();
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let datadir = test_path("datadir");
         let db_path = test_path("db");
         let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
-        let builder = BlockBuilder::new(rx, &config, &datadir, 2, store, metrics).await?;
+        let builder = BlockBuilder::new(rx, &config, 2, store, metrics).await?;
 
         let provider = builder.mchain.provider.clone();
 
@@ -284,11 +266,9 @@ mod tests {
 
         // Second run: resume builder
         let (_resumed_tx, resumed_rx) = mpsc::channel(1);
-        let datadir = test_path("datadir");
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
         let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
-        let resumed_builder =
-            BlockBuilder::new(resumed_rx, &config, &datadir, 2, store, metrics).await?;
+        let resumed_builder = BlockBuilder::new(resumed_rx, &config, 2, store, metrics).await?;
 
         let resumed_provider = resumed_builder.mchain.provider.clone();
 

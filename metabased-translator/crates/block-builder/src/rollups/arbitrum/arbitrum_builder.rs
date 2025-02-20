@@ -303,12 +303,12 @@ impl ArbitrumBlockBuilder {
         };
 
         let batch = Batch(messages);
-        debug!("New Batch: {:?}", batch);
+        info!("New Batch: {:?}", batch);
 
         // Encode the batch data
         let encoded_batch = batch.encode()?;
 
-        // Create the transaction request
+        // Create the transaction
         let request = TransactionRequest::default().to(self.mchain_rollup_address).input(
             // Encode the function call with parameters
             Rollup::postBatchCall::new((encoded_batch,)).abi_encode().into(), // Convert the tokenized call data to bytes

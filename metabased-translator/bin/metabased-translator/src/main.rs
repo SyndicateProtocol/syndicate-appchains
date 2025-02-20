@@ -90,7 +90,6 @@ async fn run(
     let block_builder = BlockBuilder::new(
         slot_rx,
         &config.block_builder,
-        config.datadir.as_str(),
         config.slotter.slot_duration,
         db,
         metrics.block_builder,
