@@ -306,14 +306,14 @@ pub fn is_port_available(port: u16) -> bool {
 }
 
 /// Custom [`Drop`] to make sure the Anvil process is terminated and the port is released.
-#[cfg(test)]
 impl Drop for MetaChainProvider {
     fn drop(&mut self) {
         // Ensure anvil process is terminated
+        info!("Terminating anvil");
         let id = self.anvil.child().id();
-        let _ = std::process::Command::new("kill").arg(id.to_string()).output();
-        // Give the port time to be released
-        std::thread::sleep(std::time::Duration::from_millis(500));
+        _ = std::process::Command::new("kill").arg(id.to_string()).output();
+        _ = self.anvil.child_mut().wait();
+        info!("Terminated anvil");
     }
 }
 
