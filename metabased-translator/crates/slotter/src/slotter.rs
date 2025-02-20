@@ -7,6 +7,7 @@ use common::{
     types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotState},
 };
 use derivative::Derivative;
+use eyre::{Error, Report};
 use std::{collections::VecDeque, sync::Arc};
 use thiserror::Error;
 use tokio::{
@@ -16,7 +17,7 @@ use tokio::{
         oneshot,
     },
 };
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, info, trace, warn};
 
 /// Maximum time to wait for blocks before considering a slot final (24 hours in seconds)
 /// A slot becomes safe if both chains have progressed `SLOT_SAFETY_WINDOW_SEC` seconds past the
@@ -130,7 +131,7 @@ impl Slotter {
         mut sequencing_rx: Receiver<BlockAndReceipts>,
         mut settlement_rx: Receiver<BlockAndReceipts>,
         mut shutdown_rx: oneshot::Receiver<()>,
-    ) {
+    ) -> Result<(), Error> {
         info!("Starting Slotter");
 
         loop {
@@ -149,8 +150,8 @@ impl Slotter {
                 }
                 _ = &mut shutdown_rx => {
                     drop(self.sender);
-                    info!("Slotter stopped");
-                    return;
+                    info!("Slotter shut down");
+                    return Err(Report::from(SlotterError::Shutdown));
                 }
             };
 
@@ -160,6 +161,10 @@ impl Slotter {
                     SlotterError::ReorgDetected { .. } => {
                         panic!("Reorgs not yet implemented {e}"); // TODO SEQ-429 - implement reorg
                                                                   // handing
+                    }
+                    SlotterError::Shutdown => {
+                        warn!("Slotter shut down");
+                        return Err(Report::from(e))
                     }
                     _ => panic!("Slotter error: {e}"),
                 },
@@ -432,7 +437,7 @@ impl std::fmt::Display for Slotter {
 
 #[allow(missing_docs)] // self-documenting
 #[derive(Debug, Error)]
-enum SlotterError {
+pub enum SlotterError {
     #[error("No slots available {0}")]
     NoSlotsAvailable(String),
 
@@ -459,6 +464,9 @@ enum SlotterError {
 
     #[error("Database error: {0}")]
     DbError(#[from] DbError),
+
+    #[error("Slotter was shut down")]
+    Shutdown,
 }
 
 impl From<SendError<Slot>> for SlotterError {
@@ -735,7 +743,7 @@ mod tests {
 
         // shutdown slotter
         let _ = shutdown_tx.send(());
-        handle.await.unwrap();
+        let _ = handle.await.unwrap();
 
         // Create new channels for the resumed slotter
         let (new_seq_tx, new_seq_rx) = channel(CHAN_CAPACITY);

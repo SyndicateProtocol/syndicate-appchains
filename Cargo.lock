@@ -3966,6 +3966,7 @@ dependencies = [
  "clap",
  "common",
  "derivative",
+ "eyre",
  "prometheus-client",
  "serial_test",
  "test-case",

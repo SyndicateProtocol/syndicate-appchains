@@ -327,7 +327,7 @@ impl MetaNode {
         );
         let (shutdown_slotter_tx, shutdown_slotter_rx) = tokio::sync::oneshot::channel();
         let slotter_task = Task(tokio::spawn(async move {
-            slotter.start(sequencer_rx, settlement_rx, shutdown_slotter_rx).await;
+            let _ = slotter.start(sequencer_rx, settlement_rx, shutdown_slotter_rx).await;
         }));
 
         let datadir = test_path("datadir");
@@ -346,7 +346,7 @@ impl MetaNode {
             launch_nitro_node(&block_builder.mchain, nitro_port).await?;
         let (builder_tx, builder_rx) = tokio::sync::oneshot::channel();
         let block_builder_task = Task(tokio::spawn(async move {
-            block_builder.start(None, builder_rx).await;
+            let _ = block_builder.start(None, builder_rx).await;
         }));
 
         Ok(Self {
