@@ -161,25 +161,7 @@ impl Slotter {
                         panic!("Reorgs not yet implemented {e}"); // TODO SEQ-429 - implement reorg
                                                                   // handing
                     }
-                    SlotterError::BlockNumberSkipped { .. } => {
-                        panic!("Block number skipped {e}");
-                    }
-                    SlotterError::NoSlotsAvailable(_) => {
-                        panic!("No slots available. This should never happen - if it does, it's an implementation error. {e}");
-                    }
-                    SlotterError::SlotSendError(_) => {
-                        // unrecoverable. on shutdown slotter should stop before block-builder
-                        panic!("Failed to send slot through channel: {e}");
-                    }
-                    SlotterError::EarlierTimestamp { .. } => {
-                        panic!("Earlier timestamp - this should never happen (where a block is received with the expected block number, but a lower timestamp) {e}");
-                    }
-                    SlotterError::BlockBeforeSafeTimestamp { .. } => {
-                        panic!("Block before safe timestamp - this should never happen (where a block is received with a timestamp before the safe timestamp) {e}");
-                    }
-                    SlotterError::DbError(_) => {
-                        panic!("Database error: {e}");
-                    }
+                    _ => panic!("Slotter error: {e}"),
                 },
             }
         }
