@@ -156,7 +156,7 @@ mod tests {
     use super::*;
     use alloy::rpc::types::BlockNumberOrTag;
     use async_trait::async_trait;
-    use common::types::{Block, BlockAndReceipts};
+    use common::types::{Block, BlockAndReceiptsPayload};
     use eyre::Result;
     use mockall::{mock, predicate::*};
     use serial_test::serial;
@@ -276,7 +276,7 @@ mod tests {
         #[async_trait]
         impl RPCClient for RPCClientMock {
             async fn get_block_by_number(&self, block_number: BlockNumberOrTag) -> Result<Block, RPCClientError>;
-            async fn batch_get_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
+            async fn batch_get_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<Vec<BlockAndReceiptsPayload>, RPCClientError>;
         }
     }
 
