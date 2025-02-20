@@ -15,7 +15,7 @@ use block_builder::{
     connectors::anvil::{FilledProvider, MetaChainProvider},
     metrics::BlockBuilderMetrics,
 };
-use common::{db::DummyStore, types::Chain};
+use common::{db::RocksDbStore, types::Chain};
 use contract_bindings::{
     arbitrum::rollup::Rollup,
     metabased::{
@@ -198,6 +198,7 @@ pub struct MetaNode {
 }
 
 impl MetaNode {
+    #[allow(clippy::unwrap_used)] // test utility
     pub async fn new(pre_loaded: bool, config: MetabasedConfig) -> Result<Self> {
         // We need 4 ports to run a full meta node
         // - MChain
@@ -287,9 +288,9 @@ impl MetaNode {
         set_config.polling_interval = Duration::from_millis(10);
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let sequencing_client: Arc<dyn RPCClient> =
-            Arc::new(EthClient::new(&seq_config.rpc_url).await?);
+            Arc::new(EthClient::new(&seq_config.rpc_url, Chain::Sequencing).await?);
         let settlement_client: Arc<dyn RPCClient> =
-            Arc::new(EthClient::new(&set_config.rpc_url).await?);
+            Arc::new(EthClient::new(&set_config.rpc_url, Chain::Settlement).await?);
         let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
             Chain::Sequencing,
             sequencing_client,
@@ -313,11 +314,15 @@ impl MetaNode {
             let _ = settlement_ingestor.start_polling(set_ingestor_rx).await;
         }));
 
+        // new DB
+        let db_path = test_path("db");
+        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
+
         // Launch the slotter, block builder, and nitro rollup
         let (slotter, slotter_rx) = Slotter::new(
             &config.slotter,
             None,
-            Arc::new(DummyStore {}),
+            store.clone(),
             SlotterMetrics::new(&mut metrics_state.registry),
         );
         let (shutdown_slotter_tx, shutdown_slotter_rx) = tokio::sync::oneshot::channel();
@@ -330,7 +335,7 @@ impl MetaNode {
             slotter_rx,
             &block_builder_cfg,
             &datadir,
-            Arc::new(DummyStore {}),
+            store,
             BlockBuilderMetrics::new(&mut metrics_state.registry),
         )
         .await?;

@@ -42,12 +42,12 @@ async fn run(
 
     // Initialize ETH clients
     let sequencing_client: Arc<dyn RPCClient> = Arc::new(
-        EthClient::new(&config.sequencing.sequencing_rpc_url)
+        EthClient::new(&config.sequencing.sequencing_rpc_url, Chain::Sequencing)
             .await
             .map_err(RuntimeError::RPCClient)?,
     );
     let settlement_client: Arc<dyn RPCClient> = Arc::new(
-        EthClient::new(&config.settlement.settlement_rpc_url)
+        EthClient::new(&config.settlement.settlement_rpc_url, Chain::Settlement)
             .await
             .map_err(RuntimeError::RPCClient)?,
     );

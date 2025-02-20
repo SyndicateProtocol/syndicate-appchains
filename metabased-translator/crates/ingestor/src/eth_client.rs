@@ -8,7 +8,7 @@ use alloy::{
     transports::http::{Client, Http},
 };
 use async_trait::async_trait;
-use common::types::{Block, BlockAndReceipts, Receipt};
+use common::types::{Block, BlockAndReceipts, Chain, Receipt};
 use eyre::eyre;
 use std::fmt::Debug;
 use thiserror::Error;
@@ -58,6 +58,7 @@ pub trait RPCClient: Send + Sync + Debug {
 #[derive(Debug)]
 pub struct EthClient {
     client: RpcClient<Http<Client>>,
+    chain: Chain,
 }
 
 impl EthClient {
@@ -71,11 +72,11 @@ impl EthClient {
     ///
     /// A result containing the `EthClient` instance if successful, or an error if the connection
     /// fails.
-    pub async fn new(rpc_url: &str) -> Result<Self, RPCClientError> {
+    pub async fn new(rpc_url: &str, chain: Chain) -> Result<Self, RPCClientError> {
         let url =
             Url::parse(rpc_url).map_err(|_e| RPCClientError::InvalidRpcURL(rpc_url.to_string()))?;
         let client = ClientBuilder::default().http(url);
-        Ok(Self { client })
+        Ok(Self { client, chain })
     }
 }
 
@@ -135,7 +136,11 @@ impl RPCClient for EthClient {
                 .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
                 .map_resp(move |resp: Option<Block>| {
                     if resp.is_none() {
-                        trace!("Block not available for number: {}", block_number.clone());
+                        trace!(
+                            "Block #{:?} not available on {:?} chain.",
+                            block_number.clone(),
+                            self.chain
+                        );
                     }
                     resp
                 });
@@ -144,7 +149,11 @@ impl RPCClient for EthClient {
                 .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
                 .map_resp(|resp: Option<Vec<Receipt>>| {
                     if resp.is_none() {
-                        trace!("Receipts not available for block number: {}", block_number.clone());
+                        trace!(
+                            "Receipts not available for block #{:?} on {:?} chain.",
+                            block_number.clone(),
+                            self.chain
+                        );
                     }
                     resp
                 });

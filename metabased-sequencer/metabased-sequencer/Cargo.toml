@@ -33,6 +33,7 @@ prometheus-client = { workspace = true }
 tower = { workspace = true }
 tower-layer = { workspace = true }
 tower-service = { workspace = true }
+alloy-primitives = { workspace = true }
 
 [dev-dependencies]
 alloy-rlp = { workspace = true }
