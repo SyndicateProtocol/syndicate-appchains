@@ -14,7 +14,7 @@ use alloy::{
 use block_builder::{
     block_builder::BlockBuilder,
     config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
-    connectors::anvil::{FilledProvider, MetaChainProvider},
+    connectors::mchain::{FilledProvider, MetaChainProvider},
     metrics::BlockBuilderMetrics,
 };
 use common::{db::RocksDbStore, tracing::init_test_tracing, types::Chain};
@@ -451,7 +451,7 @@ impl MetaNode {
         let mchain = start_reth(
             #[allow(clippy::unwrap_used)]
             block_builder_cfg.mchain_url.port().unwrap(),
-            block_builder::connectors::anvil::MCHAIN_ID,
+            block_builder::connectors::mchain::MCHAIN_ID,
         )
         .await?;
 

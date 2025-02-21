@@ -2,7 +2,7 @@
 
 use crate::{
     config::{BlockBuilderConfig, TargetRollupType},
-    connectors::anvil::MetaChainProvider,
+    connectors::mchain::MetaChainProvider,
     metrics::BlockBuilderMetrics,
     rollups::{
         arbitrum::arbitrum_builder::ArbitrumBlockBuilder,
@@ -183,9 +183,6 @@ impl BlockBuilder {
 #[allow(missing_docs)] // self-documenting
 #[derive(Debug, thiserror::Error)]
 pub enum BlockBuilderError {
-    #[error("Error starting Anvil: {0}")]
-    AnvilStart(AnvilStartError),
-
     #[error("Failed to submit transaction to MetaChain: {0}")]
     SubmitTxnError(RpcError<TransportErrorKind>),
 

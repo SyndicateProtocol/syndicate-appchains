@@ -1,6 +1,6 @@
 //! Integration tests for the metabased-translator handling termination signals
 
-use block_builder::connectors::anvil::MCHAIN_ID;
+use block_builder::connectors::mchain::MCHAIN_ID;
 use e2e_tests::{full_meta_node::start_anvil, port_manager::PortManager};
 use eyre::Result;
 use reqwest::Client;

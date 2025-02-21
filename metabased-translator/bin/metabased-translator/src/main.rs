@@ -187,7 +187,7 @@ fn main() -> Result<(), RuntimeError> {
     let runtime =
         tokio::runtime::Runtime::new().map_err(|e| RuntimeError::Initialization(e.to_string()))?;
 
-    // Init the paths for the DB and Anvil state
+    // Init the path for the DB
     let db_path = format!("{}/db", base_config.datadir);
     // Initiate the metrics registry
     let registry = Registry::default();

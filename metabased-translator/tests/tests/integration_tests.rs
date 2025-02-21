@@ -10,7 +10,7 @@ use alloy::{
 use block_builder::{
     config::{get_rollup_contract_address, BlockBuilderConfig},
     connectors::{
-        anvil::{MetaChainProvider, MCHAIN_ID},
+        mchain::{MetaChainProvider, MCHAIN_ID},
         metrics::MChainMetrics,
     },
     rollups::arbitrum,

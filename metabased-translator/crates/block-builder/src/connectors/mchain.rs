@@ -1,4 +1,4 @@
-//! Anvil connector for the `MetaChain`
+//! Connector for the `MetaChain`
 use crate::{
     block_builder::BlockBuilderError,
     config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
@@ -8,7 +8,7 @@ use alloy::{
     network::{Ethereum, EthereumWallet, TransactionBuilder},
     primitives::{Address, U256},
     providers::{
-        ext::AnvilApi,
+        ext::AnvilApi as _,
         fillers::{
             BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
             WalletFiller,
@@ -21,7 +21,6 @@ use alloy::{
 use contract_bindings::arbitrum::rollup::Rollup;
 use eyre::{Error, Result};
 use reqwest::Client;
-use std::net::TcpListener;
 use thiserror::Error;
 use tracing::{debug, error};
 
@@ -244,15 +243,6 @@ impl MetaChainProvider {
 
         // Ok(())
     }
-}
-
-/// Check if a port is available by attempting to bind to it
-///
-/// The port will be used for both HTTP and WebSocket connections, a feature provided by Anvil.
-/// See: <https://book.getfoundry.sh/reference/anvil/#supported-transport-layers>
-pub fn is_port_available(port: u16) -> bool {
-    let addr = format!("127.0.0.1:{}", port);
-    TcpListener::bind(addr).is_ok()
 }
 
 #[cfg(test)]
