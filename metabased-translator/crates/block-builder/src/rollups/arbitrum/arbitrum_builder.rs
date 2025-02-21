@@ -27,7 +27,7 @@ use contract_bindings::arbitrum::{
     rollup::Rollup,
 };
 use eyre::Result;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use thiserror::Error;
 use tracing::{debug, error, info, trace};
 
@@ -100,10 +100,10 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
         slot: &Slot,
     ) -> Result<Vec<TransactionRequest>, eyre::Error> {
         let delayed_messages =
-            self.process_delayed_messages(slot.settlement_chain_blocks.clone()).await?;
+            self.process_delayed_messages(slot.settlement_blocks.clone()).await?;
         debug!("Delayed messages: {:?}", delayed_messages);
 
-        let mb_transactions = self.parse_blocks_to_mbtxs(slot.sequencing_chain_blocks.clone());
+        let mb_transactions = self.parse_block_to_mbtxs(Arc::clone(&slot.sequencing_block));
 
         if delayed_messages.is_empty() && mb_transactions.is_empty() {
             trace!("No delayed messages or MB transactions, skipping block");
@@ -404,8 +404,8 @@ mod tests {
             number: 1,
             timestamp: 0,
             state: SlotState::Safe,
-            settlement_chain_blocks: vec![],
-            sequencing_chain_blocks: vec![],
+            settlement_blocks: vec![],
+            sequencing_block: Arc::new(BlockAndReceipts::default()),
         };
 
         let result = builder.build_block_from_slot(&slot).await;
@@ -491,8 +491,8 @@ mod tests {
             number: 1,
             timestamp: 0,
             state: SlotState::Safe,
-            settlement_chain_blocks: vec![block],
-            sequencing_chain_blocks: vec![],
+            settlement_blocks: vec![block],
+            sequencing_block: Arc::new(BlockAndReceipts::default()),
         };
 
         let result = builder.build_block_from_slot(&slot).await;
@@ -532,11 +532,11 @@ mod tests {
             number: 1,
             timestamp: 0,
             state: SlotState::Safe,
-            settlement_chain_blocks: vec![],
-            sequencing_chain_blocks: vec![Arc::new(BlockAndReceipts {
+            settlement_blocks: vec![],
+            sequencing_block: Arc::new(BlockAndReceipts {
                 block,
                 receipts: vec![Receipt { logs: vec![txn_processed_log], ..Default::default() }],
-            })],
+            }),
         };
 
         let result = builder.build_block_from_slot(&slot).await;
@@ -627,14 +627,14 @@ mod tests {
             number: 1,
             timestamp: 0,
             state: SlotState::Safe,
-            settlement_chain_blocks: vec![Arc::new(BlockAndReceipts {
+            settlement_blocks: vec![Arc::new(BlockAndReceipts {
                 block: settlement_block,
                 receipts: vec![settlement_receipt],
             })],
-            sequencing_chain_blocks: vec![Arc::new(BlockAndReceipts {
+            sequencing_block: Arc::new(BlockAndReceipts {
                 block: sequencing_block,
                 receipts: vec![sequencing_receipt],
-            })],
+            }),
         };
 
         let result = builder.build_block_from_slot(&slot).await;

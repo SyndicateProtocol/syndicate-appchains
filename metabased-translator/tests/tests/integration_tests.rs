@@ -12,7 +12,7 @@ use block_builder::{
     connectors::{anvil::MetaChainProvider, metrics::MChainMetrics},
     rollups::arbitrum,
 };
-use common::types::Block;
+use common::{tracing::init_test_tracing, types::Block};
 use contract_bindings::arbitrum::{iinbox::IInbox, rollup::Rollup};
 use e2e_tests::full_meta_node::{
     launch_nitro_node, MetaNode, GENESIS_TIMESTAMP, PRELOAD_INBOX_ADDRESS,
@@ -24,12 +24,14 @@ use prometheus_client::registry::Registry;
 use std::time::Duration;
 use test_utils::test_path;
 use tokio::time::sleep;
+use tracing::Level;
 
 /// This test sends different types of delayed messages
 /// via the inbox contract and ensures that all of them
 /// are sequenced via the metabased translator and show up on the rollup.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_settlement_test() -> Result<()> {
+    let _ = init_test_tracing(Level::INFO);
     // Start the meta node (port index 0, pre-loaded with the full set of Arb contracts)
     let mut config = MetabasedConfig::default();
     config.slotter.settlement_delay = 0;
@@ -161,10 +163,10 @@ async fn e2e_settlement_test() -> Result<()> {
         .value(parse_ether("1")?)
         .send()
         .await?;
-    meta_node.mine_set_blocks(0).await?;
+    meta_node.mine_set_block(0).await?;
 
-    // Mine blocks to process the slot
-    meta_node.mine_next_slot().await?;
+    // Mine a set block to process the slot
+    meta_node.mine_set_block(1).await?;
 
     // Process the slot
     sleep(Duration::from_millis(500)).await;
@@ -187,14 +189,14 @@ async fn e2e_settlement_test() -> Result<()> {
 /// sequence a mchain block that does not include a batch.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_test() -> Result<()> {
+    let _ = init_test_tracing(Level::INFO);
     // Start the meta node (port index 1, no pre-loaded contracts)
-    let mut config = MetabasedConfig::default();
-    config.slotter.settlement_delay = 0;
-    let meta_node = MetaNode::new(false, config).await?;
+    let config = MetabasedConfig::default();
+    let meta_node = MetaNode::new(false, config.clone()).await?;
     // Setup the settlement rollup contract
     let set_rollup = Rollup::new(get_rollup_contract_address(), &meta_node.settlement_provider);
 
-    // Send a deposit and a regular tx at slot 1 (mchain block 2, rollup block 1)
+    // Send a deposit and a regular tx
     _ = set_rollup
         .depositEth(
             meta_node.sequencing_provider.default_signer_address(),
@@ -204,7 +206,7 @@ async fn e2e_test() -> Result<()> {
         .send()
         .await?;
 
-    // Send a sequenced tx at slot 1 (mchain block 2, rollup 2)
+    // Send a sequenced tx
     let mut tx = vec![];
     let inner_tx = TransactionRequest::default()
         .with_to(address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"))
@@ -219,18 +221,22 @@ async fn e2e_test() -> Result<()> {
     inner_tx.encode_2718(&mut tx);
     _ = meta_node.sequencing_contract.processTransaction(tx.into()).send().await?;
 
-    // insert a block to slot 1 @ ts 0, slot 2 @ ts 1. mine slot 1 -> mchain block 2.
-    meta_node.mine_both(0).await?;
-    meta_node.mine_next_slot().await?;
+    // due to the delay for settlement, we need to space the sequencing chain, so the following
+    // tx arrives at the same time, or after the deposit
+    meta_node.mine_seq_block(config.slotter.settlement_delay).await?;
+    meta_node.mine_set_block(0).await?;
+
+    // mine 1 seq block to close the opened slot
+    meta_node.mine_set_block(1).await?;
     sleep(Duration::from_millis(200)).await;
 
     // check mchain blocks
-    assert_eq!(meta_node.mchain_provider.get_block_number().await?, 2);
+    assert_eq!(meta_node.mchain_provider.get_block_number().await?, 4);
     let mchain_block: Block = meta_node
         .mchain_provider
-        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
+        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(4), true))
         .await?;
-    assert_eq!(mchain_block.timestamp, GENESIS_TIMESTAMP);
+    assert_eq!(mchain_block.timestamp, GENESIS_TIMESTAMP + config.slotter.settlement_delay);
     assert_eq!(mchain_block.transactions.len(), 2);
     // check rollup blocks
     assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 2);
@@ -239,7 +245,7 @@ async fn e2e_test() -> Result<()> {
         .metabased_rollup
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(1), true))
         .await?;
-    assert_eq!(rollup_block.timestamp, GENESIS_TIMESTAMP);
+    assert_eq!(rollup_block.timestamp, GENESIS_TIMESTAMP + config.slotter.settlement_delay);
     // the first transaction is the startBlock transaction
     assert_eq!(rollup_block.transactions.len(), 2);
     // check the second rollup block
@@ -247,7 +253,7 @@ async fn e2e_test() -> Result<()> {
         .metabased_rollup
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
         .await?;
-    assert_eq!(rollup_block.timestamp, GENESIS_TIMESTAMP);
+    assert_eq!(rollup_block.timestamp, GENESIS_TIMESTAMP + config.slotter.settlement_delay);
     // the first transaction is the startBlock transaction
     assert_eq!(rollup_block.transactions.len(), 2);
     // tx hash should match
@@ -264,33 +270,33 @@ async fn e2e_test() -> Result<()> {
         )
         .send()
         .await?;
-    meta_node.mine_next_slot().await?;
-    meta_node.mine_next_slot().await?;
-    sleep(Duration::from_millis(100)).await;
+
+    // create a seq block with a ts >= the settlement block with delay
+    meta_node.mine_seq_block(config.slotter.settlement_delay).await?;
+    meta_node.mine_set_block(1).await?;
+
+    // and another settlement block to close the slot
+    meta_node.mine_set_block(60).await?;
+
+    sleep(Duration::from_millis(200)).await;
 
     // check mchain blocks
-    assert_eq!(meta_node.mchain_provider.get_block_number().await?, 4);
+    assert_eq!(meta_node.mchain_provider.get_block_number().await?, 5);
     // check mchain block 3
     let mchain_block: Block = meta_node
         .mchain_provider
-        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(3), true))
+        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(5), true))
         .await?;
-    assert_eq!(mchain_block.timestamp, GENESIS_TIMESTAMP + meta_node.slot_duration);
-    assert_eq!(mchain_block.transactions.len(), 0);
-    // check mchain block 4
-    let mchain_block: Block = meta_node
-        .mchain_provider
-        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(4), true))
-        .await?;
-    assert_eq!(mchain_block.timestamp, GENESIS_TIMESTAMP + meta_node.slot_duration * 2);
+    assert_eq!(mchain_block.timestamp, GENESIS_TIMESTAMP + config.slotter.settlement_delay * 2);
     assert_eq!(mchain_block.transactions.len(), 2);
+
     // check rollup block 3
     assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 3);
     let rollup_block: Block = meta_node
         .metabased_rollup
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(3), true))
         .await?;
-    assert_eq!(rollup_block.timestamp, GENESIS_TIMESTAMP + meta_node.slot_duration * 2);
+    assert_eq!(rollup_block.timestamp, GENESIS_TIMESTAMP + config.slotter.settlement_delay * 2);
     // the first transaction is the startBlock transaction
     assert_eq!(rollup_block.transactions.len(), 2);
     // balance should match

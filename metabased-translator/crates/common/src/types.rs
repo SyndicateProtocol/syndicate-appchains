@@ -182,9 +182,9 @@ pub enum SlotState {
     /// `MAX_WAIT_MS` old).
     Safe,
     /// A slot that we don't expect to fit more blocks into. It should be considered canonical
-    /// unless a reorg happens.
-    Unsafe,
-    /// A slot to which incoming blocks might still be added.
+    /// unless a reorg happens
+    Closed,
+    /// A slot to which incoming blocks might still be added
     #[default]
     Open,
 }
@@ -199,45 +199,38 @@ pub struct Slot {
     pub number: u64,
     /// the timestamp of the slot in seconds.
     pub timestamp: u64,
-    /// the blocks from the sequencing chain to be included in the slot.
-    #[serde(deserialize_with = "deserialize_arc_vec", serialize_with = "serialize_arc_vec")]
-    pub sequencing_chain_blocks: Vec<BlockAndReceiptsPointer>,
+    /// the block from the sequencing chain to be included in the slot.
+    #[serde(
+        deserialize_with = "deserialize_arc_block_and_receipts",
+        serialize_with = "serialize_arc_block_and_receipts"
+    )]
+    pub sequencing_block: BlockAndReceiptsPointer,
     /// the blocks from the settlement chain to be included in the slot.
     #[serde(deserialize_with = "deserialize_arc_vec", serialize_with = "serialize_arc_vec")]
-    pub settlement_chain_blocks: Vec<BlockAndReceiptsPointer>,
+    pub settlement_blocks: Vec<BlockAndReceiptsPointer>,
     /// the finality state of the slot.
     pub state: SlotState,
 }
 
 impl Slot {
-    /// Creates a new slot.
-    pub const fn new(number: u64, timestamp: u64) -> Self {
+    /// Creates a new slot
+    pub const fn new(
+        number: u64,
+        timestamp: u64,
+        sequencing_block: BlockAndReceiptsPointer,
+    ) -> Self {
         Self {
             number,
             timestamp,
-            sequencing_chain_blocks: Vec::new(),
-            settlement_chain_blocks: Vec::new(),
+            sequencing_block,
+            settlement_blocks: Vec::new(),
             state: SlotState::Open,
         }
     }
 
-    /// Checks if the slot is empty (does not include any blocks).
-    pub fn is_empty(&self) -> bool {
-        self.sequencing_chain_blocks.is_empty() && self.settlement_chain_blocks.is_empty()
-    }
-
-    /// Adds a block to the slot's chain-specific block list.
-    pub fn push_block(&mut self, block: BlockAndReceiptsPointer, chain: Chain) {
-        // Wrap the block in an Arc
-        match chain {
-            Chain::Sequencing => self.sequencing_chain_blocks.push(block),
-            Chain::Settlement => self.settlement_chain_blocks.push(block),
-        }
-    }
-
-    /// Returns the total number of blocks across both the sequencing and settlement chains.
-    pub fn get_total_blocks(&self) -> usize {
-        self.sequencing_chain_blocks.len() + self.settlement_chain_blocks.len()
+    /// Adds a block to the slot's chain-specific block list
+    pub fn push_settlement_block(&mut self, block: BlockAndReceiptsPointer) {
+        self.settlement_blocks.push(block)
     }
 }
 
@@ -245,14 +238,13 @@ impl fmt::Display for Slot {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Slot #{} [ts: {}, state: {}, blocks: {} seq + {} settle], Sequencing blocks: {}, Settlement blocks: {}",
+            "Slot #{} [ts: {}, state: {}],  Sequencing block: {},  Settlement blocks (total: {}): {}",
             self.number,
             self.timestamp,
             self.state,
-            self.sequencing_chain_blocks.len(),
-            self.settlement_chain_blocks.len(),
-            format_blocks(&self.sequencing_chain_blocks),
-            format_blocks(&self.settlement_chain_blocks),
+            format_block(&self.sequencing_block),
+            self.settlement_blocks.len(),
+            format_blocks(&self.settlement_blocks),
         )
     }
 }
@@ -271,15 +263,43 @@ fn format_blocks(blocks: &[BlockAndReceiptsPointer]) -> String {
         .join(", ")
 }
 
-/// Custom deserializer for Vec<BlockAndReceipts>
-fn deserialize_arc_vec<'de, D>(deserializer: D) -> Result<Vec<BlockAndReceiptsPointer>, D::Error>
+fn format_block(b: &BlockAndReceipts) -> String {
+    format!(
+        "number: {}, hash: {}, total_receipts: {}",
+        b.block.number,
+        b.block.hash,
+        b.receipts.len()
+    )
+}
+
+fn deserialize_arc_block_and_receipts<'de, D>(
+    deserializer: D,
+) -> Result<Arc<BlockAndReceipts>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let block_and_receipts: BlockAndReceipts = Deserialize::deserialize(deserializer)?;
+    Ok(Arc::new(block_and_receipts))
+}
+
+fn serialize_arc_block_and_receipts<S>(
+    arc: &Arc<BlockAndReceipts>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    (**arc).serialize(serializer) // Deref Arc and serialize inner `BlockAndReceipts`
+}
+
+fn deserialize_arc_vec<'de, D>(deserializer: D) -> Result<Vec<Arc<BlockAndReceipts>>, D::Error>
 where
     D: Deserializer<'de>,
 {
     struct ArcVecVisitor;
 
     impl<'de> Visitor<'de> for ArcVecVisitor {
-        type Value = Vec<BlockAndReceiptsPointer>;
+        type Value = Vec<Arc<BlockAndReceipts>>;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
             formatter.write_str("a sequence of BlockAndReceipts wrapped in Arc")
@@ -300,7 +320,6 @@ where
     deserializer.deserialize_seq(ArcVecVisitor)
 }
 
-/// Custom serializer for Vec<BlockAndReceipts>
 fn serialize_arc_vec<S>(vec: &[BlockAndReceiptsPointer], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
@@ -465,10 +484,8 @@ mod test {
     use alloy::{hex::FromHex, primitives::B256};
 
     fn create_test_slot() -> Slot {
-        let mut slot = Slot::new(1, 1000);
-
         // Add sequencing chain block with transaction and receipt
-        slot.sequencing_chain_blocks.push(Arc::new(BlockAndReceipts {
+        let sequencing_block = Arc::new(BlockAndReceipts {
             block: Block {
                 hash: B256::from_hex(
                     "0x1234567890123456789012345678901234567890123456789012345678901234",
@@ -535,10 +552,12 @@ mod test {
                 status: "0x1".to_string(),
                 receipt_type: "0x0".to_string(),
             }],
-        }));
+        });
+
+        let mut slot = Slot::new(1, 1000, sequencing_block);
 
         // Add settlement chain block
-        slot.settlement_chain_blocks.push(Arc::new(BlockAndReceipts {
+        slot.settlement_blocks.push(Arc::new(BlockAndReceipts {
             block: Block {
                 hash: B256::from_hex(
                     "0x5678901234567890123456789012345678901234567890123456789012345678",
