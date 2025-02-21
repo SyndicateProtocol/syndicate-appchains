@@ -179,12 +179,14 @@ pub async fn start_reth(port: u16, chain_id: u64) -> Result<Docker> {
         .arg("run")
         .arg("--init")
         .arg("--rm")
-        .arg("--net=host")
+        .arg("-p")
+        .arg(port.to_string() + ":8545")
         .arg("ghcr.io/syndicateprotocol/reth")
         .arg("node")
         .arg("--dev")
         .arg("--http")
-        .arg("--http.port=".to_string() + &port.to_string())
+        .arg("--http.addr=0.0.0.0")
+        .arg("--http.port=8545")
         .arg("--http.api=eth,anvil")
         .arg("--txpool.minimal-protocol-fee=0")
         .arg("--chain=".to_string() + &chain_config(chain_id))
@@ -279,30 +281,19 @@ pub struct MetaNode {
     pub mchain_provider: FilledProvider,
     pub rollup: Rollup::RollupInstance<Http<Client>, FilledProvider>,
 
-    #[allow(dead_code)]
-    sequencer_ingestor_task: Task,
-    #[allow(dead_code)]
-    settlement_ingestor_task: Task,
-    #[allow(dead_code)]
-    block_builder_task: Task,
-    #[allow(dead_code)]
-    slotter_task: Task,
+    _sequencer_ingestor_task: Task,
+    _settlement_ingestor_task: Task,
+    _block_builder_task: Task,
+    _slotter_task: Task,
 
     // References to keep the processes/tasks alive
-    #[allow(dead_code)]
-    seq_anvil: AnvilInstance,
-    #[allow(dead_code)]
-    set_anvil: AnvilInstance,
-    #[allow(dead_code)]
-    nitro_docker: Docker,
-    #[allow(dead_code)]
-    seq_ingestor_tx: tokio::sync::oneshot::Sender<()>,
-    #[allow(dead_code)]
-    set_ingestor_tx: tokio::sync::oneshot::Sender<()>,
-    #[allow(dead_code)]
-    builder_tx: tokio::sync::oneshot::Sender<()>,
-    #[allow(dead_code)]
-    slotter_tx: tokio::sync::oneshot::Sender<()>,
+    _seq_anvil: AnvilInstance,
+    _set_anvil: AnvilInstance,
+    _nitro_docker: Docker,
+    _seq_ingestor_tx: tokio::sync::oneshot::Sender<()>,
+    _set_ingestor_tx: tokio::sync::oneshot::Sender<()>,
+    _builder_tx: tokio::sync::oneshot::Sender<()>,
+    _slotter_tx: tokio::sync::oneshot::Sender<()>,
 }
 
 impl MetaNode {
@@ -334,7 +325,7 @@ impl MetaNode {
 
         // Launch mock sequencing chain and deploy contracts
         let seq_port = port_tracker.next_port();
-        let (seq_anvil, seq_provider) = start_anvil(seq_port, 15).await?;
+        let (_seq_anvil, seq_provider) = start_anvil(seq_port, 15).await?;
         _ = MetabasedSequencerChain::deploy_builder(
             &seq_provider,
             U256::from(block_builder_cfg.target_chain_id),
@@ -365,7 +356,7 @@ impl MetaNode {
 
         // Launch mock settlement chain
         let set_port = port_tracker.next_port();
-        let (set_anvil, set_provider);
+        let (_set_anvil, set_provider);
         if pre_loaded {
             // If flag is set, load the anvil state from a file
             // This is the full set of Arb contracts
@@ -373,7 +364,7 @@ impl MetaNode {
                 .join("config")
                 .join("anvil.json");
 
-            (set_anvil, set_provider) = start_anvil_with_args(
+            (_set_anvil, set_provider) = start_anvil_with_args(
                 set_port,
                 31337,
                 #[allow(clippy::unwrap_used)]
@@ -382,7 +373,7 @@ impl MetaNode {
             .await?;
         } else {
             // If not use our mock Rollup contract for easier testing
-            (set_anvil, set_provider) = start_anvil(set_port, 20).await?;
+            (_set_anvil, set_provider) = start_anvil(set_port, 20).await?;
             // Use the mock rollup contract for the test instead of deploying all the nitro rollup
             // contracts
             _ = Rollup::deploy_builder(
@@ -423,12 +414,12 @@ impl MetaNode {
             IngestorMetrics::new(&mut metrics_state.registry),
         )
         .await?;
-        let (seq_ingestor_tx, seq_ingestor_rx) = tokio::sync::oneshot::channel();
-        let sequencer_ingestor_task = Task(tokio::spawn(async move {
+        let (_seq_ingestor_tx, seq_ingestor_rx) = tokio::sync::oneshot::channel();
+        let _sequencer_ingestor_task = Task(tokio::spawn(async move {
             let _ = sequencing_ingestor.start_polling(seq_ingestor_rx).await;
         }));
-        let (set_ingestor_tx, set_ingestor_rx) = tokio::sync::oneshot::channel();
-        let settlement_ingestor_task = Task(tokio::spawn(async move {
+        let (_set_ingestor_tx, set_ingestor_rx) = tokio::sync::oneshot::channel();
+        let _settlement_ingestor_task = Task(tokio::spawn(async move {
             let _ = settlement_ingestor.start_polling(set_ingestor_rx).await;
         }));
 
@@ -444,7 +435,7 @@ impl MetaNode {
             SlotterMetrics::new(&mut metrics_state.registry),
         );
         let (shutdown_slotter_tx, shutdown_slotter_rx) = tokio::sync::oneshot::channel();
-        let slotter_task = Task(tokio::spawn(async move {
+        let _slotter_task = Task(tokio::spawn(async move {
             slotter.start(sequencer_rx, settlement_rx, shutdown_slotter_rx).await;
         }));
 
@@ -467,10 +458,10 @@ impl MetaNode {
         let rollup = block_builder.mchain.rollup.clone();
 
         let nitro_port = port_tracker.next_port();
-        let (nitro_docker, metabased_rollup) =
+        let (_nitro_docker, metabased_rollup) =
             launch_nitro_node(&block_builder.mchain, nitro_port).await?;
-        let (builder_tx, builder_rx) = tokio::sync::oneshot::channel();
-        let block_builder_task = Task(tokio::spawn(async move {
+        let (_builder_tx, builder_rx) = tokio::sync::oneshot::channel();
+        let _block_builder_task = Task(tokio::spawn(async move {
             block_builder.start(None, builder_rx).await;
         }));
 
@@ -487,19 +478,19 @@ impl MetaNode {
             mchain_provider,
             rollup,
 
-            sequencer_ingestor_task,
-            settlement_ingestor_task,
-            block_builder_task,
-            slotter_task,
+            _sequencer_ingestor_task,
+            _settlement_ingestor_task,
+            _block_builder_task,
+            _slotter_task,
 
-            seq_anvil,
-            set_anvil,
+            _seq_anvil,
+            _set_anvil,
 
-            nitro_docker,
-            seq_ingestor_tx,
-            set_ingestor_tx,
-            builder_tx,
-            slotter_tx: shutdown_slotter_tx,
+            _nitro_docker,
+            _seq_ingestor_tx,
+            _set_ingestor_tx,
+            _builder_tx,
+            _slotter_tx: shutdown_slotter_tx,
         })
     }
 

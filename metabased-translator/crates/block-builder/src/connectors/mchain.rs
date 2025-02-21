@@ -55,6 +55,8 @@ pub type FilledProvider = FillProvider<
 #[derive(Debug)]
 #[allow(missing_docs)]
 pub struct MetaChainProvider {
+    /// `mchain_url` is an implementation-agnostic URL to a running execution client
+    /// that supports the `evm_mine` and `evm_mine_detailed` rpc methods
     pub mchain_url: url::Url,
     pub provider: FilledProvider,
     pub rollup: Rollup::RollupInstance<Http<Client>, FilledProvider>,
@@ -126,17 +128,11 @@ impl MetaChainProvider {
 
     /// Mines a block on the `MetaChain`
     pub async fn mine_block(&self, block_timestamp_secs: u64) -> Result<(), MineBlockError> {
-        let mut result = self
+        let result = self
             .provider
             .anvil_mine_detailed(Some(MineOptions::Timestamp(Some(block_timestamp_secs))))
             .await;
         debug!("{}", format!("Mined block on MetaChain {:?}", result));
-        // TODO: remove this hack once anvil_mine_detailed() returns the blocks
-        result = self
-            .provider
-            .raw_request("eth_getBlockByNumber".into(), ("latest", false))
-            .await
-            .map(|x| vec![x]);
         match result {
             Ok(mut mined_blocks) if !mined_blocks.is_empty() => {
                 let first_block = mined_blocks.remove(0); // Extract the first block

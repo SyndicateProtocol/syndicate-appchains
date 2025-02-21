@@ -89,6 +89,37 @@ impl BlockBuilder {
         Ok(())
     }
 
+    async fn verify_block(&self, transactions_len: usize, slot_number: u64) {
+        let current_block = self.get_current_block_number().await;
+        assert_eq!(
+            current_block, slot_number,
+            "Mined block number {} does not match slot number {}",
+            current_block, slot_number
+        );
+        trace!("Mined block: {:?} from slot: {:?}", current_block, slot_number);
+
+        // Verify transactions are all included and succeeded
+        // TODO(SEQ-623): check to make sure the tx hashes match as well
+        let receipts: Vec<common::types::Receipt> = self
+            .mchain
+            .provider
+            .raw_request("eth_getBlockReceipts".into(), (BlockNumberOrTag::Number(current_block),))
+            .await
+            .unwrap_or_else(|e| {
+                panic!("Failed to fetch receipts for block {:#?}: {:#?}", current_block, e)
+            });
+        assert!(
+            receipts.len() == transactions_len,
+            "expected {:#?} receipts, got {:#?}",
+            transactions_len,
+            receipts
+        );
+
+        for r in receipts {
+            assert!(r.status == 1, "tx failed: {:#?}", r);
+        }
+    }
+
     /// Start the block builder
     pub async fn start(
         mut self,
@@ -141,24 +172,8 @@ impl BlockBuilder {
                         panic!("Error mining block: {}", e);
                     }
 
-                    let current_block = self.get_current_block_number().await;
-                    assert_eq!(
-                        current_block,
-                        slot.number,
-                        "Mined block number {} does not match slot number {}",
-                        current_block,
-                        slot.number
-                    );
-                    trace!("Mined block: {:?} from slot: {:?}", current_block, slot.number);
-
-                    // Verify transactions are all included and succeeded
-                    // TODO: check to make sure the tx hashes match
-                    let receipts: Vec<common::types::Receipt> = self.mchain.provider.raw_request("eth_getBlockReceipts".into(), (BlockNumberOrTag::Number(current_block),)).await.unwrap_or_else(|e|panic!("Failed to fetch receipts for block {:#?}: {:#?}", current_block, e));
-                    assert!(receipts.len() == transactions_len, "expected {:#?} receipts, got {:#?}", transactions_len, receipts);
-
-                    for r in receipts {
-                        assert!(r.status == 1, "tx failed: {:#?}", r);
-                    }
+                    // TODO(SEQ-623): add a flag to enable/disable this check
+                    self.verify_block(transactions_len, slot.number).await;
 
                     if let Err(e) = self.store.save_unsafe_slot(&slot).await {
                         panic!("Error saving slot: {}", e);

@@ -24,16 +24,13 @@ use eyre::{eyre, Result};
 use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
-use serial_test::serial;
 use std::time::Duration;
 use tokio::time::sleep;
 
 /// This test sends different types of delayed messages
 /// via the inbox contract and ensures that all of them
 /// are sequenced via the metabased translator and show up on the rollup.
-/// TODO: remove the serial attribute once the reth port conflicts are fixed.
 #[tokio::test(flavor = "multi_thread")]
-#[serial]
 async fn e2e_settlement_test() -> Result<()> {
     // Start the meta node (port index 0, pre-loaded with the full set of Arb contracts)
     let mut config = MetabasedConfig::default();
@@ -203,9 +200,7 @@ async fn e2e_settlement_test() -> Result<()> {
 /// blocks sequenced via the sequencing contract show up
 /// on the rollup. It also checks to make sure missing slots
 /// sequence a mchain block that does not include a batch.
-/// TODO: remove the serial attribute once the reth port conflicts are fixed.
 #[tokio::test(flavor = "multi_thread")]
-#[serial]
 async fn e2e_test() -> Result<()> {
     // Start the meta node (port index 1, no pre-loaded contracts)
     let mut config = MetabasedConfig::default();
@@ -321,9 +316,7 @@ async fn e2e_test() -> Result<()> {
 
 /// This test tests that rollup blocks are properly derived from batches created
 /// via the block builder code and posted to the dummy rollup contract.
-/// TODO: remove the serial attribute once the reth port conflicts are fixed
 #[tokio::test(flavor = "multi_thread")]
-#[serial]
 async fn test_nitro_batch() -> Result<()> {
     let block_builder_cfg =
         BlockBuilderConfig { mchain_url: "http://127.0.0.1:8388".parse()?, ..Default::default() };
@@ -400,9 +393,7 @@ async fn test_nitro_batch() -> Result<()> {
 }
 
 /// Regression test
-/// TODO: remove the serial attribute once the reth port conflicts are fixed
 #[tokio::test(flavor = "multi_thread")]
-#[serial]
 async fn test_nitro_batch_two_tx() -> Result<()> {
     let block_builder_cfg =
         BlockBuilderConfig { mchain_url: "http://127.0.0.1:8488".parse()?, ..Default::default() };

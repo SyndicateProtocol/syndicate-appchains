@@ -4,6 +4,9 @@ This is a service that ingests L2 transaction data, organizes the data into slot
 
 It consists of a `common` crate and 3 component crates: `ingestor`, `slotter` and `block-builder`
 
+An execution client such as reth must be available at the mchain url (http://127.0.0.1:8888) prior to starting the translator -
+see the provided docker-compose.yaml file for more information.
+
 #### Metachain configuration
 
 The metachain has chain id 84532 and a genesis timestamp of 0.
@@ -34,7 +37,7 @@ with the following on-chain configuration:
       "EnableArbOS": true,
       "AllowDebugPrecompiles": false,
       "DataAvailabilityCommittee": false,
-      "InitialArbOSVersion": 10,
+      "InitialArbOSVersion": 32,
       "InitialChainOwner": "0x0000000000000000000000000000000000000000",
       "GenesisBlockNum": 0
    }

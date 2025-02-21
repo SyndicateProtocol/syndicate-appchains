@@ -702,6 +702,15 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_block_slot_ordering() {
+        assert_eq!(block_slot_ordering(0, 0, 1), Ordering::Equal);
+        assert_eq!(block_slot_ordering(1, 0, 1), Ordering::Greater);
+        assert_eq!(block_slot_ordering(0, 1, 1), Ordering::Less);
+        assert_eq!(block_slot_ordering(1, 1, 1), Ordering::Equal);
+        assert_eq!(block_slot_ordering(2, 1, 1), Ordering::Greater);
+    }
+
     /// Test scenario:
     /// ```text
     /// Slot 0 [9]:
