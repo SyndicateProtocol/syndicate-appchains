@@ -18,7 +18,7 @@ use alloy::{
 use async_trait::async_trait;
 use common::types::{BlockAndReceiptsPointer, Slot};
 use eyre::Result;
-use std::{str::FromStr, sync::Arc};
+use std::str::FromStr;
 
 #[derive(Debug)]
 /// Builder for constructing Optimism blocks from transactions
@@ -31,7 +31,7 @@ impl RollupBlockBuilder for OptimismBlockBuilder {
     async fn build_block_from_slot(&mut self, slot: &Slot) -> Result<Vec<TransactionRequest>> {
         let deposited_txns = self.process_deposited_txns(slot.settlement_blocks.clone()).await?;
 
-        let mbtxs = self.parse_block_to_mbtxs(Arc::clone(&slot.sequencing_block));
+        let mbtxs = self.parse_block_to_mbtxs(slot.sequencing_block.clone());
 
         let batch_txn = self.build_batch_txn(mbtxs).await?;
 

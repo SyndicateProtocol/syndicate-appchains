@@ -27,7 +27,7 @@ use contract_bindings::arbitrum::{
     rollup::Rollup,
 };
 use eyre::Result;
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 use thiserror::Error;
 use tracing::{debug, error, info, trace};
 
@@ -103,7 +103,7 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
             self.process_delayed_messages(slot.settlement_blocks.clone()).await?;
         debug!("Delayed messages: {:?}", delayed_messages);
 
-        let mb_transactions = self.parse_block_to_mbtxs(Arc::clone(&slot.sequencing_block));
+        let mb_transactions = self.parse_block_to_mbtxs(slot.sequencing_block.clone());
 
         if delayed_messages.is_empty() && mb_transactions.is_empty() {
             trace!("No delayed messages or MB transactions, skipping block");
