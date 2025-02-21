@@ -30,22 +30,22 @@ pub mod Create2 {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea264697066735822122049e3170ebef0d1540a91235b937fc3a7317d9840d7f470189a3e2f45df678c6264736f6c63430008190033
+    ///0x6055604b600b8282823980515f1a607314603f577f4e487b71000000000000000000000000000000000000000000000000000000005f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220aa7bfe8a96f2b125b3772a465d2cdf3df95931c7859ba2d1143775b4f755a5cf64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`U`2`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`&WcNH{q`\xE0\x1B_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 I\xE3\x17\x0E\xBE\xF0\xD1T\n\x91#[\x93\x7F\xC3\xA71}\x98@\xD7\xF4p\x18\x9A>/E\xDFg\x8CbdsolcC\0\x08\x19\x003",
+        b"`U`K`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`?W\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xAA{\xFE\x8A\x96\xF2\xB1%\xB3w*F],\xDF=\xF9Y1\xC7\x85\x9B\xA2\xD1\x147u\xB4\xF7U\xA5\xCFdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x730000000000000000000000000000000000000000301460806040525f80fdfea264697066735822122049e3170ebef0d1540a91235b937fc3a7317d9840d7f470189a3e2f45df678c6264736f6c63430008190033
+    ///0x730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220aa7bfe8a96f2b125b3772a465d2cdf3df95931c7859ba2d1143775b4f755a5cf64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 I\xE3\x17\x0E\xBE\xF0\xD1T\n\x91#[\x93\x7F\xC3\xA71}\x98@\xD7\xF4p\x18\x9A>/E\xDFg\x8CbdsolcC\0\x08\x19\x003",
+        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xAA{\xFE\x8A\x96\xF2\xB1%\xB3w*F],\xDF=\xF9Y1\xC7\x85\x9B\xA2\xD1\x147u\xB4\xF7U\xA5\xCFdsolcC\0\x08\x19\x003",
     );
     /**Custom error with signature `Create2EmptyBytecode()` and selector `0x4ca249dc`.
 ```solidity
@@ -113,6 +113,7 @@ error Create2EmptyBytecode();
     };
     ///Container for all the [`Create2`](self) custom errors.
     pub enum Create2Errors {
+        #[allow(missing_docs)]
         Create2EmptyBytecode(Create2EmptyBytecode),
     }
     #[automatically_derived]
