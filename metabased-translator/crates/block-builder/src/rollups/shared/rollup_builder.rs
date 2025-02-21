@@ -26,20 +26,6 @@ pub trait RollupBlockBuilder: Debug + Send + Sync + Unpin + 'static {
     ///
     /// # Returns
     /// A vector of extracted transactions in raw `Bytes` format.
-    fn parse_blocks_to_mbtxs(&self, input: Vec<BlockAndReceiptsPointer>) -> Vec<Bytes> {
-        input
-            .iter()
-            .flat_map(|block| block.receipts.iter())
-            .flat_map(|receipt| receipt.logs.iter())
-            .filter_map(|log| self.transaction_parser().get_event_transactions(log).ok())
-            .flatten()
-            .collect()
-    }
-    /// Parses a block and its receipts to extract Metabased transactions.
-    ///
-    /// This function processes the receipts within the provided `BlockAndReceiptsPointer`,
-    /// extracting event logs and using the transaction parser to retrieve relevant transactions.
-    /// The extracted transactions are returned as a vector of `Bytes`.
     fn parse_block_to_mbtxs(&self, input: BlockAndReceiptsPointer) -> Vec<Bytes> {
         input
             .receipts
