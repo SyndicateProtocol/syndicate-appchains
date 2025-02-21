@@ -2,15 +2,15 @@ name: Foundry Tests
 
 on:
   # Run workflow on every push to main. This ensures that cross-service PRs that
-  # depend on metabased-contracts are tested.
+  # depend on metabased-translator-contracts are tested.
   push:
     branches:
       - main
-  # Only run on PRs that touch metabased-contracts files to avoid unnecessary CI runs
+  # Only run on PRs that touch metabased-translator-contracts files to avoid unnecessary CI runs
   pull_request:
     paths:
-      - "metabased-contracts/**"
-      - "metabased-translator/contract-bindings/src/metabased/**"
+      - "metabased-translator/contracts/**"
+      - "metabased-translator/contract-bindings/**"
 
 env:
   FOUNDRY_PROFILE: ci
