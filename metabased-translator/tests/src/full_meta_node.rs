@@ -15,7 +15,7 @@ use block_builder::{
     connectors::anvil::{FilledProvider, MetaChainProvider},
     metrics::BlockBuilderMetrics,
 };
-use common::{db::RocksDbStore, tracing::init_test_tracing, types::Chain};
+use common::{db::RocksDbStore, types::Chain};
 use contract_bindings::{
     arbitrum::rollup::Rollup,
     metabased::{
@@ -43,7 +43,6 @@ use tokio::{
     task,
     time::timeout,
 };
-use tracing::Level;
 
 pub const GENESIS_TIMESTAMP: u64 = 1736824187;
 pub const PRELOAD_INBOX_ADDRESS: Address = address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899");
@@ -173,7 +172,6 @@ pub struct MetaNode {
     pub metabased_rollup: RootProvider<Http<Client>>,
 
     pub chain_id: u64,
-    pub slot_duration: u64,
 
     pub mchain_provider: FilledProvider,
 
@@ -216,7 +214,6 @@ impl MetaNode {
         let inbox_address =
             if pre_loaded { PRELOAD_INBOX_ADDRESS } else { get_rollup_contract_address() };
 
-        let _ = init_test_tracing(Level::INFO);
         let mchain_port = port_tracker.next_port();
         let block_builder_cfg = BlockBuilderConfig {
             bridge_address,
@@ -321,13 +318,9 @@ impl MetaNode {
         let db_path = test_path("db");
         let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
 
-        // Start slotter at the genesis timestamp
-        let mut slotter_cfg = config.slotter;
-        slotter_cfg.start_slot_timestamp = GENESIS_TIMESTAMP;
-
         // Launch the slotter, block builder, and nitro rollup
         let (slotter, slotter_rx) = Slotter::new(
-            &slotter_cfg,
+            &config.slotter,
             None,
             store.clone(),
             SlotterMetrics::new(&mut metrics_state.registry),
@@ -342,7 +335,6 @@ impl MetaNode {
             slotter_rx,
             &block_builder_cfg,
             &datadir,
-            slotter_cfg.slot_duration,
             store,
             BlockBuilderMetrics::new(&mut metrics_state.registry),
         )
@@ -364,7 +356,6 @@ impl MetaNode {
             metabased_rollup,
 
             chain_id: block_builder_cfg.target_chain_id,
-            slot_duration: slotter_cfg.slot_duration,
 
             mchain_provider,
 
@@ -384,26 +375,19 @@ impl MetaNode {
         })
     }
 
-    pub async fn mine_seq_blocks(&self, delay: u64) -> Result<()> {
+    pub async fn mine_seq_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.sequencing_provider, delay).await?;
         Ok(())
     }
 
-    pub async fn mine_set_blocks(&self, delay: u64) -> Result<()> {
+    pub async fn mine_set_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.settlement_provider, delay).await?;
         Ok(())
     }
 
     pub async fn mine_both(&self, delay: u64) -> Result<()> {
-        self.mine_seq_blocks(delay).await?;
-        self.mine_set_blocks(delay).await?;
-        Ok(())
-    }
-
-    pub async fn mine_next_slot(&self) -> Result<()> {
-        self.mine_seq_blocks(self.slot_duration).await?;
-        self.mine_set_blocks(self.slot_duration).await?;
-
+        self.mine_seq_block(delay).await?;
+        self.mine_set_block(delay).await?;
         Ok(())
     }
 }
