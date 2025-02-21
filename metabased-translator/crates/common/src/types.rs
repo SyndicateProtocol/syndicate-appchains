@@ -12,12 +12,12 @@ use serde::{
 use std::{fmt, sync::Arc};
 use strum_macros::Display;
 
-/// Shared reference to a `BlockAndReceiptsPayload` instance
-pub type BlockAndReceipts = Arc<BlockAndReceiptsPayload>;
+/// Shared reference to a `BlockAndReceipts` instance
+pub type BlockAndReceiptsPointer = Arc<BlockAndReceipts>;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
 /// **`BlockAndReceipts`**: Contains both a `Block` and the associated list of `Receipt` objects.
-pub struct BlockAndReceiptsPayload {
+pub struct BlockAndReceipts {
     /// The block data.
     pub block: Block,
     /// The transaction receipts for the block.
@@ -189,27 +189,27 @@ pub enum SlotState {
     Open,
 }
 
-/// Shared reference to a `SlotPayload` instance
-pub type Slot = Arc<SlotPayload>;
+/// Shared reference to a `Slot` instance
+pub type SlotPointer = Arc<Slot>;
 
 /// A `Slot` is a collection of source chain blocks to be sent to the block builder.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
-pub struct SlotPayload {
+pub struct Slot {
     /// the number of the slot - `slot_number` == `MetaChain`'s block number.
     pub number: u64,
     /// the timestamp of the slot in seconds.
     pub timestamp: u64,
     /// the blocks from the sequencing chain to be included in the slot.
     #[serde(deserialize_with = "deserialize_arc_vec", serialize_with = "serialize_arc_vec")]
-    pub sequencing_chain_blocks: Vec<BlockAndReceipts>,
+    pub sequencing_chain_blocks: Vec<BlockAndReceiptsPointer>,
     /// the blocks from the settlement chain to be included in the slot.
     #[serde(deserialize_with = "deserialize_arc_vec", serialize_with = "serialize_arc_vec")]
-    pub settlement_chain_blocks: Vec<BlockAndReceipts>,
+    pub settlement_chain_blocks: Vec<BlockAndReceiptsPointer>,
     /// the finality state of the slot.
     pub state: SlotState,
 }
 
-impl SlotPayload {
+impl Slot {
     /// Creates a new slot.
     pub const fn new(number: u64, timestamp: u64) -> Self {
         Self {
@@ -227,7 +227,7 @@ impl SlotPayload {
     }
 
     /// Adds a block to the slot's chain-specific block list.
-    pub fn push_block(&mut self, block: BlockAndReceipts, chain: Chain) {
+    pub fn push_block(&mut self, block: BlockAndReceiptsPointer, chain: Chain) {
         // Wrap the block in an Arc
         match chain {
             Chain::Sequencing => self.sequencing_chain_blocks.push(block),
@@ -241,7 +241,7 @@ impl SlotPayload {
     }
 }
 
-impl fmt::Display for SlotPayload {
+impl fmt::Display for Slot {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -257,7 +257,7 @@ impl fmt::Display for SlotPayload {
     }
 }
 
-fn format_blocks(blocks: &[BlockAndReceipts]) -> String {
+fn format_blocks(blocks: &[BlockAndReceiptsPointer]) -> String {
     if blocks.is_empty() {
         return "none".to_string();
     }
@@ -272,14 +272,14 @@ fn format_blocks(blocks: &[BlockAndReceipts]) -> String {
 }
 
 /// Custom deserializer for Vec<BlockAndReceipts>
-fn deserialize_arc_vec<'de, D>(deserializer: D) -> Result<Vec<BlockAndReceipts>, D::Error>
+fn deserialize_arc_vec<'de, D>(deserializer: D) -> Result<Vec<BlockAndReceiptsPointer>, D::Error>
 where
     D: Deserializer<'de>,
 {
     struct ArcVecVisitor;
 
     impl<'de> Visitor<'de> for ArcVecVisitor {
-        type Value = Vec<BlockAndReceipts>;
+        type Value = Vec<BlockAndReceiptsPointer>;
 
         fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
             formatter.write_str("a sequence of BlockAndReceipts wrapped in Arc")
@@ -290,7 +290,7 @@ where
             A: SeqAccess<'de>,
         {
             let mut vec = Vec::new();
-            while let Some(value) = seq.next_element::<BlockAndReceiptsPayload>()? {
+            while let Some(value) = seq.next_element::<BlockAndReceipts>()? {
                 vec.push(Arc::new(value));
             }
             Ok(vec)
@@ -301,12 +301,12 @@ where
 }
 
 /// Custom serializer for Vec<BlockAndReceipts>
-fn serialize_arc_vec<S>(vec: &[BlockAndReceipts], serializer: S) -> Result<S::Ok, S::Error>
+fn serialize_arc_vec<S>(vec: &[BlockAndReceiptsPointer], serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {
     // Serialize as a sequence of inner BlockAndReceipts
-    let inner: Vec<&BlockAndReceiptsPayload> = vec.iter().map(|arc| arc.as_ref()).collect();
+    let inner: Vec<&BlockAndReceipts> = vec.iter().map(|arc| arc.as_ref()).collect();
     inner.serialize(serializer)
 }
 
@@ -464,11 +464,11 @@ mod test {
     use super::*;
     use alloy::{hex::FromHex, primitives::B256};
 
-    fn create_test_slot() -> SlotPayload {
-        let mut slot = SlotPayload::new(1, 1000);
+    fn create_test_slot() -> Slot {
+        let mut slot = Slot::new(1, 1000);
 
         // Add sequencing chain block with transaction and receipt
-        slot.sequencing_chain_blocks.push(Arc::new(BlockAndReceiptsPayload {
+        slot.sequencing_chain_blocks.push(Arc::new(BlockAndReceipts {
             block: Block {
                 hash: B256::from_hex(
                     "0x1234567890123456789012345678901234567890123456789012345678901234",
@@ -538,7 +538,7 @@ mod test {
         }));
 
         // Add settlement chain block
-        slot.settlement_chain_blocks.push(Arc::new(BlockAndReceiptsPayload {
+        slot.settlement_chain_blocks.push(Arc::new(BlockAndReceipts {
             block: Block {
                 hash: B256::from_hex(
                     "0x5678901234567890123456789012345678901234567890123456789012345678",
@@ -567,7 +567,7 @@ mod test {
     fn test_bincode_serialization() {
         let slot = create_test_slot();
         let encoded = bincode::serialize(&slot).unwrap();
-        let decoded: SlotPayload = bincode::deserialize(&encoded).unwrap();
+        let decoded: Slot = bincode::deserialize(&encoded).unwrap();
         assert_eq!(decoded, slot);
     }
 
@@ -576,7 +576,7 @@ mod test {
         let slot = create_test_slot();
         let json = serde_json::to_string(&slot).unwrap();
         println!("{}", json);
-        let decoded: SlotPayload = serde_json::from_str(&json).unwrap();
+        let decoded: Slot = serde_json::from_str(&json).unwrap();
         assert_eq!(decoded, slot);
     }
 }

@@ -8,7 +8,7 @@ use alloy::{
     transports::http::{Client, Http},
 };
 use async_trait::async_trait;
-use common::types::{Block, BlockAndReceiptsPayload, Chain, Receipt};
+use common::types::{Block, BlockAndReceipts, Chain, Receipt};
 use eyre::eyre;
 use std::fmt::Debug;
 use thiserror::Error;
@@ -48,7 +48,7 @@ pub trait RPCClient: Send + Sync + Debug {
     async fn batch_get_blocks_and_receipts(
         &self,
         block_numbers: Vec<u64>,
-    ) -> Result<Vec<BlockAndReceiptsPayload>, RPCClientError>;
+    ) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
 }
 
 /// A client for interacting with an Ethereum-like blockchain.
@@ -123,7 +123,7 @@ impl RPCClient for EthClient {
     async fn batch_get_blocks_and_receipts(
         &self,
         block_numbers: Vec<u64>,
-    ) -> Result<Vec<BlockAndReceiptsPayload>, RPCClientError> {
+    ) -> Result<Vec<BlockAndReceipts>, RPCClientError> {
         let mut batch = self.client.new_batch();
         let mut block_futures = Vec::new();
         let mut receipt_futures = Vec::new();
@@ -170,7 +170,7 @@ impl RPCClient for EthClient {
                 .map_err(|e| RPCClientError::RpcError(eyre!(e)))?;
 
             if let (Some(block), Some(receipts)) = (block_opt, receipts_opt) {
-                results.push(BlockAndReceiptsPayload { block, receipts });
+                results.push(BlockAndReceipts { block, receipts });
             }
         }
 

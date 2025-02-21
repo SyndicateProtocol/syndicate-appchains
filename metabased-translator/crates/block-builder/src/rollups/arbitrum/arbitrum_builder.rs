@@ -17,7 +17,7 @@ use alloy::{
     sol_types::{SolCall, SolEvent},
 };
 use async_trait::async_trait;
-use common::types::{BlockAndReceipts, Log, SlotPayload};
+use common::types::{BlockAndReceiptsPointer, Log, Slot};
 use contract_bindings::arbitrum::{
     ibridge::IBridge::MessageDelivered,
     idelayedmessageprovider::IDelayedMessageProvider::{
@@ -97,7 +97,7 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
     /// Builds a block from a slot
     async fn build_block_from_slot(
         &mut self,
-        slot: &SlotPayload,
+        slot: &Slot,
     ) -> Result<Vec<TransactionRequest>, eyre::Error> {
         let delayed_messages =
             self.process_delayed_messages(slot.settlement_chain_blocks.clone()).await?;
@@ -140,7 +140,7 @@ impl ArbitrumBlockBuilder {
     /// Processes settlement chain receipts into delayed messages
     async fn process_delayed_messages(
         &self,
-        blocks: Vec<BlockAndReceipts>,
+        blocks: Vec<BlockAndReceiptsPointer>,
     ) -> Result<Vec<TransactionRequest>> {
         // Create a local map to store message data
         let mut message_data: HashMap<U256, Bytes> = HashMap::new();
@@ -324,7 +324,7 @@ mod tests {
     use super::*;
     use alloy::primitives::{hex, keccak256, TxKind};
     use assert_matches::assert_matches;
-    use common::types::{Block, BlockAndReceiptsPayload, Log, Receipt, SlotState, Transaction};
+    use common::types::{Block, BlockAndReceipts, Log, Receipt, SlotState, Transaction};
     use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain::TransactionProcessed;
     use std::{str::FromStr, sync::Arc};
 
@@ -400,7 +400,7 @@ mod tests {
         let mut builder = ArbitrumBlockBuilder::default();
 
         // Create an empty slot
-        let slot = SlotPayload {
+        let slot = Slot {
             number: 1,
             timestamp: 0,
             state: SlotState::Safe,
@@ -429,8 +429,8 @@ mod tests {
         number: u64,
         transactions: Vec<Transaction>,
         receipts: Vec<Receipt>,
-    ) -> BlockAndReceipts {
-        Arc::new(BlockAndReceiptsPayload {
+    ) -> BlockAndReceiptsPointer {
+        Arc::new(BlockAndReceipts {
             block: Block { number, transactions, ..Default::default() },
             receipts,
         })
@@ -487,7 +487,7 @@ mod tests {
             vec![Receipt { logs: vec![msg_delivered_log, inbox_msg_log], ..Default::default() }],
         );
 
-        let slot = SlotPayload {
+        let slot = Slot {
             number: 1,
             timestamp: 0,
             state: SlotState::Safe,
@@ -528,12 +528,12 @@ mod tests {
         let block =
             Block { number: 1, transactions: vec![Transaction::default()], ..Default::default() };
 
-        let slot = SlotPayload {
+        let slot = Slot {
             number: 1,
             timestamp: 0,
             state: SlotState::Safe,
             settlement_chain_blocks: vec![],
-            sequencing_chain_blocks: vec![Arc::new(BlockAndReceiptsPayload {
+            sequencing_chain_blocks: vec![Arc::new(BlockAndReceipts {
                 block,
                 receipts: vec![Receipt { logs: vec![txn_processed_log], ..Default::default() }],
             })],
@@ -623,15 +623,15 @@ mod tests {
         let settlement_receipt =
             Receipt { logs: vec![delayed_log, inbox_log], ..Default::default() };
 
-        let slot = SlotPayload {
+        let slot = Slot {
             number: 1,
             timestamp: 0,
             state: SlotState::Safe,
-            settlement_chain_blocks: vec![Arc::new(BlockAndReceiptsPayload {
+            settlement_chain_blocks: vec![Arc::new(BlockAndReceipts {
                 block: settlement_block,
                 receipts: vec![settlement_receipt],
             })],
-            sequencing_chain_blocks: vec![Arc::new(BlockAndReceiptsPayload {
+            sequencing_chain_blocks: vec![Arc::new(BlockAndReceipts {
                 block: sequencing_block,
                 receipts: vec![sequencing_receipt],
             })],

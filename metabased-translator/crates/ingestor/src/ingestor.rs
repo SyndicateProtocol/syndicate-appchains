@@ -3,7 +3,7 @@
 
 use crate::{config::ChainIngestorConfig, eth_client::RPCClient, metrics::IngestorMetrics};
 use alloy::rpc::types::BlockNumberOrTag;
-use common::types::{BlockAndReceipts, Chain};
+use common::types::{BlockAndReceiptsPointer, Chain};
 use eyre::{eyre, Error};
 use std::{
     cmp::{max, min},
@@ -27,7 +27,7 @@ pub struct Ingestor {
     current_block_number: u64,
     initial_chain_head: u64,
     syncing_batch_size: u64,
-    sender: Sender<BlockAndReceipts>,
+    sender: Sender<BlockAndReceiptsPointer>,
     polling_interval: Duration,
     metrics: IngestorMetrics,
 }
@@ -50,7 +50,7 @@ impl Ingestor {
         client: Arc<dyn RPCClient>,
         config: &ChainIngestorConfig,
         metrics: IngestorMetrics,
-    ) -> Result<(Self, Receiver<BlockAndReceipts>), Error> {
+    ) -> Result<(Self, Receiver<BlockAndReceiptsPointer>), Error> {
         let (sender, receiver) = channel(config.buffer_size);
         let client_clone = client.clone();
         let chain_head = client_clone.get_block_by_number(BlockNumberOrTag::Latest).await?;
@@ -75,7 +75,7 @@ impl Ingestor {
     /// - `block_and_receipts`: The block and its receipts to be sent to the consumer.
     async fn push_block_and_receipts(
         &mut self,
-        block_and_receipts: BlockAndReceipts,
+        block_and_receipts: BlockAndReceiptsPointer,
     ) -> Result<(), Error> {
         if block_and_receipts.block.number != self.current_block_number {
             error!(
@@ -175,7 +175,7 @@ mod tests {
     };
     use alloy::{primitives::B256, rpc::types::BlockNumberOrTag};
     use async_trait::async_trait;
-    use common::types::{Block, BlockAndReceiptsPayload};
+    use common::types::{Block, BlockAndReceipts};
     use eyre::Result;
     use mockall::{mock, predicate::*};
     use prometheus_client::registry::Registry;
@@ -207,7 +207,7 @@ mod tests {
         }
     }
 
-    fn get_dummy_block_and_receipts(number: u64) -> BlockAndReceiptsPayload {
+    fn get_dummy_block_and_receipts(number: u64) -> BlockAndReceipts {
         let block: Block = Block {
             hash: B256::from_str(
                 "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
@@ -225,7 +225,7 @@ mod tests {
             timestamp: 1000000000,
             transactions: vec![],
         };
-        BlockAndReceiptsPayload { block, receipts: vec![] }
+        BlockAndReceipts { block, receipts: vec![] }
     }
 
     mock! {
@@ -235,7 +235,7 @@ mod tests {
         #[async_trait]
         impl RPCClient for RPCClientMock {
             async fn get_block_by_number(&self, block_number: BlockNumberOrTag) -> Result<Block, RPCClientError>;
-            async fn batch_get_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<Vec<BlockAndReceiptsPayload>, RPCClientError>;
+            async fn batch_get_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
         }
     }
 

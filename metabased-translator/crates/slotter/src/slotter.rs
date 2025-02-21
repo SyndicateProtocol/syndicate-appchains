@@ -4,7 +4,7 @@ use crate::{config::SlotterConfig, metrics::SlotterMetrics};
 use alloy::primitives::B256;
 use common::{
     db::{DbError, KnownState, TranslatorStore},
-    types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotPayload, SlotState},
+    types::{Block, BlockAndReceiptsPointer, BlockRef, Chain, Slot, SlotPointer, SlotState},
 };
 use derivative::Derivative;
 use std::{cmp::Ordering, collections::VecDeque, sync::Arc};
@@ -55,10 +55,10 @@ pub struct Slotter {
     safe_timestamp: u64,
 
     /// Stores all open and unsafe slots
-    slots: VecDeque<SlotPayload>,
+    slots: VecDeque<Slot>,
 
     /// Sender for sending slots to the consumer
-    sender: Sender<Slot>,
+    sender: Sender<SlotPointer>,
 
     #[derivative(Debug = "ignore")]
     store: Arc<dyn TranslatorStore + Send + Sync>,
@@ -75,7 +75,7 @@ impl Slotter {
         known_state: Option<KnownState>,
         store: Arc<dyn TranslatorStore + Send + Sync>,
         metrics: SlotterMetrics,
-    ) -> (Self, Receiver<Slot>) {
+    ) -> (Self, Receiver<SlotPointer>) {
         let (slot_tx, slot_rx) = channel(100);
         let mut slots = VecDeque::new();
         let mut safe_timestamp = 0;
@@ -88,7 +88,7 @@ impl Slotter {
                 (Some(known_state.sequencing_block), Some(known_state.settlement_block))
             }
             None => {
-                slots.push_front(SlotPayload::new(START_SLOT, config.start_slot_timestamp));
+                slots.push_front(Slot::new(START_SLOT, config.start_slot_timestamp));
                 (None, None)
             }
         };
@@ -126,8 +126,8 @@ impl Slotter {
     /// The receiver that was created during [`Slotter::new`] will get slots as they are processed
     pub async fn start(
         mut self,
-        mut sequencing_rx: Receiver<BlockAndReceipts>,
-        mut settlement_rx: Receiver<BlockAndReceipts>,
+        mut sequencing_rx: Receiver<BlockAndReceiptsPointer>,
+        mut settlement_rx: Receiver<BlockAndReceiptsPointer>,
         mut shutdown_rx: oneshot::Receiver<()>,
     ) {
         info!("Starting Slotter");
@@ -198,10 +198,14 @@ impl Slotter {
 
     fn prioritize_lagging_chain<'a>(
         &self,
-        sequencing_rx: &'a mut Receiver<BlockAndReceipts>,
-        settlement_rx: &'a mut Receiver<BlockAndReceipts>,
-    ) -> (&'a mut Receiver<BlockAndReceipts>, Chain, &'a mut Receiver<BlockAndReceipts>, Chain)
-    {
+        sequencing_rx: &'a mut Receiver<BlockAndReceiptsPointer>,
+        settlement_rx: &'a mut Receiver<BlockAndReceiptsPointer>,
+    ) -> (
+        &'a mut Receiver<BlockAndReceiptsPointer>,
+        Chain,
+        &'a mut Receiver<BlockAndReceiptsPointer>,
+        Chain,
+    ) {
         let seq_ts = self.latest_sequencing_block.as_ref().map_or(0, |b| b.timestamp);
         let set_ts = self.latest_settlement_block.as_ref().map_or(0, |b| b.timestamp);
 
@@ -263,7 +267,7 @@ impl Slotter {
 
     async fn process_block(
         &mut self,
-        block_info: BlockAndReceipts,
+        block_info: BlockAndReceiptsPointer,
         chain: Chain,
     ) -> Result<(), SlotterError> {
         if block_info.block.timestamp < self.safe_timestamp {
@@ -320,14 +324,12 @@ impl Slotter {
                     // create a single empty slot right behind the new slot (this will allow the
                     // empty slot to be marked as unsafe before the new slot and accelerate
                     // confirmations on the mchain)
-                    let new_slot = SlotPayload::new(
-                        target_slot_number - 1,
-                        target_timestamp - self.slot_duration,
-                    );
+                    let new_slot =
+                        Slot::new(target_slot_number - 1, target_timestamp - self.slot_duration);
                     self.slots.push_front(new_slot);
                 }
 
-                let mut slot = SlotPayload::new(target_slot_number, target_timestamp);
+                let mut slot = Slot::new(target_slot_number, target_timestamp);
                 self.metrics.record_last_slot(slot.number);
                 slot.push_block(block_info, chain);
                 trace!(%slot, "Created new slot");
@@ -439,7 +441,7 @@ impl Slotter {
 
     fn insert_block_into_previous_slot(
         &mut self,
-        block_info: BlockAndReceipts,
+        block_info: BlockAndReceiptsPointer,
         chain: Chain,
         latest_slot_number: u64,
         latest_slot_timestamp: u64,
@@ -470,7 +472,7 @@ impl Slotter {
                     // We've gone too far, insert new slot before this one
                     let mut slots_to_insert = Vec::new();
 
-                    let mut new_slot = SlotPayload::new(target_slot_number, target_timestamp);
+                    let mut new_slot = Slot::new(target_slot_number, target_timestamp);
                     trace!(%new_slot, "Creating new slot between existing slots");
                     new_slot.push_block(block_info, chain);
                     slots_to_insert.push(new_slot);
@@ -478,7 +480,7 @@ impl Slotter {
                     // Create empty slots between latest and target if needed
                     if target_slot_number > slot.number + 1 {
                         // Create empty slot right before the target slot
-                        let empty_slot = SlotPayload::new(
+                        let empty_slot = Slot::new(
                             target_slot_number - 1,
                             target_timestamp - self.slot_duration,
                         );
@@ -600,7 +602,7 @@ enum SlotterError {
     NoSlotsAvailable(String),
 
     #[error("Failed to send slot through channel: {0}")]
-    SlotSendError(#[from] SendError<SlotPayload>),
+    SlotSendError(#[from] SendError<Slot>),
 
     #[error("Block timestamp {block_timestamp}, number {block_number} for {chain} chain is in the past - this should never happen. Latest sequencing block: {latest_sequencing_block}, latest settlement block: {latest_settlement_block}, slots: {slots}")]
     BlockTooOld {
@@ -640,7 +642,7 @@ enum SlotterError {
     TimestampOverflow,
 
     #[error("Failed to send slot (Arc) through channel: {0}")]
-    SlotArcSendError(#[from] SendError<Slot>),
+    SlotArcSendError(#[from] SendError<SlotPointer>),
 }
 
 #[cfg(test)]
@@ -648,7 +650,7 @@ mod tests {
     use super::*;
     use alloy::primitives::B256;
     use assert_matches::assert_matches;
-    use common::types::BlockAndReceiptsPayload;
+    use common::types::BlockAndReceipts;
     use prometheus_client::registry::Registry;
     use std::{str::FromStr, time::Duration};
     use tracing_test::traced_test;
@@ -661,9 +663,9 @@ mod tests {
     use test_utils::test_path;
 
     struct TestSetup {
-        slot_rx: Receiver<Slot>,
-        sequencing_tx: Sender<BlockAndReceipts>,
-        settlement_tx: Sender<BlockAndReceipts>,
+        slot_rx: Receiver<SlotPointer>,
+        sequencing_tx: Sender<BlockAndReceiptsPointer>,
+        settlement_tx: Sender<BlockAndReceiptsPointer>,
         shutdown_tx: oneshot::Sender<()>,
     }
 
@@ -678,7 +680,7 @@ mod tests {
         TestSetup { slot_rx, sequencing_tx: seq_tx, settlement_tx: settle_tx, shutdown_tx }
     }
 
-    fn create_slotter(config: &SlotterConfig) -> (Slotter, Receiver<Slot>) {
+    fn create_slotter(config: &SlotterConfig) -> (Slotter, Receiver<SlotPointer>) {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = SlotterMetrics::new(&mut metrics_state.registry);
         let store = Arc::new(RocksDbStore::new(test_path("slotter_db").as_str()).unwrap());
@@ -688,8 +690,8 @@ mod tests {
         (slotter, slot_rx)
     }
 
-    fn create_test_block(number: u64, timestamp: u64) -> BlockAndReceipts {
-        Arc::new(BlockAndReceiptsPayload {
+    fn create_test_block(number: u64, timestamp: u64) -> BlockAndReceiptsPointer {
+        Arc::new(BlockAndReceipts {
             block: Block {
                 hash: B256::from_str(
                     "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",

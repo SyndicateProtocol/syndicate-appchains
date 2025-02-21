@@ -15,7 +15,7 @@
 //!
 //! The `RocksDbStore` implementation is used for the `TranslatorStore` trait
 
-use crate::types::{BlockRef, SlotPayload};
+use crate::types::{BlockRef, Slot};
 use async_trait::async_trait;
 use bincode;
 use rocksdb::DB;
@@ -33,7 +33,7 @@ const KEY_SLOT_UNSAFE: &[u8] = b"slot/latest_unsafe";
 #[derive(Debug)]
 pub struct KnownState {
     /// The latest slot that was marked as safe
-    pub slot: SlotPayload,
+    pub slot: Slot,
     /// The latest block from the sequencing chain that has been slotted
     pub sequencing_block: BlockRef,
     /// The latest block from the settlement chain that has been slotted
@@ -56,7 +56,7 @@ pub trait TranslatorStore {
     /// Saves the latest safe slot and block refs to the database
     /// NOTE: `save_safe_slot` will keep track of latest safe blocks from each slot that is passed,
     /// it expects all safe slots to be passed in order
-    async fn save_safe_slot(&self, slot: &SlotPayload) -> Result<(), DbError>;
+    async fn save_safe_slot(&self, slot: &Slot) -> Result<(), DbError>;
 
     /// Returns the latest safe state from the database, if one exists.
     ///
@@ -80,7 +80,7 @@ pub trait TranslatorStore {
     /// Saves the latest unsafe slot and block refs to the database
     /// NOTE: `save_unsafe_slot` will keep track of latest unsafe blocks from each slot that is
     /// passed, it expects all unsafe slots to be passed in order
-    async fn save_unsafe_slot(&self, slot: &SlotPayload) -> Result<(), DbError>;
+    async fn save_unsafe_slot(&self, slot: &Slot) -> Result<(), DbError>;
 
     /// Returns the latest unsafe state from the database, if one exists.
     ///
@@ -108,7 +108,7 @@ pub struct DummyStore;
 
 #[async_trait]
 impl TranslatorStore for DummyStore {
-    async fn save_safe_slot(&self, _slot: &SlotPayload) -> Result<(), DbError> {
+    async fn save_safe_slot(&self, _slot: &Slot) -> Result<(), DbError> {
         Ok(())
     }
 
@@ -116,7 +116,7 @@ impl TranslatorStore for DummyStore {
         Ok(None)
     }
 
-    async fn save_unsafe_slot(&self, _slot: &SlotPayload) -> Result<(), DbError> {
+    async fn save_unsafe_slot(&self, _slot: &Slot) -> Result<(), DbError> {
         Ok(())
     }
 
@@ -155,7 +155,7 @@ impl RocksDbStore {
             None => return Ok(None),
         };
 
-        let slot: SlotPayload = serde_json::from_slice(&slot_bytes)?;
+        let slot: Slot = serde_json::from_slice(&slot_bytes)?;
         let seq = self.db.get(seq_key)?.and_then(|v| bincode::deserialize(&v).ok());
         let settle = self.db.get(settle_key)?.and_then(|v| bincode::deserialize(&v).ok());
 
@@ -170,7 +170,7 @@ impl RocksDbStore {
 
 #[async_trait]
 impl TranslatorStore for RocksDbStore {
-    async fn save_safe_slot(&self, slot: &SlotPayload) -> Result<(), DbError> {
+    async fn save_safe_slot(&self, slot: &Slot) -> Result<(), DbError> {
         let mut batch = rocksdb::WriteBatch::default();
         batch.put(KEY_SLOT_SAFE, serde_json::to_vec(slot)?);
 
@@ -185,7 +185,7 @@ impl TranslatorStore for RocksDbStore {
         Ok(())
     }
 
-    async fn save_unsafe_slot(&self, slot: &SlotPayload) -> Result<(), DbError> {
+    async fn save_unsafe_slot(&self, slot: &Slot) -> Result<(), DbError> {
         let mut batch = rocksdb::WriteBatch::default();
         batch.put(KEY_SLOT_UNSAFE, serde_json::to_vec(slot)?);
 
@@ -225,7 +225,7 @@ pub enum DbError {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::types::{Block, BlockAndReceiptsPayload, SlotState};
+    use crate::types::{Block, BlockAndReceipts, SlotState};
     use alloy::primitives::B256;
     use std::sync::Arc;
     use test_utils::test_path;
@@ -249,16 +249,14 @@ mod test {
         let store = RocksDbStore::new(test_path("rocksdb_test_safe").as_str()).unwrap();
         assert!(store.get_safe_state().await.unwrap().is_none());
 
-        let mut slot = SlotPayload::new(1, 1000);
+        let mut slot = Slot::new(1, 1000);
         let seq_block = create_test_block(1);
         let settle_block = create_test_block(2);
 
         slot.sequencing_chain_blocks
-            .push(Arc::new(BlockAndReceiptsPayload { block: seq_block.clone(), receipts: vec![] }));
-        slot.settlement_chain_blocks.push(Arc::new(BlockAndReceiptsPayload {
-            block: settle_block.clone(),
-            receipts: vec![],
-        }));
+            .push(Arc::new(BlockAndReceipts { block: seq_block.clone(), receipts: vec![] }));
+        slot.settlement_chain_blocks
+            .push(Arc::new(BlockAndReceipts { block: settle_block.clone(), receipts: vec![] }));
         slot.state = SlotState::Safe;
         store.save_safe_slot(&slot).await.unwrap();
 
@@ -276,16 +274,14 @@ mod test {
         let store = RocksDbStore::new(test_path("rocksdb_test_unsafe").as_str()).unwrap();
         assert!(store.get_unsafe_state().await.unwrap().is_none());
 
-        let mut slot = SlotPayload::new(1, 1000);
+        let mut slot = Slot::new(1, 1000);
         let seq_block = create_test_block(1);
         let settle_block = create_test_block(2);
 
         slot.sequencing_chain_blocks
-            .push(Arc::new(BlockAndReceiptsPayload { block: seq_block.clone(), receipts: vec![] }));
-        slot.settlement_chain_blocks.push(Arc::new(BlockAndReceiptsPayload {
-            block: settle_block.clone(),
-            receipts: vec![],
-        }));
+            .push(Arc::new(BlockAndReceipts { block: seq_block.clone(), receipts: vec![] }));
+        slot.settlement_chain_blocks
+            .push(Arc::new(BlockAndReceipts { block: settle_block.clone(), receipts: vec![] }));
         slot.state = SlotState::Unsafe;
 
         store.save_unsafe_slot(&slot).await.unwrap();
@@ -304,31 +300,28 @@ mod test {
         let store = RocksDbStore::new(test_path("rocksdb_test_both").as_str()).unwrap();
 
         // Create and save safe state
-        let mut safe_slot = SlotPayload::new(1, 1000);
+        let mut safe_slot = Slot::new(1, 1000);
         let safe_seq = create_test_block(1);
         let safe_settle = create_test_block(2);
         safe_slot
             .sequencing_chain_blocks
-            .push(Arc::new(BlockAndReceiptsPayload { block: safe_seq.clone(), receipts: vec![] }));
-        safe_slot.settlement_chain_blocks.push(Arc::new(BlockAndReceiptsPayload {
-            block: safe_settle.clone(),
-            receipts: vec![],
-        }));
+            .push(Arc::new(BlockAndReceipts { block: safe_seq.clone(), receipts: vec![] }));
+        safe_slot
+            .settlement_chain_blocks
+            .push(Arc::new(BlockAndReceipts { block: safe_settle.clone(), receipts: vec![] }));
         safe_slot.state = SlotState::Safe;
         store.save_safe_slot(&safe_slot).await.unwrap();
 
         // Create and save unsafe state
-        let mut unsafe_slot = SlotPayload::new(2, 2000);
+        let mut unsafe_slot = Slot::new(2, 2000);
         let unsafe_seq = create_test_block(3);
         let unsafe_settle = create_test_block(4);
-        unsafe_slot.sequencing_chain_blocks.push(Arc::new(BlockAndReceiptsPayload {
-            block: unsafe_seq.clone(),
-            receipts: vec![],
-        }));
-        unsafe_slot.settlement_chain_blocks.push(Arc::new(BlockAndReceiptsPayload {
-            block: unsafe_settle.clone(),
-            receipts: vec![],
-        }));
+        unsafe_slot
+            .sequencing_chain_blocks
+            .push(Arc::new(BlockAndReceipts { block: unsafe_seq.clone(), receipts: vec![] }));
+        unsafe_slot
+            .settlement_chain_blocks
+            .push(Arc::new(BlockAndReceipts { block: unsafe_settle.clone(), receipts: vec![] }));
         unsafe_slot.state = SlotState::Unsafe;
 
         store.save_unsafe_slot(&unsafe_slot).await.unwrap();
