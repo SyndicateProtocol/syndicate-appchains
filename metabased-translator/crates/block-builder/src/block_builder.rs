@@ -15,7 +15,7 @@ use alloy::{
 };
 use common::{db::TranslatorStore, types::SlotPointer};
 use derivative::Derivative;
-use eyre::{Error, Result};
+use eyre::{Error, Report, Result};
 use std::sync::Arc;
 use tokio::sync::{mpsc::Receiver, oneshot};
 use tracing::{error, info, trace};
@@ -92,7 +92,7 @@ impl BlockBuilder {
         mut self,
         known_block_number: Option<u64>,
         mut shutdown_rx: oneshot::Receiver<()>,
-    ) {
+    ) -> Result<(), Error> {
         // resume from known state
         if let Err(e) = self.resume_from_block(known_block_number).await {
             panic!("Failed to validate and rollback: {}", e);
@@ -137,7 +137,7 @@ impl BlockBuilder {
                 _ = &mut shutdown_rx => {
                     drop(self.mchain);
                     info!("Block builder stopped");
-                    return;
+                    return Err(Report::from(BlockBuilderError::Shutdown))
                 }
             }
         }
@@ -167,6 +167,9 @@ pub enum BlockBuilderError {
 
     #[error("Error mining block: {0}")]
     MineBlock(String),
+
+    #[error("Block builder was shut down")]
+    Shutdown,
 }
 
 #[allow(missing_docs)] // self-documenting
@@ -227,7 +230,9 @@ mod tests {
 
         // Clean shutdown
         let _ = shutdown_tx.send(());
-        handle.await?;
+        let res = handle.await?;
+        assert!(res.is_err(), "Block builder should have been shut down");
+        assert!(res.unwrap_err().to_string().contains("shut down"));
         Ok(())
     }
 
@@ -265,13 +270,13 @@ mod tests {
         assert_eq!(latest_block, 3, "Chain should be at block 3");
 
         let _ = shutdown_tx.send(());
-        handle.await?;
+        let _ = handle.await?;
 
         // Second run: resume builder
         let (_resumed_tx, resumed_rx) = mpsc::channel(1);
         let datadir = test_path("datadir");
         let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
+        let store = Arc::new(RocksDbStore::new(db_path.as_str())?);
         let resumed_builder =
             BlockBuilder::new(resumed_rx, &config, &datadir, store, metrics).await?;
 

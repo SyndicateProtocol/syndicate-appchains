@@ -4,7 +4,7 @@ use crate::{
     infrastructure::{PrometheusMetrics, SolMetabasedSequencerChainService, TokioStopwatch},
 };
 use alloy::{
-    network::{Ethereum, EthereumWallet},
+    network::{Ethereum, EthereumWallet, NetworkWallet},
     primitives::{Address, B256},
     providers::{
         fillers::{
@@ -85,6 +85,8 @@ fn create_chain_service(
     // See https://alloy.rs/building-with-alloy/understanding-fillers.html
     let signer = PrivateKeySigner::from_bytes(&private_key)?;
     let wallet = EthereumWallet::from(signer);
+    let wallet_address =
+        <EthereumWallet as NetworkWallet<Ethereum>>::default_signer_address(&wallet);
     let filler = join_fill!(
         NonceFiller::new(CachedNonceManager::default()),
         WalletFiller::new(wallet),
@@ -95,5 +97,5 @@ fn create_chain_service(
     let rpc: RootProvider<_, Ethereum> = ReqwestProvider::new_http(chain_rpc_address);
     let rpc = FillProvider::new(rpc, filler);
 
-    Ok(SolMetabasedSequencerChainService::new(chain_contract_address, rpc))
+    Ok(SolMetabasedSequencerChainService::new(chain_contract_address, wallet_address, rpc))
 }
