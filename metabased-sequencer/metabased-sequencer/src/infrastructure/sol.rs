@@ -28,7 +28,8 @@ sol! {
 
 #[derive(Debug)]
 pub struct SolMetabasedSequencerChainService<P: Provider<T, N>, T: Transport + Clone, N: Network> {
-    account: Address,
+    chain_contract_address: Address,
+    wallet_address: Address,
     provider: P,
     phantom1: PhantomData<T>,
     phantom2: PhantomData<N>,
@@ -37,17 +38,23 @@ pub struct SolMetabasedSequencerChainService<P: Provider<T, N>, T: Transport + C
 impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
     SolMetabasedSequencerChainService<P, T, N>
 {
-    pub fn new(account: Address, provider: P) -> Self {
-        Self { account, provider, phantom1: Default::default(), phantom2: Default::default() }
+    pub fn new(chain_contract_address: Address, wallet_address: Address, provider: P) -> Self {
+        Self {
+            chain_contract_address,
+            wallet_address,
+            provider,
+            phantom1: Default::default(),
+            phantom2: Default::default(),
+        }
     }
 
     pub fn contract(&self) -> MetabasedSequencerChainInstance<T, &P, N> {
-        MetabasedSequencerChain::new(self.account, &self.provider)
+        MetabasedSequencerChain::new(self.chain_contract_address, &self.provider)
     }
 
-    /// Gets the current balance of the sequencer account
+    /// Gets the current balance of the sequencer wallet
     async fn get_balance(&self) -> Result<U256, alloy::contract::Error> {
-        Ok(self.provider.get_balance(self.account).await?)
+        Ok(self.provider.get_balance(self.wallet_address).await?)
     }
 
     fn format_tx_data(tx: &Bytes) -> String {
@@ -61,7 +68,7 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
                 let decimals = U256::from(18); // ETH has 18 decimals
                 let balance_in_eth = format_units_uint(&balance, &decimals);
                 info!(
-                    account = ?self.account,
+                    wallet_address = ?self.wallet_address,
                     balance_wei = ?balance,
                     balance_in_eth,
                     "Sequencer wallet balance {}", context
@@ -69,7 +76,7 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
             }
             Err(e) => {
                 warn!(
-                    account = ?self.account,
+                    ?self.wallet_address,
                     error = ?e,
                     "Could not fetch sequencer wallet balance {}", context
                 );
@@ -96,7 +103,8 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
     async fn process_transaction(&self, tx: Bytes) -> Result<TxHash, Self::Error> {
         let result = debug_span!(
             "process_transaction",
-            account = ?self.account,
+            ?self.wallet_address,
+            ?self.chain_contract_address,
             tx_data = ?Self::format_tx_data(&tx),
             tx_size = tx.len()
         )
@@ -127,7 +135,8 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
     async fn process_bulk_transactions(&self, txs: Vec<Bytes>) -> Result<TxHash, Self::Error> {
         debug_span!(
             "process_bulk_transactions",
-            account = ?self.account,
+            ?self.wallet_address,
+            ?self.chain_contract_address,
             tx_count = txs.len(),
             total_size = txs.iter().map(|tx| tx.len()).sum::<usize>(),
             tx_data = ?txs.iter().map(|tx| Self::format_tx_data(tx)).collect::<Vec<_>>()
@@ -203,7 +212,11 @@ mod tests {
         let expected_balance = U256::from(100);
         let provider = MockProvider::new(expected_balance);
         let service: SolMetabasedSequencerChainService<MockProvider, BoxTransport, Ethereum> =
-            SolMetabasedSequencerChainService::new(Address::default(), provider);
+            SolMetabasedSequencerChainService::new(
+                Address::default(),
+                Address::default(),
+                provider,
+            );
         let balance = service.get_balance().await.unwrap();
         assert_eq!(balance, expected_balance);
     }
@@ -213,7 +226,11 @@ mod tests {
         let expected_balance = U256::from(0);
         let provider = MockProvider::new(expected_balance);
         let service: SolMetabasedSequencerChainService<MockProvider, BoxTransport, Ethereum> =
-            SolMetabasedSequencerChainService::new(Address::default(), provider);
+            SolMetabasedSequencerChainService::new(
+                Address::default(),
+                Address::default(),
+                provider,
+            );
         let balance = service.get_balance().await.unwrap();
         assert_eq!(balance, expected_balance);
     }
