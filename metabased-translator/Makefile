@@ -13,7 +13,7 @@ create-arbitrum-contract-bindings:
 create-metabased-contract-bindings:
 	git submodule update --init --recursive
 	git submodule status --recursive
-	cd ../metabased-contracts && rm -rf out && forge bind --alloy --force
+	cd ../metabased-contracts && rm -rf out && forge bind --alloy --force -C ./sequencing-modules
 	cp -r ../metabased-contracts/out/bindings/src/* contract-bindings/src/metabased
 	mv contract-bindings/src/metabased/lib.rs contract-bindings/src/metabased/mod.rs
 .PHONY: create-metabased-contracts-bindings

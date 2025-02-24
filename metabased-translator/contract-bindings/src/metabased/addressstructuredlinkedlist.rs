@@ -22,22 +22,22 @@ pub mod AddressStructuredLinkedList {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6055604b600b8282823980515f1a607314603f577f4e487b71000000000000000000000000000000000000000000000000000000005f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea26469706673582212207634a2d5ee23e9d214166e704c208d3498f0a5b2ab90051ec4b77f63a281cb0e64736f6c63430008190033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea26469706673582212206920cab2ce2bec034eaf23100b62045c4d6c018a75cb2c5970bf133f5a273b5964736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`U`K`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`?W\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 v4\xA2\xD5\xEE#\xE9\xD2\x14\x16npL \x8D4\x98\xF0\xA5\xB2\xAB\x90\x05\x1E\xC4\xB7\x7Fc\xA2\x81\xCB\x0EdsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 i \xCA\xB2\xCE+\xEC\x03N\xAF#\x10\x0Bb\x04\\Ml\x01\x8Au\xCB,Yp\xBF\x13?Z';YdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x730000000000000000000000000000000000000000301460806040525f80fdfea26469706673582212207634a2d5ee23e9d214166e704c208d3498f0a5b2ab90051ec4b77f63a281cb0e64736f6c63430008190033
+    ///0x60806040525f80fdfea26469706673582212206920cab2ce2bec034eaf23100b62045c4d6c018a75cb2c5970bf133f5a273b5964736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 v4\xA2\xD5\xEE#\xE9\xD2\x14\x16npL \x8D4\x98\xF0\xA5\xB2\xAB\x90\x05\x1E\xC4\xB7\x7Fc\xA2\x81\xCB\x0EdsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 i \xCA\xB2\xCE+\xEC\x03N\xAF#\x10\x0Bb\x04\\Ml\x01\x8Au\xCB,Yp\xBF\x13?Z';YdsolcC\0\x08\x19\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`AddressStructuredLinkedList`](self) contract instance.

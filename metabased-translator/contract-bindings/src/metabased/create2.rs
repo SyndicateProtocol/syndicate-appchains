@@ -30,22 +30,22 @@ pub mod Create2 {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6055604b600b8282823980515f1a607314603f577f4e487b71000000000000000000000000000000000000000000000000000000005f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220aa7bfe8a96f2b125b3772a465d2cdf3df95931c7859ba2d1143775b4f755a5cf64736f6c63430008190033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220b0884ea191c47ddb9d0f18e7c29d5d8dad56f34a9339123cf0466e2c59e53f1c64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`U`K`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`?W\x7FNH{q\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xAA{\xFE\x8A\x96\xF2\xB1%\xB3w*F],\xDF=\xF9Y1\xC7\x85\x9B\xA2\xD1\x147u\xB4\xF7U\xA5\xCFdsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB0\x88N\xA1\x91\xC4}\xDB\x9D\x0F\x18\xE7\xC2\x9D]\x8D\xADV\xF3J\x939\x12<\xF0Fn,Y\xE5?\x1CdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220aa7bfe8a96f2b125b3772a465d2cdf3df95931c7859ba2d1143775b4f755a5cf64736f6c63430008190033
+    ///0x60806040525f80fdfea2646970667358221220b0884ea191c47ddb9d0f18e7c29d5d8dad56f34a9339123cf0466e2c59e53f1c64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xAA{\xFE\x8A\x96\xF2\xB1%\xB3w*F],\xDF=\xF9Y1\xC7\x85\x9B\xA2\xD1\x147u\xB4\xF7U\xA5\xCFdsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB0\x88N\xA1\x91\xC4}\xDB\x9D\x0F\x18\xE7\xC2\x9D]\x8D\xADV\xF3J\x939\x12<\xF0Fn,Y\xE5?\x1CdsolcC\0\x08\x19\x003",
     );
     /**Custom error with signature `Create2EmptyBytecode()` and selector `0x4ca249dc`.
 ```solidity
