@@ -59,6 +59,10 @@ jobs:
           forge test -vvv
         id: test
 
+      # when generating the bindings:
+      # --force flag to clear the cache and artifacts folder and recompile
+      # -C to create bindings only for a specific directory
+        
       - name: Check Rust contract bindings for metabased-translator
         if: matrix.contract-dir == 'metabased-translator/contracts'
         run: |
