@@ -22,22 +22,22 @@ pub mod StorageSlot {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220f8ed3b660756996c1d70be4fa3582ed7f5ce2925e864629d7e7f270e4d91149564736f6c63430008190033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea26469706673582212206a991a851fc9852bb1559107bda8f980b7ca25dba4cb0c9a60068c31b2eb136064736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`U`2`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`&WcNH{q`\xE0\x1B_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xF8\xED;f\x07V\x99l\x1Dp\xBEO\xA3X.\xD7\xF5\xCE)%\xE8db\x9D~\x7F'\x0EM\x91\x14\x95dsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 j\x99\x1A\x85\x1F\xC9\x85+\xB1U\x91\x07\xBD\xA8\xF9\x80\xB7\xCA%\xDB\xA4\xCB\x0C\x9A`\x06\x8C1\xB2\xEB\x13`dsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220f8ed3b660756996c1d70be4fa3582ed7f5ce2925e864629d7e7f270e4d91149564736f6c63430008190033
+    ///0x60806040525f80fdfea26469706673582212206a991a851fc9852bb1559107bda8f980b7ca25dba4cb0c9a60068c31b2eb136064736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xF8\xED;f\x07V\x99l\x1Dp\xBEO\xA3X.\xD7\xF5\xCE)%\xE8db\x9D~\x7F'\x0EM\x91\x14\x95dsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 j\x99\x1A\x85\x1F\xC9\x85+\xB1U\x91\x07\xBD\xA8\xF9\x80\xB7\xCA%\xDB\xA4\xCB\x0C\x9A`\x06\x8C1\xB2\xEB\x13`dsolcC\0\x08\x19\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`StorageSlot`](self) contract instance.

@@ -65,22 +65,22 @@ pub mod Errors {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea264697066735822122074187d8bdac82047553b0641038c08dc02d9ae315c849735c07791faa500c31564736f6c63430008190033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220a0d239409980c15ac73bf8bc949cdb90cf620a05abe30342ec9ec3ee4e624db464736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`U`2`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`&WcNH{q`\xE0\x1B_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 t\x18}\x8B\xDA\xC8 GU;\x06A\x03\x8C\x08\xDC\x02\xD9\xAE1\\\x84\x975\xC0w\x91\xFA\xA5\0\xC3\x15dsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xA0\xD29@\x99\x80\xC1Z\xC7;\xF8\xBC\x94\x9C\xDB\x90\xCFb\n\x05\xAB\xE3\x03B\xEC\x9E\xC3\xEENbM\xB4dsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x730000000000000000000000000000000000000000301460806040525f80fdfea264697066735822122074187d8bdac82047553b0641038c08dc02d9ae315c849735c07791faa500c31564736f6c63430008190033
+    ///0x60806040525f80fdfea2646970667358221220a0d239409980c15ac73bf8bc949cdb90cf620a05abe30342ec9ec3ee4e624db464736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 t\x18}\x8B\xDA\xC8 GU;\x06A\x03\x8C\x08\xDC\x02\xD9\xAE1\\\x84\x975\xC0w\x91\xFA\xA5\0\xC3\x15dsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xA0\xD29@\x99\x80\xC1Z\xC7;\xF8\xBC\x94\x9C\xDB\x90\xCFb\n\x05\xAB\xE3\x03B\xEC\x9E\xC3\xEENbM\xB4dsolcC\0\x08\x19\x003",
     );
     /**Custom error with signature `FailedCall()` and selector `0xd6bda275`.
 ```solidity
@@ -217,7 +217,9 @@ error InsufficientBalance(uint256 balance, uint256 needed);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InsufficientBalance {
+        #[allow(missing_docs)]
         pub balance: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub needed: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -300,6 +302,7 @@ error MissingPrecompile(address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MissingPrecompile {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -365,9 +368,13 @@ error MissingPrecompile(address);
     };
     ///Container for all the [`Errors`](self) custom errors.
     pub enum ErrorsErrors {
+        #[allow(missing_docs)]
         FailedCall(FailedCall),
+        #[allow(missing_docs)]
         FailedDeployment(FailedDeployment),
+        #[allow(missing_docs)]
         InsufficientBalance(InsufficientBalance),
+        #[allow(missing_docs)]
         MissingPrecompile(MissingPrecompile),
     }
     #[automatically_derived]
