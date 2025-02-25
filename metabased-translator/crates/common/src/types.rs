@@ -6,7 +6,7 @@ use alloy::{
 };
 use fmt::{Display, Formatter, Result as FmtResult};
 use serde::{
-    de::{self, Deserializer, SeqAccess, Visitor},
+    de::{self, Deserializer},
     Deserialize, Serialize, Serializer,
 };
 use std::{fmt, sync::Arc};
@@ -200,13 +200,8 @@ pub struct Slot {
     /// the timestamp of the slot in seconds.
     pub timestamp: u64,
     /// the block from the sequencing chain to be included in the slot.
-    #[serde(
-        deserialize_with = "deserialize_arc_block_and_receipts",
-        serialize_with = "serialize_arc_block_and_receipts"
-    )]
     pub sequencing_block: BlockAndReceiptsPointer,
     /// the blocks from the settlement chain to be included in the slot.
-    #[serde(deserialize_with = "deserialize_arc_vec", serialize_with = "serialize_arc_vec")]
     pub settlement_blocks: Vec<BlockAndReceiptsPointer>,
     /// the finality state of the slot.
     pub state: SlotState,
@@ -270,63 +265,6 @@ fn format_block(b: &BlockAndReceipts) -> String {
         b.block.hash,
         b.receipts.len()
     )
-}
-
-fn deserialize_arc_block_and_receipts<'de, D>(
-    deserializer: D,
-) -> Result<Arc<BlockAndReceipts>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let block_and_receipts: BlockAndReceipts = Deserialize::deserialize(deserializer)?;
-    Ok(Arc::new(block_and_receipts))
-}
-
-fn serialize_arc_block_and_receipts<S>(
-    arc: &Arc<BlockAndReceipts>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    (**arc).serialize(serializer) // Deref Arc and serialize inner `BlockAndReceipts`
-}
-
-fn deserialize_arc_vec<'de, D>(deserializer: D) -> Result<Vec<Arc<BlockAndReceipts>>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct ArcVecVisitor;
-
-    impl<'de> Visitor<'de> for ArcVecVisitor {
-        type Value = Vec<Arc<BlockAndReceipts>>;
-
-        fn expecting(&self, formatter: &mut Formatter<'_>) -> FmtResult {
-            formatter.write_str("a sequence of BlockAndReceipts wrapped in Arc")
-        }
-
-        fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-        where
-            A: SeqAccess<'de>,
-        {
-            let mut vec = Vec::new();
-            while let Some(value) = seq.next_element::<BlockAndReceipts>()? {
-                vec.push(Arc::new(value));
-            }
-            Ok(vec)
-        }
-    }
-
-    deserializer.deserialize_seq(ArcVecVisitor)
-}
-
-fn serialize_arc_vec<S>(vec: &[BlockAndReceiptsPointer], serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    // Serialize as a sequence of inner BlockAndReceipts
-    let inner: Vec<&BlockAndReceipts> = vec.iter().map(|arc| arc.as_ref()).collect();
-    inner.serialize(serializer)
 }
 
 /// A reference to a block containing just its number and timestamp.
