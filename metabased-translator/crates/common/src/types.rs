@@ -189,9 +189,6 @@ pub enum SlotState {
     Open,
 }
 
-/// Shared reference to a `Slot` instance
-pub type SlotPointer = Arc<Slot>;
-
 /// A `Slot` is a collection of source chain blocks to be sent to the block builder.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct Slot {

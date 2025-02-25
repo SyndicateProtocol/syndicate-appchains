@@ -13,7 +13,7 @@ use alloy::{
     providers::Provider,
     transports::{RpcError, TransportErrorKind},
 };
-use common::{db::TranslatorStore, types::SlotPointer};
+use common::{db::TranslatorStore, types::Slot};
 use derivative::Derivative;
 use eyre::{Error, Report, Result};
 use std::sync::Arc;
@@ -25,7 +25,7 @@ use url::Url;
 #[derive(Derivative)]
 #[derivative(Debug)]
 pub struct BlockBuilder {
-    slotter_rx: Receiver<SlotPointer>,
+    slotter_rx: Receiver<Slot>,
     #[allow(missing_docs)]
     pub mchain: MetaChainProvider,
     builder: Box<dyn RollupBlockBuilder>,
@@ -38,7 +38,7 @@ pub struct BlockBuilder {
 impl BlockBuilder {
     /// Create a new block builder
     pub async fn new(
-        slotter_rx: Receiver<SlotPointer>,
+        slotter_rx: Receiver<Slot>,
         config: &BlockBuilderConfig,
         datadir: &str,
         store: Arc<dyn TranslatorStore + Send + Sync>,
@@ -221,8 +221,7 @@ mod tests {
         let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });
 
         // Send a test block
-        let test_slot =
-            Arc::new(Slot::new(2, genesis_ts + 1, Arc::new(BlockAndReceipts::default())));
+        let test_slot = Slot::new(2, genesis_ts + 1, Arc::new(BlockAndReceipts::default()));
         tx.send(test_slot).await?;
 
         // Give some time for processing
@@ -252,9 +251,9 @@ mod tests {
         let provider = builder.mchain.provider.clone();
 
         // First run: send a few slots
-        let test_slot1 = Arc::new(Slot::new(1, 1000, Arc::new(BlockAndReceipts::default())));
-        let test_slot2 = Arc::new(Slot::new(2, 2000, Arc::new(BlockAndReceipts::default())));
-        let test_slot3 = Arc::new(Slot::new(3, 3000, Arc::new(BlockAndReceipts::default())));
+        let test_slot1 = Slot::new(1, 1000, Arc::new(BlockAndReceipts::default()));
+        let test_slot2 = Slot::new(2, 2000, Arc::new(BlockAndReceipts::default()));
+        let test_slot3 = Slot::new(3, 3000, Arc::new(BlockAndReceipts::default()));
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });

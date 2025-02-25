@@ -4,10 +4,7 @@ use crate::{config::SlotterConfig, metrics::SlotterMetrics};
 use alloy::primitives::B256;
 use common::{
     db::{DbError, KnownState, TranslatorStore},
-    types::{
-        Block, BlockAndReceipts, BlockAndReceiptsPointer, BlockRef, Chain, Slot, SlotPointer,
-        SlotState,
-    },
+    types::{Block, BlockAndReceipts, BlockAndReceiptsPointer, BlockRef, Chain, Slot, SlotState},
 };
 use derivative::Derivative;
 use eyre::{Error, Report};
@@ -65,7 +62,7 @@ pub struct Slotter {
     unassigned_settlement_blocks: VecDeque<BlockAndReceipts>,
 
     /// Sender for sending slots to the consumer
-    sender: Sender<SlotPointer>,
+    sender: Sender<Slot>,
 
     #[derivative(Debug = "ignore")]
     store: Arc<dyn TranslatorStore + Send + Sync>,
@@ -82,7 +79,7 @@ impl Slotter {
         known_state: Option<KnownState>,
         store: Arc<dyn TranslatorStore + Send + Sync>,
         metrics: SlotterMetrics,
-    ) -> (Self, Receiver<SlotPointer>) {
+    ) -> (Self, Receiver<Slot>) {
         let (slot_tx, slot_rx) = channel(100);
         let mut slots = VecDeque::new();
         let mut safe_timestamp = 0;
@@ -365,8 +362,8 @@ impl Slotter {
                 // we have seen a settlement block that belongs in a later slot, this one
                 // can be closed
                 new_slot.state = SlotState::Closed;
-                let new_slot_arc = Arc::new(new_slot.clone()); // Clone before moving
-                let _ = self.sender.send(new_slot_arc).await.map_err(SlotterError::SlotSendError);
+                let _ =
+                    self.sender.send(new_slot.clone()).await.map_err(SlotterError::SlotSendError);
                 break;
             }
             let block = self.unassigned_settlement_blocks.pop_front().ok_or_else(|| {
@@ -399,8 +396,7 @@ impl Slotter {
                     debug!(slot_number = slot.number, "slot closed");
                     trace!("slot: {:?}", slot);
                     slot.state = SlotState::Closed;
-                    let slot_arc = Arc::new(slot.clone());
-                    sender.send(slot_arc).await?;
+                    sender.send(slot.clone()).await?;
                     closed_slots += 1;
                 }
                 continue;
@@ -452,7 +448,7 @@ pub enum SlotterError {
     NoSlotsAvailable(String),
 
     #[error("Failed to send slot through channel: {0}")]
-    SlotSendError(SendError<SlotPointer>),
+    SlotSendError(SendError<Slot>),
 
     #[error("{chain} chain reorg detected. Current: #{current_block_number}, Received: #{received_block_number}")]
     ReorgDetected { chain: Chain, current_block_number: u64, received_block_number: u64 },
@@ -479,8 +475,8 @@ pub enum SlotterError {
     Shutdown,
 }
 
-impl From<SendError<SlotPointer>> for SlotterError {
-    fn from(e: SendError<SlotPointer>) -> Self {
+impl From<SendError<Slot>> for SlotterError {
+    fn from(e: SendError<Slot>) -> Self {
         Self::SlotSendError(e)
     }
 }
@@ -504,7 +500,7 @@ mod tests {
     use test_utils::test_path;
 
     struct TestSetup {
-        slot_rx: Receiver<SlotPointer>,
+        slot_rx: Receiver<Slot>,
         sequencing_tx: Sender<BlockAndReceiptsPointer>,
         settlement_tx: Sender<BlockAndReceiptsPointer>,
         shutdown_tx: oneshot::Sender<()>,
@@ -521,7 +517,7 @@ mod tests {
         TestSetup { slot_rx, sequencing_tx: seq_tx, settlement_tx: settle_tx, shutdown_tx }
     }
 
-    fn create_slotter(config: &SlotterConfig) -> (Slotter, Receiver<SlotPointer>) {
+    fn create_slotter(config: &SlotterConfig) -> (Slotter, Receiver<Slot>) {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = SlotterMetrics::new(&mut metrics_state.registry);
         let store = Arc::new(RocksDbStore::new(test_path("slotter_db").as_str()).unwrap());
@@ -555,7 +551,7 @@ mod tests {
     }
 
     // receives with a timeout (avoids tests hanging)
-    async fn recv(slot_rx: &mut Receiver<SlotPointer>) -> Result<SlotPointer, String> {
+    async fn recv(slot_rx: &mut Receiver<Slot>) -> Result<Slot, String> {
         match timeout(Duration::from_secs(1), slot_rx.recv()).await {
             Ok(Some(slot)) => Ok(slot),
             Ok(None) => Err("Channel closed".to_string()),
