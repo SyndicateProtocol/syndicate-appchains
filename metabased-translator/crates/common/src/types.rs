@@ -12,9 +12,6 @@ use serde::{
 use std::{fmt, sync::Arc};
 use strum_macros::Display;
 
-/// Shared reference to a `BlockAndReceipts` instance
-pub type BlockAndReceiptsPointer = Arc<BlockAndReceipts>;
-
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
 /// **`BlockAndReceipts`**: Contains both a `Block` and the associated list of `Receipt` objects.
 pub struct BlockAndReceipts {
@@ -197,20 +194,16 @@ pub struct Slot {
     /// the timestamp of the slot in seconds.
     pub timestamp: u64,
     /// the block from the sequencing chain to be included in the slot.
-    pub sequencing_block: BlockAndReceiptsPointer,
+    pub sequencing_block: Arc<BlockAndReceipts>,
     /// the blocks from the settlement chain to be included in the slot.
-    pub settlement_blocks: Vec<BlockAndReceiptsPointer>,
+    pub settlement_blocks: Vec<Arc<BlockAndReceipts>>,
     /// the finality state of the slot.
     pub state: SlotState,
 }
 
 impl Slot {
     /// Creates a new slot
-    pub const fn new(
-        number: u64,
-        timestamp: u64,
-        sequencing_block: BlockAndReceiptsPointer,
-    ) -> Self {
+    pub const fn new(number: u64, timestamp: u64, sequencing_block: Arc<BlockAndReceipts>) -> Self {
         Self {
             number,
             timestamp,
@@ -221,7 +214,7 @@ impl Slot {
     }
 
     /// Adds a block to the slot's chain-specific block list
-    pub fn push_settlement_block(&mut self, block: BlockAndReceiptsPointer) {
+    pub fn push_settlement_block(&mut self, block: Arc<BlockAndReceipts>) {
         self.settlement_blocks.push(block)
     }
 }
@@ -241,7 +234,7 @@ impl Display for Slot {
     }
 }
 
-fn format_blocks(blocks: &[BlockAndReceiptsPointer]) -> String {
+fn format_blocks(blocks: &[Arc<BlockAndReceipts>]) -> String {
     if blocks.is_empty() {
         return "none".to_string();
     }

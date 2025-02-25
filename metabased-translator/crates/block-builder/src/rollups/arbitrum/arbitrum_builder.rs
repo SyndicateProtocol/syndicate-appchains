@@ -17,7 +17,7 @@ use alloy::{
     sol_types::{SolCall, SolEvent},
 };
 use async_trait::async_trait;
-use common::types::{BlockAndReceiptsPointer, Log, Slot};
+use common::types::{BlockAndReceipts, Log, Slot};
 use contract_bindings::arbitrum::{
     ibridge::IBridge::MessageDelivered,
     idelayedmessageprovider::IDelayedMessageProvider::{
@@ -27,7 +27,7 @@ use contract_bindings::arbitrum::{
     rollup::Rollup,
 };
 use eyre::Result;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use thiserror::Error;
 use tracing::{debug, error, info, trace};
 
@@ -140,7 +140,7 @@ impl ArbitrumBlockBuilder {
     /// Processes settlement chain receipts into delayed messages
     async fn process_delayed_messages(
         &self,
-        blocks: Vec<BlockAndReceiptsPointer>,
+        blocks: Vec<Arc<BlockAndReceipts>>,
     ) -> Result<Vec<TransactionRequest>> {
         // Create a local map to store message data
         let mut message_data: HashMap<U256, Bytes> = HashMap::new();
@@ -429,7 +429,7 @@ mod tests {
         number: u64,
         transactions: Vec<Transaction>,
         receipts: Vec<Receipt>,
-    ) -> BlockAndReceiptsPointer {
+    ) -> Arc<BlockAndReceipts> {
         Arc::new(BlockAndReceipts {
             block: Block { number, transactions, ..Default::default() },
             receipts,

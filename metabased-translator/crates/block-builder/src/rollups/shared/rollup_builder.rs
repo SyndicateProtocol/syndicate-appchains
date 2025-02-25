@@ -6,11 +6,12 @@
 use crate::rollups::shared::SequencingTransactionParser;
 use alloy::{primitives::Bytes, rpc::types::TransactionRequest};
 use async_trait::async_trait;
-use common::types::{BlockAndReceiptsPointer, Slot};
+use common::types::{BlockAndReceipts, Slot};
 use eyre::{Error, Result};
 use std::{
     fmt::Debug,
     marker::{Send, Sync},
+    sync::Arc,
 };
 
 /// Trait for rollup-specific block builders that construct batches from transactions
@@ -26,7 +27,7 @@ pub trait RollupBlockBuilder: Debug + Send + Sync + Unpin + 'static {
     ///
     /// # Returns
     /// A vector of extracted transactions in raw `Bytes` format.
-    fn parse_block_to_mbtxs(&self, input: BlockAndReceiptsPointer) -> Vec<Bytes> {
+    fn parse_block_to_mbtxs(&self, input: Arc<BlockAndReceipts>) -> Vec<Bytes> {
         input
             .receipts
             .iter()

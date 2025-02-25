@@ -4,7 +4,7 @@ use crate::{config::SlotterConfig, metrics::SlotterMetrics};
 use alloy::primitives::B256;
 use common::{
     db::{DbError, KnownState, TranslatorStore},
-    types::{Block, BlockAndReceipts, BlockAndReceiptsPointer, BlockRef, Chain, Slot, SlotState},
+    types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotState},
 };
 use derivative::Derivative;
 use eyre::{Error, Report};
@@ -128,8 +128,8 @@ impl Slotter {
     /// The receiver that was created during [`Slotter::new`] will get slots as they are processed
     pub async fn start(
         mut self,
-        mut sequencing_rx: Receiver<BlockAndReceiptsPointer>,
-        mut settlement_rx: Receiver<BlockAndReceiptsPointer>,
+        mut sequencing_rx: Receiver<Arc<BlockAndReceipts>>,
+        mut settlement_rx: Receiver<Arc<BlockAndReceipts>>,
         mut shutdown_rx: oneshot::Receiver<()>,
     ) -> Result<(), Error> {
         info!("Starting Slotter");
@@ -174,12 +174,12 @@ impl Slotter {
 
     fn prioritize_lagging_chain<'a>(
         &self,
-        sequencing_rx: &'a mut Receiver<BlockAndReceiptsPointer>,
-        settlement_rx: &'a mut Receiver<BlockAndReceiptsPointer>,
+        sequencing_rx: &'a mut Receiver<Arc<BlockAndReceipts>>,
+        settlement_rx: &'a mut Receiver<Arc<BlockAndReceipts>>,
     ) -> (
-        &'a mut Receiver<BlockAndReceiptsPointer>,
+        &'a mut Receiver<Arc<BlockAndReceipts>>,
         Chain,
-        &'a mut Receiver<BlockAndReceiptsPointer>,
+        &'a mut Receiver<Arc<BlockAndReceipts>>,
         Chain,
     ) {
         let seq_ts = self.latest_sequencing_block.as_ref().map_or(0, |b| b.timestamp);
@@ -199,7 +199,7 @@ impl Slotter {
 
     async fn process_block(
         &mut self,
-        block_info: BlockAndReceiptsPointer,
+        block_info: Arc<BlockAndReceipts>,
         chain: Chain,
     ) -> Result<(), SlotterError> {
         self.update_latest_block(&block_info.block, chain)?;
@@ -339,7 +339,7 @@ impl Slotter {
 
     async fn process_sequencing_block(
         &mut self,
-        block_info: BlockAndReceiptsPointer,
+        block_info: Arc<BlockAndReceipts>,
     ) -> Result<(), SlotterError> {
         let latest_slot = self.slots.back_mut();
         trace!("latest_slot: {:?}", latest_slot);
@@ -382,7 +382,7 @@ impl Slotter {
 
     async fn process_settlement_block(
         &mut self,
-        set_block: BlockAndReceiptsPointer,
+        set_block: Arc<BlockAndReceipts>,
     ) -> Result<(), SlotterError> {
         let ts = self.settlement_timestamp(&set_block);
         let mut closed_slots = 0;
@@ -500,8 +500,8 @@ mod tests {
 
     struct TestSetup {
         slot_rx: Receiver<Slot>,
-        sequencing_tx: Sender<BlockAndReceiptsPointer>,
-        settlement_tx: Sender<BlockAndReceiptsPointer>,
+        sequencing_tx: Sender<Arc<BlockAndReceipts>>,
+        settlement_tx: Sender<Arc<BlockAndReceipts>>,
         shutdown_tx: oneshot::Sender<()>,
     }
 
@@ -526,7 +526,7 @@ mod tests {
         (slotter, slot_rx)
     }
 
-    fn create_test_block(number: u64, timestamp: u64) -> BlockAndReceiptsPointer {
+    fn create_test_block(number: u64, timestamp: u64) -> Arc<BlockAndReceipts> {
         Arc::new(BlockAndReceipts {
             block: Block {
                 hash: B256::from_str(

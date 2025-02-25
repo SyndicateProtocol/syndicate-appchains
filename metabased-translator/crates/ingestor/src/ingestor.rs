@@ -3,7 +3,7 @@
 
 use crate::{config::ChainIngestorConfig, eth_client::RPCClient, metrics::IngestorMetrics};
 use alloy::rpc::types::BlockNumberOrTag;
-use common::types::{BlockAndReceiptsPointer, Chain};
+use common::types::{BlockAndReceipts, Chain};
 use eyre::{eyre, Error};
 use std::{
     cmp::{max, min},
@@ -27,7 +27,7 @@ pub struct Ingestor {
     current_block_number: u64,
     initial_chain_head: u64,
     syncing_batch_size: u64,
-    sender: Sender<BlockAndReceiptsPointer>,
+    sender: Sender<Arc<BlockAndReceipts>>,
     polling_interval: Duration,
     metrics: IngestorMetrics,
 }
@@ -50,7 +50,7 @@ impl Ingestor {
         client: Arc<dyn RPCClient>,
         config: &ChainIngestorConfig,
         metrics: IngestorMetrics,
-    ) -> Result<(Self, Receiver<BlockAndReceiptsPointer>), Error> {
+    ) -> Result<(Self, Receiver<Arc<BlockAndReceipts>>), Error> {
         let (sender, receiver) = channel(config.buffer_size);
         let client_clone = client.clone();
         let chain_head = client_clone.get_block_by_number(BlockNumberOrTag::Latest).await?;
@@ -75,7 +75,7 @@ impl Ingestor {
     /// - `block_and_receipts`: The block and its receipts to be sent to the consumer.
     async fn push_block_and_receipts(
         &mut self,
-        block_and_receipts: BlockAndReceiptsPointer,
+        block_and_receipts: Arc<BlockAndReceipts>,
     ) -> Result<(), Error> {
         if block_and_receipts.block.number != self.current_block_number {
             error!(
