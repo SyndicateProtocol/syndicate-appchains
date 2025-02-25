@@ -34,9 +34,9 @@ $ make deploy-based-sequencerchain-frame
 
 ### Syndicate Exo
 
-| Contract Name           | Address                                    |
-| ----------------------- | ------------------------------------------ |
-| MetabasedFactory        | 0xFEA8A2BA8B760348ea95492516620ad45a299d53 |
+| Contract Name    | Address                                    |
+| ---------------- | ------------------------------------------ |
+| MetabasedFactory | 0xFEA8A2BA8B760348ea95492516620ad45a299d53 |
 
 #### Base Sepolia
 
@@ -72,15 +72,13 @@ $ make deploy-based-sequencerchain-frame
 
 #### ETH Holesky
 
-| Contract Name | Address                                    |
-| ------------- | ------------------------------------------ |
-| SynGasToken holSYND (Devnet)   | 0x19aaf160dA8985c54bb97adAF9304B5aC7890421 |
+| Contract Name                | Address                                    |
+| ---------------------------- | ------------------------------------------ |
+| SynGasToken holSYND (Devnet) | 0x19aaf160dA8985c54bb97adAF9304B5aC7890421 |
 | SynGasToken SYND (Testnet)   | 0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba |
-
 
 #### ETH Sepolia
 
-| Contract Name | Address                                    |
-| ------------- | ------------------------------------------ |
-| SyndicateToken   | 0x8c8861c1bBd3a47deC0cfc5dc82e4B5E88810BfE |
-
+| Contract Name  | Address                                    |
+| -------------- | ------------------------------------------ |
+| SyndicateToken | 0xC89095a650BB50336e1C7A8ffD4dD4bce2456e23 |
