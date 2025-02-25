@@ -362,8 +362,7 @@ impl Slotter {
                 // we have seen a settlement block that belongs in a later slot, this one
                 // can be closed
                 new_slot.state = SlotState::Closed;
-                let _ =
-                    self.sender.send(new_slot.clone()).await.map_err(SlotterError::SlotSendError);
+                self.sender.send(new_slot.clone()).await?;
                 break;
             }
             let block = self.unassigned_settlement_blocks.pop_front().ok_or_else(|| {
@@ -448,7 +447,7 @@ pub enum SlotterError {
     NoSlotsAvailable(String),
 
     #[error("Failed to send slot through channel: {0}")]
-    SlotSendError(SendError<Slot>),
+    SlotSendError(String),
 
     #[error("{chain} chain reorg detected. Current: #{current_block_number}, Received: #{received_block_number}")]
     ReorgDetected { chain: Chain, current_block_number: u64, received_block_number: u64 },
@@ -477,7 +476,7 @@ pub enum SlotterError {
 
 impl From<SendError<Slot>> for SlotterError {
     fn from(e: SendError<Slot>) -> Self {
-        Self::SlotSendError(e)
+        Self::SlotSendError(e.to_string())
     }
 }
 
