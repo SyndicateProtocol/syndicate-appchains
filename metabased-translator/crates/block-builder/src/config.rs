@@ -56,6 +56,10 @@ pub struct BlockBuilderConfig {
         value_parser = parse_address)]
     pub inbox_address: Address,
 
+    /// Flag used to ignore delayed messages besides deposits
+    #[arg(long, env = "BLOCK_BUILDER_ARBITRUM_IGNORE_DELAYED_MESSAGES", default_value = "false")]
+    pub ignore_delayed_messages: bool,
+
     // interval at which anvil saves state to disk (in seconds)
     // default is 300 seconds (5 minutes)
     #[arg(long, env = "BLOCK_BUILDER_ANVIL_STATE_INTERVAL", default_value_t = 300)]

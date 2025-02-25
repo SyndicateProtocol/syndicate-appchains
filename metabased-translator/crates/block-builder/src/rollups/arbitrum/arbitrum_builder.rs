@@ -50,7 +50,7 @@ pub enum ArbitrumBlockBuilderError {
 }
 
 #[allow(missing_docs)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum L1MessageType {
     L2Message = 3,
     L2FundedByL1 = 7,
@@ -58,6 +58,29 @@ pub enum L1MessageType {
     Initialize = 11,
     EthDeposit = 12,
     BatchPostingReport = 13,
+}
+
+impl TryFrom<u8> for L1MessageType {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            3 => Ok(Self::L2Message),
+            7 => Ok(Self::L2FundedByL1),
+            9 => Ok(Self::SubmitRetryable),
+            11 => Ok(Self::Initialize),
+            12 => Ok(Self::EthDeposit),
+            13 => Ok(Self::BatchPostingReport),
+            _ => Err(()),
+        }
+    }
+}
+
+impl L1MessageType {
+    /// Converts a `u8` to `L1MessageType`, panicking if the value is invalid.
+    pub fn from_u8_panic(value: u8) -> Self {
+        Self::try_from(value).unwrap_or_else(|_| panic!("Invalid L1MessageType value: {}", value))
+    }
 }
 
 impl std::fmt::Display for L1MessageType {
@@ -80,6 +103,9 @@ pub struct ArbitrumBlockBuilder {
 
     // Settlement chain address
     inbox_address: Address,
+
+    // Flag used to ignore Delayed messages (except Deposits)
+    ignore_delayed_messages: bool,
 }
 
 impl Default for ArbitrumBlockBuilder {
@@ -134,6 +160,7 @@ impl ArbitrumBlockBuilder {
             mchain_rollup_address: config.mchain_rollup_address,
             bridge_address: config.bridge_address,
             inbox_address: config.inbox_address,
+            ignore_delayed_messages: config.ignore_delayed_messages,
         }
     }
 
@@ -241,25 +268,24 @@ impl ArbitrumBlockBuilder {
         };
 
         let message_index = U256::from_be_slice(log.topics[1].as_slice()); // First indexed field is message index
-        let kind = msg_delivered.1; // Second non-indexed field is kind
-        if kind == L1MessageType::Initialize as u8 {
+        let kind = L1MessageType::from_u8_panic(msg_delivered.1);
+
+        if kind == L1MessageType::Initialize {
             return Err(
                 ArbitrumBlockBuilderError::DelayedMessageIgnored(L1MessageType::Initialize).into()
             );
         }
-        if kind == L1MessageType::BatchPostingReport as u8 {
+        if kind == L1MessageType::BatchPostingReport {
             return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(
                 L1MessageType::BatchPostingReport,
             )
             .into());
         }
-        if kind != L1MessageType::L2Message as u8 &&
-            kind != L1MessageType::L2FundedByL1 as u8 &&
-            kind != L1MessageType::SubmitRetryable as u8 &&
-            kind != L1MessageType::EthDeposit as u8
-        {
-            panic!("unexpected message kind={}", kind);
+
+        if self.ignore_delayed_messages && kind != L1MessageType::EthDeposit {
+            return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind).into());
         }
+
         let sender = msg_delivered.2; // Third non-indexed field is sender
 
         let data = match message_data.get(&message_index) {
@@ -270,7 +296,7 @@ impl ArbitrumBlockBuilder {
         };
 
         let delivered_msg_txn = TransactionRequest::default().to(self.mchain_rollup_address).input(
-            Rollup::deliverMessageCall { kind, sender, messageData: data.clone() }
+            Rollup::deliverMessageCall { kind: kind as u8, sender, messageData: data.clone() }
                 .abi_encode()
                 .into(),
         );
