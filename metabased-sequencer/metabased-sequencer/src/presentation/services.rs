@@ -8,14 +8,34 @@ use alloy::{
     primitives::{Address, B256},
     providers::{
         fillers::{
-            CachedNonceManager, ChainIdFiller, FillProvider, GasFiller, NonceFiller, WalletFiller,
+            CachedNonceManager, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
+            WalletFiller,
         },
         ReqwestProvider, RootProvider,
     },
     signers::local::PrivateKeySigner,
+    transports::http::{Client, Http},
 };
+use eyre::Report;
 use std::fmt::Debug;
 use url::Url;
+
+type RpcFillProvider = FillProvider<
+    JoinFill<
+        NonceFiller<CachedNonceManager>,
+        JoinFill<WalletFiller<EthereumWallet>, JoinFill<GasFiller, ChainIdFiller>>,
+    >,
+    RootProvider<Http<Client>>,
+    Http<Client>,
+    Ethereum,
+>;
+
+pub type DefaultChainService =
+    SolMetabasedSequencerChainService<RpcFillProvider, Http<Client>, Ethereum>;
+
+pub type DefaultMetrics = PrometheusMetrics;
+pub type DefaultStopwatch = TokioStopwatch;
+pub type DefaultServices = Services<DefaultChainService, DefaultMetrics, DefaultStopwatch>;
 
 #[derive(Debug)]
 pub struct Services<Chain, M, S>
@@ -52,50 +72,55 @@ where
     }
 }
 
-pub fn create(
-    chain_contract_address: Address,
-    chain_rpc_address: Url,
-    private_key: B256,
-) -> eyre::Result<
-    Services<
-        impl MetabasedSequencerChainService<Error = alloy::contract::Error>
-            + Send
-            + Sync
-            + Debug
-            + 'static,
-        impl Metrics + Send + Sync + Debug + 'static,
-        impl Stopwatch<Running: Send + Sync + Debug + 'static> + Send + Sync + Debug + 'static,
-    >,
-> {
-    let chain = create_chain_service(chain_contract_address, chain_rpc_address, private_key)?;
-    let metrics = PrometheusMetrics::new();
-    let stopwatch = TokioStopwatch;
+impl DefaultServices {
+    pub fn create(
+        chain_contract_address: Address,
+        chain_rpc_address: Url,
+        private_key: B256,
+    ) -> eyre::Result<Self> {
+        let chain =
+            Self::create_chain_service(chain_contract_address, chain_rpc_address, private_key)?;
+        let metrics = PrometheusMetrics::new();
+        let stopwatch = TokioStopwatch;
 
-    Ok(Services::new(chain, metrics, stopwatch))
-}
+        Ok(Services::new(chain, metrics, stopwatch))
+    }
 
-fn create_chain_service(
-    chain_contract_address: Address,
-    chain_rpc_address: Url,
-    private_key: B256,
-) -> eyre::Result<
-    impl MetabasedSequencerChainService<Error = alloy::contract::Error> + Send + Sync + Debug + 'static,
-> {
-    // Fillers automatically set some attributes for every transaction sent using this provider.
-    // See https://alloy.rs/building-with-alloy/understanding-fillers.html
-    let signer = PrivateKeySigner::from_bytes(&private_key)?;
-    let wallet = EthereumWallet::from(signer);
-    let wallet_address =
-        <EthereumWallet as NetworkWallet<Ethereum>>::default_signer_address(&wallet);
-    let filler = join_fill!(
-        NonceFiller::new(CachedNonceManager::default()),
-        WalletFiller::new(wallet),
-        GasFiller,
-        ChainIdFiller::new(None),
-    );
+    fn create_chain_service(
+        chain_contract_address: Address,
+        chain_rpc_address: Url,
+        private_key: B256,
+    ) -> eyre::Result<DefaultChainService> {
+        // Fillers automatically set some attributes for every transaction sent using this provider.
+        // See https://alloy.rs/building-with-alloy/understanding-fillers.html
+        let wallet = Self::from(&private_key)?;
 
-    let rpc: RootProvider<_, Ethereum> = ReqwestProvider::new_http(chain_rpc_address);
-    let rpc = FillProvider::new(rpc, filler);
+        let wallet_address =
+            <EthereumWallet as NetworkWallet<Ethereum>>::default_signer_address(&wallet);
 
-    Ok(SolMetabasedSequencerChainService::new(chain_contract_address, wallet_address, rpc))
+        let rpc_provider = Self::new_rpc_provider(chain_rpc_address, wallet);
+
+        Ok(SolMetabasedSequencerChainService::new(
+            chain_contract_address,
+            wallet_address,
+            rpc_provider,
+        ))
+    }
+
+    fn from(private_key: &B256) -> Result<EthereumWallet, Report> {
+        Ok(EthereumWallet::from(PrivateKeySigner::from_bytes(private_key)?))
+    }
+
+    fn new_rpc_provider(chain_rpc_address: Url, wallet: EthereumWallet) -> RpcFillProvider {
+        let filler = join_fill!(
+            NonceFiller::new(CachedNonceManager::default()),
+            WalletFiller::new(wallet),
+            GasFiller,
+            ChainIdFiller::new(None),
+        );
+
+        let rpc_client: RootProvider<_, Ethereum> = ReqwestProvider::new_http(chain_rpc_address);
+
+        FillProvider::new(rpc_client, filler)
+    }
 }

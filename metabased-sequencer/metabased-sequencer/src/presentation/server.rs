@@ -5,7 +5,7 @@ use crate::{
         json_rpc_errors::Error,
         jsonrpc,
         server::Endpoint::{Health, Metrics as MetricsEndpoint},
-        services::{self, Services},
+        services::{DefaultServices, Services},
         tower::UnescapeJsonLayer,
     },
 };
@@ -42,7 +42,7 @@ pub async fn run(
         .build(format!("0.0.0.0:{port}"))
         .await?;
 
-    let services = services::create(chain_contract_address, chain_rpc_address, private_key)?;
+    let services = DefaultServices::create(chain_contract_address, chain_rpc_address, private_key)?;
     let module = create_eth_module(services)?;
 
     let addr = server.local_addr()?;
