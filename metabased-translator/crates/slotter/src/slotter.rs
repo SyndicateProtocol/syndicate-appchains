@@ -128,8 +128,8 @@ impl Slotter {
     /// The receiver that was created during [`Slotter::new`] will get slots as they are processed
     pub async fn start(
         mut self,
-        mut sequencing_rx: Receiver<BlockAndReceipts>,
-        mut settlement_rx: Receiver<BlockAndReceipts>,
+        mut sequencing_rx: Receiver<Arc<BlockAndReceipts>>,
+        mut settlement_rx: Receiver<Arc<BlockAndReceipts>>,
         mut shutdown_rx: oneshot::Receiver<()>,
     ) -> Result<(), Error> {
         info!("Starting Slotter");
@@ -174,10 +174,14 @@ impl Slotter {
 
     fn prioritize_lagging_chain<'a>(
         &self,
-        sequencing_rx: &'a mut Receiver<BlockAndReceipts>,
-        settlement_rx: &'a mut Receiver<BlockAndReceipts>,
-    ) -> (&'a mut Receiver<BlockAndReceipts>, Chain, &'a mut Receiver<BlockAndReceipts>, Chain)
-    {
+        sequencing_rx: &'a mut Receiver<Arc<BlockAndReceipts>>,
+        settlement_rx: &'a mut Receiver<Arc<BlockAndReceipts>>,
+    ) -> (
+        &'a mut Receiver<Arc<BlockAndReceipts>>,
+        Chain,
+        &'a mut Receiver<Arc<BlockAndReceipts>>,
+        Chain,
+    ) {
         let seq_ts = self.latest_sequencing_block.as_ref().map_or(0, |b| b.timestamp);
         let set_ts = self.latest_settlement_block.as_ref().map_or(0, |b| b.timestamp);
 
@@ -195,7 +199,7 @@ impl Slotter {
 
     async fn process_block(
         &mut self,
-        block_info: BlockAndReceipts,
+        block_info: Arc<BlockAndReceipts>,
         chain: Chain,
     ) -> Result<(), SlotterError> {
         self.update_latest_block(&block_info.block, chain)?;
@@ -335,7 +339,7 @@ impl Slotter {
 
     async fn process_sequencing_block(
         &mut self,
-        block_info: BlockAndReceipts,
+        block_info: Arc<BlockAndReceipts>,
     ) -> Result<(), SlotterError> {
         let latest_slot = self.slots.back_mut();
         trace!("latest_slot: {:?}", latest_slot);
@@ -366,7 +370,7 @@ impl Slotter {
                     "Slot disappeared between front() and pop_front()".to_string(),
                 )
             })?;
-            new_slot.push_settlement_block(block);
+            new_slot.push_settlement_block(Arc::new(block));
         }
         debug!(%new_slot, "new slot created");
 
@@ -378,7 +382,7 @@ impl Slotter {
 
     async fn process_settlement_block(
         &mut self,
-        set_block: BlockAndReceipts,
+        set_block: Arc<BlockAndReceipts>,
     ) -> Result<(), SlotterError> {
         let ts = self.settlement_timestamp(&set_block);
         let mut closed_slots = 0;
@@ -412,7 +416,8 @@ impl Slotter {
         }
 
         if !inserted {
-            self.unassigned_settlement_blocks.push_back(set_block);
+            self.unassigned_settlement_blocks
+                .push_back(Arc::try_unwrap(set_block).unwrap_or_else(|arc| (*arc).clone()));
             debug!("block added to the unassigned list");
         }
         Ok(())
@@ -480,6 +485,7 @@ mod tests {
     use super::*;
     use alloy::primitives::B256;
     use assert_matches::assert_matches;
+    use common::types::BlockAndReceipts;
     use prometheus_client::registry::Registry;
     use std::{str::FromStr, time::Duration};
     use tokio::time::timeout;
@@ -494,8 +500,8 @@ mod tests {
 
     struct TestSetup {
         slot_rx: Receiver<Slot>,
-        sequencing_tx: Sender<BlockAndReceipts>,
-        settlement_tx: Sender<BlockAndReceipts>,
+        sequencing_tx: Sender<Arc<BlockAndReceipts>>,
+        settlement_tx: Sender<Arc<BlockAndReceipts>>,
         shutdown_tx: oneshot::Sender<()>,
     }
 
@@ -520,8 +526,8 @@ mod tests {
         (slotter, slot_rx)
     }
 
-    fn create_test_block(number: u64, timestamp: u64) -> BlockAndReceipts {
-        BlockAndReceipts {
+    fn create_test_block(number: u64, timestamp: u64) -> Arc<BlockAndReceipts> {
+        Arc::new(BlockAndReceipts {
             block: Block {
                 hash: B256::from_str(
                     "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
@@ -540,7 +546,7 @@ mod tests {
                 transactions: vec![],
             },
             receipts: vec![],
-        }
+        })
     }
 
     // receives with a timeout (avoids tests hanging)

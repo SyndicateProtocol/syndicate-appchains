@@ -4,11 +4,12 @@ use alloy::{
     hex,
     primitives::{Address, Bytes, B256},
 };
+use fmt::{Display, Formatter, Result as FmtResult};
 use serde::{
     de::{self, Deserializer},
-    Deserialize, Serialize,
+    Deserialize, Serialize, Serializer,
 };
-use std::fmt;
+use std::{fmt, sync::Arc};
 use strum_macros::Display;
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -123,7 +124,7 @@ pub struct Receipt {
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
-/// *`Log`**: Represents an individual log entry emitted by a smart contract during a transaction,
+/// **`Log`**: Represents an individual log entry emitted by a smart contract during a transaction,
 /// containing information such as topics, data, and whether it was removed due to a reorganization.
 pub struct Log {
     /// The hash of the block containing the log, or `null` if pending.
@@ -132,13 +133,13 @@ pub struct Log {
     /// The number of the block containing the log, or `null` if pending.
     #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub block_number: u64,
-    /// The index of the transaction that generated the log
+    /// The index of the transaction that generated the log.
     #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub transaction_index: u64,
     /// The address from which the log originated.
     #[serde(deserialize_with = "deserialize_address", serialize_with = "serialize_address")]
     pub address: Address,
-    /// The index of the log entry
+    /// The index of the log entry.
     #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub log_index: u64,
     /// The data associated with the log.
@@ -149,7 +150,7 @@ pub struct Log {
     /// The topics associated with the log.
     #[serde(deserialize_with = "deserialize_b256_vec", serialize_with = "serialize_b256_vec")]
     pub topics: Vec<B256>,
-    /// The hash of the transaction that generated the log
+    /// The hash of the transaction that generated the log.
     #[serde(deserialize_with = "deserialize_b256", serialize_with = "serialize_b256")]
     pub transaction_hash: B256,
 }
@@ -170,12 +171,12 @@ impl From<Chain> for &'static str {
         }
     }
 }
-/// The state of a slot describing its finality
+/// The state of a slot describing its finality.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Display, Serialize, Deserialize, Default)]
 #[strum(serialize_all = "lowercase")]
 pub enum SlotState {
     /// A slot that is considered final and cannot rollback (blocks that are more than
-    /// `MAX_WAIT_MS` old)
+    /// `MAX_WAIT_MS` old).
     Safe,
     /// A slot that we don't expect to fit more blocks into. It should be considered canonical
     /// unless a reorg happens
@@ -185,24 +186,24 @@ pub enum SlotState {
     Open,
 }
 
-/// A `Slot` is a collection of source chain blocks  to be sent to the block builder
+/// A `Slot` is a collection of source chain blocks to be sent to the block builder.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct Slot {
-    /// the number of the slot - `slot_number` == `MetaChain`'s block number
+    /// the number of the slot - `slot_number` == `MetaChain`'s block number.
     pub number: u64,
-    /// the timestamp of the slot in seconds
+    /// the timestamp of the slot in seconds.
     pub timestamp: u64,
-    /// the blocks from the sequencing chain to be included in the slot
-    pub sequencing_block: BlockAndReceipts,
-    /// the blocks from the settlement chain to be included in the slot
-    pub settlement_blocks: Vec<BlockAndReceipts>,
-    /// the finality state of the slot
+    /// the block from the sequencing chain to be included in the slot.
+    pub sequencing_block: Arc<BlockAndReceipts>,
+    /// the blocks from the settlement chain to be included in the slot.
+    pub settlement_blocks: Vec<Arc<BlockAndReceipts>>,
+    /// the finality state of the slot.
     pub state: SlotState,
 }
 
 impl Slot {
     /// Creates a new slot
-    pub const fn new(number: u64, timestamp: u64, sequencing_block: BlockAndReceipts) -> Self {
+    pub const fn new(number: u64, timestamp: u64, sequencing_block: Arc<BlockAndReceipts>) -> Self {
         Self {
             number,
             timestamp,
@@ -213,13 +214,13 @@ impl Slot {
     }
 
     /// Adds a block to the slot's chain-specific block list
-    pub fn push_settlement_block(&mut self, block: BlockAndReceipts) {
+    pub fn push_settlement_block(&mut self, block: Arc<BlockAndReceipts>) {
         self.settlement_blocks.push(block)
     }
 }
 
-impl fmt::Display for Slot {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for Slot {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(
             f,
             "Slot #{} [ts: {}, state: {}],  Sequencing block: {},  Settlement blocks (total: {}): {}",
@@ -233,11 +234,18 @@ impl fmt::Display for Slot {
     }
 }
 
-fn format_blocks(blocks: &[BlockAndReceipts]) -> String {
+fn format_blocks(blocks: &[Arc<BlockAndReceipts>]) -> String {
     if blocks.is_empty() {
         return "none".to_string();
     }
-    blocks.iter().map(format_block).collect::<Vec<_>>().join(", ")
+    blocks
+        .iter()
+        .map(|arc_block| {
+            let b = arc_block.as_ref();
+            format!("#{} ({})", b.block.number, b.block.hash)
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
 }
 
 fn format_block(b: &BlockAndReceipts) -> String {
@@ -249,26 +257,26 @@ fn format_block(b: &BlockAndReceipts) -> String {
     )
 }
 
-/// A reference to a block containing just its number and timestamp
+/// A reference to a block containing just its number and timestamp.
 #[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
 pub struct BlockRef {
-    /// The block number
+    /// The block number.
     pub number: u64,
-    /// The block timestamp
+    /// The block timestamp.
     pub timestamp: u64,
-    /// The block hash
+    /// The block hash.
     pub hash: B256,
 }
 
 impl BlockRef {
-    /// Creates a new `BlockRef` from a `Block`
+    /// Creates a new `BlockRef` from a `Block`.
     pub const fn new(block: &Block) -> Self {
         Self { number: block.number, timestamp: block.timestamp, hash: block.hash }
     }
 }
 
-impl fmt::Display for BlockRef {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for BlockRef {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(f, "number: {}, ts: {}, hash: {}", self.number, self.timestamp, self.hash)
     }
 }
@@ -304,8 +312,6 @@ where
     D: Deserializer<'de>,
 {
     let hex_str: String = Deserialize::deserialize(deserializer)?;
-
-    // Remove "0x" prefix if present, then parse as hexadecimal.
     u64::from_str_radix(hex_str.trim_start_matches("0x"), 16)
         .map_err(|err| de::Error::custom(format!("Failed to parse hex to u64: {}", err)))
 }
@@ -315,14 +321,11 @@ where
     D: Deserializer<'de>,
 {
     let hex_str: String = Deserialize::deserialize(deserializer)?;
-
     let decoded = hex::decode(hex_str.trim_start_matches("0x"))
         .map_err(|err| de::Error::custom(format!("Failed to decode hex string: {err}")))?;
-
     let array: [u8; 32] = decoded
         .try_into()
         .map_err(|_| de::Error::custom("Failed to convert to a 32-byte array"))?;
-
     Ok(B256::from(array))
 }
 
@@ -335,11 +338,9 @@ where
         .map(|s| {
             let decoded = hex::decode(s.trim_start_matches("0x"))
                 .map_err(|err| de::Error::custom(format!("Failed to decode hex string: {err}")))?;
-
             let array: [u8; 32] = decoded
                 .try_into()
                 .map_err(|_| de::Error::custom("Failed to convert to a 32-byte array"))?;
-
             Ok(B256::from(array))
         })
         .collect()
@@ -357,14 +358,14 @@ where
 
 fn serialize_b256<S>(b256: &B256, serializer: S) -> Result<S::Ok, S::Error>
 where
-    S: serde::Serializer,
+    S: Serializer,
 {
     serializer.serialize_str(&format!("0x{}", hex::encode(b256.as_slice())))
 }
 
 fn serialize_b256_vec<S>(vec: &[B256], serializer: S) -> Result<S::Ok, S::Error>
 where
-    S: serde::Serializer,
+    S: Serializer,
 {
     use serde::ser::SerializeSeq;
     let mut seq = serializer.serialize_seq(Some(vec.len()))?;
@@ -376,14 +377,14 @@ where
 
 fn serialize_address<S>(addr: &Address, serializer: S) -> Result<S::Ok, S::Error>
 where
-    S: serde::Serializer,
+    S: Serializer,
 {
     serializer.serialize_str(&format!("0x{}", hex::encode(addr.as_slice())))
 }
 
 fn serialize_optional_address<S>(opt: &Option<Address>, serializer: S) -> Result<S::Ok, S::Error>
 where
-    S: serde::Serializer,
+    S: Serializer,
 {
     match opt {
         Some(addr) => serializer.serialize_str(&format!("0x{}", hex::encode(addr.as_slice()))),
@@ -393,14 +394,14 @@ where
 
 fn serialize_bytes<S>(bytes: &Bytes, serializer: S) -> Result<S::Ok, S::Error>
 where
-    S: serde::Serializer,
+    S: Serializer,
 {
     serializer.serialize_str(&format!("0x{}", hex::encode(bytes)))
 }
 
 fn serialize_hex_u64<S>(num: &u64, serializer: S) -> Result<S::Ok, S::Error>
 where
-    S: serde::Serializer,
+    S: Serializer,
 {
     serializer.serialize_str(&format!("0x{:x}", num))
 }
@@ -412,7 +413,7 @@ mod test {
 
     fn create_test_slot() -> Slot {
         // Add sequencing chain block with transaction and receipt
-        let sequencing_block = BlockAndReceipts {
+        let sequencing_block = Arc::new(BlockAndReceipts {
             block: Block {
                 hash: B256::from_hex(
                     "0x1234567890123456789012345678901234567890123456789012345678901234",
@@ -479,12 +480,12 @@ mod test {
                 status: "0x1".to_string(),
                 receipt_type: "0x0".to_string(),
             }],
-        };
+        });
 
         let mut slot = Slot::new(1, 1000, sequencing_block);
 
         // Add settlement chain block
-        slot.settlement_blocks.push(BlockAndReceipts {
+        slot.settlement_blocks.push(Arc::new(BlockAndReceipts {
             block: Block {
                 hash: B256::from_hex(
                     "0x5678901234567890123456789012345678901234567890123456789012345678",
@@ -503,14 +504,13 @@ mod test {
                 transactions: vec![],
             },
             receipts: vec![],
-        });
+        }));
 
         slot
     }
 
     #[test]
-    #[ignore] // NOTE: binary serialization fails. the current way we define the serialization/deserialization
-              // logic is only for JSON and there is no way to use the same objects for bincode.
+    #[ignore] // NOTE: binary serialization fails. The current serialization logic is only for JSON.
     fn test_bincode_serialization() {
         let slot = create_test_slot();
         let encoded = bincode::serialize(&slot).unwrap();

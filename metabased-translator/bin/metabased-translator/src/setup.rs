@@ -1,8 +1,7 @@
 use crate::{config::MetabasedConfig, types::RuntimeError};
 use block_builder::block_builder::BlockBuilder;
 use common::{
-    db,
-    db::{KnownState, TranslatorStore},
+    db::{self, KnownState, TranslatorStore},
     types::{BlockAndReceipts, Chain},
 };
 use eyre::Result;
@@ -111,9 +110,9 @@ pub async fn create_node_components(
 ) -> Result<
     (
         Ingestor,
-        Receiver<BlockAndReceipts>,
+        Receiver<Arc<BlockAndReceipts>>,
         Ingestor,
-        Receiver<BlockAndReceipts>,
+        Receiver<Arc<BlockAndReceipts>>,
         Slotter,
         BlockBuilder,
     ),

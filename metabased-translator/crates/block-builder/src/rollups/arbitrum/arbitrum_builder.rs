@@ -27,7 +27,7 @@ use contract_bindings::arbitrum::{
     rollup::Rollup,
 };
 use eyre::Result;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc};
 use thiserror::Error;
 use tracing::{debug, error, info, trace};
 
@@ -97,12 +97,13 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
     /// Builds a block from a slot
     async fn build_block_from_slot(
         &mut self,
-        slot: Slot,
+        slot: &Slot,
     ) -> Result<Vec<TransactionRequest>, eyre::Error> {
-        let delayed_messages = self.process_delayed_messages(slot.settlement_blocks).await?;
+        let delayed_messages =
+            self.process_delayed_messages(slot.settlement_blocks.clone()).await?;
         debug!("Delayed messages: {:?}", delayed_messages);
 
-        let mb_transactions = self.parse_block_to_mbtxs(slot.sequencing_block);
+        let mb_transactions = self.parse_block_to_mbtxs(slot.sequencing_block.clone());
 
         if delayed_messages.is_empty() && mb_transactions.is_empty() {
             trace!("No delayed messages or MB transactions, skipping block");
@@ -139,7 +140,7 @@ impl ArbitrumBlockBuilder {
     /// Processes settlement chain receipts into delayed messages
     async fn process_delayed_messages(
         &self,
-        blocks: Vec<BlockAndReceipts>,
+        blocks: Vec<Arc<BlockAndReceipts>>,
     ) -> Result<Vec<TransactionRequest>> {
         // Create a local map to store message data
         let mut message_data: HashMap<U256, Bytes> = HashMap::new();
@@ -323,9 +324,9 @@ mod tests {
     use super::*;
     use alloy::primitives::{hex, keccak256, TxKind};
     use assert_matches::assert_matches;
-    use common::types::{Block, Log, Receipt, SlotState, Transaction};
+    use common::types::{Block, BlockAndReceipts, Log, Receipt, SlotState, Transaction};
     use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain::TransactionProcessed;
-    use std::str::FromStr;
+    use std::{str::FromStr, sync::Arc};
 
     #[test]
     fn test_new_builder() {
@@ -404,10 +405,10 @@ mod tests {
             timestamp: 0,
             state: SlotState::Safe,
             settlement_blocks: vec![],
-            sequencing_block: BlockAndReceipts::default(),
+            sequencing_block: Arc::new(BlockAndReceipts::default()),
         };
 
-        let result = builder.build_block_from_slot(slot).await;
+        let result = builder.build_block_from_slot(&slot).await;
         assert!(result.is_ok());
 
         let txns = result.unwrap();
@@ -428,8 +429,11 @@ mod tests {
         number: u64,
         transactions: Vec<Transaction>,
         receipts: Vec<Receipt>,
-    ) -> BlockAndReceipts {
-        BlockAndReceipts { block: Block { number, transactions, ..Default::default() }, receipts }
+    ) -> Arc<BlockAndReceipts> {
+        Arc::new(BlockAndReceipts {
+            block: Block { number, transactions, ..Default::default() },
+            receipts,
+        })
     }
 
     #[tokio::test]
@@ -488,10 +492,10 @@ mod tests {
             timestamp: 0,
             state: SlotState::Safe,
             settlement_blocks: vec![block],
-            sequencing_block: BlockAndReceipts::default(),
+            sequencing_block: Arc::new(BlockAndReceipts::default()),
         };
 
-        let result = builder.build_block_from_slot(slot).await;
+        let result = builder.build_block_from_slot(&slot).await;
         assert!(result.is_ok());
 
         let txns = result.unwrap();
@@ -529,13 +533,13 @@ mod tests {
             timestamp: 0,
             state: SlotState::Safe,
             settlement_blocks: vec![],
-            sequencing_block: BlockAndReceipts {
+            sequencing_block: Arc::new(BlockAndReceipts {
                 block,
                 receipts: vec![Receipt { logs: vec![txn_processed_log], ..Default::default() }],
-            },
+            }),
         };
 
-        let result = builder.build_block_from_slot(slot).await;
+        let result = builder.build_block_from_slot(&slot).await;
         assert!(result.is_ok());
 
         let txns = result.unwrap();
@@ -623,17 +627,17 @@ mod tests {
             number: 1,
             timestamp: 0,
             state: SlotState::Safe,
-            settlement_blocks: vec![BlockAndReceipts {
+            settlement_blocks: vec![Arc::new(BlockAndReceipts {
                 block: settlement_block,
                 receipts: vec![settlement_receipt],
-            }],
-            sequencing_block: BlockAndReceipts {
+            })],
+            sequencing_block: Arc::new(BlockAndReceipts {
                 block: sequencing_block,
                 receipts: vec![sequencing_receipt],
-            },
+            }),
         };
 
-        let result = builder.build_block_from_slot(slot).await;
+        let result = builder.build_block_from_slot(&slot).await;
         assert!(result.is_ok());
 
         let txns = result.unwrap();

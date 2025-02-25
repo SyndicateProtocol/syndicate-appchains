@@ -27,7 +27,7 @@ pub struct Ingestor {
     current_block_number: u64,
     initial_chain_head: u64,
     syncing_batch_size: u64,
-    sender: Sender<BlockAndReceipts>,
+    sender: Sender<Arc<BlockAndReceipts>>,
     polling_interval: Duration,
     metrics: IngestorMetrics,
 }
@@ -50,7 +50,7 @@ impl Ingestor {
         client: Arc<dyn RPCClient>,
         config: &ChainIngestorConfig,
         metrics: IngestorMetrics,
-    ) -> Result<(Self, Receiver<BlockAndReceipts>), Error> {
+    ) -> Result<(Self, Receiver<Arc<BlockAndReceipts>>), Error> {
         let (sender, receiver) = channel(config.buffer_size);
         let client_clone = client.clone();
         let chain_head = client_clone.get_block_by_number(BlockNumberOrTag::Latest).await?;
@@ -75,7 +75,7 @@ impl Ingestor {
     /// - `block_and_receipts`: The block and its receipts to be sent to the consumer.
     async fn push_block_and_receipts(
         &mut self,
-        block_and_receipts: BlockAndReceipts,
+        block_and_receipts: Arc<BlockAndReceipts>,
     ) -> Result<(), Error> {
         if block_and_receipts.block.number != self.current_block_number {
             error!(
@@ -84,7 +84,7 @@ impl Ingestor {
             );
             return Err(eyre!("Block number mismatch"));
         }
-        self.sender.send(block_and_receipts.clone()).await?;
+        self.sender.send(block_and_receipts).await?;
         self.current_block_number += 1;
         self.metrics.update_channel_capacity(self.chain, self.sender.capacity());
         Ok(())
@@ -147,7 +147,7 @@ impl Ingestor {
                     duration,
                 );
                 for block in blocks {
-                    if let Err(err) = self.push_block_and_receipts(block).await {
+                    if let Err(err) = self.push_block_and_receipts(Arc::new(block)).await {
                         error!(
                             "Failed to push block and receipts for chain {:?}: {:?}, retrying...",
                             self.chain, err
@@ -291,11 +291,11 @@ mod tests {
         };
 
         let block = get_dummy_block_and_receipts(start_block);
+        let arc_block = Arc::new(block);
 
-        ingestor.push_block_and_receipts(block).await.expect("Failed to poll block");
-
-        if let Some(BlockAndReceipts { block, .. }) = receiver.recv().await {
-            assert_eq!(block.number, start_block);
+        ingestor.push_block_and_receipts(arc_block).await.expect("Failed to poll block");
+        if let Some(arc_block) = receiver.recv().await {
+            assert_eq!(arc_block.block.number, start_block);
         } else {
             panic!("No block received");
         }

@@ -226,6 +226,7 @@ mod test {
     use super::*;
     use crate::types::{Block, BlockAndReceipts, SlotState};
     use alloy::primitives::B256;
+    use std::sync::Arc;
     use test_utils::test_path;
 
     fn create_test_block(number: u64) -> Block {
@@ -247,14 +248,18 @@ mod test {
         let store = RocksDbStore::new(test_path("rocksdb_test_safe").as_str()).unwrap();
         assert!(store.get_safe_state().await.unwrap().is_none());
 
-        let mut slot =
-            Slot::new(1, 1000, BlockAndReceipts { block: create_test_block(1), receipts: vec![] });
+        let mut slot = Slot::new(
+            1,
+            1000,
+            Arc::new(BlockAndReceipts { block: create_test_block(1), receipts: vec![] }),
+        );
         let seq_block = create_test_block(1);
         let settle_block = create_test_block(2);
 
-        slot.sequencing_block = BlockAndReceipts { block: seq_block.clone(), receipts: vec![] };
+        slot.sequencing_block =
+            Arc::new(BlockAndReceipts { block: seq_block.clone(), receipts: vec![] });
         slot.settlement_blocks
-            .push(BlockAndReceipts { block: settle_block.clone(), receipts: vec![] });
+            .push(Arc::new(BlockAndReceipts { block: settle_block.clone(), receipts: vec![] }));
         slot.state = SlotState::Safe;
         store.save_safe_slot(&slot).await.unwrap();
 
@@ -272,14 +277,18 @@ mod test {
         let store = RocksDbStore::new(test_path("rocksdb_test_unsafe").as_str()).unwrap();
         assert!(store.get_unsafe_state().await.unwrap().is_none());
 
-        let mut slot =
-            Slot::new(1, 1000, BlockAndReceipts { block: create_test_block(1), receipts: vec![] });
+        let mut slot = Slot::new(
+            1,
+            1000,
+            Arc::new(BlockAndReceipts { block: create_test_block(1), receipts: vec![] }),
+        );
         let seq_block = create_test_block(1);
         let settle_block = create_test_block(2);
 
-        slot.sequencing_block = BlockAndReceipts { block: seq_block.clone(), receipts: vec![] };
+        slot.sequencing_block =
+            Arc::new(BlockAndReceipts { block: seq_block.clone(), receipts: vec![] });
         slot.settlement_blocks
-            .push(BlockAndReceipts { block: settle_block.clone(), receipts: vec![] });
+            .push(Arc::new(BlockAndReceipts { block: settle_block.clone(), receipts: vec![] }));
         slot.state = SlotState::Closed;
 
         store.save_unsafe_slot(&slot).await.unwrap();
@@ -298,27 +307,34 @@ mod test {
         let store = RocksDbStore::new(test_path("rocksdb_test_both").as_str()).unwrap();
 
         // Create and save safe state
-        let mut safe_slot =
-            Slot::new(1, 1000, BlockAndReceipts { block: create_test_block(1), receipts: vec![] });
+        let mut safe_slot = Slot::new(
+            1,
+            1000,
+            Arc::new(BlockAndReceipts { block: create_test_block(1), receipts: vec![] }),
+        );
         let safe_seq = create_test_block(1);
         let safe_settle = create_test_block(2);
-        safe_slot.sequencing_block = BlockAndReceipts { block: safe_seq.clone(), receipts: vec![] };
+        safe_slot.sequencing_block =
+            Arc::new(BlockAndReceipts { block: safe_seq.clone(), receipts: vec![] });
         safe_slot
             .settlement_blocks
-            .push(BlockAndReceipts { block: safe_settle.clone(), receipts: vec![] });
+            .push(Arc::new(BlockAndReceipts { block: safe_settle.clone(), receipts: vec![] }));
         safe_slot.state = SlotState::Safe;
         store.save_safe_slot(&safe_slot).await.unwrap();
 
         // Create and save unsafe state
-        let mut unsafe_slot =
-            Slot::new(2, 2000, BlockAndReceipts { block: create_test_block(3), receipts: vec![] });
+        let mut unsafe_slot = Slot::new(
+            2,
+            2000,
+            Arc::new(BlockAndReceipts { block: create_test_block(3), receipts: vec![] }),
+        );
         let unsafe_seq = create_test_block(3);
         let unsafe_settle = create_test_block(4);
         unsafe_slot.sequencing_block =
-            BlockAndReceipts { block: unsafe_seq.clone(), receipts: vec![] };
+            Arc::new(BlockAndReceipts { block: unsafe_seq.clone(), receipts: vec![] });
         unsafe_slot
             .settlement_blocks
-            .push(BlockAndReceipts { block: unsafe_settle.clone(), receipts: vec![] });
+            .push(Arc::new(BlockAndReceipts { block: unsafe_settle.clone(), receipts: vec![] }));
         unsafe_slot.state = SlotState::Closed;
 
         store.save_unsafe_slot(&unsafe_slot).await.unwrap();

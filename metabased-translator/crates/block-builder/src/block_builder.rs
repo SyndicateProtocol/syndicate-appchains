@@ -106,7 +106,7 @@ impl BlockBuilder {
                     self.metrics.record_last_slot(slot.number);
 
                     // [OP / ARB] Build block of MChain transactions from slot
-                    let transactions = match self.builder.build_block_from_slot(slot.clone()).await {
+                    let transactions = match self.builder.build_block_from_slot(&slot).await {
                         Ok(transactions) => transactions,
                         Err(e) => {
                             panic!("Error building batch transaction: {}", e);
@@ -187,7 +187,10 @@ pub enum AnvilStartError {
 mod tests {
     use super::*;
     use alloy::providers::Provider;
-    use common::{db::RocksDbStore, types::BlockAndReceipts};
+    use common::{
+        db::RocksDbStore,
+        types::{BlockAndReceipts, Slot},
+    };
     use eyre::Result;
     use prometheus_client::registry::Registry;
     use test_utils::test_path;
@@ -218,7 +221,7 @@ mod tests {
         let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });
 
         // Send a test block
-        let test_slot = Slot::new(2, genesis_ts + 1, BlockAndReceipts::default());
+        let test_slot = Slot::new(2, genesis_ts + 1, Arc::new(BlockAndReceipts::default()));
         tx.send(test_slot).await?;
 
         // Give some time for processing
@@ -248,9 +251,9 @@ mod tests {
         let provider = builder.mchain.provider.clone();
 
         // First run: send a few slots
-        let test_slot1 = Slot::new(1, 1000, BlockAndReceipts::default());
-        let test_slot2 = Slot::new(2, 2000, BlockAndReceipts::default());
-        let test_slot3 = Slot::new(3, 3000, BlockAndReceipts::default());
+        let test_slot1 = Slot::new(1, 1000, Arc::new(BlockAndReceipts::default()));
+        let test_slot2 = Slot::new(2, 2000, Arc::new(BlockAndReceipts::default()));
+        let test_slot3 = Slot::new(3, 3000, Arc::new(BlockAndReceipts::default()));
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });
