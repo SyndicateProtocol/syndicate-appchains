@@ -182,7 +182,7 @@ async fn e2e_settlement_test() -> Result<()> {
 
     // Mine blocks to process the slot
     meta_node.mine_next_slot().await?;
-    sleep(Duration::from_millis(1000)).await;
+    sleep(Duration::from_millis(500)).await;
 
     assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 17);
     assert_eq!(
@@ -237,7 +237,7 @@ async fn e2e_test() -> Result<()> {
     // insert a block to slot 1 @ ts 0, slot 2 @ ts 1. mine slot 1 -> mchain block 2.
     meta_node.mine_both(0).await?;
     meta_node.mine_next_slot().await?;
-    sleep(Duration::from_millis(1000)).await;
+    sleep(Duration::from_millis(200)).await;
 
     // check mchain blocks
     assert_eq!(meta_node.mchain_provider.get_block_number().await?, 2);
@@ -281,7 +281,7 @@ async fn e2e_test() -> Result<()> {
         .await?;
     meta_node.mine_next_slot().await?;
     meta_node.mine_next_slot().await?;
-    sleep(Duration::from_millis(2000)).await;
+    sleep(Duration::from_millis(100)).await;
 
     // check mchain blocks
     assert_eq!(meta_node.mchain_provider.get_block_number().await?, 4);
