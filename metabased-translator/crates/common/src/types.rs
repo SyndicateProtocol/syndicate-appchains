@@ -1,10 +1,10 @@
 //! Types module for metabased-translator
-#![allow(elided_lifetimes_in_paths)]
 
 use alloy::{
     hex,
     primitives::{Address, Bytes, B256},
 };
+use fmt::{Display, Formatter, Result as FmtResult};
 use serde::{
     de::{self, Deserializer, SeqAccess, Visitor},
     Deserialize, Serialize, Serializer,
@@ -234,8 +234,8 @@ impl Slot {
     }
 }
 
-impl fmt::Display for Slot {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for Slot {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(
             f,
             "Slot #{} [ts: {}, state: {}],  Sequencing block: {},  Settlement blocks (total: {}): {}",
@@ -301,7 +301,7 @@ where
     impl<'de> Visitor<'de> for ArcVecVisitor {
         type Value = Vec<Arc<BlockAndReceipts>>;
 
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        fn expecting(&self, formatter: &mut Formatter<'_>) -> FmtResult {
             formatter.write_str("a sequence of BlockAndReceipts wrapped in Arc")
         }
 
@@ -347,8 +347,8 @@ impl BlockRef {
     }
 }
 
-impl fmt::Display for BlockRef {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for BlockRef {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(f, "number: {}, ts: {}, hash: {}", self.number, self.timestamp, self.hash)
     }
 }

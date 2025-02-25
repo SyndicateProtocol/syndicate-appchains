@@ -3,7 +3,7 @@ use crate::{
     types::RuntimeError,
 };
 use block_builder::block_builder::BlockBuilder;
-use common::types::BlockAndReceipts;
+use common::types::BlockAndReceiptsPointer;
 use eyre::Report;
 use ingestor::ingestor::Ingestor;
 use slotter::Slotter;
@@ -22,9 +22,9 @@ impl ComponentHandles {
     pub fn spawn(
         safe_block_number: Option<u64>,
         sequencing_ingestor: Ingestor,
-        sequencing_rx: tokio::sync::mpsc::Receiver<BlockAndReceipts>,
+        sequencing_rx: tokio::sync::mpsc::Receiver<BlockAndReceiptsPointer>,
         settlement_ingestor: Ingestor,
-        settlement_rx: tokio::sync::mpsc::Receiver<BlockAndReceipts>,
+        settlement_rx: tokio::sync::mpsc::Receiver<BlockAndReceiptsPointer>,
         slotter: Slotter,
         block_builder: BlockBuilder,
         rx: ShutdownRx,
