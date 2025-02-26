@@ -78,8 +78,7 @@ impl TryFrom<u8> for L1MessageType {
 }
 
 impl L1MessageType {
-    /// Converts a `u8` to `L1MessageType`, panicking if the value is invalid.
-    pub fn from_u8_panic(value: u8) -> Self {
+    fn from_u8_panic(value: u8) -> Self {
         Self::try_from(value).unwrap_or_else(|_| panic!("Invalid L1MessageType value: {}", value))
     }
 }
