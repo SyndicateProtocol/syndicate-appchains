@@ -17,6 +17,6 @@ jobs:
   build-no-push:
     uses: ./.github/workflows/docker-build-core.yaml
     with:
-      do_push: false
+      do_push: true # Undo me
       target_name: metabased-sequencer
     secrets: inherit
