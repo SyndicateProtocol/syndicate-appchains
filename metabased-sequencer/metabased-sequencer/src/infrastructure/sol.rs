@@ -112,7 +112,7 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
             let pending_tx = self.contract().processTransaction(tx).send().await?;
 
             match pending_tx
-                .with_required_confirmations(2)
+                .with_required_confirmations(0)
                 .with_timeout(Some(Duration::from_secs(60)))
                 .watch()
                 .await
