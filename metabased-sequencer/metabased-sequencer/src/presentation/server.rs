@@ -1,7 +1,8 @@
 use crate::{
     application::{Metrics, RunningStopwatch, Stopwatch},
-    domain::{primitives::Address, MetabasedSequencerChainService},
+    domain::MetabasedSequencerChainService,
     presentation::{
+        configuration::Configuration,
         json_rpc_errors::Error,
         jsonrpc,
         server::Endpoint::{Health, Metrics as MetricsEndpoint},
@@ -9,7 +10,6 @@ use crate::{
         tower::UnescapeJsonLayer,
     },
 };
-use alloy::primitives::B256;
 use http::Method;
 use jsonrpsee::{
     server::{middleware::http::ProxyGetRequestLayer, RpcServiceBuilder, Server, ServerHandle},
@@ -17,14 +17,13 @@ use jsonrpsee::{
 };
 use std::{fmt::Debug, net::SocketAddr};
 use tracing::info;
-use url::Url;
 
-pub async fn run(
-    port: u16,
-    chain_contract_address: Address,
-    chain_rpc_address: Url,
-    private_key: B256,
-) -> eyre::Result<(SocketAddr, ServerHandle)> {
+pub async fn run(args: Configuration) -> eyre::Result<(SocketAddr, ServerHandle)> {
+    let port = args.port;
+    let chain_contract_address = args.chain_contract_address;
+    let chain_rpc_address = args.chain_rpc_address;
+    let private_key = args.private_key;
+
     let rpc_middleware = RpcServiceBuilder::new();
     let http_middleware = tower::ServiceBuilder::new()
         .layer(ProxyGetRequestLayer::new(Health.http_path(), Health.rpc_method())?)

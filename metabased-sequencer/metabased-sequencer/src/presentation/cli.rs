@@ -39,13 +39,7 @@ pub fn init_tracing_subscriber() -> Result<(), TracingError> {
 
 pub async fn run() -> Result<()> {
     let args = Configuration::parse()?;
-    let (addr, handle) = server::run(
-        args.port,
-        args.chain_contract_address,
-        args.chain_rpc_address,
-        args.private_key,
-    )
-    .await?;
+    let (addr, handle) = server::run(args).await?;
 
     info!(
         addr = %addr,

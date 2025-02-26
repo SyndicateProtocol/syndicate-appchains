@@ -52,6 +52,14 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
         MetabasedSequencerChain::new(self.chain_contract_address, &self.provider)
     }
 
+    pub fn provider(&self) -> &P {
+        &self.provider
+    }
+
+    pub fn wallet_address(&self) -> Address {
+        self.wallet_address
+    }
+
     /// Gets the current balance of the sequencer wallet
     async fn get_balance(&self) -> Result<U256, alloy::contract::Error> {
         Ok(self.provider.get_balance(self.wallet_address).await?)

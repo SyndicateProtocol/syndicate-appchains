@@ -123,4 +123,51 @@ impl DefaultServices {
 
         FillProvider::new(rpc_client, filler)
     }
+
+    // /// Refreshes the nonce for the wallet in the provider's CachedNonceManager
+    // /// Call this method periodically (e.g., every 15 seconds) to ensure the nonce stays in sync
+    // pub async fn refresh_nonce(&self) -> eyre::Result<()> {
+    //     // Get a reference to the underlying provider from the chain service
+    //     let provider = self.chain_service().provider();
+    //
+    //     // Extract the filler from the FillProvider
+    //     let filler = provider.filler();
+    //
+    //     // Get the wallet address to refresh the nonce for
+    //     let wallet_address = self.chain_service().wallet_address();
+    //
+    //     // Extract the NonceFiller which contains the CachedNonceManager
+    //     if let Some(nonce_filler) = filler.get::<NonceFiller<CachedNonceManager>>() {
+    //         // Force a refresh of the nonce from the network for this address
+    //         nonce_filler.manager().refresh(wallet_address).await?;
+    //
+    //         // Log the refresh for debugging
+    //         tracing::debug!("Refreshed nonce for wallet {}", wallet_address);
+    //
+    //         Ok(())
+    //     } else {
+    //         Err(eyre::eyre!("Could not find NonceFiller in the provider's fillers"))
+    //     }
+    // }
+
+    // /// Schedule periodic nonce refreshes
+    // /// Call this once during application startup to ensure nonces stay in sync
+    // pub fn schedule_nonce_refreshes(
+    //     &self,
+    //     interval: std::time::Duration,
+    // ) -> tokio::task::JoinHandle<()> {
+    //     let services = self.clone(); // Clone self to move into the async task
+    //
+    //     tokio::spawn(async move {
+    //         let mut interval = tokio::time::interval(interval);
+    //
+    //         loop {
+    //             interval.tick().await;
+    //
+    //             if let Err(err) = services.refresh_nonce().await {
+    //                 tracing::error!("Failed to refresh nonce: {}", err);
+    //             }
+    //         }
+    //     })
+    // }
 }

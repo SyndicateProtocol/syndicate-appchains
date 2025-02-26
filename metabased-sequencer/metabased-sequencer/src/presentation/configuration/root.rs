@@ -67,6 +67,12 @@ impl Configuration {
             CliArgs::new(args),
         )
     }
+
+    pub fn split(config: Configuration) -> (Address, Url, B256, u16) {
+        let Configuration { chain_contract_address, chain_rpc_address, private_key, port } = config;
+
+        (chain_contract_address, chain_rpc_address, private_key, port)
+    }
 }
 
 #[cfg(test)]
