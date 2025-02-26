@@ -57,6 +57,7 @@ pub struct BlockBuilderConfig {
     pub inbox_address: Address,
 
     /// Flag used to ignore delayed messages besides deposits
+    /// Default is false
     #[arg(long, env = "BLOCK_BUILDER_ARBITRUM_IGNORE_DELAYED_MESSAGES", default_value = "false")]
     pub ignore_delayed_messages: bool,
 
@@ -131,6 +132,7 @@ impl Debug for BlockBuilderConfig {
             .field("anvil_state_interval", &self.anvil_state_interval)
             .field("anvil_max_persisted_states", &self.max_persisted_states)
             .field("anvil_prune_history", &self.prune_history)
+            .field("ignore_delayed_messages", &self.ignore_delayed_messages)
             .finish()
     }
 }
@@ -233,6 +235,7 @@ mod tests {
         assert_eq!(config.anvil_state_interval, 300);
         assert_eq!(config.max_persisted_states, 1000);
         assert_eq!(config.prune_history, 1000);
+        assert!(!config.ignore_delayed_messages);
     }
 
     #[test]
