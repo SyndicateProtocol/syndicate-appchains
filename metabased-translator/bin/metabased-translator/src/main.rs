@@ -3,7 +3,7 @@ use eyre::Result;
 use metabased_translator::{
     config::MetabasedConfig,
     handles::ComponentHandles,
-    setup::{clients, create_node_components, get_extra_fields_for_logging, init_db, init_metrics},
+    setup::{clients, create_node_components, get_extra_fields_for_logging, init_metrics},
     shutdown::{ShutdownChannels, ShutdownTx},
     types::RuntimeError,
 };
@@ -36,8 +36,7 @@ async fn run(config: &mut MetabasedConfig) -> Result<(), RuntimeError> {
     info!("Initializing Metabased Translator components");
     let shutdown_channels = ShutdownChannels::new();
     let (sequencing_client, settlement_client) = clients(config).await?;
-    let (db, safe_state, safe_block_number) =
-        init_db(config, &sequencing_client, &settlement_client).await?;
+    let (safe_state, safe_block_number) = (None, None); // TODO rethink this
 
     let (metrics, metrics_task) = init_metrics(config).await;
 
@@ -48,15 +47,8 @@ async fn run(config: &mut MetabasedConfig) -> Result<(), RuntimeError> {
         settlement_rx,
         slotter,
         block_builder,
-    ) = create_node_components(
-        config,
-        sequencing_client,
-        settlement_client,
-        db,
-        safe_state,
-        metrics,
-    )
-    .await?;
+    ) = create_node_components(config, sequencing_client, settlement_client, safe_state, metrics)
+        .await?;
 
     let (main_shutdown_rx, tx, rx) = shutdown_channels.split();
     let component_tasks = ComponentHandles::spawn(

@@ -18,7 +18,7 @@ use block_builder::{
     connectors::mchain::{FilledProvider, MetaChainProvider, MCHAIN_ID},
     metrics::BlockBuilderMetrics,
 };
-use common::{db::RocksDbStore, types::Chain};
+use common::types::Chain;
 use contract_bindings::{
     arbitrum::rollup::Rollup,
     metabased::{
@@ -465,17 +465,9 @@ impl MetaNode {
             let _ = settlement_ingestor.start_polling(set_ingestor_rx).await;
         }));
 
-        // new DB
-        let db_path = test_path("db");
-        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
-
         // Launch the slotter, block builder, and nitro rollup
-        let (slotter, slotter_rx) = Slotter::new(
-            &config.slotter,
-            None,
-            store.clone(),
-            SlotterMetrics::new(&mut metrics_state.registry),
-        );
+        let (slotter, slotter_rx) =
+            Slotter::new(&config.slotter, None, SlotterMetrics::new(&mut metrics_state.registry));
         let (shutdown_slotter_tx, shutdown_slotter_rx) = tokio::sync::oneshot::channel();
         let _slotter_task = Task(tokio::spawn(async move {
             _ = slotter.start(sequencer_rx, settlement_rx, shutdown_slotter_rx).await;
@@ -484,7 +476,7 @@ impl MetaNode {
         let block_builder = BlockBuilder::new(
             slotter_rx,
             &block_builder_cfg,
-            store,
+            &datadir,
             BlockBuilderMetrics::new(&mut metrics_state.registry),
         )
         .await?;

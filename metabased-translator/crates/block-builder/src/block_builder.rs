@@ -14,26 +14,20 @@ use alloy::{
     rpc::types::BlockTransactionsKind,
     transports::{RpcError, TransportErrorKind},
 };
-use common::{db::TranslatorStore, types::Slot};
-use derivative::Derivative;
+use common::types::Slot;
 use eyre::{Error, Report, Result};
-use std::sync::Arc;
 use tokio::sync::{mpsc::Receiver, oneshot};
-use tracing::{error, info, trace};
+use tracing::{info, trace};
 use url::Url;
 
 /// Block builder service for processing and building L3 blocks.
-#[derive(Derivative)]
-#[derivative(Debug)]
+#[derive(Debug)]
 pub struct BlockBuilder {
     slotter_rx: Receiver<Slot>,
     #[allow(missing_docs)]
     pub mchain: MetaChainProvider,
     builder: Box<dyn RollupBlockBuilder>,
     metrics: BlockBuilderMetrics,
-
-    #[derivative(Debug = "ignore")]
-    store: Arc<dyn TranslatorStore + Send + Sync>,
 }
 
 impl BlockBuilder {
@@ -41,7 +35,6 @@ impl BlockBuilder {
     pub async fn new(
         slotter_rx: Receiver<Slot>,
         config: &BlockBuilderConfig,
-        store: Arc<dyn TranslatorStore + Send + Sync>,
         metrics: BlockBuilderMetrics,
     ) -> Result<Self, Error> {
         let mchain = MetaChainProvider::start(config, &metrics.mchain_metrics).await?;
@@ -53,7 +46,7 @@ impl BlockBuilder {
             }
         };
 
-        Ok(Self { slotter_rx, mchain, builder, metrics, store })
+        Ok(Self { slotter_rx, mchain, builder, metrics })
     }
 
     /// Validates and rolls back to a known block number if necessary
@@ -175,9 +168,6 @@ impl BlockBuilder {
                     // TODO(SEQ-623): add a flag to enable/disable this check
                     self.verify_block(transactions_len, slot.number).await;
 
-                    if let Err(e) = self.store.save_unsafe_slot(&slot).await {
-                        panic!("Error saving slot: {}", e);
-                    }
                 }
                 _ = &mut shutdown_rx => {
                     drop(self.mchain);

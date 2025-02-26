@@ -294,6 +294,17 @@ impl Display for BlockRef {
     }
 }
 
+/// Latest safe state of the translator
+#[derive(Debug)]
+pub struct KnownState {
+    /// The latest slot that was marked as safe
+    pub slot: Slot,
+    /// The latest block from the sequencing chain that has been slotted
+    pub sequencing_block: BlockRef,
+    /// The latest block from the settlement chain that has been slotted
+    pub settlement_block: BlockRef,
+}
+
 fn deserialize_address<'de, D>(deserializer: D) -> Result<Address, D::Error>
 where
     D: Deserializer<'de>,

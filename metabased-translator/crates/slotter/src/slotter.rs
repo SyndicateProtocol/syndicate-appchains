@@ -2,11 +2,7 @@
 
 use crate::{config::SlotterConfig, metrics::SlotterMetrics};
 use alloy::primitives::B256;
-use common::{
-    db::{DbError, KnownState, TranslatorStore},
-    types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotState},
-};
-use derivative::Derivative;
+use common::types::{Block, BlockAndReceipts, BlockRef, Chain, KnownState, Slot, SlotState};
 use eyre::{Error, Report};
 use std::{collections::VecDeque, sync::Arc};
 use thiserror::Error;
@@ -40,8 +36,7 @@ const START_SLOT: u64 = 2;
 /// - Settlement blocks are delayed by a configured time (settlement_delay)
 /// - A slot becomes Closed when we see a settlement block that cannot fit into it (the block's timestamp (plus delay) is further in the future than the slot's timestamp)
 ///  ```
-#[derive(Derivative)]
-#[derivative(Debug)]
+#[derive(Debug)]
 pub struct Slotter {
     settlement_delay: u64,
 
@@ -64,9 +59,6 @@ pub struct Slotter {
     /// Sender for sending slots to the consumer
     sender: Sender<Slot>,
 
-    #[derivative(Debug = "ignore")]
-    store: Arc<dyn TranslatorStore + Send + Sync>,
-
     /// Metrics
     metrics: SlotterMetrics,
 }
@@ -77,7 +69,6 @@ impl Slotter {
     pub fn new(
         config: &SlotterConfig,
         known_state: Option<KnownState>,
-        store: Arc<dyn TranslatorStore + Send + Sync>,
         metrics: SlotterMetrics,
     ) -> (Self, Receiver<Slot>) {
         let (slot_tx, slot_rx) = channel(100);
@@ -108,7 +99,6 @@ impl Slotter {
             unassigned_settlement_blocks: VecDeque::new(),
             settlement_delay: config.settlement_delay,
             sender: slot_tx,
-            store,
             metrics,
             min_chain_head_timestamp,
             oldest_open_slot_idx: 0,
@@ -257,7 +247,6 @@ impl Slotter {
             trace!(%slot, "Saving safe slot to DB");
             slot.state = SlotState::Safe;
             self.safe_timestamp = slot.timestamp();
-            self.store.save_safe_slot(&slot).await?;
         }
 
         // Update index after removing slots
@@ -465,9 +454,6 @@ pub enum SlotterError {
         block_hash: B256,
     },
 
-    #[error("Database error: {0}")]
-    DbError(#[from] DbError),
-
     #[error("Slotter was shut down")]
     Shutdown,
 }
@@ -493,8 +479,6 @@ mod tests {
         /// Prometheus registry
         pub registry: Registry,
     }
-    use common::db::RocksDbStore;
-    use test_utils::test_path;
 
     struct TestSetup {
         slot_rx: Receiver<Slot>,
@@ -517,9 +501,7 @@ mod tests {
     fn create_slotter(config: &SlotterConfig) -> (Slotter, Receiver<Slot>) {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = SlotterMetrics::new(&mut metrics_state.registry);
-        let store = Arc::new(RocksDbStore::new(test_path("slotter_db").as_str()).unwrap());
-
-        let (slotter, slot_rx) = Slotter::new(config, None, store, metrics);
+        let (slotter, slot_rx) = Slotter::new(config, None, metrics);
 
         (slotter, slot_rx)
     }
@@ -694,100 +676,6 @@ mod tests {
         let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
 
         assert_matches!(result, Err(SlotterError::EarlierTimestamp { .. }));
-    }
-
-    #[tokio::test]
-    #[traced_test]
-    async fn test_slotter_db_shutdown_and_resume_safe() {
-        const CHAN_CAPACITY: usize = 100;
-        let (seq_tx, seq_rx) = channel(CHAN_CAPACITY);
-        let (set_tx, set_rx) = channel(CHAN_CAPACITY);
-
-        let config = SlotterConfig { settlement_delay: 0 };
-
-        // Create a fresh DB for this test
-        let db_path = test_path("slotter_db");
-        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
-
-        // Start first slotter instance
-        let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = SlotterMetrics::new(&mut metrics_state.registry);
-        let (slotter, mut slot_rx) = Slotter::new(&config, None, store, metrics);
-        let handle = tokio::spawn(async move { slotter.start(seq_rx, set_rx, shutdown_rx).await });
-
-        // Send some blocks
-        // slot [START_SLOT]
-        seq_tx.send(create_test_block(1, 20)).await.unwrap();
-        set_tx.send(create_test_block(1, 20)).await.unwrap();
-
-        // slot [START_SLOT+1]
-        seq_tx.send(create_test_block(2, 30)).await.unwrap();
-        set_tx.send(create_test_block(2, 30)).await.unwrap();
-
-        // This should make slot [START_SLOT]  as Closed
-        let slot1 = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot1.number, START_SLOT);
-        assert_eq!(slot1.settlement.len(), 1);
-        assert_eq!(slot1.sequencing.block.number, 1);
-        assert_eq!(slot1.settlement[0].block.number, 1);
-        assert_eq!(slot1.state, SlotState::Closed);
-
-        // Send blocks that are SLOT_SAFETY_WINDOW_SEC (24 hours) ahead, this should make all
-        // previous slots as Safe
-        set_tx.send(create_test_block(3, 30 + SLOT_SAFETY_WINDOW_SEC)).await.unwrap();
-        seq_tx.send(create_test_block(3, 30 + SLOT_SAFETY_WINDOW_SEC)).await.unwrap();
-
-        // drain the channel
-        let _handle = tokio::spawn(async move {
-            loop {
-                slot_rx.recv().await;
-            }
-        });
-
-        // shutdown slotter
-        let _ = shutdown_tx.send(());
-        let _ = handle.await.unwrap();
-
-        // Create new channels for the resumed slotter
-        let (new_seq_tx, new_seq_rx) = channel(CHAN_CAPACITY);
-        let (new_set_tx, new_settle_rx) = channel(CHAN_CAPACITY);
-
-        // Create new store instance pointing to same DB, and get the latest state from the DB
-        let resumed_store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
-        let resumed_state = resumed_store.get_safe_state().await.unwrap().unwrap();
-        assert_eq!(resumed_state.slot.number, START_SLOT + 1);
-        assert_eq!(resumed_state.sequencing_block.number, 2);
-        assert_eq!(resumed_state.settlement_block.number, 2);
-
-        let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = SlotterMetrics::new(&mut metrics_state.registry);
-
-        // Create new slotter that should resume from DB
-        let (resumed_slotter, mut resumed_slot_rx) =
-            Slotter::new(&config, Some(resumed_state), resumed_store, metrics);
-
-        let (_shutdown_tx, shutdown_rx) = oneshot::channel();
-        tokio::spawn(
-            async move { resumed_slotter.start(new_seq_rx, new_settle_rx, shutdown_rx).await },
-        );
-
-        // Send new blocks to resumed slotter (since only slot [START_SLOT] and [START_SLOT+1] have
-        // saved to the DB, we should send blocks #4 (for slot [START_SLOT+2]))
-        new_seq_tx.send(create_test_block(3, 40)).await.unwrap();
-        new_set_tx.send(create_test_block(3, 40)).await.unwrap();
-
-        // sending blocks for slot [START_SLOT+2] should mark slot [START_SLOT+2] as Closed
-        new_seq_tx.send(create_test_block(4, 50)).await.unwrap();
-        new_set_tx.send(create_test_block(4, 50)).await.unwrap();
-
-        // Should get slot [START_SLOT+2] marked as Closed
-        let slot = recv(&mut resumed_slot_rx).await.unwrap();
-        assert_eq!(slot.number, START_SLOT + 2);
-        assert_eq!(slot.state, SlotState::Closed);
-        assert_eq!(slot.settlement.len(), 1);
-        assert_eq!(slot.sequencing.block.number, 3);
-        assert_eq!(slot.settlement[0].block.number, 3);
     }
 
     #[tokio::test]

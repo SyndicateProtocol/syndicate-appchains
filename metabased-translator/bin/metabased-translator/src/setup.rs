@@ -1,9 +1,6 @@
 use crate::{config::MetabasedConfig, types::RuntimeError};
 use block_builder::block_builder::BlockBuilder;
-use common::{
-    db::{self, KnownState, TranslatorStore},
-    types::{BlockAndReceipts, Chain},
-};
+use common::types::{BlockAndReceipts, Chain, KnownState};
 use eyre::Result;
 use ingestor::{
     config::ChainIngestorConfig,
@@ -16,27 +13,6 @@ use serde_json::{json, value::Value};
 use slotter::Slotter;
 use std::sync::Arc;
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
-use tracing::{debug, info};
-
-async fn get_safe_start_block(
-    config: &mut MetabasedConfig,
-    safe_state: &Option<KnownState>,
-    sequencing_client: &Arc<dyn RPCClient>,
-    settlement_client: &Arc<dyn RPCClient>,
-) -> Result<Option<u64>, RuntimeError> {
-    if let Some(state) = &safe_state {
-        info!(%state.slot, %state.sequencing_block, %state.settlement_block, "Resuming from known state in DB");
-        // TODO(SEQ-630) - auto log any changes to core `config` after the fact
-        config.sequencing.sequencing_start_block = state.sequencing_block.number + 1;
-        config.settlement.settlement_start_block = state.settlement_block.number + 1;
-    } else {
-        info!("No known state found in DB, starting from configured start blocks");
-        // Initial timestamp is only needed if we aren't resuming from db
-        config.set_initial_timestamp(settlement_client, sequencing_client).await?;
-    }
-    let safe_block_number = safe_state.as_ref().map(|state| state.slot.number);
-    Ok(safe_block_number)
-}
 
 pub async fn clients(
     config: &mut MetabasedConfig,
@@ -59,37 +35,6 @@ pub fn get_extra_fields_for_logging(base_config: MetabasedConfig) -> Vec<(String
     vec![("chain_id".to_string(), json!(base_config.block_builder.target_chain_id))]
 }
 
-pub async fn init_db(
-    config: &mut MetabasedConfig,
-    sequencing_client: &Arc<dyn RPCClient>,
-    settlement_client: &Arc<dyn RPCClient>,
-) -> Result<(Arc<dyn TranslatorStore + Send + Sync>, Option<KnownState>, Option<u64>), RuntimeError>
-{
-    let db_path = format!("{}/db", config.datadir);
-    let db = Arc::new(
-        db::RocksDbStore::new(&db_path)
-            .map_err(|e| RuntimeError::Initialization(format!("Failed to open DB: {e}")))?,
-    );
-
-    let safe_state = if config.restore_from_safe_state {
-        debug!("Resuming from latest safe state");
-        db.get_safe_state().await.map_err(|e| {
-            RuntimeError::Initialization(format!("Failed to get latest safe state: {e}"))
-        })?
-    } else {
-        debug!("Resuming from latest unsafe state");
-        db.get_unsafe_state().await.map_err(|e| {
-            RuntimeError::Initialization(format!("Failed to get latest unsafe state: {e}"))
-        })?
-    };
-
-    // Override start blocks if we're resuming from a database
-    let safe_block_number =
-        get_safe_start_block(config, &safe_state, sequencing_client, settlement_client).await?;
-
-    Ok((db, safe_state, safe_block_number))
-}
-
 pub async fn init_metrics(config: &mut MetabasedConfig) -> (TranslatorMetrics, JoinHandle<()>) {
     let registry = Registry::default();
     let mut metrics_state = MetricsState { registry };
@@ -104,7 +49,6 @@ pub async fn create_node_components(
     config: &mut MetabasedConfig,
     sequencing_client: Arc<dyn RPCClient>,
     settlement_client: Arc<dyn RPCClient>,
-    db: Arc<dyn TranslatorStore + Send + Sync>,
     safe_state: Option<KnownState>,
     metrics: TranslatorMetrics,
 ) -> Result<
@@ -138,9 +82,9 @@ pub async fn create_node_components(
     )
     .await?;
 
-    let (slotter, slot_rx) = Slotter::new(&config.slotter, safe_state, db.clone(), metrics.slotter);
+    let (slotter, slot_rx) = Slotter::new(&config.slotter, safe_state, metrics.slotter);
     let block_builder =
-        BlockBuilder::new(slot_rx, &config.block_builder, db, metrics.block_builder).await?;
+        BlockBuilder::new(slot_rx, &config.block_builder, metrics.block_builder).await?;
     Ok((
         sequencing_ingestor,
         sequencing_rx,
