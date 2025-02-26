@@ -99,11 +99,10 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
         &mut self,
         slot: &Slot,
     ) -> Result<Vec<TransactionRequest>, eyre::Error> {
-        let delayed_messages =
-            self.process_delayed_messages(slot.settlement_blocks.clone()).await?;
+        let delayed_messages = self.process_delayed_messages(slot.settlement.clone()).await?;
         debug!("Delayed messages: {:?}", delayed_messages);
 
-        let mb_transactions = self.parse_block_to_mbtxs(slot.sequencing_block.clone());
+        let mb_transactions = self.parse_block_to_mbtxs(slot.sequencing.clone());
 
         if delayed_messages.is_empty() && mb_transactions.is_empty() {
             trace!("No delayed messages or MB transactions, skipping block");
@@ -111,7 +110,7 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
         }
 
         let batch_transaction = self
-            .build_batch_txn(mb_transactions, slot.number, slot.timestamp, delayed_messages.len())
+            .build_batch_txn(mb_transactions, slot.number, slot.timestamp(), delayed_messages.len())
             .await?;
 
         let mut result: Vec<TransactionRequest> = Vec::new();
@@ -402,10 +401,9 @@ mod tests {
         // Create an empty slot
         let slot = Slot {
             number: 1,
-            timestamp: 0,
             state: SlotState::Safe,
-            settlement_blocks: vec![],
-            sequencing_block: Arc::new(BlockAndReceipts::default()),
+            settlement: vec![],
+            sequencing: Arc::new(BlockAndReceipts::default()),
         };
 
         let result = builder.build_block_from_slot(&slot).await;
@@ -489,10 +487,9 @@ mod tests {
 
         let slot = Slot {
             number: 1,
-            timestamp: 0,
             state: SlotState::Safe,
-            settlement_blocks: vec![block],
-            sequencing_block: Arc::new(BlockAndReceipts::default()),
+            settlement: vec![block],
+            sequencing: Arc::new(BlockAndReceipts::default()),
         };
 
         let result = builder.build_block_from_slot(&slot).await;
@@ -530,10 +527,9 @@ mod tests {
 
         let slot = Slot {
             number: 1,
-            timestamp: 0,
             state: SlotState::Safe,
-            settlement_blocks: vec![],
-            sequencing_block: Arc::new(BlockAndReceipts {
+            settlement: vec![],
+            sequencing: Arc::new(BlockAndReceipts {
                 block,
                 receipts: vec![Receipt { logs: vec![txn_processed_log], ..Default::default() }],
             }),
@@ -625,13 +621,12 @@ mod tests {
 
         let slot = Slot {
             number: 1,
-            timestamp: 0,
             state: SlotState::Safe,
-            settlement_blocks: vec![Arc::new(BlockAndReceipts {
+            settlement: vec![Arc::new(BlockAndReceipts {
                 block: settlement_block,
                 receipts: vec![settlement_receipt],
             })],
-            sequencing_block: Arc::new(BlockAndReceipts {
+            sequencing: Arc::new(BlockAndReceipts {
                 block: sequencing_block,
                 receipts: vec![sequencing_receipt],
             }),

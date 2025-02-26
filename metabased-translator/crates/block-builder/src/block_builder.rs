@@ -168,7 +168,7 @@ impl BlockBuilder {
                     }
 
                     // Mine the actual block with slot timestamp
-                    if let Err(e) = self.mchain.mine_block(slot.timestamp).await {
+                    if let Err(e) = self.mchain.mine_block(slot.timestamp()).await {
                         panic!("Error mining block: {}", e);
                     }
 

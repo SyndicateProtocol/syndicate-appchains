@@ -202,32 +202,35 @@ pub enum SlotState {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct Slot {
     /// the number of the slot - `slot_number` == `MetaChain`'s block number.
-    pub number: u64,
-    /// the timestamp of the slot in seconds.
-    pub timestamp: u64,
+    pub number: u64, // TODO remove
     /// the block from the sequencing chain to be included in the slot.
-    pub sequencing_block: Arc<BlockAndReceipts>,
+    pub sequencing: Arc<BlockAndReceipts>,
     /// the blocks from the settlement chain to be included in the slot.
-    pub settlement_blocks: Vec<Arc<BlockAndReceipts>>,
+    pub settlement: Vec<Arc<BlockAndReceipts>>,
     /// the finality state of the slot.
-    pub state: SlotState,
+    pub state: SlotState, // TODO this can probably be removed
 }
 
 impl Slot {
     /// Creates a new slot
-    pub const fn new(number: u64, timestamp: u64, sequencing_block: Arc<BlockAndReceipts>) -> Self {
+    pub const fn new(number: u64, sequencing_block: Arc<BlockAndReceipts>) -> Self {
         Self {
             number,
-            timestamp,
-            sequencing_block,
-            settlement_blocks: Vec::new(),
+            sequencing: sequencing_block,
+            settlement: Vec::new(),
             state: SlotState::Open,
         }
     }
 
     /// Adds a block to the slot's chain-specific block list
     pub fn push_settlement_block(&mut self, block: Arc<BlockAndReceipts>) {
-        self.settlement_blocks.push(block)
+        self.settlement.push(block)
+    }
+
+    /// Returns the timestamp of the slot
+    #[allow(clippy::missing_const_for_fn)] // false positive (cannot deref Arc in a const fn)
+    pub fn timestamp(&self) -> u64 {
+        self.sequencing.block.timestamp
     }
 }
 
@@ -235,13 +238,11 @@ impl Display for Slot {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(
             f,
-            "Slot #{} [ts: {}, state: {}],  Sequencing block: {},  Settlement blocks (total: {}): {}",
-            self.number,
-            self.timestamp,
+            "Slot [state: {}],  Sequencing block: {},  Settlement blocks (total: {}): {}",
             self.state,
-            format_block(&self.sequencing_block),
-            self.settlement_blocks.len(),
-            format_blocks(&self.settlement_blocks),
+            format_block(&self.sequencing),
+            self.settlement.len(),
+            format_blocks(&self.settlement),
         )
     }
 }
@@ -503,10 +504,10 @@ mod test {
             }],
         });
 
-        let mut slot = Slot::new(1, 1000, sequencing_block);
+        let mut slot = Slot::new(100, sequencing_block);
 
         // Add settlement chain block
-        slot.settlement_blocks.push(Arc::new(BlockAndReceipts {
+        slot.settlement.push(Arc::new(BlockAndReceipts {
             block: Block {
                 hash: B256::from_hex(
                     "0x5678901234567890123456789012345678901234567890123456789012345678",

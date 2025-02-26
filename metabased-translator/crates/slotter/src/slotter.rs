@@ -86,7 +86,7 @@ impl Slotter {
         let (latest_sequencing_block, latest_settlement_block) = match known_state {
             Some(known_state) => {
                 if known_state.slot.state == SlotState::Safe {
-                    safe_timestamp = known_state.slot.timestamp;
+                    safe_timestamp = known_state.slot.timestamp();
                 }
                 slots.push_back(known_state.slot);
                 (Some(known_state.sequencing_block), Some(known_state.settlement_block))
@@ -240,7 +240,7 @@ impl Slotter {
         while let Some(slot) = self.slots.front() {
             // Has 24h passed since this slot's timestamp?
             // If we can't mark this slot as safe, we can't mark newer ones either
-            if slot.timestamp + SLOT_SAFETY_WINDOW_SEC > self.min_chain_head_timestamp ||
+            if slot.timestamp() + SLOT_SAFETY_WINDOW_SEC > self.min_chain_head_timestamp ||
                 slot.state == SlotState::Open
             {
                 break;
@@ -256,7 +256,7 @@ impl Slotter {
 
             trace!(%slot, "Saving safe slot to DB");
             slot.state = SlotState::Safe;
-            self.safe_timestamp = slot.timestamp;
+            self.safe_timestamp = slot.timestamp();
             self.store.save_safe_slot(&slot).await?;
         }
 
@@ -348,16 +348,15 @@ impl Slotter {
             Some(slot) => slot.number + 1,
             None => START_SLOT,
         };
-        let slot_timestamp = block_info.block.timestamp;
 
         // Create a new slot for this sequencer block
-        let mut new_slot = Slot::new(slot_number, slot_timestamp, block_info);
+        let mut new_slot = Slot::new(slot_number, block_info);
 
         // check if any unassigned settlement blocks belong in this slot
         // if so, add them to the slot and remove them from the unassigned list
         // otherwise, add the slot to the front of the list
         while let Some(set_block) = self.unassigned_settlement_blocks.front() {
-            if self.settlement_timestamp(set_block) > slot_timestamp {
+            if self.settlement_timestamp(set_block) > new_slot.timestamp() {
                 // we have seen a settlement block that belongs in a later slot, this one
                 // can be closed
                 new_slot.state = SlotState::Closed;
@@ -389,7 +388,7 @@ impl Slotter {
         let sender = self.sender.clone();
 
         for slot in self.iter_from_oldest_open() {
-            if ts > slot.timestamp {
+            if ts > slot.timestamp() {
                 if slot.state == SlotState::Open {
                     debug!(slot_number = slot.number, "slot closed");
                     trace!("slot: {:?}", slot);
@@ -601,9 +600,9 @@ mod tests {
         settlement_tx.send(create_test_block(2, 20)).await.unwrap();
 
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp, 10);
+        assert_eq!(slot.timestamp(), 10);
         assert_eq!(slot.number, START_SLOT);
-        assert_eq!(slot.settlement_blocks.len(), 1);
+        assert_eq!(slot.settlement.len(), 1);
         assert_eq!(slot.state, SlotState::Closed);
         assert!(slot_rx.is_empty());
 
@@ -615,11 +614,11 @@ mod tests {
 
         for i in 1..4 {
             let slot = recv(&mut slot_rx).await.unwrap();
-            assert_eq!(slot.timestamp, 10 + i);
+            assert_eq!(slot.timestamp(), 10 + i);
             assert_eq!(slot.number, START_SLOT + i);
-            assert_eq!(slot.sequencing_block.block.number, 1 + i);
-            assert_eq!(slot.sequencing_block.block.timestamp, 10 + i);
-            assert_eq!(slot.settlement_blocks.len(), 0);
+            assert_eq!(slot.sequencing.block.number, 1 + i);
+            assert_eq!(slot.sequencing.block.timestamp, 10 + i);
+            assert_eq!(slot.settlement.len(), 0);
             assert_eq!(slot.state, SlotState::Closed);
         }
         assert!(slot_rx.is_empty());
@@ -637,11 +636,11 @@ mod tests {
         // should be marked as Closed
         settlement_tx.send(create_test_block(3, 42)).await.unwrap();
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp, 40);
+        assert_eq!(slot.timestamp(), 40);
         assert_eq!(slot.number, START_SLOT + 4);
-        assert_eq!(slot.sequencing_block.block.timestamp, 40);
-        assert_eq!(slot.settlement_blocks.len(), 1);
-        assert_eq!(slot.settlement_blocks[0].block.timestamp, 20);
+        assert_eq!(slot.sequencing.block.timestamp, 40);
+        assert_eq!(slot.settlement.len(), 1);
+        assert_eq!(slot.settlement[0].block.timestamp, 20);
         assert_eq!(slot.state, SlotState::Closed);
     }
 
@@ -729,9 +728,9 @@ mod tests {
         // This should make slot [START_SLOT]  as Closed
         let slot1 = recv(&mut slot_rx).await.unwrap();
         assert_eq!(slot1.number, START_SLOT);
-        assert_eq!(slot1.settlement_blocks.len(), 1);
-        assert_eq!(slot1.sequencing_block.block.number, 1);
-        assert_eq!(slot1.settlement_blocks[0].block.number, 1);
+        assert_eq!(slot1.settlement.len(), 1);
+        assert_eq!(slot1.sequencing.block.number, 1);
+        assert_eq!(slot1.settlement[0].block.number, 1);
         assert_eq!(slot1.state, SlotState::Closed);
 
         // Send blocks that are SLOT_SAFETY_WINDOW_SEC (24 hours) ahead, this should make all
@@ -786,9 +785,9 @@ mod tests {
         let slot = recv(&mut resumed_slot_rx).await.unwrap();
         assert_eq!(slot.number, START_SLOT + 2);
         assert_eq!(slot.state, SlotState::Closed);
-        assert_eq!(slot.settlement_blocks.len(), 1);
-        assert_eq!(slot.sequencing_block.block.number, 3);
-        assert_eq!(slot.settlement_blocks[0].block.number, 3);
+        assert_eq!(slot.settlement.len(), 1);
+        assert_eq!(slot.sequencing.block.number, 3);
+        assert_eq!(slot.settlement[0].block.number, 3);
     }
 
     #[tokio::test]
@@ -820,17 +819,17 @@ mod tests {
         // This should trigger slot  to be marked as Closed
         let slot = recv(&mut slot_rx).await.unwrap();
         assert_eq!(slot.number, START_SLOT);
-        assert_eq!(slot.timestamp, 10);
-        assert_eq!(slot.sequencing_block.block.number, 1);
-        assert_eq!(slot.settlement_blocks.len(), 0);
+        assert_eq!(slot.timestamp(), 10);
+        assert_eq!(slot.sequencing.block.number, 1);
+        assert_eq!(slot.settlement.len(), 0);
         assert_eq!(slot.state, SlotState::Closed);
 
         let slot = recv(&mut slot_rx).await.unwrap();
         assert_eq!(slot.number, START_SLOT + 1);
-        assert_eq!(slot.timestamp, 12);
-        assert_eq!(slot.sequencing_block.block.number, 2);
-        assert_eq!(slot.settlement_blocks.len(), 1);
-        assert_eq!(slot.settlement_blocks[0].block.number, 1);
+        assert_eq!(slot.timestamp(), 12);
+        assert_eq!(slot.sequencing.block.number, 2);
+        assert_eq!(slot.settlement.len(), 1);
+        assert_eq!(slot.settlement[0].block.number, 1);
         assert_eq!(slot.state, SlotState::Closed);
     }
 
@@ -854,27 +853,27 @@ mod tests {
 
         let slot = recv(&mut slot_rx).await.unwrap();
         assert_eq!(slot.number, START_SLOT);
-        assert_eq!(slot.timestamp, 100);
+        assert_eq!(slot.timestamp(), 100);
         assert_eq!(slot.state, SlotState::Closed);
-        assert_eq!(slot.sequencing_block.block.number, 1);
+        assert_eq!(slot.sequencing.block.number, 1);
         // Settlement block should not be in this slot since it was delayed to timestamp 160
-        assert_eq!(slot.settlement_blocks.len(), 0);
+        assert_eq!(slot.settlement.len(), 0);
 
         // Send sequencing block with timestamps 150
         sequencing_tx.send(create_test_block(3, 150)).await.unwrap();
 
         // there should be a slot at ts=110 and empty slot at ts=150 in the channel
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp, 110);
+        assert_eq!(slot.timestamp(), 110);
         assert_eq!(slot.state, SlotState::Closed);
-        assert_eq!(slot.sequencing_block.block.number, 2);
-        assert_eq!(slot.settlement_blocks.len(), 0);
+        assert_eq!(slot.sequencing.block.number, 2);
+        assert_eq!(slot.settlement.len(), 0);
 
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp, 150);
+        assert_eq!(slot.timestamp(), 150);
         assert_eq!(slot.state, SlotState::Closed);
-        assert_eq!(slot.sequencing_block.block.number, 3);
-        assert_eq!(slot.settlement_blocks.len(), 0);
+        assert_eq!(slot.sequencing.block.number, 3);
+        assert_eq!(slot.settlement.len(), 0);
 
         // Send settlement and sequencing blocks with timestamp 170
         settlement_tx.send(create_test_block(2, 170)).await.unwrap();
@@ -883,10 +882,10 @@ mod tests {
         // The slot with ts 170 should be marked as Closed, containing the settlement block with
         // ts=160
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp, 170);
-        assert_eq!(slot.settlement_blocks.len(), 1);
-        assert_eq!(slot.settlement_blocks[0].block.number, 1);
-        assert_eq!(slot.sequencing_block.block.number, 4);
+        assert_eq!(slot.timestamp(), 170);
+        assert_eq!(slot.settlement.len(), 1);
+        assert_eq!(slot.settlement[0].block.number, 1);
+        assert_eq!(slot.sequencing.block.number, 4);
 
         // Verify no more slots were marked as Closed
         assert!(slot_rx.try_recv().is_err());
