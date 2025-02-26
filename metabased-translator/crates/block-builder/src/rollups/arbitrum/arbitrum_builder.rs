@@ -51,6 +51,7 @@ pub enum ArbitrumBlockBuilderError {
 
 #[allow(missing_docs)]
 #[derive(Debug, PartialEq, Eq)]
+/// `<https://github.com/OffchainLabs/nitro/blob/c7f3429e2456bf5ca296a49cec3bb437420bc2bb/contracts/src/libraries/MessageTypes.sol>`
 pub enum L1MessageType {
     L2Message = 3,
     L2FundedByL1 = 7,
