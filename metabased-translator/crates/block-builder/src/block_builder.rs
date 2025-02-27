@@ -17,7 +17,7 @@ use alloy::{
 use common::types::Slot;
 use eyre::{Error, Report, Result};
 use tokio::sync::{mpsc::Receiver, oneshot};
-use tracing::{info, trace};
+use tracing::{debug, info, trace};
 use url::Url;
 
 /// Block builder service for processing and building L3 blocks.
@@ -148,6 +148,10 @@ impl BlockBuilder {
                         }
                     };
 
+                    if transactions.is_empty() {
+                        debug!("No transactions for this slot, skipping producing a block");
+                        continue;
+                    }
                     let transactions_len = transactions.len();
                     trace!("Submitting {} transactions", transactions_len);
                     self.metrics.record_transactions_per_slot(transactions_len);

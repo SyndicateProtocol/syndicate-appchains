@@ -110,7 +110,14 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
         }
 
         let batch_transaction = self
-            .build_batch_txn(mb_transactions, slot.number, slot.timestamp(), delayed_messages.len())
+            .build_batch_txn(
+                mb_transactions,
+                slot.number,
+                slot.timestamp(),
+                slot.sequencing.block.number,
+                slot.settlement.last().map_or(0, |b| b.block.number),
+                delayed_messages.len(),
+            )
             .await?;
 
         let mut result: Vec<TransactionRequest> = Vec::new();
@@ -283,6 +290,8 @@ impl ArbitrumBlockBuilder {
         txs: Vec<Bytes>,
         slot_number: u64,
         slot_timestamp: u64,
+        latest_sequencing_block: u64,
+        latest_settlement_block: u64,
         delayed_message_count: usize,
     ) -> Result<TransactionRequest> {
         if delayed_message_count > 0 {
@@ -311,7 +320,13 @@ impl ArbitrumBlockBuilder {
         // Create the transaction request
         let request = TransactionRequest::default().to(self.mchain_rollup_address).input(
             // Encode the function call with parameters
-            Rollup::postBatchCall::new((encoded_batch,)).abi_encode().into(), // Convert the tokenized call data to bytes
+            Rollup::postBatchCall::new((
+                encoded_batch,
+                U256::from(latest_sequencing_block),
+                U256::from(latest_settlement_block),
+            ))
+            .abi_encode()
+            .into(), // Convert the tokenized call data to bytes
         );
 
         Ok(request)
@@ -348,7 +363,7 @@ mod tests {
     async fn test_build_batch_empty_txs() {
         let builder = ArbitrumBlockBuilder::default();
         let txs = vec![];
-        let batch = builder.build_batch_txn(txs, 0, 0, 0).await.unwrap();
+        let batch = builder.build_batch_txn(txs, 0, 0, 1, 2, 0).await.unwrap();
 
         // Verify transaction is sent to sequencer inbox
         assert_eq!(batch.to, Some(TxKind::Call(builder.mchain_rollup_address)));
@@ -360,6 +375,8 @@ mod tests {
         // Verify the input data contains the correct parameters
         let call_data = Rollup::postBatchCall::new((
             expected_encoded, // batch data
+            U256::from(1),
+            U256::from(2),
         ))
         .abi_encode();
 
@@ -373,7 +390,7 @@ mod tests {
             hex!("1234").into(), // Sample transaction data
             hex!("5678").into(),
         ];
-        let batch = builder.build_batch_txn(txs.clone(), 0, 0, 0).await.unwrap();
+        let batch = builder.build_batch_txn(txs.clone(), 0, 0, 1, 2, 0).await.unwrap();
 
         // Verify transaction is sent to sequencer inbox
         assert_eq!(batch.to, Some(TxKind::Call(builder.mchain_rollup_address)));
@@ -388,6 +405,8 @@ mod tests {
         // Verify the input data contains the correct parameters
         let call_data = Rollup::postBatchCall::new((
             expected_encoded, // batch data
+            U256::from(1),
+            U256::from(2),
         ))
         .abi_encode();
 
@@ -551,7 +570,9 @@ mod tests {
         })]);
         let expected_encoded = expected_batch.encode().unwrap();
         let expected_batch_call =
-            Rollup::postBatchCall::new((expected_encoded,)).abi_encode().into();
+            Rollup::postBatchCall::new((expected_encoded, U256::from(1), U256::from(0)))
+                .abi_encode()
+                .into();
         assert_eq!(batch_txn.input, expected_batch_call);
     }
 
@@ -662,8 +683,13 @@ mod tests {
             }),
         ]);
         let expected_encoded = expected_batch.encode().unwrap();
-        let expected_batch_call =
-            Rollup::postBatchCall::new((expected_encoded,)).abi_encode().into();
+        let expected_batch_call = Rollup::postBatchCall::new((
+            expected_encoded,
+            U256::from(slot.sequencing.block.number),
+            U256::from(slot.settlement[0].block.number),
+        ))
+        .abi_encode()
+        .into();
         assert_eq!(batch_txn.input, expected_batch_call);
     }
 
