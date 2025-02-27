@@ -6,10 +6,17 @@ use crate::{
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
 use alloy::{
-    hex, network::Network, primitives::U256, providers::Provider, sol, transports::Transport,
+    hex,
+    network::Network,
+    primitives::U256,
+    providers::{fillers::NonceManager, Provider},
+    sol,
+    transports::{Transport, TransportResult},
 };
 use async_trait::async_trait;
-use std::{marker::PhantomData, time::Duration};
+use dashmap::DashMap;
+use futures_util::lock::Mutex;
+use std::{marker::PhantomData, sync::Arc, time::Duration};
 use tracing::{debug_span, error, info, warn};
 
 sol! {
@@ -33,18 +40,25 @@ pub struct SolMetabasedSequencerChainService<P: Provider<T, N>, T: Transport + C
     provider: P,
     phantom1: PhantomData<T>,
     phantom2: PhantomData<N>,
+    nonce_manager: CachedNonceManager2,
 }
 
 impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
     SolMetabasedSequencerChainService<P, T, N>
 {
-    pub fn new(chain_contract_address: Address, wallet_address: Address, provider: P) -> Self {
+    pub fn new(
+        chain_contract_address: Address,
+        wallet_address: Address,
+        provider: P,
+        nonce_manager: CachedNonceManager2,
+    ) -> Self {
         Self {
             chain_contract_address,
             wallet_address,
             provider,
             phantom1: Default::default(),
             phantom2: Default::default(),
+            nonce_manager,
         }
     }
 
@@ -85,6 +99,48 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
     }
 }
 
+#[derive(Clone, Debug, Default)]
+pub struct CachedNonceManager2 {
+    nonces: Arc<DashMap<Address, Arc<Mutex<u64>>>>,
+}
+
+#[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
+#[cfg_attr(not(target_arch = "wasm32"), async_trait)]
+impl NonceManager for CachedNonceManager2 {
+    async fn get_next_nonce<P, T, N>(&self, provider: &P, address: Address) -> TransportResult<u64>
+    where
+        P: Provider<T, N>,
+        N: Network,
+        T: Transport + Clone,
+    {
+        // Use `u64::MAX` as a sentinel value to indicate that the nonce has not been fetched yet.
+        const NONE: u64 = u64::MAX;
+
+        // Locks dashmap internally for a short duration to clone the `Arc`.
+        // We also don't want to hold the dashmap lock through the await point below.
+        let nonce = {
+            let rm = self.nonces.entry(address).or_insert_with(|| Arc::new(Mutex::new(NONE)));
+            Arc::clone(rm.value())
+        };
+
+        let mut nonce = nonce.lock().await;
+        let new_nonce = if *nonce == NONE {
+            // Initialize the nonce if we haven't seen this account before.
+            provider.get_transaction_count(address).await?
+        } else {
+            *nonce + 1
+        };
+        *nonce = new_nonce;
+        Ok(new_nonce)
+    }
+}
+
+impl CachedNonceManager2 {
+    fn clear_nonce(&self, address: Address) {
+        self.nonces.remove(&address);
+    }
+}
+
 /// Format wei value with arbitrary precision
 /// Ported from Foundry: https://github.com/foundry-rs/foundry/blob/master/crates/evm/abi/src/console/mod.rs#L11
 pub fn format_units_uint(x: &U256, decimals: &U256) -> String {
@@ -112,7 +168,7 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
             let pending_tx = self.contract().processTransaction(tx).send().await?;
 
             match pending_tx
-                .with_required_confirmations(2)
+                .with_required_confirmations(0)
                 .with_timeout(Some(Duration::from_secs(60)))
                 .watch()
                 .await
@@ -122,7 +178,8 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChai
                     Ok(hash)
                 }
                 Err(e) => {
-                    error!(error = ?e, "Transaction submission failed");
+                    error!(error = ?e, "Transaction submission failed. Clearing nonce for address {}", self.wallet_address);
+                    self.nonce_manager.clear_nonce(self.wallet_address);
                     Err(alloy::contract::Error::from(e))
                 }
             }
@@ -211,11 +268,13 @@ mod tests {
     async fn test_get_balance() {
         let expected_balance = U256::from(100);
         let provider = MockProvider::new(expected_balance);
+        let manager = CachedNonceManager2::default();
         let service: SolMetabasedSequencerChainService<MockProvider, BoxTransport, Ethereum> =
             SolMetabasedSequencerChainService::new(
                 Address::default(),
                 Address::default(),
                 provider,
+                manager,
             );
         let balance = service.get_balance().await.unwrap();
         assert_eq!(balance, expected_balance);
@@ -225,11 +284,13 @@ mod tests {
     async fn test_get_zero_balance() {
         let expected_balance = U256::from(0);
         let provider = MockProvider::new(expected_balance);
+        let manager = CachedNonceManager2::default();
         let service: SolMetabasedSequencerChainService<MockProvider, BoxTransport, Ethereum> =
             SolMetabasedSequencerChainService::new(
                 Address::default(),
                 Address::default(),
                 provider,
+                manager,
             );
         let balance = service.get_balance().await.unwrap();
         assert_eq!(balance, expected_balance);

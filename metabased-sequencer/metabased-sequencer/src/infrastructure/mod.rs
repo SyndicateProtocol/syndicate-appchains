@@ -1,5 +1,5 @@
 mod prometheus;
-mod sol;
+pub mod sol;
 mod tokio;
 #[allow(dead_code)]
 mod zlib_compression;

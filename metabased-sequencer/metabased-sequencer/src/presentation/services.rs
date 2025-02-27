@@ -1,15 +1,16 @@
 use crate::{
     application::{Metrics, Stopwatch},
     domain::MetabasedSequencerChainService,
-    infrastructure::{PrometheusMetrics, SolMetabasedSequencerChainService, TokioStopwatch},
+    infrastructure::{
+        sol::CachedNonceManager2, PrometheusMetrics, SolMetabasedSequencerChainService,
+        TokioStopwatch,
+    },
 };
 use alloy::{
     network::{Ethereum, EthereumWallet, NetworkWallet},
     primitives::{Address, B256},
     providers::{
-        fillers::{
-            CachedNonceManager, ChainIdFiller, FillProvider, GasFiller, NonceFiller, WalletFiller,
-        },
+        fillers::{ChainIdFiller, FillProvider, GasFiller, NonceFiller, WalletFiller},
         ReqwestProvider, RootProvider,
     },
     signers::local::PrivateKeySigner,
@@ -67,7 +68,13 @@ pub fn create(
         impl Stopwatch<Running: Send + Sync + Debug + 'static> + Send + Sync + Debug + 'static,
     >,
 > {
-    let chain = create_chain_service(chain_contract_address, chain_rpc_address, private_key)?;
+    let nonce_manager = CachedNonceManager2::default();
+    let chain = create_chain_service(
+        chain_contract_address,
+        chain_rpc_address,
+        private_key,
+        nonce_manager,
+    )?;
     let metrics = PrometheusMetrics::new();
     let stopwatch = TokioStopwatch;
 
@@ -78,6 +85,7 @@ fn create_chain_service(
     chain_contract_address: Address,
     chain_rpc_address: Url,
     private_key: B256,
+    nonce_manager: CachedNonceManager2,
 ) -> eyre::Result<
     impl MetabasedSequencerChainService<Error = alloy::contract::Error> + Send + Sync + Debug + 'static,
 > {
@@ -87,8 +95,9 @@ fn create_chain_service(
     let wallet = EthereumWallet::from(signer);
     let wallet_address =
         <EthereumWallet as NetworkWallet<Ethereum>>::default_signer_address(&wallet);
+
     let filler = join_fill!(
-        NonceFiller::new(CachedNonceManager::default()),
+        NonceFiller::new(nonce_manager.clone()),
         WalletFiller::new(wallet),
         GasFiller,
         ChainIdFiller::new(None),
@@ -97,5 +106,10 @@ fn create_chain_service(
     let rpc: RootProvider<_, Ethereum> = ReqwestProvider::new_http(chain_rpc_address);
     let rpc = FillProvider::new(rpc, filler);
 
-    Ok(SolMetabasedSequencerChainService::new(chain_contract_address, wallet_address, rpc))
+    Ok(SolMetabasedSequencerChainService::new(
+        chain_contract_address,
+        wallet_address,
+        rpc,
+        nonce_manager,
+    ))
 }

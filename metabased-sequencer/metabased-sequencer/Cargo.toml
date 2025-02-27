@@ -34,6 +34,8 @@ tower = { workspace = true }
 tower-layer = { workspace = true }
 tower-service = { workspace = true }
 alloy-primitives = { workspace = true }
+dashmap = "6.1.0"
+futures-util = "0.3.31"
 
 [dev-dependencies]
 alloy-rlp = { workspace = true }
