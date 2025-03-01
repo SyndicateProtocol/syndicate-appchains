@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-async-trait = { workspace = true }
 alloy = { workspace = true, features = [
   "rlp",
   "provider-engine-api",
@@ -15,34 +14,14 @@ alloy = { workspace = true, features = [
   "signer-local",
   "k256",
 ] }
-figment = { workspace = true, features = ["env"] }
-jsonrpsee = { workspace = true, features = ["server"] }
-tokio = { workspace = true }
-eyre = { workspace = true }
-serde_json = { workspace = true }
-tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
-tracing = { workspace = true, features = ["attributes"] }
-clap = { workspace = true, features = ["derive"] }
-bytes = { workspace = true }
-http-body-util = { workspace = true }
-http = { workspace = true }
-serde = { workspace = true }
-url = { workspace = true, features = ["serde"] }
-rand = { workspace = true }
-flate2 = { workspace = true }
-prometheus-client = { workspace = true }
-tower = { workspace = true }
-tower-layer = { workspace = true }
-tower-service = { workspace = true }
-alloy-primitives = { workspace = true }
-
-[dev-dependencies]
-alloy-rlp = { workspace = true }
-test-case = { workspace = true }
-const_format = { workspace = true }
-criterion = { workspace = true }
-
-[[bench]]
-name = "zlib_compression"
-harness = false
-path = "benches/zlib_compression.rs"
+reqwest = { workspace = true }
+clap = { version = "4.4", features = ["derive"] }
+eyre = "0.6"
+hex = "0.4"
+jsonrpsee = { version = "0.20", features = ["server"] }
+prometheus = "0.13"
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+url = "2.4" 

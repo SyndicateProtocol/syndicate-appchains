@@ -19,12 +19,9 @@ use std::{fmt::Debug, net::SocketAddr};
 use tracing::info;
 use url::Url;
 
-pub async fn run(
-    port: u16,
-    chain_contract_address: Address,
-    chain_rpc_address: Url,
-    private_key: B256,
-) -> eyre::Result<(SocketAddr, ServerHandle)> {
+use super::configuration::Configuration;
+
+pub async fn run(config: &Configuration) -> eyre::Result<(SocketAddr, ServerHandle)> {
     let rpc_middleware = RpcServiceBuilder::new();
     let http_middleware = tower::ServiceBuilder::new()
         .layer(ProxyGetRequestLayer::new(Health.http_path(), Health.rpc_method())?)
@@ -39,10 +36,14 @@ pub async fn run(
     let server = Server::builder()
         .set_http_middleware(http_middleware)
         .set_rpc_middleware(rpc_middleware)
-        .build(format!("0.0.0.0:{port}"))
+        .build(format!("0.0.0.0:{}", config.port))
         .await?;
 
-    let services = services::create(chain_contract_address, chain_rpc_address, private_key)?;
+    let services = services::create(
+        config.chain_contract_address,
+        config.chain_rpc_address.clone(),
+        config.private_key,
+    )?;
     let module = create_eth_module(services)?;
 
     let addr = server.local_addr()?;
