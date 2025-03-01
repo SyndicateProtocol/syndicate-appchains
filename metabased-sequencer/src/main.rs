@@ -45,11 +45,7 @@ async fn main() -> Result<()> {
 async fn run_server(config: &Config) -> Result<(SocketAddr, ServerHandle)> {
     let server = Server::builder().build(format!("0.0.0.0:{}", config.port)).await?;
 
-    let service = MetabasedService::new(
-        config.chain_contract_address,
-        config.chain_rpc_url.clone(),
-        config.private_key,
-    )?;
+    let service = MetabasedService::new(config)?;
 
     let mut module = RpcModule::new(service);
 

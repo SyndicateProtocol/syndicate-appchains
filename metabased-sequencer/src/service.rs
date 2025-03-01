@@ -1,9 +1,9 @@
-use crate::contract::MetabasedSequencerChain::processTransactionCall;
+use crate::{config::Config, contract::MetabasedSequencerChain::processTransactionCall};
 use alloy::{
     consensus::{Transaction, TxEnvelope, TxType},
     hex,
     network::{Ethereum, EthereumWallet},
-    primitives::{Address, Bytes, TxHash, B256, U256},
+    primitives::{Address, Bytes, TxHash, U256},
     providers::{
         fillers::{
             CachedNonceManager, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
@@ -23,9 +23,8 @@ use jsonrpsee::{
     types::{error::ErrorCode, Params},
 };
 use reqwest::Client;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use tracing::{debug, error, info};
-use url::Url;
 
 #[allow(missing_docs)]
 pub type FilledProvider = FillProvider<
@@ -50,8 +49,8 @@ pub struct MetabasedService {
 }
 
 impl MetabasedService {
-    pub fn new(contract_address: Address, rpc_url: Url, private_key: B256) -> Result<Self> {
-        let signer = PrivateKeySigner::from_bytes(&private_key)?;
+    pub fn new(config: &Config) -> Result<Self> {
+        let signer = PrivateKeySigner::from_bytes(&config.private_key)?;
         let wallet = EthereumWallet::from(signer);
 
         let provider = ProviderBuilder::new()
@@ -59,9 +58,9 @@ impl MetabasedService {
             .filler(WalletFiller::new(wallet))
             .filler(GasFiller)
             .filler(ChainIdFiller::new(None))
-            .on_http(rpc_url);
+            .on_http(config.chain_rpc_url.clone());
 
-        Ok(Self { contract_address, provider: Arc::new(provider) })
+        Ok(Self { contract_address: config.chain_contract_address, provider: Arc::new(provider) })
     }
 
     fn validate_transaction(&self, raw_tx: &Bytes) -> Result<()> {
@@ -137,9 +136,23 @@ impl MetabasedService {
         let data = processTransactionCall { encodedTxn: raw_tx };
         let input = TransactionInput::new(data.abi_encode().into());
         let tx = TransactionRequest::default().to(self.contract_address).input(input);
-        let pending = self.provider.send_transaction(tx).await?;
+        let pending_tx = self.provider.send_transaction(tx).await?;
 
-        Ok(pending.tx_hash().to_owned())
+        match pending_tx
+            .with_required_confirmations(0)
+            .with_timeout(Some(Duration::from_secs(60)))
+            .watch()
+            .await
+        {
+            Ok(hash) => {
+                // TODO: Log sequencer balance
+                return Ok(hash);
+            }
+            Err(e) => {
+                error!(error = ?e, "Transaction submission failed");
+                return Err(eyre::eyre!(e));
+            }
+        }
     }
 }
 
