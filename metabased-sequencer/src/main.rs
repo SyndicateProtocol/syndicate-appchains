@@ -1,3 +1,8 @@
+//! Metabased Sequencer is a service that processes and validates transactions
+//! before submitting them to the Metabased chain.
+//!
+//! It provides a JSON-RPC interface for submitting transactions and checking service health.
+
 use eyre::Result;
 use jsonrpsee::{
     server::{Server, ServerHandle},
@@ -11,10 +16,13 @@ use tracing_subscriber::FmtSubscriber;
 
 mod config;
 mod contract;
+mod metrics;
 mod service;
 
 use config::Config;
+use metrics::{start_metrics, MetricsState};
 use service::{send_raw_transaction_handler, MetabasedService};
+
 #[tokio::main]
 async fn main() -> Result<()> {
     // Initialize logging
@@ -28,6 +36,10 @@ async fn main() -> Result<()> {
     // Parse config
     let config = Config::parse()?;
 
+    // Initialize metrics
+    let metrics = MetricsState::new();
+    let metrics_handler = start_metrics(metrics, 7777).await;
+
     // Start server
     let (addr, handle) = run_server(&config).await?;
 
@@ -37,7 +49,10 @@ async fn main() -> Result<()> {
     );
 
     // Keep the server running
-    handle.stopped().await;
+    tokio::select! {
+        _ = handle.stopped() => {}
+        _ = metrics_handler => {}
+    }
 
     Ok(())
 }
@@ -51,7 +66,7 @@ async fn run_server(config: &Config) -> Result<(SocketAddr, ServerHandle)> {
 
     // Register RPC methods
     module.register_async_method("eth_sendRawTransaction", send_raw_transaction_handler)?;
-    module.register_method("health", |_, _| {
+    module.register_method("health", |_, _, _| {
         Ok::<JsonValue, ErrorCode>(serde_json::json!({"health": true}))
     })?;
 

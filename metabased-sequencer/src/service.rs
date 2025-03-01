@@ -21,13 +21,14 @@ use eyre::Result;
 use jsonrpsee::{
     core::RpcResult,
     types::{error::ErrorCode, Params},
+    Extensions,
 };
 use reqwest::Client;
 use std::{sync::Arc, time::Duration};
 use tracing::{debug, error, info};
 
 #[allow(missing_docs)]
-pub type FilledProvider = FillProvider<
+type FilledProvider = FillProvider<
     JoinFill<
         JoinFill<
             JoinFill<
@@ -159,6 +160,7 @@ impl MetabasedService {
 pub async fn send_raw_transaction_handler(
     params: Params<'static>,
     service: Arc<MetabasedService>,
+    _: Extensions,
 ) -> RpcResult<String> {
     let tx_data: Bytes =
         params.one::<String>().map_err(|_| ErrorCode::InvalidRequest)?.parse().map_err(|e| {
@@ -226,7 +228,8 @@ mod tests {
         let service = Arc::new(setup_test_service());
         let invalid_params = Params::new(Some("[\"invalid_hex\"]"));
 
-        let result = send_raw_transaction_handler(invalid_params, service).await;
+        let result =
+            send_raw_transaction_handler(invalid_params, service, Extensions::default()).await;
         assert!(result.is_err());
     }
 
@@ -237,7 +240,7 @@ mod tests {
         let valid_tx = "[\"0xf86d8202b28477359400825208944592d8f8d7b001e72cb26a73e4fa1806a51ac79d880de0b6b3a7640000802ca05924bde7ef10aa88db9c66dd4f5fb16b46dff2319b9968be983118b57bb50562a001b24b31010004f13d9a26b320845257a6cfc2bf819a3d55e3fc86263c5f0772\"]";
         let params = Params::new(Some(valid_tx));
 
-        let result = send_raw_transaction_handler(params, service).await;
+        let result = send_raw_transaction_handler(params, service, Extensions::default()).await;
         // Note: This will fail in actual execution since we're using a mock setup
         // but it tests the parameter parsing logic
         assert!(result.is_err());
