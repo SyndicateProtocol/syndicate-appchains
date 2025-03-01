@@ -1,5 +1,6 @@
 use alloy::sol;
 
+// TODO: Use contract bindings
 sol! {
     #[derive(Debug, PartialEq, Eq)]
     #[sol(rpc)]

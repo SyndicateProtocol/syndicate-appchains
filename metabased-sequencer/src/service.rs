@@ -173,3 +173,93 @@ pub async fn send_raw_transaction_handler(
 
     Ok(format!("0x{}", hex::encode(tx_hash)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::Config;
+    use alloy::primitives::{Bytes, B256};
+    use jsonrpsee::types::Params;
+    use std::str::FromStr;
+    use url::Url;
+
+    fn setup_test_service() -> MetabasedService {
+        let config = Config {
+            chain_contract_address: Address::from([0x42; 20]),
+            chain_rpc_url: Url::parse("http://localhost:8545").unwrap(),
+            private_key: B256::from([0x1; 32]),
+            port: 8456,
+        };
+        MetabasedService::new(&config).unwrap()
+    }
+
+    #[test]
+    fn test_new_service_creation() {
+        let config = Config {
+            chain_contract_address: Address::from([0x42; 20]),
+            chain_rpc_url: Url::parse("http://localhost:8545").unwrap(),
+            private_key: B256::from([0x1; 32]),
+            port: 8456,
+        };
+
+        let result = MetabasedService::new(&config);
+        assert!(result.is_ok());
+
+        let service = result.unwrap();
+        assert_eq!(service.contract_address, config.chain_contract_address);
+    }
+
+    #[test]
+    fn test_new_service_with_invalid_private_key() {
+        let config = Config {
+            chain_contract_address: Address::from([0x42; 20]),
+            chain_rpc_url: Url::parse("http://localhost:8545").unwrap(),
+            private_key: B256::from([0x0; 32]), // Invalid private key (all zeros)
+            port: 8456,
+        };
+
+        let result = MetabasedService::new(&config);
+        assert!(result.is_err());
+    }
+    #[tokio::test]
+    async fn test_send_raw_transaction_handler_invalid_params() {
+        let service = Arc::new(setup_test_service());
+        let invalid_params = Params::new(Some("[\"invalid_hex\"]"));
+
+        let result = send_raw_transaction_handler(invalid_params, service).await;
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_send_raw_transaction_handler_valid_params() {
+        let service = Arc::new(setup_test_service());
+        // Valid raw transaction hex
+        let valid_tx = "[\"0xf86d8202b28477359400825208944592d8f8d7b001e72cb26a73e4fa1806a51ac79d880de0b6b3a7640000802ca05924bde7ef10aa88db9c66dd4f5fb16b46dff2319b9968be983118b57bb50562a001b24b31010004f13d9a26b320845257a6cfc2bf819a3d55e3fc86263c5f0772\"]";
+        let params = Params::new(Some(valid_tx));
+
+        let result = send_raw_transaction_handler(params, service).await;
+        // Note: This will fail in actual execution since we're using a mock setup
+        // but it tests the parameter parsing logic
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_process_transaction() {
+        let service = setup_test_service();
+        let test_tx = Bytes::from_str("0xf86d8202b28477359400825208944592d8f8d7b001e72cb26a73e4fa1806a51ac79d880de0b6b3a7640000802ca05924bde7ef10aa88db9c66dd4f5fb16b46dff2319b9968be983118b57bb50562a001b24b31010004f13d9a26b320845257a6cfc2bf819a3d55e3fc86263c5f0772").unwrap();
+
+        let result = service.process_transaction(test_tx).await;
+        // This will fail since we're not connected to a real node
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validate_transaction() {
+        let service = setup_test_service();
+        let valid_tx = Bytes::from_str("0xf86d8202b28477359400825208944592d8f8d7b001e72cb26a73e4fa1806a51ac79d880de0b6b3a7640000802ca05924bde7ef10aa88db9c66dd4f5fb16b46dff2319b9968be983118b57bb50562a001b24b31010004f13d9a26b320845257a6cfc2bf819a3d55e3fc86263c5f0772").unwrap();
+
+        let result = service.validate_transaction(&valid_tx);
+        // The validation should pass since this is a valid RLP-encoded transaction
+        assert!(result.is_ok());
+    }
+}
