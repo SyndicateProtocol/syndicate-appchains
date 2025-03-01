@@ -3335,23 +3335,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "106dd99e98437432fed6519dedecfade6a06a73bb7b2a1e019fdd2bee5778d94"
 
 [[package]]
-name = "proxy"
-version = "0.1.0"
-dependencies = [
- "bytes",
- "clap",
- "http 1.2.0",
- "http-body-util",
- "hyper 1.6.0",
- "pin-project-lite",
- "reqwest",
- "serde_json",
- "tokio",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "quick-error"
 version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
