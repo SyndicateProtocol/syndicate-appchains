@@ -15,7 +15,7 @@ use alloy::{
 };
 use common::{db::TranslatorStore, types::Slot};
 use derivative::Derivative;
-use eyre::{Error, Result};
+use eyre::{Error, Report, Result};
 use std::sync::Arc;
 use tokio::sync::{mpsc::Receiver, oneshot};
 use tracing::{error, info, trace};
@@ -29,7 +29,6 @@ pub struct BlockBuilder {
     #[allow(missing_docs)]
     pub mchain: MetaChainProvider,
     builder: Box<dyn RollupBlockBuilder>,
-    slot_duration_sec: u64,
     metrics: BlockBuilderMetrics,
 
     #[derivative(Debug = "ignore")]
@@ -41,7 +40,6 @@ impl BlockBuilder {
     pub async fn new(
         slotter_rx: Receiver<Slot>,
         config: &BlockBuilderConfig,
-        slot_duration_sec: u64,
         store: Arc<dyn TranslatorStore + Send + Sync>,
         metrics: BlockBuilderMetrics,
     ) -> Result<Self, Error> {
@@ -54,7 +52,7 @@ impl BlockBuilder {
             }
         };
 
-        Ok(Self { slotter_rx, mchain, builder, metrics, slot_duration_sec, store })
+        Ok(Self { slotter_rx, mchain, builder, metrics, store })
     }
 
     /// Validates and rolls back to a known block number if necessary
@@ -123,7 +121,7 @@ impl BlockBuilder {
         mut self,
         known_block_number: Option<u64>,
         mut shutdown_rx: oneshot::Receiver<()>,
-    ) {
+    ) -> Result<(), Error> {
         // resume from known state
         if let Err(e) = self.resume_from_block(known_block_number).await {
             panic!("Failed to validate and rollback: {}", e);
@@ -137,7 +135,7 @@ impl BlockBuilder {
                     self.metrics.record_last_slot(slot.number);
 
                     // [OP / ARB] Build block of MChain transactions from slot
-                    let transactions = match self.builder.build_block_from_slot(slot.clone()).await {
+                    let transactions = match self.builder.build_block_from_slot(&slot).await {
                         Ok(transactions) => transactions,
                         Err(e) => {
                             panic!("Error building batch transaction: {}", e);
@@ -148,17 +146,8 @@ impl BlockBuilder {
                     trace!("Submitting {} transactions", transactions_len);
                     self.metrics.record_transactions_per_slot(transactions_len);
 
-                    // Fill gap with empty blocks if needed
-                    let mut block_number = self.get_current_block_number().await;
-                    while block_number < slot.number-1 {
-                        let empty_block_timestamp = slot.timestamp - ((slot.number - block_number) * self.slot_duration_sec);
-                        trace!("Mining empty block {} with timestamp {}", block_number + 1, empty_block_timestamp);
-
-                        if let Err(e) = self.mchain.mine_block(empty_block_timestamp).await {
-                            panic!("Error mining block: {}", e);
-                        }
-                        block_number += 1;
-                    }
+                    let  block_number = self.get_current_block_number().await;
+                    assert!(slot.number == block_number + 1, "Unexpected slot number, got {}, expected {}", slot.number, block_number + 1);
 
                     // Submit transactions to mchain
                     if let Err(e) = self.mchain.submit_txns(transactions).await {
@@ -180,7 +169,7 @@ impl BlockBuilder {
                 _ = &mut shutdown_rx => {
                     drop(self.mchain);
                     info!("Block builder stopped");
-                    return;
+                    return Err(Report::from(BlockBuilderError::Shutdown))
                 }
             }
         }
@@ -207,6 +196,9 @@ pub enum BlockBuilderError {
 
     #[error("Error mining block: {0}")]
     MineBlock(String),
+
+    #[error("Block builder was shut down")]
+    Shutdown,
 }
 
 #[allow(missing_docs)] // self-documenting
@@ -220,83 +212,5 @@ pub enum AnvilStartError {
     PortUnavailable { mchain_url: Url, port: u16 },
 }
 
-/*
-#[cfg(test)]
-mod tests {
-    use prometheus_client::registry::Registry;
-
-    use super::*;
-    use alloy::providers::Provider;
-    use common::db::RocksDbStore;
-    use eyre::Result;
-    use test_utils::test_path;
-    use tokio::sync::mpsc;
-    use tracing_test::traced_test;
-
-    struct MetricsState {
-        /// Prometheus registry
-        pub registry: Registry,
-    }
-
-    #[tokio::test]
-    #[traced_test]
-    #[ignore] // TODO SEQ-528 unskip/re-write
-    async fn test_block_builder_resume_from_known_safe_slot() -> Result<()> {
-        let (tx, rx) = mpsc::channel(1);
-        let config = BlockBuilderConfig::default();
-        let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let db_path = test_path("db");
-        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
-        let builder = BlockBuilder::new(rx, &config, 2, store, metrics).await?;
-
-        let provider = builder.mchain.provider.clone();
-
-        // First run: send a few slots
-        let test_slot1 = Slot::new(1, 1000);
-        let test_slot2 = Slot::new(2, 2000);
-        let test_slot3 = Slot::new(3, 3000);
-
-        let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });
-
-        tx.send(test_slot1).await?;
-        tx.send(test_slot2.clone()).await?;
-        tx.send(test_slot3).await?;
-
-        // Give time for processing and state to be persisted
-        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-
-        let latest_block = provider.get_block_number().await?;
-        assert_eq!(latest_block, 3, "Chain should be at block 3");
-
-        let _ = shutdown_tx.send(());
-        handle.await?;
-
-        // Second run: resume builder
-        let (_resumed_tx, resumed_rx) = mpsc::channel(1);
-        let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
-        let resumed_builder = BlockBuilder::new(resumed_rx, &config, 2, store, metrics).await?;
-
-        let resumed_provider = resumed_builder.mchain.provider.clone();
-
-        // resumed builder with the "last known safe slot" as slot2
-        let (_shutdown_tx, shutdown_rx) = oneshot::channel();
-        tokio::spawn(
-            async move { resumed_builder.start(Some(test_slot2.number), shutdown_rx).await },
-        );
-
-        // Give time for rollback to slot0
-        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-
-        let latest_block = resumed_provider.get_block_number().await?;
-        assert_eq!(latest_block, 2, "Chain should be at block 2 after reorg");
-
-        Ok(())
-    }
-
-    // TODO SEQ-529 - write a test that asserts for determinism (same slots should yield the same
-    // block chain on separate block builders)
-}
-*/
+// TODO SEQ-529 - write a test that asserts for determinism (same slots should yield the same
+// block chain on separate block builders)

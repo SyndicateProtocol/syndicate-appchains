@@ -140,8 +140,11 @@ error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 nee
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC20InsufficientAllowance {
+        #[allow(missing_docs)]
         pub spender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub allowance: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub needed: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -232,8 +235,11 @@ error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC20InsufficientBalance {
+        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub balance: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub needed: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -324,6 +330,7 @@ error ERC20InvalidApprover(address approver);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC20InvalidApprover {
+        #[allow(missing_docs)]
         pub approver: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -394,6 +401,7 @@ error ERC20InvalidReceiver(address receiver);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC20InvalidReceiver {
+        #[allow(missing_docs)]
         pub receiver: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -464,6 +472,7 @@ error ERC20InvalidSender(address sender);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC20InvalidSender {
+        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -534,6 +543,7 @@ error ERC20InvalidSpender(address spender);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC20InvalidSpender {
+        #[allow(missing_docs)]
         pub spender: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -599,11 +609,17 @@ error ERC20InvalidSpender(address spender);
     };
     ///Container for all the [`IERC20Errors`](self) custom errors.
     pub enum IERC20ErrorsErrors {
+        #[allow(missing_docs)]
         ERC20InsufficientAllowance(ERC20InsufficientAllowance),
+        #[allow(missing_docs)]
         ERC20InsufficientBalance(ERC20InsufficientBalance),
+        #[allow(missing_docs)]
         ERC20InvalidApprover(ERC20InvalidApprover),
+        #[allow(missing_docs)]
         ERC20InvalidReceiver(ERC20InvalidReceiver),
+        #[allow(missing_docs)]
         ERC20InvalidSender(ERC20InvalidSender),
+        #[allow(missing_docs)]
         ERC20InvalidSpender(ERC20InvalidSpender),
     }
     #[automatically_derived]

@@ -10,7 +10,7 @@ name = "metabased-translator"
 path = "src/main.rs"
 
 [dependencies]
-alloy             = { workspace = true, features = [] }
+alloy             = { workspace = true }
 block-builder     = { workspace = true }
 clap              = { workspace = true }
 common            = { workspace = true }

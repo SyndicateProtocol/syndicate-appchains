@@ -18,7 +18,7 @@ use block_builder::{
     connectors::mchain::{FilledProvider, MetaChainProvider},
     metrics::BlockBuilderMetrics,
 };
-use common::{db::RocksDbStore, tracing::init_test_tracing, types::Chain};
+use common::{db::RocksDbStore, types::Chain};
 use contract_bindings::{
     arbitrum::rollup::Rollup,
     metabased::{
@@ -45,7 +45,6 @@ use tokio::{
     task,
     time::timeout,
 };
-use tracing::Level;
 
 pub const PRELOAD_INBOX_ADDRESS: Address = address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899");
 pub const PRELOAD_BRIDGE_ADDRESS: Address = address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2");
@@ -294,7 +293,6 @@ pub struct MetaNode {
     pub metabased_rollup: RootProvider,
 
     pub chain_id: u64,
-    pub slot_duration: u64,
 
     pub mchain: (Docker, Option<(Docker, Docker, Docker, Docker)>),
     pub mchain_provider: MetaChainProvider,
@@ -331,8 +329,6 @@ impl MetaNode {
             if pre_loaded { PRELOAD_BRIDGE_ADDRESS } else { get_rollup_contract_address() };
         let inbox_address =
             if pre_loaded { PRELOAD_INBOX_ADDRESS } else { get_rollup_contract_address() };
-
-        let _ = init_test_tracing(Level::INFO);
 
         let mchain_port = port_tracker.next_port();
         let (mchain_ipc_path, mchain_auth_ipc_path, mchain) = start_reth(
@@ -465,13 +461,12 @@ impl MetaNode {
         );
         let (shutdown_slotter_tx, shutdown_slotter_rx) = tokio::sync::oneshot::channel();
         let _slotter_task = Task(tokio::spawn(async move {
-            slotter.start(sequencer_rx, settlement_rx, shutdown_slotter_rx).await;
+            _ = slotter.start(sequencer_rx, settlement_rx, shutdown_slotter_rx).await;
         }));
 
         let block_builder = BlockBuilder::new(
             slotter_rx,
             &block_builder_cfg,
-            config.slotter.slot_duration,
             store,
             BlockBuilderMetrics::new(&mut metrics_state.registry),
         )
@@ -484,7 +479,7 @@ impl MetaNode {
             launch_nitro_node(block_builder_cfg.target_chain_id, mchain_port, nitro_port).await?;
         let (_builder_tx, builder_rx) = tokio::sync::oneshot::channel();
         let _block_builder_task = Task(tokio::spawn(async move {
-            block_builder.start(None, builder_rx).await;
+            _ = block_builder.start(None, builder_rx).await;
         }));
 
         Ok(Self {
@@ -494,7 +489,6 @@ impl MetaNode {
             metabased_rollup,
 
             chain_id: block_builder_cfg.target_chain_id,
-            slot_duration: config.slotter.slot_duration,
 
             mchain,
             mchain_provider,
@@ -516,26 +510,19 @@ impl MetaNode {
         })
     }
 
-    pub async fn mine_seq_blocks(&self, delay: u64) -> Result<()> {
+    pub async fn mine_seq_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.sequencing_provider, delay).await?;
         Ok(())
     }
 
-    pub async fn mine_set_blocks(&self, delay: u64) -> Result<()> {
+    pub async fn mine_set_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.settlement_provider, delay).await?;
         Ok(())
     }
 
     pub async fn mine_both(&self, delay: u64) -> Result<()> {
-        self.mine_seq_blocks(delay).await?;
-        self.mine_set_blocks(delay).await?;
-        Ok(())
-    }
-
-    pub async fn mine_next_slot(&self) -> Result<()> {
-        self.mine_seq_blocks(self.slot_duration).await?;
-        self.mine_set_blocks(self.slot_duration).await?;
-
+        self.mine_seq_block(delay).await?;
+        self.mine_set_block(delay).await?;
         Ok(())
     }
 }

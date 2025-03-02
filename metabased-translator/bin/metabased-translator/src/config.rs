@@ -105,7 +105,6 @@ impl MetabasedConfig {
             ));
         }
 
-        self.slotter.start_slot_timestamp = set_start_block.timestamp;
         Ok(())
     }
 
@@ -210,7 +209,7 @@ mod tests {
         assert_eq!(config.block_builder.target_chain_id, 13331370);
 
         // Slotter
-        assert_eq!(config.slotter.slot_duration, 2);
+        assert_eq!(config.slotter.settlement_delay, 60);
 
         // Chains
         assert_eq!(config.sequencing.sequencing_buffer_size, 100);
@@ -243,8 +242,6 @@ mod tests {
         env::set_var("BLOCK_BUILDER_MCHAIN_AUTH_IPC_PATH", "");
 
         let config = MetabasedConfig::try_parse_from(["test"]).unwrap();
-        assert_eq!(config.block_builder.mchain_ipc_path.as_str(), "");
-        assert_eq!(config.slotter.slot_duration, 3);
         assert_eq!(config.sequencing.sequencing_buffer_size, 200);
     }
 
@@ -311,7 +308,6 @@ mod tests {
         let result = config.set_initial_timestamp(&settlement_client, &sequencing_client).await;
 
         assert!(result.is_ok());
-        assert_eq!(config.slotter.start_slot_timestamp, 6000);
     }
 
     #[tokio::test]
