@@ -7,9 +7,10 @@ use alloy::{
     network::EthereumWallet,
     node_bindings::{Anvil, AnvilInstance},
     primitives::{address, Address, U256},
-    providers::{ext::AnvilApi as _, Provider, ProviderBuilder, RootProvider, WalletProvider},
+    providers::{
+        ext::AnvilApi as _, IpcConnect, Provider, ProviderBuilder, RootProvider, WalletProvider,
+    },
     rpc::types::anvil::MineOptions,
-    transports::http::Http,
 };
 use block_builder::{
     block_builder::BlockBuilder,
@@ -35,7 +36,6 @@ use ingestor::{
 use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
-use reqwest::Client;
 use slotter::{metrics::SlotterMetrics, Slotter};
 use std::{sync::Arc, time::Duration};
 use test_utils::test_path;
@@ -77,13 +77,11 @@ impl Drop for Docker {
 
 fn chain_config(chain_id: u64) -> String {
     r#"{"config": {
-    "ethash": {},
     "chainId": "#
         .to_string() +
         &chain_id.to_string() +
         r#",
     "homesteadBlock": 0,
-    "daoForkSupport": true,
     "eip150Block": 0,
     "eip155Block": 0,
     "eip158Block": 0,
@@ -104,66 +102,8 @@ fn chain_config(chain_id: u64) -> String {
   "difficulty": "0x0",
   "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
   "coinbase": "0x0000000000000000000000000000000000000000",
-  "stateRoot": "0x5eb6e371a698b8d68f665192350ffcecbbbf322916f4b51bd79bb6887da3f494",
   "alloc": {
     "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0x70997970C51812dc3A010C7d01b50e0d17dc79C8": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0x90F79bf6EB2c4f870365E785982E1f101E93b906": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0x15d34AAf54267DB7D7c367839AAf71A00a2C6A65": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0x9965507D1a55bcC2695C58ba16FB37d819B0A4dc": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0x976EA74026E726554dB657fA54763abd0C3a0aa9": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0x14dC79964da2C08b23698B3D3cc7Ca32193d9955": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0x23618e81E3f5cdF7f54C3d65f7FBc0aBf5B21E8f": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0xa0Ee7A142d267C1f36714E4a8F75612F20a79720": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0xBcd4042DE499D14e55001CcbB24a551F3b954096": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0x71bE63f3384f5fb98995898A86B02Fb2426c5788": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0xFABB0ac9d68B0B445fB7357272Ff202C5651694a": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0x1CBd3b2770909D4e10f157cABC84C7264073C9Ec": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0xdF3e18d64BC6A983f673Ab319CCaE4f1a57C7097": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0xcd3B766CCDd6AE721141F452C550Ca635964ce71": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0x2546BcD3c84621e976D8185a91A922aE77ECEc30": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0xbDA5747bFD65F08deb54cb465eB87D40e51B197E": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0xdD2FD4581271e230360230F9337D5c0430Bf44C0": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    },
-    "0x8626f6940E2eb28930eFb4CeF49B2d1F2C9C1199": {
       "balance": "0xD3C21BCECCEDA1000000"
     }
   },
@@ -173,32 +113,105 @@ fn chain_config(chain_id: u64) -> String {
 }"#
 }
 
-pub async fn start_reth(port: u16, chain_id: u64) -> Result<Docker> {
-    let reth = Command::new("docker")
-        .kill_on_drop(false) // kill via SIGTERM instead of SIGKILL
-        .arg("run")
-        .arg("--init")
-        .arg("--rm")
-        .arg("-p")
-        .arg(port.to_string() + ":8545")
-        .arg("ghcr.io/syndicateprotocol/reth")
-        .arg("node")
-        .arg("--dev")
-        .arg("--http")
-        .arg("--http.addr=0.0.0.0")
-        .arg("--http.port=8545")
-        .arg("--http.api=eth,anvil")
-        .arg("--txpool.minimal-protocol-fee=0")
-        .arg("--chain=".to_string() + &chain_config(chain_id))
-        .spawn()?;
-    let rollup = ProviderBuilder::new()
-        .on_http(("http://localhost:".to_string() + &port.to_string()).parse()?);
+pub async fn start_reth(
+    port: u16,
+    auth_port: u16,
+    http_port: u16,
+    chain_id: u64,
+) -> Result<(String, String, (Docker, Option<(Docker, Docker, Docker, Docker)>))> {
+    let dir = env!("CARGO_MANIFEST_DIR");
+    let file = format!("{dir}/{port}.ipc");
+    let auth_file = format!("{dir}/{auth_port}.ipc");
+    let reth = Docker(
+        Command::new("docker")
+            .arg("run")
+            .arg("--init")
+            .arg("--rm")
+            .arg("-v")
+            .arg(if cfg!(target_os = "macos") { "ipc" } else { dir }.to_string() + ":/ipc")
+            .arg("-p")
+            .arg(format!("{http_port}:{http_port}"))
+            .arg("ghcr.io/syndicateprotocol/reth")
+            .arg("node")
+            .arg("--http")
+            .arg("--http.addr=0.0.0.0")
+            .arg(format!("--http.port={http_port}"))
+            .arg(format!("--ipcpath=/ipc/{port}.ipc"))
+            .arg("--auth-ipc")
+            .arg(format!("--auth-ipc.path=/ipc/{auth_port}.ipc"))
+            .arg("--chain=".to_string() + &chain_config(chain_id))
+            .spawn()?,
+    );
+    let socat;
+    #[cfg(target_os = "macos")]
+    {
+        socat = Some((
+            Docker(
+                Command::new("socat")
+                    .arg(format!("UNIX-LISTEN:{file},reuseaddr,fork"))
+                    .arg(format!("TCP4:127.0.0.1:{port}"))
+                    .spawn()?,
+            ),
+            Docker(
+                Command::new("docker")
+                    .arg("run")
+                    .arg("--init")
+                    .arg("--rm")
+                    .arg("-p")
+                    .arg(format!("{port}:{port}"))
+                    .arg("-v")
+                    .arg("ipc:/ipc")
+                    .arg("alpine/socat:1.8.0.1")
+                    .arg(format!("TCP4-LISTEN:{port},reuseaddr,fork,bind=0.0.0.0"))
+                    .arg(format!("UNIX-CONNECT:/ipc/{port}.ipc,retry=1200,interval=0.1"))
+                    .spawn()?,
+            ),
+            Docker(
+                Command::new("socat")
+                    .arg(format!("UNIX-LISTEN:{auth_file},reuseaddr,fork"))
+                    .arg(format!("TCP4:127.0.0.1:{auth_port}"))
+                    .spawn()?,
+            ),
+            Docker(
+                Command::new("docker")
+                    .arg("run")
+                    .arg("--init")
+                    .arg("--rm")
+                    .arg("-p")
+                    .arg(format!("{auth_port}:{auth_port}"))
+                    .arg("-v")
+                    .arg("ipc:/ipc")
+                    .arg("alpine/socat:1.8.0.1")
+                    .arg(format!("TCP4-LISTEN:{auth_port},reuseaddr,fork,bind=0.0.0.0"))
+                    .arg(format!("UNIX-CONNECT:/ipc/{auth_port}.ipc,retry=1200,interval=0.1"))
+                    .spawn()?,
+            ),
+        ));
+    }
     // give it two minutes to launch (in case it needs to download the image)
     timeout(Duration::from_secs(120), async {
-        while rollup.get_chain_id().await.is_err() {
-            tokio::time::sleep(Duration::from_millis(10)).await;
+        let mut rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(file.clone())).await;
+        while rollup.is_err() {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(file.clone())).await;
         }
-        Ok::<_, eyre::Error>(Docker(reth))
+        let mut auth_rollup =
+            ProviderBuilder::new().on_ipc(IpcConnect::new(auth_file.clone())).await;
+        while auth_rollup.is_err() {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+            auth_rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(auth_file.clone())).await;
+        }
+        #[allow(clippy::unwrap_used)]
+        let r = rollup.unwrap();
+        while r.get_chain_id().await.is_err() {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        #[allow(clippy::unwrap_used)]
+        let r = auth_rollup.unwrap();
+        while r.get_chain_id().await.is_err() {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        Ok::<_, eyre::Error>((file, auth_file, (reth, socat)))
     })
     .await?
 }
@@ -218,13 +231,13 @@ pub async fn start_anvil_with_args(
     let anvil = Anvil::new().port(port).chain_id(chain_id).args(cmd).try_spawn()?;
 
     let provider = ProviderBuilder::new()
-        .with_recommended_fillers()
         .wallet(EthereumWallet::from(get_default_private_key_signer()))
         .on_http(anvil.endpoint_url());
     Ok((anvil, provider))
 }
 
-pub async fn mine_block(provider: &FilledProvider, delay: u64) -> Result<()> {
+/// mine a block with a delay
+async fn mine_block(provider: &FilledProvider, delay: u64) -> Result<()> {
     let block: common::types::Block = provider
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Latest, true))
         .await?;
@@ -233,29 +246,35 @@ pub async fn mine_block(provider: &FilledProvider, delay: u64) -> Result<()> {
 }
 
 pub async fn launch_nitro_node(
-    mchain: &MetaChainProvider,
+    chain_id: u64,
+    mchain_port: u16,
     port: u16,
-) -> Result<(Docker, RootProvider<Http<Client>>)> {
+) -> Result<(Docker, RootProvider)> {
     let nitro = Command::new("docker")
-        .kill_on_drop(false) // kill via SIGTERM instead of SIGKILL
         .arg("run")
         .arg("--init")
         .arg("--rm")
         .arg("--net=host")
         .arg("offchainlabs/nitro-node:v3.4.0-d896e9c-slim")
-        .arg("--parent-chain.connection.url=".to_string() + mchain.mchain_url.as_str())
+        .arg(format!("--parent-chain.connection.url=http://localhost:{mchain_port}"))
         .arg("--node.dangerous.disable-blob-reader")
         .arg("--execution.forwarding-target=null")
         .arg("--execution.parent-chain-reader.old-header-timeout=1000h")
         .arg("--node.inbox-reader.check-delay=10ms")
         .arg("--node.staker.enable=false")
         .arg("--ensure-rollup-deployment=false")
-        .arg("--chain.info-json=".to_string() + &mchain.rollup_info("test"))
+        .arg(
+            "--chain.info-json=".to_string() +
+                &MetaChainProvider::rollup_info(
+                    &MetaChainProvider::rollup_config(chain_id),
+                    "test",
+                ),
+        )
         .arg("--http.addr=0.0.0.0")
         .arg("--http.port=".to_string() + &port.to_string())
-        .arg("--log-level=debug")
+        .arg("--log-level=info")
         .spawn()?;
-    let rollup = ProviderBuilder::new()
+    let rollup = ProviderBuilder::default()
         .on_http(("http://localhost:".to_string() + &port.to_string()).parse()?);
     // give it two minutes to launch (in case it needs to download the image)
     timeout(Duration::from_secs(120), async {
@@ -269,17 +288,17 @@ pub async fn launch_nitro_node(
 
 #[derive(Debug)]
 pub struct MetaNode {
-    pub sequencing_contract: MetabasedSequencerChainInstance<Http<Client>, FilledProvider>,
+    pub sequencing_contract: MetabasedSequencerChainInstance<(), FilledProvider>,
     pub sequencing_provider: FilledProvider,
     pub settlement_provider: FilledProvider,
-    pub metabased_rollup: RootProvider<Http<Client>>,
+    pub metabased_rollup: RootProvider,
 
     pub chain_id: u64,
     pub slot_duration: u64,
 
-    pub mchain: Docker,
-    pub mchain_provider: FilledProvider,
-    pub rollup: Rollup::RollupInstance<Http<Client>, FilledProvider>,
+    pub mchain: (Docker, Option<(Docker, Docker, Docker, Docker)>),
+    pub mchain_provider: MetaChainProvider,
+    pub rollup: Rollup::RollupInstance<(), FilledProvider>,
 
     _sequencer_ingestor_task: Task,
     _settlement_ingestor_task: Task,
@@ -314,11 +333,21 @@ impl MetaNode {
             if pre_loaded { PRELOAD_INBOX_ADDRESS } else { get_rollup_contract_address() };
 
         let _ = init_test_tracing(Level::INFO);
+
         let mchain_port = port_tracker.next_port();
+        let (mchain_ipc_path, mchain_auth_ipc_path, mchain) = start_reth(
+            port_tracker.next_port(),
+            port_tracker.next_port(),
+            mchain_port,
+            block_builder::connectors::mchain::MCHAIN_ID,
+        )
+        .await?;
+
         let block_builder_cfg = BlockBuilderConfig {
             bridge_address,
             inbox_address,
-            mchain_url: format!("http://127.0.0.1:{}", mchain_port).parse()?,
+            mchain_ipc_path,
+            mchain_auth_ipc_path,
             sequencing_contract_address: get_rollup_contract_address(),
             ..config.block_builder
         };
@@ -439,13 +468,6 @@ impl MetaNode {
             slotter.start(sequencer_rx, settlement_rx, shutdown_slotter_rx).await;
         }));
 
-        let mchain = start_reth(
-            #[allow(clippy::unwrap_used)]
-            block_builder_cfg.mchain_url.port().unwrap(),
-            block_builder::connectors::mchain::MCHAIN_ID,
-        )
-        .await?;
-
         let block_builder = BlockBuilder::new(
             slotter_rx,
             &block_builder_cfg,
@@ -454,12 +476,12 @@ impl MetaNode {
             BlockBuilderMetrics::new(&mut metrics_state.registry),
         )
         .await?;
-        let mchain_provider = block_builder.mchain.provider.clone();
-        let rollup = block_builder.mchain.rollup.clone();
+        let mchain_provider = block_builder.mchain.clone();
+        let rollup = block_builder.mchain.get_rollup();
 
         let nitro_port = port_tracker.next_port();
         let (_nitro_docker, metabased_rollup) =
-            launch_nitro_node(&block_builder.mchain, nitro_port).await?;
+            launch_nitro_node(block_builder_cfg.target_chain_id, mchain_port, nitro_port).await?;
         let (_builder_tx, builder_rx) = tokio::sync::oneshot::channel();
         let _block_builder_task = Task(tokio::spawn(async move {
             block_builder.start(None, builder_rx).await;

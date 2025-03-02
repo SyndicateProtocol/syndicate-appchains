@@ -5,36 +5,24 @@ use crate::{
     connectors::metrics::MChainMetrics,
 };
 use alloy::{
-    network::{Ethereum, EthereumWallet, TransactionBuilder},
+    eips::BlockNumberOrTag,
+    network::{EthereumWallet, TransactionBuilder},
     primitives::{Address, U256},
     providers::{
-        ext::AnvilApi as _,
+        ext::EngineApi as _,
         fillers::{
             BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
             WalletFiller,
         },
-        Identity, Provider, ProviderBuilder, RootProvider, WalletProvider,
+        Identity, IpcConnect, Provider, ProviderBuilder, RootProvider, WalletProvider,
     },
-    rpc::types::{anvil::MineOptions, TransactionRequest},
-    transports::http::Http,
+    rpc::types::{
+        engine::{ForkchoiceState, PayloadAttributes, PayloadStatus, PayloadStatusEnum},
+        Block, BlockTransactionsKind, TransactionRequest,
+    },
 };
-use contract_bindings::arbitrum::rollup::Rollup;
-use eyre::{Error, Result};
-use reqwest::Client;
-use thiserror::Error;
-use tracing::{debug, error};
-
-/// Possible errors when mining a block
-#[derive(Debug, Error)]
-pub enum MineBlockError {
-    /// Block list is empty
-    #[error("Mining operation returned an empty block list")]
-    EmptyBlockList,
-
-    /// Failed to mine block
-    #[error("Failed to mine block: {0}")]
-    MiningFailed(#[from] Error),
-}
+use contract_bindings::arbitrum::rollup::Rollup::{self, RollupInstance};
+use eyre::Result;
 
 #[allow(missing_docs)]
 pub type FilledProvider = FillProvider<
@@ -45,61 +33,97 @@ pub type FilledProvider = FillProvider<
         >,
         WalletFiller<EthereumWallet>,
     >,
-    RootProvider<Http<Client>>,
-    Http<Client>,
-    Ethereum,
+    RootProvider,
 >;
 
-/// `MetaChainProvider` starts the anvil chain when `start` is called and stops the chain when it
-/// is dropped.
-#[derive(Debug)]
+#[allow(missing_docs)]
+pub type HttpProvider = FillProvider<
+    JoinFill<
+        Identity,
+        JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+    >,
+    RootProvider,
+>;
+
+#[derive(Debug, Clone)]
 #[allow(missing_docs)]
 pub struct MetaChainProvider {
-    /// `mchain_url` is an implementation-agnostic URL to a running execution client
-    /// that supports the `evm_mine` and `evm_mine_detailed` rpc methods
-    pub mchain_url: url::Url,
-    pub provider: FilledProvider,
-    pub rollup: Rollup::RollupInstance<Http<Client>, FilledProvider>,
-    pub target_chain_id: u64,
-    pub metrics: MChainMetrics,
+    pub mchain_ipc_path: String,
+    provider: FilledProvider,
+    auth_provider: FilledProvider,
+    metrics: MChainMetrics,
 }
 
 /// The chain id of the metachain. This is the same for all rollups.
+/// TODO: this should be configurable
 pub const MCHAIN_ID: u64 = 84532;
 
 impl MetaChainProvider {
+    #[allow(missing_docs)]
+    pub async fn get_block_by_number(
+        &self,
+        number: BlockNumberOrTag,
+        kind: BlockTransactionsKind,
+    ) -> Result<Option<Block>> {
+        self.provider.get_block_by_number(number, kind).await.map_err(|e| e.into())
+    }
+
+    /// for testing only - get direct access to the rollup contract
+    pub fn get_rollup(&self) -> RollupInstance<(), FilledProvider> {
+        Rollup::new(get_rollup_contract_address(), self.provider.clone())
+    }
+
+    #[allow(missing_docs)]
+    pub async fn get_block_number(&self) -> Result<u64> {
+        self.provider.get_block_number().await.map_err(|e| e.into())
+    }
+
+    #[allow(missing_docs)]
+    pub async fn get_block_receipts(
+        &self,
+        block: BlockNumberOrTag,
+    ) -> Result<Vec<common::types::Receipt>> {
+        self.provider
+            .raw_request::<_, Vec<common::types::Receipt>>("eth_getBlockReceipts".into(), (block,))
+            .await
+            .map_err(|e| e.into())
+    }
+
     /// Create a provider for the `MetaChain`
     /// The rollup contract is only deployed to the chain when it is
     /// newly created and on the genesis block.
     /// The genesis block must have a timestamp of 0.
     pub async fn start(config: &BlockBuilderConfig, metrics: &MChainMetrics) -> Result<Self> {
         let provider = ProviderBuilder::new()
-            .with_recommended_fillers()
             .wallet(EthereumWallet::from(get_default_private_key_signer()))
-            .on_http(config.mchain_url.clone());
+            .on_ipc(IpcConnect::new(config.mchain_ipc_path.clone()))
+            .await?;
+        let auth_provider = ProviderBuilder::new()
+            .wallet(EthereumWallet::from(get_default_private_key_signer()))
+            .on_ipc(IpcConnect::new(config.mchain_auth_ipc_path.clone()))
+            .await?;
         let rollup_config = Self::rollup_config(config.target_chain_id);
 
-        if provider.get_block_number().await? == 0 {
-            let _ = Rollup::deploy_builder(
-                &provider,
+        let mchain = Self {
+            mchain_ipc_path: config.mchain_ipc_path.clone(),
+            provider,
+            auth_provider,
+            metrics: metrics.to_owned(),
+        };
+
+        if mchain.get_block_number().await? == 0 {
+            _ = Rollup::deploy_builder(
+                &mchain.provider,
                 U256::from(config.target_chain_id),
                 rollup_config.clone(),
             )
             .nonce(0)
             .send()
             .await?;
-            provider.evm_mine(Some(MineOptions::Timestamp(Some(0)))).await?;
+            mchain.mine_block(0).await?;
         }
 
-        let rollup = Rollup::new(get_rollup_contract_address(), provider.clone());
-
-        Ok(Self {
-            mchain_url: config.mchain_url.clone(),
-            provider,
-            rollup,
-            target_chain_id: config.target_chain_id,
-            metrics: metrics.to_owned(),
-        })
+        Ok(mchain)
     }
 
     /// Submits a list of transactions to the `MetaChain`
@@ -127,28 +151,70 @@ impl MetaChainProvider {
     }
 
     /// Mines a block on the `MetaChain`
-    pub async fn mine_block(&self, block_timestamp_secs: u64) -> Result<(), MineBlockError> {
-        let result = self
-            .provider
-            .anvil_mine_detailed(Some(MineOptions::Timestamp(Some(block_timestamp_secs))))
-            .await;
-        debug!("{}", format!("Mined block on MetaChain {:?}", result));
-        match result {
-            Ok(mut mined_blocks) if !mined_blocks.is_empty() => {
-                let first_block = mined_blocks.remove(0); // Extract the first block
-                debug!("Mined block on MetaChain {:?}", first_block);
-                self.metrics.record_last_block_mined(&first_block);
-                Ok(())
+    pub async fn mine_block(&self, block_timestamp_secs: u64) -> Result<()> {
+        let attr = PayloadAttributes {
+            timestamp: block_timestamp_secs,
+            prev_randao: Default::default(),
+            suggested_fee_recipient: Default::default(),
+            withdrawals: Some(Default::default()),
+            parent_beacon_block_root: Some(Default::default()),
+        };
+
+        #[allow(clippy::expect_used)]
+        let block = self
+            .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+            .await?
+            .expect("latest block not found");
+
+        // TODO: set safe and finalized block hashes properly
+        let req = self
+            .auth_provider
+            .fork_choice_updated_v3(
+                ForkchoiceState {
+                    head_block_hash: block.header.hash,
+                    safe_block_hash: block.header.hash,
+                    finalized_block_hash: block.header.hash,
+                },
+                Some(attr),
+            )
+            .await?;
+        assert_eq!(
+            req.payload_status,
+            PayloadStatus {
+                status: PayloadStatusEnum::Valid,
+                latest_valid_hash: Some(block.header.hash)
             }
-            Ok(_) => {
-                error!("Mining succeeded but returned an empty block list");
-                Err(MineBlockError::EmptyBlockList)
-            }
-            Err(e) => {
-                error!("Failed to mine block: {:?}", e);
-                Err(MineBlockError::MiningFailed(e.into()))
-            }
-        }
+        );
+
+        #[allow(clippy::expect_used)]
+        let payload =
+            self.auth_provider.get_payload_v3(req.payload_id.expect("missing payload id")).await?;
+        let block_hash = payload.execution_payload.payload_inner.payload_inner.block_hash;
+        let status = self
+            .auth_provider
+            .new_payload_v3(payload.execution_payload, Default::default(), Default::default())
+            .await?;
+        assert_eq!(
+            status,
+            PayloadStatus { status: PayloadStatusEnum::Valid, latest_valid_hash: Some(block_hash) }
+        );
+        let fcu = self
+            .auth_provider
+            .fork_choice_updated_v3(
+                ForkchoiceState {
+                    head_block_hash: block_hash,
+                    safe_block_hash: block_hash,
+                    finalized_block_hash: block_hash,
+                },
+                None,
+            )
+            .await?;
+        assert_eq!(
+            fcu.payload_status,
+            PayloadStatus { status: PayloadStatusEnum::Valid, latest_valid_hash: Some(block_hash) },
+        );
+        self.metrics.record_last_block_mined(block.header.number + 1, block_timestamp_secs);
+        Ok(())
     }
 
     /// Return the on-chain config for a rollup with a given chain id
@@ -188,8 +254,7 @@ impl MetaChainProvider {
     }
 
     /// Get the nitro json configuration data for the rollup
-    pub fn rollup_info(&self, chain_name: &str) -> String {
-        let rollup_config = Self::rollup_config(self.target_chain_id);
+    pub fn rollup_info(rollup_config: &str, chain_name: &str) -> String {
         let rollup = get_rollup_contract_address();
         let deployed_at: u64 = 1;
         let zero = Address::ZERO;
@@ -246,7 +311,6 @@ mod tests {
     use super::*;
     use alloy::{eips::BlockId, rpc::types::BlockTransactionsKind};
     use prometheus_client::registry::Registry;
-    use url::Url;
 
     struct MetricsState {
         /// Prometheus registry
@@ -257,7 +321,7 @@ mod tests {
     #[ignore] // TODO SEQ-528 unskip
     async fn test_anvil_rollback() -> Result<()> {
         let config = BlockBuilderConfig {
-            mchain_url: "http://127.0.0.1:9388".parse()?,
+            mchain_ipc_path: "http://127.0.0.1:9388".parse()?,
             ..Default::default()
         };
         let mut metrics_state = MetricsState { registry: Registry::default() };
@@ -280,7 +344,7 @@ mod tests {
     async fn test_anvil_stop_resume() -> Result<()> {
         let genesis_ts = 0;
         let config = BlockBuilderConfig {
-            mchain_url: Url::parse("http://127.0.0.1:9488").expect("Invalid URL"),
+            mchain_ipc_path: "http://127.0.0.1:9488".to_string(),
             ..Default::default()
         };
 

@@ -4,7 +4,7 @@ This is a service that ingests L2 transaction data, organizes the data into slot
 
 It consists of a `common` crate and 3 component crates: `ingestor`, `slotter` and `block-builder`
 
-An execution client such as reth must be available at the mchain url (http://127.0.0.1:8888) prior to starting the translator -
+An execution client such as reth must be available at the mchain ipc and auth ipc paths prior to starting the translator -
 see the provided docker-compose.yaml file for more information.
 
 #### Metachain configuration

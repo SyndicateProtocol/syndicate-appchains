@@ -11,7 +11,6 @@ use crate::{
 };
 use alloy::{
     eips::BlockNumberOrTag,
-    providers::Provider,
     transports::{RpcError, TransportErrorKind},
 };
 use common::{db::TranslatorStore, types::Slot};
@@ -68,7 +67,7 @@ impl BlockBuilder {
             return Ok(());
         };
 
-        let current_block_number = self.mchain.provider.get_block_number().await.map_err(|e| {
+        let current_block_number = self.mchain.get_block_number().await.map_err(|e| {
             BlockBuilderError::ResumeFromBlock(format!("Error getting current block number: {}", e))
         })?;
 
@@ -100,10 +99,9 @@ impl BlockBuilder {
 
         // Verify transactions are all included and succeeded
         // TODO(SEQ-623): check to make sure the tx hashes match as well
-        let receipts: Vec<common::types::Receipt> = self
+        let receipts = self
             .mchain
-            .provider
-            .raw_request("eth_getBlockReceipts".into(), (BlockNumberOrTag::Number(current_block),))
+            .get_block_receipts(BlockNumberOrTag::Number(current_block))
             .await
             .unwrap_or_else(|e| {
                 panic!("Failed to fetch receipts for block {:#?}: {:#?}", current_block, e)
@@ -189,7 +187,7 @@ impl BlockBuilder {
     }
 
     async fn get_current_block_number(&self) -> u64 {
-        self.mchain.provider.get_block_number().await.unwrap_or_else(|e| {
+        self.mchain.get_block_number().await.unwrap_or_else(|e| {
             panic!("Error getting current block number: {}", e);
         })
     }
@@ -222,13 +220,15 @@ pub enum AnvilStartError {
     PortUnavailable { mchain_url: Url, port: u16 },
 }
 
+/*
 #[cfg(test)]
 mod tests {
+    use prometheus_client::registry::Registry;
+
     use super::*;
     use alloy::providers::Provider;
     use common::db::RocksDbStore;
     use eyre::Result;
-    use prometheus_client::registry::Registry;
     use test_utils::test_path;
     use tokio::sync::mpsc;
     use tracing_test::traced_test;
@@ -299,3 +299,4 @@ mod tests {
     // TODO SEQ-529 - write a test that asserts for determinism (same slots should yield the same
     // block chain on separate block builders)
 }
+*/

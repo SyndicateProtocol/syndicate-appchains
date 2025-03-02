@@ -163,7 +163,8 @@ mod tests {
 
     fn clean_env() {
         // Block Builder
-        env::remove_var("BLOCK_BUILDER_MCHAIN_URL");
+        env::remove_var("BLOCK_BUILDER_MCHAIN_IPC_PATH");
+        env::remove_var("BLOCK_BUILDER_MCHAIN_AUTH_IPC_PATH");
         env::remove_var("BLOCK_BUILDER_CHAIN_ID");
         env::remove_var("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS");
         env::remove_var("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS");
@@ -200,10 +201,12 @@ mod tests {
         env::set_var("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", zero);
         env::set_var("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", zero);
         env::set_var("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", zero);
+        env::set_var("BLOCK_BUILDER_MCHAIN_IPC_PATH", "");
+        env::set_var("BLOCK_BUILDER_MCHAIN_AUTH_IPC_PATH", "");
         let config = MetabasedConfig::try_parse_from(["test"]).unwrap();
 
         // Block Builder
-        assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:8888/");
+        assert_eq!(config.block_builder.mchain_ipc_path.as_str(), "");
         assert_eq!(config.block_builder.target_chain_id, 13331370);
 
         // Slotter
@@ -236,9 +239,11 @@ mod tests {
         env::set_var("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", zero);
         env::set_var("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", zero);
         env::set_var("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", zero);
+        env::set_var("BLOCK_BUILDER_MCHAIN_IPC_PATH", "");
+        env::set_var("BLOCK_BUILDER_MCHAIN_AUTH_IPC_PATH", "");
 
         let config = MetabasedConfig::try_parse_from(["test"]).unwrap();
-        assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:9999/");
+        assert_eq!(config.block_builder.mchain_ipc_path.as_str(), "");
         assert_eq!(config.slotter.slot_duration, 3);
         assert_eq!(config.sequencing.sequencing_buffer_size, 200);
     }
@@ -248,7 +253,6 @@ mod tests {
     fn test_cli_args_override_env_vars() {
         clean_env();
         let zero = "0x0000000000000000000000000000000000000000";
-        env::set_var("BLOCK_BUILDER_MCHAIN_URL", "http://127.0.0.1:9999/");
         env::set_var("SEQUENCING_RPC_URL", "");
         env::set_var("SETTLEMENT_RPC_URL", "");
         env::set_var("SEQUENCING_START_BLOCK", "1");
@@ -256,10 +260,12 @@ mod tests {
         env::set_var("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", zero);
         env::set_var("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", zero);
         env::set_var("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", zero);
+        env::set_var("BLOCK_BUILDER_MCHAIN_IPC_PATH", "");
+        env::set_var("BLOCK_BUILDER_MCHAIN_AUTH_IPC_PATH", "");
 
         let config =
-            MetabasedConfig::try_parse_from(["test", "-u", "http://127.0.0.1:7777/"]).unwrap();
-        assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:7777/");
+            MetabasedConfig::try_parse_from(["test", "--mchain-ipc-path", "reth.ipc"]).unwrap();
+        assert_eq!(config.block_builder.mchain_ipc_path.as_str(), "reth.ipc");
     }
 
     #[test]

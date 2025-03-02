@@ -2,13 +2,13 @@
 
 use alloy::{
     eips::{eip2718::Encodable2718, BlockNumberOrTag},
-    network::TransactionBuilder,
+    network::{EthereumWallet, TransactionBuilder},
     primitives::{address, utils::parse_ether, Address, U256},
     providers::{ext::AnvilApi as _, Provider, WalletProvider},
-    rpc::types::{anvil::MineOptions, TransactionRequest},
+    rpc::types::{anvil::MineOptions, BlockTransactionsKind, TransactionRequest},
 };
 use block_builder::{
-    config::{get_rollup_contract_address, BlockBuilderConfig},
+    config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
     connectors::{
         mchain::{MetaChainProvider, MCHAIN_ID},
         metrics::MChainMetrics,
@@ -17,15 +17,25 @@ use block_builder::{
 };
 use common::types::Block;
 use contract_bindings::arbitrum::{iinbox::IInbox, rollup::Rollup};
-use e2e_tests::full_meta_node::{
-    launch_nitro_node, mine_block, start_reth, MetaNode, PRELOAD_INBOX_ADDRESS,
-};
+use e2e_tests::full_meta_node::{launch_nitro_node, start_reth, MetaNode, PRELOAD_INBOX_ADDRESS};
 use eyre::{eyre, Result};
 use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use std::time::Duration;
 use tokio::time::sleep;
+
+/// mine a mchain block with a delay - for testing only
+pub async fn mine_block(provider: &MetaChainProvider, delay: u64) -> Result<()> {
+    #[allow(clippy::expect_used)]
+    let ts = provider
+        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+        .await?
+        .expect("failed to get latest block")
+        .header
+        .timestamp;
+    provider.mine_block(ts + delay).await
+}
 
 /// This test sends different types of delayed messages
 /// via the inbox contract and ensures that all of them
@@ -241,11 +251,12 @@ async fn e2e_test() -> Result<()> {
 
     // check mchain blocks
     assert_eq!(meta_node.mchain_provider.get_block_number().await?, 2);
-    let mchain_block: Block = meta_node
+    let mchain_block = meta_node
         .mchain_provider
-        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
-        .await?;
-    assert_eq!(mchain_block.timestamp, 0);
+        .get_block_by_number(BlockNumberOrTag::Number(2), BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
+    assert_eq!(mchain_block.header.timestamp, 0);
     assert_eq!(mchain_block.transactions.len(), 2);
     // check rollup blocks
     assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 2);
@@ -286,18 +297,20 @@ async fn e2e_test() -> Result<()> {
     // check mchain blocks
     assert_eq!(meta_node.mchain_provider.get_block_number().await?, 4);
     // check mchain block 3
-    let mchain_block: Block = meta_node
+    let mchain_block = meta_node
         .mchain_provider
-        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(3), true))
-        .await?;
-    assert_eq!(mchain_block.timestamp, meta_node.slot_duration);
+        .get_block_by_number(BlockNumberOrTag::Number(3), BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
+    assert_eq!(mchain_block.header.timestamp, meta_node.slot_duration);
     assert_eq!(mchain_block.transactions.len(), 0);
     // check mchain block 4
-    let mchain_block: Block = meta_node
+    let mchain_block = meta_node
         .mchain_provider
-        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(4), true))
-        .await?;
-    assert_eq!(mchain_block.timestamp, meta_node.slot_duration * 2);
+        .get_block_by_number(BlockNumberOrTag::Number(4), BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
+    assert_eq!(mchain_block.header.timestamp, meta_node.slot_duration * 2);
     assert_eq!(mchain_block.transactions.len(), 2);
     // check rollup block 3
     assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 3);
@@ -318,30 +331,35 @@ async fn e2e_test() -> Result<()> {
 /// via the block builder code and posted to the dummy rollup contract.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_nitro_batch() -> Result<()> {
+    let (mchain_ipc_path, mchain_auth_ipc_path, _mchain) =
+        start_reth(8388, 8389, 8390, MCHAIN_ID).await?;
     let block_builder_cfg =
-        BlockBuilderConfig { mchain_url: "http://127.0.0.1:8388".parse()?, ..Default::default() };
+        BlockBuilderConfig { mchain_ipc_path, mchain_auth_ipc_path, ..Default::default() };
 
     let mut metrics_state = MetricsState { registry: Registry::default() };
     let metrics = MChainMetrics::new(&mut metrics_state.registry);
-    let _mchain = start_reth(block_builder_cfg.mchain_url.port().unwrap(), MCHAIN_ID).await?;
     let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
-    let (_nitro, rollup) = launch_nitro_node(&mchain, 8347).await?;
+    let (_nitro, rollup) = launch_nitro_node(block_builder_cfg.target_chain_id, 8390, 8347).await?;
+
+    let rollup_contract = mchain.get_rollup();
 
     // deposit 1 eth
-    _ = mchain
-        .rollup
-        .depositEth(Address::default(), mchain.provider.default_signer_address(), parse_ether("1")?)
+    _ = rollup_contract
+        .depositEth(
+            Address::default(),
+            get_default_private_key_signer().address(),
+            parse_ether("1")?,
+        )
         .send()
         .await?;
-    mine_block(&mchain.provider, 0).await?;
+    mine_block(&mchain, 0).await?;
 
     // send a batch to sequence the deposit.
-    _ = mchain
-        .rollup
+    _ = rollup_contract
         .postBatch(arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?)
         .send()
         .await?;
-    mine_block(&mchain.provider, 0).await?;
+    mine_block(&mchain, 0).await?;
 
     // wait 20ms for the batch to be processed
     sleep(Duration::from_millis(20)).await;
@@ -351,7 +369,7 @@ async fn test_nitro_batch() -> Result<()> {
 
     // check that the deposit succeeded
     assert_eq!(
-        rollup.get_balance(mchain.provider.default_signer_address()).await?,
+        rollup.get_balance(get_default_private_key_signer().address()).await?,
         parse_ether("1")?
     );
 
@@ -365,15 +383,15 @@ async fn test_nitro_batch() -> Result<()> {
         .with_chain_id(block_builder_cfg.target_chain_id)
         .with_max_fee_per_gas(100000000)
         .with_max_priority_fee_per_gas(0)
-        .build(&mchain.provider.wallet())
+        .build(&EthereumWallet::from(get_default_private_key_signer()))
         .await?;
 
     inner_tx.encode_2718(&mut tx);
     let batch = arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::L2(
         arbitrum::batch::L1IncomingMessage { header: Default::default(), l2_msg: vec![tx.into()] },
     )]);
-    _ = mchain.rollup.postBatch(batch.encode()?).send().await?;
-    mine_block(&mchain.provider, 0).await?;
+    _ = rollup_contract.postBatch(batch.encode()?).send().await?;
+    mine_block(&mchain, 0).await?;
 
     // wait for the batch to be processed
     sleep(Duration::from_millis(200)).await;
@@ -395,30 +413,34 @@ async fn test_nitro_batch() -> Result<()> {
 /// Regression test
 #[tokio::test(flavor = "multi_thread")]
 async fn test_nitro_batch_two_tx() -> Result<()> {
+    let (mchain_ipc_path, mchain_auth_ipc_path, _mchain) =
+        start_reth(8488, 8489, 8490, MCHAIN_ID).await?;
     let block_builder_cfg =
-        BlockBuilderConfig { mchain_url: "http://127.0.0.1:8488".parse()?, ..Default::default() };
+        BlockBuilderConfig { mchain_ipc_path, mchain_auth_ipc_path, ..Default::default() };
 
     let mut metrics_state = MetricsState { registry: Registry::default() };
     let metrics = MChainMetrics::new(&mut metrics_state.registry);
-    let _mchain = start_reth(block_builder_cfg.mchain_url.port().unwrap(), MCHAIN_ID).await?;
     let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
-    let (_nitro, rollup) = launch_nitro_node(&mchain, 8447).await?;
+    let (_nitro, rollup) = launch_nitro_node(block_builder_cfg.target_chain_id, 8490, 8447).await?;
+    let rollup_contract = mchain.get_rollup();
 
     // deposit 1 eth
-    _ = mchain
-        .rollup
-        .depositEth(Address::default(), mchain.provider.default_signer_address(), parse_ether("1")?)
+    _ = rollup_contract
+        .depositEth(
+            Address::default(),
+            get_default_private_key_signer().address(),
+            parse_ether("1")?,
+        )
         .send()
         .await?;
-    mine_block(&mchain.provider, 0).await?;
+    mine_block(&mchain, 0).await?;
 
     // send a batch to sequence the deposit.
-    _ = mchain
-        .rollup
+    _ = rollup_contract
         .postBatch(arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?)
         .send()
         .await?;
-    mine_block(&mchain.provider, 0).await?;
+    mine_block(&mchain, 0).await?;
 
     // wait 20ms for the batch to be processed
     sleep(Duration::from_millis(20)).await;
@@ -428,7 +450,7 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
 
     // check that the deposit succeeded
     assert_eq!(
-        rollup.get_balance(mchain.provider.default_signer_address()).await?,
+        rollup.get_balance(get_default_private_key_signer().address()).await?,
         parse_ether("1")?
     );
 
@@ -443,7 +465,7 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
         .with_chain_id(block_builder_cfg.target_chain_id)
         .with_max_fee_per_gas(100000000)
         .with_max_priority_fee_per_gas(0)
-        .build(&mchain.provider.wallet())
+        .build(&EthereumWallet::from(get_default_private_key_signer()))
         .await?;
 
     let second_tx = TransactionRequest::default()
@@ -454,7 +476,7 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
         .with_chain_id(block_builder_cfg.target_chain_id)
         .with_max_fee_per_gas(100000000)
         .with_max_priority_fee_per_gas(0)
-        .build(&mchain.provider.wallet())
+        .build(&EthereumWallet::from(get_default_private_key_signer()))
         .await?;
 
     second_tx.encode_2718(&mut tx2);
@@ -466,8 +488,8 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
             l2_msg: vec![tx.clone().into(), tx.into(), tx2.into()],
         },
     )]);
-    _ = mchain.rollup.postBatch(batch.encode()?).send().await?;
-    mine_block(&mchain.provider, 0).await?;
+    _ = rollup_contract.postBatch(batch.encode()?).send().await?;
+    mine_block(&mchain, 0).await?;
 
     // wait 20ms for the batch to be processed
     sleep(Duration::from_millis(20)).await;

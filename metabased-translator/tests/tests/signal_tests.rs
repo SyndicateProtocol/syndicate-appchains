@@ -1,7 +1,10 @@
 //! Integration tests for the metabased-translator handling termination signals
 
 use block_builder::connectors::mchain::MCHAIN_ID;
-use e2e_tests::{full_meta_node::start_anvil, port_manager::PortManager};
+use e2e_tests::{
+    full_meta_node::{start_anvil, start_reth},
+    port_manager::PortManager,
+};
 use eyre::Result;
 use reqwest::Client;
 use serial_test::serial;
@@ -32,7 +35,7 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
     let set_port = port_tracker.next_port();
     let (_set_instance, _set_provider) = start_anvil(set_port, 20).await?;
 
-    let (_mchain, _) = start_anvil(8888, MCHAIN_ID).await?;
+    let (ipc, auth_ipc, _mchain) = start_reth(8888, 8889, 8890, MCHAIN_ID).await?;
     let mut metabased_process = TokioCommand::new("cargo")
         .arg("run")
         .arg("--bin")
@@ -40,6 +43,10 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
         .current_dir("../bin/metabased-translator")
         .arg("--")
         .args([
+            "--mchain-ipc-path",
+            &ipc,
+            "--mchain-auth-ipc-path",
+            &auth_ipc,
             "--sequencing-contract-address",
             "0x0000000000000000000000000000000000000001",
             "--bridge-address",
@@ -80,13 +87,13 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[serial]
 async fn test_metabased_sigterm() -> Result<()> {
     run_metabased_translator("-TERM").await
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[serial]
 async fn test_metabased_sigint() -> Result<()> {
     run_metabased_translator("-INT").await
