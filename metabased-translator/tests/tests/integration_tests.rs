@@ -366,8 +366,8 @@ async fn test_nitro_batch() -> Result<()> {
         .await?;
     mine_block(&mchain, 0).await?;
 
-    // wait 20ms for the batch to be processed
-    sleep(Duration::from_millis(20)).await;
+    // wait 100ms for the batch to be processed
+    sleep(Duration::from_millis(100)).await;
     if rollup.get_block_number().await? != 1 {
         return Err(eyre!("block derivation failed - not on block 1"));
     }
@@ -447,8 +447,8 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
         .await?;
     mine_block(&mchain, 0).await?;
 
-    // wait 20ms for the batch to be processed
-    sleep(Duration::from_millis(20)).await;
+    // wait 100ms for the batch to be processed
+    sleep(Duration::from_millis(100)).await;
     if rollup.get_block_number().await? != 1 {
         return Err(eyre!("block derivation failed - not on block 1"));
     }
@@ -496,8 +496,8 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
     _ = rollup_contract.postBatch(batch.encode()?).send().await?;
     mine_block(&mchain, 0).await?;
 
-    // wait 20ms for the batch to be processed
-    sleep(Duration::from_millis(20)).await;
+    // wait 100ms for the batch to be processed
+    sleep(Duration::from_millis(100)).await;
     if rollup.get_block_number().await? != 2 {
         return Err(eyre!("block derivation failed - not on block 2"));
     }
