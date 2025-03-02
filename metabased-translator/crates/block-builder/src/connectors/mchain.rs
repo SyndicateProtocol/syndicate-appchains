@@ -55,7 +55,7 @@ pub struct MetaChainProvider {
 }
 
 /// The chain id of the metachain. This is the same for all rollups.
-/// TODO: this should be configurable
+/// TODO(SEQ-652): this should be configurable
 pub const MCHAIN_ID: u64 = 84532;
 
 impl MetaChainProvider {
@@ -166,7 +166,7 @@ impl MetaChainProvider {
             .await?
             .expect("latest block not found");
 
-        // TODO: set safe and finalized block hashes properly
+        // TODO(SEQ-653): set safe and finalized block hashes properly
         let req = self
             .auth_provider
             .fork_choice_updated_v3(

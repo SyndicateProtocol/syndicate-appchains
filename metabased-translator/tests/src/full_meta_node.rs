@@ -121,72 +121,68 @@ pub async fn start_reth(
     let dir = env!("CARGO_MANIFEST_DIR");
     let file = format!("{dir}/{port}.ipc");
     let auth_file = format!("{dir}/{auth_port}.ipc");
+    let chain_cfg = chain_config(chain_id);
     let reth = Docker(
         Command::new("docker")
             .arg("run")
             .arg("--init")
             .arg("--rm")
+            .arg("--entrypoint")
+            .arg("/bin/sh")
             .arg("-v")
             .arg(if cfg!(target_os = "macos") { "ipc" } else { dir }.to_string() + ":/ipc")
             .arg("-p")
             .arg(format!("{http_port}:{http_port}"))
             .arg("ghcr.io/syndicateprotocol/reth")
-            .arg("node")
-            .arg("--http")
-            .arg("--http.addr=0.0.0.0")
-            .arg(format!("--http.port={http_port}"))
-            .arg(format!("--ipcpath=/ipc/{port}.ipc"))
-            .arg("--auth-ipc")
-            .arg(format!("--auth-ipc.path=/ipc/{auth_port}.ipc"))
-            .arg("--chain=".to_string() + &chain_config(chain_id))
-            .spawn()?,
+            .arg("-c")
+            .arg(format!("umask 0 && exec reth node --http --http.addr=0.0.0.0 --http.port={http_port} --ipcpath=/ipc/{port}.ipc --auth-ipc --auth-ipc.path=/ipc/{auth_port}.ipc --chain='{chain_cfg}'"))
+            .spawn()?
     );
-    let socat;
+    #[cfg(not(target_os = "macos"))]
+    let socat = None;
     #[cfg(target_os = "macos")]
-    {
-        socat = Some((
-            Docker(
-                Command::new("socat")
-                    .arg(format!("UNIX-LISTEN:{file},reuseaddr,fork"))
-                    .arg(format!("TCP4:127.0.0.1:{port}"))
-                    .spawn()?,
-            ),
-            Docker(
-                Command::new("docker")
-                    .arg("run")
-                    .arg("--init")
-                    .arg("--rm")
-                    .arg("-p")
-                    .arg(format!("{port}:{port}"))
-                    .arg("-v")
-                    .arg("ipc:/ipc")
-                    .arg("alpine/socat:1.8.0.1")
-                    .arg(format!("TCP4-LISTEN:{port},reuseaddr,fork,bind=0.0.0.0"))
-                    .arg(format!("UNIX-CONNECT:/ipc/{port}.ipc,retry=1200,interval=0.1"))
-                    .spawn()?,
-            ),
-            Docker(
-                Command::new("socat")
-                    .arg(format!("UNIX-LISTEN:{auth_file},reuseaddr,fork"))
-                    .arg(format!("TCP4:127.0.0.1:{auth_port}"))
-                    .spawn()?,
-            ),
-            Docker(
-                Command::new("docker")
-                    .arg("run")
-                    .arg("--init")
-                    .arg("--rm")
-                    .arg("-p")
-                    .arg(format!("{auth_port}:{auth_port}"))
-                    .arg("-v")
-                    .arg("ipc:/ipc")
-                    .arg("alpine/socat:1.8.0.1")
-                    .arg(format!("TCP4-LISTEN:{auth_port},reuseaddr,fork,bind=0.0.0.0"))
-                    .arg(format!("UNIX-CONNECT:/ipc/{auth_port}.ipc,retry=1200,interval=0.1"))
-                    .spawn()?,
-            ),
-        ));
-    }
+    let socat = Some((
+        Docker(
+            Command::new("socat")
+                .arg(format!("UNIX-LISTEN:{file},reuseaddr,fork"))
+                .arg(format!("TCP4:127.0.0.1:{port}"))
+                .spawn()?,
+        ),
+        Docker(
+            Command::new("docker")
+                .arg("run")
+                .arg("--init")
+                .arg("--rm")
+                .arg("-p")
+                .arg(format!("{port}:{port}"))
+                .arg("-v")
+                .arg("ipc:/ipc")
+                .arg("alpine/socat:1.8.0.1")
+                .arg(format!("TCP4-LISTEN:{port},reuseaddr,fork,bind=0.0.0.0"))
+                .arg(format!("UNIX-CONNECT:/ipc/{port}.ipc,retry=1200,interval=0.1"))
+                .spawn()?,
+        ),
+        Docker(
+            Command::new("socat")
+                .arg(format!("UNIX-LISTEN:{auth_file},reuseaddr,fork"))
+                .arg(format!("TCP4:127.0.0.1:{auth_port}"))
+                .spawn()?,
+        ),
+        Docker(
+            Command::new("docker")
+                .arg("run")
+                .arg("--init")
+                .arg("--rm")
+                .arg("-p")
+                .arg(format!("{auth_port}:{auth_port}"))
+                .arg("-v")
+                .arg("ipc:/ipc")
+                .arg("alpine/socat:1.8.0.1")
+                .arg(format!("TCP4-LISTEN:{auth_port},reuseaddr,fork,bind=0.0.0.0"))
+                .arg(format!("UNIX-CONNECT:/ipc/{auth_port}.ipc,retry=1200,interval=0.1"))
+                .spawn()?,
+        ),
+    ));
     // give it two minutes to launch (in case it needs to download the image)
     timeout(Duration::from_secs(120), async {
         let mut rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(file.clone())).await;
