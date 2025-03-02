@@ -10,7 +10,7 @@ use alloy::{
         fillers::{
             CachedNonceManager, ChainIdFiller, FillProvider, GasFiller, NonceFiller, WalletFiller,
         },
-        ReqwestProvider, RootProvider,
+        RootProvider,
     },
     signers::local::PrivateKeySigner,
 };
@@ -94,8 +94,12 @@ fn create_chain_service(
         ChainIdFiller::new(None),
     );
 
-    let rpc: RootProvider<_, Ethereum> = ReqwestProvider::new_http(chain_rpc_address);
+    let rpc: RootProvider<Ethereum> = RootProvider::new_http(chain_rpc_address);
     let rpc = FillProvider::new(rpc, filler);
 
-    Ok(SolMetabasedSequencerChainService::new(chain_contract_address, wallet_address, rpc))
+    Ok(SolMetabasedSequencerChainService::<_, alloy::transports::BoxTransport, _>::new(
+        chain_contract_address,
+        wallet_address,
+        rpc,
+    ))
 }

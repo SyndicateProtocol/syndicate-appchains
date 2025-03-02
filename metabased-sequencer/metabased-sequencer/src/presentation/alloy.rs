@@ -43,7 +43,7 @@ mod tests {
             }
         }
 
-        async fn prepare<P, T>(
+        async fn prepare<P>(
             &self,
             _provider: &P,
             _tx: &<Ethereum as Network>::TransactionRequest,
@@ -76,7 +76,7 @@ mod tests {
             }
         }
 
-        async fn prepare<P, T>(
+        async fn prepare<P>(
             &self,
             _provider: &P,
             _tx: &<Ethereum as Network>::TransactionRequest,
@@ -109,7 +109,7 @@ mod tests {
             }
         }
 
-        async fn prepare<P, T>(
+        async fn prepare<P>(
             &self,
             _provider: &P,
             _tx: &<Ethereum as Network>::TransactionRequest,

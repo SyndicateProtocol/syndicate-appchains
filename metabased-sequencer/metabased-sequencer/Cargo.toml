@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 async-trait = { workspace = true }
-alloy = { version = "0.9.2", features = [
+alloy = { workspace = true, features = [
   "rlp",
   "provider-engine-api",
   "providers",

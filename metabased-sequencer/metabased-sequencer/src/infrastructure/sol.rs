@@ -27,7 +27,7 @@ sol! {
 }
 
 #[derive(Debug)]
-pub struct SolMetabasedSequencerChainService<P: Provider<T, N>, T: Transport + Clone, N: Network> {
+pub struct SolMetabasedSequencerChainService<P: Provider<N>, T: Transport + Clone, N: Network> {
     chain_contract_address: Address,
     wallet_address: Address,
     provider: P,
@@ -35,9 +35,7 @@ pub struct SolMetabasedSequencerChainService<P: Provider<T, N>, T: Transport + C
     phantom2: PhantomData<N>,
 }
 
-impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
-    SolMetabasedSequencerChainService<P, T, N>
-{
+impl<P: Provider<N>, T: Transport + Clone, N: Network> SolMetabasedSequencerChainService<P, T, N> {
     pub fn new(chain_contract_address: Address, wallet_address: Address, provider: P) -> Self {
         Self {
             chain_contract_address,
@@ -48,7 +46,7 @@ impl<P: Provider<T, N>, T: Transport + Clone, N: Network>
         }
     }
 
-    pub fn contract(&self) -> MetabasedSequencerChainInstance<T, &P, N> {
+    pub fn contract(&self) -> MetabasedSequencerChainInstance<(), &P, N> {
         MetabasedSequencerChain::new(self.chain_contract_address, &self.provider)
     }
 
@@ -95,7 +93,7 @@ pub fn format_units_uint(x: &U256, decimals: &U256) -> String {
 }
 
 #[async_trait]
-impl<P: Provider<T, N>, T: Transport + Clone, N: Network> MetabasedSequencerChainService
+impl<P: Provider<N>, T: Transport + Clone, N: Network> MetabasedSequencerChainService
     for SolMetabasedSequencerChainService<P, T, N>
 {
     type Error = alloy::contract::Error;
@@ -190,15 +188,15 @@ mod tests {
         }
     }
 
-    impl Provider<BoxTransport, Ethereum> for MockProvider {
-        fn root(&self) -> &RootProvider<BoxTransport, Ethereum> {
+    impl Provider<Ethereum> for MockProvider {
+        fn root(&self) -> &RootProvider<Ethereum> {
             panic!("Not implemented")
         }
 
         fn get_balance(
             &self,
             _address: Address,
-        ) -> RpcWithBlock<BoxTransport, Address, U256, U256, fn(U256) -> U256> {
+        ) -> RpcWithBlock<Address, U256, U256, fn(U256) -> U256> {
             let balance = self.balance;
             RpcWithBlock::new_provider(move |_block_id| {
                 let fut = Box::pin(async move { Ok(balance) });
