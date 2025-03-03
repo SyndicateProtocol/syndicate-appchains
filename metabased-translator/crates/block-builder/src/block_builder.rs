@@ -11,6 +11,7 @@ use crate::{
 };
 use alloy::{
     eips::BlockNumberOrTag,
+    rpc::types::BlockTransactionsKind,
     transports::{RpcError, TransportErrorKind},
 };
 use common::{db::TranslatorStore, types::Slot};
@@ -78,7 +79,19 @@ impl BlockBuilder {
 
         // rollback to block if necessary
         if known_block_number < current_block_number {
-            self.mchain.rollback_to_block(known_block_number).await.map_err(|e| {
+            let block = self
+                .mchain
+                .get_block_by_number(
+                    BlockNumberOrTag::Number(known_block_number),
+                    BlockTransactionsKind::Hashes,
+                )
+                .await
+                .map_err(|e| BlockBuilderError::ResumeFromBlock(e.to_string()))?
+                .ok_or(BlockBuilderError::ResumeFromBlock(format!(
+                    "Could not find block: {}",
+                    known_block_number
+                )))?;
+            self.mchain.rollback_to_block(block.header.hash).await.map_err(|e| {
                 BlockBuilderError::ResumeFromBlock(format!("Unable to reorg to block: {}", e))
             })?;
         }

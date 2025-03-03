@@ -1,10 +1,7 @@
 //! Integration tests for the metabased-translator handling termination signals
 
 use block_builder::connectors::mchain::MCHAIN_ID;
-use e2e_tests::{
-    full_meta_node::{start_anvil, start_reth},
-    port_manager::PortManager,
-};
+use e2e_tests::full_meta_node::{start_anvil, start_reth};
 use eyre::Result;
 use reqwest::Client;
 use serial_test::serial;
@@ -29,13 +26,10 @@ async fn wait_for_service(url: &str) -> Result<()> {
 }
 
 async fn run_metabased_translator(signal: &str) -> Result<()> {
-    let port_tracker = PortManager::instance();
-    let seq_port = port_tracker.next_port();
-    let (_seq_instance, _seq_provider) = start_anvil(seq_port, 15).await?;
-    let set_port = port_tracker.next_port();
-    let (_set_instance, _set_provider) = start_anvil(set_port, 20).await?;
+    let (seq_port, _seq_instance, _seq_provider) = start_anvil(15).await?;
+    let (set_port, _set_instance, _set_provider) = start_anvil(20).await?;
 
-    let (ipc, auth_ipc, _mchain) = start_reth(8888, 8889, 8890, MCHAIN_ID).await?;
+    let (node, _mchain) = start_reth(MCHAIN_ID).await?;
     let mut metabased_process = TokioCommand::new("cargo")
         .arg("run")
         .arg("--bin")
@@ -44,9 +38,9 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
         .arg("--")
         .args([
             "--mchain-ipc-path",
-            &ipc,
+            &node.ipc,
             "--mchain-auth-ipc-path",
-            &auth_ipc,
+            &node.auth_ipc,
             "--sequencing-contract-address",
             "0x0000000000000000000000000000000000000001",
             "--bridge-address",

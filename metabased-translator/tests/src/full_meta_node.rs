@@ -15,7 +15,7 @@ use alloy::{
 use block_builder::{
     block_builder::BlockBuilder,
     config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
-    connectors::mchain::{FilledProvider, MetaChainProvider},
+    connectors::mchain::{FilledProvider, MetaChainProvider, MCHAIN_ID},
     metrics::BlockBuilderMetrics,
 };
 use common::{db::RocksDbStore, types::Chain};
@@ -112,15 +112,23 @@ fn chain_config(chain_id: u64) -> String {
 }"#
 }
 
+#[derive(Debug)]
+pub struct NodeInfo {
+    pub ipc: String,
+    pub auth_ipc: String,
+    pub http_port: u16,
+}
+
 pub async fn start_reth(
-    port: u16,
-    auth_port: u16,
-    http_port: u16,
     chain_id: u64,
-) -> Result<(String, String, (Docker, Option<(Docker, Docker, Docker, Docker)>))> {
+) -> Result<(NodeInfo, (Docker, Option<(Docker, Docker, Docker, Docker)>))> {
+    let manager = PortManager::instance();
+    let port = manager.next_port();
+    let auth_port = manager.next_port();
+    let http_port = manager.next_port();
     let dir = env!("CARGO_MANIFEST_DIR");
-    let file = format!("{dir}/{port}.ipc");
-    let auth_file = format!("{dir}/{auth_port}.ipc");
+    let ipc = format!("{dir}/{port}.ipc");
+    let auth_ipc = format!("{dir}/{auth_port}.ipc");
     let chain_cfg = chain_config(chain_id);
     let reth = Docker(
         Command::new("docker")
@@ -140,11 +148,16 @@ pub async fn start_reth(
     );
     #[cfg(not(target_os = "macos"))]
     let socat = None;
+
+    // on mac, use socat to route traffic over tcp as unix domain sockets cannot cross the os
+    // boundary. host port.ipc -> host socat -> container socat -> container port.ipc
+    // on linux, the port.ipc socket file can be shared between the docker container and host os
+    // directly.
     #[cfg(target_os = "macos")]
     let socat = Some((
         Docker(
             Command::new("socat")
-                .arg(format!("UNIX-LISTEN:{file},reuseaddr,fork"))
+                .arg(format!("UNIX-LISTEN:{ipc},reuseaddr,fork"))
                 .arg(format!("TCP4:127.0.0.1:{port}"))
                 .spawn()?,
         ),
@@ -164,7 +177,7 @@ pub async fn start_reth(
         ),
         Docker(
             Command::new("socat")
-                .arg(format!("UNIX-LISTEN:{auth_file},reuseaddr,fork"))
+                .arg(format!("UNIX-LISTEN:{auth_ipc},reuseaddr,fork"))
                 .arg(format!("TCP4:127.0.0.1:{auth_port}"))
                 .spawn()?,
         ),
@@ -185,16 +198,16 @@ pub async fn start_reth(
     ));
     // give it two minutes to launch (in case it needs to download the image)
     timeout(Duration::from_secs(120), async {
-        let mut rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(file.clone())).await;
+        let mut rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(ipc.clone())).await;
         while rollup.is_err() {
             tokio::time::sleep(Duration::from_millis(100)).await;
-            rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(file.clone())).await;
+            rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(ipc.clone())).await;
         }
         let mut auth_rollup =
-            ProviderBuilder::new().on_ipc(IpcConnect::new(auth_file.clone())).await;
+            ProviderBuilder::new().on_ipc(IpcConnect::new(auth_ipc.clone())).await;
         while auth_rollup.is_err() {
             tokio::time::sleep(Duration::from_millis(100)).await;
-            auth_rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(auth_file.clone())).await;
+            auth_rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(auth_ipc.clone())).await;
         }
         #[allow(clippy::unwrap_used)]
         let r = rollup.unwrap();
@@ -206,20 +219,20 @@ pub async fn start_reth(
         while r.get_chain_id().await.is_err() {
             tokio::time::sleep(Duration::from_millis(100)).await;
         }
-        Ok::<_, eyre::Error>((file, auth_file, (reth, socat)))
+        Ok::<_, eyre::Error>((NodeInfo { ipc, auth_ipc, http_port }, (reth, socat)))
     })
     .await?
 }
 
-pub async fn start_anvil(port: u16, chain_id: u64) -> Result<(AnvilInstance, FilledProvider)> {
-    start_anvil_with_args(port, chain_id, Default::default()).await
+pub async fn start_anvil(chain_id: u64) -> Result<(u16, AnvilInstance, FilledProvider)> {
+    start_anvil_with_args(chain_id, Default::default()).await
 }
 
 pub async fn start_anvil_with_args(
-    port: u16,
     chain_id: u64,
     args: &[&str],
-) -> Result<(AnvilInstance, FilledProvider)> {
+) -> Result<(u16, AnvilInstance, FilledProvider)> {
+    let port = PortManager::instance().next_port();
     let mut cmd =
         vec!["--base-fee", "0", "--gas-limit", "30000000", "--timestamp", "0", "--no-mining"];
     cmd.extend_from_slice(args);
@@ -228,7 +241,7 @@ pub async fn start_anvil_with_args(
     let provider = ProviderBuilder::new()
         .wallet(EthereumWallet::from(get_default_private_key_signer()))
         .on_http(anvil.endpoint_url());
-    Ok((anvil, provider))
+    Ok((port, anvil, provider))
 }
 
 /// mine a block with a delay
@@ -240,11 +253,39 @@ async fn mine_block(provider: &FilledProvider, delay: u64) -> Result<()> {
     Ok(())
 }
 
-pub async fn launch_nitro_node(
-    chain_id: u64,
-    mchain_port: u16,
-    port: u16,
-) -> Result<(Docker, RootProvider)> {
+/// Get the nitro json configuration data for the rollup
+fn rollup_info(rollup_config: &str, chain_name: &str) -> String {
+    let rollup = get_rollup_contract_address();
+    let deployed_at: u64 = 1;
+    let zero = Address::ZERO;
+    format!(
+        r#"[{{
+              "chain-name": "{chain_name}",
+              "parent-chain-id": {MCHAIN_ID},
+              "parent-chain-is-arbitrum": false,
+              "sequencer-url": "",
+              "secondary-forwarding-target": "",
+              "feed-url": "",
+              "secondary-feed-url": "",
+              "das-index-url": "",
+              "has-genesis-state": false,
+              "chain-config": {rollup_config},
+              "rollup": {{
+                "bridge": "{rollup}",
+                "inbox": "{zero}",
+                "sequencer-inbox": "{rollup}",
+                "deployed-at": {deployed_at},
+                "rollup": "{zero}",
+                "native-token": "{zero}",
+                "upgrade-executor": "{zero}",
+                "validator-wallet-creator": "{zero}"
+              }}
+            }}]"#
+    )
+}
+
+pub async fn launch_nitro_node(chain_id: u64, mchain_port: u16) -> Result<(Docker, RootProvider)> {
+    let port = PortManager::instance().next_port();
     let nitro = Command::new("docker")
         .arg("run")
         .arg("--init")
@@ -260,10 +301,7 @@ pub async fn launch_nitro_node(
         .arg("--ensure-rollup-deployment=false")
         .arg(
             "--chain.info-json=".to_string() +
-                &MetaChainProvider::rollup_info(
-                    &MetaChainProvider::rollup_config(chain_id),
-                    "test",
-                ),
+                &rollup_info(&MetaChainProvider::rollup_config(chain_id), "test"),
         )
         .arg("--http.addr=0.0.0.0")
         .arg("--http.port=".to_string() + &port.to_string())
@@ -312,13 +350,6 @@ pub struct MetaNode {
 impl MetaNode {
     #[allow(clippy::unwrap_used)] // test utility
     pub async fn new(pre_loaded: bool, config: MetabasedConfig) -> Result<Self> {
-        // We need 4 ports to run a full meta node
-        // - MChain
-        // - Mock Sequencing Chain
-        // - Mock Settlement Chain
-        // - Nitro Rollup;
-        let port_tracker = PortManager::instance();
-
         // Define the addresses of the bridge and inbox contracts depedning on whether we
         // are loading in the full set of Arb contracts or not
         let bridge_address =
@@ -326,27 +357,19 @@ impl MetaNode {
         let inbox_address =
             if pre_loaded { PRELOAD_INBOX_ADDRESS } else { get_rollup_contract_address() };
 
-        let mchain_port = port_tracker.next_port();
-        let (mchain_ipc_path, mchain_auth_ipc_path, mchain) = start_reth(
-            port_tracker.next_port(),
-            port_tracker.next_port(),
-            mchain_port,
-            block_builder::connectors::mchain::MCHAIN_ID,
-        )
-        .await?;
+        let (node, mchain) = start_reth(MCHAIN_ID).await?;
 
         let block_builder_cfg = BlockBuilderConfig {
             bridge_address,
             inbox_address,
-            mchain_ipc_path,
-            mchain_auth_ipc_path,
+            mchain_ipc_path: node.ipc,
+            mchain_auth_ipc_path: node.auth_ipc,
             sequencing_contract_address: get_rollup_contract_address(),
             ..config.block_builder
         };
 
         // Launch mock sequencing chain and deploy contracts
-        let seq_port = port_tracker.next_port();
-        let (_seq_anvil, seq_provider) = start_anvil(seq_port, 15).await?;
+        let (seq_port, _seq_anvil, seq_provider) = start_anvil(15).await?;
         _ = MetabasedSequencerChain::deploy_builder(
             &seq_provider,
             U256::from(block_builder_cfg.target_chain_id),
@@ -376,8 +399,7 @@ impl MetaNode {
         mine_block(&seq_provider, 0).await?;
 
         // Launch mock settlement chain
-        let set_port = port_tracker.next_port();
-        let (_set_anvil, set_provider);
+        let (set_port, _set_anvil, set_provider);
         if pre_loaded {
             // If flag is set, load the anvil state from a file
             // This is the full set of Arb contracts
@@ -385,8 +407,7 @@ impl MetaNode {
                 .join("config")
                 .join("anvil.json");
 
-            (_set_anvil, set_provider) = start_anvil_with_args(
-                set_port,
+            (set_port, _set_anvil, set_provider) = start_anvil_with_args(
                 31337,
                 #[allow(clippy::unwrap_used)]
                 &["--load-state", state_file.to_str().unwrap()],
@@ -394,7 +415,7 @@ impl MetaNode {
             .await?;
         } else {
             // If not use our mock Rollup contract for easier testing
-            (_set_anvil, set_provider) = start_anvil(set_port, 20).await?;
+            (set_port, _set_anvil, set_provider) = start_anvil(20).await?;
             // Use the mock rollup contract for the test instead of deploying all the nitro rollup
             // contracts
             _ = Rollup::deploy_builder(
@@ -470,9 +491,8 @@ impl MetaNode {
         let mchain_provider = block_builder.mchain.clone();
         let rollup = block_builder.mchain.get_rollup();
 
-        let nitro_port = port_tracker.next_port();
         let (_nitro_docker, metabased_rollup) =
-            launch_nitro_node(block_builder_cfg.target_chain_id, mchain_port, nitro_port).await?;
+            launch_nitro_node(block_builder_cfg.target_chain_id, node.http_port).await?;
         let (_builder_tx, builder_rx) = tokio::sync::oneshot::channel();
         let _block_builder_task = Task(tokio::spawn(async move {
             _ = block_builder.start(None, builder_rx).await;

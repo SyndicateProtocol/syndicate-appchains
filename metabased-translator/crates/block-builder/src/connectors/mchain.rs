@@ -7,7 +7,7 @@ use crate::{
 use alloy::{
     eips::BlockNumberOrTag,
     network::{EthereumWallet, TransactionBuilder},
-    primitives::{Address, U256},
+    primitives::{Address, BlockHash, U256},
     providers::{
         ext::EngineApi as _,
         fillers::{
@@ -59,6 +59,11 @@ pub struct MetaChainProvider {
 pub const MCHAIN_ID: u64 = 84532;
 
 impl MetaChainProvider {
+    /// for testing only - get direct access to the rollup contract
+    pub fn get_rollup(&self) -> RollupInstance<(), FilledProvider> {
+        Rollup::new(get_rollup_contract_address(), self.provider.clone())
+    }
+
     #[allow(missing_docs)]
     pub async fn get_block_by_number(
         &self,
@@ -66,11 +71,6 @@ impl MetaChainProvider {
         kind: BlockTransactionsKind,
     ) -> Result<Option<Block>> {
         self.provider.get_block_by_number(number, kind).await.map_err(|e| e.into())
-    }
-
-    /// for testing only - get direct access to the rollup contract
-    pub fn get_rollup(&self) -> RollupInstance<(), FilledProvider> {
-        Rollup::new(get_rollup_contract_address(), self.provider.clone())
     }
 
     #[allow(missing_docs)]
@@ -115,7 +115,7 @@ impl MetaChainProvider {
             _ = Rollup::deploy_builder(
                 &mchain.provider,
                 U256::from(config.target_chain_id),
-                rollup_config.clone(),
+                rollup_config,
             )
             .nonce(0)
             .send()
@@ -151,7 +151,7 @@ impl MetaChainProvider {
     }
 
     /// Mines a block on the `MetaChain`
-    pub async fn mine_block(&self, block_timestamp_secs: u64) -> Result<()> {
+    pub async fn mine_block(&self, block_timestamp_secs: u64) -> Result<BlockHash> {
         let attr = PayloadAttributes {
             timestamp: block_timestamp_secs,
             prev_randao: Default::default(),
@@ -214,13 +214,34 @@ impl MetaChainProvider {
             PayloadStatus { status: PayloadStatusEnum::Valid, latest_valid_hash: Some(block_hash) },
         );
         self.metrics.record_last_block_mined(block.header.number + 1, block_timestamp_secs);
+        Ok(block_hash)
+    }
+
+    /// Rolls back the chain to a specific block hash by performing a reorg
+    pub async fn rollback_to_block(&self, block_hash: BlockHash) -> Result<()> {
+        // TODO(SEQ-653): set safe and finalized block hashes properly
+        let fcu = self
+            .auth_provider
+            .fork_choice_updated_v3(
+                ForkchoiceState {
+                    head_block_hash: block_hash,
+                    safe_block_hash: block_hash,
+                    finalized_block_hash: block_hash,
+                },
+                None,
+            )
+            .await?;
+        assert_eq!(
+            fcu.payload_status,
+            PayloadStatus { status: PayloadStatusEnum::Valid, latest_valid_hash: Some(block_hash) }
+        );
         Ok(())
     }
 
     /// Return the on-chain config for a rollup with a given chain id
     pub fn rollup_config(chain_id: u64) -> String {
         let zero = Address::ZERO;
-        format!(
+        let mut cfg = format!(
             r#"{{
               "chainId": {chain_id},
               "homesteadBlock": 0,
@@ -250,139 +271,9 @@ impl MetaChainProvider {
                 "GenesisBlockNum": 0
               }}
             }}"#
-        )
-    }
-
-    /// Get the nitro json configuration data for the rollup
-    pub fn rollup_info(rollup_config: &str, chain_name: &str) -> String {
-        let rollup = get_rollup_contract_address();
-        let deployed_at: u64 = 1;
-        let zero = Address::ZERO;
-        format!(
-            r#"[{{
-              "chain-name": "{chain_name}",
-              "parent-chain-id": {MCHAIN_ID},
-              "parent-chain-is-arbitrum": false,
-              "sequencer-url": "",
-              "secondary-forwarding-target": "",
-              "feed-url": "",
-              "secondary-feed-url": "",
-              "das-index-url": "",
-              "has-genesis-state": false,
-              "chain-config": {rollup_config},
-              "rollup": {{
-                "bridge": "{rollup}",
-                "inbox": "{zero}",
-                "sequencer-inbox": "{rollup}",
-                "deployed-at": {deployed_at},
-                "rollup": "{zero}",
-                "native-token": "{zero}",
-                "upgrade-executor": "{zero}",
-                "validator-wallet-creator": "{zero}"
-              }}
-            }}]"#
-        )
-    }
-
-    /// Rolls back the chain to a specific block number by performing a reorg
-    pub async fn rollback_to_block(&self, _block_number: u64) -> Result<()> {
-        panic!("rollback not implemented"); // TODO SEQ-528
-
-        // let current_block = self.provider.get_block_number().await?;
-        // let depth = current_block - block_number;
-        // self.provider.anvil_reorg(ReorgOptions { depth, tx_block_pairs: vec![] }).await?;
-
-        // // Verify we're at the correct block
-        // let new_block = self.provider.get_block_number().await?;
-        // if new_block != block_number {
-        //     return Err(eyre::eyre!(
-        //         "Failed to rollback: expected block {}, got block {}",
-        //         block_number,
-        //         new_block
-        //     ));
-        // }
-
-        // Ok(())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use alloy::{eips::BlockId, rpc::types::BlockTransactionsKind};
-    use prometheus_client::registry::Registry;
-
-    struct MetricsState {
-        /// Prometheus registry
-        pub registry: Registry,
-    }
-
-    #[tokio::test]
-    #[ignore] // TODO SEQ-528 unskip
-    async fn test_anvil_rollback() -> Result<()> {
-        let config = BlockBuilderConfig {
-            mchain_ipc_path: "http://127.0.0.1:9388".parse()?,
-            ..Default::default()
-        };
-        let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = MChainMetrics::new(&mut metrics_state.registry);
-        let chain = MetaChainProvider::start(&config, &metrics).await?;
-        // Mine 10 blocks
-        for i in 1000..1010 {
-            chain.mine_block(i as u64).await?;
-        }
-
-        chain.rollback_to_block(5).await?;
-        let block_num = chain.provider.get_block_number().await?;
-        assert_eq!(block_num, 5, "Chain should be at block 5");
-
-        Ok(())
-    }
-
-    #[tokio::test]
-    #[ignore] // just for debugging
-    async fn test_anvil_stop_resume() -> Result<()> {
-        let genesis_ts = 0;
-        let config = BlockBuilderConfig {
-            mchain_ipc_path: "http://127.0.0.1:9488".to_string(),
-            ..Default::default()
-        };
-
-        let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = MChainMetrics::new(&mut metrics_state.registry);
-        let provider = MetaChainProvider::start(&config, &metrics).await?;
-
-        // Mine some blocks with increasing timestamps
-        for i in 1..100_000 {
-            provider.mine_block(genesis_ts + (i * 1000)).await?;
-        }
-        let original_block = provider.provider.get_block_number().await?;
-
-        drop(provider);
-
-        // Second instance: restore state
-        let metrics = MChainMetrics::new(&mut metrics_state.registry);
-        let provider = MetaChainProvider::start(&config, &metrics).await?;
-
-        // Verify state was restored correctly
-        let restored_block = provider.provider.get_block_number().await?;
-        assert_eq!(original_block, restored_block, "Block number should match after restore");
-
-        // Check random historical blocks are accessible
-        for block_num in [42, 567, 12345, 50000, 100_000] {
-            let block = provider
-                .provider
-                .get_block(BlockId::Number(block_num.into()), BlockTransactionsKind::Full)
-                .await?;
-            assert!(block.is_some(), "Block {} should be available", block_num);
-            assert_eq!(
-                block.unwrap().header.number,
-                block_num,
-                "Block number mismatch for block {}",
-                block_num
-            );
-        }
-
-        Ok(())
+        );
+        cfg.retain(|c| !c.is_whitespace());
+        cfg.shrink_to_fit();
+        cfg
     }
 }

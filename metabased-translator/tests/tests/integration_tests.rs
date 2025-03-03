@@ -3,7 +3,7 @@
 use alloy::{
     eips::{eip2718::Encodable2718, BlockNumberOrTag},
     network::{EthereumWallet, TransactionBuilder},
-    primitives::{address, utils::parse_ether, Address, U256},
+    primitives::{address, utils::parse_ether, Address, BlockHash, U256},
     providers::{ext::AnvilApi as _, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, BlockTransactionsKind, TransactionRequest},
 };
@@ -27,7 +27,7 @@ use tokio::time::sleep;
 use tracing::Level;
 
 /// mine a mchain block with a delay - for testing only
-pub async fn mine_block(provider: &MetaChainProvider, delay: u64) -> Result<()> {
+async fn mine_block(provider: &MetaChainProvider, delay: u64) -> Result<BlockHash> {
     #[allow(clippy::expect_used)]
     let ts = provider
         .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
@@ -36,6 +36,42 @@ pub async fn mine_block(provider: &MetaChainProvider, delay: u64) -> Result<()> 
         .header
         .timestamp;
     provider.mine_block(ts + delay).await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_rollback() -> Result<()> {
+    let (node, _mchain) = start_reth(MCHAIN_ID).await?;
+    let block_builder_cfg = BlockBuilderConfig {
+        mchain_ipc_path: node.ipc,
+        mchain_auth_ipc_path: node.auth_ipc,
+        ..Default::default()
+    };
+
+    let mut metrics_state = MetricsState { registry: Registry::default() };
+    let metrics = MChainMetrics::new(&mut metrics_state.registry);
+    let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
+
+    let b1 = mchain
+        .get_block_by_number(BlockNumberOrTag::Number(1), BlockTransactionsKind::Hashes)
+        .await?
+        .expect("could not find first block")
+        .header
+        .hash;
+    let b2 = mchain.mine_block(1).await?;
+    mchain.mine_block(2).await?;
+    let b4 = mchain.mine_block(3).await?;
+    let b5 = mchain.mine_block(4).await?;
+
+    assert_eq!(mchain.get_block_number().await?, 5);
+    mchain.rollback_to_block(b5).await?;
+    assert_eq!(mchain.get_block_number().await?, 5);
+    mchain.rollback_to_block(b4).await?;
+    assert_eq!(mchain.get_block_number().await?, 4);
+    mchain.rollback_to_block(b2).await?;
+    assert_eq!(mchain.get_block_number().await?, 2);
+    mchain.rollback_to_block(b1).await?;
+    assert_eq!(mchain.get_block_number().await?, 1);
+    Ok(())
 }
 
 /// This test sends different types of delayed messages
@@ -336,15 +372,18 @@ async fn e2e_test() -> Result<()> {
 /// via the block builder code and posted to the dummy rollup contract.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_nitro_batch() -> Result<()> {
-    let (mchain_ipc_path, mchain_auth_ipc_path, _mchain) =
-        start_reth(8388, 8389, 8390, MCHAIN_ID).await?;
-    let block_builder_cfg =
-        BlockBuilderConfig { mchain_ipc_path, mchain_auth_ipc_path, ..Default::default() };
+    let (node, _mchain) = start_reth(MCHAIN_ID).await?;
+    let block_builder_cfg = BlockBuilderConfig {
+        mchain_ipc_path: node.ipc,
+        mchain_auth_ipc_path: node.auth_ipc,
+        ..Default::default()
+    };
 
     let mut metrics_state = MetricsState { registry: Registry::default() };
     let metrics = MChainMetrics::new(&mut metrics_state.registry);
     let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
-    let (_nitro, rollup) = launch_nitro_node(block_builder_cfg.target_chain_id, 8390, 8347).await?;
+    let (_nitro, rollup) =
+        launch_nitro_node(block_builder_cfg.target_chain_id, node.http_port).await?;
 
     let rollup_contract = mchain.get_rollup();
 
@@ -418,15 +457,18 @@ async fn test_nitro_batch() -> Result<()> {
 /// Regression test
 #[tokio::test(flavor = "multi_thread")]
 async fn test_nitro_batch_two_tx() -> Result<()> {
-    let (mchain_ipc_path, mchain_auth_ipc_path, _mchain) =
-        start_reth(8488, 8489, 8490, MCHAIN_ID).await?;
-    let block_builder_cfg =
-        BlockBuilderConfig { mchain_ipc_path, mchain_auth_ipc_path, ..Default::default() };
+    let (node, _mchain) = start_reth(MCHAIN_ID).await?;
+    let block_builder_cfg = BlockBuilderConfig {
+        mchain_ipc_path: node.ipc,
+        mchain_auth_ipc_path: node.auth_ipc,
+        ..Default::default()
+    };
 
     let mut metrics_state = MetricsState { registry: Registry::default() };
     let metrics = MChainMetrics::new(&mut metrics_state.registry);
     let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
-    let (_nitro, rollup) = launch_nitro_node(block_builder_cfg.target_chain_id, 8490, 8447).await?;
+    let (_nitro, rollup) =
+        launch_nitro_node(block_builder_cfg.target_chain_id, node.http_port).await?;
     let rollup_contract = mchain.get_rollup();
 
     // deposit 1 eth
