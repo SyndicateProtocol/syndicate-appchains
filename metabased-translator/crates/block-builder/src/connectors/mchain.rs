@@ -123,6 +123,12 @@ impl MetaChainProvider {
             mchain.mine_block(0).await?;
         }
 
+        // exit with an error message if the rollup contract bytecode does not match
+        assert_eq!(
+            mchain.provider.get_code_at(get_rollup_contract_address()).await?,
+            Rollup::DEPLOYED_BYTECODE
+        );
+
         Ok(mchain)
     }
 
