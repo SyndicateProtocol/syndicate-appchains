@@ -88,6 +88,14 @@ jobs:
       - name: Install Rust toolchain
         run: rustup toolchain install stable --profile minimal
 
+      # Install cargo-nextest, a next-generation Rust test runner
+      # Parallelizes tests, has readable output, configurable profiles, etc.
+      # https://nexte.st
+      - name: Install cargo-nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest@0.9
+
       # Cache Cargo dependencies
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
@@ -110,4 +118,4 @@ jobs:
 
       # Run tests on entire workspace
       - name: Run Tests
-        run: cargo test --workspace
+        run: cargo nextest run --workspace
