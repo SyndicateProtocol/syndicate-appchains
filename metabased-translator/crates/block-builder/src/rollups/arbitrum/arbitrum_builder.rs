@@ -918,4 +918,34 @@ mod tests {
         .into();
         assert_eq!(txn.input, expected_call);
     }
+
+    #[test]
+    fn test_should_ignore_delayed_message() {
+        let builder = ArbitrumBlockBuilder::new(&BlockBuilderConfig {
+            ignore_delayed_messages: true,
+            ..Default::default()
+        });
+
+        assert!(builder.should_ignore_delayed_message(&L1MessageType::L2Message));
+        assert!(builder.should_ignore_delayed_message(&L1MessageType::L2FundedByL1));
+        assert!(builder.should_ignore_delayed_message(&L1MessageType::SubmitRetryable));
+        assert!(builder.should_ignore_delayed_message(&L1MessageType::Initialize));
+        assert!(builder.should_ignore_delayed_message(&L1MessageType::BatchPostingReport));
+
+        // Message that should NOT be ignored (even if ignore_delayed_messages is true)
+        assert!(!builder.should_ignore_delayed_message(&L1MessageType::EthDeposit));
+
+        let builder = ArbitrumBlockBuilder::new(&BlockBuilderConfig {
+            ignore_delayed_messages: false,
+            ..Default::default()
+        });
+
+        assert!(!builder.should_ignore_delayed_message(&L1MessageType::L2Message));
+        assert!(!builder.should_ignore_delayed_message(&L1MessageType::L2FundedByL1));
+        assert!(!builder.should_ignore_delayed_message(&L1MessageType::SubmitRetryable));
+        assert!(!builder.should_ignore_delayed_message(&L1MessageType::EthDeposit));
+
+        assert!(builder.should_ignore_delayed_message(&L1MessageType::Initialize));
+        assert!(builder.should_ignore_delayed_message(&L1MessageType::BatchPostingReport));
+    }
 }
