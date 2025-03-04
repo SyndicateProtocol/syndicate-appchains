@@ -38,7 +38,6 @@ pub mod r#ierc721metadata;
 pub mod r#ierc721tokenreceiver;
 pub mod r#ierc721receiver;
 pub mod r#irequirementmodule;
-pub mod r#initializable;
 pub mod r#math;
 pub mod r#messagehashutils;
 pub mod r#metabasedfactory;
