@@ -28,9 +28,9 @@ jobs:
 
       # Install Rust toolchain and clippy
       - name: Install Rust toolchain
-        run: |
-          rustup toolchain install stable --profile minimal
-          rustup component add clippy
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
 
       # Cache Cargo dependencies
       - name: Cache dependencies
@@ -51,9 +51,9 @@ jobs:
 
       # Install Rust toolchain and rustfmt
       - name: Install Rust toolchain
-        run: |
-          rustup toolchain install nightly --profile minimal
-          rustup component add --toolchain nightly-x86_64-unknown-linux-gnu rustfmt
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rustfmt
 
       - name: Cache dependencies
         uses: Swatinem/rust-cache@v2
