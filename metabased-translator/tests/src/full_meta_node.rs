@@ -14,7 +14,7 @@ use alloy::{
 };
 use block_builder::{
     block_builder::BlockBuilder,
-    config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
+    config::{get_default_private_key_signer, get_rollup_contract_address},
     connectors::mchain::{FilledProvider, MetaChainProvider, MCHAIN_ID},
     metrics::BlockBuilderMetrics,
     rollups::{
@@ -42,7 +42,6 @@ use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use slotter::{metrics::SlotterMetrics, Slotter};
 use std::{sync::Arc, time::Duration};
-use test_utils::test_path;
 use tokio::{
     process::{Child, Command},
     runtime::Handle,
@@ -353,7 +352,16 @@ pub struct MetaNode {
 
 impl MetaNode {
     #[allow(clippy::unwrap_used)] // test utility
-    pub async fn new(pre_loaded: bool, config: MetabasedConfig) -> Result<Self> {
+    pub async fn new(pre_loaded: bool, mut config: MetabasedConfig) -> Result<Self> {
+        // Define the addresses of the bridge and inbox contracts depedning on whether we
+        // are loading in the full set of Arb contracts or not
+        config.block_builder.bridge_address =
+            if pre_loaded { PRELOAD_BRIDGE_ADDRESS } else { get_rollup_contract_address() };
+        config.block_builder.inbox_address =
+            if pre_loaded { PRELOAD_INBOX_ADDRESS } else { get_rollup_contract_address() };
+
+        config.block_builder.sequencing_contract_address = get_rollup_contract_address();
+
         match config.block_builder.target_rollup_type {
             block_builder::config::TargetRollupType::OPTIMISM => {
                 let adapter = OptimismAdapter::new(&config.block_builder);
@@ -368,39 +376,18 @@ impl MetaNode {
 
     async fn new_with_rollup_adapter<R: RollupAdapter>(
         pre_loaded: bool,
-        config: MetabasedConfig,
+        mut config: MetabasedConfig,
         rollup_adapter: R,
     ) -> Result<Self> {
-        // We need 4 ports to run a full meta node
-        // - MChain
-        // - Mock Sequencing Chain
-        // - Mock Settlement Chain
-        // - Nitro Rollup;
-        let port_tracker = PortManager::instance();
-
-        // Define the addresses of the bridge and inbox contracts depedning on whether we
-        // are loading in the full set of Arb contracts or not
-        let bridge_address =
-            if pre_loaded { PRELOAD_BRIDGE_ADDRESS } else { get_rollup_contract_address() };
-        let inbox_address =
-            if pre_loaded { PRELOAD_INBOX_ADDRESS } else { get_rollup_contract_address() };
-
         let (node, mchain) = start_reth(MCHAIN_ID).await?;
-
-        let block_builder_cfg = BlockBuilderConfig {
-            bridge_address,
-            inbox_address,
-            mchain_ipc_path: node.ipc,
-            mchain_auth_ipc_path: node.auth_ipc,
-            sequencing_contract_address: get_rollup_contract_address(),
-            ..config.block_builder
-        };
+        config.block_builder.mchain_ipc_path = node.ipc;
+        config.block_builder.mchain_auth_ipc_path = node.auth_ipc;
 
         // Launch mock sequencing chain and deploy contracts
         let (seq_port, _seq_anvil, seq_provider) = start_anvil(15).await?;
         _ = MetabasedSequencerChain::deploy_builder(
             &seq_provider,
-            U256::from(block_builder_cfg.target_chain_id),
+            U256::from(config.block_builder.target_chain_id),
         )
         .send()
         .await?;
@@ -448,8 +435,8 @@ impl MetaNode {
             // contracts
             _ = Rollup::deploy_builder(
                 &set_provider,
-                U256::from(block_builder_cfg.target_chain_id),
-                MetaChainProvider::rollup_config(block_builder_cfg.target_chain_id),
+                U256::from(config.block_builder.target_chain_id),
+                MetaChainProvider::rollup_config(config.block_builder.target_chain_id),
             )
             .nonce(0)
             .send()
@@ -503,9 +490,8 @@ impl MetaNode {
 
         let block_builder = BlockBuilder::new(
             slotter_rx,
-            &block_builder_cfg,
+            &config.block_builder,
             rollup_adapter,
-            &datadir,
             BlockBuilderMetrics::new(&mut metrics_state.registry),
         )
         .await?;
@@ -513,7 +499,7 @@ impl MetaNode {
         let rollup = block_builder.mchain.get_rollup();
 
         let (_nitro_docker, metabased_rollup) =
-            launch_nitro_node(block_builder_cfg.target_chain_id, node.http_port).await?;
+            launch_nitro_node(config.block_builder.target_chain_id, node.http_port).await?;
         let (_builder_tx, builder_rx) = tokio::sync::oneshot::channel();
         let _block_builder_task = Task(tokio::spawn(async move {
             _ = block_builder.start(None, builder_rx).await;
@@ -525,7 +511,7 @@ impl MetaNode {
             settlement_provider: set_provider,
             metabased_rollup,
 
-            chain_id: block_builder_cfg.target_chain_id,
+            chain_id: config.block_builder.target_chain_id,
 
             mchain,
             mchain_provider,

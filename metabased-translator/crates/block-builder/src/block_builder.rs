@@ -1,8 +1,8 @@
 //! Block builder service for processing and building L3 blocks.
 
 use crate::{
-    config::BlockBuilderConfig, connectors::anvil::MetaChainProvider, metrics::BlockBuilderMetrics,
-    rollups::shared::RollupAdapter,
+    config::BlockBuilderConfig, connectors::mchain::MetaChainProvider,
+    metrics::BlockBuilderMetrics, rollups::shared::RollupAdapter,
 };
 use alloy::{
     eips::BlockNumberOrTag,
@@ -12,7 +12,7 @@ use alloy::{
 use common::types::Slot;
 use eyre::{Error, Report, Result};
 use tokio::sync::{mpsc::Receiver, oneshot};
-use tracing::{debug, info, trace};
+use tracing::{info, trace};
 use url::Url;
 
 /// Block builder service for processing and building L3 blocks.
@@ -137,10 +137,6 @@ impl<R: RollupAdapter> BlockBuilder<R> {
                         }
                     };
 
-                    if transactions.is_empty() {
-                        debug!("No transactions for this slot, skipping producing a block");
-                        continue;
-                    }
                     let transactions_len = transactions.len();
                     trace!("Submitting {} transactions", transactions_len);
                     self.metrics.record_transactions_per_slot(transactions_len);

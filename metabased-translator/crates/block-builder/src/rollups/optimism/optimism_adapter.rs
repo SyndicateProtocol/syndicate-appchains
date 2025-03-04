@@ -53,7 +53,7 @@ impl RollupAdapter for OptimismAdapter {
         &self,
         _provider: &T,
         _block: BlockNumberOrTag,
-    ) -> Result<(Option<KnownState>, u64)> {
+    ) -> Result<Option<(KnownState, u64)>> {
         // TODO: Implement
         panic!("Not implemented")
     }

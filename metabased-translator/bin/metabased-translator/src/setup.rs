@@ -83,10 +83,10 @@ pub async fn create_node_components<R: RollupAdapter>(
     )
     .await?;
 
-    let block_builder_cfg = &config.block_builder;
     let (slotter, slot_rx) = Slotter::new(&config.slotter, safe_state, metrics.slotter);
     let block_builder =
-        BlockBuilder::new(slot_rx, &config.block_builder, metrics.block_builder).await?;
+        BlockBuilder::new(slot_rx, &config.block_builder, rollup_adapter, metrics.block_builder)
+            .await?;
     Ok((
         sequencing_ingestor,
         sequencing_rx,

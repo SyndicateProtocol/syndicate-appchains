@@ -426,7 +426,13 @@ async fn test_nitro_batch() -> Result<()> {
 
     // send a batch to sequence the deposit.
     _ = rollup_contract
-        .postBatch(arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?)
+        .postBatch(
+            arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
+            0,
+            U256::from(0),
+            0,
+            U256::from(0),
+        )
         .send()
         .await?;
     mine_block(&mchain, 0).await?;
@@ -460,8 +466,11 @@ async fn test_nitro_batch() -> Result<()> {
     let batch = arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::L2(
         arbitrum::batch::L1IncomingMessage { header: Default::default(), l2_msg: vec![tx.into()] },
     )]);
-    _ = rollup_contract.postBatch(batch.encode()?).send().await?;
-    mine_block(&mchain, 0).await?;
+    _ = rollup_contract
+        .postBatch(batch.encode()?, 0, U256::from(0), 0, U256::from(0))
+        .send()
+        .await?;
+    mchain.mine_block(0).await?;
 
     // wait for the batch to be processed
     sleep(Duration::from_millis(200)).await;
@@ -510,7 +519,13 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
 
     // send a batch to sequence the deposit.
     _ = rollup_contract
-        .postBatch(arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?)
+        .postBatch(
+            arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
+            0,
+            U256::from(0),
+            0,
+            U256::from(0),
+        )
         .send()
         .await?;
     mine_block(&mchain, 0).await?;
@@ -561,8 +576,11 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
             l2_msg: vec![tx.clone().into(), tx.into(), tx2.into()],
         },
     )]);
-    _ = rollup_contract.postBatch(batch.encode()?).send().await?;
-    mine_block(&mchain, 0).await?;
+    _ = rollup_contract
+        .postBatch(batch.encode()?, 0, U256::from(0), 0, U256::from(0))
+        .send()
+        .await?;
+    mchain.mine_block(0).await?;
 
     // wait 100ms for the batch to be processed
     sleep(Duration::from_millis(100)).await;

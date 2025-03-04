@@ -190,10 +190,6 @@ impl Slotter {
                 self.process_settlement_block(block_info).await?;
             }
         }
-        if self.min_chain_head_timestamp == 0 {
-            debug!("No blocks seen for both chains yet, skipping cleanup");
-            return Ok(());
-        }
 
         self.metrics.update_active_slots(self.slots.len());
         Ok(())

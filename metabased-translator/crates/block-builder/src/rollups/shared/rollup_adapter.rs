@@ -47,7 +47,7 @@ pub trait RollupAdapter: Debug + Send + Sync + Unpin + 'static {
         &self,
         provider: &T,
         block: BlockNumberOrTag,
-    ) -> Result<(Option<KnownState>, Option<u64>)>;
+    ) -> Result<Option<(KnownState, u64)>>;
 
     /// Builds a block from a slot
     async fn build_block_from_slot(

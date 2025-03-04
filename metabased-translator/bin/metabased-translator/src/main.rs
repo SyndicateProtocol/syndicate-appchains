@@ -1,6 +1,6 @@
 use alloy::eips::BlockNumberOrTag;
 use block_builder::{
-    connectors::anvil::MetaChainProvider,
+    connectors::mchain::MetaChainProvider,
     rollups::{
         arbitrum::arbitrum_adapter::ArbitrumAdapter, optimism::optimism_adapter::OptimismAdapter,
         shared::RollupAdapter,
@@ -61,14 +61,11 @@ async fn run(
     let (metrics, metrics_task) = init_metrics(config).await;
 
     // TODO maybe there is a way to avoid creating this here (?)
-    let mchain = MetaChainProvider::start(
-        &config.block_builder,
-        config.datadir.as_str(),
-        &metrics.block_builder.mchain_metrics,
-    )
-    .await?;
+    let mchain =
+        MetaChainProvider::start(&config.block_builder, &metrics.block_builder.mchain_metrics)
+            .await?;
 
-    let (safe_state, safe_block_number) = obtain_safe_state(
+    let (safe_state, safe_block_number) = get_safe_state(
         &mchain,
         sequencing_client.clone(),
         settlement_client.clone(),
@@ -108,23 +105,53 @@ async fn run(
     start_translator(main_shutdown_rx, tx, component_tasks, metrics_task).await
 }
 
-async fn obtain_safe_state(
+// TODO SEQ-651 - re-use this function in case of reorg
+async fn get_safe_state(
     mchain: &MetaChainProvider,
     sequencing_client: std::sync::Arc<dyn RPCClient>,
     settlement_client: std::sync::Arc<dyn RPCClient>,
     rollup_adapter: &impl RollupAdapter,
 ) -> Result<(Option<KnownState>, Option<u64>)> {
-    // TODO avoid creating this provider multiple times (?)
+    let mut current_block = BlockNumberOrTag::Latest;
+    loop {
+        match rollup_adapter.get_processed_blocks(&mchain.provider, current_block).await? {
+            Some((mut state, block_number)) => {
+                // Check if sequencing block matches
+                let seq_valid = match sequencing_client
+                    .get_block_by_number(BlockNumberOrTag::Number(state.sequencing_block.number))
+                    .await
+                {
+                    Ok(block) => {
+                        // override the timestamp (it's not stored on the mchain)
+                        state.sequencing_block.timestamp = block.timestamp;
+                        block.hash == state.sequencing_block.hash
+                    }
+                    Err(_) => false,
+                };
 
-    let (known_state, block_number) =
-        rollup_adapter.get_processed_blocks(&mchain.provider, BlockNumberOrTag::Latest).await?;
+                // Check if settlement block matches
+                let settle_valid = match settlement_client
+                    .get_block_by_number(BlockNumberOrTag::Number(state.settlement_block.number))
+                    .await
+                {
+                    Ok(block) => {
+                        // override the timestamp (it's not stored on the mchain)
+                        state.settlement_block.timestamp = block.timestamp;
+                        block.hash == state.settlement_block.hash
+                    }
+                    Err(_) => false,
+                };
 
-    // TODO - assert the hash still matches using the client,
-    // if hashes do not match, walk back the chain until we find a safe spot.
-    //...........
-    // TODO re-use this in case of reorg
-
-    Ok((known_state, block_number))
+                // If both match, return the state
+                if seq_valid && settle_valid {
+                    return Ok((Some(state), Some(block_number)));
+                }
+                // Walk back one block
+                current_block = BlockNumberOrTag::Number(block_number.saturating_sub(1));
+            }
+            None => return Ok((None, None)),
+        };
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
