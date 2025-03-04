@@ -20,6 +20,7 @@ pub struct MetricsState {
 }
 
 impl MetricsState {
+    /// Create a new `MetricsState` instance with a default Prometheus registry.
     pub fn new() -> Self {
         let registry = Registry::default();
         Self { registry }

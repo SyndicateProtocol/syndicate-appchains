@@ -9,19 +9,15 @@ use jsonrpsee::{
     types::error::ErrorCode,
     RpcModule,
 };
+use metabased_sequencer::{
+    config::Config,
+    metrics::{start_metrics, MetricsState},
+    service::{send_raw_transaction_handler, RelayerService},
+};
 use serde_json::Value as JsonValue;
 use std::net::SocketAddr;
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
-
-mod config;
-mod contract;
-mod metrics;
-mod service;
-
-use config::Config;
-use metrics::{start_metrics, MetricsState};
-use service::{send_raw_transaction_handler, MetabasedService};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -60,7 +56,7 @@ async fn main() -> Result<()> {
 async fn run_server(config: &Config) -> Result<(SocketAddr, ServerHandle)> {
     let server = Server::builder().build(format!("0.0.0.0:{}", config.port)).await?;
 
-    let service = MetabasedService::new(config)?;
+    let service = RelayerService::new(config)?;
 
     let mut module = RpcModule::new(service);
 

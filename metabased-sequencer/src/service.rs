@@ -1,3 +1,5 @@
+//! The `service` module handles the business logic for the metabased sequencer.
+
 use crate::{config::Config, contract::MetabasedSequencerChain::processTransactionCall};
 use alloy::{
     consensus::{Transaction, TxEnvelope, TxType},
@@ -44,12 +46,18 @@ pub type FilledProvider = FillProvider<
     Ethereum,
 >;
 
-pub struct MetabasedService {
+/// The service for relaying transactions to the sequencing contract.
+#[derive(Debug)]
+pub struct RelayerService {
+    /// The address of the sequencing contract on the sequencing chain
     contract_address: Address,
+
+    /// The provider for the sequencing chain
     provider: Arc<FilledProvider>,
 }
 
-impl MetabasedService {
+impl RelayerService {
+    /// Create a new `RelayerService` instance.
     pub fn new(config: &Config) -> Result<Self> {
         let signer = PrivateKeySigner::from_bytes(&config.private_key)?;
         let wallet = EthereumWallet::from(signer);
@@ -161,9 +169,10 @@ impl MetabasedService {
     }
 }
 
+/// The handler for the `eth_sendRawTransaction` JSON-RPC method.
 pub async fn send_raw_transaction_handler(
     params: Params<'static>,
-    service: Arc<MetabasedService>,
+    service: Arc<RelayerService>,
     _: Extensions,
 ) -> RpcResult<String> {
     let tx_data: Bytes =
@@ -189,14 +198,14 @@ mod tests {
     use std::str::FromStr;
     use url::Url;
 
-    fn setup_test_service() -> MetabasedService {
+    fn setup_test_service() -> RelayerService {
         let config = Config {
             chain_contract_address: Address::from([0x42; 20]),
             chain_rpc_url: Url::parse("http://localhost:8545").unwrap(),
             private_key: B256::from([0x1; 32]),
             port: 8456,
         };
-        MetabasedService::new(&config).unwrap()
+        RelayerService::new(&config).unwrap()
     }
 
     #[test]
@@ -208,7 +217,7 @@ mod tests {
             port: 8456,
         };
 
-        let result = MetabasedService::new(&config);
+        let result = RelayerService::new(&config);
         assert!(result.is_ok());
 
         let service = result.unwrap();
@@ -224,7 +233,7 @@ mod tests {
             port: 8456,
         };
 
-        let result = MetabasedService::new(&config);
+        let result = RelayerService::new(&config);
         assert!(result.is_err());
     }
     #[tokio::test]

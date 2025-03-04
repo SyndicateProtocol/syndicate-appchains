@@ -1,3 +1,5 @@
+//! The `contract` module contains the contract bindings for the metabased sequencer.
+
 use alloy::sol;
 
 // TODO: Use contract bindings
