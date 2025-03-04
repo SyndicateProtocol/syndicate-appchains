@@ -28,7 +28,7 @@ use std::{sync::Arc, time::Duration};
 use tracing::{debug, error, info};
 
 #[allow(missing_docs)]
-type FilledProvider = FillProvider<
+pub type FilledProvider = FillProvider<
     JoinFill<
         JoinFill<
             JoinFill<
@@ -64,29 +64,32 @@ impl MetabasedService {
         Ok(Self { contract_address: config.chain_contract_address, provider: Arc::new(provider) })
     }
 
-    fn validate_transaction(&self, raw_tx: &Bytes) -> Result<()> {
+    fn validate_transaction(&self, raw_tx: &Bytes) -> Result<TxHash> {
         debug!(bytes_length = raw_tx.len(), "Starting transaction validation");
         // 1. Decoding:
         let mut slice: &[u8] = raw_tx.as_ref();
         let tx = match TxEnvelope::decode(&mut slice) {
             Ok(tx) => tx,
             Err(_) => {
+                let error = eyre::eyre!("Transaction decoding failed");
                 debug!(
-                    // error = %error,
+                    error = %error,
                     "Transaction decoding failed"
                 );
-                return Err(eyre::eyre!("Transaction decoding failed"));
+                return Err(error);
             }
         };
 
         // 2. Validation:
         //For non-legacy transactions, validate chain ID immediately
         if tx.tx_type() != TxType::Legacy && tx.chain_id().is_none() {
+            let error = eyre::eyre!("Transaction validation failed: missing chain ID");
             debug!(
+                error = %error,
                 tx_type = ?tx.tx_type(),
                 "Transaction validation failed: missing chain ID"
             );
-            return Err(eyre::eyre!("Transaction validation failed: missing chain ID"));
+            return Err(error);
         }
 
         tx.recover_signer().map_err(|e| {
@@ -103,18 +106,18 @@ impl MetabasedService {
             // RPCTxFeeCap for equivalent skip check if unset
             let tx_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
             let gas_price = tx.gas_price().ok_or_else(|| {
-                // let error = InvalidInput(MissingGasPrice);
+                let error = eyre::eyre!("Transaction validation failed: missing gas price");
                 debug!(
-                    // error = %error,
+                    error = %error,
                     tx_type = ?tx.tx_type(),
                     "Transaction validation failed: missing gas price"
                 );
-                eyre::eyre!("Transaction validation failed: missing gas price")
+                error
             })?;
 
             // Short circuit if there is no cap for transaction fee at all.
             if tx_cap_in_wei.is_zero() {
-                return Ok(());
+                return Ok(tx.tx_hash().to_owned());
             }
 
             let gas_price = U256::try_from(gas_price)?;
@@ -126,12 +129,12 @@ impl MetabasedService {
             }
         }
 
-        Ok(())
+        Ok(tx.tx_hash().to_owned())
     }
 
     async fn process_transaction(&self, raw_tx: Bytes) -> Result<TxHash> {
         info!("Processing transaction: {}", hex::encode(&raw_tx));
-        self.validate_transaction(&raw_tx)?;
+        let original_tx_hash = self.validate_transaction(&raw_tx)?;
 
         debug!("Submitting validated transaction to chain");
         let data = processTransactionCall { encodedTxn: raw_tx };
@@ -147,11 +150,12 @@ impl MetabasedService {
         {
             Ok(hash) => {
                 // TODO: Log sequencer balance
-                return Ok(hash);
+                debug!("Transaction submitted: {}", hex::encode(hash));
+                Ok(original_tx_hash)
             }
             Err(e) => {
                 error!(error = ?e, "Transaction submission failed");
-                return Err(eyre::eyre!(e));
+                Err(eyre::eyre!(e))
             }
         }
     }
@@ -264,5 +268,10 @@ mod tests {
         let result = service.validate_transaction(&valid_tx);
         // The validation should pass since this is a valid RLP-encoded transaction
         assert!(result.is_ok());
+        let tx_hash = result.unwrap();
+        assert_eq!(
+            tx_hash.to_string(),
+            "0xc429e5f128387d224ba8bed6885e86525e14bfdc2eb24b5e9c3351a1176fd81f"
+        );
     }
 }
