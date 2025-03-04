@@ -258,54 +258,28 @@ impl ArbitrumBlockBuilder {
         log: &Log,
         message_data: HashMap<U256, Bytes>,
     ) -> Result<TransactionRequest> {
-        let msg_delivered = match MessageDelivered::abi_decode_data(&log.data, true) {
-            Ok(decoded) => decoded,
-            Err(e) => {
-                return Err(
-                    ArbitrumBlockBuilderError::DecodingError("MessageDelivered", e.into()).into()
-                );
-            }
-        };
+        let msg_delivered = MessageDelivered::abi_decode_data(&log.data, true)
+            .map_err(|e| ArbitrumBlockBuilderError::DecodingError("MessageDelivered", e.into()))?;
 
         let message_index = U256::from_be_slice(log.topics[1].as_slice()); // First indexed field is message index
         let kind = L1MessageType::from_u8_panic(msg_delivered.1);
 
-        if kind == L1MessageType::Initialize {
-            return Err(
-                ArbitrumBlockBuilderError::DelayedMessageIgnored(L1MessageType::Initialize).into()
-            );
-        }
-        if kind == L1MessageType::BatchPostingReport {
-            return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(
-                L1MessageType::BatchPostingReport,
-            )
-            .into());
-        }
-
-        if self.ignore_delayed_messages && kind != L1MessageType::EthDeposit {
-            debug!(
-                "Delayed message ignored. Kind: {:?}. Msg delivered: {:?}.",
-                kind, msg_delivered
-            );
+        if self.should_ignore_delayed_message(&kind) {
             return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind).into());
         }
 
-        let sender = msg_delivered.2; // Third non-indexed field is sender
+        // Extract sender (third non-indexed field)
+        let sender = msg_delivered.2;
 
-        let data = match message_data.get(&message_index) {
-            Some(data) => data,
-            None => {
-                return Err(ArbitrumBlockBuilderError::MissingInboxMessageData(message_index).into());
-            }
-        };
+        let data = message_data
+            .get(&message_index)
+            .ok_or_else(|| ArbitrumBlockBuilderError::MissingInboxMessageData(message_index))?;
 
-        let delivered_msg_txn = TransactionRequest::default().to(self.mchain_rollup_address).input(
+        Ok(TransactionRequest::default().to(self.mchain_rollup_address).input(
             Rollup::deliverMessageCall { kind: kind as u8, sender, messageData: data.clone() }
                 .abi_encode()
                 .into(),
-        );
-
-        Ok(delivered_msg_txn)
+        ))
     }
 
     /// Builds a batch of transactions into an Arbitrum batch
@@ -346,6 +320,21 @@ impl ArbitrumBlockBuilder {
         );
 
         Ok(request)
+    }
+
+    fn should_ignore_delayed_message(&self, kind: &L1MessageType) -> bool {
+        // If self.ignore_delayed_messages enabled, ignore everything except for EthDeposit
+        if self.ignore_delayed_messages && *kind != L1MessageType::EthDeposit {
+            debug!("Delayed message ignored. Kind: {:?}.", kind);
+            return true;
+        }
+
+        // Ignore Initialize & BatchPostingReport message types
+        if matches!(kind, L1MessageType::Initialize | L1MessageType::BatchPostingReport) {
+            return true;
+        }
+
+        false
     }
 }
 
