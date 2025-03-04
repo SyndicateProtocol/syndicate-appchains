@@ -16,7 +16,6 @@ brotli = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
 common = { workspace = true }
 contract-bindings = { workspace = true }
-derivative = { workspace = true }
 eyre = { workspace = true }
 flate2 = { workspace = true }
 hex = { workspace = true }

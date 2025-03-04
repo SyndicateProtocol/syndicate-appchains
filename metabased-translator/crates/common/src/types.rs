@@ -183,20 +183,6 @@ impl From<Chain> for &'static str {
         }
     }
 }
-/// The state of a slot describing its finality.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, Serialize, Deserialize, Default)]
-#[strum(serialize_all = "lowercase")]
-pub enum SlotState {
-    /// A slot that is considered final and cannot rollback (blocks that are more than
-    /// `MAX_WAIT_MS` old).
-    Safe,
-    /// A slot that we don't expect to fit more blocks into. It should be considered canonical
-    /// unless a reorg happens
-    Closed,
-    /// A slot to which incoming blocks might still be added
-    #[default]
-    Open,
-}
 
 /// A `Slot` is a collection of source chain blocks to be sent to the block builder.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
@@ -207,19 +193,12 @@ pub struct Slot {
     pub sequencing: Arc<BlockAndReceipts>,
     /// the blocks from the settlement chain to be included in the slot.
     pub settlement: Vec<Arc<BlockAndReceipts>>,
-    /// the finality state of the slot.
-    pub state: SlotState, // TODO this can probably be removed
 }
 
 impl Slot {
     /// Creates a new slot
     pub const fn new(number: u64, sequencing_block: Arc<BlockAndReceipts>) -> Self {
-        Self {
-            number,
-            sequencing: sequencing_block,
-            settlement: Vec::new(),
-            state: SlotState::Open,
-        }
+        Self { number, sequencing: sequencing_block, settlement: Vec::new() }
     }
 
     /// Adds a block to the slot's chain-specific block list
@@ -238,8 +217,8 @@ impl Display for Slot {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(
             f,
-            "Slot [state: {}],  Sequencing block: {},  Settlement blocks (total: {}): {}",
-            self.state,
+            "Slot [number: {}, Sequencing block: {}, Settlement blocks (total: {}): {}]",
+            self.number,
             format_block(&self.sequencing),
             self.settlement.len(),
             format_blocks(&self.settlement),
@@ -294,14 +273,14 @@ impl Display for BlockRef {
     }
 }
 
-/// Latest safe state of the translator
+/// A known state of the translator
 #[derive(Debug)]
 pub struct KnownState {
-    /// The latest slot that was marked as safe
-    pub slot: Slot,
-    /// The latest block from the sequencing chain that has been slotted
+    /// block number for this state
+    pub block_number: u64,
+    /// The latest block from the sequencing chain that has been processed
     pub sequencing_block: BlockRef,
-    /// The latest block from the settlement chain that has been slotted
+    /// The latest block from the settlement chain that has been processed
     pub settlement_block: BlockRef,
 }
 

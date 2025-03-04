@@ -1,13 +1,8 @@
 //! Block builder service for processing and building L3 blocks.
 
 use crate::{
-    config::{BlockBuilderConfig, TargetRollupType},
-    connectors::mchain::MetaChainProvider,
-    metrics::BlockBuilderMetrics,
-    rollups::{
-        arbitrum::arbitrum_builder::ArbitrumBlockBuilder,
-        optimism::optimism_builder::OptimismBlockBuilder, shared::RollupBlockBuilder,
-    },
+    config::BlockBuilderConfig, connectors::anvil::MetaChainProvider, metrics::BlockBuilderMetrics,
+    rollups::shared::RollupAdapter,
 };
 use alloy::{
     eips::BlockNumberOrTag,
@@ -22,31 +17,25 @@ use url::Url;
 
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
-pub struct BlockBuilder {
+pub struct BlockBuilder<R: RollupAdapter> {
     slotter_rx: Receiver<Slot>,
     #[allow(missing_docs)]
     pub mchain: MetaChainProvider,
-    builder: Box<dyn RollupBlockBuilder>,
+    rollup_adapter: R,
     metrics: BlockBuilderMetrics,
 }
 
-impl BlockBuilder {
+impl<R: RollupAdapter> BlockBuilder<R> {
     /// Create a new block builder
     pub async fn new(
         slotter_rx: Receiver<Slot>,
         config: &BlockBuilderConfig,
+        rollup_adapter: R,
         metrics: BlockBuilderMetrics,
     ) -> Result<Self, Error> {
         let mchain = MetaChainProvider::start(config, &metrics.mchain_metrics).await?;
 
-        let builder: Box<dyn RollupBlockBuilder> = match config.target_rollup_type {
-            TargetRollupType::ARBITRUM => Box::new(ArbitrumBlockBuilder::new(config)),
-            TargetRollupType::OPTIMISM => {
-                Box::new(OptimismBlockBuilder::new(config.sequencing_contract_address))
-            }
-        };
-
-        Ok(Self { slotter_rx, mchain, builder, metrics })
+        Ok(Self { slotter_rx, mchain, rollup_adapter, metrics })
     }
 
     /// Validates and rolls back to a known block number if necessary
@@ -141,7 +130,7 @@ impl BlockBuilder {
                     self.metrics.record_last_slot(slot.number);
 
                     // [OP / ARB] Build block of MChain transactions from slot
-                    let transactions = match self.builder.build_block_from_slot(&slot).await {
+                    let transactions = match self.rollup_adapter.build_block_from_slot(&slot).await {
                         Ok(transactions) => transactions,
                         Err(e) => {
                             panic!("Error building batch transaction: {}", e);

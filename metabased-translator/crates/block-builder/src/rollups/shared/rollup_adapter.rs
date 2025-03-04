@@ -1,12 +1,14 @@
 //! Shared traits and types for rollup-specific block builders.
 //!
-//! This module provides the core [`RollupBlockBuilder`] trait that defines how
+//! This module provides the core [`RollupAdapter`] trait that defines how
 //! different rollup implementations can construct and process their blocks.
 
 use crate::rollups::shared::SequencingTransactionParser;
-use alloy::{primitives::Bytes, rpc::types::TransactionRequest};
+use alloy::{
+    eips::BlockNumberOrTag, primitives::Bytes, providers::Provider, rpc::types::TransactionRequest,
+};
 use async_trait::async_trait;
-use common::types::{BlockAndReceipts, Slot};
+use common::types::{BlockAndReceipts, KnownState, Slot};
 use eyre::{Error, Result};
 use std::{
     fmt::Debug,
@@ -16,7 +18,7 @@ use std::{
 
 /// Trait for rollup-specific block builders that construct batches from transactions
 #[async_trait]
-pub trait RollupBlockBuilder: Debug + Send + Sync + Unpin + 'static {
+pub trait RollupAdapter: Debug + Send + Sync + Unpin + 'static {
     /// Parses a sequencing chain block into metabased transactions.
     ///
     /// Uses the associated transaction parser to extract transactions
@@ -39,6 +41,13 @@ pub trait RollupBlockBuilder: Debug + Send + Sync + Unpin + 'static {
 
     /// Provides access to the transaction parser used by the block builder.
     fn transaction_parser(&self) -> &SequencingTransactionParser;
+
+    /// Gets the source chain's processed blocks from the rollup
+    async fn get_processed_blocks<T: Provider>(
+        &self,
+        provider: &T,
+        block: BlockNumberOrTag,
+    ) -> Result<(Option<KnownState>, Option<u64>)>;
 
     /// Builds a block from a slot
     async fn build_block_from_slot(

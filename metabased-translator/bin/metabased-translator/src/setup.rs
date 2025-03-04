@@ -1,5 +1,5 @@
 use crate::{config::MetabasedConfig, types::RuntimeError};
-use block_builder::block_builder::BlockBuilder;
+use block_builder::{block_builder::BlockBuilder, rollups::shared::RollupAdapter};
 use common::types::{BlockAndReceipts, Chain, KnownState};
 use eyre::Result;
 use ingestor::{
@@ -15,7 +15,7 @@ use std::sync::Arc;
 use tokio::{sync::mpsc::Receiver, task::JoinHandle};
 
 pub async fn clients(
-    config: &mut MetabasedConfig,
+    config: &MetabasedConfig,
 ) -> Result<(Arc<dyn RPCClient>, Arc<dyn RPCClient>), RuntimeError> {
     let sequencing_client: Arc<dyn RPCClient> = Arc::new(
         EthClient::new(&config.sequencing.sequencing_rpc_url, Chain::Sequencing)
@@ -35,7 +35,7 @@ pub fn get_extra_fields_for_logging(base_config: MetabasedConfig) -> Vec<(String
     vec![("chain_id".to_string(), json!(base_config.block_builder.target_chain_id))]
 }
 
-pub async fn init_metrics(config: &mut MetabasedConfig) -> (TranslatorMetrics, JoinHandle<()>) {
+pub async fn init_metrics(config: &MetabasedConfig) -> (TranslatorMetrics, JoinHandle<()>) {
     let registry = Registry::default();
     let mut metrics_state = MetricsState { registry };
     let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
@@ -45,10 +45,11 @@ pub async fn init_metrics(config: &mut MetabasedConfig) -> (TranslatorMetrics, J
 
 // TODO(SEQ-628): `init` all components without a channel, `start` all components with required
 //channel
-pub async fn create_node_components(
-    config: &mut MetabasedConfig,
+pub async fn create_node_components<R: RollupAdapter>(
+    config: &MetabasedConfig,
     sequencing_client: Arc<dyn RPCClient>,
     settlement_client: Arc<dyn RPCClient>,
+    rollup_adapter: R,
     safe_state: Option<KnownState>,
     metrics: TranslatorMetrics,
 ) -> Result<
@@ -58,7 +59,7 @@ pub async fn create_node_components(
         Ingestor,
         Receiver<Arc<BlockAndReceipts>>,
         Slotter,
-        BlockBuilder,
+        BlockBuilder<R>,
     ),
     RuntimeError,
 > {
@@ -82,6 +83,7 @@ pub async fn create_node_components(
     )
     .await?;
 
+    let block_builder_cfg = &config.block_builder;
     let (slotter, slot_rx) = Slotter::new(&config.slotter, safe_state, metrics.slotter);
     let block_builder =
         BlockBuilder::new(slot_rx, &config.block_builder, metrics.block_builder).await?;

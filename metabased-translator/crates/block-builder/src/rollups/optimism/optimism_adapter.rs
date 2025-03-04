@@ -4,30 +4,35 @@
 //! transactions. It implements the [`RollupBlockBuilder`] trait to standardize block construction
 //! across different rollup implementations
 
-use crate::rollups::{
-    optimism::{
-        batch::{new_batcher_tx, Batch},
-        frame::to_data,
+use crate::{
+    config::BlockBuilderConfig,
+    rollups::{
+        optimism::{
+            batch::{new_batcher_tx, Batch},
+            frame::to_data,
+        },
+        shared::{RollupAdapter, SequencingTransactionParser},
     },
-    shared::{RollupBlockBuilder, SequencingTransactionParser},
 };
 use alloy::{
+    eips::BlockNumberOrTag,
     primitives::{Address, Bytes, B256},
+    providers::Provider,
     rpc::types::TransactionRequest,
 };
 use async_trait::async_trait;
-use common::types::{BlockAndReceipts, Slot};
+use common::types::{BlockAndReceipts, KnownState, Slot};
 use eyre::Result;
 use std::{str::FromStr, sync::Arc};
 
 #[derive(Debug)]
 /// Builder for constructing Optimism blocks from transactions
-pub struct OptimismBlockBuilder {
+pub struct OptimismAdapter {
     transaction_parser: SequencingTransactionParser,
 }
 
 #[async_trait]
-impl RollupBlockBuilder for OptimismBlockBuilder {
+impl RollupAdapter for OptimismAdapter {
     async fn build_block_from_slot(&mut self, slot: &Slot) -> Result<Vec<TransactionRequest>> {
         let deposited_txns = self.process_deposited_txns(slot.settlement.clone()).await?;
 
@@ -43,12 +48,22 @@ impl RollupBlockBuilder for OptimismBlockBuilder {
     fn transaction_parser(&self) -> &SequencingTransactionParser {
         &self.transaction_parser
     }
+
+    async fn get_processed_blocks<T: Provider>(
+        &self,
+        _provider: &T,
+        _block: BlockNumberOrTag,
+    ) -> Result<(Option<KnownState>, u64)> {
+        // TODO: Implement
+        panic!("Not implemented")
+    }
 }
 
-impl OptimismBlockBuilder {
+impl OptimismAdapter {
     /// Creates a new Optimism block builder
-    pub const fn new(sequencing_contract_address: Address) -> Self {
-        let transaction_parser = SequencingTransactionParser::new(sequencing_contract_address);
+    pub const fn new(config: &BlockBuilderConfig) -> Self {
+        let transaction_parser =
+            SequencingTransactionParser::new(config.sequencing_contract_address);
         Self { transaction_parser }
     }
 
@@ -94,7 +109,10 @@ mod tests {
         let sequencing_contract_address =
             Address::from_str("0x1234000000000000000000000000000000000000")
                 .expect("Invalid address format");
-        let builder = OptimismBlockBuilder::new(sequencing_contract_address);
+        let builder = OptimismAdapter::new(&BlockBuilderConfig {
+            sequencing_contract_address,
+            ..Default::default()
+        });
         let parser = builder.transaction_parser();
         assert!(!std::ptr::eq(parser, std::ptr::null()), "Transaction parser should not be null");
     }
@@ -104,7 +122,10 @@ mod tests {
         let sequencing_contract_address =
             Address::from_str("0x1234000000000000000000000000000000000000")
                 .expect("Invalid address format");
-        let builder = OptimismBlockBuilder::new(sequencing_contract_address);
+        let builder = OptimismAdapter::new(&BlockBuilderConfig {
+            sequencing_contract_address,
+            ..Default::default()
+        });
         let txs = vec![];
 
         let tx = builder.build_batch_txn(txs).await.unwrap();

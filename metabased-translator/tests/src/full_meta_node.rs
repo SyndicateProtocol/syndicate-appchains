@@ -17,6 +17,10 @@ use block_builder::{
     config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
     connectors::mchain::{FilledProvider, MetaChainProvider, MCHAIN_ID},
     metrics::BlockBuilderMetrics,
+    rollups::{
+        arbitrum::arbitrum_adapter::ArbitrumAdapter, optimism::optimism_adapter::OptimismAdapter,
+        shared::RollupAdapter,
+    },
 };
 use common::types::Chain;
 use contract_bindings::{
@@ -350,6 +354,30 @@ pub struct MetaNode {
 impl MetaNode {
     #[allow(clippy::unwrap_used)] // test utility
     pub async fn new(pre_loaded: bool, config: MetabasedConfig) -> Result<Self> {
+        match config.block_builder.target_rollup_type {
+            block_builder::config::TargetRollupType::OPTIMISM => {
+                let adapter = OptimismAdapter::new(&config.block_builder);
+                Self::new_with_rollup_adapter(pre_loaded, config, adapter).await
+            }
+            block_builder::config::TargetRollupType::ARBITRUM => {
+                let adapter = ArbitrumAdapter::new(&config.block_builder);
+                Self::new_with_rollup_adapter(pre_loaded, config, adapter).await
+            }
+        }
+    }
+
+    async fn new_with_rollup_adapter<R: RollupAdapter>(
+        pre_loaded: bool,
+        config: MetabasedConfig,
+        rollup_adapter: R,
+    ) -> Result<Self> {
+        // We need 4 ports to run a full meta node
+        // - MChain
+        // - Mock Sequencing Chain
+        // - Mock Settlement Chain
+        // - Nitro Rollup;
+        let port_tracker = PortManager::instance();
+
         // Define the addresses of the bridge and inbox contracts depedning on whether we
         // are loading in the full set of Arb contracts or not
         let bridge_address =
@@ -476,6 +504,7 @@ impl MetaNode {
         let block_builder = BlockBuilder::new(
             slotter_rx,
             &block_builder_cfg,
+            rollup_adapter,
             &datadir,
             BlockBuilderMetrics::new(&mut metrics_state.registry),
         )

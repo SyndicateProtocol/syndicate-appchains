@@ -8,16 +8,18 @@ use crate::{
     config::BlockBuilderConfig,
     rollups::{
         arbitrum::batch::{Batch, BatchMessage, L1IncomingMessage, L1IncomingMessageHeader},
-        shared::{RollupBlockBuilder, SequencingTransactionParser},
+        shared::{RollupAdapter, SequencingTransactionParser},
     },
 };
 use alloy::{
+    eips::{BlockId, BlockNumberOrTag},
     primitives::{Address, Bytes, FixedBytes, U256},
-    rpc::types::TransactionRequest,
+    providers::Provider,
+    rpc::types::{BlockTransactionsKind, TransactionRequest},
     sol_types::{SolCall, SolEvent},
 };
 use async_trait::async_trait;
-use common::types::{BlockAndReceipts, Log, Slot};
+use common::types::{BlockAndReceipts, BlockRef, KnownState, Log, Slot};
 use contract_bindings::arbitrum::{
     ibridge::IBridge::MessageDelivered,
     idelayedmessageprovider::IDelayedMessageProvider::{
@@ -68,7 +70,7 @@ impl std::fmt::Display for L1MessageType {
 
 #[derive(Debug)]
 /// Builder for constructing Arbitrum blocks from transactions
-pub struct ArbitrumBlockBuilder {
+pub struct ArbitrumAdapter {
     // MChain rollup address
     mchain_rollup_address: Address,
 
@@ -82,14 +84,14 @@ pub struct ArbitrumBlockBuilder {
     inbox_address: Address,
 }
 
-impl Default for ArbitrumBlockBuilder {
+impl Default for ArbitrumAdapter {
     fn default() -> Self {
         Self::new(&BlockBuilderConfig::default())
     }
 }
 
 #[async_trait]
-impl RollupBlockBuilder for ArbitrumBlockBuilder {
+impl RollupAdapter for ArbitrumAdapter {
     fn transaction_parser(&self) -> &SequencingTransactionParser {
         &self.transaction_parser
     }
@@ -114,8 +116,8 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
                 mb_transactions,
                 slot.number,
                 slot.timestamp(),
-                slot.sequencing.block.number,
-                slot.settlement.last().map_or(0, |b| b.block.number),
+                &slot.sequencing,
+                slot.settlement.last(),
                 delayed_messages.len(),
             )
             .await?;
@@ -125,9 +127,49 @@ impl RollupBlockBuilder for ArbitrumBlockBuilder {
         result.push(batch_transaction);
         Ok(result)
     }
+
+    // NOTE: timestamp of the blockRefs will be 0
+    async fn get_processed_blocks<T: Provider>(
+        &self,
+        provider: &T,
+        block: BlockNumberOrTag,
+    ) -> Result<(Option<KnownState>, Option<u64>)> {
+        let rollup = Rollup::new(self.mchain_rollup_address, provider);
+
+        let block_num = match block {
+            BlockNumberOrTag::Number(num) => num,
+            x => {
+                provider
+                    .get_block(BlockId::Number(x), BlockTransactionsKind::Hashes)
+                    .await?
+                    .unwrap_or_default()
+                    .header
+                    .number
+            }
+        };
+        let block_id = BlockId::Number(BlockNumberOrTag::Number(block_num));
+
+        let seq_num = rollup.seqBlockNumber().call().block(block_id).await?._0;
+        if seq_num == 0 {
+            return Ok((None, None));
+        }
+        let seq_hash = rollup.seqBlockHash().call().block(block_id).await?._0;
+
+        let set_num = rollup.setBlockNumber().call().block(block_id).await?._0;
+        let set_hash = rollup.setBlockHash().call().block(block_id).await?._0;
+
+        Ok((
+            Some(KnownState {
+                block_number: 0,
+                sequencing_block: BlockRef { number: seq_num, timestamp: 0, hash: seq_hash.into() },
+                settlement_block: BlockRef { number: set_num, timestamp: 0, hash: set_hash.into() },
+            }),
+            Some(block_num),
+        ))
+    }
 }
 
-impl ArbitrumBlockBuilder {
+impl ArbitrumAdapter {
     /// Creates a new Arbitrum block builder.
     ///
     /// # Arguments
@@ -288,10 +330,10 @@ impl ArbitrumBlockBuilder {
     async fn build_batch_txn(
         &self,
         txs: Vec<Bytes>,
-        slot_number: u64,
-        slot_timestamp: u64,
-        latest_sequencing_block: u64,
-        latest_settlement_block: u64,
+        mchain_block_number: u64,
+        mchain_timestamp: u64,
+        latest_sequencing_block: &Arc<BlockAndReceipts>,
+        latest_settlement_block: Option<&Arc<BlockAndReceipts>>,
         delayed_message_count: usize,
     ) -> Result<TransactionRequest> {
         if delayed_message_count > 0 {
@@ -304,8 +346,8 @@ impl ArbitrumBlockBuilder {
             debug!("Sequenced transactions: {:?}", txs);
             messages.push(BatchMessage::L2(L1IncomingMessage {
                 header: L1IncomingMessageHeader {
-                    block_number: slot_number,
-                    timestamp: slot_timestamp,
+                    block_number: mchain_block_number,
+                    timestamp: mchain_timestamp,
                 },
                 l2_msg: txs,
             }));
@@ -317,13 +359,18 @@ impl ArbitrumBlockBuilder {
         // Encode the batch data
         let encoded_batch = batch.encode()?;
 
+        let (set_num, set_hash) = latest_settlement_block
+            .map_or((0, FixedBytes::ZERO), |b| (b.block.number, b.block.hash));
+
         // Create the transaction request
         let request = TransactionRequest::default().to(self.mchain_rollup_address).input(
             // Encode the function call with parameters
             Rollup::postBatchCall::new((
                 encoded_batch,
-                U256::from(latest_sequencing_block),
-                U256::from(latest_settlement_block),
+                latest_sequencing_block.block.number,
+                latest_sequencing_block.block.hash.into(),
+                set_num,
+                set_hash.into(),
             ))
             .abi_encode()
             .into(), // Convert the tokenized call data to bytes
@@ -338,7 +385,7 @@ mod tests {
     use super::*;
     use alloy::primitives::{hex, keccak256, TxKind};
     use assert_matches::assert_matches;
-    use common::types::{Block, BlockAndReceipts, Log, Receipt, SlotState, Transaction};
+    use common::types::{Block, BlockAndReceipts, Log, Receipt, Transaction};
     use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain::TransactionProcessed;
     use std::{str::FromStr, sync::Arc};
 
@@ -354,16 +401,19 @@ mod tests {
             ..Default::default()
         };
 
-        let builder = ArbitrumBlockBuilder::new(&config);
+        let builder = ArbitrumAdapter::new(&config);
         let parser = builder.transaction_parser();
         assert!(!std::ptr::eq(parser, std::ptr::null()), "Transaction parser should not be null");
     }
 
     #[tokio::test]
     async fn test_build_batch_empty_txs() {
-        let builder = ArbitrumBlockBuilder::default();
+        let builder = ArbitrumAdapter::default();
         let txs = vec![];
-        let batch = builder.build_batch_txn(txs, 0, 0, 1, 2, 0).await.unwrap();
+        let seq_block = create_mock_block_and_receipts(1, U256::from(1111).into(), vec![], vec![]);
+        let set_block = create_mock_block_and_receipts(2, U256::from(2222).into(), vec![], vec![]);
+        let batch =
+            builder.build_batch_txn(txs, 0, 0, &seq_block, Some(&set_block), 0).await.unwrap();
 
         // Verify transaction is sent to sequencer inbox
         assert_eq!(batch.to, Some(TxKind::Call(builder.mchain_rollup_address)));
@@ -375,8 +425,10 @@ mod tests {
         // Verify the input data contains the correct parameters
         let call_data = Rollup::postBatchCall::new((
             expected_encoded, // batch data
-            U256::from(1),
-            U256::from(2),
+            seq_block.block.number,
+            seq_block.block.hash.into(),
+            set_block.block.number,
+            set_block.block.hash.into(),
         ))
         .abi_encode();
 
@@ -385,12 +437,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_build_batch_with_txs() {
-        let builder = ArbitrumBlockBuilder::default();
+        let builder = ArbitrumAdapter::default();
         let txs = vec![
             hex!("1234").into(), // Sample transaction data
             hex!("5678").into(),
         ];
-        let batch = builder.build_batch_txn(txs.clone(), 0, 0, 1, 2, 0).await.unwrap();
+        let seq_block = create_mock_block_and_receipts(1, U256::from(1111).into(), vec![], vec![]);
+        let set_block = create_mock_block_and_receipts(2, U256::from(2222).into(), vec![], vec![]);
+        let batch = builder
+            .build_batch_txn(txs.clone(), 0, 0, &seq_block, Some(&set_block), 0)
+            .await
+            .unwrap();
 
         // Verify transaction is sent to sequencer inbox
         assert_eq!(batch.to, Some(TxKind::Call(builder.mchain_rollup_address)));
@@ -405,8 +462,10 @@ mod tests {
         // Verify the input data contains the correct parameters
         let call_data = Rollup::postBatchCall::new((
             expected_encoded, // batch data
-            U256::from(1),
-            U256::from(2),
+            1,
+            U256::from(00000),
+            2,
+            U256::from(11111),
         ))
         .abi_encode();
 
@@ -415,12 +474,11 @@ mod tests {
 
     #[tokio::test]
     async fn test_empty_slot() {
-        let mut builder = ArbitrumBlockBuilder::default();
+        let mut builder = ArbitrumAdapter::default();
 
         // Create an empty slot
         let slot = Slot {
             number: 1,
-            state: SlotState::Safe,
             settlement: vec![],
             sequencing: Arc::new(BlockAndReceipts::default()),
         };
@@ -444,18 +502,19 @@ mod tests {
 
     fn create_mock_block_and_receipts(
         number: u64,
+        hash: FixedBytes<32>,
         transactions: Vec<Transaction>,
         receipts: Vec<Receipt>,
     ) -> Arc<BlockAndReceipts> {
         Arc::new(BlockAndReceipts {
-            block: Block { number, transactions, ..Default::default() },
+            block: Block { number, hash, transactions, ..Default::default() },
             receipts,
         })
     }
 
     #[tokio::test]
     async fn test_build_block_from_slot_with_delayed_messages() {
-        let builder = ArbitrumBlockBuilder::default();
+        let builder = ArbitrumAdapter::default();
         let mut builder = builder;
 
         // Create message data
@@ -500,13 +559,13 @@ mod tests {
         // Create mock block with receipts
         let block = create_mock_block_and_receipts(
             1,
+            U256::from(1111).into(),
             vec![],
             vec![Receipt { logs: vec![msg_delivered_log, inbox_msg_log], ..Default::default() }],
         );
 
         let slot = Slot {
             number: 1,
-            state: SlotState::Safe,
             settlement: vec![block],
             sequencing: Arc::new(BlockAndReceipts::default()),
         };
@@ -526,7 +585,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_build_block_from_slot_with_sequencing_txns() {
-        let builder = ArbitrumBlockBuilder::default();
+        let builder = ArbitrumAdapter::default();
         let mut builder = builder;
 
         // Create a mock L2 transaction
@@ -546,7 +605,6 @@ mod tests {
 
         let slot = Slot {
             number: 1,
-            state: SlotState::Safe,
             settlement: vec![],
             sequencing: Arc::new(BlockAndReceipts {
                 block,
@@ -570,7 +628,7 @@ mod tests {
         })]);
         let expected_encoded = expected_batch.encode().unwrap();
         let expected_batch_call =
-            Rollup::postBatchCall::new((expected_encoded, U256::from(1), U256::from(0)))
+            Rollup::postBatchCall::new((expected_encoded, 1, U256::from(1), 0, U256::from(0)))
                 .abi_encode()
                 .into();
         assert_eq!(batch_txn.input, expected_batch_call);
@@ -578,7 +636,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_build_block_from_slot_with_sequencing_and_delayed_txns() {
-        let builder = ArbitrumBlockBuilder::default();
+        let builder = ArbitrumAdapter::default();
         let mut builder = builder;
 
         // Create a mock L2 transaction
@@ -642,7 +700,6 @@ mod tests {
 
         let slot = Slot {
             number: 1,
-            state: SlotState::Safe,
             settlement: vec![Arc::new(BlockAndReceipts {
                 block: settlement_block,
                 receipts: vec![settlement_receipt],
@@ -685,7 +742,9 @@ mod tests {
         let expected_encoded = expected_batch.encode().unwrap();
         let expected_batch_call = Rollup::postBatchCall::new((
             expected_encoded,
+            1,
             U256::from(slot.sequencing.block.number),
+            0,
             U256::from(slot.settlement[0].block.number),
         ))
         .abi_encode()
@@ -695,7 +754,7 @@ mod tests {
 
     #[test]
     fn test_delayed_message_to_mchain_txn_success() {
-        let builder = ArbitrumBlockBuilder::default();
+        let builder = ArbitrumAdapter::default();
 
         // Create message data
         let message_index = U256::from(1);
@@ -751,7 +810,7 @@ mod tests {
 
     #[test]
     fn test_delayed_message_to_mchain_txn_missing_data() {
-        let builder = ArbitrumBlockBuilder::default();
+        let builder = ArbitrumAdapter::default();
 
         // Create MessageDelivered event data without corresponding message data
         let message_index = U256::from(1);
@@ -793,7 +852,7 @@ mod tests {
 
     #[test]
     fn test_delayed_message_to_mchain_txn_invalid_event_data() {
-        let builder = ArbitrumBlockBuilder::default();
+        let builder = ArbitrumAdapter::default();
         let message_map = HashMap::new();
 
         // Create log with invalid event data

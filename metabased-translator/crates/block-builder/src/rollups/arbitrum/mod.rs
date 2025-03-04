@@ -5,4 +5,4 @@
 pub mod batch;
 
 /// Arbitrum-specific block building functionality.
-pub mod arbitrum_builder;
+pub mod arbitrum_adapter;
