@@ -13,6 +13,7 @@ The Smart contracts we intend to have the audit are the following:
 - [SyndicateToken](contract.SyndicateToken.md)
 - [IRequirementModule](interface.IRequirementModule.md)
 - [PermissionModule](interface.PermissionModule.md)
+- [AddressStructuredLinkedList](library.AddressStructuredLinkedList.md)
 
 ## General Overview of Syndicate Metabased Sequencer Chain and Its Smart Contracts
 
