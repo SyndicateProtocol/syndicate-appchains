@@ -97,9 +97,5 @@ fn create_chain_service(
     let rpc: RootProvider<Ethereum> = RootProvider::new_http(chain_rpc_address);
     let rpc = FillProvider::new(rpc, filler);
 
-    Ok(SolMetabasedSequencerChainService::<_, alloy::transports::BoxTransport, _>::new(
-        chain_contract_address,
-        wallet_address,
-        rpc,
-    ))
+    Ok(SolMetabasedSequencerChainService::<_, _>::new(chain_contract_address, wallet_address, rpc))
 }
