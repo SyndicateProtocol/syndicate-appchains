@@ -74,6 +74,15 @@ impl MetaChainProvider {
     }
 
     #[allow(missing_docs)]
+    pub async fn get_block_by_hash(
+        &self,
+        hash: BlockHash,
+        kind: BlockTransactionsKind,
+    ) -> Result<Option<Block>> {
+        self.provider.get_block_by_hash(hash, kind).await.map_err(|e| e.into())
+    }
+
+    #[allow(missing_docs)]
     pub async fn get_block_number(&self) -> Result<u64> {
         self.provider.get_block_number().await.map_err(|e| e.into())
     }
@@ -178,8 +187,8 @@ impl MetaChainProvider {
             .fork_choice_updated_v3(
                 ForkchoiceState {
                     head_block_hash: block.header.hash,
-                    safe_block_hash: block.header.hash,
-                    finalized_block_hash: block.header.hash,
+                    safe_block_hash: Default::default(),
+                    finalized_block_hash: Default::default(),
                 },
                 Some(attr),
             )
@@ -209,30 +218,49 @@ impl MetaChainProvider {
             .fork_choice_updated_v3(
                 ForkchoiceState {
                     head_block_hash: block_hash,
-                    safe_block_hash: block_hash,
-                    finalized_block_hash: block_hash,
+                    safe_block_hash: Default::default(),
+                    finalized_block_hash: Default::default(),
                 },
                 None,
             )
             .await?;
         assert_eq!(
             fcu.payload_status,
-            PayloadStatus { status: PayloadStatusEnum::Valid, latest_valid_hash: Some(block_hash) },
+            PayloadStatus { status: PayloadStatusEnum::Valid, latest_valid_hash: Some(block_hash) }
         );
         self.metrics.record_last_block_mined(block.header.number + 1, block_timestamp_secs);
         Ok(block_hash)
     }
 
-    /// Rolls back the chain to a specific block hash by performing a reorg
+    /*
+    fn into_payload(b: Block) -> ExecutionPayloadV3 {
+        ExecutionPayloadV3::from_block_unchecked(
+            b.header.hash,
+            &alloy::consensus::BlockBody {
+                transactions: b
+                    .transactions
+                    .into_transactions_vec()
+                    .into_iter()
+                    .map(|t| t.inner)
+                    .collect(),
+                ommers: vec![],
+                withdrawals: b.withdrawals,
+            }
+            .into_block(b.header),
+        )
+    }
+    */
+
+    /// Rolls back the chain to a block by performing a reorg
     pub async fn rollback_to_block(&self, block_hash: BlockHash) -> Result<()> {
-        // TODO(SEQ-653): set safe and finalized block hashes properly
+        // TODO(SEQ-653): set safe and finalized block hashes
         let fcu = self
             .auth_provider
             .fork_choice_updated_v3(
                 ForkchoiceState {
                     head_block_hash: block_hash,
-                    safe_block_hash: block_hash,
-                    finalized_block_hash: block_hash,
+                    safe_block_hash: Default::default(),
+                    finalized_block_hash: Default::default(),
                 },
                 None,
             )

@@ -69,8 +69,34 @@ async fn test_rollback() -> Result<()> {
     assert_eq!(mchain.get_block_number().await?, 4);
     mchain.rollback_to_block(b2).await?;
     assert_eq!(mchain.get_block_number().await?, 2);
+    mchain.mine_block(1).await?;
+    assert_eq!(mchain.get_block_number().await?, 3);
     mchain.rollback_to_block(b1).await?;
     assert_eq!(mchain.get_block_number().await?, 1);
+    Ok(())
+}
+
+// regression test
+#[tokio::test(flavor = "multi_thread")]
+async fn test_rollback_regression() -> Result<()> {
+    let (node, _mchain) = start_reth(MCHAIN_ID).await?;
+    let block_builder_cfg = BlockBuilderConfig {
+        mchain_ipc_path: node.ipc,
+        mchain_auth_ipc_path: node.auth_ipc,
+        ..Default::default()
+    };
+
+    let mut metrics_state = MetricsState { registry: Registry::default() };
+    let metrics = MChainMetrics::new(&mut metrics_state.registry);
+    let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
+
+    let b1 = mchain.mine_block(1).await?;
+    for _ in 0..100 {
+        mchain.mine_block(1).await?;
+    }
+    mchain.rollback_to_block(b1).await?;
+    assert_eq!(mchain.get_block_number().await?, 2);
+
     Ok(())
 }
 
