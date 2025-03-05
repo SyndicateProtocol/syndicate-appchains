@@ -4,6 +4,10 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   id-token: write
@@ -15,4 +19,5 @@ jobs:
     with:
       do_push: true
       target_name: metabased-translator
+      runner_label: vip-large-01
     secrets: inherit
