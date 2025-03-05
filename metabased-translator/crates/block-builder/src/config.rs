@@ -51,6 +51,12 @@ pub struct BlockBuilderConfig {
     #[arg(short = 'i', long, env = "BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS",
         value_parser = parse_address)]
     pub inbox_address: Address,
+
+    // TODO (SEQ-567): Move ignore_delayed_messages config value on-chain
+    /// Flag used to ignore delayed messages besides deposits
+    /// Default is false
+    #[arg(long, env = "BLOCK_BUILDER_ARBITRUM_IGNORE_DELAYED_MESSAGES", default_value = "false")]
+    pub ignore_delayed_messages: bool,
 }
 
 /// Possible target rollup types for the [`block-builder`]
@@ -89,6 +95,7 @@ impl Debug for BlockBuilderConfig {
             .field("bridge_address", &self.bridge_address)
             .field("inbox_address", &self.inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
+            .field("ignore_delayed_messages", &self.ignore_delayed_messages)
             .finish()
     }
 }

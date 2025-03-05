@@ -50,7 +50,8 @@ pub enum ArbitrumBlockBuilderError {
 }
 
 #[allow(missing_docs)]
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
+/// `<https://github.com/OffchainLabs/nitro/blob/c7f3429e2456bf5ca296a49cec3bb437420bc2bb/contracts/src/libraries/MessageTypes.sol>`
 pub enum L1MessageType {
     L2Message = 3,
     L2FundedByL1 = 7,
@@ -58,6 +59,28 @@ pub enum L1MessageType {
     Initialize = 11,
     EthDeposit = 12,
     BatchPostingReport = 13,
+}
+
+impl TryFrom<u8> for L1MessageType {
+    type Error = ();
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            3 => Ok(Self::L2Message),
+            7 => Ok(Self::L2FundedByL1),
+            9 => Ok(Self::SubmitRetryable),
+            11 => Ok(Self::Initialize),
+            12 => Ok(Self::EthDeposit),
+            13 => Ok(Self::BatchPostingReport),
+            _ => Err(()),
+        }
+    }
+}
+
+impl L1MessageType {
+    fn from_u8_panic(value: u8) -> Self {
+        Self::try_from(value).unwrap_or_else(|_| panic!("Invalid L1MessageType value: {}", value))
+    }
 }
 
 impl std::fmt::Display for L1MessageType {
@@ -80,6 +103,9 @@ pub struct ArbitrumBlockBuilder {
 
     // Settlement chain address
     inbox_address: Address,
+
+    // Flag used to ignore Delayed messages (except Deposits)
+    ignore_delayed_messages: bool,
 }
 
 impl Default for ArbitrumBlockBuilder {
@@ -134,6 +160,7 @@ impl ArbitrumBlockBuilder {
             mchain_rollup_address: config.mchain_rollup_address,
             bridge_address: config.bridge_address,
             inbox_address: config.inbox_address,
+            ignore_delayed_messages: config.ignore_delayed_messages,
         }
     }
 
@@ -231,51 +258,28 @@ impl ArbitrumBlockBuilder {
         log: &Log,
         message_data: HashMap<U256, Bytes>,
     ) -> Result<TransactionRequest> {
-        let msg_delivered = match MessageDelivered::abi_decode_data(&log.data, true) {
-            Ok(decoded) => decoded,
-            Err(e) => {
-                return Err(
-                    ArbitrumBlockBuilderError::DecodingError("MessageDelivered", e.into()).into()
-                );
-            }
-        };
+        let msg_delivered = MessageDelivered::abi_decode_data(&log.data, true)
+            .map_err(|e| ArbitrumBlockBuilderError::DecodingError("MessageDelivered", e.into()))?;
 
         let message_index = U256::from_be_slice(log.topics[1].as_slice()); // First indexed field is message index
-        let kind = msg_delivered.1; // Second non-indexed field is kind
-        if kind == L1MessageType::Initialize as u8 {
-            return Err(
-                ArbitrumBlockBuilderError::DelayedMessageIgnored(L1MessageType::Initialize).into()
-            );
-        }
-        if kind == L1MessageType::BatchPostingReport as u8 {
-            return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(
-                L1MessageType::BatchPostingReport,
-            )
-            .into());
-        }
-        if kind != L1MessageType::L2Message as u8 &&
-            kind != L1MessageType::L2FundedByL1 as u8 &&
-            kind != L1MessageType::SubmitRetryable as u8 &&
-            kind != L1MessageType::EthDeposit as u8
-        {
-            panic!("unexpected message kind={}", kind);
-        }
-        let sender = msg_delivered.2; // Third non-indexed field is sender
+        let kind = L1MessageType::from_u8_panic(msg_delivered.1);
 
-        let data = match message_data.get(&message_index) {
-            Some(data) => data,
-            None => {
-                return Err(ArbitrumBlockBuilderError::MissingInboxMessageData(message_index).into());
-            }
-        };
+        if self.should_ignore_delayed_message(&kind) {
+            return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind).into());
+        }
 
-        let delivered_msg_txn = TransactionRequest::default().to(self.mchain_rollup_address).input(
-            Rollup::deliverMessageCall { kind, sender, messageData: data.clone() }
+        // Extract sender (third non-indexed field)
+        let sender = msg_delivered.2;
+
+        let data = message_data
+            .get(&message_index)
+            .ok_or_else(|| ArbitrumBlockBuilderError::MissingInboxMessageData(message_index))?;
+
+        Ok(TransactionRequest::default().to(self.mchain_rollup_address).input(
+            Rollup::deliverMessageCall { kind: kind as u8, sender, messageData: data.clone() }
                 .abi_encode()
                 .into(),
-        );
-
-        Ok(delivered_msg_txn)
+        ))
     }
 
     /// Builds a batch of transactions into an Arbitrum batch
@@ -316,6 +320,21 @@ impl ArbitrumBlockBuilder {
         );
 
         Ok(request)
+    }
+
+    fn should_ignore_delayed_message(&self, kind: &L1MessageType) -> bool {
+        // If self.ignore_delayed_messages enabled, ignore everything except for EthDeposit
+        if self.ignore_delayed_messages && *kind != L1MessageType::EthDeposit {
+            debug!("Delayed message ignored. Kind: {:?}.", kind);
+            return true;
+        }
+
+        // Ignore Initialize & BatchPostingReport message types
+        if matches!(kind, L1MessageType::Initialize | L1MessageType::BatchPostingReport) {
+            return true;
+        }
+
+        false
     }
 }
 
@@ -792,5 +811,141 @@ mod tests {
             result.unwrap_err().downcast::<ArbitrumBlockBuilderError>().unwrap(),
             ArbitrumBlockBuilderError::DecodingError(_, _)
         );
+    }
+
+    #[test]
+    fn test_delayed_message_to_mchain_txn_ignore_message() {
+        let builder = ArbitrumBlockBuilder::new(&BlockBuilderConfig {
+            ignore_delayed_messages: true,
+            ..Default::default()
+        });
+
+        // Create message data
+        let message_index = U256::from(1);
+        let message_data: Bytes = hex!("1234").into();
+        let mut message_map = HashMap::new();
+        message_map.insert(message_index, message_data.clone());
+
+        // Create MessageDelivered event data
+        let msg_delivered = MessageDelivered {
+            messageIndex: message_index,
+            beforeInboxAcc: FixedBytes::from([1u8; 32]),
+            inbox: builder.inbox_address,
+            kind: L1MessageType::L2Message as u8,
+            sender: Address::repeat_byte(1),
+            messageDataHash: keccak256(message_data),
+            baseFeeL1: U256::ZERO,
+            timestamp: 0u64,
+        };
+
+        // Create the log
+        let log = Log {
+            address: builder.bridge_address,
+            topics: vec![
+                MSG_DELIVERED_EVENT_HASH,
+                FixedBytes::from(message_index.to_be_bytes::<32>()),
+                FixedBytes::from([1u8; 32]),
+            ],
+            data: msg_delivered.encode_data().into(),
+            block_number: 1,
+            transaction_index: 0,
+            ..Default::default()
+        };
+
+        // Call the function
+        let result = builder.delayed_message_to_mchain_txn(&log, message_map);
+        assert!(result.is_err());
+        assert_matches!(
+            result.unwrap_err().downcast::<ArbitrumBlockBuilderError>().unwrap(),
+            ArbitrumBlockBuilderError::DelayedMessageIgnored(_)
+        );
+    }
+
+    #[test]
+    fn test_delayed_message_to_mchain_txn_do_not_ignore_deposit() {
+        let builder = ArbitrumBlockBuilder::new(&BlockBuilderConfig {
+            ignore_delayed_messages: true,
+            ..Default::default()
+        });
+
+        // Create message data
+        let message_index = U256::from(1);
+        let message_data: Bytes = hex!("1234").into();
+        let mut message_map = HashMap::new();
+        message_map.insert(message_index, message_data.clone());
+
+        // Create MessageDelivered event data
+        let msg_delivered = MessageDelivered {
+            messageIndex: message_index,
+            beforeInboxAcc: FixedBytes::from([1u8; 32]),
+            inbox: builder.inbox_address,
+            kind: L1MessageType::EthDeposit as u8,
+            sender: Address::repeat_byte(1),
+            messageDataHash: keccak256(message_data.clone()),
+            baseFeeL1: U256::ZERO,
+            timestamp: 0u64,
+        };
+
+        // Create the log
+        let log = Log {
+            address: builder.bridge_address,
+            topics: vec![
+                MSG_DELIVERED_EVENT_HASH,
+                FixedBytes::from(message_index.to_be_bytes::<32>()),
+                FixedBytes::from([1u8; 32]),
+            ],
+            data: msg_delivered.encode_data().into(),
+            block_number: 1,
+            transaction_index: 0,
+            ..Default::default()
+        };
+
+        let result = builder.delayed_message_to_mchain_txn(&log, message_map);
+        assert!(result.is_ok());
+
+        let txn = result.unwrap();
+
+        // Verify the transaction
+        assert_eq!(txn.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+
+        // Verify the input data matches expected deliverMessageCall
+        let expected_call = Rollup::deliverMessageCall {
+            kind: L1MessageType::EthDeposit as u8,
+            sender: Address::repeat_byte(1),
+            messageData: message_data,
+        }
+        .abi_encode()
+        .into();
+        assert_eq!(txn.input, expected_call);
+    }
+
+    #[test]
+    fn test_should_ignore_delayed_message() {
+        let builder = ArbitrumBlockBuilder::new(&BlockBuilderConfig {
+            ignore_delayed_messages: true,
+            ..Default::default()
+        });
+
+        assert!(builder.should_ignore_delayed_message(&L1MessageType::L2Message));
+        assert!(builder.should_ignore_delayed_message(&L1MessageType::L2FundedByL1));
+        assert!(builder.should_ignore_delayed_message(&L1MessageType::SubmitRetryable));
+        assert!(builder.should_ignore_delayed_message(&L1MessageType::Initialize));
+        assert!(builder.should_ignore_delayed_message(&L1MessageType::BatchPostingReport));
+
+        // Message that should NOT be ignored (even if ignore_delayed_messages is true)
+        assert!(!builder.should_ignore_delayed_message(&L1MessageType::EthDeposit));
+
+        let builder = ArbitrumBlockBuilder::new(&BlockBuilderConfig {
+            ignore_delayed_messages: false,
+            ..Default::default()
+        });
+
+        assert!(!builder.should_ignore_delayed_message(&L1MessageType::L2Message));
+        assert!(!builder.should_ignore_delayed_message(&L1MessageType::L2FundedByL1));
+        assert!(!builder.should_ignore_delayed_message(&L1MessageType::SubmitRetryable));
+        assert!(!builder.should_ignore_delayed_message(&L1MessageType::EthDeposit));
+
+        assert!(builder.should_ignore_delayed_message(&L1MessageType::Initialize));
+        assert!(builder.should_ignore_delayed_message(&L1MessageType::BatchPostingReport));
     }
 }
