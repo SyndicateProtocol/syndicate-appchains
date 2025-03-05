@@ -60,7 +60,6 @@ async fn run(
 
     let (metrics, metrics_task) = init_metrics(config).await;
 
-    // TODO maybe there is a way to avoid creating this here (?)
     let mchain =
         MetaChainProvider::start(&config.block_builder, &metrics.block_builder.mchain_metrics)
             .await?;

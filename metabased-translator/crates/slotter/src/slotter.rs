@@ -197,7 +197,7 @@ impl Slotter {
             Chain::Sequencing => self.latest_sequencing_block.as_ref(),
             Chain::Settlement => self.latest_settlement_block.as_ref(),
         } {
-            if block.number != latest.number + 1 {
+            if block.number > latest.number + 1 {
                 return Err(SlotterError::BlockNumberSkipped {
                     chain,
                     current_block_number: latest.number,
@@ -413,7 +413,7 @@ mod tests {
                 .unwrap(),
                 number,
                 parent_hash: B256::from_str(
-                    "0234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                    "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 )
                 .unwrap(),
                 logs_bloom: "0x0".to_string(),
@@ -541,16 +541,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_reorg_detected() {
-        let (mut slotter, _) = create_slotter(&SlotterConfig::default());
-        let block = create_test_block(1, 50);
-        slotter.latest_sequencing_block = Some(BlockRef::new(&create_test_block(2, 10_001).block));
-        let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
-
-        assert_matches!(result, Err(SlotterError::ReorgDetected { .. }));
-    }
-
-    #[tokio::test]
     async fn test_block_number_skipped() {
         let (mut slotter, _) = create_slotter(&SlotterConfig::default());
         let block = create_test_block(4, 400);
@@ -661,5 +651,154 @@ mod tests {
 
         // Verify no more slots were marked as Closed
         assert!(slot_rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn test_last_settlement_block_has_latest_timestamp() {
+        let TestSetup { mut slot_rx, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
+            create_slotter_and_spawn(&SlotterConfig { settlement_delay: 0 }).await;
+
+        // Send sequencing block to create a slot
+        sequencing_tx.send(create_test_block(1, 100)).await.unwrap();
+
+        // Send settlement blocks with increasing timestamps
+        settlement_tx.send(create_test_block(1, 50)).await.unwrap();
+        settlement_tx.send(create_test_block(2, 70)).await.unwrap();
+        settlement_tx.send(create_test_block(3, 90)).await.unwrap();
+
+        // Send another settlement block with higher timestamp to close the slot
+        settlement_tx.send(create_test_block(4, 110)).await.unwrap();
+
+        // This should trigger the first slot to be marked as closed
+        let slot = recv(&mut slot_rx).await.unwrap();
+
+        // Verify the slot contains all settlement blocks
+        assert_eq!(slot.timestamp(), 100);
+        assert_eq!(slot.sequencing.block.number, 1);
+        assert_eq!(slot.settlement.len(), 3);
+
+        // Now verify that the last settlement block has the latest timestamp
+        if let Some(last_settlement) = slot.settlement.last() {
+            assert_eq!(last_settlement.block.timestamp, 90);
+
+            // Also verify all settlement blocks are in ascending timestamp order
+            for i in 0..slot.settlement.len() - 1 {
+                assert!(
+                    slot.settlement[i].block.timestamp < slot.settlement[i + 1].block.timestamp,
+                    "Settlement blocks are not in ascending timestamp order"
+                );
+            }
+        } else {
+            panic!("Expected settlement blocks but found none");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parent_hash_mismatch_reorg_sequencing() {
+        test_parent_hash_mismatch_reorg_helper(Chain::Sequencing).await;
+    }
+
+    #[tokio::test]
+    async fn test_parent_hash_mismatch_reorg_settlement() {
+        test_parent_hash_mismatch_reorg_helper(Chain::Settlement).await;
+    }
+
+    async fn test_parent_hash_mismatch_reorg_helper(chain: Chain) {
+        let (mut slotter, _) = create_slotter(&SlotterConfig::default());
+
+        // Create and set the first block
+        let first_block = create_test_block(1, 50);
+        slotter.update_latest_block(&first_block.block, chain).unwrap();
+
+        // Create a second block with correct number (2) but different parent hash
+        let second_block = Arc::new(BlockAndReceipts {
+            block: Block {
+                hash: B256::from_str(
+                    "2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                )
+                .unwrap(),
+                number: 2, // Correct sequential number
+                parent_hash: B256::from_str(
+                    "0000000000abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                )
+                .unwrap(), // Different hash than first_block.hash
+                logs_bloom: "0x0".to_string(),
+                transactions_root: "0x0".to_string(),
+                state_root: "0x0".to_string(),
+                receipts_root: "0x0".to_string(),
+                timestamp: 60,
+                transactions: vec![],
+            },
+            receipts: vec![],
+        });
+
+        // Attempt to update with the second block - should fail due to parent hash mismatch
+        let result = slotter.update_latest_block(&second_block.block, chain);
+
+        // Verify that a reorg was detected
+        assert_matches!(result, Err(SlotterError::ReorgDetected { .. }));
+    }
+
+    #[tokio::test]
+    async fn test_reorg_detected_block_number_sequencing() {
+        test_reorg_detected_block_number_helper(Chain::Sequencing).await;
+    }
+
+    #[tokio::test]
+    async fn test_reorg_detected_block_number_settlement() {
+        test_reorg_detected_block_number_helper(Chain::Settlement).await;
+    }
+
+    async fn test_reorg_detected_block_number_helper(chain: Chain) {
+        let (mut slotter, _) = create_slotter(&SlotterConfig::default());
+
+        // Set up first block at number 2
+        let first_block = Arc::new(BlockAndReceipts {
+            block: Block {
+                hash: B256::from_str(
+                    "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                )
+                .unwrap(),
+                number: 2,
+                parent_hash: B256::from_str(
+                    "0000000000000000000000000000000000000000000000000000000000000000",
+                )
+                .unwrap(),
+                logs_bloom: "0x0".to_string(),
+                transactions_root: "0x0".to_string(),
+                state_root: "0x0".to_string(),
+                receipts_root: "0x0".to_string(),
+                timestamp: 100,
+                transactions: vec![],
+            },
+            receipts: vec![],
+        });
+
+        slotter.update_latest_block(&first_block.block, chain).unwrap();
+
+        // Create block with block number 1 (lower than current)
+        let reorg_block = Arc::new(BlockAndReceipts {
+            block: Block {
+                hash: B256::from_str(
+                    "2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                )
+                .unwrap(),
+                number: 1, // Lower block number should trigger reorg
+                parent_hash: B256::from_str(
+                    "0000000000abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                )
+                .unwrap(),
+                logs_bloom: "0x0".to_string(),
+                transactions_root: "0x0".to_string(),
+                state_root: "0x0".to_string(),
+                receipts_root: "0x0".to_string(),
+                timestamp: 50,
+                transactions: vec![],
+            },
+            receipts: vec![],
+        });
+
+        let result = slotter.update_latest_block(&reorg_block.block, chain);
+        assert_matches!(result, Err(SlotterError::ReorgDetected { .. }));
     }
 }

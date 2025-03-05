@@ -120,7 +120,7 @@ impl RollupAdapter for ArbitrumAdapter {
                 mchain_block_number,
                 slot.timestamp(),
                 &slot.sequencing,
-                slot.settlement.last(), // TODO add a test that asserts that last() always returns the latest block (they are correctly ordered)
+                slot.settlement.last(),
                 delayed_messages.len(),
             )
             .await?;

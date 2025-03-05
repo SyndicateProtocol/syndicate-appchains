@@ -33,7 +33,7 @@ pub struct BlockBuilderConfig {
 
     /// Target rollup type for the [`block-builder`]
     #[arg(long, env = "BLOCK_BUILDER_TARGET_ROLLUP", default_value = "arbitrum")]
-    pub target_rollup_type: TargetRollupType, // TODO consider moving to top level config
+    pub target_rollup_type: TargetRollupType,
 
     /// Arbitrum rollup address on the m-chain
     #[arg(short = 'm', long, env = "BLOCK_BUILDER_ARBITRUM_MCHAIN_ROLLUP_ADDRESS",
