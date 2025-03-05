@@ -6,15 +6,13 @@
 use eyre::Result;
 use jsonrpsee::{
     server::{Server, ServerHandle},
-    types::error::ErrorCode,
     RpcModule,
 };
 use metabased_sequencer::{
     config::Config,
-    metrics::{start_metrics, MetricsState},
+    metrics::{start_metrics, MetricsState, RelayerMetrics},
     service::{send_raw_transaction_handler, RelayerService},
 };
-use serde_json::Value as JsonValue;
 use std::net::SocketAddr;
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
@@ -30,14 +28,17 @@ async fn main() -> Result<()> {
         .init();
 
     // Parse config
-    let config = Config::parse()?;
+    let config = Config::initialize();
+
+    info!("Config: {:?}", config);
 
     // Initialize metrics
-    let metrics = MetricsState::new();
-    let metrics_handler = start_metrics(metrics, 7777).await;
+    let mut metrics = MetricsState::new();
+    let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
+    let metrics_handler = start_metrics(metrics, config.metrics_port).await;
 
     // Start server
-    let (addr, handle) = run_server(&config).await?;
+    let (addr, handle) = run_server(&config, relayer_metrics).await?;
 
     info!(
         addr = %addr,
@@ -53,19 +54,18 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn run_server(config: &Config) -> Result<(SocketAddr, ServerHandle)> {
+async fn run_server(
+    config: &Config,
+    relayer_metrics: RelayerMetrics,
+) -> Result<(SocketAddr, ServerHandle)> {
     let server = Server::builder().build(format!("0.0.0.0:{}", config.port)).await?;
 
-    let service = RelayerService::new(config)?;
+    let service = RelayerService::new(config, relayer_metrics)?;
 
     let mut module = RpcModule::new(service);
 
     // Register RPC methods
     module.register_async_method("eth_sendRawTransaction", send_raw_transaction_handler)?;
-    module.register_method("health", |_, _, _| {
-        Ok::<JsonValue, ErrorCode>(serde_json::json!({"health": true}))
-    })?;
-
     info!("Registered RPC methods: {:#?}", module.method_names().collect::<Vec<_>>());
 
     let addr = server.local_addr()?;
@@ -83,13 +83,15 @@ mod tests {
         providers::{Provider, ProviderBuilder},
     };
     use jsonrpsee::{core::client::ClientT, http_client::HttpClient};
+    use serde_json::Value as JsonValue;
     use std::str::FromStr;
     use url::Url;
 
     #[tokio::test]
     async fn test_run_server() {
         // Setup sequencing chain
-        let anvil = Anvil::new().port(8181_u16).chain_id(12345678).try_spawn().unwrap();
+        let anvil =
+            Anvil::new().port(8181_u16).chain_id(12345678).block_time(1).try_spawn().unwrap();
 
         // Setup provider
         let provider = ProviderBuilder::new().on_http(anvil.endpoint_url());
@@ -106,18 +108,17 @@ mod tests {
             chain_rpc_url: Url::parse("http://localhost:8181").unwrap(),
             private_key,
             port: 8282,
+            metrics_port: 9191,
         };
+        let mut metrics = MetricsState::new();
+        let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
 
         // Start server
-        let (_addr, _handle) = run_server(&config).await.unwrap();
+        let (_addr, _handle) = run_server(&config, relayer_metrics).await.unwrap();
 
         // Setup RPC client
         let client =
             HttpClient::builder().build(format!("http://localhost:{}", config.port)).unwrap();
-
-        // Call the health endpoint
-        let health: JsonValue = client.request("health", [()]).await.unwrap();
-        assert_eq!(health, serde_json::json!({"health": true}));
 
         // Check Nonce Before
         let nonce = provider.get_transaction_count(sequencer_address).await.unwrap();

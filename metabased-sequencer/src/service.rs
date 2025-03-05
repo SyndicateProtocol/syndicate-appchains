@@ -1,6 +1,17 @@
 //! The `service` module handles the business logic for the metabased sequencer.
 
-use crate::{config::Config, contract::MetabasedSequencerChain::processTransactionCall};
+use crate::{
+    config::Config,
+    contract::MetabasedSequencerChain::processTransactionCall,
+    errors::{
+        Error,
+        Error::{Contract, InvalidInput, InvalidParams, TransactionRejected},
+        InvalidInputError::{MissingChainID, MissingGasPrice, UnableToRLPDecode},
+        InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount},
+        Rejection::FeeTooHigh,
+    },
+    metrics::RelayerMetrics,
+};
 use alloy::{
     consensus::{Transaction, TxEnvelope, TxType},
     hex,
@@ -20,13 +31,12 @@ use alloy::{
     transports::http::Http,
 };
 use eyre::Result;
-use jsonrpsee::{
-    core::RpcResult,
-    types::{error::ErrorCode, Params},
-    Extensions,
-};
+use jsonrpsee::{core::RpcResult, types::Params, Extensions};
 use reqwest::Client;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use tracing::{debug, error, info};
 
 #[allow(missing_docs)]
@@ -54,11 +64,14 @@ pub struct RelayerService {
 
     /// The provider for the sequencing chain
     provider: Arc<FilledProvider>,
+
+    /// The metrics for the relayer service
+    metrics: Arc<RelayerMetrics>,
 }
 
 impl RelayerService {
     /// Create a new `RelayerService` instance.
-    pub fn new(config: &Config) -> Result<Self> {
+    pub fn new(config: &Config, relayer_metrics: RelayerMetrics) -> Result<Self> {
         let signer = PrivateKeySigner::from_bytes(&config.private_key)?;
         let wallet = EthereumWallet::from(signer);
 
@@ -69,17 +82,21 @@ impl RelayerService {
             .filler(ChainIdFiller::new(None))
             .on_http(config.chain_rpc_url.clone());
 
-        Ok(Self { contract_address: config.chain_contract_address, provider: Arc::new(provider) })
+        Ok(Self {
+            contract_address: config.chain_contract_address,
+            provider: Arc::new(provider),
+            metrics: Arc::new(relayer_metrics),
+        })
     }
 
-    fn validate_transaction(&self, raw_tx: &Bytes) -> Result<TxHash> {
+    fn validate_transaction(&self, raw_tx: &Bytes) -> Result<TxHash, Error> {
         debug!(bytes_length = raw_tx.len(), "Starting transaction validation");
         // 1. Decoding:
         let mut slice: &[u8] = raw_tx.as_ref();
         let tx = match TxEnvelope::decode(&mut slice) {
             Ok(tx) => tx,
             Err(_) => {
-                let error = eyre::eyre!("Transaction decoding failed");
+                let error = InvalidInput(UnableToRLPDecode);
                 debug!(
                     error = %error,
                     "Transaction decoding failed"
@@ -91,7 +108,7 @@ impl RelayerService {
         // 2. Validation:
         //For non-legacy transactions, validate chain ID immediately
         if tx.tx_type() != TxType::Legacy && tx.chain_id().is_none() {
-            let error = eyre::eyre!("Transaction validation failed: missing chain ID");
+            let error = InvalidInput(MissingChainID);
             debug!(
                 error = %error,
                 tx_type = ?tx.tx_type(),
@@ -114,7 +131,7 @@ impl RelayerService {
             // RPCTxFeeCap for equivalent skip check if unset
             let tx_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
             let gas_price = tx.gas_price().ok_or_else(|| {
-                let error = eyre::eyre!("Transaction validation failed: missing gas price");
+                let error = InvalidInput(MissingGasPrice);
                 debug!(
                     error = %error,
                     tx_type = ?tx.tx_type(),
@@ -133,14 +150,14 @@ impl RelayerService {
             let fee_wei = gas_price.saturating_mul(gas);
 
             if fee_wei > tx_cap_in_wei {
-                return Err(eyre::eyre!("Transaction fee too high"));
+                return Err(TransactionRejected(FeeTooHigh));
             }
         }
 
         Ok(tx.tx_hash().to_owned())
     }
 
-    async fn process_transaction(&self, raw_tx: Bytes) -> Result<TxHash> {
+    async fn process_transaction(&self, raw_tx: Bytes) -> Result<TxHash, Error> {
         info!("Processing transaction: {}", hex::encode(&raw_tx));
         let original_tx_hash = self.validate_transaction(&raw_tx)?;
 
@@ -148,10 +165,13 @@ impl RelayerService {
         let data = processTransactionCall { encodedTxn: raw_tx };
         let input = TransactionInput::new(data.abi_encode().into());
         let tx = TransactionRequest::default().to(self.contract_address).input(input);
-        let pending_tx = self.provider.send_transaction(tx).await?;
+        let pending_tx = self.provider.send_transaction(tx).await.map_err(|e| {
+            error!(error = ?e, "Transaction submission failed");
+            Contract(alloy::contract::Error::from(e))
+        })?;
 
         match pending_tx
-            .with_required_confirmations(0)
+            .with_required_confirmations(2)
             .with_timeout(Some(Duration::from_secs(60)))
             .watch()
             .await
@@ -163,10 +183,24 @@ impl RelayerService {
             }
             Err(e) => {
                 error!(error = ?e, "Transaction submission failed");
-                Err(eyre::eyre!(e))
+                Err(Contract(alloy::contract::Error::from(e)))
             }
         }
     }
+}
+
+// Params validation
+fn parse_send_raw_transaction_params(params: Params<'static>) -> Result<Bytes, Error> {
+    let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap_or("[]"))?;
+    let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
+    if arr.len() != 1 {
+        return Err(InvalidParams(WrongParamCount(arr.len())));
+    }
+    let item = arr.pop().ok_or(InvalidParams(MissingParam))?;
+    let raw_tx = item.as_str().ok_or(InvalidParams(NotHexEncoded))?.to_string();
+    let tx_data: Bytes = hex::decode(&raw_tx).map(Bytes::from)?;
+
+    Ok(tx_data)
 }
 
 /// The handler for the `eth_sendRawTransaction` JSON-RPC method.
@@ -175,24 +209,27 @@ pub async fn send_raw_transaction_handler(
     service: Arc<RelayerService>,
     _: Extensions,
 ) -> RpcResult<String> {
-    let tx_data: Bytes =
-        params.one::<String>().map_err(|_| ErrorCode::InvalidRequest)?.parse().map_err(|e| {
-            error!("Failed to parse transaction data: {}", e);
-            ErrorCode::InvalidParams
-        })?;
+    let start = Instant::now();
+    let result = async {
+        let tx_data = parse_send_raw_transaction_params(params)?;
+        let tx_hash = service.process_transaction(tx_data).await?;
+        Ok::<_, Error>(format!("0x{}", hex::encode(tx_hash)))
+    }
+    .await;
+    let duration = start.elapsed();
 
-    let tx_hash = service.process_transaction(tx_data).await.map_err(|e| {
-        error!("Failed to process transaction: {}", e);
-        ErrorCode::InternalError
-    })?;
-
-    Ok(format!("0x{}", hex::encode(tx_hash)))
+    result
+        .inspect(|_| service.metrics.record_rpc_call("eth_sendRawTransaction", duration, None))
+        .map_err(|e| {
+            service.metrics.record_rpc_call("eth_sendRawTransaction", duration, Some(&e));
+            e.to_json_rpc_error()
+        })
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::Config;
+    use crate::{config::Config, metrics::MetricsState};
     use alloy::primitives::{Bytes, B256};
     use jsonrpsee::types::Params;
     use std::str::FromStr;
@@ -204,8 +241,11 @@ mod tests {
             chain_rpc_url: Url::parse("http://localhost:8545").unwrap(),
             private_key: B256::from([0x1; 32]),
             port: 8456,
+            metrics_port: 9191,
         };
-        RelayerService::new(&config).unwrap()
+        let mut metrics = MetricsState::new();
+        let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
+        RelayerService::new(&config, relayer_metrics).unwrap()
     }
 
     #[test]
@@ -215,9 +255,12 @@ mod tests {
             chain_rpc_url: Url::parse("http://localhost:8545").unwrap(),
             private_key: B256::from([0x1; 32]),
             port: 8456,
+            metrics_port: 9191,
         };
+        let mut metrics = MetricsState::new();
+        let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
 
-        let result = RelayerService::new(&config);
+        let result = RelayerService::new(&config, relayer_metrics);
         assert!(result.is_ok());
 
         let service = result.unwrap();
@@ -231,9 +274,12 @@ mod tests {
             chain_rpc_url: Url::parse("http://localhost:8545").unwrap(),
             private_key: B256::from([0x0; 32]), // Invalid private key (all zeros)
             port: 8456,
+            metrics_port: 9191,
         };
+        let mut metrics = MetricsState::new();
+        let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
 
-        let result = RelayerService::new(&config);
+        let result = RelayerService::new(&config, relayer_metrics);
         assert!(result.is_err());
     }
     #[tokio::test]

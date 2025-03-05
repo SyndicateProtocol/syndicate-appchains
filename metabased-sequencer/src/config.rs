@@ -2,59 +2,73 @@
 
 use alloy::primitives::{Address, B256};
 use clap::Parser;
-use eyre::Result;
+use std::{fmt::Debug, str::FromStr};
+use thiserror::Error;
 use url::Url;
 
-#[derive(Parser, Debug)]
-#[command(version, about, long_about = None)]
-struct Args {
-    /// Address of the layer-2 Ethereum smart contract
-    #[arg(short = 'c', long)]
-    pub chain_contract_address: Option<Address>,
-
-    /// URL of the layer-2 Ethereum RPC node
-    #[arg(short = 'r', long)]
-    pub chain_rpc_url: Option<Url>,
-
-    /// Port to listen on
-    #[arg(short = 'p', long)]
-    pub port: Option<u16>,
-
-    /// Private key for signing transactions    
-    #[arg(short = 'k', long)]
-    pub private_key: Option<B256>,
+/// Error type for configuration errors
+#[derive(Error, Debug)]
+pub enum ConfigError {
+    /// Invalid URL
+    #[error("Invalid URL: {0}")]
+    InvalidURL(String),
+    /// Invalid URL: no host
+    #[error("Invalid URL: no host")]
+    InvalidURLHost,
+    /// Invalid URL scheme
+    #[error("Invalid URL scheme: {0}. Only http and https are supported")]
+    InvalidURLScheme(String),
 }
 
-/// The configuration for the metabased sequencer.
-#[derive(Debug)]
+/// Configuration for the metabased sequencer
+#[derive(Parser, Debug, Clone)]
+#[command(version, about, long_about = None)]
 pub struct Config {
-    /// The address of sequencing contract on the sequencing chain
+    /// Address of the layer-2 Ethereum smart contract
+    #[arg(short = 'c', long, env = "METABASED_SEQUENCER_CONTRACT_ADDRESS", value_parser = parse_address)]
     pub chain_contract_address: Address,
 
-    /// The URL of the sequencing chain RPC node
+    /// URL of the layer-2 Ethereum RPC node
+    #[arg(short = 'r', long, env = "METABASED_SEQUENCER_RPC_URL", value_parser = parse_url)]
     pub chain_rpc_url: Url,
 
-    /// The private key for signing transactions
-    pub private_key: B256,
-
-    /// The port to listen on
+    /// Port to listen on
+    #[arg(short = 'p', long, env = "METABASED_SEQUENCER_PORT", default_value_t = 8456)]
     pub port: u16,
+
+    /// Port for metrics
+    #[arg(short = 'm', long, env = "METABASED_SEQUENCER_METRICS_PORT", default_value_t = 9191)]
+    pub metrics_port: u16,
+
+    /// Private key for signing transactions    
+    #[arg(short = 'k', long, env = "METABASED_SEQUENCER_PRIVATE_KEY")]
+    pub private_key: B256,
+}
+
+/// Parse a string into an Ethereum `Address`.
+fn parse_address(value: &str) -> Result<Address, String> {
+    Address::from_str(value).map_err(|_| format!("Invalid address: {}", value))
+}
+
+/// Parse default string into a valid [`URL`].
+fn parse_url(value: &str) -> Result<Url, ConfigError> {
+    Url::parse(value).map_or_else(
+        |_err| Err(ConfigError::InvalidURL(value.to_string())),
+        |url| {
+            if !url.has_host() {
+                return Err(ConfigError::InvalidURLHost);
+            }
+            match url.scheme() {
+                "http" | "https" => Ok(url),
+                _ => Err(ConfigError::InvalidURLScheme(url.scheme().to_string())),
+            }
+        },
+    )
 }
 
 impl Config {
-    /// Parse the command line arguments and return a `Config` struct.
-    pub fn parse() -> Result<Self> {
-        let args = Args::parse();
-
-        Ok(Self {
-            chain_contract_address: args
-                .chain_contract_address
-                .ok_or_else(|| eyre::eyre!("Missing chain contract address"))?,
-            chain_rpc_url: args
-                .chain_rpc_url
-                .ok_or_else(|| eyre::eyre!("Missing chain RPC URL"))?,
-            private_key: args.private_key.ok_or_else(|| eyre::eyre!("Missing private key"))?,
-            port: args.port.unwrap_or(8456),
-        })
+    /// Initializes the configuration by parsing CLI arguments and environment variables.
+    pub fn initialize() -> Self {
+        Self::parse()
     }
 }
