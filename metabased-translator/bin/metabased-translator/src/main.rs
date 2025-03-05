@@ -84,15 +84,6 @@ async fn start_translator(
     //TODO(SEQ-628) - some crate task failures don't actually get propagated back. We probably want
     // to, likely useful for operating nodes
 
-    /* Oleksii chat
-    if JoinError, just panic
-
-    eyre vs anyhow
-    - eyre has subcrate color-eyre for readable local dev
-
-    - run should be handleable, panic in `main()` if you want
-     */
-
     // MAIN SELECT LOOP - wait for shutdown signal or task failure
     tokio::select! {
         _ = main_shutdown_rx => handles.graceful_shutdown(tx).await,
