@@ -1,12 +1,15 @@
 # Metabased-translator
 
-This is a service that ingests L2 transaction data, organizes the data into slots, transforms it into a unified format to be mined by an Anvil node, then mines it and makes it available to rollup frameworks.
+This is a service that ingests L2 transaction data, organizes the data into slots, builds blocks from the slots, and mines the blocks and makes them available to rollup frameworks.
 
 It consists of a `common` crate and 3 component crates: `ingestor`, `slotter` and `block-builder`
 
+An execution client such as reth must be available at the mchain ipc and auth ipc paths prior to starting the translator -
+see the provided docker-compose.yaml file for more information.
+
 #### Metachain configuration
 
-The metachain has chain id 84532 and a genesis timestamp of 1712500000.
+The metachain has chain id 84532 and a genesis timestamp of 0.
 
 The rollup contract is deployed to 0x5FbDB2315678afecb367f032d93F642f64180aa3 on the first metachain block
 with the following on-chain configuration:
@@ -34,7 +37,7 @@ with the following on-chain configuration:
       "EnableArbOS": true,
       "AllowDebugPrecompiles": false,
       "DataAvailabilityCommittee": false,
-      "InitialArbOSVersion": 10,
+      "InitialArbOSVersion": 32,
       "InitialChainOwner": "0x0000000000000000000000000000000000000000",
       "GenesisBlockNum": 0
    }

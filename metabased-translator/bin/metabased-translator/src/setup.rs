@@ -139,14 +139,8 @@ pub async fn create_node_components(
     .await?;
 
     let (slotter, slot_rx) = Slotter::new(&config.slotter, safe_state, db.clone(), metrics.slotter);
-    let block_builder = BlockBuilder::new(
-        slot_rx,
-        &config.block_builder,
-        config.datadir.as_str(),
-        db,
-        metrics.block_builder,
-    )
-    .await?;
+    let block_builder =
+        BlockBuilder::new(slot_rx, &config.block_builder, db, metrics.block_builder).await?;
     Ok((
         sequencing_ingestor,
         sequencing_rx,

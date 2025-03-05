@@ -9,17 +9,7 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy = { workspace = true, features = [
-  "contract",
-  "node-bindings",
-  "providers",
-  "rlp",
-  "rpc-types",
-  "rpc-types-anvil",
-  "signer-local",
-  "signers",
-  "sol-types",
-] }
+alloy = { workspace = true, features = [ "provider-ipc", "rlp", "provider-engine-api" ] }
 async-trait = { workspace = true }
 base64 = { workspace = true }
 brotli = { workspace = true }
@@ -31,7 +21,6 @@ eyre = { workspace = true }
 flate2 = { workspace = true }
 hex = { workspace = true }
 prometheus-client = { workspace = true }
-reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 thiserror = { workspace = true }

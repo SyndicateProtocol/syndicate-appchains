@@ -2,19 +2,16 @@
 
 use alloy::{
     hex,
-    network::{Ethereum, EthereumWallet},
+    network::EthereumWallet,
     primitives::Address,
-    providers::{
-        fillers::{FillProvider, JoinFill, WalletFiller},
-        Identity, Provider, ProviderBuilder, RootProvider,
-    },
+    providers::{Provider, ProviderBuilder},
     signers::{k256::SecretKey, local::LocalSigner, utils::public_key_to_address, Signer},
     sol_types::private::Bytes,
-    transports::http::Http,
 };
+use block_builder::connectors::mchain::{FilledProvider, HttpProvider};
 use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain;
 use eyre::{eyre, Error};
-use reqwest::{Client, Url};
+use reqwest::Url;
 use std::str::FromStr;
 use strum_macros::EnumString;
 
@@ -133,20 +130,13 @@ impl RollupType {
     }
 }
 
-type ProviderWithWallet = FillProvider<
-    JoinFill<Identity, WalletFiller<EthereumWallet>>,
-    RootProvider<Http<Client>>,
-    Http<Client>,
-    Ethereum,
->;
-
 /// Creates a wallet from a private key and a chain ID
 pub fn wallet_from_private_key(private_key: &SecretKey, chain_id: u64) -> EthereumWallet {
     let signer = LocalSigner::from(private_key.clone()).with_chain_id(Some(chain_id));
     EthereumWallet::from(signer)
 }
 
-fn provider_with_wallet(url: &Url, private_key: &SecretKey, chain_id: u64) -> ProviderWithWallet {
+fn provider_with_wallet(url: &Url, private_key: &SecretKey, chain_id: u64) -> FilledProvider {
     let signer = wallet_from_private_key(private_key, chain_id);
     ProviderBuilder::new().wallet(signer).on_http(url.clone())
 }
@@ -167,17 +157,8 @@ pub struct Accounts {
     pub sequencer: Account,
 }
 
-type SequencingContractInstance = MetabasedSequencerChain::MetabasedSequencerChainInstance<
-    Http<Client>,
-    FillProvider<
-        JoinFill<Identity, WalletFiller<EthereumWallet>>,
-        RootProvider<Http<Client>>,
-        Http<Client>,
-        Ethereum,
-    >,
->;
-
-type HttpProvider = RootProvider<Http<Client>>;
+type SequencingContractInstance =
+    MetabasedSequencerChain::MetabasedSequencerChainInstance<(), FilledProvider>;
 
 #[derive(Debug)]
 /// The test environment - contains all the providers and accounts necessary to write e2e tests
