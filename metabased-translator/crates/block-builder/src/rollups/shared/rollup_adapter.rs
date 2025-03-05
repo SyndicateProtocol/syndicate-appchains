@@ -42,6 +42,13 @@ pub trait RollupAdapter: Debug + Send + Sync + Unpin + 'static {
     /// Provides access to the transaction parser used by the block builder.
     fn transaction_parser(&self) -> &SequencingTransactionParser;
 
+    /// Builds a block from a slot
+    async fn build_block_from_slot(
+        &mut self,
+        slot: &Slot,
+        mchain_block_number: u64,
+    ) -> Result<Vec<TransactionRequest>, Error>;
+
     /// Gets the source chain's processed blocks from the rollup
     async fn get_processed_blocks<T: Provider>(
         &self,
@@ -49,9 +56,6 @@ pub trait RollupAdapter: Debug + Send + Sync + Unpin + 'static {
         block: BlockNumberOrTag,
     ) -> Result<Option<(KnownState, u64)>>;
 
-    /// Builds a block from a slot
-    async fn build_block_from_slot(
-        &mut self,
-        slot: &Slot,
-    ) -> Result<Vec<TransactionRequest>, Error>;
+    /// Gets the last sequencing block processed
+    async fn get_last_sequencing_block_processed<T: Provider>(&self, provider: &T) -> Result<u64>;
 }

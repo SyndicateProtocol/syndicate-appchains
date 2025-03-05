@@ -276,7 +276,7 @@ async fn e2e_settlement_test() -> Result<()> {
 /// sequence a mchain block that does not include a batch.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_test() -> Result<()> {
-    let _ = init_test_tracing(Level::INFO);
+    let _ = init_test_tracing(Level::DEBUG);
     // Start the meta node (port index 1, no pre-loaded contracts)
     let config = MetabasedConfig::default();
     let meta_node = MetaNode::new(false, config.clone()).await?;

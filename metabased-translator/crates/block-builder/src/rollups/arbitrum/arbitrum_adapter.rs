@@ -100,6 +100,7 @@ impl RollupAdapter for ArbitrumAdapter {
     async fn build_block_from_slot(
         &mut self,
         slot: &Slot,
+        mchain_block_number: u64,
     ) -> Result<Vec<TransactionRequest>, eyre::Error> {
         let delayed_messages = self.process_delayed_messages(slot.settlement.clone()).await?;
         debug!("Delayed messages: {:?}", delayed_messages);
@@ -116,7 +117,7 @@ impl RollupAdapter for ArbitrumAdapter {
         let batch_transaction = self
             .build_batch_txn(
                 mb_transactions,
-                slot.number,
+                mchain_block_number,
                 slot.timestamp(),
                 &slot.sequencing,
                 slot.settlement.last(), // TODO add a test that asserts that last() always returns the latest block (they are correctly ordered)
@@ -168,6 +169,17 @@ impl RollupAdapter for ArbitrumAdapter {
             },
             block_num,
         )))
+    }
+
+    async fn get_last_sequencing_block_processed<T: Provider>(&self, provider: &T) -> Result<u64> {
+        let rollup = Rollup::new(self.mchain_rollup_address, provider);
+        let seq_num = rollup
+            .seqBlockNumber()
+            .call()
+            .block(BlockId::Number(BlockNumberOrTag::Latest))
+            .await?
+            ._0;
+        Ok(seq_num)
     }
 }
 
@@ -482,13 +494,9 @@ mod tests {
         let mut builder = ArbitrumAdapter::default();
 
         // Create an empty slot
-        let slot = Slot {
-            number: 1,
-            settlement: vec![],
-            sequencing: Arc::new(BlockAndReceipts::default()),
-        };
+        let slot = Slot { settlement: vec![], sequencing: Arc::new(BlockAndReceipts::default()) };
 
-        let result = builder.build_block_from_slot(&slot).await;
+        let result = builder.build_block_from_slot(&slot, 1).await;
         assert!(result.is_ok());
 
         let txns = result.unwrap();
@@ -569,13 +577,10 @@ mod tests {
             vec![Receipt { logs: vec![msg_delivered_log, inbox_msg_log], ..Default::default() }],
         );
 
-        let slot = Slot {
-            number: 1,
-            settlement: vec![block],
-            sequencing: Arc::new(BlockAndReceipts::default()),
-        };
+        let slot =
+            Slot { settlement: vec![block], sequencing: Arc::new(BlockAndReceipts::default()) };
 
-        let result = builder.build_block_from_slot(&slot).await;
+        let result = builder.build_block_from_slot(&slot, 1).await;
         assert!(result.is_ok());
 
         let txns = result.unwrap();
@@ -609,7 +614,6 @@ mod tests {
             Block { number: 1, transactions: vec![Transaction::default()], ..Default::default() };
 
         let slot = Slot {
-            number: 1,
             settlement: vec![],
             sequencing: Arc::new(BlockAndReceipts {
                 block,
@@ -617,7 +621,7 @@ mod tests {
             }),
         };
 
-        let result = builder.build_block_from_slot(&slot).await;
+        let result = builder.build_block_from_slot(&slot, 1).await;
         assert!(result.is_ok());
 
         let txns = result.unwrap();
@@ -712,7 +716,6 @@ mod tests {
             Receipt { logs: vec![delayed_log, inbox_log], ..Default::default() };
 
         let slot = Slot {
-            number: 1,
             settlement: vec![Arc::new(BlockAndReceipts {
                 block: settlement_block,
                 receipts: vec![settlement_receipt],
@@ -723,7 +726,7 @@ mod tests {
             }),
         };
 
-        let result = builder.build_block_from_slot(&slot).await;
+        let result = builder.build_block_from_slot(&slot, 1).await;
         assert!(result.is_ok());
 
         let txns = result.unwrap();

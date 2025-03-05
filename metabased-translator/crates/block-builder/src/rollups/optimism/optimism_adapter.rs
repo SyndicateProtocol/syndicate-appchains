@@ -33,7 +33,11 @@ pub struct OptimismAdapter {
 
 #[async_trait]
 impl RollupAdapter for OptimismAdapter {
-    async fn build_block_from_slot(&mut self, slot: &Slot) -> Result<Vec<TransactionRequest>> {
+    async fn build_block_from_slot(
+        &mut self,
+        slot: &Slot,
+        _mchain_block_number: u64,
+    ) -> Result<Vec<TransactionRequest>> {
         let deposited_txns = self.process_deposited_txns(slot.settlement.clone()).await?;
 
         let mbtxs = self.parse_block_to_mbtxs(slot.sequencing.clone());
@@ -54,7 +58,10 @@ impl RollupAdapter for OptimismAdapter {
         _provider: &T,
         _block: BlockNumberOrTag,
     ) -> Result<Option<(KnownState, u64)>> {
-        // TODO: Implement
+        panic!("Not implemented")
+    }
+
+    async fn get_last_sequencing_block_processed<T: Provider>(&self, _provider: &T) -> Result<u64> {
         panic!("Not implemented")
     }
 }

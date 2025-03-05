@@ -15,9 +15,6 @@ use tokio::{
 };
 use tracing::{debug, error, info, trace, warn};
 
-/// The first slot number to use
-const START_SLOT: u64 = 2;
-
 /// Polls and ingests blocks from an Ethereum chain
 ///
 /// Slots are stored in a linked list ordered by timestamp, with newer slots at the back.
@@ -258,14 +255,8 @@ impl Slotter {
         let latest_slot = self.slots.back_mut();
         trace!("latest_slot: {:?}", latest_slot);
 
-        // Each sequencer block creates a new slot
-        let slot_number = match latest_slot {
-            Some(slot) => slot.number + 1,
-            None => START_SLOT,
-        };
-
         // Create a new slot for this sequencer block
-        let mut new_slot = Slot::new(slot_number, block_info);
+        let mut new_slot = Slot::new(block_info);
 
         // check if any unassigned settlement blocks belong in this slot
         // if so, add them to the slot and remove them from the unassigned list
@@ -275,8 +266,8 @@ impl Slotter {
                 // we have seen a settlement block that belongs in a later slot, this one
                 // can be closed
                 self.sender.send(new_slot.clone()).await?;
-                debug!(%new_slot, "new slot created and closed");
-                self.metrics.record_last_slot_created(slot_number);
+                debug!(%new_slot, "slot sent");
+                self.metrics.record_last_slot_created(new_slot.sequencing.block.number);
                 return Ok(());
             }
             let block = self.unassigned_settlement_blocks.pop_front().ok_or_else(|| {
@@ -289,8 +280,8 @@ impl Slotter {
         debug!(%new_slot, "new opened slot created");
 
         // Add the new slot
+        self.metrics.record_last_slot_created(new_slot.sequencing.block.number);
         self.slots.push_back(new_slot);
-        self.metrics.record_last_slot_created(slot_number);
         Ok(())
     }
 
@@ -302,17 +293,12 @@ impl Slotter {
 
         while let Some(mut slot) = self.slots.pop_front() {
             if set_ts > slot.timestamp() {
-                debug!(slot_number = slot.number, "slot closed");
-                trace!("slot: {:?}", slot);
+                debug!(%slot, "slot sent");
                 self.sender.send(slot.clone()).await?;
                 continue;
             }
             slot.push_settlement_block(set_block.clone());
-            debug!(
-                slot_number = slot.number,
-                block_number = set_block.block.number,
-                "block added to the slot"
-            );
+            debug!(block_number = set_block.block.number, "block added to the slot");
             trace!("settlement block added to slot: {:?}", slot);
             //add the slot back to the front of the list
             self.slots.push_front(slot);
@@ -495,7 +481,6 @@ mod tests {
 
         let slot = recv(&mut slot_rx).await.unwrap();
         assert_eq!(slot.timestamp(), 10);
-        assert_eq!(slot.number, START_SLOT);
         assert_eq!(slot.settlement.len(), 1);
         assert!(slot_rx.is_empty());
 
@@ -508,7 +493,6 @@ mod tests {
         for i in 1..4 {
             let slot = recv(&mut slot_rx).await.unwrap();
             assert_eq!(slot.timestamp(), 10 + i);
-            assert_eq!(slot.number, START_SLOT + i);
             assert_eq!(slot.sequencing.block.number, 1 + i);
             assert_eq!(slot.sequencing.block.timestamp, 10 + i);
             assert_eq!(slot.settlement.len(), 0);
@@ -529,7 +513,6 @@ mod tests {
         settlement_tx.send(create_test_block(3, 42)).await.unwrap();
         let slot = recv(&mut slot_rx).await.unwrap();
         assert_eq!(slot.timestamp(), 40);
-        assert_eq!(slot.number, START_SLOT + 4);
         assert_eq!(slot.sequencing.block.timestamp, 40);
         assert_eq!(slot.settlement.len(), 1);
         assert_eq!(slot.settlement[0].block.timestamp, 20);
@@ -615,13 +598,11 @@ mod tests {
 
         // This should trigger slot  to be marked as Closed
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.number, START_SLOT);
         assert_eq!(slot.timestamp(), 10);
         assert_eq!(slot.sequencing.block.number, 1);
         assert_eq!(slot.settlement.len(), 0);
 
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.number, START_SLOT + 1);
         assert_eq!(slot.timestamp(), 12);
         assert_eq!(slot.sequencing.block.number, 2);
         assert_eq!(slot.settlement.len(), 1);
@@ -647,7 +628,6 @@ mod tests {
         // Both chains have effectively progressed past slot 100
 
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.number, START_SLOT);
         assert_eq!(slot.timestamp(), 100);
         assert_eq!(slot.sequencing.block.number, 1);
         // Settlement block should not be in this slot since it was delayed to timestamp 160

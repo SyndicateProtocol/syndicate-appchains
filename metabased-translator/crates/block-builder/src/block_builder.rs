@@ -81,14 +81,9 @@ impl<R: RollupAdapter> BlockBuilder<R> {
         Ok(())
     }
 
-    async fn verify_block(&self, transactions_len: usize, slot_number: u64) {
+    async fn verify_block(&self, transactions_len: usize, slot_seq_number: u64) {
         let current_block = self.get_current_block_number().await;
-        assert_eq!(
-            current_block, slot_number,
-            "Mined block number {} does not match slot number {}",
-            current_block, slot_number
-        );
-        trace!("Mined block: {:?} from slot: {:?}", current_block, slot_number);
+        trace!("Mined block: {:?} from slot: {:?}", current_block, slot_seq_number);
 
         // Verify transactions are all included and succeeded
         // TODO(SEQ-623): check to make sure the tx hashes match as well
@@ -127,10 +122,10 @@ impl<R: RollupAdapter> BlockBuilder<R> {
                 biased; // biased allows us to process everything that's in the channel before shutting down
                 Some(slot) = self.slotter_rx.recv() => {
                     trace!("Received slot: {:?}", slot);
-                    self.metrics.record_last_slot(slot.number);
+                    self.metrics.record_last_slot(slot.sequencing.block.number);
 
                     // [OP / ARB] Build block of MChain transactions from slot
-                    let transactions = match self.rollup_adapter.build_block_from_slot(&slot).await {
+                    let transactions = match self.rollup_adapter.build_block_from_slot(&slot, self.get_current_block_number().await +1).await {
                         Ok(transactions) => transactions,
                         Err(e) => {
                             panic!("Error building batch transaction: {}", e);
@@ -141,8 +136,10 @@ impl<R: RollupAdapter> BlockBuilder<R> {
                     trace!("Submitting {} transactions", transactions_len);
                     self.metrics.record_transactions_per_slot(transactions_len);
 
-                    let  block_number = self.get_current_block_number().await;
-                    assert!(slot.number == block_number + 1, "Unexpected slot number, got {}, expected {}", slot.number, block_number + 1);
+                    let  last_sequencing_block_processed = self.get_last_sequencing_block_processed().await;
+                    if last_sequencing_block_processed > 0 {
+                        assert!(slot.sequencing.block.number == last_sequencing_block_processed + 1, "Unexpected slot number, got {}, expected {}", slot.sequencing.block.number, last_sequencing_block_processed + 1);
+                    }
 
                     // Submit transactions to mchain
                     if let Err(e) = self.mchain.submit_txns(transactions).await {
@@ -155,7 +152,7 @@ impl<R: RollupAdapter> BlockBuilder<R> {
                     }
 
                     // TODO(SEQ-623): add a flag to enable/disable this check
-                    self.verify_block(transactions_len, slot.number).await;
+                    self.verify_block(transactions_len, slot.sequencing.block.number).await;
 
                 }
                 _ = &mut shutdown_rx => {
@@ -171,6 +168,15 @@ impl<R: RollupAdapter> BlockBuilder<R> {
         self.mchain.get_block_number().await.unwrap_or_else(|e| {
             panic!("Error getting current block number: {}", e);
         })
+    }
+
+    async fn get_last_sequencing_block_processed(&self) -> u64 {
+        self.rollup_adapter
+            .get_last_sequencing_block_processed(&self.mchain.provider)
+            .await
+            .unwrap_or_else(|e| {
+                panic!("Error getting last sequencing block processed: {}", e);
+            })
     }
 }
 

@@ -187,8 +187,6 @@ impl From<Chain> for &'static str {
 /// A `Slot` is a collection of source chain blocks to be sent to the block builder.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct Slot {
-    /// the number of the slot - `slot_number` == `MetaChain`'s block number.
-    pub number: u64, // TODO remove
     /// the block from the sequencing chain to be included in the slot.
     pub sequencing: Arc<BlockAndReceipts>,
     /// the blocks from the settlement chain to be included in the slot.
@@ -197,8 +195,8 @@ pub struct Slot {
 
 impl Slot {
     /// Creates a new slot
-    pub const fn new(number: u64, sequencing_block: Arc<BlockAndReceipts>) -> Self {
-        Self { number, sequencing: sequencing_block, settlement: Vec::new() }
+    pub const fn new(sequencing_block: Arc<BlockAndReceipts>) -> Self {
+        Self { sequencing: sequencing_block, settlement: Vec::new() }
     }
 
     /// Adds a block to the slot's chain-specific block list
@@ -217,8 +215,7 @@ impl Display for Slot {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(
             f,
-            "Slot [number: {}, Sequencing block: {}, Settlement blocks (total: {}): {}]",
-            self.number,
+            "Slot [Sequencing block: {}, Settlement blocks (total: {}): {}]",
             format_block(&self.sequencing),
             self.settlement.len(),
             format_blocks(&self.settlement),
@@ -494,7 +491,7 @@ mod test {
             }],
         });
 
-        let mut slot = Slot::new(100, sequencing_block);
+        let mut slot = Slot::new(sequencing_block);
 
         // Add settlement chain block
         slot.settlement.push(Arc::new(BlockAndReceipts {
