@@ -9,7 +9,6 @@ use alloy::{
 use clap::{Parser, ValueEnum};
 use std::{fmt::Debug, str::FromStr};
 use thiserror::Error;
-use url::Url;
 
 const DEFAULT_PRIVATE_KEY_SIGNER: &str =
     "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
@@ -18,14 +17,11 @@ const DEFAULT_PRIVATE_KEY_SIGNER: &str =
 #[derive(Parser, Clone)]
 #[allow(missing_docs)]
 pub struct BlockBuilderConfig {
-    #[arg(short = 'u', long, env = "BLOCK_BUILDER_MCHAIN_URL",
-        default_value = "http://127.0.0.1:8888",
-        value_parser = parse_url)]
-    pub mchain_url: Url,
+    #[arg(long, env = "BLOCK_BUILDER_MCHAIN_AUTH_IPC_PATH")]
+    pub mchain_auth_ipc_path: String,
 
-    /// This is dynamically set at runtime.
-    #[arg(skip)]
-    pub genesis_timestamp: u64,
+    #[arg(long, env = "BLOCK_BUILDER_MCHAIN_IPC_PATH")]
+    pub mchain_ipc_path: String,
 
     #[arg(short = 'c', long, env = "BLOCK_BUILDER_TARGET_CHAIN_ID", default_value_t = 13331370)]
     pub target_chain_id: u64,
@@ -55,21 +51,6 @@ pub struct BlockBuilderConfig {
     #[arg(short = 'i', long, env = "BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS",
         value_parser = parse_address)]
     pub inbox_address: Address,
-
-    // interval at which anvil saves state to disk (in seconds)
-    // default is 300 seconds (5 minutes)
-    #[arg(long, env = "BLOCK_BUILDER_ANVIL_STATE_INTERVAL", default_value_t = 300)]
-    pub anvil_state_interval: u64,
-
-    // number of states to be saved on disk
-    // default is 1000
-    #[arg(long, env = "BLOCK_BUILDER_ANVIL_MAX_PERSISTED_STATES", default_value_t = 1000)]
-    pub max_persisted_states: u64,
-
-    // number of blocks to keep in memory (must set max_persisted_states to 0)
-    // default is 1000
-    #[arg(long, env = "BLOCK_BUILDER_ANVIL_PRUNE_HISTORY", default_value_t = 1000)]
-    pub prune_history: u64,
 }
 
 /// Possible target rollup types for the [`block-builder`]
@@ -83,22 +64,6 @@ pub enum TargetRollupType {
 /// Parse a string into an Ethereum `Address`.
 fn parse_address(value: &str) -> Result<Address, String> {
     Address::from_str(value).map_err(|_| format!("Invalid address: {}", value))
-}
-
-/// Parse default string into a valid [`URL`].
-fn parse_url(value: &str) -> Result<Url, ConfigError> {
-    Url::parse(value).map_or_else(
-        |_err| Err(ConfigError::InvalidURL(value.to_string())),
-        |url| {
-            if !url.has_host() {
-                return Err(ConfigError::InvalidURLHost);
-            }
-            match url.scheme() {
-                "http" | "https" => Ok(url),
-                _ => Err(ConfigError::InvalidURLScheme(url.scheme().to_string())),
-            }
-        },
-    )
 }
 
 /// Parse default string into a `PrivateKeySigner`.
@@ -115,18 +80,15 @@ pub fn get_rollup_contract_address() -> Address {
 impl Debug for BlockBuilderConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockBuilderConfig")
-            .field("mchain_url", &self.mchain_url)
+            .field("mchain_auth_ipc_path", &self.mchain_auth_ipc_path)
+            .field("mchain_ipc_path", &self.mchain_ipc_path)
             .field("target_chain_id", &self.target_chain_id)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
-            .field("genesis_timestamp", &self.genesis_timestamp)
             .field("target_rollup_type", &self.target_rollup_type)
             .field("mchain_rollup_address", &self.mchain_rollup_address)
             .field("bridge_address", &self.bridge_address)
             .field("inbox_address", &self.inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
-            .field("anvil_state_interval", &self.anvil_state_interval)
-            .field("anvil_max_persisted_states", &self.max_persisted_states)
-            .field("anvil_prune_history", &self.prune_history)
             .finish()
     }
 }
@@ -134,17 +96,25 @@ impl Debug for BlockBuilderConfig {
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
         let zero = Address::ZERO.to_string();
-        let mut config = Self::parse_from(["", "-s", &zero, "-b", &zero, "-i", &zero]);
-        config.genesis_timestamp = 1712500000;
-        config
+        Self::parse_from([
+            "",
+            "-s",
+            &zero,
+            "-b",
+            &zero,
+            "-i",
+            &zero,
+            "--mchain-ipc-path",
+            "",
+            "--mchain-auth-ipc-path",
+            "",
+        ])
     }
 }
 
 impl BlockBuilderConfig {
     /// Validates the config values and complains about impossible ones
     pub fn validate(&self) -> Result<(), ConfigError> {
-        parse_url(self.mchain_url.as_ref())?;
-
         if self.target_chain_id == 0 {
             return Err(ConfigError::InvalidChainId("Chain ID cannot be 0".to_string()));
         }
@@ -210,26 +180,6 @@ pub enum ConfigError {
 mod tests {
     use super::*;
     use assert_matches::assert_matches;
-    use url::Url;
-
-    #[test]
-    fn test_default_parsing() {
-        let zero = Address::ZERO.to_string();
-        let config =
-            BlockBuilderConfig::parse_from(["test", "-s", &zero, "-b", &zero, "-i", &zero]);
-        assert_eq!(
-            config.mchain_url,
-            Url::parse("http://127.0.0.1:8888").expect("Failed to parse default URL")
-        );
-        assert_eq!(config.target_chain_id, 13331370);
-        assert_eq!(
-            config.sequencing_contract_address.to_string(),
-            "0x0000000000000000000000000000000000000000"
-        );
-        assert_eq!(config.anvil_state_interval, 300);
-        assert_eq!(config.max_persisted_states, 1000);
-        assert_eq!(config.prune_history, 1000);
-    }
 
     #[test]
     fn test_validate_chain_id() {
@@ -271,82 +221,5 @@ mod tests {
         let config =
             BlockBuilderConfig { sequencing_contract_address: Address::ZERO, ..Default::default() };
         assert_matches!(config.validate(), Err(ConfigError::InvalidAddress(_)));
-    }
-
-    #[test]
-    fn test_parse_url_valid() {
-        let valid_urls = [
-            "http://127.0.0.1:8888",
-            "https://localhost:8000",
-            "http://example.com:3000",
-            "https://test.domain:8545",
-        ];
-
-        for url in valid_urls {
-            assert!(parse_url(url).is_ok(), "URL should be valid: {}", url);
-        }
-    }
-
-    #[test]
-    fn test_parse_url_invalid_format() {
-        let invalid_urls = ["not_a_url", "http://", "://test.com", "http:///", "", "123.456"];
-
-        for url in invalid_urls {
-            match parse_url(url) {
-                Err(ConfigError::InvalidURL(error_url)) => {
-                    assert_eq!(error_url, url, "Error should contain the invalid URL");
-                }
-                _ => panic!("Expected InvalidURL error for: {}", url),
-            }
-        }
-    }
-
-    #[test]
-    fn test_parse_url_invalid_host_scheme() {
-        let invalid_host_schemes = ["file://localhost.com", "data://example.com"];
-
-        for url in invalid_host_schemes {
-            match parse_url(url) {
-                Err(ConfigError::InvalidURLScheme(_)) => {}
-                Err(err) => panic!("Expected InvalidURLScheme error for: {}, got: {}", url, err),
-                Ok(_) => panic!("Expected InvalidURLScheme error for: {}", url),
-            }
-        }
-    }
-
-    #[test]
-    fn test_parse_url_no_host() {
-        let urls_without_host = ["file:///path/to/file", "data:text/plain,Hello", "localhost:999"];
-
-        for url in urls_without_host {
-            match parse_url(url) {
-                Err(ConfigError::InvalidURLHost) => {}
-                _ => panic!("Expected InvalidURLHost error for: {}", url),
-            }
-        }
-    }
-
-    #[test]
-    fn test_parse_url_with_port() {
-        let result = parse_url("http://localhost:8545");
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap().port().unwrap(), 8545);
-    }
-
-    #[test]
-    fn test_parse_url_without_port() {
-        let result = parse_url("https://example.com");
-        assert!(result.is_ok());
-        // HTTPS default port is 443
-        assert_eq!(result.unwrap().port().unwrap_or(443), 443);
-    }
-
-    #[test]
-    fn test_parse_url_with_path() {
-        let result = parse_url("http://localhost:8080/api/v1?param=value");
-        assert!(result.is_ok());
-        let url = result.unwrap();
-        assert_eq!(url.path(), "/api/v1");
-        assert_eq!(url.query(), Some("param=value"));
     }
 }

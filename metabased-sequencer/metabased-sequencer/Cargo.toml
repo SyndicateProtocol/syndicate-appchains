@@ -7,6 +7,7 @@ edition = "2021"
 async-trait = { workspace = true }
 alloy = { workspace = true, features = [
   "rlp",
+  "provider-engine-api",
   "providers",
   "rpc-types",
   "contract",

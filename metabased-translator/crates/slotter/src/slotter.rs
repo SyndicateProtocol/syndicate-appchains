@@ -203,7 +203,6 @@ impl Slotter {
         chain: Chain,
     ) -> Result<(), SlotterError> {
         self.update_latest_block(&block_info.block, chain)?;
-
         debug!(
             ?chain,
             block_number = block_info.block.number,
