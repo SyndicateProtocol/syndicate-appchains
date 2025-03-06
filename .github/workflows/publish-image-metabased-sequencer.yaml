@@ -4,6 +4,9 @@ on:
     branches:
       - main
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
@@ -16,6 +19,7 @@ jobs:
     with:
       do_push: true
       target_name: metabased-sequencer
+      runner_label: vip-large-01
     secrets: inherit
 
   # Trigger Cloud Run here to prevent race condition
