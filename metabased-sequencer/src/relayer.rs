@@ -76,6 +76,7 @@ impl RelayerService {
         let wallet = EthereumWallet::from(signer);
 
         let provider = ProviderBuilder::new()
+            // TODO [SEQ-620]: Make nonce management more robust
             .with_cached_nonce_management()
             .filler(WalletFiller::new(wallet))
             .filler(GasFiller)
@@ -89,6 +90,7 @@ impl RelayerService {
         })
     }
 
+    // TODO [SEQ-660]: Refactor this function to be more readable
     fn validate_transaction(&self, raw_tx: &Bytes) -> Result<TxHash, Error> {
         debug!(bytes_length = raw_tx.len(), "Starting transaction validation");
         // 1. Decoding:
@@ -170,6 +172,7 @@ impl RelayerService {
             Contract(alloy::contract::Error::from(e))
         })?;
 
+        // TODO [SEQ-661]: Make this configurable
         match pending_tx
             .with_required_confirmations(2)
             .with_timeout(Some(Duration::from_secs(60)))

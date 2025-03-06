@@ -66,7 +66,10 @@ pub async fn metrics_handler(
 }
 
 /// Starts a metrics server on the specified port, serving Prometheus-compatible metrics.
-pub async fn start_metrics(metrics_state: MetricsState, port: u16) -> tokio::task::JoinHandle<()> {
+pub async fn start_metrics(
+    metrics_state: MetricsState,
+    port: u16,
+) -> eyre::Result<tokio::task::JoinHandle<()>> {
     let state = Arc::new(RwLock::new(metrics_state));
     let router = Router::new().route("/metrics", get(metrics_handler)).with_state(state);
 
@@ -74,15 +77,15 @@ pub async fn start_metrics(metrics_state: MetricsState, port: u16) -> tokio::tas
         Ok(listener) => listener,
         Err(e) => {
             eprintln!("Failed to bind metrics server: {}", e);
-            return tokio::spawn(async {});
+            return Err(eyre::Report::new(e));
         }
     };
 
-    tokio::spawn(async move {
+    Ok(tokio::spawn(async move {
         if let Err(e) = axum::serve(listener, router).await {
             eprintln!("Metrics server error: {}", e);
         }
-    })
+    }))
 }
 
 #[cfg(test)]
@@ -136,6 +139,7 @@ mod tests {
         let port = 9001;
 
         let handle = start_metrics(metrics_state, port).await;
+        assert!(handle.is_ok());
 
         sleep(Duration::from_secs(1)).await;
         let client = Client::new();
@@ -145,6 +149,6 @@ mod tests {
         let status = response.unwrap().status();
         assert_eq!(status, StatusCode::OK, "Unexpected status code: {:?}", status);
 
-        handle.abort();
+        handle.unwrap().abort();
     }
 }

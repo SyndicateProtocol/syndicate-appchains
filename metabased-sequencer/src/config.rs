@@ -24,24 +24,24 @@ pub enum ConfigError {
 #[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]
 pub struct Config {
-    /// Address of the layer-2 Ethereum smart contract
-    #[arg(short = 'c', long, env = "METABASED_SEQUENCER_CONTRACT_ADDRESS", value_parser = parse_address)]
+    /// Address of the sequencing contract
+    #[arg(short = 'c', long, env = "SEQUENCER_CONTRACT_ADDRESS", value_parser = parse_address)]
     pub chain_contract_address: Address,
 
-    /// URL of the layer-2 Ethereum RPC node
-    #[arg(short = 'r', long, env = "METABASED_SEQUENCER_RPC_URL", value_parser = parse_url)]
+    /// URL of the sequencing chain RPC node
+    #[arg(short = 'r', long, env = "SEQUENCER_CHAIN_RPC_URL", value_parser = parse_url)]
     pub chain_rpc_url: Url,
 
     /// Port to listen on
-    #[arg(short = 'p', long, env = "METABASED_SEQUENCER_PORT", default_value_t = 8456)]
+    #[arg(short = 'p', long, env = "SEQUENCER_PORT", default_value_t = 8456)]
     pub port: u16,
 
     /// Port for metrics
-    #[arg(short = 'm', long, env = "METABASED_SEQUENCER_METRICS_PORT", default_value_t = 9191)]
+    #[arg(short = 'm', long, env = "SEQUENCER_METRICS_PORT", default_value_t = 9191)]
     pub metrics_port: u16,
 
     /// Private key for signing transactions    
-    #[arg(short = 'k', long, env = "METABASED_SEQUENCER_PRIVATE_KEY")]
+    #[arg(short = 'k', long, env = "SEQUENCER_PRIVATE_KEY")]
     pub private_key: B256,
 }
 
