@@ -15,7 +15,7 @@ use crate::{
 use alloy::{
     consensus::{Transaction, TxEnvelope, TxType},
     hex,
-    network::{Ethereum, EthereumWallet},
+    network::EthereumWallet,
     primitives::{Address, Bytes, TxHash, U256},
     providers::{
         fillers::{
@@ -28,11 +28,9 @@ use alloy::{
     rpc::types::{TransactionInput, TransactionRequest},
     signers::local::PrivateKeySigner,
     sol_types::SolCall,
-    transports::http::Http,
 };
 use eyre::Result;
 use jsonrpsee::{core::RpcResult, types::Params, Extensions};
-use reqwest::Client;
 use std::{
     sync::Arc,
     time::{Duration, Instant},
@@ -44,16 +42,26 @@ pub type FilledProvider = FillProvider<
     JoinFill<
         JoinFill<
             JoinFill<
-                JoinFill<Identity, NonceFiller<CachedNonceManager>>,
+                JoinFill<
+                    JoinFill<
+                        Identity,
+                        JoinFill<
+                            GasFiller,
+                            JoinFill<
+                                alloy::providers::fillers::BlobGasFiller,
+                                JoinFill<NonceFiller, ChainIdFiller>,
+                            >,
+                        >,
+                    >,
+                    NonceFiller<CachedNonceManager>,
+                >,
                 WalletFiller<EthereumWallet>,
             >,
             GasFiller,
         >,
         ChainIdFiller,
     >,
-    RootProvider<Http<Client>>,
-    Http<Client>,
-    Ethereum,
+    RootProvider,
 >;
 
 /// The service for relaying transactions to the sequencing contract.
@@ -77,7 +85,7 @@ impl RelayerService {
 
         let provider = ProviderBuilder::new()
             // TODO [SEQ-620]: Make nonce management more robust
-            .with_cached_nonce_management()
+            .filler(NonceFiller::new(CachedNonceManager::default()))
             .filler(WalletFiller::new(wallet))
             .filler(GasFiller)
             .filler(ChainIdFiller::new(None))
