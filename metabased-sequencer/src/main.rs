@@ -13,6 +13,7 @@ use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
 
 #[tokio::main]
+#[allow(clippy::redundant_pub_crate)]
 async fn main() -> Result<()> {
     // Initialize logging
     FmtSubscriber::builder()

@@ -2,7 +2,7 @@
 
 use alloy::sol;
 
-// TODO: Use contract bindings
+// TODO [SEQ-658]: Use contract bindings
 sol! {
     #[derive(Debug, PartialEq, Eq)]
     #[sol(rpc)]
