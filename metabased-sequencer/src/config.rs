@@ -29,7 +29,7 @@ pub struct Config {
     pub chain_contract_address: Address,
 
     /// URL of the sequencing chain RPC node
-    #[arg(short = 'r', long, env = "SEQUENCER_CHAIN_RPC_URL", value_parser = parse_url)]
+    #[arg(short = 'r', long, env = "SEQUENCER_CHAIN_RPC_ADDRESS", value_parser = parse_url)]
     pub chain_rpc_url: Url,
 
     /// Port to listen on
