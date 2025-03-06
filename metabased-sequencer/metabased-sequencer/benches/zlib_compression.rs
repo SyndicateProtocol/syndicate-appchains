@@ -1,13 +1,12 @@
 use alloy::{
     primitives::{hex_literal::hex, Address, Bytes, B256, U256},
     rlp::{Encodable, RlpDecodable, RlpEncodable},
-    signers::k256::elliptic_curve::rand_core::RngCore,
 };
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use metabased_sequencer::infrastructure::{
     compress_transaction, compress_transactions, decompress_transaction, decompress_transactions,
 };
-use rand::Rng;
+use rand::{Rng, RngCore};
 use std::time::Instant;
 
 // Sample transactions used in benchmarks
@@ -101,7 +100,7 @@ struct Transaction {
 
 /// Generates a random raw Ethereum transaction in hexadecimal format
 pub fn generate_random_raw_transaction_rlp() -> String {
-    let mut rng = rand::thread_rng();
+    let mut rng = rand::rng();
 
     // Generate random recipient address
     let mut recipient_bytes = [0u8; 20];
@@ -116,26 +115,26 @@ pub fn generate_random_raw_transaction_rlp() -> String {
     // Convert Gwei to Wei for gas prices (1 Gwei = 1e9 Wei)
     let min_gas_price_gwei: u64 = 1;
     let max_gas_price_gwei: u64 = 100;
-    let gas_price_gwei = rng.gen_range(min_gas_price_gwei..=max_gas_price_gwei);
+    let gas_price_gwei = rng.random_range(min_gas_price_gwei..=max_gas_price_gwei);
     let gas_price = U256::from(gas_price_gwei) * U256::from(1_000_000_000u64);
 
     let min_priority_fee_gwei: u64 = 1;
     let max_priority_fee_gwei: u64 = 50;
-    let priority_fee_gwei = rng.gen_range(min_priority_fee_gwei..=max_priority_fee_gwei);
+    let priority_fee_gwei = rng.random_range(min_priority_fee_gwei..=max_priority_fee_gwei);
     let priority_fee = U256::from(priority_fee_gwei) * U256::from(1_000_000_000u64);
 
     let tx = Transaction {
         chain_id: 1, // mainnet
-        nonce: rng.gen_range(0..1_000_000),
+        nonce: rng.random_range(0..1_000_000),
         max_priority_fee_per_gas: priority_fee,
         gas_price,
-        gas_limit: U256::from(rng.gen_range(21_000..1_000_000)),
+        gas_limit: U256::from(rng.random_range(21_000..1_000_000)),
         to: Address::from_slice(&recipient_bytes),
         // Random value between 0 and 2 ETH (in Wei)
-        value: U256::from(rng.gen_range(0..=2_000_000_000_000_000_000u64)),
+        value: U256::from(rng.random_range(0..=2_000_000_000_000_000_000u64)),
         data: Bytes::default(),
         access_list: vec![1],
-        v: 2 + 35 + rng.gen_range(0..2), // EIP-155 encoding
+        v: 2 + 35 + rng.random_range(0..2), // EIP-155 encoding
         r: B256::from_slice(&r_bytes),
         s: B256::from_slice(&s_bytes),
     };

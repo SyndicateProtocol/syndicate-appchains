@@ -5,9 +5,7 @@ use crate::{
     },
     infrastructure::sol::MetabasedSequencerChain::MetabasedSequencerChainInstance,
 };
-use alloy::{
-    hex, network::Network, primitives::U256, providers::Provider, sol, transports::Transport,
-};
+use alloy::{hex, network::Network, primitives::U256, providers::Provider, sol};
 use async_trait::async_trait;
 use std::{marker::PhantomData, time::Duration};
 use tracing::{debug_span, error, info, warn};
@@ -27,23 +25,16 @@ sol! {
 }
 
 #[derive(Debug)]
-pub struct SolMetabasedSequencerChainService<P: Provider<N>, T: Transport + Clone, N: Network> {
+pub struct SolMetabasedSequencerChainService<P: Provider<N>, N: Network> {
     chain_contract_address: Address,
     wallet_address: Address,
     provider: P,
-    phantom1: PhantomData<T>,
-    phantom2: PhantomData<N>,
+    phantom1: PhantomData<N>,
 }
 
-impl<P: Provider<N>, T: Transport + Clone, N: Network> SolMetabasedSequencerChainService<P, T, N> {
+impl<P: Provider<N>, N: Network> SolMetabasedSequencerChainService<P, N> {
     pub fn new(chain_contract_address: Address, wallet_address: Address, provider: P) -> Self {
-        Self {
-            chain_contract_address,
-            wallet_address,
-            provider,
-            phantom1: Default::default(),
-            phantom2: Default::default(),
-        }
+        Self { chain_contract_address, wallet_address, provider, phantom1: Default::default() }
     }
 
     pub fn contract(&self) -> MetabasedSequencerChainInstance<(), &P, N> {
@@ -93,8 +84,8 @@ pub fn format_units_uint(x: &U256, decimals: &U256) -> String {
 }
 
 #[async_trait]
-impl<P: Provider<N>, T: Transport + Clone, N: Network> MetabasedSequencerChainService
-    for SolMetabasedSequencerChainService<P, T, N>
+impl<P: Provider<N>, N: Network> MetabasedSequencerChainService
+    for SolMetabasedSequencerChainService<P, N>
 {
     type Error = alloy::contract::Error;
 
@@ -174,7 +165,6 @@ mod tests {
     use alloy::{
         network::Ethereum,
         providers::{ProviderCall::BoxedFuture, RootProvider, RpcWithBlock},
-        transports::BoxTransport,
     };
 
     #[derive(Debug, Clone)]
@@ -209,7 +199,7 @@ mod tests {
     async fn test_get_balance() {
         let expected_balance = U256::from(100);
         let provider = MockProvider::new(expected_balance);
-        let service: SolMetabasedSequencerChainService<MockProvider, BoxTransport, Ethereum> =
+        let service: SolMetabasedSequencerChainService<MockProvider, Ethereum> =
             SolMetabasedSequencerChainService::new(
                 Address::default(),
                 Address::default(),
@@ -223,7 +213,7 @@ mod tests {
     async fn test_get_zero_balance() {
         let expected_balance = U256::from(0);
         let provider = MockProvider::new(expected_balance);
-        let service: SolMetabasedSequencerChainService<MockProvider, BoxTransport, Ethereum> =
+        let service: SolMetabasedSequencerChainService<MockProvider, Ethereum> =
             SolMetabasedSequencerChainService::new(
                 Address::default(),
                 Address::default(),
