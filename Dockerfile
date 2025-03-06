@@ -50,8 +50,7 @@ RUN cargo build --profile $BUILD_PROFILE \
 RUN cargo build --profile $BUILD_PROFILE \
     --features "$FEATURES" \
     --locked \
-    --package metabased-sequencer \
-    --package proxy
+    --package metabased-sequencer
 
 # Copy binaries to known locations
 RUN cp /app/target/$BUILD_PROFILE/metabased-translator /app/translator && \
