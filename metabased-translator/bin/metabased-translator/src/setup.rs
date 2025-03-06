@@ -1,6 +1,10 @@
 use crate::{config::MetabasedConfig, types::RuntimeError};
-use block_builder::{block_builder::BlockBuilder, rollups::shared::RollupAdapter};
-use common::types::{BlockAndReceipts, Chain, KnownState};
+use alloy::eips::BlockNumberOrTag;
+use block_builder::{
+    block_builder::BlockBuilder, connectors::mchain::MetaChainProvider,
+    rollups::shared::RollupAdapter,
+};
+use common::types::{BlockAndReceipts, BlockRef, Chain, KnownState};
 use eyre::Result;
 use ingestor::{
     config::ChainIngestorConfig,
@@ -95,4 +99,112 @@ pub async fn create_node_components<R: RollupAdapter>(
         slotter,
         block_builder,
     ))
+}
+
+async fn validate_block_add_timestamp(
+    client: &Arc<dyn RPCClient>,
+    expected_block: &mut BlockRef,
+) -> bool {
+    match client.get_block_by_number(BlockNumberOrTag::Number(expected_block.number)).await {
+        Ok(block) => {
+            expected_block.timestamp = block.timestamp;
+            block.hash == expected_block.hash
+        }
+        Err(_) => false,
+    }
+}
+
+// TODO (SEQ-651) - re-use this function in case of reorg
+pub async fn get_safe_state(
+    mchain: &MetaChainProvider,
+    sequencing_client: Arc<dyn RPCClient>,
+    settlement_client: Arc<dyn RPCClient>,
+    rollup_adapter: &impl RollupAdapter,
+) -> Result<(Option<KnownState>, Option<u64>)> {
+    let mut current_block = BlockNumberOrTag::Latest;
+    loop {
+        match rollup_adapter.get_processed_blocks(&mchain.provider, current_block).await? {
+            Some((mut state, block_number)) => {
+                let seq_valid =
+                    validate_block_add_timestamp(&sequencing_client, &mut state.sequencing_block)
+                        .await;
+                let settle_valid =
+                    validate_block_add_timestamp(&settlement_client, &mut state.settlement_block)
+                        .await;
+
+                if seq_valid && settle_valid {
+                    return Ok((Some(state), Some(block_number)));
+                }
+                current_block = BlockNumberOrTag::Number(block_number.saturating_sub(1));
+            }
+            None => return Ok((None, None)),
+        };
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy::primitives::{hex, B256};
+    use async_trait::async_trait;
+    use common::types::Block;
+    use ingestor::eth_client::RPCClientError;
+    use std::fmt::Debug;
+
+    #[derive(Debug, Clone)]
+    struct MockRPCClient {
+        block_hash: B256,
+        timestamp: u64,
+    }
+
+    #[async_trait]
+    impl RPCClient for MockRPCClient {
+        async fn get_block_by_number(&self, _: BlockNumberOrTag) -> Result<Block, RPCClientError> {
+            Ok(Block {
+                hash: self.block_hash,
+                timestamp: self.timestamp,
+                number: 1,
+                ..Default::default()
+            })
+        }
+
+        async fn batch_get_blocks_and_receipts(
+            &self,
+            _block_numbers: Vec<u64>,
+        ) -> Result<Vec<BlockAndReceipts>, RPCClientError> {
+            unimplemented!("Not needed for this test")
+        }
+    }
+
+    #[tokio::test]
+    async fn test_validate_block() {
+        let expected_hash = B256::from_slice(&hex!(
+            "1234567890123456789012345678901234567890123456789012345678901234"
+        ));
+        let expected_timestamp = 12345;
+
+        let mut test_block = BlockRef {
+            hash: expected_hash,
+            number: 1,
+            timestamp: 0, // Initial timestamp
+        };
+
+        let client: Arc<dyn RPCClient> =
+            Arc::new(MockRPCClient { block_hash: expected_hash, timestamp: expected_timestamp });
+
+        assert!(validate_block_add_timestamp(&client, &mut test_block).await);
+        assert_eq!(test_block.timestamp, expected_timestamp);
+
+        // Test mismatch case
+        let client_mismatch: Arc<dyn RPCClient> = Arc::new(MockRPCClient {
+            block_hash: B256::from_slice(&hex!(
+                "4321432143214321432143214321432143214321432143214321432143214321"
+            )),
+            timestamp: expected_timestamp,
+        });
+
+        let mut test_block = BlockRef { hash: expected_hash, number: 1, timestamp: 0 };
+
+        assert!(!validate_block_add_timestamp(&client_mismatch, &mut test_block).await);
+    }
 }

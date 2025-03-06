@@ -14,7 +14,10 @@ use alloy::{
 };
 use block_builder::{
     block_builder::BlockBuilder,
-    config::{get_default_private_key_signer, get_rollup_contract_address},
+    config::{
+        get_default_private_key_signer, get_rollup_contract_address,
+        TargetRollupType::{ARBITRUM, OPTIMISM},
+    },
     connectors::mchain::{FilledProvider, MetaChainProvider, MCHAIN_ID},
     metrics::BlockBuilderMetrics,
     rollups::{
@@ -363,11 +366,11 @@ impl MetaNode {
         config.block_builder.sequencing_contract_address = get_rollup_contract_address();
 
         match config.block_builder.target_rollup_type {
-            block_builder::config::TargetRollupType::OPTIMISM => {
+            OPTIMISM => {
                 let adapter = OptimismAdapter::new(&config.block_builder);
                 Self::new_with_rollup_adapter(pre_loaded, config, adapter).await
             }
-            block_builder::config::TargetRollupType::ARBITRUM => {
+            ARBITRUM => {
                 let adapter = ArbitrumAdapter::new(&config.block_builder);
                 Self::new_with_rollup_adapter(pre_loaded, config, adapter).await
             }

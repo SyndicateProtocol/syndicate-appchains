@@ -1,18 +1,19 @@
-use alloy::eips::BlockNumberOrTag;
 use block_builder::{
+    config::TargetRollupType::{ARBITRUM, OPTIMISM},
     connectors::mchain::MetaChainProvider,
     rollups::{
         arbitrum::arbitrum_adapter::ArbitrumAdapter, optimism::optimism_adapter::OptimismAdapter,
         shared::RollupAdapter,
     },
 };
-use common::{tracing::init_tracing_with_extra_fields, types::KnownState};
+use common::tracing::init_tracing_with_extra_fields;
 use eyre::Result;
-use ingestor::eth_client::RPCClient;
 use metabased_translator::{
     config::MetabasedConfig,
     handles::ComponentHandles,
-    setup::{clients, create_node_components, get_extra_fields_for_logging, init_metrics},
+    setup::{
+        clients, create_node_components, get_extra_fields_for_logging, get_safe_state, init_metrics,
+    },
     shutdown::{ShutdownChannels, ShutdownTx},
     types::RuntimeError,
 };
@@ -35,11 +36,11 @@ fn main() -> Result<(), RuntimeError> {
 
     // Run the async process
     match base_config.block_builder.target_rollup_type {
-        block_builder::config::TargetRollupType::OPTIMISM => {
+        OPTIMISM => {
             runtime
                 .block_on(run(&base_config, OptimismAdapter::new(&base_config.block_builder)))?;
         }
-        block_builder::config::TargetRollupType::ARBITRUM => {
+        ARBITRUM => {
             runtime
                 .block_on(run(&base_config, ArbitrumAdapter::new(&base_config.block_builder)))?;
         }
@@ -102,55 +103,6 @@ async fn run(
 
     info!("Starting Metabased Translator");
     start_translator(main_shutdown_rx, tx, component_tasks, metrics_task).await
-}
-
-// TODO SEQ-651 - re-use this function in case of reorg
-async fn get_safe_state(
-    mchain: &MetaChainProvider,
-    sequencing_client: std::sync::Arc<dyn RPCClient>,
-    settlement_client: std::sync::Arc<dyn RPCClient>,
-    rollup_adapter: &impl RollupAdapter,
-) -> Result<(Option<KnownState>, Option<u64>)> {
-    let mut current_block = BlockNumberOrTag::Latest;
-    loop {
-        match rollup_adapter.get_processed_blocks(&mchain.provider, current_block).await? {
-            Some((mut state, block_number)) => {
-                // Check if sequencing block matches
-                let seq_valid = match sequencing_client
-                    .get_block_by_number(BlockNumberOrTag::Number(state.sequencing_block.number))
-                    .await
-                {
-                    Ok(block) => {
-                        // override the timestamp (it's not stored on the mchain)
-                        state.sequencing_block.timestamp = block.timestamp;
-                        block.hash == state.sequencing_block.hash
-                    }
-                    Err(_) => false,
-                };
-
-                // Check if settlement block matches
-                let settle_valid = match settlement_client
-                    .get_block_by_number(BlockNumberOrTag::Number(state.settlement_block.number))
-                    .await
-                {
-                    Ok(block) => {
-                        // override the timestamp (it's not stored on the mchain)
-                        state.settlement_block.timestamp = block.timestamp;
-                        block.hash == state.settlement_block.hash
-                    }
-                    Err(_) => false,
-                };
-
-                // If both match, return the state
-                if seq_valid && settle_valid {
-                    return Ok((Some(state), Some(block_number)));
-                }
-                // Walk back one block
-                current_block = BlockNumberOrTag::Number(block_number.saturating_sub(1));
-            }
-            None => return Ok((None, None)),
-        };
-    }
 }
 
 #[allow(clippy::too_many_arguments)]
