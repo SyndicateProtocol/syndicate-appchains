@@ -33,10 +33,7 @@ pub struct Config {
     pub chain_rpc_url: Url,
 
     /// Port to listen on
-    ///
-    /// This can be set with the PORT environment variable (for Cloud Run compatibility).
-    /// Falls back to `SEQUENCER_PORT` if PORT is not set.
-    #[arg(short = 'p', long, env = "PORT", default_value_t = 8456)]
+    #[arg(short = 'p', long, env = "SEQUENCER_PORT", default_value_t = 8456)]
     pub port: u16,
 
     /// Port for metrics

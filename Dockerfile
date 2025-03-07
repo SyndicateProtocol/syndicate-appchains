@@ -106,6 +106,7 @@ RUN apt-get update && \
     curl \
     build-essential \
     git \
+    socat \
     && rm -rf /var/lib/apt/lists/*
 
 # NOTE: Foundry is unnecessary for the metabased-sequencer. Skipping install
@@ -120,9 +121,9 @@ RUN mkdir -p /etc/metabased-sequencer
 VOLUME ["/data"]
 
 # Expose ports
-# NOTE: GCP Cloud Run defaults to 8080 so this line is unnecessary for such deployment
-EXPOSE 8545 8546
+# NOTE: GCP Cloud Run defaults to 8080, so we expose it and set up port forwarding
+EXPOSE 8080 8545 8546
 
-ENTRYPOINT ["/usr/local/bin/metabased-sequencer"]
+ENTRYPOINT ["sh", "-c", "socat TCP-LISTEN:8080,fork TCP:localhost:8456 & /usr/local/bin/metabased-sequencer"]
 # Optional default arguments can be provided via CMD
 LABEL service=metabased-sequencer
