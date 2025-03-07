@@ -2,10 +2,14 @@
 
 use alloy::{
     eips::{eip2718::Encodable2718, BlockId::Number, BlockNumberOrTag},
+    hex::FromHex,
     network::{EthereumWallet, TransactionBuilder},
-    primitives::{address, utils::parse_ether, Address, BlockHash, U256},
+    primitives::{address, utils::parse_ether, Address, BlockHash, Log, B256, U256},
     providers::{ext::AnvilApi as _, Provider, WalletProvider},
-    rpc::types::{anvil::MineOptions, BlockTransactionsKind, TransactionRequest},
+    rpc::types::{
+        anvil::MineOptions, BlockTransactionsKind, Filter, FilterSet, TransactionRequest,
+    },
+    sol_types::SolEvent,
 };
 use block_builder::{
     config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
@@ -19,23 +23,29 @@ use common::{
     tracing::init_test_tracing,
     types::{Block, BlockRef},
 };
-<<<<<<< HEAD
-use common::{tracing::init_test_tracing, types::Block};
-use contract_bindings::arbitrum::{iinbox::IInbox, irollupuser::IRollupUser, rollup::Rollup};
+use contract_bindings::arbitrum::{
+    iinbox::IInbox,
+    irollupcore::IRollupCore::AssertionCreated,
+    irollupuser::IRollupUser::{
+        self, AssertionInputs, AssertionState, BeforeStateData, ConfigData, GlobalState,
+        MachineStatus,
+    },
+    rollup::Rollup,
+};
 use e2e_tests::full_meta_node::{
     launch_nitro_node, start_reth, MetaNode, PRELOAD_INBOX_ADDRESS, PRELOAD_ROLLUP_ADDRESS,
 };
-=======
-use contract_bindings::arbitrum::{iinbox::IInbox, rollup::Rollup};
-use e2e_tests::full_meta_node::{launch_nitro_node, start_reth, MetaNode, PRELOAD_INBOX_ADDRESS};
->>>>>>> f0166f42d2c5306a28a8710700252c1df20e4bd1
 use eyre::{eyre, Result};
 use metabased_translator::{config::MetabasedConfig, setup::get_safe_state};
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
-use std::time::Duration;
+use serde::{
+    de::{self, Deserializer},
+    Deserialize, Serialize, Serializer,
+};
+use std::{str::FromStr, time::Duration};
 use tokio::time::sleep;
-use tracing::Level;
+use tracing::{info, Level};
 
 /// mine a mchain block with a delay - for testing only
 async fn mine_block(provider: &MetaChainProvider, delay: u64) -> Result<BlockHash> {
@@ -679,18 +689,91 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
     let inbox = IInbox::new(PRELOAD_INBOX_ADDRESS, &meta_node.settlement_provider);
     _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
 
-    let global_state: serde_json::Value = meta_node
+    // let global_state: serde_json::Value = meta_node
+    //     .metabased_rollup
+    //     .raw_request(
+    //         "arbdebug_validateMessageNumber".into(),
+    //         ("0x0", true, "0x184884e1eb9fefdc158f6c8ac912bb183bf3cf83f0090317e0bc4ac5860baa39"),
+    //     )
+    //     .await?;
+
+    // info!("GLOBAL STATE {:?}", global_state);
+    #[derive(Serialize, Deserialize, Debug)]
+    #[serde(rename_all = "camelCase")]
+    struct NitroBlock {
+        hash: B256,
+        send_root: B256,
+    }
+    let block: NitroBlock = meta_node
         .metabased_rollup
-        .raw_request(
-            "arbdebug_validateMessageNumber".into(),
-            ("0x0", true, "0x184884e1eb9fefdc158f6c8ac912bb183bf3cf83f0090317e0bc4ac5860baa39"),
-        )
+        .raw_request("eth_getBlockByNumber".into(), ("0x0", false))
         .await?;
 
-    println!("GLOBAL STATE {:?}", global_state);
+    let z: u64 = 0;
+    let global_state =
+        GlobalState { u64Vals: [0 as u64, 0 as u64], bytes32Vals: [block.hash, block.send_root] };
 
-    // let rollup = IRollupUser::new(PRELOAD_ROLLUP_ADDRESS, &meta_node.settlement_provider);
-    // _ = rollup.fastConfirmNewAssertion(assertion, expectedAssertionHash);
+    let config = ConfigData {
+        wasmModuleRoot: B256::from_hex(
+            "0x184884e1eb9fefdc158f6c8ac912bb183bf3cf83f0090317e0bc4ac5860baa39",
+        )
+        .unwrap(),
+        requiredStake: U256::from(1000000000000000000 as u64),
+        challengeManager: address!("0xE801273F775Eacc1d74d1d43f92ec4524caBBD35"),
+        confirmPeriodBlocks: 20,
+        nextInboxPosition: 0,
+    };
+
+    let after_state = AssertionState {
+        globalState: global_state.clone(),
+        machineStatus: 1, // 1 == FINISHED
+        endHistoryRoot: B256::default(),
+    };
+
+    info!("Assertion created!");
+
+    let rollup = IRollupUser::new(PRELOAD_ROLLUP_ADDRESS, &meta_node.settlement_provider);
+
+    let prev = B256::default();
+
+    let latest = rollup.latestConfirmed().call().await?._0;
+
+    let filter = &Filter {
+        address: PRELOAD_ROLLUP_ADDRESS.into(),
+        topics: [
+            AssertionCreated::SIGNATURE_HASH.into(),
+            Default::default(),
+            Default::default(),
+            Default::default(),
+        ],
+        block_option: Default::default(),
+    };
+    let events = meta_node.settlement_provider.get_logs(filter).await?;
+    let log_decode = AssertionCreated::abi_decode_data(&events[0].data().data, true)?;
+    let assertion_inputs = log_decode.0;
+    // info!("ASSERTION CREATED LOG {:#?}", log_decode.0);
+
+    let assertion = AssertionInputs {
+        beforeStateData: assertion_inputs.beforeStateData,
+        beforeState: AssertionState {
+            globalState: GlobalState {
+                u64Vals: [0 as u64, 0 as u64],
+                bytes32Vals: [B256::default(), B256::default()],
+            },
+            machineStatus: 1, // 1 == FINISHED
+            endHistoryRoot: Default::default(),
+        },
+        afterState: after_state.clone(),
+    };
+
+    let assertion_hash =
+        rollup.computeAssertionHash(latest, after_state, B256::default()).call().await?;
+
+    // let eah = rollup.computeAssertionHash(prev, after_state, B256::default()).call().await?;
+
+    let _a = rollup.fastConfirmNewAssertion(assertion, assertion_hash._0).send().await?;
+
+    info!("WE ARE DONE");
 
     // const L2_MESSAGE_KIND_SIGNED_TX: u8 = 4;
     // let gas_limit: u64 = 100_000;
