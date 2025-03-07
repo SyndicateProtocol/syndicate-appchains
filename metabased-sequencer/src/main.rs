@@ -30,9 +30,7 @@ async fn main() -> Result<()> {
     // Initialize metrics
     let mut metrics = MetricsState::new();
     let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
-    let metrics_handler = start_metrics(metrics, config.metrics_port).await.unwrap_or_else(|e| {
-        panic!("Failed to start metrics on port {}: {}", config.metrics_port, e)
-    });
+    let metrics_handler = start_metrics(metrics, config.metrics_port).await;
 
     // Start server
     let (addr, handle) = run_server(&config, relayer_metrics).await?;

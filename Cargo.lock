@@ -2700,8 +2700,10 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "axum",
+ "bytes",
  "clap",
  "eyre",
+ "flate2",
  "hex",
  "jsonrpsee",
  "prometheus-client",
@@ -2746,7 +2748,6 @@ dependencies = [
  "block-builder",
  "clap",
  "common",
- "eyre",
  "ingestor",
  "prometheus-client",
  "reqwest",

@@ -94,10 +94,7 @@ pub async fn init_metrics(config: &mut MetabasedConfig) -> (TranslatorMetrics, J
     let registry = Registry::default();
     let mut metrics_state = MetricsState { registry };
     let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
-    let metrics_task =
-        start_metrics(metrics_state, config.metrics.metrics_port).await.unwrap_or_else(|e| {
-            panic!("Failed to start metrics on port {}: {}", config.metrics.metrics_port, e)
-        });
+    let metrics_task = start_metrics(metrics_state, config.metrics.metrics_port).await;
     (metrics, metrics_task)
 }
 

@@ -35,7 +35,7 @@ use std::{
     sync::Arc,
     time::{Duration, Instant},
 };
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 #[allow(missing_docs)]
 pub type FilledProvider = FillProvider<
@@ -70,6 +70,9 @@ pub struct RelayerService {
     /// The address of the sequencing contract on the sequencing chain
     contract_address: Address,
 
+    /// The address of the wallet for the relayer service
+    wallet_address: Address,
+
     /// The provider for the sequencing chain
     provider: Arc<FilledProvider>,
 
@@ -81,6 +84,7 @@ impl RelayerService {
     /// Create a new `RelayerService` instance.
     pub fn new(config: &Config, relayer_metrics: RelayerMetrics) -> Result<Self> {
         let signer = PrivateKeySigner::from_bytes(&config.private_key)?;
+        let wallet_address = signer.address();
         let wallet = EthereumWallet::from(signer);
 
         let provider = ProviderBuilder::new()
@@ -93,6 +97,7 @@ impl RelayerService {
 
         Ok(Self {
             contract_address: config.chain_contract_address,
+            wallet_address,
             provider: Arc::new(provider),
             metrics: Arc::new(relayer_metrics),
         })
@@ -188,7 +193,19 @@ impl RelayerService {
             .await
         {
             Ok(hash) => {
-                // TODO: Log sequencer balance
+                match self.provider.get_balance(self.wallet_address).await {
+                    Ok(balance) => info!(
+                        ?self.wallet_address,
+                        "Wallet balance in wei : {:#x}",
+                        balance
+                    ),
+                    Err(e) => warn!(
+                        ?self.wallet_address,
+                        "Error getting wallet balance: {}",
+                        e
+                    ),
+                }
+
                 debug!("Transaction submitted: {}", hex::encode(hash));
                 Ok(original_tx_hash)
             }
@@ -201,6 +218,7 @@ impl RelayerService {
 }
 
 // Params validation
+// TODO [SEQ-663]: Refactor this function
 fn parse_send_raw_transaction_params(params: Params<'static>) -> Result<Bytes, Error> {
     let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap_or("[]"))?;
     let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
