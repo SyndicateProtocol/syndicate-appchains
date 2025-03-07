@@ -593,6 +593,7 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
     config.settlement.settlement_start_block = 1;
     config.sequencing.sequencing_start_block = 3;
     let meta_node = MetaNode::new(true, config).await?;
+    sleep(Duration::from_secs(3)).await;
 
     // Sync the tips of the sequencing and settlement chains
     let seq_block: Block = meta_node
