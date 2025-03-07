@@ -65,13 +65,14 @@ async fn run(
         MetaChainProvider::start(&config.block_builder, &metrics.block_builder.mchain_metrics)
             .await?;
 
-    let (safe_state, safe_block_number) = get_safe_state(
+    let (safe_state, safe_block_number) = (get_safe_state(
         &mchain,
         sequencing_client.clone(),
         settlement_client.clone(),
         &rollup_adapter,
     )
-    .await?;
+    .await?)
+        .unzip();
 
     let (
         sequencing_ingestor,

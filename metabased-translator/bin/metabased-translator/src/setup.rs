@@ -120,7 +120,7 @@ pub async fn get_safe_state(
     sequencing_client: Arc<dyn RPCClient>,
     settlement_client: Arc<dyn RPCClient>,
     rollup_adapter: &impl RollupAdapter,
-) -> Result<(Option<KnownState>, Option<u64>)> {
+) -> Result<Option<(KnownState, u64)>> {
     let mut current_block = BlockNumberOrTag::Latest;
     loop {
         match rollup_adapter.get_processed_blocks(&mchain.provider, current_block).await? {
@@ -133,11 +133,11 @@ pub async fn get_safe_state(
                         .await;
 
                 if seq_valid && settle_valid {
-                    return Ok((Some(state), Some(block_number)));
+                    return Ok(Some((state, block_number)));
                 }
                 current_block = BlockNumberOrTag::Number(block_number.saturating_sub(1));
             }
-            None => return Ok((None, None)),
+            None => return Ok(None),
         };
     }
 }
