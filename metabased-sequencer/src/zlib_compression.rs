@@ -1,11 +1,10 @@
-use crate::domain;
+//! The `zlib_compression` module provides functionality for compressing and decompressing
+//! transactions
+
+use alloy::primitives::Bytes;
 use bytes::BytesMut;
-use domain::primitives::Bytes;
 use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
-use std::{
-    convert::Infallible,
-    io::{self, Read, Write},
-};
+use std::io::{Error, ErrorKind, Read, Write};
 
 // Valid Zlib CM bits
 const ZLIB_CM8: u8 = 0x08;
@@ -14,7 +13,7 @@ const CM_BITS_MASK: u8 = 0x0F;
 
 /// Compresses a single Ethereum transaction using zlib compression
 /// Ensures the CM bits are set to 8 (default for zlib)
-pub fn compress_transaction(transaction: &[u8]) -> Result<Vec<u8>, IoError> {
+pub fn compress_transaction(transaction: &[u8]) -> Result<Vec<u8>, Error> {
     let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
     encoder.write_all(transaction)?;
     let compressed = encoder.finish()?;
@@ -26,7 +25,7 @@ pub fn compress_transaction(transaction: &[u8]) -> Result<Vec<u8>, IoError> {
 }
 
 /// Decompresses a single zlib compressed Ethereum transaction
-pub fn decompress_transaction(compressed: &[u8]) -> Result<Vec<u8>, IoError> {
+pub fn decompress_transaction(compressed: &[u8]) -> Result<Vec<u8>, Error> {
     is_valid_cm_bits_8_or_15(compressed)?;
 
     let mut decoder = ZlibDecoder::new(compressed);
@@ -36,24 +35,9 @@ pub fn decompress_transaction(compressed: &[u8]) -> Result<Vec<u8>, IoError> {
     Ok(buffer)
 }
 
-#[derive(Debug)]
-pub struct IoError(io::Error);
-
-impl From<io::Error> for IoError {
-    fn from(e: io::Error) -> Self {
-        IoError(e)
-    }
-}
-
-impl From<IoError> for Infallible {
-    fn from(_: IoError) -> Self {
-        unreachable!("Cannot instantiate infallible")
-    }
-}
-
 /// Compresses a slice of Ethereum transactions using zlib compression
 /// Each transaction is prefixed with its length to enable proper decompression
-pub fn compress_transactions(transactions: &[Bytes]) -> Result<Bytes, IoError> {
+pub fn compress_transactions(transactions: &[Bytes]) -> Result<Bytes, Error> {
     let mut buffer = BytesMut::new();
 
     // Write number of transactions (4 bytes)
@@ -76,7 +60,7 @@ pub fn compress_transactions(transactions: &[Bytes]) -> Result<Bytes, IoError> {
 }
 
 /// Decompresses zlib compressed Ethereum transactions back into their original form
-pub fn decompress_transactions(compressed: &Bytes) -> Result<Vec<Bytes>, IoError> {
+pub fn decompress_transactions(compressed: &Bytes) -> Result<Vec<Bytes>, Error> {
     is_valid_cm_bits_8_or_15(compressed)?;
 
     let mut decoder = ZlibDecoder::new(&compressed[..]);
@@ -88,25 +72,29 @@ pub fn decompress_transactions(compressed: &Bytes) -> Result<Vec<Bytes>, IoError
 
     // Read number of transactions
     if buffer.len() < 4 {
-        return Err(IoError(io::Error::new(io::ErrorKind::InvalidData, "Invalid compressed data")));
+        return Err(Error::new(ErrorKind::InvalidData, "Invalid compressed data"));
     }
-    let num_transactions = u32::from_be_bytes(buffer[0..4].try_into().unwrap());
+    let num_transactions = u32::from_be_bytes(
+        buffer[0..4]
+            .try_into()
+            .map_err(|_| Error::new(ErrorKind::InvalidData, "Invalid transaction count bytes"))?,
+    );
     pos += 4;
 
     // Read each transaction
     for _ in 0..num_transactions {
         if pos + 4 > buffer.len() {
-            return Err(IoError(io::Error::new(io::ErrorKind::InvalidData, "Truncated data")));
+            return Err(Error::new(ErrorKind::InvalidData, "Truncated data"));
         }
 
-        let tx_len = u32::from_be_bytes(buffer[pos..pos + 4].try_into().unwrap()) as usize;
+        let tx_len =
+            u32::from_be_bytes(buffer[pos..pos + 4].try_into().map_err(|_| {
+                Error::new(ErrorKind::InvalidData, "Invalid transaction length bytes")
+            })?) as usize;
         pos += 4;
 
         if pos + tx_len > buffer.len() {
-            return Err(IoError(io::Error::new(
-                io::ErrorKind::InvalidData,
-                "Truncated transaction",
-            )));
+            return Err(Error::new(ErrorKind::InvalidData, "Truncated transaction"));
         }
 
         transactions.push(Bytes::copy_from_slice(&buffer[pos..pos + tx_len]));
@@ -121,25 +109,25 @@ fn validate_cm_bits<T: AsRef<[u8]>>(
     compressed: T,
     allowed_values: &[u8],
     error_msg: &str,
-) -> Result<(), IoError> {
+) -> Result<(), Error> {
     let compressed = compressed.as_ref();
 
     // Check for empty data first
     if compressed.is_empty() {
-        return Err(IoError(io::Error::new(io::ErrorKind::InvalidData, "Empty compressed data")));
+        return Err(Error::new(ErrorKind::InvalidData, "Empty compressed data"));
     }
 
     // Extract CM bits and check against allowed values
     let cm_bits = compressed[0] & CM_BITS_MASK;
     if !allowed_values.contains(&cm_bits) {
-        return Err(IoError(io::Error::new(io::ErrorKind::InvalidData, error_msg)));
+        return Err(Error::new(ErrorKind::InvalidData, error_msg));
     }
 
     Ok(())
 }
 
 /// Validates that CM bits are exactly 8
-fn is_valid_cm_bits_8_only<T: AsRef<[u8]>>(compressed: T) -> Result<(), IoError> {
+fn is_valid_cm_bits_8_only<T: AsRef<[u8]>>(compressed: T) -> Result<(), Error> {
     validate_cm_bits(
         compressed,
         &[ZLIB_CM8],
@@ -148,7 +136,7 @@ fn is_valid_cm_bits_8_only<T: AsRef<[u8]>>(compressed: T) -> Result<(), IoError>
 }
 
 /// Validates that CM bits are either 8 or 15
-fn is_valid_cm_bits_8_or_15<T: AsRef<[u8]>>(compressed: T) -> Result<(), IoError> {
+fn is_valid_cm_bits_8_or_15<T: AsRef<[u8]>>(compressed: T) -> Result<(), Error> {
     validate_cm_bits(
         compressed,
         &[ZLIB_CM8, ZLIB_CM15],
@@ -196,11 +184,11 @@ mod tests {
 
     // Pulled random txns from Base Sepolia explorer
     // https://sepolia.basescan.org/tx/0x517f3cda3ec255651839794d633c54843cb07ee54d18dfd6a7797a1d96ec4ffe
-    const SAMPLE_TX_2: [u8; 132] = hex!("cdb554ea000000000000000000000000b8b904c73d2fb4d8c173298a51c27fab70222c320000000000000000000000000000000000000000000000000000000000568936000000000000000000000000b8b904c73d2fb4d8c173298a51c27fab70222c32000000000000000000000000000000000000000000000000000000000059bd0d");
+    const _SAMPLE_TX_2: [u8; 132] = hex!("cdb554ea000000000000000000000000b8b904c73d2fb4d8c173298a51c27fab70222c320000000000000000000000000000000000000000000000000000000000568936000000000000000000000000b8b904c73d2fb4d8c173298a51c27fab70222c32000000000000000000000000000000000000000000000000000000000059bd0d");
     // https://sepolia.basescan.org/tx/0xdcef8686e15d1e163482d27658b4f1260a8dc07a7e5f6bce81df27a8f2127b81
-    const SAMPLE_TX_3: [u8; 68] = hex!("39509351000000000000000000000000dd2da9ba748722faea8629a215ea47dd15e852f90000000000000000000000000000000000000000000000000429d069189e0000");
+    const _SAMPLE_TX_3: [u8; 68] = hex!("39509351000000000000000000000000dd2da9ba748722faea8629a215ea47dd15e852f90000000000000000000000000000000000000000000000000429d069189e0000");
     // https://sepolia.basescan.org/tx/0x5de957de7b67999cc14099b7b40919afb0592de64c20a658c6cd296624b34ba9
-    const SAMPLE_TX_4: [u8; 132] = hex!("81813c8b0000000000000000000000000000000000000000000000000000000001026afc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016345785d8a000000000000000000000000000000000000000000000000000000000000671834d8");
+    const _SAMPLE_TX_4: [u8; 132] = hex!("81813c8b0000000000000000000000000000000000000000000000000000000001026afc0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000016345785d8a000000000000000000000000000000000000000000000000000000000000671834d8");
 
     #[test]
     fn test_single_tx_compression() {

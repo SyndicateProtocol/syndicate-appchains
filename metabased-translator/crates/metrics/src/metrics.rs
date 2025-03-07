@@ -73,8 +73,7 @@ pub async fn start_metrics(metrics_state: MetricsState, port: u16) -> tokio::tas
     let listener = match tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await {
         Ok(listener) => listener,
         Err(e) => {
-            eprintln!("Failed to bind metrics server: {}", e);
-            return tokio::spawn(async {});
+            panic!("Failed to bind metrics server: {}", e);
         }
     };
 
