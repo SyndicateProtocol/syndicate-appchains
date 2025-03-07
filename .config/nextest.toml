@@ -2,5 +2,5 @@
 serial = { max-threads = 1 }
 
 [[profile.default.overrides]]
-filter = 'test(serial::)'
+filter = 'test(serial::) or package(e2e-tests)'
 test-group = 'serial'
