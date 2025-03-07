@@ -158,7 +158,6 @@ mod tests {
     use common::types::{Block, BlockAndReceipts};
     use eyre::Result;
     use mockall::{mock, predicate::*};
-    use serial_test::serial;
     use std::{env, time::Duration};
     use tokio;
 
@@ -189,79 +188,83 @@ mod tests {
         env::remove_var("METRICS_PORT");
     }
 
-    #[test]
-    #[serial]
-    fn test_default_values() {
-        clean_env();
-        let zero = "0x0000000000000000000000000000000000000000";
-        env::set_var("SEQUENCING_RPC_URL", "");
-        env::set_var("SETTLEMENT_RPC_URL", "");
-        env::set_var("SEQUENCING_START_BLOCK", "1");
-        env::set_var("SETTLEMENT_START_BLOCK", "1");
-        env::set_var("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", zero);
-        env::set_var("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", zero);
-        env::set_var("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", zero);
-        let config = MetabasedConfig::try_parse_from(["test"]).unwrap();
+    mod serial {
+        use super::*;
+        use serial_test::serial;
 
-        // Block Builder
-        assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:8888/");
-        assert_eq!(config.block_builder.target_chain_id, 13331370);
+        #[test]
+        #[serial]
+        fn test_default_values() {
+            clean_env();
+            let zero = "0x0000000000000000000000000000000000000000";
+            env::set_var("SEQUENCING_RPC_URL", "");
+            env::set_var("SETTLEMENT_RPC_URL", "");
+            env::set_var("SEQUENCING_START_BLOCK", "1");
+            env::set_var("SETTLEMENT_START_BLOCK", "1");
+            env::set_var("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", zero);
+            env::set_var("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", zero);
+            env::set_var("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", zero);
+            let config = MetabasedConfig::try_parse_from(["test"]).unwrap();
 
-        // Slotter
-        assert_eq!(config.slotter.settlement_delay, 60);
+            // Block Builder
+            assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:8888/");
+            assert_eq!(config.block_builder.target_chain_id, 13331370);
 
-        // Chains
-        assert_eq!(config.sequencing.sequencing_buffer_size, 100);
-        assert_eq!(config.sequencing.sequencing_polling_interval, Duration::from_secs(1));
-        assert_eq!(config.sequencing.sequencing_rpc_url, "");
-        assert_eq!(config.settlement.settlement_buffer_size, 100);
-        assert_eq!(config.settlement.settlement_polling_interval, Duration::from_secs(1));
-        assert_eq!(config.settlement.settlement_rpc_url, "");
+            // Slotter
+            assert_eq!(config.slotter.settlement_delay, 60);
 
-        // Metrics
-        assert_eq!(config.metrics.metrics_port, 9090)
+            // Chains
+            assert_eq!(config.sequencing.sequencing_buffer_size, 100);
+            assert_eq!(config.sequencing.sequencing_polling_interval, Duration::from_secs(1));
+            assert_eq!(config.sequencing.sequencing_rpc_url, "");
+            assert_eq!(config.settlement.settlement_buffer_size, 100);
+            assert_eq!(config.settlement.settlement_polling_interval, Duration::from_secs(1));
+            assert_eq!(config.settlement.settlement_rpc_url, "");
+
+            // Metrics
+            assert_eq!(config.metrics.metrics_port, 9090)
+        }
+
+        #[test]
+        #[serial]
+        fn test_env_vars_override_defaults() {
+            clean_env();
+            let zero = "0x0000000000000000000000000000000000000000";
+            env::set_var("BLOCK_BUILDER_MCHAIN_URL", "http://127.0.0.1:9999/");
+            env::set_var("SLOTTER_SLOT_DURATION", "3");
+            env::set_var("SEQUENCING_BUFFER_SIZE", "200");
+            env::set_var("SEQUENCING_RPC_URL", "");
+            env::set_var("SETTLEMENT_RPC_URL", "");
+            env::set_var("SEQUENCING_START_BLOCK", "1");
+            env::set_var("SETTLEMENT_START_BLOCK", "1");
+            env::set_var("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", zero);
+            env::set_var("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", zero);
+            env::set_var("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", zero);
+
+            let config = MetabasedConfig::try_parse_from(["test"]).unwrap();
+            assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:9999/");
+            assert_eq!(config.sequencing.sequencing_buffer_size, 200);
+        }
+
+        #[test]
+        #[serial]
+        fn test_cli_args_override_env_vars() {
+            clean_env();
+            let zero = "0x0000000000000000000000000000000000000000";
+            env::set_var("BLOCK_BUILDER_MCHAIN_URL", "http://127.0.0.1:9999/");
+            env::set_var("SEQUENCING_RPC_URL", "");
+            env::set_var("SETTLEMENT_RPC_URL", "");
+            env::set_var("SEQUENCING_START_BLOCK", "1");
+            env::set_var("SETTLEMENT_START_BLOCK", "1");
+            env::set_var("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", zero);
+            env::set_var("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", zero);
+            env::set_var("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", zero);
+
+            let config =
+                MetabasedConfig::try_parse_from(["test", "-u", "http://127.0.0.1:7777/"]).unwrap();
+            assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:7777/");
+        }
     }
-
-    #[test]
-    #[serial]
-    fn test_env_vars_override_defaults() {
-        clean_env();
-        let zero = "0x0000000000000000000000000000000000000000";
-        env::set_var("BLOCK_BUILDER_MCHAIN_URL", "http://127.0.0.1:9999/");
-        env::set_var("SLOTTER_SLOT_DURATION", "3");
-        env::set_var("SEQUENCING_BUFFER_SIZE", "200");
-        env::set_var("SEQUENCING_RPC_URL", "");
-        env::set_var("SETTLEMENT_RPC_URL", "");
-        env::set_var("SEQUENCING_START_BLOCK", "1");
-        env::set_var("SETTLEMENT_START_BLOCK", "1");
-        env::set_var("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", zero);
-        env::set_var("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", zero);
-        env::set_var("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", zero);
-
-        let config = MetabasedConfig::try_parse_from(["test"]).unwrap();
-        assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:9999/");
-        assert_eq!(config.sequencing.sequencing_buffer_size, 200);
-    }
-
-    #[test]
-    #[serial]
-    fn test_cli_args_override_env_vars() {
-        clean_env();
-        let zero = "0x0000000000000000000000000000000000000000";
-        env::set_var("BLOCK_BUILDER_MCHAIN_URL", "http://127.0.0.1:9999/");
-        env::set_var("SEQUENCING_RPC_URL", "");
-        env::set_var("SETTLEMENT_RPC_URL", "");
-        env::set_var("SEQUENCING_START_BLOCK", "1");
-        env::set_var("SETTLEMENT_START_BLOCK", "1");
-        env::set_var("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", zero);
-        env::set_var("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", zero);
-        env::set_var("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", zero);
-
-        let config =
-            MetabasedConfig::try_parse_from(["test", "-u", "http://127.0.0.1:7777/"]).unwrap();
-        assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:7777/");
-    }
-
     #[test]
     fn test_generate_command() {
         MetabasedConfig::generate_sample_command();

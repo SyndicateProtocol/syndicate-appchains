@@ -3,7 +3,6 @@
 use e2e_tests::{full_meta_node::start_anvil, port_manager::PortManager};
 use eyre::Result;
 use reqwest::Client;
-use serial_test::serial;
 use std::{process::Command, time::Duration};
 use test_utils::test_path;
 use tokio::{process::Command as TokioCommand, time::sleep};
@@ -78,14 +77,19 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
     Ok(())
 }
 
-#[tokio::test]
-#[serial]
-async fn test_metabased_sigterm() -> Result<()> {
-    run_metabased_translator("-TERM").await
-}
+mod serial {
+    use super::{run_metabased_translator, Result};
+    use serial_test::serial;
 
-#[tokio::test]
-#[serial]
-async fn test_metabased_sigint() -> Result<()> {
-    run_metabased_translator("-INT").await
+    #[tokio::test]
+    #[serial]
+    async fn test_metabased_sigterm() -> Result<()> {
+        run_metabased_translator("-TERM").await
+    }
+
+    #[tokio::test]
+    #[serial]
+    async fn test_metabased_sigint() -> Result<()> {
+        run_metabased_translator("-INT").await
+    }
 }
