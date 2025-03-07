@@ -49,7 +49,7 @@ pub type HttpProvider = FillProvider<
 #[allow(missing_docs)]
 pub struct MetaChainProvider {
     pub mchain_ipc_path: String,
-    provider: FilledProvider,
+    pub provider: FilledProvider,
     auth_provider: FilledProvider,
     metrics: MChainMetrics,
 }

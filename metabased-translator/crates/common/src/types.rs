@@ -183,51 +183,31 @@ impl From<Chain> for &'static str {
         }
     }
 }
-/// The state of a slot describing its finality.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Display, Serialize, Deserialize, Default)]
-#[strum(serialize_all = "lowercase")]
-pub enum SlotState {
-    /// A slot that is considered final and cannot rollback (blocks that are more than
-    /// `MAX_WAIT_MS` old).
-    Safe,
-    /// A slot that we don't expect to fit more blocks into. It should be considered canonical
-    /// unless a reorg happens
-    Closed,
-    /// A slot to which incoming blocks might still be added
-    #[default]
-    Open,
-}
 
 /// A `Slot` is a collection of source chain blocks to be sent to the block builder.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct Slot {
-    /// the number of the slot - `slot_number` == `MetaChain`'s block number.
-    pub number: u64,
-    /// the timestamp of the slot in seconds.
-    pub timestamp: u64,
     /// the block from the sequencing chain to be included in the slot.
-    pub sequencing_block: Arc<BlockAndReceipts>,
+    pub sequencing: Arc<BlockAndReceipts>,
     /// the blocks from the settlement chain to be included in the slot.
-    pub settlement_blocks: Vec<Arc<BlockAndReceipts>>,
-    /// the finality state of the slot.
-    pub state: SlotState,
+    pub settlement: Vec<Arc<BlockAndReceipts>>,
 }
 
 impl Slot {
     /// Creates a new slot
-    pub const fn new(number: u64, timestamp: u64, sequencing_block: Arc<BlockAndReceipts>) -> Self {
-        Self {
-            number,
-            timestamp,
-            sequencing_block,
-            settlement_blocks: Vec::new(),
-            state: SlotState::Open,
-        }
+    pub const fn new(sequencing_block: Arc<BlockAndReceipts>) -> Self {
+        Self { sequencing: sequencing_block, settlement: Vec::new() }
     }
 
     /// Adds a block to the slot's chain-specific block list
     pub fn push_settlement_block(&mut self, block: Arc<BlockAndReceipts>) {
-        self.settlement_blocks.push(block)
+        self.settlement.push(block)
+    }
+
+    /// Returns the timestamp of the slot
+    #[allow(clippy::missing_const_for_fn)] // false positive (cannot deref Arc in a const fn)
+    pub fn timestamp(&self) -> u64 {
+        self.sequencing.block.timestamp
     }
 }
 
@@ -235,13 +215,10 @@ impl Display for Slot {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(
             f,
-            "Slot #{} [ts: {}, state: {}],  Sequencing block: {},  Settlement blocks (total: {}): {}",
-            self.number,
-            self.timestamp,
-            self.state,
-            format_block(&self.sequencing_block),
-            self.settlement_blocks.len(),
-            format_blocks(&self.settlement_blocks),
+            "Slot [Sequencing block: {}, Settlement blocks (total: {}): {}]",
+            format_block(&self.sequencing),
+            self.settlement.len(),
+            format_blocks(&self.settlement),
         )
     }
 }
@@ -291,6 +268,17 @@ impl Display for BlockRef {
     fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
         write!(f, "number: {}, ts: {}, hash: {}", self.number, self.timestamp, self.hash)
     }
+}
+
+/// A known state of the translator
+#[derive(Debug)]
+pub struct KnownState {
+    /// mchain block number for this state
+    pub mchain_block_number: u64,
+    /// The latest block from the sequencing chain that has been processed
+    pub sequencing_block: BlockRef,
+    /// The latest block from the settlement chain that has been processed
+    pub settlement_block: BlockRef,
 }
 
 fn deserialize_address<'de, D>(deserializer: D) -> Result<Address, D::Error>
@@ -503,10 +491,10 @@ mod test {
             }],
         });
 
-        let mut slot = Slot::new(1, 1000, sequencing_block);
+        let mut slot = Slot::new(sequencing_block);
 
         // Add settlement chain block
-        slot.settlement_blocks.push(Arc::new(BlockAndReceipts {
+        slot.settlement.push(Arc::new(BlockAndReceipts {
             block: Block {
                 hash: B256::from_hex(
                     "0x5678901234567890123456789012345678901234567890123456789012345678",

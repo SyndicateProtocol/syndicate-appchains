@@ -1,7 +1,7 @@
 //! Integration tests for the metabased stack
 
 use alloy::{
-    eips::{eip2718::Encodable2718, BlockNumberOrTag},
+    eips::{eip2718::Encodable2718, BlockId::Number, BlockNumberOrTag},
     network::{EthereumWallet, TransactionBuilder},
     primitives::{address, utils::parse_ether, Address, BlockHash, U256},
     providers::{ext::AnvilApi as _, Provider, WalletProvider},
@@ -13,13 +13,16 @@ use block_builder::{
         mchain::{MetaChainProvider, MCHAIN_ID},
         metrics::MChainMetrics,
     },
-    rollups::arbitrum,
+    rollups::arbitrum::{self, arbitrum_adapter::ArbitrumAdapter},
 };
-use common::{tracing::init_test_tracing, types::Block};
+use common::{
+    tracing::init_test_tracing,
+    types::{Block, BlockRef},
+};
 use contract_bindings::arbitrum::{iinbox::IInbox, rollup::Rollup};
 use e2e_tests::full_meta_node::{launch_nitro_node, start_reth, MetaNode, PRELOAD_INBOX_ADDRESS};
 use eyre::{eyre, Result};
-use metabased_translator::config::MetabasedConfig;
+use metabased_translator::{config::MetabasedConfig, setup::get_safe_state};
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use std::time::Duration;
@@ -391,6 +394,45 @@ async fn e2e_test() -> Result<()> {
     // balance should match
     assert_eq!(meta_node.metabased_rollup.get_balance(test_addr).await?, parse_ether("1")?);
 
+    let known_state = get_safe_state(
+        &meta_node.mchain_provider,
+        meta_node.sequencing_client.clone(),
+        meta_node.settlement_client.clone(),
+        &ArbitrumAdapter::new(&config.block_builder),
+    )
+    .await?
+    .unwrap();
+
+    assert_eq!(
+        known_state.mchain_block_number,
+        meta_node.mchain_provider.get_block_number().await?
+    );
+    let seq_block = meta_node
+        .sequencing_provider
+        .get_block(Number(BlockNumberOrTag::Latest), BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
+    assert_eq!(
+        known_state.sequencing_block,
+        BlockRef {
+            number: seq_block.header.number,
+            timestamp: seq_block.header.timestamp,
+            hash: seq_block.header.hash
+        }
+    );
+    let set_block = meta_node
+        .settlement_provider
+        .get_block(Number(BlockNumberOrTag::Number(4)), BlockTransactionsKind::Hashes) // last block (5) hasn't been processed yet
+        .await?
+        .unwrap();
+    assert_eq!(
+        known_state.settlement_block,
+        BlockRef {
+            number: set_block.header.number,
+            timestamp: set_block.header.timestamp,
+            hash: set_block.header.hash
+        }
+    );
     Ok(())
 }
 
@@ -426,7 +468,13 @@ async fn test_nitro_batch() -> Result<()> {
 
     // send a batch to sequence the deposit.
     _ = rollup_contract
-        .postBatch(arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?)
+        .postBatch(
+            arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
+            0,
+            U256::from(0),
+            0,
+            U256::from(0),
+        )
         .send()
         .await?;
     mine_block(&mchain, 0).await?;
@@ -460,8 +508,11 @@ async fn test_nitro_batch() -> Result<()> {
     let batch = arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::L2(
         arbitrum::batch::L1IncomingMessage { header: Default::default(), l2_msg: vec![tx.into()] },
     )]);
-    _ = rollup_contract.postBatch(batch.encode()?).send().await?;
-    mine_block(&mchain, 0).await?;
+    _ = rollup_contract
+        .postBatch(batch.encode()?, 0, U256::from(0), 0, U256::from(0))
+        .send()
+        .await?;
+    mchain.mine_block(0).await?;
 
     // wait for the batch to be processed
     sleep(Duration::from_millis(200)).await;
@@ -510,7 +561,13 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
 
     // send a batch to sequence the deposit.
     _ = rollup_contract
-        .postBatch(arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?)
+        .postBatch(
+            arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
+            0,
+            U256::from(0),
+            0,
+            U256::from(0),
+        )
         .send()
         .await?;
     mine_block(&mchain, 0).await?;
@@ -561,8 +618,11 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
             l2_msg: vec![tx.clone().into(), tx.into(), tx2.into()],
         },
     )]);
-    _ = rollup_contract.postBatch(batch.encode()?).send().await?;
-    mine_block(&mchain, 0).await?;
+    _ = rollup_contract
+        .postBatch(batch.encode()?, 0, U256::from(0), 0, U256::from(0))
+        .send()
+        .await?;
+    mchain.mine_block(0).await?;
 
     // wait 100ms for the batch to be processed
     sleep(Duration::from_millis(100)).await;

@@ -2,7 +2,7 @@ use crate::{
     shutdown::{ShutdownRx, ShutdownTx},
     types::RuntimeError,
 };
-use block_builder::block_builder::BlockBuilder;
+use block_builder::{block_builder::BlockBuilder, rollups::shared::RollupAdapter};
 use common::types::BlockAndReceipts;
 use eyre::Report;
 use ingestor::ingestor::Ingestor;
@@ -20,14 +20,14 @@ pub struct ComponentHandles {
 
 impl ComponentHandles {
     #[allow(clippy::too_many_arguments)]
-    pub fn spawn(
-        safe_block_number: Option<u64>,
+    pub fn spawn<R: RollupAdapter>(
+        safe_mchain_block_number: Option<u64>,
         sequencing_ingestor: Ingestor,
         sequencing_rx: tokio::sync::mpsc::Receiver<Arc<BlockAndReceipts>>,
         settlement_ingestor: Ingestor,
         settlement_rx: tokio::sync::mpsc::Receiver<Arc<BlockAndReceipts>>,
         slotter: Slotter,
-        block_builder: BlockBuilder,
+        block_builder: BlockBuilder<R>,
         rx: ShutdownRx,
     ) -> Self {
         let sequencing =
@@ -42,7 +42,9 @@ impl ComponentHandles {
             );
 
         let block_builder =
-            tokio::spawn(async move { block_builder.start(safe_block_number, rx.builder).await });
+            tokio::spawn(
+                async move { block_builder.start(safe_mchain_block_number, rx.builder).await },
+            );
 
         Self { sequencing, settlement, slotter, block_builder }
     }

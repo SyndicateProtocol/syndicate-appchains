@@ -590,14 +590,3 @@ e2e-tests: create-envrc
     . {{ envrc_file }} && cd {{ e2e_tests_root }} && cargo test --features e2e-tests
     @just _log-end "e2e-tests"
 
-# Delete and recreate the Anvil datadir directory
-reset-datadir:
-    @just _log-start "reset-datadir"
-    
-    @echo "Removing datadir..."
-    rm -rf {{ repository_root }}/datadir
-    
-    @echo "Creating fresh datadir..."
-    mkdir -p {{ repository_root }}/datadir
-    
-    @just _log-end "reset-datadir"
