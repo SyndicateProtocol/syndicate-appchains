@@ -6,4 +6,4 @@
 pub mod batch;
 pub mod frame;
 
-pub mod optimism_builder;
+pub mod optimism_adapter;

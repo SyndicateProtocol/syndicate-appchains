@@ -14,11 +14,18 @@ use alloy::{
 };
 use block_builder::{
     block_builder::BlockBuilder,
-    config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
+    config::{
+        get_default_private_key_signer, get_rollup_contract_address,
+        TargetRollupType::{ARBITRUM, OPTIMISM},
+    },
     connectors::mchain::{FilledProvider, MetaChainProvider, MCHAIN_ID},
     metrics::BlockBuilderMetrics,
+    rollups::{
+        arbitrum::arbitrum_adapter::ArbitrumAdapter, optimism::optimism_adapter::OptimismAdapter,
+        shared::RollupAdapter,
+    },
 };
-use common::{db::RocksDbStore, types::Chain};
+use common::types::Chain;
 use contract_bindings::{
     arbitrum::rollup::Rollup,
     metabased::{
@@ -38,7 +45,6 @@ use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use slotter::{metrics::SlotterMetrics, Slotter};
 use std::{sync::Arc, time::Duration};
-use test_utils::test_path;
 use tokio::{
     process::{Child, Command},
     runtime::Handle,
@@ -325,7 +331,9 @@ pub async fn launch_nitro_node(chain_id: u64, mchain_port: u16) -> Result<(Docke
 pub struct MetaNode {
     pub sequencing_contract: MetabasedSequencerChainInstance<(), FilledProvider>,
     pub sequencing_provider: FilledProvider,
+    pub sequencing_client: Arc<dyn RPCClient>,
     pub settlement_provider: FilledProvider,
+    pub settlement_client: Arc<dyn RPCClient>,
     pub metabased_rollup: RootProvider,
 
     pub chain_id: u64,
@@ -351,30 +359,42 @@ pub struct MetaNode {
 
 impl MetaNode {
     #[allow(clippy::unwrap_used)] // test utility
-    pub async fn new(pre_loaded: bool, config: MetabasedConfig) -> Result<Self> {
+    pub async fn new(pre_loaded: bool, mut config: MetabasedConfig) -> Result<Self> {
         // Define the addresses of the bridge and inbox contracts depedning on whether we
         // are loading in the full set of Arb contracts or not
-        let bridge_address =
+        config.block_builder.bridge_address =
             if pre_loaded { PRELOAD_BRIDGE_ADDRESS } else { get_rollup_contract_address() };
-        let inbox_address =
+        config.block_builder.inbox_address =
             if pre_loaded { PRELOAD_INBOX_ADDRESS } else { get_rollup_contract_address() };
 
-        let (node, mchain) = start_reth(MCHAIN_ID).await?;
+        config.block_builder.sequencing_contract_address = get_rollup_contract_address();
 
-        let block_builder_cfg = BlockBuilderConfig {
-            bridge_address,
-            inbox_address,
-            mchain_ipc_path: node.ipc,
-            mchain_auth_ipc_path: node.auth_ipc,
-            sequencing_contract_address: get_rollup_contract_address(),
-            ..config.block_builder
-        };
+        match config.block_builder.target_rollup_type {
+            OPTIMISM => {
+                let adapter = OptimismAdapter::new(&config.block_builder);
+                Self::new_with_rollup_adapter(pre_loaded, config, adapter).await
+            }
+            ARBITRUM => {
+                let adapter = ArbitrumAdapter::new(&config.block_builder);
+                Self::new_with_rollup_adapter(pre_loaded, config, adapter).await
+            }
+        }
+    }
+
+    async fn new_with_rollup_adapter<R: RollupAdapter>(
+        pre_loaded: bool,
+        mut config: MetabasedConfig,
+        rollup_adapter: R,
+    ) -> Result<Self> {
+        let (node, mchain) = start_reth(MCHAIN_ID).await?;
+        config.block_builder.mchain_ipc_path = node.ipc;
+        config.block_builder.mchain_auth_ipc_path = node.auth_ipc;
 
         // Launch mock sequencing chain and deploy contracts
         let (seq_port, _seq_anvil, seq_provider) = start_anvil(15).await?;
         _ = MetabasedSequencerChain::deploy_builder(
             &seq_provider,
-            U256::from(block_builder_cfg.target_chain_id),
+            U256::from(config.block_builder.target_chain_id),
         )
         .send()
         .await?;
@@ -422,8 +442,8 @@ impl MetaNode {
             // contracts
             _ = Rollup::deploy_builder(
                 &set_provider,
-                U256::from(block_builder_cfg.target_chain_id),
-                MetaChainProvider::rollup_config(block_builder_cfg.target_chain_id),
+                U256::from(config.block_builder.target_chain_id),
+                MetaChainProvider::rollup_config(config.block_builder.target_chain_id),
             )
             .nonce(0)
             .send()
@@ -446,14 +466,14 @@ impl MetaNode {
             Arc::new(EthClient::new(&set_config.rpc_url, Chain::Settlement).await?);
         let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
             Chain::Sequencing,
-            sequencing_client,
+            sequencing_client.clone(),
             &seq_config,
             IngestorMetrics::new(&mut metrics_state.registry),
         )
         .await?;
         let (settlement_ingestor, settlement_rx) = Ingestor::new(
             Chain::Settlement,
-            settlement_client,
+            settlement_client.clone(),
             &set_config,
             IngestorMetrics::new(&mut metrics_state.registry),
         )
@@ -467,17 +487,9 @@ impl MetaNode {
             let _ = settlement_ingestor.start_polling(set_ingestor_rx).await;
         }));
 
-        // new DB
-        let db_path = test_path("db");
-        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
-
         // Launch the slotter, block builder, and nitro rollup
-        let (slotter, slotter_rx) = Slotter::new(
-            &config.slotter,
-            None,
-            store.clone(),
-            SlotterMetrics::new(&mut metrics_state.registry),
-        );
+        let (slotter, slotter_rx) =
+            Slotter::new(&config.slotter, None, SlotterMetrics::new(&mut metrics_state.registry));
         let (shutdown_slotter_tx, shutdown_slotter_rx) = tokio::sync::oneshot::channel();
         let _slotter_task = Task(tokio::spawn(async move {
             _ = slotter.start(sequencer_rx, settlement_rx, shutdown_slotter_rx).await;
@@ -485,8 +497,8 @@ impl MetaNode {
 
         let block_builder = BlockBuilder::new(
             slotter_rx,
-            &block_builder_cfg,
-            store,
+            &config.block_builder,
+            rollup_adapter,
             BlockBuilderMetrics::new(&mut metrics_state.registry),
         )
         .await?;
@@ -494,7 +506,7 @@ impl MetaNode {
         let rollup = block_builder.mchain.get_rollup();
 
         let (_nitro_docker, metabased_rollup) =
-            launch_nitro_node(block_builder_cfg.target_chain_id, node.http_port).await?;
+            launch_nitro_node(config.block_builder.target_chain_id, node.http_port).await?;
         let (_builder_tx, builder_rx) = tokio::sync::oneshot::channel();
         let _block_builder_task = Task(tokio::spawn(async move {
             _ = block_builder.start(None, builder_rx).await;
@@ -503,10 +515,12 @@ impl MetaNode {
         Ok(Self {
             sequencing_contract,
             sequencing_provider: seq_provider,
+            sequencing_client,
             settlement_provider: set_provider,
+            settlement_client,
             metabased_rollup,
 
-            chain_id: block_builder_cfg.target_chain_id,
+            chain_id: config.block_builder.target_chain_id,
 
             mchain,
             mchain_provider,

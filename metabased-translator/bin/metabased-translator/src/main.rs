@@ -1,9 +1,19 @@
+use block_builder::{
+    config::TargetRollupType::{ARBITRUM, OPTIMISM},
+    connectors::mchain::MetaChainProvider,
+    rollups::{
+        arbitrum::arbitrum_adapter::ArbitrumAdapter, optimism::optimism_adapter::OptimismAdapter,
+        shared::RollupAdapter,
+    },
+};
 use common::tracing::init_tracing_with_extra_fields;
 use eyre::Result;
 use metabased_translator::{
     config::MetabasedConfig,
     handles::ComponentHandles,
-    setup::{clients, create_node_components, get_extra_fields_for_logging, init_db, init_metrics},
+    setup::{
+        clients, create_node_components, get_extra_fields_for_logging, get_safe_state, init_metrics,
+    },
     shutdown::{ShutdownChannels, ShutdownTx},
     types::RuntimeError,
 };
@@ -11,7 +21,7 @@ use tokio::task::JoinHandle;
 use tracing::{debug, error, info};
 
 fn main() -> Result<(), RuntimeError> {
-    let mut base_config = MetabasedConfig::initialize();
+    let base_config = MetabasedConfig::initialize();
     let extra_fields = get_extra_fields_for_logging(base_config.clone());
     init_tracing_with_extra_fields(extra_fields)?;
 
@@ -25,21 +35,45 @@ fn main() -> Result<(), RuntimeError> {
         tokio::runtime::Runtime::new().map_err(|e| RuntimeError::Initialization(e.to_string()))?;
 
     // Run the async process
-    runtime.block_on(run(&mut base_config))?;
+    match base_config.block_builder.target_rollup_type {
+        OPTIMISM => {
+            runtime
+                .block_on(run(&base_config, OptimismAdapter::new(&base_config.block_builder)))?;
+        }
+        ARBITRUM => {
+            runtime
+                .block_on(run(&base_config, ArbitrumAdapter::new(&base_config.block_builder)))?;
+        }
+    }
 
     Ok(())
 }
 
 /// Entry point for the async runtime
 /// This function initializes the database, creates the node components, and starts the translator.
-async fn run(config: &mut MetabasedConfig) -> Result<(), RuntimeError> {
+async fn run(
+    config: &MetabasedConfig,
+    rollup_adapter: impl RollupAdapter,
+) -> Result<(), RuntimeError> {
     info!("Initializing Metabased Translator components");
     let shutdown_channels = ShutdownChannels::new();
     let (sequencing_client, settlement_client) = clients(config).await?;
-    let (db, safe_state, safe_block_number) =
-        init_db(config, &sequencing_client, &settlement_client).await?;
 
     let (metrics, metrics_task) = init_metrics(config).await;
+
+    let mchain =
+        MetaChainProvider::start(&config.block_builder, &metrics.block_builder.mchain_metrics)
+            .await?;
+
+    let safe_state = get_safe_state(
+        &mchain,
+        sequencing_client.clone(),
+        settlement_client.clone(),
+        &rollup_adapter,
+    )
+    .await?;
+
+    let mchain_safe_block_number = safe_state.as_ref().map(|state| state.mchain_block_number);
 
     let (
         sequencing_ingestor,
@@ -52,15 +86,14 @@ async fn run(config: &mut MetabasedConfig) -> Result<(), RuntimeError> {
         config,
         sequencing_client,
         settlement_client,
-        db,
+        rollup_adapter,
         safe_state,
         metrics,
     )
     .await?;
-
     let (main_shutdown_rx, tx, rx) = shutdown_channels.split();
     let component_tasks = ComponentHandles::spawn(
-        safe_block_number,
+        mchain_safe_block_number,
         sequencing_ingestor,
         sequencing_rx,
         settlement_ingestor,

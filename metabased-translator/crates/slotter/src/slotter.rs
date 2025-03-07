@@ -2,11 +2,7 @@
 
 use crate::{config::SlotterConfig, metrics::SlotterMetrics};
 use alloy::primitives::B256;
-use common::{
-    db::{DbError, KnownState, TranslatorStore},
-    types::{Block, BlockAndReceipts, BlockRef, Chain, Slot, SlotState},
-};
-use derivative::Derivative;
+use common::types::{Block, BlockAndReceipts, BlockRef, Chain, KnownState, Slot};
 use eyre::{Error, Report};
 use std::{collections::VecDeque, sync::Arc};
 use thiserror::Error;
@@ -18,14 +14,6 @@ use tokio::{
     },
 };
 use tracing::{debug, error, info, trace, warn};
-
-/// Maximum time to wait for blocks before considering a slot final (24 hours in seconds)
-/// A slot becomes safe if both chains have progressed `SLOT_SAFETY_WINDOW_SEC` seconds past the
-/// slot's timestamp
-const SLOT_SAFETY_WINDOW_SEC: u64 = 24 * 60 * 60;
-
-/// The first slot number to use
-const START_SLOT: u64 = 2;
 
 /// Polls and ingests blocks from an Ethereum chain
 ///
@@ -40,8 +28,7 @@ const START_SLOT: u64 = 2;
 /// - Settlement blocks are delayed by a configured time (settlement_delay)
 /// - A slot becomes Closed when we see a settlement block that cannot fit into it (the block's timestamp (plus delay) is further in the future than the slot's timestamp)
 ///  ```
-#[derive(Derivative)]
-#[derivative(Debug)]
+#[derive(Debug)]
 pub struct Slotter {
     settlement_delay: u64,
 
@@ -49,23 +36,14 @@ pub struct Slotter {
     latest_settlement_block: Option<BlockRef>,
     min_chain_head_timestamp: u64,
 
-    /// Timestamp of the last saved safe slot
-    safe_timestamp: u64,
-
     /// Stores all open and unsafe slots
     slots: VecDeque<Slot>,
-
-    /// Index of the oldest open slot
-    oldest_open_slot_idx: usize,
 
     /// Unassigned settlement blocks
     unassigned_settlement_blocks: VecDeque<BlockAndReceipts>,
 
     /// Sender for sending slots to the consumer
     sender: Sender<Slot>,
-
-    #[derivative(Debug = "ignore")]
-    store: Arc<dyn TranslatorStore + Send + Sync>,
 
     /// Metrics
     metrics: SlotterMetrics,
@@ -77,18 +55,11 @@ impl Slotter {
     pub fn new(
         config: &SlotterConfig,
         known_state: Option<KnownState>,
-        store: Arc<dyn TranslatorStore + Send + Sync>,
         metrics: SlotterMetrics,
     ) -> (Self, Receiver<Slot>) {
         let (slot_tx, slot_rx) = channel(100);
-        let mut slots = VecDeque::new();
-        let mut safe_timestamp = 0;
         let (latest_sequencing_block, latest_settlement_block) = match known_state {
             Some(known_state) => {
-                if known_state.slot.state == SlotState::Safe {
-                    safe_timestamp = known_state.slot.timestamp;
-                }
-                slots.push_back(known_state.slot);
                 (Some(known_state.sequencing_block), Some(known_state.settlement_block))
             }
             None => (None, None),
@@ -103,15 +74,12 @@ impl Slotter {
         let slotter = Self {
             latest_sequencing_block,
             latest_settlement_block,
-            safe_timestamp,
-            slots,
+            slots: VecDeque::new(),
             unassigned_settlement_blocks: VecDeque::new(),
             settlement_delay: config.settlement_delay,
             sender: slot_tx,
-            store,
             metrics,
             min_chain_head_timestamp,
-            oldest_open_slot_idx: 0,
         };
         (slotter, slot_rx)
     }
@@ -219,82 +187,26 @@ impl Slotter {
                 self.process_settlement_block(block_info).await?;
             }
         }
-        if self.min_chain_head_timestamp == 0 {
-            debug!("No blocks seen for both chains yet, skipping cleanup");
-            return Ok(());
-        }
-
-        self.cleanup_slots().await?;
-        self.metrics.update_active_slots(self.slots.len());
-        Ok(())
-    }
-
-    /// `cleanup_slots` will mark slots as safe if both chains have progressed
-    /// `SLOT_SAFETY_WINDOW_SEC` seconds past them and we have seen blocks from both chains
-    /// after that point.
-    async fn cleanup_slots(&mut self) -> Result<(), SlotterError> {
-        trace!("Checking for slots to mark as safe");
-        // Check slots from oldest to newest (front to back)
-        let mut slots_removed = 0;
-
-        while let Some(slot) = self.slots.front() {
-            // Has 24h passed since this slot's timestamp?
-            // If we can't mark this slot as safe, we can't mark newer ones either
-            if slot.timestamp + SLOT_SAFETY_WINDOW_SEC > self.min_chain_head_timestamp ||
-                slot.state == SlotState::Open
-            {
-                break;
-            }
-
-            // Remove the slot from the list
-            let mut slot = self.slots.pop_front().ok_or_else(|| {
-                SlotterError::NoSlotsAvailable(
-                    "Slot disappeared between front() and pop_front()".to_string(),
-                )
-            })?;
-            slots_removed += 1;
-
-            trace!(%slot, "Saving safe slot to DB");
-            slot.state = SlotState::Safe;
-            self.safe_timestamp = slot.timestamp;
-            self.store.save_safe_slot(&slot).await?;
-        }
-
-        // Update index after removing slots
-        if slots_removed > 0 {
-            //TODO add a test for this
-            self.oldest_open_slot_idx = self.oldest_open_slot_idx.saturating_sub(slots_removed);
-        }
 
         self.metrics.update_active_slots(self.slots.len());
         Ok(())
     }
 
     fn update_latest_block(&mut self, block: &Block, chain: Chain) -> Result<(), SlotterError> {
-        if block.timestamp < self.safe_timestamp {
-            return Err(SlotterError::BlockBeforeSafeTimestamp {
-                chain,
-                safe_timestamp: self.safe_timestamp,
-                block_timestamp: block.timestamp,
-                block_number: block.number,
-                block_hash: block.hash,
-            });
-        }
-
         if let Some(latest) = match chain {
             Chain::Sequencing => self.latest_sequencing_block.as_ref(),
             Chain::Settlement => self.latest_settlement_block.as_ref(),
         } {
-            if block.number <= latest.number {
-                return Err(SlotterError::ReorgDetected {
+            if block.number > latest.number + 1 {
+                return Err(SlotterError::BlockNumberSkipped {
                     chain,
                     current_block_number: latest.number,
                     received_block_number: block.number,
                 });
             }
 
-            if block.number != latest.number + 1 {
-                return Err(SlotterError::BlockNumberSkipped {
+            if !block.parent_hash.eq(&latest.hash) {
+                return Err(SlotterError::ReorgDetected {
                     chain,
                     current_block_number: latest.number,
                     received_block_number: block.number,
@@ -343,26 +255,20 @@ impl Slotter {
         let latest_slot = self.slots.back_mut();
         trace!("latest_slot: {:?}", latest_slot);
 
-        // Each sequencer block creates a new slot
-        let slot_number = match latest_slot {
-            Some(slot) => slot.number + 1,
-            None => START_SLOT,
-        };
-        let slot_timestamp = block_info.block.timestamp;
-
         // Create a new slot for this sequencer block
-        let mut new_slot = Slot::new(slot_number, slot_timestamp, block_info);
+        let mut new_slot = Slot::new(block_info);
 
         // check if any unassigned settlement blocks belong in this slot
         // if so, add them to the slot and remove them from the unassigned list
         // otherwise, add the slot to the front of the list
         while let Some(set_block) = self.unassigned_settlement_blocks.front() {
-            if self.settlement_timestamp(set_block) > slot_timestamp {
+            if self.settlement_timestamp(set_block) > new_slot.timestamp() {
                 // we have seen a settlement block that belongs in a later slot, this one
                 // can be closed
-                new_slot.state = SlotState::Closed;
                 self.sender.send(new_slot.clone()).await?;
-                break;
+                debug!(%new_slot, "slot sent");
+                self.metrics.record_last_slot_created(new_slot.sequencing.block.number);
+                return Ok(());
             }
             let block = self.unassigned_settlement_blocks.pop_front().ok_or_else(|| {
                 SlotterError::NoSlotsAvailable(
@@ -371,11 +277,11 @@ impl Slotter {
             })?;
             new_slot.push_settlement_block(Arc::new(block));
         }
-        debug!(%new_slot, "new slot created");
+        debug!(%new_slot, "new opened slot created");
 
         // Add the new slot
+        self.metrics.record_last_slot_created(new_slot.sequencing.block.number);
         self.slots.push_back(new_slot);
-        self.metrics.record_last_slot_created(slot_number);
         Ok(())
     }
 
@@ -383,47 +289,27 @@ impl Slotter {
         &mut self,
         set_block: Arc<BlockAndReceipts>,
     ) -> Result<(), SlotterError> {
-        let ts = self.settlement_timestamp(&set_block);
-        let mut closed_slots = 0;
-        let mut inserted = false;
-        let sender = self.sender.clone();
+        let set_ts = self.settlement_timestamp(&set_block);
 
-        for slot in self.iter_from_oldest_open() {
-            if ts > slot.timestamp {
-                if slot.state == SlotState::Open {
-                    debug!(slot_number = slot.number, "slot closed");
-                    trace!("slot: {:?}", slot);
-                    slot.state = SlotState::Closed;
-                    sender.send(slot.clone()).await?;
-                    closed_slots += 1;
-                }
+        while let Some(mut slot) = self.slots.pop_front() {
+            if set_ts > slot.timestamp() {
+                debug!(%slot, "slot sent");
+                self.sender.send(slot.clone()).await?;
                 continue;
             }
             slot.push_settlement_block(set_block.clone());
-            debug!(
-                slot_number = slot.number,
-                block_number = set_block.block.number,
-                "block added to the slot"
-            );
-            trace!("slot: {:?}", slot);
-            inserted = true;
-            break;
+            debug!(block_number = set_block.block.number, "block added to the slot");
+            trace!("settlement block added to slot: {:?}", slot);
+            //add the slot back to the front of the list
+            self.slots.push_front(slot);
+            return Ok(());
         }
 
-        if closed_slots > 0 {
-            self.oldest_open_slot_idx += closed_slots;
-        }
-
-        if !inserted {
-            self.unassigned_settlement_blocks
-                .push_back(Arc::try_unwrap(set_block).unwrap_or_else(|arc| (*arc).clone()));
-            debug!("block added to the unassigned list");
-        }
+        // if we get here, the block doesn't fit in any slot
+        self.unassigned_settlement_blocks
+            .push_back(Arc::try_unwrap(set_block).unwrap_or_else(|arc| (*arc).clone()));
+        debug!("block added to the unassigned list");
         Ok(())
-    }
-
-    fn iter_from_oldest_open(&mut self) -> impl Iterator<Item = &mut Slot> {
-        self.slots.range_mut(self.oldest_open_slot_idx..)
     }
 }
 
@@ -466,9 +352,6 @@ pub enum SlotterError {
         block_hash: B256,
     },
 
-    #[error("Database error: {0}")]
-    DbError(#[from] DbError),
-
     #[error("Slotter was shut down")]
     Shutdown,
 }
@@ -494,8 +377,6 @@ mod tests {
         /// Prometheus registry
         pub registry: Registry,
     }
-    use common::db::RocksDbStore;
-    use test_utils::test_path;
 
     struct TestSetup {
         slot_rx: Receiver<Slot>,
@@ -518,9 +399,7 @@ mod tests {
     fn create_slotter(config: &SlotterConfig) -> (Slotter, Receiver<Slot>) {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = SlotterMetrics::new(&mut metrics_state.registry);
-        let store = Arc::new(RocksDbStore::new(test_path("slotter_db").as_str()).unwrap());
-
-        let (slotter, slot_rx) = Slotter::new(config, None, store, metrics);
+        let (slotter, slot_rx) = Slotter::new(config, None, metrics);
 
         (slotter, slot_rx)
     }
@@ -534,7 +413,7 @@ mod tests {
                 .unwrap(),
                 number,
                 parent_hash: B256::from_str(
-                    "0234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                    "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
                 )
                 .unwrap(),
                 logs_bloom: "0x0".to_string(),
@@ -601,10 +480,8 @@ mod tests {
         settlement_tx.send(create_test_block(2, 20)).await.unwrap();
 
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp, 10);
-        assert_eq!(slot.number, START_SLOT);
-        assert_eq!(slot.settlement_blocks.len(), 1);
-        assert_eq!(slot.state, SlotState::Closed);
+        assert_eq!(slot.timestamp(), 10);
+        assert_eq!(slot.settlement.len(), 1);
         assert!(slot_rx.is_empty());
 
         // send  few bock for the sequencing chain with timestamps lower than the settlement
@@ -615,12 +492,10 @@ mod tests {
 
         for i in 1..4 {
             let slot = recv(&mut slot_rx).await.unwrap();
-            assert_eq!(slot.timestamp, 10 + i);
-            assert_eq!(slot.number, START_SLOT + i);
-            assert_eq!(slot.sequencing_block.block.number, 1 + i);
-            assert_eq!(slot.sequencing_block.block.timestamp, 10 + i);
-            assert_eq!(slot.settlement_blocks.len(), 0);
-            assert_eq!(slot.state, SlotState::Closed);
+            assert_eq!(slot.timestamp(), 10 + i);
+            assert_eq!(slot.sequencing.block.number, 1 + i);
+            assert_eq!(slot.sequencing.block.timestamp, 10 + i);
+            assert_eq!(slot.settlement.len(), 0);
         }
         assert!(slot_rx.is_empty());
 
@@ -637,12 +512,10 @@ mod tests {
         // should be marked as Closed
         settlement_tx.send(create_test_block(3, 42)).await.unwrap();
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp, 40);
-        assert_eq!(slot.number, START_SLOT + 4);
-        assert_eq!(slot.sequencing_block.block.timestamp, 40);
-        assert_eq!(slot.settlement_blocks.len(), 1);
-        assert_eq!(slot.settlement_blocks[0].block.timestamp, 20);
-        assert_eq!(slot.state, SlotState::Closed);
+        assert_eq!(slot.timestamp(), 40);
+        assert_eq!(slot.sequencing.block.timestamp, 40);
+        assert_eq!(slot.settlement.len(), 1);
+        assert_eq!(slot.settlement[0].block.timestamp, 20);
     }
 
     #[tokio::test]
@@ -668,16 +541,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_reorg_detected() {
-        let (mut slotter, _) = create_slotter(&SlotterConfig::default());
-        let block = create_test_block(1, 50);
-        slotter.latest_sequencing_block = Some(BlockRef::new(&create_test_block(2, 10_001).block));
-        let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
-
-        assert_matches!(result, Err(SlotterError::ReorgDetected { .. }));
-    }
-
-    #[tokio::test]
     async fn test_block_number_skipped() {
         let (mut slotter, _) = create_slotter(&SlotterConfig::default());
         let block = create_test_block(4, 400);
@@ -695,100 +558,6 @@ mod tests {
         let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
 
         assert_matches!(result, Err(SlotterError::EarlierTimestamp { .. }));
-    }
-
-    #[tokio::test]
-    #[traced_test]
-    async fn test_slotter_db_shutdown_and_resume_safe() {
-        const CHAN_CAPACITY: usize = 100;
-        let (seq_tx, seq_rx) = channel(CHAN_CAPACITY);
-        let (set_tx, set_rx) = channel(CHAN_CAPACITY);
-
-        let config = SlotterConfig { settlement_delay: 0 };
-
-        // Create a fresh DB for this test
-        let db_path = test_path("slotter_db");
-        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
-
-        // Start first slotter instance
-        let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = SlotterMetrics::new(&mut metrics_state.registry);
-        let (slotter, mut slot_rx) = Slotter::new(&config, None, store, metrics);
-        let handle = tokio::spawn(async move { slotter.start(seq_rx, set_rx, shutdown_rx).await });
-
-        // Send some blocks
-        // slot [START_SLOT]
-        seq_tx.send(create_test_block(1, 20)).await.unwrap();
-        set_tx.send(create_test_block(1, 20)).await.unwrap();
-
-        // slot [START_SLOT+1]
-        seq_tx.send(create_test_block(2, 30)).await.unwrap();
-        set_tx.send(create_test_block(2, 30)).await.unwrap();
-
-        // This should make slot [START_SLOT]  as Closed
-        let slot1 = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot1.number, START_SLOT);
-        assert_eq!(slot1.settlement_blocks.len(), 1);
-        assert_eq!(slot1.sequencing_block.block.number, 1);
-        assert_eq!(slot1.settlement_blocks[0].block.number, 1);
-        assert_eq!(slot1.state, SlotState::Closed);
-
-        // Send blocks that are SLOT_SAFETY_WINDOW_SEC (24 hours) ahead, this should make all
-        // previous slots as Safe
-        set_tx.send(create_test_block(3, 30 + SLOT_SAFETY_WINDOW_SEC)).await.unwrap();
-        seq_tx.send(create_test_block(3, 30 + SLOT_SAFETY_WINDOW_SEC)).await.unwrap();
-
-        // drain the channel
-        let _handle = tokio::spawn(async move {
-            loop {
-                slot_rx.recv().await;
-            }
-        });
-
-        // shutdown slotter
-        let _ = shutdown_tx.send(());
-        let _ = handle.await.unwrap();
-
-        // Create new channels for the resumed slotter
-        let (new_seq_tx, new_seq_rx) = channel(CHAN_CAPACITY);
-        let (new_set_tx, new_settle_rx) = channel(CHAN_CAPACITY);
-
-        // Create new store instance pointing to same DB, and get the latest state from the DB
-        let resumed_store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
-        let resumed_state = resumed_store.get_safe_state().await.unwrap().unwrap();
-        assert_eq!(resumed_state.slot.number, START_SLOT + 1);
-        assert_eq!(resumed_state.sequencing_block.number, 2);
-        assert_eq!(resumed_state.settlement_block.number, 2);
-
-        let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = SlotterMetrics::new(&mut metrics_state.registry);
-
-        // Create new slotter that should resume from DB
-        let (resumed_slotter, mut resumed_slot_rx) =
-            Slotter::new(&config, Some(resumed_state), resumed_store, metrics);
-
-        let (_shutdown_tx, shutdown_rx) = oneshot::channel();
-        tokio::spawn(
-            async move { resumed_slotter.start(new_seq_rx, new_settle_rx, shutdown_rx).await },
-        );
-
-        // Send new blocks to resumed slotter (since only slot [START_SLOT] and [START_SLOT+1] have
-        // saved to the DB, we should send blocks #4 (for slot [START_SLOT+2]))
-        new_seq_tx.send(create_test_block(3, 40)).await.unwrap();
-        new_set_tx.send(create_test_block(3, 40)).await.unwrap();
-
-        // sending blocks for slot [START_SLOT+2] should mark slot [START_SLOT+2] as Closed
-        new_seq_tx.send(create_test_block(4, 50)).await.unwrap();
-        new_set_tx.send(create_test_block(4, 50)).await.unwrap();
-
-        // Should get slot [START_SLOT+2] marked as Closed
-        let slot = recv(&mut resumed_slot_rx).await.unwrap();
-        assert_eq!(slot.number, START_SLOT + 2);
-        assert_eq!(slot.state, SlotState::Closed);
-        assert_eq!(slot.settlement_blocks.len(), 1);
-        assert_eq!(slot.sequencing_block.block.number, 3);
-        assert_eq!(slot.settlement_blocks[0].block.number, 3);
     }
 
     #[tokio::test]
@@ -819,19 +588,15 @@ mod tests {
 
         // This should trigger slot  to be marked as Closed
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.number, START_SLOT);
-        assert_eq!(slot.timestamp, 10);
-        assert_eq!(slot.sequencing_block.block.number, 1);
-        assert_eq!(slot.settlement_blocks.len(), 0);
-        assert_eq!(slot.state, SlotState::Closed);
+        assert_eq!(slot.timestamp(), 10);
+        assert_eq!(slot.sequencing.block.number, 1);
+        assert_eq!(slot.settlement.len(), 0);
 
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.number, START_SLOT + 1);
-        assert_eq!(slot.timestamp, 12);
-        assert_eq!(slot.sequencing_block.block.number, 2);
-        assert_eq!(slot.settlement_blocks.len(), 1);
-        assert_eq!(slot.settlement_blocks[0].block.number, 1);
-        assert_eq!(slot.state, SlotState::Closed);
+        assert_eq!(slot.timestamp(), 12);
+        assert_eq!(slot.sequencing.block.number, 2);
+        assert_eq!(slot.settlement.len(), 1);
+        assert_eq!(slot.settlement[0].block.number, 1);
     }
 
     #[tokio::test]
@@ -853,28 +618,24 @@ mod tests {
         // Both chains have effectively progressed past slot 100
 
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.number, START_SLOT);
-        assert_eq!(slot.timestamp, 100);
-        assert_eq!(slot.state, SlotState::Closed);
-        assert_eq!(slot.sequencing_block.block.number, 1);
+        assert_eq!(slot.timestamp(), 100);
+        assert_eq!(slot.sequencing.block.number, 1);
         // Settlement block should not be in this slot since it was delayed to timestamp 160
-        assert_eq!(slot.settlement_blocks.len(), 0);
+        assert_eq!(slot.settlement.len(), 0);
 
         // Send sequencing block with timestamps 150
         sequencing_tx.send(create_test_block(3, 150)).await.unwrap();
 
         // there should be a slot at ts=110 and empty slot at ts=150 in the channel
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp, 110);
-        assert_eq!(slot.state, SlotState::Closed);
-        assert_eq!(slot.sequencing_block.block.number, 2);
-        assert_eq!(slot.settlement_blocks.len(), 0);
+        assert_eq!(slot.timestamp(), 110);
+        assert_eq!(slot.sequencing.block.number, 2);
+        assert_eq!(slot.settlement.len(), 0);
 
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp, 150);
-        assert_eq!(slot.state, SlotState::Closed);
-        assert_eq!(slot.sequencing_block.block.number, 3);
-        assert_eq!(slot.settlement_blocks.len(), 0);
+        assert_eq!(slot.timestamp(), 150);
+        assert_eq!(slot.sequencing.block.number, 3);
+        assert_eq!(slot.settlement.len(), 0);
 
         // Send settlement and sequencing blocks with timestamp 170
         settlement_tx.send(create_test_block(2, 170)).await.unwrap();
@@ -883,12 +644,161 @@ mod tests {
         // The slot with ts 170 should be marked as Closed, containing the settlement block with
         // ts=160
         let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp, 170);
-        assert_eq!(slot.settlement_blocks.len(), 1);
-        assert_eq!(slot.settlement_blocks[0].block.number, 1);
-        assert_eq!(slot.sequencing_block.block.number, 4);
+        assert_eq!(slot.timestamp(), 170);
+        assert_eq!(slot.settlement.len(), 1);
+        assert_eq!(slot.settlement[0].block.number, 1);
+        assert_eq!(slot.sequencing.block.number, 4);
 
         // Verify no more slots were marked as Closed
         assert!(slot_rx.try_recv().is_err());
+    }
+
+    #[tokio::test]
+    async fn test_last_settlement_block_has_latest_timestamp() {
+        let TestSetup { mut slot_rx, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
+            create_slotter_and_spawn(&SlotterConfig { settlement_delay: 0 }).await;
+
+        // Send sequencing block to create a slot
+        sequencing_tx.send(create_test_block(1, 100)).await.unwrap();
+
+        // Send settlement blocks with increasing timestamps
+        settlement_tx.send(create_test_block(1, 50)).await.unwrap();
+        settlement_tx.send(create_test_block(2, 70)).await.unwrap();
+        settlement_tx.send(create_test_block(3, 90)).await.unwrap();
+
+        // Send another settlement block with higher timestamp to close the slot
+        settlement_tx.send(create_test_block(4, 110)).await.unwrap();
+
+        // This should trigger the first slot to be marked as closed
+        let slot = recv(&mut slot_rx).await.unwrap();
+
+        // Verify the slot contains all settlement blocks
+        assert_eq!(slot.timestamp(), 100);
+        assert_eq!(slot.sequencing.block.number, 1);
+        assert_eq!(slot.settlement.len(), 3);
+
+        // Now verify that the last settlement block has the latest timestamp
+        if let Some(last_settlement) = slot.settlement.last() {
+            assert_eq!(last_settlement.block.timestamp, 90);
+
+            // Also verify all settlement blocks are in ascending timestamp order
+            for i in 0..slot.settlement.len() - 1 {
+                assert!(
+                    slot.settlement[i].block.timestamp < slot.settlement[i + 1].block.timestamp,
+                    "Settlement blocks are not in ascending timestamp order"
+                );
+            }
+        } else {
+            panic!("Expected settlement blocks but found none");
+        }
+    }
+
+    #[tokio::test]
+    async fn test_parent_hash_mismatch_reorg_sequencing() {
+        test_parent_hash_mismatch_reorg_helper(Chain::Sequencing).await;
+    }
+
+    #[tokio::test]
+    async fn test_parent_hash_mismatch_reorg_settlement() {
+        test_parent_hash_mismatch_reorg_helper(Chain::Settlement).await;
+    }
+
+    async fn test_parent_hash_mismatch_reorg_helper(chain: Chain) {
+        let (mut slotter, _) = create_slotter(&SlotterConfig::default());
+
+        // Create and set the first block
+        let first_block = create_test_block(1, 50);
+        slotter.update_latest_block(&first_block.block, chain).unwrap();
+
+        // Create a second block with correct number (2) but different parent hash
+        let second_block = Arc::new(BlockAndReceipts {
+            block: Block {
+                hash: B256::from_str(
+                    "2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                )
+                .unwrap(),
+                number: 2, // Correct sequential number
+                parent_hash: B256::from_str(
+                    "0000000000abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                )
+                .unwrap(), // Different hash than first_block.hash
+                logs_bloom: "0x0".to_string(),
+                transactions_root: "0x0".to_string(),
+                state_root: "0x0".to_string(),
+                receipts_root: "0x0".to_string(),
+                timestamp: 60,
+                transactions: vec![],
+            },
+            receipts: vec![],
+        });
+
+        // Attempt to update with the second block - should fail due to parent hash mismatch
+        let result = slotter.update_latest_block(&second_block.block, chain);
+
+        // Verify that a reorg was detected
+        assert_matches!(result, Err(SlotterError::ReorgDetected { .. }));
+    }
+
+    #[tokio::test]
+    async fn test_reorg_detected_block_number_sequencing() {
+        test_reorg_detected_block_number_helper(Chain::Sequencing).await;
+    }
+
+    #[tokio::test]
+    async fn test_reorg_detected_block_number_settlement() {
+        test_reorg_detected_block_number_helper(Chain::Settlement).await;
+    }
+
+    async fn test_reorg_detected_block_number_helper(chain: Chain) {
+        let (mut slotter, _) = create_slotter(&SlotterConfig::default());
+
+        // Set up first block at number 2
+        let first_block = Arc::new(BlockAndReceipts {
+            block: Block {
+                hash: B256::from_str(
+                    "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                )
+                .unwrap(),
+                number: 2,
+                parent_hash: B256::from_str(
+                    "0000000000000000000000000000000000000000000000000000000000000000",
+                )
+                .unwrap(),
+                logs_bloom: "0x0".to_string(),
+                transactions_root: "0x0".to_string(),
+                state_root: "0x0".to_string(),
+                receipts_root: "0x0".to_string(),
+                timestamp: 100,
+                transactions: vec![],
+            },
+            receipts: vec![],
+        });
+
+        slotter.update_latest_block(&first_block.block, chain).unwrap();
+
+        // Create block with block number 1 (lower than current)
+        let reorg_block = Arc::new(BlockAndReceipts {
+            block: Block {
+                hash: B256::from_str(
+                    "2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                )
+                .unwrap(),
+                number: 1, // Lower block number should trigger reorg
+                parent_hash: B256::from_str(
+                    "0000000000abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                )
+                .unwrap(),
+                logs_bloom: "0x0".to_string(),
+                transactions_root: "0x0".to_string(),
+                state_root: "0x0".to_string(),
+                receipts_root: "0x0".to_string(),
+                timestamp: 50,
+                transactions: vec![],
+            },
+            receipts: vec![],
+        });
+
+        let result = slotter.update_latest_block(&reorg_block.block, chain);
+        assert_matches!(result, Err(SlotterError::ReorgDetected { .. }));
     }
 }

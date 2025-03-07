@@ -15,6 +15,12 @@ contract Rollup {
     uint64 public constant delaySeconds = 86400;
     uint64 public constant futureSeconds = 3600;
 
+    uint64 public seqBlockNumber = 0;
+    uint256 public seqBlockHash = 0;
+
+    uint64 public setBlockNumber = 0;
+    uint256 public setBlockHash = 0;
+
     // IBridge.sol
     bytes32[] public delayedInboxAccs;
 
@@ -36,7 +42,7 @@ contract Rollup {
         bytes memory initMsg = abi.encodePacked(chainId, initMsgVersion, currentDataCost, chainConfig);
         deliverMessage(INITIALIZATION_MSG_TYPE, address(0), initMsg);
         // post a batch containing the initialization message
-        postBatch(hex"000b00800203");
+        postBatch(hex"000b00800203", 0, 0, 0, 0);
     }
 
     // IBridge.sol
@@ -59,7 +65,20 @@ contract Rollup {
         return sequencerInboxAccs[index];
     }
 
-    function postBatch(bytes memory data) public {
+    function postBatch(
+        bytes memory data,
+        uint64 _seqBlockNumber,
+        uint256 _seqBlockHash,
+        uint64 _setBlockNumber,
+        uint256 _setBlockHash
+    ) public {
+        seqBlockNumber = _seqBlockNumber;
+        seqBlockHash = _seqBlockHash;
+        if (_setBlockNumber > 0) {
+            setBlockNumber = _setBlockNumber;
+            setBlockHash = _setBlockHash;
+        }
+
         uint256 afterDelayedMessagesRead = delayedInboxAccs.length;
         (bytes32 dataHash, IBridge.TimeBounds memory timeBounds) = formCallDataHash(data, afterDelayedMessagesRead);
         uint256 seqMessageIndex = sequencerInboxAccs.length;

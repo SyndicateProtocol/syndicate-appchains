@@ -261,8 +261,8 @@ arb-clean-chain:
 op-update-chain-address: op-deploy-chain create-envrc
     @just _log-start "op-update-chain-address"
 
-    cat {{ envrc_file }} | grep -v METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS= > {{ envrc_file }}.tmp
-    echo METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ op_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ envrc_file }}.tmp
+    cat {{ envrc_file }} | grep -v SEQUENCING_CONTRACT_ADDRESS= > {{ envrc_file }}.tmp
+    echo SEQUENCING_CONTRACT_ADDRESS=0x$(cat {{ op_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ envrc_file }}.tmp
     mv {{ envrc_file }}.tmp {{ envrc_file }}
 
     @just _log-end "op-update-chain-address"
@@ -292,7 +292,6 @@ create-op-network-config:
 
     @just _log-end "create-op-network-config"
 
-# TODO(SEQ-312): Merge METABASED_SEQUENCER_CHAIN_RPC_ADDRESS -> SEQUENCING_CHAIN_RPC_URL
 # Copy of `.envrc.example` using vars set earlier in the file
 create-envrc:
     @just _log-start "create-envrc"
@@ -322,10 +321,8 @@ create-envrc:
     "export OP_TRANSLATOR_LOG_LEVEL=debug\n"\
     "export OP_TRANSLATOR_PRETTY=true\n"\
     "# metabased-sequencer\n"\
-    "export METABASED_SEQUENCER_CHAIN_RPC_ADDRESS={{ arb_orbit_l2_rpc_url }}\n"\
-    "export METABASED_SEQUENCER_PRIVATE_KEY={{ arb_orbit_l2_private_key }}\n"\
-    "export METABASED_SEQUENCER_PORT={{ metabased_sequencer_port }}\n"\
-    "export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x0000000000000000000000000000000000000000\n"\
+    "export SEQUENCER_PRIVATE_KEY={{ arb_orbit_l2_private_key }}\n"\
+    "export SEQUENCER_PORT={{ metabased_sequencer_port }}\n"\
     "export ROLLUP_TYPE=ARB"\
     > {{ envrc_file }}
 
@@ -340,13 +337,12 @@ create-envrc:
 arb-update-chain-address: arb-deploy-chain create-envrc
     @just _log-start "arb-update-chain-address"
 
-    cat {{ envrc_file }} | grep -v METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS= > {{ envrc_file }}.tmp
-    echo export METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ envrc_file }}.tmp
+    cat {{ envrc_file }} | grep -v SEQUENCING_CONTRACT_ADDRESS= > {{ envrc_file }}.tmp
+    echo export SEQUENCING_CONTRACT_ADDRESS=0x$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ envrc_file }}.tmp
     mv {{ envrc_file }}.tmp {{ envrc_file }}
 
     @just _log-end "arb-update-chain-address"
 
-# TODO(SEQ-312): refactor duplicate
 # Puts Arb contract address into localnet ENV file
 update-chain-address: arb-deploy-chain create-envrc
     @just _log-start "update-chain-address"
@@ -356,10 +352,9 @@ update-chain-address: arb-deploy-chain create-envrc
     set -euxo pipefail
     # Get the contract address from arb deployment file
     contract_address=$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq)
-    # Remove both old addresses and create temp file
-    cat {{ envrc_file }} | grep -v METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS= | grep -v SEQUENCING_CONTRACT_ADDRESS= > {{ envrc_file }}.tmp
-    # Add both new addresses
-    echo "METABASED_SEQUENCER_CHAIN_CONTRACT_ADDRESS=0x${contract_address}" >> {{ envrc_file }}.tmp
+    # Remove old address and create temp file
+    cat {{ envrc_file }} | grep -v SEQUENCING_CONTRACT_ADDRESS= > {{ envrc_file }}.tmp
+    # Add new address
     echo "SEQUENCING_CONTRACT_ADDRESS=0x${contract_address}" >> {{ envrc_file }}.tmp
     mv {{ envrc_file }}.tmp {{ envrc_file }}
     exit 0
@@ -595,14 +590,3 @@ e2e-tests: create-envrc
     . {{ envrc_file }} && cd {{ e2e_tests_root }} && cargo test --features e2e-tests
     @just _log-end "e2e-tests"
 
-# Delete and recreate the Anvil datadir directory
-reset-datadir:
-    @just _log-start "reset-datadir"
-    
-    @echo "Removing datadir..."
-    rm -rf {{ repository_root }}/datadir
-    
-    @echo "Creating fresh datadir..."
-    mkdir -p {{ repository_root }}/datadir
-    
-    @just _log-end "reset-datadir"
