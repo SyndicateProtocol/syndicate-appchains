@@ -35,7 +35,7 @@ pub struct Config {
     /// Port to listen on
     ///
     /// This can be set with the PORT environment variable (for Cloud Run compatibility).
-    /// Falls back to SEQUENCER_PORT if PORT is not set.
+    /// Falls back to `SEQUENCER_PORT` if PORT is not set.
     #[arg(short = 'p', long, env = "PORT", default_value_t = 8456)]
     pub port: u16,
 
