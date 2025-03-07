@@ -1,7 +1,6 @@
 [workspace]
 members = [
-    "metabased-sequencer/metabased-sequencer",
-    "metabased-sequencer/proxy",
+    "metabased-sequencer",
     "metabased-translator/bin/metabased-translator",
     "metabased-translator/contract-bindings",
     "metabased-translator/crates/block-builder",
