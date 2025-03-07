@@ -6,7 +6,7 @@ on:
 
 # If any later dev container updates are pushed, cancel the earlier jobs
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
   cancel-in-progress: true
 
 # Allow for package uploads to GCR

@@ -207,7 +207,7 @@ mod tests {
             let config = MetabasedConfig::try_parse_from(["test"]).unwrap();
 
             // Block Builder
-            assert_eq!(config.block_builder.mchain_url.as_str(), "http://127.0.0.1:8888/");
+            assert_eq!(config.block_builder.mchain_ipc_path.as_str(), "");
             assert_eq!(config.block_builder.target_chain_id, 13331370);
 
             // Slotter

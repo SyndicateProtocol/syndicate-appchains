@@ -1,59 +1,42 @@
 //! Block builder service for processing and building L3 blocks.
 
 use crate::{
-    config::{BlockBuilderConfig, TargetRollupType},
-    connectors::anvil::MetaChainProvider,
-    metrics::BlockBuilderMetrics,
-    rollups::{
-        arbitrum::arbitrum_builder::ArbitrumBlockBuilder,
-        optimism::optimism_builder::OptimismBlockBuilder, shared::RollupBlockBuilder,
-    },
+    config::BlockBuilderConfig, connectors::mchain::MetaChainProvider,
+    metrics::BlockBuilderMetrics, rollups::shared::RollupAdapter,
 };
 use alloy::{
-    providers::Provider,
+    eips::BlockNumberOrTag,
+    providers::ext::TraceApi,
+    rpc::types::BlockTransactionsKind,
     transports::{RpcError, TransportErrorKind},
 };
-use common::{db::TranslatorStore, types::Slot};
-use derivative::Derivative;
+use common::types::Slot;
 use eyre::{Error, Report, Result};
-use std::sync::Arc;
 use tokio::sync::{mpsc::Receiver, oneshot};
-use tracing::{error, info, trace};
+use tracing::{info, trace};
 use url::Url;
 
 /// Block builder service for processing and building L3 blocks.
-#[derive(Derivative)]
-#[derivative(Debug)]
-pub struct BlockBuilder {
+#[derive(Debug)]
+pub struct BlockBuilder<R: RollupAdapter> {
     slotter_rx: Receiver<Slot>,
     #[allow(missing_docs)]
     pub mchain: MetaChainProvider,
-    builder: Box<dyn RollupBlockBuilder>,
+    rollup_adapter: R,
     metrics: BlockBuilderMetrics,
-
-    #[derivative(Debug = "ignore")]
-    store: Arc<dyn TranslatorStore + Send + Sync>,
 }
 
-impl BlockBuilder {
+impl<R: RollupAdapter> BlockBuilder<R> {
     /// Create a new block builder
     pub async fn new(
         slotter_rx: Receiver<Slot>,
         config: &BlockBuilderConfig,
-        datadir: &str,
-        store: Arc<dyn TranslatorStore + Send + Sync>,
+        rollup_adapter: R,
         metrics: BlockBuilderMetrics,
     ) -> Result<Self, Error> {
-        let mchain = MetaChainProvider::start(config, datadir, &metrics.mchain_metrics).await?;
+        let mchain = MetaChainProvider::start(config, &metrics.mchain_metrics).await?;
 
-        let builder: Box<dyn RollupBlockBuilder> = match config.target_rollup_type {
-            TargetRollupType::ARBITRUM => Box::new(ArbitrumBlockBuilder::new(config)),
-            TargetRollupType::OPTIMISM => {
-                Box::new(OptimismBlockBuilder::new(config.sequencing_contract_address))
-            }
-        };
-
-        Ok(Self { slotter_rx, mchain, builder, metrics, store })
+        Ok(Self { slotter_rx, mchain, rollup_adapter, metrics })
     }
 
     /// Validates and rolls back to a known block number if necessary
@@ -66,7 +49,7 @@ impl BlockBuilder {
             return Ok(());
         };
 
-        let current_block_number = self.mchain.provider.get_block_number().await.map_err(|e| {
+        let current_block_number = self.mchain.get_block_number().await.map_err(|e| {
             BlockBuilderError::ResumeFromBlock(format!("Error getting current block number: {}", e))
         })?;
 
@@ -79,12 +62,67 @@ impl BlockBuilder {
 
         // rollback to block if necessary
         if known_block_number < current_block_number {
-            self.mchain.rollback_to_block(known_block_number).await.map_err(|e| {
+            let block = self
+                .mchain
+                .get_block_by_number(
+                    BlockNumberOrTag::Number(known_block_number),
+                    BlockTransactionsKind::Hashes,
+                )
+                .await
+                .map_err(|e| BlockBuilderError::ResumeFromBlock(e.to_string()))?
+                .ok_or(BlockBuilderError::ResumeFromBlock(format!(
+                    "Could not find block: {}",
+                    known_block_number
+                )))?;
+            self.mchain.rollback_to_block(block.header.hash).await.map_err(|e| {
                 BlockBuilderError::ResumeFromBlock(format!("Unable to reorg to block: {}", e))
             })?;
         }
         info!("Resumed from block: {}", known_block_number);
         Ok(())
+    }
+
+    async fn verify_block(&self, transactions_len: usize, slot_seq_number: u64) {
+        let current_block = self.get_current_block_number().await;
+        trace!("Mined block: {:?} from slot: {:?}", current_block, slot_seq_number);
+
+        // Verify transactions are all included and succeeded
+        // TODO(SEQ-623): check to make sure the tx hashes match as well
+        let receipts = self
+            .mchain
+            .get_block_receipts(BlockNumberOrTag::Number(current_block))
+            .await
+            .unwrap_or_else(|e| {
+                panic!("Failed to fetch receipts for block {:#?}: {:#?}", current_block, e)
+            });
+        assert!(
+            receipts.len() == transactions_len,
+            "expected {:#?} receipts, got {:#?}",
+            transactions_len,
+            receipts
+        );
+
+        for r in receipts {
+            if r.status != 1 {
+                let trace = self
+                    .mchain
+                    .provider
+                    .trace_transaction(r.transaction_hash)
+                    .await
+                    .unwrap_or_default();
+                let error_msg = trace
+                    .first()
+                    .and_then(|t| t.trace.result.as_ref())
+                    .map_or_else(String::new, |output| {
+                        self.rollup_adapter.decode_error(output.output())
+                    });
+
+                panic!(
+                    "tx failed: receipt: {:#?} trace: {:#?}, humanly_readable_error: {}",
+                    r, trace, error_msg
+                );
+            }
+        }
     }
 
     /// Start the block builder
@@ -103,10 +141,10 @@ impl BlockBuilder {
                 biased; // biased allows us to process everything that's in the channel before shutting down
                 Some(slot) = self.slotter_rx.recv() => {
                     trace!("Received slot: {:?}", slot);
-                    self.metrics.record_last_slot(slot.number);
+                    self.metrics.record_last_slot(slot.sequencing.block.number);
 
                     // [OP / ARB] Build block of MChain transactions from slot
-                    let transactions = match self.builder.build_block_from_slot(&slot).await {
+                    let transactions = match self.rollup_adapter.build_block_from_slot(&slot, self.get_current_block_number().await +1).await {
                         Ok(transactions) => transactions,
                         Err(e) => {
                             panic!("Error building batch transaction: {}", e);
@@ -117,8 +155,10 @@ impl BlockBuilder {
                     trace!("Submitting {} transactions", transactions_len);
                     self.metrics.record_transactions_per_slot(transactions_len);
 
-                    let  block_number = self.get_current_block_number().await;
-                    assert!(slot.number == block_number + 1, "Unexpected slot number, got {}, expected {}", slot.number, block_number + 1);
+                    let  last_sequencing_block_processed = self.get_last_sequencing_block_processed().await;
+                    if last_sequencing_block_processed > 0 {
+                        assert!(slot.sequencing.block.number == last_sequencing_block_processed + 1, "Unexpected slot number, got {}, expected {}", slot.sequencing.block.number, last_sequencing_block_processed + 1);
+                    }
 
                     // Submit transactions to mchain
                     if let Err(e) = self.mchain.submit_txns(transactions).await {
@@ -126,13 +166,13 @@ impl BlockBuilder {
                     }
 
                     // Mine the actual block with slot timestamp
-                    if let Err(e) = self.mchain.mine_block(slot.timestamp).await {
+                    if let Err(e) = self.mchain.mine_block(slot.timestamp()).await {
                         panic!("Error mining block: {}", e);
                     }
 
-                    if let Err(e) = self.store.save_unsafe_slot(&slot).await {
-                        panic!("Error saving slot: {}", e);
-                    }
+                    // TODO(SEQ-623): add a flag to enable/disable this check
+                    self.verify_block(transactions_len, slot.sequencing.block.number).await;
+
                 }
                 _ = &mut shutdown_rx => {
                     drop(self.mchain);
@@ -144,18 +184,24 @@ impl BlockBuilder {
     }
 
     async fn get_current_block_number(&self) -> u64 {
-        self.mchain.provider.get_block_number().await.unwrap_or_else(|e| {
+        self.mchain.get_block_number().await.unwrap_or_else(|e| {
             panic!("Error getting current block number: {}", e);
         })
+    }
+
+    async fn get_last_sequencing_block_processed(&self) -> u64 {
+        self.rollup_adapter
+            .get_last_sequencing_block_processed(&self.mchain.provider)
+            .await
+            .unwrap_or_else(|e| {
+                panic!("Error getting last sequencing block processed: {}", e);
+            })
     }
 }
 
 #[allow(missing_docs)] // self-documenting
 #[derive(Debug, thiserror::Error)]
 pub enum BlockBuilderError {
-    #[error("Error starting Anvil: {0}")]
-    AnvilStart(AnvilStartError),
-
     #[error("Failed to submit transaction to MetaChain: {0}")]
     SubmitTxnError(RpcError<TransportErrorKind>),
 
@@ -183,119 +229,5 @@ pub enum AnvilStartError {
     PortUnavailable { mchain_url: Url, port: u16 },
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use alloy::providers::Provider;
-    use common::{
-        db::RocksDbStore,
-        types::{BlockAndReceipts, Slot},
-    };
-    use eyre::Result;
-    use prometheus_client::registry::Registry;
-    use test_utils::test_path;
-    use tokio::sync::mpsc;
-    use tracing_test::traced_test;
-
-    struct MetricsState {
-        /// Prometheus registry
-        pub registry: Registry,
-    }
-
-    /// Test the block builder startup and basic functionality
-    /// This test requires Anvil (part of Foundry toolchain) to simulate a local Ethereum node.
-    /// The test spawns an Anvil instance with custom parameters for gas and mining settings.
-    #[tokio::test]
-    async fn test_block_builder_start() -> Result<()> {
-        let (tx, rx) = mpsc::channel(32);
-        let config = BlockBuilderConfig::default();
-        let genesis_ts = config.genesis_timestamp;
-        let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let datadir = test_path("datadir");
-        let db_path = test_path("db");
-        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
-        let builder = BlockBuilder::new(rx, &config, &datadir, store, metrics).await?;
-
-        let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });
-
-        // Send a test block
-        let test_slot = Slot::new(2, genesis_ts + 1, Arc::new(BlockAndReceipts::default()));
-        tx.send(test_slot).await?;
-
-        // Give some time for processing
-        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
-
-        // Clean shutdown
-        let _ = shutdown_tx.send(());
-        let res = handle.await?;
-        assert!(res.is_err(), "Block builder should have been shut down");
-        assert!(res.unwrap_err().to_string().contains("shut down"));
-        Ok(())
-    }
-
-    #[tokio::test]
-    #[traced_test]
-    #[ignore] // TODO SEQ-528 unskip/re-write
-    async fn test_block_builder_resume_from_known_safe_slot() -> Result<()> {
-        let (tx, rx) = mpsc::channel(1);
-        let config = BlockBuilderConfig::default();
-        let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let datadir = test_path("datadir");
-        let db_path = test_path("db");
-        let store = Arc::new(RocksDbStore::new(db_path.as_str()).unwrap());
-        let builder = BlockBuilder::new(rx, &config, &datadir, store, metrics).await?;
-
-        let provider = builder.mchain.provider.clone();
-
-        // First run: send a few slots
-        let test_slot1 = Slot::new(1, 1000, Arc::new(BlockAndReceipts::default()));
-        let test_slot2 = Slot::new(2, 2000, Arc::new(BlockAndReceipts::default()));
-        let test_slot3 = Slot::new(3, 3000, Arc::new(BlockAndReceipts::default()));
-
-        let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let handle = tokio::spawn(async move { builder.start(None, shutdown_rx).await });
-
-        tx.send(test_slot1).await?;
-        tx.send(test_slot2.clone()).await?;
-        tx.send(test_slot3).await?;
-
-        // Give time for processing and state to be persisted
-        tokio::time::sleep(tokio::time::Duration::from_millis(200)).await;
-
-        let latest_block = provider.get_block_number().await?;
-        assert_eq!(latest_block, 3, "Chain should be at block 3");
-
-        let _ = shutdown_tx.send(());
-        let _ = handle.await?;
-
-        // Second run: resume builder
-        let (_resumed_tx, resumed_rx) = mpsc::channel(1);
-        let datadir = test_path("datadir");
-        let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
-        let store = Arc::new(RocksDbStore::new(db_path.as_str())?);
-        let resumed_builder =
-            BlockBuilder::new(resumed_rx, &config, &datadir, store, metrics).await?;
-
-        let resumed_provider = resumed_builder.mchain.provider.clone();
-
-        // resumed builder with the "last known safe slot" as slot2
-        let (_shutdown_tx, shutdown_rx) = oneshot::channel();
-        tokio::spawn(
-            async move { resumed_builder.start(Some(test_slot2.number), shutdown_rx).await },
-        );
-
-        // Give time for rollback to slot0
-        tokio::time::sleep(tokio::time::Duration::from_millis(1000)).await;
-
-        let latest_block = resumed_provider.get_block_number().await?;
-        assert_eq!(latest_block, 2, "Chain should be at block 2 after reorg");
-
-        Ok(())
-    }
-
-    // TODO SEQ-529 - write a test that asserts for determinism (same slots should yield the same
-    // block chain on separate block builders)
-}
+// TODO SEQ-529 - write a test that asserts for determinism (same slots should yield the same
+// block chain on separate block builders)

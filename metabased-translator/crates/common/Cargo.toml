@@ -9,14 +9,11 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy              = { workspace = true, features = ["serde"] }
-async-trait        = { workspace = true }
+alloy              = { workspace = true }
 bincode            = { workspace = true }
-rocksdb            = { workspace = true }
 serde              = { workspace = true, features = ["derive", "rc"] }
 serde_json         = { workspace = true }
 strum_macros       = { workspace = true }
-thiserror          = { workspace = true }
 tracing            = { workspace = true, features = ["attributes"] }
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
 

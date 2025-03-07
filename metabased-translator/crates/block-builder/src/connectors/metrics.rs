@@ -1,6 +1,5 @@
 //! The `metrics` module for the `MChain`
 
-use alloy::rpc::types::Block;
 use prometheus_client::{metrics::gauge::Gauge, registry::Registry};
 /// Structure holding metrics related to the `MChain`.
 #[derive(Debug, Clone)]
@@ -37,19 +36,15 @@ impl MChainMetrics {
     }
 
     /// Updates the last mined block number and timestamp metrics.
-    pub fn record_last_block_mined(&self, block: &Block) {
-        self.mchain_last_mined_block_number.set(block.header.number as i64);
-        self.mchain_last_mined_block_timestamp_seconds.set(block.header.timestamp as i64);
+    pub fn record_last_block_mined(&self, number: u64, ts: u64) {
+        self.mchain_last_mined_block_number.set(number as i64);
+        self.mchain_last_mined_block_timestamp_seconds.set(ts as i64);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::{
-        consensus::Header as CHeader,
-        rpc::types::{Block, BlockTransactions, Header, Transaction},
-    };
     use prometheus_client::registry::Registry;
 
     #[test]
@@ -66,13 +61,7 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = MChainMetrics::new(&mut registry);
 
-        let mut block = Block::new(
-            Header::new(CHeader::default()),
-            BlockTransactions::<Transaction>::Full(vec![]),
-        );
-        block.header.number = 10;
-        block.header.timestamp = 100000;
-        metrics.record_last_block_mined(&block);
+        metrics.record_last_block_mined(10, 100000);
         assert_eq!(metrics.mchain_last_mined_block_number.get(), 10);
         assert_eq!(metrics.mchain_last_mined_block_timestamp_seconds.get(), 100000);
     }

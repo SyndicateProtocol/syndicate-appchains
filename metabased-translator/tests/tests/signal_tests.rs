@@ -81,13 +81,13 @@ mod serial {
     use super::{run_metabased_translator, Result};
     use serial_test::serial;
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     #[serial]
     async fn test_metabased_sigterm() -> Result<()> {
         run_metabased_translator("-TERM").await
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     #[serial]
     async fn test_metabased_sigint() -> Result<()> {
         run_metabased_translator("-INT").await

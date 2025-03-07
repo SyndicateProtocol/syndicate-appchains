@@ -14,6 +14,10 @@ on:
       - "Cargo.lock"
       - ".github/workflows/rust-ci.yaml"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
 env:
   CARGO_TERM_COLOR: always
   # Make sure CI fails on all warnings, including Clippy lints

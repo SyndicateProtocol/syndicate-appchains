@@ -4,6 +4,10 @@ on:
   release:
     types: [published]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: false # deliberately allow concurrent runs to finish
+
 permissions:
   contents: read
   id-token: write
@@ -15,6 +19,7 @@ jobs:
     with:
       do_push: true
       target_name: metabased-sequencer
+      runner_label: vip-large-01
     secrets: inherit
 
   publish-translator:
@@ -22,11 +27,12 @@ jobs:
     with:
       do_push: true
       target_name: metabased-translator
+      runner_label: vip-large-01
     secrets: inherit
 
   cloud-run-deployment:
     needs: [publish-sequencer]
-    runs-on: ubuntu-latest
+    runs-on: vip-large
     permissions:
       contents: 'read'
       id-token: 'write'

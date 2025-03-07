@@ -11,6 +11,15 @@ on:
         required: true
         type: string
         description: 'Name of the valid Dockerfile target to build. This is also the service name'
+      runner_label:
+        required: false
+        type: string
+        default: "ubuntu-latest"
+        description: "Which runner label(s) to use"
+
+# This is a reusable workflow that can be called from other workflows. Do not give it a concurrency key unless it will
+# be run individually in the future
+#concurrency:
 
 env:
   GITHUB_REGISTRY: ghcr.io
@@ -21,7 +30,7 @@ env:
 
 jobs:
   docker:
-    runs-on: ubuntu-latest
+    runs-on: ${{ inputs.runner_label }}
     permissions:
       contents: 'read'
       id-token: 'write'
