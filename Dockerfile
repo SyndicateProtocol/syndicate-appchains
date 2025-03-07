@@ -46,7 +46,7 @@ RUN cargo build --profile $BUILD_PROFILE \
     --locked \
     --bin metabased-translator
 
-# Build metabased-sequencer and proxy
+# Build metabased-sequencer
 RUN cargo build --profile $BUILD_PROFILE \
     --features "$FEATURES" \
     --locked \

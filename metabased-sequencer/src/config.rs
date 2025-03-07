@@ -25,7 +25,7 @@ pub enum ConfigError {
 #[command(version, about, long_about = None)]
 pub struct Config {
     /// Address of the sequencing contract
-    #[arg(short = 'c', long, env = "SEQUENCER_CHAIN_CONTRACT_ADDRESS", value_parser = parse_address)]
+    #[arg(short = 'c', long, env = "SEQUENCING_CONTRACT_ADDRESS", value_parser = parse_address)]
     pub chain_contract_address: Address,
 
     /// URL of the sequencing chain RPC node
