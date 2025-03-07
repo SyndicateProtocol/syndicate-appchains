@@ -8,6 +8,10 @@ on:
   # Run workflow on all PRs
   pull_request:
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   packages: read  # Allows pulling cached container images from GHCR
