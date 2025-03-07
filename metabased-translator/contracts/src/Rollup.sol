@@ -72,9 +72,11 @@ contract Rollup {
         uint64 _setBlockNum,
         uint256 _setBlockHash
     ) public {
+        require(seqBlockNumber == 0 || _seqBlockNum == seqBlockNumber + 1, "INVALID_SEQ_BLOCK_NUMBER");
         seqBlockNumber = _seqBlockNum;
         seqBlockHash = _seqBlockHash;
-        if (seqBlockNumber > 0) {
+        if (setBlockNumber > 0) {
+            require(setBlockNumber == 0 || _setBlockNum == setBlockNumber + 1, "INVALID_SET_BLOCK_NUMBER");
             setBlockNumber = _setBlockNum;
             setBlockHash = _setBlockHash;
         }

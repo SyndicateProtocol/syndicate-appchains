@@ -139,7 +139,7 @@ impl RollupAdapter for ArbitrumAdapter {
     ) -> Result<Option<(KnownState, u64)>> {
         let rollup = Rollup::new(self.mchain_rollup_address, provider);
 
-        let block_num = match block {
+        let block_number = match block {
             BlockNumberOrTag::Number(num) => num,
             tag => {
                 provider
@@ -150,7 +150,7 @@ impl RollupAdapter for ArbitrumAdapter {
                     .number
             }
         };
-        let block_id = BlockId::Number(BlockNumberOrTag::Number(block_num));
+        let block_id = BlockId::Number(BlockNumberOrTag::Number(block_number));
 
         let seq_num = rollup.seqBlockNumber().call().block(block_id).await?._0;
         if seq_num == 0 {
@@ -163,11 +163,11 @@ impl RollupAdapter for ArbitrumAdapter {
 
         Ok(Some((
             KnownState {
-                block_number: 0,
+                block_number,
                 sequencing_block: BlockRef { number: seq_num, timestamp: 0, hash: seq_hash.into() },
                 settlement_block: BlockRef { number: set_num, timestamp: 0, hash: set_hash.into() },
             },
-            block_num,
+            block_number,
         )))
     }
 

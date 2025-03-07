@@ -205,7 +205,7 @@ impl Slotter {
                 });
             }
 
-            if block.number <= latest.number || !block.parent_hash.eq(&latest.hash) {
+            if !block.parent_hash.eq(&latest.hash) {
                 return Err(SlotterError::ReorgDetected {
                     chain,
                     current_block_number: latest.number,
