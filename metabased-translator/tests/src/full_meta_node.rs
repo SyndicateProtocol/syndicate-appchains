@@ -46,9 +46,9 @@ use tokio::{
     time::timeout,
 };
 
-pub const PRELOAD_INBOX_ADDRESS: Address = address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899");
-pub const PRELOAD_BRIDGE_ADDRESS: Address = address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2");
-
+pub const PRELOAD_INBOX_ADDRESS: Address = address!("0x437f6403860C0FafF7F4c6942a90bc720E0e9ad1"); //address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899");
+pub const PRELOAD_BRIDGE_ADDRESS: Address = address!("0xF4b9ce94A3E4CA1f53a711b0ee6E4d41Ae381Aca"); //address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2");
+pub const PRELOAD_ROLLUP_ADDRESS: Address = address!("0xd31B1422A15118106521CbcA5B57862A4B5A3429");
 #[derive(Debug)]
 struct Task(task::JoinHandle<()>);
 
@@ -291,7 +291,7 @@ pub async fn launch_nitro_node(chain_id: u64, mchain_port: u16) -> Result<(Docke
         .arg("--init")
         .arg("--rm")
         .arg("--net=host")
-        .arg("offchainlabs/nitro-node:v3.4.0-d896e9c-slim")
+        .arg("offchainlabs/nitro-node:v3.4.0-d896e9c-validator")
         .arg(format!("--parent-chain.connection.url=http://localhost:{mchain_port}"))
         .arg("--node.dangerous.disable-blob-reader")
         .arg("--execution.forwarding-target=null")
@@ -306,6 +306,8 @@ pub async fn launch_nitro_node(chain_id: u64, mchain_port: u16) -> Result<(Docke
         .arg("--http.addr=0.0.0.0")
         .arg("--http.port=".to_string() + &port.to_string())
         .arg("--log-level=info")
+        .arg("--http.api=net,web3,eth,arb,arbdebug,debug")
+        .arg("--node.block-validator.current-module-root=0x184884e1eb9fefdc158f6c8ac912bb183bf3cf83f0090317e0bc4ac5860baa39")
         .spawn()?;
     let rollup = ProviderBuilder::default()
         .on_http(("http://localhost:".to_string() + &port.to_string()).parse()?);
@@ -405,7 +407,7 @@ impl MetaNode {
             // This is the full set of Arb contracts
             let state_file = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("config")
-                .join("anvil.json");
+                .join("anvil_fast_withdrawal.json");
 
             (set_port, _set_anvil, set_provider) = start_anvil_with_args(
                 31337,

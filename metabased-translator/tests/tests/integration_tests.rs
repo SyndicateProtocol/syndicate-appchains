@@ -16,8 +16,10 @@ use block_builder::{
     rollups::arbitrum,
 };
 use common::{tracing::init_test_tracing, types::Block};
-use contract_bindings::arbitrum::{iinbox::IInbox, rollup::Rollup};
-use e2e_tests::full_meta_node::{launch_nitro_node, start_reth, MetaNode, PRELOAD_INBOX_ADDRESS};
+use contract_bindings::arbitrum::{iinbox::IInbox, irollupuser::IRollupUser, rollup::Rollup};
+use e2e_tests::full_meta_node::{
+    launch_nitro_node, start_reth, MetaNode, PRELOAD_INBOX_ADDRESS, PRELOAD_ROLLUP_ADDRESS,
+};
 use eyre::{eyre, Result};
 use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::MetricsState;
@@ -578,6 +580,186 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
     // tx hash should match
     assert_eq!(block.transactions[1].hash, *inner_tx.tx_hash());
     assert_eq!(block.transactions[2].hash, *second_tx.tx_hash());
+
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn e2e_settlement_fast_withdrawal() -> Result<()> {
+    let _ = init_test_tracing(Level::INFO);
+    // Start the meta node (port index 0, pre-loaded with the full set of Arb contracts)
+    let mut config = MetabasedConfig::default();
+    config.slotter.settlement_delay = 0;
+    config.settlement.settlement_start_block = 1;
+    config.sequencing.sequencing_start_block = 3;
+    let meta_node = MetaNode::new(true, config).await?;
+
+    // Sync the tips of the sequencing and settlement chains
+    let seq_block: Block = meta_node
+        .settlement_provider
+        .raw_request("eth_getBlockByNumber".into(), ("latest", true))
+        .await?;
+    meta_node
+        .sequencing_provider
+        .evm_mine(Some(MineOptions::Timestamp(Some(seq_block.timestamp))))
+        .await?;
+
+    // Grab the wallet address for the test
+    let wallet_address = meta_node.settlement_provider.default_signer_address();
+
+    // Send a deposit (unaliased address) delayed message
+    // Deposit is from the arbos address and does not increment the nonce
+    let inbox = IInbox::new(PRELOAD_INBOX_ADDRESS, &meta_node.settlement_provider);
+    _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
+
+    let global_state: serde_json::Value = meta_node
+        .metabased_rollup
+        .raw_request(
+            "arbdebug_validateMessageNumber".into(),
+            ("0x0", true, "0x184884e1eb9fefdc158f6c8ac912bb183bf3cf83f0090317e0bc4ac5860baa39"),
+        )
+        .await?;
+
+    println!("GLOBAL STATE {:?}", global_state);
+
+    // let rollup = IRollupUser::new(PRELOAD_ROLLUP_ADDRESS, &meta_node.settlement_provider);
+    // _ = rollup.fastConfirmNewAssertion(assertion, expectedAssertionHash);
+
+    // const L2_MESSAGE_KIND_SIGNED_TX: u8 = 4;
+    // let gas_limit: u64 = 100_000;
+    // let max_fee_per_gas: u128 = 100_000_000;
+
+    // // Send l2 signed messages (unaliased address)
+    // // Message (not from origin)
+    // let mut inner_tx = vec![];
+    // TransactionRequest::default()
+    //     .with_to(Address::ZERO)
+    //     .with_value(parse_ether("0.1")?)
+    //     .with_nonce(0)
+    //     .with_gas_limit(gas_limit)
+    //     .with_chain_id(meta_node.chain_id)
+    //     .with_max_fee_per_gas(max_fee_per_gas)
+    //     .with_max_priority_fee_per_gas(0)
+    //     .build(meta_node.settlement_provider.wallet())
+    //     .await?
+    //     .encode_2718(&mut inner_tx);
+    // let mut tx = vec![L2_MESSAGE_KIND_SIGNED_TX];
+    // tx.append(&mut inner_tx);
+    // _ = inbox.sendL2Message(tx.into()).send().await?;
+    // // Message From Origin
+    // inner_tx = vec![];
+    // TransactionRequest::default()
+    //     .with_to(Address::ZERO)
+    //     .with_value(parse_ether("0.1")?)
+    //     .with_nonce(1)
+    //     .with_gas_limit(gas_limit)
+    //     .with_chain_id(meta_node.chain_id)
+    //     .with_max_fee_per_gas(max_fee_per_gas)
+    //     .with_max_priority_fee_per_gas(0)
+    //     .build(meta_node.settlement_provider.wallet())
+    //     .await?
+    //     .encode_2718(&mut inner_tx);
+    // tx = vec![L2_MESSAGE_KIND_SIGNED_TX];
+    // tx.append(&mut inner_tx);
+    // _ = inbox.sendL2MessageFromOrigin(tx.into()).send().await?;
+
+    // // Send retryable tickets that are automatically redeemed (aliased address)
+    // // Safe Retryable Ticket
+    // _ = inbox
+    //     .createRetryableTicket(
+    //         wallet_address,
+    //         U256::ZERO,
+    //         parse_ether("0.00001")?,
+    //         wallet_address,
+    //         wallet_address,
+    //         U256::from(gas_limit),
+    //         U256::from(max_fee_per_gas),
+    //         Default::default(),
+    //     )
+    //     .value(parse_ether("1")?)
+    //     .send()
+    //     .await?;
+    // // Unsafe Retryable Ticket
+    // _ = inbox
+    //     .unsafeCreateRetryableTicket(
+    //         wallet_address,
+    //         U256::ZERO,
+    //         parse_ether("0.00001")?,
+    //         wallet_address,
+    //         wallet_address,
+    //         U256::from(gas_limit),
+    //         U256::from(max_fee_per_gas),
+    //         Default::default(),
+    //     )
+    //     .value(parse_ether("1")?)
+    //     .send()
+    //     .await?;
+
+    // // Send 2 l2 unsigned messages (aliased address)
+    // // Unsigned Transaction
+    // _ = inbox
+    //     .sendUnsignedTransaction(
+    //         U256::from(gas_limit),
+    //         U256::from(max_fee_per_gas),
+    //         U256::from(2),
+    //         wallet_address,
+    //         parse_ether("0.9")?,
+    //         Default::default(),
+    //     )
+    //     .send()
+    //     .await?;
+    // // Contract Transaction
+    // _ = inbox
+    //     .sendContractTransaction(
+    //         U256::from(gas_limit),
+    //         U256::from(max_fee_per_gas),
+    //         wallet_address,
+    //         parse_ether("0.9")?,
+    //         Default::default(),
+    //     )
+    //     .send()
+    //     .await?;
+
+    // // Send 2 l2 funded by l1 messages (aliased address)
+    // // Funded Unsigned Transaction
+    // _ = inbox
+    //     .sendL1FundedUnsignedTransaction(
+    //         U256::from(gas_limit),
+    //         U256::from(max_fee_per_gas),
+    //         U256::from(4),
+    //         wallet_address,
+    //         Default::default(),
+    //     )
+    //     .value(parse_ether("1")?)
+    //     .send()
+    //     .await?;
+    // // Funded Contract Transaction
+    // _ = inbox
+    //     .sendL1FundedContractTransaction(
+    //         U256::from(gas_limit),
+    //         U256::from(max_fee_per_gas),
+    //         wallet_address,
+    //         Default::default(),
+    //     )
+    //     .value(parse_ether("1")?)
+    //     .send()
+    //     .await?;
+    // meta_node.mine_set_block(0).await?;
+
+    // // Mine a set block to process the slot
+    // meta_node.mine_set_block(1).await?;
+
+    // // Process the slot
+    // sleep(Duration::from_millis(500)).await;
+
+    // assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 17);
+    // assert_eq!(
+    //     meta_node
+    //         .metabased_rollup
+    //         .get_balance(meta_node.settlement_provider.default_signer_address())
+    //         .await?,
+    //     parse_ether("4.6000316")?
+    // );
 
     Ok(())
 }
