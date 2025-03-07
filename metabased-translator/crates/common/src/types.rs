@@ -273,8 +273,8 @@ impl Display for BlockRef {
 /// A known state of the translator
 #[derive(Debug)]
 pub struct KnownState {
-    /// block number for this state
-    pub block_number: u64,
+    /// mchain block number for this state
+    pub mchain_block_number: u64,
     /// The latest block from the sequencing chain that has been processed
     pub sequencing_block: BlockRef,
     /// The latest block from the settlement chain that has been processed

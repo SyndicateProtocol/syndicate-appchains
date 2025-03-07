@@ -49,6 +49,9 @@ pub trait RollupAdapter: Debug + Send + Sync + Unpin + 'static {
         mchain_block_number: u64,
     ) -> Result<Vec<TransactionRequest>, Error>;
 
+    /// decodes an error from the rollup contract - useful for humanly readable logs
+    fn decode_error(&self, output: &Bytes) -> String;
+
     /// Gets the source chain's processed blocks from the rollup
     async fn get_processed_blocks<T: Provider>(
         &self,

@@ -6,6 +6,7 @@ use crate::{
 };
 use alloy::{
     eips::BlockNumberOrTag,
+    providers::ext::TraceApi,
     rpc::types::BlockTransactionsKind,
     transports::{RpcError, TransportErrorKind},
 };
@@ -102,7 +103,25 @@ impl<R: RollupAdapter> BlockBuilder<R> {
         );
 
         for r in receipts {
-            assert!(r.status == 1, "tx failed: {:#?}", r);
+            if r.status != 1 {
+                let trace = self
+                    .mchain
+                    .provider
+                    .trace_transaction(r.transaction_hash)
+                    .await
+                    .unwrap_or_default();
+                let error_msg = trace
+                    .first()
+                    .and_then(|t| t.trace.result.as_ref())
+                    .map_or_else(String::new, |output| {
+                        self.rollup_adapter.decode_error(output.output())
+                    });
+
+                panic!(
+                    "tx failed: receipt: {:#?} trace: {:#?}, humanly_readable_error: {}",
+                    r, trace, error_msg
+                );
+            }
         }
     }
 

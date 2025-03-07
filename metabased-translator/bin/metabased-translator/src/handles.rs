@@ -21,7 +21,7 @@ pub struct ComponentHandles {
 impl ComponentHandles {
     #[allow(clippy::too_many_arguments)]
     pub fn spawn<R: RollupAdapter>(
-        safe_block_number: Option<u64>,
+        safe_mchain_block_number: Option<u64>,
         sequencing_ingestor: Ingestor,
         sequencing_rx: tokio::sync::mpsc::Receiver<Arc<BlockAndReceipts>>,
         settlement_ingestor: Ingestor,
@@ -42,7 +42,9 @@ impl ComponentHandles {
             );
 
         let block_builder =
-            tokio::spawn(async move { block_builder.start(safe_block_number, rx.builder).await });
+            tokio::spawn(
+                async move { block_builder.start(safe_mchain_block_number, rx.builder).await },
+            );
 
         Self { sequencing, settlement, slotter, block_builder }
     }

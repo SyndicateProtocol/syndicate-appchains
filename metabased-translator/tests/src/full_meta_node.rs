@@ -329,7 +329,9 @@ pub async fn launch_nitro_node(chain_id: u64, mchain_port: u16) -> Result<(Docke
 pub struct MetaNode {
     pub sequencing_contract: MetabasedSequencerChainInstance<(), FilledProvider>,
     pub sequencing_provider: FilledProvider,
+    pub sequencing_client: Arc<dyn RPCClient>,
     pub settlement_provider: FilledProvider,
+    pub settlement_client: Arc<dyn RPCClient>,
     pub metabased_rollup: RootProvider,
 
     pub chain_id: u64,
@@ -462,14 +464,14 @@ impl MetaNode {
             Arc::new(EthClient::new(&set_config.rpc_url, Chain::Settlement).await?);
         let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
             Chain::Sequencing,
-            sequencing_client,
+            sequencing_client.clone(),
             &seq_config,
             IngestorMetrics::new(&mut metrics_state.registry),
         )
         .await?;
         let (settlement_ingestor, settlement_rx) = Ingestor::new(
             Chain::Settlement,
-            settlement_client,
+            settlement_client.clone(),
             &set_config,
             IngestorMetrics::new(&mut metrics_state.registry),
         )
@@ -511,7 +513,9 @@ impl MetaNode {
         Ok(Self {
             sequencing_contract,
             sequencing_provider: seq_provider,
+            sequencing_client,
             settlement_provider: set_provider,
+            settlement_client,
             metabased_rollup,
 
             chain_id: config.block_builder.target_chain_id,

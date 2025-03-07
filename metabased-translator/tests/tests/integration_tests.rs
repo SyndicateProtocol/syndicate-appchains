@@ -1,7 +1,7 @@
 //! Integration tests for the metabased stack
 
 use alloy::{
-    eips::{eip2718::Encodable2718, BlockNumberOrTag},
+    eips::{eip2718::Encodable2718, BlockId::Number, BlockNumberOrTag},
     network::{EthereumWallet, TransactionBuilder},
     primitives::{address, utils::parse_ether, Address, BlockHash, U256},
     providers::{ext::AnvilApi as _, Provider, WalletProvider},
@@ -13,13 +13,16 @@ use block_builder::{
         mchain::{MetaChainProvider, MCHAIN_ID},
         metrics::MChainMetrics,
     },
-    rollups::arbitrum,
+    rollups::arbitrum::{self, arbitrum_adapter::ArbitrumAdapter},
 };
-use common::{tracing::init_test_tracing, types::Block};
+use common::{
+    tracing::init_test_tracing,
+    types::{Block, BlockRef},
+};
 use contract_bindings::arbitrum::{iinbox::IInbox, rollup::Rollup};
 use e2e_tests::full_meta_node::{launch_nitro_node, start_reth, MetaNode, PRELOAD_INBOX_ADDRESS};
 use eyre::{eyre, Result};
-use metabased_translator::config::MetabasedConfig;
+use metabased_translator::{config::MetabasedConfig, setup::get_safe_state};
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use std::time::Duration;
@@ -276,7 +279,7 @@ async fn e2e_settlement_test() -> Result<()> {
 /// sequence a mchain block that does not include a batch.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_test() -> Result<()> {
-    let _ = init_test_tracing(Level::DEBUG);
+    let _ = init_test_tracing(Level::INFO);
     // Start the meta node (port index 1, no pre-loaded contracts)
     let config = MetabasedConfig::default();
     let meta_node = MetaNode::new(false, config.clone()).await?;
@@ -391,6 +394,45 @@ async fn e2e_test() -> Result<()> {
     // balance should match
     assert_eq!(meta_node.metabased_rollup.get_balance(test_addr).await?, parse_ether("1")?);
 
+    let known_state = get_safe_state(
+        &meta_node.mchain_provider,
+        meta_node.sequencing_client.clone(),
+        meta_node.settlement_client.clone(),
+        &ArbitrumAdapter::new(&config.block_builder),
+    )
+    .await?
+    .unwrap();
+
+    assert_eq!(
+        known_state.mchain_block_number,
+        meta_node.mchain_provider.get_block_number().await?
+    );
+    let seq_block = meta_node
+        .sequencing_provider
+        .get_block(Number(BlockNumberOrTag::Latest), BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
+    assert_eq!(
+        known_state.sequencing_block,
+        BlockRef {
+            number: seq_block.header.number,
+            timestamp: seq_block.header.timestamp,
+            hash: seq_block.header.hash
+        }
+    );
+    let set_block = meta_node
+        .settlement_provider
+        .get_block(Number(BlockNumberOrTag::Number(4)), BlockTransactionsKind::Hashes) // last block (5) hasn't been processed yet
+        .await?
+        .unwrap();
+    assert_eq!(
+        known_state.settlement_block,
+        BlockRef {
+            number: set_block.header.number,
+            timestamp: set_block.header.timestamp,
+            hash: set_block.header.hash
+        }
+    );
     Ok(())
 }
 

@@ -67,17 +67,15 @@ contract Rollup {
 
     function postBatch(
         bytes memory data,
-        uint64 _seqBlockNum,
+        uint64 _seqBlockNumber,
         uint256 _seqBlockHash,
-        uint64 _setBlockNum,
+        uint64 _setBlockNumber,
         uint256 _setBlockHash
     ) public {
-        require(seqBlockNumber == 0 || _seqBlockNum == seqBlockNumber + 1, "INVALID_SEQ_BLOCK_NUMBER");
-        seqBlockNumber = _seqBlockNum;
+        seqBlockNumber = _seqBlockNumber;
         seqBlockHash = _seqBlockHash;
-        if (setBlockNumber > 0) {
-            require(setBlockNumber == 0 || _setBlockNum == setBlockNumber + 1, "INVALID_SET_BLOCK_NUMBER");
-            setBlockNumber = _setBlockNum;
+        if (_setBlockNumber > 0) {
+            setBlockNumber = _setBlockNumber;
             setBlockHash = _setBlockHash;
         }
 

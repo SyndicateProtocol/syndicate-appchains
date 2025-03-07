@@ -49,6 +49,10 @@ impl RollupAdapter for OptimismAdapter {
         Ok(result)
     }
 
+    fn decode_error(&self, _output: &Bytes) -> String {
+        panic!("Not implemented")
+    }
+
     fn transaction_parser(&self) -> &SequencingTransactionParser {
         &self.transaction_parser
     }

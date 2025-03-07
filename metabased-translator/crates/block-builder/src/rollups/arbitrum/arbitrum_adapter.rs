@@ -16,7 +16,7 @@ use alloy::{
     primitives::{Address, Bytes, FixedBytes, U256},
     providers::Provider,
     rpc::types::{BlockTransactionsKind, TransactionRequest},
-    sol_types::{SolCall, SolEvent},
+    sol_types::{SolCall, SolEvent, SolInterface},
 };
 use async_trait::async_trait;
 use common::types::{BlockAndReceipts, BlockRef, KnownState, Log, Slot};
@@ -163,7 +163,7 @@ impl RollupAdapter for ArbitrumAdapter {
 
         Ok(Some((
             KnownState {
-                block_number,
+                mchain_block_number: block_number,
                 sequencing_block: BlockRef { number: seq_num, timestamp: 0, hash: seq_hash.into() },
                 settlement_block: BlockRef { number: set_num, timestamp: 0, hash: set_hash.into() },
             },
@@ -180,6 +180,18 @@ impl RollupAdapter for ArbitrumAdapter {
             .await?
             ._0;
         Ok(seq_num)
+    }
+
+    fn decode_error(&self, output: &Bytes) -> String {
+        Rollup::RollupErrors::abi_decode(output, true).map_or_else(
+            |_| String::from_utf8(output[4 + 32 + 32..].to_vec()).unwrap_or_default(),
+            |decoded| match decoded {
+                Rollup::RollupErrors::DataTooLarge(err) => format!(
+                    "DataTooLarge, dataLength: {}, maxDataLength: {}",
+                    err.dataLength, err.maxDataLength
+                ),
+            },
+        )
     }
 }
 

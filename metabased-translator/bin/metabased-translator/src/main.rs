@@ -65,14 +65,15 @@ async fn run(
         MetaChainProvider::start(&config.block_builder, &metrics.block_builder.mchain_metrics)
             .await?;
 
-    let (safe_state, safe_block_number) = (get_safe_state(
+    let safe_state = get_safe_state(
         &mchain,
         sequencing_client.clone(),
         settlement_client.clone(),
         &rollup_adapter,
     )
-    .await?)
-        .unzip();
+    .await?;
+
+    let mchain_safe_block_number = safe_state.as_ref().map(|state| state.mchain_block_number);
 
     let (
         sequencing_ingestor,
@@ -92,7 +93,7 @@ async fn run(
     .await?;
     let (main_shutdown_rx, tx, rx) = shutdown_channels.split();
     let component_tasks = ComponentHandles::spawn(
-        safe_block_number,
+        mchain_safe_block_number,
         sequencing_ingestor,
         sequencing_rx,
         settlement_ingestor,
