@@ -24,6 +24,8 @@ use common::{
     types::{Block, BlockRef},
 };
 use contract_bindings::arbitrum::{
+    arbsys::ArbSys,
+    ibridge::IBridge,
     iinbox::IInbox,
     irollupcore::IRollupCore::AssertionCreated,
     irollupuser::IRollupUser::{
@@ -33,7 +35,8 @@ use contract_bindings::arbitrum::{
     rollup::Rollup,
 };
 use e2e_tests::full_meta_node::{
-    launch_nitro_node, start_reth, MetaNode, PRELOAD_INBOX_ADDRESS, PRELOAD_ROLLUP_ADDRESS,
+    launch_nitro_node, start_reth, MetaNode, PRELOAD_BRIDGE_ADDRESS, PRELOAD_INBOX_ADDRESS,
+    PRELOAD_ROLLUP_ADDRESS,
 };
 use eyre::{eyre, Result};
 use metabased_translator::{config::MetabasedConfig, setup::get_safe_state};
@@ -45,7 +48,7 @@ use serde::{
 };
 use std::{str::FromStr, time::Duration};
 use tokio::time::sleep;
-use tracing::{info, Level};
+use tracing::{event, info, Level};
 
 /// mine a mchain block with a delay - for testing only
 async fn mine_block(provider: &MetaChainProvider, delay: u64) -> Result<BlockHash> {
@@ -688,14 +691,12 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
     // Deposit is from the arbos address and does not increment the nonce
     let inbox = IInbox::new(PRELOAD_INBOX_ADDRESS, &meta_node.settlement_provider);
     _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
-
-    // let global_state: serde_json::Value = meta_node
-    //     .metabased_rollup
-    //     .raw_request(
-    //         "arbdebug_validateMessageNumber".into(),
-    //         ("0x0", true, "0x184884e1eb9fefdc158f6c8ac912bb183bf3cf83f0090317e0bc4ac5860baa39"),
-    //     )
-    //     .await?;
+    meta_node.mine_seq_block(1).await?;
+    meta_node.mine_set_block(1).await?;
+    sleep(Duration::from_secs(2)).await;
+    meta_node.mine_seq_block(1).await?;
+    meta_node.mine_set_block(1).await?;
+    sleep(Duration::from_secs(2)).await;
 
     // info!("GLOBAL STATE {:?}", global_state);
     #[derive(Serialize, Deserialize, Debug)]
@@ -704,39 +705,50 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
         hash: B256,
         send_root: B256,
     }
-    let block: NitroBlock = meta_node
-        .metabased_rollup
-        .raw_request("eth_getBlockByNumber".into(), ("0x0", false))
-        .await?;
 
-    let z: u64 = 0;
-    let global_state =
-        GlobalState { u64Vals: [0 as u64, 0 as u64], bytes32Vals: [block.hash, block.send_root] };
+    // Set up withdrawal
+    let mut tx = vec![];
+    let arbsys = ArbSys::new(
+        address!("0x0000000000000000000000000000000000000064"),
+        &meta_node.metabased_rollup,
+    );
+    let gas_limit: u64 = 100_000;
+    let max_fee_per_gas: u128 = 100_000_000;
+    let m_chain_block = meta_node.mchain_provider.get_block_number().await?;
+    info!("LATEST m_chain_block block : {:?}", m_chain_block);
+    let withdrawal = arbsys
+        .withdrawEth(Address::ZERO)
+        .value(parse_ether("0.1")?)
+        .nonce(0)
+        .gas(gas_limit)
+        .chain_id(meta_node.chain_id)
+        .max_fee_per_gas(max_fee_per_gas)
+        .max_priority_fee_per_gas(0)
+        .into_transaction_request()
+        .build(meta_node.sequencing_provider.wallet())
+        .await?
+        .encode_2718(&mut tx);
+    _ = meta_node.sequencing_contract.processTransaction(tx.into()).send().await?;
 
-    let config = ConfigData {
-        wasmModuleRoot: B256::from_hex(
-            "0x184884e1eb9fefdc158f6c8ac912bb183bf3cf83f0090317e0bc4ac5860baa39",
-        )
-        .unwrap(),
-        requiredStake: U256::from(1000000000000000000 as u64),
-        challengeManager: address!("0xE801273F775Eacc1d74d1d43f92ec4524caBBD35"),
-        confirmPeriodBlocks: 20,
-        nextInboxPosition: 0,
-    };
+    meta_node.mine_seq_block(0).await?;
+    meta_node.mine_set_block(1).await?;
+    sleep(Duration::from_secs(2)).await;
 
-    let after_state = AssertionState {
-        globalState: global_state.clone(),
-        machineStatus: 1, // 1 == FINISHED
-        endHistoryRoot: B256::default(),
-    };
+    let meta_block = meta_node.metabased_rollup.get_block_number().await?;
+    info!("LATEST metabased rollup block : {:?}", meta_block);
 
-    info!("Assertion created!");
+    let m_chain_block = meta_node.mchain_provider.get_block_number().await?;
+    info!("LATEST m_chain_block block : {:?}", m_chain_block);
 
     let rollup = IRollupUser::new(PRELOAD_ROLLUP_ADDRESS, &meta_node.settlement_provider);
+    let bridge = IBridge::new(PRELOAD_BRIDGE_ADDRESS, &meta_node.settlement_provider);
 
-    let prev = B256::default();
-
-    let latest = rollup.latestConfirmed().call().await?._0;
+    let block: NitroBlock = meta_node
+        .metabased_rollup
+        .clone()
+        .raw_request("eth_getBlockByNumber".into(), ("latest", false))
+        .await?;
+    info!("block.send_root: {:?}", block.send_root);
 
     let filter = &Filter {
         address: PRELOAD_ROLLUP_ADDRESS.into(),
@@ -749,167 +761,61 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
         block_option: Default::default(),
     };
     let events = meta_node.settlement_provider.get_logs(filter).await?;
-    let log_decode = AssertionCreated::abi_decode_data(&events[0].data().data, true)?;
-    let assertion_inputs = log_decode.0;
+    info!("NUMBER OF EVENTS: {:?}", events.len());
+    let topics = events[0].topics();
+    let log_decode = AssertionCreated::decode_log_data(events[0].data(), true)?;
+    // let log_decode = AssertionCreated::new(AssertionCreated::decode_topics(topics)?, data);
+    let assertion_inputs = log_decode.assertion;
     // info!("ASSERTION CREATED LOG {:#?}", log_decode.0);
 
+    let wasm = B256::from_hex("0x184884e1eb9fefdc158f6c8ac912bb183bf3cf83f0090317e0bc4ac5860baa39")
+        .unwrap();
+
+    let config = assertion_inputs.beforeStateData.configData;
+    let before_state = assertion_inputs.afterState;
+
+    let after_state = AssertionState {
+        globalState: GlobalState {
+            u64Vals: [1 as u64, 0 as u64],
+            bytes32Vals: [block.hash, block.send_root],
+        },
+        machineStatus: 1,
+        endHistoryRoot: B256::default(),
+    };
+
     let assertion = AssertionInputs {
-        beforeStateData: assertion_inputs.beforeStateData,
+        beforeStateData: BeforeStateData {
+            sequencerBatchAcc: log_decode.afterInboxBatchAcc,
+            prevPrevAssertionHash: log_decode.parentAssertionHash,
+            configData: ConfigData {
+                wasmModuleRoot: wasm,
+                requiredStake: U256::from(1000000000000000000 as u64),
+                challengeManager: address!("0xE801273F775Eacc1d74d1d43f92ec4524caBBD35"),
+                confirmPeriodBlocks: 20,
+                nextInboxPosition: 1,
+            },
+        },
         beforeState: AssertionState {
             globalState: GlobalState {
-                u64Vals: [0 as u64, 0 as u64],
-                bytes32Vals: [B256::default(), B256::default()],
+                u64Vals: before_state.globalState.u64Vals,
+                bytes32Vals: before_state.globalState.bytes32Vals,
             },
-            machineStatus: 1, // 1 == FINISHED
-            endHistoryRoot: Default::default(),
+            machineStatus: before_state.machineStatus,
+            endHistoryRoot: before_state.endHistoryRoot,
         },
         afterState: after_state.clone(),
     };
 
-    let assertion_hash =
-        rollup.computeAssertionHash(latest, after_state, B256::default()).call().await?;
+    let sequencer_batch_acc = bridge.sequencerInboxAccs(U256::from(0)).call().await?._0;
 
-    // let eah = rollup.computeAssertionHash(prev, after_state, B256::default()).call().await?;
+    let assertion_hash = rollup
+        .computeAssertionHash(log_decode.assertionHash, after_state, sequencer_batch_acc)
+        .call()
+        .await?;
 
     let _a = rollup.fastConfirmNewAssertion(assertion, assertion_hash._0).send().await?;
 
     info!("WE ARE DONE");
-
-    // const L2_MESSAGE_KIND_SIGNED_TX: u8 = 4;
-    // let gas_limit: u64 = 100_000;
-    // let max_fee_per_gas: u128 = 100_000_000;
-
-    // // Send l2 signed messages (unaliased address)
-    // // Message (not from origin)
-    // let mut inner_tx = vec![];
-    // TransactionRequest::default()
-    //     .with_to(Address::ZERO)
-    //     .with_value(parse_ether("0.1")?)
-    //     .with_nonce(0)
-    //     .with_gas_limit(gas_limit)
-    //     .with_chain_id(meta_node.chain_id)
-    //     .with_max_fee_per_gas(max_fee_per_gas)
-    //     .with_max_priority_fee_per_gas(0)
-    //     .build(meta_node.settlement_provider.wallet())
-    //     .await?
-    //     .encode_2718(&mut inner_tx);
-    // let mut tx = vec![L2_MESSAGE_KIND_SIGNED_TX];
-    // tx.append(&mut inner_tx);
-    // _ = inbox.sendL2Message(tx.into()).send().await?;
-    // // Message From Origin
-    // inner_tx = vec![];
-    // TransactionRequest::default()
-    //     .with_to(Address::ZERO)
-    //     .with_value(parse_ether("0.1")?)
-    //     .with_nonce(1)
-    //     .with_gas_limit(gas_limit)
-    //     .with_chain_id(meta_node.chain_id)
-    //     .with_max_fee_per_gas(max_fee_per_gas)
-    //     .with_max_priority_fee_per_gas(0)
-    //     .build(meta_node.settlement_provider.wallet())
-    //     .await?
-    //     .encode_2718(&mut inner_tx);
-    // tx = vec![L2_MESSAGE_KIND_SIGNED_TX];
-    // tx.append(&mut inner_tx);
-    // _ = inbox.sendL2MessageFromOrigin(tx.into()).send().await?;
-
-    // // Send retryable tickets that are automatically redeemed (aliased address)
-    // // Safe Retryable Ticket
-    // _ = inbox
-    //     .createRetryableTicket(
-    //         wallet_address,
-    //         U256::ZERO,
-    //         parse_ether("0.00001")?,
-    //         wallet_address,
-    //         wallet_address,
-    //         U256::from(gas_limit),
-    //         U256::from(max_fee_per_gas),
-    //         Default::default(),
-    //     )
-    //     .value(parse_ether("1")?)
-    //     .send()
-    //     .await?;
-    // // Unsafe Retryable Ticket
-    // _ = inbox
-    //     .unsafeCreateRetryableTicket(
-    //         wallet_address,
-    //         U256::ZERO,
-    //         parse_ether("0.00001")?,
-    //         wallet_address,
-    //         wallet_address,
-    //         U256::from(gas_limit),
-    //         U256::from(max_fee_per_gas),
-    //         Default::default(),
-    //     )
-    //     .value(parse_ether("1")?)
-    //     .send()
-    //     .await?;
-
-    // // Send 2 l2 unsigned messages (aliased address)
-    // // Unsigned Transaction
-    // _ = inbox
-    //     .sendUnsignedTransaction(
-    //         U256::from(gas_limit),
-    //         U256::from(max_fee_per_gas),
-    //         U256::from(2),
-    //         wallet_address,
-    //         parse_ether("0.9")?,
-    //         Default::default(),
-    //     )
-    //     .send()
-    //     .await?;
-    // // Contract Transaction
-    // _ = inbox
-    //     .sendContractTransaction(
-    //         U256::from(gas_limit),
-    //         U256::from(max_fee_per_gas),
-    //         wallet_address,
-    //         parse_ether("0.9")?,
-    //         Default::default(),
-    //     )
-    //     .send()
-    //     .await?;
-
-    // // Send 2 l2 funded by l1 messages (aliased address)
-    // // Funded Unsigned Transaction
-    // _ = inbox
-    //     .sendL1FundedUnsignedTransaction(
-    //         U256::from(gas_limit),
-    //         U256::from(max_fee_per_gas),
-    //         U256::from(4),
-    //         wallet_address,
-    //         Default::default(),
-    //     )
-    //     .value(parse_ether("1")?)
-    //     .send()
-    //     .await?;
-    // // Funded Contract Transaction
-    // _ = inbox
-    //     .sendL1FundedContractTransaction(
-    //         U256::from(gas_limit),
-    //         U256::from(max_fee_per_gas),
-    //         wallet_address,
-    //         Default::default(),
-    //     )
-    //     .value(parse_ether("1")?)
-    //     .send()
-    //     .await?;
-    // meta_node.mine_set_block(0).await?;
-
-    // // Mine a set block to process the slot
-    // meta_node.mine_set_block(1).await?;
-
-    // // Process the slot
-    // sleep(Duration::from_millis(500)).await;
-
-    // assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 17);
-    // assert_eq!(
-    //     meta_node
-    //         .metabased_rollup
-    //         .get_balance(meta_node.settlement_provider.default_signer_address())
-    //         .await?,
-    //     parse_ether("4.6000316")?
-    // );
 
     Ok(())
 }

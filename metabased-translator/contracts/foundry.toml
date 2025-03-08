@@ -1,5 +1,5 @@
 [profile.default]
-src = "bridge"
+src = "src"
 out = "out"
 libs = ["lib"]
 

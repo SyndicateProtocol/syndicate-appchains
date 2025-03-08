@@ -1588,6 +1588,7 @@ dependencies = [
  "metrics",
  "prometheus-client",
  "reqwest",
+ "serde",
  "serde_json",
  "serial_test",
  "slotter",

@@ -52,9 +52,9 @@ use tokio::{
     time::timeout,
 };
 
-pub const PRELOAD_INBOX_ADDRESS: Address = address!("0x437f6403860C0FafF7F4c6942a90bc720E0e9ad1"); //address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899");
-pub const PRELOAD_BRIDGE_ADDRESS: Address = address!("0xF4b9ce94A3E4CA1f53a711b0ee6E4d41Ae381Aca"); //address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2");
-pub const PRELOAD_ROLLUP_ADDRESS: Address = address!("0xd31B1422A15118106521CbcA5B57862A4B5A3429");
+pub const PRELOAD_INBOX_ADDRESS: Address = address!("0x26eE2349212255614edCc046DD9472F2a5b7EF2b"); //address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899");
+pub const PRELOAD_BRIDGE_ADDRESS: Address = address!("0xa0e810a42086da4Ebc5C49fEd626cA6A75B06437"); //address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2");
+pub const PRELOAD_ROLLUP_ADDRESS: Address = address!("0x75744D0D556497B4ccb91D24328bF6160c2e0fE7");
 #[derive(Debug)]
 struct Task(task::JoinHandle<()>);
 
@@ -311,7 +311,7 @@ pub async fn launch_nitro_node(chain_id: u64, mchain_port: u16) -> Result<(Docke
         )
         .arg("--http.addr=0.0.0.0")
         .arg("--http.port=".to_string() + &port.to_string())
-        .arg("--log-level=info")
+        .arg("--log-level=debug")
         .arg("--http.api=net,web3,eth,arb,arbdebug,debug")
         .arg("--node.block-validator.current-module-root=0x184884e1eb9fefdc158f6c8ac912bb183bf3cf83f0090317e0bc4ac5860baa39")
         .spawn()?;
