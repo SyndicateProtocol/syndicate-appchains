@@ -672,16 +672,15 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
     config.settlement.settlement_start_block = 1;
     config.sequencing.sequencing_start_block = 3;
     let meta_node = MetaNode::new(true, config).await?;
-    sleep(Duration::from_secs(3)).await;
 
     // Sync the tips of the sequencing and settlement chains
-    let seq_block: Block = meta_node
+    let block: Block = meta_node
         .settlement_provider
         .raw_request("eth_getBlockByNumber".into(), ("latest", true))
         .await?;
     meta_node
         .sequencing_provider
-        .evm_mine(Some(MineOptions::Timestamp(Some(seq_block.timestamp))))
+        .evm_mine(Some(MineOptions::Timestamp(Some(block.timestamp))))
         .await?;
 
     // Grab the wallet address for the test
@@ -691,12 +690,10 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
     // Deposit is from the arbos address and does not increment the nonce
     let inbox = IInbox::new(PRELOAD_INBOX_ADDRESS, &meta_node.settlement_provider);
     _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
-    meta_node.mine_seq_block(1).await?;
+    meta_node.mine_set_block(0).await?;
+    // mine the next settlement block to finalize the slot
     meta_node.mine_set_block(1).await?;
-    sleep(Duration::from_secs(2)).await;
-    meta_node.mine_seq_block(1).await?;
-    meta_node.mine_set_block(1).await?;
-    sleep(Duration::from_secs(2)).await;
+    sleep(Duration::from_secs(1)).await;
 
     // info!("GLOBAL STATE {:?}", global_state);
     #[derive(Serialize, Deserialize, Debug)]
@@ -730,9 +727,9 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
         .encode_2718(&mut tx);
     _ = meta_node.sequencing_contract.processTransaction(tx.into()).send().await?;
 
+    // mine a new slot at the same timestamp with the new sequencer block and no settlement blocks
     meta_node.mine_seq_block(0).await?;
-    meta_node.mine_set_block(1).await?;
-    sleep(Duration::from_secs(2)).await;
+    sleep(Duration::from_secs(1)).await;
 
     let meta_block = meta_node.metabased_rollup.get_block_number().await?;
     info!("LATEST metabased rollup block : {:?}", meta_block);
@@ -758,7 +755,10 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
             Default::default(),
             Default::default(),
         ],
-        block_option: Default::default(),
+        block_option: alloy::rpc::types::FilterBlockOption::Range {
+            from_block: Some(BlockNumberOrTag::Earliest),
+            to_block: Some(BlockNumberOrTag::Latest),
+        },
     };
     let events = meta_node.settlement_provider.get_logs(filter).await?;
     info!("NUMBER OF EVENTS: {:?}", events.len());
