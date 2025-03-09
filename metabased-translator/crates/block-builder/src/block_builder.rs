@@ -24,6 +24,7 @@ pub struct BlockBuilder<R: RollupAdapter> {
     pub mchain: MetaChainProvider,
     rollup_adapter: R,
     metrics: BlockBuilderMetrics,
+    mine_empty_blocks: bool,
 }
 
 impl<R: RollupAdapter> BlockBuilder<R> {
@@ -36,7 +37,13 @@ impl<R: RollupAdapter> BlockBuilder<R> {
     ) -> Result<Self, Error> {
         let mchain = MetaChainProvider::start(config, &metrics.mchain_metrics).await?;
 
-        Ok(Self { slotter_rx, mchain, rollup_adapter, metrics })
+        Ok(Self {
+            slotter_rx,
+            mchain,
+            rollup_adapter,
+            metrics,
+            mine_empty_blocks: config.mine_empty_blocks,
+        })
     }
 
     /// Validates and rolls back to a known block number if necessary
@@ -152,27 +159,30 @@ impl<R: RollupAdapter> BlockBuilder<R> {
                     };
 
                     let transactions_len = transactions.len();
-                    trace!("Submitting {} transactions", transactions_len);
-                    self.metrics.record_transactions_per_slot(transactions_len);
+                    if transactions_len > 0 || self.mine_empty_blocks {
+                        trace!("Submitting {} transactions", transactions_len);
+                        self.metrics.record_transactions_per_slot(transactions_len);
 
-                    let  last_sequencing_block_processed = self.get_last_sequencing_block_processed().await;
-                    if last_sequencing_block_processed > 0 {
-                        assert!(slot.sequencing.block.number == last_sequencing_block_processed + 1, "Unexpected slot number, got {}, expected {}", slot.sequencing.block.number, last_sequencing_block_processed + 1);
+                        let  last_sequencing_block_processed = self.get_last_sequencing_block_processed().await;
+                        if last_sequencing_block_processed > 0 {
+                            assert!(slot.sequencing.block.number == last_sequencing_block_processed + 1, "Unexpected slot number, got {}, expected {}", slot.sequencing.block.number, last_sequencing_block_processed + 1);
+                        }
+
+                        // Submit transactions to mchain
+                        if let Err(e) = self.mchain.submit_txns(transactions).await {
+                            panic!("Error submitting transaction: {}", e);
+                        }
+
+                        // Mine the actual block with slot timestamp
+                        if let Err(e) = self.mchain.mine_block(slot.timestamp()).await {
+                            panic!("Error mining block: {}", e);
+                        }
+
+                        // TODO(SEQ-623): add a flag to enable/disable this check
+                        self.verify_block(transactions_len, slot.sequencing.block.number).await;
+                    } else {
+                        trace!("Skipping empty block");
                     }
-
-                    // Submit transactions to mchain
-                    if let Err(e) = self.mchain.submit_txns(transactions).await {
-                        panic!("Error submitting transaction: {}", e);
-                    }
-
-                    // Mine the actual block with slot timestamp
-                    if let Err(e) = self.mchain.mine_block(slot.timestamp()).await {
-                        panic!("Error mining block: {}", e);
-                    }
-
-                    // TODO(SEQ-623): add a flag to enable/disable this check
-                    self.verify_block(transactions_len, slot.sequencing.block.number).await;
-
                 }
                 _ = &mut shutdown_rx => {
                     drop(self.mchain);

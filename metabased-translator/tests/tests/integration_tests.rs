@@ -316,15 +316,15 @@ async fn e2e_test() -> Result<()> {
     meta_node.mine_seq_block(config.slotter.settlement_delay).await?;
     meta_node.mine_set_block(0).await?;
 
-    // mine 1 seq block to close the opened slot
+    // mine 1 set block to close the opened slot
     meta_node.mine_set_block(1).await?;
     sleep(Duration::from_millis(200)).await;
 
     // check mchain blocks
-    assert_eq!(meta_node.mchain_provider.get_block_number().await?, 4);
+    assert_eq!(meta_node.mchain_provider.get_block_number().await?, 2);
     let mchain_block = meta_node
         .mchain_provider
-        .get_block_by_number(BlockNumberOrTag::Number(4), BlockTransactionsKind::Hashes)
+        .get_block_by_number(BlockNumberOrTag::Number(2), BlockTransactionsKind::Hashes)
         .await?
         .unwrap();
     assert_eq!(mchain_block.header.timestamp, config.slotter.settlement_delay);
@@ -372,11 +372,11 @@ async fn e2e_test() -> Result<()> {
     sleep(Duration::from_millis(200)).await;
 
     // check mchain blocks
-    assert_eq!(meta_node.mchain_provider.get_block_number().await?, 5);
-    // check mchain block 5
+    assert_eq!(meta_node.mchain_provider.get_block_number().await?, 3);
+    // check mchain block 3
     let mchain_block = meta_node
         .mchain_provider
-        .get_block_by_number(BlockNumberOrTag::Number(5), BlockTransactionsKind::Hashes)
+        .get_block_by_number(BlockNumberOrTag::Number(3), BlockTransactionsKind::Hashes)
         .await?
         .unwrap();
     assert_eq!(mchain_block.header.timestamp, config.slotter.settlement_delay * 2);
