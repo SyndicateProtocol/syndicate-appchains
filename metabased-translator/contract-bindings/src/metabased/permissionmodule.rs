@@ -68,12 +68,14 @@ function isAllowed(address proposer) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAllowedCall {
+        #[allow(missing_docs)]
         pub proposer: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAllowedReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -187,6 +189,7 @@ function isAllowed(address proposer) external view returns (bool);
     };
     ///Container for all the [`PermissionModule`](self) function calls.
     pub enum PermissionModuleCalls {
+        #[allow(missing_docs)]
         isAllowed(isAllowedCall),
     }
     #[automatically_derived]

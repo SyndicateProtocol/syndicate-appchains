@@ -357,7 +357,9 @@ event InboxMessageDeliveredFromOrigin(uint256 indexed messageNum);
     };
     ///Container for all the [`IDelayedMessageProvider`](self) events.
     pub enum IDelayedMessageProviderEvents {
+        #[allow(missing_docs)]
         InboxMessageDelivered(InboxMessageDelivered),
+        #[allow(missing_docs)]
         InboxMessageDeliveredFromOrigin(InboxMessageDeliveredFromOrigin),
     }
     #[automatically_derived]

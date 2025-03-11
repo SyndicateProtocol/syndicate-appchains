@@ -330,7 +330,9 @@ event Initialized(uint64 version);
     };
     ///Container for all the [`Initializable`](self) custom errors.
     pub enum InitializableErrors {
+        #[allow(missing_docs)]
         InvalidInitialization(InvalidInitialization),
+        #[allow(missing_docs)]
         NotInitializing(NotInitializing),
     }
     #[automatically_derived]
@@ -453,6 +455,7 @@ event Initialized(uint64 version);
     }
     ///Container for all the [`Initializable`](self) events.
     pub enum InitializableEvents {
+        #[allow(missing_docs)]
         Initialized(Initialized),
     }
     #[automatically_derived]

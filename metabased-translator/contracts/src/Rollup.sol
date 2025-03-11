@@ -45,10 +45,6 @@ contract Rollup {
         postBatch(hex"000b00800203", 0, 0, 0, 0);
     }
 
-    function getBlockInfo() external view returns (uint64, uint256, uint64, uint256) {
-        return (seqBlockNumber, seqBlockHash, setBlockNumber, setBlockHash);
-    }
-
     // IBridge.sol
     function delayedMessageCount() external view returns (uint256) {
         return delayedInboxAccs.length;
@@ -67,6 +63,14 @@ contract Rollup {
     // ISequencerInbox.sol
     function inboxAccs(uint256 index) external view returns (bytes32) {
         return sequencerInboxAccs[index];
+    }
+
+    function getSourceChainsProcessedBlocks()
+        external
+        view
+        returns (uint64 _seqBlockNumber, uint256 _seqBlockHash, uint64 _setBlockNumber, uint256 _setBlockHash)
+    {
+        return (seqBlockNumber, seqBlockHash, setBlockNumber, setBlockHash);
     }
 
     function postBatch(
