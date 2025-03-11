@@ -65,6 +65,14 @@ contract Rollup {
         return sequencerInboxAccs[index];
     }
 
+    function getSourceChainsProcessedBlocks()
+        external
+        view
+        returns (uint64 _seqBlockNumber, uint256 _seqBlockHash, uint64 _setBlockNumber, uint256 _setBlockHash)
+    {
+        return (seqBlockNumber, seqBlockHash, setBlockNumber, setBlockHash);
+    }
+
     function postBatch(
         bytes memory data,
         uint64 _seqBlockNumber,
