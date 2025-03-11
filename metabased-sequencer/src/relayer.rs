@@ -5,18 +5,16 @@ use crate::{
     contract::MetabasedSequencerChain::processTransactionCall,
     errors::{
         Error,
-        Error::{Contract, InvalidInput, InvalidParams, TransactionRejected},
-        InvalidInputError::{MissingChainID, MissingGasPrice, UnableToRLPDecode},
+        Error::{Contract, InvalidParams},
         InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount},
-        Rejection::FeeTooHigh,
     },
     metrics::RelayerMetrics,
+    utils::validation::validate_transaction,
 };
 use alloy::{
-    consensus::{Transaction, TxEnvelope, TxType},
     hex,
     network::EthereumWallet,
-    primitives::{Address, Bytes, TxHash, U256},
+    primitives::{Address, Bytes, TxHash},
     providers::{
         fillers::{
             CachedNonceManager, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
@@ -24,7 +22,6 @@ use alloy::{
         },
         Identity, Provider, ProviderBuilder, RootProvider,
     },
-    rlp::Decodable,
     rpc::types::{TransactionInput, TransactionRequest},
     signers::local::PrivateKeySigner,
     sol_types::SolCall,
@@ -103,78 +100,9 @@ impl RelayerService {
         })
     }
 
-    // TODO [SEQ-660]: Refactor this function to be more readable
-    fn validate_transaction(&self, raw_tx: &Bytes) -> Result<TxHash, Error> {
-        debug!(bytes_length = raw_tx.len(), "Starting transaction validation");
-        // 1. Decoding:
-        let mut slice: &[u8] = raw_tx.as_ref();
-        let tx = match TxEnvelope::decode(&mut slice) {
-            Ok(tx) => tx,
-            Err(_) => {
-                let error = InvalidInput(UnableToRLPDecode);
-                debug!(
-                    error = %error,
-                    "Transaction decoding failed"
-                );
-                return Err(error);
-            }
-        };
-
-        // 2. Validation:
-        //For non-legacy transactions, validate chain ID immediately
-        if tx.tx_type() != TxType::Legacy && tx.chain_id().is_none() {
-            let error = InvalidInput(MissingChainID);
-            debug!(
-                error = %error,
-                tx_type = ?tx.tx_type(),
-                "Transaction validation failed: missing chain ID"
-            );
-            return Err(error);
-        }
-
-        tx.recover_signer().map_err(|e| {
-            debug!(
-                error = ?e,
-                tx_type = ?tx.tx_type(),
-                "Transaction validation failed: invalid signature"
-            );
-            e
-        })?;
-
-        if tx.tx_type() == TxType::Legacy {
-            // TODO(SEQ-179): introduce optional global tx cap config. See op-geth's checkTxFee() +
-            // RPCTxFeeCap for equivalent skip check if unset
-            let tx_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
-            let gas_price = tx.gas_price().ok_or_else(|| {
-                let error = InvalidInput(MissingGasPrice);
-                debug!(
-                    error = %error,
-                    tx_type = ?tx.tx_type(),
-                    "Transaction validation failed: missing gas price"
-                );
-                error
-            })?;
-
-            // Short circuit if there is no cap for transaction fee at all.
-            if tx_cap_in_wei.is_zero() {
-                return Ok(tx.tx_hash().to_owned());
-            }
-
-            let gas_price = U256::try_from(gas_price)?;
-            let gas = U256::try_from(tx.gas_limit())?;
-            let fee_wei = gas_price.saturating_mul(gas);
-
-            if fee_wei > tx_cap_in_wei {
-                return Err(TransactionRejected(FeeTooHigh));
-            }
-        }
-
-        Ok(tx.tx_hash().to_owned())
-    }
-
     async fn process_transaction(&self, raw_tx: Bytes) -> Result<TxHash, Error> {
         info!("Processing transaction: {}", hex::encode(&raw_tx));
-        let original_tx_hash = self.validate_transaction(&raw_tx)?;
+        let original_tx_hash = validate_transaction(&raw_tx)?;
 
         debug!("Submitting validated transaction to chain");
         let data = processTransactionCall { encodedTxn: raw_tx };
@@ -342,20 +270,5 @@ mod tests {
         let result = service.process_transaction(test_tx).await;
         // This will fail since we're not connected to a real node
         assert!(result.is_err());
-    }
-
-    #[test]
-    fn test_validate_transaction() {
-        let service = setup_test_service();
-        let valid_tx = Bytes::from_str("0xf86d8202b28477359400825208944592d8f8d7b001e72cb26a73e4fa1806a51ac79d880de0b6b3a7640000802ca05924bde7ef10aa88db9c66dd4f5fb16b46dff2319b9968be983118b57bb50562a001b24b31010004f13d9a26b320845257a6cfc2bf819a3d55e3fc86263c5f0772").unwrap();
-
-        let result = service.validate_transaction(&valid_tx);
-        // The validation should pass since this is a valid RLP-encoded transaction
-        assert!(result.is_ok());
-        let tx_hash = result.unwrap();
-        assert_eq!(
-            tx_hash.to_string(),
-            "0xc429e5f128387d224ba8bed6885e86525e14bfdc2eb24b5e9c3351a1176fd81f"
-        );
     }
 }
