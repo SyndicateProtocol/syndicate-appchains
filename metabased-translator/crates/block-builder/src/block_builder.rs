@@ -159,30 +159,26 @@ impl<R: RollupAdapter> BlockBuilder<R> {
                     };
 
                     let transactions_len = transactions.len();
-                    if transactions_len > 0 || self.mine_empty_blocks {
-                        trace!("Submitting {} transactions", transactions_len);
-                        self.metrics.record_transactions_per_slot(transactions_len);
-
-                        let  last_sequencing_block_processed = self.get_last_sequencing_block_processed().await;
-                        if last_sequencing_block_processed > 0 {
-                            assert!(slot.sequencing.block.number == last_sequencing_block_processed + 1, "Unexpected slot number, got {}, expected {}", slot.sequencing.block.number, last_sequencing_block_processed + 1);
-                        }
-
-                        // Submit transactions to mchain
-                        if let Err(e) = self.mchain.submit_txns(transactions).await {
-                            panic!("Error submitting transaction: {}", e);
-                        }
-
-                        // Mine the actual block with slot timestamp
-                        if let Err(e) = self.mchain.mine_block(slot.timestamp()).await {
-                            panic!("Error mining block: {}", e);
-                        }
-
-                        // TODO(SEQ-623): add a flag to enable/disable this check
-                        self.verify_block(transactions_len, slot.sequencing.block.number).await;
-                    } else {
+                    if transactions_len == 0 && !self.mine_empty_blocks {
                         trace!("Skipping empty block");
+                        continue;
                     }
+
+                    trace!("Submitting {} transactions", transactions_len);
+                    self.metrics.record_transactions_per_slot(transactions_len);
+
+                    // Submit transactions to mchain
+                    if let Err(e) = self.mchain.submit_txns(transactions).await {
+                        panic!("Error submitting transaction: {}", e);
+                    }
+
+                    // Mine the actual block with slot timestamp
+                    if let Err(e) = self.mchain.mine_block(slot.timestamp()).await {
+                        panic!("Error mining block: {}", e);
+                    }
+
+                    // TODO(SEQ-623): add a flag to enable/disable this check
+                    self.verify_block(transactions_len, slot.sequencing.block.number).await;
                 }
                 _ = &mut shutdown_rx => {
                     drop(self.mchain);
@@ -197,15 +193,6 @@ impl<R: RollupAdapter> BlockBuilder<R> {
         self.mchain.get_block_number().await.unwrap_or_else(|e| {
             panic!("Error getting current block number: {}", e);
         })
-    }
-
-    async fn get_last_sequencing_block_processed(&self) -> u64 {
-        self.rollup_adapter
-            .get_last_sequencing_block_processed(&self.mchain.provider)
-            .await
-            .unwrap_or_else(|e| {
-                panic!("Error getting last sequencing block processed: {}", e);
-            })
     }
 }
 

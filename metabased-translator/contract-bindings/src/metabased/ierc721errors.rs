@@ -159,11 +159,8 @@ error ERC721IncorrectOwner(address sender, uint256 tokenId, address owner);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721IncorrectOwner {
-        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -252,9 +249,7 @@ error ERC721InsufficientApproval(address operator, uint256 tokenId);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721InsufficientApproval {
-        #[allow(missing_docs)]
         pub operator: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -339,7 +334,6 @@ error ERC721InvalidApprover(address approver);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721InvalidApprover {
-        #[allow(missing_docs)]
         pub approver: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -410,7 +404,6 @@ error ERC721InvalidOperator(address operator);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721InvalidOperator {
-        #[allow(missing_docs)]
         pub operator: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -481,7 +474,6 @@ error ERC721InvalidOwner(address owner);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721InvalidOwner {
-        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -552,7 +544,6 @@ error ERC721InvalidReceiver(address receiver);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721InvalidReceiver {
-        #[allow(missing_docs)]
         pub receiver: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -623,7 +614,6 @@ error ERC721InvalidSender(address sender);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721InvalidSender {
-        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -694,7 +684,6 @@ error ERC721NonexistentToken(uint256 tokenId);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721NonexistentToken {
-        #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -762,21 +751,13 @@ error ERC721NonexistentToken(uint256 tokenId);
     };
     ///Container for all the [`IERC721Errors`](self) custom errors.
     pub enum IERC721ErrorsErrors {
-        #[allow(missing_docs)]
         ERC721IncorrectOwner(ERC721IncorrectOwner),
-        #[allow(missing_docs)]
         ERC721InsufficientApproval(ERC721InsufficientApproval),
-        #[allow(missing_docs)]
         ERC721InvalidApprover(ERC721InvalidApprover),
-        #[allow(missing_docs)]
         ERC721InvalidOperator(ERC721InvalidOperator),
-        #[allow(missing_docs)]
         ERC721InvalidOwner(ERC721InvalidOwner),
-        #[allow(missing_docs)]
         ERC721InvalidReceiver(ERC721InvalidReceiver),
-        #[allow(missing_docs)]
         ERC721InvalidSender(ERC721InvalidSender),
-        #[allow(missing_docs)]
         ERC721NonexistentToken(ERC721NonexistentToken),
     }
     #[automatically_derived]

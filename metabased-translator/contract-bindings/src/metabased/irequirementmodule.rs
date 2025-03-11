@@ -115,9 +115,7 @@ function addCheck(address _address, bool addToHead) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addCheckCall {
-        #[allow(missing_docs)]
         pub _address: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub addToHead: bool,
     }
     ///Container type for the return parameters of the [`addCheck(address,bool)`](addCheckCall) function.
@@ -256,7 +254,6 @@ function getAllChecks() external view returns (address[] memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getAllChecksReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<alloy::sol_types::private::Address>,
     }
     #[allow(
@@ -377,14 +374,12 @@ function isAllowed(address proposer) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAllowedCall {
-        #[allow(missing_docs)]
         pub proposer: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAllowedReturn {
-        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -503,7 +498,6 @@ function removeCheck(address _address) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct removeCheckCall {
-        #[allow(missing_docs)]
         pub _address: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`removeCheck(address)`](removeCheckCall) function.
@@ -621,13 +615,9 @@ function removeCheck(address _address) external;
     };
     ///Container for all the [`IRequirementModule`](self) function calls.
     pub enum IRequirementModuleCalls {
-        #[allow(missing_docs)]
         addCheck(addCheckCall),
-        #[allow(missing_docs)]
         getAllChecks(getAllChecksCall),
-        #[allow(missing_docs)]
         isAllowed(isAllowedCall),
-        #[allow(missing_docs)]
         removeCheck(removeCheckCall),
     }
     #[automatically_derived]

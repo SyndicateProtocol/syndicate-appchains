@@ -109,7 +109,7 @@ async fn test_rollback_regression() -> Result<()> {
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_settlement_test() -> Result<()> {
     let _ = init_test_tracing(Level::INFO);
-    // Start the meta node (port index 0, pre-loaded with the full set of Arb contracts)
+    // Start the meta node (pre-loaded with the full set of Arb contracts)
     let mut config = MetabasedConfig::default();
     config.slotter.settlement_delay = 0;
     config.settlement.settlement_start_block = 1;
@@ -117,13 +117,13 @@ async fn e2e_settlement_test() -> Result<()> {
     let meta_node = MetaNode::new(true, config).await?;
 
     // Sync the tips of the sequencing and settlement chains
-    let seq_block: Block = meta_node
+    let block: Block = meta_node
         .settlement_provider
         .raw_request("eth_getBlockByNumber".into(), ("latest", true))
         .await?;
     meta_node
         .sequencing_provider
-        .evm_mine(Some(MineOptions::Timestamp(Some(seq_block.timestamp))))
+        .evm_mine(Some(MineOptions::Timestamp(Some(block.timestamp))))
         .await?;
 
     // Grab the wallet address for the test
@@ -273,15 +273,27 @@ async fn e2e_settlement_test() -> Result<()> {
     Ok(())
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn e2e_test() -> Result<()> {
+    e2e_test_base(false).await
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn e2e_test_empty_blocks() -> Result<()> {
+    e2e_test_base(true).await
+}
+
 /// This test tests the sequencing contract to make sure
 /// blocks sequenced via the sequencing contract show up
 /// on the rollup. It also checks to make sure missing slots
 /// sequence a mchain block that does not include a batch.
-#[tokio::test(flavor = "multi_thread")]
-async fn e2e_test() -> Result<()> {
+#[cfg(test)]
+async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
     let _ = init_test_tracing(Level::INFO);
-    // Start the meta node (port index 1, no pre-loaded contracts)
-    let config = MetabasedConfig::default();
+    // Start the meta node (no pre-loaded contracts)
+    let mut config = MetabasedConfig::default();
+    config.block_builder.mine_empty_blocks = mine_empty_blocks;
+    config.sequencing.sequencing_start_block = 3; // skip the contract deployment blocks
     let meta_node = MetaNode::new(false, config.clone()).await?;
     // Setup the settlement rollup contract
     let set_rollup = Rollup::new(get_rollup_contract_address(), &meta_node.settlement_provider);
@@ -316,7 +328,16 @@ async fn e2e_test() -> Result<()> {
     meta_node.mine_seq_block(config.slotter.settlement_delay).await?;
     meta_node.mine_set_block(0).await?;
 
-    // mine 1 set block to close the opened slot
+    // mine 1 set block to close the opened slot that contains another deposit
+    let test_addr: Address = "0xA9ec1Ed7008fDfdE38978Dfef4cF2754A969E5FA".parse()?;
+    _ = set_rollup
+        .depositEth(
+            meta_node.sequencing_provider.default_signer_address(),
+            test_addr,
+            parse_ether("1")?,
+        )
+        .send()
+        .await?;
     meta_node.mine_set_block(1).await?;
     sleep(Duration::from_millis(200)).await;
 
@@ -350,50 +371,55 @@ async fn e2e_test() -> Result<()> {
     // tx hash should match
     assert_eq!(rollup_block.transactions[1].hash, *inner_tx.tx_hash());
 
-    let test_addr: Address = "0xA9ec1Ed7008fDfdE38978Dfef4cF2754A969E5FA".parse()?;
+    // sequence an empty slot
+    meta_node.mine_seq_block(0).await?;
 
-    // Send another delayed message one slot out. The missing slot should sequence an empty block.
-    _ = set_rollup
-        .depositEth(
-            meta_node.sequencing_provider.default_signer_address(),
-            test_addr,
-            parse_ether("1")?,
-        )
-        .send()
-        .await?;
-
-    // create a seq block with a ts >= the settlement block with delay
-    meta_node.mine_seq_block(config.slotter.settlement_delay).await?;
-    meta_node.mine_set_block(1).await?;
-
-    // and another settlement block to close the slot
-    meta_node.mine_set_block(60).await?;
+    // mine the pending settlement block (which contains a deposit tx)
+    meta_node.mine_both(1).await?;
 
     sleep(Duration::from_millis(200)).await;
 
-    // check mchain blocks
-    assert_eq!(meta_node.mchain_provider.get_block_number().await?, 3);
-    // check mchain block 3
+    let mut block_number = 3;
+
+    // check empty block
+    if mine_empty_blocks {
+        let mchain_block = meta_node
+            .mchain_provider
+            .get_block_by_number(
+                BlockNumberOrTag::Number(block_number),
+                BlockTransactionsKind::Hashes,
+            )
+            .await?
+            .unwrap();
+        assert_eq!(mchain_block.header.timestamp, config.slotter.settlement_delay);
+        assert_eq!(mchain_block.transactions.len(), 0);
+
+        block_number += 1;
+    }
+
+    // check mchain block
+    assert_eq!(meta_node.mchain_provider.get_block_number().await?, block_number);
     let mchain_block = meta_node
         .mchain_provider
-        .get_block_by_number(BlockNumberOrTag::Number(3), BlockTransactionsKind::Hashes)
+        .get_block_by_number(BlockNumberOrTag::Number(block_number), BlockTransactionsKind::Hashes)
         .await?
         .unwrap();
-    assert_eq!(mchain_block.header.timestamp, config.slotter.settlement_delay * 2);
+    assert_eq!(mchain_block.header.timestamp, config.slotter.settlement_delay + 1);
     assert_eq!(mchain_block.transactions.len(), 2);
 
-    // check rollup block 3
+    // check rollup block
     assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 3);
     let rollup_block: Block = meta_node
         .metabased_rollup
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(3), true))
         .await?;
-    assert_eq!(rollup_block.timestamp, config.slotter.settlement_delay * 2);
+    assert_eq!(rollup_block.timestamp, config.slotter.settlement_delay + 1);
     // the first transaction is the startBlock transaction
     assert_eq!(rollup_block.transactions.len(), 2);
     // balance should match
     assert_eq!(meta_node.metabased_rollup.get_balance(test_addr).await?, parse_ether("1")?);
 
+    // check rollup contract state
     let known_state = get_safe_state(
         &meta_node.mchain_provider,
         meta_node.sequencing_client.clone(),
@@ -402,7 +428,6 @@ async fn e2e_test() -> Result<()> {
     )
     .await?
     .unwrap();
-
     assert_eq!(
         known_state.mchain_block_number,
         meta_node.mchain_provider.get_block_number().await?
@@ -420,9 +445,15 @@ async fn e2e_test() -> Result<()> {
             hash: seq_block.header.hash
         }
     );
+    // last block hasn't been processed yet
     let set_block = meta_node
         .settlement_provider
-        .get_block(Number(BlockNumberOrTag::Number(4)), BlockTransactionsKind::Hashes) // last block (5) hasn't been processed yet
+        .get_block(
+            Number(BlockNumberOrTag::Number(
+                meta_node.settlement_provider.get_block_number().await? - 1,
+            )),
+            BlockTransactionsKind::Hashes,
+        )
         .await?
         .unwrap();
     assert_eq!(

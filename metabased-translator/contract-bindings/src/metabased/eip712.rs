@@ -183,7 +183,6 @@ error StringTooLong(string str);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct StringTooLong {
-        #[allow(missing_docs)]
         pub str: alloy::sol_types::private::String,
     }
     #[allow(
@@ -383,19 +382,12 @@ function eip712Domain() external view returns (bytes1 fields, string memory name
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct eip712DomainReturn {
-        #[allow(missing_docs)]
         pub fields: alloy::sol_types::private::FixedBytes<1>,
-        #[allow(missing_docs)]
         pub name: alloy::sol_types::private::String,
-        #[allow(missing_docs)]
         pub version: alloy::sol_types::private::String,
-        #[allow(missing_docs)]
         pub chainId: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub verifyingContract: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub salt: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub extensions: alloy::sol_types::private::Vec<
             alloy::sol_types::private::primitives::aliases::U256,
         >,
@@ -549,7 +541,6 @@ function eip712Domain() external view returns (bytes1 fields, string memory name
     };
     ///Container for all the [`EIP712`](self) function calls.
     pub enum EIP712Calls {
-        #[allow(missing_docs)]
         eip712Domain(eip712DomainCall),
     }
     #[automatically_derived]
@@ -642,9 +633,7 @@ function eip712Domain() external view returns (bytes1 fields, string memory name
     }
     ///Container for all the [`EIP712`](self) custom errors.
     pub enum EIP712Errors {
-        #[allow(missing_docs)]
         InvalidShortString(InvalidShortString),
-        #[allow(missing_docs)]
         StringTooLong(StringTooLong),
     }
     #[automatically_derived]
@@ -765,7 +754,6 @@ function eip712Domain() external view returns (bytes1 fields, string memory name
     }
     ///Container for all the [`EIP712`](self) events.
     pub enum EIP712Events {
-        #[allow(missing_docs)]
         EIP712DomainChanged(EIP712DomainChanged),
     }
     #[automatically_derived]

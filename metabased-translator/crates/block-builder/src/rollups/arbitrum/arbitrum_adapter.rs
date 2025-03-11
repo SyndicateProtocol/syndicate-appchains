@@ -26,7 +26,7 @@ use contract_bindings::arbitrum::{
         InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
     },
     iinboxbase::IInboxBase::sendL2MessageFromOriginCall,
-    rollup::Rollup,
+    rollup::Rollup::{self, getBlockInfoReturn},
 };
 use eyre::Result;
 use std::{collections::HashMap, sync::Arc};
@@ -178,14 +178,12 @@ impl RollupAdapter for ArbitrumAdapter {
         };
         let block_id = BlockId::Number(BlockNumberOrTag::Number(block_number));
 
-        let seq_num = rollup.seqBlockNumber().call().block(block_id).await?._0;
+        let getBlockInfoReturn { _0: seq_num, _1: seq_hash, _2: set_num, _3: set_hash } =
+            rollup.getBlockInfo().call().block(block_id).await?;
+
         if seq_num == 0 {
             return Ok(None);
         }
-        let seq_hash = rollup.seqBlockHash().call().block(block_id).await?._0;
-
-        let set_num = rollup.setBlockNumber().call().block(block_id).await?._0;
-        let set_hash = rollup.setBlockHash().call().block(block_id).await?._0;
 
         Ok(Some((
             KnownState {

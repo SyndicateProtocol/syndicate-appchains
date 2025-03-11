@@ -45,6 +45,10 @@ contract Rollup {
         postBatch(hex"000b00800203", 0, 0, 0, 0);
     }
 
+    function getBlockInfo() external view returns (uint64, uint256, uint64, uint256) {
+        return (seqBlockNumber, seqBlockHash, setBlockNumber, setBlockHash);
+    }
+
     // IBridge.sol
     function delayedMessageCount() external view returns (uint256) {
         return delayedInboxAccs.length;
