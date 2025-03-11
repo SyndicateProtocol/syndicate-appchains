@@ -16,17 +16,11 @@ use tracing::debug;
 
 fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, Error> {
     let mut slice: &[u8] = raw_tx.as_ref();
-    TxEnvelope::decode(&mut slice).map_or_else(
-        |_| {
-            let error = InvalidInput(UnableToRLPDecode);
-            debug!(
-                error = %error,
-                "Transaction decoding failed"
-            );
-            Err(error)
-        },
-        Ok,
-    )
+    TxEnvelope::decode(&mut slice).map_err(|_| {
+        let error = InvalidInput(UnableToRLPDecode);
+        debug!(error = %error, "Transaction decoding failed");
+        error
+    })
 }
 
 fn check_chain_id(tx: &TxEnvelope) -> Result<(), Error> {
