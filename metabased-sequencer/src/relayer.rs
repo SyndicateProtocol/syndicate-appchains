@@ -9,7 +9,7 @@ use crate::{
         InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount},
     },
     metrics::RelayerMetrics,
-    utils::validation::validate_transaction,
+    validation::validate_transaction,
 };
 use alloy::{
     hex,

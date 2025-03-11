@@ -170,7 +170,7 @@ mod tests {
         let valid_tx = wrap_txn_legacy(TxLegacy::default());
         assert!(check_gas_price(&valid_tx).is_ok());
 
-        // Legacy ransaction with extremely high gas price should fail
+        // Legacy transaction with extremely high gas price should fail
         let invalid_legacy_tx = wrap_txn_legacy(TxLegacy {
             gas_limit: 2u64,
             gas_price: 1_000_000_000_000_000_000u128,
