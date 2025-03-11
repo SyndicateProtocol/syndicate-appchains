@@ -1,3 +1,4 @@
+use alloy::eips::BlockNumberOrTag;
 use block_builder::{
     config::TargetRollupType::{ARBITRUM, OPTIMISM},
     connectors::mchain::MetaChainProvider,
@@ -7,13 +8,10 @@ use block_builder::{
     },
 };
 use common::tracing::init_tracing_with_extra_fields;
-use eyre::Result;
+use eyre::{eyre, Result};
 use metabased_translator::{
+    components::{clients, get_extra_fields_for_logging, init_metrics, ComponentHandles},
     config::MetabasedConfig,
-    handles::ComponentHandles,
-    setup::{
-        clients, create_node_components, get_extra_fields_for_logging, get_safe_state, init_metrics,
-    },
     shutdown::{ShutdownChannels, ShutdownTx},
     types::RuntimeError,
 };
@@ -65,50 +63,54 @@ async fn run(
         MetaChainProvider::start(&config.block_builder, &metrics.block_builder.mchain_metrics)
             .await?;
 
-    let safe_state = get_safe_state(
-        &mchain,
-        sequencing_client.clone(),
-        settlement_client.clone(),
-        &rollup_adapter,
-    )
-    .await?;
+    // TODO re-think the arguments here, the closures are quite verbose
+    let safe_state = mchain
+        .start_from_safe_state(
+            {
+                let client = sequencing_client.clone();
+                move |block_number| {
+                    let client = client.clone();
+                    async move {
+                        client
+                            .get_block_by_number(BlockNumberOrTag::Number(block_number))
+                            .await
+                            .map_err(|e| eyre!(e))
+                    }
+                }
+            },
+            {
+                let client = settlement_client.clone();
+                move |block_number| {
+                    let client = client.clone();
+                    async move {
+                        client
+                            .get_block_by_number(BlockNumberOrTag::Number(block_number))
+                            .await
+                            .map_err(|e| eyre!(e))
+                    }
+                }
+            },
+            &rollup_adapter,
+        )
+        .await?;
 
-    let mchain_safe_block_number = safe_state.as_ref().map(|state| state.mchain_block_number);
-
-    let (
-        sequencing_ingestor,
-        sequencing_rx,
-        settlement_ingestor,
-        settlement_rx,
-        slotter,
-        block_builder,
-    ) = create_node_components(
-        config,
-        sequencing_client,
-        settlement_client,
-        rollup_adapter,
-        safe_state,
-        metrics,
-    )
-    .await?;
     let (main_shutdown_rx, tx, rx) = shutdown_channels.split();
     let component_tasks = ComponentHandles::spawn(
-        mchain_safe_block_number,
-        sequencing_ingestor,
-        sequencing_rx,
-        settlement_ingestor,
-        settlement_rx,
-        slotter,
-        block_builder,
+        config,
+        safe_state,
+        sequencing_client,
+        settlement_client,
+        metrics,
+        mchain,
+        rollup_adapter,
         rx,
     );
 
     info!("Starting Metabased Translator");
-    start_translator(main_shutdown_rx, tx, component_tasks, metrics_task).await
+    start_shutdown_handling(main_shutdown_rx, tx, component_tasks, metrics_task).await
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn start_translator(
+async fn start_shutdown_handling(
     main_shutdown_rx: tokio::sync::oneshot::Receiver<()>,
     tx: ShutdownTx,
     mut handles: ComponentHandles,

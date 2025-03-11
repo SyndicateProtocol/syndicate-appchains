@@ -9,12 +9,13 @@ use thiserror::Error;
 use tokio::{
     select,
     sync::{
-        mpsc::{channel, error::SendError, Receiver, Sender},
+        mpsc::{error::SendError, Receiver, Sender},
         oneshot,
     },
 };
 use tracing::{debug, error, info, trace, warn};
 
+// TODO try to make this private (?)
 /// Polls and ingests blocks from an Ethereum chain
 ///
 /// Slots are stored in a linked list ordered by timestamp, with newer slots at the back.
@@ -52,12 +53,15 @@ pub struct Slotter {
 impl Slotter {
     /// Creates a new [`Slotter`] that receives blocks from two chains and organizes them into
     /// slots.
-    pub fn new(
+    pub async fn run(
         config: &SlotterConfig,
         known_state: Option<KnownState>,
+        sequencing_rx: Receiver<Arc<BlockAndReceipts>>,
+        settlement_rx: Receiver<Arc<BlockAndReceipts>>,
+        sender: Sender<Slot>,
         metrics: SlotterMetrics,
-    ) -> (Self, Receiver<Slot>) {
-        let (slot_tx, slot_rx) = channel(100);
+        shutdown_rx: oneshot::Receiver<()>,
+    ) -> Result<(), Error> {
         let (latest_sequencing_block, latest_settlement_block) = match known_state {
             Some(known_state) => {
                 (Some(known_state.sequencing_block), Some(known_state.settlement_block))
@@ -77,14 +81,14 @@ impl Slotter {
             slots: VecDeque::new(),
             unassigned_settlement_blocks: VecDeque::new(),
             settlement_delay: config.settlement_delay,
-            sender: slot_tx,
+            sender,
             metrics,
             min_chain_head_timestamp,
         };
-        (slotter, slot_rx)
+        slotter.main_loop(sequencing_rx, settlement_rx, shutdown_rx).await
     }
 
-    /// Starts the [`Slotter`] loop.
+    /// Starts the [`Slotter`] main loop.
     ///
     /// The [`Slotter`] will:
     /// 1. Receive blocks from both sequencing and settlement chains
@@ -94,7 +98,7 @@ impl Slotter {
     /// 4. Send completed slots through the returned channel
     ///
     /// The receiver that was created during [`Slotter::new`] will get slots as they are processed
-    pub async fn start(
+    async fn main_loop(
         mut self,
         mut sequencing_rx: Receiver<Arc<BlockAndReceipts>>,
         mut settlement_rx: Receiver<Arc<BlockAndReceipts>>,
@@ -370,7 +374,7 @@ mod tests {
     use common::types::BlockAndReceipts;
     use prometheus_client::registry::Registry;
     use std::{str::FromStr, time::Duration};
-    use tokio::time::timeout;
+    use tokio::{sync::mpsc::channel, time::timeout};
     use tracing_test::traced_test;
 
     struct MetricsState {
@@ -389,9 +393,9 @@ mod tests {
         let (slotter, slot_rx) = create_slotter(config);
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let (seq_tx, seq_rx) = channel(100);
-        let (settle_tx, settle_rx) = channel(100);
-        tokio::spawn(async move { slotter.start(seq_rx, settle_rx, shutdown_rx).await });
+        let (seq_tx, seq_rx) = channel::<Arc<BlockAndReceipts>>(100);
+        let (settle_tx, settle_rx) = channel::<Arc<BlockAndReceipts>>(100);
+        tokio::spawn(async move { slotter.main_loop(seq_rx, settle_rx, shutdown_rx).await });
 
         TestSetup { slot_rx, sequencing_tx: seq_tx, settlement_tx: settle_tx, shutdown_tx }
     }
@@ -399,9 +403,21 @@ mod tests {
     fn create_slotter(config: &SlotterConfig) -> (Slotter, Receiver<Slot>) {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = SlotterMetrics::new(&mut metrics_state.registry);
-        let (slotter, slot_rx) = Slotter::new(config, None, metrics);
+        let (sender, slot_rx) = channel::<Slot>(100);
 
-        (slotter, slot_rx)
+        (
+            Slotter {
+                latest_sequencing_block: None,
+                latest_settlement_block: None,
+                slots: VecDeque::new(),
+                unassigned_settlement_blocks: VecDeque::new(),
+                settlement_delay: config.settlement_delay,
+                sender,
+                metrics,
+                min_chain_head_timestamp: 0,
+            },
+            slot_rx,
+        )
     }
 
     fn create_test_block(number: u64, timestamp: u64) -> Arc<BlockAndReceipts> {

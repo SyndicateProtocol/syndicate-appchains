@@ -1,6 +1,6 @@
 use tokio::{
     signal::unix::{signal, SignalKind},
-    sync::{oneshot, oneshot::Sender},
+    sync::oneshot::{self, Receiver, Sender},
 };
 use tracing::info;
 
@@ -12,15 +12,15 @@ pub struct ShutdownTx {
 }
 
 pub struct ShutdownRx {
-    pub sequencer: oneshot::Receiver<()>,
-    pub settlement: oneshot::Receiver<()>,
-    pub slotter: oneshot::Receiver<()>,
-    pub builder: oneshot::Receiver<()>,
+    pub sequencing: Receiver<()>,
+    pub settlement: Receiver<()>,
+    pub slotter: Receiver<()>,
+    pub block_builder: Receiver<()>,
 }
 
 /// Main channel plus paired channels for each component
 pub struct ShutdownChannels {
-    pub main: oneshot::Receiver<()>,
+    pub main: Receiver<()>,
     pub tx: ShutdownTx,
     pub rx: ShutdownRx,
 }
@@ -44,15 +44,15 @@ impl ShutdownChannels {
                 builder: build_tx,
             },
             rx: ShutdownRx {
-                sequencer: seq_rx,
+                sequencing: seq_rx,
                 settlement: settle_rx,
                 slotter: slot_rx,
-                builder: build_rx,
+                block_builder: build_rx,
             },
         }
     }
 
-    pub fn split(self) -> (oneshot::Receiver<()>, ShutdownTx, ShutdownRx) {
+    pub fn split(self) -> (Receiver<()>, ShutdownTx, ShutdownRx) {
         (self.main, self.tx, self.rx)
     }
 }

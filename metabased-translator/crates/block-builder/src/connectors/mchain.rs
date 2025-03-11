@@ -3,6 +3,7 @@ use crate::{
     block_builder::BlockBuilderError,
     config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
     connectors::metrics::MChainMetrics,
+    rollups::shared::RollupAdapter,
 };
 use alloy::{
     eips::BlockNumberOrTag,
@@ -18,11 +19,14 @@ use alloy::{
     },
     rpc::types::{
         engine::{ForkchoiceState, PayloadAttributes, PayloadStatus, PayloadStatusEnum},
-        Block, BlockTransactionsKind, TransactionRequest,
+        BlockTransactionsKind, TransactionRequest,
     },
 };
+use common::types::{Block, BlockRef, KnownState};
 use contract_bindings::arbitrum::rollup::Rollup::{self, RollupInstance};
-use eyre::Result;
+use eyre::{eyre, Result};
+use std::future::Future;
+use tracing::info;
 
 #[allow(missing_docs)]
 pub type FilledProvider = FillProvider<
@@ -69,7 +73,7 @@ impl MetaChainProvider {
         &self,
         number: BlockNumberOrTag,
         kind: BlockTransactionsKind,
-    ) -> Result<Option<Block>> {
+    ) -> Result<Option<alloy::rpc::types::Block>> {
         self.provider.get_block_by_number(number, kind).await.map_err(|e| e.into())
     }
 
@@ -78,7 +82,7 @@ impl MetaChainProvider {
         &self,
         hash: BlockHash,
         kind: BlockTransactionsKind,
-    ) -> Result<Option<Block>> {
+    ) -> Result<Option<alloy::rpc::types::Block>> {
         self.provider.get_block_by_hash(hash, kind).await.map_err(|e| e.into())
     }
 
@@ -309,5 +313,161 @@ impl MetaChainProvider {
         cfg.retain(|c| !c.is_whitespace());
         cfg.shrink_to_fit();
         cfg
+    }
+
+    /// TODO write me and find a better name for this func
+    // TODO (SEQ-651) - re-use this function in case of reorg
+    pub async fn start_from_safe_state<F1, F2, Fut1, Fut2>(
+        &self,
+        sequencing_client: F1,
+        settlement_client: F2,
+        rollup_adapter: &impl RollupAdapter,
+    ) -> Result<Option<KnownState>>
+    where
+        F1: Fn(u64) -> Fut1 + Send + Sync,
+        F2: Fn(u64) -> Fut2 + Send + Sync,
+        Fut1: Future<Output = Result<Block>> + Send,
+        Fut2: Future<Output = Result<Block>> + Send,
+    {
+        let safe_state =
+            self.get_safe_state(sequencing_client, settlement_client, rollup_adapter).await?;
+        self.rollback_to_safe_state(&safe_state).await?;
+        Ok(safe_state)
+    }
+
+    // TODO find a better name for this func
+    /// Validates and rolls back to a known block number if necessary
+    async fn rollback_to_safe_state(&self, known_safe_state: &Option<KnownState>) -> Result<()> {
+        let known_block_number = match known_safe_state {
+            Some(known_state) => known_state.mchain_block_number,
+            None => {
+                info!("No known block number to resume from, starting from genesis");
+                return Ok(())
+            }
+        };
+
+        let current_block_number = self
+            .provider
+            .get_block_number()
+            .await
+            .map_err(|e| eyre!(format!("Error getting current block number: {}", e)))?;
+
+        if known_block_number > current_block_number {
+            return Err(eyre!(format!(
+                "Known block(slot) number {} is greater than the current mchain block number {}",
+                known_block_number, current_block_number
+            )));
+        }
+
+        // rollback to block if necessary
+        if known_block_number < current_block_number {
+            let block = self
+                .provider
+                .get_block_by_number(
+                    BlockNumberOrTag::Number(known_block_number),
+                    BlockTransactionsKind::Hashes,
+                )
+                .await
+                .map_err(|e| BlockBuilderError::ResumeFromBlock(e.to_string()))?
+                .ok_or(BlockBuilderError::ResumeFromBlock(format!(
+                    "Could not find block: {}",
+                    known_block_number
+                )))?;
+            self.rollback_to_block(block.header.hash).await.map_err(|e| {
+                BlockBuilderError::ResumeFromBlock(format!("Unable to reorg to block: {}", e))
+            })?;
+        }
+        info!("Resumed from block: {}", known_block_number);
+        Ok(())
+    }
+
+    /// Get obtains the processed blocks from the rollup contract and validates them against the
+    /// source chain clients
+    pub async fn get_safe_state<F1, F2, Fut1, Fut2>(
+        &self,
+        sequencing_client: F1,
+        settlement_client: F2,
+        rollup_adapter: &impl RollupAdapter,
+    ) -> Result<Option<KnownState>>
+    where
+        F1: Fn(u64) -> Fut1 + Send + Sync,
+        F2: Fn(u64) -> Fut2 + Send + Sync,
+        Fut1: Future<Output = Result<Block>> + Send,
+        Fut2: Future<Output = Result<Block>> + Send,
+    {
+        let mut current_block = BlockNumberOrTag::Latest;
+        loop {
+            match rollup_adapter.get_processed_blocks(&self.provider, current_block).await? {
+                Some((mut state, block_number)) => {
+                    let seq_valid = validate_block_add_timestamp(
+                        &sequencing_client,
+                        &mut state.sequencing_block,
+                    )
+                    .await;
+                    let settle_valid = validate_block_add_timestamp(
+                        &settlement_client,
+                        &mut state.settlement_block,
+                    )
+                    .await;
+
+                    if seq_valid && settle_valid {
+                        return Ok(Some(state));
+                    }
+                    current_block = BlockNumberOrTag::Number(block_number.saturating_sub(1));
+                }
+                None => return Ok(None),
+            };
+        }
+    }
+}
+
+async fn validate_block_add_timestamp<F, Fut>(get_block: &F, expected_block: &mut BlockRef) -> bool
+where
+    F: Fn(u64) -> Fut + Send + Sync,
+    Fut: Future<Output = Result<Block>> + Send,
+{
+    match get_block(expected_block.number).await {
+        Ok(block) => {
+            expected_block.timestamp = block.timestamp;
+            block.hash == expected_block.hash
+        }
+        Err(_) => false,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy::primitives::{hex, B256};
+
+    #[tokio::test]
+    async fn test_validate_block() {
+        let expected_hash = B256::from_slice(&hex!(
+            "1234567890123456789012345678901234567890123456789012345678901234"
+        ));
+        let expected_timestamp = 12345;
+
+        let mut test_block = BlockRef { hash: expected_hash, number: 1, timestamp: 0 };
+
+        let get_block = |_: u64| async move {
+            Ok(Block { hash: expected_hash, timestamp: expected_timestamp, ..Default::default() })
+        };
+
+        assert!(validate_block_add_timestamp(&get_block, &mut test_block).await);
+        assert_eq!(test_block.timestamp, expected_timestamp);
+
+        // Test mismatch case
+        let get_block_mismatch = |_: u64| async move {
+            Ok(Block {
+                hash: B256::from_slice(&hex!(
+                    "4321432143214321432143214321432143214321432143214321432143214321"
+                )),
+                timestamp: expected_timestamp,
+                ..Default::default()
+            })
+        };
+
+        let mut test_block = BlockRef { hash: expected_hash, number: 1, timestamp: 0 };
+        assert!(!validate_block_add_timestamp(&get_block_mismatch, &mut test_block).await);
     }
 }

@@ -7,7 +7,6 @@ use crate::{
 use alloy::{
     eips::BlockNumberOrTag,
     providers::ext::TraceApi,
-    rpc::types::BlockTransactionsKind,
     transports::{RpcError, TransportErrorKind},
 };
 use common::types::Slot;
@@ -16,6 +15,7 @@ use tokio::sync::{mpsc::Receiver, oneshot};
 use tracing::{info, trace};
 use url::Url;
 
+// TODO try to make this private (?)
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
 pub struct BlockBuilder<R: RollupAdapter> {
@@ -29,120 +29,26 @@ pub struct BlockBuilder<R: RollupAdapter> {
 
 impl<R: RollupAdapter> BlockBuilder<R> {
     /// Create a new block builder
-    pub async fn new(
-        slotter_rx: Receiver<Slot>,
+    pub async fn run(
         config: &BlockBuilderConfig,
+        slotter_rx: Receiver<Slot>,
+        mchain: MetaChainProvider,
         rollup_adapter: R,
         metrics: BlockBuilderMetrics,
-    ) -> Result<Self, Error> {
-        let mchain = MetaChainProvider::start(config, &metrics.mchain_metrics).await?;
-
-        Ok(Self {
+        shutdown_rx: oneshot::Receiver<()>,
+    ) -> Result<(), Error> {
+        let block_builder = Self {
             slotter_rx,
             mchain,
             rollup_adapter,
             metrics,
             mine_empty_blocks: config.mine_empty_blocks,
-        })
-    }
-
-    /// Validates and rolls back to a known block number if necessary
-    async fn resume_from_block(
-        &self,
-        known_block_number: Option<u64>,
-    ) -> Result<(), BlockBuilderError> {
-        let Some(known_block_number) = known_block_number else {
-            info!("No known block number to resume from, starting from genesis");
-            return Ok(());
         };
-
-        let current_block_number = self.mchain.get_block_number().await.map_err(|e| {
-            BlockBuilderError::ResumeFromBlock(format!("Error getting current block number: {}", e))
-        })?;
-
-        if known_block_number > current_block_number {
-            return Err(BlockBuilderError::ResumeFromBlock(format!(
-                "Known block(slot) number {} is greater than the current mchain block number {}",
-                known_block_number, current_block_number
-            )));
-        }
-
-        // rollback to block if necessary
-        if known_block_number < current_block_number {
-            let block = self
-                .mchain
-                .get_block_by_number(
-                    BlockNumberOrTag::Number(known_block_number),
-                    BlockTransactionsKind::Hashes,
-                )
-                .await
-                .map_err(|e| BlockBuilderError::ResumeFromBlock(e.to_string()))?
-                .ok_or(BlockBuilderError::ResumeFromBlock(format!(
-                    "Could not find block: {}",
-                    known_block_number
-                )))?;
-            self.mchain.rollback_to_block(block.header.hash).await.map_err(|e| {
-                BlockBuilderError::ResumeFromBlock(format!("Unable to reorg to block: {}", e))
-            })?;
-        }
-        info!("Resumed from block: {}", known_block_number);
-        Ok(())
-    }
-
-    async fn verify_block(&self, transactions_len: usize, slot_seq_number: u64) {
-        let current_block = self.get_current_block_number().await;
-        trace!("Mined block: {:?} from slot: {:?}", current_block, slot_seq_number);
-
-        // Verify transactions are all included and succeeded
-        // TODO(SEQ-623): check to make sure the tx hashes match as well
-        let receipts = self
-            .mchain
-            .get_block_receipts(BlockNumberOrTag::Number(current_block))
-            .await
-            .unwrap_or_else(|e| {
-                panic!("Failed to fetch receipts for block {:#?}: {:#?}", current_block, e)
-            });
-        assert!(
-            receipts.len() == transactions_len,
-            "expected {:#?} receipts, got {:#?}",
-            transactions_len,
-            receipts
-        );
-
-        for r in receipts {
-            if r.status != 1 {
-                let trace = self
-                    .mchain
-                    .provider
-                    .trace_transaction(r.transaction_hash)
-                    .await
-                    .unwrap_or_default();
-                let error_msg = trace
-                    .first()
-                    .and_then(|t| t.trace.result.as_ref())
-                    .map_or_else(String::new, |output| {
-                        self.rollup_adapter.decode_error(output.output())
-                    });
-
-                panic!(
-                    "tx failed: receipt: {:#?} trace: {:#?}, humanly_readable_error: {}",
-                    r, trace, error_msg
-                );
-            }
-        }
+        block_builder.main_loop(shutdown_rx).await
     }
 
     /// Start the block builder
-    pub async fn start(
-        mut self,
-        known_block_number: Option<u64>,
-        mut shutdown_rx: oneshot::Receiver<()>,
-    ) -> Result<(), Error> {
-        // resume from known state
-        if let Err(e) = self.resume_from_block(known_block_number).await {
-            panic!("Failed to validate and rollback: {}", e);
-        }
-
+    async fn main_loop(mut self, mut shutdown_rx: oneshot::Receiver<()>) -> Result<(), Error> {
         loop {
             tokio::select! {
                 biased; // biased allows us to process everything that's in the channel before shutting down
@@ -185,6 +91,49 @@ impl<R: RollupAdapter> BlockBuilder<R> {
                     info!("Block builder stopped");
                     return Err(Report::from(BlockBuilderError::Shutdown))
                 }
+            }
+        }
+    }
+
+    async fn verify_block(&self, transactions_len: usize, slot_seq_number: u64) {
+        let current_block = self.get_current_block_number().await;
+        trace!("Mined block: {:?} from slot: {:?}", current_block, slot_seq_number);
+
+        // Verify transactions are all included and succeeded
+        // TODO(SEQ-623): check to make sure the tx hashes match as well
+        let receipts = self
+            .mchain
+            .get_block_receipts(BlockNumberOrTag::Number(current_block))
+            .await
+            .unwrap_or_else(|e| {
+                panic!("Failed to fetch receipts for block {:#?}: {:#?}", current_block, e)
+            });
+        assert!(
+            receipts.len() == transactions_len,
+            "expected {:#?} receipts, got {:#?}",
+            transactions_len,
+            receipts
+        );
+
+        for r in receipts {
+            if r.status != 1 {
+                let trace = self
+                    .mchain
+                    .provider
+                    .trace_transaction(r.transaction_hash)
+                    .await
+                    .unwrap_or_default();
+                let error_msg = trace
+                    .first()
+                    .and_then(|t| t.trace.result.as_ref())
+                    .map_or_else(String::new, |output| {
+                        self.rollup_adapter.decode_error(output.output())
+                    });
+
+                panic!(
+                    "tx failed: receipt: {:#?} trace: {:#?}, humanly_readable_error: {}",
+                    r, trace, error_msg
+                );
             }
         }
     }
