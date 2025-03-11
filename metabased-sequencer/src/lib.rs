@@ -7,4 +7,5 @@ pub mod errors;
 pub mod metrics;
 pub mod relayer;
 pub mod server;
+pub mod validation;
 pub mod zlib_compression;
