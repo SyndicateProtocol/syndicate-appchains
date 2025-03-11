@@ -13,6 +13,7 @@ pub mod r#alwaysallowedmodule;
 pub mod r#atomicsequencer;
 pub mod r#atomicsequencerimplementation;
 pub mod r#mockisallowed;
+pub mod r#bidstructuredlinkedlist;
 pub mod r#context;
 pub mod r#create2;
 pub mod r#deploymetabasedfactory;
