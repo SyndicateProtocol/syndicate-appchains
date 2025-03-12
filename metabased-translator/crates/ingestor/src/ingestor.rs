@@ -1,9 +1,12 @@
 //! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a
 //! consumer using a channel
 
-use crate::{config::ChainIngestorConfig, eth_client::RPCClient, metrics::IngestorMetrics};
+use crate::{config::ChainIngestorConfig, metrics::IngestorMetrics};
 use alloy::rpc::types::BlockNumberOrTag;
-use common::types::{BlockAndReceipts, Chain};
+use common::{
+    eth_client::RPCClient,
+    types::{BlockAndReceipts, Chain},
+};
 use eyre::{eyre, Error};
 use std::{
     cmp::{max, min},
@@ -166,12 +169,14 @@ mod tests {
     use super::*;
     use crate::{
         config::{ChainIngestorConfig, IngestionPipelineConfig},
-        eth_client::{EthClient, RPCClientError},
         metrics::IngestorMetrics,
     };
     use alloy::{primitives::B256, rpc::types::BlockNumberOrTag};
     use async_trait::async_trait;
-    use common::types::{Block, BlockAndReceipts};
+    use common::{
+        eth_client::{EthClient, RPCClientError},
+        types::{Block, BlockAndReceipts},
+    };
     use eyre::Result;
     use mockall::{mock, predicate::*};
     use prometheus_client::registry::Registry;

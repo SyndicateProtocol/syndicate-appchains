@@ -1,11 +1,11 @@
 //! The `eth_client` module provides a client for interacting with an Ethereum-like blockchain.
 
+use crate::types::{Block, BlockAndReceipts, Chain, Receipt};
 use alloy::rpc::{
     client::{ClientBuilder, RpcClient},
     types::BlockNumberOrTag,
 };
 use async_trait::async_trait;
-use common::types::{Block, BlockAndReceipts, Chain, Receipt};
 use eyre::eyre;
 use std::fmt::Debug;
 use thiserror::Error;

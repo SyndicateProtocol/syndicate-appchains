@@ -1301,15 +1301,19 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "async-trait",
  "bincode",
+ "eyre",
  "serde",
  "serde_json",
  "serial_test",
  "strum_macros 0.27.1",
  "test-utils",
+ "thiserror 2.0.11",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "url",
 ]
 
 [[package]]
@@ -1583,13 +1587,11 @@ dependencies = [
  "common",
  "contract-bindings",
  "eyre",
- "ingestor",
  "metabased-translator",
  "metrics",
  "prometheus-client",
  "reqwest",
  "serial_test",
- "slotter",
  "strum 0.27.1",
  "strum_macros 0.27.1",
  "thiserror 2.0.11",
@@ -2305,7 +2307,6 @@ dependencies = [
  "thiserror 2.0.11",
  "tokio",
  "tracing",
- "url",
 ]
 
 [[package]]

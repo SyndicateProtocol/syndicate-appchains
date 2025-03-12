@@ -22,10 +22,13 @@ use alloy::{
         BlockTransactionsKind, TransactionRequest,
     },
 };
-use common::types::{Block, BlockRef, KnownState};
+use common::{
+    eth_client::RPCClient,
+    types::{BlockRef, KnownState},
+};
 use contract_bindings::arbitrum::rollup::Rollup::{self, RollupInstance};
 use eyre::{eyre, Result};
-use std::future::Future;
+use std::sync::Arc;
 use tracing::info;
 
 #[allow(missing_docs)]
@@ -317,25 +320,18 @@ impl MetaChainProvider {
 
     /// TODO write me and find a better name for this func
     // TODO (SEQ-651) - re-use this function in case of reorg
-    pub async fn start_from_safe_state<F1, F2, Fut1, Fut2>(
+    pub async fn start_from_safe_state(
         &self,
-        sequencing_client: F1,
-        settlement_client: F2,
+        sequencing_client: &Arc<dyn RPCClient>,
+        settlement_client: &Arc<dyn RPCClient>,
         rollup_adapter: &impl RollupAdapter,
-    ) -> Result<Option<KnownState>>
-    where
-        F1: Fn(u64) -> Fut1 + Send + Sync,
-        F2: Fn(u64) -> Fut2 + Send + Sync,
-        Fut1: Future<Output = Result<Block>> + Send,
-        Fut2: Future<Output = Result<Block>> + Send,
-    {
+    ) -> Result<Option<KnownState>> {
         let safe_state =
             self.get_safe_state(sequencing_client, settlement_client, rollup_adapter).await?;
         self.rollback_to_safe_state(&safe_state).await?;
         Ok(safe_state)
     }
 
-    // TODO find a better name for this func
     /// Validates and rolls back to a known block number if necessary
     async fn rollback_to_safe_state(&self, known_safe_state: &Option<KnownState>) -> Result<()> {
         let known_block_number = match known_safe_state {
@@ -383,29 +379,23 @@ impl MetaChainProvider {
 
     /// Get obtains the processed blocks from the rollup contract and validates them against the
     /// source chain clients
-    pub async fn get_safe_state<F1, F2, Fut1, Fut2>(
+    pub async fn get_safe_state(
         &self,
-        sequencing_client: F1,
-        settlement_client: F2,
+        sequencing_client: &Arc<dyn RPCClient>,
+        settlement_client: &Arc<dyn RPCClient>,
         rollup_adapter: &impl RollupAdapter,
-    ) -> Result<Option<KnownState>>
-    where
-        F1: Fn(u64) -> Fut1 + Send + Sync,
-        F2: Fn(u64) -> Fut2 + Send + Sync,
-        Fut1: Future<Output = Result<Block>> + Send,
-        Fut2: Future<Output = Result<Block>> + Send,
-    {
+    ) -> Result<Option<KnownState>> {
         let mut current_block = BlockNumberOrTag::Latest;
         loop {
             match rollup_adapter.get_processed_blocks(&self.provider, current_block).await? {
                 Some((mut state, block_number)) => {
                     let seq_valid = validate_block_add_timestamp(
-                        &sequencing_client,
+                        sequencing_client,
                         &mut state.sequencing_block,
                     )
                     .await;
                     let settle_valid = validate_block_add_timestamp(
-                        &settlement_client,
+                        settlement_client,
                         &mut state.settlement_block,
                     )
                     .await;
@@ -421,12 +411,11 @@ impl MetaChainProvider {
     }
 }
 
-async fn validate_block_add_timestamp<F, Fut>(get_block: &F, expected_block: &mut BlockRef) -> bool
-where
-    F: Fn(u64) -> Fut + Send + Sync,
-    Fut: Future<Output = Result<Block>> + Send,
-{
-    match get_block(expected_block.number).await {
+async fn validate_block_add_timestamp(
+    client: &Arc<dyn RPCClient>,
+    expected_block: &mut BlockRef,
+) -> bool {
+    match client.get_block_by_number(BlockNumberOrTag::Number(expected_block.number)).await {
         Ok(block) => {
             expected_block.timestamp = block.timestamp;
             block.hash == expected_block.hash
@@ -439,7 +428,36 @@ where
 mod tests {
     use super::*;
     use alloy::primitives::{hex, B256};
+    use async_trait::async_trait;
+    use common::{
+        eth_client::{RPCClient, RPCClientError},
+        types::{Block, BlockAndReceipts},
+    };
 
+    #[derive(Debug, Clone)]
+    struct MockRPCClient {
+        block_hash: B256,
+        timestamp: u64,
+    }
+
+    #[async_trait]
+    impl RPCClient for MockRPCClient {
+        async fn get_block_by_number(&self, _: BlockNumberOrTag) -> Result<Block, RPCClientError> {
+            Ok(Block {
+                hash: self.block_hash,
+                timestamp: self.timestamp,
+                number: 1,
+                ..Default::default()
+            })
+        }
+
+        async fn batch_get_blocks_and_receipts(
+            &self,
+            _block_numbers: Vec<u64>,
+        ) -> Result<Vec<BlockAndReceipts>, RPCClientError> {
+            unimplemented!("Not needed for this test")
+        }
+    }
     #[tokio::test]
     async fn test_validate_block() {
         let expected_hash = B256::from_slice(&hex!(
@@ -447,27 +465,28 @@ mod tests {
         ));
         let expected_timestamp = 12345;
 
-        let mut test_block = BlockRef { hash: expected_hash, number: 1, timestamp: 0 };
-
-        let get_block = |_: u64| async move {
-            Ok(Block { hash: expected_hash, timestamp: expected_timestamp, ..Default::default() })
+        let mut test_block = BlockRef {
+            hash: expected_hash,
+            number: 1,
+            timestamp: 0, // Initial timestamp
         };
 
-        assert!(validate_block_add_timestamp(&get_block, &mut test_block).await);
+        let client: Arc<dyn RPCClient> =
+            Arc::new(MockRPCClient { block_hash: expected_hash, timestamp: expected_timestamp });
+
+        assert!(validate_block_add_timestamp(&client, &mut test_block).await);
         assert_eq!(test_block.timestamp, expected_timestamp);
 
         // Test mismatch case
-        let get_block_mismatch = |_: u64| async move {
-            Ok(Block {
-                hash: B256::from_slice(&hex!(
-                    "4321432143214321432143214321432143214321432143214321432143214321"
-                )),
-                timestamp: expected_timestamp,
-                ..Default::default()
-            })
-        };
+        let client_mismatch: Arc<dyn RPCClient> = Arc::new(MockRPCClient {
+            block_hash: B256::from_slice(&hex!(
+                "4321432143214321432143214321432143214321432143214321432143214321"
+            )),
+            timestamp: expected_timestamp,
+        });
 
         let mut test_block = BlockRef { hash: expected_hash, number: 1, timestamp: 0 };
-        assert!(!validate_block_add_timestamp(&get_block_mismatch, &mut test_block).await);
+
+        assert!(!validate_block_add_timestamp(&client_mismatch, &mut test_block).await);
     }
 }

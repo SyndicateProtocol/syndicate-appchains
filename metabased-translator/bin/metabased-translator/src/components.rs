@@ -7,13 +7,12 @@ use block_builder::{
     block_builder::BlockBuilder, connectors::mchain::MetaChainProvider,
     rollups::shared::RollupAdapter,
 };
-use common::types::{BlockAndReceipts, Chain, KnownState, Slot};
-use eyre::Report;
-use ingestor::{
-    config::ChainIngestorConfig,
+use common::{
     eth_client::{EthClient, RPCClient},
-    ingestor::Ingestor,
+    types::{BlockAndReceipts, Chain, KnownState, Slot},
 };
+use eyre::Report;
+use ingestor::{config::ChainIngestorConfig, ingestor::Ingestor};
 use metrics::metrics::{start_metrics, MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
 use serde_json::{json, Value};

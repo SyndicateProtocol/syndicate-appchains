@@ -1,4 +1,3 @@
-use alloy::eips::BlockNumberOrTag;
 use block_builder::{
     config::TargetRollupType::{ARBITRUM, OPTIMISM},
     connectors::mchain::MetaChainProvider,
@@ -8,7 +7,7 @@ use block_builder::{
     },
 };
 use common::tracing::init_tracing_with_extra_fields;
-use eyre::{eyre, Result};
+use eyre::Result;
 use metabased_translator::{
     components::{clients, get_extra_fields_for_logging, init_metrics, ComponentHandles},
     config::MetabasedConfig,
@@ -63,35 +62,8 @@ async fn run(
         MetaChainProvider::start(&config.block_builder, &metrics.block_builder.mchain_metrics)
             .await?;
 
-    // TODO re-think the arguments here, the closures are quite verbose
     let safe_state = mchain
-        .start_from_safe_state(
-            {
-                let client = sequencing_client.clone();
-                move |block_number| {
-                    let client = client.clone();
-                    async move {
-                        client
-                            .get_block_by_number(BlockNumberOrTag::Number(block_number))
-                            .await
-                            .map_err(|e| eyre!(e))
-                    }
-                }
-            },
-            {
-                let client = settlement_client.clone();
-                move |block_number| {
-                    let client = client.clone();
-                    async move {
-                        client
-                            .get_block_by_number(BlockNumberOrTag::Number(block_number))
-                            .await
-                            .map_err(|e| eyre!(e))
-                    }
-                }
-            },
-            &rollup_adapter,
-        )
+        .start_from_safe_state(&sequencing_client, &settlement_client, &rollup_adapter)
         .await?;
 
     let (main_shutdown_rx, tx, rx) = shutdown_channels.split();

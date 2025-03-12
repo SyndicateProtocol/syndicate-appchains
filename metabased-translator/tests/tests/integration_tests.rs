@@ -423,9 +423,8 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
     let known_state = meta_node
         .mchain_provider
         .get_safe_state(
-            &meta_node.mchain_provider,
-            meta_node.sequencing_client.clone(),
-            meta_node.settlement_client.clone(),
+            &meta_node.sequencing_client,
+            &meta_node.settlement_client,
             &ArbitrumAdapter::new(&config.block_builder),
         )
         .await?

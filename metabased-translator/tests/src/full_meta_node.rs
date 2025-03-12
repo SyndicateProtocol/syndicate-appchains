@@ -23,7 +23,10 @@ use block_builder::{
         shared::RollupAdapter,
     },
 };
-use common::types::Chain;
+use common::{
+    eth_client::{EthClient, RPCClient},
+    types::Chain,
+};
 use contract_bindings::{
     arbitrum::rollup::Rollup,
     metabased::{
@@ -32,7 +35,6 @@ use contract_bindings::{
     },
 };
 use eyre::{eyre, Result};
-use ingestor::eth_client::{EthClient, RPCClient};
 use metabased_translator::{
     components::ComponentHandles, config::MetabasedConfig, shutdown::ShutdownRx,
 };
@@ -291,16 +293,15 @@ pub async fn launch_nitro_node(chain_id: u64, mchain_port: u16) -> Result<(Docke
         .arg("--node.inbox-reader.check-delay=10ms")
         .arg("--node.staker.enable=false")
         .arg("--ensure-rollup-deployment=false")
-        .arg(
-            "--chain.info-json=".to_string() +
-                &rollup_info(&MetaChainProvider::rollup_config(chain_id), "test"),
-        )
+        .arg(format!(
+            "--chain.info-json={}",
+            rollup_info(&MetaChainProvider::rollup_config(chain_id), "test")
+        ))
         .arg("--http.addr=0.0.0.0")
-        .arg("--http.port=".to_string() + &port.to_string())
+        .arg(format!("--http.port={}", port))
         .arg("--log-level=info")
         .spawn()?;
-    let rollup = ProviderBuilder::default()
-        .on_http(("http://localhost:".to_string() + &port.to_string()).parse()?);
+    let rollup = ProviderBuilder::default().on_http(format!("http://localhost:{}", port).parse()?);
     // give it two minutes to launch (in case it needs to download the image)
     timeout(Duration::from_secs(120), async {
         while rollup.get_chain_id().await.is_err() {
@@ -447,10 +448,6 @@ impl MetaNode {
             EthClient::new(&config.settlement.settlement_rpc_url, Chain::Settlement).await?,
         );
 
-        // Launch the nitro rollup
-        let (nitro_docker, metabased_rollup) =
-            launch_nitro_node(config.block_builder.target_chain_id, node.http_port).await?;
-
         // Initialize the MetaChainProvider
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
@@ -484,6 +481,10 @@ impl MetaNode {
             rollup_adapter,
             shutdown_rx,
         );
+
+        // Launch the nitro rollup
+        let (nitro_docker, metabased_rollup) =
+            launch_nitro_node(config.block_builder.target_chain_id, node.http_port).await?;
 
         Ok(Self {
             sequencing_contract,

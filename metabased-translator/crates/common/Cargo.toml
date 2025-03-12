@@ -10,17 +10,21 @@ version.workspace      = true
 
 [dependencies]
 alloy              = { workspace = true }
+async-trait        = { workspace = true }
 bincode            = { workspace = true }
+eyre               = { workspace = true }
 serde              = { workspace = true, features = ["derive", "rc"] }
 serde_json         = { workspace = true }
 strum_macros       = { workspace = true }
+thiserror          = { workspace = true }
+tokio              = { workspace = true, features = ["macros", "rt"] }
 tracing            = { workspace = true, features = ["attributes"] }
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
+url                = { workspace = true }
 
 [dev-dependencies]
 serial_test = { workspace = true }
 test-utils  = { workspace = true }
-tokio       = { workspace = true, features = ["macros", "rt"] }
 
 [lints]
 workspace = true

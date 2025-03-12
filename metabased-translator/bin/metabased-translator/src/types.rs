@@ -1,6 +1,5 @@
-use common::tracing::TracingError;
+use common::{eth_client::RPCClientError, tracing::TracingError};
 use eyre::Report;
-use ingestor::eth_client::RPCClientError;
 use thiserror::Error;
 use tracing::error;
 
