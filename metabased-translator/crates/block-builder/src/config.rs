@@ -17,6 +17,9 @@ const DEFAULT_PRIVATE_KEY_SIGNER: &str =
 #[derive(Parser, Clone)]
 #[allow(missing_docs)]
 pub struct BlockBuilderConfig {
+    #[arg(long, env = "BLOCK_BUILDER_MINE_EMPTY_BLOCKS", default_value_t = false)]
+    pub mine_empty_blocks: bool,
+
     #[arg(long, env = "BLOCK_BUILDER_MCHAIN_AUTH_IPC_PATH")]
     pub mchain_auth_ipc_path: String,
 

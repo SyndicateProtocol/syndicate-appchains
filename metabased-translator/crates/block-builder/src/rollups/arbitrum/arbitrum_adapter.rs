@@ -178,14 +178,15 @@ impl RollupAdapter for ArbitrumAdapter {
         };
         let block_id = BlockId::Number(BlockNumberOrTag::Number(block_number));
 
-        let seq_num = rollup.seqBlockNumber().call().block(block_id).await?._0;
+        let res = rollup.getSourceChainsProcessedBlocks().call().block(block_id).await?;
+        let seq_num = res._seqBlockNumber;
+        let seq_hash = res._seqBlockHash;
+        let set_num = res._setBlockNumber;
+        let set_hash = res._setBlockHash;
+
         if seq_num == 0 {
             return Ok(None);
         }
-        let seq_hash = rollup.seqBlockHash().call().block(block_id).await?._0;
-
-        let set_num = rollup.setBlockNumber().call().block(block_id).await?._0;
-        let set_hash = rollup.setBlockHash().call().block(block_id).await?._0;
 
         Ok(Some((
             KnownState {
