@@ -25,7 +25,7 @@ use contract_bindings::arbitrum::{
     idelayedmessageprovider::IDelayedMessageProvider::{
         InboxMessageDelivered, InboxMessageDeliveredFromOrigin,
     },
-    iinboxbase::IInboxBase::sendL2MessageFromOriginCall,
+    iinbox::IInbox::sendL2MessageFromOriginCall,
     rollup::Rollup,
 };
 use eyre::Result;

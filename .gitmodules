@@ -10,6 +10,3 @@
 [submodule "metabased-translator/contracts/nitro-contracts"]
 	path = metabased-translator/contracts/nitro-contracts
 	url = https://github.com/OffchainLabs/nitro-contracts.git
-[submodule "metabased-translator/contracts/src/nitro-contracts"]
-	path = metabased-translator/contracts/src/nitro-contracts
-	url = https://github.com/OffchainLabs/nitro-contracts.git

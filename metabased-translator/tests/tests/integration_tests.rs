@@ -27,11 +27,11 @@ use contract_bindings::arbitrum::{
     iinbox::IInbox,
     ioutbox::IOutbox,
     irollupcore::IRollupCore::AssertionCreated,
-    irollupuser::IRollupUser::{
-        self, AssertionInputs, AssertionState, BeforeStateData, ConfigData, GlobalState,
-    },
     nodeinterface::NodeInterface,
     rollup::Rollup,
+    rollupuserlogic::RollupUserLogic::{
+        self, AssertionInputs, AssertionState, BeforeStateData, ConfigData, GlobalState,
+    },
 };
 use e2e_tests::full_meta_node::{
     launch_nitro_node, start_reth, MetaNode, PRELOAD_BRIDGE_ADDRESS, PRELOAD_CHALLENGE_MANAGER,
@@ -714,7 +714,7 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
     sleep(Duration::from_secs(1)).await;
 
     // 2. Build & confirm Assertion on the settlement chain
-    let rollup = IRollupUser::new(PRELOAD_ROLLUP_ADDRESS, &meta_node.settlement_provider);
+    let rollup = RollupUserLogic::new(PRELOAD_ROLLUP_ADDRESS, &meta_node.settlement_provider);
     let bridge = IBridge::new(PRELOAD_BRIDGE_ADDRESS, &meta_node.settlement_provider);
 
     // Helper struct
