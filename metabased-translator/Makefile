@@ -5,6 +5,7 @@ create-arbitrum-contract-bindings:
 	git submodule update --init --recursive
 	git submodule status --recursive
 	rm -rf contracts/out contract-bindings/src/arbitrum/*
+	cd contracts/src/nitro-contracts && yarn install && yarn build
 	cd contracts && forge bind --alloy --force
 	cp -r contracts/out/bindings/src/* contract-bindings/src/arbitrum
 	mv contract-bindings/src/arbitrum/lib.rs contract-bindings/src/arbitrum/mod.rs
