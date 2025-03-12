@@ -1,4 +1,4 @@
-exclude: vendor|\.pb\.go|contracts/
+exclude: vendor|\.pb\.go
 
 repos:
   - repo: local

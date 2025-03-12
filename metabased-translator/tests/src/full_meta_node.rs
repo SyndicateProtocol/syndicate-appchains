@@ -303,7 +303,7 @@ pub async fn launch_nitro_node(chain_id: u64, mchain_port: u16) -> Result<(Docke
         .arg("--init")
         .arg("--rm")
         .arg("--net=host")
-        .arg("offchainlabs/nitro-node:v3.4.0-d896e9c-validator")
+        .arg("offchainlabs/nitro-node:v3.4.0-d896e9c-slim")
         .arg(format!("--parent-chain.connection.url=http://localhost:{mchain_port}"))
         .arg("--node.dangerous.disable-blob-reader")
         .arg("--execution.forwarding-target=null")
@@ -317,9 +317,7 @@ pub async fn launch_nitro_node(chain_id: u64, mchain_port: u16) -> Result<(Docke
         )
         .arg("--http.addr=0.0.0.0")
         .arg("--http.port=".to_string() + &port.to_string())
-        .arg("--log-level=debug")
-        .arg("--http.api=net,web3,eth,arb,arbdebug,debug")
-        .arg("--node.block-validator.current-module-root=0x184884e1eb9fefdc158f6c8ac912bb183bf3cf83f0090317e0bc4ac5860baa39")
+        .arg("--log-level=info")
         .spawn()?;
     let rollup = ProviderBuilder::default()
         .on_http(("http://localhost:".to_string() + &port.to_string()).parse()?);
