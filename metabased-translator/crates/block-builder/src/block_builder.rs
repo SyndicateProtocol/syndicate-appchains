@@ -13,7 +13,6 @@ use common::types::Slot;
 use eyre::{Error, Report, Result};
 use tokio::sync::{mpsc::Receiver, oneshot};
 use tracing::{info, trace};
-use url::Url;
 
 // TODO try to make this private (?)
 /// Block builder service for processing and building L3 blocks.
@@ -151,6 +150,12 @@ pub enum BlockBuilderError {
     #[error("Failed to submit transaction to MetaChain: {0}")]
     SubmitTxnError(RpcError<TransportErrorKind>),
 
+    #[error("Error getting current block number: {0}")]
+    GetCurrentBlockNumber(String),
+
+    #[error("Known block(slot) number {0} is greater than the current mchain block number {1}")]
+    KnownBlockNumberGreaterThanCurrentBlockNumber(u64, u64),
+
     #[error("Cannot serialize empty l2 msg")]
     EmptyL2Message(),
 
@@ -162,17 +167,6 @@ pub enum BlockBuilderError {
 
     #[error("Block builder was shut down")]
     Shutdown,
-}
-
-#[allow(missing_docs)] // self-documenting
-#[derive(Debug, thiserror::Error)]
-pub enum AnvilStartError {
-    #[error("Invalid host in mchain_url")]
-    InvalidHost,
-    #[error("No port found in mchain_url")]
-    NoPort,
-    #[error("Requested port in mchain_url {mchain_url:} is unavailable: {port}")]
-    PortUnavailable { mchain_url: Url, port: u16 },
 }
 
 // TODO SEQ-529 - write a test that asserts for determinism (same slots should yield the same

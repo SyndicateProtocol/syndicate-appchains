@@ -27,7 +27,7 @@ use common::{
     types::{BlockRef, KnownState},
 };
 use contract_bindings::arbitrum::rollup::Rollup::{self, RollupInstance};
-use eyre::{eyre, Result};
+use eyre::Result;
 use std::sync::Arc;
 use tracing::info;
 
@@ -350,7 +350,10 @@ impl MetaChainProvider {
     }
 
     /// Validates and rolls back to a known block number if necessary
-    async fn rollback_to_safe_state(&self, known_safe_state: &Option<KnownState>) -> Result<()> {
+    async fn rollback_to_safe_state(
+        &self,
+        known_safe_state: &Option<KnownState>,
+    ) -> Result<(), BlockBuilderError> {
         let known_block_number = match known_safe_state {
             Some(known_state) => known_state.mchain_block_number,
             None => {
@@ -363,13 +366,13 @@ impl MetaChainProvider {
             .provider
             .get_block_number()
             .await
-            .map_err(|e| eyre!(format!("Error getting current block number: {}", e)))?;
+            .map_err(|e| BlockBuilderError::GetCurrentBlockNumber(e.to_string()))?;
 
         if known_block_number > current_block_number {
-            return Err(eyre!(format!(
-                "Known block(slot) number {} is greater than the current mchain block number {}",
-                known_block_number, current_block_number
-            )));
+            return Err(BlockBuilderError::KnownBlockNumberGreaterThanCurrentBlockNumber(
+                known_block_number,
+                current_block_number,
+            ));
         }
 
         // rollback to block if necessary
