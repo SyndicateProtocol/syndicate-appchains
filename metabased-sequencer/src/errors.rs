@@ -123,8 +123,6 @@ pub enum InvalidInputError {
     InvalidUint,
     /// Transaction signature is invalid
     InvalidTransactionSignature,
-    /// Transaction is missing gas price
-    MissingGasPrice,
     /// Failed to decode RLP data
     UnableToRLPDecode,
     /// Chain ID is missing
@@ -153,7 +151,6 @@ impl fmt::Display for InvalidInputError {
             Self::InvalidTransactionSignature => {
                 write!(f, "invalid transaction signature")
             }
-            Self::MissingGasPrice => write!(f, "transaction missing gas price"),
             Self::UnableToRLPDecode => write!(f, "unable to RLP decode"),
             Self::MissingChainID => {
                 write!(f, "missing chain ID")
