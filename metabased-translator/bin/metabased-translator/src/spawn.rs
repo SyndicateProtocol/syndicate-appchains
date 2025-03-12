@@ -3,20 +3,16 @@ use crate::{
     shutdown_channels::{ShutdownRx, ShutdownTx},
     types::RuntimeError,
 };
-use block_builder::{
-    block_builder::BlockBuilder, connectors::mchain::MetaChainProvider,
-    rollups::shared::RollupAdapter,
-};
+use block_builder::{connectors::mchain::MetaChainProvider, rollups::shared::RollupAdapter};
 use common::{
     eth_client::{EthClient, RPCClient},
     types::{BlockAndReceipts, Chain, KnownState, Slot},
 };
 use eyre::Report;
-use ingestor::{config::ChainIngestorConfig, ingestor::Ingestor};
+use ingestor::config::ChainIngestorConfig;
 use metrics::metrics::{start_metrics, MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
 use serde_json::{json, Value};
-use slotter::Slotter;
 use std::sync::Arc;
 use tokio::{sync::mpsc::channel, task::JoinHandle};
 use tracing::{error, log::info};
@@ -59,7 +55,7 @@ impl ComponentHandles {
         let block_builder_config = config.block_builder.clone();
 
         let sequencing = tokio::spawn(async move {
-            Ingestor::run(
+            ingestor::run(
                 Chain::Sequencing,
                 &sequencing_config,
                 sequencing_client,
@@ -71,7 +67,7 @@ impl ComponentHandles {
         });
 
         let settlement = tokio::spawn(async move {
-            Ingestor::run(
+            ingestor::run(
                 Chain::Settlement,
                 &settlement_config,
                 settlement_client,
@@ -83,7 +79,7 @@ impl ComponentHandles {
         });
 
         let slotter = tokio::spawn(async move {
-            Slotter::run(
+            slotter::run(
                 &slotter_config,
                 known_state,
                 sequencing_rx,
@@ -96,7 +92,7 @@ impl ComponentHandles {
         });
 
         let block_builder = tokio::spawn(async move {
-            BlockBuilder::run(
+            block_builder::run(
                 &block_builder_config,
                 slot_rx,
                 mchain,

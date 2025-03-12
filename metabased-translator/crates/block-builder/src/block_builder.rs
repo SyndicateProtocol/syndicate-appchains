@@ -14,10 +14,9 @@ use eyre::{Error, Report, Result};
 use tokio::sync::{mpsc::Receiver, oneshot};
 use tracing::{info, trace};
 
-// TODO try to make this private (?)
 /// Block builder service for processing and building L3 blocks.
 #[derive(Debug)]
-pub struct BlockBuilder<R: RollupAdapter> {
+struct BlockBuilder<R: RollupAdapter> {
     slotter_rx: Receiver<Slot>,
     #[allow(missing_docs)]
     pub mchain: MetaChainProvider,
@@ -26,26 +25,26 @@ pub struct BlockBuilder<R: RollupAdapter> {
     mine_empty_blocks: bool,
 }
 
-impl<R: RollupAdapter> BlockBuilder<R> {
-    /// Create a new block builder
-    pub async fn run(
-        config: &BlockBuilderConfig,
-        slotter_rx: Receiver<Slot>,
-        mchain: MetaChainProvider,
-        rollup_adapter: R,
-        metrics: BlockBuilderMetrics,
-        shutdown_rx: oneshot::Receiver<()>,
-    ) -> Result<(), Error> {
-        let block_builder = Self {
-            slotter_rx,
-            mchain,
-            rollup_adapter,
-            metrics,
-            mine_empty_blocks: config.mine_empty_blocks,
-        };
-        block_builder.main_loop(shutdown_rx).await
-    }
+/// starts a new block builder task
+pub async fn run(
+    config: &BlockBuilderConfig,
+    slotter_rx: Receiver<Slot>,
+    mchain: MetaChainProvider,
+    rollup_adapter: impl RollupAdapter,
+    metrics: BlockBuilderMetrics,
+    shutdown_rx: oneshot::Receiver<()>,
+) -> Result<(), Error> {
+    let block_builder = BlockBuilder {
+        slotter_rx,
+        mchain,
+        rollup_adapter,
+        metrics,
+        mine_empty_blocks: config.mine_empty_blocks,
+    };
+    block_builder.main_loop(shutdown_rx).await
+}
 
+impl<R: RollupAdapter> BlockBuilder<R> {
     /// Start the block builder
     async fn main_loop(mut self, mut shutdown_rx: oneshot::Receiver<()>) -> Result<(), Error> {
         loop {

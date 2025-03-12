@@ -19,10 +19,9 @@ use tokio::{
 };
 use tracing::{error, info, trace};
 
-// TODO try to make this private (?)
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
-pub struct Ingestor {
+struct Ingestor {
     chain: Chain,
     client: Arc<dyn RPCClient>,
     current_block_number: u64,
@@ -33,44 +32,42 @@ pub struct Ingestor {
     metrics: IngestorMetrics,
 }
 
-impl Ingestor {
-    /// Creates a new `Ingestor` instance responsible for polling blocks.
-    ///
-    /// # Arguments
-    /// - `chain`: Specifies whether the ingestor is targeting the `Settlement` or `Sequencing`
-    ///   chain.
-    /// - `client`: An asynchronous RPC client used for fetching block data.
-    /// - `sender`: A channel for sending blocks to the consumer.
-    /// - `config`: Configuration parameters, including the RPC endpoint URL and starting block
-    ///   number.
-    /// - `metrics`: Metrics collection for monitoring ingestion performance.
-    /// - `shutdown_rx`: A channel for receiving shutdown signals.
-    ///
-    /// # Returns
-    /// A `Result` indicating the success or failure of the ingestor execution.
-    pub async fn run(
-        chain: Chain,
-        config: &ChainIngestorConfig,
-        client: Arc<dyn RPCClient>,
-        sender: Sender<Arc<BlockAndReceipts>>,
-        metrics: IngestorMetrics,
-        shutdown_rx: oneshot::Receiver<()>,
-    ) -> Result<(), Error> {
-        let client_clone = client.clone();
-        let chain_head = client_clone.get_block_by_number(BlockNumberOrTag::Latest).await?;
-        let ingestor = Self {
-            chain,
-            client,
-            current_block_number: config.start_block,
-            initial_chain_head: chain_head.number,
-            syncing_batch_size: config.syncing_batch_size,
-            sender,
-            polling_interval: config.polling_interval,
-            metrics,
-        };
-        ingestor.main_loop(shutdown_rx).await
-    }
+/// Starts a new `Ingestor` task, responsible for polling blocks.
+///
+/// # Arguments
+/// - `chain`: Specifies whether the ingestor is targeting the `Settlement` or `Sequencing` chain.
+/// - `client`: An asynchronous RPC client used for fetching block data.
+/// - `sender`: A channel for sending blocks to the consumer.
+/// - `config`: Configuration parameters, including the RPC endpoint URL and starting block number.
+/// - `metrics`: Metrics collection for monitoring ingestion performance.
+/// - `shutdown_rx`: A channel for receiving shutdown signals.
+///
+/// # Returns
+/// A `Result` indicating the success or failure of the ingestor execution.
+pub async fn run(
+    chain: Chain,
+    config: &ChainIngestorConfig,
+    client: Arc<dyn RPCClient>,
+    sender: Sender<Arc<BlockAndReceipts>>,
+    metrics: IngestorMetrics,
+    shutdown_rx: oneshot::Receiver<()>,
+) -> Result<(), Error> {
+    let client_clone = client.clone();
+    let chain_head = client_clone.get_block_by_number(BlockNumberOrTag::Latest).await?;
+    let ingestor = Ingestor {
+        chain,
+        client,
+        current_block_number: config.start_block,
+        initial_chain_head: chain_head.number,
+        syncing_batch_size: config.syncing_batch_size,
+        sender,
+        polling_interval: config.polling_interval,
+        metrics,
+    };
+    ingestor.main_loop(shutdown_rx).await
+}
 
+impl Ingestor {
     /// Starts the polling process.
     ///
     /// This asynchronous function continuously polls for new blocks and their receipts

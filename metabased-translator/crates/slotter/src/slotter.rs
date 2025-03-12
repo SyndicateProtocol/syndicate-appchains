@@ -15,7 +15,6 @@ use tokio::{
 };
 use tracing::{debug, error, info, trace, warn};
 
-// TODO try to make this private (?)
 /// Polls and ingests blocks from an Ethereum chain
 ///
 /// Slots are stored in a linked list ordered by timestamp, with newer slots at the back.
@@ -30,7 +29,7 @@ use tracing::{debug, error, info, trace, warn};
 /// - A slot becomes Closed when we see a settlement block that cannot fit into it (the block's timestamp (plus delay) is further in the future than the slot's timestamp)
 ///  ```
 #[derive(Debug)]
-pub struct Slotter {
+struct Slotter {
     settlement_delay: u64,
 
     latest_sequencing_block: Option<BlockRef>,
@@ -50,44 +49,44 @@ pub struct Slotter {
     metrics: SlotterMetrics,
 }
 
+/// Starts a new [`Slotter`] tasks that receives blocks from the source chains and organizes them
+/// into slots.
+pub async fn run(
+    config: &SlotterConfig,
+    known_state: Option<KnownState>,
+    sequencing_rx: Receiver<Arc<BlockAndReceipts>>,
+    settlement_rx: Receiver<Arc<BlockAndReceipts>>,
+    sender: Sender<Slot>,
+    metrics: SlotterMetrics,
+    shutdown_rx: oneshot::Receiver<()>,
+) -> Result<(), Error> {
+    let (latest_sequencing_block, latest_settlement_block) = match known_state {
+        Some(known_state) => {
+            (Some(known_state.sequencing_block), Some(known_state.settlement_block))
+        }
+        None => (None, None),
+    };
+
+    // Calculate min_chain_head_timestamp from latest blocks
+    let min_chain_head_timestamp = match (&latest_sequencing_block, &latest_settlement_block) {
+        (Some(seq), Some(set)) => seq.timestamp.min(set.timestamp),
+        _ => 0, // If we don't have both blocks yet, use 0
+    };
+
+    let slotter = Slotter {
+        latest_sequencing_block,
+        latest_settlement_block,
+        slots: VecDeque::new(),
+        unassigned_settlement_blocks: VecDeque::new(),
+        settlement_delay: config.settlement_delay,
+        sender,
+        metrics,
+        min_chain_head_timestamp,
+    };
+    slotter.main_loop(sequencing_rx, settlement_rx, shutdown_rx).await
+}
+
 impl Slotter {
-    /// Creates a new [`Slotter`] that receives blocks from two chains and organizes them into
-    /// slots.
-    pub async fn run(
-        config: &SlotterConfig,
-        known_state: Option<KnownState>,
-        sequencing_rx: Receiver<Arc<BlockAndReceipts>>,
-        settlement_rx: Receiver<Arc<BlockAndReceipts>>,
-        sender: Sender<Slot>,
-        metrics: SlotterMetrics,
-        shutdown_rx: oneshot::Receiver<()>,
-    ) -> Result<(), Error> {
-        let (latest_sequencing_block, latest_settlement_block) = match known_state {
-            Some(known_state) => {
-                (Some(known_state.sequencing_block), Some(known_state.settlement_block))
-            }
-            None => (None, None),
-        };
-
-        // Calculate min_chain_head_timestamp from latest blocks
-        let min_chain_head_timestamp = match (&latest_sequencing_block, &latest_settlement_block) {
-            (Some(seq), Some(set)) => seq.timestamp.min(set.timestamp),
-            _ => 0, // If we don't have both blocks yet, use 0
-        };
-
-        let slotter = Self {
-            latest_sequencing_block,
-            latest_settlement_block,
-            slots: VecDeque::new(),
-            unassigned_settlement_blocks: VecDeque::new(),
-            settlement_delay: config.settlement_delay,
-            sender,
-            metrics,
-            min_chain_head_timestamp,
-        };
-        slotter.main_loop(sequencing_rx, settlement_rx, shutdown_rx).await
-    }
-
     /// Starts the [`Slotter`] main loop.
     ///
     /// The [`Slotter`] will:
