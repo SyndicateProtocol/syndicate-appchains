@@ -69,6 +69,6 @@ jobs:
 
       - name: Check Rust contract bindings
         run: |
-          mv ../contracts-bindings/ old/
+          mv ../contract-bindings/ old/
           make create-contract-bindings
           diff -r -q old/ ../contract-bindings/ || (echo "Error: Rust contract bindings are out of date. Please run 'make -C metabased-translator create-contract-bindings' to update them." && exit 1)
