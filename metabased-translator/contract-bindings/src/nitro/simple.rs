@@ -890,6 +890,7 @@ function checkBlockHashes() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct checkBlockHashesReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1010,11 +1011,17 @@ function checkCalls(bool useTopLevel, bool directCase, bool staticCase, bool del
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct checkCallsCall {
+        #[allow(missing_docs)]
         pub useTopLevel: bool,
+        #[allow(missing_docs)]
         pub directCase: bool,
+        #[allow(missing_docs)]
         pub staticCase: bool,
+        #[allow(missing_docs)]
         pub delegateCase: bool,
+        #[allow(missing_docs)]
         pub callcodeCase: bool,
+        #[allow(missing_docs)]
         pub callCase: bool,
     }
     ///Container type for the return parameters of the [`checkCalls(bool,bool,bool,bool,bool,bool)`](checkCallsCall) function.
@@ -1180,13 +1187,16 @@ function checkGasUsed(address to, bytes memory input) external view returns (uin
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct checkGasUsedCall {
+        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub input: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`checkGasUsed(address,bytes)`](checkGasUsedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct checkGasUsedReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1322,7 +1332,9 @@ function checkIsTopLevelOrWasAliased(bool useTopLevel, bool expected) external v
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct checkIsTopLevelOrWasAliasedCall {
+        #[allow(missing_docs)]
         pub useTopLevel: bool,
+        #[allow(missing_docs)]
         pub expected: bool,
     }
     ///Container type for the return parameters of the [`checkIsTopLevelOrWasAliased(bool,bool)`](checkIsTopLevelOrWasAliasedCall) function.
@@ -1465,6 +1477,7 @@ function counter() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct counterReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -1583,6 +1596,7 @@ function difficulty() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct difficultyReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1819,6 +1833,7 @@ function getBlockDifficulty() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getBlockDifficultyReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2289,6 +2304,7 @@ function logAndIncrement(uint256 expected) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct logAndIncrementCall {
+        #[allow(missing_docs)]
         pub expected: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`logAndIncrement(uint256)`](logAndIncrementCall) function.
@@ -2647,8 +2663,11 @@ function postManyBatches(address sequencerInbox, bytes memory batchData, uint256
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct postManyBatchesCall {
+        #[allow(missing_docs)]
         pub sequencerInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub batchData: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
         pub numberToPost: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`postManyBatches(address,bytes,uint256)`](postManyBatchesCall) function.
@@ -2908,21 +2927,37 @@ function storeDifficulty() external;
     };
     ///Container for all the [`Simple`](self) function calls.
     pub enum SimpleCalls {
+        #[allow(missing_docs)]
         checkBlockHashes(checkBlockHashesCall),
+        #[allow(missing_docs)]
         checkCalls(checkCallsCall),
+        #[allow(missing_docs)]
         checkGasUsed(checkGasUsedCall),
+        #[allow(missing_docs)]
         checkIsTopLevelOrWasAliased(checkIsTopLevelOrWasAliasedCall),
+        #[allow(missing_docs)]
         counter(counterCall),
+        #[allow(missing_docs)]
         difficulty(difficultyCall),
+        #[allow(missing_docs)]
         emitNullEvent(emitNullEventCall),
+        #[allow(missing_docs)]
         getBlockDifficulty(getBlockDifficultyCall),
+        #[allow(missing_docs)]
         increment(incrementCall),
+        #[allow(missing_docs)]
         incrementEmit(incrementEmitCall),
+        #[allow(missing_docs)]
         incrementRedeem(incrementRedeemCall),
+        #[allow(missing_docs)]
         logAndIncrement(logAndIncrementCall),
+        #[allow(missing_docs)]
         noop(noopCall),
+        #[allow(missing_docs)]
         pleaseRevert(pleaseRevertCall),
+        #[allow(missing_docs)]
         postManyBatches(postManyBatchesCall),
+        #[allow(missing_docs)]
         storeDifficulty(storeDifficultyCall),
     }
     #[automatically_derived]
@@ -3417,9 +3452,13 @@ function storeDifficulty() external;
     }
     ///Container for all the [`Simple`](self) events.
     pub enum SimpleEvents {
+        #[allow(missing_docs)]
         CounterEvent(CounterEvent),
+        #[allow(missing_docs)]
         LogAndIncrementCalled(LogAndIncrementCalled),
+        #[allow(missing_docs)]
         NullEvent(NullEvent),
+        #[allow(missing_docs)]
         RedeemedEvent(RedeemedEvent),
     }
     #[automatically_derived]

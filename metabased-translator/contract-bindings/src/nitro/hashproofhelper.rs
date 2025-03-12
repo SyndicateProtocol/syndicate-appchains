@@ -211,7 +211,9 @@ error NotProven(bytes32 fullHash, uint64 offset);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NotProven {
+        #[allow(missing_docs)]
         pub fullHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub offset: u64,
     }
     #[allow(
@@ -559,13 +561,16 @@ function getPreimagePart(bytes32 fullHash, uint64 offset) external view returns 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPreimagePartCall {
+        #[allow(missing_docs)]
         pub fullHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub offset: u64,
     }
     ///Container type for the return parameters of the [`getPreimagePart(bytes32,uint64)`](getPreimagePartCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPreimagePartReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -701,14 +706,18 @@ function keccakStates(address) external view returns (uint64 offset, bytes memor
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct keccakStatesCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`keccakStates(address)`](keccakStatesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct keccakStatesReturn {
+        #[allow(missing_docs)]
         pub offset: u64,
+        #[allow(missing_docs)]
         pub part: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
         pub length: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -843,13 +852,16 @@ function proveWithFullPreimage(bytes memory data, uint64 offset) external return
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct proveWithFullPreimageCall {
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
         pub offset: u64,
     }
     ///Container type for the return parameters of the [`proveWithFullPreimage(bytes,uint64)`](proveWithFullPreimageCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct proveWithFullPreimageReturn {
+        #[allow(missing_docs)]
         pub fullHash: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -984,14 +996,18 @@ function proveWithSplitPreimage(bytes memory data, uint64 offset, uint256 flags)
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct proveWithSplitPreimageCall {
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
         pub offset: u64,
+        #[allow(missing_docs)]
         pub flags: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`proveWithSplitPreimage(bytes,uint64,uint256)`](proveWithSplitPreimageCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct proveWithSplitPreimageReturn {
+        #[allow(missing_docs)]
         pub fullHash: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1131,10 +1147,15 @@ function proveWithSplitPreimage(bytes memory data, uint64 offset, uint256 flags)
     };
     ///Container for all the [`HashProofHelper`](self) function calls.
     pub enum HashProofHelperCalls {
+        #[allow(missing_docs)]
         clearSplitProof(clearSplitProofCall),
+        #[allow(missing_docs)]
         getPreimagePart(getPreimagePartCall),
+        #[allow(missing_docs)]
         keccakStates(keccakStatesCall),
+        #[allow(missing_docs)]
         proveWithFullPreimage(proveWithFullPreimageCall),
+        #[allow(missing_docs)]
         proveWithSplitPreimage(proveWithSplitPreimageCall),
     }
     #[automatically_derived]
@@ -1341,6 +1362,7 @@ function proveWithSplitPreimage(bytes memory data, uint64 offset, uint256 flags)
     }
     ///Container for all the [`HashProofHelper`](self) custom errors.
     pub enum HashProofHelperErrors {
+        #[allow(missing_docs)]
         NotProven(NotProven),
     }
     #[automatically_derived]
@@ -1426,6 +1448,7 @@ function proveWithSplitPreimage(bytes memory data, uint64 offset, uint256 flags)
     }
     ///Container for all the [`HashProofHelper`](self) events.
     pub enum HashProofHelperEvents {
+        #[allow(missing_docs)]
         PreimagePartProven(PreimagePartProven),
     }
     #[automatically_derived]

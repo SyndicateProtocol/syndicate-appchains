@@ -113,6 +113,7 @@ error HeapIsEmpty();
     };
     ///Container for all the [`MinHeapLib`](self) custom errors.
     pub enum MinHeapLibErrors {
+        #[allow(missing_docs)]
         HeapIsEmpty(HeapIsEmpty),
     }
     #[automatically_derived]

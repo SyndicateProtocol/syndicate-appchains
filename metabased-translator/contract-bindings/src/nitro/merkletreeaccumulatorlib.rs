@@ -66,6 +66,7 @@ function MAX_LEVEL() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MAX_LEVELReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -177,6 +178,7 @@ function MAX_LEVEL() external view returns (uint256);
     };
     ///Container for all the [`MerkleTreeAccumulatorLib`](self) function calls.
     pub enum MerkleTreeAccumulatorLibCalls {
+        #[allow(missing_docs)]
         MAX_LEVEL(MAX_LEVELCall),
     }
     #[automatically_derived]

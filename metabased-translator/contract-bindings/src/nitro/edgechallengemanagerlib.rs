@@ -66,6 +66,7 @@ function UNRIVALED() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct UNRIVALEDReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -175,6 +176,7 @@ function UNRIVALED() external view returns (bytes32);
     };
     ///Container for all the [`EdgeChallengeManagerLib`](self) function calls.
     pub enum EdgeChallengeManagerLibCalls {
+        #[allow(missing_docs)]
         UNRIVALED(UNRIVALEDCall),
     }
     #[automatically_derived]

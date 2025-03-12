@@ -84,8 +84,11 @@ struct BufferConfig { uint64 threshold; uint64 max; uint64 replenishRateInBasis;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BufferConfig {
+        #[allow(missing_docs)]
         pub threshold: u64,
+        #[allow(missing_docs)]
         pub max: u64,
+        #[allow(missing_docs)]
         pub replenishRateInBasis: u64,
     }
     #[allow(
@@ -324,6 +327,7 @@ function postUpgradeInit(BufferConfig memory bufferConfig_) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct postUpgradeInitCall {
+        #[allow(missing_docs)]
         pub bufferConfig_: <BufferConfig as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`postUpgradeInit((uint64,uint64,uint64))`](postUpgradeInitCall) function.
@@ -445,6 +449,7 @@ function postUpgradeInit(BufferConfig memory bufferConfig_) external;
     };
     ///Container for all the [`ISeqInboxPostUpgradeInit`](self) function calls.
     pub enum ISeqInboxPostUpgradeInitCalls {
+        #[allow(missing_docs)]
         postUpgradeInit(postUpgradeInitCall),
     }
     #[automatically_derived]

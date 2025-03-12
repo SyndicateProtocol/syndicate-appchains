@@ -470,7 +470,9 @@ error BadArrayLength(uint256 expected, uint256 actual);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BadArrayLength {
+        #[allow(missing_docs)]
         pub expected: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub actual: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -553,6 +555,7 @@ error NotExecutorOrOwner(address actual);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NotExecutorOrOwner {
+        #[allow(missing_docs)]
         pub actual: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -623,8 +626,11 @@ error OnlyOwnerDestination(address expected, address actual, address destination
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct OnlyOwnerDestination {
+        #[allow(missing_docs)]
         pub expected: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub actual: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub destination: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -713,6 +719,7 @@ error WithdrawEthFail(address destination);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct WithdrawEthFail {
+        #[allow(missing_docs)]
         pub destination: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1352,12 +1359,14 @@ function allowedExecutorDestinations(address) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowedExecutorDestinationsCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`allowedExecutorDestinations(address)`](allowedExecutorDestinationsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowedExecutorDestinationsReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -1480,8 +1489,11 @@ function executeTransaction(bytes memory data, address destination, uint256 amou
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executeTransactionCall {
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
         pub destination: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`executeTransaction(bytes,address,uint256)`](executeTransactionCall) function.
@@ -1630,9 +1642,13 @@ function executeTransactionWithGasRefunder(address gasRefunder, bytes memory dat
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executeTransactionWithGasRefunderCall {
+        #[allow(missing_docs)]
         pub gasRefunder: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
         pub destination: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`executeTransactionWithGasRefunder(address,bytes,address,uint256)`](executeTransactionWithGasRefunderCall) function.
@@ -1788,10 +1804,13 @@ function executeTransactions(bytes[] memory data, address[] memory destination, 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executeTransactionsCall {
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Vec<alloy::sol_types::private::Bytes>,
+        #[allow(missing_docs)]
         pub destination: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::Vec<
             alloy::sol_types::private::primitives::aliases::U256,
         >,
@@ -1944,11 +1963,15 @@ function executeTransactionsWithGasRefunder(address gasRefunder, bytes[] memory 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executeTransactionsWithGasRefunderCall {
+        #[allow(missing_docs)]
         pub gasRefunder: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Vec<alloy::sol_types::private::Bytes>,
+        #[allow(missing_docs)]
         pub destination: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::Vec<
             alloy::sol_types::private::primitives::aliases::U256,
         >,
@@ -2108,12 +2131,14 @@ function executors(address) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executorsCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`executors(address)`](executorsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executorsReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2232,8 +2257,11 @@ function initialize(address _executor, address _owner, address[] memory initialE
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initializeCall {
+        #[allow(missing_docs)]
         pub _executor: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _owner: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub initialExecutorAllowedDests: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
@@ -2386,6 +2414,7 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2620,9 +2649,11 @@ function setAllowedExecutorDestinations(address[] memory destinations, bool[] me
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setAllowedExecutorDestinationsCall {
+        #[allow(missing_docs)]
         pub destinations: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
+        #[allow(missing_docs)]
         pub isSet: alloy::sol_types::private::Vec<bool>,
     }
     ///Container type for the return parameters of the [`setAllowedExecutorDestinations(address[],bool[])`](setAllowedExecutorDestinationsCall) function.
@@ -2764,9 +2795,11 @@ function setExecutor(address[] memory newExecutors, bool[] memory isExecutor) ex
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setExecutorCall {
+        #[allow(missing_docs)]
         pub newExecutors: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
+        #[allow(missing_docs)]
         pub isExecutor: alloy::sol_types::private::Vec<bool>,
     }
     ///Container type for the return parameters of the [`setExecutor(address[],bool[])`](setExecutorCall) function.
@@ -2904,6 +2937,7 @@ function transferOwnership(address newOwner) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferOwnershipCall {
+        #[allow(missing_docs)]
         pub newOwner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`transferOwnership(address)`](transferOwnershipCall) function.
@@ -3030,6 +3064,7 @@ function validateExecuteTransaction(address destination) external view;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct validateExecuteTransactionCall {
+        #[allow(missing_docs)]
         pub destination: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`validateExecuteTransaction(address)`](validateExecuteTransactionCall) function.
@@ -3156,7 +3191,9 @@ function withdrawEth(uint256 amount, address destination) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawEthCall {
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub destination: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`withdrawEth(uint256,address)`](withdrawEthCall) function.
@@ -3289,19 +3326,33 @@ function withdrawEth(uint256 amount, address destination) external;
     };
     ///Container for all the [`ValidatorWallet`](self) function calls.
     pub enum ValidatorWalletCalls {
+        #[allow(missing_docs)]
         allowedExecutorDestinations(allowedExecutorDestinationsCall),
+        #[allow(missing_docs)]
         executeTransaction(executeTransactionCall),
+        #[allow(missing_docs)]
         executeTransactionWithGasRefunder(executeTransactionWithGasRefunderCall),
+        #[allow(missing_docs)]
         executeTransactions(executeTransactionsCall),
+        #[allow(missing_docs)]
         executeTransactionsWithGasRefunder(executeTransactionsWithGasRefunderCall),
+        #[allow(missing_docs)]
         executors(executorsCall),
+        #[allow(missing_docs)]
         initialize(initializeCall),
+        #[allow(missing_docs)]
         owner(ownerCall),
+        #[allow(missing_docs)]
         renounceOwnership(renounceOwnershipCall),
+        #[allow(missing_docs)]
         setAllowedExecutorDestinations(setAllowedExecutorDestinationsCall),
+        #[allow(missing_docs)]
         setExecutor(setExecutorCall),
+        #[allow(missing_docs)]
         transferOwnership(transferOwnershipCall),
+        #[allow(missing_docs)]
         validateExecuteTransaction(validateExecuteTransactionCall),
+        #[allow(missing_docs)]
         withdrawEth(withdrawEthCall),
     }
     #[automatically_derived]
@@ -3751,9 +3802,13 @@ function withdrawEth(uint256 amount, address destination) external;
     }
     ///Container for all the [`ValidatorWallet`](self) custom errors.
     pub enum ValidatorWalletErrors {
+        #[allow(missing_docs)]
         BadArrayLength(BadArrayLength),
+        #[allow(missing_docs)]
         NotExecutorOrOwner(NotExecutorOrOwner),
+        #[allow(missing_docs)]
         OnlyOwnerDestination(OnlyOwnerDestination),
+        #[allow(missing_docs)]
         WithdrawEthFail(WithdrawEthFail),
     }
     #[automatically_derived]
@@ -3932,9 +3987,13 @@ function withdrawEth(uint256 amount, address destination) external;
     }
     ///Container for all the [`ValidatorWallet`](self) events.
     pub enum ValidatorWalletEvents {
+        #[allow(missing_docs)]
         AllowedExecutorDestinationsUpdated(AllowedExecutorDestinationsUpdated),
+        #[allow(missing_docs)]
         ExecutorUpdated(ExecutorUpdated),
+        #[allow(missing_docs)]
         Initialized(Initialized),
+        #[allow(missing_docs)]
         OwnershipTransferred(OwnershipTransferred),
     }
     #[automatically_derived]

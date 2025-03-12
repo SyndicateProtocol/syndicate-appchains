@@ -274,7 +274,9 @@ error MerkleProofTooLong(uint256 actualLength, uint256 maxProofLength);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MerkleProofTooLong {
+        #[allow(missing_docs)]
         pub actualLength: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub maxProofLength: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -357,16 +359,20 @@ function appendCompleteSubTree(bytes32[] memory me, uint256 level, bytes32 subtr
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct appendCompleteSubTreeCall {
+        #[allow(missing_docs)]
         pub me: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
+        #[allow(missing_docs)]
         pub level: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub subtreeRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`appendCompleteSubTree(bytes32[],uint256,bytes32)`](appendCompleteSubTreeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct appendCompleteSubTreeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
@@ -531,15 +537,18 @@ function appendLeaf(bytes32[] memory me, bytes32 leaf) external pure returns (by
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct appendLeafCall {
+        #[allow(missing_docs)]
         pub me: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
+        #[allow(missing_docs)]
         pub leaf: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`appendLeaf(bytes32[],bytes32)`](appendLeafCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct appendLeafReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
@@ -690,12 +699,14 @@ function leastSignificantBit(uint256 x) external pure returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct leastSignificantBitCall {
+        #[allow(missing_docs)]
         pub x: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`leastSignificantBit(uint256)`](leastSignificantBitCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct leastSignificantBitReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -822,13 +833,16 @@ function maximumAppendBetween(uint256 startSize, uint256 endSize) external pure 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct maximumAppendBetweenCall {
+        #[allow(missing_docs)]
         pub startSize: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub endSize: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`maximumAppendBetween(uint256,uint256)`](maximumAppendBetweenCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct maximumAppendBetweenReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -968,12 +982,14 @@ function mostSignificantBit(uint256 x) external pure returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct mostSignificantBitCall {
+        #[allow(missing_docs)]
         pub x: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`mostSignificantBit(uint256)`](mostSignificantBitCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct mostSignificantBitReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1100,6 +1116,7 @@ function root(bytes32[] memory me) external pure returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct rootCall {
+        #[allow(missing_docs)]
         pub me: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
@@ -1108,6 +1125,7 @@ function root(bytes32[] memory me) external pure returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct rootReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1238,9 +1256,13 @@ function verifyInclusionProof(bytes32 rootHash, bytes32 leaf, uint256 index, byt
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct verifyInclusionProofCall {
+        #[allow(missing_docs)]
         pub rootHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub leaf: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub index: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub proof: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
@@ -1402,13 +1424,19 @@ function verifyPrefixProof(bytes32 preRoot, uint256 preSize, bytes32 postRoot, u
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct verifyPrefixProofCall {
+        #[allow(missing_docs)]
         pub preRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub preSize: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub postRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub postSize: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub preExpansion: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
+        #[allow(missing_docs)]
         pub proof: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
@@ -1592,13 +1620,21 @@ function verifyPrefixProof(bytes32 preRoot, uint256 preSize, bytes32 postRoot, u
     };
     ///Container for all the [`MerkleTreeAccess`](self) function calls.
     pub enum MerkleTreeAccessCalls {
+        #[allow(missing_docs)]
         appendCompleteSubTree(appendCompleteSubTreeCall),
+        #[allow(missing_docs)]
         appendLeaf(appendLeafCall),
+        #[allow(missing_docs)]
         leastSignificantBit(leastSignificantBitCall),
+        #[allow(missing_docs)]
         maximumAppendBetween(maximumAppendBetweenCall),
+        #[allow(missing_docs)]
         mostSignificantBit(mostSignificantBitCall),
+        #[allow(missing_docs)]
         root(rootCall),
+        #[allow(missing_docs)]
         verifyInclusionProof(verifyInclusionProofCall),
+        #[allow(missing_docs)]
         verifyPrefixProof(verifyPrefixProofCall),
     }
     #[automatically_derived]
@@ -1880,6 +1916,7 @@ function verifyPrefixProof(bytes32 preRoot, uint256 preSize, bytes32 postRoot, u
     }
     ///Container for all the [`MerkleTreeAccess`](self) custom errors.
     pub enum MerkleTreeAccessErrors {
+        #[allow(missing_docs)]
         MerkleProofTooLong(MerkleProofTooLong),
     }
     #[automatically_derived]

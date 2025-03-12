@@ -1533,6 +1533,7 @@ function activeOutbox() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct activeOutboxReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1647,12 +1648,14 @@ function allowedDelayedInboxList(uint256) external returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowedDelayedInboxListCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`allowedDelayedInboxList(uint256)`](allowedDelayedInboxListCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowedDelayedInboxListReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1777,12 +1780,14 @@ function allowedDelayedInboxes(address inbox) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowedDelayedInboxesCall {
+        #[allow(missing_docs)]
         pub inbox: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`allowedDelayedInboxes(address)`](allowedDelayedInboxesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowedDelayedInboxesReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -1905,12 +1910,14 @@ function allowedOutboxList(uint256) external returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowedOutboxListCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`allowedOutboxList(uint256)`](allowedOutboxListCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowedOutboxListReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2035,12 +2042,14 @@ function allowedOutboxes(address outbox) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowedOutboxesCall {
+        #[allow(missing_docs)]
         pub outbox: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`allowedOutboxes(address)`](allowedOutboxesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowedOutboxesReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2161,12 +2170,14 @@ function delayedInboxAccs(uint256) external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct delayedInboxAccsCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`delayedInboxAccs(uint256)`](delayedInboxAccsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct delayedInboxAccsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -2295,6 +2306,7 @@ function delayedMessageCount() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct delayedMessageCountReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2415,14 +2427,18 @@ function enqueueDelayedMessage(uint8 kind, address sender, bytes32 messageDataHa
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct enqueueDelayedMessageCall {
+        #[allow(missing_docs)]
         pub kind: u8,
+        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub messageDataHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`enqueueDelayedMessage(uint8,address,bytes32)`](enqueueDelayedMessageCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct enqueueDelayedMessageReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2569,18 +2585,26 @@ function enqueueSequencerMessage(bytes32 dataHash, uint256 afterDelayedMessagesR
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct enqueueSequencerMessageCall {
+        #[allow(missing_docs)]
         pub dataHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub afterDelayedMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub prevMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub newMessageCount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`enqueueSequencerMessage(bytes32,uint256,uint256,uint256)`](enqueueSequencerMessageCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct enqueueSequencerMessageReturn {
+        #[allow(missing_docs)]
         pub seqMessageIndex: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub beforeAcc: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub delayedAcc: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub acc: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -2759,15 +2783,20 @@ function executeCall(address to, uint256 value, bytes memory data) external retu
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executeCallCall {
+        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`executeCall(address,uint256,bytes)`](executeCallCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executeCallReturn {
+        #[allow(missing_docs)]
         pub success: bool,
+        #[allow(missing_docs)]
         pub returnData: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -2917,6 +2946,7 @@ function initialize(address rollup_) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initializeCall {
+        #[allow(missing_docs)]
         pub rollup_: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`initialize(address)`](initializeCall) function.
@@ -3043,6 +3073,7 @@ function rollup() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct rollupReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3161,6 +3192,7 @@ function sequencerInbox() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sequencerInboxReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3277,12 +3309,14 @@ function sequencerInboxAccs(uint256) external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sequencerInboxAccsCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`sequencerInboxAccs(uint256)`](sequencerInboxAccsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sequencerInboxAccsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -3411,6 +3445,7 @@ function sequencerMessageCount() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sequencerMessageCountReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3535,6 +3570,7 @@ function sequencerReportedSubMessageCount() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sequencerReportedSubMessageCountReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3655,7 +3691,9 @@ function setDelayedInbox(address inbox, bool enabled) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setDelayedInboxCall {
+        #[allow(missing_docs)]
         pub inbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub enabled: bool,
     }
     ///Container type for the return parameters of the [`setDelayedInbox(address,bool)`](setDelayedInboxCall) function.
@@ -3792,7 +3830,9 @@ function setOutbox(address inbox, bool enabled) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setOutboxCall {
+        #[allow(missing_docs)]
         pub inbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub enabled: bool,
     }
     ///Container type for the return parameters of the [`setOutbox(address,bool)`](setOutboxCall) function.
@@ -3927,6 +3967,7 @@ function setSequencerInbox(address _sequencerInbox) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setSequencerInboxCall {
+        #[allow(missing_docs)]
         pub _sequencerInbox: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setSequencerInbox(address)`](setSequencerInboxCall) function.
@@ -4053,13 +4094,16 @@ function submitBatchSpendingReport(address batchPoster, bytes32 dataHash) extern
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct submitBatchSpendingReportCall {
+        #[allow(missing_docs)]
         pub batchPoster: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub dataHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`submitBatchSpendingReport(address,bytes32)`](submitBatchSpendingReportCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct submitBatchSpendingReportReturn {
+        #[allow(missing_docs)]
         pub msgNum: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -4199,6 +4243,7 @@ function updateRollupAddress(address _rollup) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct updateRollupAddressCall {
+        #[allow(missing_docs)]
         pub _rollup: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`updateRollupAddress(address)`](updateRollupAddressCall) function.
@@ -4320,26 +4365,47 @@ function updateRollupAddress(address _rollup) external;
     };
     ///Container for all the [`IEthBridge`](self) function calls.
     pub enum IEthBridgeCalls {
+        #[allow(missing_docs)]
         activeOutbox(activeOutboxCall),
+        #[allow(missing_docs)]
         allowedDelayedInboxList(allowedDelayedInboxListCall),
+        #[allow(missing_docs)]
         allowedDelayedInboxes(allowedDelayedInboxesCall),
+        #[allow(missing_docs)]
         allowedOutboxList(allowedOutboxListCall),
+        #[allow(missing_docs)]
         allowedOutboxes(allowedOutboxesCall),
+        #[allow(missing_docs)]
         delayedInboxAccs(delayedInboxAccsCall),
+        #[allow(missing_docs)]
         delayedMessageCount(delayedMessageCountCall),
+        #[allow(missing_docs)]
         enqueueDelayedMessage(enqueueDelayedMessageCall),
+        #[allow(missing_docs)]
         enqueueSequencerMessage(enqueueSequencerMessageCall),
+        #[allow(missing_docs)]
         executeCall(executeCallCall),
+        #[allow(missing_docs)]
         initialize(initializeCall),
+        #[allow(missing_docs)]
         rollup(rollupCall),
+        #[allow(missing_docs)]
         sequencerInbox(sequencerInboxCall),
+        #[allow(missing_docs)]
         sequencerInboxAccs(sequencerInboxAccsCall),
+        #[allow(missing_docs)]
         sequencerMessageCount(sequencerMessageCountCall),
+        #[allow(missing_docs)]
         sequencerReportedSubMessageCount(sequencerReportedSubMessageCountCall),
+        #[allow(missing_docs)]
         setDelayedInbox(setDelayedInboxCall),
+        #[allow(missing_docs)]
         setOutbox(setOutboxCall),
+        #[allow(missing_docs)]
         setSequencerInbox(setSequencerInboxCall),
+        #[allow(missing_docs)]
         submitBatchSpendingReport(submitBatchSpendingReportCall),
+        #[allow(missing_docs)]
         updateRollupAddress(updateRollupAddressCall),
     }
     #[automatically_derived]
@@ -4983,11 +5049,17 @@ function updateRollupAddress(address _rollup) external;
     }
     ///Container for all the [`IEthBridge`](self) events.
     pub enum IEthBridgeEvents {
+        #[allow(missing_docs)]
         BridgeCallTriggered(BridgeCallTriggered),
+        #[allow(missing_docs)]
         InboxToggle(InboxToggle),
+        #[allow(missing_docs)]
         MessageDelivered(MessageDelivered),
+        #[allow(missing_docs)]
         OutboxToggle(OutboxToggle),
+        #[allow(missing_docs)]
         RollupUpdated(RollupUpdated),
+        #[allow(missing_docs)]
         SequencerInboxUpdated(SequencerInboxUpdated),
     }
     #[automatically_derived]

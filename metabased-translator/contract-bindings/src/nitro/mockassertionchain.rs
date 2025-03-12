@@ -784,8 +784,11 @@ struct AssertionState { GlobalState globalState; MachineStatus machineStatus; by
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AssertionState {
+        #[allow(missing_docs)]
         pub globalState: <GlobalState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub machineStatus: <MachineStatus as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub endHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1029,10 +1032,15 @@ struct ConfigData { bytes32 wasmModuleRoot; uint256 requiredStake; address chall
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ConfigData {
+        #[allow(missing_docs)]
         pub wasmModuleRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub requiredStake: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub challengeManager: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub confirmPeriodBlocks: u64,
+        #[allow(missing_docs)]
         pub nextInboxPosition: u64,
     }
     #[allow(
@@ -1327,7 +1335,9 @@ struct GlobalState { bytes32[2] bytes32Vals; uint64[2] u64Vals; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct GlobalState {
+        #[allow(missing_docs)]
         pub bytes32Vals: [alloy::sol_types::private::FixedBytes<32>; 2usize],
+        #[allow(missing_docs)]
         pub u64Vals: [u64; 2usize],
     }
     #[allow(
@@ -1566,17 +1576,24 @@ function addAssertion(bytes32 predecessorId, uint256 height, uint64 nextInboxPos
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addAssertionCall {
+        #[allow(missing_docs)]
         pub predecessorId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub height: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub nextInboxPosition: u64,
+        #[allow(missing_docs)]
         pub beforeState: <AssertionState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub afterState: <AssertionState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub successionChallenge: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`addAssertion(bytes32,uint256,uint64,((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32),bytes32)`](addAssertionCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addAssertionReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1745,16 +1762,22 @@ function addAssertionUnsafe(bytes32 predecessorId, uint256 height, uint64 nextIn
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addAssertionUnsafeCall {
+        #[allow(missing_docs)]
         pub predecessorId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub height: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub nextInboxPosition: u64,
+        #[allow(missing_docs)]
         pub afterState: <AssertionState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub successionChallenge: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`addAssertionUnsafe(bytes32,uint256,uint64,((bytes32[2],uint64[2]),uint8,bytes32),bytes32)`](addAssertionUnsafeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addAssertionUnsafeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1919,12 +1942,14 @@ function assertionExists(bytes32 assertionHash) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct assertionExistsCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`assertionExists(bytes32)`](assertionExistsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct assertionExistsReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2049,6 +2074,7 @@ function baseStake() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct baseStakeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2169,6 +2195,7 @@ function bridge() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct bridgeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2283,13 +2310,16 @@ function calculateAssertionHash(bytes32 predecessorId, AssertionState memory aft
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct calculateAssertionHashCall {
+        #[allow(missing_docs)]
         pub predecessorId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub afterState: <AssertionState as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`calculateAssertionHash(bytes32,((bytes32[2],uint64[2]),uint8,bytes32))`](calculateAssertionHashCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct calculateAssertionHashReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -2431,6 +2461,7 @@ function challengeManager() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct challengeManagerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2553,6 +2584,7 @@ function confirmPeriodBlocks() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct confirmPeriodBlocksReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -2671,12 +2703,14 @@ function getFirstChildCreationBlock(bytes32 assertionHash) external view returns
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getFirstChildCreationBlockCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getFirstChildCreationBlock(bytes32)`](getFirstChildCreationBlockCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getFirstChildCreationBlockReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -2799,12 +2833,14 @@ function getSecondChildCreationBlock(bytes32 assertionHash) external view return
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getSecondChildCreationBlockCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getSecondChildCreationBlock(bytes32)`](getSecondChildCreationBlockCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getSecondChildCreationBlockReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -2931,6 +2967,7 @@ function getValidators() external pure returns (address[] memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getValidatorsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<alloy::sol_types::private::Address>,
     }
     #[allow(
@@ -3051,12 +3088,14 @@ function isFirstChild(bytes32 assertionHash) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isFirstChildCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`isFirstChild(bytes32)`](isFirstChildCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isFirstChildReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -3175,12 +3214,14 @@ function isPending(bytes32 assertionHash) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isPendingCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`isPending(bytes32)`](isPendingCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isPendingReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -3299,12 +3340,14 @@ function isValidator(address) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isValidatorCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isValidator(address)`](isValidatorCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isValidatorReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -3423,7 +3466,9 @@ function setIsValidator(address user, bool x) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setIsValidatorCall {
+        #[allow(missing_docs)]
         pub user: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub x: bool,
     }
     ///Container type for the return parameters of the [`setIsValidator(address,bool)`](setIsValidatorCall) function.
@@ -3557,6 +3602,7 @@ function setValidatorWhitelistDisabled(bool x) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setValidatorWhitelistDisabledCall {
+        #[allow(missing_docs)]
         pub x: bool,
     }
     ///Container type for the return parameters of the [`setValidatorWhitelistDisabled(bool)`](setValidatorWhitelistDisabledCall) function.
@@ -3687,6 +3733,7 @@ function stakeToken() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct stakeTokenReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3801,9 +3848,13 @@ function validateAssertionHash(bytes32 assertionHash, AssertionState memory stat
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct validateAssertionHashCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub state: <AssertionState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub prevAssertionHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub inboxAcc: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`validateAssertionHash(bytes32,((bytes32[2],uint64[2]),uint8,bytes32),bytes32,bytes32)`](validateAssertionHashCall) function.
@@ -3962,7 +4013,9 @@ function validateConfig(bytes32 assertionHash, ConfigData memory configData) ext
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct validateConfigCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub configData: <ConfigData as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`validateConfig(bytes32,(bytes32,uint256,address,uint64,uint64))`](validateConfigCall) function.
@@ -4104,6 +4157,7 @@ function validatorWhitelistDisabled() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct validatorWhitelistDisabledReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -4226,6 +4280,7 @@ function wasmModuleRoot() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct wasmModuleRootReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -4337,26 +4392,47 @@ function wasmModuleRoot() external view returns (bytes32);
     };
     ///Container for all the [`MockAssertionChain`](self) function calls.
     pub enum MockAssertionChainCalls {
+        #[allow(missing_docs)]
         addAssertion(addAssertionCall),
+        #[allow(missing_docs)]
         addAssertionUnsafe(addAssertionUnsafeCall),
+        #[allow(missing_docs)]
         assertionExists(assertionExistsCall),
+        #[allow(missing_docs)]
         baseStake(baseStakeCall),
+        #[allow(missing_docs)]
         bridge(bridgeCall),
+        #[allow(missing_docs)]
         calculateAssertionHash(calculateAssertionHashCall),
+        #[allow(missing_docs)]
         challengeManager(challengeManagerCall),
+        #[allow(missing_docs)]
         confirmPeriodBlocks(confirmPeriodBlocksCall),
+        #[allow(missing_docs)]
         getFirstChildCreationBlock(getFirstChildCreationBlockCall),
+        #[allow(missing_docs)]
         getSecondChildCreationBlock(getSecondChildCreationBlockCall),
+        #[allow(missing_docs)]
         getValidators(getValidatorsCall),
+        #[allow(missing_docs)]
         isFirstChild(isFirstChildCall),
+        #[allow(missing_docs)]
         isPending(isPendingCall),
+        #[allow(missing_docs)]
         isValidator(isValidatorCall),
+        #[allow(missing_docs)]
         setIsValidator(setIsValidatorCall),
+        #[allow(missing_docs)]
         setValidatorWhitelistDisabled(setValidatorWhitelistDisabledCall),
+        #[allow(missing_docs)]
         stakeToken(stakeTokenCall),
+        #[allow(missing_docs)]
         validateAssertionHash(validateAssertionHashCall),
+        #[allow(missing_docs)]
         validateConfig(validateConfigCall),
+        #[allow(missing_docs)]
         validatorWhitelistDisabled(validatorWhitelistDisabledCall),
+        #[allow(missing_docs)]
         wasmModuleRoot(wasmModuleRootCall),
     }
     #[automatically_derived]

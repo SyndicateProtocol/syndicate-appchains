@@ -72,6 +72,7 @@ constructor(address impl_);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub impl_: alloy::sol_types::private::Address,
     }
     const _: () = {

@@ -66,6 +66,7 @@ function nativeToken() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct nativeTokenReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -175,6 +176,7 @@ function nativeToken() external view returns (address);
     };
     ///Container for all the [`IERC20Bridge`](self) function calls.
     pub enum IERC20BridgeCalls {
+        #[allow(missing_docs)]
         nativeToken(nativeTokenCall),
     }
     #[automatically_derived]

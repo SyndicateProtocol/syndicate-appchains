@@ -172,6 +172,7 @@ function l1Block() external view returns (uint96);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct l1BlockReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U96,
     }
     #[allow(
@@ -292,6 +293,7 @@ function l2Block() external view returns (uint128);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct l2BlockReturn {
+        #[allow(missing_docs)]
         pub _0: u128,
     }
     #[allow(
@@ -410,6 +412,7 @@ function outbox() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct outboxReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -528,6 +531,7 @@ function outputId() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct outputIdReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -762,6 +766,7 @@ function sender() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct senderReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -876,6 +881,7 @@ function setOutbox(address _outbox) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setOutboxCall {
+        #[allow(missing_docs)]
         pub _outbox: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setOutbox(address)`](setOutboxCall) function.
@@ -1002,6 +1008,7 @@ function timestamp() external view returns (uint128);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct timestampReturn {
+        #[allow(missing_docs)]
         pub _0: u128,
     }
     #[allow(
@@ -1120,6 +1127,7 @@ function withdrawalAmount() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawalAmountReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1235,14 +1243,23 @@ function withdrawalAmount() external view returns (uint256);
     };
     ///Container for all the [`L2ToL1Target`](self) function calls.
     pub enum L2ToL1TargetCalls {
+        #[allow(missing_docs)]
         l1Block(l1BlockCall),
+        #[allow(missing_docs)]
         l2Block(l2BlockCall),
+        #[allow(missing_docs)]
         outbox(outboxCall),
+        #[allow(missing_docs)]
         outputId(outputIdCall),
+        #[allow(missing_docs)]
         receiveHook(receiveHookCall),
+        #[allow(missing_docs)]
         sender(senderCall),
+        #[allow(missing_docs)]
         setOutbox(setOutboxCall),
+        #[allow(missing_docs)]
         timestamp(timestampCall),
+        #[allow(missing_docs)]
         withdrawalAmount(withdrawalAmountCall),
     }
     #[automatically_derived]

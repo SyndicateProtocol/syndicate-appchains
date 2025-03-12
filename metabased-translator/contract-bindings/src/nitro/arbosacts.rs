@@ -182,10 +182,15 @@ function batchPostingReport(uint256 batchTimestamp, address batchPosterAddress, 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct batchPostingReportCall {
+        #[allow(missing_docs)]
         pub batchTimestamp: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub batchPosterAddress: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub batchNumber: u64,
+        #[allow(missing_docs)]
         pub batchDataGas: u64,
+        #[allow(missing_docs)]
         pub l1BaseFeeWei: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`batchPostingReport(uint256,address,uint64,uint64,uint256)`](batchPostingReportCall) function.
@@ -354,9 +359,13 @@ function startBlock(uint256 l1BaseFee, uint64 l1BlockNumber, uint64 l2BlockNumbe
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct startBlockCall {
+        #[allow(missing_docs)]
         pub l1BaseFee: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub l1BlockNumber: u64,
+        #[allow(missing_docs)]
         pub l2BlockNumber: u64,
+        #[allow(missing_docs)]
         pub timePassed: u64,
     }
     ///Container type for the return parameters of the [`startBlock(uint256,uint64,uint64,uint64)`](startBlockCall) function.
@@ -508,7 +517,9 @@ function startBlock(uint256 l1BaseFee, uint64 l1BlockNumber, uint64 l2BlockNumbe
     };
     ///Container for all the [`ArbosActs`](self) function calls.
     pub enum ArbosActsCalls {
+        #[allow(missing_docs)]
         batchPostingReport(batchPostingReportCall),
+        #[allow(missing_docs)]
         startBlock(startBlockCall),
     }
     #[automatically_derived]
@@ -629,6 +640,7 @@ function startBlock(uint256 l1BaseFee, uint64 l1BlockNumber, uint64 l2BlockNumbe
     }
     ///Container for all the [`ArbosActs`](self) custom errors.
     pub enum ArbosActsErrors {
+        #[allow(missing_docs)]
         CallerNotArbOS(CallerNotArbOS),
     }
     #[automatically_derived]

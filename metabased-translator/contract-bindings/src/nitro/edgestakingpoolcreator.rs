@@ -339,13 +339,16 @@ function createPool(address challengeManager, bytes32 edgeId) external returns (
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createPoolCall {
+        #[allow(missing_docs)]
         pub challengeManager: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`createPool(address,bytes32)`](createPoolCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createPoolReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -479,13 +482,16 @@ function getPool(address challengeManager, bytes32 edgeId) external view returns
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPoolCall {
+        #[allow(missing_docs)]
         pub challengeManager: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getPool(address,bytes32)`](getPoolCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPoolReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -614,7 +620,9 @@ function getPool(address challengeManager, bytes32 edgeId) external view returns
     };
     ///Container for all the [`EdgeStakingPoolCreator`](self) function calls.
     pub enum EdgeStakingPoolCreatorCalls {
+        #[allow(missing_docs)]
         createPool(createPoolCall),
+        #[allow(missing_docs)]
         getPool(getPoolCall),
     }
     #[automatically_derived]
@@ -728,6 +736,7 @@ function getPool(address challengeManager, bytes32 edgeId) external view returns
     }
     ///Container for all the [`EdgeStakingPoolCreator`](self) custom errors.
     pub enum EdgeStakingPoolCreatorErrors {
+        #[allow(missing_docs)]
         PoolDoesntExist(PoolDoesntExist),
     }
     #[automatically_derived]
@@ -820,6 +829,7 @@ function getPool(address challengeManager, bytes32 edgeId) external view returns
     }
     ///Container for all the [`EdgeStakingPoolCreator`](self) events.
     pub enum EdgeStakingPoolCreatorEvents {
+        #[allow(missing_docs)]
         NewEdgeStakingPoolCreated(NewEdgeStakingPoolCreated),
     }
     #[automatically_derived]

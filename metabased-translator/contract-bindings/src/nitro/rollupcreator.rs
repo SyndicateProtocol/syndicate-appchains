@@ -22,9 +22,13 @@ struct MaxTimeVariation { uint256 delayBlocks; uint256 futureBlocks; uint256 del
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MaxTimeVariation {
+        #[allow(missing_docs)]
         pub delayBlocks: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub futureBlocks: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub delaySeconds: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub futureSeconds: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1197,8 +1201,11 @@ struct AssertionState { GlobalState globalState; MachineStatus machineStatus; by
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AssertionState {
+        #[allow(missing_docs)]
         pub globalState: <GlobalState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub machineStatus: <MachineStatus as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub endHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1442,8 +1449,11 @@ struct BufferConfig { uint64 threshold; uint64 max; uint64 replenishRateInBasis;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BufferConfig {
+        #[allow(missing_docs)]
         pub threshold: u64,
+        #[allow(missing_docs)]
         pub max: u64,
+        #[allow(missing_docs)]
         pub replenishRateInBasis: u64,
     }
     #[allow(
@@ -1681,28 +1691,49 @@ struct Config { uint64 confirmPeriodBlocks; address stakeToken; uint256 baseStak
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Config {
+        #[allow(missing_docs)]
         pub confirmPeriodBlocks: u64,
+        #[allow(missing_docs)]
         pub stakeToken: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub baseStake: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub wasmModuleRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub loserStakeEscrow: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub chainId: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub chainConfig: alloy::sol_types::private::String,
+        #[allow(missing_docs)]
         pub minimumAssertionPeriod: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub validatorAfkBlocks: u64,
+        #[allow(missing_docs)]
         pub miniStakeValues: alloy::sol_types::private::Vec<
             alloy::sol_types::private::primitives::aliases::U256,
         >,
+        #[allow(missing_docs)]
         pub sequencerInboxMaxTimeVariation: <ISequencerInbox::MaxTimeVariation as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub layerZeroBlockEdgeHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub layerZeroBigStepEdgeHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub layerZeroSmallStepEdgeHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub genesisAssertionState: <AssertionState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub genesisInboxCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub anyTrustFastConfirmer: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub numBigStepLevel: u8,
+        #[allow(missing_docs)]
         pub challengeGracePeriodBlocks: u64,
+        #[allow(missing_docs)]
         pub bufferConfig: <BufferConfig as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -2370,7 +2401,9 @@ struct GlobalState { bytes32[2] bytes32Vals; uint64[2] u64Vals; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct GlobalState {
+        #[allow(missing_docs)]
         pub bytes32Vals: [alloy::sol_types::private::FixedBytes<32>; 2usize],
+        #[allow(missing_docs)]
         pub u64Vals: [u64; 2usize],
     }
     #[allow(
@@ -2608,17 +2641,25 @@ struct RollupDeploymentParams { Config config; address[] validators; uint256 max
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct RollupDeploymentParams {
+        #[allow(missing_docs)]
         pub config: <Config as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub validators: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
+        #[allow(missing_docs)]
         pub maxDataSize: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub nativeToken: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub deployFactoriesToL2: bool,
+        #[allow(missing_docs)]
         pub maxFeePerGasForRetryables: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub batchPosters: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
+        #[allow(missing_docs)]
         pub batchPosterManager: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3509,6 +3550,7 @@ function bridgeCreator() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct bridgeCreatorReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3627,6 +3669,7 @@ function challengeManagerTemplate() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct challengeManagerTemplateReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3745,12 +3788,14 @@ function createRollup(RollupDeploymentParams memory deployParams) external payab
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createRollupCall {
+        #[allow(missing_docs)]
         pub deployParams: <RollupDeploymentParams as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`createRollup(((uint64,address,uint256,bytes32,address,address,uint256,string,uint256,uint64,uint256[],(uint256,uint256,uint256,uint256),uint256,uint256,uint256,((bytes32[2],uint64[2]),uint8,bytes32),uint256,address,uint8,uint64,(uint64,uint64,uint64)),address[],uint256,address,bool,uint256,address[],address))`](createRollupCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createRollupReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3875,6 +3920,7 @@ function l2FactoriesDeployer() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct l2FactoriesDeployerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3997,6 +4043,7 @@ function osp() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ospReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -4115,6 +4162,7 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -4353,6 +4401,7 @@ function rollupAdminLogic() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct rollupAdminLogicReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -4475,6 +4524,7 @@ function rollupUserLogic() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct rollupUserLogicReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -4591,13 +4641,21 @@ function setTemplates(address _bridgeCreator, address _osp, address _challengeMa
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setTemplatesCall {
+        #[allow(missing_docs)]
         pub _bridgeCreator: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _osp: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _challengeManagerLogic: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _rollupAdminLogic: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _rollupUserLogic: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _upgradeExecutorLogic: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _validatorWalletCreator: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _l2FactoriesDeployer: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setTemplates(address,address,address,address,address,address,address,address)`](setTemplatesCall) function.
@@ -4786,6 +4844,7 @@ function transferOwnership(address newOwner) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferOwnershipCall {
+        #[allow(missing_docs)]
         pub newOwner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`transferOwnership(address)`](transferOwnershipCall) function.
@@ -4916,6 +4975,7 @@ function upgradeExecutorLogic() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeExecutorLogicReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -5038,6 +5098,7 @@ function validatorWalletCreator() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct validatorWalletCreatorReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -5151,18 +5212,31 @@ function validatorWalletCreator() external view returns (address);
     };
     ///Container for all the [`RollupCreator`](self) function calls.
     pub enum RollupCreatorCalls {
+        #[allow(missing_docs)]
         bridgeCreator(bridgeCreatorCall),
+        #[allow(missing_docs)]
         challengeManagerTemplate(challengeManagerTemplateCall),
+        #[allow(missing_docs)]
         createRollup(createRollupCall),
+        #[allow(missing_docs)]
         l2FactoriesDeployer(l2FactoriesDeployerCall),
+        #[allow(missing_docs)]
         osp(ospCall),
+        #[allow(missing_docs)]
         owner(ownerCall),
+        #[allow(missing_docs)]
         renounceOwnership(renounceOwnershipCall),
+        #[allow(missing_docs)]
         rollupAdminLogic(rollupAdminLogicCall),
+        #[allow(missing_docs)]
         rollupUserLogic(rollupUserLogicCall),
+        #[allow(missing_docs)]
         setTemplates(setTemplatesCall),
+        #[allow(missing_docs)]
         transferOwnership(transferOwnershipCall),
+        #[allow(missing_docs)]
         upgradeExecutorLogic(upgradeExecutorLogicCall),
+        #[allow(missing_docs)]
         validatorWalletCreator(validatorWalletCreatorCall),
     }
     #[automatically_derived]
@@ -5579,8 +5653,11 @@ function validatorWalletCreator() external view returns (address);
     }
     ///Container for all the [`RollupCreator`](self) events.
     pub enum RollupCreatorEvents {
+        #[allow(missing_docs)]
         OwnershipTransferred(OwnershipTransferred),
+        #[allow(missing_docs)]
         RollupCreated(RollupCreated),
+        #[allow(missing_docs)]
         TemplatesUpdated(TemplatesUpdated),
     }
     #[automatically_derived]

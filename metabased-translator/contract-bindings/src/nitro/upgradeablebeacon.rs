@@ -441,6 +441,7 @@ constructor(address implementation_);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub implementation_: alloy::sol_types::private::Address,
     }
     const _: () = {
@@ -509,6 +510,7 @@ function implementation() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct implementationReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -629,6 +631,7 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -863,6 +866,7 @@ function transferOwnership(address newOwner) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferOwnershipCall {
+        #[allow(missing_docs)]
         pub newOwner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`transferOwnership(address)`](transferOwnershipCall) function.
@@ -989,6 +993,7 @@ function upgradeTo(address newImplementation) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeToCall {
+        #[allow(missing_docs)]
         pub newImplementation: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`upgradeTo(address)`](upgradeToCall) function.
@@ -1106,10 +1111,15 @@ function upgradeTo(address newImplementation) external;
     };
     ///Container for all the [`UpgradeableBeacon`](self) function calls.
     pub enum UpgradeableBeaconCalls {
+        #[allow(missing_docs)]
         implementation(implementationCall),
+        #[allow(missing_docs)]
         owner(ownerCall),
+        #[allow(missing_docs)]
         renounceOwnership(renounceOwnershipCall),
+        #[allow(missing_docs)]
         transferOwnership(transferOwnershipCall),
+        #[allow(missing_docs)]
         upgradeTo(upgradeToCall),
     }
     #[automatically_derived]
@@ -1307,7 +1317,9 @@ function upgradeTo(address newImplementation) external;
     }
     ///Container for all the [`UpgradeableBeacon`](self) events.
     pub enum UpgradeableBeaconEvents {
+        #[allow(missing_docs)]
         OwnershipTransferred(OwnershipTransferred),
+        #[allow(missing_docs)]
         Upgraded(Upgraded),
     }
     #[automatically_derived]

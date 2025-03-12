@@ -1950,11 +1950,17 @@ struct AssertionReferenceData { bytes32 assertionHash; bytes32 predecessorId; bo
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AssertionReferenceData {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub predecessorId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub isPending: bool,
+        #[allow(missing_docs)]
         pub hasSibling: bool,
+        #[allow(missing_docs)]
         pub startState: <AssertionState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub endState: <AssertionState as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -2266,8 +2272,11 @@ struct AssertionState { GlobalState globalState; MachineStatus machineStatus; by
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AssertionState {
+        #[allow(missing_docs)]
         pub globalState: <GlobalState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub machineStatus: <MachineStatus as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub endHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -2511,20 +2520,35 @@ struct ChallengeEdge { bytes32 originId; bytes32 startHistoryRoot; uint256 start
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ChallengeEdge {
+        #[allow(missing_docs)]
         pub originId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub startHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub startHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub endHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub endHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub lowerChildId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub upperChildId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub claimId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub staker: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub createdAtBlock: u64,
+        #[allow(missing_docs)]
         pub confirmedAtBlock: u64,
+        #[allow(missing_docs)]
         pub status: <EdgeStatus as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub level: u8,
+        #[allow(missing_docs)]
         pub refunded: bool,
+        #[allow(missing_docs)]
         pub totalTimeUnrivaledCache: u64,
     }
     #[allow(
@@ -3033,11 +3057,17 @@ struct CreateEdgeArgs { uint8 level; bytes32 endHistoryRoot; uint256 endHeight; 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct CreateEdgeArgs {
+        #[allow(missing_docs)]
         pub level: u8,
+        #[allow(missing_docs)]
         pub endHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub endHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub claimId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub prefixProof: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
         pub proof: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -3344,13 +3374,21 @@ struct EdgeAddedData { bytes32 edgeId; bytes32 mutualId; bytes32 originId; bytes
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct EdgeAddedData {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub mutualId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub originId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub claimId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub length: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub level: u8,
+        #[allow(missing_docs)]
         pub hasRival: bool,
+        #[allow(missing_docs)]
         pub isLayerZero: bool,
     }
     #[allow(
@@ -3699,8 +3737,11 @@ struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; bytes32 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ExecutionContext {
+        #[allow(missing_docs)]
         pub maxInboxMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub bridge: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub initialWasmModuleRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -3945,7 +3986,9 @@ struct GlobalState { bytes32[2] bytes32Vals; uint64[2] u64Vals; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct GlobalState {
+        #[allow(missing_docs)]
         pub bytes32Vals: [alloy::sol_types::private::FixedBytes<32>; 2usize],
+        #[allow(missing_docs)]
         pub u64Vals: [u64; 2usize],
     }
     #[allow(
@@ -4183,7 +4226,9 @@ struct OneStepData { bytes32 beforeHash; bytes proof; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct OneStepData {
+        #[allow(missing_docs)]
         pub beforeHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub proof: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -4404,7 +4449,9 @@ error AccountHasMadeLayerZeroRival(address account, bytes32 mutualId);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AccountHasMadeLayerZeroRival {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub mutualId: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -4553,7 +4600,9 @@ error AssertionHashMismatch(bytes32 h1, bytes32 h2);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AssertionHashMismatch {
+        #[allow(missing_docs)]
         pub h1: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub h2: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -4761,7 +4810,9 @@ error CachedTimeSufficient(uint256 actual, uint256 expected);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct CachedTimeSufficient {
+        #[allow(missing_docs)]
         pub actual: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub expected: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -4844,8 +4895,11 @@ error ChildrenAlreadySet(bytes32 edgeId, bytes32 lowerChildId, bytes32 upperChil
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ChildrenAlreadySet {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub lowerChildId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub upperChildId: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -4934,7 +4988,9 @@ error ClaimEdgeInvalidLevel(uint8 argLevel, uint8 claimLevel);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ClaimEdgeInvalidLevel {
+        #[allow(missing_docs)]
         pub argLevel: u8,
+        #[allow(missing_docs)]
         pub claimLevel: u8,
     }
     #[allow(
@@ -5014,6 +5070,7 @@ error ClaimEdgeNotLengthOneRival(bytes32 claimId);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ClaimEdgeNotLengthOneRival {
+        #[allow(missing_docs)]
         pub claimId: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -5150,6 +5207,7 @@ error EdgeAlreadyExists(bytes32 edgeId);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct EdgeAlreadyExists {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -5220,6 +5278,7 @@ error EdgeNotExists(bytes32 edgeId);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct EdgeNotExists {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -5290,6 +5349,7 @@ error EdgeNotLengthOne(uint256 length);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct EdgeNotLengthOne {
+        #[allow(missing_docs)]
         pub length: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -5362,7 +5422,9 @@ error EdgeNotPending(bytes32 edgeId, EdgeStatus status);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct EdgeNotPending {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub status: <EdgeStatus as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -5443,6 +5505,7 @@ error EdgeTypeNotSmallStep(uint8 level);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct EdgeTypeNotSmallStep {
+        #[allow(missing_docs)]
         pub level: u8,
     }
     #[allow(
@@ -5513,6 +5576,7 @@ error EdgeUnrivaled(bytes32 edgeId);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct EdgeUnrivaled {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -6223,7 +6287,9 @@ error HeightDiffLtTwo(uint256 h1, uint256 h2);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct HeightDiffLtTwo {
+        #[allow(missing_docs)]
         pub h1: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub h2: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -6303,7 +6369,9 @@ error InsufficientConfirmationBlocks(uint256 totalBlocks, uint256 thresholdBlock
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InsufficientConfirmationBlocks {
+        #[allow(missing_docs)]
         pub totalBlocks: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub thresholdBlocks: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -6388,7 +6456,9 @@ error InvalidEndHeight(uint256 actualHeight, uint256 expectedHeight);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InvalidEndHeight {
+        #[allow(missing_docs)]
         pub actualHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub expectedHeight: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -6471,7 +6541,9 @@ error InvalidHeights(uint256 start, uint256 end);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InvalidHeights {
+        #[allow(missing_docs)]
         pub start: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub end: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -6554,7 +6626,9 @@ error LevelTooHigh(uint8 level, uint8 numBigStepLevels);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct LevelTooHigh {
+        #[allow(missing_docs)]
         pub level: u8,
+        #[allow(missing_docs)]
         pub numBigStepLevels: u8,
     }
     #[allow(
@@ -6634,7 +6708,9 @@ error MerkleProofTooLong(uint256 actualLength, uint256 maxProofLength);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MerkleProofTooLong {
+        #[allow(missing_docs)]
         pub actualLength: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub maxProofLength: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -6717,6 +6793,7 @@ error NotPowerOfTwo(uint256 val);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NotPowerOfTwo {
+        #[allow(missing_docs)]
         pub val: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -6789,7 +6866,9 @@ error RivalEdgeConfirmed(bytes32 edgeId, bytes32 confirmedRivalId);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct RivalEdgeConfirmed {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub confirmedRivalId: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -6872,12 +6951,14 @@ function add(ChallengeEdge memory edge) external returns (EdgeAddedData memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addCall {
+        #[allow(missing_docs)]
         pub edge: <ChallengeEdge as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`add((bytes32,bytes32,uint256,bytes32,uint256,bytes32,bytes32,bytes32,address,uint64,uint64,uint8,uint8,bool,uint64))`](addCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addReturn {
+        #[allow(missing_docs)]
         pub _0: <EdgeAddedData as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -6996,16 +7077,22 @@ function bisectEdge(bytes32 edgeId, bytes32 bisectionHistoryRoot, bytes memory p
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct bisectEdgeCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub bisectionHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub prefixProof: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`bisectEdge(bytes32,bytes32,bytes)`](bisectEdgeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct bisectEdgeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub _1: <EdgeAddedData as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub _2: <EdgeAddedData as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -7162,18 +7249,27 @@ function confirmEdgeByOneStepProof(bytes32 edgeId, address oneStepProofEntry, On
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct confirmEdgeByOneStepProofCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub oneStepProofEntry: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub oneStepData: <OneStepData as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub execCtx: <ExecutionContext as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub beforeHistoryInclusionProof: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
+        #[allow(missing_docs)]
         pub afterHistoryInclusionProof: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
+        #[allow(missing_docs)]
         pub numBigStepLevel: u8,
+        #[allow(missing_docs)]
         pub bigStepHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub smallStepHeight: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`confirmEdgeByOneStepProof(bytes32,address,(bytes32,bytes),(uint256,address,bytes32),bytes32[],bytes32[],uint8,uint256,uint256)`](confirmEdgeByOneStepProofCall) function.
@@ -7390,14 +7486,18 @@ function confirmEdgeByTime(bytes32 edgeId, uint64 claimedAssertionUnrivaledBlock
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct confirmEdgeByTimeCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub claimedAssertionUnrivaledBlocks: u64,
+        #[allow(missing_docs)]
         pub confirmationThresholdBlock: u64,
     }
     ///Container type for the return parameters of the [`confirmEdgeByTime(bytes32,uint64,uint64)`](confirmEdgeByTimeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct confirmEdgeByTimeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -7552,12 +7652,14 @@ function confirmedRivals(bytes32 mutualId) external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct confirmedRivalsCall {
+        #[allow(missing_docs)]
         pub mutualId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`confirmedRivals(bytes32)`](confirmedRivalsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct confirmedRivalsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -7678,17 +7780,24 @@ function createLayerZeroEdge(CreateEdgeArgs memory args, AssertionReferenceData 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createLayerZeroEdgeCall {
+        #[allow(missing_docs)]
         pub args: <CreateEdgeArgs as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub ard: <AssertionReferenceData as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub oneStepProofEntry: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub expectedEndHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub numBigStepLevel: u8,
+        #[allow(missing_docs)]
         pub whitelistEnabled: bool,
     }
     ///Container type for the return parameters of the [`createLayerZeroEdge((uint8,bytes32,uint256,bytes32,bytes,bytes),(bytes32,bytes32,bool,bool,((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),address,uint256,uint8,bool)`](createLayerZeroEdgeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createLayerZeroEdgeReturn {
+        #[allow(missing_docs)]
         pub _0: <EdgeAddedData as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -7861,12 +7970,14 @@ function exists(bytes32 edgeId) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct existsCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`exists(bytes32)`](existsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct existsReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -7985,12 +8096,14 @@ function firstRivals(bytes32 mutualId) external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct firstRivalsCall {
+        #[allow(missing_docs)]
         pub mutualId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`firstRivals(bytes32)`](firstRivalsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct firstRivalsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -8109,12 +8222,14 @@ function get(bytes32 edgeId) external view returns (ChallengeEdge memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`get(bytes32)`](getCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getReturn {
+        #[allow(missing_docs)]
         pub _0: <ChallengeEdge as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -8235,12 +8350,14 @@ function getConfirmedRival(bytes32 mutualId) external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getConfirmedRivalCall {
+        #[allow(missing_docs)]
         pub mutualId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getConfirmedRival(bytes32)`](getConfirmedRivalCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getConfirmedRivalReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -8363,12 +8480,14 @@ function getNoCheck(bytes32 edgeId) external view returns (ChallengeEdge memory)
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getNoCheckCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getNoCheck(bytes32)`](getNoCheckCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getNoCheckReturn {
+        #[allow(missing_docs)]
         pub _0: <ChallengeEdge as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -8489,12 +8608,14 @@ function getPrevAssertionHash(bytes32 edgeId) external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPrevAssertionHashCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getPrevAssertionHash(bytes32)`](getPrevAssertionHashCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPrevAssertionHashReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -8617,12 +8738,14 @@ function hasLengthOneRival(bytes32 edgeId) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct hasLengthOneRivalCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`hasLengthOneRival(bytes32)`](hasLengthOneRivalCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct hasLengthOneRivalReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -8745,13 +8868,16 @@ function hasMadeLayerZeroRival(address account, bytes32 mutualId) external view 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct hasMadeLayerZeroRivalCall {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub mutualId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`hasMadeLayerZeroRival(address,bytes32)`](hasMadeLayerZeroRivalCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct hasMadeLayerZeroRivalReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -8889,12 +9015,14 @@ function hasRival(bytes32 edgeId) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct hasRivalCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`hasRival(bytes32)`](hasRivalCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct hasRivalReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -9013,12 +9141,14 @@ function isPowerOfTwo(uint256 x) external pure returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isPowerOfTwoCall {
+        #[allow(missing_docs)]
         pub x: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`isPowerOfTwo(uint256)`](isPowerOfTwoCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isPowerOfTwoReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -9139,13 +9269,16 @@ function mandatoryBisectionHeight(uint256 start, uint256 end) external pure retu
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct mandatoryBisectionHeightCall {
+        #[allow(missing_docs)]
         pub start: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub end: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`mandatoryBisectionHeight(uint256,uint256)`](mandatoryBisectionHeightCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct mandatoryBisectionHeightReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -9285,13 +9418,16 @@ function nextEdgeLevel(uint8 level, uint8 numBigStepLevel) external pure returns
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct nextEdgeLevelCall {
+        #[allow(missing_docs)]
         pub level: u8,
+        #[allow(missing_docs)]
         pub numBigStepLevel: u8,
     }
     ///Container type for the return parameters of the [`nextEdgeLevel(uint8,uint8)`](nextEdgeLevelCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct nextEdgeLevelReturn {
+        #[allow(missing_docs)]
         pub _0: u8,
     }
     #[allow(
@@ -9422,6 +9558,7 @@ function remove(bytes32 edgeId) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct removeCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`remove(bytes32)`](removeCall) function.
@@ -9544,7 +9681,9 @@ function setClaimId(bytes32 edgeId, bytes32 claimId) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setClaimIdCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub claimId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`setClaimId(bytes32,bytes32)`](setClaimIdCall) function.
@@ -9682,6 +9821,7 @@ function setConfirmed(bytes32 id) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setConfirmedCall {
+        #[allow(missing_docs)]
         pub id: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`setConfirmed(bytes32)`](setConfirmedCall) function.
@@ -9804,6 +9944,7 @@ function setConfirmedRival(bytes32 edgeId) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setConfirmedRivalCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`setConfirmedRival(bytes32)`](setConfirmedRivalCall) function.
@@ -9930,7 +10071,9 @@ function setFirstRival(bytes32 edgeId, bytes32 firstRival) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setFirstRivalCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub firstRival: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`setFirstRival(bytes32,bytes32)`](setFirstRivalCall) function.
@@ -10068,8 +10211,11 @@ function setHasMadeLayerZeroRival(address account, bytes32 mutualId, bool x) ext
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setHasMadeLayerZeroRivalCall {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub mutualId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub x: bool,
     }
     ///Container type for the return parameters of the [`setHasMadeLayerZeroRival(address,bytes32,bool)`](setHasMadeLayerZeroRivalCall) function.
@@ -10218,7 +10364,9 @@ function setLevel(bytes32 edgeId, uint8 level) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setLevelCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub level: u8,
     }
     ///Container type for the return parameters of the [`setLevel(bytes32,uint8)`](setLevelCall) function.
@@ -10356,12 +10504,14 @@ function timeUnrivaled(bytes32 edgeId) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct timeUnrivaledCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`timeUnrivaled(bytes32)`](timeUnrivaledCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct timeUnrivaledReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -10482,12 +10632,14 @@ function timeUnrivaledTotal(bytes32 edgeId) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct timeUnrivaledTotalCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`timeUnrivaledTotal(bytes32)`](timeUnrivaledTotalCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct timeUnrivaledTotalReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -10612,7 +10764,9 @@ function updateTimerCacheByChildren(bytes32 edgeId, uint256 maximumCachedTime) e
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct updateTimerCacheByChildrenCall {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub maximumCachedTime: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`updateTimerCacheByChildren(bytes32,uint256)`](updateTimerCacheByChildrenCall) function.
@@ -10749,33 +10903,61 @@ function updateTimerCacheByChildren(bytes32 edgeId, uint256 maximumCachedTime) e
     };
     ///Container for all the [`EdgeChallengeManagerLibAccess`](self) function calls.
     pub enum EdgeChallengeManagerLibAccessCalls {
+        #[allow(missing_docs)]
         add(addCall),
+        #[allow(missing_docs)]
         bisectEdge(bisectEdgeCall),
+        #[allow(missing_docs)]
         confirmEdgeByOneStepProof(confirmEdgeByOneStepProofCall),
+        #[allow(missing_docs)]
         confirmEdgeByTime(confirmEdgeByTimeCall),
+        #[allow(missing_docs)]
         confirmedRivals(confirmedRivalsCall),
+        #[allow(missing_docs)]
         createLayerZeroEdge(createLayerZeroEdgeCall),
+        #[allow(missing_docs)]
         exists(existsCall),
+        #[allow(missing_docs)]
         firstRivals(firstRivalsCall),
+        #[allow(missing_docs)]
         get(getCall),
+        #[allow(missing_docs)]
         getConfirmedRival(getConfirmedRivalCall),
+        #[allow(missing_docs)]
         getNoCheck(getNoCheckCall),
+        #[allow(missing_docs)]
         getPrevAssertionHash(getPrevAssertionHashCall),
+        #[allow(missing_docs)]
         hasLengthOneRival(hasLengthOneRivalCall),
+        #[allow(missing_docs)]
         hasMadeLayerZeroRival(hasMadeLayerZeroRivalCall),
+        #[allow(missing_docs)]
         hasRival(hasRivalCall),
+        #[allow(missing_docs)]
         isPowerOfTwo(isPowerOfTwoCall),
+        #[allow(missing_docs)]
         mandatoryBisectionHeight(mandatoryBisectionHeightCall),
+        #[allow(missing_docs)]
         nextEdgeLevel(nextEdgeLevelCall),
+        #[allow(missing_docs)]
         remove(removeCall),
+        #[allow(missing_docs)]
         setClaimId(setClaimIdCall),
+        #[allow(missing_docs)]
         setConfirmed(setConfirmedCall),
+        #[allow(missing_docs)]
         setConfirmedRival(setConfirmedRivalCall),
+        #[allow(missing_docs)]
         setFirstRival(setFirstRivalCall),
+        #[allow(missing_docs)]
         setHasMadeLayerZeroRival(setHasMadeLayerZeroRivalCall),
+        #[allow(missing_docs)]
         setLevel(setLevelCall),
+        #[allow(missing_docs)]
         timeUnrivaled(timeUnrivaledCall),
+        #[allow(missing_docs)]
         timeUnrivaledTotal(timeUnrivaledTotalCall),
+        #[allow(missing_docs)]
         updateTimerCacheByChildren(updateTimerCacheByChildrenCall),
     }
     #[automatically_derived]
@@ -11596,39 +11778,73 @@ function updateTimerCacheByChildren(bytes32 edgeId, uint256 maximumCachedTime) e
     }
     ///Container for all the [`EdgeChallengeManagerLibAccess`](self) custom errors.
     pub enum EdgeChallengeManagerLibAccessErrors {
+        #[allow(missing_docs)]
         AccountHasMadeLayerZeroRival(AccountHasMadeLayerZeroRival),
+        #[allow(missing_docs)]
         AssertionHashEmpty(AssertionHashEmpty),
+        #[allow(missing_docs)]
         AssertionHashMismatch(AssertionHashMismatch),
+        #[allow(missing_docs)]
         AssertionNoSibling(AssertionNoSibling),
+        #[allow(missing_docs)]
         AssertionNotPending(AssertionNotPending),
+        #[allow(missing_docs)]
         CachedTimeSufficient(CachedTimeSufficient),
+        #[allow(missing_docs)]
         ChildrenAlreadySet(ChildrenAlreadySet),
+        #[allow(missing_docs)]
         ClaimEdgeInvalidLevel(ClaimEdgeInvalidLevel),
+        #[allow(missing_docs)]
         ClaimEdgeNotLengthOneRival(ClaimEdgeNotLengthOneRival),
+        #[allow(missing_docs)]
         ClaimEdgeNotPending(ClaimEdgeNotPending),
+        #[allow(missing_docs)]
         EdgeAlreadyExists(EdgeAlreadyExists),
+        #[allow(missing_docs)]
         EdgeNotExists(EdgeNotExists),
+        #[allow(missing_docs)]
         EdgeNotLengthOne(EdgeNotLengthOne),
+        #[allow(missing_docs)]
         EdgeNotPending(EdgeNotPending),
+        #[allow(missing_docs)]
         EdgeTypeNotSmallStep(EdgeTypeNotSmallStep),
+        #[allow(missing_docs)]
         EdgeUnrivaled(EdgeUnrivaled),
+        #[allow(missing_docs)]
         EmptyClaimId(EmptyClaimId),
+        #[allow(missing_docs)]
         EmptyEdgeSpecificProof(EmptyEdgeSpecificProof),
+        #[allow(missing_docs)]
         EmptyEndMachineStatus(EmptyEndMachineStatus),
+        #[allow(missing_docs)]
         EmptyEndRoot(EmptyEndRoot),
+        #[allow(missing_docs)]
         EmptyFirstRival(EmptyFirstRival),
+        #[allow(missing_docs)]
         EmptyOriginId(EmptyOriginId),
+        #[allow(missing_docs)]
         EmptyPrefixProof(EmptyPrefixProof),
+        #[allow(missing_docs)]
         EmptyStaker(EmptyStaker),
+        #[allow(missing_docs)]
         EmptyStartMachineStatus(EmptyStartMachineStatus),
+        #[allow(missing_docs)]
         EmptyStartRoot(EmptyStartRoot),
+        #[allow(missing_docs)]
         HeightDiffLtTwo(HeightDiffLtTwo),
+        #[allow(missing_docs)]
         InsufficientConfirmationBlocks(InsufficientConfirmationBlocks),
+        #[allow(missing_docs)]
         InvalidEndHeight(InvalidEndHeight),
+        #[allow(missing_docs)]
         InvalidHeights(InvalidHeights),
+        #[allow(missing_docs)]
         LevelTooHigh(LevelTooHigh),
+        #[allow(missing_docs)]
         MerkleProofTooLong(MerkleProofTooLong),
+        #[allow(missing_docs)]
         NotPowerOfTwo(NotPowerOfTwo),
+        #[allow(missing_docs)]
         RivalEdgeConfirmed(RivalEdgeConfirmed),
     }
     #[automatically_derived]

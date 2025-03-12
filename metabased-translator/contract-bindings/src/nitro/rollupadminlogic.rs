@@ -22,10 +22,15 @@ struct Staker { uint256 amountStaked; bytes32 latestStakedAssertion; uint64 inde
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Staker {
+        #[allow(missing_docs)]
         pub amountStaked: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub latestStakedAssertion: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub index: u64,
+        #[allow(missing_docs)]
         pub isStaked: bool,
+        #[allow(missing_docs)]
         pub withdrawalAddress: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -458,9 +463,13 @@ struct MaxTimeVariation { uint256 delayBlocks; uint256 futureBlocks; uint256 del
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MaxTimeVariation {
+        #[allow(missing_docs)]
         pub delayBlocks: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub futureBlocks: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub delaySeconds: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub futureSeconds: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3550,8 +3559,11 @@ struct AssertionInputs { BeforeStateData beforeStateData; AssertionState beforeS
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AssertionInputs {
+        #[allow(missing_docs)]
         pub beforeStateData: <BeforeStateData as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub beforeState: <AssertionState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub afterState: <AssertionState as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -3801,11 +3813,17 @@ struct AssertionNode { uint64 firstChildBlock; uint64 secondChildBlock; uint64 c
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AssertionNode {
+        #[allow(missing_docs)]
         pub firstChildBlock: u64,
+        #[allow(missing_docs)]
         pub secondChildBlock: u64,
+        #[allow(missing_docs)]
         pub createdAtBlock: u64,
+        #[allow(missing_docs)]
         pub isFirstChild: bool,
+        #[allow(missing_docs)]
         pub status: <AssertionStatus as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub configHash: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -4118,8 +4136,11 @@ struct AssertionState { GlobalState globalState; MachineStatus machineStatus; by
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AssertionState {
+        #[allow(missing_docs)]
         pub globalState: <GlobalState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub machineStatus: <MachineStatus as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub endHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -4363,8 +4384,11 @@ struct BeforeStateData { bytes32 prevPrevAssertionHash; bytes32 sequencerBatchAc
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BeforeStateData {
+        #[allow(missing_docs)]
         pub prevPrevAssertionHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub sequencerBatchAcc: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub configData: <ConfigData as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -4614,8 +4638,11 @@ struct BufferConfig { uint64 threshold; uint64 max; uint64 replenishRateInBasis;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BufferConfig {
+        #[allow(missing_docs)]
         pub threshold: u64,
+        #[allow(missing_docs)]
         pub max: u64,
+        #[allow(missing_docs)]
         pub replenishRateInBasis: u64,
     }
     #[allow(
@@ -4853,28 +4880,49 @@ struct Config { uint64 confirmPeriodBlocks; address stakeToken; uint256 baseStak
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Config {
+        #[allow(missing_docs)]
         pub confirmPeriodBlocks: u64,
+        #[allow(missing_docs)]
         pub stakeToken: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub baseStake: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub wasmModuleRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub loserStakeEscrow: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub chainId: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub chainConfig: alloy::sol_types::private::String,
+        #[allow(missing_docs)]
         pub minimumAssertionPeriod: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub validatorAfkBlocks: u64,
+        #[allow(missing_docs)]
         pub miniStakeValues: alloy::sol_types::private::Vec<
             alloy::sol_types::private::primitives::aliases::U256,
         >,
+        #[allow(missing_docs)]
         pub sequencerInboxMaxTimeVariation: <ISequencerInbox::MaxTimeVariation as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub layerZeroBlockEdgeHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub layerZeroBigStepEdgeHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub layerZeroSmallStepEdgeHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub genesisAssertionState: <AssertionState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub genesisInboxCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub anyTrustFastConfirmer: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub numBigStepLevel: u8,
+        #[allow(missing_docs)]
         pub challengeGracePeriodBlocks: u64,
+        #[allow(missing_docs)]
         pub bufferConfig: <BufferConfig as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -5542,10 +5590,15 @@ struct ConfigData { bytes32 wasmModuleRoot; uint256 requiredStake; address chall
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ConfigData {
+        #[allow(missing_docs)]
         pub wasmModuleRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub requiredStake: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub challengeManager: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub confirmPeriodBlocks: u64,
+        #[allow(missing_docs)]
         pub nextInboxPosition: u64,
     }
     #[allow(
@@ -5840,14 +5893,23 @@ struct ContractDependencies { address bridge; address sequencerInbox; address in
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ContractDependencies {
+        #[allow(missing_docs)]
         pub bridge: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub sequencerInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub inbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub outbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub rollupEventInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub challengeManager: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub rollupAdminLogic: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub rollupUserLogic: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub validatorWalletCreator: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -6192,7 +6254,9 @@ struct GlobalState { bytes32[2] bytes32Vals; uint64[2] u64Vals; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct GlobalState {
+        #[allow(missing_docs)]
         pub bytes32Vals: [alloy::sol_types::private::FixedBytes<32>; 2usize],
+        #[allow(missing_docs)]
         pub u64Vals: [u64; 2usize],
     }
     #[allow(
@@ -10763,16 +10827,22 @@ function _stakerMap(address) external view returns (uint256 amountStaked, bytes3
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct _stakerMapCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`_stakerMap(address)`](_stakerMapCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct _stakerMapReturn {
+        #[allow(missing_docs)]
         pub amountStaked: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub latestStakedAssertion: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub index: u64,
+        #[allow(missing_docs)]
         pub isStaked: bool,
+        #[allow(missing_docs)]
         pub withdrawalAddress: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -10921,12 +10991,14 @@ function amountStaked(address staker) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct amountStakedCall {
+        #[allow(missing_docs)]
         pub staker: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`amountStaked(address)`](amountStakedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct amountStakedReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -11051,6 +11123,7 @@ function anyTrustFastConfirmer() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct anyTrustFastConfirmerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -11173,6 +11246,7 @@ function baseStake() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct baseStakeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -11293,6 +11367,7 @@ function bridge() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct bridgeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -11411,6 +11486,7 @@ function chainId() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct chainIdReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -11531,6 +11607,7 @@ function challengeGracePeriodBlocks() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct challengeGracePeriodBlocksReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -11653,6 +11730,7 @@ function challengeManager() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct challengeManagerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -11775,6 +11853,7 @@ function confirmPeriodBlocks() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct confirmPeriodBlocksReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -11893,9 +11972,13 @@ function forceConfirmAssertion(bytes32 assertionHash, bytes32 parentAssertionHas
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct forceConfirmAssertionCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub parentAssertionHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub confirmState: <AssertionState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub inboxAcc: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`forceConfirmAssertion(bytes32,bytes32,((bytes32[2],uint64[2]),uint8,bytes32),bytes32)`](forceConfirmAssertionCall) function.
@@ -12056,8 +12139,11 @@ function forceCreateAssertion(bytes32 prevAssertionHash, AssertionInputs memory 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct forceCreateAssertionCall {
+        #[allow(missing_docs)]
         pub prevAssertionHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub assertion: <AssertionInputs as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub expectedAssertionHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`forceCreateAssertion(bytes32,((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32)`](forceCreateAssertionCall) function.
@@ -12210,6 +12296,7 @@ function forceRefundStaker(address[] memory staker) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct forceRefundStakerCall {
+        #[allow(missing_docs)]
         pub staker: alloy::sol_types::private::Vec<alloy::sol_types::private::Address>,
     }
     ///Container type for the return parameters of the [`forceRefundStaker(address[])`](forceRefundStakerCall) function.
@@ -12346,6 +12433,7 @@ function genesisAssertionHash() external pure returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct genesisAssertionHashReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -12464,12 +12552,14 @@ function getAssertion(bytes32 assertionHash) external view returns (AssertionNod
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getAssertionCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getAssertion(bytes32)`](getAssertionCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getAssertionReturn {
+        #[allow(missing_docs)]
         pub _0: <AssertionNode as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -12590,12 +12680,14 @@ function getAssertionCreationBlockForLogLookup(bytes32 assertionHash) external v
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getAssertionCreationBlockForLogLookupCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getAssertionCreationBlockForLogLookup(bytes32)`](getAssertionCreationBlockForLogLookupCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getAssertionCreationBlockForLogLookupReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -12720,12 +12812,14 @@ function getFirstChildCreationBlock(bytes32 assertionHash) external view returns
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getFirstChildCreationBlockCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getFirstChildCreationBlock(bytes32)`](getFirstChildCreationBlockCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getFirstChildCreationBlockReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -12848,12 +12942,14 @@ function getSecondChildCreationBlock(bytes32 assertionHash) external view return
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getSecondChildCreationBlockCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getSecondChildCreationBlock(bytes32)`](getSecondChildCreationBlockCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getSecondChildCreationBlockReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -12976,12 +13072,14 @@ function getStaker(address staker) external view returns (IRollupCore.Staker mem
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getStakerCall {
+        #[allow(missing_docs)]
         pub staker: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`getStaker(address)`](getStakerCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getStakerReturn {
+        #[allow(missing_docs)]
         pub _0: <IRollupCore::Staker as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -13102,12 +13200,14 @@ function getStakerAddress(uint64 stakerNum) external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getStakerAddressCall {
+        #[allow(missing_docs)]
         pub stakerNum: u64,
     }
     ///Container type for the return parameters of the [`getStakerAddress(uint64)`](getStakerAddressCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getStakerAddressReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -13234,6 +13334,7 @@ function getValidators() external view returns (address[] memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getValidatorsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<alloy::sol_types::private::Address>,
     }
     #[allow(
@@ -13358,6 +13459,7 @@ function inbox() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct inboxReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -13472,7 +13574,9 @@ function initialize(Config memory config, ContractDependencies memory connectedC
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initializeCall {
+        #[allow(missing_docs)]
         pub config: <Config as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub connectedContracts: <ContractDependencies as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`initialize((uint64,address,uint256,bytes32,address,address,uint256,string,uint256,uint64,uint256[],(uint256,uint256,uint256,uint256),uint256,uint256,uint256,((bytes32[2],uint64[2]),uint8,bytes32),uint256,address,uint8,uint64,(uint64,uint64,uint64)),(address,address,address,address,address,address,address,address,address))`](initializeCall) function.
@@ -13602,12 +13706,14 @@ function isFirstChild(bytes32 assertionHash) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isFirstChildCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`isFirstChild(bytes32)`](isFirstChildCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isFirstChildReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -13726,12 +13832,14 @@ function isPending(bytes32 assertionHash) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isPendingCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`isPending(bytes32)`](isPendingCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isPendingReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -13850,12 +13958,14 @@ function isStaked(address staker) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isStakedCall {
+        #[allow(missing_docs)]
         pub staker: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isStaked(address)`](isStakedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isStakedReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -13974,12 +14084,14 @@ function isValidator(address validator) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isValidatorCall {
+        #[allow(missing_docs)]
         pub validator: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isValidator(address)`](isValidatorCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isValidatorReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -14102,6 +14214,7 @@ function latestConfirmed() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct latestConfirmedReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -14218,12 +14331,14 @@ function latestStakedAssertion(address staker) external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct latestStakedAssertionCall {
+        #[allow(missing_docs)]
         pub staker: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`latestStakedAssertion(address)`](latestStakedAssertionCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct latestStakedAssertionReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -14350,6 +14465,7 @@ function loserStakeEscrow() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct loserStakeEscrowReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -14472,6 +14588,7 @@ function minimumAssertionPeriod() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct minimumAssertionPeriodReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -14596,6 +14713,7 @@ function outbox() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct outboxReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -14830,6 +14948,7 @@ function paused() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct pausedReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -14948,6 +15067,7 @@ function proxiableUUID() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct proxiableUUIDReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -15062,6 +15182,7 @@ function removeOldOutbox(address _outbox) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct removeOldOutboxCall {
+        #[allow(missing_docs)]
         pub _outbox: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`removeOldOutbox(address)`](removeOldOutboxCall) function.
@@ -15306,6 +15427,7 @@ function rollupDeploymentBlock() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct rollupDeploymentBlockReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -15430,6 +15552,7 @@ function rollupEventInbox() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct rollupEventInboxReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -15552,6 +15675,7 @@ function sequencerInbox() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sequencerInboxReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -15668,6 +15792,7 @@ function setAnyTrustFastConfirmer(address _anyTrustFastConfirmer) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setAnyTrustFastConfirmerCall {
+        #[allow(missing_docs)]
         pub _anyTrustFastConfirmer: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setAnyTrustFastConfirmer(address)`](setAnyTrustFastConfirmerCall) function.
@@ -15796,6 +15921,7 @@ function setBaseStake(uint256 newBaseStake) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setBaseStakeCall {
+        #[allow(missing_docs)]
         pub newBaseStake: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`setBaseStake(uint256)`](setBaseStakeCall) function.
@@ -15920,6 +16046,7 @@ function setChallengeManager(address _challengeManager) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setChallengeManagerCall {
+        #[allow(missing_docs)]
         pub _challengeManager: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setChallengeManager(address)`](setChallengeManagerCall) function.
@@ -16046,6 +16173,7 @@ function setConfirmPeriodBlocks(uint64 newConfirmPeriod) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setConfirmPeriodBlocksCall {
+        #[allow(missing_docs)]
         pub newConfirmPeriod: u64,
     }
     ///Container type for the return parameters of the [`setConfirmPeriodBlocks(uint64)`](setConfirmPeriodBlocksCall) function.
@@ -16172,7 +16300,9 @@ function setDelayedInbox(address _inbox, bool _enabled) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setDelayedInboxCall {
+        #[allow(missing_docs)]
         pub _inbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _enabled: bool,
     }
     ///Container type for the return parameters of the [`setDelayedInbox(address,bool)`](setDelayedInboxCall) function.
@@ -16309,6 +16439,7 @@ function setInbox(address newInbox) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setInboxCall {
+        #[allow(missing_docs)]
         pub newInbox: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setInbox(address)`](setInboxCall) function.
@@ -16431,6 +16562,7 @@ function setLoserStakeEscrow(address newLoserStakerEscrow) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setLoserStakeEscrowCall {
+        #[allow(missing_docs)]
         pub newLoserStakerEscrow: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setLoserStakeEscrow(address)`](setLoserStakeEscrowCall) function.
@@ -16559,6 +16691,7 @@ function setMinimumAssertionPeriod(uint256 newPeriod) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setMinimumAssertionPeriodCall {
+        #[allow(missing_docs)]
         pub newPeriod: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`setMinimumAssertionPeriod(uint256)`](setMinimumAssertionPeriodCall) function.
@@ -16687,6 +16820,7 @@ function setOutbox(address _outbox) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setOutboxCall {
+        #[allow(missing_docs)]
         pub _outbox: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setOutbox(address)`](setOutboxCall) function.
@@ -16809,6 +16943,7 @@ function setOwner(address newOwner) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setOwnerCall {
+        #[allow(missing_docs)]
         pub newOwner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setOwner(address)`](setOwnerCall) function.
@@ -16931,6 +17066,7 @@ function setSequencerInbox(address _sequencerInbox) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setSequencerInboxCall {
+        #[allow(missing_docs)]
         pub _sequencerInbox: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setSequencerInbox(address)`](setSequencerInboxCall) function.
@@ -17057,9 +17193,11 @@ function setValidator(address[] memory _validator, bool[] memory _val) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setValidatorCall {
+        #[allow(missing_docs)]
         pub _validator: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
+        #[allow(missing_docs)]
         pub _val: alloy::sol_types::private::Vec<bool>,
     }
     ///Container type for the return parameters of the [`setValidator(address[],bool[])`](setValidatorCall) function.
@@ -17197,6 +17335,7 @@ function setValidatorAfkBlocks(uint64 newAfkBlocks) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setValidatorAfkBlocksCall {
+        #[allow(missing_docs)]
         pub newAfkBlocks: u64,
     }
     ///Container type for the return parameters of the [`setValidatorAfkBlocks(uint64)`](setValidatorAfkBlocksCall) function.
@@ -17323,6 +17462,7 @@ function setValidatorWhitelistDisabled(bool _validatorWhitelistDisabled) externa
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setValidatorWhitelistDisabledCall {
+        #[allow(missing_docs)]
         pub _validatorWhitelistDisabled: bool,
     }
     ///Container type for the return parameters of the [`setValidatorWhitelistDisabled(bool)`](setValidatorWhitelistDisabledCall) function.
@@ -17451,6 +17591,7 @@ function setWasmModuleRoot(bytes32 newWasmModuleRoot) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setWasmModuleRootCall {
+        #[allow(missing_docs)]
         pub newWasmModuleRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`setWasmModuleRoot(bytes32)`](setWasmModuleRootCall) function.
@@ -17581,6 +17722,7 @@ function stakeToken() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct stakeTokenReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -17699,6 +17841,7 @@ function stakerCount() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct stakerCountReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -17817,6 +17960,7 @@ function totalWithdrawableFunds() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct totalWithdrawableFundsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -17937,6 +18081,7 @@ function upgradeSecondaryTo(address newImplementation) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeSecondaryToCall {
+        #[allow(missing_docs)]
         pub newImplementation: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`upgradeSecondaryTo(address)`](upgradeSecondaryToCall) function.
@@ -18063,7 +18208,9 @@ function upgradeSecondaryToAndCall(address newImplementation, bytes memory data)
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeSecondaryToAndCallCall {
+        #[allow(missing_docs)]
         pub newImplementation: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`upgradeSecondaryToAndCall(address,bytes)`](upgradeSecondaryToAndCallCall) function.
@@ -18205,6 +18352,7 @@ function upgradeTo(address newImplementation) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeToCall {
+        #[allow(missing_docs)]
         pub newImplementation: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`upgradeTo(address)`](upgradeToCall) function.
@@ -18327,7 +18475,9 @@ function upgradeToAndCall(address newImplementation, bytes memory data) external
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeToAndCallCall {
+        #[allow(missing_docs)]
         pub newImplementation: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`upgradeToAndCall(address,bytes)`](upgradeToAndCallCall) function.
@@ -18469,9 +18619,13 @@ function validateAssertionHash(bytes32 assertionHash, AssertionState memory stat
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct validateAssertionHashCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub state: <AssertionState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub prevAssertionHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub inboxAcc: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`validateAssertionHash(bytes32,((bytes32[2],uint64[2]),uint8,bytes32),bytes32,bytes32)`](validateAssertionHashCall) function.
@@ -18630,7 +18784,9 @@ function validateConfig(bytes32 assertionHash, ConfigData memory configData) ext
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct validateConfigCall {
+        #[allow(missing_docs)]
         pub assertionHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub configData: <ConfigData as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`validateConfig(bytes32,(bytes32,uint256,address,uint64,uint64))`](validateConfigCall) function.
@@ -18772,6 +18928,7 @@ function validatorAfkBlocks() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct validatorAfkBlocksReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -18894,6 +19051,7 @@ function validatorWalletCreator() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct validatorWalletCreatorReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -19016,6 +19174,7 @@ function validatorWhitelistDisabled() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct validatorWhitelistDisabledReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -19138,6 +19297,7 @@ function wasmModuleRoot() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct wasmModuleRootReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -19254,12 +19414,14 @@ function withdrawableFunds(address user) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawableFundsCall {
+        #[allow(missing_docs)]
         pub user: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`withdrawableFunds(address)`](withdrawableFundsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawableFundsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -19384,12 +19546,14 @@ function withdrawalAddress(address staker) external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawalAddressCall {
+        #[allow(missing_docs)]
         pub staker: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`withdrawalAddress(address)`](withdrawalAddressCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawalAddressReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -19507,74 +19671,143 @@ function withdrawalAddress(address staker) external view returns (address);
     };
     ///Container for all the [`RollupAdminLogic`](self) function calls.
     pub enum RollupAdminLogicCalls {
+        #[allow(missing_docs)]
         _stakerMap(_stakerMapCall),
+        #[allow(missing_docs)]
         amountStaked(amountStakedCall),
+        #[allow(missing_docs)]
         anyTrustFastConfirmer(anyTrustFastConfirmerCall),
+        #[allow(missing_docs)]
         baseStake(baseStakeCall),
+        #[allow(missing_docs)]
         bridge(bridgeCall),
+        #[allow(missing_docs)]
         chainId(chainIdCall),
+        #[allow(missing_docs)]
         challengeGracePeriodBlocks(challengeGracePeriodBlocksCall),
+        #[allow(missing_docs)]
         challengeManager(challengeManagerCall),
+        #[allow(missing_docs)]
         confirmPeriodBlocks(confirmPeriodBlocksCall),
+        #[allow(missing_docs)]
         forceConfirmAssertion(forceConfirmAssertionCall),
+        #[allow(missing_docs)]
         forceCreateAssertion(forceCreateAssertionCall),
+        #[allow(missing_docs)]
         forceRefundStaker(forceRefundStakerCall),
+        #[allow(missing_docs)]
         genesisAssertionHash(genesisAssertionHashCall),
+        #[allow(missing_docs)]
         getAssertion(getAssertionCall),
+        #[allow(missing_docs)]
         getAssertionCreationBlockForLogLookup(getAssertionCreationBlockForLogLookupCall),
+        #[allow(missing_docs)]
         getFirstChildCreationBlock(getFirstChildCreationBlockCall),
+        #[allow(missing_docs)]
         getSecondChildCreationBlock(getSecondChildCreationBlockCall),
+        #[allow(missing_docs)]
         getStaker(getStakerCall),
+        #[allow(missing_docs)]
         getStakerAddress(getStakerAddressCall),
+        #[allow(missing_docs)]
         getValidators(getValidatorsCall),
+        #[allow(missing_docs)]
         inbox(inboxCall),
+        #[allow(missing_docs)]
         initialize(initializeCall),
+        #[allow(missing_docs)]
         isFirstChild(isFirstChildCall),
+        #[allow(missing_docs)]
         isPending(isPendingCall),
+        #[allow(missing_docs)]
         isStaked(isStakedCall),
+        #[allow(missing_docs)]
         isValidator(isValidatorCall),
+        #[allow(missing_docs)]
         latestConfirmed(latestConfirmedCall),
+        #[allow(missing_docs)]
         latestStakedAssertion(latestStakedAssertionCall),
+        #[allow(missing_docs)]
         loserStakeEscrow(loserStakeEscrowCall),
+        #[allow(missing_docs)]
         minimumAssertionPeriod(minimumAssertionPeriodCall),
+        #[allow(missing_docs)]
         outbox(outboxCall),
+        #[allow(missing_docs)]
         pause(pauseCall),
+        #[allow(missing_docs)]
         paused(pausedCall),
+        #[allow(missing_docs)]
         proxiableUUID(proxiableUUIDCall),
+        #[allow(missing_docs)]
         removeOldOutbox(removeOldOutboxCall),
+        #[allow(missing_docs)]
         resume(resumeCall),
+        #[allow(missing_docs)]
         rollupDeploymentBlock(rollupDeploymentBlockCall),
+        #[allow(missing_docs)]
         rollupEventInbox(rollupEventInboxCall),
+        #[allow(missing_docs)]
         sequencerInbox(sequencerInboxCall),
+        #[allow(missing_docs)]
         setAnyTrustFastConfirmer(setAnyTrustFastConfirmerCall),
+        #[allow(missing_docs)]
         setBaseStake(setBaseStakeCall),
+        #[allow(missing_docs)]
         setChallengeManager(setChallengeManagerCall),
+        #[allow(missing_docs)]
         setConfirmPeriodBlocks(setConfirmPeriodBlocksCall),
+        #[allow(missing_docs)]
         setDelayedInbox(setDelayedInboxCall),
+        #[allow(missing_docs)]
         setInbox(setInboxCall),
+        #[allow(missing_docs)]
         setLoserStakeEscrow(setLoserStakeEscrowCall),
+        #[allow(missing_docs)]
         setMinimumAssertionPeriod(setMinimumAssertionPeriodCall),
+        #[allow(missing_docs)]
         setOutbox(setOutboxCall),
+        #[allow(missing_docs)]
         setOwner(setOwnerCall),
+        #[allow(missing_docs)]
         setSequencerInbox(setSequencerInboxCall),
+        #[allow(missing_docs)]
         setValidator(setValidatorCall),
+        #[allow(missing_docs)]
         setValidatorAfkBlocks(setValidatorAfkBlocksCall),
+        #[allow(missing_docs)]
         setValidatorWhitelistDisabled(setValidatorWhitelistDisabledCall),
+        #[allow(missing_docs)]
         setWasmModuleRoot(setWasmModuleRootCall),
+        #[allow(missing_docs)]
         stakeToken(stakeTokenCall),
+        #[allow(missing_docs)]
         stakerCount(stakerCountCall),
+        #[allow(missing_docs)]
         totalWithdrawableFunds(totalWithdrawableFundsCall),
+        #[allow(missing_docs)]
         upgradeSecondaryTo(upgradeSecondaryToCall),
+        #[allow(missing_docs)]
         upgradeSecondaryToAndCall(upgradeSecondaryToAndCallCall),
+        #[allow(missing_docs)]
         upgradeTo(upgradeToCall),
+        #[allow(missing_docs)]
         upgradeToAndCall(upgradeToAndCallCall),
+        #[allow(missing_docs)]
         validateAssertionHash(validateAssertionHashCall),
+        #[allow(missing_docs)]
         validateConfig(validateConfigCall),
+        #[allow(missing_docs)]
         validatorAfkBlocks(validatorAfkBlocksCall),
+        #[allow(missing_docs)]
         validatorWalletCreator(validatorWalletCreatorCall),
+        #[allow(missing_docs)]
         validatorWhitelistDisabled(validatorWhitelistDisabledCall),
+        #[allow(missing_docs)]
         wasmModuleRoot(wasmModuleRootCall),
+        #[allow(missing_docs)]
         withdrawableFunds(withdrawableFundsCall),
+        #[allow(missing_docs)]
         withdrawalAddress(withdrawalAddressCall),
     }
     #[automatically_derived]
@@ -21498,36 +21731,67 @@ function withdrawalAddress(address staker) external view returns (address);
     }
     ///Container for all the [`RollupAdminLogic`](self) events.
     pub enum RollupAdminLogicEvents {
+        #[allow(missing_docs)]
         AdminChanged(AdminChanged),
+        #[allow(missing_docs)]
         AnyTrustFastConfirmerSet(AnyTrustFastConfirmerSet),
+        #[allow(missing_docs)]
         AssertionConfirmed(AssertionConfirmed),
+        #[allow(missing_docs)]
         AssertionCreated(AssertionCreated),
+        #[allow(missing_docs)]
         AssertionForceConfirmed(AssertionForceConfirmed),
+        #[allow(missing_docs)]
         AssertionForceCreated(AssertionForceCreated),
+        #[allow(missing_docs)]
         BaseStakeSet(BaseStakeSet),
+        #[allow(missing_docs)]
         BeaconUpgraded(BeaconUpgraded),
+        #[allow(missing_docs)]
         ChallengeManagerSet(ChallengeManagerSet),
+        #[allow(missing_docs)]
         ConfirmPeriodBlocksSet(ConfirmPeriodBlocksSet),
+        #[allow(missing_docs)]
         DelayedInboxSet(DelayedInboxSet),
+        #[allow(missing_docs)]
         InboxSet(InboxSet),
+        #[allow(missing_docs)]
         Initialized(Initialized),
+        #[allow(missing_docs)]
         LoserStakeEscrowSet(LoserStakeEscrowSet),
+        #[allow(missing_docs)]
         MinimumAssertionPeriodSet(MinimumAssertionPeriodSet),
+        #[allow(missing_docs)]
         OldOutboxRemoved(OldOutboxRemoved),
+        #[allow(missing_docs)]
         OutboxSet(OutboxSet),
+        #[allow(missing_docs)]
         Paused(Paused),
+        #[allow(missing_docs)]
         RollupChallengeStarted(RollupChallengeStarted),
+        #[allow(missing_docs)]
         RollupInitialized(RollupInitialized),
+        #[allow(missing_docs)]
         SequencerInboxSet(SequencerInboxSet),
+        #[allow(missing_docs)]
         StakersForceRefunded(StakersForceRefunded),
+        #[allow(missing_docs)]
         Unpaused(Unpaused),
+        #[allow(missing_docs)]
         Upgraded(Upgraded),
+        #[allow(missing_docs)]
         UpgradedSecondary(UpgradedSecondary),
+        #[allow(missing_docs)]
         UserStakeUpdated(UserStakeUpdated),
+        #[allow(missing_docs)]
         UserWithdrawableFundsUpdated(UserWithdrawableFundsUpdated),
+        #[allow(missing_docs)]
         ValidatorAfkBlocksSet(ValidatorAfkBlocksSet),
+        #[allow(missing_docs)]
         ValidatorWhitelistDisabledSet(ValidatorWhitelistDisabledSet),
+        #[allow(missing_docs)]
         ValidatorsSet(ValidatorsSet),
+        #[allow(missing_docs)]
         WasmModuleRootSet(WasmModuleRootSet),
     }
     #[automatically_derived]

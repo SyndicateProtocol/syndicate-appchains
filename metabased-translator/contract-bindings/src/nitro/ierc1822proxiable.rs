@@ -66,6 +66,7 @@ function proxiableUUID() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct proxiableUUIDReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -175,6 +176,7 @@ function proxiableUUID() external view returns (bytes32);
     };
     ///Container for all the [`IERC1822Proxiable`](self) function calls.
     pub enum IERC1822ProxiableCalls {
+        #[allow(missing_docs)]
         proxiableUUID(proxiableUUIDCall),
     }
     #[automatically_derived]

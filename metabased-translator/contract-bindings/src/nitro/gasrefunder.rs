@@ -2262,6 +2262,7 @@ function allowContracts(address[] memory addresses) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowContractsCall {
+        #[allow(missing_docs)]
         pub addresses: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
@@ -2394,6 +2395,7 @@ function allowRefundees(address[] memory addresses) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowRefundeesCall {
+        #[allow(missing_docs)]
         pub addresses: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
@@ -2526,12 +2528,14 @@ function allowedContracts(address) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowedContractsCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`allowedContracts(address)`](allowedContractsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowedContractsReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2654,12 +2658,14 @@ function allowedRefundees(address) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowedRefundeesCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`allowedRefundees(address)`](allowedRefundeesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowedRefundeesReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2786,11 +2792,17 @@ function commonParams() external view returns (uint128 maxRefundeeBalance, uint3
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct commonParamsReturn {
+        #[allow(missing_docs)]
         pub maxRefundeeBalance: u128,
+        #[allow(missing_docs)]
         pub extraGasMargin: u32,
+        #[allow(missing_docs)]
         pub calldataCost: u8,
+        #[allow(missing_docs)]
         pub maxGasTip: u64,
+        #[allow(missing_docs)]
         pub maxGasCost: u64,
+        #[allow(missing_docs)]
         pub maxSingleGasUsage: u32,
     }
     #[allow(
@@ -2933,6 +2945,7 @@ function disallowContracts(address[] memory addresses) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct disallowContractsCall {
+        #[allow(missing_docs)]
         pub addresses: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
@@ -3067,6 +3080,7 @@ function disallowRefundees(address[] memory addresses) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct disallowRefundeesCall {
+        #[allow(missing_docs)]
         pub addresses: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
@@ -3205,6 +3219,7 @@ function disallower() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct disallowerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3319,14 +3334,18 @@ function onGasSpent(address refundee, uint256 gasUsed, uint256 calldataSize) ext
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct onGasSpentCall {
+        #[allow(missing_docs)]
         pub refundee: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub gasUsed: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub calldataSize: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`onGasSpent(address,uint256,uint256)`](onGasSpentCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct onGasSpentReturn {
+        #[allow(missing_docs)]
         pub success: bool,
     }
     #[allow(
@@ -3471,6 +3490,7 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3705,6 +3725,7 @@ function setCalldataCost(uint8 newValue) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setCalldataCostCall {
+        #[allow(missing_docs)]
         pub newValue: u8,
     }
     ///Container type for the return parameters of the [`setCalldataCost(uint8)`](setCalldataCostCall) function.
@@ -3829,6 +3850,7 @@ function setDisallower(address addr) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setDisallowerCall {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setDisallower(address)`](setDisallowerCall) function.
@@ -3951,6 +3973,7 @@ function setExtraGasMargin(uint32 newValue) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setExtraGasMarginCall {
+        #[allow(missing_docs)]
         pub newValue: u32,
     }
     ///Container type for the return parameters of the [`setExtraGasMargin(uint32)`](setExtraGasMarginCall) function.
@@ -4077,6 +4100,7 @@ function setMaxGasCost(uint64 newValue) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setMaxGasCostCall {
+        #[allow(missing_docs)]
         pub newValue: u64,
     }
     ///Container type for the return parameters of the [`setMaxGasCost(uint64)`](setMaxGasCostCall) function.
@@ -4199,6 +4223,7 @@ function setMaxGasTip(uint64 newValue) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setMaxGasTipCall {
+        #[allow(missing_docs)]
         pub newValue: u64,
     }
     ///Container type for the return parameters of the [`setMaxGasTip(uint64)`](setMaxGasTipCall) function.
@@ -4321,6 +4346,7 @@ function setMaxRefundeeBalance(uint128 newValue) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setMaxRefundeeBalanceCall {
+        #[allow(missing_docs)]
         pub newValue: u128,
     }
     ///Container type for the return parameters of the [`setMaxRefundeeBalance(uint128)`](setMaxRefundeeBalanceCall) function.
@@ -4447,6 +4473,7 @@ function setMaxSingleGasUsage(uint32 newValue) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setMaxSingleGasUsageCall {
+        #[allow(missing_docs)]
         pub newValue: u32,
     }
     ///Container type for the return parameters of the [`setMaxSingleGasUsage(uint32)`](setMaxSingleGasUsageCall) function.
@@ -4573,6 +4600,7 @@ function transferOwnership(address newOwner) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferOwnershipCall {
+        #[allow(missing_docs)]
         pub newOwner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`transferOwnership(address)`](transferOwnershipCall) function.
@@ -4699,7 +4727,9 @@ function withdraw(address destination, uint256 amount) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawCall {
+        #[allow(missing_docs)]
         pub destination: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`withdraw(address,uint256)`](withdrawCall) function.
@@ -4832,25 +4862,45 @@ function withdraw(address destination, uint256 amount) external;
     };
     ///Container for all the [`GasRefunder`](self) function calls.
     pub enum GasRefunderCalls {
+        #[allow(missing_docs)]
         allowContracts(allowContractsCall),
+        #[allow(missing_docs)]
         allowRefundees(allowRefundeesCall),
+        #[allow(missing_docs)]
         allowedContracts(allowedContractsCall),
+        #[allow(missing_docs)]
         allowedRefundees(allowedRefundeesCall),
+        #[allow(missing_docs)]
         commonParams(commonParamsCall),
+        #[allow(missing_docs)]
         disallowContracts(disallowContractsCall),
+        #[allow(missing_docs)]
         disallowRefundees(disallowRefundeesCall),
+        #[allow(missing_docs)]
         disallower(disallowerCall),
+        #[allow(missing_docs)]
         onGasSpent(onGasSpentCall),
+        #[allow(missing_docs)]
         owner(ownerCall),
+        #[allow(missing_docs)]
         renounceOwnership(renounceOwnershipCall),
+        #[allow(missing_docs)]
         setCalldataCost(setCalldataCostCall),
+        #[allow(missing_docs)]
         setDisallower(setDisallowerCall),
+        #[allow(missing_docs)]
         setExtraGasMargin(setExtraGasMarginCall),
+        #[allow(missing_docs)]
         setMaxGasCost(setMaxGasCostCall),
+        #[allow(missing_docs)]
         setMaxGasTip(setMaxGasTipCall),
+        #[allow(missing_docs)]
         setMaxRefundeeBalance(setMaxRefundeeBalanceCall),
+        #[allow(missing_docs)]
         setMaxSingleGasUsage(setMaxSingleGasUsageCall),
+        #[allow(missing_docs)]
         transferOwnership(transferOwnershipCall),
+        #[allow(missing_docs)]
         withdraw(withdrawCall),
     }
     #[automatically_derived]
@@ -5462,14 +5512,23 @@ function withdraw(address destination, uint256 amount) external;
     }
     ///Container for all the [`GasRefunder`](self) events.
     pub enum GasRefunderEvents {
+        #[allow(missing_docs)]
         CommonParameterSet(CommonParameterSet),
+        #[allow(missing_docs)]
         ContractAllowedSet(ContractAllowedSet),
+        #[allow(missing_docs)]
         Deposited(Deposited),
+        #[allow(missing_docs)]
         DisallowerSet(DisallowerSet),
+        #[allow(missing_docs)]
         OwnershipTransferred(OwnershipTransferred),
+        #[allow(missing_docs)]
         RefundGasCostsDenied(RefundGasCostsDenied),
+        #[allow(missing_docs)]
         RefundedGasCosts(RefundedGasCosts),
+        #[allow(missing_docs)]
         RefundeeAllowedSet(RefundeeAllowedSet),
+        #[allow(missing_docs)]
         Withdrawn(Withdrawn),
     }
     #[automatically_derived]

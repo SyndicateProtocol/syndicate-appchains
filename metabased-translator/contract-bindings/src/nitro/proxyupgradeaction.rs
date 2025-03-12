@@ -72,8 +72,11 @@ function perform(address admin, address target, address newLogic) external payab
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct performCall {
+        #[allow(missing_docs)]
         pub admin: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub target: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub newLogic: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`perform(address,address,address)`](performCall) function.
@@ -213,6 +216,7 @@ function perform(address admin, address target, address newLogic) external payab
     };
     ///Container for all the [`ProxyUpgradeAction`](self) function calls.
     pub enum ProxyUpgradeActionCalls {
+        #[allow(missing_docs)]
         perform(performCall),
     }
     #[automatically_derived]

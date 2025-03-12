@@ -691,6 +691,7 @@ function createWallet(address[] memory initialExecutorAllowedDests) external ret
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createWalletCall {
+        #[allow(missing_docs)]
         pub initialExecutorAllowedDests: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
@@ -699,6 +700,7 @@ function createWallet(address[] memory initialExecutorAllowedDests) external ret
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createWalletReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -831,6 +833,7 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1065,6 +1068,7 @@ function setTemplate(address _template) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setTemplateCall {
+        #[allow(missing_docs)]
         pub _template: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setTemplate(address)`](setTemplateCall) function.
@@ -1191,6 +1195,7 @@ function template() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct templateReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1305,6 +1310,7 @@ function transferOwnership(address newOwner) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferOwnershipCall {
+        #[allow(missing_docs)]
         pub newOwner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`transferOwnership(address)`](transferOwnershipCall) function.
@@ -1426,11 +1432,17 @@ function transferOwnership(address newOwner) external;
     };
     ///Container for all the [`ValidatorWalletCreator`](self) function calls.
     pub enum ValidatorWalletCreatorCalls {
+        #[allow(missing_docs)]
         createWallet(createWalletCall),
+        #[allow(missing_docs)]
         owner(ownerCall),
+        #[allow(missing_docs)]
         renounceOwnership(renounceOwnershipCall),
+        #[allow(missing_docs)]
         setTemplate(setTemplateCall),
+        #[allow(missing_docs)]
         template(templateCall),
+        #[allow(missing_docs)]
         transferOwnership(transferOwnershipCall),
     }
     #[automatically_derived]
@@ -1654,8 +1666,11 @@ function transferOwnership(address newOwner) external;
     }
     ///Container for all the [`ValidatorWalletCreator`](self) events.
     pub enum ValidatorWalletCreatorEvents {
+        #[allow(missing_docs)]
         OwnershipTransferred(OwnershipTransferred),
+        #[allow(missing_docs)]
         TemplateUpdated(TemplateUpdated),
+        #[allow(missing_docs)]
         WalletCreated(WalletCreated),
     }
     #[automatically_derived]

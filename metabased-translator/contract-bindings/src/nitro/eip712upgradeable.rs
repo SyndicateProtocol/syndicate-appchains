@@ -189,6 +189,7 @@ event Initialized(uint8 version);
     };
     ///Container for all the [`EIP712Upgradeable`](self) events.
     pub enum EIP712UpgradeableEvents {
+        #[allow(missing_docs)]
         Initialized(Initialized),
     }
     #[automatically_derived]

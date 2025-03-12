@@ -67,7 +67,9 @@ function withdraw(address stakeToken, uint256 amount) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawCall {
+        #[allow(missing_docs)]
         pub stakeToken: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`withdraw(address,uint256)`](withdrawCall) function.
@@ -200,6 +202,7 @@ function withdraw(address stakeToken, uint256 amount) external;
     };
     ///Container for all the [`FundsHolder`](self) function calls.
     pub enum FundsHolderCalls {
+        #[allow(missing_docs)]
         withdraw(withdrawCall),
     }
     #[automatically_derived]

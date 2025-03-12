@@ -80,6 +80,7 @@ function getBlobBaseFee() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getBlobBaseFeeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -202,6 +203,7 @@ function getDataHashes() external view returns (bytes32[] memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getDataHashesReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
@@ -325,7 +327,9 @@ function getDataHashes() external view returns (bytes32[] memory);
     };
     ///Container for all the [`IReader4844`](self) function calls.
     pub enum IReader4844Calls {
+        #[allow(missing_docs)]
         getBlobBaseFee(getBlobBaseFeeCall),
+        #[allow(missing_docs)]
         getDataHashes(getDataHashesCall),
     }
     #[automatically_derived]

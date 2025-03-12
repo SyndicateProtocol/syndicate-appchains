@@ -293,11 +293,17 @@ struct CreateEdgeArgs { uint8 level; bytes32 endHistoryRoot; uint256 endHeight; 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct CreateEdgeArgs {
+        #[allow(missing_docs)]
         pub level: u8,
+        #[allow(missing_docs)]
         pub endHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub endHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub claimId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub prefixProof: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
         pub proof: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -605,8 +611,11 @@ error AmountExceedsBalance(address account, uint256 amount, uint256 balance);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AmountExceedsBalance {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub balance: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -759,7 +768,9 @@ error IncorrectEdgeId(bytes32 actual, bytes32 expected);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct IncorrectEdgeId {
+        #[allow(missing_docs)]
         pub actual: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub expected: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1196,6 +1207,7 @@ function challengeManager() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct challengeManagerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1314,6 +1326,7 @@ function createEdge(CreateEdgeArgs memory args) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createEdgeCall {
+        #[allow(missing_docs)]
         pub args: <CreateEdgeArgs as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`createEdge((uint8,bytes32,uint256,bytes32,bytes,bytes))`](createEdgeCall) function.
@@ -1434,12 +1447,14 @@ function depositBalance(address account) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct depositBalanceCall {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`depositBalance(address)`](depositBalanceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct depositBalanceReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1562,6 +1577,7 @@ function depositIntoPool(uint256 amount) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct depositIntoPoolCall {
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`depositIntoPool(uint256)`](depositIntoPoolCall) function.
@@ -1692,6 +1708,7 @@ function edgeId() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct edgeIdReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1810,6 +1827,7 @@ function stakeToken() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct stakeTokenReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2044,6 +2062,7 @@ function withdrawFromPool(uint256 amount) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawFromPool_1Call {
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`withdrawFromPool(uint256)`](withdrawFromPool_1Call) function.
@@ -2167,13 +2186,21 @@ function withdrawFromPool(uint256 amount) external;
     };
     ///Container for all the [`IEdgeStakingPool`](self) function calls.
     pub enum IEdgeStakingPoolCalls {
+        #[allow(missing_docs)]
         challengeManager(challengeManagerCall),
+        #[allow(missing_docs)]
         createEdge(createEdgeCall),
+        #[allow(missing_docs)]
         depositBalance(depositBalanceCall),
+        #[allow(missing_docs)]
         depositIntoPool(depositIntoPoolCall),
+        #[allow(missing_docs)]
         edgeId(edgeIdCall),
+        #[allow(missing_docs)]
         stakeToken(stakeTokenCall),
+        #[allow(missing_docs)]
         withdrawFromPool_0(withdrawFromPool_0Call),
+        #[allow(missing_docs)]
         withdrawFromPool_1(withdrawFromPool_1Call),
     }
     #[automatically_derived]
@@ -2453,9 +2480,13 @@ function withdrawFromPool(uint256 amount) external;
     }
     ///Container for all the [`IEdgeStakingPool`](self) custom errors.
     pub enum IEdgeStakingPoolErrors {
+        #[allow(missing_docs)]
         AmountExceedsBalance(AmountExceedsBalance),
+        #[allow(missing_docs)]
         EmptyEdgeId(EmptyEdgeId),
+        #[allow(missing_docs)]
         IncorrectEdgeId(IncorrectEdgeId),
+        #[allow(missing_docs)]
         ZeroAmount(ZeroAmount),
     }
     #[automatically_derived]
@@ -2627,7 +2658,9 @@ function withdrawFromPool(uint256 amount) external;
     }
     ///Container for all the [`IEdgeStakingPool`](self) events.
     pub enum IEdgeStakingPoolEvents {
+        #[allow(missing_docs)]
         StakeDeposited(StakeDeposited),
+        #[allow(missing_docs)]
         StakeWithdrawn(StakeWithdrawn),
     }
     #[automatically_derived]

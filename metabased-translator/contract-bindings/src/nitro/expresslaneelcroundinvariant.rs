@@ -22,7 +22,9 @@ struct FuzzSelector { address addr; bytes4[] selectors; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct FuzzSelector {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub selectors: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<4>,
         >,
@@ -4020,6 +4022,7 @@ function IS_TEST() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct IS_TESTReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -4138,6 +4141,7 @@ function excludeArtifacts() external view returns (string[] memory excludedArtif
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct excludeArtifactsReturn {
+        #[allow(missing_docs)]
         pub excludedArtifacts_: alloy::sol_types::private::Vec<
             alloy::sol_types::private::String,
         >,
@@ -4270,6 +4274,7 @@ function excludeContracts() external view returns (address[] memory excludedCont
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct excludeContractsReturn {
+        #[allow(missing_docs)]
         pub excludedContracts_: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
@@ -4402,6 +4407,7 @@ function excludeSenders() external view returns (address[] memory excludedSender
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct excludeSendersReturn {
+        #[allow(missing_docs)]
         pub excludedSenders_: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
@@ -4530,6 +4536,7 @@ function failed() external returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct failedReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -4884,6 +4891,7 @@ function targetArtifactSelectors() external view returns (StdInvariant.FuzzSelec
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct targetArtifactSelectorsReturn {
+        #[allow(missing_docs)]
         pub targetedArtifactSelectors_: alloy::sol_types::private::Vec<
             <StdInvariant::FuzzSelector as alloy::sol_types::SolType>::RustType,
         >,
@@ -5018,6 +5026,7 @@ function targetArtifacts() external view returns (string[] memory targetedArtifa
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct targetArtifactsReturn {
+        #[allow(missing_docs)]
         pub targetedArtifacts_: alloy::sol_types::private::Vec<
             alloy::sol_types::private::String,
         >,
@@ -5148,6 +5157,7 @@ function targetContracts() external view returns (address[] memory targetedContr
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct targetContractsReturn {
+        #[allow(missing_docs)]
         pub targetedContracts_: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
@@ -5278,6 +5288,7 @@ function targetSelectors() external view returns (StdInvariant.FuzzSelector[] me
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct targetSelectorsReturn {
+        #[allow(missing_docs)]
         pub targetedSelectors_: alloy::sol_types::private::Vec<
             <StdInvariant::FuzzSelector as alloy::sol_types::SolType>::RustType,
         >,
@@ -5410,6 +5421,7 @@ function targetSenders() external view returns (address[] memory targetedSenders
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct targetSendersReturn {
+        #[allow(missing_docs)]
         pub targetedSenders_: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
@@ -5527,17 +5539,29 @@ function targetSenders() external view returns (address[] memory targetedSenders
     };
     ///Container for all the [`ExpressLaneELCRoundInvariant`](self) function calls.
     pub enum ExpressLaneELCRoundInvariantCalls {
+        #[allow(missing_docs)]
         IS_TEST(IS_TESTCall),
+        #[allow(missing_docs)]
         excludeArtifacts(excludeArtifactsCall),
+        #[allow(missing_docs)]
         excludeContracts(excludeContractsCall),
+        #[allow(missing_docs)]
         excludeSenders(excludeSendersCall),
+        #[allow(missing_docs)]
         failed(failedCall),
+        #[allow(missing_docs)]
         invariantRoundsNeverSame(invariantRoundsNeverSameCall),
+        #[allow(missing_docs)]
         setUp(setUpCall),
+        #[allow(missing_docs)]
         targetArtifactSelectors(targetArtifactSelectorsCall),
+        #[allow(missing_docs)]
         targetArtifacts(targetArtifactsCall),
+        #[allow(missing_docs)]
         targetContracts(targetContractsCall),
+        #[allow(missing_docs)]
         targetSelectors(targetSelectorsCall),
+        #[allow(missing_docs)]
         targetSenders(targetSendersCall),
     }
     #[automatically_derived]
@@ -5923,27 +5947,49 @@ function targetSenders() external view returns (address[] memory targetedSenders
     }
     ///Container for all the [`ExpressLaneELCRoundInvariant`](self) events.
     pub enum ExpressLaneELCRoundInvariantEvents {
+        #[allow(missing_docs)]
         log(log),
+        #[allow(missing_docs)]
         log_address(log_address),
+        #[allow(missing_docs)]
         log_array_0(log_array_0),
+        #[allow(missing_docs)]
         log_array_1(log_array_1),
+        #[allow(missing_docs)]
         log_array_2(log_array_2),
+        #[allow(missing_docs)]
         log_bytes(log_bytes),
+        #[allow(missing_docs)]
         log_bytes32(log_bytes32),
+        #[allow(missing_docs)]
         log_int(log_int),
+        #[allow(missing_docs)]
         log_named_address(log_named_address),
+        #[allow(missing_docs)]
         log_named_array_0(log_named_array_0),
+        #[allow(missing_docs)]
         log_named_array_1(log_named_array_1),
+        #[allow(missing_docs)]
         log_named_array_2(log_named_array_2),
+        #[allow(missing_docs)]
         log_named_bytes(log_named_bytes),
+        #[allow(missing_docs)]
         log_named_bytes32(log_named_bytes32),
+        #[allow(missing_docs)]
         log_named_decimal_int(log_named_decimal_int),
+        #[allow(missing_docs)]
         log_named_decimal_uint(log_named_decimal_uint),
+        #[allow(missing_docs)]
         log_named_int(log_named_int),
+        #[allow(missing_docs)]
         log_named_string(log_named_string),
+        #[allow(missing_docs)]
         log_named_uint(log_named_uint),
+        #[allow(missing_docs)]
         log_string(log_string),
+        #[allow(missing_docs)]
         log_uint(log_uint),
+        #[allow(missing_docs)]
         logs(logs),
     }
     #[automatically_derived]

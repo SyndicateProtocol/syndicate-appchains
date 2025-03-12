@@ -82,12 +82,14 @@ function Bytes(uint256 length) external returns (bytes memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BytesCall {
+        #[allow(missing_docs)]
         pub length: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`Bytes(uint256)`](BytesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BytesReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -212,6 +214,7 @@ function Bytes32() external returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Bytes32Return {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -321,7 +324,9 @@ function Bytes32() external returns (bytes32);
     };
     ///Container for all the [`Random`](self) function calls.
     pub enum RandomCalls {
+        #[allow(missing_docs)]
         Bytes(BytesCall),
+        #[allow(missing_docs)]
         Bytes32(Bytes32Call),
     }
     #[automatically_derived]

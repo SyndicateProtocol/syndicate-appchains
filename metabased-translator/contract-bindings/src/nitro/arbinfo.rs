@@ -88,12 +88,14 @@ function getBalance(address account) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getBalanceCall {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`getBalance(address)`](getBalanceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getBalanceReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -214,12 +216,14 @@ function getCode(address account) external view returns (bytes memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getCodeCall {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`getCode(address)`](getCodeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getCodeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -333,7 +337,9 @@ function getCode(address account) external view returns (bytes memory);
     };
     ///Container for all the [`ArbInfo`](self) function calls.
     pub enum ArbInfoCalls {
+        #[allow(missing_docs)]
         getBalance(getBalanceCall),
+        #[allow(missing_docs)]
         getCode(getCodeCall),
     }
     #[automatically_derived]

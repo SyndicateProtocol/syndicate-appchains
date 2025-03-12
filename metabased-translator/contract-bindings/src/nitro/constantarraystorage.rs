@@ -75,6 +75,7 @@ constructor(uint256[] __array);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub __array: alloy::sol_types::private::Vec<
             alloy::sol_types::private::primitives::aliases::U256,
         >,
@@ -153,6 +154,7 @@ function array() external view returns (uint256[] memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct arrayReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<
             alloy::sol_types::private::primitives::aliases::U256,
         >,
@@ -272,6 +274,7 @@ function array() external view returns (uint256[] memory);
     };
     ///Container for all the [`ConstantArrayStorage`](self) function calls.
     pub enum ConstantArrayStorageCalls {
+        #[allow(missing_docs)]
         array(arrayCall),
     }
     #[automatically_derived]

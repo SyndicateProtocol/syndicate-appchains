@@ -352,13 +352,16 @@ function createPool(address _rollup, bytes32 _assertionHash) external returns (a
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createPoolCall {
+        #[allow(missing_docs)]
         pub _rollup: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _assertionHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`createPool(address,bytes32)`](createPoolCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createPoolReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -492,13 +495,16 @@ function getPool(address _rollup, bytes32 _assertionHash) external view returns 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPoolCall {
+        #[allow(missing_docs)]
         pub _rollup: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _assertionHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getPool(address,bytes32)`](getPoolCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPoolReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -627,7 +633,9 @@ function getPool(address _rollup, bytes32 _assertionHash) external view returns 
     };
     ///Container for all the [`AssertionStakingPoolCreator`](self) function calls.
     pub enum AssertionStakingPoolCreatorCalls {
+        #[allow(missing_docs)]
         createPool(createPoolCall),
+        #[allow(missing_docs)]
         getPool(getPoolCall),
     }
     #[automatically_derived]
@@ -741,6 +749,7 @@ function getPool(address _rollup, bytes32 _assertionHash) external view returns 
     }
     ///Container for all the [`AssertionStakingPoolCreator`](self) custom errors.
     pub enum AssertionStakingPoolCreatorErrors {
+        #[allow(missing_docs)]
         PoolDoesntExist(PoolDoesntExist),
     }
     #[automatically_derived]
@@ -833,6 +842,7 @@ function getPool(address _rollup, bytes32 _assertionHash) external view returns 
     }
     ///Container for all the [`AssertionStakingPoolCreator`](self) events.
     pub enum AssertionStakingPoolCreatorEvents {
+        #[allow(missing_docs)]
         NewAssertionPoolCreated(NewAssertionPoolCreated),
     }
     #[automatically_derived]

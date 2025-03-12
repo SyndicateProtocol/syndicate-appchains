@@ -673,10 +673,15 @@ function fillBlockRecover() external payable;
     };
     ///Container for all the [`Benchmarks`](self) function calls.
     pub enum BenchmarksCalls {
+        #[allow(missing_docs)]
         fillBlockAdd(fillBlockAddCall),
+        #[allow(missing_docs)]
         fillBlockHash(fillBlockHashCall),
+        #[allow(missing_docs)]
         fillBlockMulMod(fillBlockMulModCall),
+        #[allow(missing_docs)]
         fillBlockQuickStep(fillBlockQuickStepCall),
+        #[allow(missing_docs)]
         fillBlockRecover(fillBlockRecoverCall),
     }
     #[automatically_derived]

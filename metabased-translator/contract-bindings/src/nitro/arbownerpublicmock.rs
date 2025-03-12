@@ -86,6 +86,7 @@ function getNetworkFeeAccount() external pure returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getNetworkFeeAccountReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -204,12 +205,14 @@ function isChainOwner(address addr) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isChainOwnerCall {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isChainOwner(address)`](isChainOwnerCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isChainOwnerReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -323,7 +326,9 @@ function isChainOwner(address addr) external view returns (bool);
     };
     ///Container for all the [`ArbOwnerPublicMock`](self) function calls.
     pub enum ArbOwnerPublicMockCalls {
+        #[allow(missing_docs)]
         getNetworkFeeAccount(getNetworkFeeAccountCall),
+        #[allow(missing_docs)]
         isChainOwner(isChainOwnerCall),
     }
     #[automatically_derived]

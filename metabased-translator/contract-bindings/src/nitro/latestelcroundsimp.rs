@@ -209,7 +209,9 @@ struct ELCRound { address expressLaneController; uint64 round; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ELCRound {
+        #[allow(missing_docs)]
         pub expressLaneController: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub round: u64,
     }
     #[allow(
@@ -425,6 +427,7 @@ error RoundAlreadyResolved(uint64 round);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct RoundAlreadyResolved {
+        #[allow(missing_docs)]
         pub round: u64,
     }
     #[allow(
@@ -495,6 +498,7 @@ error RoundNotResolved(uint64 round);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct RoundNotResolved {
+        #[allow(missing_docs)]
         pub round: u64,
     }
     #[allow(
@@ -565,6 +569,7 @@ constructor(ELCRound[2] r);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub r: [<ELCRound as alloy::sol_types::SolType>::RustType; 2usize],
     }
     const _: () = {
@@ -640,7 +645,9 @@ function latestELCRound() external view returns (ELCRound memory, uint8);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct latestELCRoundReturn {
+        #[allow(missing_docs)]
         pub _0: <ELCRound as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub _1: u8,
     }
     #[allow(
@@ -763,12 +770,14 @@ function resolvedRound(uint64 round) external view returns (ELCRound memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct resolvedRoundCall {
+        #[allow(missing_docs)]
         pub round: u64,
     }
     ///Container type for the return parameters of the [`resolvedRound(uint64)`](resolvedRoundCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct resolvedRoundReturn {
+        #[allow(missing_docs)]
         pub _0: <ELCRound as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -889,13 +898,16 @@ function rounds(uint256) external view returns (address expressLaneController, u
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct roundsCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`rounds(uint256)`](roundsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct roundsReturn {
+        #[allow(missing_docs)]
         pub expressLaneController: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub round: u64,
     }
     #[allow(
@@ -1025,7 +1037,9 @@ function setResolvedRound(uint64 round, address expressLaneController) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setResolvedRoundCall {
+        #[allow(missing_docs)]
         pub round: u64,
+        #[allow(missing_docs)]
         pub expressLaneController: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setResolvedRound(uint64,address)`](setResolvedRoundCall) function.
@@ -1159,9 +1173,13 @@ function setResolvedRound(uint64 round, address expressLaneController) external;
     };
     ///Container for all the [`LatestELCRoundsImp`](self) function calls.
     pub enum LatestELCRoundsImpCalls {
+        #[allow(missing_docs)]
         latestELCRound(latestELCRoundCall),
+        #[allow(missing_docs)]
         resolvedRound(resolvedRoundCall),
+        #[allow(missing_docs)]
         rounds(roundsCall),
+        #[allow(missing_docs)]
         setResolvedRound(setResolvedRoundCall),
     }
     #[automatically_derived]
@@ -1333,7 +1351,9 @@ function setResolvedRound(uint64 round, address expressLaneController) external;
     }
     ///Container for all the [`LatestELCRoundsImp`](self) custom errors.
     pub enum LatestELCRoundsImpErrors {
+        #[allow(missing_docs)]
         RoundAlreadyResolved(RoundAlreadyResolved),
+        #[allow(missing_docs)]
         RoundNotResolved(RoundNotResolved),
     }
     #[automatically_derived]

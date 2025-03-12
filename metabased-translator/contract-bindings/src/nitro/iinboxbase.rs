@@ -66,6 +66,7 @@ function bridge() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct bridgeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -175,6 +176,7 @@ function bridge() external view returns (address);
     };
     ///Container for all the [`IInboxBase`](self) function calls.
     pub enum IInboxBaseCalls {
+        #[allow(missing_docs)]
         bridge(bridgeCall),
     }
     #[automatically_derived]

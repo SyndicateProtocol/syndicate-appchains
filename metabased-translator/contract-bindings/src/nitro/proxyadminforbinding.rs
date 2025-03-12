@@ -354,7 +354,9 @@ function changeProxyAdmin(address proxy, address newAdmin) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct changeProxyAdminCall {
+        #[allow(missing_docs)]
         pub proxy: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub newAdmin: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`changeProxyAdmin(address,address)`](changeProxyAdminCall) function.
@@ -496,12 +498,14 @@ function getProxyAdmin(address proxy) external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getProxyAdminCall {
+        #[allow(missing_docs)]
         pub proxy: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`getProxyAdmin(address)`](getProxyAdminCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getProxyAdminReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -620,12 +624,14 @@ function getProxyImplementation(address proxy) external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getProxyImplementationCall {
+        #[allow(missing_docs)]
         pub proxy: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`getProxyImplementation(address)`](getProxyImplementationCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getProxyImplementationReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -752,6 +758,7 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -986,6 +993,7 @@ function transferOwnership(address newOwner) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferOwnershipCall {
+        #[allow(missing_docs)]
         pub newOwner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`transferOwnership(address)`](transferOwnershipCall) function.
@@ -1112,7 +1120,9 @@ function upgrade(address proxy, address implementation) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeCall {
+        #[allow(missing_docs)]
         pub proxy: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub implementation: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`upgrade(address,address)`](upgradeCall) function.
@@ -1250,8 +1260,11 @@ function upgradeAndCall(address proxy, address implementation, bytes memory data
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeAndCallCall {
+        #[allow(missing_docs)]
         pub proxy: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub implementation: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`upgradeAndCall(address,address,bytes)`](upgradeAndCallCall) function.
@@ -1393,13 +1406,21 @@ function upgradeAndCall(address proxy, address implementation, bytes memory data
     };
     ///Container for all the [`ProxyAdminForBinding`](self) function calls.
     pub enum ProxyAdminForBindingCalls {
+        #[allow(missing_docs)]
         changeProxyAdmin(changeProxyAdminCall),
+        #[allow(missing_docs)]
         getProxyAdmin(getProxyAdminCall),
+        #[allow(missing_docs)]
         getProxyImplementation(getProxyImplementationCall),
+        #[allow(missing_docs)]
         owner(ownerCall),
+        #[allow(missing_docs)]
         renounceOwnership(renounceOwnershipCall),
+        #[allow(missing_docs)]
         transferOwnership(transferOwnershipCall),
+        #[allow(missing_docs)]
         upgrade(upgradeCall),
+        #[allow(missing_docs)]
         upgradeAndCall(upgradeAndCallCall),
     }
     #[automatically_derived]
@@ -1676,6 +1697,7 @@ function upgradeAndCall(address proxy, address implementation, bytes memory data
     }
     ///Container for all the [`ProxyAdminForBinding`](self) events.
     pub enum ProxyAdminForBindingEvents {
+        #[allow(missing_docs)]
         OwnershipTransferred(OwnershipTransferred),
     }
     #[automatically_derived]

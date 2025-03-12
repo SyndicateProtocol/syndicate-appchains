@@ -608,8 +608,11 @@ struct Entry { bytes32 code; uint64 size; uint192 bid; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Entry {
+        #[allow(missing_docs)]
         pub code: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub size: u64,
+        #[allow(missing_docs)]
         pub bid: alloy::sol_types::private::primitives::aliases::U192,
     }
     #[allow(
@@ -846,6 +849,7 @@ error AlreadyCached(bytes32 codehash);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AlreadyCached {
+        #[allow(missing_docs)]
         pub codehash: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -916,8 +920,11 @@ error AsmTooLarge(uint256 asm, uint256 queueSize, uint256 cacheSize);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AsmTooLarge {
+        #[allow(missing_docs)]
         pub asm: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub queueSize: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub cacheSize: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1006,6 +1013,7 @@ error BidTooLarge(uint256 bid);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BidTooLarge {
+        #[allow(missing_docs)]
         pub bid: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1078,7 +1086,9 @@ error BidTooSmall(uint192 bid, uint192 min);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BidTooSmall {
+        #[allow(missing_docs)]
         pub bid: alloy::sol_types::private::primitives::aliases::U192,
+        #[allow(missing_docs)]
         pub min: alloy::sol_types::private::primitives::aliases::U192,
     }
     #[allow(
@@ -1222,7 +1232,9 @@ error MakeSpaceTooLarge(uint64 size, uint64 limit);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MakeSpaceTooLarge {
+        #[allow(missing_docs)]
         pub size: u64,
+        #[allow(missing_docs)]
         pub limit: u64,
     }
     #[allow(
@@ -1302,6 +1314,7 @@ error NotChainOwner(address sender);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NotChainOwner {
+        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2333,6 +2346,7 @@ function cacheSize() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct cacheSizeReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -2451,6 +2465,7 @@ function decay() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct decayReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -2565,14 +2580,18 @@ function entries(uint256) external view returns (bytes32 code, uint64 size, uint
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct entriesCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`entries(uint256)`](entriesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct entriesReturn {
+        #[allow(missing_docs)]
         pub code: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub size: u64,
+        #[allow(missing_docs)]
         pub bid: alloy::sol_types::private::primitives::aliases::U192,
     }
     #[allow(
@@ -2825,6 +2844,7 @@ function evictPrograms(uint256 count) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct evictProgramsCall {
+        #[allow(missing_docs)]
         pub count: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`evictPrograms(uint256)`](evictProgramsCall) function.
@@ -2953,6 +2973,7 @@ function getEntries() external view returns (Entry[] memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getEntriesReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<
             <Entry as alloy::sol_types::SolType>::RustType,
         >,
@@ -3073,12 +3094,14 @@ function getMinBid(address program) external view returns (uint192 min);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getMinBid_0Call {
+        #[allow(missing_docs)]
         pub program: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`getMinBid(address)`](getMinBid_0Call) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getMinBid_0Return {
+        #[allow(missing_docs)]
         pub min: alloy::sol_types::private::primitives::aliases::U192,
     }
     #[allow(
@@ -3199,12 +3222,14 @@ function getMinBid(bytes32 codehash) external view returns (uint192 min);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getMinBid_1Call {
+        #[allow(missing_docs)]
         pub codehash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getMinBid(bytes32)`](getMinBid_1Call) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getMinBid_1Return {
+        #[allow(missing_docs)]
         pub min: alloy::sol_types::private::primitives::aliases::U192,
     }
     #[allow(
@@ -3325,12 +3350,14 @@ function getMinBid(uint64 size) external view returns (uint192 min);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getMinBid_2Call {
+        #[allow(missing_docs)]
         pub size: u64,
     }
     ///Container type for the return parameters of the [`getMinBid(uint64)`](getMinBid_2Call) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getMinBid_2Return {
+        #[allow(missing_docs)]
         pub min: alloy::sol_types::private::primitives::aliases::U192,
     }
     #[allow(
@@ -3451,12 +3478,14 @@ function getSmallestEntries(uint256 k) external view returns (Entry[] memory res
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getSmallestEntriesCall {
+        #[allow(missing_docs)]
         pub k: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`getSmallestEntries(uint256)`](getSmallestEntriesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getSmallestEntriesReturn {
+        #[allow(missing_docs)]
         pub result: alloy::sol_types::private::Vec<
             <Entry as alloy::sol_types::SolType>::RustType,
         >,
@@ -3587,7 +3616,9 @@ function initialize(uint64 initCacheSize, uint64 initDecay) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initializeCall {
+        #[allow(missing_docs)]
         pub initCacheSize: u64,
+        #[allow(missing_docs)]
         pub initDecay: u64,
     }
     ///Container type for the return parameters of the [`initialize(uint64,uint64)`](initializeCall) function.
@@ -3726,6 +3757,7 @@ function isPaused() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isPausedReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -3840,12 +3872,14 @@ function makeSpace(uint64 size) external payable returns (uint64 space);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct makeSpaceCall {
+        #[allow(missing_docs)]
         pub size: u64,
     }
     ///Container type for the return parameters of the [`makeSpace(uint64)`](makeSpaceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct makeSpaceReturn {
+        #[allow(missing_docs)]
         pub space: u64,
     }
     #[allow(
@@ -4080,6 +4114,7 @@ function placeBid(address program) external payable;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct placeBidCall {
+        #[allow(missing_docs)]
         pub program: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`placeBid(address)`](placeBidCall) function.
@@ -4206,6 +4241,7 @@ function queueSize() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct queueSizeReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -4320,6 +4356,7 @@ function setCacheSize(uint64 newSize) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setCacheSizeCall {
+        #[allow(missing_docs)]
         pub newSize: u64,
     }
     ///Container type for the return parameters of the [`setCacheSize(uint64)`](setCacheSizeCall) function.
@@ -4442,6 +4479,7 @@ function setDecayRate(uint64 newDecay) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setDecayRateCall {
+        #[allow(missing_docs)]
         pub newDecay: u64,
     }
     ///Container type for the return parameters of the [`setDecayRate(uint64)`](setDecayRateCall) function.
@@ -4791,25 +4829,45 @@ function unpause() external;
     };
     ///Container for all the [`CacheManager`](self) function calls.
     pub enum CacheManagerCalls {
+        #[allow(missing_docs)]
         cacheSize(cacheSizeCall),
+        #[allow(missing_docs)]
         decay(decayCall),
+        #[allow(missing_docs)]
         entries(entriesCall),
+        #[allow(missing_docs)]
         evictAll(evictAllCall),
+        #[allow(missing_docs)]
         evictPrograms(evictProgramsCall),
+        #[allow(missing_docs)]
         getEntries(getEntriesCall),
+        #[allow(missing_docs)]
         getMinBid_0(getMinBid_0Call),
+        #[allow(missing_docs)]
         getMinBid_1(getMinBid_1Call),
+        #[allow(missing_docs)]
         getMinBid_2(getMinBid_2Call),
+        #[allow(missing_docs)]
         getSmallestEntries(getSmallestEntriesCall),
+        #[allow(missing_docs)]
         initialize(initializeCall),
+        #[allow(missing_docs)]
         isPaused(isPausedCall),
+        #[allow(missing_docs)]
         makeSpace(makeSpaceCall),
+        #[allow(missing_docs)]
         paused(pausedCall),
+        #[allow(missing_docs)]
         placeBid(placeBidCall),
+        #[allow(missing_docs)]
         queueSize(queueSizeCall),
+        #[allow(missing_docs)]
         setCacheSize(setCacheSizeCall),
+        #[allow(missing_docs)]
         setDecayRate(setDecayRateCall),
+        #[allow(missing_docs)]
         sweepFunds(sweepFundsCall),
+        #[allow(missing_docs)]
         unpause(unpauseCall),
     }
     #[automatically_derived]
@@ -5384,12 +5442,19 @@ function unpause() external;
     }
     ///Container for all the [`CacheManager`](self) custom errors.
     pub enum CacheManagerErrors {
+        #[allow(missing_docs)]
         AlreadyCached(AlreadyCached),
+        #[allow(missing_docs)]
         AsmTooLarge(AsmTooLarge),
+        #[allow(missing_docs)]
         BidTooLarge(BidTooLarge),
+        #[allow(missing_docs)]
         BidTooSmall(BidTooSmall),
+        #[allow(missing_docs)]
         BidsArePaused(BidsArePaused),
+        #[allow(missing_docs)]
         MakeSpaceTooLarge(MakeSpaceTooLarge),
+        #[allow(missing_docs)]
         NotChainOwner(NotChainOwner),
     }
     #[automatically_derived]
@@ -5640,12 +5705,19 @@ function unpause() external;
     }
     ///Container for all the [`CacheManager`](self) events.
     pub enum CacheManagerEvents {
+        #[allow(missing_docs)]
         DeleteBid(DeleteBid),
+        #[allow(missing_docs)]
         Initialized(Initialized),
+        #[allow(missing_docs)]
         InsertBid(InsertBid),
+        #[allow(missing_docs)]
         Pause(Pause),
+        #[allow(missing_docs)]
         SetCacheSize(SetCacheSize),
+        #[allow(missing_docs)]
         SetDecayRate(SetDecayRate),
+        #[allow(missing_docs)]
         Unpause(Unpause),
     }
     #[automatically_derived]

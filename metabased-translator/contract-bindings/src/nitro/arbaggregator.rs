@@ -193,6 +193,7 @@ function addBatchPoster(address newBatchPoster) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addBatchPosterCall {
+        #[allow(missing_docs)]
         pub newBatchPoster: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`addBatchPoster(address)`](addBatchPosterCall) function.
@@ -321,6 +322,7 @@ function getBatchPosters() external view returns (address[] memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getBatchPostersReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<alloy::sol_types::private::Address>,
     }
     #[allow(
@@ -447,6 +449,7 @@ function getDefaultAggregator() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getDefaultAggregatorReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -565,12 +568,14 @@ function getFeeCollector(address batchPoster) external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getFeeCollectorCall {
+        #[allow(missing_docs)]
         pub batchPoster: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`getFeeCollector(address)`](getFeeCollectorCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getFeeCollectorReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -691,13 +696,16 @@ function getPreferredAggregator(address addr) external view returns (address, bo
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPreferredAggregatorCall {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`getPreferredAggregator(address)`](getPreferredAggregatorCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPreferredAggregatorReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _1: bool,
     }
     #[allow(
@@ -826,12 +834,14 @@ function getTxBaseFee(address aggregator) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getTxBaseFeeCall {
+        #[allow(missing_docs)]
         pub aggregator: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`getTxBaseFee(address)`](getTxBaseFeeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getTxBaseFeeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -952,7 +962,9 @@ function setFeeCollector(address batchPoster, address newFeeCollector) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setFeeCollectorCall {
+        #[allow(missing_docs)]
         pub batchPoster: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub newFeeCollector: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setFeeCollector(address,address)`](setFeeCollectorCall) function.
@@ -1092,7 +1104,9 @@ function setTxBaseFee(address aggregator, uint256 feeInL1Gas) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setTxBaseFeeCall {
+        #[allow(missing_docs)]
         pub aggregator: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub feeInL1Gas: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`setTxBaseFee(address,uint256)`](setTxBaseFeeCall) function.
@@ -1225,13 +1239,21 @@ function setTxBaseFee(address aggregator, uint256 feeInL1Gas) external;
     };
     ///Container for all the [`ArbAggregator`](self) function calls.
     pub enum ArbAggregatorCalls {
+        #[allow(missing_docs)]
         addBatchPoster(addBatchPosterCall),
+        #[allow(missing_docs)]
         getBatchPosters(getBatchPostersCall),
+        #[allow(missing_docs)]
         getDefaultAggregator(getDefaultAggregatorCall),
+        #[allow(missing_docs)]
         getFeeCollector(getFeeCollectorCall),
+        #[allow(missing_docs)]
         getPreferredAggregator(getPreferredAggregatorCall),
+        #[allow(missing_docs)]
         getTxBaseFee(getTxBaseFeeCall),
+        #[allow(missing_docs)]
         setFeeCollector(setFeeCollectorCall),
+        #[allow(missing_docs)]
         setTxBaseFee(setTxBaseFeeCall),
     }
     #[automatically_derived]

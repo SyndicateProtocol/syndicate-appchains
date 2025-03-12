@@ -113,6 +113,7 @@ function DEPLOY_HELPER() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct DEPLOY_HELPERReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -231,6 +232,7 @@ function MAX_FEE_PER_GAS() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MAX_FEE_PER_GASReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -349,7 +351,9 @@ function deploy(address inbox, uint256 maxFeePerGas) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct deploy_0Call {
+        #[allow(missing_docs)]
         pub inbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub maxFeePerGas: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`deploy(address,uint256)`](deploy_0Call) function.
@@ -487,6 +491,7 @@ function deploy(address inbox) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct deploy_1Call {
+        #[allow(missing_docs)]
         pub inbox: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`deploy(address)`](deploy_1Call) function.
@@ -604,9 +609,13 @@ function deploy(address inbox) external;
     };
     ///Container for all the [`FactoryDeployerHelper`](self) function calls.
     pub enum FactoryDeployerHelperCalls {
+        #[allow(missing_docs)]
         DEPLOY_HELPER(DEPLOY_HELPERCall),
+        #[allow(missing_docs)]
         MAX_FEE_PER_GAS(MAX_FEE_PER_GASCall),
+        #[allow(missing_docs)]
         deploy_0(deploy_0Call),
+        #[allow(missing_docs)]
         deploy_1(deploy_1Call),
     }
     #[automatically_derived]

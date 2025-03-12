@@ -167,6 +167,7 @@ function dummy() external;
     };
     ///Container for all the [`Dummy`](self) function calls.
     pub enum DummyCalls {
+        #[allow(missing_docs)]
         dummy(dummyCall),
     }
     #[automatically_derived]

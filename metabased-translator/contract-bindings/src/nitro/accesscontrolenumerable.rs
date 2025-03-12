@@ -777,6 +777,7 @@ function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct DEFAULT_ADMIN_ROLEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -895,12 +896,14 @@ function getRoleAdmin(bytes32 role) external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRoleAdminCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getRoleAdmin(bytes32)`](getRoleAdminCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRoleAdminReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1019,13 +1022,16 @@ function getRoleMember(bytes32 role, uint256 index) external view returns (addre
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRoleMemberCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub index: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`getRoleMember(bytes32,uint256)`](getRoleMemberCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRoleMemberReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1159,12 +1165,14 @@ function getRoleMemberCount(bytes32 role) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRoleMemberCountCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getRoleMemberCount(bytes32)`](getRoleMemberCountCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRoleMemberCountReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1289,7 +1297,9 @@ function grantRole(bytes32 role, address account) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct grantRoleCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`grantRole(bytes32,address)`](grantRoleCall) function.
@@ -1427,13 +1437,16 @@ function hasRole(bytes32 role, address account) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct hasRoleCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`hasRole(bytes32,address)`](hasRoleCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct hasRoleReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -1567,7 +1580,9 @@ function renounceRole(bytes32 role, address account) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct renounceRoleCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`renounceRole(bytes32,address)`](renounceRoleCall) function.
@@ -1705,7 +1720,9 @@ function revokeRole(bytes32 role, address account) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct revokeRoleCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`revokeRole(bytes32,address)`](revokeRoleCall) function.
@@ -1843,12 +1860,14 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct supportsInterfaceCall {
+        #[allow(missing_docs)]
         pub interfaceId: alloy::sol_types::private::FixedBytes<4>,
     }
     ///Container type for the return parameters of the [`supportsInterface(bytes4)`](supportsInterfaceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct supportsInterfaceReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -1966,14 +1985,23 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     };
     ///Container for all the [`AccessControlEnumerable`](self) function calls.
     pub enum AccessControlEnumerableCalls {
+        #[allow(missing_docs)]
         DEFAULT_ADMIN_ROLE(DEFAULT_ADMIN_ROLECall),
+        #[allow(missing_docs)]
         getRoleAdmin(getRoleAdminCall),
+        #[allow(missing_docs)]
         getRoleMember(getRoleMemberCall),
+        #[allow(missing_docs)]
         getRoleMemberCount(getRoleMemberCountCall),
+        #[allow(missing_docs)]
         grantRole(grantRoleCall),
+        #[allow(missing_docs)]
         hasRole(hasRoleCall),
+        #[allow(missing_docs)]
         renounceRole(renounceRoleCall),
+        #[allow(missing_docs)]
         revokeRole(revokeRoleCall),
+        #[allow(missing_docs)]
         supportsInterface(supportsInterfaceCall),
     }
     #[automatically_derived]
@@ -2281,8 +2309,11 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     }
     ///Container for all the [`AccessControlEnumerable`](self) events.
     pub enum AccessControlEnumerableEvents {
+        #[allow(missing_docs)]
         RoleAdminChanged(RoleAdminChanged),
+        #[allow(missing_docs)]
         RoleGranted(RoleGranted),
+        #[allow(missing_docs)]
         RoleRevoked(RoleRevoked),
     }
     #[automatically_derived]

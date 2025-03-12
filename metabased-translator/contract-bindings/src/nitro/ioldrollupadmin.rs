@@ -78,6 +78,7 @@ function forceRefundStaker(address[] memory stacker) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct forceRefundStakerCall {
+        #[allow(missing_docs)]
         pub stacker: alloy::sol_types::private::Vec<alloy::sol_types::private::Address>,
     }
     ///Container type for the return parameters of the [`forceRefundStaker(address[])`](forceRefundStakerCall) function.
@@ -437,8 +438,11 @@ function resume() external;
     };
     ///Container for all the [`IOldRollupAdmin`](self) function calls.
     pub enum IOldRollupAdminCalls {
+        #[allow(missing_docs)]
         forceRefundStaker(forceRefundStakerCall),
+        #[allow(missing_docs)]
         pause(pauseCall),
+        #[allow(missing_docs)]
         resume(resumeCall),
     }
     #[automatically_derived]

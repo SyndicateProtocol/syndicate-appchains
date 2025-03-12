@@ -189,6 +189,7 @@ event Initialized(uint8 version);
     };
     ///Container for all the [`ContextUpgradeable`](self) events.
     pub enum ContextUpgradeableEvents {
+        #[allow(missing_docs)]
         Initialized(Initialized),
     }
     #[automatically_derived]

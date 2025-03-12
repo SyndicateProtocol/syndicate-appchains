@@ -97,13 +97,16 @@ function getDeploymentTotalCost(address inbox, uint256 maxFeePerGas) external vi
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getDeploymentTotalCostCall {
+        #[allow(missing_docs)]
         pub inbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub maxFeePerGas: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`getDeploymentTotalCost(address,uint256)`](getDeploymentTotalCostCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getDeploymentTotalCostReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -243,8 +246,11 @@ function perform(address _inbox, address _nativeToken, uint256 _maxFeePerGas) ex
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct performCall {
+        #[allow(missing_docs)]
         pub _inbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _nativeToken: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _maxFeePerGas: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`perform(address,address,uint256)`](performCall) function.
@@ -384,7 +390,9 @@ function perform(address _inbox, address _nativeToken, uint256 _maxFeePerGas) ex
     };
     ///Container for all the [`IDeployHelper`](self) function calls.
     pub enum IDeployHelperCalls {
+        #[allow(missing_docs)]
         getDeploymentTotalCost(getDeploymentTotalCostCall),
+        #[allow(missing_docs)]
         perform(performCall),
     }
     #[automatically_derived]

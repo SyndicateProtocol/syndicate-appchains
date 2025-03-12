@@ -618,8 +618,11 @@ constructor(address _logic, address admin_, bytes _data) payable;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub _logic: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub admin_: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _data: alloy::sol_types::private::Bytes,
     }
     const _: () = {
@@ -710,6 +713,7 @@ function admin() external returns (address admin_);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct adminReturn {
+        #[allow(missing_docs)]
         pub admin_: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -824,6 +828,7 @@ function changeAdmin(address newAdmin) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct changeAdminCall {
+        #[allow(missing_docs)]
         pub newAdmin: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`changeAdmin(address)`](changeAdminCall) function.
@@ -950,6 +955,7 @@ function implementation() external returns (address implementation_);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct implementationReturn {
+        #[allow(missing_docs)]
         pub implementation_: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1066,6 +1072,7 @@ function upgradeTo(address newImplementation) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeToCall {
+        #[allow(missing_docs)]
         pub newImplementation: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`upgradeTo(address)`](upgradeToCall) function.
@@ -1188,7 +1195,9 @@ function upgradeToAndCall(address newImplementation, bytes memory data) external
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeToAndCallCall {
+        #[allow(missing_docs)]
         pub newImplementation: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`upgradeToAndCall(address,bytes)`](upgradeToAndCallCall) function.
@@ -1325,10 +1334,15 @@ function upgradeToAndCall(address newImplementation, bytes memory data) external
     };
     ///Container for all the [`TransparentUpgradeableProxy`](self) function calls.
     pub enum TransparentUpgradeableProxyCalls {
+        #[allow(missing_docs)]
         admin(adminCall),
+        #[allow(missing_docs)]
         changeAdmin(changeAdminCall),
+        #[allow(missing_docs)]
         implementation(implementationCall),
+        #[allow(missing_docs)]
         upgradeTo(upgradeToCall),
+        #[allow(missing_docs)]
         upgradeToAndCall(upgradeToAndCallCall),
     }
     #[automatically_derived]
@@ -1526,8 +1540,11 @@ function upgradeToAndCall(address newImplementation, bytes memory data) external
     }
     ///Container for all the [`TransparentUpgradeableProxy`](self) events.
     pub enum TransparentUpgradeableProxyEvents {
+        #[allow(missing_docs)]
         AdminChanged(AdminChanged),
+        #[allow(missing_docs)]
         BeaconUpgraded(BeaconUpgraded),
+        #[allow(missing_docs)]
         Upgraded(Upgraded),
     }
     #[automatically_derived]

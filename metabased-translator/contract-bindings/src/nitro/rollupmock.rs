@@ -354,6 +354,7 @@ constructor(address _owner);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub _owner: alloy::sol_types::private::Address,
     }
     const _: () = {
@@ -422,6 +423,7 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -540,6 +542,7 @@ function withdrawStakerFunds() external returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawStakerFundsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -655,7 +658,9 @@ function withdrawStakerFunds() external returns (uint256);
     };
     ///Container for all the [`RollupMock`](self) function calls.
     pub enum RollupMockCalls {
+        #[allow(missing_docs)]
         owner(ownerCall),
+        #[allow(missing_docs)]
         withdrawStakerFunds(withdrawStakerFundsCall),
     }
     #[automatically_derived]
@@ -771,7 +776,9 @@ function withdrawStakerFunds() external returns (uint256);
     }
     ///Container for all the [`RollupMock`](self) events.
     pub enum RollupMockEvents {
+        #[allow(missing_docs)]
         WithdrawTriggered(WithdrawTriggered),
+        #[allow(missing_docs)]
         ZombieTriggered(ZombieTriggered),
     }
     #[automatically_derived]

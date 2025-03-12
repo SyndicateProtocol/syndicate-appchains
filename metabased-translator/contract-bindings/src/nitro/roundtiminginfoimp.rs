@@ -204,9 +204,13 @@ struct RoundTimingInfo { int64 offsetTimestamp; uint64 roundDurationSeconds; uin
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct RoundTimingInfo {
+        #[allow(missing_docs)]
         pub offsetTimestamp: i64,
+        #[allow(missing_docs)]
         pub roundDurationSeconds: u64,
+        #[allow(missing_docs)]
         pub auctionClosingSeconds: u64,
+        #[allow(missing_docs)]
         pub reserveSubmissionSeconds: u64,
     }
     #[allow(
@@ -485,6 +489,7 @@ error NegativeRoundStart(int64 roundStart);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NegativeRoundStart {
+        #[allow(missing_docs)]
         pub roundStart: i64,
     }
     #[allow(
@@ -555,6 +560,7 @@ constructor(RoundTimingInfo r);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub r: <RoundTimingInfo as alloy::sol_types::SolType>::RustType,
     }
     const _: () = {
@@ -621,6 +627,7 @@ function currentRound() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct currentRoundReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -739,6 +746,7 @@ function isAuctionRoundClosed() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAuctionRoundClosedReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -857,12 +865,14 @@ function isReserveBlackout(uint64 latestResolvedRound) external view returns (bo
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isReserveBlackoutCall {
+        #[allow(missing_docs)]
         pub latestResolvedRound: u64,
     }
     ///Container type for the return parameters of the [`isReserveBlackout(uint64)`](isReserveBlackoutCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isReserveBlackoutReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -987,13 +997,16 @@ function roundTimestamps(uint64 round) external view returns (uint64, uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct roundTimestampsCall {
+        #[allow(missing_docs)]
         pub round: u64,
     }
     ///Container type for the return parameters of the [`roundTimestamps(uint64)`](roundTimestampsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct roundTimestampsReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
+        #[allow(missing_docs)]
         pub _1: u64,
     }
     #[allow(
@@ -1124,9 +1137,13 @@ function timingInfo() external view returns (int64 offsetTimestamp, uint64 round
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct timingInfoReturn {
+        #[allow(missing_docs)]
         pub offsetTimestamp: i64,
+        #[allow(missing_docs)]
         pub roundDurationSeconds: u64,
+        #[allow(missing_docs)]
         pub auctionClosingSeconds: u64,
+        #[allow(missing_docs)]
         pub reserveSubmissionSeconds: u64,
     }
     #[allow(
@@ -1256,10 +1273,15 @@ function timingInfo() external view returns (int64 offsetTimestamp, uint64 round
     };
     ///Container for all the [`RoundTimingInfoImp`](self) function calls.
     pub enum RoundTimingInfoImpCalls {
+        #[allow(missing_docs)]
         currentRound(currentRoundCall),
+        #[allow(missing_docs)]
         isAuctionRoundClosed(isAuctionRoundClosedCall),
+        #[allow(missing_docs)]
         isReserveBlackout(isReserveBlackoutCall),
+        #[allow(missing_docs)]
         roundTimestamps(roundTimestampsCall),
+        #[allow(missing_docs)]
         timingInfo(timingInfoCall),
     }
     #[automatically_derived]
@@ -1464,6 +1486,7 @@ function timingInfo() external view returns (int64 offsetTimestamp, uint64 round
     }
     ///Container for all the [`RoundTimingInfoImp`](self) custom errors.
     pub enum RoundTimingInfoImpErrors {
+        #[allow(missing_docs)]
         NegativeRoundStart(NegativeRoundStart),
     }
     #[automatically_derived]

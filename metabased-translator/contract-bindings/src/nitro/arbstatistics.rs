@@ -91,11 +91,17 @@ function getStats() external view returns (uint256, uint256, uint256, uint256, u
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getStatsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub _1: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub _2: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub _3: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub _4: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub _5: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -233,6 +239,7 @@ function getStats() external view returns (uint256, uint256, uint256, uint256, u
     };
     ///Container for all the [`ArbStatistics`](self) function calls.
     pub enum ArbStatisticsCalls {
+        #[allow(missing_docs)]
         getStats(getStatsCall),
     }
     #[automatically_derived]

@@ -135,6 +135,7 @@ function checkArbBlockHashReturnsLatest(bytes32 expected) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct checkArbBlockHashReturnsLatestCall {
+        #[allow(missing_docs)]
         pub expected: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`checkArbBlockHashReturnsLatest(bytes32)`](checkArbBlockHashReturnsLatestCall) function.
@@ -372,7 +373,9 @@ function isAdvancing() external;
     };
     ///Container for all the [`PendingBlkTimeAndNrAdvanceCheck`](self) function calls.
     pub enum PendingBlkTimeAndNrAdvanceCheckCalls {
+        #[allow(missing_docs)]
         checkArbBlockHashReturnsLatest(checkArbBlockHashReturnsLatestCall),
+        #[allow(missing_docs)]
         isAdvancing(isAdvancingCall),
     }
     #[automatically_derived]

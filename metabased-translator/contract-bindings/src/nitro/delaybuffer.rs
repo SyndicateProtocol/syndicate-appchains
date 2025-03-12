@@ -66,6 +66,7 @@ function BASIS() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BASISReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -177,6 +178,7 @@ function BASIS() external view returns (uint256);
     };
     ///Container for all the [`DelayBuffer`](self) function calls.
     pub enum DelayBufferCalls {
+        #[allow(missing_docs)]
         BASIS(BASISCall),
     }
     #[automatically_derived]

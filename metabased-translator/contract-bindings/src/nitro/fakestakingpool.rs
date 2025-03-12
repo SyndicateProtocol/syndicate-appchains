@@ -241,8 +241,11 @@ error AmountExceedsBalance(address account, uint256 amount, uint256 balance);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AmountExceedsBalance {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub balance: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -681,8 +684,11 @@ constructor(address _stakeToken, address _fundsHolder, uint256 _reqStake);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub _stakeToken: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _fundsHolder: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _reqStake: alloy::sol_types::private::primitives::aliases::U256,
     }
     const _: () = {
@@ -885,12 +891,14 @@ function depositBalance(address) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct depositBalanceCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`depositBalance(address)`](depositBalanceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct depositBalanceReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1013,6 +1021,7 @@ function depositIntoPool(uint256 amount) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct depositIntoPoolCall {
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`depositIntoPool(uint256)`](depositIntoPoolCall) function.
@@ -1143,6 +1152,7 @@ function fundsHolder() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct fundsHolderReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1261,6 +1271,7 @@ function stakeToken() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct stakeTokenReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1495,6 +1506,7 @@ function withdrawFromPool(uint256 amount) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawFromPool_1Call {
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`withdrawFromPool(uint256)`](withdrawFromPool_1Call) function.
@@ -1738,13 +1750,21 @@ function withdrawStakeBackIntoPool() external;
     };
     ///Container for all the [`FakeStakingPool`](self) function calls.
     pub enum FakeStakingPoolCalls {
+        #[allow(missing_docs)]
         createMove(createMoveCall),
+        #[allow(missing_docs)]
         depositBalance(depositBalanceCall),
+        #[allow(missing_docs)]
         depositIntoPool(depositIntoPoolCall),
+        #[allow(missing_docs)]
         fundsHolder(fundsHolderCall),
+        #[allow(missing_docs)]
         stakeToken(stakeTokenCall),
+        #[allow(missing_docs)]
         withdrawFromPool_0(withdrawFromPool_0Call),
+        #[allow(missing_docs)]
         withdrawFromPool_1(withdrawFromPool_1Call),
+        #[allow(missing_docs)]
         withdrawStakeBackIntoPool(withdrawStakeBackIntoPoolCall),
     }
     #[automatically_derived]
@@ -2031,7 +2051,9 @@ function withdrawStakeBackIntoPool() external;
     }
     ///Container for all the [`FakeStakingPool`](self) custom errors.
     pub enum FakeStakingPoolErrors {
+        #[allow(missing_docs)]
         AmountExceedsBalance(AmountExceedsBalance),
+        #[allow(missing_docs)]
         ZeroAmount(ZeroAmount),
     }
     #[automatically_derived]
@@ -2149,7 +2171,9 @@ function withdrawStakeBackIntoPool() external;
     }
     ///Container for all the [`FakeStakingPool`](self) events.
     pub enum FakeStakingPoolEvents {
+        #[allow(missing_docs)]
         StakeDeposited(StakeDeposited),
+        #[allow(missing_docs)]
         StakeWithdrawn(StakeWithdrawn),
     }
     #[automatically_derived]

@@ -189,6 +189,7 @@ event Initialized(uint8 version);
     };
     ///Container for all the [`Initializable`](self) events.
     pub enum InitializableEvents {
+        #[allow(missing_docs)]
         Initialized(Initialized),
     }
     #[automatically_derived]

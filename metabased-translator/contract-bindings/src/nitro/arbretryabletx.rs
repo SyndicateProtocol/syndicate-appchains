@@ -1218,6 +1218,7 @@ function cancel(bytes32 ticketId) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct cancelCall {
+        #[allow(missing_docs)]
         pub ticketId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`cancel(bytes32)`](cancelCall) function.
@@ -1340,12 +1341,14 @@ function getBeneficiary(bytes32 ticketId) external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getBeneficiaryCall {
+        #[allow(missing_docs)]
         pub ticketId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getBeneficiary(bytes32)`](getBeneficiaryCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getBeneficiaryReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1470,6 +1473,7 @@ function getCurrentRedeemer() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getCurrentRedeemerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1592,6 +1596,7 @@ function getLifetime() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getLifetimeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1708,12 +1713,14 @@ function getTimeout(bytes32 ticketId) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getTimeoutCall {
+        #[allow(missing_docs)]
         pub ticketId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getTimeout(bytes32)`](getTimeoutCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getTimeoutReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1834,12 +1841,14 @@ function keepalive(bytes32 ticketId) external returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct keepaliveCall {
+        #[allow(missing_docs)]
         pub ticketId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`keepalive(bytes32)`](keepaliveCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct keepaliveReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1960,12 +1969,14 @@ function redeem(bytes32 ticketId) external returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct redeemCall {
+        #[allow(missing_docs)]
         pub ticketId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`redeem(bytes32)`](redeemCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct redeemReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -2084,16 +2095,27 @@ function submitRetryable(bytes32 requestId, uint256 l1BaseFee, uint256 deposit, 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct submitRetryableCall {
+        #[allow(missing_docs)]
         pub requestId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub l1BaseFee: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub deposit: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub callvalue: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub gasFeeCap: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub gasLimit: u64,
+        #[allow(missing_docs)]
         pub maxSubmissionFee: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub feeRefundAddress: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub beneficiary: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub retryTo: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub retryData: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`submitRetryable(bytes32,uint256,uint256,uint256,uint256,uint64,uint256,address,address,address,bytes)`](submitRetryableCall) function.
@@ -2303,13 +2325,21 @@ function submitRetryable(bytes32 requestId, uint256 l1BaseFee, uint256 deposit, 
     };
     ///Container for all the [`ArbRetryableTx`](self) function calls.
     pub enum ArbRetryableTxCalls {
+        #[allow(missing_docs)]
         cancel(cancelCall),
+        #[allow(missing_docs)]
         getBeneficiary(getBeneficiaryCall),
+        #[allow(missing_docs)]
         getCurrentRedeemer(getCurrentRedeemerCall),
+        #[allow(missing_docs)]
         getLifetime(getLifetimeCall),
+        #[allow(missing_docs)]
         getTimeout(getTimeoutCall),
+        #[allow(missing_docs)]
         keepalive(keepaliveCall),
+        #[allow(missing_docs)]
         redeem(redeemCall),
+        #[allow(missing_docs)]
         submitRetryable(submitRetryableCall),
     }
     #[automatically_derived]
@@ -2582,7 +2612,9 @@ function submitRetryable(bytes32 requestId, uint256 l1BaseFee, uint256 deposit, 
     }
     ///Container for all the [`ArbRetryableTx`](self) custom errors.
     pub enum ArbRetryableTxErrors {
+        #[allow(missing_docs)]
         NoTicketWithID(NoTicketWithID),
+        #[allow(missing_docs)]
         NotCallable(NotCallable),
     }
     #[automatically_derived]
@@ -2703,10 +2735,15 @@ function submitRetryable(bytes32 requestId, uint256 l1BaseFee, uint256 deposit, 
     }
     ///Container for all the [`ArbRetryableTx`](self) events.
     pub enum ArbRetryableTxEvents {
+        #[allow(missing_docs)]
         Canceled(Canceled),
+        #[allow(missing_docs)]
         LifetimeExtended(LifetimeExtended),
+        #[allow(missing_docs)]
         RedeemScheduled(RedeemScheduled),
+        #[allow(missing_docs)]
         Redeemed(Redeemed),
+        #[allow(missing_docs)]
         TicketCreated(TicketCreated),
     }
     #[automatically_derived]

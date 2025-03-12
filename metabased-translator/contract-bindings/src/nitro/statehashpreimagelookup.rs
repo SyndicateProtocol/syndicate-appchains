@@ -378,7 +378,9 @@ struct ExecutionState { GlobalState globalState; MachineStatus machineStatus; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ExecutionState {
+        #[allow(missing_docs)]
         pub globalState: <GlobalState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub machineStatus: <MachineStatus as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -596,7 +598,9 @@ struct GlobalState { bytes32[2] bytes32Vals; uint64[2] u64Vals; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct GlobalState {
+        #[allow(missing_docs)]
         pub bytes32Vals: [alloy::sol_types::private::FixedBytes<32>; 2usize],
+        #[allow(missing_docs)]
         pub u64Vals: [u64; 2usize],
     }
     #[allow(
@@ -985,13 +989,16 @@ function get(bytes32 h) external view returns (ExecutionState memory executionSt
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getCall {
+        #[allow(missing_docs)]
         pub h: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`get(bytes32)`](getCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getReturn {
+        #[allow(missing_docs)]
         pub executionState: <ExecutionState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub inboxMaxCount: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1122,8 +1129,11 @@ function set(bytes32 h, ExecutionState memory executionState, uint256 inboxMaxCo
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setCall {
+        #[allow(missing_docs)]
         pub h: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub executionState: <ExecutionState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub inboxMaxCount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`set(bytes32,((bytes32[2],uint64[2]),uint8),uint256)`](setCall) function.
@@ -1268,13 +1278,16 @@ function stateHash(ExecutionState memory executionState, uint256 inboxMaxCount) 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct stateHashCall {
+        #[allow(missing_docs)]
         pub executionState: <ExecutionState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub inboxMaxCount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`stateHash(((bytes32[2],uint64[2]),uint8),uint256)`](stateHashCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct stateHashReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1403,8 +1416,11 @@ function stateHash(ExecutionState memory executionState, uint256 inboxMaxCount) 
     };
     ///Container for all the [`StateHashPreImageLookup`](self) function calls.
     pub enum StateHashPreImageLookupCalls {
+        #[allow(missing_docs)]
         get(getCall),
+        #[allow(missing_docs)]
         set(setCall),
+        #[allow(missing_docs)]
         stateHash(stateHashCall),
     }
     #[automatically_derived]
@@ -1539,6 +1555,7 @@ function stateHash(ExecutionState memory executionState, uint256 inboxMaxCount) 
     }
     ///Container for all the [`StateHashPreImageLookup`](self) events.
     pub enum StateHashPreImageLookupEvents {
+        #[allow(missing_docs)]
         HashSet(HashSet),
     }
     #[automatically_derived]

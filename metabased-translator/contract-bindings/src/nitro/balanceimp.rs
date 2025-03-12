@@ -245,7 +245,9 @@ struct Balance { uint256 balance; uint64 withdrawalRound; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Balance {
+        #[allow(missing_docs)]
         pub balance: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub withdrawalRound: u64,
     }
     #[allow(
@@ -472,7 +474,9 @@ error InsufficientBalance(uint256 amountRequested, uint256 balance);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InsufficientBalance {
+        #[allow(missing_docs)]
         pub amountRequested: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub balance: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -811,6 +815,7 @@ constructor(Balance _bal);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub _bal: <Balance as alloy::sol_types::SolType>::RustType,
     }
     const _: () = {
@@ -877,7 +882,9 @@ function bal() external view returns (uint256 balance, uint64 withdrawalRound);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct balReturn {
+        #[allow(missing_docs)]
         pub balance: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub withdrawalRound: u64,
     }
     #[allow(
@@ -1004,12 +1011,14 @@ function balanceAtRound(uint64 round) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct balanceAtRoundCall {
+        #[allow(missing_docs)]
         pub round: u64,
     }
     ///Container type for the return parameters of the [`balanceAtRound(uint64)`](balanceAtRoundCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct balanceAtRoundReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1132,12 +1141,14 @@ function finalizeWithdrawal(uint64 round) external returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct finalizeWithdrawalCall {
+        #[allow(missing_docs)]
         pub round: u64,
     }
     ///Container type for the return parameters of the [`finalizeWithdrawal(uint64)`](finalizeWithdrawalCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct finalizeWithdrawalReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1262,6 +1273,7 @@ function increase(uint256 amount) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct increaseCall {
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`increase(uint256)`](increaseCall) function.
@@ -1386,6 +1398,7 @@ function initiateWithdrawal(uint64 round) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initiateWithdrawalCall {
+        #[allow(missing_docs)]
         pub round: u64,
     }
     ///Container type for the return parameters of the [`initiateWithdrawal(uint64)`](initiateWithdrawalCall) function.
@@ -1512,7 +1525,9 @@ function reduce(uint256 amount, uint64 round) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct reduceCall {
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub round: u64,
     }
     ///Container type for the return parameters of the [`reduce(uint256,uint64)`](reduceCall) function.
@@ -1650,12 +1665,14 @@ function withdrawableBalanceAtRound(uint64 round) external view returns (uint256
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawableBalanceAtRoundCall {
+        #[allow(missing_docs)]
         pub round: u64,
     }
     ///Container type for the return parameters of the [`withdrawableBalanceAtRound(uint64)`](withdrawableBalanceAtRoundCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawableBalanceAtRoundReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1775,12 +1792,19 @@ function withdrawableBalanceAtRound(uint64 round) external view returns (uint256
     };
     ///Container for all the [`BalanceImp`](self) function calls.
     pub enum BalanceImpCalls {
+        #[allow(missing_docs)]
         bal(balCall),
+        #[allow(missing_docs)]
         balanceAtRound(balanceAtRoundCall),
+        #[allow(missing_docs)]
         finalizeWithdrawal(finalizeWithdrawalCall),
+        #[allow(missing_docs)]
         increase(increaseCall),
+        #[allow(missing_docs)]
         initiateWithdrawal(initiateWithdrawalCall),
+        #[allow(missing_docs)]
         reduce(reduceCall),
+        #[allow(missing_docs)]
         withdrawableBalanceAtRound(withdrawableBalanceAtRoundCall),
     }
     #[automatically_derived]
@@ -2025,10 +2049,15 @@ function withdrawableBalanceAtRound(uint64 round) external view returns (uint256
     }
     ///Container for all the [`BalanceImp`](self) custom errors.
     pub enum BalanceImpErrors {
+        #[allow(missing_docs)]
         InsufficientBalance(InsufficientBalance),
+        #[allow(missing_docs)]
         NothingToWithdraw(NothingToWithdraw),
+        #[allow(missing_docs)]
         WithdrawalInProgress(WithdrawalInProgress),
+        #[allow(missing_docs)]
         WithdrawalMaxRound(WithdrawalMaxRound),
+        #[allow(missing_docs)]
         ZeroAmount(ZeroAmount),
     }
     #[automatically_derived]

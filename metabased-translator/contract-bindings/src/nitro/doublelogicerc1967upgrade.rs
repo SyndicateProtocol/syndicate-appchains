@@ -650,9 +650,13 @@ event UpgradedSecondary(address indexed implementation);
     };
     ///Container for all the [`DoubleLogicERC1967Upgrade`](self) events.
     pub enum DoubleLogicERC1967UpgradeEvents {
+        #[allow(missing_docs)]
         AdminChanged(AdminChanged),
+        #[allow(missing_docs)]
         BeaconUpgraded(BeaconUpgraded),
+        #[allow(missing_docs)]
         Upgraded(Upgraded),
+        #[allow(missing_docs)]
         UpgradedSecondary(UpgradedSecondary),
     }
     #[automatically_derived]

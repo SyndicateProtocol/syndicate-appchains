@@ -117,15 +117,20 @@ function get(address addr, uint256 index) external view returns (uint256, bool, 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getCall {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub index: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`get(address,uint256)`](getCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub _1: bool,
+        #[allow(missing_docs)]
         pub _2: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -275,12 +280,14 @@ function size(address addr) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sizeCall {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`size(address)`](sizeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sizeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -401,6 +408,7 @@ function upload(bytes memory buf) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct uploadCall {
+        #[allow(missing_docs)]
         pub buf: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`upload(bytes)`](uploadCall) function.
@@ -518,8 +526,11 @@ function upload(bytes memory buf) external;
     };
     ///Container for all the [`ArbFunctionTable`](self) function calls.
     pub enum ArbFunctionTableCalls {
+        #[allow(missing_docs)]
         get(getCall),
+        #[allow(missing_docs)]
         size(sizeCall),
+        #[allow(missing_docs)]
         upload(uploadCall),
     }
     #[automatically_derived]

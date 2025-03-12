@@ -1384,6 +1384,7 @@ function ADMIN_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ADMIN_ROLEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1502,6 +1503,7 @@ function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct DEFAULT_ADMIN_ROLEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1624,6 +1626,7 @@ function EXECUTOR_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct EXECUTOR_ROLEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1738,7 +1741,9 @@ function execute(address upgrade, bytes memory upgradeCallData) external payable
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executeCall {
+        #[allow(missing_docs)]
         pub upgrade: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub upgradeCallData: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`execute(address,bytes)`](executeCall) function.
@@ -1876,7 +1881,9 @@ function executeCall(address target, bytes memory targetCallData) external payab
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executeCallCall {
+        #[allow(missing_docs)]
         pub target: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub targetCallData: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`executeCall(address,bytes)`](executeCallCall) function.
@@ -2014,12 +2021,14 @@ function getRoleAdmin(bytes32 role) external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRoleAdminCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getRoleAdmin(bytes32)`](getRoleAdminCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRoleAdminReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -2138,7 +2147,9 @@ function grantRole(bytes32 role, address account) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct grantRoleCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`grantRole(bytes32,address)`](grantRoleCall) function.
@@ -2276,13 +2287,16 @@ function hasRole(bytes32 role, address account) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct hasRoleCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`hasRole(bytes32,address)`](hasRoleCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct hasRoleReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2416,7 +2430,9 @@ function initialize(address admin, address[] memory executors) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initializeCall {
+        #[allow(missing_docs)]
         pub admin: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub executors: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
@@ -2556,7 +2572,9 @@ function renounceRole(bytes32 role, address account) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct renounceRoleCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`renounceRole(bytes32,address)`](renounceRoleCall) function.
@@ -2694,7 +2712,9 @@ function revokeRole(bytes32 role, address account) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct revokeRoleCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`revokeRole(bytes32,address)`](revokeRoleCall) function.
@@ -2832,12 +2852,14 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct supportsInterfaceCall {
+        #[allow(missing_docs)]
         pub interfaceId: alloy::sol_types::private::FixedBytes<4>,
     }
     ///Container type for the return parameters of the [`supportsInterface(bytes4)`](supportsInterfaceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct supportsInterfaceReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2955,17 +2977,29 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     };
     ///Container for all the [`UpgradeExecutorMock`](self) function calls.
     pub enum UpgradeExecutorMockCalls {
+        #[allow(missing_docs)]
         ADMIN_ROLE(ADMIN_ROLECall),
+        #[allow(missing_docs)]
         DEFAULT_ADMIN_ROLE(DEFAULT_ADMIN_ROLECall),
+        #[allow(missing_docs)]
         EXECUTOR_ROLE(EXECUTOR_ROLECall),
+        #[allow(missing_docs)]
         execute(executeCall),
+        #[allow(missing_docs)]
         executeCall(executeCallCall),
+        #[allow(missing_docs)]
         getRoleAdmin(getRoleAdminCall),
+        #[allow(missing_docs)]
         grantRole(grantRoleCall),
+        #[allow(missing_docs)]
         hasRole(hasRoleCall),
+        #[allow(missing_docs)]
         initialize(initializeCall),
+        #[allow(missing_docs)]
         renounceRole(renounceRoleCall),
+        #[allow(missing_docs)]
         revokeRole(revokeRoleCall),
+        #[allow(missing_docs)]
         supportsInterface(supportsInterfaceCall),
     }
     #[automatically_derived]
@@ -3346,11 +3380,17 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     }
     ///Container for all the [`UpgradeExecutorMock`](self) events.
     pub enum UpgradeExecutorMockEvents {
+        #[allow(missing_docs)]
         Initialized(Initialized),
+        #[allow(missing_docs)]
         RoleAdminChanged(RoleAdminChanged),
+        #[allow(missing_docs)]
         RoleGranted(RoleGranted),
+        #[allow(missing_docs)]
         RoleRevoked(RoleRevoked),
+        #[allow(missing_docs)]
         TargetCallExecuted(TargetCallExecuted),
+        #[allow(missing_docs)]
         UpgradeExecuted(UpgradeExecuted),
     }
     #[automatically_derived]

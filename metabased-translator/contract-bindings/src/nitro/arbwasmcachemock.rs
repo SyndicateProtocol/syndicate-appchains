@@ -124,6 +124,7 @@ function cacheProgram(address addr) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct cacheProgramCall {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`cacheProgram(address)`](cacheProgramCall) function.
@@ -246,12 +247,14 @@ function codehashIsCached(bytes32) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct codehashIsCachedCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`codehashIsCached(bytes32)`](codehashIsCachedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct codehashIsCachedReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -374,6 +377,7 @@ function evictCodehash(bytes32 codehash) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct evictCodehashCall {
+        #[allow(missing_docs)]
         pub codehash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`evictCodehash(bytes32)`](evictCodehashCall) function.
@@ -500,6 +504,7 @@ function numCached() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct numCachedReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -620,6 +625,7 @@ function uselessCalls() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct uselessCallsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -731,10 +737,15 @@ function uselessCalls() external view returns (uint256);
     };
     ///Container for all the [`ArbWasmCacheMock`](self) function calls.
     pub enum ArbWasmCacheMockCalls {
+        #[allow(missing_docs)]
         cacheProgram(cacheProgramCall),
+        #[allow(missing_docs)]
         codehashIsCached(codehashIsCachedCall),
+        #[allow(missing_docs)]
         evictCodehash(evictCodehashCall),
+        #[allow(missing_docs)]
         numCached(numCachedCall),
+        #[allow(missing_docs)]
         uselessCalls(uselessCallsCall),
     }
     #[automatically_derived]

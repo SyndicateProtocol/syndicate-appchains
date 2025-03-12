@@ -68,12 +68,14 @@ function codehashAsmSize(bytes32 codehash) external pure returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct codehashAsmSizeCall {
+        #[allow(missing_docs)]
         pub codehash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`codehashAsmSize(bytes32)`](codehashAsmSizeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct codehashAsmSizeReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -189,6 +191,7 @@ function codehashAsmSize(bytes32 codehash) external pure returns (uint64);
     };
     ///Container for all the [`ArbWasmMock`](self) function calls.
     pub enum ArbWasmMockCalls {
+        #[allow(missing_docs)]
         codehashAsmSize(codehashAsmSizeCall),
     }
     #[automatically_derived]

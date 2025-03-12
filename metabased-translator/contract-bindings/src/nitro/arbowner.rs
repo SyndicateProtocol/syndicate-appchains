@@ -779,6 +779,7 @@ function addChainOwner(address newOwner) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addChainOwnerCall {
+        #[allow(missing_docs)]
         pub newOwner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`addChainOwner(address)`](addChainOwnerCall) function.
@@ -901,6 +902,7 @@ function addWasmCacheManager(address manager) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addWasmCacheManagerCall {
+        #[allow(missing_docs)]
         pub manager: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`addWasmCacheManager(address)`](addWasmCacheManagerCall) function.
@@ -1031,6 +1033,7 @@ function getAllChainOwners() external view returns (address[] memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getAllChainOwnersReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<alloy::sol_types::private::Address>,
     }
     #[allow(
@@ -1159,6 +1162,7 @@ function getInfraFeeAccount() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getInfraFeeAccountReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1281,6 +1285,7 @@ function getNetworkFeeAccount() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getNetworkFeeAccountReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1399,12 +1404,14 @@ function isChainOwner(address addr) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isChainOwnerCall {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isChainOwner(address)`](isChainOwnerCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isChainOwnerReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -1523,12 +1530,14 @@ function releaseL1PricerSurplusFunds(uint256 maxWeiToRelease) external returns (
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct releaseL1PricerSurplusFundsCall {
+        #[allow(missing_docs)]
         pub maxWeiToRelease: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`releaseL1PricerSurplusFunds(uint256)`](releaseL1PricerSurplusFundsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct releaseL1PricerSurplusFundsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1655,6 +1664,7 @@ function removeChainOwner(address ownerToRemove) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct removeChainOwnerCall {
+        #[allow(missing_docs)]
         pub ownerToRemove: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`removeChainOwner(address)`](removeChainOwnerCall) function.
@@ -1781,6 +1791,7 @@ function removeWasmCacheManager(address manager) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct removeWasmCacheManagerCall {
+        #[allow(missing_docs)]
         pub manager: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`removeWasmCacheManager(address)`](removeWasmCacheManagerCall) function.
@@ -1907,7 +1918,9 @@ function scheduleArbOSUpgrade(uint64 newVersion, uint64 timestamp) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct scheduleArbOSUpgradeCall {
+        #[allow(missing_docs)]
         pub newVersion: u64,
+        #[allow(missing_docs)]
         pub timestamp: u64,
     }
     ///Container type for the return parameters of the [`scheduleArbOSUpgrade(uint64,uint64)`](scheduleArbOSUpgradeCall) function.
@@ -2046,6 +2059,7 @@ function setAmortizedCostCapBips(uint64 cap) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setAmortizedCostCapBipsCall {
+        #[allow(missing_docs)]
         pub cap: u64,
     }
     ///Container type for the return parameters of the [`setAmortizedCostCapBips(uint64)`](setAmortizedCostCapBipsCall) function.
@@ -2172,6 +2186,7 @@ function setBrotliCompressionLevel(uint64 level) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setBrotliCompressionLevelCall {
+        #[allow(missing_docs)]
         pub level: u64,
     }
     ///Container type for the return parameters of the [`setBrotliCompressionLevel(uint64)`](setBrotliCompressionLevelCall) function.
@@ -2298,6 +2313,7 @@ function setChainConfig(string memory chainConfig) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setChainConfigCall {
+        #[allow(missing_docs)]
         pub chainConfig: alloy::sol_types::private::String,
     }
     ///Container type for the return parameters of the [`setChainConfig(string)`](setChainConfigCall) function.
@@ -2422,6 +2438,7 @@ function setInfraFeeAccount(address newInfraFeeAccount) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setInfraFeeAccountCall {
+        #[allow(missing_docs)]
         pub newInfraFeeAccount: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setInfraFeeAccount(address)`](setInfraFeeAccountCall) function.
@@ -2550,6 +2567,7 @@ function setInkPrice(uint32 price) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setInkPriceCall {
+        #[allow(missing_docs)]
         pub price: u32,
     }
     ///Container type for the return parameters of the [`setInkPrice(uint32)`](setInkPriceCall) function.
@@ -2672,6 +2690,7 @@ function setL1BaseFeeEstimateInertia(uint64 inertia) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setL1BaseFeeEstimateInertiaCall {
+        #[allow(missing_docs)]
         pub inertia: u64,
     }
     ///Container type for the return parameters of the [`setL1BaseFeeEstimateInertia(uint64)`](setL1BaseFeeEstimateInertiaCall) function.
@@ -2798,6 +2817,7 @@ function setL1PricePerUnit(uint256 pricePerUnit) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setL1PricePerUnitCall {
+        #[allow(missing_docs)]
         pub pricePerUnit: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`setL1PricePerUnit(uint256)`](setL1PricePerUnitCall) function.
@@ -2926,6 +2946,7 @@ function setL1PricingEquilibrationUnits(uint256 equilibrationUnits) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setL1PricingEquilibrationUnitsCall {
+        #[allow(missing_docs)]
         pub equilibrationUnits: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`setL1PricingEquilibrationUnits(uint256)`](setL1PricingEquilibrationUnitsCall) function.
@@ -3056,6 +3077,7 @@ function setL1PricingInertia(uint64 inertia) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setL1PricingInertiaCall {
+        #[allow(missing_docs)]
         pub inertia: u64,
     }
     ///Container type for the return parameters of the [`setL1PricingInertia(uint64)`](setL1PricingInertiaCall) function.
@@ -3182,6 +3204,7 @@ function setL1PricingRewardRate(uint64 weiPerUnit) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setL1PricingRewardRateCall {
+        #[allow(missing_docs)]
         pub weiPerUnit: u64,
     }
     ///Container type for the return parameters of the [`setL1PricingRewardRate(uint64)`](setL1PricingRewardRateCall) function.
@@ -3308,6 +3331,7 @@ function setL1PricingRewardRecipient(address recipient) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setL1PricingRewardRecipientCall {
+        #[allow(missing_docs)]
         pub recipient: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setL1PricingRewardRecipient(address)`](setL1PricingRewardRecipientCall) function.
@@ -3434,6 +3458,7 @@ function setL2BaseFee(uint256 priceInWei) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setL2BaseFeeCall {
+        #[allow(missing_docs)]
         pub priceInWei: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`setL2BaseFee(uint256)`](setL2BaseFeeCall) function.
@@ -3558,6 +3583,7 @@ function setL2GasBacklogTolerance(uint64 sec) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setL2GasBacklogToleranceCall {
+        #[allow(missing_docs)]
         pub sec: u64,
     }
     ///Container type for the return parameters of the [`setL2GasBacklogTolerance(uint64)`](setL2GasBacklogToleranceCall) function.
@@ -3684,6 +3710,7 @@ function setL2GasPricingInertia(uint64 sec) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setL2GasPricingInertiaCall {
+        #[allow(missing_docs)]
         pub sec: u64,
     }
     ///Container type for the return parameters of the [`setL2GasPricingInertia(uint64)`](setL2GasPricingInertiaCall) function.
@@ -3810,6 +3837,7 @@ function setMaxTxGasLimit(uint64 limit) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setMaxTxGasLimitCall {
+        #[allow(missing_docs)]
         pub limit: u64,
     }
     ///Container type for the return parameters of the [`setMaxTxGasLimit(uint64)`](setMaxTxGasLimitCall) function.
@@ -3936,6 +3964,7 @@ function setMinimumL2BaseFee(uint256 priceInWei) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setMinimumL2BaseFeeCall {
+        #[allow(missing_docs)]
         pub priceInWei: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`setMinimumL2BaseFee(uint256)`](setMinimumL2BaseFeeCall) function.
@@ -4064,6 +4093,7 @@ function setNetworkFeeAccount(address newNetworkFeeAccount) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setNetworkFeeAccountCall {
+        #[allow(missing_docs)]
         pub newNetworkFeeAccount: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setNetworkFeeAccount(address)`](setNetworkFeeAccountCall) function.
@@ -4192,6 +4222,7 @@ function setPerBatchGasCharge(int64 cost) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setPerBatchGasChargeCall {
+        #[allow(missing_docs)]
         pub cost: i64,
     }
     ///Container type for the return parameters of the [`setPerBatchGasCharge(int64)`](setPerBatchGasChargeCall) function.
@@ -4318,6 +4349,7 @@ function setSpeedLimit(uint64 limit) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setSpeedLimitCall {
+        #[allow(missing_docs)]
         pub limit: u64,
     }
     ///Container type for the return parameters of the [`setSpeedLimit(uint64)`](setSpeedLimitCall) function.
@@ -4440,6 +4472,7 @@ function setWasmBlockCacheSize(uint16 count) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setWasmBlockCacheSizeCall {
+        #[allow(missing_docs)]
         pub count: u16,
     }
     ///Container type for the return parameters of the [`setWasmBlockCacheSize(uint16)`](setWasmBlockCacheSizeCall) function.
@@ -4566,6 +4599,7 @@ function setWasmExpiryDays(uint16 _days) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setWasmExpiryDaysCall {
+        #[allow(missing_docs)]
         pub _days: u16,
     }
     ///Container type for the return parameters of the [`setWasmExpiryDays(uint16)`](setWasmExpiryDaysCall) function.
@@ -4692,6 +4726,7 @@ function setWasmFreePages(uint16 pages) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setWasmFreePagesCall {
+        #[allow(missing_docs)]
         pub pages: u16,
     }
     ///Container type for the return parameters of the [`setWasmFreePages(uint16)`](setWasmFreePagesCall) function.
@@ -4818,6 +4853,7 @@ function setWasmInitCostScalar(uint64 percent) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setWasmInitCostScalarCall {
+        #[allow(missing_docs)]
         pub percent: u64,
     }
     ///Container type for the return parameters of the [`setWasmInitCostScalar(uint64)`](setWasmInitCostScalarCall) function.
@@ -4944,6 +4980,7 @@ function setWasmKeepaliveDays(uint16 _days) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setWasmKeepaliveDaysCall {
+        #[allow(missing_docs)]
         pub _days: u16,
     }
     ///Container type for the return parameters of the [`setWasmKeepaliveDays(uint16)`](setWasmKeepaliveDaysCall) function.
@@ -5070,6 +5107,7 @@ function setWasmMaxStackDepth(uint32 depth) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setWasmMaxStackDepthCall {
+        #[allow(missing_docs)]
         pub depth: u32,
     }
     ///Container type for the return parameters of the [`setWasmMaxStackDepth(uint32)`](setWasmMaxStackDepthCall) function.
@@ -5196,7 +5234,9 @@ function setWasmMinInitGas(uint8 gas, uint16 cached) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setWasmMinInitGasCall {
+        #[allow(missing_docs)]
         pub gas: u8,
+        #[allow(missing_docs)]
         pub cached: u16,
     }
     ///Container type for the return parameters of the [`setWasmMinInitGas(uint8,uint16)`](setWasmMinInitGasCall) function.
@@ -5335,6 +5375,7 @@ function setWasmPageGas(uint16 gas) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setWasmPageGasCall {
+        #[allow(missing_docs)]
         pub gas: u16,
     }
     ///Container type for the return parameters of the [`setWasmPageGas(uint16)`](setWasmPageGasCall) function.
@@ -5459,6 +5500,7 @@ function setWasmPageLimit(uint16 limit) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setWasmPageLimitCall {
+        #[allow(missing_docs)]
         pub limit: u16,
     }
     ///Container type for the return parameters of the [`setWasmPageLimit(uint16)`](setWasmPageLimitCall) function.
@@ -5580,43 +5622,81 @@ function setWasmPageLimit(uint16 limit) external;
     };
     ///Container for all the [`ArbOwner`](self) function calls.
     pub enum ArbOwnerCalls {
+        #[allow(missing_docs)]
         addChainOwner(addChainOwnerCall),
+        #[allow(missing_docs)]
         addWasmCacheManager(addWasmCacheManagerCall),
+        #[allow(missing_docs)]
         getAllChainOwners(getAllChainOwnersCall),
+        #[allow(missing_docs)]
         getInfraFeeAccount(getInfraFeeAccountCall),
+        #[allow(missing_docs)]
         getNetworkFeeAccount(getNetworkFeeAccountCall),
+        #[allow(missing_docs)]
         isChainOwner(isChainOwnerCall),
+        #[allow(missing_docs)]
         releaseL1PricerSurplusFunds(releaseL1PricerSurplusFundsCall),
+        #[allow(missing_docs)]
         removeChainOwner(removeChainOwnerCall),
+        #[allow(missing_docs)]
         removeWasmCacheManager(removeWasmCacheManagerCall),
+        #[allow(missing_docs)]
         scheduleArbOSUpgrade(scheduleArbOSUpgradeCall),
+        #[allow(missing_docs)]
         setAmortizedCostCapBips(setAmortizedCostCapBipsCall),
+        #[allow(missing_docs)]
         setBrotliCompressionLevel(setBrotliCompressionLevelCall),
+        #[allow(missing_docs)]
         setChainConfig(setChainConfigCall),
+        #[allow(missing_docs)]
         setInfraFeeAccount(setInfraFeeAccountCall),
+        #[allow(missing_docs)]
         setInkPrice(setInkPriceCall),
+        #[allow(missing_docs)]
         setL1BaseFeeEstimateInertia(setL1BaseFeeEstimateInertiaCall),
+        #[allow(missing_docs)]
         setL1PricePerUnit(setL1PricePerUnitCall),
+        #[allow(missing_docs)]
         setL1PricingEquilibrationUnits(setL1PricingEquilibrationUnitsCall),
+        #[allow(missing_docs)]
         setL1PricingInertia(setL1PricingInertiaCall),
+        #[allow(missing_docs)]
         setL1PricingRewardRate(setL1PricingRewardRateCall),
+        #[allow(missing_docs)]
         setL1PricingRewardRecipient(setL1PricingRewardRecipientCall),
+        #[allow(missing_docs)]
         setL2BaseFee(setL2BaseFeeCall),
+        #[allow(missing_docs)]
         setL2GasBacklogTolerance(setL2GasBacklogToleranceCall),
+        #[allow(missing_docs)]
         setL2GasPricingInertia(setL2GasPricingInertiaCall),
+        #[allow(missing_docs)]
         setMaxTxGasLimit(setMaxTxGasLimitCall),
+        #[allow(missing_docs)]
         setMinimumL2BaseFee(setMinimumL2BaseFeeCall),
+        #[allow(missing_docs)]
         setNetworkFeeAccount(setNetworkFeeAccountCall),
+        #[allow(missing_docs)]
         setPerBatchGasCharge(setPerBatchGasChargeCall),
+        #[allow(missing_docs)]
         setSpeedLimit(setSpeedLimitCall),
+        #[allow(missing_docs)]
         setWasmBlockCacheSize(setWasmBlockCacheSizeCall),
+        #[allow(missing_docs)]
         setWasmExpiryDays(setWasmExpiryDaysCall),
+        #[allow(missing_docs)]
         setWasmFreePages(setWasmFreePagesCall),
+        #[allow(missing_docs)]
         setWasmInitCostScalar(setWasmInitCostScalarCall),
+        #[allow(missing_docs)]
         setWasmKeepaliveDays(setWasmKeepaliveDaysCall),
+        #[allow(missing_docs)]
         setWasmMaxStackDepth(setWasmMaxStackDepthCall),
+        #[allow(missing_docs)]
         setWasmMinInitGas(setWasmMinInitGasCall),
+        #[allow(missing_docs)]
         setWasmPageGas(setWasmPageGasCall),
+        #[allow(missing_docs)]
         setWasmPageLimit(setWasmPageLimitCall),
     }
     #[automatically_derived]
@@ -6747,6 +6827,7 @@ function setWasmPageLimit(uint16 limit) external;
     }
     ///Container for all the [`ArbOwner`](self) events.
     pub enum ArbOwnerEvents {
+        #[allow(missing_docs)]
         OwnerActs(OwnerActs),
     }
     #[automatically_derived]

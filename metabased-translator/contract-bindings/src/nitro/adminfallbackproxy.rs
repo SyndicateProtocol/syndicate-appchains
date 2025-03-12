@@ -662,9 +662,13 @@ event UpgradedSecondary(address indexed implementation);
     };
     ///Container for all the [`AdminFallbackProxy`](self) events.
     pub enum AdminFallbackProxyEvents {
+        #[allow(missing_docs)]
         AdminChanged(AdminChanged),
+        #[allow(missing_docs)]
         BeaconUpgraded(BeaconUpgraded),
+        #[allow(missing_docs)]
         Upgraded(Upgraded),
+        #[allow(missing_docs)]
         UpgradedSecondary(UpgradedSecondary),
     }
     #[automatically_derived]

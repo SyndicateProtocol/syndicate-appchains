@@ -269,6 +269,7 @@ function ERC1820_DEPLOYER() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC1820_DEPLOYERReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -391,6 +392,7 @@ function ERC1820_PAYLOAD() external view returns (bytes memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC1820_PAYLOADReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -511,6 +513,7 @@ function ERC1820_VALUE() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC1820_VALUEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -631,6 +634,7 @@ function ERC2470_DEPLOYER() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC2470_DEPLOYERReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -753,6 +757,7 @@ function ERC2470_PAYLOAD() external view returns (bytes memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC2470_PAYLOADReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -873,6 +878,7 @@ function ERC2470_VALUE() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC2470_VALUEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -993,6 +999,7 @@ function NICK_CREATE2_DEPLOYER() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NICK_CREATE2_DEPLOYERReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1115,6 +1122,7 @@ function NICK_CREATE2_PAYLOAD() external view returns (bytes memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NICK_CREATE2_PAYLOADReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -1237,6 +1245,7 @@ function NICK_CREATE2_VALUE() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NICK_CREATE2_VALUEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1361,6 +1370,7 @@ function ZOLTU_CREATE2_DEPLOYER() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ZOLTU_CREATE2_DEPLOYERReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1483,6 +1493,7 @@ function ZOLTU_CREATE2_PAYLOAD() external view returns (bytes memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ZOLTU_CREATE2_PAYLOADReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -1605,6 +1616,7 @@ function ZOLTU_VALUE() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ZOLTU_VALUEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1721,13 +1733,16 @@ function getDeploymentTotalCost(address inbox, uint256 maxFeePerGas) external vi
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getDeploymentTotalCostCall {
+        #[allow(missing_docs)]
         pub inbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub maxFeePerGas: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`getDeploymentTotalCost(address,uint256)`](getDeploymentTotalCostCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getDeploymentTotalCostReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1867,8 +1882,11 @@ function perform(address _inbox, address _nativeToken, uint256 _maxFeePerGas) ex
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct performCall {
+        #[allow(missing_docs)]
         pub _inbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _nativeToken: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _maxFeePerGas: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`perform(address,address,uint256)`](performCall) function.
@@ -2008,19 +2026,33 @@ function perform(address _inbox, address _nativeToken, uint256 _maxFeePerGas) ex
     };
     ///Container for all the [`DeployHelper`](self) function calls.
     pub enum DeployHelperCalls {
+        #[allow(missing_docs)]
         ERC1820_DEPLOYER(ERC1820_DEPLOYERCall),
+        #[allow(missing_docs)]
         ERC1820_PAYLOAD(ERC1820_PAYLOADCall),
+        #[allow(missing_docs)]
         ERC1820_VALUE(ERC1820_VALUECall),
+        #[allow(missing_docs)]
         ERC2470_DEPLOYER(ERC2470_DEPLOYERCall),
+        #[allow(missing_docs)]
         ERC2470_PAYLOAD(ERC2470_PAYLOADCall),
+        #[allow(missing_docs)]
         ERC2470_VALUE(ERC2470_VALUECall),
+        #[allow(missing_docs)]
         NICK_CREATE2_DEPLOYER(NICK_CREATE2_DEPLOYERCall),
+        #[allow(missing_docs)]
         NICK_CREATE2_PAYLOAD(NICK_CREATE2_PAYLOADCall),
+        #[allow(missing_docs)]
         NICK_CREATE2_VALUE(NICK_CREATE2_VALUECall),
+        #[allow(missing_docs)]
         ZOLTU_CREATE2_DEPLOYER(ZOLTU_CREATE2_DEPLOYERCall),
+        #[allow(missing_docs)]
         ZOLTU_CREATE2_PAYLOAD(ZOLTU_CREATE2_PAYLOADCall),
+        #[allow(missing_docs)]
         ZOLTU_VALUE(ZOLTU_VALUECall),
+        #[allow(missing_docs)]
         getDeploymentTotalCost(getDeploymentTotalCostCall),
+        #[allow(missing_docs)]
         perform(performCall),
     }
     #[automatically_derived]

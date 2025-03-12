@@ -250,8 +250,11 @@ error Custom(uint64, string, bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Custom {
+        #[allow(missing_docs)]
         pub _0: u64,
+        #[allow(missing_docs)]
         pub _1: alloy::sol_types::private::String,
+        #[allow(missing_docs)]
         pub _2: bool,
     }
     #[allow(
@@ -1000,6 +1003,7 @@ function customRevert(uint64 number) external pure;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct customRevertCall {
+        #[allow(missing_docs)]
         pub number: u64,
     }
     ///Container type for the return parameters of the [`customRevert(uint64)`](customRevertCall) function.
@@ -1122,14 +1126,18 @@ function events(bool flag, bytes32 value) external payable returns (address, uin
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct eventsCall {
+        #[allow(missing_docs)]
         pub flag: bool,
+        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`events(bool,bytes32)`](eventsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct eventsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _1: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1615,11 +1623,17 @@ function panic() external;
     };
     ///Container for all the [`ArbDebug`](self) function calls.
     pub enum ArbDebugCalls {
+        #[allow(missing_docs)]
         becomeChainOwner(becomeChainOwnerCall),
+        #[allow(missing_docs)]
         customRevert(customRevertCall),
+        #[allow(missing_docs)]
         events(eventsCall),
+        #[allow(missing_docs)]
         eventsView(eventsViewCall),
+        #[allow(missing_docs)]
         legacyError(legacyErrorCall),
+        #[allow(missing_docs)]
         panic(panicCall),
     }
     #[automatically_derived]
@@ -1838,7 +1852,9 @@ function panic() external;
     }
     ///Container for all the [`ArbDebug`](self) custom errors.
     pub enum ArbDebugErrors {
+        #[allow(missing_docs)]
         Custom(Custom),
+        #[allow(missing_docs)]
         Unused(Unused),
     }
     #[automatically_derived]
@@ -1947,8 +1963,11 @@ function panic() external;
     }
     ///Container for all the [`ArbDebug`](self) events.
     pub enum ArbDebugEvents {
+        #[allow(missing_docs)]
         Basic(Basic),
+        #[allow(missing_docs)]
         Mixed(Mixed),
+        #[allow(missing_docs)]
         Store(Store),
     }
     #[automatically_derived]

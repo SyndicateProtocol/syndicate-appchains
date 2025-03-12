@@ -738,6 +738,7 @@ error AlreadySpent(uint256 index);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AlreadySpent {
+        #[allow(missing_docs)]
         pub index: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1002,7 +1003,9 @@ error MerkleProofTooLong(uint256 actualLength, uint256 maxProofLength);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MerkleProofTooLong {
+        #[allow(missing_docs)]
         pub actualLength: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub maxProofLength: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1085,7 +1088,9 @@ error NotOwner(address sender, address owner);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NotOwner {
+        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1168,7 +1173,9 @@ error NotRollup(address sender, address rollup);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NotRollup {
+        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub rollup: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1251,7 +1258,9 @@ error PathNotMinimal(uint256 index, uint256 maxIndex);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct PathNotMinimal {
+        #[allow(missing_docs)]
         pub index: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub maxIndex: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1334,6 +1343,7 @@ error ProofTooLong(uint256 proofLength);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ProofTooLong {
+        #[allow(missing_docs)]
         pub proofLength: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1536,6 +1546,7 @@ error UnknownRoot(bytes32 root);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct UnknownRoot {
+        #[allow(missing_docs)]
         pub root: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1921,6 +1932,7 @@ function OUTBOX_VERSION() external view returns (uint128);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct OUTBOX_VERSIONReturn {
+        #[allow(missing_docs)]
         pub _0: u128,
     }
     #[allow(
@@ -2041,6 +2053,7 @@ function bridge() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct bridgeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2155,18 +2168,26 @@ function calculateItemHash(address l2Sender, address to, uint256 l2Block, uint25
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct calculateItemHashCall {
+        #[allow(missing_docs)]
         pub l2Sender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub l2Block: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub l1Block: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub l2Timestamp: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`calculateItemHash(address,address,uint256,uint256,uint256,uint256,bytes)`](calculateItemHashCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct calculateItemHashReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -2347,16 +2368,20 @@ function calculateMerkleRoot(bytes32[] memory proof, uint256 path, bytes32 item)
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct calculateMerkleRootCall {
+        #[allow(missing_docs)]
         pub proof: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
+        #[allow(missing_docs)]
         pub path: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub item: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`calculateMerkleRoot(bytes32[],uint256,bytes32)`](calculateMerkleRootCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct calculateMerkleRootReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -2507,16 +2532,25 @@ function executeTransaction(bytes32[] memory proof, uint256 index, address l2Sen
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executeTransactionCall {
+        #[allow(missing_docs)]
         pub proof: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
+        #[allow(missing_docs)]
         pub index: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub l2Sender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub l2Block: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub l1Block: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub l2Timestamp: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`executeTransaction(bytes32[],uint256,address,address,uint256,uint256,uint256,uint256,bytes)`](executeTransactionCall) function.
@@ -2723,13 +2757,21 @@ function executeTransactionSimulation(uint256 index, address l2Sender, address t
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executeTransactionSimulationCall {
+        #[allow(missing_docs)]
         pub index: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub l2Sender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub l2Block: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub l1Block: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub l2Timestamp: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`executeTransactionSimulation(uint256,address,address,uint256,uint256,uint256,uint256,bytes)`](executeTransactionSimulationCall) function.
@@ -2922,6 +2964,7 @@ function initialize(address _bridge) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initializeCall {
+        #[allow(missing_docs)]
         pub _bridge: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`initialize(address)`](initializeCall) function.
@@ -3044,12 +3087,14 @@ function isSpent(uint256 index) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isSpentCall {
+        #[allow(missing_docs)]
         pub index: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`isSpent(uint256)`](isSpentCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isSpentReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -3174,6 +3219,7 @@ function l2ToL1BatchNum() external pure returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct l2ToL1BatchNumReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3296,6 +3342,7 @@ function l2ToL1Block() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct l2ToL1BlockReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3416,6 +3463,7 @@ function l2ToL1EthBlock() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct l2ToL1EthBlockReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3538,6 +3586,7 @@ function l2ToL1OutputId() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct l2ToL1OutputIdReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -3658,6 +3707,7 @@ function l2ToL1Sender() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct l2ToL1SenderReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3776,6 +3826,7 @@ function l2ToL1Timestamp() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct l2ToL1TimestampReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3898,6 +3949,7 @@ function l2ToL1WithdrawalAmount() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct l2ToL1WithdrawalAmountReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -4140,6 +4192,7 @@ function rollup() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct rollupReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -4254,12 +4307,14 @@ function roots(bytes32) external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct rootsCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`roots(bytes32)`](rootsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct rootsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -4378,12 +4433,14 @@ function spent(uint256) external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct spentCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`spent(uint256)`](spentCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct spentReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -4624,7 +4681,9 @@ function updateSendRoot(bytes32 root, bytes32 l2BlockHash) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct updateSendRootCall {
+        #[allow(missing_docs)]
         pub root: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub l2BlockHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`updateSendRoot(bytes32,bytes32)`](updateSendRootCall) function.
@@ -4759,26 +4818,47 @@ function updateSendRoot(bytes32 root, bytes32 l2BlockHash) external;
     };
     ///Container for all the [`ERC20Outbox`](self) function calls.
     pub enum ERC20OutboxCalls {
+        #[allow(missing_docs)]
         OUTBOX_VERSION(OUTBOX_VERSIONCall),
+        #[allow(missing_docs)]
         bridge(bridgeCall),
+        #[allow(missing_docs)]
         calculateItemHash(calculateItemHashCall),
+        #[allow(missing_docs)]
         calculateMerkleRoot(calculateMerkleRootCall),
+        #[allow(missing_docs)]
         executeTransaction(executeTransactionCall),
+        #[allow(missing_docs)]
         executeTransactionSimulation(executeTransactionSimulationCall),
+        #[allow(missing_docs)]
         initialize(initializeCall),
+        #[allow(missing_docs)]
         isSpent(isSpentCall),
+        #[allow(missing_docs)]
         l2ToL1BatchNum(l2ToL1BatchNumCall),
+        #[allow(missing_docs)]
         l2ToL1Block(l2ToL1BlockCall),
+        #[allow(missing_docs)]
         l2ToL1EthBlock(l2ToL1EthBlockCall),
+        #[allow(missing_docs)]
         l2ToL1OutputId(l2ToL1OutputIdCall),
+        #[allow(missing_docs)]
         l2ToL1Sender(l2ToL1SenderCall),
+        #[allow(missing_docs)]
         l2ToL1Timestamp(l2ToL1TimestampCall),
+        #[allow(missing_docs)]
         l2ToL1WithdrawalAmount(l2ToL1WithdrawalAmountCall),
+        #[allow(missing_docs)]
         postUpgradeInit(postUpgradeInitCall),
+        #[allow(missing_docs)]
         rollup(rollupCall),
+        #[allow(missing_docs)]
         roots(rootsCall),
+        #[allow(missing_docs)]
         spent(spentCall),
+        #[allow(missing_docs)]
         updateRollupAddress(updateRollupAddressCall),
+        #[allow(missing_docs)]
         updateSendRoot(updateSendRootCall),
     }
     #[automatically_derived]
@@ -5396,18 +5476,31 @@ function updateSendRoot(bytes32 root, bytes32 l2BlockHash) external;
     }
     ///Container for all the [`ERC20Outbox`](self) custom errors.
     pub enum ERC20OutboxErrors {
+        #[allow(missing_docs)]
         AlreadyInit(AlreadyInit),
+        #[allow(missing_docs)]
         AlreadySpent(AlreadySpent),
+        #[allow(missing_docs)]
         BadPostUpgradeInit(BadPostUpgradeInit),
+        #[allow(missing_docs)]
         BridgeCallFailed(BridgeCallFailed),
+        #[allow(missing_docs)]
         HadZeroInit(HadZeroInit),
+        #[allow(missing_docs)]
         MerkleProofTooLong(MerkleProofTooLong),
+        #[allow(missing_docs)]
         NotOwner(NotOwner),
+        #[allow(missing_docs)]
         NotRollup(NotRollup),
+        #[allow(missing_docs)]
         PathNotMinimal(PathNotMinimal),
+        #[allow(missing_docs)]
         ProofTooLong(ProofTooLong),
+        #[allow(missing_docs)]
         RollupNotChanged(RollupNotChanged),
+        #[allow(missing_docs)]
         SimulationOnlyEntrypoint(SimulationOnlyEntrypoint),
+        #[allow(missing_docs)]
         UnknownRoot(UnknownRoot),
     }
     #[automatically_derived]
@@ -5814,7 +5907,9 @@ function updateSendRoot(bytes32 root, bytes32 l2BlockHash) external;
     }
     ///Container for all the [`ERC20Outbox`](self) events.
     pub enum ERC20OutboxEvents {
+        #[allow(missing_docs)]
         OutBoxTransactionExecuted(OutBoxTransactionExecuted),
+        #[allow(missing_docs)]
         SendRootUpdated(SendRootUpdated),
     }
     #[automatically_derived]

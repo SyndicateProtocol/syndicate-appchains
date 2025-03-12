@@ -22,22 +22,22 @@ pub mod ERC721Utils {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220e19bcace1fc9d3d48c448945cda6055addcb4694f4e3c32145984aa359f4e54964736f6c63430008190033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220c4fbef23977aac4828b8bd9e400fba7c292baec5170c034ec3faffc03699fb3264736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xE1\x9B\xCA\xCE\x1F\xC9\xD3\xD4\x8CD\x89E\xCD\xA6\x05Z\xDD\xCBF\x94\xF4\xE3\xC3!E\x98J\xA3Y\xF4\xE5IdsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xC4\xFB\xEF#\x97z\xACH(\xB8\xBD\x9E@\x0F\xBA|)+\xAE\xC5\x17\x0C\x03N\xC3\xFA\xFF\xC06\x99\xFB2dsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x5f80fdfea2646970667358221220e19bcace1fc9d3d48c448945cda6055addcb4694f4e3c32145984aa359f4e54964736f6c63430008190033
+    ///0x60806040525f80fdfea2646970667358221220c4fbef23977aac4828b8bd9e400fba7c292baec5170c034ec3faffc03699fb3264736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xE1\x9B\xCA\xCE\x1F\xC9\xD3\xD4\x8CD\x89E\xCD\xA6\x05Z\xDD\xCBF\x94\xF4\xE3\xC3!E\x98J\xA3Y\xF4\xE5IdsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xC4\xFB\xEF#\x97z\xACH(\xB8\xBD\x9E@\x0F\xBA|)+\xAE\xC5\x17\x0C\x03N\xC3\xFA\xFF\xC06\x99\xFB2dsolcC\0\x08\x19\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`ERC721Utils`](self) contract instance.

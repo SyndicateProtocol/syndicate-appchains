@@ -329,6 +329,7 @@ function allCacheManagers() external view returns (address[] memory managers);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allCacheManagersReturn {
+        #[allow(missing_docs)]
         pub managers: alloy::sol_types::private::Vec<alloy::sol_types::private::Address>,
     }
     #[allow(
@@ -453,6 +454,7 @@ function cacheCodehash(bytes32 codehash) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct cacheCodehashCall {
+        #[allow(missing_docs)]
         pub codehash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`cacheCodehash(bytes32)`](cacheCodehashCall) function.
@@ -575,6 +577,7 @@ function cacheProgram(address addr) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct cacheProgramCall {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`cacheProgram(address)`](cacheProgramCall) function.
@@ -697,12 +700,14 @@ function codehashIsCached(bytes32 codehash) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct codehashIsCachedCall {
+        #[allow(missing_docs)]
         pub codehash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`codehashIsCached(bytes32)`](codehashIsCachedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct codehashIsCachedReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -825,6 +830,7 @@ function evictCodehash(bytes32 codehash) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct evictCodehashCall {
+        #[allow(missing_docs)]
         pub codehash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`evictCodehash(bytes32)`](evictCodehashCall) function.
@@ -947,12 +953,14 @@ function isCacheManager(address manager) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isCacheManagerCall {
+        #[allow(missing_docs)]
         pub manager: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isCacheManager(address)`](isCacheManagerCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isCacheManagerReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -1068,11 +1076,17 @@ function isCacheManager(address manager) external view returns (bool);
     };
     ///Container for all the [`ArbWasmCache`](self) function calls.
     pub enum ArbWasmCacheCalls {
+        #[allow(missing_docs)]
         allCacheManagers(allCacheManagersCall),
+        #[allow(missing_docs)]
         cacheCodehash(cacheCodehashCall),
+        #[allow(missing_docs)]
         cacheProgram(cacheProgramCall),
+        #[allow(missing_docs)]
         codehashIsCached(codehashIsCachedCall),
+        #[allow(missing_docs)]
         evictCodehash(evictCodehashCall),
+        #[allow(missing_docs)]
         isCacheManager(isCacheManagerCall),
     }
     #[automatically_derived]
@@ -1307,6 +1321,7 @@ function isCacheManager(address manager) external view returns (bool);
     }
     ///Container for all the [`ArbWasmCache`](self) events.
     pub enum ArbWasmCacheEvents {
+        #[allow(missing_docs)]
         UpdateProgramCache(UpdateProgramCache),
     }
     #[automatically_derived]

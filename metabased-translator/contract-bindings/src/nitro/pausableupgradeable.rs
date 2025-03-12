@@ -505,6 +505,7 @@ function paused() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct pausedReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -614,6 +615,7 @@ function paused() external view returns (bool);
     };
     ///Container for all the [`PausableUpgradeable`](self) function calls.
     pub enum PausableUpgradeableCalls {
+        #[allow(missing_docs)]
         paused(pausedCall),
     }
     #[automatically_derived]
@@ -699,8 +701,11 @@ function paused() external view returns (bool);
     }
     ///Container for all the [`PausableUpgradeable`](self) events.
     pub enum PausableUpgradeableEvents {
+        #[allow(missing_docs)]
         Initialized(Initialized),
+        #[allow(missing_docs)]
         Paused(Paused),
+        #[allow(missing_docs)]
         Unpaused(Unpaused),
     }
     #[automatically_derived]

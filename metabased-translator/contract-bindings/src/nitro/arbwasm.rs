@@ -521,6 +521,7 @@ error ProgramExpired(uint64 ageInSeconds);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ProgramExpired {
+        #[allow(missing_docs)]
         pub ageInSeconds: u64,
     }
     #[allow(
@@ -591,7 +592,9 @@ error ProgramInsufficientValue(uint256 have, uint256 want);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ProgramInsufficientValue {
+        #[allow(missing_docs)]
         pub have: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub want: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -676,6 +679,7 @@ error ProgramKeepaliveTooSoon(uint64 ageInSeconds);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ProgramKeepaliveTooSoon {
+        #[allow(missing_docs)]
         pub ageInSeconds: u64,
     }
     #[allow(
@@ -746,7 +750,9 @@ error ProgramNeedsUpgrade(uint16 version, uint16 stylusVersion);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ProgramNeedsUpgrade {
+        #[allow(missing_docs)]
         pub version: u16,
+        #[allow(missing_docs)]
         pub stylusVersion: u16,
     }
     #[allow(
@@ -1329,13 +1335,16 @@ function activateProgram(address program) external payable returns (uint16 versi
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct activateProgramCall {
+        #[allow(missing_docs)]
         pub program: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`activateProgram(address)`](activateProgramCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct activateProgramReturn {
+        #[allow(missing_docs)]
         pub version: u16,
+        #[allow(missing_docs)]
         pub dataFee: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1472,6 +1481,7 @@ function blockCacheSize() external view returns (uint16 count);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct blockCacheSizeReturn {
+        #[allow(missing_docs)]
         pub count: u16,
     }
     #[allow(
@@ -1588,12 +1598,14 @@ function codehashAsmSize(bytes32 codehash) external view returns (uint32 size);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct codehashAsmSizeCall {
+        #[allow(missing_docs)]
         pub codehash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`codehashAsmSize(bytes32)`](codehashAsmSizeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct codehashAsmSizeReturn {
+        #[allow(missing_docs)]
         pub size: u32,
     }
     #[allow(
@@ -1714,6 +1726,7 @@ function codehashKeepalive(bytes32 codehash) external payable;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct codehashKeepaliveCall {
+        #[allow(missing_docs)]
         pub codehash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`codehashKeepalive(bytes32)`](codehashKeepaliveCall) function.
@@ -1840,12 +1853,14 @@ function codehashVersion(bytes32 codehash) external view returns (uint16 version
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct codehashVersionCall {
+        #[allow(missing_docs)]
         pub codehash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`codehashVersion(bytes32)`](codehashVersionCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct codehashVersionReturn {
+        #[allow(missing_docs)]
         pub version: u16,
     }
     #[allow(
@@ -1970,6 +1985,7 @@ function expiryDays() external view returns (uint16 _days);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct expiryDaysReturn {
+        #[allow(missing_docs)]
         pub _days: u16,
     }
     #[allow(
@@ -2088,6 +2104,7 @@ function freePages() external view returns (uint16 pages);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct freePagesReturn {
+        #[allow(missing_docs)]
         pub pages: u16,
     }
     #[allow(
@@ -2206,6 +2223,7 @@ function initCostScalar() external view returns (uint64 percent);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initCostScalarReturn {
+        #[allow(missing_docs)]
         pub percent: u64,
     }
     #[allow(
@@ -2326,6 +2344,7 @@ function inkPrice() external view returns (uint32 price);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct inkPriceReturn {
+        #[allow(missing_docs)]
         pub price: u32,
     }
     #[allow(
@@ -2444,6 +2463,7 @@ function keepaliveDays() external view returns (uint16 _days);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct keepaliveDaysReturn {
+        #[allow(missing_docs)]
         pub _days: u16,
     }
     #[allow(
@@ -2562,6 +2582,7 @@ function maxStackDepth() external view returns (uint32 depth);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct maxStackDepthReturn {
+        #[allow(missing_docs)]
         pub depth: u32,
     }
     #[allow(
@@ -2680,7 +2701,9 @@ function minInitGas() external view returns (uint64 gas, uint64 cached);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct minInitGasReturn {
+        #[allow(missing_docs)]
         pub gas: u64,
+        #[allow(missing_docs)]
         pub cached: u64,
     }
     #[allow(
@@ -2808,6 +2831,7 @@ function pageGas() external view returns (uint16 gas);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct pageGasReturn {
+        #[allow(missing_docs)]
         pub gas: u16,
     }
     #[allow(
@@ -2926,6 +2950,7 @@ function pageLimit() external view returns (uint16 limit);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct pageLimitReturn {
+        #[allow(missing_docs)]
         pub limit: u16,
     }
     #[allow(
@@ -3044,6 +3069,7 @@ function pageRamp() external view returns (uint64 ramp);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct pageRampReturn {
+        #[allow(missing_docs)]
         pub ramp: u64,
     }
     #[allow(
@@ -3158,13 +3184,16 @@ function programInitGas(address program) external view returns (uint64 gas, uint
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct programInitGasCall {
+        #[allow(missing_docs)]
         pub program: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`programInitGas(address)`](programInitGasCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct programInitGasReturn {
+        #[allow(missing_docs)]
         pub gas: u64,
+        #[allow(missing_docs)]
         pub gasWhenCached: u64,
     }
     #[allow(
@@ -3294,12 +3323,14 @@ function programMemoryFootprint(address program) external view returns (uint16 f
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct programMemoryFootprintCall {
+        #[allow(missing_docs)]
         pub program: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`programMemoryFootprint(address)`](programMemoryFootprintCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct programMemoryFootprintReturn {
+        #[allow(missing_docs)]
         pub footprint: u16,
     }
     #[allow(
@@ -3422,12 +3453,14 @@ function programTimeLeft(address program) external view returns (uint64 _secs);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct programTimeLeftCall {
+        #[allow(missing_docs)]
         pub program: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`programTimeLeft(address)`](programTimeLeftCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct programTimeLeftReturn {
+        #[allow(missing_docs)]
         pub _secs: u64,
     }
     #[allow(
@@ -3548,12 +3581,14 @@ function programVersion(address program) external view returns (uint16 version);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct programVersionCall {
+        #[allow(missing_docs)]
         pub program: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`programVersion(address)`](programVersionCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct programVersionReturn {
+        #[allow(missing_docs)]
         pub version: u16,
     }
     #[allow(
@@ -3678,6 +3713,7 @@ function stylusVersion() external view returns (uint16 version);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct stylusVersionReturn {
+        #[allow(missing_docs)]
         pub version: u16,
     }
     #[allow(
@@ -3787,25 +3823,45 @@ function stylusVersion() external view returns (uint16 version);
     };
     ///Container for all the [`ArbWasm`](self) function calls.
     pub enum ArbWasmCalls {
+        #[allow(missing_docs)]
         activateProgram(activateProgramCall),
+        #[allow(missing_docs)]
         blockCacheSize(blockCacheSizeCall),
+        #[allow(missing_docs)]
         codehashAsmSize(codehashAsmSizeCall),
+        #[allow(missing_docs)]
         codehashKeepalive(codehashKeepaliveCall),
+        #[allow(missing_docs)]
         codehashVersion(codehashVersionCall),
+        #[allow(missing_docs)]
         expiryDays(expiryDaysCall),
+        #[allow(missing_docs)]
         freePages(freePagesCall),
+        #[allow(missing_docs)]
         initCostScalar(initCostScalarCall),
+        #[allow(missing_docs)]
         inkPrice(inkPriceCall),
+        #[allow(missing_docs)]
         keepaliveDays(keepaliveDaysCall),
+        #[allow(missing_docs)]
         maxStackDepth(maxStackDepthCall),
+        #[allow(missing_docs)]
         minInitGas(minInitGasCall),
+        #[allow(missing_docs)]
         pageGas(pageGasCall),
+        #[allow(missing_docs)]
         pageLimit(pageLimitCall),
+        #[allow(missing_docs)]
         pageRamp(pageRampCall),
+        #[allow(missing_docs)]
         programInitGas(programInitGasCall),
+        #[allow(missing_docs)]
         programMemoryFootprint(programMemoryFootprintCall),
+        #[allow(missing_docs)]
         programTimeLeft(programTimeLeftCall),
+        #[allow(missing_docs)]
         programVersion(programVersionCall),
+        #[allow(missing_docs)]
         stylusVersion(stylusVersionCall),
     }
     #[automatically_derived]
@@ -4409,12 +4465,19 @@ function stylusVersion() external view returns (uint16 version);
     }
     ///Container for all the [`ArbWasm`](self) custom errors.
     pub enum ArbWasmErrors {
+        #[allow(missing_docs)]
         ProgramExpired(ProgramExpired),
+        #[allow(missing_docs)]
         ProgramInsufficientValue(ProgramInsufficientValue),
+        #[allow(missing_docs)]
         ProgramKeepaliveTooSoon(ProgramKeepaliveTooSoon),
+        #[allow(missing_docs)]
         ProgramNeedsUpgrade(ProgramNeedsUpgrade),
+        #[allow(missing_docs)]
         ProgramNotActivated(ProgramNotActivated),
+        #[allow(missing_docs)]
         ProgramNotWasm(ProgramNotWasm),
+        #[allow(missing_docs)]
         ProgramUpToDate(ProgramUpToDate),
     }
     #[automatically_derived]
@@ -4677,7 +4740,9 @@ function stylusVersion() external view returns (uint16 version);
     }
     ///Container for all the [`ArbWasm`](self) events.
     pub enum ArbWasmEvents {
+        #[allow(missing_docs)]
         ProgramActivated(ProgramActivated),
+        #[allow(missing_docs)]
         ProgramLifetimeExtended(ProgramLifetimeExtended),
     }
     #[automatically_derived]

@@ -1761,8 +1761,11 @@ struct Bid { address expressLaneController; uint256 amount; bytes signature; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Bid {
+        #[allow(missing_docs)]
         pub expressLaneController: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub signature: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -1999,7 +2002,9 @@ struct ELCRound { address expressLaneController; uint64 round; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ELCRound {
+        #[allow(missing_docs)]
         pub expressLaneController: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub round: u64,
     }
     #[allow(
@@ -2214,17 +2219,29 @@ struct InitArgs { address _auctioneer; address _biddingToken; address _beneficia
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InitArgs {
+        #[allow(missing_docs)]
         pub _auctioneer: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _biddingToken: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _beneficiary: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _roundTimingInfo: <RoundTimingInfo as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub _minReservePrice: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub _auctioneerAdmin: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _minReservePriceSetter: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _reservePriceSetter: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _reservePriceSetterAdmin: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _beneficiarySetter: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _roundTimingSetter: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _masterAdmin: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2634,9 +2651,13 @@ struct RoundTimingInfo { int64 offsetTimestamp; uint64 roundDurationSeconds; uin
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct RoundTimingInfo {
+        #[allow(missing_docs)]
         pub offsetTimestamp: i64,
+        #[allow(missing_docs)]
         pub roundDurationSeconds: u64,
+        #[allow(missing_docs)]
         pub auctionClosingSeconds: u64,
+        #[allow(missing_docs)]
         pub reserveSubmissionSeconds: u64,
     }
     #[allow(
@@ -2914,7 +2935,9 @@ struct Transferor { address addr; uint64 fixedUntilRound; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Transferor {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub fixedUntilRound: u64,
     }
     #[allow(
@@ -3262,6 +3285,7 @@ error FixedTransferor(uint64 fixedUntilRound);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct FixedTransferor {
+        #[allow(missing_docs)]
         pub fixedUntilRound: u64,
     }
     #[allow(
@@ -3332,7 +3356,9 @@ error InsufficientBalance(uint256 amountRequested, uint256 balance);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InsufficientBalance {
+        #[allow(missing_docs)]
         pub amountRequested: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub balance: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3415,8 +3441,11 @@ error InsufficientBalanceAcc(address account, uint256 amountRequested, uint256 b
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InsufficientBalanceAcc {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub amountRequested: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub balance: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3505,7 +3534,9 @@ error InvalidNewRound(uint64 currentRound, uint64 newRound);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InvalidNewRound {
+        #[allow(missing_docs)]
         pub currentRound: u64,
+        #[allow(missing_docs)]
         pub newRound: u64,
     }
     #[allow(
@@ -3585,7 +3616,9 @@ error InvalidNewStart(uint64 currentStart, uint64 newStart);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InvalidNewStart {
+        #[allow(missing_docs)]
         pub currentStart: u64,
+        #[allow(missing_docs)]
         pub newStart: u64,
     }
     #[allow(
@@ -3729,6 +3762,7 @@ error NegativeRoundStart(int64 roundStart);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NegativeRoundStart {
+        #[allow(missing_docs)]
         pub roundStart: i64,
     }
     #[allow(
@@ -3799,8 +3833,11 @@ error NotExpressLaneController(uint64 round, address controller, address sender)
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NotExpressLaneController {
+        #[allow(missing_docs)]
         pub round: u64,
+        #[allow(missing_docs)]
         pub controller: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3891,8 +3928,11 @@ error NotTransferor(uint64 round, address expectedTransferor, address msgSender)
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NotTransferor {
+        #[allow(missing_docs)]
         pub round: u64,
+        #[allow(missing_docs)]
         pub expectedTransferor: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub msgSender: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -4109,7 +4149,9 @@ error ReservePriceNotMet(uint256 bidAmount, uint256 reservePrice);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ReservePriceNotMet {
+        #[allow(missing_docs)]
         pub bidAmount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub reservePrice: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -4192,7 +4234,9 @@ error ReservePriceTooLow(uint256 reservePrice, uint256 minReservePrice);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ReservePriceTooLow {
+        #[allow(missing_docs)]
         pub reservePrice: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub minReservePrice: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -4275,6 +4319,7 @@ error RoundAlreadyResolved(uint64 round);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct RoundAlreadyResolved {
+        #[allow(missing_docs)]
         pub round: u64,
     }
     #[allow(
@@ -4409,6 +4454,7 @@ error RoundNotResolved(uint64 round);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct RoundNotResolved {
+        #[allow(missing_docs)]
         pub round: u64,
     }
     #[allow(
@@ -4479,6 +4525,7 @@ error RoundTooLong(uint64 roundDurationSeconds);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct RoundTooLong {
+        #[allow(missing_docs)]
         pub roundDurationSeconds: u64,
     }
     #[allow(
@@ -4551,7 +4598,9 @@ error RoundTooOld(uint64 round, uint64 currentRound);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct RoundTooOld {
+        #[allow(missing_docs)]
         pub round: u64,
+        #[allow(missing_docs)]
         pub currentRound: u64,
     }
     #[allow(
@@ -7243,6 +7292,7 @@ function AUCTIONEER_ADMIN_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AUCTIONEER_ADMIN_ROLEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -7365,6 +7415,7 @@ function AUCTIONEER_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AUCTIONEER_ROLEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -7485,6 +7536,7 @@ function BENEFICIARY_SETTER_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BENEFICIARY_SETTER_ROLEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -7607,6 +7659,7 @@ function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct DEFAULT_ADMIN_ROLEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -7729,6 +7782,7 @@ function MIN_RESERVE_SETTER_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MIN_RESERVE_SETTER_ROLEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -7851,6 +7905,7 @@ function RESERVE_SETTER_ADMIN_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct RESERVE_SETTER_ADMIN_ROLEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -7973,6 +8028,7 @@ function RESERVE_SETTER_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct RESERVE_SETTER_ROLEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -8095,6 +8151,7 @@ function ROUND_TIMING_SETTER_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ROUND_TIMING_SETTER_ROLEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -8213,12 +8270,14 @@ function balanceOf(address account) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct balanceOfCall {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`balanceOf(address)`](balanceOfCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct balanceOfReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -8339,13 +8398,16 @@ function balanceOfAtRound(address account, uint64 round) external view returns (
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct balanceOfAtRoundCall {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub round: u64,
     }
     ///Container type for the return parameters of the [`balanceOfAtRound(address,uint64)`](balanceOfAtRoundCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct balanceOfAtRoundReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -8486,6 +8548,7 @@ function beneficiary() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct beneficiaryReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -8604,6 +8667,7 @@ function beneficiaryBalance() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct beneficiaryBalanceReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -8728,6 +8792,7 @@ function biddingToken() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct biddingTokenReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -8846,6 +8911,7 @@ function currentRound() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct currentRoundReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -8960,6 +9026,7 @@ function deposit(uint256 amount) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct depositCall {
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`deposit(uint256)`](depositCall) function.
@@ -9088,6 +9155,7 @@ function domainSeparator() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct domainSeparatorReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -9444,14 +9512,18 @@ function getBidHash(uint64 round, address expressLaneController, uint256 amount)
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getBidHashCall {
+        #[allow(missing_docs)]
         pub round: u64,
+        #[allow(missing_docs)]
         pub expressLaneController: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`getBidHash(uint64,address,uint256)`](getBidHashCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getBidHashReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -9592,12 +9664,14 @@ function getRoleAdmin(bytes32 role) external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRoleAdminCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getRoleAdmin(bytes32)`](getRoleAdminCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRoleAdminReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -9716,13 +9790,16 @@ function getRoleMember(bytes32 role, uint256 index) external view returns (addre
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRoleMemberCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub index: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`getRoleMember(bytes32,uint256)`](getRoleMemberCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRoleMemberReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -9856,12 +9933,14 @@ function getRoleMemberCount(bytes32 role) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRoleMemberCountCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getRoleMemberCount(bytes32)`](getRoleMemberCountCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRoleMemberCountReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -9986,7 +10065,9 @@ function grantRole(bytes32 role, address account) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct grantRoleCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`grantRole(bytes32,address)`](grantRoleCall) function.
@@ -10124,13 +10205,16 @@ function hasRole(bytes32 role, address account) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct hasRoleCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`hasRole(bytes32,address)`](hasRoleCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct hasRoleReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -10264,6 +10348,7 @@ function initialize(InitArgs memory args) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initializeCall {
+        #[allow(missing_docs)]
         pub args: <InitArgs as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`initialize((address,address,address,(int64,uint64,uint64,uint64),uint256,address,address,address,address,address,address,address))`](initializeCall) function.
@@ -10508,6 +10593,7 @@ function isAuctionRoundClosed() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAuctionRoundClosedReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -10630,6 +10716,7 @@ function isReserveBlackout() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isReserveBlackoutReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -10752,6 +10839,7 @@ function minReservePrice() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct minReservePriceReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -10870,7 +10958,9 @@ function renounceRole(bytes32 role, address account) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct renounceRoleCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`renounceRole(bytes32,address)`](renounceRoleCall) function.
@@ -11012,6 +11102,7 @@ function reservePrice() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct reservePriceReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -11128,7 +11219,9 @@ function resolveMultiBidAuction(Bid memory firstPriceBid, Bid memory secondPrice
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct resolveMultiBidAuctionCall {
+        #[allow(missing_docs)]
         pub firstPriceBid: <Bid as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub secondPriceBid: <Bid as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`resolveMultiBidAuction((address,uint256,bytes),(address,uint256,bytes))`](resolveMultiBidAuctionCall) function.
@@ -11260,6 +11353,7 @@ function resolveSingleBidAuction(Bid memory firstPriceBid) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct resolveSingleBidAuctionCall {
+        #[allow(missing_docs)]
         pub firstPriceBid: <Bid as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`resolveSingleBidAuction((address,uint256,bytes))`](resolveSingleBidAuctionCall) function.
@@ -11388,7 +11482,9 @@ function resolvedRounds() external view returns (ELCRound memory, ELCRound memor
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct resolvedRoundsReturn {
+        #[allow(missing_docs)]
         pub _0: <ELCRound as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub _1: <ELCRound as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -11508,7 +11604,9 @@ function revokeRole(bytes32 role, address account) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct revokeRoleCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`revokeRole(bytes32,address)`](revokeRoleCall) function.
@@ -11646,13 +11744,16 @@ function roundTimestamps(uint64 round) external view returns (uint64, uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct roundTimestampsCall {
+        #[allow(missing_docs)]
         pub round: u64,
     }
     ///Container type for the return parameters of the [`roundTimestamps(uint64)`](roundTimestampsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct roundTimestampsReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
+        #[allow(missing_docs)]
         pub _1: u64,
     }
     #[allow(
@@ -11783,9 +11884,13 @@ function roundTimingInfo() external view returns (int64 offsetTimestamp, uint64 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct roundTimingInfoReturn {
+        #[allow(missing_docs)]
         pub offsetTimestamp: i64,
+        #[allow(missing_docs)]
         pub roundDurationSeconds: u64,
+        #[allow(missing_docs)]
         pub auctionClosingSeconds: u64,
+        #[allow(missing_docs)]
         pub reserveSubmissionSeconds: u64,
     }
     #[allow(
@@ -11922,6 +12027,7 @@ function setBeneficiary(address newBeneficiary) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setBeneficiaryCall {
+        #[allow(missing_docs)]
         pub newBeneficiary: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setBeneficiary(address)`](setBeneficiaryCall) function.
@@ -12046,6 +12152,7 @@ function setMinReservePrice(uint256 newMinReservePrice) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setMinReservePriceCall {
+        #[allow(missing_docs)]
         pub newMinReservePrice: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`setMinReservePrice(uint256)`](setMinReservePriceCall) function.
@@ -12176,6 +12283,7 @@ function setReservePrice(uint256 newReservePrice) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setReservePriceCall {
+        #[allow(missing_docs)]
         pub newReservePrice: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`setReservePrice(uint256)`](setReservePriceCall) function.
@@ -12302,6 +12410,7 @@ function setRoundTimingInfo(RoundTimingInfo memory newRoundTimingInfo) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setRoundTimingInfoCall {
+        #[allow(missing_docs)]
         pub newRoundTimingInfo: <RoundTimingInfo as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`setRoundTimingInfo((int64,uint64,uint64,uint64))`](setRoundTimingInfoCall) function.
@@ -12432,6 +12541,7 @@ function setTransferor(Transferor memory transferor) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setTransferorCall {
+        #[allow(missing_docs)]
         pub transferor: <Transferor as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`setTransferor((address,uint64))`](setTransferorCall) function.
@@ -12552,12 +12662,14 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct supportsInterfaceCall {
+        #[allow(missing_docs)]
         pub interfaceId: alloy::sol_types::private::FixedBytes<4>,
     }
     ///Container type for the return parameters of the [`supportsInterface(bytes4)`](supportsInterfaceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct supportsInterfaceReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -12680,7 +12792,9 @@ function transferExpressLaneController(uint64 round, address newExpressLaneContr
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferExpressLaneControllerCall {
+        #[allow(missing_docs)]
         pub round: u64,
+        #[allow(missing_docs)]
         pub newExpressLaneController: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`transferExpressLaneController(uint64,address)`](transferExpressLaneControllerCall) function.
@@ -12819,13 +12933,16 @@ function transferorOf(address) external view returns (address addr, uint64 fixed
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferorOfCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`transferorOf(address)`](transferorOfCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferorOfReturn {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub fixedUntilRound: u64,
     }
     #[allow(
@@ -12953,12 +13070,14 @@ function withdrawableBalance(address account) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawableBalanceCall {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`withdrawableBalance(address)`](withdrawableBalanceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawableBalanceReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -13083,13 +13202,16 @@ function withdrawableBalanceAtRound(address account, uint64 round) external view
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawableBalanceAtRoundCall {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub round: u64,
     }
     ///Container type for the return parameters of the [`withdrawableBalanceAtRound(address,uint64)`](withdrawableBalanceAtRoundCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawableBalanceAtRoundReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -13221,52 +13343,99 @@ function withdrawableBalanceAtRound(address account, uint64 round) external view
     };
     ///Container for all the [`ExpressLaneAuction`](self) function calls.
     pub enum ExpressLaneAuctionCalls {
+        #[allow(missing_docs)]
         AUCTIONEER_ADMIN_ROLE(AUCTIONEER_ADMIN_ROLECall),
+        #[allow(missing_docs)]
         AUCTIONEER_ROLE(AUCTIONEER_ROLECall),
+        #[allow(missing_docs)]
         BENEFICIARY_SETTER_ROLE(BENEFICIARY_SETTER_ROLECall),
+        #[allow(missing_docs)]
         DEFAULT_ADMIN_ROLE(DEFAULT_ADMIN_ROLECall),
+        #[allow(missing_docs)]
         MIN_RESERVE_SETTER_ROLE(MIN_RESERVE_SETTER_ROLECall),
+        #[allow(missing_docs)]
         RESERVE_SETTER_ADMIN_ROLE(RESERVE_SETTER_ADMIN_ROLECall),
+        #[allow(missing_docs)]
         RESERVE_SETTER_ROLE(RESERVE_SETTER_ROLECall),
+        #[allow(missing_docs)]
         ROUND_TIMING_SETTER_ROLE(ROUND_TIMING_SETTER_ROLECall),
+        #[allow(missing_docs)]
         balanceOf(balanceOfCall),
+        #[allow(missing_docs)]
         balanceOfAtRound(balanceOfAtRoundCall),
+        #[allow(missing_docs)]
         beneficiary(beneficiaryCall),
+        #[allow(missing_docs)]
         beneficiaryBalance(beneficiaryBalanceCall),
+        #[allow(missing_docs)]
         biddingToken(biddingTokenCall),
+        #[allow(missing_docs)]
         currentRound(currentRoundCall),
+        #[allow(missing_docs)]
         deposit(depositCall),
+        #[allow(missing_docs)]
         domainSeparator(domainSeparatorCall),
+        #[allow(missing_docs)]
         finalizeWithdrawal(finalizeWithdrawalCall),
+        #[allow(missing_docs)]
         flushBeneficiaryBalance(flushBeneficiaryBalanceCall),
+        #[allow(missing_docs)]
         getBidHash(getBidHashCall),
+        #[allow(missing_docs)]
         getRoleAdmin(getRoleAdminCall),
+        #[allow(missing_docs)]
         getRoleMember(getRoleMemberCall),
+        #[allow(missing_docs)]
         getRoleMemberCount(getRoleMemberCountCall),
+        #[allow(missing_docs)]
         grantRole(grantRoleCall),
+        #[allow(missing_docs)]
         hasRole(hasRoleCall),
+        #[allow(missing_docs)]
         initialize(initializeCall),
+        #[allow(missing_docs)]
         initiateWithdrawal(initiateWithdrawalCall),
+        #[allow(missing_docs)]
         isAuctionRoundClosed(isAuctionRoundClosedCall),
+        #[allow(missing_docs)]
         isReserveBlackout(isReserveBlackoutCall),
+        #[allow(missing_docs)]
         minReservePrice(minReservePriceCall),
+        #[allow(missing_docs)]
         renounceRole(renounceRoleCall),
+        #[allow(missing_docs)]
         reservePrice(reservePriceCall),
+        #[allow(missing_docs)]
         resolveMultiBidAuction(resolveMultiBidAuctionCall),
+        #[allow(missing_docs)]
         resolveSingleBidAuction(resolveSingleBidAuctionCall),
+        #[allow(missing_docs)]
         resolvedRounds(resolvedRoundsCall),
+        #[allow(missing_docs)]
         revokeRole(revokeRoleCall),
+        #[allow(missing_docs)]
         roundTimestamps(roundTimestampsCall),
+        #[allow(missing_docs)]
         roundTimingInfo(roundTimingInfoCall),
+        #[allow(missing_docs)]
         setBeneficiary(setBeneficiaryCall),
+        #[allow(missing_docs)]
         setMinReservePrice(setMinReservePriceCall),
+        #[allow(missing_docs)]
         setReservePrice(setReservePriceCall),
+        #[allow(missing_docs)]
         setRoundTimingInfo(setRoundTimingInfoCall),
+        #[allow(missing_docs)]
         setTransferor(setTransferorCall),
+        #[allow(missing_docs)]
         supportsInterface(supportsInterfaceCall),
+        #[allow(missing_docs)]
         transferExpressLaneController(transferExpressLaneControllerCall),
+        #[allow(missing_docs)]
         transferorOf(transferorOfCall),
+        #[allow(missing_docs)]
         withdrawableBalance(withdrawableBalanceCall),
+        #[allow(missing_docs)]
         withdrawableBalanceAtRound(withdrawableBalanceAtRoundCall),
     }
     #[automatically_derived]
@@ -14625,32 +14794,59 @@ function withdrawableBalanceAtRound(address account, uint64 round) external view
     }
     ///Container for all the [`ExpressLaneAuction`](self) custom errors.
     pub enum ExpressLaneAuctionErrors {
+        #[allow(missing_docs)]
         AuctionNotClosed(AuctionNotClosed),
+        #[allow(missing_docs)]
         BidsWrongOrder(BidsWrongOrder),
+        #[allow(missing_docs)]
         FixedTransferor(FixedTransferor),
+        #[allow(missing_docs)]
         InsufficientBalance(InsufficientBalance),
+        #[allow(missing_docs)]
         InsufficientBalanceAcc(InsufficientBalanceAcc),
+        #[allow(missing_docs)]
         InvalidNewRound(InvalidNewRound),
+        #[allow(missing_docs)]
         InvalidNewStart(InvalidNewStart),
+        #[allow(missing_docs)]
         NegativeOffset(NegativeOffset),
+        #[allow(missing_docs)]
         NegativeRoundStart(NegativeRoundStart),
+        #[allow(missing_docs)]
         NotExpressLaneController(NotExpressLaneController),
+        #[allow(missing_docs)]
         NotTransferor(NotTransferor),
+        #[allow(missing_docs)]
         NothingToWithdraw(NothingToWithdraw),
+        #[allow(missing_docs)]
         ReserveBlackout(ReserveBlackout),
+        #[allow(missing_docs)]
         ReservePriceNotMet(ReservePriceNotMet),
+        #[allow(missing_docs)]
         ReservePriceTooLow(ReservePriceTooLow),
+        #[allow(missing_docs)]
         RoundAlreadyResolved(RoundAlreadyResolved),
+        #[allow(missing_docs)]
         RoundDurationTooShort(RoundDurationTooShort),
+        #[allow(missing_docs)]
         RoundNotResolved(RoundNotResolved),
+        #[allow(missing_docs)]
         RoundTooLong(RoundTooLong),
+        #[allow(missing_docs)]
         RoundTooOld(RoundTooOld),
+        #[allow(missing_docs)]
         SameBidder(SameBidder),
+        #[allow(missing_docs)]
         TieBidsWrongOrder(TieBidsWrongOrder),
+        #[allow(missing_docs)]
         WithdrawalInProgress(WithdrawalInProgress),
+        #[allow(missing_docs)]
         WithdrawalMaxRound(WithdrawalMaxRound),
+        #[allow(missing_docs)]
         ZeroAmount(ZeroAmount),
+        #[allow(missing_docs)]
         ZeroAuctionClosingSeconds(ZeroAuctionClosingSeconds),
+        #[allow(missing_docs)]
         ZeroBiddingToken(ZeroBiddingToken),
     }
     #[automatically_derived]
@@ -15457,19 +15653,33 @@ function withdrawableBalanceAtRound(address account, uint64 round) external view
     }
     ///Container for all the [`ExpressLaneAuction`](self) events.
     pub enum ExpressLaneAuctionEvents {
+        #[allow(missing_docs)]
         AuctionResolved(AuctionResolved),
+        #[allow(missing_docs)]
         Deposit(Deposit),
+        #[allow(missing_docs)]
         Initialized(Initialized),
+        #[allow(missing_docs)]
         RoleAdminChanged(RoleAdminChanged),
+        #[allow(missing_docs)]
         RoleGranted(RoleGranted),
+        #[allow(missing_docs)]
         RoleRevoked(RoleRevoked),
+        #[allow(missing_docs)]
         SetBeneficiary(SetBeneficiary),
+        #[allow(missing_docs)]
         SetExpressLaneController(SetExpressLaneController),
+        #[allow(missing_docs)]
         SetMinReservePrice(SetMinReservePrice),
+        #[allow(missing_docs)]
         SetReservePrice(SetReservePrice),
+        #[allow(missing_docs)]
         SetRoundTimingInfo(SetRoundTimingInfo),
+        #[allow(missing_docs)]
         SetTransferor(SetTransferor),
+        #[allow(missing_docs)]
         WithdrawalFinalized(WithdrawalFinalized),
+        #[allow(missing_docs)]
         WithdrawalInitiated(WithdrawalInitiated),
     }
     #[automatically_derived]

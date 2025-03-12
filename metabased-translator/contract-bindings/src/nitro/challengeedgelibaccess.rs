@@ -1369,20 +1369,35 @@ struct ChallengeEdge { bytes32 originId; bytes32 startHistoryRoot; uint256 start
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ChallengeEdge {
+        #[allow(missing_docs)]
         pub originId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub startHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub startHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub endHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub endHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub lowerChildId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub upperChildId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub claimId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub staker: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub createdAtBlock: u64,
+        #[allow(missing_docs)]
         pub confirmedAtBlock: u64,
+        #[allow(missing_docs)]
         pub status: <EdgeStatus as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub level: u8,
+        #[allow(missing_docs)]
         pub refunded: bool,
+        #[allow(missing_docs)]
         pub totalTimeUnrivaledCache: u64,
     }
     #[allow(
@@ -1892,8 +1907,11 @@ error ChildrenAlreadySet(bytes32 edgeId, bytes32 lowerChildId, bytes32 upperChil
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ChildrenAlreadySet {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub lowerChildId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub upperChildId: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1982,6 +2000,7 @@ error EdgeAlreadyRefunded(bytes32 edgeId);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct EdgeAlreadyRefunded {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -2052,7 +2071,9 @@ error EdgeNotConfirmed(bytes32 edgeId, EdgeStatus);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct EdgeNotConfirmed {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub _1: <EdgeStatus as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -2133,6 +2154,7 @@ error EdgeNotExists(bytes32 edgeId);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct EdgeNotExists {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -2203,8 +2225,11 @@ error EdgeNotLayerZero(bytes32 edgeId, address staker, bytes32 claimId);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct EdgeNotLayerZero {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub staker: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub claimId: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -2293,7 +2318,9 @@ error EdgeNotPending(bytes32 edgeId, EdgeStatus status);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct EdgeNotPending {
+        #[allow(missing_docs)]
         pub edgeId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub status: <EdgeStatus as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -2694,7 +2721,9 @@ error InvalidHeights(uint256 start, uint256 end);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InvalidHeights {
+        #[allow(missing_docs)]
         pub start: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub end: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2777,7 +2806,9 @@ error LevelTooHigh(uint8 level, uint8 numBigStepLevels);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct LevelTooHigh {
+        #[allow(missing_docs)]
         pub level: u8,
+        #[allow(missing_docs)]
         pub numBigStepLevels: u8,
     }
     #[allow(
@@ -2981,6 +3012,7 @@ function exists() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct existsReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -3099,6 +3131,7 @@ function getChallengeEdge() external view returns (ChallengeEdge memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getChallengeEdgeReturn {
+        #[allow(missing_docs)]
         pub _0: <ChallengeEdge as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -3223,6 +3256,7 @@ function id() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct idReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -3337,17 +3371,24 @@ function idComponent(uint8 level, bytes32 originId, uint256 startHeight, bytes32
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct idComponentCall {
+        #[allow(missing_docs)]
         pub level: u8,
+        #[allow(missing_docs)]
         pub originId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub startHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub startHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub endHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub endHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`idComponent(uint8,bytes32,uint256,bytes32,uint256,bytes32)`](idComponentCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct idComponentReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -3516,12 +3557,14 @@ function idMem(ChallengeEdge memory edge) external pure returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct idMemCall {
+        #[allow(missing_docs)]
         pub edge: <ChallengeEdge as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`idMem((bytes32,bytes32,uint256,bytes32,uint256,bytes32,bytes32,bytes32,address,uint64,uint64,uint8,uint8,bool,uint64))`](idMemCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct idMemReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -3642,6 +3685,7 @@ function isLayerZero() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isLayerZeroReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -3760,6 +3804,7 @@ function length() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct lengthReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3876,13 +3921,16 @@ function levelToType(uint8 level, uint8 numBigStepLevels) external pure returns 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct levelToTypeCall {
+        #[allow(missing_docs)]
         pub level: u8,
+        #[allow(missing_docs)]
         pub numBigStepLevels: u8,
     }
     ///Container type for the return parameters of the [`levelToType(uint8,uint8)`](levelToTypeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct levelToTypeReturn {
+        #[allow(missing_docs)]
         pub eType: <EdgeType as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -4019,6 +4067,7 @@ function mutualId() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct mutualIdReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -4133,16 +4182,22 @@ function mutualIdComponent(uint8 level, bytes32 originId, uint256 startHeight, b
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct mutualIdComponentCall {
+        #[allow(missing_docs)]
         pub level: u8,
+        #[allow(missing_docs)]
         pub originId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub startHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub startHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub endHeight: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`mutualIdComponent(uint8,bytes32,uint256,bytes32,uint256)`](mutualIdComponentCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct mutualIdComponentReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -4307,12 +4362,14 @@ function mutualIdMem(ChallengeEdge memory ce) external pure returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct mutualIdMemCall {
+        #[allow(missing_docs)]
         pub ce: <ChallengeEdge as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`mutualIdMem((bytes32,bytes32,uint256,bytes32,uint256,bytes32,bytes32,bytes32,address,uint64,uint64,uint8,uint8,bool,uint64))`](mutualIdMemCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct mutualIdMemReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -4429,17 +4486,24 @@ function newChildEdge(bytes32 originId, bytes32 startHistoryRoot, uint256 startH
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct newChildEdgeCall {
+        #[allow(missing_docs)]
         pub originId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub startHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub startHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub endHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub endHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub level: u8,
     }
     ///Container type for the return parameters of the [`newChildEdge(bytes32,bytes32,uint256,bytes32,uint256,uint8)`](newChildEdgeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct newChildEdgeReturn {
+        #[allow(missing_docs)]
         pub _0: <ChallengeEdge as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -4610,10 +4674,15 @@ function newEdgeChecks(bytes32 originId, bytes32 startHistoryRoot, uint256 start
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct newEdgeChecksCall {
+        #[allow(missing_docs)]
         pub originId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub startHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub startHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub endHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub endHeight: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`newEdgeChecks(bytes32,bytes32,uint256,bytes32,uint256)`](newEdgeChecksCall) function.
@@ -4778,19 +4847,28 @@ function newLayerZeroEdge(bytes32 originId, bytes32 startHistoryRoot, uint256 st
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct newLayerZeroEdgeCall {
+        #[allow(missing_docs)]
         pub originId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub startHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub startHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub endHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub endHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub claimId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub staker: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub level: u8,
     }
     ///Container type for the return parameters of the [`newLayerZeroEdge(bytes32,bytes32,uint256,bytes32,uint256,bytes32,address,uint8)`](newLayerZeroEdgeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct newLayerZeroEdgeReturn {
+        #[allow(missing_docs)]
         pub _0: <ChallengeEdge as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -4981,6 +5059,7 @@ function setChallengeEdge(ChallengeEdge memory edge) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setChallengeEdgeCall {
+        #[allow(missing_docs)]
         pub edge: <ChallengeEdge as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`setChallengeEdge((bytes32,bytes32,uint256,bytes32,uint256,bytes32,bytes32,bytes32,address,uint64,uint64,uint8,uint8,bool,uint64))`](setChallengeEdgeCall) function.
@@ -5105,7 +5184,9 @@ function setChildren(bytes32 lowerChildId, bytes32 upperChildId) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setChildrenCall {
+        #[allow(missing_docs)]
         pub lowerChildId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub upperChildId: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`setChildren(bytes32,bytes32)`](setChildrenCall) function.
@@ -5470,24 +5551,43 @@ function setRefunded() external;
     };
     ///Container for all the [`ChallengeEdgeLibAccess`](self) function calls.
     pub enum ChallengeEdgeLibAccessCalls {
+        #[allow(missing_docs)]
         deleteChallengeEdge(deleteChallengeEdgeCall),
+        #[allow(missing_docs)]
         exists(existsCall),
+        #[allow(missing_docs)]
         getChallengeEdge(getChallengeEdgeCall),
+        #[allow(missing_docs)]
         id(idCall),
+        #[allow(missing_docs)]
         idComponent(idComponentCall),
+        #[allow(missing_docs)]
         idMem(idMemCall),
+        #[allow(missing_docs)]
         isLayerZero(isLayerZeroCall),
+        #[allow(missing_docs)]
         length(lengthCall),
+        #[allow(missing_docs)]
         levelToType(levelToTypeCall),
+        #[allow(missing_docs)]
         mutualId(mutualIdCall),
+        #[allow(missing_docs)]
         mutualIdComponent(mutualIdComponentCall),
+        #[allow(missing_docs)]
         mutualIdMem(mutualIdMemCall),
+        #[allow(missing_docs)]
         newChildEdge(newChildEdgeCall),
+        #[allow(missing_docs)]
         newEdgeChecks(newEdgeChecksCall),
+        #[allow(missing_docs)]
         newLayerZeroEdge(newLayerZeroEdgeCall),
+        #[allow(missing_docs)]
         setChallengeEdge(setChallengeEdgeCall),
+        #[allow(missing_docs)]
         setChildren(setChildrenCall),
+        #[allow(missing_docs)]
         setConfirmed(setConfirmedCall),
+        #[allow(missing_docs)]
         setRefunded(setRefundedCall),
     }
     #[automatically_derived]
@@ -6054,18 +6154,31 @@ function setRefunded() external;
     }
     ///Container for all the [`ChallengeEdgeLibAccess`](self) custom errors.
     pub enum ChallengeEdgeLibAccessErrors {
+        #[allow(missing_docs)]
         ChildrenAlreadySet(ChildrenAlreadySet),
+        #[allow(missing_docs)]
         EdgeAlreadyRefunded(EdgeAlreadyRefunded),
+        #[allow(missing_docs)]
         EdgeNotConfirmed(EdgeNotConfirmed),
+        #[allow(missing_docs)]
         EdgeNotExists(EdgeNotExists),
+        #[allow(missing_docs)]
         EdgeNotLayerZero(EdgeNotLayerZero),
+        #[allow(missing_docs)]
         EdgeNotPending(EdgeNotPending),
+        #[allow(missing_docs)]
         EmptyClaimId(EmptyClaimId),
+        #[allow(missing_docs)]
         EmptyEndRoot(EmptyEndRoot),
+        #[allow(missing_docs)]
         EmptyOriginId(EmptyOriginId),
+        #[allow(missing_docs)]
         EmptyStaker(EmptyStaker),
+        #[allow(missing_docs)]
         EmptyStartRoot(EmptyStartRoot),
+        #[allow(missing_docs)]
         InvalidHeights(InvalidHeights),
+        #[allow(missing_docs)]
         LevelTooHigh(LevelTooHigh),
     }
     #[automatically_derived]

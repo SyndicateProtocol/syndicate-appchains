@@ -559,6 +559,7 @@ function proxiableUUID() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct proxiableUUIDReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -673,6 +674,7 @@ function upgradeTo(address newImplementation) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeToCall {
+        #[allow(missing_docs)]
         pub newImplementation: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`upgradeTo(address)`](upgradeToCall) function.
@@ -795,7 +797,9 @@ function upgradeToAndCall(address newImplementation, bytes memory data) external
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeToAndCallCall {
+        #[allow(missing_docs)]
         pub newImplementation: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`upgradeToAndCall(address,bytes)`](upgradeToAndCallCall) function.
@@ -932,8 +936,11 @@ function upgradeToAndCall(address newImplementation, bytes memory data) external
     };
     ///Container for all the [`UUPSUpgradeable`](self) function calls.
     pub enum UUPSUpgradeableCalls {
+        #[allow(missing_docs)]
         proxiableUUID(proxiableUUIDCall),
+        #[allow(missing_docs)]
         upgradeTo(upgradeToCall),
+        #[allow(missing_docs)]
         upgradeToAndCall(upgradeToAndCallCall),
     }
     #[automatically_derived]
@@ -1082,8 +1089,11 @@ function upgradeToAndCall(address newImplementation, bytes memory data) external
     }
     ///Container for all the [`UUPSUpgradeable`](self) events.
     pub enum UUPSUpgradeableEvents {
+        #[allow(missing_docs)]
         AdminChanged(AdminChanged),
+        #[allow(missing_docs)]
         BeaconUpgraded(BeaconUpgraded),
+        #[allow(missing_docs)]
         Upgraded(Upgraded),
     }
     #[automatically_derived]

@@ -113,6 +113,7 @@ error PoolDoesntExist();
     };
     ///Container for all the [`StakingPoolCreatorUtils`](self) custom errors.
     pub enum StakingPoolCreatorUtilsErrors {
+        #[allow(missing_docs)]
         PoolDoesntExist(PoolDoesntExist),
     }
     #[automatically_derived]

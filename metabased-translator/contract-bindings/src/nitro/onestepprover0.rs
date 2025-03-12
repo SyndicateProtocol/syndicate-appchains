@@ -919,8 +919,11 @@ struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; bytes32 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ExecutionContext {
+        #[allow(missing_docs)]
         pub maxInboxMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub bridge: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub initialWasmModuleRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1165,7 +1168,9 @@ struct Instruction { uint16 opcode; uint256 argumentData; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Instruction {
+        #[allow(missing_docs)]
         pub opcode: u16,
+        #[allow(missing_docs)]
         pub argumentData: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1389,17 +1394,29 @@ struct Machine { MachineStatus status; ValueStack valueStack; MultiStack valueMu
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Machine {
+        #[allow(missing_docs)]
         pub status: <MachineStatus as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub valueStack: <ValueStack as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub valueMultiStack: <MultiStack as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub internalStack: <ValueStack as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub frameStack: <StackFrameWindow as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub frameMultiStack: <MultiStack as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub globalStateHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub moduleIdx: u32,
+        #[allow(missing_docs)]
         pub functionIdx: u32,
+        #[allow(missing_docs)]
         pub functionPc: u32,
+        #[allow(missing_docs)]
         pub recoveryPc: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub modulesRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1857,11 +1874,17 @@ struct Module { bytes32 globalsMerkleRoot; ModuleMemory moduleMemory; bytes32 ta
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Module {
+        #[allow(missing_docs)]
         pub globalsMerkleRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub moduleMemory: <ModuleMemory as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub tablesMerkleRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub functionsMerkleRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub extraHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub internalsOffset: u32,
     }
     #[allow(
@@ -2185,8 +2208,11 @@ struct ModuleMemory { uint64 size; uint64 maxSize; bytes32 merkleRoot; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ModuleMemory {
+        #[allow(missing_docs)]
         pub size: u64,
+        #[allow(missing_docs)]
         pub maxSize: u64,
+        #[allow(missing_docs)]
         pub merkleRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -2429,7 +2455,9 @@ struct MultiStack { bytes32 inactiveStackHash; bytes32 remainingHash; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MultiStack {
+        #[allow(missing_docs)]
         pub inactiveStackHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub remainingHash: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -2655,9 +2683,13 @@ struct StackFrame { Value returnPc; bytes32 localsMerkleRoot; uint32 callerModul
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct StackFrame {
+        #[allow(missing_docs)]
         pub returnPc: <Value as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub localsMerkleRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub callerModule: u32,
+        #[allow(missing_docs)]
         pub callerModuleInternals: u32,
     }
     #[allow(
@@ -2925,9 +2957,11 @@ struct StackFrameWindow { StackFrame[] proved; bytes32 remainingHash; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct StackFrameWindow {
+        #[allow(missing_docs)]
         pub proved: alloy::sol_types::private::Vec<
             <StackFrame as alloy::sol_types::SolType>::RustType,
         >,
+        #[allow(missing_docs)]
         pub remainingHash: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -3158,7 +3192,9 @@ struct Value { ValueType valueType; uint256 contents; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Value {
+        #[allow(missing_docs)]
         pub valueType: <ValueType as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub contents: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3373,6 +3409,7 @@ struct ValueArray { Value[] inner; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ValueArray {
+        #[allow(missing_docs)]
         pub inner: alloy::sol_types::private::Vec<
             <Value as alloy::sol_types::SolType>::RustType,
         >,
@@ -3570,7 +3607,9 @@ struct ValueStack { ValueArray proved; bytes32 remainingHash; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ValueStack {
+        #[allow(missing_docs)]
         pub proved: <ValueArray as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub remainingHash: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -3794,17 +3833,24 @@ function executeOneStep(ExecutionContext memory, Machine memory startMach, Modul
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executeOneStepCall {
+        #[allow(missing_docs)]
         pub _0: <ExecutionContext as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub startMach: <Machine as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub startMod: <Module as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub inst: <Instruction as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub proof: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`executeOneStep((uint256,address,bytes32),(uint8,(((uint8,uint256)[]),bytes32),(bytes32,bytes32),(((uint8,uint256)[]),bytes32),(((uint8,uint256),bytes32,uint32,uint32)[],bytes32),(bytes32,bytes32),bytes32,uint32,uint32,uint32,bytes32,bytes32),(bytes32,(uint64,uint64,bytes32),bytes32,bytes32,bytes32,uint32),(uint16,uint256),bytes)`](executeOneStepCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executeOneStepReturn {
+        #[allow(missing_docs)]
         pub mach: <Machine as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub r#mod: <Module as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -3954,6 +4000,7 @@ function executeOneStep(ExecutionContext memory, Machine memory startMach, Modul
     };
     ///Container for all the [`OneStepProver0`](self) function calls.
     pub enum OneStepProver0Calls {
+        #[allow(missing_docs)]
         executeOneStep(executeOneStepCall),
     }
     #[automatically_derived]

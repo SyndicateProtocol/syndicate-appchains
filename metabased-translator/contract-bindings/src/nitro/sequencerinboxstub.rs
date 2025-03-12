@@ -147,9 +147,13 @@ struct TimeBounds { uint64 minTimestamp; uint64 maxTimestamp; uint64 minBlockNum
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct TimeBounds {
+        #[allow(missing_docs)]
         pub minTimestamp: u64,
+        #[allow(missing_docs)]
         pub maxTimestamp: u64,
+        #[allow(missing_docs)]
         pub minBlockNumber: u64,
+        #[allow(missing_docs)]
         pub maxBlockNumber: u64,
     }
     #[allow(
@@ -565,9 +569,13 @@ struct MaxTimeVariation { uint256 delayBlocks; uint256 futureBlocks; uint256 del
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MaxTimeVariation {
+        #[allow(missing_docs)]
         pub delayBlocks: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub futureBlocks: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub delaySeconds: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub futureSeconds: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -984,12 +992,19 @@ struct Message { uint8 kind; address sender; uint64 blockNumber; uint64 timestam
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Message {
+        #[allow(missing_docs)]
         pub kind: u8,
+        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub blockNumber: u64,
+        #[allow(missing_docs)]
         pub timestamp: u64,
+        #[allow(missing_docs)]
         pub inboxSeqNum: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub baseFeeL1: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub messageDataHash: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -3295,8 +3310,11 @@ struct BufferConfig { uint64 threshold; uint64 max; uint64 replenishRateInBasis;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BufferConfig {
+        #[allow(missing_docs)]
         pub threshold: u64,
+        #[allow(missing_docs)]
         pub max: u64,
+        #[allow(missing_docs)]
         pub replenishRateInBasis: u64,
     }
     #[allow(
@@ -3534,7 +3552,9 @@ struct DelayProof { bytes32 beforeDelayedAcc; Messages.Message delayedMessage; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct DelayProof {
+        #[allow(missing_docs)]
         pub beforeDelayedAcc: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub delayedMessage: <Messages::Message as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -3826,6 +3846,7 @@ error AlreadyValidDASKeyset(bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AlreadyValidDASKeyset {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -4024,7 +4045,9 @@ error BadSequencerNumber(uint256 stored, uint256 received);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BadSequencerNumber {
+        #[allow(missing_docs)]
         pub stored: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub received: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -4171,7 +4194,9 @@ error DataTooLarge(uint256 dataLength, uint256 maxDataLength);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct DataTooLarge {
+        #[allow(missing_docs)]
         pub dataLength: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub maxDataLength: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -4770,6 +4795,7 @@ error InitParamZero(string name);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InitParamZero {
+        #[allow(missing_docs)]
         pub name: alloy::sol_types::private::String,
     }
     #[allow(
@@ -4906,6 +4932,7 @@ error InvalidHeaderFlag(bytes1);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InvalidHeaderFlag {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<1>,
     }
     #[allow(
@@ -5168,6 +5195,7 @@ error NoSuchKeyset(bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NoSuchKeyset {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -5302,6 +5330,7 @@ error NotBatchPosterManager(address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NotBatchPosterManager {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -5564,7 +5593,9 @@ error NotOwner(address sender, address owner);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NotOwner {
+        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -7422,12 +7453,19 @@ constructor(address bridge_, address sequencer_, ISequencerInbox.MaxTimeVariatio
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub bridge_: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub sequencer_: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub maxTimeVariation_: <ISequencerInbox::MaxTimeVariation as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub maxDataSize_: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub reader4844_: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub isUsingFeeToken_: bool,
+        #[allow(missing_docs)]
         pub isDelayBufferable_: bool,
     }
     const _: () = {
@@ -7554,6 +7592,7 @@ function BROTLI_MESSAGE_HEADER_FLAG() external view returns (bytes1);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BROTLI_MESSAGE_HEADER_FLAGReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<1>,
     }
     #[allow(
@@ -7676,6 +7715,7 @@ function DAS_MESSAGE_HEADER_FLAG() external view returns (bytes1);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct DAS_MESSAGE_HEADER_FLAGReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<1>,
     }
     #[allow(
@@ -7798,6 +7838,7 @@ function DATA_AUTHENTICATED_FLAG() external view returns (bytes1);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct DATA_AUTHENTICATED_FLAGReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<1>,
     }
     #[allow(
@@ -7920,6 +7961,7 @@ function DATA_BLOB_HEADER_FLAG() external view returns (bytes1);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct DATA_BLOB_HEADER_FLAGReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<1>,
     }
     #[allow(
@@ -8042,6 +8084,7 @@ function HEADER_LENGTH() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct HEADER_LENGTHReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -8162,6 +8205,7 @@ function TREE_DAS_MESSAGE_HEADER_FLAG() external view returns (bytes1);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct TREE_DAS_MESSAGE_HEADER_FLAGReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<1>,
     }
     #[allow(
@@ -8284,6 +8328,7 @@ function ZERO_HEAVY_MESSAGE_HEADER_FLAG() external view returns (bytes1);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ZERO_HEAVY_MESSAGE_HEADER_FLAGReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<1>,
     }
     #[allow(
@@ -8402,6 +8447,7 @@ function addInitMessage(uint256 chainId) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addInitMessageCall {
+        #[allow(missing_docs)]
         pub chainId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`addInitMessage(uint256)`](addInitMessageCall) function.
@@ -8528,11 +8574,17 @@ function addSequencerL2Batch(uint256 sequenceNumber, bytes memory data, uint256 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addSequencerL2BatchCall {
+        #[allow(missing_docs)]
         pub sequenceNumber: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
         pub afterDelayedMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub gasRefunder: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub prevMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub newMessageCount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`addSequencerL2Batch(uint256,bytes,uint256,address,uint256,uint256)`](addSequencerL2BatchCall) function.
@@ -8711,12 +8763,19 @@ function addSequencerL2BatchDelayProof(uint256 sequenceNumber, bytes memory data
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addSequencerL2BatchDelayProofCall {
+        #[allow(missing_docs)]
         pub sequenceNumber: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
         pub afterDelayedMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub gasRefunder: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub prevMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub newMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub delayProof: <DelayProof as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`addSequencerL2BatchDelayProof(uint256,bytes,uint256,address,uint256,uint256,(bytes32,(uint8,address,uint64,uint64,uint256,uint256,bytes32)))`](addSequencerL2BatchDelayProofCall) function.
@@ -8901,10 +8960,15 @@ function addSequencerL2BatchFromBlobs(uint256 sequenceNumber, uint256 afterDelay
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addSequencerL2BatchFromBlobsCall {
+        #[allow(missing_docs)]
         pub sequenceNumber: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub afterDelayedMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub gasRefunder: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub prevMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub newMessageCount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`addSequencerL2BatchFromBlobs(uint256,uint256,address,uint256,uint256)`](addSequencerL2BatchFromBlobsCall) function.
@@ -9075,11 +9139,17 @@ function addSequencerL2BatchFromBlobsDelayProof(uint256 sequenceNumber, uint256 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addSequencerL2BatchFromBlobsDelayProofCall {
+        #[allow(missing_docs)]
         pub sequenceNumber: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub afterDelayedMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub gasRefunder: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub prevMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub newMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub delayProof: <DelayProof as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`addSequencerL2BatchFromBlobsDelayProof(uint256,uint256,address,uint256,uint256,(bytes32,(uint8,address,uint64,uint64,uint256,uint256,bytes32)))`](addSequencerL2BatchFromBlobsDelayProofCall) function.
@@ -9256,9 +9326,13 @@ function addSequencerL2BatchFromOrigin(uint256, bytes memory, uint256, address) 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addSequencerL2BatchFromOrigin_0Call {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub _1: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
         pub _2: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub _3: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`addSequencerL2BatchFromOrigin(uint256,bytes,uint256,address)`](addSequencerL2BatchFromOrigin_0Call) function.
@@ -9414,11 +9488,17 @@ function addSequencerL2BatchFromOrigin(uint256 sequenceNumber, bytes memory data
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addSequencerL2BatchFromOrigin_1Call {
+        #[allow(missing_docs)]
         pub sequenceNumber: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
         pub afterDelayedMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub gasRefunder: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub prevMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub newMessageCount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`addSequencerL2BatchFromOrigin(uint256,bytes,uint256,address,uint256,uint256)`](addSequencerL2BatchFromOrigin_1Call) function.
@@ -9597,12 +9677,19 @@ function addSequencerL2BatchFromOriginDelayProof(uint256 sequenceNumber, bytes m
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addSequencerL2BatchFromOriginDelayProofCall {
+        #[allow(missing_docs)]
         pub sequenceNumber: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
         pub afterDelayedMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub gasRefunder: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub prevMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub newMessageCount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub delayProof: <DelayProof as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`addSequencerL2BatchFromOriginDelayProof(uint256,bytes,uint256,address,uint256,uint256,(bytes32,(uint8,address,uint64,uint64,uint256,uint256,bytes32)))`](addSequencerL2BatchFromOriginDelayProofCall) function.
@@ -9791,6 +9878,7 @@ function batchCount() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct batchCountReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -9911,6 +9999,7 @@ function batchPosterManager() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct batchPosterManagerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -10033,6 +10122,7 @@ function bridge() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct bridgeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -10151,11 +10241,17 @@ function buffer() external view returns (uint64 bufferBlocks, uint64 max, uint64
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct bufferReturn {
+        #[allow(missing_docs)]
         pub bufferBlocks: u64,
+        #[allow(missing_docs)]
         pub max: u64,
+        #[allow(missing_docs)]
         pub threshold: u64,
+        #[allow(missing_docs)]
         pub prevBlockNumber: u64,
+        #[allow(missing_docs)]
         pub replenishRateInBasis: u64,
+        #[allow(missing_docs)]
         pub prevSequencedBlockNumber: u64,
     }
     #[allow(
@@ -10298,13 +10394,16 @@ function dasKeySetInfo(bytes32) external view returns (bool isValidKeyset, uint6
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct dasKeySetInfoCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`dasKeySetInfo(bytes32)`](dasKeySetInfoCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct dasKeySetInfoReturn {
+        #[allow(missing_docs)]
         pub isValidKeyset: bool,
+        #[allow(missing_docs)]
         pub creationBlock: u64,
     }
     #[allow(
@@ -10432,11 +10531,17 @@ function forceInclusion(uint256 _totalDelayedMessagesRead, uint8 kind, uint64[2]
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct forceInclusionCall {
+        #[allow(missing_docs)]
         pub _totalDelayedMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub kind: u8,
+        #[allow(missing_docs)]
         pub l1BlockAndTime: [u64; 2usize],
+        #[allow(missing_docs)]
         pub baseFeeL1: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub messageDataHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`forceInclusion(uint256,uint8,uint64[2],uint256,address,bytes32)`](forceInclusionCall) function.
@@ -10620,12 +10725,14 @@ function forceInclusionDeadline(uint64 blockNumber) external view returns (uint6
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct forceInclusionDeadlineCall {
+        #[allow(missing_docs)]
         pub blockNumber: u64,
     }
     ///Container type for the return parameters of the [`forceInclusionDeadline(uint64)`](forceInclusionDeadlineCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct forceInclusionDeadlineReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -10748,12 +10855,14 @@ function getKeysetCreationBlock(bytes32 ksHash) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getKeysetCreationBlockCall {
+        #[allow(missing_docs)]
         pub ksHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getKeysetCreationBlock(bytes32)`](getKeysetCreationBlockCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getKeysetCreationBlockReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -10878,12 +10987,14 @@ function inboxAccs(uint256 index) external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct inboxAccsCall {
+        #[allow(missing_docs)]
         pub index: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`inboxAccs(uint256)`](inboxAccsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct inboxAccsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -11004,8 +11115,11 @@ function initialize(address bridge_, ISequencerInbox.MaxTimeVariation memory max
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initializeCall {
+        #[allow(missing_docs)]
         pub bridge_: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub maxTimeVariation_: <ISequencerInbox::MaxTimeVariation as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub bufferConfig_: <BufferConfig as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`initialize(address,(uint256,uint256,uint256,uint256),(uint64,uint64,uint64))`](initializeCall) function.
@@ -11150,6 +11264,7 @@ function invalidateKeysetHash(bytes32 ksHash) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct invalidateKeysetHashCall {
+        #[allow(missing_docs)]
         pub ksHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`invalidateKeysetHash(bytes32)`](invalidateKeysetHashCall) function.
@@ -11276,12 +11391,14 @@ function isBatchPoster(address) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isBatchPosterCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isBatchPoster(address)`](isBatchPosterCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isBatchPosterReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -11404,6 +11521,7 @@ function isDelayBufferable() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isDelayBufferableReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -11522,12 +11640,14 @@ function isSequencer(address) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isSequencerCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isSequencer(address)`](isSequencerCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isSequencerReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -11650,6 +11770,7 @@ function isUsingFeeToken() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isUsingFeeTokenReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -11766,12 +11887,14 @@ function isValidKeysetHash(bytes32 ksHash) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isValidKeysetHashCall {
+        #[allow(missing_docs)]
         pub ksHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`isValidKeysetHash(bytes32)`](isValidKeysetHashCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isValidKeysetHashReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -11898,6 +12021,7 @@ function maxDataSize() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct maxDataSizeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -12018,9 +12142,13 @@ function maxTimeVariation() external view returns (uint256, uint256, uint256, ui
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct maxTimeVariationReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub _1: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub _2: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub _3: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -12159,6 +12287,7 @@ function postUpgradeInit(BufferConfig memory bufferConfig_) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct postUpgradeInitCall {
+        #[allow(missing_docs)]
         pub bufferConfig_: <BufferConfig as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`postUpgradeInit((uint64,uint64,uint64))`](postUpgradeInitCall) function.
@@ -12289,6 +12418,7 @@ function reader4844() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct reader4844Return {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -12527,6 +12657,7 @@ function rollup() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct rollupReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -12641,6 +12772,7 @@ function setBatchPosterManager(address newBatchPosterManager) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setBatchPosterManagerCall {
+        #[allow(missing_docs)]
         pub newBatchPosterManager: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`setBatchPosterManager(address)`](setBatchPosterManagerCall) function.
@@ -12769,6 +12901,7 @@ function setBufferConfig(BufferConfig memory bufferConfig_) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setBufferConfigCall {
+        #[allow(missing_docs)]
         pub bufferConfig_: <BufferConfig as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`setBufferConfig((uint64,uint64,uint64))`](setBufferConfigCall) function.
@@ -12895,7 +13028,9 @@ function setIsBatchPoster(address addr, bool isBatchPoster_) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setIsBatchPosterCall {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub isBatchPoster_: bool,
     }
     ///Container type for the return parameters of the [`setIsBatchPoster(address,bool)`](setIsBatchPosterCall) function.
@@ -13034,7 +13169,9 @@ function setIsSequencer(address addr, bool isSequencer_) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setIsSequencerCall {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub isSequencer_: bool,
     }
     ///Container type for the return parameters of the [`setIsSequencer(address,bool)`](setIsSequencerCall) function.
@@ -13171,6 +13308,7 @@ function setMaxTimeVariation(ISequencerInbox.MaxTimeVariation memory maxTimeVari
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setMaxTimeVariationCall {
+        #[allow(missing_docs)]
         pub maxTimeVariation_: <ISequencerInbox::MaxTimeVariation as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`setMaxTimeVariation((uint256,uint256,uint256,uint256))`](setMaxTimeVariationCall) function.
@@ -13299,6 +13437,7 @@ function setValidKeyset(bytes memory keysetBytes) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setValidKeysetCall {
+        #[allow(missing_docs)]
         pub keysetBytes: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`setValidKeyset(bytes)`](setValidKeysetCall) function.
@@ -13427,6 +13566,7 @@ function totalDelayedMessagesRead() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct totalDelayedMessagesReadReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -13662,54 +13802,99 @@ function updateRollupAddress() external;
     };
     ///Container for all the [`SequencerInboxStub`](self) function calls.
     pub enum SequencerInboxStubCalls {
+        #[allow(missing_docs)]
         BROTLI_MESSAGE_HEADER_FLAG(BROTLI_MESSAGE_HEADER_FLAGCall),
+        #[allow(missing_docs)]
         DAS_MESSAGE_HEADER_FLAG(DAS_MESSAGE_HEADER_FLAGCall),
+        #[allow(missing_docs)]
         DATA_AUTHENTICATED_FLAG(DATA_AUTHENTICATED_FLAGCall),
+        #[allow(missing_docs)]
         DATA_BLOB_HEADER_FLAG(DATA_BLOB_HEADER_FLAGCall),
+        #[allow(missing_docs)]
         HEADER_LENGTH(HEADER_LENGTHCall),
+        #[allow(missing_docs)]
         TREE_DAS_MESSAGE_HEADER_FLAG(TREE_DAS_MESSAGE_HEADER_FLAGCall),
+        #[allow(missing_docs)]
         ZERO_HEAVY_MESSAGE_HEADER_FLAG(ZERO_HEAVY_MESSAGE_HEADER_FLAGCall),
+        #[allow(missing_docs)]
         addInitMessage(addInitMessageCall),
+        #[allow(missing_docs)]
         addSequencerL2Batch(addSequencerL2BatchCall),
+        #[allow(missing_docs)]
         addSequencerL2BatchDelayProof(addSequencerL2BatchDelayProofCall),
+        #[allow(missing_docs)]
         addSequencerL2BatchFromBlobs(addSequencerL2BatchFromBlobsCall),
+        #[allow(missing_docs)]
         addSequencerL2BatchFromBlobsDelayProof(
             addSequencerL2BatchFromBlobsDelayProofCall,
         ),
+        #[allow(missing_docs)]
         addSequencerL2BatchFromOrigin_0(addSequencerL2BatchFromOrigin_0Call),
+        #[allow(missing_docs)]
         addSequencerL2BatchFromOrigin_1(addSequencerL2BatchFromOrigin_1Call),
+        #[allow(missing_docs)]
         addSequencerL2BatchFromOriginDelayProof(
             addSequencerL2BatchFromOriginDelayProofCall,
         ),
+        #[allow(missing_docs)]
         batchCount(batchCountCall),
+        #[allow(missing_docs)]
         batchPosterManager(batchPosterManagerCall),
+        #[allow(missing_docs)]
         bridge(bridgeCall),
+        #[allow(missing_docs)]
         buffer(bufferCall),
+        #[allow(missing_docs)]
         dasKeySetInfo(dasKeySetInfoCall),
+        #[allow(missing_docs)]
         forceInclusion(forceInclusionCall),
+        #[allow(missing_docs)]
         forceInclusionDeadline(forceInclusionDeadlineCall),
+        #[allow(missing_docs)]
         getKeysetCreationBlock(getKeysetCreationBlockCall),
+        #[allow(missing_docs)]
         inboxAccs(inboxAccsCall),
+        #[allow(missing_docs)]
         initialize(initializeCall),
+        #[allow(missing_docs)]
         invalidateKeysetHash(invalidateKeysetHashCall),
+        #[allow(missing_docs)]
         isBatchPoster(isBatchPosterCall),
+        #[allow(missing_docs)]
         isDelayBufferable(isDelayBufferableCall),
+        #[allow(missing_docs)]
         isSequencer(isSequencerCall),
+        #[allow(missing_docs)]
         isUsingFeeToken(isUsingFeeTokenCall),
+        #[allow(missing_docs)]
         isValidKeysetHash(isValidKeysetHashCall),
+        #[allow(missing_docs)]
         maxDataSize(maxDataSizeCall),
+        #[allow(missing_docs)]
         maxTimeVariation(maxTimeVariationCall),
+        #[allow(missing_docs)]
         postUpgradeInit(postUpgradeInitCall),
+        #[allow(missing_docs)]
         reader4844(reader4844Call),
+        #[allow(missing_docs)]
         removeDelayAfterFork(removeDelayAfterForkCall),
+        #[allow(missing_docs)]
         rollup(rollupCall),
+        #[allow(missing_docs)]
         setBatchPosterManager(setBatchPosterManagerCall),
+        #[allow(missing_docs)]
         setBufferConfig(setBufferConfigCall),
+        #[allow(missing_docs)]
         setIsBatchPoster(setIsBatchPosterCall),
+        #[allow(missing_docs)]
         setIsSequencer(setIsSequencerCall),
+        #[allow(missing_docs)]
         setMaxTimeVariation(setMaxTimeVariationCall),
+        #[allow(missing_docs)]
         setValidKeyset(setValidKeysetCall),
+        #[allow(missing_docs)]
         totalDelayedMessagesRead(totalDelayedMessagesReadCall),
+        #[allow(missing_docs)]
         updateRollupAddress(updateRollupAddressCall),
     }
     #[automatically_derived]
@@ -15015,34 +15200,63 @@ function updateRollupAddress() external;
     }
     ///Container for all the [`SequencerInboxStub`](self) custom errors.
     pub enum SequencerInboxStubErrors {
+        #[allow(missing_docs)]
         AlreadyInit(AlreadyInit),
+        #[allow(missing_docs)]
         AlreadyValidDASKeyset(AlreadyValidDASKeyset),
+        #[allow(missing_docs)]
         BadBufferConfig(BadBufferConfig),
+        #[allow(missing_docs)]
         BadMaxTimeVariation(BadMaxTimeVariation),
+        #[allow(missing_docs)]
         BadSequencerNumber(BadSequencerNumber),
+        #[allow(missing_docs)]
         DataBlobsNotSupported(DataBlobsNotSupported),
+        #[allow(missing_docs)]
         DataTooLarge(DataTooLarge),
+        #[allow(missing_docs)]
         DelayProofRequired(DelayProofRequired),
+        #[allow(missing_docs)]
         DelayedBackwards(DelayedBackwards),
+        #[allow(missing_docs)]
         DelayedTooFar(DelayedTooFar),
+        #[allow(missing_docs)]
         Deprecated(Deprecated),
+        #[allow(missing_docs)]
         ExtraGasNotUint64(ExtraGasNotUint64),
+        #[allow(missing_docs)]
         ForceIncludeBlockTooSoon(ForceIncludeBlockTooSoon),
+        #[allow(missing_docs)]
         HadZeroInit(HadZeroInit),
+        #[allow(missing_docs)]
         IncorrectMessagePreimage(IncorrectMessagePreimage),
+        #[allow(missing_docs)]
         InitParamZero(InitParamZero),
+        #[allow(missing_docs)]
         InvalidDelayedAccPreimage(InvalidDelayedAccPreimage),
+        #[allow(missing_docs)]
         InvalidHeaderFlag(InvalidHeaderFlag),
+        #[allow(missing_docs)]
         KeysetTooLarge(KeysetTooLarge),
+        #[allow(missing_docs)]
         MissingDataHashes(MissingDataHashes),
+        #[allow(missing_docs)]
         NativeTokenMismatch(NativeTokenMismatch),
+        #[allow(missing_docs)]
         NoSuchKeyset(NoSuchKeyset),
+        #[allow(missing_docs)]
         NotBatchPoster(NotBatchPoster),
+        #[allow(missing_docs)]
         NotBatchPosterManager(NotBatchPosterManager),
+        #[allow(missing_docs)]
         NotCodelessOrigin(NotCodelessOrigin),
+        #[allow(missing_docs)]
         NotDelayBufferable(NotDelayBufferable),
+        #[allow(missing_docs)]
         NotForked(NotForked),
+        #[allow(missing_docs)]
         NotOwner(NotOwner),
+        #[allow(missing_docs)]
         RollupNotChanged(RollupNotChanged),
     }
     #[automatically_derived]
@@ -15890,17 +16104,29 @@ function updateRollupAddress() external;
     }
     ///Container for all the [`SequencerInboxStub`](self) events.
     pub enum SequencerInboxStubEvents {
+        #[allow(missing_docs)]
         BatchPosterManagerSet(BatchPosterManagerSet),
+        #[allow(missing_docs)]
         BatchPosterSet(BatchPosterSet),
+        #[allow(missing_docs)]
         BufferConfigSet(BufferConfigSet),
+        #[allow(missing_docs)]
         InboxMessageDelivered(InboxMessageDelivered),
+        #[allow(missing_docs)]
         InboxMessageDeliveredFromOrigin(InboxMessageDeliveredFromOrigin),
+        #[allow(missing_docs)]
         InvalidateKeyset(InvalidateKeyset),
+        #[allow(missing_docs)]
         MaxTimeVariationSet(MaxTimeVariationSet),
+        #[allow(missing_docs)]
         OwnerFunctionCalled(OwnerFunctionCalled),
+        #[allow(missing_docs)]
         SequencerBatchData(SequencerBatchData),
+        #[allow(missing_docs)]
         SequencerBatchDelivered(SequencerBatchDelivered),
+        #[allow(missing_docs)]
         SequencerSet(SequencerSet),
+        #[allow(missing_docs)]
         SetValidKeyset(SetValidKeyset),
     }
     #[automatically_derived]

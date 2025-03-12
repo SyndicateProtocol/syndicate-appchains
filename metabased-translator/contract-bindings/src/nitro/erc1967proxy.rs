@@ -537,7 +537,9 @@ constructor(address _logic, bytes _data) payable;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub _logic: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _data: alloy::sol_types::private::Bytes,
     }
     const _: () = {
@@ -612,8 +614,11 @@ constructor(address _logic, bytes _data) payable;
     };
     ///Container for all the [`ERC1967Proxy`](self) events.
     pub enum ERC1967ProxyEvents {
+        #[allow(missing_docs)]
         AdminChanged(AdminChanged),
+        #[allow(missing_docs)]
         BeaconUpgraded(BeaconUpgraded),
+        #[allow(missing_docs)]
         Upgraded(Upgraded),
     }
     #[automatically_derived]

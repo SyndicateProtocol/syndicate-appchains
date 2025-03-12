@@ -548,8 +548,11 @@ struct AssertionInputs { BeforeStateData beforeStateData; AssertionState beforeS
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AssertionInputs {
+        #[allow(missing_docs)]
         pub beforeStateData: <BeforeStateData as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub beforeState: <AssertionState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub afterState: <AssertionState as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -799,8 +802,11 @@ struct AssertionState { GlobalState globalState; MachineStatus machineStatus; by
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AssertionState {
+        #[allow(missing_docs)]
         pub globalState: <GlobalState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub machineStatus: <MachineStatus as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub endHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1044,8 +1050,11 @@ struct BeforeStateData { bytes32 prevPrevAssertionHash; bytes32 sequencerBatchAc
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BeforeStateData {
+        #[allow(missing_docs)]
         pub prevPrevAssertionHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub sequencerBatchAcc: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub configData: <ConfigData as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -1295,10 +1304,15 @@ struct ConfigData { bytes32 wasmModuleRoot; uint256 requiredStake; address chall
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ConfigData {
+        #[allow(missing_docs)]
         pub wasmModuleRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub requiredStake: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub challengeManager: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub confirmPeriodBlocks: u64,
+        #[allow(missing_docs)]
         pub nextInboxPosition: u64,
     }
     #[allow(
@@ -1593,7 +1607,9 @@ struct GlobalState { bytes32[2] bytes32Vals; uint64[2] u64Vals; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct GlobalState {
+        #[allow(missing_docs)]
         pub bytes32Vals: [alloy::sol_types::private::FixedBytes<32>; 2usize],
+        #[allow(missing_docs)]
         pub u64Vals: [u64; 2usize],
     }
     #[allow(
@@ -1832,8 +1848,11 @@ error AmountExceedsBalance(address account, uint256 amount, uint256 balance);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AmountExceedsBalance {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub balance: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2336,7 +2355,9 @@ constructor(address _rollup, bytes32 _assertionHash);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub _rollup: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _assertionHash: alloy::sol_types::private::FixedBytes<32>,
     }
     const _: () = {
@@ -2420,6 +2441,7 @@ function assertionHash() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct assertionHashReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -2534,6 +2556,7 @@ function createAssertion(AssertionInputs memory assertionInputs) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createAssertionCall {
+        #[allow(missing_docs)]
         pub assertionInputs: <AssertionInputs as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`createAssertion(((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)))`](createAssertionCall) function.
@@ -2660,12 +2683,14 @@ function depositBalance(address) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct depositBalanceCall {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`depositBalance(address)`](depositBalanceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct depositBalanceReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2788,6 +2813,7 @@ function depositIntoPool(uint256 amount) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct depositIntoPoolCall {
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`depositIntoPool(uint256)`](depositIntoPoolCall) function.
@@ -3164,6 +3190,7 @@ function rollup() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct rollupReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3282,6 +3309,7 @@ function stakeToken() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct stakeTokenReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3516,6 +3544,7 @@ function withdrawFromPool(uint256 amount) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawFromPool_1Call {
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`withdrawFromPool(uint256)`](withdrawFromPool_1Call) function.
@@ -3759,18 +3788,29 @@ function withdrawStakeBackIntoPool() external;
     };
     ///Container for all the [`AssertionStakingPool`](self) function calls.
     pub enum AssertionStakingPoolCalls {
+        #[allow(missing_docs)]
         assertionHash(assertionHashCall),
+        #[allow(missing_docs)]
         createAssertion(createAssertionCall),
+        #[allow(missing_docs)]
         depositBalance(depositBalanceCall),
+        #[allow(missing_docs)]
         depositIntoPool(depositIntoPoolCall),
+        #[allow(missing_docs)]
         makeStakeWithdrawable(makeStakeWithdrawableCall),
+        #[allow(missing_docs)]
         makeStakeWithdrawableAndWithdrawBackIntoPool(
             makeStakeWithdrawableAndWithdrawBackIntoPoolCall,
         ),
+        #[allow(missing_docs)]
         rollup(rollupCall),
+        #[allow(missing_docs)]
         stakeToken(stakeTokenCall),
+        #[allow(missing_docs)]
         withdrawFromPool_0(withdrawFromPool_0Call),
+        #[allow(missing_docs)]
         withdrawFromPool_1(withdrawFromPool_1Call),
+        #[allow(missing_docs)]
         withdrawStakeBackIntoPool(withdrawStakeBackIntoPoolCall),
     }
     #[automatically_derived]
@@ -4138,8 +4178,11 @@ function withdrawStakeBackIntoPool() external;
     }
     ///Container for all the [`AssertionStakingPool`](self) custom errors.
     pub enum AssertionStakingPoolErrors {
+        #[allow(missing_docs)]
         AmountExceedsBalance(AmountExceedsBalance),
+        #[allow(missing_docs)]
         EmptyAssertionId(EmptyAssertionId),
+        #[allow(missing_docs)]
         ZeroAmount(ZeroAmount),
     }
     #[automatically_derived]
@@ -4285,7 +4328,9 @@ function withdrawStakeBackIntoPool() external;
     }
     ///Container for all the [`AssertionStakingPool`](self) events.
     pub enum AssertionStakingPoolEvents {
+        #[allow(missing_docs)]
         StakeDeposited(StakeDeposited),
+        #[allow(missing_docs)]
         StakeWithdrawn(StakeWithdrawn),
     }
     #[automatically_derived]

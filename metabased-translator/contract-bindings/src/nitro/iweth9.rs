@@ -186,6 +186,7 @@ function withdraw(uint256 _amount) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawCall {
+        #[allow(missing_docs)]
         pub _amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`withdraw(uint256)`](withdrawCall) function.
@@ -305,7 +306,9 @@ function withdraw(uint256 _amount) external;
     };
     ///Container for all the [`IWETH9`](self) function calls.
     pub enum IWETH9Calls {
+        #[allow(missing_docs)]
         deposit(depositCall),
+        #[allow(missing_docs)]
         withdraw(withdrawCall),
     }
     #[automatically_derived]

@@ -78,14 +78,18 @@ function transferFrom(address from, address to, uint256 value) external returns 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferFromCall {
+        #[allow(missing_docs)]
         pub from: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`transferFrom(address,address,uint256)`](transferFromCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferFromReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -221,6 +225,7 @@ function transferFrom(address from, address to, uint256 value) external returns 
     };
     ///Container for all the [`IERC20`](self) function calls.
     pub enum IERC20Calls {
+        #[allow(missing_docs)]
         transferFrom(transferFromCall),
     }
     #[automatically_derived]

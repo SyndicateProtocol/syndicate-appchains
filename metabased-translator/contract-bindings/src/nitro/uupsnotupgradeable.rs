@@ -674,6 +674,7 @@ function proxiableUUID() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct proxiableUUIDReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -783,6 +784,7 @@ function proxiableUUID() external view returns (bytes32);
     };
     ///Container for all the [`UUPSNotUpgradeable`](self) function calls.
     pub enum UUPSNotUpgradeableCalls {
+        #[allow(missing_docs)]
         proxiableUUID(proxiableUUIDCall),
     }
     #[automatically_derived]
@@ -875,9 +877,13 @@ function proxiableUUID() external view returns (bytes32);
     }
     ///Container for all the [`UUPSNotUpgradeable`](self) events.
     pub enum UUPSNotUpgradeableEvents {
+        #[allow(missing_docs)]
         AdminChanged(AdminChanged),
+        #[allow(missing_docs)]
         BeaconUpgraded(BeaconUpgraded),
+        #[allow(missing_docs)]
         Upgraded(Upgraded),
+        #[allow(missing_docs)]
         UpgradedSecondary(UpgradedSecondary),
     }
     #[automatically_derived]

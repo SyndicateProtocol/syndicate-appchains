@@ -22,9 +22,13 @@ struct MaxTimeVariation { uint256 delayBlocks; uint256 futureBlocks; uint256 del
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MaxTimeVariation {
+        #[allow(missing_docs)]
         pub delayBlocks: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub futureBlocks: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub delaySeconds: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub futureSeconds: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -925,10 +929,15 @@ struct BridgeContracts { address bridge; address inbox; address sequencerInbox; 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BridgeContracts {
+        #[allow(missing_docs)]
         pub bridge: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub inbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub sequencerInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub rollupEventInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub outbox: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1201,11 +1210,17 @@ struct BridgeTemplates { address bridge; address sequencerInbox; address delayBu
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BridgeTemplates {
+        #[allow(missing_docs)]
         pub bridge: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub sequencerInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub delayBufferableSequencerInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub inbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub rollupEventInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub outbox: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1496,8 +1511,11 @@ struct BufferConfig { uint64 threshold; uint64 max; uint64 replenishRateInBasis;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BufferConfig {
+        #[allow(missing_docs)]
         pub threshold: u64,
+        #[allow(missing_docs)]
         pub max: u64,
+        #[allow(missing_docs)]
         pub replenishRateInBasis: u64,
     }
     #[allow(
@@ -2133,7 +2151,9 @@ constructor(BridgeTemplates _ethBasedTemplates, BridgeTemplates _erc20BasedTempl
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub _ethBasedTemplates: <BridgeTemplates as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub _erc20BasedTemplates: <BridgeTemplates as alloy::sol_types::SolType>::RustType,
     }
     const _: () = {
@@ -2207,16 +2227,22 @@ function createBridge(address adminProxy, address rollup, address nativeToken, I
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createBridgeCall {
+        #[allow(missing_docs)]
         pub adminProxy: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub rollup: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub nativeToken: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub maxTimeVariation: <ISequencerInbox::MaxTimeVariation as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub bufferConfig: <BufferConfig as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`createBridge(address,address,address,(uint256,uint256,uint256,uint256),(uint64,uint64,uint64))`](createBridgeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createBridgeReturn {
+        #[allow(missing_docs)]
         pub _0: <BridgeContracts as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -2383,11 +2409,17 @@ function erc20BasedTemplates() external view returns (address bridge, address se
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct erc20BasedTemplatesReturn {
+        #[allow(missing_docs)]
         pub bridge: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub sequencerInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub delayBufferableSequencerInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub inbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub rollupEventInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub outbox: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2545,11 +2577,17 @@ function ethBasedTemplates() external view returns (address bridge, address sequ
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ethBasedTemplatesReturn {
+        #[allow(missing_docs)]
         pub bridge: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub sequencerInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub delayBufferableSequencerInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub inbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub rollupEventInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub outbox: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2707,6 +2745,7 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2941,6 +2980,7 @@ function transferOwnership(address newOwner) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferOwnershipCall {
+        #[allow(missing_docs)]
         pub newOwner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`transferOwnership(address)`](transferOwnershipCall) function.
@@ -3067,6 +3107,7 @@ function updateERC20Templates(BridgeTemplates memory _newTemplates) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct updateERC20TemplatesCall {
+        #[allow(missing_docs)]
         pub _newTemplates: <BridgeTemplates as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`updateERC20Templates((address,address,address,address,address,address))`](updateERC20TemplatesCall) function.
@@ -3195,6 +3236,7 @@ function updateTemplates(BridgeTemplates memory _newTemplates) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct updateTemplatesCall {
+        #[allow(missing_docs)]
         pub _newTemplates: <BridgeTemplates as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`updateTemplates((address,address,address,address,address,address))`](updateTemplatesCall) function.
@@ -3316,13 +3358,21 @@ function updateTemplates(BridgeTemplates memory _newTemplates) external;
     };
     ///Container for all the [`BridgeCreator`](self) function calls.
     pub enum BridgeCreatorCalls {
+        #[allow(missing_docs)]
         createBridge(createBridgeCall),
+        #[allow(missing_docs)]
         erc20BasedTemplates(erc20BasedTemplatesCall),
+        #[allow(missing_docs)]
         ethBasedTemplates(ethBasedTemplatesCall),
+        #[allow(missing_docs)]
         owner(ownerCall),
+        #[allow(missing_docs)]
         renounceOwnership(renounceOwnershipCall),
+        #[allow(missing_docs)]
         transferOwnership(transferOwnershipCall),
+        #[allow(missing_docs)]
         updateERC20Templates(updateERC20TemplatesCall),
+        #[allow(missing_docs)]
         updateTemplates(updateTemplatesCall),
     }
     #[automatically_derived]
@@ -3606,8 +3656,11 @@ function updateTemplates(BridgeTemplates memory _newTemplates) external;
     }
     ///Container for all the [`BridgeCreator`](self) events.
     pub enum BridgeCreatorEvents {
+        #[allow(missing_docs)]
         ERC20TemplatesUpdated(ERC20TemplatesUpdated),
+        #[allow(missing_docs)]
         OwnershipTransferred(OwnershipTransferred),
+        #[allow(missing_docs)]
         TemplatesUpdated(TemplatesUpdated),
     }
     #[automatically_derived]

@@ -307,8 +307,11 @@ struct ExecutionContext { uint256 maxInboxMessagesRead; address bridge; bytes32 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ExecutionContext {
+        #[allow(missing_docs)]
         pub maxInboxMessagesRead: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub bridge: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub initialWasmModuleRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -553,7 +556,9 @@ struct ExecutionState { GlobalState globalState; MachineStatus machineStatus; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ExecutionState {
+        #[allow(missing_docs)]
         pub globalState: <GlobalState as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub machineStatus: <MachineStatus as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -771,7 +776,9 @@ struct GlobalState { bytes32[2] bytes32Vals; uint64[2] u64Vals; }
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct GlobalState {
+        #[allow(missing_docs)]
         pub bytes32Vals: [alloy::sol_types::private::FixedBytes<32>; 2usize],
+        #[allow(missing_docs)]
         pub u64Vals: [u64; 2usize],
     }
     #[allow(
@@ -1010,12 +1017,14 @@ function getMachineHash(ExecutionState memory execState) external pure returns (
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getMachineHashCall {
+        #[allow(missing_docs)]
         pub execState: <ExecutionState as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`getMachineHash(((bytes32[2],uint64[2]),uint8))`](getMachineHashCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getMachineHashReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1138,13 +1147,16 @@ function getStartMachineHash(bytes32 globalStateHash, bytes32 wasmModuleRoot) ex
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getStartMachineHashCall {
+        #[allow(missing_docs)]
         pub globalStateHash: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub wasmModuleRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getStartMachineHash(bytes32,bytes32)`](getStartMachineHashCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getStartMachineHashReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1282,15 +1294,20 @@ function proveOneStep(ExecutionContext memory, uint256, bytes32, bytes memory pr
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct proveOneStepCall {
+        #[allow(missing_docs)]
         pub _0: <ExecutionContext as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub _1: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub _2: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub proof: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`proveOneStep((uint256,address,bytes32),uint256,bytes32,bytes)`](proveOneStepCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct proveOneStepReturn {
+        #[allow(missing_docs)]
         pub afterHash: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1431,8 +1448,11 @@ function proveOneStep(ExecutionContext memory, uint256, bytes32, bytes memory pr
     };
     ///Container for all the [`MockOneStepProofEntry`](self) function calls.
     pub enum MockOneStepProofEntryCalls {
+        #[allow(missing_docs)]
         getMachineHash(getMachineHashCall),
+        #[allow(missing_docs)]
         getStartMachineHash(getStartMachineHashCall),
+        #[allow(missing_docs)]
         proveOneStep(proveOneStepCall),
     }
     #[automatically_derived]

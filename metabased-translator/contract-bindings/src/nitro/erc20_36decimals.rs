@@ -716,13 +716,16 @@ function allowance(address owner, address spender) external view returns (uint25
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowanceCall {
+        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub spender: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`allowance(address,address)`](allowanceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowanceReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -858,13 +861,16 @@ function approve(address spender, uint256 amount) external returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct approveCall {
+        #[allow(missing_docs)]
         pub spender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`approve(address,uint256)`](approveCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct approveReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -998,12 +1004,14 @@ function balanceOf(address account) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct balanceOfCall {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`balanceOf(address)`](balanceOfCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct balanceOfReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1128,6 +1136,7 @@ function decimals() external pure returns (uint8);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct decimalsReturn {
+        #[allow(missing_docs)]
         pub _0: u8,
     }
     #[allow(
@@ -1242,13 +1251,16 @@ function decreaseAllowance(address spender, uint256 subtractedValue) external re
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct decreaseAllowanceCall {
+        #[allow(missing_docs)]
         pub spender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub subtractedValue: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`decreaseAllowance(address,uint256)`](decreaseAllowanceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct decreaseAllowanceReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -1386,13 +1398,16 @@ function increaseAllowance(address spender, uint256 addedValue) external returns
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct increaseAllowanceCall {
+        #[allow(missing_docs)]
         pub spender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub addedValue: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`increaseAllowance(address,uint256)`](increaseAllowanceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct increaseAllowanceReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -1530,7 +1545,9 @@ function mint(address to, uint256 amount) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct mintCall {
+        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`mint(address,uint256)`](mintCall) function.
@@ -1672,6 +1689,7 @@ function name() external view returns (string memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct nameReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::String,
     }
     #[allow(
@@ -1790,6 +1808,7 @@ function symbol() external view returns (string memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct symbolReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::String,
     }
     #[allow(
@@ -1908,6 +1927,7 @@ function totalSupply() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct totalSupplyReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2024,13 +2044,16 @@ function transfer(address to, uint256 amount) external returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferCall {
+        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`transfer(address,uint256)`](transferCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2164,14 +2187,18 @@ function transferFrom(address from, address to, uint256 amount) external returns
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferFromCall {
+        #[allow(missing_docs)]
         pub from: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`transferFrom(address,address,uint256)`](transferFromCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferFromReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2307,17 +2334,29 @@ function transferFrom(address from, address to, uint256 amount) external returns
     };
     ///Container for all the [`ERC20_36Decimals`](self) function calls.
     pub enum ERC20_36DecimalsCalls {
+        #[allow(missing_docs)]
         allowance(allowanceCall),
+        #[allow(missing_docs)]
         approve(approveCall),
+        #[allow(missing_docs)]
         balanceOf(balanceOfCall),
+        #[allow(missing_docs)]
         decimals(decimalsCall),
+        #[allow(missing_docs)]
         decreaseAllowance(decreaseAllowanceCall),
+        #[allow(missing_docs)]
         increaseAllowance(increaseAllowanceCall),
+        #[allow(missing_docs)]
         mint(mintCall),
+        #[allow(missing_docs)]
         name(nameCall),
+        #[allow(missing_docs)]
         symbol(symbolCall),
+        #[allow(missing_docs)]
         totalSupply(totalSupplyCall),
+        #[allow(missing_docs)]
         transfer(transferCall),
+        #[allow(missing_docs)]
         transferFrom(transferFromCall),
     }
     #[automatically_derived]
@@ -2680,7 +2719,9 @@ function transferFrom(address from, address to, uint256 amount) external returns
     }
     ///Container for all the [`ERC20_36Decimals`](self) events.
     pub enum ERC20_36DecimalsEvents {
+        #[allow(missing_docs)]
         Approval(Approval),
+        #[allow(missing_docs)]
         Transfer(Transfer),
     }
     #[automatically_derived]

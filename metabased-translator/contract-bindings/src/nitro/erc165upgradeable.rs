@@ -215,12 +215,14 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct supportsInterfaceCall {
+        #[allow(missing_docs)]
         pub interfaceId: alloy::sol_types::private::FixedBytes<4>,
     }
     ///Container type for the return parameters of the [`supportsInterface(bytes4)`](supportsInterfaceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct supportsInterfaceReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -338,6 +340,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     };
     ///Container for all the [`ERC165Upgradeable`](self) function calls.
     pub enum ERC165UpgradeableCalls {
+        #[allow(missing_docs)]
         supportsInterface(supportsInterfaceCall),
     }
     #[automatically_derived]
@@ -430,6 +433,7 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     }
     ///Container for all the [`ERC165Upgradeable`](self) events.
     pub enum ERC165UpgradeableEvents {
+        #[allow(missing_docs)]
         Initialized(Initialized),
     }
     #[automatically_derived]

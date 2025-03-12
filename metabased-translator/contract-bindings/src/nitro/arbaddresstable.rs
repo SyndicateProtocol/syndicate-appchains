@@ -192,12 +192,14 @@ function addressExists(address addr) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addressExistsCall {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`addressExists(address)`](addressExistsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addressExistsReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -316,12 +318,14 @@ function compress(address addr) external returns (bytes memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct compressCall {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`compress(address)`](compressCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct compressReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -440,14 +444,18 @@ function decompress(bytes memory buf, uint256 offset) external view returns (add
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct decompressCall {
+        #[allow(missing_docs)]
         pub buf: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
         pub offset: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`decompress(bytes,uint256)`](decompressCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct decompressReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _1: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -590,12 +598,14 @@ function lookup(address addr) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct lookupCall {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`lookup(address)`](lookupCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct lookupReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -716,12 +726,14 @@ function lookupIndex(uint256 index) external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct lookupIndexCall {
+        #[allow(missing_docs)]
         pub index: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`lookupIndex(uint256)`](lookupIndexCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct lookupIndexReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -842,12 +854,14 @@ function register(address addr) external returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct registerCall {
+        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`register(address)`](registerCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct registerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -972,6 +986,7 @@ function size() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sizeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1083,12 +1098,19 @@ function size() external view returns (uint256);
     };
     ///Container for all the [`ArbAddressTable`](self) function calls.
     pub enum ArbAddressTableCalls {
+        #[allow(missing_docs)]
         addressExists(addressExistsCall),
+        #[allow(missing_docs)]
         compress(compressCall),
+        #[allow(missing_docs)]
         decompress(decompressCall),
+        #[allow(missing_docs)]
         lookup(lookupCall),
+        #[allow(missing_docs)]
         lookupIndex(lookupIndexCall),
+        #[allow(missing_docs)]
         register(registerCall),
+        #[allow(missing_docs)]
         size(sizeCall),
     }
     #[automatically_derived]

@@ -291,7 +291,9 @@ function remove() external;
     };
     ///Container for all the [`SdkStorage`](self) function calls.
     pub enum SdkStorageCalls {
+        #[allow(missing_docs)]
         populate(populateCall),
+        #[allow(missing_docs)]
         remove(removeCall),
     }
     #[automatically_derived]

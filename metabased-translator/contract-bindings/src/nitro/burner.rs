@@ -154,6 +154,7 @@ constructor(address _token);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub _token: alloy::sol_types::private::Address,
     }
     const _: () = {
@@ -338,6 +339,7 @@ function token() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct tokenReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -447,7 +449,9 @@ function token() external view returns (address);
     };
     ///Container for all the [`Burner`](self) function calls.
     pub enum BurnerCalls {
+        #[allow(missing_docs)]
         burn(burnCall),
+        #[allow(missing_docs)]
         token(tokenCall),
     }
     #[automatically_derived]
@@ -556,6 +560,7 @@ function token() external view returns (address);
     }
     ///Container for all the [`Burner`](self) custom errors.
     pub enum BurnerErrors {
+        #[allow(missing_docs)]
         ZeroAddress(ZeroAddress),
     }
     #[automatically_derived]

@@ -740,6 +740,7 @@ function proxiableUUID() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct proxiableUUIDReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -854,6 +855,7 @@ function upgradeSecondaryTo(address newImplementation) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeSecondaryToCall {
+        #[allow(missing_docs)]
         pub newImplementation: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`upgradeSecondaryTo(address)`](upgradeSecondaryToCall) function.
@@ -980,7 +982,9 @@ function upgradeSecondaryToAndCall(address newImplementation, bytes memory data)
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeSecondaryToAndCallCall {
+        #[allow(missing_docs)]
         pub newImplementation: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`upgradeSecondaryToAndCall(address,bytes)`](upgradeSecondaryToAndCallCall) function.
@@ -1122,6 +1126,7 @@ function upgradeTo(address newImplementation) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeToCall {
+        #[allow(missing_docs)]
         pub newImplementation: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`upgradeTo(address)`](upgradeToCall) function.
@@ -1244,7 +1249,9 @@ function upgradeToAndCall(address newImplementation, bytes memory data) external
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeToAndCallCall {
+        #[allow(missing_docs)]
         pub newImplementation: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`upgradeToAndCall(address,bytes)`](upgradeToAndCallCall) function.
@@ -1381,10 +1388,15 @@ function upgradeToAndCall(address newImplementation, bytes memory data) external
     };
     ///Container for all the [`DoubleLogicUUPSUpgradeable`](self) function calls.
     pub enum DoubleLogicUUPSUpgradeableCalls {
+        #[allow(missing_docs)]
         proxiableUUID(proxiableUUIDCall),
+        #[allow(missing_docs)]
         upgradeSecondaryTo(upgradeSecondaryToCall),
+        #[allow(missing_docs)]
         upgradeSecondaryToAndCall(upgradeSecondaryToAndCallCall),
+        #[allow(missing_docs)]
         upgradeTo(upgradeToCall),
+        #[allow(missing_docs)]
         upgradeToAndCall(upgradeToAndCallCall),
     }
     #[automatically_derived]
@@ -1591,9 +1603,13 @@ function upgradeToAndCall(address newImplementation, bytes memory data) external
     }
     ///Container for all the [`DoubleLogicUUPSUpgradeable`](self) events.
     pub enum DoubleLogicUUPSUpgradeableEvents {
+        #[allow(missing_docs)]
         AdminChanged(AdminChanged),
+        #[allow(missing_docs)]
         BeaconUpgraded(BeaconUpgraded),
+        #[allow(missing_docs)]
         Upgraded(Upgraded),
+        #[allow(missing_docs)]
         UpgradedSecondary(UpgradedSecondary),
     }
     #[automatically_derived]

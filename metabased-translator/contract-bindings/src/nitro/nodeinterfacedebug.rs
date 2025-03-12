@@ -114,12 +114,19 @@ struct RetryableInfo { uint64 timeout; address from; address to; uint256 value; 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct RetryableInfo {
+        #[allow(missing_docs)]
         pub timeout: u64,
+        #[allow(missing_docs)]
         pub from: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub beneficiary: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub tries: u64,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -437,12 +444,14 @@ function getRetryable(bytes32 ticket) external view returns (RetryableInfo memor
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRetryableCall {
+        #[allow(missing_docs)]
         pub ticket: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getRetryable(bytes32)`](getRetryableCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getRetryableReturn {
+        #[allow(missing_docs)]
         pub retryable: <RetryableInfo as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -558,6 +567,7 @@ function getRetryable(bytes32 ticket) external view returns (RetryableInfo memor
     };
     ///Container for all the [`NodeInterfaceDebug`](self) function calls.
     pub enum NodeInterfaceDebugCalls {
+        #[allow(missing_docs)]
         getRetryable(getRetryableCall),
     }
     #[automatically_derived]

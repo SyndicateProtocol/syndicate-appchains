@@ -202,11 +202,17 @@ struct CreateEdgeArgs { uint8 level; bytes32 endHistoryRoot; uint256 endHeight; 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct CreateEdgeArgs {
+        #[allow(missing_docs)]
         pub level: u8,
+        #[allow(missing_docs)]
         pub endHistoryRoot: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub endHeight: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub claimId: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub prefixProof: alloy::sol_types::private::Bytes,
+        #[allow(missing_docs)]
         pub proof: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -642,6 +648,7 @@ constructor(address _token);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub _token: alloy::sol_types::private::Address,
     }
     const _: () = {
@@ -706,12 +713,14 @@ function createLayerZeroEdge(CreateEdgeArgs memory args) external returns (bytes
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createLayerZeroEdgeCall {
+        #[allow(missing_docs)]
         pub args: <CreateEdgeArgs as alloy::sol_types::SolType>::RustType,
     }
     ///Container type for the return parameters of the [`createLayerZeroEdge((uint8,bytes32,uint256,bytes32,bytes,bytes))`](createLayerZeroEdgeCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createLayerZeroEdgeReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -832,12 +841,14 @@ function stakeAmounts(uint256 lvl) external pure returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct stakeAmountsCall {
+        #[allow(missing_docs)]
         pub lvl: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`stakeAmounts(uint256)`](stakeAmountsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct stakeAmountsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -964,6 +975,7 @@ function stakeToken() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct stakeTokenReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1073,8 +1085,11 @@ function stakeToken() external view returns (address);
     };
     ///Container for all the [`MockChallengeManager`](self) function calls.
     pub enum MockChallengeManagerCalls {
+        #[allow(missing_docs)]
         createLayerZeroEdge(createLayerZeroEdgeCall),
+        #[allow(missing_docs)]
         stakeAmounts(stakeAmountsCall),
+        #[allow(missing_docs)]
         stakeToken(stakeTokenCall),
     }
     #[automatically_derived]
@@ -1223,6 +1238,7 @@ function stakeToken() external view returns (address);
     }
     ///Container for all the [`MockChallengeManager`](self) events.
     pub enum MockChallengeManagerEvents {
+        #[allow(missing_docs)]
         EdgeCreated(EdgeCreated),
     }
     #[automatically_derived]

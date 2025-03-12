@@ -200,6 +200,7 @@ function setVersion(uint256 _version) external payable;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setVersionCall {
+        #[allow(missing_docs)]
         pub _version: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`setVersion(uint256)`](setVersionCall) function.
@@ -328,6 +329,7 @@ function version() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct versionReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -439,8 +441,11 @@ function version() external view returns (uint256);
     };
     ///Container for all the [`EthVault`](self) function calls.
     pub enum EthVaultCalls {
+        #[allow(missing_docs)]
         justRevert(justRevertCall),
+        #[allow(missing_docs)]
         setVersion(setVersionCall),
+        #[allow(missing_docs)]
         version(versionCall),
     }
     #[automatically_derived]

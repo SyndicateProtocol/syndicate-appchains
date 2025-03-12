@@ -994,8 +994,11 @@ struct BufferConfig { uint64 threshold; uint64 max; uint64 replenishRateInBasis;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BufferConfig {
+        #[allow(missing_docs)]
         pub threshold: u64,
+        #[allow(missing_docs)]
         pub max: u64,
+        #[allow(missing_docs)]
         pub replenishRateInBasis: u64,
     }
     #[allow(
@@ -1233,13 +1236,21 @@ struct Contracts { address excessStakeReceiver; address rollup; address bridge; 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Contracts {
+        #[allow(missing_docs)]
         pub excessStakeReceiver: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub rollup: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub bridge: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub sequencerInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub rollupEventInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub outbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub inbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub osp: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1566,13 +1577,21 @@ struct Implementations { address bridge; address seqInbox; address inbox; addres
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Implementations {
+        #[allow(missing_docs)]
         pub bridge: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub seqInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub inbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub rei: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub outbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub newRollupUser: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub newRollupAdmin: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub challengeManager: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1899,10 +1918,15 @@ struct ProxyAdmins { address outbox; address bridge; address rei; address seqInb
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ProxyAdmins {
+        #[allow(missing_docs)]
         pub outbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub bridge: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub rei: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub seqInbox: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub inbox: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2169,23 +2193,39 @@ struct Settings { uint64 confirmPeriodBlocks; uint64 challengePeriodBlocks; addr
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct Settings {
+        #[allow(missing_docs)]
         pub confirmPeriodBlocks: u64,
+        #[allow(missing_docs)]
         pub challengePeriodBlocks: u64,
+        #[allow(missing_docs)]
         pub stakeToken: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub stakeAmt: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub miniStakeAmounts: alloy::sol_types::private::Vec<
             alloy::sol_types::private::primitives::aliases::U256,
         >,
+        #[allow(missing_docs)]
         pub chainId: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub minimumAssertionPeriod: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub validatorAfkBlocks: u64,
+        #[allow(missing_docs)]
         pub disableValidatorWhitelist: bool,
+        #[allow(missing_docs)]
         pub blockLeafSize: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub bigStepLeafSize: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub smallStepLeafSize: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub numBigStepLevel: u8,
+        #[allow(missing_docs)]
         pub challengeGracePeriodBlocks: u64,
+        #[allow(missing_docs)]
         pub isDelayBufferable: bool,
+        #[allow(missing_docs)]
         pub bufferConfig: <BufferConfig as alloy::sol_types::SolType>::RustType,
     }
     #[allow(
@@ -2879,9 +2919,13 @@ constructor(Contracts contracts, ProxyAdmins proxyAdmins, Implementations implem
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
+        #[allow(missing_docs)]
         pub contracts: <Contracts as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub proxyAdmins: <ProxyAdmins as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub implementations: <Implementations as alloy::sol_types::SolType>::RustType,
+        #[allow(missing_docs)]
         pub settings: <Settings as alloy::sol_types::SolType>::RustType,
     }
     const _: () = {
@@ -2975,6 +3019,7 @@ function BIGSTEP_LEAF_SIZE() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BIGSTEP_LEAF_SIZEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3099,6 +3144,7 @@ function BLOCK_LEAF_SIZE() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BLOCK_LEAF_SIZEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3221,6 +3267,7 @@ function BRIDGE() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct BRIDGEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3339,6 +3386,7 @@ function CHAIN_ID() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct CHAIN_IDReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3459,6 +3507,7 @@ function CHALLENGE_GRACE_PERIOD_BLOCKS() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct CHALLENGE_GRACE_PERIOD_BLOCKSReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -3581,6 +3630,7 @@ function CHALLENGE_PERIOD_BLOCKS() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct CHALLENGE_PERIOD_BLOCKSReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -3703,6 +3753,7 @@ function CONFIRM_PERIOD_BLOCKS() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct CONFIRM_PERIOD_BLOCKSReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -3825,6 +3876,7 @@ function DISABLE_VALIDATOR_WHITELIST() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct DISABLE_VALIDATOR_WHITELISTReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -3947,6 +3999,7 @@ function EXCESS_STAKE_RECEIVER() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct EXCESS_STAKE_RECEIVERReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -4069,6 +4122,7 @@ function IMPL_BRIDGE() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct IMPL_BRIDGEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -4187,6 +4241,7 @@ function IMPL_CHALLENGE_MANAGER() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct IMPL_CHALLENGE_MANAGERReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -4309,6 +4364,7 @@ function IMPL_INBOX() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct IMPL_INBOXReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -4427,6 +4483,7 @@ function IMPL_NEW_ROLLUP_ADMIN() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct IMPL_NEW_ROLLUP_ADMINReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -4549,6 +4606,7 @@ function IMPL_NEW_ROLLUP_USER() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct IMPL_NEW_ROLLUP_USERReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -4671,6 +4729,7 @@ function IMPL_OUTBOX() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct IMPL_OUTBOXReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -4789,6 +4848,7 @@ function IMPL_REI() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct IMPL_REIReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -4907,6 +4967,7 @@ function IMPL_SEQUENCER_INBOX() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct IMPL_SEQUENCER_INBOXReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -5029,6 +5090,7 @@ function INBOX() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct INBOXReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -5147,6 +5209,7 @@ function IS_DELAY_BUFFERABLE() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct IS_DELAY_BUFFERABLEReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -5269,6 +5332,7 @@ function MAX() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MAXReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -5387,6 +5451,7 @@ function MINIMUM_ASSERTION_PERIOD() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MINIMUM_ASSERTION_PERIODReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -5511,6 +5576,7 @@ function MINI_STAKE_AMOUNTS_STORAGE() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MINI_STAKE_AMOUNTS_STORAGEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -5633,6 +5699,7 @@ function NUM_BIGSTEP_LEVEL() external view returns (uint8);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NUM_BIGSTEP_LEVELReturn {
+        #[allow(missing_docs)]
         pub _0: u8,
     }
     #[allow(
@@ -5755,6 +5822,7 @@ function OLD_ROLLUP() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct OLD_ROLLUPReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -5873,6 +5941,7 @@ function OSP() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct OSPReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -5991,6 +6060,7 @@ function OUTBOX() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct OUTBOXReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -6109,6 +6179,7 @@ function PREIMAGE_LOOKUP() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct PREIMAGE_LOOKUPReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -6229,6 +6300,7 @@ function PROXY_ADMIN_BRIDGE() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct PROXY_ADMIN_BRIDGEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -6351,6 +6423,7 @@ function PROXY_ADMIN_INBOX() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct PROXY_ADMIN_INBOXReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -6473,6 +6546,7 @@ function PROXY_ADMIN_OUTBOX() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct PROXY_ADMIN_OUTBOXReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -6595,6 +6669,7 @@ function PROXY_ADMIN_REI() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct PROXY_ADMIN_REIReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -6715,6 +6790,7 @@ function PROXY_ADMIN_SEQUENCER_INBOX() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct PROXY_ADMIN_SEQUENCER_INBOXReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -6837,6 +6913,7 @@ function REI() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct REIReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -6955,6 +7032,7 @@ function REPLENISH_RATE_IN_BASIS() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct REPLENISH_RATE_IN_BASISReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -7077,6 +7155,7 @@ function SECONDS_PER_SLOT() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct SECONDS_PER_SLOTReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -7201,6 +7280,7 @@ function SEQ_INBOX() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct SEQ_INBOXReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -7319,6 +7399,7 @@ function SMALLSTEP_LEAF_SIZE() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct SMALLSTEP_LEAF_SIZEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -7443,6 +7524,7 @@ function STAKE_AMOUNT() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct STAKE_AMOUNTReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -7563,6 +7645,7 @@ function STAKE_TOKEN() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct STAKE_TOKENReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -7681,6 +7764,7 @@ function THRESHOLD() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct THRESHOLDReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -7799,6 +7883,7 @@ function VALIDATOR_AFK_BLOCKS() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct VALIDATOR_AFK_BLOCKSReturn {
+        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -7917,13 +8002,16 @@ function expectedRollupAddress(address deployer, uint256 chainId) external pure 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct expectedRollupAddressCall {
+        #[allow(missing_docs)]
         pub deployer: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub chainId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`expectedRollupAddress(address,uint256)`](expectedRollupAddressCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct expectedRollupAddressReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -8061,6 +8149,7 @@ function perform(address[] memory validators) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct performCall {
+        #[allow(missing_docs)]
         pub validators: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
@@ -8191,8 +8280,11 @@ function validateRollupDeployedAtAddress(address rollupAddress, address deployer
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct validateRollupDeployedAtAddressCall {
+        #[allow(missing_docs)]
         pub rollupAddress: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub deployer: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub chainId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`validateRollupDeployedAtAddress(address,address,uint256)`](validateRollupDeployedAtAddressCall) function.
@@ -8336,49 +8428,93 @@ function validateRollupDeployedAtAddress(address rollupAddress, address deployer
     };
     ///Container for all the [`BOLDUpgradeAction`](self) function calls.
     pub enum BOLDUpgradeActionCalls {
+        #[allow(missing_docs)]
         BIGSTEP_LEAF_SIZE(BIGSTEP_LEAF_SIZECall),
+        #[allow(missing_docs)]
         BLOCK_LEAF_SIZE(BLOCK_LEAF_SIZECall),
+        #[allow(missing_docs)]
         BRIDGE(BRIDGECall),
+        #[allow(missing_docs)]
         CHAIN_ID(CHAIN_IDCall),
+        #[allow(missing_docs)]
         CHALLENGE_GRACE_PERIOD_BLOCKS(CHALLENGE_GRACE_PERIOD_BLOCKSCall),
+        #[allow(missing_docs)]
         CHALLENGE_PERIOD_BLOCKS(CHALLENGE_PERIOD_BLOCKSCall),
+        #[allow(missing_docs)]
         CONFIRM_PERIOD_BLOCKS(CONFIRM_PERIOD_BLOCKSCall),
+        #[allow(missing_docs)]
         DISABLE_VALIDATOR_WHITELIST(DISABLE_VALIDATOR_WHITELISTCall),
+        #[allow(missing_docs)]
         EXCESS_STAKE_RECEIVER(EXCESS_STAKE_RECEIVERCall),
+        #[allow(missing_docs)]
         IMPL_BRIDGE(IMPL_BRIDGECall),
+        #[allow(missing_docs)]
         IMPL_CHALLENGE_MANAGER(IMPL_CHALLENGE_MANAGERCall),
+        #[allow(missing_docs)]
         IMPL_INBOX(IMPL_INBOXCall),
+        #[allow(missing_docs)]
         IMPL_NEW_ROLLUP_ADMIN(IMPL_NEW_ROLLUP_ADMINCall),
+        #[allow(missing_docs)]
         IMPL_NEW_ROLLUP_USER(IMPL_NEW_ROLLUP_USERCall),
+        #[allow(missing_docs)]
         IMPL_OUTBOX(IMPL_OUTBOXCall),
+        #[allow(missing_docs)]
         IMPL_REI(IMPL_REICall),
+        #[allow(missing_docs)]
         IMPL_SEQUENCER_INBOX(IMPL_SEQUENCER_INBOXCall),
+        #[allow(missing_docs)]
         INBOX(INBOXCall),
+        #[allow(missing_docs)]
         IS_DELAY_BUFFERABLE(IS_DELAY_BUFFERABLECall),
+        #[allow(missing_docs)]
         MAX(MAXCall),
+        #[allow(missing_docs)]
         MINIMUM_ASSERTION_PERIOD(MINIMUM_ASSERTION_PERIODCall),
+        #[allow(missing_docs)]
         MINI_STAKE_AMOUNTS_STORAGE(MINI_STAKE_AMOUNTS_STORAGECall),
+        #[allow(missing_docs)]
         NUM_BIGSTEP_LEVEL(NUM_BIGSTEP_LEVELCall),
+        #[allow(missing_docs)]
         OLD_ROLLUP(OLD_ROLLUPCall),
+        #[allow(missing_docs)]
         OSP(OSPCall),
+        #[allow(missing_docs)]
         OUTBOX(OUTBOXCall),
+        #[allow(missing_docs)]
         PREIMAGE_LOOKUP(PREIMAGE_LOOKUPCall),
+        #[allow(missing_docs)]
         PROXY_ADMIN_BRIDGE(PROXY_ADMIN_BRIDGECall),
+        #[allow(missing_docs)]
         PROXY_ADMIN_INBOX(PROXY_ADMIN_INBOXCall),
+        #[allow(missing_docs)]
         PROXY_ADMIN_OUTBOX(PROXY_ADMIN_OUTBOXCall),
+        #[allow(missing_docs)]
         PROXY_ADMIN_REI(PROXY_ADMIN_REICall),
+        #[allow(missing_docs)]
         PROXY_ADMIN_SEQUENCER_INBOX(PROXY_ADMIN_SEQUENCER_INBOXCall),
+        #[allow(missing_docs)]
         REI(REICall),
+        #[allow(missing_docs)]
         REPLENISH_RATE_IN_BASIS(REPLENISH_RATE_IN_BASISCall),
+        #[allow(missing_docs)]
         SECONDS_PER_SLOT(SECONDS_PER_SLOTCall),
+        #[allow(missing_docs)]
         SEQ_INBOX(SEQ_INBOXCall),
+        #[allow(missing_docs)]
         SMALLSTEP_LEAF_SIZE(SMALLSTEP_LEAF_SIZECall),
+        #[allow(missing_docs)]
         STAKE_AMOUNT(STAKE_AMOUNTCall),
+        #[allow(missing_docs)]
         STAKE_TOKEN(STAKE_TOKENCall),
+        #[allow(missing_docs)]
         THRESHOLD(THRESHOLDCall),
+        #[allow(missing_docs)]
         VALIDATOR_AFK_BLOCKS(VALIDATOR_AFK_BLOCKSCall),
+        #[allow(missing_docs)]
         expectedRollupAddress(expectedRollupAddressCall),
+        #[allow(missing_docs)]
         perform(performCall),
+        #[allow(missing_docs)]
         validateRollupDeployedAtAddress(validateRollupDeployedAtAddressCall),
     }
     #[automatically_derived]
@@ -9612,6 +9748,7 @@ function validateRollupDeployedAtAddress(address rollupAddress, address deployer
     }
     ///Container for all the [`BOLDUpgradeAction`](self) events.
     pub enum BOLDUpgradeActionEvents {
+        #[allow(missing_docs)]
         RollupMigrated(RollupMigrated),
     }
     #[automatically_derived]

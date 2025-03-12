@@ -76,6 +76,7 @@ function cacheProgram(address program) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct cacheProgramCall {
+        #[allow(missing_docs)]
         pub program: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`cacheProgram(address)`](cacheProgramCall) function.
@@ -198,6 +199,7 @@ function evictProgram(address program) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct evictProgramCall {
+        #[allow(missing_docs)]
         pub program: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`evictProgram(address)`](evictProgramCall) function.
@@ -315,7 +317,9 @@ function evictProgram(address program) external;
     };
     ///Container for all the [`SimpleCacheManager`](self) function calls.
     pub enum SimpleCacheManagerCalls {
+        #[allow(missing_docs)]
         cacheProgram(cacheProgramCall),
+        #[allow(missing_docs)]
         evictProgram(evictProgramCall),
     }
     #[automatically_derived]

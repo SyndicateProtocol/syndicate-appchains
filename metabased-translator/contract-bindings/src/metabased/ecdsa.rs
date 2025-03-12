@@ -54,22 +54,22 @@ pub mod ECDSA {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea264697066735822122002f4402514f4c0e104ca7036bd8ad187fb779a5ff7186d7bf93dab0038b2f12364736f6c63430008190033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea26469706673582212209d9ec283b6127d94abc691765816fb3901206a169db42b5351ae6d88fa285ef364736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \x02\xF4@%\x14\xF4\xC0\xE1\x04\xCAp6\xBD\x8A\xD1\x87\xFBw\x9A_\xF7\x18m{\xF9=\xAB\08\xB2\xF1#dsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x9D\x9E\xC2\x83\xB6\x12}\x94\xAB\xC6\x91vX\x16\xFB9\x01 j\x16\x9D\xB4+SQ\xAEm\x88\xFA(^\xF3dsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x5f80fdfea264697066735822122002f4402514f4c0e104ca7036bd8ad187fb779a5ff7186d7bf93dab0038b2f12364736f6c63430008190033
+    ///0x60806040525f80fdfea26469706673582212209d9ec283b6127d94abc691765816fb3901206a169db42b5351ae6d88fa285ef364736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \x02\xF4@%\x14\xF4\xC0\xE1\x04\xCAp6\xBD\x8A\xD1\x87\xFBw\x9A_\xF7\x18m{\xF9=\xAB\08\xB2\xF1#dsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x9D\x9E\xC2\x83\xB6\x12}\x94\xAB\xC6\x91vX\x16\xFB9\x01 j\x16\x9D\xB4+SQ\xAEm\x88\xFA(^\xF3dsolcC\0\x08\x19\x003",
     );
     /**Custom error with signature `ECDSAInvalidSignature()` and selector `0xf645eedf`.
 ```solidity
@@ -142,6 +142,7 @@ error ECDSAInvalidSignatureLength(uint256 length);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ECDSAInvalidSignatureLength {
+        #[allow(missing_docs)]
         pub length: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -216,6 +217,7 @@ error ECDSAInvalidSignatureS(bytes32 s);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ECDSAInvalidSignatureS {
+        #[allow(missing_docs)]
         pub s: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -281,8 +283,11 @@ error ECDSAInvalidSignatureS(bytes32 s);
     };
     ///Container for all the [`ECDSA`](self) custom errors.
     pub enum ECDSAErrors {
+        #[allow(missing_docs)]
         ECDSAInvalidSignature(ECDSAInvalidSignature),
+        #[allow(missing_docs)]
         ECDSAInvalidSignatureLength(ECDSAInvalidSignatureLength),
+        #[allow(missing_docs)]
         ECDSAInvalidSignatureS(ECDSAInvalidSignatureS),
     }
     #[automatically_derived]
