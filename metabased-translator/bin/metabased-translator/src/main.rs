@@ -47,7 +47,8 @@ fn main() -> Result<(), RuntimeError> {
 }
 
 /// Entry point for the async runtime
-/// This function initializes the database, creates the node components, and starts the translator.
+/// This function holds the application lifecycle. It starts the translator components and sets up
+/// the shutdown handling.
 async fn run(
     config: &MetabasedConfig,
     rollup_adapter: impl RollupAdapter,

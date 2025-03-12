@@ -394,8 +394,8 @@ impl MetaChainProvider {
         Ok(())
     }
 
-    /// Get obtains the processed blocks from the rollup contract and validates them against the
-    /// source chain clients
+    /// `get_safe_state` obtains the processed blocks from the rollup contract and validates them
+    /// against the source chain clients
     pub async fn get_safe_state(
         &self,
         sequencing_client: &Arc<dyn RPCClient>,
