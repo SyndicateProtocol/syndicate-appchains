@@ -21,16 +21,18 @@ use common::{
     tracing::init_test_tracing,
     types::{Block, BlockRef},
 };
-use contract_bindings::arbitrum::{
-    arbsys::ArbSys,
-    ibridge::IBridge,
-    iinbox::IInbox,
-    ioutbox::IOutbox,
-    irollupcore::IRollupCore::AssertionCreated,
-    nodeinterface::NodeInterface,
-    rollup::Rollup,
-    rollupuserlogic::RollupUserLogic::{
-        self, AssertionInputs, AssertionState, BeforeStateData, ConfigData, GlobalState,
+use contract_bindings::{
+    arbitrum::rollup::Rollup,
+    nitro::{
+        arbsys::ArbSys,
+        ibridge::IBridge,
+        iinbox::IInbox,
+        ioutbox::IOutbox,
+        irollupcore::IRollupCore::AssertionCreated,
+        nodeinterface::NodeInterface,
+        rollupuserlogic::RollupUserLogic::{
+            self, AssertionInputs, AssertionState, BeforeStateData, ConfigData, GlobalState,
+        },
     },
 };
 use e2e_tests::full_meta_node::{

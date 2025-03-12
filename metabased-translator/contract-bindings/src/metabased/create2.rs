@@ -30,22 +30,22 @@ pub mod Create2 {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220b0884ea191c47ddb9d0f18e7c29d5d8dad56f34a9339123cf0466e2c59e53f1c64736f6c63430008190033
+    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220b50c00ed20cd7ce3fb8530351209d9d4e719c7f649015973598fd250a85ab7dc64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB0\x88N\xA1\x91\xC4}\xDB\x9D\x0F\x18\xE7\xC2\x9D]\x8D\xADV\xF3J\x939\x12<\xF0Fn,Y\xE5?\x1CdsolcC\0\x08\x19\x003",
+        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB5\x0C\0\xED \xCD|\xE3\xFB\x8505\x12\t\xD9\xD4\xE7\x19\xC7\xF6I\x01YsY\x8F\xD2P\xA8Z\xB7\xDCdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea2646970667358221220b0884ea191c47ddb9d0f18e7c29d5d8dad56f34a9339123cf0466e2c59e53f1c64736f6c63430008190033
+    ///0x5f80fdfea2646970667358221220b50c00ed20cd7ce3fb8530351209d9d4e719c7f649015973598fd250a85ab7dc64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB0\x88N\xA1\x91\xC4}\xDB\x9D\x0F\x18\xE7\xC2\x9D]\x8D\xADV\xF3J\x939\x12<\xF0Fn,Y\xE5?\x1CdsolcC\0\x08\x19\x003",
+        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB5\x0C\0\xED \xCD|\xE3\xFB\x8505\x12\t\xD9\xD4\xE7\x19\xC7\xF6I\x01YsY\x8F\xD2P\xA8Z\xB7\xDCdsolcC\0\x08\x19\x003",
     );
     /**Custom error with signature `Create2EmptyBytecode()` and selector `0x4ca249dc`.
 ```solidity
@@ -113,7 +113,6 @@ error Create2EmptyBytecode();
     };
     ///Container for all the [`Create2`](self) custom errors.
     pub enum Create2Errors {
-        #[allow(missing_docs)]
         Create2EmptyBytecode(Create2EmptyBytecode),
     }
     #[automatically_derived]
