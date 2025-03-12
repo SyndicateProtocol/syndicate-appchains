@@ -71,7 +71,7 @@ jobs:
         if: matrix.contract-dir == 'metabased-translator/contracts'
         run: |
           cd ..
-          mv contract-bindings old
+          cp -r contract-bindings old
           make create-contract-bindings
           mv out/bindings/src/lib.rs out/bindings/src/mod.rs
           diff -r -q old contract-bindings|| (echo "Error: Rust contract bindings are out of date. Please run 'make -C metabased-translator create-contract-bindings' to update them." && exit 1)
