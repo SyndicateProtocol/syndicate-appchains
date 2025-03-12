@@ -26,6 +26,8 @@ jobs:
       # Enable fail-fast to stop the job immediately if any step fails
       # This helps catch issues early and prevents wasting CI resources
       fail-fast: true
+      matrix:
+        contract-dir: ["metabased-translator/contracts", "metabased-contracts"]
 
     name: ${{ matrix.contract-dir }} Check
     runs-on: ubuntu-latest
