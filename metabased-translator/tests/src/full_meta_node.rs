@@ -55,6 +55,12 @@ use tokio::{
 pub const PRELOAD_INBOX_ADDRESS: Address = address!("0x26eE2349212255614edCc046DD9472F2a5b7EF2b"); //address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899");
 pub const PRELOAD_BRIDGE_ADDRESS: Address = address!("0xa0e810a42086da4Ebc5C49fEd626cA6A75B06437"); //address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2");
 pub const PRELOAD_ROLLUP_ADDRESS: Address = address!("0x75744D0D556497B4ccb91D24328bF6160c2e0fE7");
+pub const PRELOAD_OUTBOX_ADDRESS: Address = address!("0x3442A17C5AF1E664E10F6AC0e3bE2bDb9C87E948");
+pub const PRELOAD_CHALLENGE_MANAGER: Address =
+    address!("0xE801273F775Eacc1d74d1d43f92ec4524caBBD35");
+
+pub const PRELOAD_WASM_MODULE_ROOT: &str =
+    "0x184884e1eb9fefdc158f6c8ac912bb183bf3cf83f0090317e0bc4ac5860baa39";
 #[derive(Debug)]
 struct Task(task::JoinHandle<()>);
 
@@ -427,7 +433,7 @@ impl MetaNode {
             // This is the full set of Arb contracts
             let state_file = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
                 .join("config")
-                .join("anvil_fast_withdrawal.json");
+                .join("anvil.json");
 
             (set_port, _set_anvil, set_provider) = start_anvil_with_args(
                 31337,

@@ -42,3 +42,4 @@ datadir/
 
 # Foundry dependencies
 external/lib
+.qodo

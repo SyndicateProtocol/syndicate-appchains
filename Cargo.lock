@@ -1589,7 +1589,6 @@ dependencies = [
  "prometheus-client",
  "reqwest",
  "serde",
- "serde_json",
  "serial_test",
  "slotter",
  "strum 0.27.1",

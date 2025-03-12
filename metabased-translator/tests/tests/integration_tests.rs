@@ -4,11 +4,9 @@ use alloy::{
     eips::{eip2718::Encodable2718, BlockId::Number, BlockNumberOrTag},
     hex::FromHex,
     network::{EthereumWallet, TransactionBuilder},
-    primitives::{address, utils::parse_ether, Address, BlockHash, Log, B256, U256},
+    primitives::{address, utils::parse_ether, Address, BlockHash, Bytes, B256, U256},
     providers::{ext::AnvilApi as _, Provider, WalletProvider},
-    rpc::types::{
-        anvil::MineOptions, BlockTransactionsKind, Filter, FilterSet, TransactionRequest,
-    },
+    rpc::types::{anvil::MineOptions, BlockTransactionsKind, Filter, TransactionRequest},
     sol_types::SolEvent,
 };
 use block_builder::{
@@ -27,28 +25,27 @@ use contract_bindings::arbitrum::{
     arbsys::ArbSys,
     ibridge::IBridge,
     iinbox::IInbox,
+    ioutbox::IOutbox,
     irollupcore::IRollupCore::AssertionCreated,
     irollupuser::IRollupUser::{
         self, AssertionInputs, AssertionState, BeforeStateData, ConfigData, GlobalState,
-        MachineStatus,
     },
+    nodeinterface::NodeInterface,
     rollup::Rollup,
 };
 use e2e_tests::full_meta_node::{
-    launch_nitro_node, start_reth, MetaNode, PRELOAD_BRIDGE_ADDRESS, PRELOAD_INBOX_ADDRESS,
-    PRELOAD_ROLLUP_ADDRESS,
+    launch_nitro_node, start_reth, MetaNode, PRELOAD_BRIDGE_ADDRESS, PRELOAD_CHALLENGE_MANAGER,
+    PRELOAD_INBOX_ADDRESS, PRELOAD_OUTBOX_ADDRESS, PRELOAD_ROLLUP_ADDRESS,
+    PRELOAD_WASM_MODULE_ROOT,
 };
 use eyre::{eyre, Result};
 use metabased_translator::{config::MetabasedConfig, setup::get_safe_state};
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
-use serde::{
-    de::{self, Deserializer},
-    Deserialize, Serialize, Serializer,
-};
-use std::{str::FromStr, time::Duration};
+use serde::{Deserialize, Serialize};
+use std::time::Duration;
 use tokio::time::sleep;
-use tracing::{event, info, Level};
+use tracing::Level;
 
 /// mine a mchain block with a delay - for testing only
 async fn mine_block(provider: &MetaChainProvider, delay: u64) -> Result<BlockHash> {
@@ -665,15 +662,15 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_settlement_fast_withdrawal() -> Result<()> {
+    // 0. Set up
     let _ = init_test_tracing(Level::INFO);
-    // Start the meta node (port index 0, pre-loaded with the full set of Arb contracts)
+
     let mut config = MetabasedConfig::default();
     config.slotter.settlement_delay = 0;
     config.settlement.settlement_start_block = 1;
     config.sequencing.sequencing_start_block = 3;
     let meta_node = MetaNode::new(true, config).await?;
 
-    // Sync the tips of the sequencing and settlement chains
     let block: Block = meta_node
         .settlement_provider
         .raw_request("eth_getBlockByNumber".into(), ("latest", true))
@@ -683,27 +680,13 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
         .evm_mine(Some(MineOptions::Timestamp(Some(block.timestamp))))
         .await?;
 
-    // Grab the wallet address for the test
-    let wallet_address = meta_node.settlement_provider.default_signer_address();
-
-    // Send a deposit (unaliased address) delayed message
-    // Deposit is from the arbos address and does not increment the nonce
     let inbox = IInbox::new(PRELOAD_INBOX_ADDRESS, &meta_node.settlement_provider);
     _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
     meta_node.mine_set_block(0).await?;
-    // mine the next settlement block to finalize the slot
     meta_node.mine_set_block(1).await?;
     sleep(Duration::from_secs(1)).await;
 
-    // info!("GLOBAL STATE {:?}", global_state);
-    #[derive(Serialize, Deserialize, Debug)]
-    #[serde(rename_all = "camelCase")]
-    struct NitroBlock {
-        hash: B256,
-        send_root: B256,
-    }
-
-    // Set up withdrawal
+    // 1. Send withdrawal transaction on the Appchain
     let mut tx = vec![];
     let arbsys = ArbSys::new(
         address!("0x0000000000000000000000000000000000000064"),
@@ -711,41 +694,45 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
     );
     let gas_limit: u64 = 100_000;
     let max_fee_per_gas: u128 = 100_000_000;
-    let m_chain_block = meta_node.mchain_provider.get_block_number().await?;
-    info!("LATEST m_chain_block block : {:?}", m_chain_block);
-    let withdrawal = arbsys
-        .withdrawEth(Address::ZERO)
-        .value(parse_ether("0.1")?)
+    let withdrawal_value = parse_ether("0.1")?;
+    let withdrawal_wallet = meta_node.sequencing_provider.wallet();
+    let to_address = address!("0x0000000000000000000000000000000000000001");
+    arbsys
+        .withdrawEth(to_address)
+        .value(withdrawal_value)
         .nonce(0)
         .gas(gas_limit)
         .chain_id(meta_node.chain_id)
         .max_fee_per_gas(max_fee_per_gas)
         .max_priority_fee_per_gas(0)
         .into_transaction_request()
-        .build(meta_node.sequencing_provider.wallet())
+        .build(withdrawal_wallet)
         .await?
         .encode_2718(&mut tx);
-    _ = meta_node.sequencing_contract.processTransaction(tx.into()).send().await?;
-
-    // mine a new slot at the same timestamp with the new sequencer block and no settlement blocks
+    let _ = meta_node.sequencing_contract.processTransaction(tx.into()).send().await?;
     meta_node.mine_seq_block(0).await?;
     sleep(Duration::from_secs(1)).await;
 
-    let meta_block = meta_node.metabased_rollup.get_block_number().await?;
-    info!("LATEST metabased rollup block : {:?}", meta_block);
-
-    let m_chain_block = meta_node.mchain_provider.get_block_number().await?;
-    info!("LATEST m_chain_block block : {:?}", m_chain_block);
-
+    // 2. Build & confirm Assertion on the settlement chain
     let rollup = IRollupUser::new(PRELOAD_ROLLUP_ADDRESS, &meta_node.settlement_provider);
     let bridge = IBridge::new(PRELOAD_BRIDGE_ADDRESS, &meta_node.settlement_provider);
+
+    // Helper struct
+    #[derive(Serialize, Deserialize, Debug)]
+    #[serde(rename_all = "camelCase")]
+    struct NitroBlock {
+        hash: B256,
+        send_root: B256,
+        number: U256,
+        l1_block_number: U256,
+        timestamp: U256,
+    }
 
     let block: NitroBlock = meta_node
         .metabased_rollup
         .clone()
         .raw_request("eth_getBlockByNumber".into(), ("latest", false))
         .await?;
-    info!("block.send_root: {:?}", block.send_root);
 
     let filter = &Filter {
         address: PRELOAD_ROLLUP_ADDRESS.into(),
@@ -761,22 +748,13 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
         },
     };
     let events = meta_node.settlement_provider.get_logs(filter).await?;
-    info!("NUMBER OF EVENTS: {:?}", events.len());
-    let topics = events[0].topics();
+
     let log_decode = AssertionCreated::decode_log_data(events[0].data(), true)?;
-    // let log_decode = AssertionCreated::new(AssertionCreated::decode_topics(topics)?, data);
     let assertion_inputs = log_decode.assertion;
-    // info!("ASSERTION CREATED LOG {:#?}", log_decode.0);
-
-    let wasm = B256::from_hex("0x184884e1eb9fefdc158f6c8ac912bb183bf3cf83f0090317e0bc4ac5860baa39")
-        .unwrap();
-
-    let config = assertion_inputs.beforeStateData.configData;
     let before_state = assertion_inputs.afterState;
-
     let after_state = AssertionState {
         globalState: GlobalState {
-            u64Vals: [1 as u64, 0 as u64],
+            u64Vals: [1_u64, 0_u64],
             bytes32Vals: [block.hash, block.send_root],
         },
         machineStatus: 1,
@@ -788,9 +766,9 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
             sequencerBatchAcc: log_decode.afterInboxBatchAcc,
             prevPrevAssertionHash: log_decode.parentAssertionHash,
             configData: ConfigData {
-                wasmModuleRoot: wasm,
-                requiredStake: U256::from(1000000000000000000 as u64),
-                challengeManager: address!("0xE801273F775Eacc1d74d1d43f92ec4524caBBD35"),
+                wasmModuleRoot: B256::from_hex(PRELOAD_WASM_MODULE_ROOT).unwrap(),
+                requiredStake: U256::from(1000000000000000000_u64),
+                challengeManager: PRELOAD_CHALLENGE_MANAGER,
                 confirmPeriodBlocks: 20,
                 nextInboxPosition: 1,
             },
@@ -806,16 +784,48 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
         afterState: after_state.clone(),
     };
 
+    // Calculate assertion hash
     let sequencer_batch_acc = bridge.sequencerInboxAccs(U256::from(0)).call().await?._0;
-
     let assertion_hash = rollup
         .computeAssertionHash(log_decode.assertionHash, after_state, sequencer_batch_acc)
         .call()
         .await?;
 
-    let _a = rollup.fastConfirmNewAssertion(assertion, assertion_hash._0).send().await?;
+    // Confirm new assertion - this will be done by the new State Poster service
+    let _ = rollup.fastConfirmNewAssertion(assertion, assertion_hash._0).send().await?;
+    meta_node.mine_set_block(0).await?;
 
-    info!("WE ARE DONE");
+    // 3. Execute transaction (usually done by end-user)
+
+    // Generate proof
+    let node_interface = NodeInterface::new(
+        address!("0x00000000000000000000000000000000000000c8"), // NodeInterface pre-compile
+        &meta_node.metabased_rollup,
+    );
+    let proof = node_interface.constructOutboxProof(1, 0).call().await?;
+
+    // Execute withdrawal
+    let outbox = IOutbox::new(PRELOAD_OUTBOX_ADDRESS, &meta_node.settlement_provider);
+    let _ = outbox
+        .executeTransaction(
+            proof.proof,                                            // proof
+            U256::from(0),                                          // index
+            meta_node.sequencing_provider.default_signer_address(), // l2Sender
+            to_address,                                             // to
+            block.number,                                           // l2Block,
+            block.l1_block_number,                                  // l1Block,
+            block.timestamp,                                        // l2Timestamp,
+            withdrawal_value,                                       // value
+            Bytes::new(),                                           // data (always empty)
+        )
+        .send()
+        .await?;
+
+    meta_node.mine_set_block(0).await?;
+
+    // Assert new balance is equal to withdrawal amount
+    let balance_after = meta_node.settlement_provider.get_balance(to_address).await?;
+    assert_eq!(balance_after, withdrawal_value);
 
     Ok(())
 }

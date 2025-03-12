@@ -62,6 +62,8 @@ pub mod modulelib;
 pub mod modulememorylib;
 pub mod modulememorycompactlib;
 pub mod multistacklib;
+pub mod nodeinterface;
+pub mod nodeinterfacedebug;
 pub mod pcarraylib;
 pub mod rollup;
 pub mod stackframelib;
