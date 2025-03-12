@@ -1,6 +1,6 @@
 use crate::{
     config::MetabasedConfig,
-    shutdown::{ShutdownRx, ShutdownTx},
+    shutdown_channels::{ShutdownRx, ShutdownTx},
     types::RuntimeError,
 };
 use block_builder::{
@@ -44,7 +44,7 @@ impl ComponentHandles {
             channel::<Arc<BlockAndReceipts>>(config.sequencing.sequencing_buffer_size);
         let (settlement_tx, settlement_rx) =
             channel::<Arc<BlockAndReceipts>>(config.settlement.settlement_buffer_size);
-        let (slot_tx, slot_rx) = channel::<Slot>(100);
+        let (slot_tx, slot_rx) = channel::<Slot>(100); // TODO (SEQ-680) we can remove this channel
 
         let mut sequencing_config: ChainIngestorConfig = config.sequencing.clone().into();
         let mut settlement_config: ChainIngestorConfig = config.settlement.clone().into();

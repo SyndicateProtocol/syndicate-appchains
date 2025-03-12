@@ -318,9 +318,26 @@ impl MetaChainProvider {
         cfg
     }
 
-    /// TODO write me and find a better name for this func
-    // TODO (SEQ-651) - re-use this function in case of reorg
-    pub async fn start_from_safe_state(
+    // TODO (SEQ-681) - re-use this function in case of reorg
+    /// Reconciles the [`MetaChain`] state with the source chains (sequencing and settlement)
+    ///
+    /// This function is used during application startup and when handling reorgs to ensure
+    /// the [`MetaChain`]'s state is consistent with the source chains. It:
+    /// 1. Retrieves the latest valid state from the rollup contract that can be verified against
+    ///    both source chains
+    /// 2. Rolls back the [`MetaChain`] to this validated state if necessary
+    /// 3. Returns the established safe state for the translator to resume from
+    ///
+    /// # Arguments
+    /// * `sequencing_client` - Client for the sequencing chain
+    /// * `settlement_client` - Client for the settlement chain
+    /// * `rollup_adapter` - Adapter for interacting with the rollup contract
+    ///
+    /// # Returns
+    /// * `Ok(Some(KnownState))` - The validated state if one was found
+    /// * `Ok(None)` - No validated state was found (starting from genesis)
+    /// * `Err` - An error occurred during reconciliation
+    pub async fn reconcile_mchain_with_source_chains(
         &self,
         sequencing_client: &Arc<dyn RPCClient>,
         settlement_client: &Arc<dyn RPCClient>,

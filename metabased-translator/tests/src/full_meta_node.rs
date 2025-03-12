@@ -36,7 +36,9 @@ use contract_bindings::{
 };
 use eyre::{eyre, Result};
 use metabased_translator::{
-    components::ComponentHandles, config::MetabasedConfig, shutdown::ShutdownRx,
+    config::MetabasedConfig,
+    shutdown_channels::{ShutdownChannels, ShutdownTx},
+    spawn::ComponentHandles,
 };
 use metrics::metrics::{MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
@@ -44,7 +46,6 @@ use std::{sync::Arc, time::Duration};
 use tokio::{
     process::{Child, Command},
     runtime::Handle,
-    sync::oneshot,
     task,
     time::timeout,
 };
@@ -333,11 +334,8 @@ pub struct MetaNode {
     _seq_anvil: AnvilInstance,
     _set_anvil: AnvilInstance,
     _nitro_docker: Docker,
-    // Keep shutdown channel senders alive
-    _seq_tx: oneshot::Sender<()>,
-    _settlement_tx: oneshot::Sender<()>,
-    _slotter_tx: oneshot::Sender<()>,
-    _builder_tx: oneshot::Sender<()>,
+    // keep the shutdown channel senders alive
+    _shutdown_channels: ShutdownTx,
 }
 
 impl MetaNode {
@@ -458,17 +456,7 @@ impl MetaNode {
         let rollup = mchain_provider.get_rollup();
 
         // Create shutdown channels
-        let (seq_tx, seq_rx) = oneshot::channel();
-        let (settlement_tx, settlement_rx) = oneshot::channel();
-        let (slotter_tx, slotter_rx) = oneshot::channel();
-        let (builder_tx, builder_rx) = oneshot::channel();
-
-        let shutdown_rx = ShutdownRx {
-            sequencing: seq_rx,
-            settlement: settlement_rx,
-            slotter: slotter_rx,
-            block_builder: builder_rx,
-        };
+        let (_main_rx, shutdown_tx, shutdown_rx) = ShutdownChannels::new().split();
 
         // Launch components using ComponentHandles::spawn
         let component_handles = ComponentHandles::spawn(
@@ -505,10 +493,7 @@ impl MetaNode {
             _seq_anvil: seq_anvil,
             _set_anvil: set_anvil,
             _nitro_docker: nitro_docker,
-            _seq_tx: seq_tx,
-            _settlement_tx: settlement_tx,
-            _slotter_tx: slotter_tx,
-            _builder_tx: builder_tx,
+            _shutdown_channels: shutdown_tx,
         })
     }
 

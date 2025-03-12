@@ -9,9 +9,9 @@ use block_builder::{
 use common::tracing::init_tracing_with_extra_fields;
 use eyre::Result;
 use metabased_translator::{
-    components::{clients, get_extra_fields_for_logging, init_metrics, ComponentHandles},
     config::MetabasedConfig,
-    shutdown::{ShutdownChannels, ShutdownTx},
+    shutdown_channels::{ShutdownChannels, ShutdownTx},
+    spawn::{clients, get_extra_fields_for_logging, init_metrics, ComponentHandles},
     types::RuntimeError,
 };
 use tokio::task::JoinHandle;
@@ -63,7 +63,11 @@ async fn run(
             .await?;
 
     let safe_state = mchain
-        .start_from_safe_state(&sequencing_client, &settlement_client, &rollup_adapter)
+        .reconcile_mchain_with_source_chains(
+            &sequencing_client,
+            &settlement_client,
+            &rollup_adapter,
+        )
         .await?;
 
     let (main_shutdown_rx, tx, rx) = shutdown_channels.split();
