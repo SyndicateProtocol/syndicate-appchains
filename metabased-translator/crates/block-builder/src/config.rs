@@ -11,7 +11,7 @@ use std::{fmt::Debug, str::FromStr};
 use thiserror::Error;
 
 const DEFAULT_PRIVATE_KEY_SIGNER: &str =
-    "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+    "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // address = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 
 /// Configuration for the block builder service
 #[derive(Parser, Clone)]
