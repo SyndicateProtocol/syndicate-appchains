@@ -26,14 +26,12 @@ jobs:
       # Enable fail-fast to stop the job immediately if any step fails
       # This helps catch issues early and prevents wasting CI resources
       fail-fast: true
-      matrix:
-        contract-dir: ["metabased-translator/contracts", "metabased-contracts"]
 
-    name: ${{ matrix.contract-dir }} Check
+    name: Contract bindings check
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: ${{ matrix.contract-dir }}
+        working-directory: metabased-translator
     steps:
       - uses: actions/checkout@v4
         with:
@@ -63,12 +61,7 @@ jobs:
           forge test -vvv
         id: test
 
-      # when generating the bindings:
-      # --force flag to clear the cache and artifacts folder and recompile
-      # -C to create bindings only for a specific directory
-
       - name: Check Rust contract bindings for metabased-translator
-        if: matrix.contract-dir == 'metabased-translator/contracts'
         run: |
           cd ..
           cp -r contract-bindings old
