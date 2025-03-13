@@ -5,7 +5,7 @@
 //! construction across different rollup implementations
 
 use crate::{
-    config::BlockBuilderConfig,
+    config::{get_rollup_contract_address, BlockBuilderConfig},
     rollups::{
         arbitrum::batch::{Batch, BatchMessage, L1IncomingMessage, L1IncomingMessageHeader},
         shared::{RollupAdapter, SequencingTransactionParser},
@@ -94,9 +94,6 @@ impl std::fmt::Display for L1MessageType {
 #[derive(Debug)]
 /// Builder for constructing Arbitrum blocks from transactions
 pub struct ArbitrumAdapter {
-    // MChain rollup address
-    mchain_rollup_address: Address,
-
     // Sequencing chain address
     transaction_parser: SequencingTransactionParser,
 
@@ -163,7 +160,7 @@ impl RollupAdapter for ArbitrumAdapter {
         provider: &T,
         block: BlockNumberOrTag,
     ) -> Result<Option<(KnownState, u64)>> {
-        let rollup = Rollup::new(self.mchain_rollup_address, provider);
+        let rollup = Rollup::new(get_rollup_contract_address(), provider);
 
         let block_number = match block {
             BlockNumberOrTag::Number(num) => num,
@@ -199,7 +196,7 @@ impl RollupAdapter for ArbitrumAdapter {
     }
 
     async fn get_last_sequencing_block_processed<T: Provider>(&self, provider: &T) -> Result<u64> {
-        let rollup = Rollup::new(self.mchain_rollup_address, provider);
+        let rollup = Rollup::new(get_rollup_contract_address(), provider);
         let seq_num = rollup
             .seqBlockNumber()
             .call()
@@ -232,7 +229,6 @@ impl ArbitrumAdapter {
             transaction_parser: SequencingTransactionParser::new(
                 config.sequencing_contract_address,
             ),
-            mchain_rollup_address: config.mchain_rollup_address,
             bridge_address: config.bridge_address,
             inbox_address: config.inbox_address,
             ignore_delayed_messages: config.ignore_delayed_messages,
@@ -350,7 +346,7 @@ impl ArbitrumAdapter {
             .get(&message_index)
             .ok_or_else(|| ArbitrumBlockBuilderError::MissingInboxMessageData(message_index))?;
 
-        Ok(TransactionRequest::default().to(self.mchain_rollup_address).input(
+        Ok(TransactionRequest::default().to(get_rollup_contract_address()).input(
             Rollup::deliverMessageCall { kind: kind as u8, sender, messageData: data.clone() }
                 .abi_encode()
                 .into(),
@@ -394,7 +390,7 @@ impl ArbitrumAdapter {
             .map_or((0, FixedBytes::ZERO), |b| (b.block.number, b.block.hash));
 
         // Create the transaction request
-        let request = TransactionRequest::default().to(self.mchain_rollup_address).input(
+        let request = TransactionRequest::default().to(get_rollup_contract_address()).input(
             // Encode the function call with parameters
             Rollup::postBatchCall::new((
                 encoded_batch,
@@ -442,7 +438,6 @@ mod tests {
                 .expect("Invalid address format");
         let config = BlockBuilderConfig {
             sequencing_contract_address,
-            mchain_rollup_address: sequencing_contract_address,
             bridge_address: sequencing_contract_address,
             ..Default::default()
         };
@@ -462,7 +457,7 @@ mod tests {
             builder.build_batch_txn(txs, 0, 0, &seq_block, Some(&set_block), 0).await.unwrap();
 
         // Verify transaction is sent to sequencer inbox
-        assert_eq!(batch.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+        assert_eq!(batch.to, Some(TxKind::Call(get_rollup_contract_address())));
 
         // For empty batch, should create BatchMessage::Delayed
         let expected_batch = Batch(vec![]);
@@ -497,7 +492,7 @@ mod tests {
             .unwrap();
 
         // Verify transaction is sent to sequencer inbox
-        assert_eq!(batch.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+        assert_eq!(batch.to, Some(TxKind::Call(get_rollup_contract_address())));
 
         // For non-empty batch, should create BatchMessage::L2
         let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
@@ -619,10 +614,10 @@ mod tests {
         assert_eq!(txns.len(), 2); // Should contain batch transaction + delayed message transaction
 
         // Verify delayed message transaction
-        assert_eq!(txns[0].to, Some(TxKind::Call(builder.mchain_rollup_address)));
+        assert_eq!(txns[0].to, Some(TxKind::Call(get_rollup_contract_address())));
 
         // Verify the batch transaction
-        assert_eq!(txns[1].to, Some(TxKind::Call(builder.mchain_rollup_address)));
+        assert_eq!(txns[1].to, Some(TxKind::Call(get_rollup_contract_address())));
     }
 
     #[tokio::test]
@@ -661,7 +656,7 @@ mod tests {
 
         // Verify the batch transaction contains our tx data
         let batch_txn = &txns[0];
-        assert_eq!(batch_txn.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+        assert_eq!(batch_txn.to, Some(TxKind::Call(get_rollup_contract_address())));
         let txn_data_without_prefix = txn_data[1..].to_vec();
         let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
             header: L1IncomingMessageHeader { block_number: 1, timestamp: 0 },
@@ -766,7 +761,7 @@ mod tests {
 
         // Verify delayed message transaction
         let delayed_tx = &txns[0];
-        assert_eq!(delayed_tx.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+        assert_eq!(delayed_tx.to, Some(TxKind::Call(get_rollup_contract_address())));
         let expected_delayed_call = Rollup::deliverMessageCall {
             kind: L1MessageType::L2Message as u8,
             sender: Address::repeat_byte(1),
@@ -779,7 +774,7 @@ mod tests {
         // Verify the batch transaction contains our sequencing tx data
         let batch_txn = &txns[1];
         let txn_data_without_prefix = txn_data[1..].to_vec();
-        assert_eq!(batch_txn.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+        assert_eq!(batch_txn.to, Some(TxKind::Call(get_rollup_contract_address())));
         let expected_batch = Batch(vec![
             BatchMessage::Delayed,
             BatchMessage::L2(L1IncomingMessage {
@@ -838,7 +833,7 @@ mod tests {
         let txn = result.unwrap();
 
         // Verify the transaction
-        assert_eq!(txn.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+        assert_eq!(txn.to, Some(TxKind::Call(get_rollup_contract_address())));
 
         // Verify the input data matches expected deliverMessageCall
         let expected_call = Rollup::deliverMessageCall {
@@ -1010,7 +1005,7 @@ mod tests {
         let txn = result.unwrap();
 
         // Verify the transaction
-        assert_eq!(txn.to, Some(TxKind::Call(builder.mchain_rollup_address)));
+        assert_eq!(txn.to, Some(TxKind::Call(get_rollup_contract_address())));
 
         // Verify the input data matches expected deliverMessageCall
         let expected_call = Rollup::deliverMessageCall {

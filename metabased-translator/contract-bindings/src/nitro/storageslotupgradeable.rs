@@ -22,22 +22,22 @@ pub mod StorageSlotUpgradeable {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220e1c21477ce4ce23ff9f9fe908f5b4dc33ab15d61134572f11f7dce4eb33f979964736f6c63430008190033
+    ///0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f5ffdfea2646970667358221220f609639fda9becb13c84a9306d94969477b0d0899b52c825a97fe3cc02ab527b64736f6c634300081c0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`U`2`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`&WcNH{q`\xE0\x1B_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xE1\xC2\x14w\xCEL\xE2?\xF9\xF9\xFE\x90\x8F[M\xC3:\xB1]a\x13Er\xF1\x1F}\xCEN\xB3?\x97\x99dsolcC\0\x08\x19\x003",
+        b"`U`2`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`&WcNH{q`\xE0\x1B_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R__\xFD\xFE\xA2dipfsX\"\x12 \xF6\tc\x9F\xDA\x9B\xEC\xB1<\x84\xA90m\x94\x96\x94w\xB0\xD0\x89\x9BR\xC8%\xA9\x7F\xE3\xCC\x02\xABR{dsolcC\0\x08\x1C\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220e1c21477ce4ce23ff9f9fe908f5b4dc33ab15d61134572f11f7dce4eb33f979964736f6c63430008190033
+    ///0x730000000000000000000000000000000000000000301460806040525f5ffdfea2646970667358221220f609639fda9becb13c84a9306d94969477b0d0899b52c825a97fe3cc02ab527b64736f6c634300081c0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xE1\xC2\x14w\xCEL\xE2?\xF9\xF9\xFE\x90\x8F[M\xC3:\xB1]a\x13Er\xF1\x1F}\xCEN\xB3?\x97\x99dsolcC\0\x08\x19\x003",
+        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R__\xFD\xFE\xA2dipfsX\"\x12 \xF6\tc\x9F\xDA\x9B\xEC\xB1<\x84\xA90m\x94\x96\x94w\xB0\xD0\x89\x9BR\xC8%\xA9\x7F\xE3\xCC\x02\xABR{dsolcC\0\x08\x1C\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`StorageSlotUpgradeable`](self) contract instance.

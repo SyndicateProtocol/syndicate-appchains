@@ -32,22 +32,22 @@ pub mod Dummy {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080604052348015600e575f80fd5b50606280601a5f395ff3fe6080604052348015600e575f80fd5b50600436106026575f3560e01c806332e43a1114602a575b5f80fd5b00fea2646970667358221220845776af453be937a0157f49f28437fcb4be6c0245acd77ab9e312ac21e3ed6764736f6c63430008190033
+    ///0x6080604052348015600e575f5ffd5b50606280601a5f395ff3fe6080604052348015600e575f5ffd5b50600436106026575f3560e01c806332e43a1114602a575b5f5ffd5b00fea26469706673582212200da4b66ec4b7de584ace18f2dca092f9b2f0b85702a8eee76a56f4ec282eb85664736f6c634300081c0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4\x80\x15`\x0EW_\x80\xFD[P`b\x80`\x1A_9_\xF3\xFE`\x80`@R4\x80\x15`\x0EW_\x80\xFD[P`\x046\x10`&W_5`\xE0\x1C\x80c2\xE4:\x11\x14`*W[_\x80\xFD[\0\xFE\xA2dipfsX\"\x12 \x84Wv\xAFE;\xE97\xA0\x15\x7FI\xF2\x847\xFC\xB4\xBEl\x02E\xAC\xD7z\xB9\xE3\x12\xAC!\xE3\xEDgdsolcC\0\x08\x19\x003",
+        b"`\x80`@R4\x80\x15`\x0EW__\xFD[P`b\x80`\x1A_9_\xF3\xFE`\x80`@R4\x80\x15`\x0EW__\xFD[P`\x046\x10`&W_5`\xE0\x1C\x80c2\xE4:\x11\x14`*W[__\xFD[\0\xFE\xA2dipfsX\"\x12 \r\xA4\xB6n\xC4\xB7\xDEXJ\xCE\x18\xF2\xDC\xA0\x92\xF9\xB2\xF0\xB8W\x02\xA8\xEE\xE7jV\xF4\xEC(.\xB8VdsolcC\0\x08\x1C\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x6080604052348015600e575f80fd5b50600436106026575f3560e01c806332e43a1114602a575b5f80fd5b00fea2646970667358221220845776af453be937a0157f49f28437fcb4be6c0245acd77ab9e312ac21e3ed6764736f6c63430008190033
+    ///0x6080604052348015600e575f5ffd5b50600436106026575f3560e01c806332e43a1114602a575b5f5ffd5b00fea26469706673582212200da4b66ec4b7de584ace18f2dca092f9b2f0b85702a8eee76a56f4ec282eb85664736f6c634300081c0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4\x80\x15`\x0EW_\x80\xFD[P`\x046\x10`&W_5`\xE0\x1C\x80c2\xE4:\x11\x14`*W[_\x80\xFD[\0\xFE\xA2dipfsX\"\x12 \x84Wv\xAFE;\xE97\xA0\x15\x7FI\xF2\x847\xFC\xB4\xBEl\x02E\xAC\xD7z\xB9\xE3\x12\xAC!\xE3\xEDgdsolcC\0\x08\x19\x003",
+        b"`\x80`@R4\x80\x15`\x0EW__\xFD[P`\x046\x10`&W_5`\xE0\x1C\x80c2\xE4:\x11\x14`*W[__\xFD[\0\xFE\xA2dipfsX\"\x12 \r\xA4\xB6n\xC4\xB7\xDEXJ\xCE\x18\xF2\xDC\xA0\x92\xF9\xB2\xF0\xB8W\x02\xA8\xEE\xE7jV\xF4\xEC(.\xB8VdsolcC\0\x08\x1C\x003",
     );
     /**Function with signature `dummy()` and selector `0x32e43a11`.
 ```solidity

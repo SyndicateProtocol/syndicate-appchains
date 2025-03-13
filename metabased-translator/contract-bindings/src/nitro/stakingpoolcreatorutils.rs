@@ -30,22 +30,22 @@ pub mod StakingPoolCreatorUtils {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220a76fd2a3c2f715d3553e0a5f54b37e0afb22f4713e0543530233eb5928815a1164736f6c63430008190033
+    ///0x60556032600b8282823980515f1a607314602657634e487b7160e01b5f525f60045260245ffd5b305f52607381538281f3fe730000000000000000000000000000000000000000301460806040525f5ffdfea26469706673582212206ead181bb3d36e7a4bde06ac670b0ad2098c7859e9c3ca140d3f732224c96a9964736f6c634300081c0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`U`2`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`&WcNH{q`\xE0\x1B_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xA7o\xD2\xA3\xC2\xF7\x15\xD3U>\n_T\xB3~\n\xFB\"\xF4q>\x05CS\x023\xEBY(\x81Z\x11dsolcC\0\x08\x19\x003",
+        b"`U`2`\x0B\x82\x82\x829\x80Q_\x1A`s\x14`&WcNH{q`\xE0\x1B_R_`\x04R`$_\xFD[0_R`s\x81S\x82\x81\xF3\xFEs\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R__\xFD\xFE\xA2dipfsX\"\x12 n\xAD\x18\x1B\xB3\xD3nzK\xDE\x06\xACg\x0B\n\xD2\t\x8CxY\xE9\xC3\xCA\x14\r?s\"$\xC9j\x99dsolcC\0\x08\x1C\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x730000000000000000000000000000000000000000301460806040525f80fdfea2646970667358221220a76fd2a3c2f715d3553e0a5f54b37e0afb22f4713e0543530233eb5928815a1164736f6c63430008190033
+    ///0x730000000000000000000000000000000000000000301460806040525f5ffdfea26469706673582212206ead181bb3d36e7a4bde06ac670b0ad2098c7859e9c3ca140d3f732224c96a9964736f6c634300081c0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xA7o\xD2\xA3\xC2\xF7\x15\xD3U>\n_T\xB3~\n\xFB\"\xF4q>\x05CS\x023\xEBY(\x81Z\x11dsolcC\0\x08\x19\x003",
+        b"s\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x000\x14`\x80`@R__\xFD\xFE\xA2dipfsX\"\x12 n\xAD\x18\x1B\xB3\xD3nzK\xDE\x06\xACg\x0B\n\xD2\t\x8CxY\xE9\xC3\xCA\x14\r?s\"$\xC9j\x99dsolcC\0\x08\x1C\x003",
     );
     /**Custom error with signature `PoolDoesntExist()` and selector `0x215db331`.
 ```solidity

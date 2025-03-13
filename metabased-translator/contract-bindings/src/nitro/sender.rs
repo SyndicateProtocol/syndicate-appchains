@@ -22,22 +22,22 @@ pub mod Sender {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080604052348015600e575f80fd5b50603e80601a5f395ff3fe60806040525f80fdfea2646970667358221220120b6b35d9e6124b0d97888a05d13cf36ee9b01864344aae87024d2e8ec5a26664736f6c63430008190033
+    ///0x6080604052348015600e575f5ffd5b50603e80601a5f395ff3fe60806040525f5ffdfea264697066735822122043c1e7bb389b58357802bebe811a99dda6fed2a05545c6d18af5408db01ee14964736f6c634300081c0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4\x80\x15`\x0EW_\x80\xFD[P`>\x80`\x1A_9_\xF3\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x12\x0Bk5\xD9\xE6\x12K\r\x97\x88\x8A\x05\xD1<\xF3n\xE9\xB0\x18d4J\xAE\x87\x02M.\x8E\xC5\xA2fdsolcC\0\x08\x19\x003",
+        b"`\x80`@R4\x80\x15`\x0EW__\xFD[P`>\x80`\x1A_9_\xF3\xFE`\x80`@R__\xFD\xFE\xA2dipfsX\"\x12 C\xC1\xE7\xBB8\x9BX5x\x02\xBE\xBE\x81\x1A\x99\xDD\xA6\xFE\xD2\xA0UE\xC6\xD1\x8A\xF5@\x8D\xB0\x1E\xE1IdsolcC\0\x08\x1C\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea2646970667358221220120b6b35d9e6124b0d97888a05d13cf36ee9b01864344aae87024d2e8ec5a26664736f6c63430008190033
+    ///0x60806040525f5ffdfea264697066735822122043c1e7bb389b58357802bebe811a99dda6fed2a05545c6d18af5408db01ee14964736f6c634300081c0033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x12\x0Bk5\xD9\xE6\x12K\r\x97\x88\x8A\x05\xD1<\xF3n\xE9\xB0\x18d4J\xAE\x87\x02M.\x8E\xC5\xA2fdsolcC\0\x08\x19\x003",
+        b"`\x80`@R__\xFD\xFE\xA2dipfsX\"\x12 C\xC1\xE7\xBB8\x9BX5x\x02\xBE\xBE\x81\x1A\x99\xDD\xA6\xFE\xD2\xA0UE\xC6\xD1\x8A\xF5@\x8D\xB0\x1E\xE1IdsolcC\0\x08\x1C\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`Sender`](self) contract instance.
