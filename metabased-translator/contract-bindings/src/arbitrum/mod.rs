@@ -4,6 +4,8 @@
 //! Do not manually edit these files.
 //! These files may be overwritten by the codegen system at any time.
 pub mod r#arbgasinfo;
+pub mod r#arbowner;
+pub mod r#arbownerpublic;
 pub mod r#counter;
 pub mod r#ibridge;
 pub mod r#idelayedmessageprovider;

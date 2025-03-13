@@ -290,7 +290,11 @@ fn rollup_info(rollup_config: &str, chain_name: &str) -> String {
     )
 }
 
-pub async fn launch_nitro_node(chain_id: u64, mchain_port: u16) -> Result<(Docker, RootProvider)> {
+pub async fn launch_nitro_node(
+    chain_id: u64,
+    chain_owner: Address,
+    mchain_port: u16,
+) -> Result<(Docker, RootProvider)> {
     let port = PortManager::instance().next_port();
     let nitro = Command::new("docker")
         .arg("run")
@@ -307,7 +311,7 @@ pub async fn launch_nitro_node(chain_id: u64, mchain_port: u16) -> Result<(Docke
         .arg("--ensure-rollup-deployment=false")
         .arg(
             "--chain.info-json=".to_string() +
-                &rollup_info(&MetaChainProvider::rollup_config(chain_id), "test"),
+                &rollup_info(&MetaChainProvider::rollup_config(chain_id, chain_owner), "test"),
         )
         .arg("--http.addr=0.0.0.0")
         .arg("--http.port=".to_string() + &port.to_string())
@@ -441,7 +445,10 @@ impl MetaNode {
             _ = Rollup::deploy_builder(
                 &set_provider,
                 U256::from(config.block_builder.target_chain_id),
-                MetaChainProvider::rollup_config(config.block_builder.target_chain_id),
+                MetaChainProvider::rollup_config(
+                    config.block_builder.target_chain_id,
+                    config.block_builder.owner_address,
+                ),
             )
             .nonce(0)
             .send()
@@ -503,8 +510,12 @@ impl MetaNode {
         let mchain_provider = block_builder.mchain.clone();
         let rollup = block_builder.mchain.get_rollup();
 
-        let (_nitro_docker, metabased_rollup) =
-            launch_nitro_node(config.block_builder.target_chain_id, node.http_port).await?;
+        let (_nitro_docker, metabased_rollup) = launch_nitro_node(
+            config.block_builder.target_chain_id,
+            config.block_builder.owner_address,
+            node.http_port,
+        )
+        .await?;
         let (_builder_tx, builder_rx) = tokio::sync::oneshot::channel();
         let _block_builder_task = Task(tokio::spawn(async move {
             _ = block_builder.start(None, builder_rx).await;

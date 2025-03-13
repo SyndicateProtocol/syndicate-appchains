@@ -19,7 +19,9 @@ use common::{
     tracing::init_test_tracing,
     types::{Block, BlockRef},
 };
-use contract_bindings::arbitrum::{arbgasinfo::ArbGasInfo, iinbox::IInbox, rollup::Rollup};
+use contract_bindings::arbitrum::{
+    arbgasinfo::ArbGasInfo, arbownerpublic::ArbOwnerPublic, iinbox::IInbox, rollup::Rollup,
+};
 use e2e_tests::full_meta_node::{launch_nitro_node, start_reth, MetaNode, PRELOAD_INBOX_ADDRESS};
 use eyre::{eyre, Result};
 use metabased_translator::{config::MetabasedConfig, setup::get_safe_state};
@@ -76,6 +78,22 @@ async fn test_rollback() -> Result<()> {
     assert_eq!(mchain.get_block_number().await?, 3);
     mchain.rollback_to_block(b1).await?;
     assert_eq!(mchain.get_block_number().await?, 1);
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn arb_owner_test() -> Result<()> {
+    let _ = init_test_tracing(Level::INFO);
+    let mut cfg = MetabasedConfig::default();
+    let owner = address!("0x0000000000000000000000000000000000000001");
+    cfg.block_builder.owner_address = owner;
+    // Start the meta node
+    let meta_node = MetaNode::new(false, cfg).await?;
+    let arb_owner_public = ArbOwnerPublic::new(
+        address!("0x000000000000000000000000000000000000006b"),
+        &meta_node.metabased_rollup,
+    );
+    assert_eq!(arb_owner_public.getAllChainOwners().call().await?._0, [owner]);
     Ok(())
 }
 
@@ -495,8 +513,12 @@ async fn test_nitro_batch() -> Result<()> {
     let mut metrics_state = MetricsState { registry: Registry::default() };
     let metrics = MChainMetrics::new(&mut metrics_state.registry);
     let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
-    let (_nitro, rollup) =
-        launch_nitro_node(block_builder_cfg.target_chain_id, node.http_port).await?;
+    let (_nitro, rollup) = launch_nitro_node(
+        block_builder_cfg.target_chain_id,
+        block_builder_cfg.owner_address,
+        node.http_port,
+    )
+    .await?;
 
     let rollup_contract = mchain.get_rollup();
 
@@ -589,8 +611,12 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
     let mut metrics_state = MetricsState { registry: Registry::default() };
     let metrics = MChainMetrics::new(&mut metrics_state.registry);
     let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
-    let (_nitro, rollup) =
-        launch_nitro_node(block_builder_cfg.target_chain_id, node.http_port).await?;
+    let (_nitro, rollup) = launch_nitro_node(
+        block_builder_cfg.target_chain_id,
+        block_builder_cfg.owner_address,
+        node.http_port,
+    )
+    .await?;
     let rollup_contract = mchain.get_rollup();
 
     // deposit 1 eth

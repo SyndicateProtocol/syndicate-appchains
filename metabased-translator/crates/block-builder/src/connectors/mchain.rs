@@ -111,7 +111,7 @@ impl MetaChainProvider {
             .wallet(EthereumWallet::from(get_default_private_key_signer()))
             .on_ipc(IpcConnect::new(config.mchain_auth_ipc_path.clone()))
             .await?;
-        let rollup_config = Self::rollup_config(config.target_chain_id);
+        let rollup_config = Self::rollup_config(config.target_chain_id, config.owner_address);
 
         let mchain = Self {
             mchain_ipc_path: config.mchain_ipc_path.clone(),
@@ -273,8 +273,7 @@ impl MetaChainProvider {
     }
 
     /// Return the on-chain config for a rollup with a given chain id
-    pub fn rollup_config(chain_id: u64) -> String {
-        let zero = Address::ZERO;
+    pub fn rollup_config(chain_id: u64, chain_owner: Address) -> String {
         let mut cfg = format!(
             r#"{{
               "chainId": {chain_id},
@@ -301,7 +300,7 @@ impl MetaChainProvider {
                 "AllowDebugPrecompiles": false,
                 "DataAvailabilityCommittee": false,
                 "InitialArbOSVersion": 32,
-                "InitialChainOwner": "{zero}",
+                "InitialChainOwner": "{chain_owner}",
                 "GenesisBlockNum": 0
               }}
             }}"#

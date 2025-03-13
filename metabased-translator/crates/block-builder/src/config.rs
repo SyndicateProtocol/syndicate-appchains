@@ -17,6 +17,9 @@ const DEFAULT_PRIVATE_KEY_SIGNER: &str =
 #[derive(Parser, Clone)]
 #[allow(missing_docs)]
 pub struct BlockBuilderConfig {
+    #[arg(long, env = "BLOCK_BUILDER_ROLLUP_OWNER_ADDRESS", value_parser = parse_address, default_value_t = Address::ZERO)]
+    pub owner_address: Address,
+
     #[arg(long, env = "BLOCK_BUILDER_MINE_EMPTY_BLOCKS", default_value_t = false)]
     pub mine_empty_blocks: bool,
 
@@ -37,12 +40,6 @@ pub struct BlockBuilderConfig {
     /// Target rollup type for the [`block-builder`]
     #[arg(long, env = "BLOCK_BUILDER_TARGET_ROLLUP", default_value = "arbitrum")]
     pub target_rollup_type: TargetRollupType,
-
-    /// Arbitrum rollup address on the m-chain
-    #[arg(short = 'm', long, env = "BLOCK_BUILDER_ARBITRUM_MCHAIN_ROLLUP_ADDRESS",
-        value_parser = parse_address,
-        default_value = "0x5FbDB2315678afecb367f032d93F642f64180aa3")]
-    pub mchain_rollup_address: Address,
 
     // TODO(SEQ-555): make bridge and inbox addresses specific to arbitrum
     /// Bridge address on the settlement chain
@@ -89,12 +86,12 @@ pub fn get_rollup_contract_address() -> Address {
 impl Debug for BlockBuilderConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockBuilderConfig")
+            .field("owner_address", &self.owner_address)
             .field("mchain_auth_ipc_path", &self.mchain_auth_ipc_path)
             .field("mchain_ipc_path", &self.mchain_ipc_path)
             .field("target_chain_id", &self.target_chain_id)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
             .field("target_rollup_type", &self.target_rollup_type)
-            .field("mchain_rollup_address", &self.mchain_rollup_address)
             .field("bridge_address", &self.bridge_address)
             .field("inbox_address", &self.inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
@@ -138,11 +135,6 @@ impl BlockBuilderConfig {
         match self.target_rollup_type {
             // Validate Arbitrum specific configuration
             TargetRollupType::ARBITRUM => {
-                if self.mchain_rollup_address == Address::ZERO {
-                    return Err(ConfigError::InvalidAddress(
-                        "MChain rollup address cannot be 0".to_string(),
-                    ));
-                }
                 if self.bridge_address == Address::ZERO {
                     return Err(ConfigError::InvalidAddress(
                         "Bridge address cannot be 0".to_string(),
@@ -205,13 +197,6 @@ mod tests {
             ..Default::default()
         };
         assert_matches!(config.validate(), Err(ConfigError::UnsupportedRollupType(_)));
-    }
-
-    #[test]
-    fn test_validate_mchain_rollup_address() {
-        let config =
-            BlockBuilderConfig { mchain_rollup_address: Address::ZERO, ..Default::default() };
-        assert_matches!(config.validate(), Err(ConfigError::InvalidAddress(_)));
     }
 
     #[test]
