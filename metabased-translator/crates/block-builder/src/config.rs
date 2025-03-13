@@ -29,6 +29,7 @@ pub struct BlockBuilderConfig {
     #[arg(long, env = "BLOCK_BUILDER_MCHAIN_IPC_PATH")]
     pub mchain_ipc_path: String,
 
+    /// The chain ID of the Appchain rollup (not the mchain)
     #[arg(short = 'c', long, env = "BLOCK_BUILDER_TARGET_CHAIN_ID", default_value_t = 13331370)]
     pub target_chain_id: u64,
 

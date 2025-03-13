@@ -6,11 +6,9 @@
 use alloy::rpc::types::BlockNumberOrTag;
 use block_builder::config::BlockBuilderConfig;
 use clap::Parser;
+use common::eth_client::{RPCClient, RPCClientError};
 use eyre::Result;
-use ingestor::{
-    config::{ChainIngestorConfig, SequencingChainConfig, SettlementChainConfig},
-    eth_client::{RPCClient, RPCClientError},
-};
+use ingestor::config::{ChainIngestorConfig, SequencingChainConfig, SettlementChainConfig};
 use metrics::config::MetricsConfig;
 use slotter::config::SlotterConfig;
 use std::{fmt::Debug, sync::Arc};

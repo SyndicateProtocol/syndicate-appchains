@@ -1,9 +1,12 @@
 //! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a
 //! consumer using a channel
 
-use crate::{config::ChainIngestorConfig, eth_client::RPCClient, metrics::IngestorMetrics};
+use crate::{config::ChainIngestorConfig, metrics::IngestorMetrics};
 use alloy::rpc::types::BlockNumberOrTag;
-use common::types::{BlockAndReceipts, Chain};
+use common::{
+    eth_client::RPCClient,
+    types::{BlockAndReceipts, Chain},
+};
 use eyre::{eyre, Error};
 use std::{
     cmp::{max, min},
@@ -11,17 +14,14 @@ use std::{
     time::Duration,
 };
 use tokio::{
-    sync::{
-        mpsc::{channel, Receiver, Sender},
-        oneshot,
-    },
+    sync::{mpsc::Sender, oneshot},
     time::Instant,
 };
 use tracing::{error, info, trace};
 
 /// Polls and ingests blocks from an Ethereum chain
 #[derive(Debug)]
-pub struct Ingestor {
+struct Ingestor {
     chain: Chain,
     client: Arc<dyn RPCClient>,
     current_block_number: u64,
@@ -32,41 +32,75 @@ pub struct Ingestor {
     metrics: IngestorMetrics,
 }
 
+/// Starts a new `Ingestor` task, responsible for polling blocks.
+///
+/// # Arguments
+/// - `chain`: Specifies whether the ingestor is targeting the `Settlement` or `Sequencing` chain.
+/// - `client`: An asynchronous RPC client used for fetching block data.
+/// - `sender`: A channel for sending blocks to the consumer.
+/// - `config`: Configuration parameters, including the RPC endpoint URL and starting block number.
+/// - `metrics`: Metrics collection for monitoring ingestion performance.
+/// - `shutdown_rx`: A channel for receiving shutdown signals.
+///
+/// # Returns
+/// A `Result` indicating the success or failure of the ingestor execution.
+pub async fn run(
+    chain: Chain,
+    config: &ChainIngestorConfig,
+    client: Arc<dyn RPCClient>,
+    sender: Sender<Arc<BlockAndReceipts>>,
+    metrics: IngestorMetrics,
+    shutdown_rx: oneshot::Receiver<()>,
+) -> Result<(), Error> {
+    let client_clone = client.clone();
+    let chain_head = client_clone.get_block_by_number(BlockNumberOrTag::Latest).await?;
+    let ingestor = Ingestor {
+        chain,
+        client,
+        current_block_number: config.start_block,
+        initial_chain_head: chain_head.number,
+        syncing_batch_size: config.syncing_batch_size,
+        sender,
+        polling_interval: config.polling_interval,
+        metrics,
+    };
+    ingestor.main_loop(shutdown_rx).await
+}
+
 impl Ingestor {
-    /// Creates a new `Ingestor` instance responsible for polling blocks.
+    /// Starts the polling process.
     ///
-    /// # Arguments
-    /// - `chain`: Specifies whether the ingestor is targeting the `Settlement` or `Sequencing`
-    ///   chain.
-    /// - `client`: An asynchronous RPC client used for fetching block data.
-    /// - `config`: Configuration parameters, including the RPC endpoint URL and starting block
-    ///   number.
-    /// - `metrics`: Metrics collection for monitoring ingestion performance.
+    /// This asynchronous function continuously polls for new blocks and their receipts
+    /// at a specified interval (`self.polling_interval`).
     ///
-    /// # Returns
-    /// A tuple containing the `Ingestor` instance and a `Receiver` for consuming blocks.
-    pub async fn new(
-        chain: Chain,
-        client: Arc<dyn RPCClient>,
-        config: &ChainIngestorConfig,
-        metrics: IngestorMetrics,
-    ) -> Result<(Self, Receiver<Arc<BlockAndReceipts>>), Error> {
-        let (sender, receiver) = channel(config.buffer_size);
-        let client_clone = client.clone();
-        let chain_head = client_clone.get_block_by_number(BlockNumberOrTag::Latest).await?;
-        Ok((
-            Self {
-                chain,
-                client,
-                current_block_number: config.start_block,
-                initial_chain_head: chain_head.number,
-                syncing_batch_size: config.syncing_batch_size,
-                sender,
-                polling_interval: config.polling_interval,
-                metrics,
-            },
-            receiver,
-        ))
+    /// The polling process runs in an infinite loop, but it is designed to handle two
+    /// key scenarios:
+    /// 1. **Interval Tick**: On each interval tick, the function fetches the next block and
+    ///    receipts, logs relevant details, and pushes the data to the consumer. If fetching or
+    ///    pushing fails, the function retries automatically.
+    /// 2. **Cancellation Signal**: The function listens for cancellation signals (e.g., task
+    ///    abortion or a `ctrl_c` event). When such a signal is received, the polling process
+    ///    gracefully stops.
+    /// # Errors
+    /// This function returns an `Error` if initialization or any critical operation
+    /// fails. Errors during polling (e.g., fetching blocks or pushing data) are logged
+    /// and retried within the loop.
+    async fn main_loop(mut self, mut shutdown_rx: oneshot::Receiver<()>) -> Result<(), Error> {
+        info!("Starting polling for {}", self.chain);
+
+        let mut interval = tokio::time::interval(self.polling_interval);
+        loop {
+            tokio::select! {
+                _ = &mut shutdown_rx => {
+                    drop(self.sender);
+                    info!("{} ingestor stopped", self.chain);
+                    return Ok(());
+                }
+                _ = interval.tick() => {
+                    self.fetch_and_push_batch().await;
+                }
+            }
+        }
     }
 
     /// Sends the retrieved block to the consumer and updates the current block number.
@@ -88,44 +122,6 @@ impl Ingestor {
         self.current_block_number += 1;
         self.metrics.update_channel_capacity(self.chain, self.sender.capacity());
         Ok(())
-    }
-
-    /// Starts the polling process.
-    ///
-    /// This asynchronous function continuously polls for new blocks and their receipts
-    /// at a specified interval (`self.polling_interval`).
-    ///
-    /// The polling process runs in an infinite loop, but it is designed to handle two
-    /// key scenarios:
-    /// 1. **Interval Tick**: On each interval tick, the function fetches the next block and
-    ///    receipts, logs relevant details, and pushes the data to the consumer. If fetching or
-    ///    pushing fails, the function retries automatically.
-    /// 2. **Cancellation Signal**: The function listens for cancellation signals (e.g., task
-    ///    abortion or a `ctrl_c` event). When such a signal is received, the polling process
-    ///    gracefully stops.
-    /// # Errors
-    /// This function returns an `Error` if initialization or any critical operation
-    /// fails. Errors during polling (e.g., fetching blocks or pushing data) are logged
-    /// and retried within the loop.
-    pub async fn start_polling(
-        mut self,
-        mut shutdown_rx: oneshot::Receiver<()>,
-    ) -> Result<(), Error> {
-        info!("Starting polling for {}", self.chain);
-
-        let mut interval = tokio::time::interval(self.polling_interval);
-        loop {
-            tokio::select! {
-                _ = &mut shutdown_rx => {
-                    drop(self.sender);
-                    info!("{} ingestor stopped", self.chain);
-                    return Ok(());
-                }
-                _ = interval.tick() => {
-                    self.fetch_and_push_batch().await;
-                }
-            }
-        }
     }
 
     async fn fetch_and_push_batch(&mut self) {
@@ -170,16 +166,19 @@ mod tests {
     use super::*;
     use crate::{
         config::{ChainIngestorConfig, IngestionPipelineConfig},
-        eth_client::{EthClient, RPCClientError},
         metrics::IngestorMetrics,
     };
     use alloy::{primitives::B256, rpc::types::BlockNumberOrTag};
     use async_trait::async_trait;
-    use common::types::{Block, BlockAndReceipts};
+    use common::{
+        eth_client::{EthClient, RPCClientError},
+        types::{Block, BlockAndReceipts},
+    };
     use eyre::Result;
     use mockall::{mock, predicate::*};
     use prometheus_client::registry::Registry;
     use std::str::FromStr;
+    use tokio::sync::mpsc::channel;
 
     struct MetricsState {
         /// Prometheus registry
@@ -240,35 +239,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_ingestor_new() -> Result<(), Error> {
-        let start_block = 19486923;
-        let chain_head = start_block + 10;
-        let buffer_size = 100;
-        let polling_interval = Duration::from_secs(1);
-        let config = test_config();
-
-        let mut metrics_state = MetricsState { registry: Registry::default() };
-        let metrics = IngestorMetrics::new(&mut metrics_state.registry);
-        let config = config.sequencing.into();
-
-        let mut mock = MockRPCClientMock::new();
-        mock.expect_get_block_by_number()
-            .with(eq(BlockNumberOrTag::Latest))
-            .times(1)
-            .returning(move |_| Ok(Block { number: chain_head, ..Default::default() }));
-
-        let client: Arc<dyn RPCClient> = Arc::new(mock);
-        let (ingestor, receiver) =
-            Ingestor::new(Chain::Sequencing, client, &config, metrics).await?;
-
-        assert_eq!(ingestor.current_block_number, start_block);
-        assert_eq!(receiver.capacity(), buffer_size);
-        assert_eq!(ingestor.polling_interval, polling_interval);
-        assert_eq!(ingestor.initial_chain_head, chain_head);
-        Ok(())
-    }
-
-    #[tokio::test]
     async fn test_push_block_and_receipts() -> Result<(), Error> {
         let start_block = 19486923;
         let polling_interval = Duration::from_secs(1);
@@ -325,7 +295,7 @@ mod tests {
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let polling_handle = tokio::spawn(async move {
-            let result = ingestor.start_polling(shutdown_rx).await;
+            let result = ingestor.main_loop(shutdown_rx).await;
             assert!(result.is_ok(), "Polling task failed: {:?}", result);
         });
 
@@ -377,7 +347,7 @@ mod tests {
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let polling_handle = tokio::spawn(async move {
-            let result = ingestor.start_polling(shutdown_rx).await;
+            let result = ingestor.main_loop(shutdown_rx).await;
             assert!(result.is_ok(), "Polling task failed: {:?}", result);
         });
 
