@@ -33,7 +33,9 @@ contract Rollup {
     constructor(uint256 chainId, string memory chainConfig) {
         require(bytes(chainConfig).length > 0, "EMPTY_CHAIN_CONFIG");
         deliverMessage(
-            INITIALIZATION_MSG_TYPE, address(0), abi.encodePacked(chainId, uint8(1), uint256(0), chainConfig)
+            INITIALIZATION_MSG_TYPE,
+            address(0),
+            abi.encodePacked(chainId, /* initMsgVersion */ uint8(1), /* currentDataCost */ uint256(0), chainConfig)
         );
         // post a batch containing the initialization message
         postBatch(hex"000b00800203", 0, 0, 0, 0);

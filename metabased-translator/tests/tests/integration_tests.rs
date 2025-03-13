@@ -83,29 +83,28 @@ async fn test_rollback() -> Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn arb_owner_test() -> Result<()> {
+    const ARB_OWNER_CONTRACT_ADDRESS: Address =
+        address!("0x000000000000000000000000000000000000006b");
     let _ = init_test_tracing(Level::INFO);
     let mut cfg = MetabasedConfig::default();
     let owner = address!("0x0000000000000000000000000000000000000001");
     cfg.block_builder.owner_address = owner;
     // Start the meta node
     let meta_node = MetaNode::new(false, cfg).await?;
-    let arb_owner_public = ArbOwnerPublic::new(
-        address!("0x000000000000000000000000000000000000006b"),
-        &meta_node.metabased_rollup,
-    );
+    let arb_owner_public =
+        ArbOwnerPublic::new(ARB_OWNER_CONTRACT_ADDRESS, &meta_node.metabased_rollup);
     assert_eq!(arb_owner_public.getAllChainOwners().call().await?._0, [owner]);
     Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread")]
-async fn e2e_no_l1_fees() -> Result<()> {
+async fn no_l1_fees_test() -> Result<()> {
+    const ARB_GAS_INFO_CONTRACT_ADDRESS: Address =
+        address!("0x000000000000000000000000000000000000006c");
     let _ = init_test_tracing(Level::INFO);
     // Start the meta node
     let meta_node = MetaNode::new(false, MetabasedConfig::default()).await?;
-    let arb_gas_info = ArbGasInfo::new(
-        address!("0x000000000000000000000000000000000000006c"),
-        &meta_node.metabased_rollup,
-    );
+    let arb_gas_info = ArbGasInfo::new(ARB_GAS_INFO_CONTRACT_ADDRESS, &meta_node.metabased_rollup);
     assert_eq!(arb_gas_info.getL1BaseFeeEstimate().call().await?._0, U256::ZERO);
 
     Ok(())

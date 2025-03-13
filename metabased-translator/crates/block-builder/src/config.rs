@@ -17,6 +17,8 @@ const DEFAULT_PRIVATE_KEY_SIGNER: &str =
 #[derive(Parser, Clone)]
 #[allow(missing_docs)]
 pub struct BlockBuilderConfig {
+    // TODO(SEQ-686): Remove this variable and read the owner address from the settlement chain
+    // contract instead.
     #[arg(long, env = "BLOCK_BUILDER_ROLLUP_OWNER_ADDRESS", value_parser = parse_address, default_value_t = Address::ZERO)]
     pub owner_address: Address,
 
