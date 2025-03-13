@@ -311,8 +311,7 @@ pub async fn launch_nitro_node(chain_id: u64, mchain_port: u16) -> Result<(Docke
         )
         .arg("--http.addr=0.0.0.0")
         .arg("--http.port=".to_string() + &port.to_string())
-        .arg("--http.api=net,web3,eth,debug,trace")
-        .arg("--log-level=debug")
+        .arg("--log-level=info")
         .spawn()?;
     let rollup = ProviderBuilder::default()
         .on_http(("http://localhost:".to_string() + &port.to_string()).parse()?);

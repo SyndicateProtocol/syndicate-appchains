@@ -6,7 +6,6 @@ import "./bridge/ISequencerInbox.sol";
 import "./bridge/IDelayedMessageProvider.sol";
 import "./libraries/MessageTypes.sol";
 import "./libraries/Error.sol";
-import "./precompiles/ArbOwner.sol";
 
 contract Rollup {
     // TODO: set these values properly
@@ -33,33 +32,11 @@ contract Rollup {
 
     constructor(uint256 chainId, string memory chainConfig) {
         require(bytes(chainConfig).length > 0, "EMPTY_CHAIN_CONFIG");
-        uint8 initMsgVersion = 1;
-        uint256 currentDataCost = block.basefee;
-        /*
-        if (ArbitrumChecker.runningOnArbitrum()) {
-            currentDataCost += ArbGasInfo(address(0x6c)).getL1BaseFeeEstimate();
-        }
-        */
-        bytes memory initMsg = abi.encodePacked(chainId, initMsgVersion, currentDataCost, chainConfig);
-        deliverMessage(INITIALIZATION_MSG_TYPE, address(0), initMsg);
-        depositEth(address(0), address(0), 1 ether);
-        arbOwnerCall(abi.encodeCall(ArbOwner.setL1PricePerUnit, 0));
-        arbOwnerCall(abi.encodeCall(ArbOwner.setL1PricingRewardRate, 0));
-        // post a batch containing the initialization message & arbowner calls
-        postBatch(hex"", 0, 0, 0, 0);
-    }
-
-    uint256 internal constant GAS_LIMIT = 1e6;
-    uint256 internal constant MAX_FEE_PER_GAS = 1e9;
-
-    function arbOwnerCall(bytes memory data) internal {
         deliverMessage(
-            L2_MSG,
-            address(0),
-            abi.encodePacked(
-                L2MessageType_unsignedContractTx, abi.encode(GAS_LIMIT, MAX_FEE_PER_GAS, address(0x70), 0), data
-            )
+            INITIALIZATION_MSG_TYPE, address(0), abi.encodePacked(chainId, uint8(1), uint256(0), chainConfig)
         );
+        // post a batch containing the initialization message
+        postBatch(hex"000b00800203", 0, 0, 0, 0);
     }
 
     // IBridge.sol
@@ -130,7 +107,7 @@ contract Rollup {
         emit ISequencerInbox.SequencerBatchData(seqMessageIndex, data);
     }
 
-    function depositEth(address src, address dest, uint256 value) public {
+    function depositEth(address src, address dest, uint256 value) external {
         deliverMessage(L1MessageType_ethDeposit, src, abi.encodePacked(dest, value));
     }
 
@@ -141,7 +118,7 @@ contract Rollup {
         bytes32 messageDataHash = keccak256(messageData);
         bytes32 messageHash = keccak256(
             abi.encodePacked(
-                kind, sender, uint64(block.number), uint64(block.timestamp), count, block.basefee, messageDataHash
+                kind, sender, uint64(block.number), uint64(block.timestamp), count, uint256(0), messageDataHash
             )
         );
         bytes32 prevAcc = 0;
@@ -150,7 +127,7 @@ contract Rollup {
         }
         delayedInboxAccs.push(keccak256(abi.encodePacked(prevAcc, messageHash)));
         emit IBridge.MessageDelivered(
-            count, prevAcc, address(this), kind, sender, messageDataHash, block.basefee, uint64(block.timestamp)
+            count, prevAcc, address(this), kind, sender, messageDataHash, 0, uint64(block.timestamp)
         );
         emit IDelayedMessageProvider.InboxMessageDelivered(count, messageData);
     }
