@@ -10,11 +10,8 @@ use common::tracing::init_tracing_with_extra_fields;
 use eyre::Result;
 use metabased_translator::{
     config::MetabasedConfig,
-    handles::ComponentHandles,
-    setup::{
-        clients, create_node_components, get_extra_fields_for_logging, get_safe_state, init_metrics,
-    },
-    shutdown::{ShutdownChannels, ShutdownTx},
+    shutdown_channels::{ShutdownChannels, ShutdownTx},
+    spawn::{clients, get_extra_fields_for_logging, init_metrics, ComponentHandles},
     types::RuntimeError,
 };
 use tokio::task::JoinHandle;
@@ -50,7 +47,8 @@ fn main() -> Result<(), RuntimeError> {
 }
 
 /// Entry point for the async runtime
-/// This function initializes the database, creates the node components, and starts the translator.
+/// This function holds the application lifecycle. It starts the translator components and sets up
+/// the shutdown handling.
 async fn run(
     config: &MetabasedConfig,
     rollup_adapter: impl RollupAdapter,
@@ -65,50 +63,31 @@ async fn run(
         MetaChainProvider::start(&config.block_builder, &metrics.block_builder.mchain_metrics)
             .await?;
 
-    let safe_state = get_safe_state(
-        &mchain,
-        sequencing_client.clone(),
-        settlement_client.clone(),
-        &rollup_adapter,
-    )
-    .await?;
+    let safe_state = mchain
+        .reconcile_mchain_with_source_chains(
+            &sequencing_client,
+            &settlement_client,
+            &rollup_adapter,
+        )
+        .await?;
 
-    let mchain_safe_block_number = safe_state.as_ref().map(|state| state.mchain_block_number);
-
-    let (
-        sequencing_ingestor,
-        sequencing_rx,
-        settlement_ingestor,
-        settlement_rx,
-        slotter,
-        block_builder,
-    ) = create_node_components(
-        config,
-        sequencing_client,
-        settlement_client,
-        rollup_adapter,
-        safe_state,
-        metrics,
-    )
-    .await?;
     let (main_shutdown_rx, tx, rx) = shutdown_channels.split();
     let component_tasks = ComponentHandles::spawn(
-        mchain_safe_block_number,
-        sequencing_ingestor,
-        sequencing_rx,
-        settlement_ingestor,
-        settlement_rx,
-        slotter,
-        block_builder,
+        config,
+        safe_state,
+        sequencing_client,
+        settlement_client,
+        metrics,
+        mchain,
+        rollup_adapter,
         rx,
     );
 
     info!("Starting Metabased Translator");
-    start_translator(main_shutdown_rx, tx, component_tasks, metrics_task).await
+    start_shutdown_handling(main_shutdown_rx, tx, component_tasks, metrics_task).await
 }
 
-#[allow(clippy::too_many_arguments)]
-async fn start_translator(
+async fn start_shutdown_handling(
     main_shutdown_rx: tokio::sync::oneshot::Receiver<()>,
     tx: ShutdownTx,
     mut handles: ComponentHandles,

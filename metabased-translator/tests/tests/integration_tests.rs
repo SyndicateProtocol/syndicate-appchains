@@ -22,7 +22,7 @@ use common::{
 use contract_bindings::arbitrum::{iinbox::IInbox, rollup::Rollup};
 use e2e_tests::full_meta_node::{launch_nitro_node, start_reth, MetaNode, PRELOAD_INBOX_ADDRESS};
 use eyre::{eyre, Result};
-use metabased_translator::{config::MetabasedConfig, setup::get_safe_state};
+use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use std::time::Duration;
@@ -420,14 +420,15 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
     assert_eq!(meta_node.metabased_rollup.get_balance(test_addr).await?, parse_ether("1")?);
 
     // check rollup contract state
-    let known_state = get_safe_state(
-        &meta_node.mchain_provider,
-        meta_node.sequencing_client.clone(),
-        meta_node.settlement_client.clone(),
-        &ArbitrumAdapter::new(&config.block_builder),
-    )
-    .await?
-    .unwrap();
+    let known_state = meta_node
+        .mchain_provider
+        .get_safe_state(
+            &meta_node.sequencing_client,
+            &meta_node.settlement_client,
+            &ArbitrumAdapter::new(&config.block_builder),
+        )
+        .await?
+        .unwrap();
     assert_eq!(
         known_state.mchain_block_number,
         meta_node.mchain_provider.get_block_number().await?
