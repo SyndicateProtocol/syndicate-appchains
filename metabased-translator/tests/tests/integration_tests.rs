@@ -36,8 +36,9 @@ use contract_bindings::{
     },
 };
 use e2e_tests::full_meta_node::{
-    launch_nitro_node, start_reth, MetaNode, PRELOAD_BRIDGE_ADDRESS, PRELOAD_CHALLENGE_MANAGER,
-    PRELOAD_INBOX_ADDRESS, PRELOAD_OUTBOX_ADDRESS, PRELOAD_ROLLUP_ADDRESS,
+    launch_nitro_node, start_reth, MetaNode, PRELOAD_ARB_SYS_PRECOMPILE_ADDRESS,
+    PRELOAD_BRIDGE_ADDRESS, PRELOAD_CHALLENGE_MANAGER, PRELOAD_INBOX_ADDRESS,
+    PRELOAD_NODE_INTERFACE_PRECOMPILE_ADDRESS, PRELOAD_OUTBOX_ADDRESS, PRELOAD_ROLLUP_ADDRESS,
     PRELOAD_WASM_MODULE_ROOT,
 };
 use eyre::{eyre, Result};
@@ -690,10 +691,7 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
 
     // 1. Send withdrawal transaction on the Appchain
     let mut tx = vec![];
-    let arbsys = ArbSys::new(
-        address!("0x0000000000000000000000000000000000000064"),
-        &meta_node.metabased_rollup,
-    );
+    let arbsys = ArbSys::new(PRELOAD_ARB_SYS_PRECOMPILE_ADDRESS, &meta_node.metabased_rollup);
     let gas_limit: u64 = 100_000;
     let max_fee_per_gas: u128 = 100_000_000;
     let withdrawal_value = parse_ether("0.1")?;
@@ -732,7 +730,6 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
 
     let block: NitroBlock = meta_node
         .metabased_rollup
-        .clone()
         .raw_request("eth_getBlockByNumber".into(), ("latest", false))
         .await?;
 
@@ -801,7 +798,7 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
 
     // Generate proof
     let node_interface = NodeInterface::new(
-        address!("0x00000000000000000000000000000000000000c8"), // NodeInterface pre-compile
+        PRELOAD_NODE_INTERFACE_PRECOMPILE_ADDRESS, // NodeInterface pre-compile
         &meta_node.metabased_rollup,
     );
     let proof = node_interface.constructOutboxProof(1, 0).call().await?;
