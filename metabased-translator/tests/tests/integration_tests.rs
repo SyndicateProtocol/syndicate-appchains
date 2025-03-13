@@ -19,7 +19,7 @@ use common::{
     tracing::init_test_tracing,
     types::{Block, BlockRef},
 };
-use contract_bindings::arbitrum::{iinbox::IInbox, rollup::Rollup};
+use contract_bindings::arbitrum::{arbgasinfo::ArbGasInfo, iinbox::IInbox, rollup::Rollup};
 use e2e_tests::full_meta_node::{launch_nitro_node, start_reth, MetaNode, PRELOAD_INBOX_ADDRESS};
 use eyre::{eyre, Result};
 use metabased_translator::{config::MetabasedConfig, setup::get_safe_state};
@@ -28,6 +28,8 @@ use prometheus_client::registry::Registry;
 use std::time::Duration;
 use tokio::time::sleep;
 use tracing::Level;
+
+const ROLLUP_START_BLOCK: u64 = 3;
 
 /// mine a mchain block with a delay - for testing only
 async fn mine_block(provider: &MetaChainProvider, delay: u64) -> Result<BlockHash> {
@@ -99,6 +101,21 @@ async fn test_rollback_regression() -> Result<()> {
     }
     mchain.rollback_to_block(b1).await?;
     assert_eq!(mchain.get_block_number().await?, 2);
+
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn e2e_no_l1_fees() -> Result<()> {
+    let _ = init_test_tracing(Level::INFO);
+    // Start the meta node
+    let meta_node = MetaNode::new(false, MetabasedConfig::default()).await?;
+    let arbos = ArbGasInfo::new(
+        address!("0x000000000000000000000000000000000000006c"),
+        &meta_node.metabased_rollup,
+    );
+    assert_eq!(arbos.getL1RewardRate().call().await?._0, 0);
+    assert_eq!(arbos.getL1GasPriceEstimate().call().await?._0, U256::ZERO);
 
     Ok(())
 }
@@ -261,7 +278,7 @@ async fn e2e_settlement_test() -> Result<()> {
     // Process the slot
     sleep(Duration::from_millis(500)).await;
 
-    assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 17);
+    assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 17 + ROLLUP_START_BLOCK);
     assert_eq!(
         meta_node
             .metabased_rollup
@@ -294,6 +311,7 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
     let mut config = MetabasedConfig::default();
     config.block_builder.mine_empty_blocks = mine_empty_blocks;
     config.sequencing.sequencing_start_block = 3; // skip the contract deployment blocks
+    config.settlement.settlement_start_block = 2; // skip the contract deployment blocks
     let meta_node = MetaNode::new(false, config.clone()).await?;
     // Setup the settlement rollup contract
     let set_rollup = Rollup::new(get_rollup_contract_address(), &meta_node.settlement_provider);
@@ -351,11 +369,14 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
     assert_eq!(mchain_block.header.timestamp, config.slotter.settlement_delay);
     assert_eq!(mchain_block.transactions.len(), 2);
     // check rollup blocks
-    assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 2);
+    assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 2 + ROLLUP_START_BLOCK);
     // check the first rollup block
     let rollup_block: Block = meta_node
         .metabased_rollup
-        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(1), true))
+        .raw_request(
+            "eth_getBlockByNumber".into(),
+            (BlockNumberOrTag::Number(1 + ROLLUP_START_BLOCK), true),
+        )
         .await?;
     assert_eq!(rollup_block.timestamp, config.slotter.settlement_delay);
     // the first transaction is the startBlock transaction
@@ -363,7 +384,10 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
     // check the second rollup block
     let rollup_block: Block = meta_node
         .metabased_rollup
-        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
+        .raw_request(
+            "eth_getBlockByNumber".into(),
+            (BlockNumberOrTag::Number(2 + ROLLUP_START_BLOCK), true),
+        )
         .await?;
     assert_eq!(rollup_block.timestamp, config.slotter.settlement_delay);
     // the first transaction is the startBlock transaction
@@ -408,10 +432,13 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
     assert_eq!(mchain_block.transactions.len(), 2);
 
     // check rollup block
-    assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 3);
+    assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 3 + ROLLUP_START_BLOCK);
     let rollup_block: Block = meta_node
         .metabased_rollup
-        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(3), true))
+        .raw_request(
+            "eth_getBlockByNumber".into(),
+            (BlockNumberOrTag::Number(3 + ROLLUP_START_BLOCK), true),
+        )
         .await?;
     assert_eq!(rollup_block.timestamp, config.slotter.settlement_delay + 1);
     // the first transaction is the startBlock transaction
@@ -512,8 +539,8 @@ async fn test_nitro_batch() -> Result<()> {
 
     // wait 100ms for the batch to be processed
     sleep(Duration::from_millis(100)).await;
-    if rollup.get_block_number().await? != 1 {
-        return Err(eyre!("block derivation failed - not on block 1"));
+    if rollup.get_block_number().await? != 1 + ROLLUP_START_BLOCK {
+        return Err(eyre!("block derivation failed - not on offset 1"));
     }
 
     // check that the deposit succeeded
@@ -547,13 +574,16 @@ async fn test_nitro_batch() -> Result<()> {
 
     // wait for the batch to be processed
     sleep(Duration::from_millis(200)).await;
-    if rollup.get_block_number().await? != 2 {
-        return Err(eyre!("block derivation failed - not on block 2"));
+    if rollup.get_block_number().await? != 2 + ROLLUP_START_BLOCK {
+        return Err(eyre!("block derivation failed - not on offset 2"));
     }
 
     // check that the tx was sequenced
     let block: Block = rollup
-        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
+        .raw_request(
+            "eth_getBlockByNumber".into(),
+            (BlockNumberOrTag::Number(2 + ROLLUP_START_BLOCK), true),
+        )
         .await?;
     assert_eq!(block.transactions.len(), 2);
     // tx hash should match
@@ -605,8 +635,8 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
 
     // wait 100ms for the batch to be processed
     sleep(Duration::from_millis(100)).await;
-    if rollup.get_block_number().await? != 1 {
-        return Err(eyre!("block derivation failed - not on block 1"));
+    if rollup.get_block_number().await? != 1 + ROLLUP_START_BLOCK {
+        return Err(eyre!("block derivation failed - not on offset 1"));
     }
 
     // check that the deposit succeeded
@@ -657,13 +687,16 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
 
     // wait 100ms for the batch to be processed
     sleep(Duration::from_millis(100)).await;
-    if rollup.get_block_number().await? != 2 {
-        return Err(eyre!("block derivation failed - not on block 2"));
+    if rollup.get_block_number().await? != 2 + ROLLUP_START_BLOCK {
+        return Err(eyre!("block derivation failed - not on offset 2"));
     }
 
     // check that the tx was sequenced
     let block: Block = rollup
-        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
+        .raw_request(
+            "eth_getBlockByNumber".into(),
+            (BlockNumberOrTag::Number(2 + ROLLUP_START_BLOCK), true),
+        )
         .await?;
     assert_eq!(block.transactions.len(), 3);
     // tx hash should match

@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import "./IBridge.sol";
-import "./ISequencerInbox.sol";
-import "./IDelayedMessageProvider.sol";
-import "../libraries/MessageTypes.sol";
-import "../libraries/Error.sol";
+import "./bridge/IBridge.sol";
+import "./bridge/ISequencerInbox.sol";
+import "./bridge/IDelayedMessageProvider.sol";
+import "./libraries/MessageTypes.sol";
+import "./libraries/Error.sol";
+import "./precompiles/ArbOwner.sol";
 
 contract Rollup {
     // TODO: set these values properly
@@ -41,8 +42,24 @@ contract Rollup {
         */
         bytes memory initMsg = abi.encodePacked(chainId, initMsgVersion, currentDataCost, chainConfig);
         deliverMessage(INITIALIZATION_MSG_TYPE, address(0), initMsg);
-        // post a batch containing the initialization message
-        postBatch(hex"000b00800203", 0, 0, 0, 0);
+        depositEth(address(0), address(0), 1 ether);
+        arbOwnerCall(abi.encodeCall(ArbOwner.setL1PricePerUnit, 0));
+        arbOwnerCall(abi.encodeCall(ArbOwner.setL1PricingRewardRate, 0));
+        // post a batch containing the initialization message & arbowner calls
+        postBatch(hex"", 0, 0, 0, 0);
+    }
+
+    uint256 internal constant GAS_LIMIT = 1e6;
+    uint256 internal constant MAX_FEE_PER_GAS = 1e9;
+
+    function arbOwnerCall(bytes memory data) internal {
+        deliverMessage(
+            L2_MSG,
+            address(0),
+            abi.encodePacked(
+                L2MessageType_unsignedContractTx, abi.encode(GAS_LIMIT, MAX_FEE_PER_GAS, address(0x70), 0), data
+            )
+        );
     }
 
     // IBridge.sol
@@ -113,7 +130,7 @@ contract Rollup {
         emit ISequencerInbox.SequencerBatchData(seqMessageIndex, data);
     }
 
-    function depositEth(address src, address dest, uint256 value) external {
+    function depositEth(address src, address dest, uint256 value) public {
         deliverMessage(L1MessageType_ethDeposit, src, abi.encodePacked(dest, value));
     }
 
