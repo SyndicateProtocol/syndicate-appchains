@@ -21,21 +21,19 @@ use common::{
     tracing::init_test_tracing,
     types::{Block, BlockRef},
 };
-use contract_bindings::{
-    arbitrum::rollup::Rollup,
-    nitro::{
-        arbgasinfo::ArbGasInfo,
-        arbownerpublic::ArbOwnerPublic,
-        arbsys::ArbSys,
-        ibridge::IBridge,
-        iinbox::IInbox,
-        ioutbox::IOutbox,
-        irollupcore::IRollupCore::AssertionCreated,
-        nodeinterface::NodeInterface,
-        rollupuserlogic::RollupUserLogic::{
-            self, AssertionInputs, AssertionState, BeforeStateData, ConfigData, GlobalState,
-        },
+use contract_bindings::arbitrum::{
+    arbgasinfo::ArbGasInfo,
+    arbownerpublic::ArbOwnerPublic,
+    arbsys::ArbSys,
+    ibridge::IBridge,
+    iinbox::IInbox,
+    ioutbox::IOutbox,
+    irollupcore::IRollupCore::{
+        self, AssertionCreated, AssertionInputs, AssertionState, BeforeStateData, ConfigData,
+        GlobalState,
     },
+    nodeinterface::NodeInterface,
+    rollup::Rollup,
 };
 use e2e_tests::full_meta_node::{
     launch_nitro_node, start_reth, MetaNode, PRELOAD_ARB_SYS_PRECOMPILE_ADDRESS,
@@ -785,7 +783,7 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
     sleep(Duration::from_secs(1)).await;
 
     // 2. Build & confirm Assertion on the settlement chain
-    let rollup = RollupUserLogic::new(PRELOAD_ROLLUP_ADDRESS, &meta_node.settlement_provider);
+    let rollup = IRollupCore::new(PRELOAD_ROLLUP_ADDRESS, &meta_node.settlement_provider);
     let bridge = IBridge::new(PRELOAD_BRIDGE_ADDRESS, &meta_node.settlement_provider);
 
     // Helper struct
