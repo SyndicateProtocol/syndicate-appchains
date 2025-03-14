@@ -9,6 +9,7 @@ use crate::{
         InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount},
     },
     metrics::RelayerMetrics,
+    nonce::CachedResettingNonceManager,
     validation::validate_transaction,
 };
 use alloy::{
@@ -81,6 +82,8 @@ pub struct RelayerService {
 
     /// The timeout for relaying a transaction
     tx_timeout: Duration,
+
+    nonce_manager: CachedResettingNonceManager,
 }
 
 impl RelayerService {
@@ -98,6 +101,8 @@ impl RelayerService {
             .filler(ChainIdFiller::new(None))
             .on_http(config.chain_rpc_url.clone());
 
+        let nonce_manager = CachedResettingNonceManager::default();
+
         Ok(Self {
             contract_address: config.chain_contract_address,
             wallet_address,
@@ -105,6 +110,7 @@ impl RelayerService {
             metrics: Arc::new(relayer_metrics),
             tx_confirmations: config.tx_confirmations,
             tx_timeout: config.tx_timeout,
+            nonce_manager,
         })
     }
 
@@ -145,7 +151,8 @@ impl RelayerService {
                 Ok(original_tx_hash)
             }
             Err(e) => {
-                error!(error = ?e, "Transaction submission failed");
+                error!(error = ?e, "Transaction submission failed. Clearing nonce for address {}", self.wallet_address);
+                self.nonce_manager.clear_all_nonces();
                 Err(Contract(alloy::contract::Error::from(e)))
             }
         }

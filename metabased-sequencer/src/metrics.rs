@@ -1,4 +1,4 @@
-//! The `metrics` module  handles metrics recording for the metabased translator
+//! The `metrics` module handles metrics recording for the metabased translator
 
 use crate::errors::Error;
 use axum::{
