@@ -18,7 +18,7 @@ use std::{
 
 /// Trait for rollup-specific block builders that construct batches from transactions
 #[async_trait]
-pub trait RollupAdapter: Debug + Send + Sync + Unpin + 'static {
+pub trait RollupAdapter: Debug + Send + Sync + Unpin + Clone + 'static {
     /// Parses a sequencing chain block into metabased transactions.
     ///
     /// Uses the associated transaction parser to extract transactions
@@ -44,7 +44,7 @@ pub trait RollupAdapter: Debug + Send + Sync + Unpin + 'static {
 
     /// Builds a block from a slot
     async fn build_block_from_slot(
-        &mut self,
+        &self,
         slot: &Slot,
         mchain_block_number: u64,
     ) -> Result<Vec<TransactionRequest>, Error>;

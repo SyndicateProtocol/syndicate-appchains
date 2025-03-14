@@ -2,7 +2,7 @@
 use crate::{
     block_builder::BlockBuilderError,
     config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
-    connectors::metrics::MChainMetrics,
+    metrics::BlockBuilderMetrics,
     rollups::shared::RollupAdapter,
 };
 use alloy::{
@@ -54,18 +54,23 @@ pub type HttpProvider = FillProvider<
 
 #[derive(Debug, Clone)]
 #[allow(missing_docs)]
-pub struct MetaChainProvider {
+pub struct MetaChainProvider<R: RollupAdapter> {
     pub mchain_ipc_path: String,
     pub provider: FilledProvider,
     auth_provider: FilledProvider,
-    metrics: MChainMetrics,
+
+    // TODO try to make these private
+    pub rollup_adapter: R,
+    pub mine_empty_blocks: bool,
+
+    pub metrics: BlockBuilderMetrics,
 }
 
 /// The chain id of the metachain. This is the same for all rollups.
 /// TODO(SEQ-652): this should be configurable
 pub const MCHAIN_ID: u64 = 84532;
 
-impl MetaChainProvider {
+impl<R: RollupAdapter> MetaChainProvider<R> {
     /// for testing only - get direct access to the rollup contract
     pub fn get_rollup(&self) -> RollupInstance<(), FilledProvider> {
         Rollup::new(get_rollup_contract_address(), self.provider.clone())
@@ -109,7 +114,11 @@ impl MetaChainProvider {
     /// The rollup contract is only deployed to the chain when it is
     /// newly created and on the genesis block.
     /// The genesis block must have a timestamp of 0.
-    pub async fn start(config: &BlockBuilderConfig, metrics: &MChainMetrics) -> Result<Self> {
+    pub async fn start(
+        config: &BlockBuilderConfig,
+        metrics: BlockBuilderMetrics,
+        rollup_adapter: R,
+    ) -> Result<Self> {
         let provider = ProviderBuilder::new()
             .wallet(EthereumWallet::from(get_default_private_key_signer()))
             .on_ipc(IpcConnect::new(config.mchain_ipc_path.clone()))
@@ -118,13 +127,15 @@ impl MetaChainProvider {
             .wallet(EthereumWallet::from(get_default_private_key_signer()))
             .on_ipc(IpcConnect::new(config.mchain_auth_ipc_path.clone()))
             .await?;
-        let rollup_config = Self::rollup_config(config.target_chain_id, config.owner_address);
+        let rollup_config = rollup_config(config.target_chain_id, config.owner_address);
 
         let mchain = Self {
             mchain_ipc_path: config.mchain_ipc_path.clone(),
             provider,
             auth_provider,
-            metrics: metrics.to_owned(),
+            rollup_adapter,
+            mine_empty_blocks: config.mine_empty_blocks,
+            metrics,
         };
 
         if mchain.get_block_number().await? == 0 {
@@ -235,7 +246,9 @@ impl MetaChainProvider {
             fcu.payload_status,
             PayloadStatus { status: PayloadStatusEnum::Valid, latest_valid_hash: Some(block_hash) }
         );
-        self.metrics.record_last_block_mined(block.header.number + 1, block_timestamp_secs);
+        self.metrics
+            .mchain_metrics
+            .record_last_block_mined(block.header.number + 1, block_timestamp_secs);
         Ok(block_hash)
     }
 
@@ -279,44 +292,6 @@ impl MetaChainProvider {
         Ok(())
     }
 
-    /// Return the on-chain config for a rollup with a given chain id
-    pub fn rollup_config(chain_id: u64, chain_owner: Address) -> String {
-        let mut cfg = format!(
-            r#"{{
-              "chainId": {chain_id},
-              "homesteadBlock": 0,
-              "daoForkBlock": null,
-              "daoForkSupport": true,
-              "eip150Block": 0,
-              "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-              "eip155Block": 0,
-              "eip158Block": 0,
-              "byzantiumBlock": 0,
-              "constantinopleBlock": 0,
-              "petersburgBlock": 0,
-              "istanbulBlock": 0,
-              "muirGlacierBlock": 0,
-              "berlinBlock": 0,
-              "londonBlock": 0,
-              "clique": {{
-                "period": 0,
-                "epoch": 0
-              }},
-              "arbitrum": {{
-                "EnableArbOS": true,
-                "AllowDebugPrecompiles": false,
-                "DataAvailabilityCommittee": false,
-                "InitialArbOSVersion": 32,
-                "InitialChainOwner": "{chain_owner}",
-                "GenesisBlockNum": 0
-              }}
-            }}"#
-        );
-        cfg.retain(|c| !c.is_whitespace());
-        cfg.shrink_to_fit();
-        cfg
-    }
-
     // TODO (SEQ-681) - re-use this function in case of reorg
     /// Reconciles the [`MetaChain`] state with the source chains (sequencing and settlement)
     ///
@@ -340,10 +315,8 @@ impl MetaChainProvider {
         &self,
         sequencing_client: &Arc<dyn RPCClient>,
         settlement_client: &Arc<dyn RPCClient>,
-        rollup_adapter: &impl RollupAdapter,
     ) -> Result<Option<KnownState>> {
-        let safe_state =
-            self.get_safe_state(sequencing_client, settlement_client, rollup_adapter).await?;
+        let safe_state = self.get_safe_state(sequencing_client, settlement_client).await?;
         self.rollback_to_safe_state(&safe_state).await?;
         Ok(safe_state)
     }
@@ -402,11 +375,10 @@ impl MetaChainProvider {
         &self,
         sequencing_client: &Arc<dyn RPCClient>,
         settlement_client: &Arc<dyn RPCClient>,
-        rollup_adapter: &impl RollupAdapter,
     ) -> Result<Option<KnownState>> {
         let mut current_block = BlockNumberOrTag::Latest;
         loop {
-            match rollup_adapter.get_processed_blocks(&self.provider, current_block).await? {
+            match self.rollup_adapter.get_processed_blocks(&self.provider, current_block).await? {
                 Some((mut state, block_number)) => {
                     let seq_valid = validate_block_add_timestamp(
                         sequencing_client,
@@ -441,6 +413,44 @@ async fn validate_block_add_timestamp(
         }
         Err(_) => false,
     }
+}
+
+/// Return the on-chain config for a rollup with a given chain id
+pub fn rollup_config(chain_id: u64, chain_owner: Address) -> String {
+    let mut cfg = format!(
+        r#"{{
+            "chainId": {chain_id},
+            "homesteadBlock": 0,
+            "daoForkBlock": null,
+            "daoForkSupport": true,
+            "eip150Block": 0,
+            "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "eip155Block": 0,
+            "eip158Block": 0,
+            "byzantiumBlock": 0,
+            "constantinopleBlock": 0,
+            "petersburgBlock": 0,
+            "istanbulBlock": 0,
+            "muirGlacierBlock": 0,
+            "berlinBlock": 0,
+            "londonBlock": 0,
+            "clique": {{
+            "period": 0,
+            "epoch": 0
+            }},
+            "arbitrum": {{
+            "EnableArbOS": true,
+            "AllowDebugPrecompiles": false,
+            "DataAvailabilityCommittee": false,
+            "InitialArbOSVersion": 32,
+            "InitialChainOwner": "{chain_owner}",
+            "GenesisBlockNum": 0
+            }}
+        }}"#
+    );
+    cfg.retain(|c| !c.is_whitespace());
+    cfg.shrink_to_fit();
+    cfg
 }
 
 #[cfg(test)]

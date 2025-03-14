@@ -59,17 +59,15 @@ async fn run(
 
     let (metrics, metrics_task) = init_metrics(config).await;
 
-    let mchain =
-        MetaChainProvider::start(&config.block_builder, &metrics.block_builder.mchain_metrics)
-            .await?;
+    let mchain = MetaChainProvider::start(
+        &config.block_builder,
+        metrics.block_builder.clone(),
+        rollup_adapter,
+    )
+    .await?;
 
-    let safe_state = mchain
-        .reconcile_mchain_with_source_chains(
-            &sequencing_client,
-            &settlement_client,
-            &rollup_adapter,
-        )
-        .await?;
+    let safe_state =
+        mchain.reconcile_mchain_with_source_chains(&sequencing_client, &settlement_client).await?;
 
     let (main_shutdown_rx, tx, rx) = shutdown_channels.split();
     let component_tasks = ComponentHandles::spawn(
@@ -79,7 +77,6 @@ async fn run(
         settlement_client,
         metrics,
         mchain,
-        rollup_adapter,
         rx,
     );
 
@@ -102,7 +99,6 @@ async fn start_shutdown_handling(
         res = &mut handles.sequencing => handles.check_error(res, "Sequencing chain ingestor"),
         res = &mut handles.settlement => handles.check_error(res, "Settlement chain ingestor"),
         res = &mut handles.slotter => handles.check_error(res, "Slotter"),
-        res = &mut handles.block_builder => handles.check_error(res, "Block builder"),
         res = metrics_task => {
             if let Err(e) = res {
                 error!("Metrics task failed: {}", e)

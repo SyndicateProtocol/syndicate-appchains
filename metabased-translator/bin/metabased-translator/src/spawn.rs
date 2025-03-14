@@ -6,7 +6,7 @@ use crate::{
 use block_builder::{connectors::mchain::MetaChainProvider, rollups::shared::RollupAdapter};
 use common::{
     eth_client::{EthClient, RPCClient},
-    types::{BlockAndReceipts, Chain, KnownState, Slot},
+    types::{BlockAndReceipts, Chain, KnownState},
 };
 use eyre::Report;
 use ingestor::config::ChainIngestorConfig;
@@ -21,26 +21,22 @@ pub struct ComponentHandles {
     pub sequencing: JoinHandle<eyre::Result<(), Report>>,
     pub settlement: JoinHandle<eyre::Result<(), Report>>,
     pub slotter: JoinHandle<eyre::Result<(), Report>>,
-    pub block_builder: JoinHandle<eyre::Result<(), Report>>,
 }
 
 impl ComponentHandles {
-    #[allow(clippy::too_many_arguments)]
     pub fn spawn(
         config: &MetabasedConfig,
         known_state: Option<KnownState>,
         sequencing_client: Arc<dyn RPCClient>,
         settlement_client: Arc<dyn RPCClient>,
         metrics: TranslatorMetrics,
-        mchain: MetaChainProvider,
-        rollup_adapter: impl RollupAdapter,
+        mchain: MetaChainProvider<impl RollupAdapter>,
         shutdown_rx: ShutdownRx,
     ) -> Self {
         let (sequencing_tx, sequencing_rx) =
             channel::<Arc<BlockAndReceipts>>(config.sequencing.sequencing_buffer_size);
         let (settlement_tx, settlement_rx) =
             channel::<Arc<BlockAndReceipts>>(config.settlement.settlement_buffer_size);
-        let (slot_tx, slot_rx) = channel::<Slot>(100); // TODO (SEQ-680) we can remove this channel
 
         let mut sequencing_config: ChainIngestorConfig = config.sequencing.clone().into();
         let mut settlement_config: ChainIngestorConfig = config.settlement.clone().into();
@@ -52,7 +48,6 @@ impl ComponentHandles {
         }
 
         let slotter_config = config.slotter.clone();
-        let block_builder_config = config.block_builder.clone();
 
         let sequencing = tokio::spawn(async move {
             ingestor::run(
@@ -84,26 +79,14 @@ impl ComponentHandles {
                 known_state,
                 sequencing_rx,
                 settlement_rx,
-                slot_tx,
+                mchain,
                 metrics.slotter,
                 shutdown_rx.slotter,
             )
             .await
         });
 
-        let block_builder = tokio::spawn(async move {
-            block_builder::run(
-                &block_builder_config,
-                slot_rx,
-                mchain,
-                rollup_adapter,
-                metrics.block_builder,
-                shutdown_rx.block_builder,
-            )
-            .await
-        });
-
-        Self { sequencing, settlement, slotter, block_builder }
+        Self { sequencing, settlement, slotter }
     }
 
     pub async fn graceful_shutdown(self, tx: ShutdownTx) -> eyre::Result<(), RuntimeError> {
@@ -125,13 +108,6 @@ impl ComponentHandles {
         let _ = tx.slotter.send(());
         if let Err(e) = self.slotter.await {
             error!("Error shutting down slotter: {}", e);
-        }
-
-        // 3. Stop block builder
-        info!("Shutting down block builder...");
-        let _ = tx.builder.send(());
-        if let Err(e) = self.block_builder.await {
-            error!("Error shutting down block builder: {}", e);
         }
 
         info!("Metabased Translator shutdown complete");

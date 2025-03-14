@@ -25,7 +25,7 @@ use common::types::{BlockAndReceipts, KnownState, Slot};
 use eyre::Result;
 use std::{str::FromStr, sync::Arc};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Builder for constructing Optimism blocks from transactions
 pub struct OptimismAdapter {
     transaction_parser: SequencingTransactionParser,
@@ -34,7 +34,7 @@ pub struct OptimismAdapter {
 #[async_trait]
 impl RollupAdapter for OptimismAdapter {
     async fn build_block_from_slot(
-        &mut self,
+        &self,
         slot: &Slot,
         _mchain_block_number: u64,
     ) -> Result<Vec<TransactionRequest>> {
