@@ -2,7 +2,7 @@
 
 use alloy::primitives::{Address, B256};
 use clap::Parser;
-use std::{fmt::Debug, str::FromStr};
+use std::{fmt::Debug, str::FromStr, time::Duration};
 use thiserror::Error;
 use url::Url;
 
@@ -43,6 +43,19 @@ pub struct Config {
     /// Private key for signing transactions    
     #[arg(short = 'k', long, env = "SEQUENCER_PRIVATE_KEY")]
     pub private_key: B256,
+
+    /// Confirmations to wait for when relaying transaction
+    #[arg(long, env = "SEQUENCER_CONFIRMATIONS", default_value_t = 2)]
+    pub tx_confirmations: u64,
+
+    /// Timeout when relaying transaction
+    #[arg(
+        long,
+        env = "SEQUENCER_TIMEOUT",
+        default_value = "60s",
+        value_parser = humantime::parse_duration
+    )]
+    pub tx_timeout: Duration,
 }
 
 /// Parse a string into an Ethereum `Address`.
