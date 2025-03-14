@@ -45,7 +45,7 @@ pub struct Config {
     pub private_key: B256,
 
     /// Confirmations to wait for when relaying transaction
-    #[arg(long, env = "SEQUENCER_CONFIRMATIONS", default_value_t = 2)]
+    #[arg(long, env = "SEQUENCER_CONFIRMATIONS", default_value_t = 0)]
     pub tx_confirmations: u64,
 
     /// Timeout when relaying transaction
