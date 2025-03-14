@@ -15,7 +15,7 @@ use alloy::{
 use block_builder::{
     config::{get_default_private_key_signer, get_rollup_contract_address},
     connectors::mchain::{rollup_config, FilledProvider, MetaChainProvider, MCHAIN_ID},
-    rollups::shared::RollupAdapter,
+    rollups::arbitrum::arbitrum_adapter::ArbitrumAdapter,
 };
 use common::{
     eth_client::{EthClient, RPCClient},
@@ -322,7 +322,7 @@ pub async fn launch_nitro_node(
 }
 
 #[allow(missing_debug_implementations)]
-pub struct MetaNode<R: RollupAdapter> {
+pub struct MetaNode {
     pub sequencing_contract: MetabasedSequencerChainInstance<(), FilledProvider>,
     pub sequencing_provider: FilledProvider,
     pub sequencing_client: Arc<dyn RPCClient>,
@@ -333,7 +333,7 @@ pub struct MetaNode<R: RollupAdapter> {
     pub chain_id: u64,
 
     pub mchain: (Docker, Option<(Docker, Docker, Docker, Docker)>),
-    pub mchain_provider: MetaChainProvider<R>,
+    pub mchain_provider: MetaChainProvider<ArbitrumAdapter>,
 
     _component_handles: ComponentHandles,
 
@@ -345,12 +345,8 @@ pub struct MetaNode<R: RollupAdapter> {
     _shutdown_channels: ShutdownTx,
 }
 
-impl<R: RollupAdapter> MetaNode<R> {
-    pub async fn new(
-        pre_loaded: bool,
-        mut config: MetabasedConfig,
-        rollup_adapter: R,
-    ) -> Result<Self> {
+impl MetaNode {
+    pub async fn new(pre_loaded: bool, mut config: MetabasedConfig) -> Result<Self> {
         // Define the addresses of the bridge and inbox contracts depedning on whether we
         // are loading in the full set of Arb contracts or not
         config.block_builder.bridge_address =
@@ -448,7 +444,7 @@ impl<R: RollupAdapter> MetaNode<R> {
         let mchain_provider = MetaChainProvider::start(
             &config.block_builder,
             metrics.block_builder.clone(),
-            rollup_adapter,
+            ArbitrumAdapter::new(&config.block_builder),
         )
         .await
         .map_err(|e| eyre!("Failed to initialize MetaChainProvider: {}", e))?;

@@ -11,7 +11,7 @@ use common::types::{Slot, SlotProcessor};
 use eyre::{Error, Result};
 use tracing::trace;
 
-// TODO re-structure the block-builder directory, and metrics.
+// TODO - SEQ-693: re-structure the block-builder directory, and metrics.
 
 #[async_trait]
 impl<R: RollupAdapter> SlotProcessor for MetaChainProvider<R> {

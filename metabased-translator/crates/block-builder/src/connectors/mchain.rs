@@ -59,7 +59,6 @@ pub struct MetaChainProvider<R: RollupAdapter> {
     pub provider: FilledProvider,
     auth_provider: FilledProvider,
 
-    // TODO try to make these private
     pub rollup_adapter: R,
     pub mine_empty_blocks: bool,
 

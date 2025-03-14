@@ -118,8 +118,7 @@ async fn arb_owner_test() -> Result<()> {
     let owner = address!("0x0000000000000000000000000000000000000001");
     cfg.block_builder.owner_address = owner;
     // Start the meta node
-    let meta_node =
-        MetaNode::new(false, cfg.clone(), ArbitrumAdapter::new(&cfg.block_builder)).await?;
+    let meta_node = MetaNode::new(false, cfg.clone()).await?;
     let arb_owner_public =
         ArbOwnerPublic::new(ARB_OWNER_CONTRACT_ADDRESS, &meta_node.metabased_rollup);
     assert_eq!(arb_owner_public.getAllChainOwners().call().await?._0, [owner]);
@@ -133,8 +132,7 @@ async fn no_l1_fees_test() -> Result<()> {
     let _ = init_test_tracing(Level::INFO);
     // Start the meta node
     let cfg = MetabasedConfig::default();
-    let meta_node =
-        MetaNode::new(false, cfg.clone(), ArbitrumAdapter::new(&cfg.block_builder)).await?;
+    let meta_node = MetaNode::new(false, cfg.clone()).await?;
     let arb_gas_info = ArbGasInfo::new(ARB_GAS_INFO_CONTRACT_ADDRESS, &meta_node.metabased_rollup);
     assert_eq!(arb_gas_info.getL1BaseFeeEstimate().call().await?._0, U256::ZERO);
 
@@ -181,8 +179,7 @@ async fn e2e_settlement_test() -> Result<()> {
     config.slotter.settlement_delay = 0;
     config.settlement.settlement_start_block = 1;
     config.sequencing.sequencing_start_block = 3;
-    let meta_node =
-        MetaNode::new(true, config.clone(), ArbitrumAdapter::new(&config.block_builder)).await?;
+    let meta_node = MetaNode::new(true, config).await?;
 
     // Sync the tips of the sequencing and settlement chains
     let block: Block = meta_node
@@ -362,8 +359,7 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
     let mut config = MetabasedConfig::default();
     config.block_builder.mine_empty_blocks = mine_empty_blocks;
     config.sequencing.sequencing_start_block = 3; // skip the contract deployment blocks
-    let meta_node =
-        MetaNode::new(false, config.clone(), ArbitrumAdapter::new(&config.block_builder)).await?;
+    let meta_node = MetaNode::new(false, config.clone()).await?;
     // Setup the settlement rollup contract
     let set_rollup = Rollup::new(get_rollup_contract_address(), &meta_node.settlement_provider);
 
@@ -766,8 +762,7 @@ async fn e2e_settlement_fast_withdrawal() -> Result<()> {
     config.slotter.settlement_delay = 0;
     config.settlement.settlement_start_block = 1;
     config.sequencing.sequencing_start_block = 3;
-    let meta_node =
-        MetaNode::new(true, config.clone(), ArbitrumAdapter::new(&config.block_builder)).await?;
+    let meta_node = MetaNode::new(true, config).await?;
 
     let block: Block = meta_node
         .settlement_provider
