@@ -75,6 +75,12 @@ pub struct RelayerService {
 
     /// The metrics for the relayer service
     metrics: Arc<RelayerMetrics>,
+
+    /// The number of confirmations to wait for when relaying a transaction
+    tx_confirmations: u64,
+
+    /// The timeout for relaying a transaction
+    tx_timeout: Duration,
 }
 
 impl RelayerService {
@@ -97,6 +103,8 @@ impl RelayerService {
             wallet_address,
             provider: Arc::new(provider),
             metrics: Arc::new(relayer_metrics),
+            tx_confirmations: config.tx_confirmations,
+            tx_timeout: config.tx_timeout,
         })
     }
 
@@ -113,10 +121,9 @@ impl RelayerService {
             Contract(alloy::contract::Error::from(e))
         })?;
 
-        // TODO [SEQ-661]: Make this configurable
         match pending_tx
-            .with_required_confirmations(2)
-            .with_timeout(Some(Duration::from_secs(60)))
+            .with_required_confirmations(self.tx_confirmations)
+            .with_timeout(Some(self.tx_timeout))
             .watch()
             .await
         {
@@ -199,6 +206,8 @@ mod tests {
             private_key: B256::from([0x1; 32]),
             port: 8456,
             metrics_port: 9191,
+            tx_confirmations: 2,
+            tx_timeout: Duration::from_secs(60),
         };
         let mut metrics = MetricsState::new();
         let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
@@ -213,6 +222,8 @@ mod tests {
             private_key: B256::from([0x1; 32]),
             port: 8456,
             metrics_port: 9191,
+            tx_confirmations: 2,
+            tx_timeout: Duration::from_secs(60),
         };
         let mut metrics = MetricsState::new();
         let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
@@ -232,6 +243,8 @@ mod tests {
             private_key: B256::from([0x0; 32]), // Invalid private key (all zeros)
             port: 8456,
             metrics_port: 9191,
+            tx_confirmations: 2,
+            tx_timeout: Duration::from_secs(60),
         };
         let mut metrics = MetricsState::new();
         let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
