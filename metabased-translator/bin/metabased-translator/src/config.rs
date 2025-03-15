@@ -3,15 +3,14 @@
 //! This module contains all possible configuration options for the Metabased Translator. Different
 //! crates each inherit a subset of these options to configure themselves
 
-use alloy::rpc::types::BlockNumberOrTag;
 use block_builder::config::BlockBuilderConfig;
 use clap::Parser;
-use common::eth_client::{RPCClient, RPCClientError};
+use common::eth_client::RPCClientError;
 use eyre::Result;
 use ingestor::config::{ChainIngestorConfig, SequencingChainConfig, SettlementChainConfig};
 use metrics::config::MetricsConfig;
 use slotter::config::SlotterConfig;
-use std::{fmt::Debug, sync::Arc};
+use std::fmt::Debug;
 use thiserror::Error;
 use tracing::error;
 
@@ -78,31 +77,6 @@ impl MetabasedConfig {
         Ok(())
     }
 
-    pub async fn set_initial_timestamp(
-        &mut self,
-        settlement_client: &Arc<dyn RPCClient>,
-        sequencing_client: &Arc<dyn RPCClient>,
-    ) -> Result<(), ConfigError> {
-        let seq_start_block = sequencing_client
-            .get_block_by_number(BlockNumberOrTag::Number(self.sequencing.sequencing_start_block))
-            .await
-            .map_err(ConfigError::RPCClient)?;
-
-        let set_start_block = settlement_client
-            .get_block_by_number(BlockNumberOrTag::Number(self.settlement.settlement_start_block))
-            .await
-            .map_err(ConfigError::RPCClient)?;
-
-        if seq_start_block.timestamp < set_start_block.timestamp {
-            return Err(ConfigError::SettlementStartBlockTooLate(
-                set_start_block.timestamp,
-                seq_start_block.timestamp,
-            ));
-        }
-
-        Ok(())
-    }
-
     pub fn generate_sample_command() {
         let mut cmd = String::from("cargo run --bin metabased-translator -- \\\n");
 
@@ -147,28 +121,34 @@ mod tests {
     use super::*;
     use alloy::rpc::types::BlockNumberOrTag;
     use async_trait::async_trait;
-    use common::types::{Block, BlockAndReceipts};
+    use common::{
+        eth_client::RPCClient,
+        types::{Block, BlockAndReceipts},
+    };
     use eyre::Result;
     use mockall::{mock, predicate::*};
-    use tokio;
+
+    const ZERO: &str = "0x0000000000000000000000000000000000000000";
+    const REQUIRED_ENV_VARS: &[(&str, Option<&str>)] = &[
+        ("SEQUENCING_RPC_URL", Some("")),
+        ("SETTLEMENT_RPC_URL", Some("")),
+        ("SEQUENCING_START_BLOCK", Some("1")),
+        ("SETTLEMENT_START_BLOCK", Some("1")),
+        ("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", Some(ZERO)),
+        ("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", Some(ZERO)),
+        ("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", Some(ZERO)),
+        ("BLOCK_BUILDER_MCHAIN_IPC_PATH", Some("")),
+        ("BLOCK_BUILDER_MCHAIN_AUTH_IPC_PATH", Some("")),
+    ];
 
     #[test]
     fn test_clap_parse() {
-        let zero = "0x0000000000000000000000000000000000000000";
         let config = temp_env::with_vars(
             [
-                ("SEQUENCING_RPC_URL", Some("")),
-                ("SETTLEMENT_RPC_URL", Some("")),
-                ("SEQUENCING_START_BLOCK", Some("1")),
-                ("SETTLEMENT_START_BLOCK", Some("1")),
-                ("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", Some(zero)),
-                ("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", Some(zero)),
-                ("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", Some(zero)),
-                ("BLOCK_BUILDER_MCHAIN_IPC_PATH", Some("")),
-                ("BLOCK_BUILDER_MCHAIN_AUTH_IPC_PATH", Some("")),
-                ("SEQUENCING_BUFFER_SIZE", Some("200")),
-                ("SETTLEMENT_BUFFER_SIZE", Some("200")),
-            ],
+                REQUIRED_ENV_VARS,
+                &[("SEQUENCING_BUFFER_SIZE", Some("200")), ("SETTLEMENT_BUFFER_SIZE", Some("200"))],
+            ]
+            .concat(),
             || MetabasedConfig::try_parse_from(["test", "--sequencing-buffer-size", "300"]),
         )
         .unwrap();
@@ -194,62 +174,5 @@ mod tests {
             async fn get_block_by_number(&self, block_number: BlockNumberOrTag) -> Result<Block, RPCClientError>;
             async fn batch_get_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
         }
-    }
-
-    #[tokio::test]
-    async fn test_set_initial_timestamp_success() {
-        let mut config = MetabasedConfig::parse();
-        config.settlement.settlement_start_block = 100;
-        config.sequencing.sequencing_start_block = 200;
-
-        let mut mock_settlement_client = MockRPCClientMock::new();
-        let mut mock_sequencing_client = MockRPCClientMock::new();
-
-        mock_settlement_client
-            .expect_get_block_by_number()
-            .with(eq(BlockNumberOrTag::Number(100)))
-            .times(1)
-            .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
-
-        mock_sequencing_client
-            .expect_get_block_by_number()
-            .with(eq(BlockNumberOrTag::Number(200)))
-            .times(1)
-            .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
-
-        let settlement_client: Arc<dyn RPCClient> = Arc::new(mock_settlement_client);
-        let sequencing_client: Arc<dyn RPCClient> = Arc::new(mock_sequencing_client);
-
-        let result = config.set_initial_timestamp(&settlement_client, &sequencing_client).await;
-
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_set_initial_timestamp_fail() {
-        let mut config = MetabasedConfig::parse();
-        config.settlement.settlement_start_block = 100;
-        config.sequencing.sequencing_start_block = 200;
-
-        let mut mock_settlement_client = MockRPCClientMock::new();
-        let mut mock_sequencing_client = MockRPCClientMock::new();
-
-        mock_settlement_client
-            .expect_get_block_by_number()
-            .with(eq(BlockNumberOrTag::Number(100)))
-            .times(1)
-            .returning(|_| Ok(Block { timestamp: 6000, ..Default::default() }));
-        mock_sequencing_client
-            .expect_get_block_by_number()
-            .with(eq(BlockNumberOrTag::Number(200)))
-            .times(1)
-            .returning(|_| Ok(Block { timestamp: 5000, ..Default::default() }));
-
-        let settlement_client: Arc<dyn RPCClient> = Arc::new(mock_settlement_client);
-        let sequencing_client: Arc<dyn RPCClient> = Arc::new(mock_sequencing_client);
-
-        let result = config.set_initial_timestamp(&settlement_client, &sequencing_client).await;
-
-        assert!(result.is_err());
     }
 }
