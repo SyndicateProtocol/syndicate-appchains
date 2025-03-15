@@ -1,17 +1,24 @@
 [package]
-name = "metabased-poster"
-edition.workspace = true
-exclude.workspace = true
-homepage.workspace = true
-license.workspace = true
-repository.workspace = true
+edition.workspace      = true
+exclude.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "metabased-poster"
+repository.workspace   = true
 rust-version.workspace = true
-version.workspace = true
+version.workspace      = true
 
 [dependencies]
-eyre = { workspace = true }
-tracing = {workspace = true}
+alloy              = { workspace = true, features = ["provider-engine-api", "providers"] }
+clap               = { workspace = true, features = ["derive", "env"] }
+eyre               = { workspace = true }
+humantime          = { workspace = true }
+serde              = { workspace = true }
+thiserror          = { workspace = true }
+tokio              = { workspace = true, features = ["signal"] }
+tracing            = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
+url                = { workspace = true }
 
 
 [lints]
