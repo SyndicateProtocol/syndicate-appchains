@@ -118,7 +118,7 @@ async fn arb_owner_test() -> Result<()> {
     let owner = address!("0x0000000000000000000000000000000000000001");
     cfg.block_builder.owner_address = owner;
     // Start the meta node
-    let meta_node = MetaNode::new(false, cfg.clone()).await?;
+    let meta_node = MetaNode::new(false, cfg).await?;
     let arb_owner_public =
         ArbOwnerPublic::new(ARB_OWNER_CONTRACT_ADDRESS, &meta_node.metabased_rollup);
     assert_eq!(arb_owner_public.getAllChainOwners().call().await?._0, [owner]);
@@ -132,7 +132,7 @@ async fn no_l1_fees_test() -> Result<()> {
     let _ = init_test_tracing(Level::INFO);
     // Start the meta node
     let cfg = MetabasedConfig::default();
-    let meta_node = MetaNode::new(false, cfg.clone()).await?;
+    let meta_node = MetaNode::new(false, cfg).await?;
     let arb_gas_info = ArbGasInfo::new(ARB_GAS_INFO_CONTRACT_ADDRESS, &meta_node.metabased_rollup);
     assert_eq!(arb_gas_info.getL1BaseFeeEstimate().call().await?._0, U256::ZERO);
 
