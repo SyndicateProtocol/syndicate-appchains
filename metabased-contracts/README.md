@@ -20,6 +20,12 @@ $ forge build
 $ forge test
 ```
 
+#### Run coverage test:
+
+```shell
+forge coverage
+```
+
 ### Deploy
 
 Look at Makefile for more details.
