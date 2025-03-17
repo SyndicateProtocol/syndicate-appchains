@@ -13,19 +13,20 @@ use alloy::{
     rpc::types::anvil::MineOptions,
 };
 use block_builder::{
-    block_builder::BlockBuilder,
     config::{
         get_default_private_key_signer, get_rollup_contract_address,
         TargetRollupType::{ARBITRUM, OPTIMISM},
     },
     connectors::mchain::{FilledProvider, MetaChainProvider, MCHAIN_ID},
-    metrics::BlockBuilderMetrics,
     rollups::{
         arbitrum::arbitrum_adapter::ArbitrumAdapter, optimism::optimism_adapter::OptimismAdapter,
         shared::RollupAdapter,
     },
 };
-use common::types::Chain;
+use common::{
+    eth_client::{EthClient, RPCClient},
+    types::Chain,
+};
 use contract_bindings::{
     arbitrum::rollup::Rollup,
     metabased::{
@@ -34,16 +35,13 @@ use contract_bindings::{
     },
 };
 use eyre::{eyre, Result};
-use ingestor::{
-    config::ChainIngestorConfig,
-    eth_client::{EthClient, RPCClient},
-    ingestor::Ingestor,
-    metrics::IngestorMetrics,
+use metabased_translator::{
+    config::MetabasedConfig,
+    shutdown_channels::{ShutdownChannels, ShutdownTx},
+    spawn::ComponentHandles,
 };
-use metabased_translator::config::MetabasedConfig;
-use metrics::metrics::MetricsState;
+use metrics::metrics::{MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
-use slotter::{metrics::SlotterMetrics, Slotter};
 use std::{sync::Arc, time::Duration};
 use tokio::{
     process::{Child, Command},
@@ -52,18 +50,19 @@ use tokio::{
     time::timeout,
 };
 
-pub const PRELOAD_INBOX_ADDRESS: Address = address!("0xD82DEBC6B9DEebee526B4cb818b3ff2EAa136899");
-pub const PRELOAD_BRIDGE_ADDRESS: Address = address!("0x199Beb469aEf45CBC2B5Fb1BE58690C9D12f45E2");
+pub const PRELOAD_INBOX_ADDRESS: Address = address!("0x26eE2349212255614edCc046DD9472F2a5b7EF2b");
+pub const PRELOAD_BRIDGE_ADDRESS: Address = address!("0xa0e810a42086da4Ebc5C49fEd626cA6A75B06437");
+pub const PRELOAD_ROLLUP_ADDRESS: Address = address!("0x75744D0D556497B4ccb91D24328bF6160c2e0fE7");
+pub const PRELOAD_OUTBOX_ADDRESS: Address = address!("0x3442A17C5AF1E664E10F6AC0e3bE2bDb9C87E948");
+pub const PRELOAD_CHALLENGE_MANAGER: Address =
+    address!("0xE801273F775Eacc1d74d1d43f92ec4524caBBD35");
+pub const PRELOAD_ARB_SYS_PRECOMPILE_ADDRESS: Address =
+    address!("0x0000000000000000000000000000000000000064");
+pub const PRELOAD_NODE_INTERFACE_PRECOMPILE_ADDRESS: Address =
+    address!("0x00000000000000000000000000000000000000c8");
 
-#[derive(Debug)]
-struct Task(task::JoinHandle<()>);
-
-impl Drop for Task {
-    fn drop(&mut self) {
-        self.0.abort();
-    }
-}
-
+pub const PRELOAD_WASM_MODULE_ROOT: &str =
+    "0x184884e1eb9fefdc158f6c8ac912bb183bf3cf83f0090317e0bc4ac5860baa39";
 #[derive(Debug)]
 pub struct Docker(Child);
 
@@ -290,7 +289,11 @@ fn rollup_info(rollup_config: &str, chain_name: &str) -> String {
     )
 }
 
-pub async fn launch_nitro_node(chain_id: u64, mchain_port: u16) -> Result<(Docker, RootProvider)> {
+pub async fn launch_nitro_node(
+    chain_id: u64,
+    chain_owner: Address,
+    mchain_port: u16,
+) -> Result<(Docker, RootProvider)> {
     let port = PortManager::instance().next_port();
     let nitro = Command::new("docker")
         .arg("run")
@@ -305,16 +308,15 @@ pub async fn launch_nitro_node(chain_id: u64, mchain_port: u16) -> Result<(Docke
         .arg("--node.inbox-reader.check-delay=10ms")
         .arg("--node.staker.enable=false")
         .arg("--ensure-rollup-deployment=false")
-        .arg(
-            "--chain.info-json=".to_string() +
-                &rollup_info(&MetaChainProvider::rollup_config(chain_id), "test"),
-        )
+        .arg(format!(
+            "--chain.info-json={}",
+            rollup_info(&MetaChainProvider::rollup_config(chain_id, chain_owner), "test")
+        ))
         .arg("--http.addr=0.0.0.0")
-        .arg("--http.port=".to_string() + &port.to_string())
+        .arg(format!("--http.port={}", port))
         .arg("--log-level=info")
         .spawn()?;
-    let rollup = ProviderBuilder::default()
-        .on_http(("http://localhost:".to_string() + &port.to_string()).parse()?);
+    let rollup = ProviderBuilder::default().on_http(format!("http://localhost:{}", port).parse()?);
     // give it two minutes to launch (in case it needs to download the image)
     timeout(Duration::from_secs(120), async {
         while rollup.get_chain_id().await.is_err() {
@@ -325,7 +327,7 @@ pub async fn launch_nitro_node(chain_id: u64, mchain_port: u16) -> Result<(Docke
     .await?
 }
 
-#[derive(Debug)]
+#[allow(missing_debug_implementations)]
 pub struct MetaNode {
     pub sequencing_contract: MetabasedSequencerChainInstance<(), FilledProvider>,
     pub sequencing_provider: FilledProvider,
@@ -340,19 +342,14 @@ pub struct MetaNode {
     pub mchain_provider: MetaChainProvider,
     pub rollup: Rollup::RollupInstance<(), FilledProvider>,
 
-    _sequencer_ingestor_task: Task,
-    _settlement_ingestor_task: Task,
-    _block_builder_task: Task,
-    _slotter_task: Task,
+    _component_handles: ComponentHandles,
 
     // References to keep the processes/tasks alive
     _seq_anvil: AnvilInstance,
     _set_anvil: AnvilInstance,
     _nitro_docker: Docker,
-    _seq_ingestor_tx: tokio::sync::oneshot::Sender<()>,
-    _set_ingestor_tx: tokio::sync::oneshot::Sender<()>,
-    _builder_tx: tokio::sync::oneshot::Sender<()>,
-    _slotter_tx: tokio::sync::oneshot::Sender<()>,
+    // keep the shutdown channel senders alive
+    _shutdown_channels: ShutdownTx,
 }
 
 impl MetaNode {
@@ -389,7 +386,7 @@ impl MetaNode {
         config.block_builder.mchain_auth_ipc_path = node.auth_ipc;
 
         // Launch mock sequencing chain and deploy contracts
-        let (seq_port, _seq_anvil, seq_provider) = start_anvil(15).await?;
+        let (seq_port, seq_anvil, seq_provider) = start_anvil(15).await?;
         _ = MetabasedSequencerChain::deploy_builder(
             &seq_provider,
             U256::from(config.block_builder.target_chain_id),
@@ -419,7 +416,7 @@ impl MetaNode {
         mine_block(&seq_provider, 0).await?;
 
         // Launch mock settlement chain
-        let (set_port, _set_anvil, set_provider);
+        let (set_port, set_anvil, set_provider);
         if pre_loaded {
             // If flag is set, load the anvil state from a file
             // This is the full set of Arb contracts
@@ -427,7 +424,7 @@ impl MetaNode {
                 .join("config")
                 .join("anvil.json");
 
-            (set_port, _set_anvil, set_provider) = start_anvil_with_args(
+            (set_port, set_anvil, set_provider) = start_anvil_with_args(
                 31337,
                 #[allow(clippy::unwrap_used)]
                 &["--load-state", state_file.to_str().unwrap()],
@@ -435,13 +432,16 @@ impl MetaNode {
             .await?;
         } else {
             // If not use our mock Rollup contract for easier testing
-            (set_port, _set_anvil, set_provider) = start_anvil(20).await?;
+            (set_port, set_anvil, set_provider) = start_anvil(20).await?;
             // Use the mock rollup contract for the test instead of deploying all the nitro rollup
             // contracts
             _ = Rollup::deploy_builder(
                 &set_provider,
                 U256::from(config.block_builder.target_chain_id),
-                MetaChainProvider::rollup_config(config.block_builder.target_chain_id),
+                MetaChainProvider::rollup_config(
+                    config.block_builder.target_chain_id,
+                    config.block_builder.owner_address,
+                ),
             )
             .nonce(0)
             .send()
@@ -449,66 +449,51 @@ impl MetaNode {
             mine_block(&set_provider, 0).await?;
         }
 
-        // Launch ingestors for the sequencer and settlement chains
+        // Update the RPC URLs in the config
+        config.sequencing.sequencing_rpc_url = format!("http://localhost:{}", seq_port);
+        config.settlement.settlement_rpc_url = format!("http://localhost:{}", set_port);
+        config.sequencing.sequencing_polling_interval = Duration::from_millis(10);
+        config.settlement.settlement_polling_interval = Duration::from_millis(10);
 
-        let mut seq_config: ChainIngestorConfig = (&config.sequencing).into();
-        let mut set_config: ChainIngestorConfig = (&config.settlement).into();
-        seq_config.rpc_url = format!("http://localhost:{}", seq_port);
-        seq_config.polling_interval = Duration::from_millis(10);
-        set_config.rpc_url = format!("http://localhost:{}", set_port);
-        set_config.polling_interval = Duration::from_millis(10);
+        // Create RPC clients
+        let sequencing_client: Arc<dyn RPCClient> = Arc::new(
+            EthClient::new(&config.sequencing.sequencing_rpc_url, Chain::Sequencing).await?,
+        );
+        let settlement_client: Arc<dyn RPCClient> = Arc::new(
+            EthClient::new(&config.settlement.settlement_rpc_url, Chain::Settlement).await?,
+        );
+
+        // Initialize the MetaChainProvider
         let mut metrics_state = MetricsState { registry: Registry::default() };
-        let sequencing_client: Arc<dyn RPCClient> =
-            Arc::new(EthClient::new(&seq_config.rpc_url, Chain::Sequencing).await?);
-        let settlement_client: Arc<dyn RPCClient> =
-            Arc::new(EthClient::new(&set_config.rpc_url, Chain::Settlement).await?);
-        let (sequencing_ingestor, sequencer_rx) = Ingestor::new(
-            Chain::Sequencing,
+        let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
+        let mchain_provider =
+            MetaChainProvider::start(&config.block_builder, &metrics.block_builder.mchain_metrics)
+                .await
+                .map_err(|e| eyre!("Failed to initialize MetaChainProvider: {}", e))?;
+        let rollup = mchain_provider.get_rollup();
+
+        // Create shutdown channels
+        let (_main_rx, shutdown_tx, shutdown_rx) = ShutdownChannels::new().split();
+
+        // Launch components using ComponentHandles::spawn
+        let component_handles = ComponentHandles::spawn(
+            &config,
+            None, // no known state for tests
             sequencing_client.clone(),
-            &seq_config,
-            IngestorMetrics::new(&mut metrics_state.registry),
-        )
-        .await?;
-        let (settlement_ingestor, settlement_rx) = Ingestor::new(
-            Chain::Settlement,
             settlement_client.clone(),
-            &set_config,
-            IngestorMetrics::new(&mut metrics_state.registry),
-        )
-        .await?;
-        let (_seq_ingestor_tx, seq_ingestor_rx) = tokio::sync::oneshot::channel();
-        let _sequencer_ingestor_task = Task(tokio::spawn(async move {
-            let _ = sequencing_ingestor.start_polling(seq_ingestor_rx).await;
-        }));
-        let (_set_ingestor_tx, set_ingestor_rx) = tokio::sync::oneshot::channel();
-        let _settlement_ingestor_task = Task(tokio::spawn(async move {
-            let _ = settlement_ingestor.start_polling(set_ingestor_rx).await;
-        }));
-
-        // Launch the slotter, block builder, and nitro rollup
-        let (slotter, slotter_rx) =
-            Slotter::new(&config.slotter, None, SlotterMetrics::new(&mut metrics_state.registry));
-        let (shutdown_slotter_tx, shutdown_slotter_rx) = tokio::sync::oneshot::channel();
-        let _slotter_task = Task(tokio::spawn(async move {
-            _ = slotter.start(sequencer_rx, settlement_rx, shutdown_slotter_rx).await;
-        }));
-
-        let block_builder = BlockBuilder::new(
-            slotter_rx,
-            &config.block_builder,
+            metrics,
+            mchain_provider.clone(),
             rollup_adapter,
-            BlockBuilderMetrics::new(&mut metrics_state.registry),
+            shutdown_rx,
+        );
+
+        // Launch the nitro rollup
+        let (nitro_docker, metabased_rollup) = launch_nitro_node(
+            config.block_builder.target_chain_id,
+            config.block_builder.owner_address,
+            node.http_port,
         )
         .await?;
-        let mchain_provider = block_builder.mchain.clone();
-        let rollup = block_builder.mchain.get_rollup();
-
-        let (_nitro_docker, metabased_rollup) =
-            launch_nitro_node(config.block_builder.target_chain_id, node.http_port).await?;
-        let (_builder_tx, builder_rx) = tokio::sync::oneshot::channel();
-        let _block_builder_task = Task(tokio::spawn(async move {
-            _ = block_builder.start(None, builder_rx).await;
-        }));
 
         Ok(Self {
             sequencing_contract,
@@ -524,19 +509,12 @@ impl MetaNode {
             mchain_provider,
             rollup,
 
-            _sequencer_ingestor_task,
-            _settlement_ingestor_task,
-            _block_builder_task,
-            _slotter_task,
+            _component_handles: component_handles,
 
-            _seq_anvil,
-            _set_anvil,
-
-            _nitro_docker,
-            _seq_ingestor_tx,
-            _set_ingestor_tx,
-            _builder_tx,
-            _slotter_tx: shutdown_slotter_tx,
+            _seq_anvil: seq_anvil,
+            _set_anvil: set_anvil,
+            _nitro_docker: nitro_docker,
+            _shutdown_channels: shutdown_tx,
         })
     }
 

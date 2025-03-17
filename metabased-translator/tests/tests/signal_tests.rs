@@ -1,7 +1,10 @@
 //! Integration tests for the metabased-translator handling termination signals
 
 use block_builder::connectors::mchain::MCHAIN_ID;
-use e2e_tests::full_meta_node::{start_anvil, start_reth};
+use e2e_tests::{
+    full_meta_node::{start_anvil, start_reth},
+    port_manager::PortManager,
+};
 use eyre::Result;
 use reqwest::Client;
 use std::{process::Command, time::Duration};
@@ -28,6 +31,7 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
     let (set_port, _set_instance, _set_provider) = start_anvil(20).await?;
 
     let (node, _mchain) = start_reth(MCHAIN_ID).await?;
+    let metrics_port = PortManager::instance().next_port();
     let mut metabased_process = TokioCommand::new("cargo")
         .arg("run")
         .arg("--bin")
@@ -53,11 +57,13 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
             &format!("http://localhost:{}", set_port),
             "--settlement-start-block",
             "0",
+            "--metrics-port",
+            &metrics_port.to_string(),
         ])
         .spawn()?;
 
     // Wait for metabased-translator to be ready. We can do that by hitting the metrics endpoint
-    wait_for_service("http://localhost:9090/metrics").await?;
+    wait_for_service(&format!("http://localhost:{metrics_port}/metrics")).await?;
 
     let pid = metabased_process.id().ok_or_else(|| eyre::eyre!("Failed to get process ID"))?;
 
@@ -77,19 +83,12 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
     Ok(())
 }
 
-mod serial {
-    use super::{run_metabased_translator, Result};
-    use serial_test::serial;
+#[tokio::test(flavor = "multi_thread")]
+async fn test_metabased_sigterm() -> Result<()> {
+    run_metabased_translator("-TERM").await
+}
 
-    #[tokio::test(flavor = "multi_thread")]
-    #[serial]
-    async fn test_metabased_sigterm() -> Result<()> {
-        run_metabased_translator("-TERM").await
-    }
-
-    #[tokio::test(flavor = "multi_thread")]
-    #[serial]
-    async fn test_metabased_sigint() -> Result<()> {
-        run_metabased_translator("-INT").await
-    }
+#[tokio::test(flavor = "multi_thread")]
+async fn test_metabased_sigint() -> Result<()> {
+    run_metabased_translator("-INT").await
 }

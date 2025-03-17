@@ -61,7 +61,7 @@ mod tests {
     use jsonrpsee::{core::client::ClientT, http_client::HttpClient};
     use reqwest::{Client, StatusCode};
     use serde_json::Value as JsonValue;
-    use std::str::FromStr;
+    use std::{str::FromStr, time::Duration};
     use url::Url;
 
     #[tokio::test]
@@ -86,6 +86,8 @@ mod tests {
             private_key,
             port: 8282,
             metrics_port: 9191,
+            tx_confirmations: 2,
+            tx_timeout: Duration::from_secs(60),
         };
         let mut metrics = MetricsState::new();
         let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);

@@ -30,11 +30,9 @@ serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["process", "rt-multi-thread"] }
 tracing = { workspace = true }
-url = { workspace = true }
 
 [dev-dependencies]
 assert_matches = { workspace = true }
-serial_test    = { workspace = true }
 test-utils     = { workspace = true }
 tracing-test   = { workspace = true }
 

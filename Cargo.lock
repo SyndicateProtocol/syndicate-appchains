@@ -1135,13 +1135,11 @@ dependencies = [
  "prometheus-client",
  "serde",
  "serde_json",
- "serial_test",
  "test-utils",
  "thiserror 2.0.11",
  "tokio",
  "tracing",
  "tracing-test",
- "url",
 ]
 
 [[package]]
@@ -1301,15 +1299,18 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "async-trait",
  "bincode",
+ "eyre",
  "serde",
  "serde_json",
- "serial_test",
  "strum_macros 0.27.1",
  "test-utils",
+ "thiserror 2.0.11",
  "tokio",
  "tracing",
  "tracing-subscriber",
+ "url",
 ]
 
 [[package]]
@@ -1583,13 +1584,11 @@ dependencies = [
  "common",
  "contract-bindings",
  "eyre",
- "ingestor",
  "metabased-translator",
  "metrics",
  "prometheus-client",
  "reqwest",
- "serial_test",
- "slotter",
+ "serde",
  "strum 0.27.1",
  "strum_macros 0.27.1",
  "thiserror 2.0.11",
@@ -2305,7 +2304,6 @@ dependencies = [
  "thiserror 2.0.11",
  "tokio",
  "tracing",
- "url",
 ]
 
 [[package]]
@@ -2592,6 +2590,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
+name = "metabased-poster"
+version = "0.1.0"
+dependencies = [
+ "eyre",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "metabased-sequencer"
 version = "0.1.0"
 dependencies = [
@@ -2602,6 +2609,7 @@ dependencies = [
  "eyre",
  "flate2",
  "hex",
+ "humantime",
  "jsonrpsee",
  "prometheus-client",
  "reqwest",
@@ -2629,8 +2637,8 @@ dependencies = [
  "mockall",
  "prometheus-client",
  "serde_json",
- "serial_test",
  "slotter",
+ "temp-env",
  "thiserror 2.0.11",
  "tokio",
  "tracing",
@@ -3518,15 +3526,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "scc"
-version = "2.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "28e1c91382686d21b5ac7959341fcb9780fa7c03773646995a87c950fa7be640"
-dependencies = [
- "sdd",
-]
-
-[[package]]
 name = "schannel"
 version = "0.1.27"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3540,12 +3539,6 @@ name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
-
-[[package]]
-name = "sdd"
-version = "3.0.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "478f121bb72bbf63c52c93011ea1791dca40140dfe13f8336c4c5ac952c33aa9"
 
 [[package]]
 name = "sec1"
@@ -3664,31 +3657,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "serial_test"
-version = "3.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1b258109f244e1d6891bf1053a55d63a5cd4f8f4c30cf9a1280989f80e7a1fa9"
-dependencies = [
- "futures",
- "log",
- "once_cell",
- "parking_lot",
- "scc",
- "serial_test_derive",
-]
-
-[[package]]
-name = "serial_test_derive"
-version = "3.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d69265a08751de7844521fd15003ae0a888e035773ba05695c5c759a6f89eef"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.96",
-]
-
-[[package]]
 name = "sha1"
 version = "0.10.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3783,7 +3751,6 @@ dependencies = [
  "common",
  "eyre",
  "prometheus-client",
- "serial_test",
  "test-case",
  "test-utils",
  "thiserror 2.0.11",
@@ -3982,6 +3949,15 @@ name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
+
+[[package]]
+name = "temp-env"
+version = "0.3.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "96374855068f47402c3121c6eed88d29cb1de8f3ab27090e273e420bdabcf050"
+dependencies = [
+ "parking_lot",
+]
 
 [[package]]
 name = "tempfile"

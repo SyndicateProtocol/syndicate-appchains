@@ -14,13 +14,11 @@ block-builder        = { workspace = true }
 common               = { workspace = true }
 contract-bindings    = { workspace = true }
 eyre                 = { workspace = true }
-ingestor             = { workspace = true }
 metabased-translator = { workspace = true }
 metrics              = { workspace = true }
 prometheus-client    = { workspace = true }
 reqwest              = { workspace = true }
-serial_test          = { workspace = true }
-slotter              = { workspace = true }
+serde                = { workspace = true }
 strum                = { workspace = true }
 strum_macros         = { workspace = true }
 thiserror            = { workspace = true }

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity 0.8.25;
+pragma solidity ^0.8.25;
 
-import "./IBridge.sol";
-import "./ISequencerInbox.sol";
-import "./IDelayedMessageProvider.sol";
-import "../libraries/MessageTypes.sol";
-import "../libraries/Error.sol";
+import "./bridge/IBridge.sol";
+import "./bridge/ISequencerInbox.sol";
+import "./bridge/IDelayedMessageProvider.sol";
+import "./libraries/MessageTypes.sol";
+import "./libraries/Error.sol";
 
 contract Rollup {
     // TODO: set these values properly
@@ -32,15 +32,11 @@ contract Rollup {
 
     constructor(uint256 chainId, string memory chainConfig) {
         require(bytes(chainConfig).length > 0, "EMPTY_CHAIN_CONFIG");
-        uint8 initMsgVersion = 1;
-        uint256 currentDataCost = block.basefee;
-        /*
-        if (ArbitrumChecker.runningOnArbitrum()) {
-            currentDataCost += ArbGasInfo(address(0x6c)).getL1BaseFeeEstimate();
-        }
-        */
-        bytes memory initMsg = abi.encodePacked(chainId, initMsgVersion, currentDataCost, chainConfig);
-        deliverMessage(INITIALIZATION_MSG_TYPE, address(0), initMsg);
+        deliverMessage(
+            INITIALIZATION_MSG_TYPE,
+            address(0),
+            abi.encodePacked(chainId, /* initMsgVersion */ uint8(1), /* currentDataCost */ uint256(0), chainConfig)
+        );
         // post a batch containing the initialization message
         postBatch(hex"000b00800203", 0, 0, 0, 0);
     }
@@ -124,7 +120,7 @@ contract Rollup {
         bytes32 messageDataHash = keccak256(messageData);
         bytes32 messageHash = keccak256(
             abi.encodePacked(
-                kind, sender, uint64(block.number), uint64(block.timestamp), count, block.basefee, messageDataHash
+                kind, sender, uint64(block.number), uint64(block.timestamp), count, uint256(0), messageDataHash
             )
         );
         bytes32 prevAcc = 0;
@@ -133,7 +129,7 @@ contract Rollup {
         }
         delayedInboxAccs.push(keccak256(abi.encodePacked(prevAcc, messageHash)));
         emit IBridge.MessageDelivered(
-            count, prevAcc, address(this), kind, sender, messageDataHash, block.basefee, uint64(block.timestamp)
+            count, prevAcc, address(this), kind, sender, messageDataHash, 0, uint64(block.timestamp)
         );
         emit IDelayedMessageProvider.InboxMessageDelivered(count, messageData);
     }
