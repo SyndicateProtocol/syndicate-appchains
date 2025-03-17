@@ -33,7 +33,6 @@ tracing = { workspace = true }
 
 [dev-dependencies]
 assert_matches = { workspace = true }
-serial_test    = { workspace = true }
 test-utils     = { workspace = true }
 tracing-test   = { workspace = true }
 
