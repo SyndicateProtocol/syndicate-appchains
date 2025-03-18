@@ -7,7 +7,7 @@ use alloy::{
     transports::TransportResult,
 };
 use dashmap::DashMap;
-use futures_util::lock::Mutex;
+use futures::lock::Mutex;
 use jsonrpsee::core::async_trait;
 use std::sync::Arc;
 
@@ -20,7 +20,6 @@ pub struct CachedResettingNonceManager {
 #[cfg_attr(target_arch = "wasm32", async_trait(?Send))]
 #[cfg_attr(not(target_arch = "wasm32"), async_trait)]
 impl NonceManager for CachedResettingNonceManager {
-    /// Same impl as CachedNonceManager
     async fn get_next_nonce<P, N>(&self, provider: &P, address: Address) -> TransportResult<u64>
     where
         P: Provider<N>,
