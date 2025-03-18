@@ -13,15 +13,9 @@ use alloy::{
     rpc::types::anvil::MineOptions,
 };
 use block_builder::{
-    config::{
-        get_default_private_key_signer, get_rollup_contract_address,
-        TargetRollupType::{ARBITRUM, OPTIMISM},
-    },
-    connectors::mchain::{FilledProvider, MetaChainProvider, MCHAIN_ID},
-    rollups::{
-        arbitrum::arbitrum_adapter::ArbitrumAdapter, optimism::optimism_adapter::OptimismAdapter,
-        shared::RollupAdapter,
-    },
+    config::{get_default_private_key_signer, get_rollup_contract_address},
+    connectors::mchain::{rollup_config, FilledProvider, MetaChainProvider, MCHAIN_ID},
+    rollups::arbitrum::arbitrum_adapter::ArbitrumAdapter,
 };
 use common::{
     eth_client::{EthClient, RPCClient},
@@ -310,7 +304,7 @@ pub async fn launch_nitro_node(
         .arg("--ensure-rollup-deployment=false")
         .arg(format!(
             "--chain.info-json={}",
-            rollup_info(&MetaChainProvider::rollup_config(chain_id, chain_owner), "test")
+            rollup_info(&rollup_config(chain_id, chain_owner), "test")
         ))
         .arg("--http.addr=0.0.0.0")
         .arg(format!("--http.port={}", port))
@@ -339,8 +333,7 @@ pub struct MetaNode {
     pub chain_id: u64,
 
     pub mchain: (Docker, Option<(Docker, Docker, Docker, Docker)>),
-    pub mchain_provider: MetaChainProvider,
-    pub rollup: Rollup::RollupInstance<(), FilledProvider>,
+    pub mchain_provider: MetaChainProvider<ArbitrumAdapter>,
 
     _component_handles: ComponentHandles,
 
@@ -353,7 +346,6 @@ pub struct MetaNode {
 }
 
 impl MetaNode {
-    #[allow(clippy::unwrap_used)] // test utility
     pub async fn new(pre_loaded: bool, mut config: MetabasedConfig) -> Result<Self> {
         // Define the addresses of the bridge and inbox contracts depedning on whether we
         // are loading in the full set of Arb contracts or not
@@ -364,23 +356,6 @@ impl MetaNode {
 
         config.block_builder.sequencing_contract_address = get_rollup_contract_address();
 
-        match config.block_builder.target_rollup_type {
-            OPTIMISM => {
-                let adapter = OptimismAdapter::new(&config.block_builder);
-                Self::new_with_rollup_adapter(pre_loaded, config, adapter).await
-            }
-            ARBITRUM => {
-                let adapter = ArbitrumAdapter::new(&config.block_builder);
-                Self::new_with_rollup_adapter(pre_loaded, config, adapter).await
-            }
-        }
-    }
-
-    async fn new_with_rollup_adapter<R: RollupAdapter>(
-        pre_loaded: bool,
-        mut config: MetabasedConfig,
-        rollup_adapter: R,
-    ) -> Result<Self> {
         let (node, mchain) = start_reth(MCHAIN_ID).await?;
         config.block_builder.mchain_ipc_path = node.ipc;
         config.block_builder.mchain_auth_ipc_path = node.auth_ipc;
@@ -438,7 +413,7 @@ impl MetaNode {
             _ = Rollup::deploy_builder(
                 &set_provider,
                 U256::from(config.block_builder.target_chain_id),
-                MetaChainProvider::rollup_config(
+                rollup_config(
                     config.block_builder.target_chain_id,
                     config.block_builder.owner_address,
                 ),
@@ -466,11 +441,13 @@ impl MetaNode {
         // Initialize the MetaChainProvider
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
-        let mchain_provider =
-            MetaChainProvider::start(&config.block_builder, &metrics.block_builder.mchain_metrics)
-                .await
-                .map_err(|e| eyre!("Failed to initialize MetaChainProvider: {}", e))?;
-        let rollup = mchain_provider.get_rollup();
+        let mchain_provider = MetaChainProvider::start(
+            &config.block_builder,
+            metrics.block_builder.clone(),
+            ArbitrumAdapter::new(&config.block_builder),
+        )
+        .await
+        .map_err(|e| eyre!("Failed to initialize MetaChainProvider: {}", e))?;
 
         // Create shutdown channels
         let (_main_rx, shutdown_tx, shutdown_rx) = ShutdownChannels::new().split();
@@ -483,7 +460,6 @@ impl MetaNode {
             settlement_client.clone(),
             metrics,
             mchain_provider.clone(),
-            rollup_adapter,
             shutdown_rx,
         );
 
@@ -507,7 +483,6 @@ impl MetaNode {
 
             mchain,
             mchain_provider,
-            rollup,
 
             _component_handles: component_handles,
 

@@ -3747,6 +3747,7 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "assert_matches",
+ "async-trait",
  "clap",
  "common",
  "eyre",

@@ -43,7 +43,7 @@ pub enum SequencingParserError {
 }
 
 /// The parser for meta-based transactions
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SequencingTransactionParser {
     /// The address of the sequencing contract
     pub sequencing_contract_address: Address,

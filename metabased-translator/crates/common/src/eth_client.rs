@@ -1,12 +1,14 @@
 //! The `eth_client` module provides a client for interacting with an Ethereum-like blockchain.
 
 use crate::types::{Block, BlockAndReceipts, Chain, Receipt};
-use alloy::rpc::{
-    client::{ClientBuilder, RpcClient},
-    types::BlockNumberOrTag,
+use alloy::{
+    rpc::{
+        client::{ClientBuilder, RpcClient},
+        types::BlockNumberOrTag,
+    },
+    transports::{RpcError, TransportErrorKind},
 };
 use async_trait::async_trait;
-use eyre::eyre;
 use std::fmt::Debug;
 use thiserror::Error;
 use tracing::trace;
@@ -29,7 +31,7 @@ pub enum RPCClientError {
 
     /// Generic RPC communication failure
     #[error("RPC request failed: {0}")]
-    RpcError(#[source] eyre::Error),
+    RpcError(#[from] RpcError<TransportErrorKind>),
 }
 
 /// Trait defining methods for interacting with a blockchain
@@ -94,8 +96,7 @@ impl RPCClient for EthClient {
     ) -> Result<Block, RPCClientError> {
         self.client
             .request::<_, Option<Block>>("eth_getBlockByNumber", (block_identifier, true))
-            .await
-            .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
+            .await?
             .ok_or_else(|| RPCClientError::BlockNotFound(block_identifier.to_string()))
     }
 
@@ -129,8 +130,7 @@ impl RPCClient for EthClient {
             let block_number_hex = format!("0x{:x}", block_number);
 
             let block_fut = batch
-                .add_call("eth_getBlockByNumber", &(block_number_hex.clone(), true))
-                .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
+                .add_call("eth_getBlockByNumber", &(block_number_hex.clone(), true))?
                 .map_resp(move |resp: Option<Block>| {
                     if resp.is_none() {
                         trace!(
@@ -142,8 +142,7 @@ impl RPCClient for EthClient {
                     resp
                 });
             let receipt_fut = batch
-                .add_call("eth_getBlockReceipts", &[block_number_hex])
-                .map_err(|e| RPCClientError::RpcError(eyre!(e)))?
+                .add_call("eth_getBlockReceipts", &[block_number_hex])?
                 .map_resp(|resp: Option<Vec<Receipt>>| {
                     if resp.is_none() {
                         trace!(
@@ -159,12 +158,11 @@ impl RPCClient for EthClient {
             receipt_futures.push(receipt_fut);
         }
 
-        batch.send().await.map_err(|e| RPCClientError::RpcError(eyre!(e)))?;
+        batch.send().await?;
 
         let mut results = Vec::new();
         for (block_fut, receipt_fut) in block_futures.into_iter().zip(receipt_futures.into_iter()) {
-            let (block_opt, receipts_opt) = tokio::try_join!(block_fut, receipt_fut)
-                .map_err(|e| RPCClientError::RpcError(eyre!(e)))?;
+            let (block_opt, receipts_opt) = tokio::try_join!(block_fut, receipt_fut)?;
 
             if let (Some(block), Some(receipts)) = (block_opt, receipts_opt) {
                 results.push(BlockAndReceipts { block, receipts });

@@ -8,14 +8,12 @@ pub struct ShutdownTx {
     pub sequencer: Sender<()>,
     pub settlement: Sender<()>,
     pub slotter: Sender<()>,
-    pub builder: Sender<()>,
 }
 
 pub struct ShutdownRx {
     pub sequencing: Receiver<()>,
     pub settlement: Receiver<()>,
     pub slotter: Receiver<()>,
-    pub block_builder: Receiver<()>,
 }
 
 /// Main channel plus paired channels for each component
@@ -31,24 +29,13 @@ impl ShutdownChannels {
         let (seq_tx, seq_rx) = oneshot::channel();
         let (settle_tx, settle_rx) = oneshot::channel();
         let (slot_tx, slot_rx) = oneshot::channel();
-        let (build_tx, build_rx) = oneshot::channel();
 
         init_signal_handler(main_tx);
 
         Self {
             main: main_rx,
-            tx: ShutdownTx {
-                sequencer: seq_tx,
-                settlement: settle_tx,
-                slotter: slot_tx,
-                builder: build_tx,
-            },
-            rx: ShutdownRx {
-                sequencing: seq_rx,
-                settlement: settle_rx,
-                slotter: slot_rx,
-                block_builder: build_rx,
-            },
+            tx: ShutdownTx { sequencer: seq_tx, settlement: settle_tx, slotter: slot_tx },
+            rx: ShutdownRx { sequencing: seq_rx, settlement: settle_rx, slotter: slot_rx },
         }
     }
 

@@ -91,7 +91,7 @@ impl std::fmt::Display for L1MessageType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Builder for constructing Arbitrum blocks from transactions
 pub struct ArbitrumAdapter {
     // Sequencing chain address
@@ -121,7 +121,7 @@ impl RollupAdapter for ArbitrumAdapter {
 
     /// Builds a block from a slot
     async fn build_block_from_slot(
-        &mut self,
+        &self,
         slot: &Slot,
         mchain_block_number: u64,
     ) -> Result<Vec<TransactionRequest>, eyre::Error> {
@@ -518,7 +518,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_empty_slot() {
-        let mut builder = ArbitrumAdapter::default();
+        let builder = ArbitrumAdapter::default();
 
         // Create an empty slot
         let slot = Slot { settlement: vec![], sequencing: Arc::new(BlockAndReceipts::default()) };
@@ -555,7 +555,6 @@ mod tests {
     #[tokio::test]
     async fn test_build_block_from_slot_with_delayed_messages() {
         let builder = ArbitrumAdapter::default();
-        let mut builder = builder;
 
         // Create message data
         let message_index = U256::from(1);
@@ -623,7 +622,6 @@ mod tests {
     #[tokio::test]
     async fn test_build_block_from_slot_with_sequencing_txns() {
         let builder = ArbitrumAdapter::default();
-        let mut builder = builder;
 
         // Create a mock L2 transaction
         let txn_data: Bytes = hex!("001234").into();
@@ -681,7 +679,6 @@ mod tests {
     #[tokio::test]
     async fn test_build_block_from_slot_with_sequencing_and_delayed_txns() {
         let builder = ArbitrumAdapter::default();
-        let mut builder = builder;
 
         // Create a mock L2 transaction
         let txn_data: Bytes = hex!("001234").into();

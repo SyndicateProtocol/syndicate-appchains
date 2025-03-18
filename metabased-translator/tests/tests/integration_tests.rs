@@ -11,11 +11,12 @@ use alloy::{
 };
 use block_builder::{
     config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
-    connectors::{
-        mchain::{MetaChainProvider, MCHAIN_ID},
-        metrics::MChainMetrics,
+    connectors::mchain::{MetaChainProvider, MCHAIN_ID},
+    metrics::BlockBuilderMetrics,
+    rollups::{
+        arbitrum::{self, arbitrum_adapter::ArbitrumAdapter},
+        shared::RollupAdapter,
     },
-    rollups::arbitrum::{self, arbitrum_adapter::ArbitrumAdapter},
 };
 use common::{
     tracing::init_test_tracing,
@@ -51,7 +52,10 @@ use tokio::time::sleep;
 use tracing::Level;
 
 /// mine a mchain block with a delay - for testing only
-async fn mine_block(provider: &MetaChainProvider, delay: u64) -> Result<BlockHash> {
+async fn mine_block(
+    provider: &MetaChainProvider<impl RollupAdapter>,
+    delay: u64,
+) -> Result<BlockHash> {
     #[allow(clippy::expect_used)]
     let ts = provider
         .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
@@ -72,8 +76,13 @@ async fn test_rollback() -> Result<()> {
     };
 
     let mut metrics_state = MetricsState { registry: Registry::default() };
-    let metrics = MChainMetrics::new(&mut metrics_state.registry);
-    let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
+    let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
+    let mchain = MetaChainProvider::start(
+        &block_builder_cfg,
+        metrics,
+        ArbitrumAdapter::new(&block_builder_cfg),
+    )
+    .await?;
 
     let b1 = mchain
         .get_block_by_number(BlockNumberOrTag::Number(1), BlockTransactionsKind::Hashes)
@@ -122,7 +131,8 @@ async fn no_l1_fees_test() -> Result<()> {
         address!("0x000000000000000000000000000000000000006c");
     let _ = init_test_tracing(Level::INFO);
     // Start the meta node
-    let meta_node = MetaNode::new(false, MetabasedConfig::default()).await?;
+    let cfg = MetabasedConfig::default();
+    let meta_node = MetaNode::new(false, cfg).await?;
     let arb_gas_info = ArbGasInfo::new(ARB_GAS_INFO_CONTRACT_ADDRESS, &meta_node.metabased_rollup);
     assert_eq!(arb_gas_info.getL1BaseFeeEstimate().call().await?._0, U256::ZERO);
 
@@ -140,8 +150,13 @@ async fn test_rollback_regression() -> Result<()> {
     };
 
     let mut metrics_state = MetricsState { registry: Registry::default() };
-    let metrics = MChainMetrics::new(&mut metrics_state.registry);
-    let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
+    let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
+    let mchain = MetaChainProvider::start(
+        &block_builder_cfg,
+        metrics,
+        ArbitrumAdapter::new(&block_builder_cfg),
+    )
+    .await?;
 
     let b1 = mchain.mine_block(1).await?;
     for _ in 0..100 {
@@ -472,11 +487,7 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
     // check rollup contract state
     let known_state = meta_node
         .mchain_provider
-        .get_safe_state(
-            &meta_node.sequencing_client,
-            &meta_node.settlement_client,
-            &ArbitrumAdapter::new(&config.block_builder),
-        )
+        .get_safe_state(&meta_node.sequencing_client, &meta_node.settlement_client)
         .await?
         .unwrap();
     assert_eq!(
@@ -530,8 +541,13 @@ async fn test_nitro_batch() -> Result<()> {
     };
 
     let mut metrics_state = MetricsState { registry: Registry::default() };
-    let metrics = MChainMetrics::new(&mut metrics_state.registry);
-    let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
+    let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
+    let mchain = MetaChainProvider::start(
+        &block_builder_cfg,
+        metrics,
+        ArbitrumAdapter::new(&block_builder_cfg),
+    )
+    .await?;
     let (_nitro, rollup) = launch_nitro_node(
         block_builder_cfg.target_chain_id,
         block_builder_cfg.owner_address,
@@ -628,8 +644,13 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
     };
 
     let mut metrics_state = MetricsState { registry: Registry::default() };
-    let metrics = MChainMetrics::new(&mut metrics_state.registry);
-    let mchain = MetaChainProvider::start(&block_builder_cfg, &metrics).await?;
+    let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
+    let mchain = MetaChainProvider::start(
+        &block_builder_cfg,
+        metrics,
+        ArbitrumAdapter::new(&block_builder_cfg),
+    )
+    .await?;
     let (_nitro, rollup) = launch_nitro_node(
         block_builder_cfg.target_chain_id,
         block_builder_cfg.owner_address,
