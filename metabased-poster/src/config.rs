@@ -40,14 +40,6 @@ pub struct Config {
     #[arg(short = 'b', long, env = "BRIDGE_CONTRACT_ADDRESS", value_parser = parse_address)]
     pub bridge_contract_address: Address,
 
-    /// Port to listen on
-    #[arg(short = 'p', long, env = "POSTER_PORT", default_value_t = 8456)]
-    pub port: u16,
-
-    /// Port for metrics
-    #[arg(short = 'm', long, env = "POSTER_METRICS_PORT", default_value_t = 9191)]
-    pub metrics_port: u16,
-
     /// Private key for signing transactions    
     #[arg(short = 'k', long, env = "POSTER_PRIVATE_KEY")]
     pub private_key: B256,

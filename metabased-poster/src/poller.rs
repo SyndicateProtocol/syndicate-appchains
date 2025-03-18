@@ -1,14 +1,11 @@
 //!  The `poller` polls information from the appchain on a `polling_interval` frequency
 
-use alloy::{
-    primitives::B256,
-    providers::{Provider, ProviderBuilder, RootProvider},
-};
+use crate::types::NitroBlock;
+use alloy::providers::{Provider, ProviderBuilder, RootProvider};
 use eyre::{eyre, Result};
-use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
 use tokio::sync::{mpsc::Sender, oneshot};
-use tracing::{error, info};
+use tracing::error;
 use url::Url;
 
 /// Polls information from the `rpc_url` on a `polling_interval` frequency
@@ -19,13 +16,7 @@ struct Poller {
     sender: Sender<Arc<NitroBlock>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-struct NitroBlock {
-    hash: B256,
-    send_root: B256,
-}
-
+/// Starts the poller task
 pub async fn run(
     rpc_url: Url,
     polling_interval: Duration,
@@ -39,8 +30,6 @@ pub async fn run(
 
 impl Poller {
     async fn main_loop(self, mut shutdown_rx: oneshot::Receiver<()>) -> Result<()> {
-        info!("Starting poller...");
-
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
             tokio::select! {
