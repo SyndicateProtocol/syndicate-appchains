@@ -89,16 +89,16 @@ pub fn get_rollup_contract_address() -> Address {
 impl Debug for BlockBuilderConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockBuilderConfig")
-            .field("owner_address", &self.owner_address)
+            .field("rollup_owner_address", &self.rollup_owner_address)
             .field("mchain_auth_ipc_path", &self.mchain_auth_ipc_path)
             .field("mchain_ipc_path", &self.mchain_ipc_path)
             .field("target_chain_id", &self.target_chain_id)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
             .field("target_rollup_type", &self.target_rollup_type)
-            .field("bridge_address", &self.bridge_address)
-            .field("inbox_address", &self.inbox_address)
+            .field("arbitrum_bridge_address", &self.arbitrum_bridge_address)
+            .field("arbitrum_inbox_address", &self.arbitrum_inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
-            .field("ignore_delayed_messages", &self.ignore_delayed_messages)
+            .field("arbitrum_ignore_delayed_messages", &self.arbitrum_ignore_delayed_messages)
             .finish()
     }
 }
@@ -138,12 +138,12 @@ impl BlockBuilderConfig {
         match self.target_rollup_type {
             // Validate Arbitrum specific configuration
             TargetRollupType::ARBITRUM => {
-                if self.bridge_address == Address::ZERO {
+                if self.arbitrum_bridge_address == Address::ZERO {
                     return Err(ConfigError::InvalidAddress(
                         "Bridge address cannot be 0".to_string(),
                     ));
                 }
-                if self.inbox_address == Address::ZERO {
+                if self.arbitrum_inbox_address == Address::ZERO {
                     return Err(ConfigError::InvalidAddress(
                         "Inbox address cannot be 0".to_string(),
                     ));
