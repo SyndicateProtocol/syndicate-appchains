@@ -28,19 +28,15 @@ pub struct Config {
     #[arg(short = 's', long, env = "SETTLEMENT_CHAIN_RPC_URL", value_parser = parse_url)]
     pub settlement_chain_rpc_url: Url,
 
-    /// URL of the sequencing chain RPC node
+    /// URL of the app-chain RPC node
     #[arg(short = 'a', long, env = "APP_CHAIN_RPC_URL", value_parser = parse_url)]
     pub app_chain_rpc_url: Url,
 
-    /// Address of the sequencing contract
-    #[arg(short = 'i', long, env = "INBOX_CONTRACT_ADDRESS", value_parser = parse_address)]
-    pub inbox_contract_address: Address,
+    /// Address of the assertion poster contract
+    #[arg(short = 'b', long, env = "ASSERTION_POSTER_CONTRACT_ADDRESS", value_parser = parse_address)]
+    pub assertion_poster_contract_address: Address,
 
-    /// Address of the sequencing contract
-    #[arg(short = 'b', long, env = "BRIDGE_CONTRACT_ADDRESS", value_parser = parse_address)]
-    pub bridge_contract_address: Address,
-
-    /// Private key for signing transactions    
+    /// Private key    
     #[arg(short = 'k', long, env = "POSTER_PRIVATE_KEY")]
     pub private_key: B256,
 

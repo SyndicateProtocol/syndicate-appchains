@@ -9,11 +9,11 @@ use tracing::error;
 #[serde(rename_all = "camelCase")]
 #[allow(missing_docs)]
 pub struct NitroBlock {
-    number: U256,
-    l1_block_number: U256,
-    timestamp: U256,
-    hash: B256,
-    send_root: B256,
+    pub number: U256,
+    pub l1_block_number: U256,
+    pub timestamp: U256,
+    pub hash: B256,
+    pub send_root: B256,
 }
 
 #[derive(Debug, Error)]

@@ -37,8 +37,15 @@ impl ComponentHandles {
             .await
         });
 
-        let submitter_handler =
-            tokio::spawn(async move { submitter::run(blocks_rx, shutdown_rx.submitter).await });
+        let submitter_handler = tokio::spawn(async move {
+            submitter::run(
+                config.settlement_chain_rpc_url,
+                config.assertion_poster_contract_address,
+                blocks_rx,
+                shutdown_rx.submitter,
+            )
+            .await
+        });
         Self { poller: poller_handle, submitter: submitter_handler }
     }
 
