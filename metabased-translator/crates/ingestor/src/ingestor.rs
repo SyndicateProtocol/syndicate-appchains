@@ -125,8 +125,8 @@ impl Ingestor {
     }
 
     async fn fetch_and_push_batch(&mut self) {
-        let block_numbers = (self.current_block_number
-            ..min(
+        let block_numbers = (self.current_block_number..
+            min(
                 max(self.initial_chain_head, self.current_block_number) + 1,
                 self.current_block_number + self.syncing_batch_size,
             ))

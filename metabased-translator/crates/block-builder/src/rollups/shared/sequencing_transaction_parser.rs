@@ -57,8 +57,8 @@ impl SequencingTransactionParser {
 
     /// Checks if a log is a `TransactionProcessed` event
     pub fn is_log_transaction_processed(&self, eth_log: Log) -> bool {
-        eth_log.address == self.sequencing_contract_address
-            && eth_log
+        eth_log.address == self.sequencing_contract_address &&
+            eth_log
                 .topics
                 .first()
                 .is_some_and(|t| *t == keccak256(TransactionProcessed::SIGNATURE.as_bytes()))

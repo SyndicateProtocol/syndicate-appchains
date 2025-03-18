@@ -41,11 +41,11 @@ impl Batch {
         // Step 2: Encode fields as a list
         let header = alloy::rlp::Header {
             list: true,
-            payload_length: self.parent_hash.length()
-                + self.epoch_num.length()
-                + self.epoch_hash.length()
-                + self.timestamp.length()
-                + self.transactions.length(),
+            payload_length: self.parent_hash.length() +
+                self.epoch_num.length() +
+                self.epoch_hash.length() +
+                self.timestamp.length() +
+                self.transactions.length(),
         };
         header.encode(&mut out);
 
