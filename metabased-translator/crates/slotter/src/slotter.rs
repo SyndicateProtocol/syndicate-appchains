@@ -132,7 +132,7 @@ impl<P: SlotProcessor> Slotter<P> {
                     }
                     SlotterError::Shutdown => {
                         warn!("Slotter shut down");
-                        return Err(Report::from(e))
+                        return Err(Report::from(e));
                     }
                     _ => panic!("Slotter error: {e}"),
                 },
@@ -762,8 +762,8 @@ mod tests {
             // Also verify all settlement blocks are in ascending timestamp order
             for i in 0..slots[0].settlement.len() - 1 {
                 assert!(
-                    slots[0].settlement[i].block.timestamp <
-                        slots[0].settlement[i + 1].block.timestamp,
+                    slots[0].settlement[i].block.timestamp
+                        < slots[0].settlement[i + 1].block.timestamp,
                     "Settlement blocks are not in ascending timestamp order"
                 );
             }

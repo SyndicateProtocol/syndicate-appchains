@@ -76,9 +76,9 @@ impl Drop for Docker {
 fn chain_config(chain_id: u64) -> String {
     r#"{"config": {
     "chainId": "#
-        .to_string() +
-        &chain_id.to_string() +
-        r#",
+        .to_string()
+        + &chain_id.to_string()
+        + r#",
     "homesteadBlock": 0,
     "eip150Block": 0,
     "eip155Block": 0,

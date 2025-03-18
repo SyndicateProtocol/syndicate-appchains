@@ -205,15 +205,15 @@ mod tests {
         let past_timestamp = now - 5; // 5 seconds ago
         metrics.update_chain_timestamp_lag(past_timestamp, Chain::Sequencing);
         assert!(
-            metrics.slotter_timestamp_lag_ms.get_or_create(&Labels { chain: "sequencing" }).get() >=
-                5000
+            metrics.slotter_timestamp_lag_ms.get_or_create(&Labels { chain: "sequencing" }).get()
+                >= 5000
         );
 
         let past_timestamp = now - 10000; // 10 seconds ago
         metrics.update_chain_timestamp_lag(past_timestamp, Chain::Settlement);
         assert!(
-            metrics.slotter_timestamp_lag_ms.get_or_create(&Labels { chain: "settlement" }).get() >=
-                10000
+            metrics.slotter_timestamp_lag_ms.get_or_create(&Labels { chain: "settlement" }).get()
+                >= 10000
         );
     }
 

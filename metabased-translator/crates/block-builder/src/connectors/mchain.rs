@@ -329,7 +329,7 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
             Some(known_state) => known_state.mchain_block_number,
             None => {
                 info!("No known block number to resume from, starting from genesis");
-                return Ok(())
+                return Ok(());
             }
         };
 
