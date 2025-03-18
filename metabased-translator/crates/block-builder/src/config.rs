@@ -20,7 +20,7 @@ pub struct BlockBuilderConfig {
     // TODO(SEQ-686): Remove this variable and read the owner address from the settlement chain
     // contract instead.
     #[arg(long, env = "ROLLUP_OWNER_ADDRESS", value_parser = parse_address, default_value_t = Address::ZERO)]
-    pub owner_address: Address,
+    pub rollup_owner_address: Address,
 
     #[arg(long, env = "MINE_EMPTY_BLOCKS", default_value_t = false)]
     pub mine_empty_blocks: bool,
@@ -48,18 +48,18 @@ pub struct BlockBuilderConfig {
     /// Bridge address on the settlement chain
     #[arg(short = 'b', long, env = "ARBITRUM_BRIDGE_ADDRESS",
         value_parser = parse_address)]
-    pub bridge_address: Address,
+    pub arbitrum_bridge_address: Address,
 
     /// Inbox address on the settlement chain
     #[arg(short = 'i', long, env = "ARBITRUM_INBOX_ADDRESS",
         value_parser = parse_address)]
-    pub inbox_address: Address,
+    pub arbitrum_inbox_address: Address,
 
     // TODO (SEQ-567): Move ignore_delayed_messages config value on-chain
     /// Flag used to ignore delayed messages besides deposits
     /// Default is false
     #[arg(long, env = "ARBITRUM_IGNORE_DELAYED_MESSAGES", default_value = "false")]
-    pub ignore_delayed_messages: bool,
+    pub arbitrum_ignore_delayed_messages: bool,
 }
 
 /// Possible target rollup types for the [`block-builder`]
