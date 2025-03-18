@@ -204,13 +204,13 @@ mod tests {
 
     #[test]
     fn test_validate_bridge_address() {
-        let config = BlockBuilderConfig { bridge_address: Address::ZERO, ..Default::default() };
+        let config = BlockBuilderConfig { arbitrum_bridge_address: Address::ZERO, ..Default::default() };
         assert_matches!(config.validate(), Err(ConfigError::InvalidAddress(_)));
     }
 
     #[test]
     fn test_validate_inbox_address() {
-        let config = BlockBuilderConfig { inbox_address: Address::ZERO, ..Default::default() };
+        let config = BlockBuilderConfig { arbitrum_inbox_address: Address::ZERO, ..Default::default() };
         assert_matches!(config.validate(), Err(ConfigError::InvalidAddress(_)));
     }
 
