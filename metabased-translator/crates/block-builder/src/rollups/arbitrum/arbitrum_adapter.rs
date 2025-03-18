@@ -229,9 +229,9 @@ impl ArbitrumAdapter {
             transaction_parser: SequencingTransactionParser::new(
                 config.sequencing_contract_address,
             ),
-            bridge_address: config.bridge_address,
-            inbox_address: config.inbox_address,
-            ignore_delayed_messages: config.ignore_delayed_messages,
+            bridge_address: config.arbitrum_bridge_address,
+            inbox_address: config.arbitrum_inbox_address,
+            ignore_delayed_messages: config.arbitrum_ignore_delayed_messages,
         }
     }
 
@@ -438,7 +438,7 @@ mod tests {
                 .expect("Invalid address format");
         let config = BlockBuilderConfig {
             sequencing_contract_address,
-            bridge_address: sequencing_contract_address,
+            arbitrum_bridge_address: sequencing_contract_address,
             ..Default::default()
         };
 
