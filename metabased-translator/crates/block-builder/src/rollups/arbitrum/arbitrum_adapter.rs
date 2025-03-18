@@ -912,7 +912,7 @@ mod tests {
     #[test]
     fn test_delayed_message_to_mchain_txn_ignore_message() {
         let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            ignore_delayed_messages: true,
+            arbitrum_ignore_delayed_messages: true,
             ..Default::default()
         });
 
@@ -960,7 +960,7 @@ mod tests {
     #[test]
     fn test_delayed_message_to_mchain_txn_do_not_ignore_deposit() {
         let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            ignore_delayed_messages: true,
+            arbitrum_ignore_delayed_messages: true,
             ..Default::default()
         });
 
@@ -1018,7 +1018,7 @@ mod tests {
     #[test]
     fn test_should_ignore_delayed_message() {
         let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            ignore_delayed_messages: true,
+            arbitrum_ignore_delayed_messages: true,
             ..Default::default()
         });
 
@@ -1032,7 +1032,7 @@ mod tests {
         assert!(!builder.should_ignore_delayed_message(&L1MessageType::EthDeposit));
 
         let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            ignore_delayed_messages: false,
+            arbitrum_ignore_delayed_messages: false,
             ..Default::default()
         });
 
