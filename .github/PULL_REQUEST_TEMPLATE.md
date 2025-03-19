@@ -13,6 +13,11 @@
   - <Does this PR introduce any breaking changes (API/config/schema) for node operators?>
   - <If yes, explain the breaking change, its impact, and applicable upgrade steps.> 
 
+### Metrics changes?
+- **Yes/No:** 
+  - <Does this PR introduce any changes to metrics that might affect our dashboards or alerts?>
+  - <If yes, explain the metric(s) what are added/removed/updated> 
+
 ### Anything interesting?
   - < Optional>
   - < Did you use something fancy or new to you that teammates may not have seen before? Help your reviewer by explaining it here and link any references you used>
