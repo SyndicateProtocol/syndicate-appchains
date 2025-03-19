@@ -1,5 +1,5 @@
 [workspace]
-members = [ 
+members = [ "maestro", 
     "metabased-poster",
     "metabased-sequencer",
     "metabased-translator/bin/metabased-translator",
