@@ -11,7 +11,7 @@ pub struct SlotterConfig {
     /// This helps sequencing chain blocks to be processed sooner
     /// This delay , like the slot duration, and start blocks, must be set at genesis and never
     /// changed
-    #[arg(long, env = "SLOTTER_SETTLEMENT_DELAY", default_value_t = 60)]
+    #[arg(long, env = "SETTLEMENT_DELAY", default_value_t = 60)]
     pub settlement_delay: u64,
 }
 

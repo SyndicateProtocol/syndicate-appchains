@@ -116,7 +116,7 @@ async fn arb_owner_test() -> Result<()> {
     let _ = init_test_tracing(Level::INFO);
     let mut cfg = MetabasedConfig::default();
     let owner = address!("0x0000000000000000000000000000000000000001");
-    cfg.block_builder.owner_address = owner;
+    cfg.block_builder.rollup_owner_address = owner;
     // Start the meta node
     let meta_node = MetaNode::new(false, cfg).await?;
     let arb_owner_public =
@@ -550,7 +550,7 @@ async fn test_nitro_batch() -> Result<()> {
     .await?;
     let (_nitro, rollup) = launch_nitro_node(
         block_builder_cfg.target_chain_id,
-        block_builder_cfg.owner_address,
+        block_builder_cfg.rollup_owner_address,
         node.http_port,
     )
     .await?;
@@ -653,7 +653,7 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
     .await?;
     let (_nitro, rollup) = launch_nitro_node(
         block_builder_cfg.target_chain_id,
-        block_builder_cfg.owner_address,
+        block_builder_cfg.rollup_owner_address,
         node.http_port,
     )
     .await?;
