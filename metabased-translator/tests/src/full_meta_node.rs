@@ -29,14 +29,11 @@ use contract_bindings::{
     },
 };
 use eyre::{eyre, Result};
-use metabased_translator::{
-    config::MetabasedConfig,
-    shutdown_channels::{ShutdownChannels, ShutdownTx},
-    spawn::ComponentHandles,
-};
+use metabased_translator::{config::MetabasedConfig, spawn::run};
 use metrics::metrics::{MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
 use std::{sync::Arc, time::Duration};
+use test_utils::test_path;
 use tokio::{
     process::{Child, Command},
     runtime::Handle,
@@ -114,11 +111,11 @@ pub struct NodeInfo {
 pub async fn start_reth(
     chain_id: u64,
 ) -> Result<(NodeInfo, (Docker, Option<(Docker, Docker, Docker, Docker)>))> {
+    let dir = test_path("reth");
     let manager = PortManager::instance();
     let port = manager.next_port();
     let auth_port = manager.next_port();
     let http_port = manager.next_port();
-    let dir = env!("CARGO_MANIFEST_DIR");
     let ipc = format!("{dir}/{port}.ipc");
     let auth_ipc = format!("{dir}/{auth_port}.ipc");
     let chain_cfg = chain_config(chain_id);
@@ -130,7 +127,7 @@ pub async fn start_reth(
             .arg("--entrypoint")
             .arg("/bin/sh")
             .arg("-v")
-            .arg(if cfg!(target_os = "macos") { "ipc" } else { dir }.to_string() + ":/ipc")
+            .arg(if cfg!(target_os = "macos") { "ipc" } else { &dir }.to_owned() + ":/ipc")
             .arg("-p")
             .arg(format!("{http_port}:{http_port}"))
             .arg("ghcr.io/syndicateprotocol/reth")
@@ -330,14 +327,10 @@ pub struct MetaNode {
     pub mchain: (Docker, Option<(Docker, Docker, Docker, Docker)>),
     pub mchain_provider: MetaChainProvider<ArbitrumAdapter>,
 
-    _component_handles: ComponentHandles,
-
     // References to keep the processes/tasks alive
     _seq_anvil: AnvilInstance,
     _set_anvil: AnvilInstance,
     _nitro_docker: Docker,
-    // keep the shutdown channel senders alive
-    _shutdown_channels: ShutdownTx,
 }
 
 /// nitro contract version on the settlement chain used for testing
@@ -352,6 +345,9 @@ impl MetaNode {
         pre_loaded: Option<ContractVersion>,
         mut config: MetabasedConfig,
     ) -> Result<Self> {
+        let port_manager = PortManager::instance();
+        config.metrics.metrics_port = port_manager.next_port();
+
         // Define the addresses of the bridge and inbox contracts depedning on whether we
         // are loading in the full set of Arb contracts or not
         config.block_builder.arbitrum_bridge_address =
@@ -464,19 +460,14 @@ impl MetaNode {
         .await
         .map_err(|e| eyre!("Failed to initialize MetaChainProvider: {}", e))?;
 
-        // Create shutdown channels
-        let (_main_rx, shutdown_tx, shutdown_rx) = ShutdownChannels::new().split();
-
-        // Launch components using ComponentHandles::spawn
-        let component_handles = ComponentHandles::spawn(
-            &config,
-            None, // no known state for tests
-            sequencing_client.clone(),
-            settlement_client.clone(),
-            metrics,
-            mchain_provider.clone(),
-            shutdown_rx,
-        );
+        // Launch the translator
+        let cfg_clone = config.clone();
+        tokio::spawn(async move {
+            let err = run(&cfg_clone, ArbitrumAdapter::new(&cfg_clone.block_builder)).await;
+            if let Err(e) = err {
+                panic!("Translator error: {}", e);
+            }
+        });
 
         // Launch the nitro rollup
         let (nitro_docker, metabased_rollup) = launch_nitro_node(
@@ -501,12 +492,9 @@ impl MetaNode {
             mchain,
             mchain_provider,
 
-            _component_handles: component_handles,
-
             _seq_anvil: seq_anvil,
             _set_anvil: set_anvil,
             _nitro_docker: nitro_docker,
-            _shutdown_channels: shutdown_tx,
         })
     }
 

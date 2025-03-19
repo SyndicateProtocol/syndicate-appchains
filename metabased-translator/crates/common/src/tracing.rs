@@ -99,7 +99,9 @@ pub fn init_tracing_with_extra_fields(
 /// Initializes a tracing subscriber for testing purposes
 pub fn init_test_tracing(level: Level) -> Result<(), TracingError> {
     subscriber_fmt()
-        .with_env_filter(EnvFilter::new(level.to_string()))
+        .with_env_filter(EnvFilter::new(format!(
+            "off,metabased_translator={level},ingestor={level},slotter={level},block_builder={level}" // off == supress logs from non-specified crates )))
+        )))
         .try_init()
         .map_err(|e| TracingError::SubscriberInit(format!("{:?}", e)))?;
     Ok(())

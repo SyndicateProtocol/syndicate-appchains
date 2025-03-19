@@ -1,6 +1,6 @@
 use crate::{
     config::MetabasedConfig,
-    shutdown_channels::{ShutdownRx, ShutdownTx},
+    shutdown_channels::{ShutdownChannels, ShutdownRx, ShutdownTx},
     types::RuntimeError,
 };
 use block_builder::{connectors::mchain::MetaChainProvider, rollups::shared::RollupAdapter};
@@ -8,23 +8,109 @@ use common::{
     eth_client::{EthClient, RPCClient},
     types::{BlockAndReceipts, Chain, KnownState},
 };
-use eyre::Report;
+use eyre::{Report, Result};
 use ingestor::config::ChainIngestorConfig;
 use metrics::metrics::{start_metrics, MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
 use serde_json::{json, Value};
+use slotter::SlotterError;
 use std::sync::Arc;
 use tokio::{sync::mpsc::channel, task::JoinHandle};
 use tracing::{error, log::info};
 
-pub struct ComponentHandles {
-    pub sequencing: JoinHandle<eyre::Result<(), Report>>,
-    pub settlement: JoinHandle<eyre::Result<(), Report>>,
-    pub slotter: JoinHandle<eyre::Result<(), Report>>,
+/// Entry point for the async runtime
+/// This function holds the application lifecycle. It starts the translator components and sets up
+/// the shutdown handling.
+pub async fn run(
+    config: &MetabasedConfig,
+    rollup_adapter: impl RollupAdapter,
+) -> Result<(), RuntimeError> {
+    info!("Initializing Metabased Translator components");
+    let (sequencing_client, settlement_client) = clients(config).await?;
+
+    let metrics = init_metrics(config).await;
+
+    let mchain = MetaChainProvider::start(
+        &config.block_builder,
+        metrics.block_builder.clone(),
+        rollup_adapter,
+    )
+    .await?;
+
+    loop {
+        let shutdown_channels = ShutdownChannels::new();
+        let safe_state = mchain
+            .reconcile_mchain_with_source_chains(
+                &sequencing_client.clone(),
+                &settlement_client.clone(),
+            )
+            .await?;
+
+        let (main_shutdown_rx, tx, rx) = shutdown_channels.split();
+        let component_tasks = ComponentHandles::spawn(
+            config,
+            safe_state,
+            sequencing_client.clone(),
+            settlement_client.clone(),
+            metrics.clone(),
+            mchain.clone(),
+            rx,
+        );
+
+        info!("Starting Metabased Translator");
+        match termination_handling(main_shutdown_rx, tx, component_tasks).await {
+            Ok(()) => std::process::exit(0),
+            Err(e) => match e {
+                TerminationError::Err(e) => {
+                    error!("Metabased Translator terminated with error: {}", e);
+                    std::process::exit(1);
+                }
+                TerminationError::ReorgDetected() => {
+                    continue;
+                }
+            },
+        };
+    }
+}
+
+enum TerminationError {
+    Err(RuntimeError),
+    ReorgDetected(),
+}
+
+async fn termination_handling(
+    main_shutdown_rx: tokio::sync::oneshot::Receiver<()>,
+    tx: ShutdownTx,
+    mut handles: ComponentHandles,
+) -> Result<(), TerminationError> {
+    // MAIN SELECT LOOP - wait for shutdown signal or task failure
+    tokio::select! {
+        _ = main_shutdown_rx => handles.graceful_shutdown(tx).await.map_err(TerminationError::Err),
+        res = &mut handles.sequencing => handles.check_error(res, "Sequencing chain ingestor").map_err(TerminationError::Err),
+        res = &mut handles.settlement => handles.check_error(res, "Settlement chain ingestor").map_err(TerminationError::Err),
+        res = &mut handles.slotter => {
+            match res {
+                Ok(Ok(_)) => Ok(()),
+                Ok(Err(SlotterError::ReorgDetected { chain, current_block, received_block, received_parent_hash })) => {
+                    error!("chain: {chain}, current_block: {current_block}, received_block: {received_block}, received_parent_hash: {received_parent_hash}, Reorg detected, restarting the translator components");
+                    handles.abort();
+                    Err(TerminationError::ReorgDetected())
+                }
+                Ok(Err(e)) => Err(TerminationError::Err(RuntimeError::TaskFailedRecoverable(format!("Slotter: {e}")))),
+                Err(e) => Err(TerminationError::Err(RuntimeError::TaskFailedUnrecoverable(format!("Slotter: {e}")))),
+            }
+        },
+    }
+}
+
+struct ComponentHandles {
+    sequencing: JoinHandle<Result<(), Report>>,
+    settlement: JoinHandle<Result<(), Report>>,
+    slotter: JoinHandle<Result<(), SlotterError>>,
 }
 
 impl ComponentHandles {
-    pub fn spawn(
+    fn spawn(
         config: &MetabasedConfig,
         known_state: Option<KnownState>,
         sequencing_client: Arc<dyn RPCClient>,
@@ -89,7 +175,13 @@ impl ComponentHandles {
         Self { sequencing, settlement, slotter }
     }
 
-    pub async fn graceful_shutdown(self, tx: ShutdownTx) -> eyre::Result<(), RuntimeError> {
+    pub fn abort(self) {
+        self.sequencing.abort();
+        self.settlement.abort();
+        self.slotter.abort();
+    }
+
+    pub async fn graceful_shutdown(self, tx: ShutdownTx) -> Result<(), RuntimeError> {
         info!("Received shutdown signal");
 
         // 1. Stop ingestors first
@@ -117,9 +209,9 @@ impl ComponentHandles {
     /// Outer error is unrecoverable task panic, inner error is recoverable
     pub fn check_error(
         self,
-        handle_result: eyre::Result<eyre::Result<(), Report>, tokio::task::JoinError>,
+        handle_result: Result<eyre::Result<(), Report>, tokio::task::JoinError>,
         component: &str,
-    ) -> eyre::Result<(), RuntimeError> {
+    ) -> Result<(), RuntimeError> {
         match handle_result {
             Ok(res) => match res {
                 Ok(_) => {
@@ -154,10 +246,10 @@ pub fn get_extra_fields_for_logging(base_config: MetabasedConfig) -> Vec<(String
     vec![("chain_id".to_string(), json!(base_config.block_builder.target_chain_id))]
 }
 
-pub async fn init_metrics(config: &MetabasedConfig) -> (TranslatorMetrics, JoinHandle<()>) {
+pub async fn init_metrics(config: &MetabasedConfig) -> TranslatorMetrics {
     let registry = Registry::default();
     let mut metrics_state = MetricsState { registry };
     let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
-    let metrics_task = start_metrics(metrics_state, config.metrics.metrics_port).await;
-    (metrics, metrics_task)
+    start_metrics(metrics_state, config.metrics.metrics_port).await;
+    metrics
 }

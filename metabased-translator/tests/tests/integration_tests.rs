@@ -28,7 +28,7 @@ use contract_bindings::arbitrum::{
     nodeinterface::NodeInterface, rollup::Rollup,
 };
 use e2e_tests::full_meta_node::{launch_nitro_node, start_reth, ContractVersion, MetaNode};
-use eyre::{eyre, Result};
+use eyre::{eyre, Ok, Result};
 use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
@@ -157,12 +157,8 @@ async fn test_rollback_regression() -> Result<()> {
     Ok(())
 }
 
-/// This test sends different types of delayed messages
-/// via the inbox contract and ensures that all of them
-/// are sequenced via the metabased translator and show up on the rollup.
-#[tokio::test(flavor = "multi_thread")]
-async fn e2e_settlement_test() -> Result<()> {
-    let _ = init_test_tracing(Level::INFO);
+#[allow(clippy::unwrap_used)] // test code
+async fn new_test_with_synced_chains() -> Result<MetaNode> {
     // Start the meta node (pre-loaded with the full set of Arb contracts)
     let mut config = MetabasedConfig::default();
     config.slotter.settlement_delay = 0;
@@ -171,14 +167,27 @@ async fn e2e_settlement_test() -> Result<()> {
     let meta_node = MetaNode::new(Some(ContractVersion::V300), config).await?;
 
     // Sync the tips of the sequencing and settlement chains
-    let block: Block = meta_node
+    let block = meta_node
         .settlement_provider
-        .raw_request("eth_getBlockByNumber".into(), ("latest", true))
-        .await?;
+        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
     meta_node
         .sequencing_provider
-        .evm_mine(Some(MineOptions::Timestamp(Some(block.timestamp))))
+        .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
         .await?;
+
+    Ok(meta_node)
+}
+
+/// This test sends different types of delayed messages
+/// via the inbox contract and ensures that all of them
+/// are sequenced via the metabased translator and show up on the rollup.
+#[tokio::test(flavor = "multi_thread")]
+async fn e2e_settlement_test() -> Result<()> {
+    let _ = init_test_tracing(Level::INFO);
+
+    let meta_node = new_test_with_synced_chains().await?;
 
     // Grab the wallet address for the test
     let wallet_address = meta_node.settlement_provider.default_signer_address();
@@ -309,7 +318,7 @@ async fn e2e_settlement_test() -> Result<()> {
         .await?;
     meta_node.mine_set_block(0).await?;
 
-    // Mine a set block to process the slot
+    // Mine an set block to process the slot
     meta_node.mine_set_block(1).await?;
 
     // Process the slot
@@ -481,11 +490,19 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
         .unwrap();
     assert_eq!(
         known_state.mchain_block_number,
-        meta_node.mchain_provider.get_block_number().await?
+        // -1 because safe_state return the block that matches the verified state of the world
+        // minus 1
+        meta_node.mchain_provider.get_block_number().await? - 1
     );
     let seq_block = meta_node
         .sequencing_provider
-        .get_block(Number(BlockNumberOrTag::Latest), BlockTransactionsKind::Hashes)
+        .get_block(
+            Number(BlockNumberOrTag::Number(
+                // -2 because it's the latest block that has transactions in it
+                meta_node.sequencing_provider.get_block_number().await? - 2,
+            )),
+            BlockTransactionsKind::Hashes,
+        )
         .await?
         .unwrap();
     assert_eq!(
@@ -501,7 +518,8 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
         .settlement_provider
         .get_block(
             Number(BlockNumberOrTag::Number(
-                meta_node.settlement_provider.get_block_number().await? - 1,
+                // -2 because the latest block hasn't been processed yet
+                meta_node.settlement_provider.get_block_number().await? - 2,
             )),
             BlockTransactionsKind::Hashes,
         )
@@ -914,6 +932,115 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
     // Assert new balance is equal to withdrawal amount
     let balance_after = meta_node.settlement_provider.get_balance(to_address).await?;
     assert_eq!(balance_after, withdrawal_value);
+
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_settlement_reorg() -> Result<()> {
+    let _ = init_test_tracing(Level::DEBUG);
+    let meta_node = new_test_with_synced_chains().await?;
+
+    // NOTE: at this point the mchain is on block 1 (initial mchain block) - we can't reorg to
+    // genesis, so we need to create two slots on top of it before the reorg happens.
+
+    meta_node.mine_both(1).await?; //mine mchain block 2 (only works because there are delayed txs to proccess, otherwise the
+                                   // mchain block would be empty/skipped)
+    sleep(Duration::from_millis(200)).await;
+    assert_eq!(meta_node.mchain_provider.get_block_number().await?, 2);
+
+    let wallet_address = meta_node.settlement_provider.default_signer_address();
+    let inbox = IInbox::new(meta_node.inbox_address, &meta_node.settlement_provider);
+
+    // create a deposit (that won't be rolled back) that will fit on mchain's block 3
+    let balance_before_deposit = meta_node.metabased_rollup.get_balance(wallet_address).await?;
+    _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
+
+    meta_node.mine_both(100).await?;
+    meta_node.mine_both(1).await?; // extra blocks to close the slot
+    sleep(Duration::from_millis(200)).await;
+    let balance_after_deposit = meta_node.metabased_rollup.get_balance(wallet_address).await?;
+    assert_eq!(balance_after_deposit, balance_before_deposit + parse_ether("1")?);
+    let mchain_block_before_deposit = meta_node
+        .mchain_provider
+        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
+    assert_eq!(mchain_block_before_deposit.header.number, 3);
+
+    // send a deposit that will be reorged
+    let balance_before_deposit = meta_node.metabased_rollup.get_balance(wallet_address).await?;
+
+    _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
+
+    // make this deposit fit into a slot that will be reorged
+    meta_node.mine_both(200).await?; // will be reorged leaving this slot opened
+    meta_node.mine_both(1).await?; // mine an extra block to close the slot (will be reorged later)
+    sleep(Duration::from_millis(200)).await;
+
+    let balance_after_deposit = meta_node.metabased_rollup.get_balance(wallet_address).await?;
+    assert_eq!(balance_after_deposit, balance_before_deposit + parse_ether("1")?);
+    assert_eq!(meta_node.mchain_provider.get_block_number().await?, 4);
+
+    // the rollup head has not been updated yet
+    let rollup_head_before_reorg = meta_node
+        .metabased_rollup
+        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
+
+    // reorg, assert that the L3 balance has disappeared
+    let reorg_depth = 2;
+    let current_block = meta_node.settlement_provider.get_block_number().await?;
+    meta_node.settlement_provider.anvil_rollback(Some(reorg_depth)).await?;
+    assert_eq!(
+        meta_node.settlement_provider.get_block_number().await?,
+        current_block - reorg_depth
+    );
+
+    //NOTE: mine an extra block. (the ingestor currently polls by block number, so it won't detect
+    // a reorg at a given block height, until a block with a bigger height is mined)
+    // if we switch to a different ingestor implementation this could be removed.
+
+    for _ in 0..reorg_depth + 1 {
+        meta_node.mine_set_block(0).await?;
+    }
+    sleep(Duration::from_millis(200)).await;
+
+    // mchain should have reorged to a pre-deposit block
+    assert_eq!(
+        meta_node
+            .mchain_provider
+            .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+            .await?
+            .unwrap(),
+        mchain_block_before_deposit
+    );
+    // the rollup should have reorged to a pre-deposit block
+
+    // create new slots
+    _ = inbox.depositEth().value(parse_ether("0.01")?).send().await?;
+    meta_node.mine_both(500).await?;
+    meta_node.mine_both(500).await?; // build mchain to an height above what the rollup has seen before the reorg
+    sleep(Duration::from_millis(200)).await;
+
+    assert_eq!(meta_node.mchain_provider.get_block_number().await?, 4);
+
+    sleep(Duration::from_secs(10)).await; // TODO 10s too much
+
+    // rollup is expected tobe at the same height, but a different block
+    let rollup_head_after_reorg = meta_node
+        .metabased_rollup
+        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
+
+    assert_eq!(rollup_head_after_reorg.header.number, rollup_head_before_reorg.header.number);
+    assert_ne!(rollup_head_after_reorg.header.hash, rollup_head_before_reorg.header.hash);
+
+    // balance should be correct (reorged deposit is not included)
+    let balance_after_reorg = meta_node.metabased_rollup.get_balance(wallet_address).await?;
+    assert_eq!(balance_after_reorg, balance_before_deposit + parse_ether("0.01")?);
 
     Ok(())
 }
