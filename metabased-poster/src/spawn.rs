@@ -40,6 +40,7 @@ impl ComponentHandles {
         let submitter_handler = tokio::spawn(async move {
             submitter::run(
                 config.settlement_chain_rpc_url,
+                config.private_key,
                 config.assertion_poster_contract_address,
                 blocks_rx,
                 shutdown_rx.submitter,

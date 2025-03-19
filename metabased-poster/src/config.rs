@@ -1,6 +1,6 @@
 //! The `config` module handles configuration parsing for the metabased poster.
 
-use alloy::primitives::{Address, B256};
+use alloy::primitives::Address;
 use clap::Parser;
 use std::{fmt::Debug, str::FromStr, time::Duration};
 use thiserror::Error;
@@ -38,7 +38,7 @@ pub struct Config {
 
     /// Private key    
     #[arg(short = 'k', long, env = "POSTER_PRIVATE_KEY")]
-    pub private_key: B256,
+    pub private_key: String,
 
     /// The interval between each block polling
     #[arg( long, env = "POSTER_POLLING_INTERVAL", default_value = "10m", value_parser = humantime::parse_duration )]
