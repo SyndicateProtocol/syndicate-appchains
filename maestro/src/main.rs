@@ -9,10 +9,13 @@ use jsonrpsee::{
     types::{ErrorCode, Params},
     RpcModule,
 };
-use maestro::errors::{
-    Error,
-    Error::InvalidParams,
-    InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount},
+use maestro::{
+    errors::{
+        Error,
+        Error::InvalidParams,
+        InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount},
+    },
+    layers::HeadersLayer,
 };
 use std::{net::SocketAddr, sync::Arc};
 use tower::ServiceBuilder;
@@ -55,8 +58,10 @@ pub async fn run_server(// config: &Config,
     // relayer_metrics: RelayerMetrics,
 ) -> Result<(SocketAddr, ServerHandle)> {
     // Middleware to proxy "/health" GET requests to "health" RPC method
-    let http_middleware =
-        ServiceBuilder::new().layer(ProxyGetRequestLayer::new("/health", "health")?);
+    let required_headers = vec!["X-Synd-Chain-Id".to_string(), "X-Synd-Method-Name".to_string()];
+    let http_middleware = ServiceBuilder::new()
+        .layer(HeadersLayer::new(required_headers)?)
+        .layer(ProxyGetRequestLayer::new("/health", "health")?);
 
     let port = 8111;
     let server = Server::builder()
@@ -87,13 +92,11 @@ pub async fn run_server(// config: &Config,
 pub async fn send_raw_transaction_handler(
     params: Params<'static>,
     _service: Arc<MaestroService>,
-    _: Extensions,
+    _extensions: Extensions,
 ) -> RpcResult<String> {
     // let start = Instant::now();
     let result = async {
         let _tx_data = parse_send_raw_transaction_params(params)?;
-
-        // TODO validate HTTP request headers
 
         // TODO spam plane
 
