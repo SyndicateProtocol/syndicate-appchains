@@ -349,9 +349,9 @@ impl MetaNode {
     pub async fn new(pre_loaded: bool, mut config: MetabasedConfig) -> Result<Self> {
         // Define the addresses of the bridge and inbox contracts depedning on whether we
         // are loading in the full set of Arb contracts or not
-        config.block_builder.bridge_address =
+        config.block_builder.arbitrum_bridge_address =
             if pre_loaded { PRELOAD_BRIDGE_ADDRESS } else { get_rollup_contract_address() };
-        config.block_builder.inbox_address =
+        config.block_builder.arbitrum_inbox_address =
             if pre_loaded { PRELOAD_INBOX_ADDRESS } else { get_rollup_contract_address() };
 
         config.block_builder.sequencing_contract_address = get_rollup_contract_address();
@@ -415,7 +415,7 @@ impl MetaNode {
                 U256::from(config.block_builder.target_chain_id),
                 rollup_config(
                     config.block_builder.target_chain_id,
-                    config.block_builder.owner_address,
+                    config.block_builder.rollup_owner_address,
                 ),
             )
             .nonce(0)
@@ -466,7 +466,7 @@ impl MetaNode {
         // Launch the nitro rollup
         let (nitro_docker, metabased_rollup) = launch_nitro_node(
             config.block_builder.target_chain_id,
-            config.block_builder.owner_address,
+            config.block_builder.rollup_owner_address,
             node.http_port,
         )
         .await?;

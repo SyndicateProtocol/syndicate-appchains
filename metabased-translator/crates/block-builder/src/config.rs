@@ -19,47 +19,47 @@ const DEFAULT_PRIVATE_KEY_SIGNER: &str =
 pub struct BlockBuilderConfig {
     // TODO(SEQ-686): Remove this variable and read the owner address from the settlement chain
     // contract instead.
-    #[arg(long, env = "BLOCK_BUILDER_ROLLUP_OWNER_ADDRESS", value_parser = parse_address, default_value_t = Address::ZERO)]
-    pub owner_address: Address,
+    #[arg(long, env = "ROLLUP_OWNER_ADDRESS", value_parser = parse_address, default_value_t = Address::ZERO)]
+    pub rollup_owner_address: Address,
 
-    #[arg(long, env = "BLOCK_BUILDER_MINE_EMPTY_BLOCKS", default_value_t = false)]
+    #[arg(long, env = "MINE_EMPTY_BLOCKS", default_value_t = false)]
     pub mine_empty_blocks: bool,
 
-    #[arg(long, env = "BLOCK_BUILDER_MCHAIN_AUTH_IPC_PATH")]
+    #[arg(long, env = "MCHAIN_AUTH_IPC_PATH")]
     pub mchain_auth_ipc_path: String,
 
-    #[arg(long, env = "BLOCK_BUILDER_MCHAIN_IPC_PATH")]
+    #[arg(long, env = "MCHAIN_IPC_PATH")]
     pub mchain_ipc_path: String,
 
     /// The chain ID of the Appchain rollup (not the mchain)
-    #[arg(short = 'c', long, env = "BLOCK_BUILDER_TARGET_CHAIN_ID", default_value_t = 13331370)]
+    #[arg(short = 'c', long, env = "TARGET_CHAIN_ID", default_value_t = 13331370)]
     pub target_chain_id: u64,
 
     /// Sequencing contract address on the sequencing chain
-    #[arg(short = 's', long, env = "BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS",
+    #[arg(short = 's', long, env = "SEQUENCING_CONTRACT_ADDRESS",
         value_parser = parse_address)]
     pub sequencing_contract_address: Address,
 
     /// Target rollup type for the [`block-builder`]
-    #[arg(long, env = "BLOCK_BUILDER_TARGET_ROLLUP", default_value = "arbitrum")]
+    #[arg(long, env = "TARGET_ROLLUP_TYPE", default_value = "arbitrum")]
     pub target_rollup_type: TargetRollupType,
 
     // TODO(SEQ-555): make bridge and inbox addresses specific to arbitrum
     /// Bridge address on the settlement chain
-    #[arg(short = 'b', long, env = "BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS",
+    #[arg(short = 'b', long, env = "ARBITRUM_BRIDGE_ADDRESS",
         value_parser = parse_address)]
-    pub bridge_address: Address,
+    pub arbitrum_bridge_address: Address,
 
     /// Inbox address on the settlement chain
-    #[arg(short = 'i', long, env = "BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS",
+    #[arg(short = 'i', long, env = "ARBITRUM_INBOX_ADDRESS",
         value_parser = parse_address)]
-    pub inbox_address: Address,
+    pub arbitrum_inbox_address: Address,
 
     // TODO (SEQ-567): Move ignore_delayed_messages config value on-chain
     /// Flag used to ignore delayed messages besides deposits
     /// Default is false
-    #[arg(long, env = "BLOCK_BUILDER_ARBITRUM_IGNORE_DELAYED_MESSAGES", default_value = "false")]
-    pub ignore_delayed_messages: bool,
+    #[arg(long, env = "ARBITRUM_IGNORE_DELAYED_MESSAGES", default_value = "false")]
+    pub arbitrum_ignore_delayed_messages: bool,
 }
 
 /// Possible target rollup types for the [`block-builder`]
@@ -89,16 +89,16 @@ pub fn get_rollup_contract_address() -> Address {
 impl Debug for BlockBuilderConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockBuilderConfig")
-            .field("owner_address", &self.owner_address)
+            .field("rollup_owner_address", &self.rollup_owner_address)
             .field("mchain_auth_ipc_path", &self.mchain_auth_ipc_path)
             .field("mchain_ipc_path", &self.mchain_ipc_path)
             .field("target_chain_id", &self.target_chain_id)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
             .field("target_rollup_type", &self.target_rollup_type)
-            .field("bridge_address", &self.bridge_address)
-            .field("inbox_address", &self.inbox_address)
+            .field("arbitrum_bridge_address", &self.arbitrum_bridge_address)
+            .field("arbitrum_inbox_address", &self.arbitrum_inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
-            .field("ignore_delayed_messages", &self.ignore_delayed_messages)
+            .field("arbitrum_ignore_delayed_messages", &self.arbitrum_ignore_delayed_messages)
             .finish()
     }
 }
@@ -138,12 +138,12 @@ impl BlockBuilderConfig {
         match self.target_rollup_type {
             // Validate Arbitrum specific configuration
             TargetRollupType::ARBITRUM => {
-                if self.bridge_address == Address::ZERO {
+                if self.arbitrum_bridge_address == Address::ZERO {
                     return Err(ConfigError::InvalidAddress(
                         "Bridge address cannot be 0".to_string(),
                     ));
                 }
-                if self.inbox_address == Address::ZERO {
+                if self.arbitrum_inbox_address == Address::ZERO {
                     return Err(ConfigError::InvalidAddress(
                         "Inbox address cannot be 0".to_string(),
                     ));
@@ -204,13 +204,15 @@ mod tests {
 
     #[test]
     fn test_validate_bridge_address() {
-        let config = BlockBuilderConfig { bridge_address: Address::ZERO, ..Default::default() };
+        let config =
+            BlockBuilderConfig { arbitrum_bridge_address: Address::ZERO, ..Default::default() };
         assert_matches!(config.validate(), Err(ConfigError::InvalidAddress(_)));
     }
 
     #[test]
     fn test_validate_inbox_address() {
-        let config = BlockBuilderConfig { inbox_address: Address::ZERO, ..Default::default() };
+        let config =
+            BlockBuilderConfig { arbitrum_inbox_address: Address::ZERO, ..Default::default() };
         assert_matches!(config.validate(), Err(ConfigError::InvalidAddress(_)));
     }
 

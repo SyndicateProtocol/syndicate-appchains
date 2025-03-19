@@ -323,7 +323,7 @@ create-envrc:
     "# metabased-sequencer\n"\
     "export SEQUENCER_PRIVATE_KEY={{ arb_orbit_l2_private_key }}\n"\
     "export SEQUENCER_PORT={{ metabased_sequencer_port }}\n"\
-    "export ROLLUP_TYPE=ARB"\
+    "export TARGET_ROLLUP_TYPE=ARB"\
     > {{ envrc_file }}
 
     @echo "Created .envrc file at {{ envrc_file }}"

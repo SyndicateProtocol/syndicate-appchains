@@ -126,7 +126,7 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
             .wallet(EthereumWallet::from(get_default_private_key_signer()))
             .on_ipc(IpcConnect::new(config.mchain_auth_ipc_path.clone()))
             .await?;
-        let rollup_config = rollup_config(config.target_chain_id, config.owner_address);
+        let rollup_config = rollup_config(config.target_chain_id, config.rollup_owner_address);
 
         let mchain = Self {
             mchain_ipc_path: config.mchain_ipc_path.clone(),
@@ -329,7 +329,7 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
             Some(known_state) => known_state.mchain_block_number,
             None => {
                 info!("No known block number to resume from, starting from genesis");
-                return Ok(())
+                return Ok(());
             }
         };
 

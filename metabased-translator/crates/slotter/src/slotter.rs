@@ -132,7 +132,7 @@ impl<P: SlotProcessor> Slotter<P> {
                     }
                     SlotterError::Shutdown => {
                         warn!("Slotter shut down");
-                        return Err(Report::from(e))
+                        return Err(Report::from(e));
                     }
                     _ => panic!("Slotter error: {e}"),
                 },

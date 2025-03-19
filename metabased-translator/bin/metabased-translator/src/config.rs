@@ -130,11 +130,11 @@ mod tests {
         ("SETTLEMENT_RPC_URL", Some("")),
         ("SEQUENCING_START_BLOCK", Some("1")),
         ("SETTLEMENT_START_BLOCK", Some("1")),
-        ("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", Some(ZERO)),
-        ("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", Some(ZERO)),
-        ("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", Some(ZERO)),
-        ("BLOCK_BUILDER_MCHAIN_IPC_PATH", Some("")),
-        ("BLOCK_BUILDER_MCHAIN_AUTH_IPC_PATH", Some("")),
+        ("SEQUENCING_CONTRACT_ADDRESS", Some(ZERO)),
+        ("ARBITRUM_BRIDGE_ADDRESS", Some(ZERO)),
+        ("ARBITRUM_INBOX_ADDRESS", Some(ZERO)),
+        ("MCHAIN_IPC_PATH", Some("")),
+        ("MCHAIN_AUTH_IPC_PATH", Some("")),
     ];
 
     #[test]
