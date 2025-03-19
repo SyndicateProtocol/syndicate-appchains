@@ -34,7 +34,11 @@ Generate documentation for the Solidity contracts:
 $ forge doc
 ```
 
-This command generates markdown documentation for all Solidity source files in the project and outputs them to the `docs/` directory by default.
+This command generates markdown documentation for all Solidity source files in the project. By default, it:
+- Outputs documentation to the `docs/` directory in the project root
+- Generates markdown files for each contract, interface, and library
+- Includes function signatures, parameters, return values, events, and errors
+- Does not build or serve the documentation (requires additional flags)
 
 #### Options:
 
