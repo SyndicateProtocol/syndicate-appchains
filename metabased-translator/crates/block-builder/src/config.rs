@@ -41,7 +41,7 @@ pub struct BlockBuilderConfig {
     pub sequencing_contract_address: Address,
 
     /// Target rollup type for the [`block-builder`]
-    #[arg(long, env = "TARGET_ROLLUP", default_value = "arbitrum")]
+    #[arg(long, env = "TARGET_ROLLUP_TYPE", default_value = "arbitrum")]
     pub target_rollup_type: TargetRollupType,
 
     // TODO(SEQ-555): make bridge and inbox addresses specific to arbitrum
