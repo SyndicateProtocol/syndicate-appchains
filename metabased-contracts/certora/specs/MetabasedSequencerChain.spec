@@ -1,10 +1,10 @@
-using PermissionModuleBasic as permission;
+using ProposerPermissionModuleBasic as permission;
 using InitializableHarness as init;
 
 methods {
     // View functions
     function l3ChainId() external returns (uint256) envfree;
-    function requirementModule() external returns (address) envfree;
+    function proposerRequirementModule() external returns (address) envfree;
     function isAllowed(address) external returns (bool) envfree;
     function owner() external returns (address) envfree;
     function init._getInitializedVersion() external returns (uint8) envfree;
@@ -42,7 +42,7 @@ rule initializationCorrect(address admin, address module) {
 
     initialize(e, admin, module);
 
-    assert requirementModule() == module, "Module not set correctly";
+    assert proposerRequirementModule() == module, "Module not set correctly";
     assert owner() == admin, "Admin not set correctly";
 }
 
@@ -53,21 +53,21 @@ invariant l3ChainIdNotZero()
     l3ChainId() != 0;
 
 /*
- * Rule 4: Verify that requirementModule address is never zero after initialization
+ * Rule 4: Verify that proposerRequirementModule address is never zero after initialization
  */
 rule moduleNotZero(method f) {
     env e;
     require init._getInitializedVersion() > 0;
 
     // Get the module before
-    address oldModule = requirementModule();
+    address oldModule = proposerRequirementModule();
 
     // Function call
     calldataarg args;
     f(e, args);
 
     // Get the module after
-    address newModule = requirementModule();
+    address newModule = proposerRequirementModule();
 
     // Assert module cannot be zero address
     assert newModule != 0;
@@ -166,13 +166,13 @@ rule moduleUpdateChangesState(address newModule) {
     require newModule != 0;
 
     // Store old module
-    address oldModule = requirementModule();
+    address oldModule = proposerRequirementModule();
 
     // Update module
     updateRequirementModule@withrevert(e, newModule);
 
     // If successful, module should be updated
-    assert !lastReverted => requirementModule() == newModule,
+    assert !lastReverted => proposerRequirementModule() == newModule,
         "Module not updated correctly";
 }
 
@@ -182,13 +182,13 @@ rule moduleUpdateChangesState(address newModule) {
 rule stateConsistencyAfterProcessing(bytes data) {
     env e;
     require init._getInitializedVersion() > 0;
-    address oldModule = requirementModule();
+    address oldModule = proposerRequirementModule();
 
     // Process transaction
     processTransaction@withrevert(e, data);
 
     // Verify requirement module hasn't changed
-    assert requirementModule() == oldModule,
+    assert proposerRequirementModule() == oldModule,
         "Transaction processing modified core state";
 }
 

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {PermissionModule} from "../interfaces/PermissionModule.sol";
+import {ProposerPermissionModule} from "../interfaces/ProposerPermissionModule.sol";
 
 /// @title SealedBidAuctionSequencingModule
 /// @notice A sealed bid auction sequencing module contract where all bidders simultaneously submit sealed bids so that no bidder knows how much the other auction participants have bid.
-contract SealedBidAuctionSequencingModule is PermissionModule {
+contract SealedBidAuctionSequencingModule is ProposerPermissionModule {
     struct Bid {
         bytes32 sealedBid;
         uint256 deposit;
