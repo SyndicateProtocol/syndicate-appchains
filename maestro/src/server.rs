@@ -22,15 +22,12 @@ use tower::ServiceBuilder;
 use tracing::info;
 
 /// Runs the base server for the sequencer
-pub async fn run(// config: &Config,
-                  // relayer_metrics: RelayerMetrics,
-) -> eyre::Result<(SocketAddr, ServerHandle)> {
+pub async fn run(port: i32) -> eyre::Result<(SocketAddr, ServerHandle)> {
     let required_headers = vec!["X-Synd-Chain-Id".to_string(), "X-Synd-Method-Name".to_string()];
     let http_middleware = ServiceBuilder::new()
         .layer(HeadersLayer::new(required_headers)?)
         .layer(ProxyGetRequestLayer::new("/health", "health")?);
 
-    let port = 8080;
     let server = Server::builder()
         .set_http_middleware(http_middleware)
         .build(format!("0.0.0.0:{}", port))

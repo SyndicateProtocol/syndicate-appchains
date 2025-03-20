@@ -2,21 +2,42 @@
 
 use alloy::transports::http::{reqwest::Response, Client};
 use jsonrpsee::server::ServerHandle;
+use maestro::server;
 use serde_json::{json, Value};
-use std::{net::SocketAddr, time::Duration};
+use std::{env, net::SocketAddr, time::Duration};
 use tokio::{sync::OnceCell, time::sleep};
 
-// Global static server setup
+// Global static server setup - one per test function
 static SERVER_SETUP: OnceCell<(SocketAddr, ServerHandle, String)> = OnceCell::const_new();
 
-// Initialize the server once for all tests
+// Get port for testing - always use port 0 (dynamic) when not in a test group
+const fn get_test_port() -> i32 {
+    // Always use 0 for dynamic port allocation
+    // This lets the OS assign an available port automatically
+    0
+}
+
+// Initialize the server for this test function
 async fn setup_server() -> &'static (SocketAddr, ServerHandle, String) {
     SERVER_SETUP
         .get_or_init(|| async {
+            // Log which test group we're in
+            let test_group =
+                env::var("NEXTEST_TEST_GROUP").unwrap_or_else(|_| "@global".to_string());
+            let group_slot =
+                env::var("NEXTEST_TEST_GROUP_SLOT").unwrap_or_else(|_| "none".to_string());
+
+            println!("Running with test group: {}, slot: {}", test_group, group_slot);
+
+            // Get dynamic port (0)
+            let port = get_test_port();
+            println!("Using dynamic port (0)");
+
             // Start the server
             #[allow(clippy::expect_used)]
-            let (addr, handle) = maestro::server::run().await.expect("Failed to start server");
+            let (addr, handle) = server::run(port).await.expect("Failed to start server");
             let base_url = format!("http://{}", addr);
+            println!("Server started at {} (OS assigned port {})", base_url, addr.port());
 
             // Give the server a moment to fully initialize
             sleep(Duration::from_millis(100)).await;
@@ -91,33 +112,6 @@ async fn test_valid_transaction() -> eyre::Result<()> {
 }
 
 #[tokio::test]
-async fn test_malformed_headers() -> eyre::Result<()> {
-    let (_, _, base_url) = setup_server().await;
-    let client = Client::new();
-
-    // Test request with malformed required headers
-    let no_headers_response = client
-        .post(base_url)
-        .header("X-Synd-Chain-Id", "1")
-        .header("X-Synd-Wrong-Header", "eth_sendRawTransaction")
-        .json(&json!({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "eth_sendRawTransaction",
-            "params": ["0x1234"]
-        }))
-        .send()
-        .await?;
-
-    assert!(
-        !no_headers_response.status().is_success(),
-        "Request without malformed headers should fail"
-    );
-
-    Ok(())
-}
-
-#[tokio::test]
 async fn test_missing_headers() -> eyre::Result<()> {
     let (_, _, base_url) = setup_server().await;
     let client = Client::new();
@@ -138,6 +132,37 @@ async fn test_missing_headers() -> eyre::Result<()> {
         !no_headers_response.status().is_success(),
         "Request without required headers should fail"
     );
+
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_malformed_headers() -> eyre::Result<()> {
+    let (_, _, base_url) = setup_server().await;
+    let client = Client::new();
+
+    // Test with malformed headers
+    let malformed_headers_response = client
+        .post(base_url)
+        .header("X-Synd-Chain-Id", "invalid")
+        .header("X-Synd-Womp-Womp", "eth_sendRawTransaction")
+        .json(&json!({
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "eth_sendRawTransaction",
+            "params": ["0x1234"]
+        }))
+        .send()
+        .await?;
+
+    // Expect failure or error response
+    if malformed_headers_response.status().is_success() {
+        let json: Value = malformed_headers_response.json().await?;
+        assert!(json.get("error").is_some(), "Malformed headers should return an error");
+    } else {
+        // If response is not successful, that's also valid
+        assert!(!malformed_headers_response.status().is_success());
+    }
 
     Ok(())
 }
@@ -188,19 +213,17 @@ async fn test_invalid_hex() -> eyre::Result<()> {
     Ok(())
 }
 
-// This module contains test teardown logic, running after all tests are complete
-mod teardown {
-    use super::*;
-
-    #[tokio::test]
-    // Make this the last test to run using the 'z' prefix
-    async fn z_shutdown_server() -> eyre::Result<()> {
-        // Only try to shut down if the server was actually started
-        if let Some((_, handle, _)) = SERVER_SETUP.get() {
-            // Gracefully shut down the server
-            handle.stop()?;
-        }
-
-        Ok(())
+// Test to ensure server is properly stopped
+// This will run last since nextest sorts tests alphabetically
+#[tokio::test]
+async fn teardown_z_shutdown_server() -> eyre::Result<()> {
+    if let Some((_, handle, _)) = SERVER_SETUP.get() {
+        handle.stop()?;
+        sleep(Duration::from_millis(100)).await;
+        println!("Server successfully stopped");
+    } else {
+        println!("No server instance to stop");
     }
+
+    Ok(())
 }

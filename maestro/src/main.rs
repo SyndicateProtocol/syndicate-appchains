@@ -16,7 +16,8 @@ async fn main() -> Result<()> {
 
     // TODO metrics, if necessary
 
-    let (addr, handle) = maestro::server::run().await?;
+    let port = 8111;
+    let (addr, handle) = maestro::server::run(port).await?;
 
     info!(
         addr = %addr,
