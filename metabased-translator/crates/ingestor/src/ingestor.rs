@@ -141,7 +141,7 @@ impl Ingestor {
             "batch(eth_getBlockByNumber + eth_getBlockReceipts)",
             duration,
         );
-    
+
         match blocks_result {
             Ok(blocks) => {
                 for block in blocks {
