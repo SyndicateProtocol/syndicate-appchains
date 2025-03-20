@@ -14,7 +14,7 @@ use tracing_subscriber::FmtSubscriber;
 fn main() -> Result<(), RuntimeError> {
     // Initialize logging
     FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
+        .with_max_level(Level::DEBUG)
         .json()
         .with_target(true)
         .with_env_filter("info")

@@ -5,7 +5,7 @@ use alloy::providers::{Provider, ProviderBuilder, RootProvider};
 use eyre::{eyre, Result};
 use std::{sync::Arc, time::Duration};
 use tokio::sync::{mpsc::Sender, oneshot};
-use tracing::error;
+use tracing::{error, info};
 use url::Url;
 
 /// Polls information from the `rpc_url` on a `polling_interval` frequency
@@ -23,6 +23,7 @@ pub async fn run(
     sender: Sender<Arc<NitroBlock>>,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> Result<()> {
+    info!("Starting poller...");
     let poller =
         Poller { polling_interval, provider: ProviderBuilder::default().on_http(rpc_url), sender };
     poller.main_loop(shutdown_rx).await
@@ -54,7 +55,6 @@ impl Poller {
             .map_err(|err| eyre!("eth_getBlockByNumber request failed: {:?}", err))?;
 
         self.sender.send(Arc::new(block)).await.map_err(|_| eyre!("Failed to send block"))?;
-
         Ok(())
     }
 }

@@ -77,7 +77,7 @@ impl Submitter {
 
     async fn post_assertion(&self, block: Arc<NitroBlock>) -> Result<()> {
         let _ = self.assertion_poster.postAssertion(block.hash, block.send_root).send().await?;
-        info!("Assertion submitted2 for block: {:?}", block);
+        info!("Assertion submitted for block: {:?}", block);
         Ok(())
     }
 }
