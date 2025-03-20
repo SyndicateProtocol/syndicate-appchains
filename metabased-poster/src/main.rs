@@ -26,11 +26,11 @@ fn main() -> Result<(), RuntimeError> {
     let runtime =
         tokio::runtime::Runtime::new().map_err(|e| RuntimeError::Initialization(e.to_string()))?;
 
-    runtime.block_on(run(&config))?;
+    runtime.block_on(run(config))?;
     Ok(())
 }
 
-async fn run(config: &Config) -> Result<(), RuntimeError> {
+async fn run(config: Config) -> Result<(), RuntimeError> {
     let shutdown_channels = ShutdownChannels::new();
     // TODO (SEQ-695): Poster metrics
     let component_tasks = ComponentHandles::spawn(config, shutdown_channels.rx);
@@ -47,7 +47,6 @@ async fn start_shutdown_handling(
     // MAIN SELECT LOOP - wait for shutdown signal or task failure
     tokio::select! {
         _ = main_shutdown_rx => handles.graceful_shutdown(tx).await,
-        res = &mut handles.poller => handles.check_error(res, "Poller"),
-        res = &mut handles.submitter => handles.check_error(res, "Submitter"),
+        res = &mut handles.poster => handles.check_error(res, "Poller"),
     }
 }

@@ -1,0 +1,97 @@
+//!  The `poster` polls information from the appchain on a `polling_interval` frequency and posts to
+//! the settlement chain
+
+use crate::{config::Config, types::NitroBlock};
+use alloy::{
+    network::EthereumWallet,
+    providers::{
+        fillers::{
+            BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
+            WalletFiller,
+        },
+        Identity, Provider, ProviderBuilder, RootProvider,
+    },
+    signers::local::PrivateKeySigner,
+};
+use contract_bindings::arbitrum::iassertionposter::IAssertionPoster::{
+    self, IAssertionPosterInstance,
+};
+use eyre::{eyre, Result};
+use std::{str::FromStr, time::Duration};
+use tokio::sync::oneshot;
+use tracing::{error, info};
+
+type FilledProvider = FillProvider<
+    JoinFill<
+        JoinFill<
+            Identity,
+            JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+        >,
+        WalletFiller<EthereumWallet>,
+    >,
+    RootProvider,
+>;
+
+#[derive(Debug)]
+struct Poster {
+    app_chain_provider: RootProvider,
+    polling_interval: Duration,
+    assertion_poster: IAssertionPosterInstance<(), FilledProvider>,
+}
+
+/// Starts the poller task
+pub async fn run(config: &Config, shutdown_rx: oneshot::Receiver<()>) -> Result<()> {
+    info!("Starting poller...");
+    let app_chain_provider = ProviderBuilder::default().on_http(config.app_chain_rpc_url.clone());
+    let signer = PrivateKeySigner::from_str(&config.private_key)
+        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
+    let settlement_provider = ProviderBuilder::new()
+        .wallet(EthereumWallet::from(signer))
+        .on_http(config.settlement_chain_rpc_url.clone());
+
+    let assertion_poster =
+        IAssertionPoster::new(config.assertion_poster_contract_address, settlement_provider);
+
+    let poster =
+        Poster { app_chain_provider, polling_interval: config.polling_interval, assertion_poster };
+    poster.main_loop(shutdown_rx).await
+}
+
+impl Poster {
+    async fn main_loop(self, mut shutdown_rx: oneshot::Receiver<()>) -> Result<()> {
+        let mut interval = tokio::time::interval(self.polling_interval);
+        loop {
+            tokio::select! {
+                _ = &mut shutdown_rx => {
+                    return Ok(());
+                }
+                _ = interval.tick() => {
+                    match self.fetch_block().await {
+                        Ok(block) => {
+                            if let Err(err) = self.post_assertion(block).await {
+                                error!("Failed to post assertion: {:?}", err);
+                            }
+                        }
+                        Err(err) => {
+                            error!("Failed to fetch block: {:?}", err);
+                        }
+                    }
+
+                }
+            }
+        }
+    }
+
+    async fn fetch_block(&self) -> Result<NitroBlock> {
+        self.app_chain_provider
+            .raw_request("eth_getBlockByNumber".into(), ("latest", false))
+            .await
+            .map_err(|err| eyre!("eth_getBlockByNumber request failed: {:?}", err))
+    }
+
+    async fn post_assertion(&self, block: NitroBlock) -> Result<()> {
+        let _ = self.assertion_poster.postAssertion(block.hash, block.send_root).send().await?;
+        info!("Assertion submitted for block: {:?}", block);
+        Ok(())
+    }
+}

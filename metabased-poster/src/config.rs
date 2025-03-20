@@ -43,10 +43,6 @@ pub struct Config {
     /// The interval between each block polling
     #[arg( long, env = "POSTER_POLLING_INTERVAL", default_value = "10m", value_parser = humantime::parse_duration )]
     pub polling_interval: Duration,
-
-    /// The size of the buffer used to store incoming blocks
-    #[arg(long = "buffer-size", env = "BUFFER_SIZE", default_value_t = 10)]
-    pub buffer_size: usize,
 }
 
 /// Parse a string into an Ethereum `Address`.
