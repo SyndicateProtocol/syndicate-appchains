@@ -132,16 +132,19 @@ impl Ingestor {
             ))
             .collect();
         trace!("Fetching blocks {:?} on {:?}", block_numbers, self.chain);
-
+    
         let start_time = Instant::now();
-        match self.client.batch_get_blocks_and_receipts(block_numbers).await {
+        let blocks_result = self.client.batch_get_blocks_and_receipts(block_numbers).await;
+        // Record the RPC latency immediately after the network call
+        let duration = start_time.elapsed();
+        self.metrics.record_rpc_call(
+            self.chain,
+            "batch(eth_getBlockByNumber + eth_getBlockReceipts)",
+            duration,
+        );
+    
+        match blocks_result {
             Ok(blocks) => {
-                let duration = start_time.elapsed();
-                self.metrics.record_rpc_call(
-                    self.chain,
-                    "batch(eth_getBlockByNumber + eth_getBlockReceipts)",
-                    duration,
-                );
                 for block in blocks {
                     if let Err(err) = self.push_block_and_receipts(Arc::new(block)).await {
                         error!(
