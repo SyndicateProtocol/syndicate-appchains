@@ -29,6 +29,8 @@ tracing = {workspace = true}
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
 tower = {workspace = true}
 bytes = {workspace = true}
+futures-util = {workspace = true}
+http-body = {workspace = true}
 
 [lints]
 workspace = true

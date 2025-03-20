@@ -1,3 +1,5 @@
+//! The `layers` module contains code relating to the  `Maestro` service server layers
+
 use crate::errors::Error;
 use axum::http::Response;
 use bytes::Bytes as HyperBytes;
