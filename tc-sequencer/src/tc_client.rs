@@ -41,7 +41,7 @@ impl SendTransactionRequest {
         Self {
             project_id,
             contract_address,
-            chain_id: 8453,
+            chain_id: 5113,
             function_signature: "processTransaction(bytes data)".to_string(),
             args: HashMap::from([("data".to_string(), hex::encode(data))]),
         }
@@ -94,7 +94,7 @@ impl TCClient {
 
         let response = self
             .client
-            .post(self.tc_url.clone())
+            .post(format!("{}/transact/sendTransaction", self.tc_url))
             .bearer_auth(self.tc_api_key.clone())
             .json(&request)
             .send()
