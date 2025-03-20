@@ -123,7 +123,7 @@ impl TCClient {
         debug!("Submitting validated transaction to TC");
         self.send_transaction(contract_address, raw_tx).await?;
 
-        Ok(original_tx.tx_hash().clone())
+        Ok(*original_tx.tx_hash())
     }
 }
 

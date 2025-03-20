@@ -63,8 +63,8 @@ mod tests {
 
         let config = Config {
             tc_url: Url::parse(&server.url()).unwrap(),
-            tc_project_id: "".to_string(),
-            tc_api_key: "".to_string(),
+            tc_project_id: String::new(),
+            tc_api_key: String::new(),
             metabased_sequencer_factory_address: Address::from_str(
                 "0xFEA8A2BA8B760348ea95492516620ad45a299d53",
             )
@@ -100,18 +100,6 @@ mod tests {
         );
 
         mock_tc_server.assert();
-
-        // // Send 3 more transactions
-        // for _ in 0..3 {
-        //     let _: JsonValue = client
-        //         .request("eth_sendRawTransaction", [
-        //
-        // "0xf86d8202b28477359400825208944592d8f8d7b001e72cb26a73e4fa1806a51ac79d880de0b6b3a7640000802ca05924bde7ef10aa88db9c66dd4f5fb16b46dff2319b9968be983118b57bb50562a001b24b31010004f13d9a26b320845257a6cfc2bf819a3d55e3fc86263c5f0772"
-        // ,         ])
-        //         .await
-        //         .unwrap();
-        // }
-
-        // mock_tc_server.assert();
+        drop(server);
     }
 }
