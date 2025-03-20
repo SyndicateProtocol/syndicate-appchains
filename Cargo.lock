@@ -4184,16 +4184,12 @@ name = "tc-sequencer"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "axum",
  "bytes",
  "clap",
  "eyre",
- "flate2",
  "hex",
- "humantime",
  "jsonrpsee",
  "mockito",
- "prometheus-client",
  "reqwest",
  "serde",
  "serde_json",

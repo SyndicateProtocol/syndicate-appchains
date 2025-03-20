@@ -49,7 +49,7 @@ mod tests {
     use super::*;
     use alloy::primitives::Address;
     use jsonrpsee::{core::client::ClientT, http_client::HttpClient};
-    use mockito;
+    use mockito::{self, Matcher};
     use reqwest::{Client, StatusCode};
     use serde_json::Value as JsonValue;
     use std::str::FromStr;
@@ -59,7 +59,8 @@ mod tests {
     async fn test_run_server() {
         // Setup mock TC server
         let mut server = mockito::Server::new_async().await;
-        let mock_tc_server = server.mock("POST", "/").with_status(200).create();
+        let mock_tc_server =
+            server.mock("POST", Matcher::Any).with_status(200).create_async().await;
 
         let config = Config {
             tc_url: Url::parse(&server.url()).unwrap(),
