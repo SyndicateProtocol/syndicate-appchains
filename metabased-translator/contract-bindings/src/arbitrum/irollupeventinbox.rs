@@ -121,7 +121,6 @@ function bridge() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct bridgeReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -236,7 +235,6 @@ function initialize(address _bridge) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initializeCall {
-        #[allow(missing_docs)]
         pub _bridge: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`initialize(address)`](initializeCall) function.
@@ -363,7 +361,6 @@ function rollup() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct rollupReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -478,9 +475,7 @@ function rollupInitialized(uint256 chainId, string memory chainConfig) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct rollupInitializedCall {
-        #[allow(missing_docs)]
         pub chainId: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub chainConfig: alloy::sol_types::private::String,
     }
     ///Container type for the return parameters of the [`rollupInitialized(uint256,string)`](rollupInitializedCall) function.
@@ -737,15 +732,10 @@ function updateRollupAddress() external;
     };
     ///Container for all the [`IRollupEventInbox`](self) function calls.
     pub enum IRollupEventInboxCalls {
-        #[allow(missing_docs)]
         bridge(bridgeCall),
-        #[allow(missing_docs)]
         initialize(initializeCall),
-        #[allow(missing_docs)]
         rollup(rollupCall),
-        #[allow(missing_docs)]
         rollupInitialized(rollupInitializedCall),
-        #[allow(missing_docs)]
         updateRollupAddress(updateRollupAddressCall),
     }
     #[automatically_derived]
