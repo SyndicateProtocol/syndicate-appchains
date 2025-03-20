@@ -20,16 +20,18 @@ use std::{
 use tower::{Layer, Service};
 use tracing::debug;
 
+/// Layer to check for required headers in the request
 #[derive(Debug, Clone)]
 pub struct HeadersLayer(Option<Arc<Vec<String>>>);
 
 impl HeadersLayer {
-    /// Enables header checking and fail if those headers are not present
+    /// Creates new `HeadersLayer` with the given required headers
     pub fn new(required_headers: Vec<String>) -> eyre::Result<Self, Error> {
         Ok(Self(Some(Arc::new(required_headers))))
     }
 
-    pub fn disable() -> Self {
+    /// Convenience function to disable the check, rather than delete the layer entirely
+    pub const fn disable() -> Self {
         Self(None)
     }
 }
@@ -42,6 +44,7 @@ impl<S> Layer<S> for HeadersLayer {
     }
 }
 
+/// Enables header checking and fails the request if those headers are not present
 #[derive(Debug, Clone)]
 pub struct HeadersService<S> {
     inner: S,
