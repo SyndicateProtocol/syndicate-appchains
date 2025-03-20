@@ -30,7 +30,7 @@ pub async fn run(// config: &Config,
         .layer(HeadersLayer::new(required_headers)?)
         .layer(ProxyGetRequestLayer::new("/health", "health")?);
 
-    let port = 8111;
+    let port = 8080;
     let server = Server::builder()
         .set_http_middleware(http_middleware)
         .build(format!("0.0.0.0:{}", port))
