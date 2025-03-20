@@ -58,3 +58,30 @@ impl Poller {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::sync::mpsc;
+
+    #[tokio::test]
+    async fn test_poller_shutdown() {
+        let (sender, _receiver) = mpsc::channel(1);
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let rpc_url = Url::parse("http://localhost:8545").unwrap(); // Replace with an actual RPC if needed
+
+        let poller = Poller {
+            provider: ProviderBuilder::default().on_http(rpc_url),
+            polling_interval: Duration::from_millis(100),
+            sender,
+        };
+
+        let poller_task = tokio::spawn(poller.main_loop(shutdown_rx));
+
+        // Send shutdown signal
+        shutdown_tx.send(()).unwrap();
+        let result = poller_task.await.unwrap();
+
+        assert!(result.is_ok(), "Poller should exit cleanly on shutdown");
+    }
+}

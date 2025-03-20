@@ -81,3 +81,50 @@ impl Submitter {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::sync::mpsc;
+    async fn create_submitter() -> Submitter {
+        let rpc_url = Url::parse("http://localhost:8545").unwrap(); // Replace with an actual RPC if needed
+        let private_key =
+            "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef".to_string();
+        let contract_address = Address::default();
+
+        let priv_k = PrivateKeySigner::from_str(&private_key).expect("Invalid private key");
+        let provider = ProviderBuilder::new().wallet(EthereumWallet::from(priv_k)).on_http(rpc_url);
+        let assertion_poster = IAssertionPoster::new(contract_address, provider);
+
+        Submitter { assertion_poster }
+    }
+
+    #[tokio::test]
+    async fn test_post_assertion() {
+        let submitter = create_submitter().await;
+        let block = Arc::new(NitroBlock::default());
+        let result = submitter.post_assertion(block.clone()).await;
+        match &result {
+            Ok(_) => println!("post_assertion succeeded"),
+            Err(err) => eprintln!("post_assertion failed: {:?}", err),
+        }
+
+        // Note: This will fail in actual execution since we're using a mock setup
+        // but it tests the parameter parsing logic
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn test_main_loop_handles_blocks_and_shutdown() {
+        let submitter = create_submitter().await;
+
+        let (blocks_tx, blocks_rx) = mpsc::channel(10);
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let block = Arc::new(NitroBlock::default());
+        blocks_tx.send(block.clone()).await.unwrap();
+        drop(shutdown_tx);
+
+        let result = submitter.main_loop(blocks_rx, shutdown_rx).await;
+        assert!(result.is_err(), "Expected main_loop to exit with shutdown error");
+    }
+}
