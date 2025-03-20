@@ -1,111 +1,73 @@
 //! Block builder service for processing and building L3 blocks.
 
-use crate::{
-    config::BlockBuilderConfig, connectors::mchain::MetaChainProvider,
-    metrics::BlockBuilderMetrics, rollups::shared::RollupAdapter,
-};
+use crate::{connectors::mchain::MetaChainProvider, rollups::shared::RollupAdapter};
 use alloy::{
     eips::BlockNumberOrTag,
     providers::ext::TraceApi,
     transports::{RpcError, TransportErrorKind},
 };
-use common::types::Slot;
-use eyre::{Error, Report, Result};
-use tokio::sync::{mpsc::Receiver, oneshot};
-use tracing::{info, trace};
+use async_trait::async_trait;
+use common::types::{Slot, SlotProcessor};
+use eyre::{Error, Result};
+use tracing::trace;
 
-/// Block builder service for processing and building L3 blocks.
-#[derive(Debug)]
-struct BlockBuilder<R: RollupAdapter> {
-    slotter_rx: Receiver<Slot>,
-    #[allow(missing_docs)]
-    pub mchain: MetaChainProvider,
-    rollup_adapter: R,
-    metrics: BlockBuilderMetrics,
-    mine_empty_blocks: bool,
-}
+// TODO - SEQ-693: re-structure the block-builder directory, and metrics.
 
-/// starts a new block builder task
-pub async fn run(
-    config: &BlockBuilderConfig,
-    slotter_rx: Receiver<Slot>,
-    mchain: MetaChainProvider,
-    rollup_adapter: impl RollupAdapter,
-    metrics: BlockBuilderMetrics,
-    shutdown_rx: oneshot::Receiver<()>,
-) -> Result<(), Error> {
-    let block_builder = BlockBuilder {
-        slotter_rx,
-        mchain,
-        rollup_adapter,
-        metrics,
-        mine_empty_blocks: config.mine_empty_blocks,
-    };
-    block_builder.main_loop(shutdown_rx).await
-}
+#[async_trait]
+impl<R: RollupAdapter> SlotProcessor for MetaChainProvider<R> {
+    async fn process_slot(&self, slot: &Slot) -> Result<(), Error> {
+        trace!("Received slot: {:?}", slot);
+        self.metrics.record_last_slot(slot.sequencing.block.number);
 
-impl<R: RollupAdapter> BlockBuilder<R> {
-    /// Start the block builder
-    async fn main_loop(mut self, mut shutdown_rx: oneshot::Receiver<()>) -> Result<(), Error> {
-        loop {
-            tokio::select! {
-                biased; // biased allows us to process everything that's in the channel before shutting down
-                Some(slot) = self.slotter_rx.recv() => {
-                    trace!("Received slot: {:?}", slot);
-                    self.metrics.record_last_slot(slot.sequencing.block.number);
-
-                    // [OP / ARB] Build block of MChain transactions from slot
-                    let transactions = match self.rollup_adapter.build_block_from_slot(&slot, self.get_current_block_number().await +1).await {
-                        Ok(transactions) => transactions,
-                        Err(e) => {
-                            panic!("Error building batch transaction: {}", e);
-                        }
-                    };
-
-                    let transactions_len = transactions.len();
-                    if transactions_len == 0 && !self.mine_empty_blocks {
-                        trace!("Skipping empty block");
-                        continue;
-                    }
-
-                    trace!("Submitting {} transactions", transactions_len);
-                    self.metrics.record_transactions_per_slot(transactions_len);
-
-                    // Submit transactions to mchain
-                    if let Err(e) = self.mchain.submit_txns(transactions).await {
-                        panic!("Error submitting transaction: {}", e);
-                    }
-
-                    // Mine the actual block with slot timestamp
-                    if let Err(e) = self.mchain.mine_block(slot.timestamp()).await {
-                        panic!("Error mining block: {}", e);
-                    }
-
-                    // TODO(SEQ-623): add a flag to enable/disable this check
-                    self.verify_block(transactions_len, slot.sequencing.block.number).await;
-                }
-                _ = &mut shutdown_rx => {
-                    drop(self.mchain);
-                    info!("Block builder stopped");
-                    return Err(Report::from(BlockBuilderError::Shutdown))
-                }
+        // [OP / ARB] Build block of MChain transactions from slot
+        let transactions = match self
+            .rollup_adapter
+            .build_block_from_slot(slot, self.get_current_block_number().await + 1)
+            .await
+        {
+            Ok(transactions) => transactions,
+            Err(e) => {
+                panic!("Error building batch transaction: {}", e);
             }
-        }
-    }
+        };
 
+        let transactions_len = transactions.len();
+        if transactions_len == 0 && !self.mine_empty_blocks {
+            trace!("Skipping empty block");
+            return Ok(());
+        }
+
+        trace!("Submitting {} transactions", transactions_len);
+        self.metrics.record_transactions_per_slot(transactions_len);
+
+        // Submit transactions to mchain
+        if let Err(e) = self.submit_txns(transactions).await {
+            panic!("Error submitting transaction: {}", e);
+        }
+
+        // Mine the actual block with slot timestamp
+        if let Err(e) = self.mine_block(slot.timestamp()).await {
+            panic!("Error mining block: {}", e);
+        }
+
+        // TODO(SEQ-623): add a flag to enable/disable this check
+        self.verify_block(transactions_len, slot.sequencing.block.number).await;
+        Ok(())
+    }
+}
+
+impl<R: RollupAdapter> MetaChainProvider<R> {
     async fn verify_block(&self, transactions_len: usize, slot_seq_number: u64) {
         let current_block = self.get_current_block_number().await;
         trace!("Mined block: {:?} from slot: {:?}", current_block, slot_seq_number);
 
         // Verify transactions are all included and succeeded
         // TODO(SEQ-623): check to make sure the tx hashes match as well
-        let receipts = self
-            .mchain
-            .get_block_receipts(BlockNumberOrTag::Number(current_block))
-            .await
-            .unwrap_or_else(|e| {
-                panic!("Failed to fetch receipts for block {:#?}: {:#?}", current_block, e)
-            });
+        let receipts =
+            self.get_block_receipts(BlockNumberOrTag::Number(current_block)).await.unwrap_or_else(
+                |e| panic!("Failed to fetch receipts for block {:#?}: {:#?}", current_block, e),
+            );
+
         assert!(
             receipts.len() == transactions_len,
             "expected {:#?} receipts, got {:#?}",
@@ -115,12 +77,8 @@ impl<R: RollupAdapter> BlockBuilder<R> {
 
         for r in receipts {
             if r.status != 1 {
-                let trace = self
-                    .mchain
-                    .provider
-                    .trace_transaction(r.transaction_hash)
-                    .await
-                    .unwrap_or_default();
+                let trace =
+                    self.provider.trace_transaction(r.transaction_hash).await.unwrap_or_default();
                 let error_msg = trace
                     .first()
                     .and_then(|t| t.trace.result.as_ref())
@@ -137,7 +95,7 @@ impl<R: RollupAdapter> BlockBuilder<R> {
     }
 
     async fn get_current_block_number(&self) -> u64 {
-        self.mchain.get_block_number().await.unwrap_or_else(|e| {
+        self.get_block_number().await.unwrap_or_else(|e| {
             panic!("Error getting current block number: {}", e);
         })
     }
@@ -167,6 +125,3 @@ pub enum BlockBuilderError {
     #[error("Block builder was shut down")]
     Shutdown,
 }
-
-// TODO SEQ-529 - write a test that asserts for determinism (same slots should yield the same
-// block chain on separate block builders)

@@ -25,7 +25,7 @@ contract DreamAgentNFTTest is Test {
         vm.stopPrank();
     }
 
-    function test_Constructor() public {
+    function test_Constructor() public view {
         assertTrue(nft.hasRole(DEFAULT_ADMIN_ROLE, admin));
         assertTrue(nft.hasRole(MINTER_ROLE, minter));
         assertEq(nft.name(), "DreamAgentNFT");
@@ -78,7 +78,7 @@ contract DreamAgentNFTTest is Test {
         vm.stopPrank();
     }
 
-    function test_SupportsInterface() public {
+    function test_SupportsInterface() public view {
         // Test ERC721 interface support
         bytes4 erc721InterfaceId = 0x80ac58cd;
         assertTrue(nft.supportsInterface(erc721InterfaceId));

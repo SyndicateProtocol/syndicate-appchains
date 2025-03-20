@@ -1,0 +1,34 @@
+[package]
+name = "maestro"
+edition.workspace = true
+exclude.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+alloy = { workspace = true, features = [
+    "rlp",
+    "provider-engine-api",
+    "providers",
+    "rpc-types",
+    "contract",
+    "signers",
+    "signer-local",
+    "k256",
+    "node-bindings"
+] }
+axum              = { workspace = true }
+eyre = {workspace = true}
+jsonrpsee = { workspace = true, features = ["full"] }
+serde_json = {workspace = true}
+tokio = { workspace = true, features = ["full"] }
+tracing = {workspace = true}
+tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
+tower = {workspace = true}
+bytes = {workspace = true}
+
+[lints]
+workspace = true

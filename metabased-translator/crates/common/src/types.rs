@@ -4,6 +4,8 @@ use alloy::{
     hex,
     primitives::{Address, Bytes, B256},
 };
+use async_trait::async_trait;
+use eyre::Error;
 use fmt::{Display, Formatter, Result as FmtResult};
 use serde::{
     de::{self, Deserializer},
@@ -182,6 +184,14 @@ impl From<Chain> for &'static str {
             Chain::Settlement => "settlement",
         }
     }
+}
+
+/// A trait for processing slots of blocks from the sequencing and settlement chains.
+/// Implementors of this trait define how to translate each slot into the mchain state.
+#[async_trait]
+pub trait SlotProcessor {
+    /// Process a single slot
+    async fn process_slot(&self, slot: &Slot) -> Result<(), Error>;
 }
 
 /// A `Slot` is a collection of source chain blocks to be sent to the block builder.

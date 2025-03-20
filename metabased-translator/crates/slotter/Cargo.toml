@@ -10,6 +10,7 @@ version.workspace      = true
 
 [dependencies]
 alloy             = { workspace = true, features = ["provider-engine-api"] }
+async-trait       = { workspace = true }
 clap              = { workspace = true, features = ["derive", "env"] }
 common            = { workspace = true }
 eyre              = { workspace = true }
@@ -20,7 +21,6 @@ tracing           = { workspace = true }
 
 [dev-dependencies]
 assert_matches = { workspace = true }
-serial_test    = { workspace = true }
 test-case      = { workspace = true }
 test-utils     = { workspace = true }
 tracing-test   = { workspace = true }

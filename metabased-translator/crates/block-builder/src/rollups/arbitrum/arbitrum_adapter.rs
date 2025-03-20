@@ -91,7 +91,7 @@ impl std::fmt::Display for L1MessageType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 /// Builder for constructing Arbitrum blocks from transactions
 pub struct ArbitrumAdapter {
     // Sequencing chain address
@@ -121,7 +121,7 @@ impl RollupAdapter for ArbitrumAdapter {
 
     /// Builds a block from a slot
     async fn build_block_from_slot(
-        &mut self,
+        &self,
         slot: &Slot,
         mchain_block_number: u64,
     ) -> Result<Vec<TransactionRequest>, eyre::Error> {
@@ -229,9 +229,9 @@ impl ArbitrumAdapter {
             transaction_parser: SequencingTransactionParser::new(
                 config.sequencing_contract_address,
             ),
-            bridge_address: config.bridge_address,
-            inbox_address: config.inbox_address,
-            ignore_delayed_messages: config.ignore_delayed_messages,
+            bridge_address: config.arbitrum_bridge_address,
+            inbox_address: config.arbitrum_inbox_address,
+            ignore_delayed_messages: config.arbitrum_ignore_delayed_messages,
         }
     }
 
@@ -438,7 +438,7 @@ mod tests {
                 .expect("Invalid address format");
         let config = BlockBuilderConfig {
             sequencing_contract_address,
-            bridge_address: sequencing_contract_address,
+            arbitrum_bridge_address: sequencing_contract_address,
             ..Default::default()
         };
 
@@ -518,7 +518,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_empty_slot() {
-        let mut builder = ArbitrumAdapter::default();
+        let builder = ArbitrumAdapter::default();
 
         // Create an empty slot
         let slot = Slot { settlement: vec![], sequencing: Arc::new(BlockAndReceipts::default()) };
@@ -555,7 +555,6 @@ mod tests {
     #[tokio::test]
     async fn test_build_block_from_slot_with_delayed_messages() {
         let builder = ArbitrumAdapter::default();
-        let mut builder = builder;
 
         // Create message data
         let message_index = U256::from(1);
@@ -623,7 +622,6 @@ mod tests {
     #[tokio::test]
     async fn test_build_block_from_slot_with_sequencing_txns() {
         let builder = ArbitrumAdapter::default();
-        let mut builder = builder;
 
         // Create a mock L2 transaction
         let txn_data: Bytes = hex!("001234").into();
@@ -681,7 +679,6 @@ mod tests {
     #[tokio::test]
     async fn test_build_block_from_slot_with_sequencing_and_delayed_txns() {
         let builder = ArbitrumAdapter::default();
-        let mut builder = builder;
 
         // Create a mock L2 transaction
         let txn_data: Bytes = hex!("001234").into();
@@ -915,7 +912,7 @@ mod tests {
     #[test]
     fn test_delayed_message_to_mchain_txn_ignore_message() {
         let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            ignore_delayed_messages: true,
+            arbitrum_ignore_delayed_messages: true,
             ..Default::default()
         });
 
@@ -963,7 +960,7 @@ mod tests {
     #[test]
     fn test_delayed_message_to_mchain_txn_do_not_ignore_deposit() {
         let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            ignore_delayed_messages: true,
+            arbitrum_ignore_delayed_messages: true,
             ..Default::default()
         });
 
@@ -1021,7 +1018,7 @@ mod tests {
     #[test]
     fn test_should_ignore_delayed_message() {
         let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            ignore_delayed_messages: true,
+            arbitrum_ignore_delayed_messages: true,
             ..Default::default()
         });
 
@@ -1035,7 +1032,7 @@ mod tests {
         assert!(!builder.should_ignore_delayed_message(&L1MessageType::EthDeposit));
 
         let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            ignore_delayed_messages: false,
+            arbitrum_ignore_delayed_messages: false,
             ..Default::default()
         });
 

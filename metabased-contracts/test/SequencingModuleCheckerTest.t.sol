@@ -3,7 +3,6 @@ pragma solidity 0.8.25;
 
 import {SequencingModuleChecker, Ownable} from "src/SequencingModuleChecker.sol";
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
-import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import {Test} from "forge-std/Test.sol";
 
 contract SequencingModuleCheckerMock is SequencingModuleChecker {}

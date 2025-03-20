@@ -2,14 +2,14 @@
 
 use crate::{config::SlotterConfig, metrics::SlotterMetrics};
 use alloy::primitives::B256;
-use common::types::{Block, BlockAndReceipts, BlockRef, Chain, KnownState, Slot};
+use common::types::{Block, BlockAndReceipts, BlockRef, Chain, KnownState, Slot, SlotProcessor};
 use eyre::{Error, Report};
 use std::{collections::VecDeque, sync::Arc};
 use thiserror::Error;
 use tokio::{
     select,
     sync::{
-        mpsc::{error::SendError, Receiver, Sender},
+        mpsc::{error::SendError, Receiver},
         oneshot,
     },
 };
@@ -29,7 +29,7 @@ use tracing::{debug, error, info, trace, warn};
 /// - A slot becomes Closed when we see a settlement block that cannot fit into it (the block's timestamp (plus delay) is further in the future than the slot's timestamp)
 ///  ```
 #[derive(Debug)]
-struct Slotter {
+struct Slotter<P: SlotProcessor> {
     settlement_delay: u64,
 
     latest_sequencing_block: Option<BlockRef>,
@@ -42,10 +42,8 @@ struct Slotter {
     /// Unassigned settlement blocks
     unassigned_settlement_blocks: VecDeque<BlockAndReceipts>,
 
-    /// Sender for sending slots to the consumer
-    sender: Sender<Slot>,
+    slot_processor: P,
 
-    /// Metrics
     metrics: SlotterMetrics,
 }
 
@@ -56,7 +54,7 @@ pub async fn run(
     known_state: Option<KnownState>,
     sequencing_rx: Receiver<Arc<BlockAndReceipts>>,
     settlement_rx: Receiver<Arc<BlockAndReceipts>>,
-    sender: Sender<Slot>,
+    slot_processor: impl SlotProcessor,
     metrics: SlotterMetrics,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> Result<(), Error> {
@@ -74,19 +72,19 @@ pub async fn run(
     };
 
     let slotter = Slotter {
+        settlement_delay: config.settlement_delay,
         latest_sequencing_block,
         latest_settlement_block,
+        min_chain_head_timestamp,
         slots: VecDeque::new(),
         unassigned_settlement_blocks: VecDeque::new(),
-        settlement_delay: config.settlement_delay,
-        sender,
+        slot_processor,
         metrics,
-        min_chain_head_timestamp,
     };
     slotter.main_loop(sequencing_rx, settlement_rx, shutdown_rx).await
 }
 
-impl Slotter {
+impl<P: SlotProcessor> Slotter<P> {
     /// Starts the [`Slotter`] main loop.
     ///
     /// The [`Slotter`] will:
@@ -120,7 +118,6 @@ impl Slotter {
                     self.process_block(block, second_chain).await
                 }
                 _ = &mut shutdown_rx => {
-                    drop(self.sender);
                     info!("Slotter shut down");
                     return Err(Report::from(SlotterError::Shutdown));
                 }
@@ -135,7 +132,7 @@ impl Slotter {
                     }
                     SlotterError::Shutdown => {
                         warn!("Slotter shut down");
-                        return Err(Report::from(e))
+                        return Err(Report::from(e));
                     }
                     _ => panic!("Slotter error: {e}"),
                 },
@@ -268,8 +265,8 @@ impl Slotter {
             if self.settlement_timestamp(set_block) > new_slot.timestamp() {
                 // we have seen a settlement block that belongs in a later slot, this one
                 // can be closed
-                self.sender.send(new_slot.clone()).await?;
-                debug!(%new_slot, "slot sent");
+                self.slot_processor.process_slot(&new_slot).await?;
+                debug!(%new_slot, "slot processed");
                 self.metrics.record_last_slot_created(new_slot.sequencing.block.number);
                 return Ok(());
             }
@@ -296,8 +293,8 @@ impl Slotter {
 
         while let Some(mut slot) = self.slots.pop_front() {
             if set_ts > slot.timestamp() {
-                debug!(%slot, "slot sent");
-                self.sender.send(slot.clone()).await?;
+                self.slot_processor.process_slot(&slot).await?;
+                debug!(%slot, "slot processed");
                 continue;
             }
             slot.push_settlement_block(set_block.clone());
@@ -316,7 +313,7 @@ impl Slotter {
     }
 }
 
-impl std::fmt::Display for Slotter {
+impl<P: SlotProcessor> std::fmt::Display for Slotter<P> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
@@ -355,6 +352,9 @@ pub enum SlotterError {
         block_hash: B256,
     },
 
+    #[error("Slot processor error: {0}")]
+    SlotProcessorError(#[from] Report),
+
     #[error("Slotter was shut down")]
     Shutdown,
 }
@@ -370,10 +370,15 @@ mod tests {
     use super::*;
     use alloy::primitives::B256;
     use assert_matches::assert_matches;
+    use async_trait::async_trait;
     use common::types::BlockAndReceipts;
     use prometheus_client::registry::Registry;
-    use std::{str::FromStr, time::Duration};
-    use tokio::{sync::mpsc::channel, time::timeout};
+    use std::{
+        str::FromStr,
+        sync::{Arc, Mutex},
+        time::Duration,
+    };
+    use tokio::sync::mpsc::{channel, Sender};
     use tracing_test::traced_test;
 
     struct MetricsState {
@@ -381,42 +386,66 @@ mod tests {
         pub registry: Registry,
     }
 
+    // Mock implementation of SlotProcessor for testing
+    #[derive(Debug, Clone)]
+    struct MockSlotProcessor {
+        processed_slots: Arc<Mutex<Vec<Slot>>>,
+    }
+
+    impl MockSlotProcessor {
+        fn new() -> Self {
+            Self { processed_slots: Arc::new(Mutex::new(Vec::new())) }
+        }
+
+        fn get_processed_slots(&self) -> Vec<Slot> {
+            self.processed_slots.lock().unwrap().clone()
+        }
+    }
+
+    #[async_trait]
+    impl SlotProcessor for MockSlotProcessor {
+        async fn process_slot(&self, slot: &Slot) -> Result<(), Error> {
+            self.processed_slots.lock().unwrap().push(slot.clone());
+            Ok(())
+        }
+    }
+
     struct TestSetup {
-        slot_rx: Receiver<Slot>,
+        processor: MockSlotProcessor,
         sequencing_tx: Sender<Arc<BlockAndReceipts>>,
         settlement_tx: Sender<Arc<BlockAndReceipts>>,
         shutdown_tx: oneshot::Sender<()>,
     }
 
     async fn create_slotter_and_spawn(config: &SlotterConfig) -> TestSetup {
-        let (slotter, slot_rx) = create_slotter(config);
+        let processor = MockSlotProcessor::new();
+        let slotter = create_slotter(config, processor.clone());
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let (seq_tx, seq_rx) = channel::<Arc<BlockAndReceipts>>(100);
         let (settle_tx, settle_rx) = channel::<Arc<BlockAndReceipts>>(100);
         tokio::spawn(async move { slotter.main_loop(seq_rx, settle_rx, shutdown_rx).await });
 
-        TestSetup { slot_rx, sequencing_tx: seq_tx, settlement_tx: settle_tx, shutdown_tx }
+        TestSetup { processor, sequencing_tx: seq_tx, settlement_tx: settle_tx, shutdown_tx }
     }
 
-    fn create_slotter(config: &SlotterConfig) -> (Slotter, Receiver<Slot>) {
+    fn create_slotter(
+        config: &SlotterConfig,
+        processor: MockSlotProcessor,
+    ) -> Slotter<MockSlotProcessor> {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = SlotterMetrics::new(&mut metrics_state.registry);
-        let (sender, slot_rx) = channel::<Slot>(100);
 
-        (
-            Slotter {
-                latest_sequencing_block: None,
-                latest_settlement_block: None,
-                slots: VecDeque::new(),
-                unassigned_settlement_blocks: VecDeque::new(),
-                settlement_delay: config.settlement_delay,
-                sender,
-                metrics,
-                min_chain_head_timestamp: 0,
-            },
-            slot_rx,
-        )
+        Slotter {
+            latest_sequencing_block: None,
+            latest_settlement_block: None,
+            slots: VecDeque::new(),
+            unassigned_settlement_blocks: VecDeque::new(),
+            settlement_delay: config.settlement_delay,
+            metrics,
+            min_chain_head_timestamp: 0,
+            slot_processor: processor,
+        }
     }
 
     fn create_test_block(number: u64, timestamp: u64) -> Arc<BlockAndReceipts> {
@@ -442,12 +471,31 @@ mod tests {
         })
     }
 
-    // receives with a timeout (avoids tests hanging)
-    async fn recv(slot_rx: &mut Receiver<Slot>) -> Result<Slot, String> {
-        match timeout(Duration::from_secs(1), slot_rx.recv()).await {
-            Ok(Some(slot)) => Ok(slot),
-            Ok(None) => Err("Channel closed".to_string()),
-            Err(elapsed) => Err(format!("Timeout after 1s: {elapsed}")),
+    // Helper function to wait for a specific number of slots to be processed
+    async fn wait_for_processed_slots(
+        processor: &MockSlotProcessor,
+        count: usize,
+        timeout_ms: u64,
+    ) -> Result<Vec<Slot>, String> {
+        let start = std::time::Instant::now();
+        let timeout_duration = Duration::from_millis(timeout_ms);
+
+        loop {
+            let slots = processor.get_processed_slots();
+            if slots.len() >= count {
+                return Ok(slots);
+            }
+
+            if start.elapsed() > timeout_duration {
+                return Err(format!(
+                    "Timeout after {}ms waiting for {} slots (got {})",
+                    timeout_ms,
+                    count,
+                    slots.len()
+                ));
+            }
+
+            tokio::time::sleep(Duration::from_millis(10)).await;
         }
     }
 
@@ -480,24 +528,26 @@ mod tests {
     async fn test_slotter() {
         // NOTE: IMPORTANT - keep _shutdown_tx in scope, otherwise `slotter` will be terminated
         // immediatelly
-        let TestSetup { mut slot_rx, sequencing_tx, settlement_tx, shutdown_tx: _shutdown_tx } =
+        let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown_tx } =
             create_slotter_and_spawn(&SlotterConfig { settlement_delay: 0 }).await;
 
         // send initial blocks, these should fit in slot [START_SLOT], send channel should be empty
         sequencing_tx.send(create_test_block(1, 10)).await.unwrap();
         settlement_tx.send(create_test_block(1, 10)).await.unwrap();
 
-        assert!(slot_rx.is_empty());
+        // No slots should be processed yet
+        assert_eq!(processor.get_processed_slots().len(), 0);
 
         // send a block for the settlement chain far in the future, that should this should mark
         // slot [START_SLOT] as Closed, and have any sequecing blocks with a lower timestamp form a
         // Closed empty slot
         settlement_tx.send(create_test_block(2, 20)).await.unwrap();
 
-        let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp(), 10);
-        assert_eq!(slot.settlement.len(), 1);
-        assert!(slot_rx.is_empty());
+        // Wait for the slot to be processed
+        let slots = wait_for_processed_slots(&processor, 1, 1000).await.unwrap();
+        assert_eq!(slots.len(), 1);
+        assert_eq!(slots[0].timestamp(), 10);
+        assert_eq!(slots[0].settlement.len(), 1);
 
         // send  few bock for the sequencing chain with timestamps lower than the settlement
         // timestamp
@@ -505,14 +555,15 @@ mod tests {
         sequencing_tx.send(create_test_block(3, 12)).await.unwrap();
         sequencing_tx.send(create_test_block(4, 13)).await.unwrap();
 
+        // Wait for 3 more slots to be processed
+        let slots = wait_for_processed_slots(&processor, 4, 1000).await.unwrap();
         for i in 1..4 {
-            let slot = recv(&mut slot_rx).await.unwrap();
-            assert_eq!(slot.timestamp(), 10 + i);
-            assert_eq!(slot.sequencing.block.number, 1 + i);
-            assert_eq!(slot.sequencing.block.timestamp, 10 + i);
-            assert_eq!(slot.settlement.len(), 0);
+            let slot_idx = i;
+            assert_eq!(slots[slot_idx].timestamp(), 10 + i as u64);
+            assert_eq!(slots[slot_idx].sequencing.block.number, 1 + i as u64);
+            assert_eq!(slots[slot_idx].sequencing.block.timestamp, 10 + i as u64);
+            assert_eq!(slots[slot_idx].settlement.len(), 0);
         }
-        assert!(slot_rx.is_empty());
 
         //send a sequencing block that should create a slot that includes settlement block ts=20
         // (should still be open, tho)
@@ -521,21 +572,27 @@ mod tests {
         // sending a sequencing block with a higher timestamp shouldn't mark the slot ts=40 as
         // Closed
         sequencing_tx.send(create_test_block(6, 41)).await.unwrap();
-        assert!(slot_rx.is_empty());
+
+        // No new slots should be processed yet
+        assert_eq!(processor.get_processed_slots().len(), 4);
 
         // only when a settlement block with a higher timestamp than ts=40 is sent, the slot ts=40
         // should be marked as Closed
         settlement_tx.send(create_test_block(3, 42)).await.unwrap();
-        let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp(), 40);
-        assert_eq!(slot.sequencing.block.timestamp, 40);
-        assert_eq!(slot.settlement.len(), 1);
-        assert_eq!(slot.settlement[0].block.timestamp, 20);
+
+        // Wait for one more slot to be processed
+        let slots = wait_for_processed_slots(&processor, 5, 1000).await.unwrap();
+        let last_slot = &slots[4];
+        assert_eq!(last_slot.timestamp(), 40);
+        assert_eq!(last_slot.sequencing.block.timestamp, 40);
+        assert_eq!(last_slot.settlement.len(), 1);
+        assert_eq!(last_slot.settlement[0].block.timestamp, 20);
     }
 
     #[tokio::test]
     async fn test_update_latest_block_success_sequencing() {
-        let (mut slotter, _) = create_slotter(&SlotterConfig::default());
+        let processor = MockSlotProcessor::new();
+        let mut slotter = create_slotter(&SlotterConfig::default(), processor);
         let block = create_test_block(2, 200);
         slotter.latest_sequencing_block = Some(BlockRef::new(&create_test_block(1, 100).block));
         let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
@@ -546,7 +603,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_update_latest_block_success_settlement() {
-        let (mut slotter, _) = create_slotter(&SlotterConfig::default());
+        let processor = MockSlotProcessor::new();
+        let mut slotter = create_slotter(&SlotterConfig::default(), processor);
         let block = create_test_block(3, 300);
         slotter.latest_settlement_block = Some(BlockRef::new(&create_test_block(2, 200).block));
         let result = slotter.update_latest_block(&block.block, Chain::Settlement);
@@ -557,7 +615,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_block_number_skipped() {
-        let (mut slotter, _) = create_slotter(&SlotterConfig::default());
+        let processor = MockSlotProcessor::new();
+        let mut slotter = create_slotter(&SlotterConfig::default(), processor);
         let block = create_test_block(4, 400);
         slotter.latest_settlement_block = Some(BlockRef::new(&create_test_block(2, 200).block));
         let result = slotter.update_latest_block(&block.block, Chain::Settlement);
@@ -567,7 +626,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_earlier_timestamp() {
-        let (mut slotter, _) = create_slotter(&SlotterConfig::default());
+        let processor = MockSlotProcessor::new();
+        let mut slotter = create_slotter(&SlotterConfig::default(), processor);
         let block = create_test_block(2, 50);
         slotter.latest_sequencing_block = Some(BlockRef::new(&create_test_block(1, 100).block));
         let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
@@ -578,7 +638,7 @@ mod tests {
     #[tokio::test]
     #[traced_test]
     async fn test_insert_block_between_slots() {
-        let TestSetup { mut slot_rx, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
+        let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
             create_slotter_and_spawn(&SlotterConfig { settlement_delay: 0 }).await;
 
         // Create initial slots by sending blocks
@@ -601,23 +661,25 @@ mod tests {
         // Closed
         settlement_tx.send(create_test_block(2, 15)).await.unwrap();
 
-        // This should trigger slot  to be marked as Closed
-        let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp(), 10);
-        assert_eq!(slot.sequencing.block.number, 1);
-        assert_eq!(slot.settlement.len(), 0);
+        // Wait for slots to be processed
+        let slots = wait_for_processed_slots(&processor, 2, 1000).await.unwrap();
 
-        let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp(), 12);
-        assert_eq!(slot.sequencing.block.number, 2);
-        assert_eq!(slot.settlement.len(), 1);
-        assert_eq!(slot.settlement[0].block.number, 1);
+        // First slot should be ts=10 with no settlement blocks
+        assert_eq!(slots[0].timestamp(), 10);
+        assert_eq!(slots[0].sequencing.block.number, 1);
+        assert_eq!(slots[0].settlement.len(), 0);
+
+        // Second slot should be ts=12 with one settlement block
+        assert_eq!(slots[1].timestamp(), 12);
+        assert_eq!(slots[1].sequencing.block.number, 2);
+        assert_eq!(slots[1].settlement.len(), 1);
+        assert_eq!(slots[1].settlement[0].block.number, 1);
     }
 
     #[tokio::test]
     #[traced_test]
     async fn test_settlement_delay() {
-        let TestSetup { mut slot_rx, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
+        let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
             create_slotter_and_spawn(&SlotterConfig { settlement_delay: 60 }).await;
 
         // Send initial blocks with timestamp  100
@@ -632,45 +694,46 @@ mod tests {
         // - Settlement chain block at timestamp 100 is treated as timestamp 160 (100 + 60)
         // Both chains have effectively progressed past slot 100
 
-        let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp(), 100);
-        assert_eq!(slot.sequencing.block.number, 1);
+        // Wait for the first slot to be processed
+        let slots = wait_for_processed_slots(&processor, 1, 1000).await.unwrap();
+        assert_eq!(slots[0].timestamp(), 100);
+        assert_eq!(slots[0].sequencing.block.number, 1);
         // Settlement block should not be in this slot since it was delayed to timestamp 160
-        assert_eq!(slot.settlement.len(), 0);
+        assert_eq!(slots[0].settlement.len(), 0);
 
         // Send sequencing block with timestamps 150
         sequencing_tx.send(create_test_block(3, 150)).await.unwrap();
 
-        // there should be a slot at ts=110 and empty slot at ts=150 in the channel
-        let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp(), 110);
-        assert_eq!(slot.sequencing.block.number, 2);
-        assert_eq!(slot.settlement.len(), 0);
+        // Wait for two more slots to be processed
+        let slots = wait_for_processed_slots(&processor, 3, 1000).await.unwrap();
 
-        let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp(), 150);
-        assert_eq!(slot.sequencing.block.number, 3);
-        assert_eq!(slot.settlement.len(), 0);
+        // There should be a slot at ts=110 and empty slot at ts=150
+        assert_eq!(slots[1].timestamp(), 110);
+        assert_eq!(slots[1].sequencing.block.number, 2);
+        assert_eq!(slots[1].settlement.len(), 0);
+
+        assert_eq!(slots[2].timestamp(), 150);
+        assert_eq!(slots[2].sequencing.block.number, 3);
+        assert_eq!(slots[2].settlement.len(), 0);
 
         // Send settlement and sequencing blocks with timestamp 170
         settlement_tx.send(create_test_block(2, 170)).await.unwrap();
         sequencing_tx.send(create_test_block(4, 170)).await.unwrap();
 
+        // Wait for one more slot to be processed
+        let slots = wait_for_processed_slots(&processor, 4, 1000).await.unwrap();
+
         // The slot with ts 170 should be marked as Closed, containing the settlement block with
         // ts=160
-        let slot = recv(&mut slot_rx).await.unwrap();
-        assert_eq!(slot.timestamp(), 170);
-        assert_eq!(slot.settlement.len(), 1);
-        assert_eq!(slot.settlement[0].block.number, 1);
-        assert_eq!(slot.sequencing.block.number, 4);
-
-        // Verify no more slots were marked as Closed
-        assert!(slot_rx.try_recv().is_err());
+        assert_eq!(slots[3].timestamp(), 170);
+        assert_eq!(slots[3].settlement.len(), 1);
+        assert_eq!(slots[3].settlement[0].block.number, 1);
+        assert_eq!(slots[3].sequencing.block.number, 4);
     }
 
     #[tokio::test]
     async fn test_last_settlement_block_has_latest_timestamp() {
-        let TestSetup { mut slot_rx, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
+        let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
             create_slotter_and_spawn(&SlotterConfig { settlement_delay: 0 }).await;
 
         // Send sequencing block to create a slot
@@ -684,22 +747,23 @@ mod tests {
         // Send another settlement block with higher timestamp to close the slot
         settlement_tx.send(create_test_block(4, 110)).await.unwrap();
 
-        // This should trigger the first slot to be marked as closed
-        let slot = recv(&mut slot_rx).await.unwrap();
+        // Wait for the slot to be processed
+        let slots = wait_for_processed_slots(&processor, 1, 1000).await.unwrap();
 
         // Verify the slot contains all settlement blocks
-        assert_eq!(slot.timestamp(), 100);
-        assert_eq!(slot.sequencing.block.number, 1);
-        assert_eq!(slot.settlement.len(), 3);
+        assert_eq!(slots[0].timestamp(), 100);
+        assert_eq!(slots[0].sequencing.block.number, 1);
+        assert_eq!(slots[0].settlement.len(), 3);
 
         // Now verify that the last settlement block has the latest timestamp
-        if let Some(last_settlement) = slot.settlement.last() {
+        if let Some(last_settlement) = slots[0].settlement.last() {
             assert_eq!(last_settlement.block.timestamp, 90);
 
             // Also verify all settlement blocks are in ascending timestamp order
-            for i in 0..slot.settlement.len() - 1 {
+            for i in 0..slots[0].settlement.len() - 1 {
                 assert!(
-                    slot.settlement[i].block.timestamp < slot.settlement[i + 1].block.timestamp,
+                    slots[0].settlement[i].block.timestamp <
+                        slots[0].settlement[i + 1].block.timestamp,
                     "Settlement blocks are not in ascending timestamp order"
                 );
             }
@@ -719,7 +783,8 @@ mod tests {
     }
 
     async fn test_parent_hash_mismatch_reorg_helper(chain: Chain) {
-        let (mut slotter, _) = create_slotter(&SlotterConfig::default());
+        let processor = MockSlotProcessor::new();
+        let mut slotter = create_slotter(&SlotterConfig::default(), processor);
 
         // Create and set the first block
         let first_block = create_test_block(1, 50);
@@ -765,7 +830,8 @@ mod tests {
     }
 
     async fn test_reorg_detected_block_number_helper(chain: Chain) {
-        let (mut slotter, _) = create_slotter(&SlotterConfig::default());
+        let processor = MockSlotProcessor::new();
+        let mut slotter = create_slotter(&SlotterConfig::default(), processor);
 
         // Set up first block at number 2
         let first_block = Arc::new(BlockAndReceipts {
