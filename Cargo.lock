@@ -2702,21 +2702,13 @@ dependencies = [
  "alloy",
  "axum",
  "bytes",
- "clap",
  "eyre",
- "flate2",
- "hex",
- "humantime",
  "jsonrpsee",
- "prometheus-client",
- "reqwest",
  "serde_json",
- "thiserror 2.0.11",
  "tokio",
  "tower 0.4.13",
  "tracing",
  "tracing-subscriber",
- "url",
 ]
 
 [[package]]
