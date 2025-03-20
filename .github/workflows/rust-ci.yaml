@@ -118,7 +118,7 @@ jobs:
 
       # Run tests on entire workspace
       - name: Run Tests
-        run: cargo test --workspace
+        run: cargo test --workspace --exclude maestro
 
   nextest:
     name: Nextest Integration Tests
@@ -146,4 +146,4 @@ jobs:
 
       # Run maestro tests with nextest (using existing config)
       - name: Run Integration Tests with Nextest
-        run: cargo nextest run -p maestro
+        run: cargo nextest run --profile maestro
