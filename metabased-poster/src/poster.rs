@@ -39,7 +39,7 @@ struct Poster {
     assertion_poster: IAssertionPosterInstance<(), FilledProvider>,
 }
 
-/// Starts the poller task
+/// Starts the poster loop
 pub async fn run(config: &Config, shutdown_rx: oneshot::Receiver<()>) -> Result<()> {
     info!("Starting poller...");
     let app_chain_provider = ProviderBuilder::default().on_http(config.app_chain_rpc_url.clone());
