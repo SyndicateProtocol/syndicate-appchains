@@ -2704,6 +2704,7 @@ dependencies = [
  "bytes",
  "eyre",
  "futures-util",
+ "http",
  "http-body",
  "jsonrpsee",
  "serde_json",

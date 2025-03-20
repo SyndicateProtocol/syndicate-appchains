@@ -26,12 +26,7 @@ use tracing_subscriber::FmtSubscriber;
 #[allow(clippy::redundant_pub_crate)]
 async fn main() -> Result<()> {
     // Initialize logging
-    FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .json()
-        .with_target(true)
-        .with_env_filter("info")
-        .init();
+    FmtSubscriber::builder().with_max_level(Level::DEBUG).json().with_target(true).init();
 
     // TODO
     // let config = Config::initialize();

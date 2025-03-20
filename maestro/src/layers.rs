@@ -4,6 +4,7 @@ use crate::errors::Error;
 use axum::http::Response;
 use bytes::Bytes as HyperBytes;
 use futures_util::TryFutureExt;
+use http::Method;
 use jsonrpsee::{
     core::{
         http_helpers::{Body as HttpBody, Request as HttpRequest},
@@ -71,6 +72,11 @@ where
     }
 
     fn call(&mut self, request: HttpRequest<B>) -> Self::Future {
+        // JSON-RPC calls are POSTs
+        if request.method() == Method::GET {
+            return Box::pin(self.inner.call(request).map_err(Into::into))
+        }
+
         if let Some(headers) = &self.headers {
             for header in headers.iter() {
                 if !request.headers().contains_key(header) {
@@ -79,6 +85,7 @@ where
                 }
             }
         }
+
         Box::pin(self.inner.call(request).map_err(Into::into))
     }
 }
