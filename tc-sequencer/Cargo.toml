@@ -1,6 +1,6 @@
 [package]
 edition = "2021"
-name    = "metabased-sequencer"
+name    = "tc-sequencer"
 version = "0.1.0"
 
 [dependencies]
@@ -25,6 +25,7 @@ humantime = { workspace = true }
 jsonrpsee = { workspace = true, features = ["http-client", "server"] }
 prometheus-client = { workspace = true }
 reqwest = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
@@ -35,3 +36,6 @@ url = { workspace = true }
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+mockito = { workspace = true }

@@ -1,0 +1,117 @@
+//! The `server` module sets up and runs the base server for the sequencer
+use crate::{
+    config::Config,
+    tc_client::{send_raw_transaction_handler, TCClient},
+};
+use eyre::Result;
+use jsonrpsee::{
+    server::{middleware::http::ProxyGetRequestLayer, Server, ServerHandle},
+    types::error::ErrorCode,
+    RpcModule,
+};
+use serde_json::Value as JsonValue;
+use std::net::SocketAddr;
+use tower::ServiceBuilder;
+use tracing::info;
+
+/// Runs the base server for the sequencer
+pub async fn run_server(config: &Config) -> Result<(SocketAddr, ServerHandle)> {
+    // Middleware to proxy "/health" GET requests to "health" RPC method
+    let http_middleware =
+        ServiceBuilder::new().layer(ProxyGetRequestLayer::new("/health", "health")?);
+
+    let server = Server::builder()
+        .set_http_middleware(http_middleware)
+        .build(format!("0.0.0.0:{}", config.port))
+        .await?;
+
+    let service = TCClient::new(config)?;
+    let mut module = RpcModule::new(service);
+
+    // Register RPC methods
+    module.register_async_method("eth_sendRawTransaction", send_raw_transaction_handler)?;
+
+    // Register health method (this will be hit by the health check middleware)
+    module.register_method("health", |_, _, _| {
+        Ok::<JsonValue, ErrorCode>(serde_json::json!({"health": true}))
+    })?;
+
+    info!("Registered RPC methods: {:#?}", module.method_names().collect::<Vec<_>>());
+
+    let addr = server.local_addr()?;
+    let handle = server.start(module);
+
+    Ok((addr, handle))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy::primitives::Address;
+    use jsonrpsee::{core::client::ClientT, http_client::HttpClient};
+    use mockito;
+    use reqwest::{Client, StatusCode};
+    use serde_json::Value as JsonValue;
+    use std::str::FromStr;
+    use url::Url;
+
+    #[tokio::test]
+    async fn test_run_server() {
+        // Setup mock TC server
+        let mut server = mockito::Server::new_async().await;
+        let mock_tc_server = server.mock("POST", "/").with_status(200).create();
+
+        let config = Config {
+            tc_url: Url::parse(&server.url()).unwrap(),
+            tc_project_id: "".to_string(),
+            tc_api_key: "".to_string(),
+            metabased_sequencer_factory_address: Address::from_str(
+                "0xFEA8A2BA8B760348ea95492516620ad45a299d53",
+            )
+            .unwrap(),
+            port: 8282,
+        };
+
+        // Start server
+        let (_addr, _handle) = run_server(&config).await.unwrap();
+
+        // Check health endpoint
+        let health_response = Client::new()
+            .get(format!("http://localhost:{}/health", config.port))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(health_response.status(), StatusCode::OK);
+
+        // Setup RPC client
+        let client =
+            HttpClient::builder().build(format!("http://localhost:{}", config.port)).unwrap();
+
+        // Call the eth_sendRawTransaction endpoint
+        let tx_hash: JsonValue = client
+            .request("eth_sendRawTransaction", [
+                "0xf86d8202b28477359400825208944592d8f8d7b001e72cb26a73e4fa1806a51ac79d880de0b6b3a7640000802ca05924bde7ef10aa88db9c66dd4f5fb16b46dff2319b9968be983118b57bb50562a001b24b31010004f13d9a26b320845257a6cfc2bf819a3d55e3fc86263c5f0772",
+            ])
+            .await
+            .unwrap();
+        assert_eq!(
+            tx_hash,
+            serde_json::json!("0xc429e5f128387d224ba8bed6885e86525e14bfdc2eb24b5e9c3351a1176fd81f")
+        );
+
+        mock_tc_server.assert();
+
+        // // Send 3 more transactions
+        // for _ in 0..3 {
+        //     let _: JsonValue = client
+        //         .request("eth_sendRawTransaction", [
+        //
+        // "0xf86d8202b28477359400825208944592d8f8d7b001e72cb26a73e4fa1806a51ac79d880de0b6b3a7640000802ca05924bde7ef10aa88db9c66dd4f5fb16b46dff2319b9968be983118b57bb50562a001b24b31010004f13d9a26b320845257a6cfc2bf819a3d55e3fc86263c5f0772"
+        // ,         ])
+        //         .await
+        //         .unwrap();
+        // }
+
+        // mock_tc_server.assert();
+    }
+}
