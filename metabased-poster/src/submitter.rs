@@ -46,9 +46,9 @@ pub async fn run(
     blocks_rx: Receiver<Arc<NitroBlock>>,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> Result<(), Error> {
-    let priv_k = PrivateKeySigner::from_str(&private_key)
+    let signer = PrivateKeySigner::from_str(&private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
-    let provider = ProviderBuilder::new().wallet(EthereumWallet::from(priv_k)).on_http(rpc_url);
+    let provider = ProviderBuilder::new().wallet(EthereumWallet::from(signer)).on_http(rpc_url);
     let assertion_poster = IAssertionPoster::new(assertion_poster_contract_address, provider);
     let submitter = Submitter { assertion_poster };
     submitter.main_loop(blocks_rx, shutdown_rx).await
@@ -56,7 +56,7 @@ pub async fn run(
 
 impl Submitter {
     async fn main_loop(
-        self,
+        &self,
         mut blocks_rx: Receiver<Arc<NitroBlock>>,
         mut shutdown_rx: oneshot::Receiver<()>,
     ) -> Result<(), Error> {
@@ -64,14 +64,17 @@ impl Submitter {
         loop {
             tokio::select! {
                 Some(block) = blocks_rx.recv() => {
-                    let _ = self.assertion_poster.postAssertion(block.hash, block.send_root).send().await?;
-                    info!("Assertion submitted for block: {:?}", block);
+                    self.post_assertion(block).await;
                 },
                 _ = &mut shutdown_rx => {
-                    info!("Shutting down Submitter...");
                     return Err(eyre!("Shut down"))
                 }
             }
         }
+    }
+
+    async fn post_assertion(&self, block: Arc<NitroBlock>) {
+        let _ = self.assertion_poster.postAssertion(block.hash, block.send_root).send().await;
+        info!("Assertion submitted for block: {:?}", block);
     }
 }
