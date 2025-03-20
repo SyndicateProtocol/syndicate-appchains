@@ -16,6 +16,11 @@ contract AllowlistSequencingModuleTest is Test {
         vm.stopPrank();
     }
 
+    function testAdminCannotBeZeroAddress() public {
+        vm.expectRevert(AllowlistSequencingModule.AddressNotAllowed.selector);
+        new AllowlistSequencingModule(address(0));
+    }
+
     function testAdminCanAddToAllowlist() public {
         vm.startPrank(admin);
         vm.expectEmit(true, false, false, false);
@@ -72,6 +77,11 @@ contract AllowlistSequencingModuleTest is Test {
         vm.expectRevert(AllowlistSequencingModule.AddressNotAllowed.selector);
         allowlistSequencer.transferAdmin(address(0));
         vm.stopPrank();
+    }
+
+    function testTransferAdminFailsForNonAdmin() public {
+        vm.expectRevert(AllowlistSequencingModule.NotAdmin.selector);
+        allowlistSequencer.transferAdmin(user1);
     }
 
     function testTransferAdminEmitsEvent() public {

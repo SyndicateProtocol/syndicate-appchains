@@ -90,6 +90,14 @@ contract MetabasedSequencerChainTest is MetabasedSequencerChainTestSetUp {
         chain.processTransaction(_data);
     }
 
+    function testProcessTransactionFailsWhenMsgSenderIsNotAllowed() public {
+        bytes memory _data = abi.encode("raw transaction");
+        bytes memory expectedTx = abi.encodePacked(bytes1(0x00), _data);
+
+        vm.expectRevert();
+        chain.processTransaction(_data);
+    }
+
     function testProcessBulkTransactions() public {
         bytes[] memory validTxns = new bytes[](3);
         validTxns[0] = abi.encode("transaction 1");
