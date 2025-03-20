@@ -1,4 +1,4 @@
-//! The `service` module handles the business logic for the metabased sequencer.
+//! The `service` module handles the business logic for the tc sequencer.
 
 use crate::{
     bytecode::get_bytecode,

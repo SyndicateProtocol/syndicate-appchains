@@ -24,7 +24,7 @@ pub enum ConfigError {
     InvalidAddress(String),
 }
 
-/// Configuration for the metabased sequencer
+/// Configuration for the tc sequencer
 #[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]
 pub struct Config {

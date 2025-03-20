@@ -10,7 +10,7 @@ use jsonrpsee::types::{error, ErrorObject, ErrorObjectOwned};
 use std::{convert::Infallible, fmt};
 
 // Source: https://github.com/MetaMask/rpc-errors/blob/main/src/errors.ts
-/// Primary error type for the metabased sequencer, following JSON-RPC error code mapping
+/// Primary error type for the tc sequencer, following JSON-RPC error code mapping
 #[derive(Debug)]
 pub enum Error {
     /// The JSON sent is not a valid Request object

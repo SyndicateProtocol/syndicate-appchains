@@ -1,5 +1,5 @@
-//! Metabased Sequencer is a service that processes and validates transactions
-//! before submitting them to the Metabased chain.
+//! TC Sequencer is a service that processes and validates transactions
+//! before submitting them to TC for sending to the Metabased chain.
 //!
 //! It provides a JSON-RPC interface for submitting transactions and checking service health.
 
