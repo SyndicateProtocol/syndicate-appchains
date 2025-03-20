@@ -132,7 +132,6 @@ impl Ingestor {
             ))
             .collect();
         trace!("Fetching blocks {:?} on {:?}", block_numbers, self.chain);
-    
         let start_time = Instant::now();
         let blocks_result = self.client.batch_get_blocks_and_receipts(block_numbers).await;
         // Record the RPC latency immediately after the network call
