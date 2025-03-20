@@ -22,11 +22,8 @@ pub struct ComponentHandles {
 #[allow(missing_docs)]
 impl ComponentHandles {
     pub fn spawn(config: &Config, shutdown_rx: ShutdownRx) -> Self {
-        // TODO - config channel size
-        let (blocks_tx, blocks_rx) = channel::<Arc<NitroBlock>>(10);
-
         let config = config.clone();
-
+        let (blocks_tx, blocks_rx) = channel::<Arc<NitroBlock>>(config.buffer_size);
         let poller_handle = tokio::spawn(async move {
             poller::run(
                 config.app_chain_rpc_url,
@@ -67,7 +64,7 @@ impl ComponentHandles {
             error!("Error shutting down slotter: {}", e);
         }
 
-        info!("Metabased POster shutdown complete");
+        info!("Metabased Poster shutdown complete");
         Ok(())
     }
 
