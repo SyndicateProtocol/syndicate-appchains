@@ -848,8 +848,8 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
         .await?;
 
     // submit multiple times to make sure repeated submissions work
-    _ = assertion_poster.postAssertion(block.hash, block.send_root).send().await?;
-    _ = assertion_poster.postAssertion(block.hash, block.send_root).send().await?;
+    _ = assertion_poster.postAssertion(U256::from(1).into(), U256::from(2).into()).send().await?;
+    _ = assertion_poster.postAssertion(U256::from(3).into(), U256::from(4).into()).send().await?;
     // post a batch to make sure this doesn't break anything
     let seq_inbox = ISequencerInbox::new(
         bridge.sequencerInbox().call().await?._0,
@@ -866,7 +866,7 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
         )
         .send()
         .await?;
-    _ = assertion_poster.postAssertion(block.hash, block.send_root).send().await?;
+    _ = assertion_poster.postAssertion(U256::from(5).into(), U256::from(6).into()).send().await?;
     _ = assertion_poster.postAssertion(block.hash, block.send_root).send().await?;
 
     // 3. Execute transaction (usually done by end-user)
