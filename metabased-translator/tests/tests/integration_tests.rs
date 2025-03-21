@@ -23,8 +23,9 @@ use common::{
 use contract_bindings::arbitrum::{
     arbgasinfo::ArbGasInfo, arbownerpublic::ArbOwnerPublic, arbsys::ArbSys,
     assertionposter::AssertionPoster, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox,
-    iownable::IOwnable, irollupcore::IRollupCore, isequencerinbox::ISequencerInbox,
-    iupgradeexecutor::IUpgradeExecutor, nodeinterface::NodeInterface, rollup::Rollup,
+    iownable::IOwnable, irollupadmin::IRollupAdmin, irollupcore::IRollupCore,
+    isequencerinbox::ISequencerInbox, iupgradeexecutor::IUpgradeExecutor,
+    nodeinterface::NodeInterface, rollup::Rollup,
 };
 use e2e_tests::full_meta_node::{launch_nitro_node, start_reth, ContractVersion, MetaNode};
 use eyre::{eyre, Result};
@@ -863,6 +864,14 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
             Address::ZERO,
             U256::ZERO,
             U256::ZERO,
+        )
+        .send()
+        .await?;
+    // modify the confirm period to make sure it still works
+    _ = executor
+        .executeCall(
+            bridge.rollup().call().await?._0,
+            IRollupAdmin::setConfirmPeriodBlocksCall { newConfirmPeriod: 99 }.abi_encode().into(),
         )
         .send()
         .await?;
