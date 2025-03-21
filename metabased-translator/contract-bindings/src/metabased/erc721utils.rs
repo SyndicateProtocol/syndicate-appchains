@@ -22,22 +22,22 @@ pub mod ERC721Utils {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220e19bcace1fc9d3d48c448945cda6055addcb4694f4e3c32145984aa359f4e54964736f6c63430008190033
+    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea264697066735822122094493d7a19516a5eca485419b19d52e84a7e89bb8327ca1f56ea3caa9e0a23f464736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xE1\x9B\xCA\xCE\x1F\xC9\xD3\xD4\x8CD\x89E\xCD\xA6\x05Z\xDD\xCBF\x94\xF4\xE3\xC3!E\x98J\xA3Y\xF4\xE5IdsolcC\0\x08\x19\x003",
+        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \x94I=z\x19Qj^\xCAHT\x19\xB1\x9DR\xE8J~\x89\xBB\x83'\xCA\x1FV\xEA<\xAA\x9E\n#\xF4dsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x5f80fdfea2646970667358221220e19bcace1fc9d3d48c448945cda6055addcb4694f4e3c32145984aa359f4e54964736f6c63430008190033
+    ///0x5f80fdfea264697066735822122094493d7a19516a5eca485419b19d52e84a7e89bb8327ca1f56ea3caa9e0a23f464736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xE1\x9B\xCA\xCE\x1F\xC9\xD3\xD4\x8CD\x89E\xCD\xA6\x05Z\xDD\xCBF\x94\xF4\xE3\xC3!E\x98J\xA3Y\xF4\xE5IdsolcC\0\x08\x19\x003",
+        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \x94I=z\x19Qj^\xCAHT\x19\xB1\x9DR\xE8J~\x89\xBB\x83'\xCA\x1FV\xEA<\xAA\x9E\n#\xF4dsolcC\0\x08\x19\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`ERC721Utils`](self) contract instance.

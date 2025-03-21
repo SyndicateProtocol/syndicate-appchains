@@ -30,22 +30,22 @@ pub mod Create2 {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220b50c00ed20cd7ce3fb8530351209d9d4e719c7f649015973598fd250a85ab7dc64736f6c63430008190033
+    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220a85c07186f33c3c9573dc97d5d4e8a25ecb37d91bdac58fc65b47a01f489680564736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB5\x0C\0\xED \xCD|\xE3\xFB\x8505\x12\t\xD9\xD4\xE7\x19\xC7\xF6I\x01YsY\x8F\xD2P\xA8Z\xB7\xDCdsolcC\0\x08\x19\x003",
+        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xA8\\\x07\x18o3\xC3\xC9W=\xC9}]N\x8A%\xEC\xB3}\x91\xBD\xACX\xFCe\xB4z\x01\xF4\x89h\x05dsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x5f80fdfea2646970667358221220b50c00ed20cd7ce3fb8530351209d9d4e719c7f649015973598fd250a85ab7dc64736f6c63430008190033
+    ///0x5f80fdfea2646970667358221220a85c07186f33c3c9573dc97d5d4e8a25ecb37d91bdac58fc65b47a01f489680564736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB5\x0C\0\xED \xCD|\xE3\xFB\x8505\x12\t\xD9\xD4\xE7\x19\xC7\xF6I\x01YsY\x8F\xD2P\xA8Z\xB7\xDCdsolcC\0\x08\x19\x003",
+        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xA8\\\x07\x18o3\xC3\xC9W=\xC9}]N\x8A%\xEC\xB3}\x91\xBD\xACX\xFCe\xB4z\x01\xF4\x89h\x05dsolcC\0\x08\x19\x003",
     );
     /**Custom error with signature `Create2EmptyBytecode()` and selector `0x4ca249dc`.
 ```solidity

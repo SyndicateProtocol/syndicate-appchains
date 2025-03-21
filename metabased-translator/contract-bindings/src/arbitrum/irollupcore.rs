@@ -59,9 +59,7 @@ interface IRollupCore {
     function bridge() external view returns (address);
     function chainId() external view returns (uint256);
     function challengeManager() external view returns (address);
-    function computeAssertionHash(bytes32 prevAssertionHash, AssertionState memory state, bytes32 inboxAcc) external pure returns (bytes32);
     function confirmPeriodBlocks() external view returns (uint64);
-    function fastConfirmNewAssertion(AssertionInputs memory assertion, bytes32 expectedAssertionHash) external;
     function genesisAssertionHash() external pure returns (bytes32);
     function getAssertion(bytes32 assertionHash) external view returns (AssertionNode memory);
     function getAssertionCreationBlockForLogLookup(bytes32 assertionHash) external view returns (uint256);
@@ -169,64 +167,6 @@ interface IRollupCore {
   },
   {
     "type": "function",
-    "name": "computeAssertionHash",
-    "inputs": [
-      {
-        "name": "prevAssertionHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      },
-      {
-        "name": "state",
-        "type": "tuple",
-        "internalType": "struct AssertionState",
-        "components": [
-          {
-            "name": "globalState",
-            "type": "tuple",
-            "internalType": "struct GlobalState",
-            "components": [
-              {
-                "name": "bytes32Vals",
-                "type": "bytes32[2]",
-                "internalType": "bytes32[2]"
-              },
-              {
-                "name": "u64Vals",
-                "type": "uint64[2]",
-                "internalType": "uint64[2]"
-              }
-            ]
-          },
-          {
-            "name": "machineStatus",
-            "type": "uint8",
-            "internalType": "enum MachineStatus"
-          },
-          {
-            "name": "endHistoryRoot",
-            "type": "bytes32",
-            "internalType": "bytes32"
-          }
-        ]
-      },
-      {
-        "name": "inboxAcc",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "stateMutability": "pure"
-  },
-  {
-    "type": "function",
     "name": "confirmPeriodBlocks",
     "inputs": [],
     "outputs": [
@@ -237,143 +177,6 @@ interface IRollupCore {
       }
     ],
     "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "fastConfirmNewAssertion",
-    "inputs": [
-      {
-        "name": "assertion",
-        "type": "tuple",
-        "internalType": "struct AssertionInputs",
-        "components": [
-          {
-            "name": "beforeStateData",
-            "type": "tuple",
-            "internalType": "struct BeforeStateData",
-            "components": [
-              {
-                "name": "prevPrevAssertionHash",
-                "type": "bytes32",
-                "internalType": "bytes32"
-              },
-              {
-                "name": "sequencerBatchAcc",
-                "type": "bytes32",
-                "internalType": "bytes32"
-              },
-              {
-                "name": "configData",
-                "type": "tuple",
-                "internalType": "struct ConfigData",
-                "components": [
-                  {
-                    "name": "wasmModuleRoot",
-                    "type": "bytes32",
-                    "internalType": "bytes32"
-                  },
-                  {
-                    "name": "requiredStake",
-                    "type": "uint256",
-                    "internalType": "uint256"
-                  },
-                  {
-                    "name": "challengeManager",
-                    "type": "address",
-                    "internalType": "address"
-                  },
-                  {
-                    "name": "confirmPeriodBlocks",
-                    "type": "uint64",
-                    "internalType": "uint64"
-                  },
-                  {
-                    "name": "nextInboxPosition",
-                    "type": "uint64",
-                    "internalType": "uint64"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "name": "beforeState",
-            "type": "tuple",
-            "internalType": "struct AssertionState",
-            "components": [
-              {
-                "name": "globalState",
-                "type": "tuple",
-                "internalType": "struct GlobalState",
-                "components": [
-                  {
-                    "name": "bytes32Vals",
-                    "type": "bytes32[2]",
-                    "internalType": "bytes32[2]"
-                  },
-                  {
-                    "name": "u64Vals",
-                    "type": "uint64[2]",
-                    "internalType": "uint64[2]"
-                  }
-                ]
-              },
-              {
-                "name": "machineStatus",
-                "type": "uint8",
-                "internalType": "enum MachineStatus"
-              },
-              {
-                "name": "endHistoryRoot",
-                "type": "bytes32",
-                "internalType": "bytes32"
-              }
-            ]
-          },
-          {
-            "name": "afterState",
-            "type": "tuple",
-            "internalType": "struct AssertionState",
-            "components": [
-              {
-                "name": "globalState",
-                "type": "tuple",
-                "internalType": "struct GlobalState",
-                "components": [
-                  {
-                    "name": "bytes32Vals",
-                    "type": "bytes32[2]",
-                    "internalType": "bytes32[2]"
-                  },
-                  {
-                    "name": "u64Vals",
-                    "type": "uint64[2]",
-                    "internalType": "uint64[2]"
-                  }
-                ]
-              },
-              {
-                "name": "machineStatus",
-                "type": "uint8",
-                "internalType": "enum MachineStatus"
-              },
-              {
-                "name": "endHistoryRoot",
-                "type": "bytes32",
-                "internalType": "bytes32"
-              }
-            ]
-          }
-        ]
-      },
-      {
-        "name": "expectedAssertionHash",
-        "type": "bytes32",
-        "internalType": "bytes32"
-      }
-    ],
-    "outputs": [],
-    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -5010,156 +4813,6 @@ function challengeManager() external view returns (address);
             }
         }
     };
-    /**Function with signature `computeAssertionHash(bytes32,((bytes32[2],uint64[2]),uint8,bytes32),bytes32)` and selector `0x33635fc2`.
-```solidity
-function computeAssertionHash(bytes32 prevAssertionHash, AssertionState memory state, bytes32 inboxAcc) external pure returns (bytes32);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct computeAssertionHashCall {
-        pub prevAssertionHash: alloy::sol_types::private::FixedBytes<32>,
-        pub state: <AssertionState as alloy::sol_types::SolType>::RustType,
-        pub inboxAcc: alloy::sol_types::private::FixedBytes<32>,
-    }
-    ///Container type for the return parameters of the [`computeAssertionHash(bytes32,((bytes32[2],uint64[2]),uint8,bytes32),bytes32)`](computeAssertionHashCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct computeAssertionHashReturn {
-        pub _0: alloy::sol_types::private::FixedBytes<32>,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = (
-                alloy::sol_types::sol_data::FixedBytes<32>,
-                AssertionState,
-                alloy::sol_types::sol_data::FixedBytes<32>,
-            );
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                alloy::sol_types::private::FixedBytes<32>,
-                <AssertionState as alloy::sol_types::SolType>::RustType,
-                alloy::sol_types::private::FixedBytes<32>,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<computeAssertionHashCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: computeAssertionHashCall) -> Self {
-                    (value.prevAssertionHash, value.state, value.inboxAcc)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for computeAssertionHashCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {
-                        prevAssertionHash: tuple.0,
-                        state: tuple.1,
-                        inboxAcc: tuple.2,
-                    }
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (alloy::sol_types::private::FixedBytes<32>,);
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<computeAssertionHashReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: computeAssertionHashReturn) -> Self {
-                    (value._0,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for computeAssertionHashReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for computeAssertionHashCall {
-            type Parameters<'a> = (
-                alloy::sol_types::sol_data::FixedBytes<32>,
-                AssertionState,
-                alloy::sol_types::sol_data::FixedBytes<32>,
-            );
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = computeAssertionHashReturn;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::FixedBytes<32>,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "computeAssertionHash(bytes32,((bytes32[2],uint64[2]),uint8,bytes32),bytes32)";
-            const SELECTOR: [u8; 4] = [51u8, 99u8, 95u8, 194u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                (
-                    <alloy::sol_types::sol_data::FixedBytes<
-                        32,
-                    > as alloy_sol_types::SolType>::tokenize(&self.prevAssertionHash),
-                    <AssertionState as alloy_sol_types::SolType>::tokenize(&self.state),
-                    <alloy::sol_types::sol_data::FixedBytes<
-                        32,
-                    > as alloy_sol_types::SolType>::tokenize(&self.inboxAcc),
-                )
-            }
-            #[inline]
-            fn abi_decode_returns(
-                data: &[u8],
-                validate: bool,
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
-            }
-        }
-    };
     /**Function with signature `confirmPeriodBlocks()` and selector `0x2e7acfa6`.
 ```solidity
 function confirmPeriodBlocks() external view returns (uint64);
@@ -5269,148 +4922,6 @@ function confirmPeriodBlocks() external view returns (uint64);
             #[inline]
             fn tokenize(&self) -> Self::Token<'_> {
                 ()
-            }
-            #[inline]
-            fn abi_decode_returns(
-                data: &[u8],
-                validate: bool,
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
-            }
-        }
-    };
-    /**Function with signature `fastConfirmNewAssertion(((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32)` and selector `0x6420fb9f`.
-```solidity
-function fastConfirmNewAssertion(AssertionInputs memory assertion, bytes32 expectedAssertionHash) external;
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct fastConfirmNewAssertionCall {
-        pub assertion: <AssertionInputs as alloy::sol_types::SolType>::RustType,
-        pub expectedAssertionHash: alloy::sol_types::private::FixedBytes<32>,
-    }
-    ///Container type for the return parameters of the [`fastConfirmNewAssertion(((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32)`](fastConfirmNewAssertionCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct fastConfirmNewAssertionReturn {}
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = (
-                AssertionInputs,
-                alloy::sol_types::sol_data::FixedBytes<32>,
-            );
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (
-                <AssertionInputs as alloy::sol_types::SolType>::RustType,
-                alloy::sol_types::private::FixedBytes<32>,
-            );
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<fastConfirmNewAssertionCall>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: fastConfirmNewAssertionCall) -> Self {
-                    (value.assertion, value.expectedAssertionHash)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for fastConfirmNewAssertionCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {
-                        assertion: tuple.0,
-                        expectedAssertionHash: tuple.1,
-                    }
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<fastConfirmNewAssertionReturn>
-            for UnderlyingRustTuple<'_> {
-                fn from(value: fastConfirmNewAssertionReturn) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>>
-            for fastConfirmNewAssertionReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for fastConfirmNewAssertionCall {
-            type Parameters<'a> = (
-                AssertionInputs,
-                alloy::sol_types::sol_data::FixedBytes<32>,
-            );
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = fastConfirmNewAssertionReturn;
-            type ReturnTuple<'a> = ();
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "fastConfirmNewAssertion(((bytes32,bytes32,(bytes32,uint256,address,uint64,uint64)),((bytes32[2],uint64[2]),uint8,bytes32),((bytes32[2],uint64[2]),uint8,bytes32)),bytes32)";
-            const SELECTOR: [u8; 4] = [100u8, 32u8, 251u8, 159u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                (
-                    <AssertionInputs as alloy_sol_types::SolType>::tokenize(
-                        &self.assertion,
-                    ),
-                    <alloy::sol_types::sol_data::FixedBytes<
-                        32,
-                    > as alloy_sol_types::SolType>::tokenize(&self.expectedAssertionHash),
-                )
             }
             #[inline]
             fn abi_decode_returns(
@@ -8950,9 +8461,7 @@ function withdrawalAddress(address staker) external view returns (address);
         bridge(bridgeCall),
         chainId(chainIdCall),
         challengeManager(challengeManagerCall),
-        computeAssertionHash(computeAssertionHashCall),
         confirmPeriodBlocks(confirmPeriodBlocksCall),
-        fastConfirmNewAssertion(fastConfirmNewAssertionCall),
         genesisAssertionHash(genesisAssertionHashCall),
         getAssertion(getAssertionCall),
         getAssertionCreationBlockForLogLookup(getAssertionCreationBlockForLogLookupCall),
@@ -9000,13 +8509,11 @@ function withdrawalAddress(address staker) external view returns (address);
             [46u8, 122u8, 207u8, 166u8],
             [47u8, 48u8, 202u8, 189u8],
             [48u8, 131u8, 98u8, 40u8],
-            [51u8, 99u8, 95u8, 194u8],
             [53u8, 51u8, 37u8, 224u8],
             [69u8, 227u8, 139u8, 100u8],
             [81u8, 237u8, 106u8, 48u8],
             [86u8, 187u8, 201u8, 230u8],
             [97u8, 119u8, 253u8, 24u8],
-            [100u8, 32u8, 251u8, 159u8],
             [101u8, 247u8, 248u8, 13u8],
             [109u8, 221u8, 55u8, 68u8],
             [118u8, 231u8, 226u8, 59u8],
@@ -9033,7 +8540,7 @@ function withdrawalAddress(address staker) external view returns (address);
     impl alloy_sol_types::SolInterface for IRollupCoreCalls {
         const NAME: &'static str = "IRollupCoreCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 36usize;
+        const COUNT: usize = 34usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -9048,14 +8555,8 @@ function withdrawalAddress(address staker) external view returns (address);
                 Self::challengeManager(_) => {
                     <challengeManagerCall as alloy_sol_types::SolCall>::SELECTOR
                 }
-                Self::computeAssertionHash(_) => {
-                    <computeAssertionHashCall as alloy_sol_types::SolCall>::SELECTOR
-                }
                 Self::confirmPeriodBlocks(_) => {
                     <confirmPeriodBlocksCall as alloy_sol_types::SolCall>::SELECTOR
-                }
-                Self::fastConfirmNewAssertion(_) => {
-                    <fastConfirmNewAssertionCall as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::genesisAssertionHash(_) => {
                     <genesisAssertionHashCall as alloy_sol_types::SolCall>::SELECTOR
@@ -9276,19 +8777,6 @@ function withdrawalAddress(address staker) external view returns (address);
                     isFirstChild
                 },
                 {
-                    fn computeAssertionHash(
-                        data: &[u8],
-                        validate: bool,
-                    ) -> alloy_sol_types::Result<IRollupCoreCalls> {
-                        <computeAssertionHashCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
-                            .map(IRollupCoreCalls::computeAssertionHash)
-                    }
-                    computeAssertionHash
-                },
-                {
                     fn genesisAssertionHash(
                         data: &[u8],
                         validate: bool,
@@ -9352,19 +8840,6 @@ function withdrawalAddress(address staker) external view returns (address);
                             .map(IRollupCoreCalls::isStaked)
                     }
                     isStaked
-                },
-                {
-                    fn fastConfirmNewAssertion(
-                        data: &[u8],
-                        validate: bool,
-                    ) -> alloy_sol_types::Result<IRollupCoreCalls> {
-                        <fastConfirmNewAssertionCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
-                            .map(IRollupCoreCalls::fastConfirmNewAssertion)
-                    }
-                    fastConfirmNewAssertion
                 },
                 {
                     fn latestConfirmed(
@@ -9659,18 +9134,8 @@ function withdrawalAddress(address staker) external view returns (address);
                         inner,
                     )
                 }
-                Self::computeAssertionHash(inner) => {
-                    <computeAssertionHashCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
                 Self::confirmPeriodBlocks(inner) => {
                     <confirmPeriodBlocksCall as alloy_sol_types::SolCall>::abi_encoded_size(
-                        inner,
-                    )
-                }
-                Self::fastConfirmNewAssertion(inner) => {
-                    <fastConfirmNewAssertionCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
                     )
                 }
@@ -9833,20 +9298,8 @@ function withdrawalAddress(address staker) external view returns (address);
                         out,
                     )
                 }
-                Self::computeAssertionHash(inner) => {
-                    <computeAssertionHashCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
                 Self::confirmPeriodBlocks(inner) => {
                     <confirmPeriodBlocksCall as alloy_sol_types::SolCall>::abi_encode_raw(
-                        inner,
-                        out,
-                    )
-                }
-                Self::fastConfirmNewAssertion(inner) => {
-                    <fastConfirmNewAssertionCall as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -10561,39 +10014,11 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ) -> alloy_contract::SolCallBuilder<T, &P, challengeManagerCall, N> {
             self.call_builder(&challengeManagerCall {})
         }
-        ///Creates a new call builder for the [`computeAssertionHash`] function.
-        pub fn computeAssertionHash(
-            &self,
-            prevAssertionHash: alloy::sol_types::private::FixedBytes<32>,
-            state: <AssertionState as alloy::sol_types::SolType>::RustType,
-            inboxAcc: alloy::sol_types::private::FixedBytes<32>,
-        ) -> alloy_contract::SolCallBuilder<T, &P, computeAssertionHashCall, N> {
-            self.call_builder(
-                &computeAssertionHashCall {
-                    prevAssertionHash,
-                    state,
-                    inboxAcc,
-                },
-            )
-        }
         ///Creates a new call builder for the [`confirmPeriodBlocks`] function.
         pub fn confirmPeriodBlocks(
             &self,
         ) -> alloy_contract::SolCallBuilder<T, &P, confirmPeriodBlocksCall, N> {
             self.call_builder(&confirmPeriodBlocksCall {})
-        }
-        ///Creates a new call builder for the [`fastConfirmNewAssertion`] function.
-        pub fn fastConfirmNewAssertion(
-            &self,
-            assertion: <AssertionInputs as alloy::sol_types::SolType>::RustType,
-            expectedAssertionHash: alloy::sol_types::private::FixedBytes<32>,
-        ) -> alloy_contract::SolCallBuilder<T, &P, fastConfirmNewAssertionCall, N> {
-            self.call_builder(
-                &fastConfirmNewAssertionCall {
-                    assertion,
-                    expectedAssertionHash,
-                },
-            )
         }
         ///Creates a new call builder for the [`genesisAssertionHash`] function.
         pub fn genesisAssertionHash(

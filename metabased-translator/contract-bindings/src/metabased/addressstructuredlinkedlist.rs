@@ -22,22 +22,22 @@ pub mod AddressStructuredLinkedList {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220d0a1e8b69342719fdc586235e961dece8b49e8038d48ca640e41715ef6b2b92764736f6c63430008190033
+    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220e710da94b73640c12b452abeb23d97213dd305613c9932554e643098d05d444664736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xD0\xA1\xE8\xB6\x93Bq\x9F\xDCXb5\xE9a\xDE\xCE\x8BI\xE8\x03\x8DH\xCAd\x0EAq^\xF6\xB2\xB9'dsolcC\0\x08\x19\x003",
+        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xE7\x10\xDA\x94\xB76@\xC1+E*\xBE\xB2=\x97!=\xD3\x05a<\x992UNd0\x98\xD0]DFdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x5f80fdfea2646970667358221220d0a1e8b69342719fdc586235e961dece8b49e8038d48ca640e41715ef6b2b92764736f6c63430008190033
+    ///0x5f80fdfea2646970667358221220e710da94b73640c12b452abeb23d97213dd305613c9932554e643098d05d444664736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xD0\xA1\xE8\xB6\x93Bq\x9F\xDCXb5\xE9a\xDE\xCE\x8BI\xE8\x03\x8DH\xCAd\x0EAq^\xF6\xB2\xB9'dsolcC\0\x08\x19\x003",
+        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xE7\x10\xDA\x94\xB76@\xC1+E*\xBE\xB2=\x97!=\xD3\x05a<\x992UNd0\x98\xD0]DFdsolcC\0\x08\x19\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`AddressStructuredLinkedList`](self) contract instance.

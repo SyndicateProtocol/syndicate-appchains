@@ -22,22 +22,22 @@ pub mod MessageHashUtils {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220484b264c38cdd9eff9f6b7a02fa9c0604148acd22e8e239a4ffcb3bb2d8eb9aa64736f6c63430008190033
+    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220af4785298c542cd1af5568187245568b22130d62469f22bc68c1474668685abb64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 HK&L8\xCD\xD9\xEF\xF9\xF6\xB7\xA0/\xA9\xC0`AH\xAC\xD2.\x8E#\x9AO\xFC\xB3\xBB-\x8E\xB9\xAAdsolcC\0\x08\x19\x003",
+        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xAFG\x85)\x8CT,\xD1\xAFUh\x18rEV\x8B\"\x13\rbF\x9F\"\xBCh\xC1GFhhZ\xBBdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x5f80fdfea2646970667358221220484b264c38cdd9eff9f6b7a02fa9c0604148acd22e8e239a4ffcb3bb2d8eb9aa64736f6c63430008190033
+    ///0x5f80fdfea2646970667358221220af4785298c542cd1af5568187245568b22130d62469f22bc68c1474668685abb64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 HK&L8\xCD\xD9\xEF\xF9\xF6\xB7\xA0/\xA9\xC0`AH\xAC\xD2.\x8E#\x9AO\xFC\xB3\xBB-\x8E\xB9\xAAdsolcC\0\x08\x19\x003",
+        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xAFG\x85)\x8CT,\xD1\xAFUh\x18rEV\x8B\"\x13\rbF\x9F\"\xBCh\xC1GFhhZ\xBBdsolcC\0\x08\x19\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`MessageHashUtils`](self) contract instance.

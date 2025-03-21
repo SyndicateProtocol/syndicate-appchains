@@ -82,22 +82,22 @@ pub mod SafeCast {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea26469706673582212202915fc4c18b1900c43c3eeffcb9dc99630b94da74dc2284e4e2bc1bb0997cf0c64736f6c63430008190033
+    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220b9642ba77a4e50a4e1f43f0c5695df792deb0ae73bad3cb43dff12b1ad51879c64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 )\x15\xFCL\x18\xB1\x90\x0CC\xC3\xEE\xFF\xCB\x9D\xC9\x960\xB9M\xA7M\xC2(NN+\xC1\xBB\t\x97\xCF\x0CdsolcC\0\x08\x19\x003",
+        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB9d+\xA7zNP\xA4\xE1\xF4?\x0CV\x95\xDFy-\xEB\n\xE7;\xAD<\xB4=\xFF\x12\xB1\xADQ\x87\x9CdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x5f80fdfea26469706673582212202915fc4c18b1900c43c3eeffcb9dc99630b94da74dc2284e4e2bc1bb0997cf0c64736f6c63430008190033
+    ///0x5f80fdfea2646970667358221220b9642ba77a4e50a4e1f43f0c5695df792deb0ae73bad3cb43dff12b1ad51879c64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 )\x15\xFCL\x18\xB1\x90\x0CC\xC3\xEE\xFF\xCB\x9D\xC9\x960\xB9M\xA7M\xC2(NN+\xC1\xBB\t\x97\xCF\x0CdsolcC\0\x08\x19\x003",
+        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB9d+\xA7zNP\xA4\xE1\xF4?\x0CV\x95\xDFy-\xEB\n\xE7;\xAD<\xB4=\xFF\x12\xB1\xADQ\x87\x9CdsolcC\0\x08\x19\x003",
     );
     /**Custom error with signature `SafeCastOverflowedIntDowncast(uint8,int256)` and selector `0x327269a7`.
 ```solidity

@@ -22,22 +22,22 @@ pub mod SignedMath {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea26469706673582212208bf67d987eeb869856f1873f4153e9ce4ecc6ec2593a893b2bc52c549f9df85b64736f6c63430008190033
+    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea26469706673582212201675370076408cc32a231588f7f2bf1c4aa4a16b55c23776d9b7a1a84c6a8f2d64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \x8B\xF6}\x98~\xEB\x86\x98V\xF1\x87?AS\xE9\xCEN\xCCn\xC2Y:\x89;+\xC5,T\x9F\x9D\xF8[dsolcC\0\x08\x19\x003",
+        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \x16u7\0v@\x8C\xC3*#\x15\x88\xF7\xF2\xBF\x1CJ\xA4\xA1kU\xC27v\xD9\xB7\xA1\xA8Lj\x8F-dsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x5f80fdfea26469706673582212208bf67d987eeb869856f1873f4153e9ce4ecc6ec2593a893b2bc52c549f9df85b64736f6c63430008190033
+    ///0x5f80fdfea26469706673582212201675370076408cc32a231588f7f2bf1c4aa4a16b55c23776d9b7a1a84c6a8f2d64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \x8B\xF6}\x98~\xEB\x86\x98V\xF1\x87?AS\xE9\xCEN\xCCn\xC2Y:\x89;+\xC5,T\x9F\x9D\xF8[dsolcC\0\x08\x19\x003",
+        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \x16u7\0v@\x8C\xC3*#\x15\x88\xF7\xF2\xBF\x1CJ\xA4\xA1kU\xC27v\xD9\xB7\xA1\xA8Lj\x8F-dsolcC\0\x08\x19\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`SignedMath`](self) contract instance.

@@ -42,22 +42,22 @@ pub mod ShortStrings {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220b83ec4f05cdb4b7a9d33f3da18b6fc6b7aa726b8926388d82ddb52921926ded064736f6c63430008190033
+    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220d9f25ade485e6392da3b1ce4722e08f120e3276bbafe70f082801e5820387aee64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB8>\xC4\xF0\\\xDBKz\x9D3\xF3\xDA\x18\xB6\xFCkz\xA7&\xB8\x92c\x88\xD8-\xDBR\x92\x19&\xDE\xD0dsolcC\0\x08\x19\x003",
+        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xD9\xF2Z\xDEH^c\x92\xDA;\x1C\xE4r.\x08\xF1 \xE3'k\xBA\xFEp\xF0\x82\x80\x1EX 8z\xEEdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x5f80fdfea2646970667358221220b83ec4f05cdb4b7a9d33f3da18b6fc6b7aa726b8926388d82ddb52921926ded064736f6c63430008190033
+    ///0x5f80fdfea2646970667358221220d9f25ade485e6392da3b1ce4722e08f120e3276bbafe70f082801e5820387aee64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB8>\xC4\xF0\\\xDBKz\x9D3\xF3\xDA\x18\xB6\xFCkz\xA7&\xB8\x92c\x88\xD8-\xDBR\x92\x19&\xDE\xD0dsolcC\0\x08\x19\x003",
+        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xD9\xF2Z\xDEH^c\x92\xDA;\x1C\xE4r.\x08\xF1 \xE3'k\xBA\xFEp\xF0\x82\x80\x1EX 8z\xEEdsolcC\0\x08\x19\x003",
     );
     /**Custom error with signature `InvalidShortString()` and selector `0xb3512b0c`.
 ```solidity
