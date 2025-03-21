@@ -22,22 +22,22 @@ pub mod Panic {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220bcd782d8a480e470e1c5626ad69d2e43096d243212d9ae897f5db59f0eebef6664736f6c63430008190033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea26469706673582212205fdb2fd0aed457ccd999b865eb008778c2dd33012919f109900000c7de3f38d764736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xBC\xD7\x82\xD8\xA4\x80\xE4p\xE1\xC5bj\xD6\x9D.C\tm$2\x12\xD9\xAE\x89\x7F]\xB5\x9F\x0E\xEB\xEFfdsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 _\xDB/\xD0\xAE\xD4W\xCC\xD9\x99\xB8e\xEB\0\x87x\xC2\xDD3\x01)\x19\xF1\t\x90\0\0\xC7\xDE?8\xD7dsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea2646970667358221220bcd782d8a480e470e1c5626ad69d2e43096d243212d9ae897f5db59f0eebef6664736f6c63430008190033
+    ///0x60806040525f80fdfea26469706673582212205fdb2fd0aed457ccd999b865eb008778c2dd33012919f109900000c7de3f38d764736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xBC\xD7\x82\xD8\xA4\x80\xE4p\xE1\xC5bj\xD6\x9D.C\tm$2\x12\xD9\xAE\x89\x7F]\xB5\x9F\x0E\xEB\xEFfdsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 _\xDB/\xD0\xAE\xD4W\xCC\xD9\x99\xB8e\xEB\0\x87x\xC2\xDD3\x01)\x19\xF1\t\x90\0\0\xC7\xDE?8\xD7dsolcC\0\x08\x19\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`Panic`](self) contract instance.
