@@ -67,9 +67,7 @@ function postAssertion(bytes32 blockHash, bytes32 sendRoot) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct postAssertionCall {
-        #[allow(missing_docs)]
         pub blockHash: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub sendRoot: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`postAssertion(bytes32,bytes32)`](postAssertionCall) function.
@@ -202,7 +200,6 @@ function postAssertion(bytes32 blockHash, bytes32 sendRoot) external;
     };
     ///Container for all the [`IAssertionPoster`](self) function calls.
     pub enum IAssertionPosterCalls {
-        #[allow(missing_docs)]
         postAssertion(postAssertionCall),
     }
     #[automatically_derived]

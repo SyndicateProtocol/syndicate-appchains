@@ -44,22 +44,22 @@ pub mod MockCalldataAllowedTrue {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080806040523460135760a6908160188239f35b5f80fdfe60808060405260043610156011575f80fd5b5f3560e01c633dfb5ee7146023575f80fd5b34606c576020366003190112606c5760043567ffffffffffffffff808211606c5736602383011215606c578160040135908111606c5736910160240111606c5780600160209252f35b5f80fdfea264697066735822122020d1ea34d9737369a39a94d70836db0994e7c16800c80b1f7050b7009ab12ad764736f6c63430008190033
+    ///0x6080806040523460135760a6908160188239f35b5f80fdfe60808060405260043610156011575f80fd5b5f3560e01c633dfb5ee7146023575f80fd5b34606c576020366003190112606c5760043567ffffffffffffffff808211606c5736602383011215606c578160040135908111606c5736910160240111606c5780600160209252f35b5f80fdfea2646970667358221220e9ca813497d8de06ee608dccd89b8eb9302ecc533e2a3142372453cc6f891eaa64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x13W`\xA6\x90\x81`\x18\x829\xF3[_\x80\xFD\xFE`\x80\x80`@R`\x046\x10\x15`\x11W_\x80\xFD[_5`\xE0\x1Cc=\xFB^\xE7\x14`#W_\x80\xFD[4`lW` 6`\x03\x19\x01\x12`lW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x80\x82\x11`lW6`#\x83\x01\x12\x15`lW\x81`\x04\x015\x90\x81\x11`lW6\x91\x01`$\x01\x11`lW\x80`\x01` \x92R\xF3[_\x80\xFD\xFE\xA2dipfsX\"\x12  \xD1\xEA4\xD9ssi\xA3\x9A\x94\xD7\x086\xDB\t\x94\xE7\xC1h\0\xC8\x0B\x1FpP\xB7\0\x9A\xB1*\xD7dsolcC\0\x08\x19\x003",
+        b"`\x80\x80`@R4`\x13W`\xA6\x90\x81`\x18\x829\xF3[_\x80\xFD\xFE`\x80\x80`@R`\x046\x10\x15`\x11W_\x80\xFD[_5`\xE0\x1Cc=\xFB^\xE7\x14`#W_\x80\xFD[4`lW` 6`\x03\x19\x01\x12`lW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x80\x82\x11`lW6`#\x83\x01\x12\x15`lW\x81`\x04\x015\x90\x81\x11`lW6\x91\x01`$\x01\x11`lW\x80`\x01` \x92R\xF3[_\x80\xFD\xFE\xA2dipfsX\"\x12 \xE9\xCA\x814\x97\xD8\xDE\x06\xEE`\x8D\xCC\xD8\x9B\x8E\xB90.\xCCS>*1B7$S\xCCo\x89\x1E\xAAdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60808060405260043610156011575f80fd5b5f3560e01c633dfb5ee7146023575f80fd5b34606c576020366003190112606c5760043567ffffffffffffffff808211606c5736602383011215606c578160040135908111606c5736910160240111606c5780600160209252f35b5f80fdfea264697066735822122020d1ea34d9737369a39a94d70836db0994e7c16800c80b1f7050b7009ab12ad764736f6c63430008190033
+    ///0x60808060405260043610156011575f80fd5b5f3560e01c633dfb5ee7146023575f80fd5b34606c576020366003190112606c5760043567ffffffffffffffff808211606c5736602383011215606c578160040135908111606c5736910160240111606c5780600160209252f35b5f80fdfea2646970667358221220e9ca813497d8de06ee608dccd89b8eb9302ecc533e2a3142372453cc6f891eaa64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R`\x046\x10\x15`\x11W_\x80\xFD[_5`\xE0\x1Cc=\xFB^\xE7\x14`#W_\x80\xFD[4`lW` 6`\x03\x19\x01\x12`lW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x80\x82\x11`lW6`#\x83\x01\x12\x15`lW\x81`\x04\x015\x90\x81\x11`lW6\x91\x01`$\x01\x11`lW\x80`\x01` \x92R\xF3[_\x80\xFD\xFE\xA2dipfsX\"\x12  \xD1\xEA4\xD9ssi\xA3\x9A\x94\xD7\x086\xDB\t\x94\xE7\xC1h\0\xC8\x0B\x1FpP\xB7\0\x9A\xB1*\xD7dsolcC\0\x08\x19\x003",
+        b"`\x80\x80`@R`\x046\x10\x15`\x11W_\x80\xFD[_5`\xE0\x1Cc=\xFB^\xE7\x14`#W_\x80\xFD[4`lW` 6`\x03\x19\x01\x12`lW`\x045g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x80\x82\x11`lW6`#\x83\x01\x12\x15`lW\x81`\x04\x015\x90\x81\x11`lW6\x91\x01`$\x01\x11`lW\x80`\x01` \x92R\xF3[_\x80\xFD\xFE\xA2dipfsX\"\x12 \xE9\xCA\x814\x97\xD8\xDE\x06\xEE`\x8D\xCC\xD8\x9B\x8E\xB90.\xCCS>*1B7$S\xCCo\x89\x1E\xAAdsolcC\0\x08\x19\x003",
     );
     /**Function with signature `isCalldataAllowed(bytes)` and selector `0x3dfb5ee7`.
 ```solidity
