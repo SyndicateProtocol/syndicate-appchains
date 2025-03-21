@@ -146,4 +146,4 @@ jobs:
 
       # Run maestro tests with nextest (using existing config)
       - name: Run Integration Tests with Nextest
-        run: cargo nextest run --profile maestro
+        run: cargo nextest run --profile maestro -p maestro
