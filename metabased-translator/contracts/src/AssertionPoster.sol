@@ -83,6 +83,9 @@ contract AssertionPoster is Ownable {
         }
     }
 
+    // Note: this function does not need any access modifiers as it is delegate-called via the
+    // upgrade executor contract and does not modify or have access to the contract state.
+    // It does have access to immutable variables as they are read from the runtime bytecode.
     function initialize() external {
         require(
             address(this) == address(executor),
