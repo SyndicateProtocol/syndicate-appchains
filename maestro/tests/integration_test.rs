@@ -10,6 +10,7 @@ use tokio::{sync::OnceCell, time::sleep};
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashMap;
     // Static server setup - one per test function
     static SERVER_SETUP: OnceCell<(SocketAddr, ServerHandle, String)> = OnceCell::const_new();
 
@@ -58,8 +59,7 @@ mod tests {
     ) -> eyre::Result<Response> {
         let response = client
             .post(url)
-            .header("X-Synd-Chain-Id", "1")
-            .header("X-Synd-Method-Name", method)
+            .header("x-synd-chain-id", "1")
             .json(&json!({
                 "jsonrpc": "2.0",
                 "id": 1,
@@ -99,8 +99,7 @@ mod tests {
         // Test with valid transaction input
         let tx_response = client
             .post(base_url)
-            .header("X-Synd-Chain-Id", "1")
-            .header("X-Synd-Method-Name", "eth_sendRawTransaction")
+            .header("x-synd-chain-id", "1")
             .json(&json!({
                 "jsonrpc": "2.0",
                 "id": 1,
@@ -118,11 +117,11 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_missing_headers() -> eyre::Result<()> {
+    async fn test_headers_missing() -> eyre::Result<()> {
         let (_, _, base_url) = setup_server().await;
         let client = Client::new();
 
-        // Test request with missing required headers
+        // Test request with missing optional headers
         let no_headers_response = client
             .post(base_url)
             .json(&json!({
@@ -135,23 +134,22 @@ mod tests {
             .await?;
 
         assert!(
-            !no_headers_response.status().is_success(),
-            "Request without required headers should fail"
+            no_headers_response.status().is_success(),
+            "Request without required headers should pass"
         );
 
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_malformed_headers() -> eyre::Result<()> {
+    async fn test_headers_malformed_key() -> eyre::Result<()> {
         let (_, _, base_url) = setup_server().await;
         let client = Client::new();
 
         // Test with malformed headers
         let malformed_headers_response = client
             .post(base_url)
-            .header("X-Synd-Chain-Id", "invalid")
-            .header("X-Synd-Wrong-Wrong", "eth_sendRawTransaction")
+            .header("x-synd-chain-id-Wrong", "invalid")
             .json(&json!({
                 "jsonrpc": "2.0",
                 "id": 1,
@@ -161,14 +159,35 @@ mod tests {
             .send()
             .await?;
 
-        // Expect failure or error response
-        if malformed_headers_response.status().is_success() {
-            let json: Value = malformed_headers_response.json().await?;
-            assert!(json.get("error").is_some(), "Malformed headers should return an error");
-        } else {
-            // If response is not successful, that's also valid
-            assert!(!malformed_headers_response.status().is_success());
-        }
+        assert!(
+            malformed_headers_response.status().is_success(),
+            "Request should still succeed despite weird header"
+        );
+        let header_map = malformed_headers_response.extensions().get::<HashMap<String, String>>();
+        assert!(header_map.is_none(), "Header map should not exist");
+
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_headers_valid_key_invalid_value() -> eyre::Result<()> {
+        let (_, _, base_url) = setup_server().await;
+        let client = Client::new();
+
+        // Test with malformed headers
+        let malformed_headers_response = client
+            .post(base_url)
+            .header("x-synd-chain-id", b"\xff\xff\xff".as_ref()) // Invalid ASCII that we can't parse
+            .json(&json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "eth_sendRawTransaction",
+                "params": ["0x1234"]
+            }))
+            .send()
+            .await?;
+
+        assert!(malformed_headers_response.status().is_client_error(), "Request should fail");
 
         Ok(())
     }

@@ -2706,6 +2706,7 @@ dependencies = [
  "futures-util",
  "http",
  "http-body",
+ "hyper",
  "jsonrpsee",
  "serde_json",
  "tokio",

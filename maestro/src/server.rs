@@ -23,9 +23,9 @@ use tracing::info;
 
 /// Runs the base server for the sequencer
 pub async fn run(port: i32) -> eyre::Result<(SocketAddr, ServerHandle)> {
-    let required_headers = vec!["X-Synd-Chain-Id".to_string(), "X-Synd-Method-Name".to_string()];
+    let optional_headers = vec!["x-synd-chain-id".to_string()];
     let http_middleware = ServiceBuilder::new()
-        .layer(HeadersLayer::new(required_headers)?)
+        .layer(HeadersLayer::new(optional_headers)?)
         .layer(ProxyGetRequestLayer::new("/health", "health")?);
 
     let server = Server::builder()
