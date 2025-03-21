@@ -56,9 +56,6 @@ pub struct MetabasedConfig {
 
     #[command(flatten)]
     pub metrics: MetricsConfig,
-
-    #[arg(long, env = "RESTORE_FROM_SAFE_STATE", default_value = "false")]
-    pub restore_from_safe_state: bool,
 }
 
 impl MetabasedConfig {
@@ -111,7 +108,6 @@ impl Default for MetabasedConfig {
             sequencing: ingestor_config.clone().into(),
             settlement: ingestor_config.into(),
             metrics: MetricsConfig::default(),
-            restore_from_safe_state: false,
         }
     }
 }
@@ -134,11 +130,11 @@ mod tests {
         ("SETTLEMENT_RPC_URL", Some("")),
         ("SEQUENCING_START_BLOCK", Some("1")),
         ("SETTLEMENT_START_BLOCK", Some("1")),
-        ("BLOCK_BUILDER_SEQUENCING_CONTRACT_ADDRESS", Some(ZERO)),
-        ("BLOCK_BUILDER_ARBITRUM_BRIDGE_ADDRESS", Some(ZERO)),
-        ("BLOCK_BUILDER_ARBITRUM_INBOX_ADDRESS", Some(ZERO)),
-        ("BLOCK_BUILDER_MCHAIN_IPC_PATH", Some("")),
-        ("BLOCK_BUILDER_MCHAIN_AUTH_IPC_PATH", Some("")),
+        ("SEQUENCING_CONTRACT_ADDRESS", Some(ZERO)),
+        ("ARBITRUM_BRIDGE_ADDRESS", Some(ZERO)),
+        ("ARBITRUM_INBOX_ADDRESS", Some(ZERO)),
+        ("MCHAIN_IPC_PATH", Some("")),
+        ("MCHAIN_AUTH_IPC_PATH", Some("")),
     ];
 
     #[test]

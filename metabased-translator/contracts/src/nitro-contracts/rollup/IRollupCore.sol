@@ -142,27 +142,4 @@ interface IRollupCore is IAssertionChain {
 
     /// @return Number of active stakers currently staked
     function stakerCount() external view returns (uint64);
-
-    /**
-     * @notice Computes the hash of an assertion
-     * @param state The execution state for the assertion
-     * @param prevAssertionHash The hash of the assertion's parent
-     * @param inboxAcc The inbox batch accumulator
-     */
-    function computeAssertionHash(bytes32 prevAssertionHash, AssertionState calldata state, bytes32 inboxAcc)
-        external
-        pure
-        returns (bytes32);
-
-    /**
-     * @notice This allow the anyTrustFastConfirmer to immediately create and confirm an assertion
-     *         the anyTrustFastConfirmer is supposed to be set only on an AnyTrust chain to
-     *         a contract that can call this function when received sufficient signatures
-     *         The logic in this function is similar to stakeOnNewAssertion, but without staker checks
-     *
-     *         We trust the anyTrustFastConfirmer to not call this function multiple times on the same prev,
-     *         as doing so would result in incorrect accounting of withdrawable funds in the loserStakeEscrow.
-     *         This is because the protocol assume there is only 1 unique confirmable child assertion.
-     */
-    function fastConfirmNewAssertion(AssertionInputs calldata assertion, bytes32 expectedAssertionHash) external;
 }

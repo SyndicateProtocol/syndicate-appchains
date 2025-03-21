@@ -26,6 +26,47 @@ $ forge test
 forge coverage
 ```
 
+### Documentation
+
+Generate documentation for the Solidity contracts:
+
+```shell
+$ forge doc
+```
+
+This command generates markdown documentation for all Solidity source files in the project. By default, it:
+- Outputs documentation to the `docs/` directory in the project root
+- Generates markdown files for each contract, interface, and library
+- Includes function signatures, parameters, return values, events, and errors
+- Does not build or serve the documentation (requires additional flags)
+
+#### Options:
+
+- `--out <PATH>`: Specify a custom output directory for the documentation
+- `--build`: Build the documentation into an mdbook
+- `--serve`: Serve the documentation locally
+- `--port <PORT>`: Specify the port for serving documentation (requires `--serve`)
+- `--hostname <HOSTNAME>`: Specify the hostname for serving documentation (requires `--serve`)
+
+#### Examples:
+
+Generate and build documentation:
+```shell
+$ forge doc --build
+```
+
+Generate documentation with a custom output directory:
+```shell
+$ forge doc --out ./custom-docs
+```
+
+Generate, build, and serve documentation locally:
+```shell
+$ forge doc --build --serve --port 3000
+```
+
+The documentation includes details about contracts, functions, events, and errors, similar to the files in the `pre-audit/` directory.
+
 ### Deploy
 
 Look at Makefile for more details.
