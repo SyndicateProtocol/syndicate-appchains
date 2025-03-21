@@ -81,9 +81,9 @@ const_format = { version = "0.2" }
 criterion    = { version = "0.5" }
 mockall      = "0.13.1"
 serial_test  = { version = "3.2.0" }
+temp-env     = "0.3.6"
 test-case    = { version = "3" }
 tracing-test = { version = "0.2.5" }
-temp-env = "0.3.6"
 
 
 [workspace.lints.rust]
