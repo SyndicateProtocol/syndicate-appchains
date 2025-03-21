@@ -22,22 +22,22 @@ pub mod Math {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea26469706673582212204d4697a2edb46acbf847f1d52f096646ea5da530d90462b69e772914333bb8d064736f6c63430008190033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea26469706673582212201edc6b4b9af23f91f4644ff8c768c9511b231c73c32459e0f21579014ce7756264736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 MF\x97\xA2\xED\xB4j\xCB\xF8G\xF1\xD5/\tfF\xEA]\xA50\xD9\x04b\xB6\x9Ew)\x143;\xB8\xD0dsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x1E\xDCkK\x9A\xF2?\x91\xF4dO\xF8\xC7h\xC9Q\x1B#\x1Cs\xC3$Y\xE0\xF2\x15y\x01L\xE7ubdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea26469706673582212204d4697a2edb46acbf847f1d52f096646ea5da530d90462b69e772914333bb8d064736f6c63430008190033
+    ///0x60806040525f80fdfea26469706673582212201edc6b4b9af23f91f4644ff8c768c9511b231c73c32459e0f21579014ce7756264736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 MF\x97\xA2\xED\xB4j\xCB\xF8G\xF1\xD5/\tfF\xEA]\xA50\xD9\x04b\xB6\x9Ew)\x143;\xB8\xD0dsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x1E\xDCkK\x9A\xF2?\x91\xF4dO\xF8\xC7h\xC9Q\x1B#\x1Cs\xC3$Y\xE0\xF2\x15y\x01L\xE7ubdsolcC\0\x08\x19\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`Math`](self) contract instance.
