@@ -9,7 +9,7 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy                = { workspace = true, features = ["node-bindings", "rpc-types-anvil"] }
+alloy                = { workspace = true, features = ["node-bindings", "rpc-types-anvil", "sol-types"] }
 block-builder        = { workspace = true }
 common               = { workspace = true }
 contract-bindings    = { workspace = true }

@@ -189,7 +189,7 @@ impl From<Chain> for &'static str {
 /// A trait for processing slots of blocks from the sequencing and settlement chains.
 /// Implementors of this trait define how to translate each slot into the mchain state.
 #[async_trait]
-pub trait SlotProcessor {
+pub trait SlotProcessor: Send {
     /// Process a single slot
     async fn process_slot(&self, slot: &Slot) -> Result<(), Error>;
 }
