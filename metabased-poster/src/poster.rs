@@ -18,7 +18,6 @@ use contract_bindings::arbitrum::iassertionposter::IAssertionPoster::{
 };
 use eyre::{eyre, Result};
 use std::{str::FromStr, time::Duration};
-use tokio::sync::oneshot;
 use tracing::{error, info};
 
 type FilledProvider = FillProvider<
@@ -40,31 +39,28 @@ struct Poster {
 }
 
 /// Starts the poster loop
-pub async fn run(config: &Config, shutdown_rx: oneshot::Receiver<()>) -> Result<()> {
+pub async fn run(config: &Config) -> Result<()> {
     info!("Starting poller...");
-    let app_chain_provider = ProviderBuilder::default().on_http(config.app_chain_rpc_url.clone());
+    let app_chain_provider = ProviderBuilder::default().on_http(config.appchain_rpc_url.clone());
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
     let settlement_provider = ProviderBuilder::new()
         .wallet(EthereumWallet::from(signer))
-        .on_http(config.settlement_chain_rpc_url.clone());
+        .on_http(config.settlement_rpc_url.clone());
 
     let assertion_poster =
         IAssertionPoster::new(config.assertion_poster_contract_address, settlement_provider);
 
     let poster =
         Poster { app_chain_provider, polling_interval: config.polling_interval, assertion_poster };
-    poster.main_loop(shutdown_rx).await
+    poster.main_loop().await
 }
 
 impl Poster {
-    async fn main_loop(self, mut shutdown_rx: oneshot::Receiver<()>) -> Result<()> {
+    async fn main_loop(self) -> Result<()> {
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
             tokio::select! {
-                _ = &mut shutdown_rx => {
-                    return Ok(());
-                }
                 _ = interval.tick() => {
                     match self.fetch_block().await {
                         Ok(block) => {

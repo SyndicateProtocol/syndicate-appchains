@@ -25,12 +25,12 @@ pub enum ConfigError {
 #[command(version, about, long_about = None)]
 pub struct Config {
     /// URL of the settlement chain RPC node
-    #[arg(short = 's', long, env = "SETTLEMENT_CHAIN_RPC_URL", value_parser = parse_url)]
-    pub settlement_chain_rpc_url: Url,
+    #[arg(short = 's', long, env = "SETTLEMENT_RPC_URL", value_parser = parse_url)]
+    pub settlement_rpc_url: Url,
 
     /// URL of the app-chain RPC node
-    #[arg(short = 'a', long, env = "APP_CHAIN_RPC_URL", value_parser = parse_url)]
-    pub app_chain_rpc_url: Url,
+    #[arg(short = 'a', long, env = "APPCHAIN_RPC_URL", value_parser = parse_url)]
+    pub appchain_rpc_url: Url,
 
     /// Address of the assertion poster contract
     #[arg(short = 'b', long, env = "ASSERTION_POSTER_CONTRACT_ADDRESS", value_parser = parse_address)]
