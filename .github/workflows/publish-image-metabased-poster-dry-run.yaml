@@ -1,4 +1,4 @@
-name: Build POster Image to Github and Google Registries - Dry run Check
+name: Build Poster Image to Github and Google Registries - Dry run Check
 
 on:
   pull_request:
