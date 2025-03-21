@@ -55,12 +55,9 @@ pub struct HeadersService<S> {
 impl<S, B> Service<HttpRequest<B>> for HeadersService<S>
 where
     S: Service<HttpRequest<B>, Response = Response<HttpBody>>,
-    S::Response: 'static,
     S::Error: Into<BoxError> + 'static,
     S::Future: Send + 'static,
     B: http_body::Body<Data = HyperBytes> + Send + std::fmt::Debug + 'static,
-    B::Data: Send,
-    B::Error: Into<BoxError>,
 {
     type Response = S::Response;
     type Error = BoxError;

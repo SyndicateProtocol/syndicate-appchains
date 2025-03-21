@@ -118,7 +118,7 @@ jobs:
 
       # Run tests on entire workspace
       - name: Run Tests
-        run: cargo test --workspace --exclude maestro
+        run: cargo test --workspace
 
   nextest:
     name: Nextest Integration Tests
