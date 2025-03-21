@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.25;
 
-import "./bridge/IBridge.sol";
-import "./bridge/ISequencerInbox.sol";
-import "./bridge/IDelayedMessageProvider.sol";
-import "./libraries/MessageTypes.sol";
-import "./libraries/Error.sol";
+import "@arbitrum/nitro-contracts/src/bridge/IBridge.sol";
+import "@arbitrum/nitro-contracts/src/bridge/ISequencerInbox.sol";
+import "@arbitrum/nitro-contracts/src/bridge/IDelayedMessageProvider.sol";
+import "@arbitrum/nitro-contracts/src/libraries/MessageTypes.sol";
+import "@arbitrum/nitro-contracts/src/libraries/Error.sol";
 
 contract Rollup {
     // TODO: set these values properly
