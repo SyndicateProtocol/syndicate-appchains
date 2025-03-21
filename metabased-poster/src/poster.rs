@@ -33,15 +33,14 @@ type FilledProvider = FillProvider<
 
 #[derive(Debug)]
 struct Poster {
-    app_chain_provider: RootProvider,
+    appchain_provider: RootProvider,
     polling_interval: Duration,
     assertion_poster: IAssertionPosterInstance<(), FilledProvider>,
 }
 
 /// Starts the poster loop
 pub async fn run(config: &Config) -> Result<()> {
-    info!("Starting poller...");
-    let app_chain_provider = ProviderBuilder::default().on_http(config.appchain_rpc_url.clone());
+    let appchain_provider = ProviderBuilder::default().on_http(config.appchain_rpc_url.clone());
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
     let settlement_provider = ProviderBuilder::new()
@@ -52,7 +51,7 @@ pub async fn run(config: &Config) -> Result<()> {
         IAssertionPoster::new(config.assertion_poster_contract_address, settlement_provider);
 
     let poster =
-        Poster { app_chain_provider, polling_interval: config.polling_interval, assertion_poster };
+        Poster { appchain_provider, polling_interval: config.polling_interval, assertion_poster };
     poster.main_loop().await
 }
 
@@ -79,7 +78,7 @@ impl Poster {
     }
 
     async fn fetch_block(&self) -> Result<NitroBlock> {
-        self.app_chain_provider
+        self.appchain_provider
             .raw_request("eth_getBlockByNumber".into(), ("latest", false))
             .await
             .map_err(|err| eyre!("eth_getBlockByNumber request failed: {:?}", err))
