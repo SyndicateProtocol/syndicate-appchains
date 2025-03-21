@@ -2,7 +2,8 @@
 pragma solidity 0.8.25;
 
 import {Test} from "forge-std/Test.sol";
-import {DreamChainCheckCallerFromCalldataModule} from "src/use-cases/dream/sequencing-modules/DreamChainCheckCallerFromCalldataModule.sol";
+import {DreamChainCheckCallerFromCalldataModule} from
+    "src/use-cases/dream/sequencing-modules/DreamChainCheckCallerFromCalldataModule.sol";
 import {IAgentApplication} from "src/use-cases/dream/interface/IAgentApplication.sol";
 import {RLPTxDecoder} from "src/use-cases/dream/RLP/RLPTxDecoder.sol";
 
@@ -40,7 +41,8 @@ contract DreamChainCheckCallerFromCalldataModuleTest is Test {
     address public unpermittedUser;
 
     // Set up sample RLP encoded transaction data (fixed-length valid hex string)
-    bytes internal sampleTxData = hex"f86b808504a817c80082520894b3f9704360110f807adac5c95577d4bcd58cd2ce8803ba1e47a5620aa80802ca03d60ccc517e3a8cc8da56e97f5c2bb5df825df76f4c5b62186f5a201bbb2eb0ea026ffccafd0f4dbf3a1f1e535899d2e34d21ac33fbaad84914de92a2f1d9c2dc";
+    bytes internal sampleTxData =
+        hex"f86b808504a817c80082520894b3f9704360110f807adac5c95577d4bcd58cd2ce8803ba1e47a5620aa80802ca03d60ccc517e3a8cc8da56e97f5c2bb5df825df76f4c5b62186f5a201bbb2eb0ea026ffccafd0f4dbf3a1f1e535899d2e34d21ac33fbaad84914de92a2f1d9c2dc";
 
     function setUp() public {
         permittedUser = address(0x1);
@@ -130,11 +132,7 @@ contract DreamChainCheckCallerFromCalldataModuleTest is Test {
     // Helper function to create a transaction that will decode to a specific address
     function _createSampleTxDataFrom(address from) internal returns (bytes memory) {
         // Mock the RLPTxDecoder.decodeTx call to return our desired address
-        vm.mockCall(
-            address(RLPTxDecoder),
-            abi.encodeWithSignature("decodeTx(bytes)"),
-            abi.encode(from)
-        );
+        vm.mockCall(address(RLPTxDecoder), abi.encodeWithSignature("decodeTx(bytes)"), abi.encode(from));
 
         return sampleTxData;
     }
