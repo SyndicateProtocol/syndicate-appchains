@@ -44,19 +44,12 @@ use tokio::{
     time::timeout,
 };
 
-pub const PRELOAD_INBOX_ADDRESS: Address = address!("0x26eE2349212255614edCc046DD9472F2a5b7EF2b");
-pub const PRELOAD_BRIDGE_ADDRESS: Address = address!("0xa0e810a42086da4Ebc5C49fEd626cA6A75B06437");
-pub const PRELOAD_ROLLUP_ADDRESS: Address = address!("0x75744D0D556497B4ccb91D24328bF6160c2e0fE7");
-pub const PRELOAD_OUTBOX_ADDRESS: Address = address!("0x3442A17C5AF1E664E10F6AC0e3bE2bDb9C87E948");
-pub const PRELOAD_CHALLENGE_MANAGER: Address =
-    address!("0xE801273F775Eacc1d74d1d43f92ec4524caBBD35");
-pub const PRELOAD_ARB_SYS_PRECOMPILE_ADDRESS: Address =
-    address!("0x0000000000000000000000000000000000000064");
-pub const PRELOAD_NODE_INTERFACE_PRECOMPILE_ADDRESS: Address =
-    address!("0x00000000000000000000000000000000000000c8");
+const PRELOAD_INBOX_ADDRESS_300: Address = address!("0x26eE2349212255614edCc046DD9472F2a5b7EF2b");
+const PRELOAD_BRIDGE_ADDRESS_300: Address = address!("0xa0e810a42086da4Ebc5C49fEd626cA6A75B06437");
 
-pub const PRELOAD_WASM_MODULE_ROOT: &str =
-    "0x184884e1eb9fefdc158f6c8ac912bb183bf3cf83f0090317e0bc4ac5860baa39";
+const PRELOAD_INBOX_ADDRESS_271: Address = address!("0x7e2d5FCC5E02cBF2b9f860052C0226104E23F9c7");
+const PRELOAD_BRIDGE_ADDRESS_271: Address = address!("0x8dAF17A20c9DBA35f005b6324F493785D239719d");
+
 #[derive(Debug)]
 pub struct Docker(Child);
 
@@ -331,6 +324,8 @@ pub struct MetaNode {
     pub metabased_rollup: RootProvider,
 
     pub chain_id: u64,
+    pub bridge_address: Address,
+    pub inbox_address: Address,
 
     pub mchain: (Docker, Option<(Docker, Docker, Docker, Docker)>),
     pub mchain_provider: MetaChainProvider<ArbitrumAdapter>,
@@ -345,14 +340,30 @@ pub struct MetaNode {
     _shutdown_channels: ShutdownTx,
 }
 
+/// nitro contract version on the settlement chain used for testing
+#[derive(Debug)]
+pub enum ContractVersion {
+    V213,
+    V300,
+}
+
 impl MetaNode {
-    pub async fn new(pre_loaded: bool, mut config: MetabasedConfig) -> Result<Self> {
+    pub async fn new(
+        pre_loaded: Option<ContractVersion>,
+        mut config: MetabasedConfig,
+    ) -> Result<Self> {
         // Define the addresses of the bridge and inbox contracts depedning on whether we
         // are loading in the full set of Arb contracts or not
         config.block_builder.arbitrum_bridge_address =
-            if pre_loaded { PRELOAD_BRIDGE_ADDRESS } else { get_rollup_contract_address() };
+            pre_loaded.as_ref().map_or_else(get_rollup_contract_address, |version| match version {
+                ContractVersion::V300 => PRELOAD_BRIDGE_ADDRESS_300,
+                ContractVersion::V213 => PRELOAD_BRIDGE_ADDRESS_271,
+            });
         config.block_builder.arbitrum_inbox_address =
-            if pre_loaded { PRELOAD_INBOX_ADDRESS } else { get_rollup_contract_address() };
+            pre_loaded.as_ref().map_or_else(get_rollup_contract_address, |version| match version {
+                ContractVersion::V300 => PRELOAD_INBOX_ADDRESS_300,
+                ContractVersion::V213 => PRELOAD_INBOX_ADDRESS_271,
+            });
 
         config.block_builder.sequencing_contract_address = get_rollup_contract_address();
 
@@ -392,12 +403,16 @@ impl MetaNode {
 
         // Launch mock settlement chain
         let (set_port, set_anvil, set_provider);
-        if pre_loaded {
+        if let Some(version) = pre_loaded {
+            let file = match version {
+                ContractVersion::V300 => "anvil_300.json",
+                ContractVersion::V213 => "anvil_213.json",
+            };
+
             // If flag is set, load the anvil state from a file
             // This is the full set of Arb contracts
-            let state_file = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-                .join("config")
-                .join("anvil.json");
+            let state_file =
+                std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config").join(file);
 
             (set_port, set_anvil, set_provider) = start_anvil_with_args(
                 31337,
@@ -480,6 +495,8 @@ impl MetaNode {
             metabased_rollup,
 
             chain_id: config.block_builder.target_chain_id,
+            bridge_address: config.block_builder.arbitrum_bridge_address,
+            inbox_address: config.block_builder.arbitrum_inbox_address,
 
             mchain,
             mchain_provider,
