@@ -11,6 +11,7 @@ pub mod assertionstatelib;
 pub mod counter;
 pub mod globalstatelib;
 pub mod iassertionchain;
+pub mod iassertionposter;
 pub mod ibridge;
 pub mod idelayedmessageprovider;
 pub mod ierc20;
