@@ -52,6 +52,7 @@ contract AssertionPoster is Ownable {
     address immutable self;
     IRollup immutable rollup;
     IUpgradeExecutor immutable executor;
+    // legacy refers to v2 of the nitro contracts, non-legacy is v3 - v2 and v3 have slightly different ABIs
     bool immutable legacy;
     GlobalState state;
     uint64 nodeNum;
@@ -139,6 +140,11 @@ contract AssertionPoster is Ownable {
             assertion.beforeStateData.configData = data;
             // just in case a batch is posted, update the next inbox position
             data.nextInboxPosition = uint64(rollup.bridge().sequencerMessageCount());
+            // just in case any cfg variables change, update them
+            data.wasmModuleRoot = rollup.wasmModuleRoot();
+            data.requiredStake = rollup.baseStake();
+            data.challengeManager = address(rollup.challengeManager());
+            data.confirmPeriodBlocks = rollup.confirmPeriodBlocks();
             if (state.u64Vals[0] == 1) {
                 assertion.beforeStateData.sequencerBatchAcc = seqBatchAcc;
             }
