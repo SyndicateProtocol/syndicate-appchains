@@ -51,7 +51,7 @@ contract RequireAnyModuleTest is Test {
     // Proposer Check Tests
     // ----------------------
 
-    function testIsAllowedNoChecks() public {
+    function testIsAllowedNoChecks() public view {
         // Should pass if no checks exist
         assertTrue(module.isAllowed(address(this)));
     }
@@ -197,7 +197,7 @@ contract RequireAnyModuleTest is Test {
     // Calldata Check Tests
     // ----------------------
 
-    function testIsCalldataAllowedNoChecks() public {
+    function testIsCalldataAllowedNoChecks() public view {
         // Should pass if no checks exist
         assertTrue(module.isCalldataAllowed(abi.encode("test data")));
     }
@@ -363,7 +363,7 @@ contract RequireAnyModuleTest is Test {
         assertEq(calldataChecks[0], calldataChecker);
     }
 
-    function testEmptyGetAllChecks() public {
+    function testEmptyGetAllChecks() public view {
         // Test that the get all functions work with empty lists
         address[] memory proposerChecks = module.getAllProposerChecks();
         address[] memory calldataChecks = module.getAllCalldataChecks();

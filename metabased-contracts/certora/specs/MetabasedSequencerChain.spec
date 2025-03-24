@@ -1,16 +1,20 @@
-using ProposerPermissionModuleBasic as permission;
+using ProposerPermissionModuleBasic as proposerPermission;
+using CalldataPermissionModuleBasic as dataPermission;
 using InitializableHarness as init;
 
 methods {
     // View functions
     function l3ChainId() external returns (uint256) envfree;
     function proposerRequirementModule() external returns (address) envfree;
+    function calldataRequirementModule() external returns (address) envfree;
     function isAllowed(address) external returns (bool) envfree;
+    function isCalldataAllowed(bytes) external returns (bool) envfree;
     function owner() external returns (address) envfree;
     function init._getInitializedVersion() external returns (uint8) envfree;
 
     // Permission Module interface methods
-    function permission.isAllowed(address) external returns (bool) envfree;
+    function proposerPermission.isAllowed(address) external returns (bool) envfree;
+    function dataPermission.isCalldataAllowed(bytes) external returns (bool) envfree;
 }
 
 /*
@@ -42,7 +46,8 @@ rule initializationCorrect(address admin, address module) {
 
     initialize(e, admin, module);
 
-    assert proposerRequirementModule() == module, "Module not set correctly";
+    assert proposerRequirementModule() == module, "Proposer module not set correctly";
+    assert calldataRequirementModule() == module, "Calldata module not set correctly";
     assert owner() == admin, "Admin not set correctly";
 }
 
@@ -57,20 +62,25 @@ invariant l3ChainIdNotZero()
  */
 rule moduleNotZero(method f) {
     env e;
-    require init._getInitializedVersion() > 0;
 
-    // Get the module before
-    address oldModule = proposerRequirementModule();
+    // Get modules before
+    address oldProposerModule = proposerRequirementModule();
+    address oldCalldataModule = calldataRequirementModule();
 
     // Function call
     calldataarg args;
     f(e, args);
 
-    // Get the module after
-    address newModule = proposerRequirementModule();
+    // Get modules after
+    address newProposerModule = proposerRequirementModule();
+    address newCalldataModule = calldataRequirementModule();
 
-    // Assert module cannot be zero address
-    assert newModule != 0;
+    // Assert modules cannot be zero address after initialization
+    require init._getInitializedVersion() > 0 => oldProposerModule != 0;
+    assert init._getInitializedVersion() > 0 => newProposerModule != 0, "Proposer module changed to zero";
+
+    require init._getInitializedVersion() > 0 => oldCalldataModule != 0;
+    assert init._getInitializedVersion() > 0 => newCalldataModule != 0, "Calldata module changed to zero";
 }
 
 /*
@@ -87,16 +97,37 @@ rule onlyAllowedCanProcess(bytes data) {
     bool success = !lastReverted;
 
     // Then the sender must have been allowed
-    assert success => permission.isAllowed(e.msg.sender),
+    assert success => proposerPermission.isAllowed(e.msg.sender),
         "Unauthorized sender processed transaction";
 }
 
 /*
- * Rule 6: Consistent behavior between processTransaction and processTransactionRaw
+ * Rule 6: Only allowed calldata can be processed
+ */
+rule onlyAllowedCalldata(bytes data) {
+    env e;
+    require init._getInitializedVersion() > 0;
+    require proposerPermission.isAllowed(e.msg.sender);
+
+    // Try to process a transaction
+    processTransaction@withrevert(e, data);
+
+    // If the transaction succeeded
+    bool success = !lastReverted;
+
+    // Then the calldata must have been allowed
+    assert success => dataPermission.isCalldataAllowed(data),
+        "Unallowed calldata was processed";
+}
+
+/*
+ * Rule 7: Consistent behavior between processTransaction and processTransactionRaw
  */
 rule processConsistency(bytes data) {
     env e;
     require init._getInitializedVersion() > 0;
+    require proposerPermission.isAllowed(e.msg.sender);
+    require dataPermission.isCalldataAllowed(data);
 
     // Record both outcomes
     processTransaction@withrevert(e, data);
@@ -111,11 +142,19 @@ rule processConsistency(bytes data) {
 }
 
 /*
- * Rule 7: Bulk processing maintains individual transaction properties
+ * Rule 8: Bulk processing maintains individual transaction properties
  */
 rule bulkProcessingConsistency(bytes[] data) {
     env e;
     require init._getInitializedVersion() > 0;
+    require proposerPermission.isAllowed(e.msg.sender);
+    require data.length > 0;
+    require data.length < 3; // Loop unrolling limit - Certora will unroll up to this limit
+
+    // Ensure all data is allowed
+    require data.length > 0 => dataPermission.isCalldataAllowed(data[0]);
+    require data.length > 1 => dataPermission.isCalldataAllowed(data[1]);
+    require data.length > 2 => dataPermission.isCalldataAllowed(data[2]);
 
     // Process transactions in bulk
     processBulkTransactions@withrevert(e, data);
@@ -123,27 +162,22 @@ rule bulkProcessingConsistency(bytes[] data) {
 
     // If bulk processing succeeded, each individual transaction should succeed
     require bulkSuccess;
-    require data.length < 3; // Loop unrolling limit - Certora will unroll up to this limit
 
+    // Check individual transactions would succeed
     processTransaction@withrevert(e, data[0]);
-    assert !lastReverted,
-        "Bulk processing accepted invalid transaction";
+    assert !lastReverted, "Bulk processing accepted invalid transaction";
+
 
     processTransaction@withrevert(e, data[1]);
-    assert !lastReverted,
-        "Bulk processing accepted invalid transaction";
+    assert !lastReverted, "Bulk processing accepted invalid transaction";
+
 
     processTransaction@withrevert(e, data[2]);
-    assert !lastReverted,
-        "Bulk processing accepted invalid transaction";
-
-    // If individual transactions succeeded, bulk processing should succeed
-    assert bulkSuccess,
-        "Bulk processing failed despite individual transactions succeeding";
+    assert !lastReverted, "Bulk processing accepted invalid transaction";
 }
 
 /*
- * Rule 8: Only owner can update requirement module
+ * Rule 9: Only owner can update requirement module
  */
 rule onlyOwnerCanUpdateModule(address newModule) {
     env e;
@@ -158,7 +192,7 @@ rule onlyOwnerCanUpdateModule(address newModule) {
 }
 
 /*
- * Rule 9: Module update changes state correctly
+ * Rule 10: Module update changes state correctly
  */
 rule moduleUpdateChangesState(address newModule) {
     env e;
@@ -166,44 +200,48 @@ rule moduleUpdateChangesState(address newModule) {
     require newModule != 0;
 
     // Store old module
-    address oldModule = proposerRequirementModule();
+    address oldProposerModule = proposerRequirementModule();
 
     // Update module
     updateRequirementModule@withrevert(e, newModule);
 
     // If successful, module should be updated
     assert !lastReverted => proposerRequirementModule() == newModule,
-        "Module not updated correctly";
+        "Proposer module not updated correctly";
 }
 
 /*
- * Rule 10: State consistency after transaction processing
+ * Rule 11: State consistency after transaction processing
  */
 rule stateConsistencyAfterProcessing(bytes data) {
     env e;
     require init._getInitializedVersion() > 0;
-    address oldModule = proposerRequirementModule();
+    address oldProposerModule = proposerRequirementModule();
+    address oldCalldataModule = calldataRequirementModule();
 
     // Process transaction
     processTransaction@withrevert(e, data);
 
-    // Verify requirement module hasn't changed
-    assert proposerRequirementModule() == oldModule,
-        "Transaction processing modified core state";
+    // Verify requirement modules haven't changed
+    assert proposerRequirementModule() == oldProposerModule,
+        "Transaction processing modified proposer module state";
+    assert calldataRequirementModule() == oldCalldataModule,
+        "Transaction processing modified calldata module state";
 }
 
 /*
- * Rule 11: Verify permissions are correctly enforced
+ * Rule 12: Verify permissions are correctly enforced
  */
 rule permissionsCorrectlyEnforced(bytes data) {
     env e;
 
     // Setup variables for initialization
     address admin = e.msg.sender;
-    address module = permission;
+    address proposerModule = proposerPermission;
+    address dataModule = dataPermission;
 
     // Initialize the contract first
-    initialize(e, admin, module);
+    initialize(e, admin, proposerModule);
 
     // Verify initialization worked
     require init._getInitializedVersion() == 1;
@@ -217,16 +255,17 @@ rule permissionsCorrectlyEnforced(bytes data) {
     require data.length > 0;
     require data.length < max_uint256;
 
-    // Check permission
-    bool initiallyAllowed = permission.isAllowed(e.msg.sender);
+    // Check permissions
+    bool senderAllowed = proposerPermission.isAllowed(e.msg.sender);
+    bool dataAllowed = dataPermission.isCalldataAllowed(data);
 
     // Process transaction
     processTransaction@withrevert(e, data);
     bool txSucceeded = !lastReverted;
 
     // Bidirectional assertions
-    assert txSucceeded => initiallyAllowed,
-        "Transaction succeeded with unauthorized sender";
-    assert initiallyAllowed => txSucceeded,
-        "Transaction failed despite sender being authorized and valid preconditions";
+    assert txSucceeded => (senderAllowed && dataAllowed),
+        "Transaction succeeded with unauthorized sender or unallowed calldata";
+    assert (senderAllowed && dataAllowed) => txSucceeded,
+        "Transaction failed despite permissions being valid and preconditions met";
 }

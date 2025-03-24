@@ -11,7 +11,7 @@ contract CalldataAlwaysAllowedModuleTest is Test {
         module = new CalldataAlwaysAllowedModule();
     }
 
-    function testIsCalldataAllowed() public {
+    function testIsCalldataAllowed() public view {
         // Test with empty calldata
         bytes memory emptyCalldata = new bytes(0);
         assertTrue(module.isCalldataAllowed(emptyCalldata), "Empty calldata should be allowed");
