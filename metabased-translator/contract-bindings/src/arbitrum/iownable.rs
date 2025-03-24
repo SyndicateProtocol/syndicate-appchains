@@ -66,6 +66,7 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -175,6 +176,7 @@ function owner() external view returns (address);
     };
     ///Container for all the [`IOwnable`](self) function calls.
     pub enum IOwnableCalls {
+        #[allow(missing_docs)]
         owner(ownerCall),
     }
     #[automatically_derived]
