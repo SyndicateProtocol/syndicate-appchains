@@ -13,8 +13,8 @@ use alloy::{
     },
     signers::local::PrivateKeySigner,
 };
-use contract_bindings::arbitrum::iassertionposter::IAssertionPoster::{
-    self, IAssertionPosterInstance,
+use contract_bindings::arbitrum::assertionposter::AssertionPoster::{
+    self, AssertionPosterInstance,
 };
 use eyre::{eyre, Result};
 use std::{str::FromStr, time::Duration};
@@ -35,7 +35,7 @@ type FilledProvider = FillProvider<
 struct Poster {
     appchain_provider: RootProvider,
     polling_interval: Duration,
-    assertion_poster: IAssertionPosterInstance<(), FilledProvider>,
+    assertion_poster: AssertionPosterInstance<(), FilledProvider>,
 }
 
 /// Starts the poster loop
@@ -48,7 +48,7 @@ pub async fn run(config: &Config) -> Result<()> {
         .on_http(config.settlement_rpc_url.clone());
 
     let assertion_poster =
-        IAssertionPoster::new(config.assertion_poster_contract_address, settlement_provider);
+        AssertionPoster::new(config.assertion_poster_contract_address, settlement_provider);
 
     let poster =
         Poster { appchain_provider, polling_interval: config.polling_interval, assertion_poster };
