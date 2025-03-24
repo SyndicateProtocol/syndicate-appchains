@@ -22,22 +22,22 @@ pub mod SignedMath {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea26469706673582212201675370076408cc32a231588f7f2bf1c4aa4a16b55c23776d9b7a1a84c6a8f2d64736f6c63430008190033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea264697066735822122093850355a4fbe15389ffc7367b7b36e037af987d58e3d964a666df7dc5d42b4c64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \x16u7\0v@\x8C\xC3*#\x15\x88\xF7\xF2\xBF\x1CJ\xA4\xA1kU\xC27v\xD9\xB7\xA1\xA8Lj\x8F-dsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x93\x85\x03U\xA4\xFB\xE1S\x89\xFF\xC76{{6\xE07\xAF\x98}X\xE3\xD9d\xA6f\xDF}\xC5\xD4+LdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x5f80fdfea26469706673582212201675370076408cc32a231588f7f2bf1c4aa4a16b55c23776d9b7a1a84c6a8f2d64736f6c63430008190033
+    ///0x60806040525f80fdfea264697066735822122093850355a4fbe15389ffc7367b7b36e037af987d58e3d964a666df7dc5d42b4c64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \x16u7\0v@\x8C\xC3*#\x15\x88\xF7\xF2\xBF\x1CJ\xA4\xA1kU\xC27v\xD9\xB7\xA1\xA8Lj\x8F-dsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x93\x85\x03U\xA4\xFB\xE1S\x89\xFF\xC76{{6\xE07\xAF\x98}X\xE3\xD9d\xA6f\xDF}\xC5\xD4+LdsolcC\0\x08\x19\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`SignedMath`](self) contract instance.
