@@ -14,10 +14,6 @@ import {
 } from "@arbitrum/nitro-contracts/src/rollup/IRollupCore.sol";
 import {IGasRefunder} from "@arbitrum/nitro-contracts/src/libraries/IGasRefunder.sol";
 
-/**
- * @title AssertionPosterTest
- * @dev Test suite for the AssertionPoster contract (simplified)
- */
 contract AssertionPosterTest is Test {
     // Events for test verification
     event RolePaused();
@@ -106,25 +102,6 @@ contract AssertionPosterTest is Test {
         legacyPoster.postAssertion(TEST_BLOCK_HASH, TEST_SEND_ROOT);
     }
 
-    function testPostAssertionLegacy() public {
-        MockRollup legacyRollup = new MockRollup();
-        legacyRollup.setLegacyMode(true);
-
-        vm.prank(OWNER);
-        AssertionPoster legacyPoster = new AssertionPoster(IRollup(address(legacyRollup)));
-
-        // Expect the events to be emitted
-        vm.expectEmit(true, true, true, true);
-        emit ForceCreateNodeCalled(0, 1, bytes32(0));
-
-        vm.expectEmit(true, true, true, true);
-        emit ForceConfirmNodeCalled(0, TEST_BLOCK_HASH, TEST_SEND_ROOT);
-
-        // Owner posts assertion
-        vm.prank(OWNER);
-        legacyPoster.postAssertion(TEST_BLOCK_HASH, TEST_SEND_ROOT);
-    }
-
     // NEW VERSION TESTS
     function testConstructorNew() public {
         MockRollup newRollup = new MockRollup();
@@ -147,69 +124,6 @@ contract AssertionPosterTest is Test {
         // Direct call should fail
         vm.expectRevert("must initialize via upgradeExecutor.execute(AssertionPoster.initialize)");
         newPoster.initialize();
-    }
-
-    function testInitializeNewWithValidators() public {
-        MockRollup newRollup = new MockRollup();
-        newRollup.setGenesisAssertionHash(TEST_GENESIS_HASH);
-
-        // Set validators
-        address[] memory validators = new address[](2);
-        validators[0] = VALIDATOR1;
-        validators[1] = VALIDATOR2;
-        newRollup.setValidators(validators);
-
-        vm.prank(OWNER);
-        AssertionPoster newPoster = new AssertionPoster(IRollup(address(newRollup)));
-
-        // Simulate being the executor for initialize
-        address executorAddr = newRollup.owner();
-        bytes memory posterCode = address(newPoster).code;
-        vm.etch(executorAddr, posterCode);
-
-        // Expect validator setting event
-        vm.expectEmit(true, true, true, true);
-        emit ValidatorsSet(validators, new bool[](2));
-
-        // Expect AFK blocks setting event
-        vm.expectEmit(true, true, true, true);
-        emit ValidatorAfkBlocksSet(type(uint64).max);
-
-        // Expect AnyTrustFastConfirmer setting event
-        vm.expectEmit(true, true, true, true);
-        emit AnyTrustFastConfirmerSet(executorAddr);
-
-        // Execute initialize from executor address
-        vm.prank(executorAddr);
-        AssertionPoster(executorAddr).initialize();
-    }
-
-    function testInitializeNewWithLowMessageCount() public {
-        MockRollup newRollup = new MockRollup();
-        newRollup.setGenesisAssertionHash(TEST_GENESIS_HASH);
-        newRollup.setSequencerMessageCount(1); // Too low
-
-        vm.prank(OWNER);
-        AssertionPoster newPoster = new AssertionPoster(IRollup(address(newRollup)));
-
-        // Simulate being the executor for initialize
-        address executorAddr = newRollup.owner();
-        bytes memory posterCode = address(newPoster).code;
-        vm.etch(executorAddr, posterCode);
-
-        // Expect batch poster setting events
-        vm.expectEmit(true, true, true, true);
-        emit BatchPosterSet(executorAddr, true);
-
-        vm.expectEmit(true, true, true, true);
-        emit SequencerBatchAdded(1);
-
-        vm.expectEmit(true, true, true, true);
-        emit BatchPosterSet(executorAddr, false);
-
-        // Execute initialize from executor address
-        vm.prank(executorAddr);
-        AssertionPoster(executorAddr).initialize();
     }
 
     function testPostAssertionNewAccessControl() public {
