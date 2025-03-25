@@ -380,7 +380,7 @@ impl MetaNode {
         )
         .send()
         .await?;
-        
+
         // Continue to deploy AlwaysAllowedModule for compatibility
         let always_allowed_contract =
             AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
@@ -395,12 +395,13 @@ impl MetaNode {
         };
 
         // Deploy WalletPoolSequencingModule and add default addresses
-        let wallet_pool_module = walletpoolsequencingmodule::WalletPoolSequencingModule::deploy_builder(
-            &seq_provider,
-            seq_provider.default_signer_address(), // admin
-        )
-        .send()
-        .await?;
+        let wallet_pool_module =
+            walletpoolsequencingmodule::WalletPoolSequencingModule::deploy_builder(
+                &seq_provider,
+                seq_provider.default_signer_address(), // admin
+            )
+            .send()
+            .await?;
         mine_block(&seq_provider, 0).await?;
         let wallet_receipt = wallet_pool_module.get_receipt().await?;
         let wallet_pool_address = match wallet_receipt.contract_address {
@@ -410,7 +411,7 @@ impl MetaNode {
                 return Err(eyre!("Wallet pool deployment failed: No contract address found."));
             }
         };
-        
+
         // Add the default wallet to the pool
         let wallet_pool = walletpoolsequencingmodule::WalletPoolSequencingModule::new(
             wallet_pool_address,
