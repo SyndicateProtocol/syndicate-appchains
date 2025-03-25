@@ -4,12 +4,9 @@ use crate::errors::Error;
 use axum::http::Response;
 use bytes::Bytes as HyperBytes;
 use futures_util::TryFutureExt;
-use jsonrpsee::{
-    core::{
-        http_helpers::{Body as HttpBody, Request as HttpRequest},
-        BoxError,
-    },
-    server::http::response::malformed,
+use jsonrpsee::core::{
+    http_helpers::{Body as HttpBody, Request as HttpRequest},
+    BoxError,
 };
 use std::{
     collections::HashMap,
@@ -74,29 +71,23 @@ where
             let mut header_map: HashMap<String, String> = HashMap::new();
 
             for optional_header in optional_headers.iter() {
-                let header_value_str: Option<String> = {
-                    // Scope to limit the immutable borrow
-                    if let Some(header_value) = request.headers().get(optional_header) {
-                        match header_value.to_str() {
-                            Ok(string_val) => Some(string_val.to_string()),
-                            Err(_) => {
-                                debug!(
-                                    "Header '{}' value contains non-ASCII characters; denying request",
-                                    optional_header
-                                );
-                                return Box::pin(async { Ok(malformed()) });
-                            }
+                if let Some(header_value) = request.headers().get(optional_header) {
+                    match header_value.to_str() {
+                        Ok(valid_str_header_val) => {
+                            // If the header value is valid, insert it into the HashMap
+                            header_map
+                                .insert(optional_header.clone(), valid_str_header_val.to_string());
                         }
-                    } else {
-                        debug!("Header '{}' not found in request; skipping it", optional_header);
-                        None
+                        Err(_) => {
+                            debug!(
+                                "Header '{}' value contains non-ASCII characters; ignoring header",
+                                optional_header
+                            );
+                        }
                     }
+                } else {
+                    debug!("Header '{}' not found in request; skipping it", optional_header);
                 };
-
-                // If a valid header value exists, insert it into the HashMap
-                if let Some(header_value) = header_value_str {
-                    header_map.insert(optional_header.clone(), header_value);
-                }
             }
 
             if !header_map.is_empty() {
@@ -197,10 +188,6 @@ mod tests {
         let response = headers_service.call(request).await.expect("Should succeed");
 
         // Ensure the service fails gracefully (e.g., returns an error)
-        assert_eq!(
-            response.status(),
-            400,
-            "Service should return 400 Error for invalid ASCII header"
-        );
+        assert_eq!(response.status(), 200, "Service should return 200 OK for non-ASCII headers");
     }
 }

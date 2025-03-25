@@ -187,7 +187,7 @@ mod tests {
             .send()
             .await?;
 
-        assert!(malformed_headers_response.status().is_client_error(), "Request should fail");
+        assert!(malformed_headers_response.status().is_success(), "Request should succeed");
 
         Ok(())
     }
