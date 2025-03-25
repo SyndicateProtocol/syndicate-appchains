@@ -26,6 +26,7 @@ use contract_bindings::{
     metabased::{
         alwaysallowedmodule::AlwaysAllowedModule,
         metabasedsequencerchain::MetabasedSequencerChain::{self, MetabasedSequencerChainInstance},
+        walletpoolsequencingmodule,
     },
 };
 use eyre::{eyre, Result};
@@ -379,6 +380,8 @@ impl MetaNode {
         )
         .send()
         .await?;
+        
+        // Continue to deploy AlwaysAllowedModule for compatibility
         let always_allowed_contract =
             AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
         mine_block(&seq_provider, 0).await?;
@@ -391,12 +394,37 @@ impl MetaNode {
             }
         };
 
-        // Setup the sequencing contract
+        // Deploy WalletPoolSequencingModule and add default addresses
+        let wallet_pool_module = walletpoolsequencingmodule::WalletPoolSequencingModule::deploy_builder(
+            &seq_provider,
+            seq_provider.default_signer_address(), // admin
+        )
+        .send()
+        .await?;
+        mine_block(&seq_provider, 0).await?;
+        let wallet_receipt = wallet_pool_module.get_receipt().await?;
+        let wallet_pool_address = match wallet_receipt.contract_address {
+            Some(address) => address,
+            None => {
+                eprintln!("Wallet pool deployment failed: No contract address found.");
+                return Err(eyre!("Wallet pool deployment failed: No contract address found."));
+            }
+        };
+        
+        // Add the default wallet to the pool
+        let wallet_pool = walletpoolsequencingmodule::WalletPoolSequencingModule::new(
+            wallet_pool_address,
+            seq_provider.clone(),
+        );
+        _ = wallet_pool.addToWalletPool(seq_provider.default_signer_address()).send().await?;
+        mine_block(&seq_provider, 0).await?;
+
+        // Setup the sequencing contract with the wallet pool module
         let provider_clone = seq_provider.clone();
         let sequencing_contract =
             MetabasedSequencerChain::new(get_rollup_contract_address(), provider_clone);
         _ = sequencing_contract
-            .initialize(seq_provider.default_signer_address(), always_allowed_module_address)
+            .initialize(seq_provider.default_signer_address(), wallet_pool_address)
             .send()
             .await?;
         mine_block(&seq_provider, 0).await?;
