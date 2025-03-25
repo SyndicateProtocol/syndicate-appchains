@@ -426,7 +426,7 @@ impl MetaNode {
         // tests
         let test_addresses = [
             // Default settlement wallet address
-            self.settlement_provider.default_signer_address(),
+            set_provider.default_signer_address(),
             // Common test addresses used in integration tests
             address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"),
             address!("0xA9ec1Ed7008fDfdE38978Dfef4cF2754A969E5FA"),
