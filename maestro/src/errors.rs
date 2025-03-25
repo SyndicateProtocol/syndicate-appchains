@@ -99,7 +99,6 @@ impl From<alloy::hex::FromHexError> for Error {
     }
 }
 
-// TODO revisit
 impl From<Error> for Report {
     fn from(value: Error) -> Self {
         eyre::eyre!(value)

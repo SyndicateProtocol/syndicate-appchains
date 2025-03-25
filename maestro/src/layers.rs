@@ -81,7 +81,7 @@ where
                             Ok(string_val) => Some(string_val.to_string()),
                             Err(_) => {
                                 debug!(
-                                    "Header '{}' value contains non-ASCII characters, denying request",
+                                    "Header '{}' value contains non-ASCII characters; denying request",
                                     optional_header
                                 );
                                 return Box::pin(async { Ok(malformed()) });

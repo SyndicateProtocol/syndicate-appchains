@@ -31,7 +31,7 @@ tower = {workspace = true}
 bytes = {workspace = true}
 futures-util = {workspace = true}
 http-body = {workspace = true}
-http.workspace = true
+http = {workspace = true}
 
 [lints]
 workspace = true
