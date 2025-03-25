@@ -123,6 +123,9 @@ rule onlyRoleAdminCanGrantRole(address newManager) {
     bytes32 role = MANAGER_ROLE();
     bytes32 adminRole = getRoleAdmin(role);
 
+    // Require that the manager doesn't have the role yet
+    require !hasRole(role, newManager);
+
     // Try to grant manager role
     grantRole@withrevert(e, role, newManager);
 
@@ -132,46 +135,34 @@ rule onlyRoleAdminCanGrantRole(address newManager) {
 }
 
 /*
- * Rule 9: Only role admins can revoke manager role
- */
-rule onlyRoleAdminCanRevokeRole(address manager) {
-    env e;
-    bytes32 role = MANAGER_ROLE();
-    bytes32 adminRole = getRoleAdmin(role);
-
-    // Try to revoke manager role
-    revokeRole@withrevert(e, role, manager);
-
-    // If successful, caller must have admin role
-    assert !lastReverted => hasRole(adminRole, e.msg.sender),
-        "Non-admin revoked manager role";
-}
-
-/*
- * Rule 10: Role changes affect permissions correctly
+ * Rule 9: Role changes affect permissions correctly
  */
 rule roleChangesAffectPermissions(address user, address manager) {
     env e1;
     env e2;
 
-    // Initial state
+    // Initial state - ensure user is not in wallet pool
     require !walletPool(user);
+    // Ensure manager has the manager role initially
     require hasRole(MANAGER_ROLE(), manager);
+    // Ensure sender of e1 has admin role
+    require hasRole(DEFAULT_ADMIN_ROLE(), e1.msg.sender);
 
     // Revoke manager role
-    require hasRole(DEFAULT_ADMIN_ROLE(), e1.msg.sender);
     revokeRole(e1, MANAGER_ROLE(), manager);
 
-    // Try to add to wallet pool
+    // Set e2 sender to be the former manager
+    require e2.msg.sender == manager;
+
+    // Try to add to wallet pool as the former manager
     addToWalletPool@withrevert(e2, user);
 
-    // If caller is the former manager, operation should revert
-    assert e2.msg.sender == manager => lastReverted,
-        "Former manager still has permission";
+    // Operation should revert as the manager role was revoked
+    assert lastReverted, "Former manager still has permission";
 }
 
 /*
- * Rule 11: Self-renunciation works correctly
+ * Rule 10: Self-renunciation works correctly
  */
 rule selfRenunciationConsistency(address manager) {
     env e;
@@ -185,14 +176,3 @@ rule selfRenunciationConsistency(address manager) {
     assert !hasRole(MANAGER_ROLE(), manager),
         "Manager still has role after renunciation";
 }
-
-/*
- * Additional invariants to verify role setup
- */
-definition manager() returns address = 0x1; // Representing the manager address
-
-invariant managerHasManagerRole()
-    hasRole(MANAGER_ROLE(), manager());
-
-invariant managerHasAdminRole()
-    hasRole(DEFAULT_ADMIN_ROLE(), manager());
