@@ -43,6 +43,10 @@ pub struct Config {
     /// The interval between each block polling
     #[arg( long, env = "POSTER_POLLING_INTERVAL", default_value = "10m", value_parser = humantime::parse_duration )]
     pub polling_interval: Duration,
+
+    /// Port for metrics
+    #[arg(short = 'm', long, env = "POSTER_METRICS_PORT", default_value_t = 9191)]
+    pub metrics_port: u16,
 }
 
 /// Parse a string into an Ethereum `Address`.
