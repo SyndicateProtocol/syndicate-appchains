@@ -13,10 +13,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use tokio::{
-    sync::{mpsc::Sender, oneshot},
-    time::Instant,
-};
+use tokio::sync::{mpsc::Sender, oneshot};
 use tracing::{error, info, trace};
 
 /// Polls and ingests blocks from an Ethereum chain
@@ -132,18 +129,15 @@ impl Ingestor {
             ))
             .collect();
         trace!("Fetching blocks {:?} on {:?}", block_numbers, self.chain);
-        let start_time = Instant::now();
-        let blocks_result = self.client.batch_get_blocks_and_receipts(block_numbers).await;
-        // Record the RPC latency immediately after the network call
-        let duration = start_time.elapsed();
-        self.metrics.record_rpc_call(
-            self.chain,
-            "batch(eth_getBlockByNumber + eth_getBlockReceipts)",
-            duration,
-        );
 
-        match blocks_result {
-            Ok(blocks) => {
+        match self.client.batch_get_blocks_and_receipts(block_numbers).await {
+            Ok((blocks, duration)) => {
+                self.metrics.record_rpc_call(
+                    self.chain,
+                    "batch(eth_getBlockByNumber + eth_getBlockReceipts)",
+                    duration,
+                );
+
                 for block in blocks {
                     if let Err(err) = self.push_block_and_receipts(Arc::new(block)).await {
                         error!(
@@ -236,7 +230,7 @@ mod tests {
         #[async_trait]
         impl RPCClient for RPCClientMock {
             async fn get_block_by_number(&self, block_number: BlockNumberOrTag) -> Result<Block, RPCClientError>;
-            async fn batch_get_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
+            async fn batch_get_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<(Vec<BlockAndReceipts>, Duration), RPCClientError>;
         }
     }
 
@@ -327,7 +321,10 @@ mod tests {
             .withf(move |block_numbers| block_numbers.len() == syncing_batch_size as usize)
             .times(1)
             .returning(move |block_numbers| {
-                Ok(block_numbers.iter().map(|&num| get_dummy_block_and_receipts(num)).collect())
+                Ok((
+                    block_numbers.iter().map(|&num| get_dummy_block_and_receipts(num)).collect(),
+                    Duration::from_millis(10),
+                ))
             });
 
         mock_client

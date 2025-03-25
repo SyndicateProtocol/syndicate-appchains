@@ -461,6 +461,7 @@ mod tests {
         eth_client::{RPCClient, RPCClientError},
         types::{Block, BlockAndReceipts},
     };
+    use std::time::Duration;
 
     #[derive(Debug, Clone)]
     struct MockRPCClient {
@@ -482,7 +483,7 @@ mod tests {
         async fn batch_get_blocks_and_receipts(
             &self,
             _block_numbers: Vec<u64>,
-        ) -> Result<Vec<BlockAndReceipts>, RPCClientError> {
+        ) -> Result<(Vec<BlockAndReceipts>, Duration), RPCClientError> {
             unimplemented!("Not needed for this test")
         }
     }

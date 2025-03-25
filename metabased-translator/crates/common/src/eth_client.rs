@@ -9,8 +9,9 @@ use alloy::{
     transports::{RpcError, TransportErrorKind},
 };
 use async_trait::async_trait;
-use std::fmt::Debug;
+use std::{fmt::Debug, time::Duration};
 use thiserror::Error;
+use tokio::time::Instant;
 use tracing::trace;
 use url::Url;
 
@@ -47,7 +48,7 @@ pub trait RPCClient: Send + Sync + Debug {
     async fn batch_get_blocks_and_receipts(
         &self,
         block_numbers: Vec<u64>,
-    ) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
+    ) -> Result<(Vec<BlockAndReceipts>, Duration), RPCClientError>;
 }
 
 /// A client for interacting with an Ethereum-like blockchain.
@@ -121,7 +122,7 @@ impl RPCClient for EthClient {
     async fn batch_get_blocks_and_receipts(
         &self,
         block_numbers: Vec<u64>,
-    ) -> Result<Vec<BlockAndReceipts>, RPCClientError> {
+    ) -> Result<(Vec<BlockAndReceipts>, Duration), RPCClientError> {
         let mut batch = self.client.new_batch();
         let mut block_futures = Vec::new();
         let mut receipt_futures = Vec::new();
@@ -158,7 +159,9 @@ impl RPCClient for EthClient {
             receipt_futures.push(receipt_fut);
         }
 
+        let start_time = Instant::now();
         batch.send().await?;
+        let duration = start_time.elapsed();
 
         let mut results = Vec::new();
         for (block_fut, receipt_fut) in block_futures.into_iter().zip(receipt_futures.into_iter()) {
@@ -169,6 +172,6 @@ impl RPCClient for EthClient {
             }
         }
 
-        Ok(results)
+        Ok((results, duration))
     }
 }
