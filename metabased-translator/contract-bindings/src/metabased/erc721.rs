@@ -507,11 +507,8 @@ error ERC721IncorrectOwner(address sender, uint256 tokenId, address owner);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721IncorrectOwner {
-        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -600,9 +597,7 @@ error ERC721InsufficientApproval(address operator, uint256 tokenId);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721InsufficientApproval {
-        #[allow(missing_docs)]
         pub operator: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -687,7 +682,6 @@ error ERC721InvalidApprover(address approver);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721InvalidApprover {
-        #[allow(missing_docs)]
         pub approver: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -758,7 +752,6 @@ error ERC721InvalidOperator(address operator);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721InvalidOperator {
-        #[allow(missing_docs)]
         pub operator: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -829,7 +822,6 @@ error ERC721InvalidOwner(address owner);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721InvalidOwner {
-        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -900,7 +892,6 @@ error ERC721InvalidReceiver(address receiver);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721InvalidReceiver {
-        #[allow(missing_docs)]
         pub receiver: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -971,7 +962,6 @@ error ERC721InvalidSender(address sender);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721InvalidSender {
-        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1042,7 +1032,6 @@ error ERC721NonexistentToken(uint256 tokenId);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC721NonexistentToken {
-        #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1575,9 +1564,7 @@ function approve(address to, uint256 tokenId) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct approveCall {
-        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`approve(address,uint256)`](approveCall) function.
@@ -1715,14 +1702,12 @@ function balanceOf(address owner) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct balanceOfCall {
-        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`balanceOf(address)`](balanceOfCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct balanceOfReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1843,14 +1828,12 @@ function getApproved(uint256 tokenId) external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getApprovedCall {
-        #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`getApproved(uint256)`](getApprovedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getApprovedReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1971,16 +1954,13 @@ function isApprovedForAll(address owner, address operator) external view returns
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isApprovedForAllCall {
-        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub operator: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isApprovedForAll(address,address)`](isApprovedForAllCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isApprovedForAllReturn {
-        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2122,7 +2102,6 @@ function name() external view returns (string memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct nameReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::String,
     }
     #[allow(
@@ -2237,14 +2216,12 @@ function ownerOf(uint256 tokenId) external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerOfCall {
-        #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`ownerOf(uint256)`](ownerOfCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerOfReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2365,11 +2342,8 @@ function safeTransferFrom(address from, address to, uint256 tokenId) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct safeTransferFrom_0Call {
-        #[allow(missing_docs)]
         pub from: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`safeTransferFrom(address,address,uint256)`](safeTransferFrom_0Call) function.
@@ -2518,13 +2492,9 @@ function safeTransferFrom(address from, address to, uint256 tokenId, bytes memor
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct safeTransferFrom_1Call {
-        #[allow(missing_docs)]
         pub from: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`safeTransferFrom(address,address,uint256,bytes)`](safeTransferFrom_1Call) function.
@@ -2680,9 +2650,7 @@ function setApprovalForAll(address operator, bool approved) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setApprovalForAllCall {
-        #[allow(missing_docs)]
         pub operator: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub approved: bool,
     }
     ///Container type for the return parameters of the [`setApprovalForAll(address,bool)`](setApprovalForAllCall) function.
@@ -2821,14 +2789,12 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct supportsInterfaceCall {
-        #[allow(missing_docs)]
         pub interfaceId: alloy::sol_types::private::FixedBytes<4>,
     }
     ///Container type for the return parameters of the [`supportsInterface(bytes4)`](supportsInterfaceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct supportsInterfaceReturn {
-        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2955,7 +2921,6 @@ function symbol() external view returns (string memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct symbolReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::String,
     }
     #[allow(
@@ -3070,14 +3035,12 @@ function tokenURI(uint256 tokenId) external view returns (string memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct tokenURICall {
-        #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`tokenURI(uint256)`](tokenURICall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct tokenURIReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::String,
     }
     #[allow(
@@ -3198,11 +3161,8 @@ function transferFrom(address from, address to, uint256 tokenId) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferFromCall {
-        #[allow(missing_docs)]
         pub from: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`transferFrom(address,address,uint256)`](transferFromCall) function.
@@ -3342,31 +3302,18 @@ function transferFrom(address from, address to, uint256 tokenId) external;
     };
     ///Container for all the [`ERC721`](self) function calls.
     pub enum ERC721Calls {
-        #[allow(missing_docs)]
         approve(approveCall),
-        #[allow(missing_docs)]
         balanceOf(balanceOfCall),
-        #[allow(missing_docs)]
         getApproved(getApprovedCall),
-        #[allow(missing_docs)]
         isApprovedForAll(isApprovedForAllCall),
-        #[allow(missing_docs)]
         name(nameCall),
-        #[allow(missing_docs)]
         ownerOf(ownerOfCall),
-        #[allow(missing_docs)]
         safeTransferFrom_0(safeTransferFrom_0Call),
-        #[allow(missing_docs)]
         safeTransferFrom_1(safeTransferFrom_1Call),
-        #[allow(missing_docs)]
         setApprovalForAll(setApprovalForAllCall),
-        #[allow(missing_docs)]
         supportsInterface(supportsInterfaceCall),
-        #[allow(missing_docs)]
         symbol(symbolCall),
-        #[allow(missing_docs)]
         tokenURI(tokenURICall),
-        #[allow(missing_docs)]
         transferFrom(transferFromCall),
     }
     #[automatically_derived]
@@ -3763,21 +3710,13 @@ function transferFrom(address from, address to, uint256 tokenId) external;
     }
     ///Container for all the [`ERC721`](self) custom errors.
     pub enum ERC721Errors {
-        #[allow(missing_docs)]
         ERC721IncorrectOwner(ERC721IncorrectOwner),
-        #[allow(missing_docs)]
         ERC721InsufficientApproval(ERC721InsufficientApproval),
-        #[allow(missing_docs)]
         ERC721InvalidApprover(ERC721InvalidApprover),
-        #[allow(missing_docs)]
         ERC721InvalidOperator(ERC721InvalidOperator),
-        #[allow(missing_docs)]
         ERC721InvalidOwner(ERC721InvalidOwner),
-        #[allow(missing_docs)]
         ERC721InvalidReceiver(ERC721InvalidReceiver),
-        #[allow(missing_docs)]
         ERC721InvalidSender(ERC721InvalidSender),
-        #[allow(missing_docs)]
         ERC721NonexistentToken(ERC721NonexistentToken),
     }
     #[automatically_derived]
@@ -4068,11 +4007,8 @@ function transferFrom(address from, address to, uint256 tokenId) external;
     }
     ///Container for all the [`ERC721`](self) events.
     pub enum ERC721Events {
-        #[allow(missing_docs)]
         Approval(Approval),
-        #[allow(missing_docs)]
         ApprovalForAll(ApprovalForAll),
-        #[allow(missing_docs)]
         Transfer(Transfer),
     }
     #[automatically_derived]

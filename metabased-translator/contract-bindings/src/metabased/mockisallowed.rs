@@ -57,22 +57,22 @@ pub mod MockIsAllowed {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x60806040523461002f576100196100146100e2565b61014d565b610021610034565b61017461015a823961017490f35b61003a565b60405190565b5f80fd5b601f801991011690565b634e487b7160e01b5f52604160045260245ffd5b906100669061003e565b810190811060018060401b0382111761007e57604052565b610048565b9061009661008f610034565b928361005c565b565b5f80fd5b151590565b6100aa8161009c565b036100b157565b5f80fd5b905051906100c2826100a1565b565b906020828203126100dd576100da915f016100b5565b90565b610098565b6101006102ce803803806100f581610083565b9283398101906100c4565b90565b5f1b90565b9061011460ff91610103565b9181191691161790565b6101279061009c565b90565b90565b9061014261013d6101499261011e565b61012a565b8254610108565b9055565b610157905f61012d565b56fe60806040526004361015610013575b6100f4565b61001d5f3561002c565b63babcc5390361000e576100bf565b60e01c90565b60405190565b5f80fd5b5f80fd5b60018060a01b031690565b61005490610040565b90565b6100608161004b565b0361006757565b5f80fd5b9050359061007882610057565b565b9060208282031261009357610090915f0161006b565b90565b61003c565b151590565b6100a690610098565b9052565b91906100bd905f6020850194019061009d565b565b346100ef576100eb6100da6100d536600461007a565b610128565b6100e2610032565b918291826100aa565b0390f35b610038565b5f80fd5b5f90565b5f1c90565b60ff1690565b610113610118916100fc565b610101565b90565b6101259054610107565b90565b506101316100f8565b5061013b5f61011b565b9056fea26469706673582212200809bdebc9bc144ad81868ad515a74fdf4a90fcafb74dad3e1d493758bd7b86f64736f6c63430008190033
+    ///0x608034605f57601f61010338819003918201601f19168301916001600160401b03831184841017606357808492602094604052833981010312605f5751801515809103605f5760ff80195f54169116175f55604051608b90816100788239f35b5f80fd5b634e487b7160e01b5f52604160045260245ffdfe60808060405260043610156011575f80fd5b5f3560e01c63babcc539146023575f80fd5b3460515760203660031901126051576004356001600160a01b0381160360515760209060ff5f541615158152f35b5f80fdfea2646970667358221220534ad68b7c13b2f6cb815730d3e0aa8958440f5e41b5a93feb08b7a7385192c264736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4a\0/Wa\0\x19a\0\x14a\0\xE2V[a\x01MV[a\0!a\x004V[a\x01ta\x01Z\x829a\x01t\x90\xF3[a\0:V[`@Q\x90V[_\x80\xFD[`\x1F\x80\x19\x91\x01\x16\x90V[cNH{q`\xE0\x1B_R`A`\x04R`$_\xFD[\x90a\0f\x90a\0>V[\x81\x01\x90\x81\x10`\x01\x80`@\x1B\x03\x82\x11\x17a\0~W`@RV[a\0HV[\x90a\0\x96a\0\x8Fa\x004V[\x92\x83a\0\\V[V[_\x80\xFD[\x15\x15\x90V[a\0\xAA\x81a\0\x9CV[\x03a\0\xB1WV[_\x80\xFD[\x90PQ\x90a\0\xC2\x82a\0\xA1V[V[\x90` \x82\x82\x03\x12a\0\xDDWa\0\xDA\x91_\x01a\0\xB5V[\x90V[a\0\x98V[a\x01\0a\x02\xCE\x808\x03\x80a\0\xF5\x81a\0\x83V[\x92\x839\x81\x01\x90a\0\xC4V[\x90V[_\x1B\x90V[\x90a\x01\x14`\xFF\x91a\x01\x03V[\x91\x81\x19\x16\x91\x16\x17\x90V[a\x01'\x90a\0\x9CV[\x90V[\x90V[\x90a\x01Ba\x01=a\x01I\x92a\x01\x1EV[a\x01*V[\x82Ta\x01\x08V[\x90UV[a\x01W\x90_a\x01-V[V\xFE`\x80`@R`\x046\x10\x15a\0\x13W[a\0\xF4V[a\0\x1D_5a\0,V[c\xBA\xBC\xC59\x03a\0\x0EWa\0\xBFV[`\xE0\x1C\x90V[`@Q\x90V[_\x80\xFD[_\x80\xFD[`\x01\x80`\xA0\x1B\x03\x16\x90V[a\0T\x90a\0@V[\x90V[a\0`\x81a\0KV[\x03a\0gWV[_\x80\xFD[\x90P5\x90a\0x\x82a\0WV[V[\x90` \x82\x82\x03\x12a\0\x93Wa\0\x90\x91_\x01a\0kV[\x90V[a\0<V[\x15\x15\x90V[a\0\xA6\x90a\0\x98V[\x90RV[\x91\x90a\0\xBD\x90_` \x85\x01\x94\x01\x90a\0\x9DV[V[4a\0\xEFWa\0\xEBa\0\xDAa\0\xD56`\x04a\0zV[a\x01(V[a\0\xE2a\x002V[\x91\x82\x91\x82a\0\xAAV[\x03\x90\xF3[a\08V[_\x80\xFD[_\x90V[_\x1C\x90V[`\xFF\x16\x90V[a\x01\x13a\x01\x18\x91a\0\xFCV[a\x01\x01V[\x90V[a\x01%\x90Ta\x01\x07V[\x90V[Pa\x011a\0\xF8V[Pa\x01;_a\x01\x1BV[\x90V\xFE\xA2dipfsX\"\x12 \x08\t\xBD\xEB\xC9\xBC\x14J\xD8\x18h\xADQZt\xFD\xF4\xA9\x0F\xCA\xFBt\xDA\xD3\xE1\xD4\x93u\x8B\xD7\xB8odsolcC\0\x08\x19\x003",
+        b"`\x804`_W`\x1Fa\x01\x038\x81\x90\x03\x91\x82\x01`\x1F\x19\x16\x83\x01\x91`\x01`\x01`@\x1B\x03\x83\x11\x84\x84\x10\x17`cW\x80\x84\x92` \x94`@R\x839\x81\x01\x03\x12`_WQ\x80\x15\x15\x80\x91\x03`_W`\xFF\x80\x19_T\x16\x91\x16\x17_U`@Q`\x8B\x90\x81a\0x\x829\xF3[_\x80\xFD[cNH{q`\xE0\x1B_R`A`\x04R`$_\xFD\xFE`\x80\x80`@R`\x046\x10\x15`\x11W_\x80\xFD[_5`\xE0\x1Cc\xBA\xBC\xC59\x14`#W_\x80\xFD[4`QW` 6`\x03\x19\x01\x12`QW`\x045`\x01`\x01`\xA0\x1B\x03\x81\x16\x03`QW` \x90`\xFF_T\x16\x15\x15\x81R\xF3[_\x80\xFD\xFE\xA2dipfsX\"\x12 SJ\xD6\x8B|\x13\xB2\xF6\xCB\x81W0\xD3\xE0\xAA\x89XD\x0F^A\xB5\xA9?\xEB\x08\xB7\xA78Q\x92\xC2dsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040526004361015610013575b6100f4565b61001d5f3561002c565b63babcc5390361000e576100bf565b60e01c90565b60405190565b5f80fd5b5f80fd5b60018060a01b031690565b61005490610040565b90565b6100608161004b565b0361006757565b5f80fd5b9050359061007882610057565b565b9060208282031261009357610090915f0161006b565b90565b61003c565b151590565b6100a690610098565b9052565b91906100bd905f6020850194019061009d565b565b346100ef576100eb6100da6100d536600461007a565b610128565b6100e2610032565b918291826100aa565b0390f35b610038565b5f80fd5b5f90565b5f1c90565b60ff1690565b610113610118916100fc565b610101565b90565b6101259054610107565b90565b506101316100f8565b5061013b5f61011b565b9056fea26469706673582212200809bdebc9bc144ad81868ad515a74fdf4a90fcafb74dad3e1d493758bd7b86f64736f6c63430008190033
+    ///0x60808060405260043610156011575f80fd5b5f3560e01c63babcc539146023575f80fd5b3460515760203660031901126051576004356001600160a01b0381160360515760209060ff5f541615158152f35b5f80fdfea2646970667358221220534ad68b7c13b2f6cb815730d3e0aa8958440f5e41b5a93feb08b7a7385192c264736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R`\x046\x10\x15a\0\x13W[a\0\xF4V[a\0\x1D_5a\0,V[c\xBA\xBC\xC59\x03a\0\x0EWa\0\xBFV[`\xE0\x1C\x90V[`@Q\x90V[_\x80\xFD[_\x80\xFD[`\x01\x80`\xA0\x1B\x03\x16\x90V[a\0T\x90a\0@V[\x90V[a\0`\x81a\0KV[\x03a\0gWV[_\x80\xFD[\x90P5\x90a\0x\x82a\0WV[V[\x90` \x82\x82\x03\x12a\0\x93Wa\0\x90\x91_\x01a\0kV[\x90V[a\0<V[\x15\x15\x90V[a\0\xA6\x90a\0\x98V[\x90RV[\x91\x90a\0\xBD\x90_` \x85\x01\x94\x01\x90a\0\x9DV[V[4a\0\xEFWa\0\xEBa\0\xDAa\0\xD56`\x04a\0zV[a\x01(V[a\0\xE2a\x002V[\x91\x82\x91\x82a\0\xAAV[\x03\x90\xF3[a\08V[_\x80\xFD[_\x90V[_\x1C\x90V[`\xFF\x16\x90V[a\x01\x13a\x01\x18\x91a\0\xFCV[a\x01\x01V[\x90V[a\x01%\x90Ta\x01\x07V[\x90V[Pa\x011a\0\xF8V[Pa\x01;_a\x01\x1BV[\x90V\xFE\xA2dipfsX\"\x12 \x08\t\xBD\xEB\xC9\xBC\x14J\xD8\x18h\xADQZt\xFD\xF4\xA9\x0F\xCA\xFBt\xDA\xD3\xE1\xD4\x93u\x8B\xD7\xB8odsolcC\0\x08\x19\x003",
+        b"`\x80\x80`@R`\x046\x10\x15`\x11W_\x80\xFD[_5`\xE0\x1Cc\xBA\xBC\xC59\x14`#W_\x80\xFD[4`QW` 6`\x03\x19\x01\x12`QW`\x045`\x01`\x01`\xA0\x1B\x03\x81\x16\x03`QW` \x90`\xFF_T\x16\x15\x15\x81R\xF3[_\x80\xFD\xFE\xA2dipfsX\"\x12 SJ\xD6\x8B|\x13\xB2\xF6\xCB\x81W0\xD3\xE0\xAA\x89XD\x0F^A\xB5\xA9?\xEB\x08\xB7\xA78Q\x92\xC2dsolcC\0\x08\x19\x003",
     );
     /**Constructor`.
 ```solidity
@@ -81,7 +81,6 @@ constructor(bool _allowed);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructorCall {
-        #[allow(missing_docs)]
         pub _allowed: bool,
     }
     const _: () = {
@@ -146,14 +145,12 @@ function isAllowed(address) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAllowedCall {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAllowedReturn {
-        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -267,7 +264,6 @@ function isAllowed(address) external view returns (bool);
     };
     ///Container for all the [`MockIsAllowed`](self) function calls.
     pub enum MockIsAllowedCalls {
-        #[allow(missing_docs)]
         isAllowed(isAllowedCall),
     }
     #[automatically_derived]
