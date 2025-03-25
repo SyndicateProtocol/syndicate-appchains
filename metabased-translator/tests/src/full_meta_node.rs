@@ -386,7 +386,7 @@ impl MetaNode {
             AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
         mine_block(&seq_provider, 0).await?;
         let receipt = always_allowed_contract.get_receipt().await?;
-        let always_allowed_module_address = match receipt.contract_address {
+        let _always_allowed_module_address = match receipt.contract_address {
             Some(address) => address,
             None => {
                 eprintln!("Deployment failed: No contract address found.");
