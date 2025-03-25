@@ -417,22 +417,21 @@ impl MetaNode {
             wallet_pool_address,
             seq_provider.clone(),
         );
-        
         // Add the default sequencing wallet to the pool
         _ = wallet_pool.addToWalletPool(seq_provider.default_signer_address()).send().await?;
         mine_block(&seq_provider, 0).await?;
-        
+
         // Add test addresses used in integration tests to the wallet pool
-        // This is necessary for e2e_test, e2e_test_empty_blocks, e2e_settlement_fast_withdrawal tests
+        // This is necessary for e2e_test, e2e_test_empty_blocks, e2e_settlement_fast_withdrawal
+        // tests
         let test_addresses = [
             // Default settlement wallet address
-            set_provider.default_signer_address(),
+            settlement_provider.default_signer_address(),
             // Common test addresses used in integration tests
             address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"),
             address!("0xA9ec1Ed7008fDfdE38978Dfef4cF2754A969E5FA"),
             // Add any other addresses that might be used in tests
         ];
-        
         for addr in test_addresses {
             _ = wallet_pool.addToWalletPool(addr).send().await?;
             mine_block(&seq_provider, 0).await?;
