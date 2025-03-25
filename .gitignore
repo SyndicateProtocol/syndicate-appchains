@@ -62,3 +62,6 @@ docs/
 
 # Certora
 .certora_internal/
+
+# foundry broadcast
+broadcast/
