@@ -15,8 +15,6 @@ methods {
     // Permission Module interface methods
     function proposerPermission.isAllowed(address) external returns (bool) envfree;
     function dataPermission.isCalldataAllowed(bytes) external returns (bool) envfree;
-    function dataPermission.allCalldataAllowed() external returns (bool) envfree;
-    function dataPermission.setAllowedAll(bool) external;
 }
 
 /*
@@ -111,28 +109,15 @@ rule onlyAllowedCalldata(bytes data) {
     require init._getInitializedVersion() > 0;
     require proposerPermission.isAllowed(e.msg.sender);
 
-    // Set calldata permission to false
-    env e_perm;
-    dataPermission.setAllowedAll(false);
-    require !dataPermission.allCalldataAllowed();
-
-    // Try to process a transaction with disallowed calldata
+    // Try to process a transaction
     processTransaction@withrevert(e, data);
-    bool disallowedSuccess = !lastReverted;
 
-    // Verify transaction is rejected
-    assert !disallowedSuccess, "Transaction succeeded with disallowed calldata";
+    // If the transaction succeeded
+    bool success = !lastReverted;
 
-    // Now set calldata permission to true
-    dataPermission.setAllowedAll(true);
-    require dataPermission.allCalldataAllowed();
-
-    // Try to process again
-    processTransaction@withrevert(e, data);
-    bool allowedSuccess = !lastReverted;
-
-    // Verify transaction succeeds
-    assert allowedSuccess, "Transaction failed with allowed calldata";
+    // Then the calldata must have been allowed
+    assert success => dataPermission.isCalldataAllowed(data),
+        "Unallowed calldata was processed";
 }
 
 /*
@@ -142,7 +127,7 @@ rule processConsistency(bytes data) {
     env e;
     require init._getInitializedVersion() > 0;
     require proposerPermission.isAllowed(e.msg.sender);
-    require dataPermission.allCalldataAllowed();
+    require dataPermission.isCalldataAllowed(data);
 
     // Record both outcomes
     processTransaction@withrevert(e, data);
@@ -163,8 +148,13 @@ rule bulkProcessingConsistency(bytes[] data) {
     env e;
     require init._getInitializedVersion() > 0;
     require proposerPermission.isAllowed(e.msg.sender);
-    require dataPermission.allCalldataAllowed();
+    require data.length > 0;
     require data.length < 3; // Loop unrolling limit - Certora will unroll up to this limit
+
+    // Ensure all data is allowed
+    require data.length > 0 => dataPermission.isCalldataAllowed(data[0]);
+    require data.length > 1 => dataPermission.isCalldataAllowed(data[1]);
+    require data.length > 2 => dataPermission.isCalldataAllowed(data[2]);
 
     // Process transactions in bulk
     processBulkTransactions@withrevert(e, data);
@@ -174,20 +164,16 @@ rule bulkProcessingConsistency(bytes[] data) {
     require bulkSuccess;
 
     // Check individual transactions would succeed
-    if (data.length > 0) {
-        processTransaction@withrevert(e, data[0]);
-        assert !lastReverted, "Bulk processing accepted invalid transaction";
-    }
+    processTransaction@withrevert(e, data[0]);
+    assert !lastReverted, "Bulk processing accepted invalid transaction";
 
-    if (data.length > 1) {
-        processTransaction@withrevert(e, data[1]);
-        assert !lastReverted, "Bulk processing accepted invalid transaction";
-    }
 
-    if (data.length > 2) {
-        processTransaction@withrevert(e, data[2]);
-        assert !lastReverted, "Bulk processing accepted invalid transaction";
-    }
+    processTransaction@withrevert(e, data[1]);
+    assert !lastReverted, "Bulk processing accepted invalid transaction";
+
+
+    processTransaction@withrevert(e, data[2]);
+    assert !lastReverted, "Bulk processing accepted invalid transaction";
 }
 
 /*
@@ -271,7 +257,7 @@ rule permissionsCorrectlyEnforced(bytes data) {
 
     // Check permissions
     bool senderAllowed = proposerPermission.isAllowed(e.msg.sender);
-    bool dataAllowed = dataPermission.allCalldataAllowed();
+    bool dataAllowed = dataPermission.isCalldataAllowed(data);
 
     // Process transaction
     processTransaction@withrevert(e, data);
