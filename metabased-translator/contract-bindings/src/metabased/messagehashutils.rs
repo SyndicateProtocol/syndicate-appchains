@@ -22,22 +22,22 @@ pub mod MessageHashUtils {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220dee7251be09eaaf257cebdc0a8a25d7f24198d2e0f232ad807a538e83b4106c564736f6c63430008190033
+    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220af4785298c542cd1af5568187245568b22130d62469f22bc68c1474668685abb64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xDE\xE7%\x1B\xE0\x9E\xAA\xF2W\xCE\xBD\xC0\xA8\xA2]\x7F$\x19\x8D.\x0F#*\xD8\x07\xA58\xE8;A\x06\xC5dsolcC\0\x08\x19\x003",
+        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xAFG\x85)\x8CT,\xD1\xAFUh\x18rEV\x8B\"\x13\rbF\x9F\"\xBCh\xC1GFhhZ\xBBdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea2646970667358221220dee7251be09eaaf257cebdc0a8a25d7f24198d2e0f232ad807a538e83b4106c564736f6c63430008190033
+    ///0x5f80fdfea2646970667358221220af4785298c542cd1af5568187245568b22130d62469f22bc68c1474668685abb64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xDE\xE7%\x1B\xE0\x9E\xAA\xF2W\xCE\xBD\xC0\xA8\xA2]\x7F$\x19\x8D.\x0F#*\xD8\x07\xA58\xE8;A\x06\xC5dsolcC\0\x08\x19\x003",
+        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xAFG\x85)\x8CT,\xD1\xAFUh\x18rEV\x8B\"\x13\rbF\x9F\"\xBCh\xC1GFhhZ\xBBdsolcC\0\x08\x19\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`MessageHashUtils`](self) contract instance.

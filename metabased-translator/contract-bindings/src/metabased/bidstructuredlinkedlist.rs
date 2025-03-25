@@ -22,22 +22,22 @@ pub mod BidStructuredLinkedList {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea26469706673582212205f4b4ff134c788fa671d0de36c9cb42986c358ca94becb0f983e05341d30bfee64736f6c63430008190033
+    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220b06eed352d9d5546f745eaa3516d6e42f52742d6e048e0c9b7c38420c61d379a64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 _KO\xF14\xC7\x88\xFAg\x1D\r\xE3l\x9C\xB4)\x86\xC3X\xCA\x94\xBE\xCB\x0F\x98>\x054\x1D0\xBF\xEEdsolcC\0\x08\x19\x003",
+        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB0n\xED5-\x9DUF\xF7E\xEA\xA3QmnB\xF5'B\xD6\xE0H\xE0\xC9\xB7\xC3\x84 \xC6\x1D7\x9AdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea26469706673582212205f4b4ff134c788fa671d0de36c9cb42986c358ca94becb0f983e05341d30bfee64736f6c63430008190033
+    ///0x5f80fdfea2646970667358221220b06eed352d9d5546f745eaa3516d6e42f52742d6e048e0c9b7c38420c61d379a64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 _KO\xF14\xC7\x88\xFAg\x1D\r\xE3l\x9C\xB4)\x86\xC3X\xCA\x94\xBE\xCB\x0F\x98>\x054\x1D0\xBF\xEEdsolcC\0\x08\x19\x003",
+        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB0n\xED5-\x9DUF\xF7E\xEA\xA3QmnB\xF5'B\xD6\xE0H\xE0\xC9\xB7\xC3\x84 \xC6\x1D7\x9AdsolcC\0\x08\x19\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`BidStructuredLinkedList`](self) contract instance.
