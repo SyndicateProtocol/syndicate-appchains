@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: UNLICENSED
-
 pragma solidity 0.8.28;
 
 import {Test} from "forge-std/Test.sol";
@@ -45,46 +44,37 @@ contract AssertionPosterTest is Test {
     AssertionPoster private poster;
     MockRollup private rollup;
 
-    /**
-     * @notice Set up the test environment
-     */
     function setUp() public {
-        // Create mock rollup
         rollup = new MockRollup();
 
         // Set initial values
-        rollup.setSequencerMessageCount(2); // Greater than 1
+        rollup.setSequencerMessageCount(2); // > 1 so that _initializeNew doesn't try to post an initial batch
         rollup.setSequencerInboxAcc(0, TEST_SEQ_BATCH_ACC);
         rollup.setWasmModuleRoot(TEST_WASM_ROOT);
         rollup.setBaseStake(1000);
         rollup.setConfirmPeriodBlocks(100);
         rollup.setComputedAssertionHash(COMPUTED_ASSERTION_HASH);
 
-        // Create the assertion poster as owner
-        vm.prank(OWNER);
+        vm.startPrank(OWNER);
         poster = new AssertionPoster(IRollup(address(rollup)));
+        vm.stopPrank();
     }
 
     // LEGACY TESTS
+
     function testConstructorLegacy() public {
         MockRollup legacyRollup = new MockRollup();
         legacyRollup.setLegacyMode(true);
-
         vm.prank(OWNER);
         AssertionPoster legacyPoster = new AssertionPoster(IRollup(address(legacyRollup)));
-
-        // Successfully created
         assertTrue(address(legacyPoster) != address(0));
     }
 
     function testInitializeLegacyDirect() public {
         MockRollup legacyRollup = new MockRollup();
         legacyRollup.setLegacyMode(true);
-
         vm.prank(OWNER);
         AssertionPoster legacyPoster = new AssertionPoster(IRollup(address(legacyRollup)));
-
-        // Direct call should fail
         vm.expectRevert("must initialize via upgradeExecutor.execute(AssertionPoster.initialize)");
         legacyPoster.initialize();
     }
@@ -92,36 +82,47 @@ contract AssertionPosterTest is Test {
     function testPostAssertionLegacyAccessControl() public {
         MockRollup legacyRollup = new MockRollup();
         legacyRollup.setLegacyMode(true);
-
         vm.prank(OWNER);
         AssertionPoster legacyPoster = new AssertionPoster(IRollup(address(legacyRollup)));
-
-        // Should revert if not owner
         vm.prank(USER);
         vm.expectRevert("Ownable: caller is not the owner");
         legacyPoster.postAssertion(TEST_BLOCK_HASH, TEST_SEND_ROOT);
     }
 
+    function testPostAssertionLegacySuccess() public {
+        MockRollup legacyRollup = new MockRollup();
+        legacyRollup.setLegacyMode(true);
+
+        vm.startPrank(OWNER);
+        // Set the executor to a mock that will forward calls
+        legacyRollup.setOwner(address(new MockExecutor()));
+        AssertionPoster legacyPoster = new AssertionPoster(IRollup(address(legacyRollup)));
+
+        // Expect events from both executor.executeCall calls:
+        vm.expectEmit(true, true, true, true);
+        emit ForceCreateNodeCalled(0, 1, bytes32(0));
+        vm.expectEmit(true, true, true, true);
+        emit ForceConfirmNodeCalled(1, TEST_BLOCK_HASH, TEST_SEND_ROOT);
+
+        legacyPoster.postAssertion(TEST_BLOCK_HASH, TEST_SEND_ROOT);
+        vm.stopPrank();
+    }
+
     // NEW VERSION TESTS
+
     function testConstructorNew() public {
         MockRollup newRollup = new MockRollup();
         newRollup.setGenesisAssertionHash(TEST_GENESIS_HASH);
-
         vm.prank(OWNER);
         AssertionPoster newPoster = new AssertionPoster(IRollup(address(newRollup)));
-
-        // Successfully created
         assertTrue(address(newPoster) != address(0));
     }
 
     function testInitializeNewDirect() public {
         MockRollup newRollup = new MockRollup();
         newRollup.setGenesisAssertionHash(TEST_GENESIS_HASH);
-
         vm.prank(OWNER);
         AssertionPoster newPoster = new AssertionPoster(IRollup(address(newRollup)));
-
-        // Direct call should fail
         vm.expectRevert("must initialize via upgradeExecutor.execute(AssertionPoster.initialize)");
         newPoster.initialize();
     }
@@ -130,13 +131,14 @@ contract AssertionPosterTest is Test {
         MockRollup newRollup = new MockRollup();
         newRollup.setGenesisAssertionHash(TEST_GENESIS_HASH);
 
-        vm.prank(OWNER);
+        vm.startPrank(OWNER);
         AssertionPoster newPoster = new AssertionPoster(IRollup(address(newRollup)));
+        vm.stopPrank();
 
-        // Should revert if not owner
-        vm.prank(USER);
+        vm.startPrank(USER);
         vm.expectRevert("Ownable: caller is not the owner");
         newPoster.postAssertion(TEST_BLOCK_HASH, TEST_SEND_ROOT);
+        vm.stopPrank();
     }
 
     function testPostAssertionNew() public {
@@ -144,25 +146,111 @@ contract AssertionPosterTest is Test {
         newRollup.setGenesisAssertionHash(TEST_GENESIS_HASH);
         newRollup.setComputedAssertionHash(COMPUTED_ASSERTION_HASH);
 
-        vm.prank(OWNER);
-        AssertionPoster newPoster = new AssertionPoster(IRollup(address(newRollup)));
+        vm.startPrank(OWNER);
 
-        // Expect the fast confirm event
+        AssertionPoster newPoster = new AssertionPoster(IRollup(address(newRollup)));
         vm.expectEmit(true, true, true, true);
         emit FastConfirmNewAssertionCalled(COMPUTED_ASSERTION_HASH);
-
-        // Owner posts assertion
-        vm.prank(OWNER);
         newPoster.postAssertion(TEST_BLOCK_HASH, TEST_SEND_ROOT);
+
+        vm.stopPrank();
+    }
+
+    function testPostAssertionNewTwice() public {
+        // This covers both branches in _postNewAssertion
+        MockRollup newRollup = new MockRollup();
+        newRollup.setGenesisAssertionHash(TEST_GENESIS_HASH);
+        newRollup.setComputedAssertionHash(COMPUTED_ASSERTION_HASH);
+
+        vm.startPrank(OWNER);
+
+        AssertionPoster newPoster = new AssertionPoster(IRollup(address(newRollup)));
+        // First call: state.u64Vals[0] is default (0), branch not taken
+        vm.expectEmit(true, true, true, true);
+        emit FastConfirmNewAssertionCalled(COMPUTED_ASSERTION_HASH);
+        newPoster.postAssertion(TEST_BLOCK_HASH, TEST_SEND_ROOT);
+        // Second call: now state.u64Vals[0] == 1 so branch is taken
+        vm.expectEmit(true, true, true, true);
+        emit FastConfirmNewAssertionCalled(COMPUTED_ASSERTION_HASH);
+        newPoster.postAssertion(TEST_BLOCK_HASH, TEST_SEND_ROOT);
+
+        vm.stopPrank();
+    }
+
+    // DELEGATECALL TESTS FOR INITIALIZE
+
+    function testInitializeLegacyDelegatecall() public {
+        MockRollup legacyRollup = new MockRollup();
+        legacyRollup.setLegacyMode(true);
+        TestExecutorCaller caller = new TestExecutorCaller();
+        legacyRollup.setOwner(address(caller));
+
+        vm.startPrank(OWNER);
+        AssertionPoster legacyPoster = new AssertionPoster(IRollup(address(legacyRollup)));
+        vm.expectEmit(true, true, true, true);
+        emit RolePaused();
+        caller.delegateInitialize(address(legacyPoster));
+        vm.stopPrank();
+    }
+
+    function testInitializeNewDelegatecall() public {
+        // Deploy new rollup and set owner to our executor caller.
+        MockRollup newRollup = new MockRollup();
+        newRollup.setGenesisAssertionHash(TEST_GENESIS_HASH);
+        TestExecutorCaller caller = new TestExecutorCaller();
+        newRollup.setOwner(address(caller));
+        // Ensure sequencer message count is already >1 so that initial batch branch is not taken.
+        newRollup.setSequencerMessageCount(2);
+        vm.prank(OWNER);
+        AssertionPoster newPoster = new AssertionPoster(IRollup(address(newRollup)));
+        // Delegatecall initialize via caller should succeed (events from new branch not easily asserted)
+        caller.delegateInitialize(address(newPoster));
+    }
+
+    function testInitializeNewDelegatecallWithInitialBatch() public {
+        // Deploy new rollup in a state that forces posting an initial batch.
+        MockRollup newRollup = new MockRollup();
+        newRollup.setGenesisAssertionHash(TEST_GENESIS_HASH);
+        // Set sequencer message count to 1 so that _postInitialBatch is called.
+        newRollup.setSequencerMessageCount(1);
+        TestExecutorCaller caller = new TestExecutorCaller();
+        newRollup.setOwner(address(caller));
+        vm.prank(OWNER);
+        AssertionPoster newPoster = new AssertionPoster(IRollup(address(newRollup)));
+        // Expect events from _postInitialBatch: BatchPosterSet and SequencerBatchAdded.
+        vm.expectEmit(true, true, true, true);
+        emit BatchPosterSet(address(newRollup.owner()), true);
+        vm.expectEmit(true, true, true, true);
+        emit SequencerBatchAdded(1);
+        caller.delegateInitialize(address(newPoster));
+        // After delegatecall, sequencer message count should be updated to 2.
+        assertGt(newRollup.bridge().sequencerMessageCount(), 1);
     }
 }
 
-// Simple mocks that implement only what's needed for the tests
+// Helper contract to simulate delegatecall via the upgrade executor
+contract TestExecutorCaller {
+    function delegateInitialize(address poster) external {
+        (bool success,) = poster.delegatecall(abi.encodeWithSignature("initialize()"));
+        require(success, "delegatecall failed");
+    }
 
-/**
- * @title MockBridge
- * @dev Simple mock bridge implementation
- */
+    function grantRole(bytes32, address) external {}
+
+    function hasRole(bytes32, address) external pure returns (bool) {
+        return true;
+    }
+
+    function getRoleAdmin(bytes32) external pure returns (bytes32) {
+        return bytes32(0);
+    }
+
+    function revokeRole(bytes32, address) external {}
+    function renounceRole(bytes32, address) external {}
+}
+
+// Mocks
+
 contract MockBridge {
     uint256 private _sequencerMessageCount;
     mapping(uint256 => bytes32) private _sequencerInboxAccs;
@@ -184,15 +272,24 @@ contract MockBridge {
     }
 }
 
-/**
- * @title MockSequencerInbox
- * @dev Simple mock sequencer inbox implementation
- */
+contract MockExecutor {
+    function executeCall(address target, bytes calldata data) external returns (bytes memory) {
+        (bool success, bytes memory result) = target.call(data);
+        require(success, "executeCall failed");
+        return result;
+    }
+}
+
 contract MockSequencerInbox {
     event BatchPosterSet(address poster, bool authorized);
     event SequencerBatchAdded(uint256 sequenceNumber);
 
     mapping(address => bool) private _isBatchPoster;
+    MockBridge private _bridge;
+
+    constructor(MockBridge bridge_) {
+        _bridge = bridge_;
+    }
 
     function isBatchPoster(address poster) external view returns (bool) {
         return _isBatchPoster[poster];
@@ -206,16 +303,12 @@ contract MockSequencerInbox {
     function addSequencerL2Batch(uint256 sequenceNumber, bytes calldata, uint256, IGasRefunder, uint256, uint256)
         external
     {
+        _bridge.setSequencerMessageCount(2);
         emit SequencerBatchAdded(sequenceNumber);
     }
 }
 
-/**
- * @title MockRollup
- * @dev Simplified mock rollup implementation that only includes what's needed for tests
- */
 contract MockRollup {
-    // Events for tracking mock interactions
     event RolePaused();
     event ValidatorsSet(address[] validators, bool[] values);
     event ValidatorAfkBlocksSet(uint64 blocks);
@@ -224,7 +317,6 @@ contract MockRollup {
     event ForceConfirmNodeCalled(uint64 nodeNum, bytes32 blockHash, bytes32 sendRoot);
     event FastConfirmNewAssertionCalled(bytes32 expectedAssertionHash);
 
-    // Mock state
     bool private _legacyMode = false;
     bytes32 private _genesisAssertionHash;
     bytes32 private _wasmModuleRoot;
@@ -236,16 +328,19 @@ contract MockRollup {
     address private _challengeManager = address(0x998);
     uint64 private _validatorAfkBlocks = 10000;
 
-    // Mock objects
     MockBridge private _bridge;
     MockSequencerInbox private _sequencerInbox;
 
     constructor() {
         _bridge = new MockBridge();
-        _sequencerInbox = new MockSequencerInbox();
+        _sequencerInbox = new MockSequencerInbox(_bridge);
     }
 
-    // Configuration setters
+    // Additional setter to allow delegatecall tests to work.
+    function setOwner(address newOwner) external {
+        _owner = newOwner;
+    }
+
     function setLegacyMode(bool mode) external {
         _legacyMode = mode;
     }
@@ -280,17 +375,15 @@ contract MockRollup {
 
     function setValidators(address[] memory validators) external {
         _validators = validators;
+        emit ValidatorsSet(validators, new bool[](validators.length));
     }
 
-    // Mock implementation of functions used by AssertionPoster
     function owner() external view returns (address) {
         return _owner;
     }
 
     function genesisAssertionHash() external view returns (bytes32) {
-        if (_legacyMode) {
-            revert("Legacy mode: no genesis assertion hash");
-        }
+        require(!_legacyMode, "Legacy mode: no genesis assertion hash");
         return _genesisAssertionHash;
     }
 
@@ -321,8 +414,8 @@ contract MockRollup {
     function getValidators() external view returns (address[] memory) {
         return _validators;
     }
-
     // Legacy methods
+
     function forceCreateNode(
         uint64 prevNode,
         uint256 prevNodeInboxMaxCount,
@@ -335,24 +428,21 @@ contract MockRollup {
     function forceConfirmNode(uint64 nodeNum, bytes32 blockHash, bytes32 sendRoot) external {
         emit ForceConfirmNodeCalled(nodeNum, blockHash, sendRoot);
     }
-
     // New version methods
+
     function computeAssertionHash(
         bytes32, /* prevAssertionHash */
         AssertionState calldata, /* state */
         bytes32 /* inboxAcc */
     ) external view returns (bytes32) {
-        // Return the pre-set hash for testing
         return _computedAssertionHash;
     }
 
-    function fastConfirmNewAssertion(AssertionInputs calldata, /* assertion */ bytes32 expectedAssertionHash)
-        external
-    {
+    function fastConfirmNewAssertion(AssertionInputs calldata, bytes32 expectedAssertionHash) external {
         emit FastConfirmNewAssertionCalled(expectedAssertionHash);
     }
-
     // Mock admin methods
+
     function pause() external {
         emit RolePaused();
     }
