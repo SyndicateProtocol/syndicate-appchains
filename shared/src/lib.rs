@@ -2,4 +2,5 @@
 //! stack.
 
 pub mod json_rpc;
+pub mod logger;
 pub mod parse;
