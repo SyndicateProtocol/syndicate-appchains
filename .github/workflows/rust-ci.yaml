@@ -118,7 +118,7 @@ jobs:
 
       # Run tests on entire workspace. `maestro` is excluded because it is tested separately by Nextest below
       - name: Run Tests
-        run: cargo test --workspace
+        run: cargo test --workspace --exclude maestro
 
   nextest:
     name: Nextest Integration Tests
