@@ -66,33 +66,32 @@ where
     }
 
     fn call(&mut self, mut request: HttpRequest<B>) -> Self::Future {
-        if let Some(optional_headers) = &self.optional_headers {
-            // Create a HashMap to store found header-values
-            let mut header_map: HashMap<String, String> = HashMap::new();
+        // Early return if no optional headers to process
+        let Some(optional_headers) = &self.optional_headers else {
+            return Box::pin(self.inner.call(request).map_err(Into::into));
+        };
 
-            for optional_header in optional_headers.iter() {
-                if let Some(header_value) = request.headers().get(optional_header) {
-                    match header_value.to_str() {
-                        Ok(valid_str_header_val) => {
-                            // If the header value is valid, insert it into the HashMap
-                            header_map
-                                .insert(optional_header.clone(), valid_str_header_val.to_string());
-                        }
-                        Err(_) => {
-                            debug!(
-                                "Header '{}' value contains non-ASCII characters; ignoring header",
-                                optional_header
-                            );
-                        }
-                    }
-                } else {
-                    debug!("Header '{}' not found in request; skipping it", optional_header);
-                };
-            }
+        // Process headers and collect valid ones
+        let mut header_map = HashMap::new();
+        for header_name in optional_headers.iter() {
+            // Get header value if it exists
+            let Some(header_value) = request.headers().get(header_name) else {
+                debug!("Header '{}' not found in request; skipping it", header_name);
+                continue;
+            };
 
-            if !header_map.is_empty() {
-                request.extensions_mut().insert(header_map);
-            }
+            // Validate header value is ASCII
+            let Ok(value) = header_value.to_str() else {
+                debug!("Header '{}' value contains non-ASCII characters; skipping it", header_name);
+                continue;
+            };
+
+            header_map.insert(header_name.clone(), value.to_string());
+        }
+
+        // Add collected headers to request if any were found
+        if !header_map.is_empty() {
+            request.extensions_mut().insert(header_map);
         }
 
         // Pass the request to the inner service
