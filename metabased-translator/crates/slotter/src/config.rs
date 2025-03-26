@@ -1,6 +1,7 @@
 //! Configuration for the slotter module
 
 use clap::Parser;
+use humantime::parse_duration;
 use thiserror::Error;
 use tracing::debug;
 
@@ -13,6 +14,18 @@ pub struct SlotterConfig {
     /// changed
     #[arg(long, env = "SETTLEMENT_DELAY", default_value_t = 60)]
     pub settlement_delay: u64,
+
+    /// Maximum allowed timestamp difference between chains
+    /// If the timestamp difference exceeds this value, the slotter will stop consuming blocks from
+    /// the chain that is ahead. A value of 0 disables this feature.
+    /// Accepts human-readable time format like "10s", "5m", "1h", etc.
+    #[arg(long, env = "MAX_SOURCE_CHAIN_LATENCY", default_value = "7days", value_parser = parse_duration_to_seconds)]
+    pub max_source_chain_latency: u64,
+}
+
+// Helper function to parse humantime duration to seconds
+fn parse_duration_to_seconds(s: &str) -> Result<u64, humantime::DurationError> {
+    parse_duration(s).map(|d| d.as_secs())
 }
 
 impl SlotterConfig {
@@ -22,8 +35,8 @@ impl SlotterConfig {
     }
 
     /// Creates a new [`SlotterConfig`] instance
-    pub fn new(settlement_delay: u64) -> Result<Self, ConfigError> {
-        let config = Self { settlement_delay };
+    pub fn new(settlement_delay: u64, max_source_chain_latency: u64) -> Result<Self, ConfigError> {
+        let config = Self { settlement_delay, max_source_chain_latency };
         config.validate()?;
         debug!("Created slotter config: {:?}", config);
         Ok(config)
@@ -51,11 +64,25 @@ mod config_tests {
     fn test_default_slotter_config() {
         let config = SlotterConfig::default();
         assert_eq!(config.settlement_delay, 60);
+        assert_eq!(config.max_source_chain_latency, 0);
     }
 
     #[test]
     fn test_default_parsing() {
         let config = SlotterConfig::parse_from(["test"]);
         assert_eq!(config.settlement_delay, 60);
+        assert_eq!(config.max_source_chain_latency, 0);
+    }
+
+    #[test]
+    fn test_humantime_parsing() {
+        let config = SlotterConfig::parse_from(["test", "--max-source-chain-latency", "5m"]);
+        assert_eq!(config.max_source_chain_latency, 300); // 5 minutes = 300 seconds
+
+        let config = SlotterConfig::parse_from(["test", "--max-source-chain-latency", "1h"]);
+        assert_eq!(config.max_source_chain_latency, 3600); // 1 hour = 3600 seconds
+
+        let config = SlotterConfig::parse_from(["test", "--max-source-chain-latency", "30s"]);
+        assert_eq!(config.max_source_chain_latency, 30); // 30 seconds
     }
 }
