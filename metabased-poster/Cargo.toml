@@ -18,6 +18,15 @@ tracing            = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
 url                = { workspace = true }
 
-
 [lints]
 workspace = true
+
+[features]
+env-tests = []
+
+[dev-dependencies]
+alloy = { workspace = true, features = [
+    "node-bindings",
+    "rpc-types-anvil",
+    "sol-types",
+] }

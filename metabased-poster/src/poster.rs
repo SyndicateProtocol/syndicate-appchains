@@ -20,7 +20,8 @@ use eyre::{eyre, Result};
 use std::{str::FromStr, time::Duration};
 use tracing::{error, info};
 
-type FilledProvider = FillProvider<
+#[allow(missing_docs)]
+pub type FilledProvider = FillProvider<
     JoinFill<
         JoinFill<
             Identity,
