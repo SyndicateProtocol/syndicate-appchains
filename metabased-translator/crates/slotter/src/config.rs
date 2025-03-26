@@ -64,14 +64,14 @@ mod config_tests {
     fn test_default_slotter_config() {
         let config = SlotterConfig::default();
         assert_eq!(config.settlement_delay, 60);
-        assert_eq!(config.max_source_chain_latency, 0);
+        assert_eq!(config.max_source_chain_latency, 7 * 24 * 60 * 60);
     }
 
     #[test]
     fn test_default_parsing() {
         let config = SlotterConfig::parse_from(["test"]);
         assert_eq!(config.settlement_delay, 60);
-        assert_eq!(config.max_source_chain_latency, 0);
+        assert_eq!(config.max_source_chain_latency, 7 * 24 * 60 * 60);
     }
 
     #[test]

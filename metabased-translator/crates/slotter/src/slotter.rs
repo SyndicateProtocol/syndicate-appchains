@@ -124,34 +124,35 @@ impl<P: SlotProcessor> Slotter<P> {
 
             trace!("Prioritized lagging chain: {:?}", first_chain);
 
-            let process_result = if latency > self.max_source_chain_latency {
-                info!("Latency between chains is too high: {} seconds", latency);
-                // stop receiving from the lagging chain entirely
-                select! {
-                    biased;
-                    Some(block) = first_rx.recv() => {
-                        self.process_block(block, first_chain).await
+            let process_result =
+                if self.max_source_chain_latency > 0 && latency > self.max_source_chain_latency {
+                    info!("Latency between chains is too high: {} seconds", latency);
+                    // stop receiving from the lagging chain entirely
+                    select! {
+                        biased;
+                        Some(block) = first_rx.recv() => {
+                            self.process_block(block, first_chain).await
+                        }
+                        _ = &mut shutdown_rx => {
+                            info!("Slotter shut down");
+                            return Err(Report::from(SlotterError::Shutdown));
+                        }
                     }
-                    _ = &mut shutdown_rx => {
-                        info!("Slotter shut down");
-                        return Err(Report::from(SlotterError::Shutdown));
+                } else {
+                    select! {
+                        biased;
+                        Some(block) = first_rx.recv() => {
+                            self.process_block(block, first_chain).await
+                        }
+                        Some(block) = second_rx.recv() => {
+                            self.process_block(block, second_chain).await
+                        }
+                        _ = &mut shutdown_rx => {
+                            info!("Slotter shut down");
+                            return Err(Report::from(SlotterError::Shutdown));
+                        }
                     }
-                }
-            } else {
-                select! {
-                    biased;
-                    Some(block) = first_rx.recv() => {
-                        self.process_block(block, first_chain).await
-                    }
-                    Some(block) = second_rx.recv() => {
-                        self.process_block(block, second_chain).await
-                    }
-                    _ = &mut shutdown_rx => {
-                        info!("Slotter shut down");
-                        return Err(Report::from(SlotterError::Shutdown));
-                    }
-                }
-            };
+                };
 
             match process_result {
                 Ok(_) => (),
