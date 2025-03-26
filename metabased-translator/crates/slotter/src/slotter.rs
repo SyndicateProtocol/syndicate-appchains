@@ -318,6 +318,7 @@ impl<P: SlotProcessor> Slotter<P> {
 
         // Add the new slot
         self.metrics.record_last_slot_created(new_slot.sequencing.block.number);
+        self.metrics.update_unassigned_settlement_blocks(self.unassigned_settlement_blocks.len());
         self.slots.push_back(new_slot);
         Ok(())
     }
