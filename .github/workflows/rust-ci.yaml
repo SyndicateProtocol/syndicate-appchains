@@ -118,12 +118,12 @@ jobs:
 
       # Run tests on entire workspace. `maestro` is excluded because it is tested separately by Nextest below
       - name: Run Tests
-        run: cargo test --workspace --exclude maestro
+        run: cargo test --workspace
 
   nextest:
     name: Nextest Integration Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15  # Likely doesn't need the full 45 minutes
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
