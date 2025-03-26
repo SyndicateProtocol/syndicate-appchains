@@ -1,7 +1,7 @@
 //!  The `poster` polls information from the appchain on a `polling_interval` frequency and posts to
 //! the settlement chain
 
-use crate::{config::Config, types::NitroBlock};
+use crate::{config::Config, metrics::PosterMetrics, types::NitroBlock};
 use alloy::{
     network::EthereumWallet,
     providers::{
@@ -36,10 +36,11 @@ struct Poster {
     appchain_provider: RootProvider,
     polling_interval: Duration,
     assertion_poster: AssertionPosterInstance<(), FilledProvider>,
+    metrics: PosterMetrics,
 }
 
 /// Starts the poster loop
-pub async fn run(config: &Config) -> Result<()> {
+pub async fn run(config: &Config, metrics: PosterMetrics) -> Result<()> {
     let appchain_provider = ProviderBuilder::default().on_http(config.appchain_rpc_url.clone());
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
@@ -50,8 +51,12 @@ pub async fn run(config: &Config) -> Result<()> {
     let assertion_poster =
         AssertionPoster::new(config.assertion_poster_contract_address, settlement_provider);
 
-    let poster =
-        Poster { appchain_provider, polling_interval: config.polling_interval, assertion_poster };
+    let poster = Poster {
+        appchain_provider,
+        polling_interval: config.polling_interval,
+        assertion_poster,
+        metrics,
+    };
     poster.main_loop().await
 }
 
@@ -86,6 +91,7 @@ impl Poster {
 
     async fn post_assertion(&self, block: NitroBlock) -> Result<()> {
         let _ = self.assertion_poster.postAssertion(block.hash, block.send_root).send().await?;
+        self.metrics.record_last_block_posted(block.number.to());
         info!("Assertion submitted for block: {:?}", block);
         Ok(())
     }
