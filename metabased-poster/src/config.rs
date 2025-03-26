@@ -25,11 +25,11 @@ pub enum ConfigError {
 #[command(version, about, long_about = None)]
 pub struct Config {
     /// URL of the settlement chain RPC node
-    #[arg(short = 's', long, env = "SETTLEMENT_RPC_URL", value_parser = shared::parse_url)]
+    #[arg(short = 's', long, env = "SETTLEMENT_RPC_URL", value_parser = parse_url)]
     pub settlement_rpc_url: Url,
 
     /// URL of the app-chain RPC node
-    #[arg(short = 'a', long, env = "APPCHAIN_RPC_URL", value_parser = shared::parse_url)]
+    #[arg(short = 'a', long, env = "APPCHAIN_RPC_URL", value_parser = parse_url)]
     pub appchain_rpc_url: Url,
 
     /// Address of the assertion poster contract
@@ -54,21 +54,21 @@ fn parse_address(value: &str) -> Result<Address, String> {
     Address::from_str(value).map_err(|_| format!("Invalid address: {}", value))
 }
 
-// /// Parse default string into a valid [`URL`].
-// fn parse_url(value: &str) -> Result<Url, ConfigError> {
-//     Url::parse(value).map_or_else(
-//         |_err| Err(ConfigError::InvalidURL(value.to_string())),
-//         |url| {
-//             if !url.has_host() {
-//                 return Err(ConfigError::InvalidURLHost);
-//             }
-//             match url.scheme() {
-//                 "http" | "https" => Ok(url),
-//                 _ => Err(ConfigError::InvalidURLScheme(url.scheme().to_string())),
-//             }
-//         },
-//     )
-// }
+/// Parse default string into a valid [`URL`].
+fn parse_url(value: &str) -> Result<Url, ConfigError> {
+    Url::parse(value).map_or_else(
+        |_err| Err(ConfigError::InvalidURL(value.to_string())),
+        |url| {
+            if !url.has_host() {
+                return Err(ConfigError::InvalidURLHost);
+            }
+            match url.scheme() {
+                "http" | "https" => Ok(url),
+                _ => Err(ConfigError::InvalidURLScheme(url.scheme().to_string())),
+            }
+        },
+    )
+}
 
 impl Config {
     /// Initializes the configuration by parsing CLI arguments and environment variables.
