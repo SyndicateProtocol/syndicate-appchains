@@ -390,7 +390,7 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         settlement_client: &Arc<dyn RPCClient>,
     ) -> Result<Option<KnownState>> {
         let mut current_block = BlockNumberOrTag::Latest;
-        // NOTE: in case there has been a settlement re-rog, we need to restart from the [FOUND
+        // NOTE: in case there has been a settlement reorg, we need to restart from the [FOUND
         // STATE] that matches the world minus 1 this is because after a reorg, an incoming
         // block might still fit the the latest found state that matches the observable world
         let mut found_block = false;
