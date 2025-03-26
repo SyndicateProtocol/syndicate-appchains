@@ -480,7 +480,6 @@ function getAmortizedCostCapBips() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getAmortizedCostCapBipsReturn {
-        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -603,7 +602,6 @@ function getCurrentTxL1GasFees() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getCurrentTxL1GasFeesReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -728,11 +726,8 @@ function getGasAccountingParams() external view returns (uint256, uint256, uint2
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getGasAccountingParamsReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _1: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _2: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -871,7 +866,6 @@ function getGasBacklog() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getGasBacklogReturn {
-        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -990,7 +984,6 @@ function getGasBacklogTolerance() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getGasBacklogToleranceReturn {
-        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -1113,7 +1106,6 @@ function getL1BaseFeeEstimate() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getL1BaseFeeEstimateReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1238,7 +1230,6 @@ function getL1BaseFeeEstimateInertia() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getL1BaseFeeEstimateInertiaReturn {
-        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -1361,7 +1352,6 @@ function getL1FeesAvailable() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getL1FeesAvailableReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1486,7 +1476,6 @@ function getL1GasPriceEstimate() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getL1GasPriceEstimateReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1611,7 +1600,6 @@ function getL1PricingEquilibrationUnits() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getL1PricingEquilibrationUnitsReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1736,7 +1724,6 @@ function getL1PricingFundsDueForRewards() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getL1PricingFundsDueForRewardsReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1861,7 +1848,6 @@ function getL1PricingSurplus() external view returns (int256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getL1PricingSurplusReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::I256,
     }
     #[allow(
@@ -1986,7 +1972,6 @@ function getL1PricingUnitsSinceUpdate() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getL1PricingUnitsSinceUpdateReturn {
-        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -2109,7 +2094,6 @@ function getL1RewardRate() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getL1RewardRateReturn {
-        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -2230,7 +2214,6 @@ function getL1RewardRecipient() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getL1RewardRecipientReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2353,7 +2336,6 @@ function getLastL1PricingSurplus() external view returns (int256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getLastL1PricingSurplusReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::I256,
     }
     #[allow(
@@ -2478,7 +2460,6 @@ function getLastL1PricingUpdateTime() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getLastL1PricingUpdateTimeReturn {
-        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -2601,7 +2582,6 @@ function getMinimumGasPrice() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getMinimumGasPriceReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2726,7 +2706,6 @@ function getPerBatchGasCharge() external view returns (int64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPerBatchGasChargeReturn {
-        #[allow(missing_docs)]
         pub _0: i64,
     }
     #[allow(
@@ -2849,11 +2828,8 @@ function getPricesInArbGas() external view returns (uint256, uint256, uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPricesInArbGasReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _1: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _2: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2988,18 +2964,14 @@ function getPricesInArbGasWithAggregator(address aggregator) external view retur
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPricesInArbGasWithAggregatorCall {
-        #[allow(missing_docs)]
         pub aggregator: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`getPricesInArbGasWithAggregator(address)`](getPricesInArbGasWithAggregatorCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPricesInArbGasWithAggregatorReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _1: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _2: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3142,17 +3114,11 @@ function getPricesInWei() external view returns (uint256, uint256, uint256, uint
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPricesInWeiReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _1: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _2: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _3: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _4: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _5: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3297,24 +3263,17 @@ function getPricesInWeiWithAggregator(address aggregator) external view returns 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPricesInWeiWithAggregatorCall {
-        #[allow(missing_docs)]
         pub aggregator: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`getPricesInWeiWithAggregator(address)`](getPricesInWeiWithAggregatorCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPricesInWeiWithAggregatorReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _1: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _2: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _3: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _4: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub _5: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3469,7 +3428,6 @@ function getPricingInertia() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getPricingInertiaReturn {
-        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -3583,53 +3541,29 @@ function getPricingInertia() external view returns (uint64);
     };
     ///Container for all the [`ArbGasInfo`](self) function calls.
     pub enum ArbGasInfoCalls {
-        #[allow(missing_docs)]
         getAmortizedCostCapBips(getAmortizedCostCapBipsCall),
-        #[allow(missing_docs)]
         getCurrentTxL1GasFees(getCurrentTxL1GasFeesCall),
-        #[allow(missing_docs)]
         getGasAccountingParams(getGasAccountingParamsCall),
-        #[allow(missing_docs)]
         getGasBacklog(getGasBacklogCall),
-        #[allow(missing_docs)]
         getGasBacklogTolerance(getGasBacklogToleranceCall),
-        #[allow(missing_docs)]
         getL1BaseFeeEstimate(getL1BaseFeeEstimateCall),
-        #[allow(missing_docs)]
         getL1BaseFeeEstimateInertia(getL1BaseFeeEstimateInertiaCall),
-        #[allow(missing_docs)]
         getL1FeesAvailable(getL1FeesAvailableCall),
-        #[allow(missing_docs)]
         getL1GasPriceEstimate(getL1GasPriceEstimateCall),
-        #[allow(missing_docs)]
         getL1PricingEquilibrationUnits(getL1PricingEquilibrationUnitsCall),
-        #[allow(missing_docs)]
         getL1PricingFundsDueForRewards(getL1PricingFundsDueForRewardsCall),
-        #[allow(missing_docs)]
         getL1PricingSurplus(getL1PricingSurplusCall),
-        #[allow(missing_docs)]
         getL1PricingUnitsSinceUpdate(getL1PricingUnitsSinceUpdateCall),
-        #[allow(missing_docs)]
         getL1RewardRate(getL1RewardRateCall),
-        #[allow(missing_docs)]
         getL1RewardRecipient(getL1RewardRecipientCall),
-        #[allow(missing_docs)]
         getLastL1PricingSurplus(getLastL1PricingSurplusCall),
-        #[allow(missing_docs)]
         getLastL1PricingUpdateTime(getLastL1PricingUpdateTimeCall),
-        #[allow(missing_docs)]
         getMinimumGasPrice(getMinimumGasPriceCall),
-        #[allow(missing_docs)]
         getPerBatchGasCharge(getPerBatchGasChargeCall),
-        #[allow(missing_docs)]
         getPricesInArbGas(getPricesInArbGasCall),
-        #[allow(missing_docs)]
         getPricesInArbGasWithAggregator(getPricesInArbGasWithAggregatorCall),
-        #[allow(missing_docs)]
         getPricesInWei(getPricesInWeiCall),
-        #[allow(missing_docs)]
         getPricesInWeiWithAggregator(getPricesInWeiWithAggregatorCall),
-        #[allow(missing_docs)]
         getPricingInertia(getPricingInertiaCall),
     }
     #[automatically_derived]

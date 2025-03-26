@@ -308,7 +308,6 @@ function getAllChainOwners() external view returns (address[] memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getAllChainOwnersReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<alloy::sol_types::private::Address>,
     }
     #[allow(
@@ -437,7 +436,6 @@ function getBrotliCompressionLevel() external view returns (uint64);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getBrotliCompressionLevelReturn {
-        #[allow(missing_docs)]
         pub _0: u64,
     }
     #[allow(
@@ -560,7 +558,6 @@ function getInfraFeeAccount() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getInfraFeeAccountReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -683,7 +680,6 @@ function getNetworkFeeAccount() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getNetworkFeeAccountReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -806,9 +802,7 @@ function getScheduledUpgrade() external view returns (uint64 arbosVersion, uint6
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getScheduledUpgradeReturn {
-        #[allow(missing_docs)]
         pub arbosVersion: u64,
-        #[allow(missing_docs)]
         pub scheduledForTimestamp: u64,
     }
     #[allow(
@@ -936,14 +930,12 @@ function isChainOwner(address addr) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isChainOwnerCall {
-        #[allow(missing_docs)]
         pub addr: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isChainOwner(address)`](isChainOwnerCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isChainOwnerReturn {
-        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -1062,7 +1054,6 @@ function rectifyChainOwner(address ownerToRectify) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct rectifyChainOwnerCall {
-        #[allow(missing_docs)]
         pub ownerToRectify: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`rectifyChainOwner(address)`](rectifyChainOwnerCall) function.
@@ -1184,19 +1175,12 @@ function rectifyChainOwner(address ownerToRectify) external;
     };
     ///Container for all the [`ArbOwnerPublic`](self) function calls.
     pub enum ArbOwnerPublicCalls {
-        #[allow(missing_docs)]
         getAllChainOwners(getAllChainOwnersCall),
-        #[allow(missing_docs)]
         getBrotliCompressionLevel(getBrotliCompressionLevelCall),
-        #[allow(missing_docs)]
         getInfraFeeAccount(getInfraFeeAccountCall),
-        #[allow(missing_docs)]
         getNetworkFeeAccount(getNetworkFeeAccountCall),
-        #[allow(missing_docs)]
         getScheduledUpgrade(getScheduledUpgradeCall),
-        #[allow(missing_docs)]
         isChainOwner(isChainOwnerCall),
-        #[allow(missing_docs)]
         rectifyChainOwner(rectifyChainOwnerCall),
     }
     #[automatically_derived]
@@ -1459,7 +1443,6 @@ function rectifyChainOwner(address ownerToRectify) external;
     }
     ///Container for all the [`ArbOwnerPublic`](self) events.
     pub enum ArbOwnerPublicEvents {
-        #[allow(missing_docs)]
         ChainOwnerRectified(ChainOwnerRectified),
     }
     #[automatically_derived]
