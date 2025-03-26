@@ -28,7 +28,7 @@ fn parse_address(value: &str) -> Result<Address, Error> {
 
 #[allow(missing_docs)]
 #[derive(Debug, Error)]
-/// Possible errors in these shared functions
+/// Possible parsing errors
 pub enum Error {
     #[error("URL error: {0}")]
     URL(URLErrorType),
