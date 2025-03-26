@@ -12,7 +12,6 @@ version.workspace = true
 url = { workspace = true }
 thiserror          = { workspace = true }
 alloy = {workspace = true, features = ["rlp"]}
-derive_more = {workspace = true}
 jsonrpsee = {workspace = true, features = ["jsonrpsee-types"]}
 serde_json = {workspace = true}
 tracing = {workspace = true}
