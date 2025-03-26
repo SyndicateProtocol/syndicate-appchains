@@ -126,7 +126,7 @@ impl<P: SlotProcessor> Slotter<P> {
 
             let process_result =
                 if self.max_source_chain_latency > 0 && latency > self.max_source_chain_latency {
-                    info!("Latency between chains is too high: {} seconds", latency);
+                    trace!("Latency between chains is too high: {} seconds", latency);
                     // stop receiving from the lagging chain entirely
                     select! {
                         biased;
