@@ -45,7 +45,7 @@ pub struct Config {
     pub polling_interval: Duration,
 
     /// Port for metrics
-    #[arg(short = 'm', long, env = "POSTER_METRICS_PORT", default_value_t = 9191)]
+    #[arg(short = 'm', long, env = "POSTER_METRICS_PORT", default_value_t = 9292)]
     pub metrics_port: u16,
 }
 
