@@ -1,0 +1,19 @@
+[package]
+name = "shared"
+edition.workspace = true
+exclude.workspace = true
+homepage.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+
+[dependencies]
+url = { workspace = true }
+thiserror          = { workspace = true }
+alloy = {workspace = true}
+derive_more = {workspace = true}
+
+
+[lints]
+workspace = true
