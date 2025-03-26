@@ -100,6 +100,8 @@ contract AssertionPoster is Ownable {
     bytes32 private prevAssertionHash;
     ConfigData private data;
 
+    bool private initialized;
+
     /**
      * @notice Constructs the AssertionPoster contract
      * @param rollup_ Address of the rollup contract
@@ -131,6 +133,9 @@ contract AssertionPoster is Ownable {
      * @dev Must be called via upgrade executor delegatecall
      */
     function initialize() external {
+        require(initialized == false, "already initialized");
+        initialized = true;
+
         require(
             address(this) == address(executor),
             "must initialize via upgradeExecutor.execute(AssertionPoster.initialize)"
