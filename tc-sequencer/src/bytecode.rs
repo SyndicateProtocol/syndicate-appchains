@@ -5,6 +5,8 @@ use alloy::{
     primitives::{Address, Bytes},
 };
 
+// TODO [SEQ-745]: Use rust bindings for the bytecode and pin versions on deployment
+
 /// Default metabased factory on Exo
 pub const V1_FACTORY_ADDRESS: &str = "0xfea8a2ba8b760348ea95492516620ad45a299d53";
 // This is the bytecode pulled directly from the Sequencing Chain factory on Exo

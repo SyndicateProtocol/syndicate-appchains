@@ -22,6 +22,7 @@ use jsonrpsee::{
     Extensions,
 };
 use reqwest::Client;
+use serde as _;
 use std::{collections::HashMap, sync::Arc};
 use tracing::{debug, error, info};
 use url::Url;
