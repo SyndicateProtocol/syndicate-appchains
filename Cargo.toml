@@ -55,10 +55,10 @@ flate2             = { version = "1.0.35" }
 futures-util       = "0.3.31"
 hex                = "0.4.3"
 http               = "1.2.0"
+http-body          = "1.0.1"
 http-body-util     = "0.1"
 humantime          = "2.1.0"
 hyper              = { version = "1.5.2" }
-http-body          = "1.0.1"
 jsonrpsee          = { version = "0.24.7" }
 pin-project-lite   = "0.2.16"
 prometheus-client  = { version = "0.23.1" }

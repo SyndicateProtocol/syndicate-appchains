@@ -30,5 +30,5 @@ async fn main() -> Result<()> {
     tokio::spawn(start_metrics(metrics_state, config.metrics_port));
 
     info!("Starting Poster service...");
-    poster::run(&config, metrics).await
+    poster::run(config, metrics).await
 }

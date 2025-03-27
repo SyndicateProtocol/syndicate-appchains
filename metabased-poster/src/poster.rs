@@ -20,7 +20,8 @@ use eyre::{eyre, Result};
 use std::{str::FromStr, time::Duration};
 use tracing::{error, info};
 
-type FilledProvider = FillProvider<
+#[allow(missing_docs)]
+pub type FilledProvider = FillProvider<
     JoinFill<
         JoinFill<
             Identity,
@@ -40,7 +41,7 @@ struct Poster {
 }
 
 /// Starts the poster loop
-pub async fn run(config: &Config, metrics: PosterMetrics) -> Result<()> {
+pub async fn run(config: Config, metrics: PosterMetrics) -> Result<()> {
     let appchain_provider = ProviderBuilder::default().on_http(config.appchain_rpc_url.clone());
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
