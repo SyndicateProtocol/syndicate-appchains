@@ -168,6 +168,11 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         for txn in txns {
             let input_data = txn.input.input().map_or(&[][..], |b| b.as_ref());
             let gas_limit = calculate_tx_gas_limit(input_data);
+            info!(
+                "Estimated gas for transaction: gas_limit={}, input_size={} bytes",
+                gas_limit,
+                input_data.len()
+            );
 
             let tx = txn
                 .with_chain_id(MCHAIN_ID)
