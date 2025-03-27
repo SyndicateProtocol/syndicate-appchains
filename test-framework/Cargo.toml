@@ -1,0 +1,29 @@
+[package]
+edition.workspace      = true
+exclude.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "test-framework"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[dependencies]
+alloy = { workspace = true, features = [
+    "node-bindings",
+    "provider-engine-api",
+    "provider-ipc",
+    "providers",
+    "rpc-types-anvil",
+    "sol-types",
+
+] }
+contract-bindings = { workspace = true }
+eyre = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true, features = ["process", "rt-multi-thread"] }
+tracing = { workspace = true }
+
+[lints]
+workspace = true
