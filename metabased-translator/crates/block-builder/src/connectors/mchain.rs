@@ -70,7 +70,7 @@ pub struct MetaChainProvider<R: RollupAdapter> {
 pub const MCHAIN_ID: u64 = 84532;
 
 /// Base gas cost for transactions
-const BASE_TRANSACTION_GAS: u64 = 100_000;
+const BASE_TRANSACTION_GAS: u64 = 200_000;
 
 impl<R: RollupAdapter> MetaChainProvider<R> {
     /// for testing only - get direct access to the rollup contract
