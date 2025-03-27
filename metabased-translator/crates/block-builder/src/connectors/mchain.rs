@@ -19,7 +19,7 @@ use alloy::{
     },
     rpc::types::{
         engine::{ForkchoiceState, PayloadAttributes, PayloadStatus, PayloadStatusEnum},
-        BlockTransactionsKind, TransactionInput, TransactionRequest,
+        BlockTransactionsKind, TransactionRequest,
     },
 };
 use common::{
@@ -166,7 +166,7 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         let mut nonce =
             self.provider.get_transaction_count(self.provider.default_signer_address()).await?;
         for txn in txns {
-            let input_data = txn.input.input().map(|b| b.as_ref()).unwrap_or(&[]);
+            let input_data = txn.input.input().map_or(&[][..], |b| b.as_ref());
             let gas_limit = calculate_tx_gas_limit(input_data);
 
             let tx = txn
