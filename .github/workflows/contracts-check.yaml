@@ -6,11 +6,10 @@ on:
   push:
     branches:
       - main
-  # Only run on PRs that touch metabased-translator/contracts
   pull_request:
     paths:
       - "metabased-contracts/**"
-      - "metabased-translator/contracts/**"
+      - "rollup-contracts/**"
       - "metabased-translator/contract-bindings/**"
 
 concurrency:
@@ -27,7 +26,7 @@ jobs:
       # This helps catch issues early and prevents wasting CI resources
       fail-fast: true
       matrix:
-        contract-dir: ['metabased-translator/contracts', 'metabased-contracts']
+        contract-dir: ['rollup-contracts', 'metabased-contracts']
 
     name: ${{ matrix.contract-dir }} Check
     runs-on: ubuntu-latest
@@ -68,7 +67,7 @@ jobs:
       # -C to create bindings only for a specific directory
         
       - name: Check Rust contract bindings for metabased-translator
-        if: matrix.contract-dir == 'metabased-translator/contracts'
+        if: matrix.contract-dir == 'rollup-contracts'
         run: |
           forge bind --alloy --force
           mv out/bindings/src/lib.rs out/bindings/src/mod.rs

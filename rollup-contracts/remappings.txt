@@ -1,0 +1,3 @@
+@openzeppelin/contracts/=lib/openzeppelin/
+@arbitrum/nitro-contracts/src/=src/nitro-contracts/
+@offchainlabs/upgrade-executor/src/=lib/upgrade-executor/
