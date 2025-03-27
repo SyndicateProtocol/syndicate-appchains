@@ -4177,6 +4177,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-framework"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "contract-bindings",
+ "eyre",
+ "reqwest",
+ "serde",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "test-utils"
 version = "0.1.0"
 

@@ -11,6 +11,7 @@ members = [
     "metabased-translator/crates/metrics",
     "metabased-translator/crates/slotter",
     "metabased-translator/tests",
+    "test-framework",
 ]
 
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
