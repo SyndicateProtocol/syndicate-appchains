@@ -15,7 +15,7 @@ use alloy::{
     eips::{BlockId, BlockNumberOrTag},
     primitives::{Address, Bytes, FixedBytes, U256},
     providers::Provider,
-    rpc::types::{BlockTransactionsKind, TransactionRequest},
+    rpc::types::TransactionRequest,
     sol_types::{SolCall, SolEvent, SolInterface},
 };
 use async_trait::async_trait;
@@ -165,12 +165,7 @@ impl RollupAdapter for ArbitrumAdapter {
         let block_number = match block {
             BlockNumberOrTag::Number(num) => num,
             tag => {
-                provider
-                    .get_block(BlockId::Number(tag), BlockTransactionsKind::Hashes)
-                    .await?
-                    .unwrap_or_default()
-                    .header
-                    .number
+                provider.get_block(BlockId::Number(tag)).await?.unwrap_or_default().header.number
             }
         };
         let block_id = BlockId::Number(BlockNumberOrTag::Number(block_number));

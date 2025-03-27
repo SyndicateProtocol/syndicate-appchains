@@ -4,7 +4,7 @@ use alloy::{
     network::{EthereumWallet, TransactionBuilder},
     primitives::{address, utils::parse_ether, Address, BlockHash, Bytes, B256, U256},
     providers::{ext::AnvilApi as _, Provider, WalletProvider},
-    rpc::types::{anvil::MineOptions, BlockTransactionsKind, TransactionRequest},
+    rpc::types::{anvil::MineOptions, TransactionRequest},
     sol_types::SolCall,
 };
 use block_builder::{
@@ -43,17 +43,18 @@ const NODE_INTERFACE_PRECOMPILE_ADDRESS: Address =
 
 /// mine a mchain block with a delay - for testing only
 async fn mine_block(
-    provider: &MetaChainProvider<impl RollupAdapter>,
+    mchain: &MetaChainProvider<impl RollupAdapter>,
     delay: u64,
 ) -> Result<BlockHash> {
     #[allow(clippy::expect_used)]
-    let ts = provider
-        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+    let ts = mchain
+        .provider
+        .get_block_by_number(BlockNumberOrTag::Latest)
         .await?
         .expect("failed to get latest block")
         .header
         .timestamp;
-    provider.mine_block(ts + delay).await
+    mchain.mine_block(ts + delay).await
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -75,7 +76,8 @@ async fn test_rollback() -> Result<()> {
     .await?;
 
     let b1 = mchain
-        .get_block_by_number(BlockNumberOrTag::Number(1), BlockTransactionsKind::Hashes)
+        .provider
+        .get_block_by_number(BlockNumberOrTag::Number(1))
         .await?
         .expect("could not find first block")
         .header
@@ -167,11 +169,8 @@ async fn new_test_with_synced_chains() -> Result<MetaNode> {
     let meta_node = MetaNode::new(Some(ContractVersion::V300), config).await?;
 
     // Sync the tips of the sequencing and settlement chains
-    let block = meta_node
-        .settlement_provider
-        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
-        .await?
-        .unwrap();
+    let block =
+        meta_node.settlement_provider.get_block_by_number(BlockNumberOrTag::Latest).await?.unwrap();
     meta_node
         .sequencing_provider
         .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
@@ -412,7 +411,8 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
     // check mchain blocks
     let mchain_block = meta_node
         .mchain_provider
-        .get_block_by_number(BlockNumberOrTag::Number(2), BlockTransactionsKind::Hashes)
+        .provider
+        .get_block_by_number(BlockNumberOrTag::Number(2))
         .await?
         .unwrap();
     assert_eq!(mchain_block.header.timestamp, config.slotter.settlement_delay);
@@ -454,7 +454,8 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
     if mine_empty_blocks {
         let mchain_block = meta_node
             .mchain_provider
-            .get_block_by_number(BlockNumberOrTag::Number(3), BlockTransactionsKind::Hashes)
+            .provider
+            .get_block_by_number(BlockNumberOrTag::Number(3))
             .await?
             .unwrap();
         assert_eq!(mchain_block.header.timestamp, config.slotter.settlement_delay);
@@ -465,7 +466,8 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
     assert_eq!(meta_node.mchain_provider.get_block_number().await?, block_number);
     let mchain_block = meta_node
         .mchain_provider
-        .get_block_by_number(BlockNumberOrTag::Number(block_number), BlockTransactionsKind::Hashes)
+        .provider
+        .get_block_by_number(BlockNumberOrTag::Number(block_number))
         .await?
         .unwrap();
     assert_eq!(mchain_block.header.timestamp, config.slotter.settlement_delay + 1);
@@ -497,13 +499,10 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
     );
     let seq_block = meta_node
         .sequencing_provider
-        .get_block(
-            Number(BlockNumberOrTag::Number(
-                // -2 because it's the latest block that has transactions in it
-                meta_node.sequencing_provider.get_block_number().await? - 2,
-            )),
-            BlockTransactionsKind::Hashes,
-        )
+        .get_block(Number(BlockNumberOrTag::Number(
+            // -2 because it's the latest block that has transactions in it
+            meta_node.sequencing_provider.get_block_number().await? - 2,
+        )))
         .await?
         .unwrap();
     assert_eq!(
@@ -517,13 +516,10 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
     // last block hasn't been processed yet
     let set_block = meta_node
         .settlement_provider
-        .get_block(
-            Number(BlockNumberOrTag::Number(
-                // -2 because the latest block hasn't been processed yet
-                meta_node.settlement_provider.get_block_number().await? - 2,
-            )),
-            BlockTransactionsKind::Hashes,
-        )
+        .get_block(Number(BlockNumberOrTag::Number(
+            // -2 because the latest block hasn't been processed yet
+            meta_node.settlement_provider.get_block_number().await? - 2,
+        )))
         .await?
         .unwrap();
     assert_eq!(
@@ -965,7 +961,8 @@ async fn test_settlement_reorg() -> Result<()> {
     // send a deposit2 that will be reorged
     let mchain_block_before_deposit = meta_node
         .mchain_provider
-        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+        .provider
+        .get_block_by_number(BlockNumberOrTag::Latest)
         .await?
         .unwrap();
     assert_eq!(mchain_block_before_deposit.header.number, 3);
@@ -988,11 +985,8 @@ async fn test_settlement_reorg() -> Result<()> {
     assert_eq!(meta_node.mchain_provider.get_block_number().await?, 4);
 
     // the rollup head has not been updated yet
-    let rollup_head_before_reorg = meta_node
-        .metabased_rollup
-        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
-        .await?
-        .unwrap();
+    let rollup_head_before_reorg =
+        meta_node.metabased_rollup.get_block_by_number(BlockNumberOrTag::Latest).await?.unwrap();
 
     // reorg, assert that the L3 balance has disappeared
     let reorg_depth = 2;
@@ -1015,7 +1009,8 @@ async fn test_settlement_reorg() -> Result<()> {
     wait_until!(
             let block = meta_node
                 .mchain_provider
-                .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+                .provider
+                .get_block_by_number(BlockNumberOrTag::Latest)
                 .await?
                 .unwrap();
             block == mchain_block_before_deposit
@@ -1027,7 +1022,8 @@ async fn test_settlement_reorg() -> Result<()> {
     assert_eq!(
         meta_node
             .mchain_provider
-            .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+            .provider
+            .get_block_by_number(BlockNumberOrTag::Latest)
             .await?
             .unwrap(),
         mchain_block_before_deposit
@@ -1041,7 +1037,7 @@ async fn test_settlement_reorg() -> Result<()> {
 
     wait_until!(let rollup_head = meta_node
         .metabased_rollup
-        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+        .get_block_by_number(BlockNumberOrTag::Latest)
         .await?
         .unwrap();
         rollup_head.header.number == rollup_head_before_reorg.header.number &&

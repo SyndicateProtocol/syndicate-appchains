@@ -19,7 +19,7 @@ use alloy::{
     },
     rpc::types::{
         engine::{ForkchoiceState, PayloadAttributes, PayloadStatus, PayloadStatusEnum},
-        BlockTransactionsKind, TransactionRequest,
+        TransactionRequest,
     },
 };
 use common::{
@@ -73,24 +73,6 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
     /// for testing only - get direct access to the rollup contract
     pub fn get_rollup(&self) -> RollupInstance<(), FilledProvider> {
         Rollup::new(get_rollup_contract_address(), self.provider.clone())
-    }
-
-    #[allow(missing_docs)]
-    pub async fn get_block_by_number(
-        &self,
-        number: BlockNumberOrTag,
-        kind: BlockTransactionsKind,
-    ) -> Result<Option<alloy::rpc::types::Block>> {
-        self.provider.get_block_by_number(number, kind).await.map_err(|e| e.into())
-    }
-
-    #[allow(missing_docs)]
-    pub async fn get_block_by_hash(
-        &self,
-        hash: BlockHash,
-        kind: BlockTransactionsKind,
-    ) -> Result<Option<alloy::rpc::types::Block>> {
-        self.provider.get_block_by_hash(hash, kind).await.map_err(|e| e.into())
     }
 
     #[allow(missing_docs)]
@@ -194,7 +176,8 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
 
         #[allow(clippy::expect_used)]
         let block = self
-            .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+            .provider
+            .get_block_by_number(BlockNumberOrTag::Latest)
             .await?
             .expect("latest block not found");
 
@@ -316,18 +299,14 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         sequencing_client: &Arc<dyn RPCClient>,
         settlement_client: &Arc<dyn RPCClient>,
     ) -> Result<Option<KnownState>> {
-        let mchain_block_before = self
-            .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
-            .await?
-            .unwrap_or_default();
+        let mchain_block_before =
+            self.provider.get_block_by_number(BlockNumberOrTag::Latest).await?.unwrap_or_default();
 
         let safe_state = self.get_safe_state(sequencing_client, settlement_client).await?;
         self.rollback_to_safe_state(&safe_state).await?;
 
-        let mchain_block_after = self
-            .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
-            .await?
-            .unwrap_or_default();
+        let mchain_block_after =
+            self.provider.get_block_by_number(BlockNumberOrTag::Latest).await?.unwrap_or_default();
         info!(
             "reconciliation done: mchain_block_before: #{} hash: {}, safe_state: {:?}, mchain_block_after: #{} hash: {}",
             mchain_block_before.header.number, mchain_block_before.header.hash, safe_state, mchain_block_after.header.number, mchain_block_after.header.hash
@@ -365,10 +344,7 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         if known_block_number < current_block_number {
             let block = self
                 .provider
-                .get_block_by_number(
-                    BlockNumberOrTag::Number(known_block_number),
-                    BlockTransactionsKind::Hashes,
-                )
+                .get_block_by_number(BlockNumberOrTag::Number(known_block_number))
                 .await
                 .map_err(|e| BlockBuilderError::ResumeFromBlock(e.to_string()))?
                 .ok_or(BlockBuilderError::ResumeFromBlock(format!(

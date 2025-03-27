@@ -124,19 +124,19 @@ impl RPCClient for EthClient {
         block_numbers: Vec<u64>,
     ) -> Result<(Vec<BlockAndReceipts>, Duration), RPCClientError> {
         let mut batch = self.client.new_batch();
-        let mut block_futures = Vec::new();
-        let mut receipt_futures = Vec::new();
+        let mut block_futures = Vec::with_capacity(block_numbers.len());
+        let mut receipt_futures = Vec::with_capacity(block_numbers.len());
 
         for block_number in &block_numbers {
             let block_number_hex = format!("0x{:x}", block_number);
 
             let block_fut = batch
                 .add_call("eth_getBlockByNumber", &(block_number_hex.clone(), true))?
-                .map_resp(move |resp: Option<Block>| {
+                .map_resp(|resp: Option<Block>| {
                     if resp.is_none() {
                         trace!(
                             "Block #{:?} not available on {:?} chain.",
-                            block_number.clone(),
+                            *block_number,
                             self.chain
                         );
                     }
@@ -148,7 +148,7 @@ impl RPCClient for EthClient {
                     if resp.is_none() {
                         trace!(
                             "Receipts not available for block #{:?} on {:?} chain.",
-                            block_number.clone(),
+                            *block_number,
                             self.chain
                         );
                     }
@@ -163,7 +163,9 @@ impl RPCClient for EthClient {
         batch.send().await?;
         let duration = start_time.elapsed();
 
-        let mut results = Vec::new();
+        let mut results = Vec::with_capacity(block_numbers.len());
+
+        // Process results and ensure futures are dropped to free resources
         for (block_fut, receipt_fut) in block_futures.into_iter().zip(receipt_futures.into_iter()) {
             let (block_opt, receipts_opt) = tokio::try_join!(block_fut, receipt_fut)?;
 

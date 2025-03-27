@@ -39,7 +39,7 @@ metrics              = { path = "metabased-translator/crates/metrics" }
 slotter              = { path = "metabased-translator/crates/slotter" }
 test-utils           = { path = "metabased-translator/crates/test-utils" }
 
-alloy              = { version = "0.11.1" }
+alloy              = { version = "0.12.6" }
 alloy-primitives   = "0.8.22"
 alloy-rlp          = "0.3.11"
 assert_matches     = "1.5.0"
