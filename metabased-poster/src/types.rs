@@ -3,7 +3,7 @@
 use alloy::primitives::{B256, U256};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug, Default)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone, Copy)]
 #[serde(rename_all = "camelCase")]
 #[allow(missing_docs)]
 pub struct NitroBlock {

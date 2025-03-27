@@ -30,3 +30,4 @@ alloy = { workspace = true, features = [
     "rpc-types-anvil",
     "sol-types",
 ] }
+jsonrpsee = { workspace = true, features = ["server"] }

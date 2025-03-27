@@ -34,14 +34,14 @@ pub type FilledProvider = FillProvider<
 
 #[derive(Debug)]
 struct Poster {
-    appchain_provider: RootProvider,
-    polling_interval: Duration,
-    assertion_poster: AssertionPosterInstance<(), FilledProvider>,
-    metrics: PosterMetrics,
+    pub appchain_provider: RootProvider,
+    pub polling_interval: Duration,
+    pub assertion_poster: AssertionPosterInstance<(), FilledProvider>,
+    pub metrics: PosterMetrics,
 }
 
 /// Starts the poster loop
-pub async fn run(config: &Config, metrics: PosterMetrics) -> Result<()> {
+pub async fn run(config: Config, metrics: PosterMetrics) -> Result<()> {
     let appchain_provider = ProviderBuilder::default().on_http(config.appchain_rpc_url.clone());
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
