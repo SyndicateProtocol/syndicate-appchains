@@ -34,10 +34,10 @@ pub type FilledProvider = FillProvider<
 
 #[derive(Debug)]
 struct Poster {
-    pub appchain_provider: RootProvider,
-    pub polling_interval: Duration,
-    pub assertion_poster: AssertionPosterInstance<(), FilledProvider>,
-    pub metrics: PosterMetrics,
+    appchain_provider: RootProvider,
+    polling_interval: Duration,
+    assertion_poster: AssertionPosterInstance<(), FilledProvider>,
+    metrics: PosterMetrics,
 }
 
 /// Starts the poster loop
