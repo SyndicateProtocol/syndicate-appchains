@@ -1,4 +1,4 @@
-//! Anvil helpers for the poster integration tests
+//! Utils for the poster integration tests
 
 use alloy::{
     network::EthereumWallet,
