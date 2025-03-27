@@ -26,6 +26,10 @@ use std::{collections::HashMap, sync::Arc};
 use tracing::{debug, error, info};
 use url::Url;
 
+const DEFAULT_SEQUENCING_CHAIN_ID: u64 = 5113;
+const DEFAULT_FUNCTION_SIGNATURE: &str = "processTransaction(bytes data)";
+const TC_DATA_KEY: &str = "data";
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SendTransactionRequest {
@@ -41,9 +45,9 @@ impl SendTransactionRequest {
         Self {
             project_id,
             contract_address,
-            chain_id: 5113,
-            function_signature: "processTransaction(bytes data)".to_string(),
-            args: HashMap::from([("data".to_string(), hex::encode(data))]),
+            chain_id: DEFAULT_SEQUENCING_CHAIN_ID,
+            function_signature: DEFAULT_FUNCTION_SIGNATURE.to_string(),
+            args: HashMap::from([(TC_DATA_KEY.to_string(), hex::encode(data))]),
         }
     }
 }
@@ -65,7 +69,7 @@ impl TCClient {
         let client = Client::new();
 
         Ok(Self {
-            tc_url: config.tc_url.clone(),
+            tc_url: config.tc_endpoint.get_url(),
             tc_project_id: config.tc_project_id.clone(),
             tc_api_key: config.tc_api_key.clone(),
             factory_address: config.metabased_sequencer_factory_address,
@@ -75,7 +79,7 @@ impl TCClient {
 
     fn get_contract_address(&self, chain_id: u64) -> Address {
         let chain_salt = U256::from(chain_id).to_be_bytes();
-        let mut packed = get_bytecode().to_vec();
+        let mut packed = get_bytecode(self.factory_address).to_vec();
         packed.extend_from_slice(&chain_salt);
         let bytecode = Bytes::from(packed);
         self.factory_address.create2(chain_salt, keccak256(&bytecode))
@@ -129,6 +133,7 @@ impl TCClient {
 
 // Params validation
 // TODO [SEQ-663]: Refactor this function
+// TODO [SEQ-722]: Move this to the shared package
 fn parse_send_raw_transaction_params(params: Params<'static>) -> Result<Bytes, Error> {
     let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap_or("[]"))?;
     let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
@@ -163,25 +168,13 @@ mod tests {
     use std::str::FromStr;
 
     fn setup_test_service() -> TCClient {
-        let config = Config {
-            tc_url: Url::parse("http://localhost:8545").unwrap(),
-            tc_project_id: "test".to_string(),
-            tc_api_key: "test".to_string(),
-            metabased_sequencer_factory_address: Address::ZERO,
-            port: 8456,
-        };
+        let config = Config::default();
         TCClient::new(&config).unwrap()
     }
 
     #[test]
     fn test_new_service_creation() {
-        let config = Config {
-            tc_url: Url::parse("http://localhost:8545").unwrap(),
-            tc_project_id: "test".to_string(),
-            tc_api_key: "test".to_string(),
-            metabased_sequencer_factory_address: Address::ZERO,
-            port: 8456,
-        };
+        let config = Config::default();
 
         let result = TCClient::new(&config);
         assert!(result.is_ok());
@@ -190,16 +183,7 @@ mod tests {
     #[test]
     fn test_get_contract_address() {
         // Setup a test service with a mock config
-        let config = Config {
-            tc_url: Url::parse("http://localhost:8545").unwrap(),
-            tc_project_id: "test".to_string(),
-            tc_api_key: "test".to_string(),
-            metabased_sequencer_factory_address: Address::from_str(
-                "0xFEA8A2BA8B760348ea95492516620ad45a299d53",
-            )
-            .unwrap(),
-            port: 8456,
-        };
+        let config = Config::default();
         let service = TCClient::new(&config).unwrap();
 
         let contract_address = service.get_contract_address(510001);

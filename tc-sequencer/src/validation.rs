@@ -52,13 +52,13 @@ fn check_signature(tx: &TxEnvelope) -> Result<(), Error> {
 fn check_gas_price(tx: &TxEnvelope) -> Result<(), Error> {
     // TODO(SEQ-179): introduce optional global tx cap config. See op-geth's checkTxFee() +
     // RPCTxFeeCap for equivalent skip check if unset
-    let tx_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
+    let tx_fee_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
 
     let gas_price = U256::try_from(tx.max_fee_per_gas())?;
     let gas = U256::try_from(tx.gas_limit())?;
     let fee_wei = gas_price.saturating_mul(gas);
 
-    if fee_wei > tx_cap_in_wei {
+    if fee_wei > tx_fee_cap_in_wei {
         return Err(TransactionRejected(FeeTooHigh));
     }
     Ok(())

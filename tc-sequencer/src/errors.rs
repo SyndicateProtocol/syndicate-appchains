@@ -1,5 +1,6 @@
 //! The `errors` module contains the error types for the metabased sequencer.
 // TODO [SEQ-662]: Simplify error file
+// TODO [SEQ-722]: Move this to the shared package
 
 use alloy::{
     contract, hex,

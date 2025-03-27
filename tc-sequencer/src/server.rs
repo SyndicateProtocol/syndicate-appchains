@@ -47,7 +47,7 @@ pub async fn run_server(config: &Config) -> Result<(SocketAddr, ServerHandle)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::primitives::Address;
+    use crate::config::TCEndpoint;
     use jsonrpsee::{core::client::ClientT, http_client::HttpClient};
     use mockito::{self, Matcher};
     use reqwest::{Client, StatusCode};
@@ -62,16 +62,8 @@ mod tests {
         let mock_tc_server =
             server.mock("POST", Matcher::Any).with_status(200).create_async().await;
 
-        let config = Config {
-            tc_url: Url::parse(&server.url()).unwrap(),
-            tc_project_id: String::new(),
-            tc_api_key: String::new(),
-            metabased_sequencer_factory_address: Address::from_str(
-                "0xFEA8A2BA8B760348ea95492516620ad45a299d53",
-            )
-            .unwrap(),
-            port: 8282,
-        };
+        let url = Url::from_str(server.url().as_str()).unwrap();
+        let config = Config { tc_endpoint: TCEndpoint::Raw(url), ..Default::default() };
 
         // Start server
         let (_addr, _handle) = run_server(&config).await.unwrap();
