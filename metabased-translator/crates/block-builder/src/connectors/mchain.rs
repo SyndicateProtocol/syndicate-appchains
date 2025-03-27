@@ -69,6 +69,9 @@ pub struct MetaChainProvider<R: RollupAdapter> {
 /// TODO(SEQ-652): this should be configurable
 pub const MCHAIN_ID: u64 = 84532;
 
+/// Base gas cost for transactions
+const BASE_TRANSACTION_GAS: u64 = 200_000;
+
 impl<R: RollupAdapter> MetaChainProvider<R> {
     /// for testing only - get direct access to the rollup contract
     pub fn get_rollup(&self) -> RollupInstance<(), FilledProvider> {
@@ -163,9 +166,17 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         let mut nonce =
             self.provider.get_transaction_count(self.provider.default_signer_address()).await?;
         for txn in txns {
+            let input_data = txn.input.input().map_or(&[][..], |b| b.as_ref());
+            let gas_limit = calculate_tx_gas_limit(input_data);
+            info!(
+                "Estimated gas for transaction: gas_limit={}, input_size={} bytes",
+                gas_limit,
+                input_data.len()
+            );
+
             let tx = txn
                 .with_chain_id(MCHAIN_ID)
-                .gas_limit(1000000)
+                .gas_limit(gas_limit)
                 .max_fee_per_gas(1000000000)
                 .max_priority_fee_per_gas(0)
                 .nonce(nonce)
@@ -452,6 +463,12 @@ pub fn rollup_config(chain_id: u64, chain_owner: Address) -> String {
     cfg
 }
 
+/// Calculate the required gas limit for a transaction based on its input data
+fn calculate_tx_gas_limit(input_data: &[u8]) -> u64 {
+    let data_gas: u64 = input_data.iter().map(|&byte| if byte == 0 { 4 } else { 16 }).sum();
+    BASE_TRANSACTION_GAS + data_gas
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -517,5 +534,23 @@ mod tests {
         let mut test_block = BlockRef { hash: expected_hash, number: 1, timestamp: 0 };
 
         assert!(!validate_block_add_timestamp(&client_mismatch, &mut test_block).await);
+    }
+
+    #[test]
+    fn test_calculate_gas_limit() {
+        // Test empty input
+        assert_eq!(calculate_tx_gas_limit(&[]), BASE_TRANSACTION_GAS);
+
+        // Test with some zero bytes
+        assert_eq!(calculate_tx_gas_limit(&[0, 0, 0]), BASE_TRANSACTION_GAS + (3 * 4));
+
+        // Test with some non-zero bytes
+        assert_eq!(calculate_tx_gas_limit(&[1, 2, 3]), BASE_TRANSACTION_GAS + (3 * 16));
+
+        // Test with mixed zero and non-zero bytes
+        assert_eq!(
+            calculate_tx_gas_limit(&[0, 1, 0, 2, 0]),
+            BASE_TRANSACTION_GAS + (3 * 4) + (2 * 16)
+        );
     }
 }
