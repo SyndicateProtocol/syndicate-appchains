@@ -15,6 +15,7 @@ pub mod r#mockrollup;
 pub mod r#mocksequencerinbox;
 pub mod r#assertionstatelib;
 pub mod r#context;
+pub mod r#counter;
 pub mod r#globalstatelib;
 pub mod r#iaccesscontrol;
 pub mod r#iassertionchain;
