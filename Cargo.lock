@@ -100,7 +100,7 @@ dependencies = [
  "either",
  "k256",
  "once_cell",
- "rand",
+ "rand 0.8.5",
  "serde",
  "serde_with",
  "thiserror 2.0.11",
@@ -530,7 +530,7 @@ dependencies = [
  "alloy-rlp",
  "alloy-serde",
  "derive_more 2.0.1",
- "rand",
+ "rand 0.8.5",
  "serde",
  "strum",
 ]
@@ -5379,7 +5379,7 @@ checksum = "6352c01d0edd5db859a63e2605f4ea3183ddbd15e2c4a9e7d32184df75e4f154"
 dependencies = [
  "proc-macro2",
  "quote",
- "syn 2.0.96",
+ "syn 2.0.100",
 ]
 
 [[package]]
