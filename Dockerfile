@@ -56,3 +56,14 @@ FROM gcr.io/distroless/cc AS metabased-poster
 COPY --from=builder /app/target/release/metabased-poster /usr/local/bin/metabased-poster
 ENTRYPOINT ["/usr/local/bin/metabased-poster"]
 LABEL service=metabased-poster
+
+# --------- Debugging image ---------
+FROM ubuntu:22.04 AS metabased-translator-debug
+RUN apt-get update && apt-get install -y heaptrack libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /app/target/release/metabased-translator /usr/local/bin/metabased-translator
+COPY --from=foundry /root/.foundry /root/.foundry
+ENV PATH="/root/.foundry/bin:${PATH}"
+ENTRYPOINT ["/usr/local/bin/metabased-translator"]
+EXPOSE 8545 8546
+LABEL service=metabased-translator
+
