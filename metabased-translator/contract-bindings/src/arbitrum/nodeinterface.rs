@@ -376,14 +376,12 @@ function blockL1Num(uint64 l2BlockNum) external view returns (uint64 l1BlockNum)
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct blockL1NumCall {
-        #[allow(missing_docs)]
         pub l2BlockNum: u64,
     }
     ///Container type for the return parameters of the [`blockL1Num(uint64)`](blockL1NumCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct blockL1NumReturn {
-        #[allow(missing_docs)]
         pub l1BlockNum: u64,
     }
     #[allow(
@@ -502,20 +500,15 @@ function constructOutboxProof(uint64 size, uint64 leaf) external view returns (b
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructOutboxProofCall {
-        #[allow(missing_docs)]
         pub size: u64,
-        #[allow(missing_docs)]
         pub leaf: u64,
     }
     ///Container type for the return parameters of the [`constructOutboxProof(uint64,uint64)`](constructOutboxProofCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct constructOutboxProofReturn {
-        #[allow(missing_docs)]
         pub send: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub root: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub proof: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
@@ -672,19 +665,12 @@ function estimateRetryableTicket(address sender, uint256 deposit, address to, ui
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct estimateRetryableTicketCall {
-        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub deposit: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub l2CallValue: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub excessFeeRefundAddress: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub callValueRefundAddress: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`estimateRetryableTicket(address,uint256,address,uint256,address,address,bytes)`](estimateRetryableTicketCall) function.
@@ -869,14 +855,12 @@ function findBatchContainingBlock(uint64 blockNum) external view returns (uint64
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct findBatchContainingBlockCall {
-        #[allow(missing_docs)]
         pub blockNum: u64,
     }
     ///Container type for the return parameters of the [`findBatchContainingBlock(uint64)`](findBatchContainingBlockCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct findBatchContainingBlockReturn {
-        #[allow(missing_docs)]
         pub batch: u64,
     }
     #[allow(
@@ -999,24 +983,17 @@ function gasEstimateComponents(address to, bool contractCreation, bytes memory d
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct gasEstimateComponentsCall {
-        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub contractCreation: bool,
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`gasEstimateComponents(address,bool,bytes)`](gasEstimateComponentsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct gasEstimateComponentsReturn {
-        #[allow(missing_docs)]
         pub gasEstimate: u64,
-        #[allow(missing_docs)]
         pub gasEstimateForL1: u64,
-        #[allow(missing_docs)]
         pub baseFee: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub l1BaseFeeEstimate: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1186,22 +1163,16 @@ function gasEstimateL1Component(address to, bool contractCreation, bytes memory 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct gasEstimateL1ComponentCall {
-        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub contractCreation: bool,
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`gasEstimateL1Component(address,bool,bytes)`](gasEstimateL1ComponentCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct gasEstimateL1ComponentReturn {
-        #[allow(missing_docs)]
         pub gasEstimateForL1: u64,
-        #[allow(missing_docs)]
         pub baseFee: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub l1BaseFeeEstimate: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1362,14 +1333,12 @@ function getL1Confirmations(bytes32 blockHash) external view returns (uint64 con
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getL1ConfirmationsCall {
-        #[allow(missing_docs)]
         pub blockHash: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`getL1Confirmations(bytes32)`](getL1ConfirmationsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getL1ConfirmationsReturn {
-        #[allow(missing_docs)]
         pub confirmations: u64,
     }
     #[allow(
@@ -1492,16 +1461,13 @@ function l2BlockRangeForL1(uint64 blockNum) external view returns (uint64 firstB
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct l2BlockRangeForL1Call {
-        #[allow(missing_docs)]
         pub blockNum: u64,
     }
     ///Container type for the return parameters of the [`l2BlockRangeForL1(uint64)`](l2BlockRangeForL1Call) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct l2BlockRangeForL1Return {
-        #[allow(missing_docs)]
         pub firstBlock: u64,
-        #[allow(missing_docs)]
         pub lastBlock: u64,
     }
     #[allow(
@@ -1633,34 +1599,23 @@ function legacyLookupMessageBatchProof(uint256 batchNum, uint64 index) external 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct legacyLookupMessageBatchProofCall {
-        #[allow(missing_docs)]
         pub batchNum: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub index: u64,
     }
     ///Container type for the return parameters of the [`legacyLookupMessageBatchProof(uint256,uint64)`](legacyLookupMessageBatchProofCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct legacyLookupMessageBatchProofReturn {
-        #[allow(missing_docs)]
         pub proof: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
-        #[allow(missing_docs)]
         pub path: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub l2Sender: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub l1Dest: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub l2Block: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub l1Block: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub timestamp: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub amount: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub calldataForL1: alloy::sol_types::private::Bytes,
     }
     #[allow(
@@ -1858,7 +1813,6 @@ function nitroGenesisBlock() external pure returns (uint256 number);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct nitroGenesisBlockReturn {
-        #[allow(missing_docs)]
         pub number: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1974,25 +1928,15 @@ function nitroGenesisBlock() external pure returns (uint256 number);
     };
     ///Container for all the [`NodeInterface`](self) function calls.
     pub enum NodeInterfaceCalls {
-        #[allow(missing_docs)]
         blockL1Num(blockL1NumCall),
-        #[allow(missing_docs)]
         constructOutboxProof(constructOutboxProofCall),
-        #[allow(missing_docs)]
         estimateRetryableTicket(estimateRetryableTicketCall),
-        #[allow(missing_docs)]
         findBatchContainingBlock(findBatchContainingBlockCall),
-        #[allow(missing_docs)]
         gasEstimateComponents(gasEstimateComponentsCall),
-        #[allow(missing_docs)]
         gasEstimateL1Component(gasEstimateL1ComponentCall),
-        #[allow(missing_docs)]
         getL1Confirmations(getL1ConfirmationsCall),
-        #[allow(missing_docs)]
         l2BlockRangeForL1(l2BlockRangeForL1Call),
-        #[allow(missing_docs)]
         legacyLookupMessageBatchProof(legacyLookupMessageBatchProofCall),
-        #[allow(missing_docs)]
         nitroGenesisBlock(nitroGenesisBlockCall),
     }
     #[automatically_derived]

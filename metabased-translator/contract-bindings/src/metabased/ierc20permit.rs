@@ -130,7 +130,6 @@ function DOMAIN_SEPARATOR() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct DOMAIN_SEPARATORReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -249,14 +248,12 @@ function nonces(address owner) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct noncesCall {
-        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`nonces(address)`](noncesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct noncesReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -377,19 +374,12 @@ function permit(address owner, address spender, uint256 value, uint256 deadline,
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct permitCall {
-        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub spender: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub deadline: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub v: u8,
-        #[allow(missing_docs)]
         pub r: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub s: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`permit(address,address,uint256,uint256,uint8,bytes32,bytes32)`](permitCall) function.
@@ -565,11 +555,8 @@ function permit(address owner, address spender, uint256 value, uint256 deadline,
     };
     ///Container for all the [`IERC20Permit`](self) function calls.
     pub enum IERC20PermitCalls {
-        #[allow(missing_docs)]
         DOMAIN_SEPARATOR(DOMAIN_SEPARATORCall),
-        #[allow(missing_docs)]
         nonces(noncesCall),
-        #[allow(missing_docs)]
         permit(permitCall),
     }
     #[automatically_derived]

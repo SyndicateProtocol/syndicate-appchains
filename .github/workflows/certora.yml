@@ -43,6 +43,7 @@ jobs:
             "SyndicateToken",
             "RequireAllModule",
             "RequireAnyModule",
+            "WalletPool",
           ]
     steps:
       - name: Checkout repository
