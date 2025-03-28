@@ -182,9 +182,7 @@ function addCalldataCheck(address _address, bool addToHead) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addCalldataCheckCall {
-        #[allow(missing_docs)]
         pub _address: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub addToHead: bool,
     }
     ///Container type for the return parameters of the [`addCalldataCheck(address,bool)`](addCalldataCheckCall) function.
@@ -323,9 +321,7 @@ function addProposerCheck(address _address, bool addToHead) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct addProposerCheckCall {
-        #[allow(missing_docs)]
         pub _address: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub addToHead: bool,
     }
     ///Container type for the return parameters of the [`addProposerCheck(address,bool)`](addProposerCheckCall) function.
@@ -468,7 +464,6 @@ function getAllCalldataChecks() external view returns (address[] memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getAllCalldataChecksReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<alloy::sol_types::private::Address>,
     }
     #[allow(
@@ -597,7 +592,6 @@ function getAllProposerChecks() external view returns (address[] memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getAllProposerChecksReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Vec<alloy::sol_types::private::Address>,
     }
     #[allow(
@@ -722,14 +716,12 @@ function isAllowed(address proposer) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAllowedCall {
-        #[allow(missing_docs)]
         pub proposer: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAllowedReturn {
-        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -848,14 +840,12 @@ function isCalldataAllowed(bytes memory data) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isCalldataAllowedCall {
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`isCalldataAllowed(bytes)`](isCalldataAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isCalldataAllowedReturn {
-        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -978,7 +968,6 @@ function removeCalldataCheck(address _address) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct removeCalldataCheckCall {
-        #[allow(missing_docs)]
         pub _address: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`removeCalldataCheck(address)`](removeCalldataCheckCall) function.
@@ -1105,7 +1094,6 @@ function removeProposerCheck(address _address) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct removeProposerCheckCall {
-        #[allow(missing_docs)]
         pub _address: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`removeProposerCheck(address)`](removeProposerCheckCall) function.
@@ -1227,21 +1215,13 @@ function removeProposerCheck(address _address) external;
     };
     ///Container for all the [`IRequirementModule`](self) function calls.
     pub enum IRequirementModuleCalls {
-        #[allow(missing_docs)]
         addCalldataCheck(addCalldataCheckCall),
-        #[allow(missing_docs)]
         addProposerCheck(addProposerCheckCall),
-        #[allow(missing_docs)]
         getAllCalldataChecks(getAllCalldataChecksCall),
-        #[allow(missing_docs)]
         getAllProposerChecks(getAllProposerChecksCall),
-        #[allow(missing_docs)]
         isAllowed(isAllowedCall),
-        #[allow(missing_docs)]
         isCalldataAllowed(isCalldataAllowedCall),
-        #[allow(missing_docs)]
         removeCalldataCheck(removeCalldataCheckCall),
-        #[allow(missing_docs)]
         removeProposerCheck(removeProposerCheckCall),
     }
     #[automatically_derived]

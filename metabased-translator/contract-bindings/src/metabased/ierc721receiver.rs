@@ -83,20 +83,15 @@ function onERC721Received(address operator, address from, uint256 tokenId, bytes
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct onERC721ReceivedCall {
-        #[allow(missing_docs)]
         pub operator: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub from: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`onERC721Received(address,address,uint256,bytes)`](onERC721ReceivedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct onERC721ReceivedReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<4>,
     }
     #[allow(
@@ -243,7 +238,6 @@ function onERC721Received(address operator, address from, uint256 tokenId, bytes
     };
     ///Container for all the [`IERC721Receiver`](self) function calls.
     pub enum IERC721ReceiverCalls {
-        #[allow(missing_docs)]
         onERC721Received(onERC721ReceivedCall),
     }
     #[automatically_derived]
