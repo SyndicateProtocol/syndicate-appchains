@@ -82,22 +82,22 @@ pub mod SafeCast {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220b9642ba77a4e50a4e1f43f0c5695df792deb0ae73bad3cb43dff12b1ad51879c64736f6c63430008190033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea264697066735822122049ca1c862995cf14a81a8b3160629a6f812a059d84abea571549a41727898d1464736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB9d+\xA7zNP\xA4\xE1\xF4?\x0CV\x95\xDFy-\xEB\n\xE7;\xAD<\xB4=\xFF\x12\xB1\xADQ\x87\x9CdsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 I\xCA\x1C\x86)\x95\xCF\x14\xA8\x1A\x8B1`b\x9Ao\x81*\x05\x9D\x84\xAB\xEAW\x15I\xA4\x17'\x89\x8D\x14dsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x5f80fdfea2646970667358221220b9642ba77a4e50a4e1f43f0c5695df792deb0ae73bad3cb43dff12b1ad51879c64736f6c63430008190033
+    ///0x60806040525f80fdfea264697066735822122049ca1c862995cf14a81a8b3160629a6f812a059d84abea571549a41727898d1464736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xB9d+\xA7zNP\xA4\xE1\xF4?\x0CV\x95\xDFy-\xEB\n\xE7;\xAD<\xB4=\xFF\x12\xB1\xADQ\x87\x9CdsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 I\xCA\x1C\x86)\x95\xCF\x14\xA8\x1A\x8B1`b\x9Ao\x81*\x05\x9D\x84\xAB\xEAW\x15I\xA4\x17'\x89\x8D\x14dsolcC\0\x08\x19\x003",
     );
     /**Custom error with signature `SafeCastOverflowedIntDowncast(uint8,int256)` and selector `0x327269a7`.
 ```solidity
@@ -106,7 +106,9 @@ error SafeCastOverflowedIntDowncast(uint8 bits, int256 value);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct SafeCastOverflowedIntDowncast {
+        #[allow(missing_docs)]
         pub bits: u8,
+        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::I256,
     }
     #[allow(
@@ -191,6 +193,7 @@ error SafeCastOverflowedIntToUint(int256 value);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct SafeCastOverflowedIntToUint {
+        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::I256,
     }
     #[allow(
@@ -265,7 +268,9 @@ error SafeCastOverflowedUintDowncast(uint8 bits, uint256 value);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct SafeCastOverflowedUintDowncast {
+        #[allow(missing_docs)]
         pub bits: u8,
+        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -350,6 +355,7 @@ error SafeCastOverflowedUintToInt(uint256 value);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct SafeCastOverflowedUintToInt {
+        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -419,9 +425,13 @@ error SafeCastOverflowedUintToInt(uint256 value);
     };
     ///Container for all the [`SafeCast`](self) custom errors.
     pub enum SafeCastErrors {
+        #[allow(missing_docs)]
         SafeCastOverflowedIntDowncast(SafeCastOverflowedIntDowncast),
+        #[allow(missing_docs)]
         SafeCastOverflowedIntToUint(SafeCastOverflowedIntToUint),
+        #[allow(missing_docs)]
         SafeCastOverflowedUintDowncast(SafeCastOverflowedUintDowncast),
+        #[allow(missing_docs)]
         SafeCastOverflowedUintToInt(SafeCastOverflowedUintToInt),
     }
     #[automatically_derived]
