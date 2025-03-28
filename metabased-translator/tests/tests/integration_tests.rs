@@ -803,7 +803,7 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
         &meta_node.settlement_provider,
     );
     _ = executor
-        .execute(*assertion_poster.address(), AssertionPoster::initializeCall::SELECTOR.into())
+        .execute(*assertion_poster.address(), AssertionPoster::configureCall::SELECTOR.into())
         .send()
         .await?;
 
