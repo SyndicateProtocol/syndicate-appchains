@@ -91,8 +91,8 @@ async fn termination_handling(
         res = &mut handles.slotter => {
             match res {
                 Ok(Ok(_)) => Ok(()),
-                Ok(Err(SlotterError::ReorgDetected { chain, current_block, received_block, received_parent_hash })) => {
-                    error!("chain: {chain}, current_block: {current_block}, received_block: {received_block}, received_parent_hash: {received_parent_hash}, Reorg detected, restarting the translator components");
+                Ok(Err(e @ SlotterError::ReorgDetected { .. })) => {
+                    error!("{e}, Reorg detected, restarting the translator components");
                     handles.abort();
                     Err(TerminationError::ReorgDetected())
                 }

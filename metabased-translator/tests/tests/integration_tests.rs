@@ -318,7 +318,7 @@ async fn e2e_settlement_test() -> Result<()> {
         .await?;
     meta_node.mine_set_block(0).await?;
 
-    // Mine an set block to process the slot
+    // Mine a set block to process the slot
     meta_node.mine_set_block(1).await?;
 
     // Process the slot - wait for block 17 to be reached
