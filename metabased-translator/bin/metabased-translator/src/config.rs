@@ -168,7 +168,7 @@ mod tests {
         #[async_trait]
         impl RPCClient for RPCClientMock {
             async fn get_block_by_number(&self, block_number: BlockNumberOrTag) -> Result<Block, RPCClientError>;
-            async fn batch_get_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
+            async fn batch_get_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<(Vec<BlockAndReceipts>, std::time::Duration), RPCClientError>;
         }
     }
 }
