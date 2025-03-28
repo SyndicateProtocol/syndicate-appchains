@@ -9,7 +9,6 @@ use alloy::{
     rpc::types::TransactionRequest,
     signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
 };
-use contract_bindings::arbitrum::r#counter::Counter;
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::Result;
 
@@ -19,6 +18,7 @@ use eyre::Result;
 /// Assert that the counter contract is deployed and that the counter is incremented on the L3 chain
 #[tokio::test]
 #[cfg_attr(not(feature = "env-tests"), ignore)]
+#[ignore = "Counter contract has been removed from arbitrum bindings"]
 async fn test_e2e_counter_contract() -> Result<()> {
     let env = TestEnv::new().await?;
 
@@ -90,6 +90,7 @@ async fn test_e2e_counter_contract() -> Result<()> {
 /// contract
 #[tokio::test]
 #[cfg_attr(not(feature = "env-tests"), ignore)]
+#[ignore = "Counter contract has been removed from arbitrum bindings"]
 async fn test_e2e_resist_garbage_data() -> Result<()> {
     let env = TestEnv::new().await?;
 
