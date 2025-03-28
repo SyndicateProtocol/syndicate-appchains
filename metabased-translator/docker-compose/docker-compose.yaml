@@ -1,6 +1,6 @@
 services:
   reth:
-    image: ghcr.io/syndicateprotocol/reth
+    image: ghcr.io/syndicateprotocol/reth:1.0.0
     volumes:
       - .:/cfg:ro
       - ipc:/ipc

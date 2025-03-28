@@ -130,7 +130,7 @@ pub async fn start_reth(
             .arg(if cfg!(target_os = "macos") { "ipc" } else { &dir }.to_owned() + ":/ipc")
             .arg("-p")
             .arg(format!("{http_port}:{http_port}"))
-            .arg("ghcr.io/syndicateprotocol/reth")
+            .arg("ghcr.io/syndicateprotocol/reth:1.0.0")
             .arg("-c")
             .arg(format!("umask 0 && exec reth node --http --http.addr=0.0.0.0 --http.port={http_port} --ipcpath=/ipc/{port}.ipc --auth-ipc --auth-ipc.path=/ipc/{auth_port}.ipc --chain='{chain_cfg}'"))
             .spawn()?

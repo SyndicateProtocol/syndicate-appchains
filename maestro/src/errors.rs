@@ -2,6 +2,7 @@
 
 use crate::errors::Error::InvalidParams;
 use alloy::contract;
+use eyre::Report;
 use jsonrpsee::types::{ErrorObject, ErrorObjectOwned};
 
 // Source: https://github.com/MetaMask/rpc-errors/blob/main/src/errors.ts
@@ -95,5 +96,11 @@ impl From<serde_json::Error> for Error {
 impl From<alloy::hex::FromHexError> for Error {
     fn from(_: alloy::hex::FromHexError) -> Self {
         InvalidParams(InvalidParamsError::InvalidHex)
+    }
+}
+
+impl From<Error> for Report {
+    fn from(value: Error) -> Self {
+        eyre::eyre!(value)
     }
 }
