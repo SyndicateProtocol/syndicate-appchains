@@ -19,7 +19,6 @@ pub mod r#ierc20;
 pub mod r#globalstatelib;
 pub mod r#iaccesscontrol;
 pub mod r#iassertionchain;
-pub mod r#iassertionposter;
 pub mod r#ibridge;
 pub mod r#idelayedmessageprovider;
 pub mod r#ierc165;
