@@ -539,18 +539,18 @@ mod tests {
     #[test]
     fn test_calculate_gas_limit() {
         // Test empty input
-        assert_eq!(calculate_tx_gas_limit(&[]), BASE_TRANSACTION_GAS);
+        assert_eq!(calculate_tx_gas_limit(&[]), BASE_TRANSACTION_GAS * 2);
 
         // Test with some zero bytes
-        assert_eq!(calculate_tx_gas_limit(&[0, 0, 0]), BASE_TRANSACTION_GAS + (3 * 4));
+        assert_eq!(calculate_tx_gas_limit(&[0, 0, 0]), (BASE_TRANSACTION_GAS + (3 * 4)) * 2);
 
         // Test with some non-zero bytes
-        assert_eq!(calculate_tx_gas_limit(&[1, 2, 3]), BASE_TRANSACTION_GAS + (3 * 16));
+        assert_eq!(calculate_tx_gas_limit(&[1, 2, 3]), (BASE_TRANSACTION_GAS + (3 * 16)) * 2);
 
         // Test with mixed zero and non-zero bytes
         assert_eq!(
             calculate_tx_gas_limit(&[0, 1, 0, 2, 0]),
-            BASE_TRANSACTION_GAS + (3 * 4) + (2 * 16)
+            (BASE_TRANSACTION_GAS + (3 * 4) + (2 * 16)) * 2
         );
     }
 }
