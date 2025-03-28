@@ -55,7 +55,7 @@ async fn test_e2e_counter_contract() -> Result<()> {
         .unwrap();
     assert!(receipt.status(), "Contract deployment failed");
 
-    let l3_counter_address = receipt.contract_address.unwrap();
+    let _l3_counter_address = receipt.contract_address.unwrap();
     // let counter = Counter::new(l3_counter_address, env.l3_chain());
     // let number = counter.number().call().await?._0.to::<u64>();
     // assert_eq!(number, 0, "Initial counter value should be 0");
