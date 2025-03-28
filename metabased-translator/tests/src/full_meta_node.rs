@@ -413,7 +413,10 @@ impl MetaNode {
         // Add the default wallet to the pool
         let wallet_pool = walletpool::WalletPool::new(wallet_pool_address, seq_provider.clone());
         // Add the default sequencing wallet to the pool
-        _ = wallet_pool.addToWalletPool(seq_provider.default_signer_address()).send().await?;
+        _ = wallet_pool
+            .addToWalletPool(seq_provider.default_signer_address(), vec![])
+            .send()
+            .await?;
         mine_block(&seq_provider, 0).await?;
 
         // Add test addresses used in integration tests to the wallet pool
@@ -428,7 +431,7 @@ impl MetaNode {
             // Add any other addresses that might be used in tests
         ];
         for addr in test_addresses {
-            _ = wallet_pool.addToWalletPool(addr).send().await?;
+            _ = wallet_pool.addToWalletPool(addr, vec![]).send().await?;
             mine_block(&seq_provider, 0).await?;
         }
 
