@@ -21,7 +21,7 @@ pub struct Labels {
 }
 
 /// Structure holding metrics related to the Slotter.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SlotterMetrics {
     /// Records the last block number processed by the Slotter
     pub slotter_last_processed_block: Family<Labels, Gauge>,
