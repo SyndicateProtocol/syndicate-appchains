@@ -17,10 +17,7 @@ use block_builder::{
     connectors::mchain::{rollup_config, FilledProvider, MetaChainProvider, MCHAIN_ID},
     rollups::arbitrum::arbitrum_adapter::ArbitrumAdapter,
 };
-use common::{
-    eth_client::{EthClient, RPCClient},
-    types::Chain,
-};
+use common::eth_client::{EthClient, RPCClient};
 use contract_bindings::{
     arbitrum::rollup::Rollup,
     metabased::{
@@ -37,6 +34,7 @@ use test_utils::test_path;
 use tokio::{
     process::{Child, Command},
     runtime::Handle,
+    sync::oneshot,
     task,
     time::timeout,
 };
@@ -230,6 +228,14 @@ pub async fn start_anvil_with_args(
     let provider = ProviderBuilder::new()
         .wallet(EthereumWallet::from(get_default_private_key_signer()))
         .on_http(anvil.endpoint_url());
+
+    // wait for the anvil to be ready
+    timeout(Duration::from_secs(120), async {
+        while provider.get_chain_id().await.is_err() {
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+    })
+    .await?;
     Ok((port, anvil, provider))
 }
 
@@ -331,6 +337,9 @@ pub struct MetaNode {
     _seq_anvil: AnvilInstance,
     _set_anvil: AnvilInstance,
     _nitro_docker: Docker,
+
+    // keep the shutdown tx alive to keep the translator running
+    _shutdown_tx: oneshot::Sender<()>,
 }
 
 /// nitro contract version on the settlement chain used for testing
@@ -442,12 +451,10 @@ impl MetaNode {
         config.settlement.settlement_polling_interval = Duration::from_millis(10);
 
         // Create RPC clients
-        let sequencing_client: Arc<dyn RPCClient> = Arc::new(
-            EthClient::new(&config.sequencing.sequencing_rpc_url, Chain::Sequencing).await?,
-        );
-        let settlement_client: Arc<dyn RPCClient> = Arc::new(
-            EthClient::new(&config.settlement.settlement_rpc_url, Chain::Settlement).await?,
-        );
+        let sequencing_client: Arc<dyn RPCClient> =
+            Arc::new(EthClient::new(&config.sequencing.sequencing_rpc_url).await?);
+        let settlement_client: Arc<dyn RPCClient> =
+            Arc::new(EthClient::new(&config.settlement.settlement_rpc_url).await?);
 
         // Initialize the MetaChainProvider
         let mut metrics_state = MetricsState { registry: Registry::default() };
@@ -462,8 +469,11 @@ impl MetaNode {
 
         // Launch the translator
         let cfg_clone = config.clone();
+        let (shutdown_tx, mut shutdown_rx) = oneshot::channel();
         tokio::spawn(async move {
-            let err = run(&cfg_clone, ArbitrumAdapter::new(&cfg_clone.block_builder)).await;
+            let err =
+                run(&cfg_clone, ArbitrumAdapter::new(&cfg_clone.block_builder), &mut shutdown_rx)
+                    .await;
             if let Err(e) = err {
                 panic!("Translator error: {}", e);
             }
@@ -495,6 +505,8 @@ impl MetaNode {
             _seq_anvil: seq_anvil,
             _set_anvil: set_anvil,
             _nitro_docker: nitro_docker,
+
+            _shutdown_tx: shutdown_tx,
         })
     }
 

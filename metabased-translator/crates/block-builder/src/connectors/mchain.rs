@@ -466,7 +466,7 @@ mod tests {
     use async_trait::async_trait;
     use common::{
         eth_client::{RPCClient, RPCClientError},
-        types::{Block, BlockAndReceipts},
+        types::{Block, Receipt},
     };
 
     #[derive(Debug, Clone)]
@@ -486,11 +486,11 @@ mod tests {
             })
         }
 
-        async fn batch_get_blocks_and_receipts(
+        async fn get_block_receipts(
             &self,
-            _block_numbers: Vec<u64>,
-        ) -> Result<Vec<BlockAndReceipts>, RPCClientError> {
-            unimplemented!("Not needed for this test")
+            _block_number_hex: &str,
+        ) -> Result<Vec<Receipt>, RPCClientError> {
+            panic!("Not implemented");
         }
     }
     #[tokio::test]

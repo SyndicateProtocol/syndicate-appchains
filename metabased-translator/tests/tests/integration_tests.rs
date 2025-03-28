@@ -1015,7 +1015,7 @@ async fn test_settlement_reorg() -> Result<()> {
                 .unwrap();
             block == mchain_block_before_deposit
         ,
-        Duration::from_millis(500)
+        Duration::from_millis(1000)
     );
 
     // mchain should have reorged to a pre-deposit block

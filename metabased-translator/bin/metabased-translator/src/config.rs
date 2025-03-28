@@ -115,14 +115,6 @@ impl Default for MetabasedConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::rpc::types::BlockNumberOrTag;
-    use async_trait::async_trait;
-    use common::{
-        eth_client::RPCClient,
-        types::{Block, BlockAndReceipts},
-    };
-    use eyre::Result;
-    use mockall::{mock, predicate::*};
 
     const ZERO: &str = "0x0000000000000000000000000000000000000000";
     const REQUIRED_ENV_VARS: &[(&str, Option<&str>)] = &[
@@ -159,16 +151,5 @@ mod tests {
     #[test]
     fn test_generate_command() {
         MetabasedConfig::generate_sample_command();
-    }
-
-    mock! {
-        #[derive(Debug)]
-        pub RPCClientMock {}
-
-        #[async_trait]
-        impl RPCClient for RPCClientMock {
-            async fn get_block_by_number(&self, block_number: BlockNumberOrTag) -> Result<Block, RPCClientError>;
-            async fn batch_get_blocks_and_receipts(&self, block_numbers: Vec<u64>) -> Result<Vec<BlockAndReceipts>, RPCClientError>;
-        }
     }
 }
