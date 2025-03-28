@@ -30,25 +30,42 @@ use contract_bindings::{
 };
 use eyre::{eyre, Result};
 use reqwest::Client;
-use std::{str::FromStr, time::Duration};
+use std::{env, str::FromStr, time::Duration};
 use tokio::{
     process::{Child, Command},
     runtime::Handle,
     task,
     time::{sleep, timeout},
 };
+use tracing::{info, Level};
+use tracing_subscriber::{fmt as subscriber_fmt, EnvFilter};
+
+enum TracingError {
+    SubscriberInit(String),
+}
+/// Initializes a tracing subscriber for testing purposes
+fn init_test_tracing(level: Level) -> Result<(), TracingError> {
+    subscriber_fmt()
+        .with_env_filter(EnvFilter::new(level.to_string()))
+        .try_init()
+        .map_err(|e| TracingError::SubscriberInit(format!("{:?}", e)))?;
+    Ok(())
+}
 
 const PRELOAD_INBOX_ADDRESS_300: Address = address!("0x26eE2349212255614edCc046DD9472F2a5b7EF2b");
 const PRELOAD_BRIDGE_ADDRESS_300: Address = address!("0xa0e810a42086da4Ebc5C49fEd626cA6A75B06437");
+const PRELOAD_POSTER_ADDRESS_300: Address = address!("0x26eE2349212255614edCc046DD9472F2a5b7EF2b"); //TODO update
 
 const PRELOAD_INBOX_ADDRESS_271: Address = address!("0x7e2d5FCC5E02cBF2b9f860052C0226104E23F9c7");
 const PRELOAD_BRIDGE_ADDRESS_271: Address = address!("0x8dAF17A20c9DBA35f005b6324F493785D239719d");
+const PRELOAD_POSTER_ADDRESS_271: Address = address!("0x26eE2349212255614edCc046DD9472F2a5b7EF2b"); //TODO update
+
 const DEFAULT_PRIVATE_KEY_SIGNER: &str =
     "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // address = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 
 const MCHAIN_ID: u64 = 84532;
 const APPCHAIN_CHAIN_ID: u64 = 51000;
-const APPCHAIN_OWNER: Address = address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
+pub const APPCHAIN_OWNER: Address = address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
 
 #[derive(Debug)]
 pub struct Docker(Child);
@@ -341,7 +358,7 @@ pub async fn launch_nitro_node(
     mchain_port: u16,
     sequencer_port: u16,
     tag: &str,
-) -> Result<(Docker, RootProvider)> {
+) -> Result<(Docker, RootProvider, String)> {
     let port = PortManager::instance().next_port();
     let nitro = Command::new("docker")
         .arg("run")
@@ -370,7 +387,7 @@ pub async fn launch_nitro_node(
         while rollup.get_chain_id().await.is_err() {
             sleep(Duration::from_millis(10)).await;
         }
-        Ok::<_, eyre::Error>((Docker(nitro), rollup))
+        Ok::<_, eyre::Error>((Docker(nitro), rollup, format!("http://localhost:{}", port)))
     })
     .await?
 }
@@ -396,7 +413,7 @@ pub struct Components {
     _set_anvil: AnvilInstance,
     _nitro_docker: Docker,
     _translator: Docker,
-    _poster: Docker,
+    _poster: Option<Docker>,
     _sequencer: Docker,
 }
 
@@ -420,7 +437,7 @@ struct TranslatorConfig {
 }
 #[derive(Debug, Default)]
 struct PosterConfig {
-    assertion_poster_contract_address: String,
+    assertion_poster_contract_address: Address,
     settlement_rpc_url: String,
     appchain_rpc_url: String,
     metrics_port: u16,
@@ -458,7 +475,27 @@ impl Default for ImageTags {
 }
 
 impl Components {
-    pub async fn new(pre_loaded: Option<ContractVersion>, tags: ImageTags) -> Result<Self> {
+    pub async fn new(pre_loaded: Option<ContractVersion>) -> Result<Self> {
+        let _ = init_test_tracing(Level::INFO);
+        info!("Setting tags...");
+        let mut tags = ImageTags::default();
+        if let Ok(tag) = env::var("NITRO_TAG") {
+            tags.nitro_tag = tag;
+        }
+        if let Ok(tag) = env::var("RETH_TAG") {
+            tags.reth_tag = tag;
+        }
+        if let Ok(tag) = env::var("POSTER_TAG") {
+            tags.poster_tag = Some(tag);
+        }
+        if let Ok(tag) = env::var("TRANSLATOR_TAG") {
+            tags.translator_tag = Some(tag);
+        }
+        if let Ok(tag) = env::var("SEQUENCER_TAG") {
+            tags.sequencer_tag = Some(tag);
+        }
+
+        info!("Starting components...");
         let mut translator_config: TranslatorConfig = Default::default();
         let mut poster_config: PosterConfig = Default::default();
         let mut sequencer_config: SequencerConfig = Default::default();
@@ -475,14 +512,24 @@ impl Components {
                 ContractVersion::V213 => PRELOAD_INBOX_ADDRESS_271,
             });
 
+        poster_config.assertion_poster_contract_address = pre_loaded.as_ref().map_or_else(
+            || Address::ZERO,
+            |version| match version {
+                ContractVersion::V300 => PRELOAD_POSTER_ADDRESS_300,
+                ContractVersion::V213 => PRELOAD_POSTER_ADDRESS_271,
+            },
+        );
+
         translator_config.sequencing_contract_address = get_rollup_contract_address();
         sequencer_config.sequencing_contract_address = get_rollup_contract_address();
 
+        info!("Starting reth...");
         let (node, _mchain) = start_reth(MCHAIN_ID, &tags.reth_tag).await?;
         translator_config.mchain_ipc_path = node.ipc;
         translator_config.mchain_auth_ipc_path = node.auth_ipc;
 
         // Launch mock sequencing chain and deploy contracts
+        info!("Starting sequencing chain...");
         let (seq_port, seq_anvil, seq_provider) = start_anvil(15).await?;
         _ = MetabasedSequencerChain::deploy_builder(&seq_provider, U256::from(APPCHAIN_CHAIN_ID))
             .send()
@@ -510,8 +557,9 @@ impl Components {
         mine_block(&seq_provider, 0).await?;
 
         // Launch mock settlement chain
+        info!("Starting settlement chain...");
         let (set_port, set_anvil, set_provider);
-        if let Some(version) = pre_loaded {
+        if let Some(version) = &pre_loaded {
             let file = match version {
                 ContractVersion::V300 => "anvil_300.json",
                 ContractVersion::V213 => "anvil_213.json",
@@ -541,12 +589,14 @@ impl Components {
             .nonce(0)
             .send()
             .await?;
+
             mine_block(&set_provider, 0).await?;
         }
 
         // Update the RPC URLs in the config
         translator_config.sequencing_rpc_url = format!("http://localhost:{}", seq_port);
         translator_config.settlement_rpc_url = format!("http://localhost:{}", set_port);
+        sequencer_config.settlement_rpc_url = format!("http://localhost:{}", set_port);
 
         // Set up ports
         sequencer_config.sequencer_port = PortManager::instance().next_port();
@@ -554,31 +604,8 @@ impl Components {
         translator_config.metrics_port = PortManager::instance().next_port();
         poster_config.metrics_port = PortManager::instance().next_port();
 
-        // Launch the nitro rollup
-        let (nitro_docker, appchain_provider) = launch_nitro_node(
-            APPCHAIN_CHAIN_ID,
-            APPCHAIN_OWNER,
-            node.http_port,
-            sequencer_config.sequencer_port,
-            &tags.nitro_tag,
-        )
-        .await?;
-
         // Launch components
-        let translator = start_component(
-            "metabased-translator",
-            tags.translator_tag,
-            get_translator_cli_args(&translator_config),
-        )
-        .await?;
-        wait_for_service(translator_config.metrics_port).await?;
-        let poster = start_component(
-            "metabased-poster",
-            tags.poster_tag,
-            get_poster_cli_args(&poster_config),
-        )
-        .await?;
-        wait_for_service(poster_config.metrics_port).await?;
+        info!("Starting sequencer...");
         let sequencer = start_component(
             "metabased-sequencer",
             tags.sequencer_tag,
@@ -586,6 +613,39 @@ impl Components {
         )
         .await?;
         wait_for_service(sequencer_config.metrics_port).await?;
+        info!("Starting translator...");
+        let translator = start_component(
+            "metabased-translator",
+            tags.translator_tag,
+            get_translator_cli_args(&translator_config),
+        )
+        .await?;
+        wait_for_service(translator_config.metrics_port).await?;
+        // Launch the nitro rollup
+        info!("Starting nitro node...");
+        let (nitro_docker, appchain_provider, nitro_url) = launch_nitro_node(
+            APPCHAIN_CHAIN_ID,
+            APPCHAIN_OWNER,
+            node.http_port,
+            sequencer_config.sequencer_port,
+            &tags.nitro_tag,
+        )
+        .await?;
+        poster_config.appchain_rpc_url = nitro_url;
+
+        let mut poster = None;
+        if pre_loaded.is_some() {
+            info!("Starting poster...");
+            poster = Some(
+                start_component(
+                    "metabased-poster",
+                    tags.poster_tag,
+                    get_poster_cli_args(&poster_config),
+                )
+                .await?,
+            );
+            wait_for_service(poster_config.metrics_port).await?;
+        }
 
         // Launch sequencer
         Ok(Self {
@@ -643,6 +703,7 @@ async fn start_component(
     } else {
         Ok(Docker(
             Command::new("cargo")
+                .current_dir("../")
                 .arg("run")
                 .arg("--bin")
                 .arg(executable_name)
@@ -656,7 +717,7 @@ async fn start_component(
 async fn wait_for_service(port: u16) -> Result<()> {
     let client = Client::new();
     loop {
-        match client.get(format!("localhost:{port}")).send().await {
+        match client.get(format!("http://localhost:{port}/metrics")).send().await {
             Ok(response) if response.status().is_success() => {
                 println!("Metabased-translator is now running.");
                 return Ok(());
@@ -691,6 +752,10 @@ fn get_translator_cli_args(config: &TranslatorConfig) -> Vec<String> {
         "0".to_string(),
         "--metrics-port".to_string(),
         config.metrics_port.to_string(),
+        "--target-chain-id".to_string(),
+        APPCHAIN_CHAIN_ID.to_string(),
+        "--rollup-owner-address".to_string(),
+        APPCHAIN_OWNER.to_string(),
     ]
 }
 
@@ -713,13 +778,13 @@ fn get_sequencer_cli_args(config: &SequencerConfig) -> Vec<String> {
     vec![
         "--private-key".to_string(),
         DEFAULT_PRIVATE_KEY_SIGNER.to_string(),
-        "--sequencing-contract-address".to_string(),
+        "--chain-contract-address".to_string(),
         config.sequencing_contract_address.to_string(),
-        "--settlement-rpc-url".to_string(),
+        "--chain-rpc-url".to_string(),
         config.settlement_rpc_url.to_string(),
-        "--sequencer-metrics-port".to_string(),
+        "--metrics-port".to_string(),
         config.metrics_port.to_string(),
-        "--sequencer-port".to_string(),
+        "--port".to_string(),
         config.sequencer_port.to_string(),
     ]
 }
