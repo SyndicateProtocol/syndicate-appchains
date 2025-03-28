@@ -26,7 +26,7 @@ use contract_bindings::{
     metabased::{
         alwaysallowedmodule::AlwaysAllowedModule,
         metabasedsequencerchain::MetabasedSequencerChain::{self, MetabasedSequencerChainInstance},
-        walletpoolsequencingmodule,
+        walletpool,
     },
 };
 use eyre::{eyre, Result};
@@ -394,9 +394,8 @@ impl MetaNode {
             }
         };
 
-        // Deploy WalletPoolSequencingModule and add default addresses
         let wallet_pool_module =
-            walletpoolsequencingmodule::WalletPoolSequencingModule::deploy_builder(
+            walletpool::WalletPool::deploy_builder(
                 &seq_provider,
                 seq_provider.default_signer_address(), // admin
             )
@@ -413,7 +412,7 @@ impl MetaNode {
         };
 
         // Add the default wallet to the pool
-        let wallet_pool = walletpoolsequencingmodule::WalletPoolSequencingModule::new(
+        let wallet_pool = walletpool::WalletPool::new(
             wallet_pool_address,
             seq_provider.clone(),
         );
