@@ -48,7 +48,7 @@ contract AssertionPosterTest is Test {
         rollup = new MockRollup();
 
         // Set initial values
-        rollup.setSequencerMessageCount(2); // > 1 so that _initializeNew doesn't try to post an initial batch
+        rollup.setSequencerMessageCount(2); // > 1 so that _configureNew doesn't try to post an initial batch
         rollup.setSequencerInboxAcc(0, TEST_SEQ_BATCH_ACC);
         rollup.setWasmModuleRoot(TEST_WASM_ROOT);
         rollup.setBaseStake(1000);
@@ -70,13 +70,13 @@ contract AssertionPosterTest is Test {
         assertTrue(address(legacyPoster) != address(0));
     }
 
-    function testInitializeLegacyDirect() public {
+    function testConfigureLegacyDirect() public {
         MockRollup legacyRollup = new MockRollup();
         legacyRollup.setLegacyMode(true);
         vm.prank(OWNER);
         AssertionPoster legacyPoster = new AssertionPoster(IRollup(address(legacyRollup)));
-        vm.expectRevert("must initialize via upgradeExecutor.execute(AssertionPoster.initialize)");
-        legacyPoster.initialize();
+        vm.expectRevert("must configure via upgradeExecutor.execute(AssertionPoster.configure)");
+        legacyPoster.configure();
     }
 
     function testPostAssertionLegacyAccessControl() public {
@@ -118,13 +118,13 @@ contract AssertionPosterTest is Test {
         assertTrue(address(newPoster) != address(0));
     }
 
-    function testInitializeNewDirect() public {
+    function testConfigureNewDirect() public {
         MockRollup newRollup = new MockRollup();
         newRollup.setGenesisAssertionHash(TEST_GENESIS_HASH);
         vm.prank(OWNER);
         AssertionPoster newPoster = new AssertionPoster(IRollup(address(newRollup)));
-        vm.expectRevert("must initialize via upgradeExecutor.execute(AssertionPoster.initialize)");
-        newPoster.initialize();
+        vm.expectRevert("must configure via upgradeExecutor.execute(AssertionPoster.configure)");
+        newPoster.configure();
     }
 
     function testPostAssertionNewAccessControl() public {
@@ -179,7 +179,7 @@ contract AssertionPosterTest is Test {
 
     // DELEGATECALL TESTS FOR INITIALIZE
 
-    function testInitializeLegacyDelegatecall() public {
+    function testConfigureLegacyDelegatecall() public {
         MockRollup legacyRollup = new MockRollup();
         legacyRollup.setLegacyMode(true);
         TestExecutorCaller caller = new TestExecutorCaller();
@@ -189,11 +189,11 @@ contract AssertionPosterTest is Test {
         AssertionPoster legacyPoster = new AssertionPoster(IRollup(address(legacyRollup)));
         vm.expectEmit(true, true, true, true);
         emit RolePaused();
-        caller.delegateInitialize(address(legacyPoster));
+        caller.delegateConfigure(address(legacyPoster));
         vm.stopPrank();
     }
 
-    function testInitializeNewDelegatecall() public {
+    function testConfigureNewDelegatecall() public {
         // Deploy new rollup and set owner to our executor caller.
         MockRollup newRollup = new MockRollup();
         newRollup.setGenesisAssertionHash(TEST_GENESIS_HASH);
@@ -203,11 +203,11 @@ contract AssertionPosterTest is Test {
         newRollup.setSequencerMessageCount(2);
         vm.prank(OWNER);
         AssertionPoster newPoster = new AssertionPoster(IRollup(address(newRollup)));
-        // Delegatecall initialize via caller should succeed (events from new branch not easily asserted)
-        caller.delegateInitialize(address(newPoster));
+        // Delegatecall configure via caller should succeed (events from new branch not easily asserted)
+        caller.delegateConfigure(address(newPoster));
     }
 
-    function testInitializeNewDelegatecallWithInitialBatch() public {
+    function testConfigureNewDelegatecallWithInitialBatch() public {
         // Deploy new rollup in a state that forces posting an initial batch.
         MockRollup newRollup = new MockRollup();
         newRollup.setGenesisAssertionHash(TEST_GENESIS_HASH);
@@ -222,7 +222,7 @@ contract AssertionPosterTest is Test {
         emit BatchPosterSet(address(newRollup.owner()), true);
         vm.expectEmit(true, true, true, true);
         emit SequencerBatchAdded(1);
-        caller.delegateInitialize(address(newPoster));
+        caller.delegateConfigure(address(newPoster));
         // After delegatecall, sequencer message count should be updated to 2.
         assertGt(newRollup.bridge().sequencerMessageCount(), 1);
     }
@@ -230,8 +230,8 @@ contract AssertionPosterTest is Test {
 
 // Helper contract to simulate delegatecall via the upgrade executor
 contract TestExecutorCaller {
-    function delegateInitialize(address poster) external {
-        (bool success,) = poster.delegatecall(abi.encodeWithSignature("initialize()"));
+    function delegateConfigure(address poster) external {
+        (bool success,) = poster.delegatecall(abi.encodeWithSignature("configure()"));
         require(success, "delegatecall failed");
     }
 

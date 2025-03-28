@@ -10,7 +10,7 @@ methods {
     function legacy() external returns (bool) optional;
     function nodeNum() external returns (uint64) optional;
     function currentInboxSize() external returns (uint64) optional;
-    function initialize() external optional;
+    function configure() external optional;
     function postAssertion(bytes32, bytes32) external optional;
 }
 
@@ -25,17 +25,17 @@ rule onlyOwnerCanPostAssertion(bytes32 blockHash, bytes32 sendRoot) {
         "Non-owner successfully posted assertion";
 }
 
-// Initialize must revert when called directly
-rule initializeRevertsDirectly() {
+// Configure must revert when called directly
+rule configureRevertsDirectly() {
     env e;
 
     // Use a sender that isn't the executor to guarantee the direct call will revert
     require e.msg.sender != executor();
 
-    initialize@withrevert(e);
+    configure@withrevert(e);
 
     assert lastReverted,
-        "Initialize didn't revert when called directly";
+        "Configure didn't revert when called directly";
 }
 
 // Only owner should be able to call postAssertion without reverting (in ideal conditions)
@@ -59,22 +59,4 @@ rule nonOwnersCannotPostAssertions(bytes32 blockHash, bytes32 sendRoot) {
 
     assert lastReverted,
         "Non-owner was able to post assertion";
-}
-
-// Initialize cannot be called multiple times
-rule initializeCanBeCalledOnlyOnce() {
-    env e1;
-    env e2;
-
-    // First call (will revert when called directly)
-    initialize@withrevert(e1);
-    bool firstReverted = lastReverted;
-
-    // Second call (should always revert)
-    initialize@withrevert(e2);
-    bool secondReverted = lastReverted;
-
-    // Either both revert or the second one always reverts
-    assert firstReverted || secondReverted,
-        "Initialize was called successfully twice";
 }

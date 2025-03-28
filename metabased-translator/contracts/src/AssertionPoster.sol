@@ -100,8 +100,6 @@ contract AssertionPoster is Ownable {
     bytes32 private prevAssertionHash;
     ConfigData private data;
 
-    bool private initialized;
-
     /**
      * @notice Constructs the AssertionPoster contract
      * @param rollup_ Address of the rollup contract
@@ -111,7 +109,7 @@ contract AssertionPoster is Ownable {
         rollup = rollup_;
         executor = IUpgradeExecutor(rollup_.owner());
 
-        // Detect if we're using legacy or new version and initialize accordingly
+        // Detect if we're using legacy or new version and configure accordingly
         try rollup_.genesisAssertionHash() returns (bytes32 assertionHash_) {
             // New version initialization (v3)
             assertionHash = assertionHash_;
@@ -129,22 +127,18 @@ contract AssertionPoster is Ownable {
     }
 
     /**
-     * @notice Initializes the contract by configuring the rollup's permissions
+     * @notice Configures the contract by configuring the rollup's permissions
      * @dev Must be called via upgrade executor delegatecall
      */
-    function initialize() external {
-        require(initialized == false, "already initialized");
-        initialized = true;
-
+    function configure() external {
         require(
-            address(this) == address(executor),
-            "must initialize via upgradeExecutor.execute(AssertionPoster.initialize)"
+            address(this) == address(executor), "must configure via upgradeExecutor.execute(AssertionPoster.configure)"
         );
 
         if (legacy) {
-            _initializeLegacy();
+            _configureLegacy();
         } else {
-            _initializeNew();
+            _configureNew();
         }
     }
 
@@ -162,20 +156,20 @@ contract AssertionPoster is Ownable {
     }
 
     /**
-     * @notice Initializes the contract for legacy rollup (v2)
+     * @notice Configures the contract for legacy rollup (v2)
      * @dev Sets up executor role and pauses regular assertion creation
      */
-    function _initializeLegacy() private {
+    function _configureLegacy() private {
         IAccessControl(address(executor)).grantRole(keccak256("EXECUTOR_ROLE"), self);
         // Prevent anyone except the admin account from creating assertions
         IRollupAdmin(address(rollup)).pause();
     }
 
     /**
-     * @notice Initializes the contract for new rollup (v3)
+     * @notice Configures the contract for new rollup (v3)
      * @dev Sets up validators, posts initial batch if needed
      */
-    function _initializeNew() private {
+    function _configureNew() private {
         address[] memory validators = rollup.getValidators();
         // Prevent validators from creating assertions
         IRollupAdmin(address(rollup)).setValidator(validators, new bool[](validators.length));
