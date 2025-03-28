@@ -9,7 +9,7 @@ use alloy::{
     rpc::types::TransactionRequest,
     signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
 };
-use contract_bindings::arbitrum::counter::Counter;
+use contract_bindings::arbitrum::r#counter::Counter;
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::Result;
 
