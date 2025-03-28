@@ -165,7 +165,7 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         for txn in txns {
             let tx = txn
                 .with_chain_id(MCHAIN_ID)
-                .gas_limit(1000000)
+                .gas_limit(15000000)
                 .max_fee_per_gas(1000000000)
                 .max_priority_fee_per_gas(0)
                 .nonce(nonce)
