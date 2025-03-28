@@ -435,9 +435,7 @@ error InvalidBlockNumber(uint256 requested, uint256 current);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InvalidBlockNumber {
-        #[allow(missing_docs)]
         pub requested: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub current: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1080,14 +1078,12 @@ function arbBlockHash(uint256 arbBlockNum) external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct arbBlockHashCall {
-        #[allow(missing_docs)]
         pub arbBlockNum: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`arbBlockHash(uint256)`](arbBlockHashCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct arbBlockHashReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -1212,7 +1208,6 @@ function arbBlockNumber() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct arbBlockNumberReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1335,7 +1330,6 @@ function arbChainID() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct arbChainIDReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1456,7 +1450,6 @@ function arbOSVersion() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct arbOSVersionReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1577,7 +1570,6 @@ function getStorageGasAvailable() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getStorageGasAvailableReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1702,7 +1694,6 @@ function isTopLevelCall() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isTopLevelCallReturn {
-        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -1819,16 +1810,13 @@ function mapL1SenderContractAddressToL2Alias(address sender, address unused) ext
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct mapL1SenderContractAddressToL2AliasCall {
-        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub unused: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`mapL1SenderContractAddressToL2Alias(address,address)`](mapL1SenderContractAddressToL2AliasCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct mapL1SenderContractAddressToL2AliasReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1970,7 +1958,6 @@ function myCallersAddressWithoutAliasing() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct myCallersAddressWithoutAliasingReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2093,11 +2080,8 @@ function sendMerkleTreeState() external view returns (uint256 size, bytes32 root
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendMerkleTreeStateReturn {
-        #[allow(missing_docs)]
         pub size: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub root: alloy::sol_types::private::FixedBytes<32>,
-        #[allow(missing_docs)]
         pub partials: alloy::sol_types::private::Vec<
             alloy::sol_types::private::FixedBytes<32>,
         >,
@@ -2238,16 +2222,13 @@ function sendTxToL1(address destination, bytes memory data) external payable ret
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendTxToL1Call {
-        #[allow(missing_docs)]
         pub destination: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`sendTxToL1(address,bytes)`](sendTxToL1Call) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sendTxToL1Return {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2387,7 +2368,6 @@ function wasMyCallersAddressAliased() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct wasMyCallersAddressAliasedReturn {
-        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2506,14 +2486,12 @@ function withdrawEth(address destination) external payable returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawEthCall {
-        #[allow(missing_docs)]
         pub destination: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`withdrawEth(address)`](withdrawEthCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct withdrawEthReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2629,29 +2607,17 @@ function withdrawEth(address destination) external payable returns (uint256);
     };
     ///Container for all the [`ArbSys`](self) function calls.
     pub enum ArbSysCalls {
-        #[allow(missing_docs)]
         arbBlockHash(arbBlockHashCall),
-        #[allow(missing_docs)]
         arbBlockNumber(arbBlockNumberCall),
-        #[allow(missing_docs)]
         arbChainID(arbChainIDCall),
-        #[allow(missing_docs)]
         arbOSVersion(arbOSVersionCall),
-        #[allow(missing_docs)]
         getStorageGasAvailable(getStorageGasAvailableCall),
-        #[allow(missing_docs)]
         isTopLevelCall(isTopLevelCallCall),
-        #[allow(missing_docs)]
         mapL1SenderContractAddressToL2Alias(mapL1SenderContractAddressToL2AliasCall),
-        #[allow(missing_docs)]
         myCallersAddressWithoutAliasing(myCallersAddressWithoutAliasingCall),
-        #[allow(missing_docs)]
         sendMerkleTreeState(sendMerkleTreeStateCall),
-        #[allow(missing_docs)]
         sendTxToL1(sendTxToL1Call),
-        #[allow(missing_docs)]
         wasMyCallersAddressAliased(wasMyCallersAddressAliasedCall),
-        #[allow(missing_docs)]
         withdrawEth(withdrawEthCall),
     }
     #[automatically_derived]
@@ -3050,7 +3016,6 @@ function withdrawEth(address destination) external payable returns (uint256);
     }
     ///Container for all the [`ArbSys`](self) custom errors.
     pub enum ArbSysErrors {
-        #[allow(missing_docs)]
         InvalidBlockNumber(InvalidBlockNumber),
     }
     #[automatically_derived]
@@ -3143,11 +3108,8 @@ function withdrawEth(address destination) external payable returns (uint256);
     }
     ///Container for all the [`ArbSys`](self) events.
     pub enum ArbSysEvents {
-        #[allow(missing_docs)]
         L2ToL1Transaction(L2ToL1Transaction),
-        #[allow(missing_docs)]
         L2ToL1Tx(L2ToL1Tx),
-        #[allow(missing_docs)]
         SendMerkleUpdate(SendMerkleUpdate),
     }
     #[automatically_derived]

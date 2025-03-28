@@ -130,7 +130,6 @@ error OwnableInvalidOwner(address owner);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct OwnableInvalidOwner {
-        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -201,7 +200,6 @@ error OwnableUnauthorizedAccount(address account);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct OwnableUnauthorizedAccount {
-        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -425,7 +423,6 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -660,7 +657,6 @@ function transferOwnership(address newOwner) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferOwnershipCall {
-        #[allow(missing_docs)]
         pub newOwner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`transferOwnership(address)`](transferOwnershipCall) function.
@@ -782,11 +778,8 @@ function transferOwnership(address newOwner) external;
     };
     ///Container for all the [`Ownable`](self) function calls.
     pub enum OwnableCalls {
-        #[allow(missing_docs)]
         owner(ownerCall),
-        #[allow(missing_docs)]
         renounceOwnership(renounceOwnershipCall),
-        #[allow(missing_docs)]
         transferOwnership(transferOwnershipCall),
     }
     #[automatically_derived]
@@ -930,9 +923,7 @@ function transferOwnership(address newOwner) external;
     }
     ///Container for all the [`Ownable`](self) custom errors.
     pub enum OwnableErrors {
-        #[allow(missing_docs)]
         OwnableInvalidOwner(OwnableInvalidOwner),
-        #[allow(missing_docs)]
         OwnableUnauthorizedAccount(OwnableUnauthorizedAccount),
     }
     #[automatically_derived]
@@ -1055,7 +1046,6 @@ function transferOwnership(address newOwner) external;
     }
     ///Container for all the [`Ownable`](self) events.
     pub enum OwnableEvents {
-        #[allow(missing_docs)]
         OwnershipTransferred(OwnershipTransferred),
     }
     #[automatically_derived]
