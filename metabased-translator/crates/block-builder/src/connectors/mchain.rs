@@ -29,7 +29,7 @@ use common::{
 use contract_bindings::arbitrum::rollup::Rollup::{self, RollupInstance};
 use eyre::Result;
 use std::sync::Arc;
-use tracing::info;
+use tracing::{debug, error, info};
 
 #[allow(missing_docs)]
 pub type FilledProvider = FillProvider<
@@ -248,6 +248,7 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         self.metrics
             .mchain_metrics
             .record_last_block_mined(block.header.number + 1, block_timestamp_secs);
+        debug!("mined mchain block: #{} hash: {}", block.header.number + 1, block_hash);
         Ok(block_hash)
     }
 
@@ -315,8 +316,22 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         sequencing_client: &Arc<dyn RPCClient>,
         settlement_client: &Arc<dyn RPCClient>,
     ) -> Result<Option<KnownState>> {
+        let mchain_block_before = self
+            .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+            .await?
+            .unwrap_or_default();
+
         let safe_state = self.get_safe_state(sequencing_client, settlement_client).await?;
         self.rollback_to_safe_state(&safe_state).await?;
+
+        let mchain_block_after = self
+            .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+            .await?
+            .unwrap_or_default();
+        info!(
+            "reconciliation done: mchain_block_before: #{} hash: {}, safe_state: {:?}, mchain_block_after: #{} hash: {}",
+            mchain_block_before.header.number, mchain_block_before.header.hash, safe_state, mchain_block_after.header.number, mchain_block_after.header.hash
+        );
         Ok(safe_state)
     }
 
@@ -364,7 +379,6 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
                 BlockBuilderError::ResumeFromBlock(format!("Unable to reorg to block: {}", e))
             })?;
         }
-        info!("Resumed from block: {}", known_block_number);
         Ok(())
     }
 
@@ -376,6 +390,10 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         settlement_client: &Arc<dyn RPCClient>,
     ) -> Result<Option<KnownState>> {
         let mut current_block = BlockNumberOrTag::Latest;
+        // NOTE: in case there has been a settlement reorg, we need to restart from the [FOUND
+        // STATE] that matches the world minus 1 this is because after a reorg, an incoming
+        // block might still fit the the latest found state that matches the observable world
+        let mut found_block = false;
         loop {
             match self.rollup_adapter.get_processed_blocks(&self.provider, current_block).await? {
                 Some((mut state, block_number)) => {
@@ -390,12 +408,25 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
                     )
                     .await;
 
-                    if seq_valid && settle_valid {
+                    if found_block {
                         return Ok(Some(state));
+                    }
+
+                    if seq_valid && settle_valid {
+                        found_block = true;
                     }
                     current_block = BlockNumberOrTag::Number(block_number.saturating_sub(1));
                 }
-                None => return Ok(None),
+                None => {
+                    if found_block &&
+                        (current_block == BlockNumberOrTag::Number(1) ||
+                            current_block == BlockNumberOrTag::Number(0))
+                    {
+                        error!("reorging to genesis not supported");
+                        panic!("reorging to genesis not supported");
+                    }
+                    return Ok(None);
+                }
             };
         }
     }
