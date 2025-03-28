@@ -466,7 +466,7 @@ pub fn rollup_config(chain_id: u64, chain_owner: Address) -> String {
 /// Calculate the required gas limit for a transaction based on its input data
 fn calculate_tx_gas_limit(input_data: &[u8]) -> u64 {
     let data_gas: u64 = input_data.iter().map(|&byte| if byte == 0 { 4 } else { 16 }).sum();
-    BASE_TRANSACTION_GAS + data_gas
+    (BASE_TRANSACTION_GAS + data_gas) * 2
 }
 
 #[cfg(test)]
