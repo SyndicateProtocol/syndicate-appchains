@@ -428,6 +428,7 @@ impl MetaNode {
             // Common test addresses used in integration tests
             address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"),
             address!("0xA9ec1Ed7008fDfdE38978Dfef4cF2754A969E5FA"),
+            address!("0x0000000000000000000000000000000000000001"),
             // Add any other addresses that might be used in tests
         ];
         for addr in test_addresses {
