@@ -36,7 +36,7 @@ async fn test_e2e_counter_contract() -> Result<()> {
         .with_gas_limit(21_000)
         .with_max_priority_fee_per_gas(1_000_000_000)
         .with_max_fee_per_gas(20_000_000_000)
-        .with_input(vec![].into()) // Placeholder for Counter::BYTECODE
+        .with_input(alloy::primitives::Bytes::default()) // Placeholder for Counter::BYTECODE
         .build(&bob_wallet)
         .await?;
 
@@ -68,7 +68,7 @@ async fn test_e2e_counter_contract() -> Result<()> {
         .with_gas_limit(21_000)
         .with_max_priority_fee_per_gas(1_000_000_000)
         .with_max_fee_per_gas(20_000_000_000)
-        .with_input(vec![].into()) // Placeholder for counter.increment().calldata()
+        .with_input(alloy::primitives::Bytes::default()) // Placeholder for counter.increment().calldata()
         .build(&bob_wallet)
         .await?;
 
@@ -113,7 +113,7 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
         .with_gas_limit(21_000)
         .with_max_priority_fee_per_gas(1_000_000_000)
         .with_max_fee_per_gas(20_000_000_000)
-        .with_input(vec![].into()) // Placeholder for Counter::BYTECODE
+        .with_input(alloy::primitives::Bytes::default()) // Placeholder for Counter::BYTECODE
         .build(&wallet_without_balance)
         .await?;
 
@@ -133,7 +133,7 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
         .with_gas_limit(21_000)
         .with_max_priority_fee_per_gas(1_000_000_000)
         .with_max_fee_per_gas(20_000_000_000)
-        .with_input(vec![].into()) // Placeholder for Counter::BYTECODE
+        .with_input(alloy::primitives::Bytes::default()) // Placeholder for Counter::BYTECODE
         .build(&bob_wallet)
         .await?;
 
