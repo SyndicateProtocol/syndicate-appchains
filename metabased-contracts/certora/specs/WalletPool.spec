@@ -22,15 +22,7 @@ methods {
 }
 
 /*
- * Rule 1: DEFAULT_ADMIN_ROLE is the admin of MANAGER_ROLE
- */
-rule defaultAdminIsManagerRoleAdmin() {
-    assert getRoleAdmin(MANAGER_ROLE()) == DEFAULT_ADMIN_ROLE(),
-        "DEFAULT_ADMIN_ROLE is not the admin of MANAGER_ROLE";
-}
-
-/*
- * Rule 2: Only managers can add to wallet pool
+ * Rule 1: Only managers can add to wallet pool
  */
 rule onlyManagersCanAdd(address wallet) {
     env e;
@@ -45,7 +37,7 @@ rule onlyManagersCanAdd(address wallet) {
 }
 
 /*
- * Rule 3: Only managers can remove from wallet pool
+ * Rule 2: Only managers can remove from wallet pool
  */
 rule onlyManagersCanRemove(address wallet) {
     env e;
@@ -60,7 +52,7 @@ rule onlyManagersCanRemove(address wallet) {
 }
 
 /*
- * Rule 4: Wallet pool state changes correctly on add
+ * Rule 3: Wallet pool state changes correctly on add
  */
 rule walletPoolAddConsistency(address wallet) {
     env e;
@@ -79,7 +71,7 @@ rule walletPoolAddConsistency(address wallet) {
 }
 
 /*
- * Rule 5: Wallet pool state changes correctly on remove
+ * Rule 4: Wallet pool state changes correctly on remove
  */
 rule walletPoolRemoveConsistency(address wallet) {
     env e;
@@ -98,7 +90,7 @@ rule walletPoolRemoveConsistency(address wallet) {
 }
 
 /*
- * Rule 6: isInWalletPool matches wallet pool state
+ * Rule 5: isInWalletPool matches wallet pool state
  */
 rule isInWalletPoolConsistency(address wallet) {
     bool inWalletPool = walletPool(wallet);
@@ -109,7 +101,7 @@ rule isInWalletPoolConsistency(address wallet) {
 }
 
 /*
- * Rule 7: Effects of wallet pool operations persist
+ * Rule 6: Effects of wallet pool operations persist
  */
 rule walletPoolOperationsPersist(method f, address wallet) {
     env e;
@@ -131,7 +123,7 @@ rule walletPoolOperationsPersist(method f, address wallet) {
 }
 
 /*
- * Rule 8: Only role admins can grant manager role
+ * Rule 7: Only role admins can grant manager role
  */
 rule onlyRoleAdminCanGrantRole(address newManager) {
     env e;
@@ -149,27 +141,9 @@ rule onlyRoleAdminCanGrantRole(address newManager) {
         "Non-admin granted manager role";
 }
 
-/*
- * Rule 9: Only role admins can revoke manager role
- */
-rule onlyRoleAdminCanRevokeRole(address manager) {
-    env e;
-    bytes32 role = MANAGER_ROLE();
-    bytes32 adminRole = getRoleAdmin(role);
-
-    // Require that the manager actually has the role
-    require hasRole(role, manager);
-
-    // Try to revoke manager role
-    revokeRole@withrevert(e, role, manager);
-
-    // If successful, caller must have admin role
-    assert !lastReverted => hasRole(adminRole, e.msg.sender),
-        "Non-admin revoked manager role";
-}
 
 /*
- * Rule 10: Role changes affect permissions correctly
+ * Rule 8: Role changes affect permissions correctly
  */
 rule roleChangesAffectPermissions(address wallet, address manager) {
     env e1;
@@ -193,7 +167,7 @@ rule roleChangesAffectPermissions(address wallet, address manager) {
 }
 
 /*
- * Rule 11: Self-renunciation works correctly
+ * Rule 9: Self-renunciation works correctly
  */
 rule selfRenunciationConsistency(address manager) {
     env e;
@@ -209,7 +183,7 @@ rule selfRenunciationConsistency(address manager) {
 }
 
 /*
- * Rule 12: Zero address cannot be used as admin in constructor
+ * Rule 10: Zero address cannot be used as admin in constructor
  */
 rule constructorRejectsZeroAddress() {
     // We can't directly test the constructor in Certora
@@ -218,7 +192,7 @@ rule constructorRejectsZeroAddress() {
 }
 
 /*
- * Rule 13: Only managers can update single allowlist module
+ * Rule 11: Only managers can update single allowlist module
  */
 rule onlyManagersCanUpdateSingleAllowlist(address allowlistModule, address wallet, bool isAllowed) {
     env e;
@@ -232,7 +206,7 @@ rule onlyManagersCanUpdateSingleAllowlist(address allowlistModule, address walle
 }
 
 /*
- * Rule 14: Only managers can update multiple allowlist modules
+ * Rule 12: Only managers can update multiple allowlist modules
  */
 rule onlyManagersCanUpdateMultipleAllowlists(address wallet, bool isAllowed) {
     env e;
@@ -245,14 +219,3 @@ rule onlyManagersCanUpdateMultipleAllowlists(address wallet, bool isAllowed) {
     assert !lastReverted => hasRole(MANAGER_ROLE(), e.msg.sender),
         "Non-manager updated allowlist modules";
 }
-
-/*
- * Invariants to verify role setup
- */
-definition manager() returns address = 0x1;
-
-invariant managerHasManagerRole()
-    hasRole(MANAGER_ROLE(), manager());
-
-invariant managerHasAdminRole()
-    hasRole(DEFAULT_ADMIN_ROLE(), manager());

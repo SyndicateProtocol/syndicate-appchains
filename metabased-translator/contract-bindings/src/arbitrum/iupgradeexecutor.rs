@@ -105,7 +105,9 @@ function execute(address upgrade, bytes memory upgradeCallData) external payable
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executeCall {
+        #[allow(missing_docs)]
         pub upgrade: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub upgradeCallData: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`execute(address,bytes)`](executeCall) function.
@@ -243,7 +245,9 @@ function executeCall(address target, bytes memory targetCallData) external payab
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct executeCallCall {
+        #[allow(missing_docs)]
         pub target: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub targetCallData: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`executeCall(address,bytes)`](executeCallCall) function.
@@ -381,7 +385,9 @@ function initialize(address admin, address[] memory executors) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initializeCall {
+        #[allow(missing_docs)]
         pub admin: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub executors: alloy::sol_types::private::Vec<
             alloy::sol_types::private::Address,
         >,
@@ -516,8 +522,11 @@ function initialize(address admin, address[] memory executors) external;
     };
     ///Container for all the [`IUpgradeExecutor`](self) function calls.
     pub enum IUpgradeExecutorCalls {
+        #[allow(missing_docs)]
         execute(executeCall),
+        #[allow(missing_docs)]
         executeCall(executeCallCall),
+        #[allow(missing_docs)]
         initialize(initializeCall),
     }
     #[automatically_derived]
