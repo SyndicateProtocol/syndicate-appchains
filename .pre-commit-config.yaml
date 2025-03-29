@@ -46,10 +46,10 @@ repos:
         files: ^(metabased-contracts)/
         pass_filenames: false
       - id: forge-test-metabased-translator-contracts
-        name: forge test metabased translator contracts
+        name: forge test rollup contracts
         entry: forge test
-        args: ["--root", "metabased-translator/contracts"]
+        args: ["--root", "rollup-contracts"]
         language: system
         types: [solidity]
-        files: ^(metabased-translator)/contracts/
+        files: ^(rollup-contracts)/
         pass_filenames: false
