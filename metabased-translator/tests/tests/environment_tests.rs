@@ -85,7 +85,10 @@ async fn test_e2e_counter_contract() -> Result<()> {
 /// This test is to ensure that the system can resist garbage data being fed to the sequencing
 /// contract
 #[tokio::test]
-#[cfg_attr(not(feature = "env-tests"))]
+#[cfg_attr(
+    not(feature = "env-tests"),
+    ignore = "Counter contract has been removed from arbitrum bindings"
+)]
 async fn test_e2e_resist_garbage_data() -> Result<()> {
     let env = TestEnv::new().await?;
 
