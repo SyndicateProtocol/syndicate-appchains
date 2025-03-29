@@ -54,20 +54,7 @@ contract ConfigManagerTest is Test {
         vm.startPrank(owner);
 
         // Deploy the config without expecting event
-        address deployedAddress = configManager.createChainConfig(
-            CHAIN_ID,
-            TARGET_ROLLUP_TYPE,
-            MINE_EMPTY_BLOCKS,
-            ARBITRUM_BRIDGE_ADDRESS,
-            ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
-            SETTLEMENT_DELAY,
-            SETTLEMENT_START_BLOCK,
-            SEQUENCING_CONTRACT_ADDRESS,
-            SEQUENCING_START_BLOCK,
-            rollupOwner,
-            DEFAULT_RPC_URL
-        );
+        address deployedAddress = configManager.createChainConfig(CHAIN_ID);
 
         // Verify the deployed address is stored correctly
         assertEq(configManager.deployedConfigs(CHAIN_ID), deployedAddress);
@@ -83,6 +70,22 @@ contract ConfigManagerTest is Test {
         // We need to cast address to ChainConfig to access its interface
         ChainConfig chainConfig = ChainConfig(deployedAddress);
 
+        // initialize the ChainConfig with the expected values
+        chainConfig.initialize(
+            CHAIN_ID,
+            TARGET_ROLLUP_TYPE,
+            MINE_EMPTY_BLOCKS,
+            ARBITRUM_BRIDGE_ADDRESS,
+            ARBITRUM_INBOX_ADDRESS,
+            ARBITRUM_IGNORE_DELAYED_MESSAGES,
+            SETTLEMENT_DELAY,
+            SETTLEMENT_START_BLOCK,
+            SEQUENCING_CONTRACT_ADDRESS,
+            SEQUENCING_START_BLOCK,
+            rollupOwner,
+            DEFAULT_RPC_URL
+        );
+        // Verify the values
         assertEq(chainConfig.CHAIN_ID(), CHAIN_ID);
         assertEq(chainConfig.TARGET_ROLLUP_TYPE(), TARGET_ROLLUP_TYPE);
         assertEq(chainConfig.MINE_EMPTY_BLOCKS(), MINE_EMPTY_BLOCKS);
@@ -103,37 +106,11 @@ contract ConfigManagerTest is Test {
         vm.startPrank(owner);
 
         // Deploy the first config
-        configManager.createChainConfig(
-            CHAIN_ID,
-            TARGET_ROLLUP_TYPE,
-            MINE_EMPTY_BLOCKS,
-            ARBITRUM_BRIDGE_ADDRESS,
-            ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
-            SETTLEMENT_DELAY,
-            SETTLEMENT_START_BLOCK,
-            SEQUENCING_CONTRACT_ADDRESS,
-            SEQUENCING_START_BLOCK,
-            rollupOwner,
-            DEFAULT_RPC_URL
-        );
+        configManager.createChainConfig(CHAIN_ID);
 
         // Attempt to deploy a duplicate config
         vm.expectRevert("Config already exists for this chain ID");
-        configManager.createChainConfig(
-            CHAIN_ID,
-            TARGET_ROLLUP_TYPE,
-            MINE_EMPTY_BLOCKS,
-            ARBITRUM_BRIDGE_ADDRESS,
-            ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
-            SETTLEMENT_DELAY,
-            SETTLEMENT_START_BLOCK,
-            SEQUENCING_CONTRACT_ADDRESS,
-            SEQUENCING_START_BLOCK,
-            rollupOwner,
-            DEFAULT_RPC_URL
-        );
+        configManager.createChainConfig(CHAIN_ID);
 
         vm.stopPrank();
     }
@@ -143,18 +120,7 @@ contract ConfigManagerTest is Test {
 
         vm.expectRevert("Chain ID cannot be zero");
         configManager.createChainConfig(
-            0, // Zero chain ID
-            TARGET_ROLLUP_TYPE,
-            MINE_EMPTY_BLOCKS,
-            ARBITRUM_BRIDGE_ADDRESS,
-            ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
-            SETTLEMENT_DELAY,
-            SETTLEMENT_START_BLOCK,
-            SEQUENCING_CONTRACT_ADDRESS,
-            SEQUENCING_START_BLOCK,
-            rollupOwner,
-            DEFAULT_RPC_URL
+            0 // Zero chain ID
         );
 
         vm.stopPrank();
@@ -164,39 +130,13 @@ contract ConfigManagerTest is Test {
         vm.prank(address(999)); // Non-owner address
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(999)));
-        configManager.createChainConfig(
-            CHAIN_ID,
-            TARGET_ROLLUP_TYPE,
-            MINE_EMPTY_BLOCKS,
-            ARBITRUM_BRIDGE_ADDRESS,
-            ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
-            SETTLEMENT_DELAY,
-            SETTLEMENT_START_BLOCK,
-            SEQUENCING_CONTRACT_ADDRESS,
-            SEQUENCING_START_BLOCK,
-            rollupOwner,
-            DEFAULT_RPC_URL
-        );
+        configManager.createChainConfig(CHAIN_ID);
     }
 
     function testGetChainConfigAddress() public {
         // Deploy the config first
         vm.prank(owner);
-        address deployedAddress = configManager.createChainConfig(
-            CHAIN_ID,
-            TARGET_ROLLUP_TYPE,
-            MINE_EMPTY_BLOCKS,
-            ARBITRUM_BRIDGE_ADDRESS,
-            ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
-            SETTLEMENT_DELAY,
-            SETTLEMENT_START_BLOCK,
-            SEQUENCING_CONTRACT_ADDRESS,
-            SEQUENCING_START_BLOCK,
-            rollupOwner,
-            DEFAULT_RPC_URL
-        );
+        address deployedAddress = configManager.createChainConfig(CHAIN_ID);
 
         // Now that it's deployed, the getChainConfigAddress should return the deployed address
         address returnedAddress = configManager.getChainConfigAddress(CHAIN_ID);
@@ -214,20 +154,7 @@ contract ConfigManagerTest is Test {
         vm.startPrank(owner);
 
         // Deploy a config first
-        address deployedAddress = configManager.createChainConfig(
-            CHAIN_ID,
-            TARGET_ROLLUP_TYPE,
-            MINE_EMPTY_BLOCKS,
-            ARBITRUM_BRIDGE_ADDRESS,
-            ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
-            SETTLEMENT_DELAY,
-            SETTLEMENT_START_BLOCK,
-            SEQUENCING_CONTRACT_ADDRESS,
-            SEQUENCING_START_BLOCK,
-            rollupOwner,
-            DEFAULT_RPC_URL
-        );
+        address deployedAddress = configManager.createChainConfig(CHAIN_ID);
 
         // Get the current implementation
         address currentImpl = IBeacon(address(configManager.beacon())).implementation();
@@ -246,11 +173,6 @@ contract ConfigManagerTest is Test {
 
         // Check that the existing proxy still works and has the same data
         ChainConfig proxyConfig = ChainConfig(deployedAddress);
-
-        // The immutable data should be preserved
-        assertEq(proxyConfig.CHAIN_ID(), CHAIN_ID);
-        assertEq(proxyConfig.TARGET_ROLLUP_TYPE(), TARGET_ROLLUP_TYPE);
-        assertEq(proxyConfig.ROLLUP_OWNER(), rollupOwner);
 
         vm.stopPrank();
     }
@@ -281,50 +203,12 @@ contract ConfigManagerTest is Test {
         // Deploy two configs with different chain IDs
         uint256 secondChainId = 789012;
 
-        address firstConfig = configManager.createChainConfig(
-            CHAIN_ID,
-            TARGET_ROLLUP_TYPE,
-            MINE_EMPTY_BLOCKS,
-            ARBITRUM_BRIDGE_ADDRESS,
-            ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
-            SETTLEMENT_DELAY,
-            SETTLEMENT_START_BLOCK,
-            SEQUENCING_CONTRACT_ADDRESS,
-            SEQUENCING_START_BLOCK,
-            rollupOwner,
-            DEFAULT_RPC_URL
-        );
+        address firstConfig = configManager.createChainConfig(CHAIN_ID);
 
-        address secondConfig = configManager.createChainConfig(
-            secondChainId,
-            TARGET_ROLLUP_TYPE,
-            !MINE_EMPTY_BLOCKS, // Different value
-            ARBITRUM_BRIDGE_ADDRESS,
-            ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
-            SETTLEMENT_DELAY + 5, // Different value
-            SETTLEMENT_START_BLOCK,
-            SEQUENCING_CONTRACT_ADDRESS,
-            SEQUENCING_START_BLOCK,
-            rollupOwner,
-            "https://different-rpc.com" // Different value
-        );
+        address secondConfig = configManager.createChainConfig(secondChainId);
 
         ChainConfig firstProxyConfig = ChainConfig(firstConfig);
         ChainConfig secondProxyConfig = ChainConfig(secondConfig);
-
-        // Check first config
-        assertEq(firstProxyConfig.CHAIN_ID(), CHAIN_ID);
-        assertEq(firstProxyConfig.MINE_EMPTY_BLOCKS(), MINE_EMPTY_BLOCKS);
-        assertEq(firstProxyConfig.SETTLEMENT_DELAY(), SETTLEMENT_DELAY);
-        assertEq(firstProxyConfig.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), DEFAULT_RPC_URL);
-
-        // Check second config with different values
-        assertEq(secondProxyConfig.CHAIN_ID(), secondChainId);
-        assertEq(secondProxyConfig.MINE_EMPTY_BLOCKS(), !MINE_EMPTY_BLOCKS);
-        assertEq(secondProxyConfig.SETTLEMENT_DELAY(), SETTLEMENT_DELAY + 5);
-        assertEq(secondProxyConfig.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), "https://different-rpc.com");
 
         // Get the current implementation
         address currentImpl = IBeacon(address(configManager.beacon())).implementation();

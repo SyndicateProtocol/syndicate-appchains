@@ -37,60 +37,19 @@ contract ConfigManager is Ownable {
     /**
      * @dev Create a new ChainConfig contract for a specific chainId
      * @param chainId The chain ID for which to create a config
-     * @param targetRollupType The type of rollup
-     * @param mineEmptyBlocks Whether to mine empty blocks
-     * @param arbitrumBridgeAddress Address of the Arbitrum bridge
-     * @param arbitrumInboxAddress Address of the Arbitrum inbox
-     * @param arbitrumIgnoreDelayedMessages Whether to ignore delayed messages
-     * @param settlementDelay Delay for settlement
-     * @param settlementStartBlock Starting block for settlement
-     * @param sequencingContractAddress Address of the sequencing contract
-     * @param sequencingStartBlock Starting block for sequencing
-     * @param rollupOwner Initial rollup owner
-     * @param defaultSequencingChainRpcUrl Default RPC URL for the sequencing chain
      * @return address The address of the deployed ChainConfig contract
      */
-    function createChainConfig(
-        uint256 chainId,
-        bytes32 targetRollupType,
-        bool mineEmptyBlocks,
-        address arbitrumBridgeAddress,
-        address arbitrumInboxAddress,
-        bool arbitrumIgnoreDelayedMessages,
-        uint256 settlementDelay,
-        uint256 settlementStartBlock,
-        address sequencingContractAddress,
-        uint256 sequencingStartBlock,
-        address rollupOwner,
-        string memory defaultSequencingChainRpcUrl
-    ) external onlyOwner returns (address) {
+    function createChainConfig(uint256 chainId) external onlyOwner returns (address) {
         require(chainId != 0, "Chain ID cannot be zero");
         require(deployedConfigs[chainId] == address(0), "Config already exists for this chain ID");
 
         // Calculate the salt from the chainId
         bytes32 salt = keccak256(abi.encodePacked(chainId));
 
-        // Encode initialization data for the config contract - this should call initialize()
-        bytes memory initData = abi.encodeWithSelector(
-            ChainConfig.initialize.selector,
-            chainId,
-            targetRollupType,
-            mineEmptyBlocks,
-            arbitrumBridgeAddress,
-            arbitrumInboxAddress,
-            arbitrumIgnoreDelayedMessages,
-            settlementDelay,
-            settlementStartBlock,
-            sequencingContractAddress,
-            sequencingStartBlock,
-            rollupOwner,
-            defaultSequencingChainRpcUrl
-        );
-
         // Deploy a beacon proxy using CREATE2
         // The BeaconProxy constructor expects only the beacon address and initialization data
         // The initialization data needs to be the encoded constructor arguments for the implementation
-        BeaconProxy proxy = new BeaconProxy{salt: salt}(address(beacon), initData);
+        BeaconProxy proxy = new BeaconProxy{salt: salt}(address(beacon), "");
 
         address proxyAddress = address(proxy);
         deployedConfigs[chainId] = proxyAddress;
@@ -117,26 +76,9 @@ contract ConfigManager is Ownable {
         // Calculate the salt from the chainId
         bytes32 salt = keccak256(abi.encodePacked(chainId));
 
-        // Calculate initialization data for BeaconProxy
-        bytes memory initData = abi.encodeWithSelector(
-            ChainConfig.initialize.selector,
-            chainId,
-            bytes32(0),
-            false,
-            address(0x1), // Non-zero address
-            address(0x2), // Non-zero address
-            false,
-            0,
-            0,
-            address(0x3), // Non-zero address
-            0,
-            address(0x4), // Non-zero address
-            ""
-        );
-
         // Generate the bytecode for BeaconProxy with constructor args
-        bytes memory constructorArgs = abi.encode(address(beacon), initData);
-        bytes memory bytecode = abi.encodePacked(type(BeaconProxy).creationCode, constructorArgs);
+        bytes memory constructorArgs = abi.encode(address(beacon));
+        bytes memory bytecode = abi.encodePacked(type(BeaconProxy).creationCode);
 
         // Calculate CREATE2 address
         bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));
