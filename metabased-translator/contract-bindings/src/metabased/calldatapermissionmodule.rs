@@ -68,14 +68,12 @@ function isCalldataAllowed(bytes memory data) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isCalldataAllowedCall {
-        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`isCalldataAllowed(bytes)`](isCalldataAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isCalldataAllowedReturn {
-        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -193,7 +191,6 @@ function isCalldataAllowed(bytes memory data) external view returns (bool);
     };
     ///Container for all the [`CalldataPermissionModule`](self) function calls.
     pub enum CalldataPermissionModuleCalls {
-        #[allow(missing_docs)]
         isCalldataAllowed(isCalldataAllowedCall),
     }
     #[automatically_derived]

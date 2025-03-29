@@ -78,18 +78,14 @@ function onGasSpent(address spender, uint256 gasUsed, uint256 calldataSize) exte
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct onGasSpentCall {
-        #[allow(missing_docs)]
         pub spender: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub gasUsed: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub calldataSize: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`onGasSpent(address,uint256,uint256)`](onGasSpentCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct onGasSpentReturn {
-        #[allow(missing_docs)]
         pub success: bool,
     }
     #[allow(
@@ -225,7 +221,6 @@ function onGasSpent(address spender, uint256 gasUsed, uint256 calldataSize) exte
     };
     ///Container for all the [`IGasRefunder`](self) function calls.
     pub enum IGasRefunderCalls {
-        #[allow(missing_docs)]
         onGasSpent(onGasSpentCall),
     }
     #[automatically_derived]
