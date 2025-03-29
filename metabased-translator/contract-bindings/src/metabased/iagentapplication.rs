@@ -111,6 +111,7 @@ function ADMIN_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ADMIN_ROLEReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -225,13 +226,16 @@ function hasRole(bytes32 role, address account) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct hasRoleCall {
+        #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`hasRole(bytes32,address)`](hasRoleCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct hasRoleReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -365,12 +369,14 @@ function isPermittedByAddress(address agentAddress) external view returns (bool)
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isPermittedByAddressCall {
+        #[allow(missing_docs)]
         pub agentAddress: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isPermittedByAddress(address)`](isPermittedByAddressCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isPermittedByAddressReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -488,8 +494,11 @@ function isPermittedByAddress(address agentAddress) external view returns (bool)
     };
     ///Container for all the [`IAgentApplication`](self) function calls.
     pub enum IAgentApplicationCalls {
+        #[allow(missing_docs)]
         ADMIN_ROLE(ADMIN_ROLECall),
+        #[allow(missing_docs)]
         hasRole(hasRoleCall),
+        #[allow(missing_docs)]
         isPermittedByAddress(isPermittedByAddressCall),
     }
     #[automatically_derived]
