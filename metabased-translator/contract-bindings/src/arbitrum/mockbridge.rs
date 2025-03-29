@@ -91,22 +91,22 @@ pub mod MockBridge {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080604052348015600e575f5ffd5b5060da80601a5f395ff3fe6080604052348015600e575f5ffd5b50600436106043575f3560e01c806284120c14604757806316bf557914605c578063468eff50146078578063d202deaa146096575b5f5ffd5b5f545b60405190815260200160405180910390f35b604a606736600460a5565b5f9081526001602052604090205490565b6094608336600460bb565b5f9182526001602052604090912055565b005b609460a136600460a5565b5f55565b5f6020828403121560b4575f5ffd5b5035919050565b5f5f6040838503121560cb575f5ffd5b5050803592602090910135915056
+    ///0x6080604052348015600e575f5ffd5b5061023b8061001c5f395ff3fe608060405234801561000f575f5ffd5b5060043610610049575f3560e01c806284120c1461004d57806316bf55791461006b578063468eff501461009b578063d202deaa146100b7575b5f5ffd5b6100556100d3565b6040516100629190610130565b60405180910390f35b61008560048036038101906100809190610177565b6100db565b60405161009291906101ba565b60405180910390f35b6100b560048036038101906100b091906101fd565b6100f5565b005b6100d160048036038101906100cc9190610177565b61010f565b005b5f5f54905090565b5f60015f8381526020019081526020015f20549050919050565b8060015f8481526020019081526020015f20819055505050565b805f8190555050565b5f819050919050565b61012a81610118565b82525050565b5f6020820190506101435f830184610121565b92915050565b5f5ffd5b61015681610118565b8114610160575f5ffd5b50565b5f813590506101718161014d565b92915050565b5f6020828403121561018c5761018b610149565b5b5f61019984828501610163565b91505092915050565b5f819050919050565b6101b4816101a2565b82525050565b5f6020820190506101cd5f8301846101ab565b92915050565b6101dc816101a2565b81146101e6575f5ffd5b50565b5f813590506101f7816101d3565b92915050565b5f5f6040838503121561021357610212610149565b5b5f61022085828601610163565b9250506020610231858286016101e9565b915050925092905056
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4\x80\x15`\x0EW__\xFD[P`\xDA\x80`\x1A_9_\xF3\xFE`\x80`@R4\x80\x15`\x0EW__\xFD[P`\x046\x10`CW_5`\xE0\x1C\x80b\x84\x12\x0C\x14`GW\x80c\x16\xBFUy\x14`\\W\x80cF\x8E\xFFP\x14`xW\x80c\xD2\x02\xDE\xAA\x14`\x96W[__\xFD[_T[`@Q\x90\x81R` \x01`@Q\x80\x91\x03\x90\xF3[`J`g6`\x04`\xA5V[_\x90\x81R`\x01` R`@\x90 T\x90V[`\x94`\x836`\x04`\xBBV[_\x91\x82R`\x01` R`@\x90\x91 UV[\0[`\x94`\xA16`\x04`\xA5V[_UV[_` \x82\x84\x03\x12\x15`\xB4W__\xFD[P5\x91\x90PV[__`@\x83\x85\x03\x12\x15`\xCBW__\xFD[PP\x805\x92` \x90\x91\x015\x91PV",
+        b"`\x80`@R4\x80\x15`\x0EW__\xFD[Pa\x02;\x80a\0\x1C_9_\xF3\xFE`\x80`@R4\x80\x15a\0\x0FW__\xFD[P`\x046\x10a\0IW_5`\xE0\x1C\x80b\x84\x12\x0C\x14a\0MW\x80c\x16\xBFUy\x14a\0kW\x80cF\x8E\xFFP\x14a\0\x9BW\x80c\xD2\x02\xDE\xAA\x14a\0\xB7W[__\xFD[a\0Ua\0\xD3V[`@Qa\0b\x91\x90a\x010V[`@Q\x80\x91\x03\x90\xF3[a\0\x85`\x04\x806\x03\x81\x01\x90a\0\x80\x91\x90a\x01wV[a\0\xDBV[`@Qa\0\x92\x91\x90a\x01\xBAV[`@Q\x80\x91\x03\x90\xF3[a\0\xB5`\x04\x806\x03\x81\x01\x90a\0\xB0\x91\x90a\x01\xFDV[a\0\xF5V[\0[a\0\xD1`\x04\x806\x03\x81\x01\x90a\0\xCC\x91\x90a\x01wV[a\x01\x0FV[\0[__T\x90P\x90V[_`\x01_\x83\x81R` \x01\x90\x81R` \x01_ T\x90P\x91\x90PV[\x80`\x01_\x84\x81R` \x01\x90\x81R` \x01_ \x81\x90UPPPV[\x80_\x81\x90UPPV[_\x81\x90P\x91\x90PV[a\x01*\x81a\x01\x18V[\x82RPPV[_` \x82\x01\x90Pa\x01C_\x83\x01\x84a\x01!V[\x92\x91PPV[__\xFD[a\x01V\x81a\x01\x18V[\x81\x14a\x01`W__\xFD[PV[_\x815\x90Pa\x01q\x81a\x01MV[\x92\x91PPV[_` \x82\x84\x03\x12\x15a\x01\x8CWa\x01\x8Ba\x01IV[[_a\x01\x99\x84\x82\x85\x01a\x01cV[\x91PP\x92\x91PPV[_\x81\x90P\x91\x90PV[a\x01\xB4\x81a\x01\xA2V[\x82RPPV[_` \x82\x01\x90Pa\x01\xCD_\x83\x01\x84a\x01\xABV[\x92\x91PPV[a\x01\xDC\x81a\x01\xA2V[\x81\x14a\x01\xE6W__\xFD[PV[_\x815\x90Pa\x01\xF7\x81a\x01\xD3V[\x92\x91PPV[__`@\x83\x85\x03\x12\x15a\x02\x13Wa\x02\x12a\x01IV[[_a\x02 \x85\x82\x86\x01a\x01cV[\x92PP` a\x021\x85\x82\x86\x01a\x01\xE9V[\x91PP\x92P\x92\x90PV",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x6080604052348015600e575f5ffd5b50600436106043575f3560e01c806284120c14604757806316bf557914605c578063468eff50146078578063d202deaa146096575b5f5ffd5b5f545b60405190815260200160405180910390f35b604a606736600460a5565b5f9081526001602052604090205490565b6094608336600460bb565b5f9182526001602052604090912055565b005b609460a136600460a5565b5f55565b5f6020828403121560b4575f5ffd5b5035919050565b5f5f6040838503121560cb575f5ffd5b5050803592602090910135915056
+    ///0x608060405234801561000f575f5ffd5b5060043610610049575f3560e01c806284120c1461004d57806316bf55791461006b578063468eff501461009b578063d202deaa146100b7575b5f5ffd5b6100556100d3565b6040516100629190610130565b60405180910390f35b61008560048036038101906100809190610177565b6100db565b60405161009291906101ba565b60405180910390f35b6100b560048036038101906100b091906101fd565b6100f5565b005b6100d160048036038101906100cc9190610177565b61010f565b005b5f5f54905090565b5f60015f8381526020019081526020015f20549050919050565b8060015f8481526020019081526020015f20819055505050565b805f8190555050565b5f819050919050565b61012a81610118565b82525050565b5f6020820190506101435f830184610121565b92915050565b5f5ffd5b61015681610118565b8114610160575f5ffd5b50565b5f813590506101718161014d565b92915050565b5f6020828403121561018c5761018b610149565b5b5f61019984828501610163565b91505092915050565b5f819050919050565b6101b4816101a2565b82525050565b5f6020820190506101cd5f8301846101ab565b92915050565b6101dc816101a2565b81146101e6575f5ffd5b50565b5f813590506101f7816101d3565b92915050565b5f5f6040838503121561021357610212610149565b5b5f61022085828601610163565b9250506020610231858286016101e9565b915050925092905056
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4\x80\x15`\x0EW__\xFD[P`\x046\x10`CW_5`\xE0\x1C\x80b\x84\x12\x0C\x14`GW\x80c\x16\xBFUy\x14`\\W\x80cF\x8E\xFFP\x14`xW\x80c\xD2\x02\xDE\xAA\x14`\x96W[__\xFD[_T[`@Q\x90\x81R` \x01`@Q\x80\x91\x03\x90\xF3[`J`g6`\x04`\xA5V[_\x90\x81R`\x01` R`@\x90 T\x90V[`\x94`\x836`\x04`\xBBV[_\x91\x82R`\x01` R`@\x90\x91 UV[\0[`\x94`\xA16`\x04`\xA5V[_UV[_` \x82\x84\x03\x12\x15`\xB4W__\xFD[P5\x91\x90PV[__`@\x83\x85\x03\x12\x15`\xCBW__\xFD[PP\x805\x92` \x90\x91\x015\x91PV",
+        b"`\x80`@R4\x80\x15a\0\x0FW__\xFD[P`\x046\x10a\0IW_5`\xE0\x1C\x80b\x84\x12\x0C\x14a\0MW\x80c\x16\xBFUy\x14a\0kW\x80cF\x8E\xFFP\x14a\0\x9BW\x80c\xD2\x02\xDE\xAA\x14a\0\xB7W[__\xFD[a\0Ua\0\xD3V[`@Qa\0b\x91\x90a\x010V[`@Q\x80\x91\x03\x90\xF3[a\0\x85`\x04\x806\x03\x81\x01\x90a\0\x80\x91\x90a\x01wV[a\0\xDBV[`@Qa\0\x92\x91\x90a\x01\xBAV[`@Q\x80\x91\x03\x90\xF3[a\0\xB5`\x04\x806\x03\x81\x01\x90a\0\xB0\x91\x90a\x01\xFDV[a\0\xF5V[\0[a\0\xD1`\x04\x806\x03\x81\x01\x90a\0\xCC\x91\x90a\x01wV[a\x01\x0FV[\0[__T\x90P\x90V[_`\x01_\x83\x81R` \x01\x90\x81R` \x01_ T\x90P\x91\x90PV[\x80`\x01_\x84\x81R` \x01\x90\x81R` \x01_ \x81\x90UPPPV[\x80_\x81\x90UPPV[_\x81\x90P\x91\x90PV[a\x01*\x81a\x01\x18V[\x82RPPV[_` \x82\x01\x90Pa\x01C_\x83\x01\x84a\x01!V[\x92\x91PPV[__\xFD[a\x01V\x81a\x01\x18V[\x81\x14a\x01`W__\xFD[PV[_\x815\x90Pa\x01q\x81a\x01MV[\x92\x91PPV[_` \x82\x84\x03\x12\x15a\x01\x8CWa\x01\x8Ba\x01IV[[_a\x01\x99\x84\x82\x85\x01a\x01cV[\x91PP\x92\x91PPV[_\x81\x90P\x91\x90PV[a\x01\xB4\x81a\x01\xA2V[\x82RPPV[_` \x82\x01\x90Pa\x01\xCD_\x83\x01\x84a\x01\xABV[\x92\x91PPV[a\x01\xDC\x81a\x01\xA2V[\x81\x14a\x01\xE6W__\xFD[PV[_\x815\x90Pa\x01\xF7\x81a\x01\xD3V[\x92\x91PPV[__`@\x83\x85\x03\x12\x15a\x02\x13Wa\x02\x12a\x01IV[[_a\x02 \x85\x82\x86\x01a\x01cV[\x92PP` a\x021\x85\x82\x86\x01a\x01\xE9V[\x91PP\x92P\x92\x90PV",
     );
     /**Function with signature `sequencerInboxAccs(uint256)` and selector `0x16bf5579`.
 ```solidity
@@ -115,12 +115,14 @@ function sequencerInboxAccs(uint256 index) external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sequencerInboxAccsCall {
+        #[allow(missing_docs)]
         pub index: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`sequencerInboxAccs(uint256)`](sequencerInboxAccsCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sequencerInboxAccsReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -249,6 +251,7 @@ function sequencerMessageCount() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct sequencerMessageCountReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -369,7 +372,9 @@ function setSequencerInboxAcc(uint256 index, bytes32 acc) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setSequencerInboxAccCall {
+        #[allow(missing_docs)]
         pub index: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub acc: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`setSequencerInboxAcc(uint256,bytes32)`](setSequencerInboxAccCall) function.
@@ -511,6 +516,7 @@ function setSequencerMessageCount(uint256 count) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setSequencerMessageCountCall {
+        #[allow(missing_docs)]
         pub count: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`setSequencerMessageCount(uint256)`](setSequencerMessageCountCall) function.
@@ -634,9 +640,13 @@ function setSequencerMessageCount(uint256 count) external;
     };
     ///Container for all the [`MockBridge`](self) function calls.
     pub enum MockBridgeCalls {
+        #[allow(missing_docs)]
         sequencerInboxAccs(sequencerInboxAccsCall),
+        #[allow(missing_docs)]
         sequencerMessageCount(sequencerMessageCountCall),
+        #[allow(missing_docs)]
         setSequencerInboxAcc(setSequencerInboxAccCall),
+        #[allow(missing_docs)]
         setSequencerMessageCount(setSequencerMessageCountCall),
     }
     #[automatically_derived]
