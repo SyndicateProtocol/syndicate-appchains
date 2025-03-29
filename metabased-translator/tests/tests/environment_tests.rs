@@ -58,9 +58,6 @@ async fn test_e2e_counter_contract() -> Result<()> {
     assert!(receipt.status(), "Contract deployment failed");
 
     let _l3_counter_address = receipt.contract_address.unwrap();
-    // let counter = Counter::new(l3_counter_address, env.l3_chain());
-    // let number = counter.number().call().await?._0.to::<u64>();
-    // assert_eq!(number, 0, "Initial counter value should be 0");
 
     let increment_tx = TransactionRequest::default()
         .with_to(env.accounts().bob.address)
@@ -82,19 +79,13 @@ async fn test_e2e_counter_contract() -> Result<()> {
         env.l3_chain().get_transaction_receipt(increment_tx.tx_hash().to_owned()).await?.unwrap();
     assert!(receipt.status(), "Counter increment failed");
 
-    // let number = counter.number().call().await?._0.to::<u64>();
-    // assert_eq!(number, 1, "Counter should be incremented to 1");
-
     Ok(())
 }
 
 /// This test is to ensure that the system can resist garbage data being fed to the sequencing
 /// contract
 #[tokio::test]
-#[cfg_attr(
-    not(feature = "env-tests"),
-    ignore = "Counter contract has been removed from arbitrum bindings"
-)]
+#[cfg_attr(not(feature = "env-tests"))]
 async fn test_e2e_resist_garbage_data() -> Result<()> {
     let env = TestEnv::new().await?;
 
