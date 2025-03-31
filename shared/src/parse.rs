@@ -22,7 +22,7 @@ pub fn parse_url(value: &str) -> Result<Url, Error> {
 }
 
 /// Parse a string into an Ethereum `Address`.
-fn parse_address(value: &str) -> Result<Address, Error> {
+pub fn parse_address(value: &str) -> Result<Address, Error> {
     Address::from_str(value).map_err(|_| Error::EthereumAddress(value.to_string()))
 }
 
