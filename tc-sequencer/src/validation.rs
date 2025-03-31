@@ -1,17 +1,17 @@
 //! Utility function for validating transactions
 
-use crate::errors::{
-    Error,
-    Error::{InvalidInput, TransactionRejected},
-    InvalidInputError::{MissingChainID, UnableToRLPDecode},
-    Rejection::FeeTooHigh,
-};
 use alloy::{
     consensus::{Transaction, TxEnvelope},
     primitives::{Bytes, U256},
     rlp::Decodable,
 };
 use eyre::Result;
+use shared::json_rpc::{
+    Error,
+    Error::{InvalidInput, TransactionRejected},
+    InvalidInputError::{MissingChainID, UnableToRLPDecode},
+    Rejection::FeeTooHigh,
+};
 use tracing::debug;
 
 fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, Error> {

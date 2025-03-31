@@ -1,15 +1,6 @@
 //! The `service` module handles the business logic for the tc sequencer.
 
-use crate::{
-    bytecode::get_bytecode,
-    config::Config,
-    errors::{
-        Error,
-        Error::InvalidParams,
-        InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount},
-    },
-    validation::validate_transaction,
-};
+use crate::{bytecode::get_bytecode, config::Config, validation::validate_transaction};
 use alloy::{
     consensus::Transaction,
     hex::{self},
@@ -23,6 +14,7 @@ use jsonrpsee::{
 };
 use reqwest::Client;
 use serde as _;
+use shared::json_rpc::{parse_send_raw_transaction_params, Error};
 use std::{collections::HashMap, sync::Arc};
 use tracing::{debug, error, info};
 use url::Url;
@@ -132,30 +124,14 @@ impl TCClient {
     }
 }
 
-// Params validation
-// TODO [SEQ-663]: Refactor this function
-// TODO [SEQ-722]: Move this to the shared package
-fn parse_send_raw_transaction_params(params: Params<'static>) -> Result<Bytes, Error> {
-    let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap_or("[]"))?;
-    let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
-    if arr.len() != 1 {
-        return Err(InvalidParams(WrongParamCount(arr.len())));
-    }
-    let item = arr.pop().ok_or(InvalidParams(MissingParam))?;
-    let raw_tx = item.as_str().ok_or(InvalidParams(NotHexEncoded))?.to_string();
-    let tx_data: Bytes = hex::decode(&raw_tx).map(Bytes::from)?;
-
-    Ok(tx_data)
-}
-
 /// The handler for the `eth_sendRawTransaction` JSON-RPC method.
 pub async fn send_raw_transaction_handler(
     params: Params<'static>,
     service: Arc<TCClient>,
     _: Extensions,
 ) -> RpcResult<String> {
-    let tx_data = parse_send_raw_transaction_params(params).map_err(|e| e.to_json_rpc_error())?;
-    let tx_hash = service.process_transaction(tx_data).await.map_err(|e| e.to_json_rpc_error())?;
+    let tx_data = parse_send_raw_transaction_params(params)?;
+    let tx_hash = service.process_transaction(tx_data).await?;
 
     Ok(format!("0x{}", hex::encode(tx_hash)))
 }
@@ -165,7 +141,6 @@ mod tests {
     use super::*;
     use crate::config::Config;
     use alloy::primitives::Bytes;
-    use jsonrpsee::types::Params;
     use std::str::FromStr;
 
     fn setup_test_service() -> TCClient {
@@ -183,7 +158,7 @@ mod tests {
 
     #[test]
     fn test_get_contract_address() {
-        // Setup a test service with a mock config
+        // Set up a test service with a mock config
         let config = Config::default();
         let service = TCClient::new(&config).unwrap();
 
@@ -192,29 +167,6 @@ mod tests {
             contract_address,
             Address::from_str("0xC1cacFC14624c4E241286Ade61DF545b90f850B4").unwrap()
         );
-    }
-
-    #[tokio::test]
-    async fn test_send_raw_transaction_handler_invalid_params() {
-        let service = Arc::new(setup_test_service());
-        let invalid_params = Params::new(Some("[\"invalid_hex\"]"));
-
-        let result =
-            send_raw_transaction_handler(invalid_params, service, Extensions::default()).await;
-        assert!(result.is_err());
-    }
-
-    #[tokio::test]
-    async fn test_send_raw_transaction_handler_valid_params() {
-        let service = Arc::new(setup_test_service());
-        // Valid raw transaction hex
-        let valid_tx = "[\"0xf86d8202b28477359400825208944592d8f8d7b001e72cb26a73e4fa1806a51ac79d880de0b6b3a7640000802ca05924bde7ef10aa88db9c66dd4f5fb16b46dff2319b9968be983118b57bb50562a001b24b31010004f13d9a26b320845257a6cfc2bf819a3d55e3fc86263c5f0772\"]";
-        let params = Params::new(Some(valid_tx));
-
-        let result = send_raw_transaction_handler(params, service, Extensions::default()).await;
-        // Note: This will fail in actual execution since we're using a mock setup
-        // but it tests the parameter parsing logic
-        assert!(result.is_err());
     }
 
     #[tokio::test]
