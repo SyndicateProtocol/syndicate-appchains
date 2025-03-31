@@ -76,13 +76,13 @@ mod config_tests {
 
     #[test]
     fn test_humantime_parsing() {
-        let config = SlotterConfig::parse_from(["test", "--max-source-chain-latency", "5m"]);
+        let config = SlotterConfig::parse_from(["test", "--max-source-chain-time-gap", "5m"]);
         assert_eq!(config.max_source_chain_time_gap, 300); // 5 minutes = 300 seconds
 
-        let config = SlotterConfig::parse_from(["test", "--max-source-chain-latency", "1h"]);
+        let config = SlotterConfig::parse_from(["test", "--max-source-chain-time-gap", "1h"]);
         assert_eq!(config.max_source_chain_time_gap, 3600); // 1 hour = 3600 seconds
 
-        let config = SlotterConfig::parse_from(["test", "--max-source-chain-latency", "30s"]);
+        let config = SlotterConfig::parse_from(["test", "--max-source-chain-time-gap", "30s"]);
         assert_eq!(config.max_source_chain_time_gap, 30); // 30 seconds
     }
 }
