@@ -24,10 +24,9 @@ impl TCEndpoint {
         match value.to_lowercase().as_str() {
             "staging" => Ok(Self::Staging),
             "production" => Ok(Self::Production),
-            // TODO [SEQ-722]: Use the common URL parser when implemented
-            url => Url::parse(url)
+            url => shared::parse::parse_url(url)
                 .map(Self::Raw)
-                .map_err(|_| ConfigError::InvalidTCEndpoint(url.to_string())),
+                .map_err(|err| ConfigError::InvalidTCEndpoint(format!("for {}, {}", url, err))),
         }
     }
 
