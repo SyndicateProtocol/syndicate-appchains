@@ -31,7 +31,7 @@ use tracing::{debug, error, info, trace, warn};
 #[derive(Debug)]
 struct Slotter<P: SlotProcessor> {
     settlement_delay: u64,
-    max_source_chain_latency: u64,
+    max_source_chain_time_gap: u64,
 
     latest_sequencing_block: Option<BlockRef>,
     latest_settlement_block: Option<BlockRef>,
@@ -74,7 +74,7 @@ pub async fn run(
 
     let slotter = Slotter {
         settlement_delay: config.settlement_delay,
-        max_source_chain_latency: config.max_source_chain_time_gap,
+        max_source_chain_time_gap: config.max_source_chain_time_gap,
         latest_sequencing_block,
         latest_settlement_block,
         min_chain_head_timestamp,
@@ -119,40 +119,27 @@ impl<P: SlotProcessor> Slotter<P> {
                 first_chain,
                 second_rx,
                 second_chain,
-                latency,
+                chains_time_gap,
             ) = self.prioritize_lagging_chain(&mut sequencing_rx, &mut settlement_rx);
 
             trace!("Prioritized lagging chain: {:?}", first_chain);
 
-            let process_result =
-                if self.max_source_chain_latency > 0 && latency > self.max_source_chain_latency {
-                    trace!("Latency between chains is too high: {} seconds", latency);
-                    // stop receiving from the lagging chain entirely
-                    select! {
-                        biased;
-                        Some(block) = first_rx.recv() => {
-                            self.process_block(block, first_chain).await
-                        }
-                        _ = &mut shutdown_rx => {
-                            info!("Slotter shut down");
-                            return Err(SlotterError::Shutdown);
-                        }
-                    }
-                } else {
-                    select! {
-                        biased;
-                        Some(block) = first_rx.recv() => {
-                            self.process_block(block, first_chain).await
-                        }
-                        Some(block) = second_rx.recv() => {
-                            self.process_block(block, second_chain).await
-                        }
-                        _ = &mut shutdown_rx => {
-                            info!("Slotter shut down");
-                            return Err(SlotterError::Shutdown);
-                        }
-                    }
-                };
+            let ignore_second_chain = self.max_source_chain_time_gap > 0 &&
+                chains_time_gap > self.max_source_chain_time_gap;
+
+            let process_result = select! {
+                biased;
+                Some(block) = first_rx.recv() => {
+                    self.process_block(block, first_chain).await
+                }
+                Some(block) = second_rx.recv(), if !ignore_second_chain => {
+                    self.process_block(block, second_chain).await
+                }
+                _ = &mut shutdown_rx => {
+                    info!("Slotter shut down");
+                    return Err(SlotterError::Shutdown);
+                }
+            };
 
             match process_result {
                 Ok(_) => (),
@@ -490,7 +477,7 @@ mod tests {
             slots: VecDeque::new(),
             unassigned_settlement_blocks: VecDeque::new(),
             settlement_delay: config.settlement_delay,
-            max_source_chain_latency: config.max_source_chain_time_gap,
+            max_source_chain_time_gap: config.max_source_chain_time_gap,
             metrics,
             min_chain_head_timestamp: 0,
             slot_processor: processor,
@@ -949,7 +936,12 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_max_source_chain_latency() {
+    async fn test_max_source_chain_time_gap() {
+        test_time_gap(Chain::Sequencing).await;
+        test_time_gap(Chain::Settlement).await;
+    }
+
+    async fn test_time_gap(late_chain: Chain) {
         //NOTE: this tests assumes the input channels are created with a capacity of 100
         // Create a slotter with max_source_chain_latency = 10 seconds
         let config = SlotterConfig { settlement_delay: 0, max_source_chain_time_gap: 10 };
@@ -957,27 +949,33 @@ mod tests {
         let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown_tx } =
             create_slotter_and_spawn(&config).await;
 
+        let (fast_chain, slow_chain) = if late_chain == Chain::Sequencing {
+            (settlement_tx, sequencing_tx)
+        } else {
+            (sequencing_tx, settlement_tx)
+        };
+
         // Send initial blocks for both chains with close timestamps
-        settlement_tx.send(create_test_block(1, 100)).await.unwrap();
-        sequencing_tx.send(create_test_block(1, 110)).await.unwrap();
+        slow_chain.send(create_test_block(1, 100)).await.unwrap();
+        fast_chain.send(create_test_block(1, 110)).await.unwrap();
 
         // No slots should be processed yet
         assert_eq!(processor.get_processed_slots().len(), 0);
 
         // Advance sequencing chain significantly ahead (beyond max_latency)
-        sequencing_tx.send(create_test_block(2, 111)).await.unwrap();
+        fast_chain.send(create_test_block(2, 111)).await.unwrap();
 
         // Try to advance sequencing chain even further - this should not be consumed
-        sequencing_tx.send(create_test_block(3, 112)).await.unwrap();
+        fast_chain.send(create_test_block(3, 112)).await.unwrap();
 
         tokio::time::sleep(Duration::from_millis(50)).await;
-        assert_eq!(sequencing_tx.capacity(), 100 - 1);
+        assert_eq!(fast_chain.capacity(), 100 - 1);
 
         // Now catch up the settlement chain
-        settlement_tx.send(create_test_block(2, 125)).await.unwrap(); // This brings settlement chain close enough to consume sequencing again
+        slow_chain.send(create_test_block(2, 125)).await.unwrap(); // This brings settlement chain close enough to consume sequencing again
         tokio::time::sleep(Duration::from_millis(50)).await;
 
-        assert_eq!(sequencing_tx.capacity(), 100);
-        assert_eq!(settlement_tx.capacity(), 100);
+        assert_eq!(fast_chain.capacity(), 100);
+        assert_eq!(slow_chain.capacity(), 100);
     }
 }
