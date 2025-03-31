@@ -4186,6 +4186,7 @@ dependencies = [
  "eyre",
  "reqwest",
  "serde",
+ "test-utils",
  "tokio",
  "tracing",
  "tracing-subscriber",

@@ -54,11 +54,11 @@ fn init_test_tracing(level: Level) -> Result<(), TracingError> {
 
 const PRELOAD_INBOX_ADDRESS_300: Address = address!("0x26eE2349212255614edCc046DD9472F2a5b7EF2b");
 const PRELOAD_BRIDGE_ADDRESS_300: Address = address!("0xa0e810a42086da4Ebc5C49fEd626cA6A75B06437");
-const PRELOAD_POSTER_ADDRESS_300: Address = address!("0x26eE2349212255614edCc046DD9472F2a5b7EF2b"); //TODO update
+const PRELOAD_POSTER_ADDRESS_300: Address = Address::ZERO; //TODO update
 
 const PRELOAD_INBOX_ADDRESS_271: Address = address!("0x7e2d5FCC5E02cBF2b9f860052C0226104E23F9c7");
 const PRELOAD_BRIDGE_ADDRESS_271: Address = address!("0x8dAF17A20c9DBA35f005b6324F493785D239719d");
-const PRELOAD_POSTER_ADDRESS_271: Address = address!("0x26eE2349212255614edCc046DD9472F2a5b7EF2b"); //TODO update
+const PRELOAD_POSTER_ADDRESS_271: Address = Address::ZERO; //TODO update
 
 const DEFAULT_PRIVATE_KEY_SIGNER: &str =
     "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // address = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
@@ -392,7 +392,7 @@ pub async fn launch_nitro_node(
     .await?
 }
 
-#[allow(missing_debug_implementations)]
+#[derive(Debug)]
 pub struct Components {
     /// Sequencing
     pub sequencing_contract: MetabasedSequencerChainInstance<(), FilledProvider>,
@@ -434,6 +434,9 @@ struct TranslatorConfig {
     sequencing_rpc_url: String,
     settlement_rpc_url: String,
     metrics_port: u16,
+    sequencing_start_block: u64,
+    settlement_start_block: u64,
+    settlement_delay: u64,
 }
 #[derive(Debug, Default)]
 struct PosterConfig {
@@ -473,9 +476,18 @@ impl Default for ImageTags {
         }
     }
 }
+#[derive(Debug, Default)]
+pub struct ConfigurationOptions {
+    pub sequencing_start_block: u64,
+    pub settlement_start_block: u64,
+    pub settlement_delay: u64,
+}
 
 impl Components {
-    pub async fn new(pre_loaded: Option<ContractVersion>) -> Result<Self> {
+    pub async fn new(
+        pre_loaded: Option<ContractVersion>,
+        options: Option<ConfigurationOptions>,
+    ) -> Result<Self> {
         let _ = init_test_tracing(Level::INFO);
         info!("Setting tags...");
         let mut tags = ImageTags::default();
@@ -499,6 +511,12 @@ impl Components {
         let mut translator_config: TranslatorConfig = Default::default();
         let mut poster_config: PosterConfig = Default::default();
         let mut sequencer_config: SequencerConfig = Default::default();
+
+        if let Some(opt) = options {
+            translator_config.sequencing_start_block = opt.sequencing_start_block;
+            translator_config.settlement_start_block = opt.settlement_start_block;
+            translator_config.settlement_delay = opt.settlement_delay;
+        }
         // Define the addresses of the bridge and inbox contracts depedning on whether we
         // are loading in the full set of Arb contracts or not
         translator_config.arbitrum_bridge_address =
@@ -597,6 +615,7 @@ impl Components {
         translator_config.sequencing_rpc_url = format!("http://localhost:{}", seq_port);
         translator_config.settlement_rpc_url = format!("http://localhost:{}", set_port);
         sequencer_config.settlement_rpc_url = format!("http://localhost:{}", set_port);
+        poster_config.settlement_rpc_url = format!("http://localhost:{}", set_port);
 
         // Set up ports
         sequencer_config.sequencer_port = PortManager::instance().next_port();
@@ -744,18 +763,20 @@ fn get_translator_cli_args(config: &TranslatorConfig) -> Vec<String> {
         config.arbitrum_inbox_address.to_string(),
         "--sequencing-rpc-url".to_string(),
         config.sequencing_rpc_url.to_string(),
-        "--sequencing-start-block".to_string(),
-        "0".to_string(),
         "--settlement-rpc-url".to_string(),
         config.settlement_rpc_url.to_string(),
-        "--settlement-start-block".to_string(),
-        "0".to_string(),
         "--metrics-port".to_string(),
         config.metrics_port.to_string(),
         "--target-chain-id".to_string(),
         APPCHAIN_CHAIN_ID.to_string(),
         "--rollup-owner-address".to_string(),
         APPCHAIN_OWNER.to_string(),
+        "--sequencing-start-block".to_string(),
+        config.sequencing_start_block.to_string(),
+        "--settlement-start-block".to_string(),
+        config.settlement_start_block.to_string(),
+        "--settlement-delay".to_string(),
+        config.settlement_delay.to_string(),
     ]
 }
 
@@ -769,7 +790,7 @@ fn get_poster_cli_args(config: &PosterConfig) -> Vec<String> {
         config.assertion_poster_contract_address.to_string(),
         "--settlement-rpc-url".to_string(),
         config.settlement_rpc_url.to_string(),
-        "--poster-metrics-port".to_string(),
+        "--metrics-port".to_string(),
         config.metrics_port.to_string(),
     ]
 }
