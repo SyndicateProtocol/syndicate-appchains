@@ -5,7 +5,10 @@
 
 use crate::rollups::shared::SequencingTransactionParser;
 use alloy::{
-    eips::BlockNumberOrTag, primitives::Bytes, providers::Provider, rpc::types::TransactionRequest,
+    eips::BlockNumberOrTag,
+    primitives::{Address, Bytes},
+    providers::Provider,
+    rpc::types::TransactionRequest,
 };
 use async_trait::async_trait;
 use common::types::{BlockAndReceipts, KnownState, Slot};
@@ -61,4 +64,10 @@ pub trait RollupAdapter: Debug + Send + Sync + Unpin + Clone + 'static {
 
     /// Gets the last sequencing block processed
     async fn get_last_sequencing_block_processed<T: Provider>(&self, provider: &T) -> Result<u64>;
+
+    /// Returns a list of addresses that are interesting to monitor on the sequencing chain
+    fn interesting_sequencing_addresses(&self) -> Vec<Address>;
+
+    /// Returns a list of addresses that are interesting to monitor on the settlement chain
+    fn interesting_settlement_addresses(&self) -> Vec<Address>;
 }

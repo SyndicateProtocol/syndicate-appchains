@@ -94,7 +94,7 @@ impl std::fmt::Display for L1MessageType {
 #[derive(Debug, Clone)]
 /// Builder for constructing Arbitrum blocks from transactions
 pub struct ArbitrumAdapter {
-    // Sequencing chain address
+    // Transaction parser for sequencing chain
     transaction_parser: SequencingTransactionParser,
 
     // Settlement chain address
@@ -211,6 +211,14 @@ impl RollupAdapter for ArbitrumAdapter {
                 ),
             },
         )
+    }
+
+    fn interesting_sequencing_addresses(&self) -> Vec<Address> {
+        vec![self.transaction_parser.sequencing_contract_address]
+    }
+
+    fn interesting_settlement_addresses(&self) -> Vec<Address> {
+        vec![self.bridge_address, self.inbox_address]
     }
 }
 

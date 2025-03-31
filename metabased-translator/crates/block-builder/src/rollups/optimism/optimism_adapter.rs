@@ -68,6 +68,16 @@ impl RollupAdapter for OptimismAdapter {
     async fn get_last_sequencing_block_processed<T: Provider>(&self, _provider: &T) -> Result<u64> {
         panic!("Not implemented")
     }
+
+    /// Returns a list of addresses that are interesting to monitor on the sequencing chain
+    fn interesting_sequencing_addresses(&self) -> Vec<Address> {
+        panic!("Not implemented")
+    }
+
+    /// Returns a list of addresses that are interesting to monitor on the settlement chain
+    fn interesting_settlement_addresses(&self) -> Vec<Address> {
+        panic!("Not implemented")
+    }
 }
 
 impl OptimismAdapter {

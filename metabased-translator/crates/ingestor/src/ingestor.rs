@@ -2,7 +2,7 @@
 //! consumer using a channel
 
 use crate::{config::ChainIngestorConfig, metrics::IngestorMetrics};
-use alloy::rpc::types::BlockNumberOrTag;
+use alloy::{primitives::Address, rpc::types::BlockNumberOrTag};
 use common::{
     eth_client::RPCClient,
     types::{Block, BlockAndReceipts, Chain, Receipt},
@@ -28,6 +28,7 @@ struct BatchContext<'a> {
     initial_chain_head: u64,
     syncing_batch_size: u64,
     chain: Chain,
+    addresses: &'a Vec<Address>,
     shutdown_rx: &'a mut oneshot::Receiver<()>,
 }
 
@@ -61,6 +62,7 @@ struct BatchContext<'a> {
 pub async fn run(
     chain: Chain,
     config: &ChainIngestorConfig,
+    addresses: Vec<Address>,
     client: Arc<dyn RPCClient>,
     sender: Sender<Arc<BlockAndReceipts>>,
     metrics: IngestorMetrics,
@@ -96,6 +98,7 @@ pub async fn run(
                     initial_chain_head,
                     syncing_batch_size: batch_size,
                     chain,
+                    addresses:&addresses,
                     shutdown_rx: &mut shutdown_rx,
                 }).await;
                 if should_terminate {
@@ -141,6 +144,7 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
     // Spawn tasks for each block number
     for &block_number in &block_numbers {
         let client = ctx.client.clone();
+        let addresses = ctx.addresses.clone();
 
         tasks.spawn(async move {
             // Fetch block and receipts
@@ -148,9 +152,18 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
                 fetch_block_with_retry(&*client, BlockNumberOrTag::Number(block_number), ctx.chain)
                     .await?;
             let receipts = fetch_receipts_with_retry(&*client, block_number, ctx.chain).await?;
+            // Filter receipts that include logs for any of the addresses in ctx.addresses
+            let filtered_receipts = receipts
+                .into_iter()
+                .filter(|receipt| {
+                    // Keep receipts where at least one log is related to the monitored
+                    // addresses
+                    receipt.logs.iter().any(|log| addresses.contains(&log.address))
+                })
+                .collect();
 
             // Return the block and receipts
-            Ok((block_number, BlockAndReceipts { block, receipts }))
+            Ok((block_number, BlockAndReceipts { block, receipts: filtered_receipts }))
         });
     }
 
@@ -388,7 +401,7 @@ mod tests {
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let polling_handle = tokio::spawn(async move {
             let result =
-                run(Chain::Sequencing, &config, client, sender, metrics, shutdown_rx).await;
+                run(Chain::Sequencing, &config, vec![], client, sender, metrics, shutdown_rx).await;
             assert!(result.is_ok(), "Polling task failed: {:?}", result);
         });
 
@@ -441,7 +454,7 @@ mod tests {
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let polling_handle = tokio::spawn(async move {
             let result =
-                run(Chain::Sequencing, &config, client, sender, metrics, shutdown_rx).await;
+                run(Chain::Sequencing, &config, vec![], client, sender, metrics, shutdown_rx).await;
             assert!(result.is_ok(), "Polling task failed: {:?}", result);
         });
 

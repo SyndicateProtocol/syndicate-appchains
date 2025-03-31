@@ -144,10 +144,14 @@ impl ComponentHandles {
 
         let slotter_config = config.slotter.clone();
 
+        let sequencing_addresses = mchain.rollup_adapter.interesting_sequencing_addresses();
+        let settlement_addresses = mchain.rollup_adapter.interesting_settlement_addresses();
+
         let sequencing = tokio::spawn(async move {
             ingestor::run(
                 Chain::Sequencing,
                 &sequencing_config,
+                sequencing_addresses,
                 sequencing_client,
                 sequencing_tx,
                 metrics.ingestor_sequencing,
@@ -160,6 +164,7 @@ impl ComponentHandles {
             ingestor::run(
                 Chain::Settlement,
                 &settlement_config,
+                settlement_addresses,
                 settlement_client,
                 settlement_tx,
                 metrics.ingestor_settlement,
