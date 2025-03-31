@@ -30,7 +30,13 @@ use contract_bindings::{
 };
 use eyre::{eyre, Result};
 use reqwest::Client;
-use std::{env, str::FromStr, time::Duration};
+use std::{
+    env,
+    error::Error,
+    fmt::{self, Display},
+    str::FromStr,
+    time::Duration,
+};
 use tokio::{
     process::{Child, Command},
     runtime::Handle,
@@ -40,9 +46,22 @@ use tokio::{
 use tracing::{info, Level};
 use tracing_subscriber::{fmt as subscriber_fmt, EnvFilter};
 
+#[derive(Debug)]
 enum TracingError {
     SubscriberInit(String),
 }
+
+impl Display for TracingError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::SubscriberInit(msg) => {
+                write!(f, "Failed to initialize subscriber: {}", msg)
+            }
+        }
+    }
+}
+
+impl Error for TracingError {}
 /// Initializes a tracing subscriber for testing purposes
 fn init_test_tracing(level: Level) -> Result<(), TracingError> {
     subscriber_fmt()
@@ -54,17 +73,17 @@ fn init_test_tracing(level: Level) -> Result<(), TracingError> {
 
 const PRELOAD_INBOX_ADDRESS_300: Address = address!("0x26eE2349212255614edCc046DD9472F2a5b7EF2b");
 const PRELOAD_BRIDGE_ADDRESS_300: Address = address!("0xa0e810a42086da4Ebc5C49fEd626cA6A75B06437");
-const PRELOAD_POSTER_ADDRESS_300: Address = Address::ZERO; //TODO update
+const PRELOAD_POSTER_ADDRESS_300: Address = address!("0x67d269191c92Caf3cD7723F116c85e6E9bf55933");
 
 const PRELOAD_INBOX_ADDRESS_271: Address = address!("0x7e2d5FCC5E02cBF2b9f860052C0226104E23F9c7");
 const PRELOAD_BRIDGE_ADDRESS_271: Address = address!("0x8dAF17A20c9DBA35f005b6324F493785D239719d");
-const PRELOAD_POSTER_ADDRESS_271: Address = Address::ZERO; //TODO update
+const PRELOAD_POSTER_ADDRESS_271: Address = address!("0x09635F643e140090A9A8Dcd712eD6285858ceBef");
 
 const DEFAULT_PRIVATE_KEY_SIGNER: &str =
     "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // address = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 
 const MCHAIN_ID: u64 = 84532;
-const APPCHAIN_CHAIN_ID: u64 = 51000;
+const APPCHAIN_CHAIN_ID: u64 = 13331370;
 pub const APPCHAIN_OWNER: Address = address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
 
 #[derive(Debug)]
@@ -403,6 +422,7 @@ pub struct Components {
     pub chain_id: u64,
     pub bridge_address: Address,
     pub inbox_address: Address,
+    pub assertion_poster_contract_address: Address,
 
     /// Appchain
     pub appchain_provider: RootProvider,
@@ -443,6 +463,7 @@ struct PosterConfig {
     assertion_poster_contract_address: Address,
     settlement_rpc_url: String,
     appchain_rpc_url: String,
+    polling_interval: Duration,
     metrics_port: u16,
 }
 #[derive(Debug, Default)]
@@ -468,7 +489,7 @@ pub struct ImageTags {
 impl Default for ImageTags {
     fn default() -> Self {
         Self {
-            reth_tag: "1.0.0".to_string(),
+            reth_tag: "2.0.0".to_string(),
             nitro_tag: "v3.4.0-d896e9c-slim".to_string(), // or some other sensible default
             poster_tag: None,
             translator_tag: None,
@@ -476,7 +497,7 @@ impl Default for ImageTags {
         }
     }
 }
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct ConfigurationOptions {
     pub sequencing_start_block: u64,
     pub settlement_start_block: u64,
@@ -651,6 +672,7 @@ impl Components {
         )
         .await?;
         poster_config.appchain_rpc_url = nitro_url;
+        poster_config.polling_interval = Duration::from_secs(1);
 
         let mut poster = None;
         if pre_loaded.is_some() {
@@ -675,6 +697,7 @@ impl Components {
             chain_id: APPCHAIN_CHAIN_ID,
             bridge_address: translator_config.arbitrum_bridge_address,
             inbox_address: translator_config.arbitrum_inbox_address,
+            assertion_poster_contract_address: poster_config.assertion_poster_contract_address,
 
             _mchain,
             _seq_anvil: seq_anvil,
@@ -792,6 +815,8 @@ fn get_poster_cli_args(config: &PosterConfig) -> Vec<String> {
         config.settlement_rpc_url.to_string(),
         "--metrics-port".to_string(),
         config.metrics_port.to_string(),
+        "--polling-interval".to_string(),
+        config.polling_interval.as_secs().to_string() + "s",
     ]
 }
 

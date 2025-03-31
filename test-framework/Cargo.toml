@@ -16,7 +16,6 @@ alloy = { workspace = true, features = [
     "providers",
     "rpc-types-anvil",
     "sol-types",
-
 ] }
 contract-bindings = { workspace = true }
 eyre = { workspace = true }
