@@ -12,6 +12,7 @@ eyre               = { workspace = true }
 humantime          = { workspace = true }
 prometheus-client  = { workspace = true }
 serde              = { workspace = true }
+shared             = { workspace = true }
 thiserror          = { workspace = true }
 tokio              = { workspace = true, features = ["full", "sync"] }
 tracing            = { workspace = true }

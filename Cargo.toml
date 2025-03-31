@@ -37,6 +37,7 @@ ingestor             = { path = "metabased-translator/crates/ingestor" }
 metabased-translator = { path = "metabased-translator/bin/metabased-translator" }
 metrics              = { path = "metabased-translator/crates/metrics" }
 slotter              = { path = "metabased-translator/crates/slotter" }
+shared               = { path = "shared" }
 test-utils           = { path = "metabased-translator/crates/test-utils" }
 
 alloy              = { version = "0.11.1" }
