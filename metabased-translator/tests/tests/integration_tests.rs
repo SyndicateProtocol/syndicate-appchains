@@ -472,7 +472,7 @@ async fn e2e_test_base(mine_empty_blocks: bool) -> Result<()> {
     assert_eq!(mchain_block.transactions.len(), 2);
 
     // check rollup block
-    assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 3);
+    wait_until!(meta_node.metabased_rollup.get_block_number().await? == 3, Duration::from_secs(1));
     let rollup_block: Block = meta_node
         .metabased_rollup
         .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(3), true))
