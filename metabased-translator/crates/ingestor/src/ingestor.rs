@@ -148,12 +148,12 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
 
         tasks.spawn(async move {
             // Fetch block and receipts
-            let block =
+            let mut block =
                 fetch_block_with_retry(&*client, BlockNumberOrTag::Number(block_number), ctx.chain)
                     .await?;
             let receipts = fetch_receipts_with_retry(&*client, block_number, ctx.chain).await?;
             // Filter receipts that include logs for any of the addresses in ctx.addresses
-            let filtered_receipts = receipts
+            let filtered_receipts: Vec<Receipt> = receipts
                 .into_iter()
                 .filter(|receipt| {
                     // Keep receipts where at least one log is related to the monitored
@@ -161,6 +161,12 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
                     receipt.logs.iter().any(|log| addresses.contains(&log.address))
                 })
                 .collect();
+
+            // TODO SEQ-759 - this is just a low hanging fruit memory optimization, but we should
+            // expand it to NOT keep any txs we don't need in memory
+            if filtered_receipts.is_empty() {
+                block.transactions = vec![];
+            }
 
             // Return the block and receipts
             Ok((block_number, BlockAndReceipts { block, receipts: filtered_receipts }))

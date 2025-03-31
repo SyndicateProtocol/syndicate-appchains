@@ -1391,13 +1391,11 @@ dependencies = [
  "async-trait",
  "bincode",
  "eyre",
- "futures",
  "serde",
  "serde_json",
  "strum_macros",
  "test-utils",
  "thiserror 2.0.11",
- "tokio",
  "tracing",
  "tracing-subscriber",
  "url",
@@ -2553,7 +2551,6 @@ name = "ingestor"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "alloy-json-rpc",
  "assert_matches",
  "async-trait",
  "clap",
@@ -2562,8 +2559,6 @@ dependencies = [
  "humantime",
  "mockall",
  "prometheus-client",
- "serde",
- "serde_json",
  "thiserror 2.0.11",
  "tokio",
  "tracing",
@@ -3002,7 +2997,6 @@ dependencies = [
 name = "metabased-translator"
 version = "0.1.0"
 dependencies = [
- "alloy",
  "async-trait",
  "block-builder",
  "clap",

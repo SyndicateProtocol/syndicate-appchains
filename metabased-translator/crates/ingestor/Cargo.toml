@@ -10,15 +10,12 @@ version.workspace      = true
 
 [dependencies]
 alloy = { workspace = true }
-alloy-json-rpc = { workspace = true }
 async-trait = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
 common = { workspace = true }
 eyre = { workspace = true }
 humantime = { workspace = true }
 prometheus-client = { workspace = true }
-serde = { workspace = true }
-serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = [
   "rt-multi-thread",
