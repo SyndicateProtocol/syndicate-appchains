@@ -1,7 +1,8 @@
 //! The `logger` module relates to Logger initialization and setup
 
-use crate::logger::Error::DefaultLoggerInit;
+use crate::logger::Error::{DefaultLoggerInit, TestSubscriberInit};
 use thiserror::Error;
+use tracing::Level;
 use tracing_subscriber::{
     fmt::{
         format::{Format, Json, JsonFields},
@@ -14,7 +15,8 @@ use tracing_subscriber::{
 ///
 /// Callers of this function need to use the [`Subscriber`] to enable it,
 ///
-/// e.g. `tracing::subscriber::set_global_default(default_subscriber)?;`
+/// e.g. `tracing::subscriber::set_global_default(default_subscriber)?;`, or use
+/// [`set_global_default_subscriber()`] below
 pub fn build_default_subscriber() -> Subscriber<JsonFields, Format<Json>, EnvFilter> {
     // Build an EnvFilter from the `RUST_LOG` environment variable, defaulting to `info` if the env
     // variable is not set.
@@ -44,9 +46,29 @@ pub fn set_global_default_subscriber() -> Result<(), Error> {
 }
 
 /// Errors relating to the logger
+#[allow(missing_docs)]
 #[derive(Error, Debug)]
 pub enum Error {
     /// error initializing the default logger
     #[error("unable to initialize default logger - did you call this more than once?: {0} ")]
     DefaultLoggerInit(String),
+    #[error("failed to initialize test tracing subscriber: {0}")]
+    TestSubscriberInit(String),
+}
+
+/// Initializes a tracing subscriber for testing purposes. Output from crates not specified below is
+/// filtered out
+pub fn init_test_tracing(level: Level) -> Result<(), Error> {
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+        // TODO add other MB packages below and make sure they work 
+        EnvFilter::new(format!(
+            "off,metabased_translator={level},ingestor={level},slotter={level},block_builder={level}"
+        ))
+    });
+
+    tracing_subscriber::fmt()
+        .with_env_filter(env_filter)
+        .try_init()
+        .map_err(|e| TestSubscriberInit(format!("{:?}", e)))?;
+    Ok(())
 }

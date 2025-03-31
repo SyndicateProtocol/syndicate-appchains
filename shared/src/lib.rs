@@ -4,3 +4,4 @@
 pub mod json_rpc;
 pub mod logger;
 pub mod parse;
+pub mod tx_validation;

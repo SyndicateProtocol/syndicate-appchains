@@ -5,4 +5,3 @@ pub mod bytecode;
 pub mod config;
 pub mod server;
 pub mod tc_client;
-pub mod validation;

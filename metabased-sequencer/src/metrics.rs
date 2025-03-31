@@ -1,6 +1,5 @@
 //! The `metrics` module  handles metrics recording for the metabased translator
 
-use crate::errors::Error;
 use axum::{
     body::Body,
     extract::State,
@@ -18,6 +17,7 @@ use prometheus_client::{
     },
     registry::Registry,
 };
+use shared::json_rpc::Error;
 use std::{sync::Arc, time::Duration};
 use tokio::sync::RwLock;
 

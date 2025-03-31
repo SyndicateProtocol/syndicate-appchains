@@ -1,6 +1,6 @@
 //! The `service` module handles the business logic for the tc sequencer.
 
-use crate::{bytecode::get_bytecode, config::Config, validation::validate_transaction};
+use crate::{bytecode::get_bytecode, config::Config};
 use alloy::{
     consensus::Transaction,
     hex::{self},
@@ -14,7 +14,10 @@ use jsonrpsee::{
 };
 use reqwest::Client;
 use serde as _;
-use shared::json_rpc::{parse_send_raw_transaction_params, Error};
+use shared::{
+    json_rpc::{parse_send_raw_transaction_params, Error},
+    tx_validation::validate_transaction,
+};
 use std::{collections::HashMap, sync::Arc};
 use tracing::{debug, error, info};
 use url::Url;

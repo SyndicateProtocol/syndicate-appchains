@@ -1,16 +1,16 @@
-//! Utility function for validating transactions
+//! The `tx_validation` module contains functions for validating the content of an Ethereum
+//! transaction
 
-use alloy::{
-    consensus::{Transaction, TxEnvelope},
-    primitives::{Bytes, U256},
-    rlp::Decodable,
-};
-use eyre::Result;
-use shared::json_rpc::{
+use crate::json_rpc::{
     Error,
     Error::{InvalidInput, TransactionRejected},
     InvalidInputError::{MissingChainID, UnableToRLPDecode},
     Rejection::FeeTooHigh,
+};
+use alloy::{
+    consensus::{Transaction, TxEnvelope},
+    primitives::{Bytes, U256},
+    rlp::Decodable,
 };
 use tracing::debug;
 
@@ -50,7 +50,7 @@ fn check_signature(tx: &TxEnvelope) -> Result<(), Error> {
 }
 
 fn check_gas_price(tx: &TxEnvelope) -> Result<(), Error> {
-    // TODO(SEQ-179): introduce optional global tx cap config. See op-geth's checkTxFee() +
+    //TODO(SEQ-179): introduce optional global tx cap config. See op-geth's checkTxFee() +
     // RPCTxFeeCap for equivalent skip check if unset
     let tx_fee_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
 

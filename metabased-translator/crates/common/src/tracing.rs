@@ -4,7 +4,7 @@
 //! other crates used in the Metabased Translator as well.
 
 use core::fmt;
-use std::{error::Error, fmt::Display};
+use thiserror::Error;
 use tracing::{Event, Level, Subscriber};
 use tracing_subscriber::{
     fmt as subscriber_fmt,
@@ -18,22 +18,11 @@ use tracing_subscriber::{
 };
 
 #[allow(missing_docs)]
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum TracingError {
+    #[error("failed to initialize subscriber: {0}")]
     SubscriberInit(String),
 }
-
-impl Display for TracingError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::SubscriberInit(msg) => {
-                write!(f, "Failed to initialize subscriber: {}", msg)
-            }
-        }
-    }
-}
-
-impl Error for TracingError {}
 
 /// A wrapper around a JSON formatter that iterates `extra_fields` and appends them all to every
 /// log event.
@@ -96,6 +85,7 @@ pub fn init_tracing_with_extra_fields(
 
     Ok(())
 }
+
 /// Initializes a tracing subscriber for testing purposes
 pub fn init_test_tracing(level: Level) -> Result<(), TracingError> {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
