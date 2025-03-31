@@ -14,7 +14,6 @@ contract ArbConfigManagerTest is Test {
     address public rollupOwner = address(2);
 
     uint256 public constant CHAIN_ID = 123456;
-    bytes32 public constant TARGET_ROLLUP_TYPE = bytes32("ARBITRUM");
     bool public constant MINE_EMPTY_BLOCKS = true;
     address public constant ARBITRUM_BRIDGE_ADDRESS = address(0x1234);
     address public constant ARBITRUM_INBOX_ADDRESS = address(0x5678);
@@ -73,7 +72,6 @@ contract ArbConfigManagerTest is Test {
         // initialize the ArbChainConfig with the expected values
         chainConfig.initialize(
             CHAIN_ID,
-            TARGET_ROLLUP_TYPE,
             MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
@@ -87,7 +85,6 @@ contract ArbConfigManagerTest is Test {
         );
         // Verify the values
         assertEq(chainConfig.CHAIN_ID(), CHAIN_ID);
-        assertEq(chainConfig.TARGET_ROLLUP_TYPE(), TARGET_ROLLUP_TYPE);
         assertEq(chainConfig.MINE_EMPTY_BLOCKS(), MINE_EMPTY_BLOCKS);
         assertEq(chainConfig.ARBITRUM_BRIDGE_ADDRESS(), ARBITRUM_BRIDGE_ADDRESS);
         assertEq(chainConfig.ARBITRUM_INBOX_ADDRESS(), ARBITRUM_INBOX_ADDRESS);

@@ -12,7 +12,6 @@ contract ArbChainConfigTest is Test {
     address public newRollupOwner = address(3);
 
     uint256 public constant CHAIN_ID = 123456;
-    bytes32 public constant TARGET_ROLLUP_TYPE = bytes32("ARBITRUM");
     bool public constant MINE_EMPTY_BLOCKS = true;
     address public constant ARBITRUM_BRIDGE_ADDRESS = address(0x1234);
     address public constant ARBITRUM_INBOX_ADDRESS = address(0x5678);
@@ -29,7 +28,6 @@ contract ArbChainConfigTest is Test {
         chainConfig = new ArbChainConfig();
         chainConfig.initialize(
             CHAIN_ID,
-            TARGET_ROLLUP_TYPE,
             MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
@@ -46,7 +44,6 @@ contract ArbChainConfigTest is Test {
 
     function testImmutableValues() public view {
         assertEq(chainConfig.CHAIN_ID(), CHAIN_ID);
-        assertEq(chainConfig.TARGET_ROLLUP_TYPE(), TARGET_ROLLUP_TYPE);
         assertEq(chainConfig.MINE_EMPTY_BLOCKS(), MINE_EMPTY_BLOCKS);
         assertEq(chainConfig.ARBITRUM_BRIDGE_ADDRESS(), ARBITRUM_BRIDGE_ADDRESS);
         assertEq(chainConfig.ARBITRUM_INBOX_ADDRESS(), ARBITRUM_INBOX_ADDRESS);
@@ -71,7 +68,6 @@ contract ArbChainConfigTest is Test {
         vm.expectRevert("Chain ID cannot be zero");
         newConfig.initialize(
             0, // Zero chain ID
-            TARGET_ROLLUP_TYPE,
             MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
@@ -89,7 +85,6 @@ contract ArbChainConfigTest is Test {
         vm.expectRevert("Arbitrum bridge address cannot be zero");
         newConfig.initialize(
             CHAIN_ID,
-            TARGET_ROLLUP_TYPE,
             MINE_EMPTY_BLOCKS,
             address(0), // Zero address
             ARBITRUM_INBOX_ADDRESS,
@@ -107,7 +102,6 @@ contract ArbChainConfigTest is Test {
         vm.expectRevert("Arbitrum inbox address cannot be zero");
         newConfig.initialize(
             CHAIN_ID,
-            TARGET_ROLLUP_TYPE,
             MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             address(0), // Zero address
@@ -125,7 +119,6 @@ contract ArbChainConfigTest is Test {
         vm.expectRevert("Sequencing contract address cannot be zero");
         newConfig.initialize(
             CHAIN_ID,
-            TARGET_ROLLUP_TYPE,
             MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
@@ -143,7 +136,6 @@ contract ArbChainConfigTest is Test {
         vm.expectRevert("Rollup owner cannot be zero address");
         newConfig.initialize(
             CHAIN_ID,
-            TARGET_ROLLUP_TYPE,
             MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
@@ -166,7 +158,6 @@ contract ArbChainConfigTest is Test {
         vm.expectRevert(Initializable.InvalidInitialization.selector);
         chainConfig.initialize(
             CHAIN_ID,
-            TARGET_ROLLUP_TYPE,
             MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
