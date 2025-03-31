@@ -1,6 +1,6 @@
 [package]
 edition.workspace = true
-name              = "metabased-sequencer"
+name              = "tc-sequencer"
 version.workspace = true
 
 [dependencies]
@@ -15,16 +15,13 @@ alloy = { workspace = true, features = [
   "signer-local",
   "signers",
 ] }
-axum = { workspace = true }
 bytes = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
 eyre = { workspace = true }
-flate2 = { workspace = true }
 hex = { workspace = true }
-humantime = { workspace = true }
 jsonrpsee = { workspace = true, features = ["http-client", "server"] }
-prometheus-client = { workspace = true }
 reqwest = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
@@ -35,3 +32,6 @@ url = { workspace = true }
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+mockito = { workspace = true }

@@ -231,8 +231,10 @@ mod tests {
             }),
         ]);
         let b1 = batch.encode()?;
+        assert!(!b1.is_empty());
         let b2 = batch.geth_encode().await?;
-        assert_eq!(b1[0], b1[0]);
+        assert!(!b2.is_empty());
+        assert_eq!(b1[0], b2[0]);
         let mut d1: Vec<u8> = vec![];
         let mut d2: Vec<u8> = vec![];
         brotli::BrotliDecompress(&mut &b1[1..], &mut d1)?;
