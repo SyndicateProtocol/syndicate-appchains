@@ -467,6 +467,7 @@ error NotAllowed(address batchSubmitter);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct NotAllowed {
+        #[allow(missing_docs)]
         pub batchSubmitter: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -537,6 +538,7 @@ error OwnableInvalidOwner(address owner);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct OwnableInvalidOwner {
+        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -607,6 +609,7 @@ error OwnableUnauthorizedAccount(address account);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct OwnableUnauthorizedAccount {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -966,6 +969,7 @@ function calldataRequirementModule() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct calldataRequirementModuleReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1084,7 +1088,9 @@ function initialize(address admin, address _requirementModule) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initializeCall {
+        #[allow(missing_docs)]
         pub admin: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _requirementModule: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`initialize(address,address)`](initializeCall) function.
@@ -1222,12 +1228,14 @@ function isAllowed(address proposer) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAllowedCall {
+        #[allow(missing_docs)]
         pub proposer: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isAllowedReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -1346,12 +1354,14 @@ function isCalldataAllowed(bytes memory data) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isCalldataAllowedCall {
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`isCalldataAllowed(bytes)`](isCalldataAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isCalldataAllowedReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -1478,6 +1488,7 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1596,6 +1607,7 @@ function proposerRequirementModule() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct proposerRequirementModuleReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1834,6 +1846,7 @@ function transferOwnership(address newOwner) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferOwnershipCall {
+        #[allow(missing_docs)]
         pub newOwner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`transferOwnership(address)`](transferOwnershipCall) function.
@@ -1960,6 +1973,7 @@ function updateRequirementModule(address _newModule) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct updateRequirementModuleCall {
+        #[allow(missing_docs)]
         pub _newModule: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`updateRequirementModule(address)`](updateRequirementModuleCall) function.
@@ -2081,14 +2095,23 @@ function updateRequirementModule(address _newModule) external;
     };
     ///Container for all the [`SequencingModuleChecker`](self) function calls.
     pub enum SequencingModuleCheckerCalls {
+        #[allow(missing_docs)]
         calldataRequirementModule(calldataRequirementModuleCall),
+        #[allow(missing_docs)]
         initialize(initializeCall),
+        #[allow(missing_docs)]
         isAllowed(isAllowedCall),
+        #[allow(missing_docs)]
         isCalldataAllowed(isCalldataAllowedCall),
+        #[allow(missing_docs)]
         owner(ownerCall),
+        #[allow(missing_docs)]
         proposerRequirementModule(proposerRequirementModuleCall),
+        #[allow(missing_docs)]
         renounceOwnership(renounceOwnershipCall),
+        #[allow(missing_docs)]
         transferOwnership(transferOwnershipCall),
+        #[allow(missing_docs)]
         updateRequirementModule(updateRequirementModuleCall),
     }
     #[automatically_derived]
@@ -2396,11 +2419,17 @@ function updateRequirementModule(address _newModule) external;
     }
     ///Container for all the [`SequencingModuleChecker`](self) custom errors.
     pub enum SequencingModuleCheckerErrors {
+        #[allow(missing_docs)]
         AlreadyInitialized(AlreadyInitialized),
+        #[allow(missing_docs)]
         CalldataNotAllowed(CalldataNotAllowed),
+        #[allow(missing_docs)]
         InvalidModuleAddress(InvalidModuleAddress),
+        #[allow(missing_docs)]
         NotAllowed(NotAllowed),
+        #[allow(missing_docs)]
         OwnableInvalidOwner(OwnableInvalidOwner),
+        #[allow(missing_docs)]
         OwnableUnauthorizedAccount(OwnableUnauthorizedAccount),
     }
     #[automatically_derived]
@@ -2632,7 +2661,9 @@ function updateRequirementModule(address _newModule) external;
     }
     ///Container for all the [`SequencingModuleChecker`](self) events.
     pub enum SequencingModuleCheckerEvents {
+        #[allow(missing_docs)]
         OwnershipTransferred(OwnershipTransferred),
+        #[allow(missing_docs)]
         RequirementModuleUpdated(RequirementModuleUpdated),
     }
     #[automatically_derived]

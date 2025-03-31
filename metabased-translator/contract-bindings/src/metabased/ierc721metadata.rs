@@ -859,7 +859,9 @@ function approve(address _approved, uint256 _tokenId) external payable;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct approveCall {
+        #[allow(missing_docs)]
         pub _approved: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`approve(address,uint256)`](approveCall) function.
@@ -997,12 +999,14 @@ function balanceOf(address _owner) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct balanceOfCall {
+        #[allow(missing_docs)]
         pub _owner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`balanceOf(address)`](balanceOfCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct balanceOfReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1123,12 +1127,14 @@ function getApproved(uint256 _tokenId) external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getApprovedCall {
+        #[allow(missing_docs)]
         pub _tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`getApproved(uint256)`](getApprovedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getApprovedReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1249,13 +1255,16 @@ function isApprovedForAll(address _owner, address _operator) external view retur
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isApprovedForAllCall {
+        #[allow(missing_docs)]
         pub _owner: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _operator: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`isApprovedForAll(address,address)`](isApprovedForAllCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct isApprovedForAllReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -1397,6 +1406,7 @@ function name() external view returns (string memory _name);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct nameReturn {
+        #[allow(missing_docs)]
         pub _name: alloy::sol_types::private::String,
     }
     #[allow(
@@ -1511,12 +1521,14 @@ function ownerOf(uint256 _tokenId) external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerOfCall {
+        #[allow(missing_docs)]
         pub _tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`ownerOf(uint256)`](ownerOfCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerOfReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1637,8 +1649,11 @@ function safeTransferFrom(address _from, address _to, uint256 _tokenId) external
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct safeTransferFrom_0Call {
+        #[allow(missing_docs)]
         pub _from: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _to: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`safeTransferFrom(address,address,uint256)`](safeTransferFrom_0Call) function.
@@ -1787,9 +1802,13 @@ function safeTransferFrom(address _from, address _to, uint256 _tokenId, bytes me
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct safeTransferFrom_1Call {
+        #[allow(missing_docs)]
         pub _from: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _to: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _tokenId: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`safeTransferFrom(address,address,uint256,bytes)`](safeTransferFrom_1Call) function.
@@ -1945,7 +1964,9 @@ function setApprovalForAll(address _operator, bool _approved) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct setApprovalForAllCall {
+        #[allow(missing_docs)]
         pub _operator: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _approved: bool,
     }
     ///Container type for the return parameters of the [`setApprovalForAll(address,bool)`](setApprovalForAllCall) function.
@@ -2084,12 +2105,14 @@ function supportsInterface(bytes4 interfaceID) external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct supportsInterfaceCall {
+        #[allow(missing_docs)]
         pub interfaceID: alloy::sol_types::private::FixedBytes<4>,
     }
     ///Container type for the return parameters of the [`supportsInterface(bytes4)`](supportsInterfaceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct supportsInterfaceReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2216,6 +2239,7 @@ function symbol() external view returns (string memory _symbol);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct symbolReturn {
+        #[allow(missing_docs)]
         pub _symbol: alloy::sol_types::private::String,
     }
     #[allow(
@@ -2330,12 +2354,14 @@ function tokenURI(uint256 _tokenId) external view returns (string memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct tokenURICall {
+        #[allow(missing_docs)]
         pub _tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`tokenURI(uint256)`](tokenURICall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct tokenURIReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::String,
     }
     #[allow(
@@ -2456,8 +2482,11 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferFromCall {
+        #[allow(missing_docs)]
         pub _from: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _to: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub _tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`transferFrom(address,address,uint256)`](transferFromCall) function.
@@ -2597,18 +2626,31 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
     };
     ///Container for all the [`IERC721Metadata`](self) function calls.
     pub enum IERC721MetadataCalls {
+        #[allow(missing_docs)]
         approve(approveCall),
+        #[allow(missing_docs)]
         balanceOf(balanceOfCall),
+        #[allow(missing_docs)]
         getApproved(getApprovedCall),
+        #[allow(missing_docs)]
         isApprovedForAll(isApprovedForAllCall),
+        #[allow(missing_docs)]
         name(nameCall),
+        #[allow(missing_docs)]
         ownerOf(ownerOfCall),
+        #[allow(missing_docs)]
         safeTransferFrom_0(safeTransferFrom_0Call),
+        #[allow(missing_docs)]
         safeTransferFrom_1(safeTransferFrom_1Call),
+        #[allow(missing_docs)]
         setApprovalForAll(setApprovalForAllCall),
+        #[allow(missing_docs)]
         supportsInterface(supportsInterfaceCall),
+        #[allow(missing_docs)]
         symbol(symbolCall),
+        #[allow(missing_docs)]
         tokenURI(tokenURICall),
+        #[allow(missing_docs)]
         transferFrom(transferFromCall),
     }
     #[automatically_derived]
@@ -3005,8 +3047,11 @@ function transferFrom(address _from, address _to, uint256 _tokenId) external pay
     }
     ///Container for all the [`IERC721Metadata`](self) events.
     pub enum IERC721MetadataEvents {
+        #[allow(missing_docs)]
         Approval(Approval),
+        #[allow(missing_docs)]
         ApprovalForAll(ApprovalForAll),
+        #[allow(missing_docs)]
         Transfer(Transfer),
     }
     #[automatically_derived]
