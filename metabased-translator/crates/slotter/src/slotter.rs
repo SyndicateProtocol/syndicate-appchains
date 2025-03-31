@@ -74,7 +74,7 @@ pub async fn run(
 
     let slotter = Slotter {
         settlement_delay: config.settlement_delay,
-        max_source_chain_latency: config.max_source_chain_latency,
+        max_source_chain_latency: config.max_source_chain_time_gap,
         latest_sequencing_block,
         latest_settlement_block,
         min_chain_head_timestamp,
@@ -490,7 +490,7 @@ mod tests {
             slots: VecDeque::new(),
             unassigned_settlement_blocks: VecDeque::new(),
             settlement_delay: config.settlement_delay,
-            max_source_chain_latency: config.max_source_chain_latency,
+            max_source_chain_latency: config.max_source_chain_time_gap,
             metrics,
             min_chain_head_timestamp: 0,
             slot_processor: processor,
@@ -580,7 +580,7 @@ mod tests {
         let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown_tx } =
             create_slotter_and_spawn(&SlotterConfig {
                 settlement_delay: 0,
-                max_source_chain_latency: 0,
+                max_source_chain_time_gap: 0,
             })
             .await;
 
@@ -694,7 +694,7 @@ mod tests {
         let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
             create_slotter_and_spawn(&SlotterConfig {
                 settlement_delay: 0,
-                max_source_chain_latency: 0,
+                max_source_chain_time_gap: 0,
             })
             .await;
 
@@ -739,7 +739,7 @@ mod tests {
         let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
             create_slotter_and_spawn(&SlotterConfig {
                 settlement_delay: 60,
-                max_source_chain_latency: 0,
+                max_source_chain_time_gap: 0,
             })
             .await;
 
@@ -797,7 +797,7 @@ mod tests {
         let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown_tx } =
             create_slotter_and_spawn(&SlotterConfig {
                 settlement_delay: 0,
-                max_source_chain_latency: 0,
+                max_source_chain_time_gap: 0,
             })
             .await;
 
@@ -952,7 +952,7 @@ mod tests {
     async fn test_max_source_chain_latency() {
         //NOTE: this tests assumes the input channels are created with a capacity of 100
         // Create a slotter with max_source_chain_latency = 10 seconds
-        let config = SlotterConfig { settlement_delay: 0, max_source_chain_latency: 10 };
+        let config = SlotterConfig { settlement_delay: 0, max_source_chain_time_gap: 10 };
 
         let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown_tx } =
             create_slotter_and_spawn(&config).await;
