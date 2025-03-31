@@ -4,22 +4,22 @@ pragma solidity 0.8.25;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import {UpgradeableBeacon} from "@openzeppelin/contracts/proxy/beacon/UpgradeableBeacon.sol";
-import {ChainConfig} from "./ChainConfig.sol";
+import {ArbChainConfig} from "./ArbChainConfig.sol";
 
 /**
- * @title ConfigManager
- * @dev Manages deployment of ChainConfig contracts using CREATE2 for deterministic addresses
+ * @title ArbConfigManager
+ * @dev Manages deployment of ArbChainConfig contracts using CREATE2 for deterministic addresses
  * Uses the Beacon Proxy pattern for upgradeable implementations
  */
-contract ConfigManager is Ownable {
+contract ArbConfigManager is Ownable {
     // Events
-    event ChainConfigCreated(uint256 indexed chainId, address configAddress);
+    event ArbChainConfigCreated(uint256 indexed chainId, address configAddress);
     event ImplementationUpgraded(address newImplementation);
 
     // Beacon that holds the current implementation address
     UpgradeableBeacon public immutable beacon;
 
-    // Mapping of chainId to deployed ChainConfig proxy address
+    // Mapping of chainId to deployed ArbChainConfig proxy address
     mapping(uint256 => address) public deployedConfigs;
 
     /**
@@ -28,18 +28,18 @@ contract ConfigManager is Ownable {
     constructor() Ownable(msg.sender) {
         // Deploy the implementation contract
         // No need to pass constructor arguments as they'll be handled by initialize()
-        address implementation = address(new ChainConfig());
+        address implementation = address(new ArbChainConfig());
 
         // Deploy the beacon with the implementation and set the owner to this contract
         beacon = new UpgradeableBeacon(implementation, address(this));
     }
 
     /**
-     * @dev Create a new ChainConfig contract for a specific chainId
+     * @dev Create a new ArbChainConfig contract for a specific chainId
      * @param chainId The chain ID for which to create a config
-     * @return address The address of the deployed ChainConfig contract
+     * @return address The address of the deployed ArbChainConfig contract
      */
-    function createChainConfig(uint256 chainId) external onlyOwner returns (address) {
+    function createArbChainConfig(uint256 chainId) external onlyOwner returns (address) {
         require(chainId != 0, "Chain ID cannot be zero");
         require(deployedConfigs[chainId] == address(0), "Config already exists for this chain ID");
 
@@ -54,7 +54,7 @@ contract ConfigManager is Ownable {
         address proxyAddress = address(proxy);
         deployedConfigs[chainId] = proxyAddress;
 
-        emit ChainConfigCreated(chainId, proxyAddress);
+        emit ArbChainConfigCreated(chainId, proxyAddress);
 
         return proxyAddress;
     }
@@ -64,7 +64,7 @@ contract ConfigManager is Ownable {
      * @param chainId The chain ID
      * @return The deterministic address where the config would be deployed
      */
-    function getChainConfigAddress(uint256 chainId) public view returns (address) {
+    function getArbChainConfigAddress(uint256 chainId) public view returns (address) {
         // Check if already deployed
         if (deployedConfigs[chainId] != address(0)) {
             return deployedConfigs[chainId];

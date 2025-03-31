@@ -5,10 +5,10 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
- * @title ChainConfig
+ * @title ArbChainConfig
  * @dev Configuration contract for settlement chain parameters
  */
-contract ChainConfig is Initializable, Ownable {
+contract ArbChainConfig is Initializable, Ownable {
     // Events
     event RollupOwnerUpdated(address indexed newRollupOwner);
     event DefaultSequencingChainRpcUrlUpdated(string newRpcUrl);

@@ -2,14 +2,14 @@
 pragma solidity 0.8.25;
 
 import {Test} from "forge-std/Test.sol";
-import {ConfigManager} from "src/config/ConfigManager.sol";
-import {ChainConfig} from "src/config/ChainConfig.sol";
+import {ArbConfigManager} from "src/config/ArbConfigManager.sol";
+import {ArbChainConfig} from "src/config/ArbChainConfig.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IBeacon} from "@openzeppelin/contracts/proxy/beacon/IBeacon.sol";
 import {BeaconProxy} from "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 
-contract ConfigManagerTest is Test {
-    ConfigManager public configManager;
+contract ArbConfigManagerTest is Test {
+    ArbConfigManager public configManager;
     address public owner = address(1);
     address public rollupOwner = address(2);
 
@@ -27,7 +27,7 @@ contract ConfigManagerTest is Test {
 
     function setUp() public {
         vm.startPrank(owner);
-        configManager = new ConfigManager();
+        configManager = new ArbConfigManager();
         vm.stopPrank();
     }
 
@@ -50,11 +50,11 @@ contract ConfigManagerTest is Test {
         assertTrue(codeSize > 0, "Implementation should be a contract");
     }
 
-    function testCreateChainConfig() public {
+    function testCreateArbChainConfig() public {
         vm.startPrank(owner);
 
         // Deploy the config without expecting event
-        address deployedAddress = configManager.createChainConfig(CHAIN_ID);
+        address deployedAddress = configManager.createArbChainConfig(CHAIN_ID);
 
         // Verify the deployed address is stored correctly
         assertEq(configManager.deployedConfigs(CHAIN_ID), deployedAddress);
@@ -66,11 +66,11 @@ contract ConfigManagerTest is Test {
         }
         assertTrue(codeSize > 0, "BeaconProxy should be a contract");
 
-        // Verify the ChainConfig values have been properly initialized
-        // We need to cast address to ChainConfig to access its interface
-        ChainConfig chainConfig = ChainConfig(deployedAddress);
+        // Verify the ArbChainConfig values have been properly initialized
+        // We need to cast address to ArbChainConfig to access its interface
+        ArbChainConfig chainConfig = ArbChainConfig(deployedAddress);
 
-        // initialize the ChainConfig with the expected values
+        // initialize the ArbChainConfig with the expected values
         chainConfig.initialize(
             CHAIN_ID,
             TARGET_ROLLUP_TYPE,
@@ -102,65 +102,65 @@ contract ConfigManagerTest is Test {
         vm.stopPrank();
     }
 
-    function testCannotCreateDuplicateChainConfig() public {
+    function testCannotCreateDuplicateArbChainConfig() public {
         vm.startPrank(owner);
 
         // Deploy the first config
-        configManager.createChainConfig(CHAIN_ID);
+        configManager.createArbChainConfig(CHAIN_ID);
 
         // Attempt to deploy a duplicate config
         vm.expectRevert("Config already exists for this chain ID");
-        configManager.createChainConfig(CHAIN_ID);
+        configManager.createArbChainConfig(CHAIN_ID);
 
         vm.stopPrank();
     }
 
-    function testCreateChainConfigRevertOnZeroChainId() public {
+    function testCreateArbChainConfigRevertOnZeroChainId() public {
         vm.startPrank(owner);
 
         vm.expectRevert("Chain ID cannot be zero");
-        configManager.createChainConfig(
+        configManager.createArbChainConfig(
             0 // Zero chain ID
         );
 
         vm.stopPrank();
     }
 
-    function testCreateChainConfigRevertOnNonOwner() public {
+    function testCreateArbChainConfigRevertOnNonOwner() public {
         vm.prank(address(999)); // Non-owner address
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(999)));
-        configManager.createChainConfig(CHAIN_ID);
+        configManager.createArbChainConfig(CHAIN_ID);
     }
 
-    function testGetChainConfigAddress() public {
+    function testGetArbChainConfigAddress() public {
         // Deploy the config first
         vm.prank(owner);
-        address deployedAddress = configManager.createChainConfig(CHAIN_ID);
+        address deployedAddress = configManager.createArbChainConfig(CHAIN_ID);
 
-        // Now that it's deployed, the getChainConfigAddress should return the deployed address
-        address returnedAddress = configManager.getChainConfigAddress(CHAIN_ID);
+        // Now that it's deployed, the getArbChainConfigAddress should return the deployed address
+        address returnedAddress = configManager.getArbChainConfigAddress(CHAIN_ID);
 
-        // Verify getChainConfigAddress returns the deployed address
+        // Verify getArbChainConfigAddress returns the deployed address
         assertEq(returnedAddress, deployedAddress);
     }
 
-    function testGetChainConfigAddressRevertOnZeroChainId() public {
+    function testGetArbChainConfigAddressRevertOnZeroChainId() public {
         vm.expectRevert("Chain ID cannot be zero");
-        configManager.getChainConfigAddress(0);
+        configManager.getArbChainConfigAddress(0);
     }
 
     function testUpgradeImplementation() public {
         vm.startPrank(owner);
 
         // Deploy a config first
-        address deployedAddress = configManager.createChainConfig(CHAIN_ID);
+        address deployedAddress = configManager.createArbChainConfig(CHAIN_ID);
 
         // Get the current implementation
         address currentImpl = IBeacon(address(configManager.beacon())).implementation();
 
         // Deploy a new implementation
-        ChainConfig newImplementation = new ChainConfig();
+        ArbChainConfig newImplementation = new ArbChainConfig();
         // No need to initialize the implementation
 
         // Upgrade to the new implementation without expecting event
@@ -172,7 +172,7 @@ contract ConfigManagerTest is Test {
         assertNotEq(newImpl, currentImpl);
 
         // Check that the existing proxy still works and has the same data
-        ChainConfig proxyConfig = ChainConfig(deployedAddress);
+        ArbChainConfig proxyConfig = ArbChainConfig(deployedAddress);
 
         vm.stopPrank();
     }
@@ -189,7 +189,7 @@ contract ConfigManagerTest is Test {
     function testUpgradeImplementationRevertOnNonOwner() public {
         vm.startPrank(address(999)); // Non-owner address
 
-        ChainConfig newImplementation = new ChainConfig();
+        ArbChainConfig newImplementation = new ArbChainConfig();
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(999)));
         configManager.upgradeImplementation(address(newImplementation));
@@ -203,18 +203,18 @@ contract ConfigManagerTest is Test {
         // Deploy two configs with different chain IDs
         uint256 secondChainId = 789012;
 
-        address firstConfig = configManager.createChainConfig(CHAIN_ID);
+        address firstConfig = configManager.createArbChainConfig(CHAIN_ID);
 
-        address secondConfig = configManager.createChainConfig(secondChainId);
+        address secondConfig = configManager.createArbChainConfig(secondChainId);
 
-        ChainConfig firstProxyConfig = ChainConfig(firstConfig);
-        ChainConfig secondProxyConfig = ChainConfig(secondConfig);
+        ArbChainConfig firstProxyConfig = ArbChainConfig(firstConfig);
+        ArbChainConfig secondProxyConfig = ArbChainConfig(secondConfig);
 
         // Get the current implementation
         address currentImpl = IBeacon(address(configManager.beacon())).implementation();
 
         // Deploy a new implementation
-        ChainConfig newImplementation = new ChainConfig();
+        ArbChainConfig newImplementation = new ArbChainConfig();
 
         // Upgrade to the new implementation
         configManager.upgradeImplementation(address(newImplementation));

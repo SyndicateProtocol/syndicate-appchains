@@ -2,11 +2,11 @@
 pragma solidity 0.8.25;
 
 import {Test} from "forge-std/Test.sol";
-import {ChainConfig, Initializable} from "src/config/ChainConfig.sol";
+import {ArbChainConfig, Initializable} from "src/config/ArbChainConfig.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
-contract ChainConfigTest is Test {
-    ChainConfig public chainConfig;
+contract ArbChainConfigTest is Test {
+    ArbChainConfig public chainConfig;
     address public owner = address(1);
     address public rollupOwner = address(2);
     address public newRollupOwner = address(3);
@@ -25,8 +25,8 @@ contract ChainConfigTest is Test {
 
     function setUp() public {
         vm.startPrank(owner);
-        // Create a new ChainConfig and initialize it
-        chainConfig = new ChainConfig();
+        // Create a new ArbChainConfig and initialize it
+        chainConfig = new ArbChainConfig();
         chainConfig.initialize(
             CHAIN_ID,
             TARGET_ROLLUP_TYPE,
@@ -65,7 +65,7 @@ contract ChainConfigTest is Test {
     function testConstructorRequirements() public {
         vm.startPrank(owner);
 
-        ChainConfig newConfig = new ChainConfig();
+        ArbChainConfig newConfig = new ArbChainConfig();
 
         // Test chain ID requirement
         vm.expectRevert("Chain ID cannot be zero");
@@ -85,7 +85,7 @@ contract ChainConfigTest is Test {
         );
 
         // Test Arbitrum bridge address requirement
-        newConfig = new ChainConfig();
+        newConfig = new ArbChainConfig();
         vm.expectRevert("Arbitrum bridge address cannot be zero");
         newConfig.initialize(
             CHAIN_ID,
@@ -103,7 +103,7 @@ contract ChainConfigTest is Test {
         );
 
         // Test Arbitrum inbox address requirement
-        newConfig = new ChainConfig();
+        newConfig = new ArbChainConfig();
         vm.expectRevert("Arbitrum inbox address cannot be zero");
         newConfig.initialize(
             CHAIN_ID,
@@ -121,7 +121,7 @@ contract ChainConfigTest is Test {
         );
 
         // Test sequencing contract address requirement
-        newConfig = new ChainConfig();
+        newConfig = new ArbChainConfig();
         vm.expectRevert("Sequencing contract address cannot be zero");
         newConfig.initialize(
             CHAIN_ID,
@@ -139,7 +139,7 @@ contract ChainConfigTest is Test {
         );
 
         // Test rollup owner requirement
-        newConfig = new ChainConfig();
+        newConfig = new ArbChainConfig();
         vm.expectRevert("Rollup owner cannot be zero address");
         newConfig.initialize(
             CHAIN_ID,
@@ -186,7 +186,7 @@ contract ChainConfigTest is Test {
         vm.startPrank(owner);
 
         vm.expectEmit(true, false, false, true);
-        emit ChainConfig.RollupOwnerUpdated(newRollupOwner);
+        emit ArbChainConfig.RollupOwnerUpdated(newRollupOwner);
 
         chainConfig.updateRollupOwner(newRollupOwner);
         assertEq(chainConfig.ROLLUP_OWNER(), newRollupOwner);
@@ -216,7 +216,7 @@ contract ChainConfigTest is Test {
         string memory newRpcUrl = "https://new-example.com/rpc";
 
         vm.expectEmit(true, false, false, true);
-        emit ChainConfig.DefaultSequencingChainRpcUrlUpdated(newRpcUrl);
+        emit ArbChainConfig.DefaultSequencingChainRpcUrlUpdated(newRpcUrl);
 
         chainConfig.updateDefaultSequencingChainRpcUrl(newRpcUrl);
         assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), newRpcUrl);
