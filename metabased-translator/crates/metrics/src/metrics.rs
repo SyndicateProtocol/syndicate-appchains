@@ -14,9 +14,10 @@ use prometheus_client::{encoding::text::encode, registry::Registry};
 use slotter::metrics::SlotterMetrics;
 use std::sync::Arc;
 use tokio::sync::RwLock;
+use tracing::error;
 
 /// Structure holding all metrics related to the translator.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TranslatorMetrics {
     /// Metrics for the sequencing ingestor
     pub ingestor_sequencing: IngestorMetrics,
@@ -79,7 +80,9 @@ pub async fn start_metrics(metrics_state: MetricsState, port: u16) -> tokio::tas
 
     tokio::spawn(async move {
         if let Err(e) = axum::serve(listener, router).await {
-            eprintln!("Metrics server error: {}", e);
+            error!("Metrics server error: {}", e);
+            std::process::exit(1); // stop the translator if the metrics server fails (this should
+                                   // never happen)
         }
     })
 }
