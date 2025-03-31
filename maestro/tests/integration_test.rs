@@ -24,8 +24,8 @@ mod tests {
         println!("Server started at {} (OS assigned port {})", &base_url, addr.port());
 
         // Give the server a moment to fully initialize
-        // TODO This should use wait_until! but it's not available because we don't have a shared
-        // utility crate
+        // TODO SEQ-576 - This should use wait_until! but it's not available because we don't have a
+        // shared utility crate
         sleep(Duration::from_millis(100)).await;
 
         (addr, handle, base_url)
