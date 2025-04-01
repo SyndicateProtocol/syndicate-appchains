@@ -23,6 +23,7 @@ metrics = { workspace = true }
 prometheus-client = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
+shared = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 test-utils = { workspace = true }

@@ -5,7 +5,7 @@
 
 use core::fmt;
 use thiserror::Error;
-use tracing::{Event, Level, Subscriber};
+use tracing::{Event, Subscriber};
 use tracing_subscriber::{
     fmt as subscriber_fmt,
     fmt::{
@@ -83,21 +83,6 @@ pub fn init_tracing_with_extra_fields(
         .try_init()
         .map_err(|e| TracingError::SubscriberInit(format!("{:?}", e)))?;
 
-    Ok(())
-}
-
-/// Initializes a tracing subscriber for testing purposes
-pub fn init_test_tracing(level: Level) -> Result<(), TracingError> {
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-        EnvFilter::new(format!(
-            "off,metabased_translator={level},ingestor={level},slotter={level},block_builder={level}" // off == suppress logs from non-specified crates
-        ))
-    });
-
-    subscriber_fmt()
-        .with_env_filter(env_filter)
-        .try_init()
-        .map_err(|e| TracingError::SubscriberInit(format!("{:?}", e)))?;
     Ok(())
 }
 

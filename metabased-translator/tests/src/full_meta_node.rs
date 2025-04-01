@@ -32,8 +32,8 @@ use eyre::{eyre, Result};
 use metabased_translator::{config::MetabasedConfig, spawn::run};
 use metrics::metrics::{MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
+use shared::test_utils::test_path;
 use std::{sync::Arc, time::Duration};
-use test_utils::test_path;
 use tokio::{
     process::{Child, Command},
     runtime::Handle,
