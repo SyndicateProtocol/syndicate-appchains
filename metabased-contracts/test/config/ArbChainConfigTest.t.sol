@@ -8,7 +8,7 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 contract ArbChainConfigTest is Test {
     ArbChainConfig public chainConfig;
     address public owner = address(1);
-    address public rollupOwner = address(2);
+    address public rollupOwner = owner;
     address public newRollupOwner = address(3);
 
     uint256 public constant CHAIN_ID = 123456;

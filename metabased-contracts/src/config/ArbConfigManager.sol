@@ -20,12 +20,12 @@ contract ArbConfigManager is Ownable {
     UpgradeableBeacon public immutable beacon;
 
     // Mapping of chainId to deployed ArbChainConfig proxy address
-    mapping(uint256 => address) public deployedConfigs;
+    mapping(uint256 chainId => address deployedProxyAddress) public deployedConfigs;
 
     /**
      * @dev Constructor to deploy the implementation contract and beacon
      */
-    constructor() Ownable(msg.sender) {
+    constructor(address _owner) Ownable(_owner) {
         // Deploy the implementation contract
         // No need to pass constructor arguments as they'll be handled by initialize()
         address implementation = address(new ArbChainConfig());
@@ -36,10 +36,32 @@ contract ArbConfigManager is Ownable {
 
     /**
      * @dev Create a new ArbChainConfig contract for a specific chainId
-     * @param chainId The chain ID for which to create a config
+     * @param chainId The chain ID
+     * @param mineEmptyBlocks Whether to mine empty blocks
+     * @param arbitrumBridgeAddress Address of the Arbitrum bridge
+     * @param arbitrumInboxAddress Address of the Arbitrum inbox
+     * @param arbitrumIgnoreDelayedMessages Whether to ignore delayed messages
+     * @param settlementDelay Delay for settlement
+     * @param settlementStartBlock Starting block for settlement
+     * @param sequencingContractAddress Address of the sequencing contract
+     * @param sequencingStartBlock Starting block for sequencing
+     * @param rollupOwner Initial rollup owner
+     * @param sequencingChainRpcUrl Default RPC URL for the sequencing chain
      * @return address The address of the deployed ArbChainConfig contract
      */
-    function createArbChainConfig(uint256 chainId) external onlyOwner returns (address) {
+    function createArbChainConfig(
+        uint256 chainId,
+        bool mineEmptyBlocks,
+        address arbitrumBridgeAddress,
+        address arbitrumInboxAddress,
+        bool arbitrumIgnoreDelayedMessages,
+        uint256 settlementDelay,
+        uint256 settlementStartBlock,
+        address sequencingContractAddress,
+        uint256 sequencingStartBlock,
+        address rollupOwner,
+        string memory sequencingChainRpcUrl
+    ) external onlyOwner returns (address) {
         require(chainId != 0, "Chain ID cannot be zero");
         require(deployedConfigs[chainId] == address(0), "Config already exists for this chain ID");
 
@@ -48,11 +70,25 @@ contract ArbConfigManager is Ownable {
 
         // Deploy a beacon proxy using CREATE2
         // The BeaconProxy constructor expects only the beacon address and initialization data
-        // The initialization data needs to be the encoded constructor arguments for the implementation
         BeaconProxy proxy = new BeaconProxy{salt: salt}(address(beacon), "");
 
         address proxyAddress = address(proxy);
         deployedConfigs[chainId] = proxyAddress;
+
+        // Initialize the proxy contract
+        ArbChainConfig(proxyAddress).initialize(
+            chainId,
+            mineEmptyBlocks,
+            arbitrumBridgeAddress,
+            arbitrumInboxAddress,
+            arbitrumIgnoreDelayedMessages,
+            settlementDelay,
+            settlementStartBlock,
+            sequencingContractAddress,
+            sequencingStartBlock,
+            rollupOwner,
+            sequencingChainRpcUrl
+        );
 
         emit ArbChainConfigCreated(chainId, proxyAddress);
 
@@ -76,8 +112,7 @@ contract ArbConfigManager is Ownable {
         // Calculate the salt from the chainId
         bytes32 salt = keccak256(abi.encodePacked(chainId));
 
-        // Generate the bytecode for BeaconProxy with constructor args
-        bytes memory constructorArgs = abi.encode(address(beacon));
+        // Generate the bytecode for BeaconProxy
         bytes memory bytecode = abi.encodePacked(type(BeaconProxy).creationCode);
 
         // Calculate CREATE2 address

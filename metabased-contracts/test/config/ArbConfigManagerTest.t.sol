@@ -26,7 +26,7 @@ contract ArbConfigManagerTest is Test {
 
     function setUp() public {
         vm.startPrank(owner);
-        configManager = new ArbConfigManager();
+        configManager = new ArbConfigManager(owner);
         vm.stopPrank();
     }
 
@@ -53,7 +53,19 @@ contract ArbConfigManagerTest is Test {
         vm.startPrank(owner);
 
         // Deploy the config without expecting event
-        address deployedAddress = configManager.createArbChainConfig(CHAIN_ID);
+        address deployedAddress = configManager.createArbChainConfig(
+            CHAIN_ID,
+            MINE_EMPTY_BLOCKS,
+            ARBITRUM_BRIDGE_ADDRESS,
+            ARBITRUM_INBOX_ADDRESS,
+            ARBITRUM_IGNORE_DELAYED_MESSAGES,
+            SETTLEMENT_DELAY,
+            SETTLEMENT_START_BLOCK,
+            SEQUENCING_CONTRACT_ADDRESS,
+            SEQUENCING_START_BLOCK,
+            rollupOwner,
+            DEFAULT_RPC_URL
+        );
 
         // Verify the deployed address is stored correctly
         assertEq(configManager.deployedConfigs(CHAIN_ID), deployedAddress);
@@ -69,20 +81,6 @@ contract ArbConfigManagerTest is Test {
         // We need to cast address to ArbChainConfig to access its interface
         ArbChainConfig chainConfig = ArbChainConfig(deployedAddress);
 
-        // initialize the ArbChainConfig with the expected values
-        chainConfig.initialize(
-            CHAIN_ID,
-            MINE_EMPTY_BLOCKS,
-            ARBITRUM_BRIDGE_ADDRESS,
-            ARBITRUM_INBOX_ADDRESS,
-            ARBITRUM_IGNORE_DELAYED_MESSAGES,
-            SETTLEMENT_DELAY,
-            SETTLEMENT_START_BLOCK,
-            SEQUENCING_CONTRACT_ADDRESS,
-            SEQUENCING_START_BLOCK,
-            rollupOwner,
-            DEFAULT_RPC_URL
-        );
         // Verify the values
         assertEq(chainConfig.CHAIN_ID(), CHAIN_ID);
         assertEq(chainConfig.MINE_EMPTY_BLOCKS(), MINE_EMPTY_BLOCKS);
@@ -103,11 +101,35 @@ contract ArbConfigManagerTest is Test {
         vm.startPrank(owner);
 
         // Deploy the first config
-        configManager.createArbChainConfig(CHAIN_ID);
+        configManager.createArbChainConfig(
+            CHAIN_ID,
+            MINE_EMPTY_BLOCKS,
+            ARBITRUM_BRIDGE_ADDRESS,
+            ARBITRUM_INBOX_ADDRESS,
+            ARBITRUM_IGNORE_DELAYED_MESSAGES,
+            SETTLEMENT_DELAY,
+            SETTLEMENT_START_BLOCK,
+            SEQUENCING_CONTRACT_ADDRESS,
+            SEQUENCING_START_BLOCK,
+            rollupOwner,
+            DEFAULT_RPC_URL
+        );
 
         // Attempt to deploy a duplicate config
         vm.expectRevert("Config already exists for this chain ID");
-        configManager.createArbChainConfig(CHAIN_ID);
+        configManager.createArbChainConfig(
+            CHAIN_ID,
+            MINE_EMPTY_BLOCKS,
+            ARBITRUM_BRIDGE_ADDRESS,
+            ARBITRUM_INBOX_ADDRESS,
+            ARBITRUM_IGNORE_DELAYED_MESSAGES,
+            SETTLEMENT_DELAY,
+            SETTLEMENT_START_BLOCK,
+            SEQUENCING_CONTRACT_ADDRESS,
+            SEQUENCING_START_BLOCK,
+            rollupOwner,
+            DEFAULT_RPC_URL
+        );
 
         vm.stopPrank();
     }
@@ -117,7 +139,17 @@ contract ArbConfigManagerTest is Test {
 
         vm.expectRevert("Chain ID cannot be zero");
         configManager.createArbChainConfig(
-            0 // Zero chain ID
+            0, // Zero chain ID
+            MINE_EMPTY_BLOCKS,
+            ARBITRUM_BRIDGE_ADDRESS,
+            ARBITRUM_INBOX_ADDRESS,
+            ARBITRUM_IGNORE_DELAYED_MESSAGES,
+            SETTLEMENT_DELAY,
+            SETTLEMENT_START_BLOCK,
+            SEQUENCING_CONTRACT_ADDRESS,
+            SEQUENCING_START_BLOCK,
+            rollupOwner,
+            DEFAULT_RPC_URL
         );
 
         vm.stopPrank();
@@ -127,19 +159,68 @@ contract ArbConfigManagerTest is Test {
         vm.prank(address(999)); // Non-owner address
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(999)));
-        configManager.createArbChainConfig(CHAIN_ID);
+        configManager.createArbChainConfig(
+            CHAIN_ID,
+            MINE_EMPTY_BLOCKS,
+            ARBITRUM_BRIDGE_ADDRESS,
+            ARBITRUM_INBOX_ADDRESS,
+            ARBITRUM_IGNORE_DELAYED_MESSAGES,
+            SETTLEMENT_DELAY,
+            SETTLEMENT_START_BLOCK,
+            SEQUENCING_CONTRACT_ADDRESS,
+            SEQUENCING_START_BLOCK,
+            rollupOwner,
+            DEFAULT_RPC_URL
+        );
     }
 
     function testGetArbChainConfigAddress() public {
         // Deploy the config first
         vm.prank(owner);
-        address deployedAddress = configManager.createArbChainConfig(CHAIN_ID);
+        address deployedAddress = configManager.createArbChainConfig(
+            CHAIN_ID,
+            MINE_EMPTY_BLOCKS,
+            ARBITRUM_BRIDGE_ADDRESS,
+            ARBITRUM_INBOX_ADDRESS,
+            ARBITRUM_IGNORE_DELAYED_MESSAGES,
+            SETTLEMENT_DELAY,
+            SETTLEMENT_START_BLOCK,
+            SEQUENCING_CONTRACT_ADDRESS,
+            SEQUENCING_START_BLOCK,
+            rollupOwner,
+            DEFAULT_RPC_URL
+        );
 
         // Now that it's deployed, the getArbChainConfigAddress should return the deployed address
         address returnedAddress = configManager.getArbChainConfigAddress(CHAIN_ID);
 
         // Verify getArbChainConfigAddress returns the deployed address
         assertEq(returnedAddress, deployedAddress);
+    }
+
+    function testRollupWnerIsArbConfigChainOwner() public {
+        // Deploy the config first
+        vm.prank(owner);
+        address deployedAddress = configManager.createArbChainConfig(
+            CHAIN_ID,
+            MINE_EMPTY_BLOCKS,
+            ARBITRUM_BRIDGE_ADDRESS,
+            ARBITRUM_INBOX_ADDRESS,
+            ARBITRUM_IGNORE_DELAYED_MESSAGES,
+            SETTLEMENT_DELAY,
+            SETTLEMENT_START_BLOCK,
+            SEQUENCING_CONTRACT_ADDRESS,
+            SEQUENCING_START_BLOCK,
+            rollupOwner,
+            DEFAULT_RPC_URL
+        );
+
+        // Now that it's deployed, the getArbChainConfigAddress should return the deployed address
+        ArbChainConfig chainConfig = ArbChainConfig(deployedAddress);
+
+        // Verify the rollup owner is set correctly
+        assertEq(chainConfig.ROLLUP_OWNER(), rollupOwner);
+        assertEq(chainConfig.owner(), rollupOwner);
     }
 
     function testGetArbChainConfigAddressRevertOnZeroChainId() public {
@@ -151,7 +232,19 @@ contract ArbConfigManagerTest is Test {
         vm.startPrank(owner);
 
         // Deploy a config first
-        address deployedAddress = configManager.createArbChainConfig(CHAIN_ID);
+        address deployedAddress = configManager.createArbChainConfig(
+            CHAIN_ID,
+            MINE_EMPTY_BLOCKS,
+            ARBITRUM_BRIDGE_ADDRESS,
+            ARBITRUM_INBOX_ADDRESS,
+            ARBITRUM_IGNORE_DELAYED_MESSAGES,
+            SETTLEMENT_DELAY,
+            SETTLEMENT_START_BLOCK,
+            SEQUENCING_CONTRACT_ADDRESS,
+            SEQUENCING_START_BLOCK,
+            rollupOwner,
+            DEFAULT_RPC_URL
+        );
 
         // Get the current implementation
         address currentImpl = IBeacon(address(configManager.beacon())).implementation();
@@ -170,6 +263,7 @@ contract ArbConfigManagerTest is Test {
 
         // Check that the existing proxy still works and has the same data
         ArbChainConfig proxyConfig = ArbChainConfig(deployedAddress);
+        assertEq(proxyConfig.CHAIN_ID(), CHAIN_ID);
 
         vm.stopPrank();
     }
@@ -194,18 +288,8 @@ contract ArbConfigManagerTest is Test {
         vm.stopPrank();
     }
 
-    function testMultipleConfigsShareImplementation() public {
+    function testChangeImplementation() public {
         vm.startPrank(owner);
-
-        // Deploy two configs with different chain IDs
-        uint256 secondChainId = 789012;
-
-        address firstConfig = configManager.createArbChainConfig(CHAIN_ID);
-
-        address secondConfig = configManager.createArbChainConfig(secondChainId);
-
-        ArbChainConfig firstProxyConfig = ArbChainConfig(firstConfig);
-        ArbChainConfig secondProxyConfig = ArbChainConfig(secondConfig);
 
         // Get the current implementation
         address currentImpl = IBeacon(address(configManager.beacon())).implementation();

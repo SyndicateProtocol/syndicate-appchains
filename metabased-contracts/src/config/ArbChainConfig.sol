@@ -60,6 +60,7 @@ contract ArbChainConfig is Initializable, Ownable {
         address rollupOwner,
         string memory sequencingChainRpcUrl
     ) public initializer {
+        // Set the configuration parameters
         require(chainId != 0, "Chain ID cannot be zero");
         require(arbitrumBridgeAddress != address(0), "Arbitrum bridge address cannot be zero");
         require(arbitrumInboxAddress != address(0), "Arbitrum inbox address cannot be zero");
@@ -80,7 +81,7 @@ contract ArbChainConfig is Initializable, Ownable {
         DEFAULT_SEQUENCING_CHAIN_RPC_URL = sequencingChainRpcUrl;
 
         // Initialize the Ownable contract
-        _transferOwnership(msg.sender);
+        _transferOwnership(rollupOwner);
     }
 
     /**
