@@ -100,13 +100,15 @@ impl TCClient {
             .send()
             .await
             .map_err(|e| {
-                error!("Failed to send transaction to TC: {}", e);
-                Error::Internal
+                let error_msg = format!("Failed to send transaction to TC: {}", e);
+                error!(error_msg);
+                Error::Internal(error_msg)
             })?;
 
         if !response.status().is_success() {
-            error!("Failed to send transaction to TC: {}", response.status());
-            return Err(Error::Internal);
+            let error_msg = format!("Failed to send transaction to TC: {}", response.status());
+            error!(error_msg);
+            return Err(Error::Internal(error_msg));
         }
 
         Ok(())

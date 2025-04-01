@@ -2,7 +2,7 @@
 
 use crate::json_rpc::{
     Error::InvalidParams,
-    InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount},
+    InvalidParamsError::{InvalidHex, MissingParam, NotAnArray, NotHexEncoded, WrongParamCount},
 };
 use alloy::{
     contract, hex,
@@ -27,8 +27,8 @@ pub enum Error {
     #[error("invalid params: {0}")]
     InvalidParams(InvalidParamsError),
     /// Internal JSON-RPC error
-    #[error("internal error")]
-    Internal,
+    #[error("internal error: {0}")]
+    Internal(String),
     /// Invalid JSON was received by the server
     #[error("parse error")]
     Parse,
@@ -75,9 +75,11 @@ impl Error {
                 format!("invalid params: {}", m),
                 None::<()>,
             ),
-            Self::Internal => {
-                ErrorObject::owned(error::INTERNAL_ERROR_CODE, "internal error", None::<()>)
-            }
+            Self::Internal(m) => ErrorObject::owned(
+                error::INTERNAL_ERROR_CODE,
+                format!("internal error: {}", m),
+                None::<()>,
+            ),
             Self::Parse => ErrorObject::owned(error::PARSE_ERROR_CODE, "parse error", None::<()>),
             Self::InvalidInput(m) => ErrorObject::owned(
                 error::CALL_EXECUTION_FAILED_CODE,
@@ -201,6 +203,9 @@ pub enum InvalidInputError {
     /// Chain ID is missing
     #[error("missing chain ID")]
     MissingChainID,
+    /// Transaction too large
+    #[error("transaction too large: limit {0} - got {1}")]
+    TransactionTooLarge(String, String),
 }
 
 impl From<serde_json::Error> for Error {
@@ -211,7 +216,7 @@ impl From<serde_json::Error> for Error {
 
 impl From<hex::FromHexError> for Error {
     fn from(_: hex::FromHexError) -> Self {
-        Self::InvalidParams(InvalidParamsError::InvalidHex)
+        InvalidParams(InvalidHex)
     }
 }
 
