@@ -251,7 +251,44 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
     false
 }
 
-// TODO try to re-use the exponential backoff logic duplicated in these 2 functions
+async fn fetch_with_retry<T, F, Fut, P>(
+    operation: F,
+    context: String,
+    chain: Chain,
+    backoff_initial_interval: u64,
+    backoff_scaling_factor: u64,
+    is_not_found_error: P,
+) -> Result<T, Error>
+where
+    F: Fn() -> Fut,
+    Fut: std::future::Future<Output = Result<T, common::eth_client::RPCClientError>>,
+    P: Fn(&common::eth_client::RPCClientError) -> bool,
+{
+    let mut retry_count = 0;
+    let mut backoff_ms = backoff_initial_interval;
+
+    loop {
+        match operation().await {
+            Ok(response) => {
+                trace!("Successfully {} on {:?} chain", context, chain);
+                return Ok(response);
+            }
+            Err(err) => {
+                if is_not_found_error(&err) {
+                    trace!("{} not yet available on {:?} chain", context, chain);
+                    return Err(eyre!("{} not yet available", context));
+                }
+                retry_count += 1;
+                error!(
+                    "Failed to {} on {:?} chain: {} retry_count: {}",
+                    context, chain, err, retry_count
+                );
+                tokio::time::sleep(Duration::from_millis(backoff_ms)).await;
+                backoff_ms *= backoff_scaling_factor;
+            }
+        }
+    }
+}
 
 async fn fetch_block_with_retry(
     client: &dyn RPCClient,
@@ -260,35 +297,17 @@ async fn fetch_block_with_retry(
     backoff_initial_interval: u64,
     backoff_scaling_factor: u64,
 ) -> Result<Block, Error> {
-    let mut retry_count = 0;
-    let mut backoff_ms = backoff_initial_interval;
     let context = format!("fetched block #{}", b);
 
-    loop {
-        match client.get_block_by_number(b).await {
-            Ok(response) => {
-                trace!("Successfully {} on {:?} chain", context, chain);
-                return Ok(response);
-            }
-            Err(err) => {
-                match err {
-                    common::eth_client::RPCClientError::BlockNotFound(_) => {
-                        trace!("Block {} not yet available on {:?} chain", b, chain);
-                        return Err(eyre!("Block {} not yet available", b));
-                    }
-                    _ => {
-                        retry_count += 1;
-                        error!(
-                            "Failed to get block {} on {:?} chain: {} retry_count: {}",
-                            b, chain, err, retry_count
-                        );
-                        tokio::time::sleep(Duration::from_millis(backoff_ms)).await;
-                        backoff_ms *= backoff_scaling_factor; // Exponential backoff
-                    }
-                }
-            }
-        }
-    }
+    fetch_with_retry(
+        || client.get_block_by_number(b),
+        context,
+        chain,
+        backoff_initial_interval,
+        backoff_scaling_factor,
+        |err| matches!(err, common::eth_client::RPCClientError::BlockNotFound(_)),
+    )
+    .await
 }
 
 async fn fetch_receipts_with_retry(
@@ -298,36 +317,18 @@ async fn fetch_receipts_with_retry(
     backoff_initial_interval: u64,
     backoff_scaling_factor: u64,
 ) -> Result<Vec<Receipt>, Error> {
-    let mut retry_count = 0;
-    let mut backoff_ms = backoff_initial_interval;
     let context = format!("fetched block #{}", block_number);
     let block_number_hex = format!("0x{:x}", block_number);
 
-    loop {
-        match client.get_block_receipts(&block_number_hex).await {
-            Ok(response) => {
-                trace!("Successfully {} on {:?} chain", context, chain);
-                return Ok(response);
-            }
-            Err(err) => {
-                match err {
-                    common::eth_client::RPCClientError::BlockReceiptsNotFound(_) => {
-                        trace!("Block {} not yet available on {:?} chain", block_number, chain);
-                        return Err(eyre!("Block {} not yet available", block_number));
-                    }
-                    _ => {
-                        retry_count += 1;
-                        error!(
-                            "Failed to get receipts for block {} on {:?} chain: {} retry_count: {}",
-                            block_number, chain, err, retry_count
-                        );
-                        tokio::time::sleep(Duration::from_millis(backoff_ms)).await;
-                        backoff_ms *= backoff_scaling_factor; // Exponential backoff
-                    }
-                }
-            }
-        }
-    }
+    fetch_with_retry(
+        || client.get_block_receipts(&block_number_hex),
+        context,
+        chain,
+        backoff_initial_interval,
+        backoff_scaling_factor,
+        |err| matches!(err, common::eth_client::RPCClientError::BlockReceiptsNotFound(_)),
+    )
+    .await
 }
 
 #[cfg(test)]
