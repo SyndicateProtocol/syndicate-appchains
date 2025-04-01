@@ -22,22 +22,22 @@ pub mod RLPReader {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220e5dedb8e60eb64a4fc5c0de0e37e3ddd24a0e7a7c0ad7ebd6f4374a4abc3731564736f6c63430008190033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea26469706673582212207fc51210e090ac6c2798fd19f4a38a08981954112d76ee611159ee153a31290064736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xE5\xDE\xDB\x8E`\xEBd\xA4\xFC\\\r\xE0\xE3~=\xDD$\xA0\xE7\xA7\xC0\xAD~\xBDoCt\xA4\xAB\xC3s\x15dsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x7F\xC5\x12\x10\xE0\x90\xACl'\x98\xFD\x19\xF4\xA3\x8A\x08\x98\x19T\x11-v\xEEa\x11Y\xEE\x15:1)\0dsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x5f80fdfea2646970667358221220e5dedb8e60eb64a4fc5c0de0e37e3ddd24a0e7a7c0ad7ebd6f4374a4abc3731564736f6c63430008190033
+    ///0x60806040525f80fdfea26469706673582212207fc51210e090ac6c2798fd19f4a38a08981954112d76ee611159ee153a31290064736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xE5\xDE\xDB\x8E`\xEBd\xA4\xFC\\\r\xE0\xE3~=\xDD$\xA0\xE7\xA7\xC0\xAD~\xBDoCt\xA4\xAB\xC3s\x15dsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x7F\xC5\x12\x10\xE0\x90\xACl'\x98\xFD\x19\xF4\xA3\x8A\x08\x98\x19T\x11-v\xEEa\x11Y\xEE\x15:1)\0dsolcC\0\x08\x19\x003",
     );
     use alloy::contract as alloy_contract;
     /**Creates a new wrapper around an on-chain [`RLPReader`](self) contract instance.
