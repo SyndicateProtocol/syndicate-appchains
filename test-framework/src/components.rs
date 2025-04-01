@@ -74,16 +74,16 @@ const PRELOAD_INBOX_ADDRESS_300: Address = address!("0x26eE2349212255614edCc046D
 const PRELOAD_BRIDGE_ADDRESS_300: Address = address!("0xa0e810a42086da4Ebc5C49fEd626cA6A75B06437");
 const PRELOAD_POSTER_ADDRESS_300: Address = address!("0x67d269191c92Caf3cD7723F116c85e6E9bf55933");
 
-const PRELOAD_INBOX_ADDRESS_271: Address = address!("0x7e2d5FCC5E02cBF2b9f860052C0226104E23F9c7");
-const PRELOAD_BRIDGE_ADDRESS_271: Address = address!("0x8dAF17A20c9DBA35f005b6324F493785D239719d");
-const PRELOAD_POSTER_ADDRESS_271: Address = address!("0x09635F643e140090A9A8Dcd712eD6285858ceBef");
+const PRELOAD_INBOX_ADDRESS_231: Address = address!("0x7e2d5FCC5E02cBF2b9f860052C0226104E23F9c7");
+const PRELOAD_BRIDGE_ADDRESS_231: Address = address!("0x8dAF17A20c9DBA35f005b6324F493785D239719d");
+const PRELOAD_POSTER_ADDRESS_231: Address = address!("0x09635F643e140090A9A8Dcd712eD6285858ceBef");
 
 const DEFAULT_PRIVATE_KEY_SIGNER: &str =
     "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // address = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
+pub const APPCHAIN_OWNER: Address = address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
 
 const MCHAIN_ID: u64 = 84532;
 const APPCHAIN_CHAIN_ID: u64 = 13331370;
-pub const APPCHAIN_OWNER: Address = address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
 
 #[derive(Debug)]
 pub struct Docker(Child);
@@ -542,19 +542,19 @@ impl Components {
         translator_config.arbitrum_bridge_address =
             pre_loaded.as_ref().map_or_else(get_rollup_contract_address, |version| match version {
                 ContractVersion::V300 => PRELOAD_BRIDGE_ADDRESS_300,
-                ContractVersion::V213 => PRELOAD_BRIDGE_ADDRESS_271,
+                ContractVersion::V213 => PRELOAD_BRIDGE_ADDRESS_231,
             });
         translator_config.arbitrum_inbox_address =
             pre_loaded.as_ref().map_or_else(get_rollup_contract_address, |version| match version {
                 ContractVersion::V300 => PRELOAD_INBOX_ADDRESS_300,
-                ContractVersion::V213 => PRELOAD_INBOX_ADDRESS_271,
+                ContractVersion::V213 => PRELOAD_INBOX_ADDRESS_231,
             });
 
         poster_config.assertion_poster_contract_address = pre_loaded.as_ref().map_or_else(
             || Address::ZERO,
             |version| match version {
                 ContractVersion::V300 => PRELOAD_POSTER_ADDRESS_300,
-                ContractVersion::V213 => PRELOAD_POSTER_ADDRESS_271,
+                ContractVersion::V213 => PRELOAD_POSTER_ADDRESS_231,
             },
         );
 
