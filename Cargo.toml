@@ -11,8 +11,8 @@ members = [
     "metabased-translator/crates/metrics",
     "metabased-translator/crates/slotter",
     "metabased-translator/tests",
+    "shared",
     "tc-sequencer",
-    "shared"
 ]
 
 # Explicitly set the resolver to version 2, which is the default for packages with edition >= 2021
@@ -40,7 +40,6 @@ slotter              = { path = "metabased-translator/crates/slotter" }
 test-utils           = { path = "metabased-translator/crates/test-utils" }
 
 alloy              = { version = "0.13.0" }
-alloy-json-rpc     = { version = "0.13.0" }
 alloy-primitives   = "0.8.22"
 alloy-rlp          = "0.3.11"
 assert_matches     = "1.5.0"
@@ -55,7 +54,6 @@ derivative         = "2.2"
 eyre               = { version = "0.6.12" }
 figment            = { version = "0.10.19" }
 flate2             = { version = "1.0.35" }
-futures            = "0.3.31"
 futures-util       = "0.3.31"
 hex                = "0.4.3"
 http               = "1.2.0"
