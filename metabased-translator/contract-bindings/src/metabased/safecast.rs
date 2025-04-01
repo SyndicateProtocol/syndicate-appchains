@@ -99,7 +99,6 @@ pub mod SafeCast {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 I\xCA\x1C\x86)\x95\xCF\x14\xA8\x1A\x8B1`b\x9Ao\x81*\x05\x9D\x84\xAB\xEAW\x15I\xA4\x17'\x89\x8D\x14dsolcC\0\x08\x19\x003",
     );
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `SafeCastOverflowedIntDowncast(uint8,int256)` and selector `0x327269a7`.
 ```solidity
 error SafeCastOverflowedIntDowncast(uint8 bits, int256 value);
@@ -187,7 +186,6 @@ error SafeCastOverflowedIntDowncast(uint8 bits, int256 value);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `SafeCastOverflowedIntToUint(int256)` and selector `0xa8ce4432`.
 ```solidity
 error SafeCastOverflowedIntToUint(int256 value);
@@ -263,7 +261,6 @@ error SafeCastOverflowedIntToUint(int256 value);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `SafeCastOverflowedUintDowncast(uint8,uint256)` and selector `0x6dfcc650`.
 ```solidity
 error SafeCastOverflowedUintDowncast(uint8 bits, uint256 value);
@@ -351,7 +348,6 @@ error SafeCastOverflowedUintDowncast(uint8 bits, uint256 value);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `SafeCastOverflowedUintToInt(uint256)` and selector `0x24775e06`.
 ```solidity
 error SafeCastOverflowedUintToInt(uint256 value);
@@ -428,7 +424,6 @@ error SafeCastOverflowedUintToInt(uint256 value);
         }
     };
     ///Container for all the [`SafeCast`](self) custom errors.
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SafeCastErrors {
         #[allow(missing_docs)]
         SafeCastOverflowedIntDowncast(SafeCastOverflowedIntDowncast),

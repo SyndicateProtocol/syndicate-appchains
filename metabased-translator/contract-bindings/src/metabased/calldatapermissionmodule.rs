@@ -61,7 +61,6 @@ pub mod CalldataPermissionModule {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isCalldataAllowed(bytes)` and selector `0x3dfb5ee7`.
 ```solidity
 function isCalldataAllowed(bytes memory data) external view returns (bool);
@@ -72,7 +71,6 @@ function isCalldataAllowed(bytes memory data) external view returns (bool);
         #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isCalldataAllowed(bytes)`](isCalldataAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -194,7 +192,6 @@ function isCalldataAllowed(bytes memory data) external view returns (bool);
         }
     };
     ///Container for all the [`CalldataPermissionModule`](self) function calls.
-    #[derive()]
     pub enum CalldataPermissionModuleCalls {
         #[allow(missing_docs)]
         isCalldataAllowed(isCalldataAllowedCall),

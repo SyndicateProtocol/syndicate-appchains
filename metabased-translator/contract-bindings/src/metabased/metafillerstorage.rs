@@ -427,7 +427,6 @@ pub mod MetafillerStorage {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R`\x046\x10\x15a\0\x13W[a\x08\x1DV[a\0\x1D_5a\0\xECV[\x80c\x01\xFF\xC9\xA7\x14a\0\xE7W\x80c\x04\x84 \xA7\x14a\0\xE2W\x80c\x0F\xFD\x13\x80\x14a\0\xDDW\x80c$\x8A\x9C\xA3\x14a\0\xD8W\x80c//\xF1]\x14a\0\xD3W\x80c6V\x8A\xBE\x14a\0\xCEW\x80cw\xBF\xDD\x19\x14a\0\xC9W\x80c\x91\xD1HT\x14a\0\xC4W\x80c\xA2\x17\xFD\xDF\x14a\0\xBFW\x80c\xB1\xD0`E\x14a\0\xBAW\x80c\xCC\xE5\xD2\xF6\x14a\0\xB5W\x80c\xD5Gt\x1F\x14a\0\xB0Wc\xEC\x87b\x1C\x03a\0\x0EWa\x07\xE8V[a\x07\x85V[a\x07PV[a\x06\xDDV[a\x06\x17V[a\x05\xA6V[a\x05qV[a\x04\xE8V[a\x04\xB4V[a\x04\x18V[a\x03\x7FV[a\x03\x01V[a\x01xV[`\xE0\x1C\x90V[`@Q\x90V[_\x80\xFD[_\x80\xFD[_\x80\xFD[c\xFF\xFF\xFF\xFF`\xE0\x1B\x16\x90V[a\x01\x19\x81a\x01\x04V[\x03a\x01 WV[_\x80\xFD[\x90P5\x90a\x011\x82a\x01\x10V[V[\x90` \x82\x82\x03\x12a\x01LWa\x01I\x91_\x01a\x01$V[\x90V[a\0\xFCV[\x15\x15\x90V[a\x01_\x90a\x01QV[\x90RV[\x91\x90a\x01v\x90_` \x85\x01\x94\x01\x90a\x01VV[V[4a\x01\xA8Wa\x01\xA4a\x01\x93a\x01\x8E6`\x04a\x013V[a\x08%V[a\x01\x9Ba\0\xF2V[\x91\x82\x91\x82a\x01cV[\x03\x90\xF3[a\0\xF8V[_\x80\xFD[_\x80\xFD[_\x80\xFD[\x90\x91\x82`\x1F\x83\x01\x12\x15a\x01\xF3W\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x01\xEEW` \x01\x92` \x83\x02\x84\x01\x11a\x01\xE9WV[a\x01\xB5V[a\x01\xB1V[a\x01\xADV[\x90\x91\x82`\x1F\x83\x01\x12\x15a\x022W\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x02-W` \x01\x92` \x83\x02\x84\x01\x11a\x02(WV[a\x01\xB5V[a\x01\xB1V[a\x01\xADV[\x90\x91\x82`\x1F\x83\x01\x12\x15a\x02qW\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x02lW` \x01\x92` \x83\x02\x84\x01\x11a\x02gWV[a\x01\xB5V[a\x01\xB1V[a\x01\xADV[\x90``\x82\x82\x03\x12a\x02\xF7W_\x82\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x02\xF2W\x81a\x02\xA0\x91\x84\x01a\x01\xB9V[\x92\x90\x93` \x82\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x02\xEDW\x83a\x02\xC3\x91\x84\x01a\x01\xF8V[\x92\x90\x93`@\x82\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x02\xE8Wa\x02\xE4\x92\x01a\x027V[\x90\x91V[a\x01\0V[a\x01\0V[a\x01\0V[a\0\xFCV[_\x01\x90V[4a\x036Wa\x03 a\x03\x146`\x04a\x02vV[\x94\x93\x90\x93\x92\x91\x92a\n\xF1V[a\x03(a\0\xF2V[\x80a\x032\x81a\x02\xFCV[\x03\x90\xF3[a\0\xF8V[\x90V[a\x03G\x81a\x03;V[\x03a\x03NWV[_\x80\xFD[\x90P5\x90a\x03_\x82a\x03>V[V[\x90` \x82\x82\x03\x12a\x03zWa\x03w\x91_\x01a\x03RV[\x90V[a\0\xFCV[4a\x03\xADWa\x03\x97a\x03\x926`\x04a\x03aV[a\x0BbV[a\x03\x9Fa\0\xF2V[\x80a\x03\xA9\x81a\x02\xFCV[\x03\x90\xF3[a\0\xF8V[\x90V[a\x03\xBE\x81a\x03\xB2V[\x03a\x03\xC5WV[_\x80\xFD[\x90P5\x90a\x03\xD6\x82a\x03\xB5V[V[\x90` \x82\x82\x03\x12a\x03\xF1Wa\x03\xEE\x91_\x01a\x03\xC9V[\x90V[a\0\xFCV[a\x03\xFF\x90a\x03\xB2V[\x90RV[\x91\x90a\x04\x16\x90_` \x85\x01\x94\x01\x90a\x03\xF6V[V[4a\x04HWa\x04Da\x043a\x04.6`\x04a\x03\xD8V[a\x0B\xBCV[a\x04;a\0\xF2V[\x91\x82\x91\x82a\x04\x03V[\x03\x90\xF3[a\0\xF8V[`\x01\x80`\xA0\x1B\x03\x16\x90V[a\x04a\x90a\x04MV[\x90V[a\x04m\x81a\x04XV[\x03a\x04tWV[_\x80\xFD[\x90P5\x90a\x04\x85\x82a\x04dV[V[\x91\x90`@\x83\x82\x03\x12a\x04\xAFW\x80a\x04\xA3a\x04\xAC\x92_\x86\x01a\x03\xC9V[\x93` \x01a\x04xV[\x90V[a\0\xFCV[4a\x04\xE3Wa\x04\xCDa\x04\xC76`\x04a\x04\x87V[\x90a\x0C\x07V[a\x04\xD5a\0\xF2V[\x80a\x04\xDF\x81a\x02\xFCV[\x03\x90\xF3[a\0\xF8V[4a\x05\x17Wa\x05\x01a\x04\xFB6`\x04a\x04\x87V[\x90a\x0C\x13V[a\x05\ta\0\xF2V[\x80a\x05\x13\x81a\x02\xFCV[\x03\x90\xF3[a\0\xF8V[_\x91\x03\x12a\x05&WV[a\0\xFCV[\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x90V[a\x05X\x90a\x03;V[\x90RV[\x91\x90a\x05o\x90_` \x85\x01\x94\x01\x90a\x05OV[V[4a\x05\xA1Wa\x05\x816`\x04a\x05\x1CV[a\x05\x9Da\x05\x8Ca\x05+V[a\x05\x94a\0\xF2V[\x91\x82\x91\x82a\x05\\V[\x03\x90\xF3[a\0\xF8V[4a\x05\xD7Wa\x05\xD3a\x05\xC2a\x05\xBC6`\x04a\x04\x87V[\x90a\x0C\xD3V[a\x05\xCAa\0\xF2V[\x91\x82\x91\x82a\x01cV[\x03\x90\xF3[a\0\xF8V[\x90V[_\x1B\x90V[a\x05\xF8a\x05\xF3a\x05\xFD\x92a\x05\xDCV[a\x05\xDFV[a\x03\xB2V[\x90V[a\x06\t_a\x05\xE4V[\x90V[a\x06\x14a\x06\0V[\x90V[4a\x06GWa\x06'6`\x04a\x05\x1CV[a\x06Ca\x062a\x06\x0CV[a\x06:a\0\xF2V[\x91\x82\x91\x82a\x04\x03V[\x03\x90\xF3[a\0\xF8V[\x90\x91\x82`\x1F\x83\x01\x12\x15a\x06\x86W\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x06\x81W` \x01\x92`\x01\x83\x02\x84\x01\x11a\x06|WV[a\x01\xB5V[a\x01\xB1V[a\x01\xADV[\x91``\x83\x83\x03\x12a\x06\xD8Wa\x06\xA2\x82_\x85\x01a\x03RV[\x92a\x06\xB0\x83` \x83\x01a\x03\xC9V[\x92`@\x82\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x06\xD3Wa\x06\xCF\x92\x01a\x06LV[\x90\x91V[a\x01\0V[a\0\xFCV[4a\x07\x0FWa\x06\xF9a\x06\xF06`\x04a\x06\x8BV[\x92\x91\x90\x91a\rjV[a\x07\x01a\0\xF2V[\x80a\x07\x0B\x81a\x02\xFCV[\x03\x90\xF3[a\0\xF8V[\x1C\x90V[\x90V[a\x07+\x90`\x08a\x070\x93\x02a\x07\x14V[a\x07\x18V[\x90V[\x90a\x07>\x91Ta\x07\x1BV[\x90V[a\x07M`\x01_\x90a\x073V[\x90V[4a\x07\x80Wa\x07`6`\x04a\x05\x1CV[a\x07|a\x07ka\x07AV[a\x07sa\0\xF2V[\x91\x82\x91\x82a\x05\\V[\x03\x90\xF3[a\0\xF8V[4a\x07\xB4Wa\x07\x9Ea\x07\x986`\x04a\x04\x87V[\x90a\r\xA2V[a\x07\xA6a\0\xF2V[\x80a\x07\xB0\x81a\x02\xFCV[\x03\x90\xF3[a\0\xF8V[\x7F$\x1E\xCF\x16\xD7\x9D\x0F\x8D\xBF\xB9,\xBC\x07\xFE\x17\x84\x04%\x97l\xF0f\x7F\x02/\xE9\x87|\xAA\x83\x1B\x08\x90V[a\x07\xE5a\x07\xB9V[\x90V[4a\x08\x18Wa\x07\xF86`\x04a\x05\x1CV[a\x08\x14a\x08\x03a\x07\xDDV[a\x08\x0Ba\0\xF2V[\x91\x82\x91\x82a\x04\x03V[\x03\x90\xF3[a\0\xF8V[_\x80\xFD[_\x90V[a\x08-a\x08!V[P\x80a\x08Ha\x08Bcye\xDB\x0B`\xE0\x1Ba\x01\x04V[\x91a\x01\x04V[\x14\x90\x81\x15a\x08UW[P\x90V[a\x08_\x91Pa\r\xAEV[_a\x08QV[\x90a\x08\x83\x95\x94\x93\x92\x91a\x08~a\x08ya\x07\xB9V[a\r\xD4V[a\t\xE5V[V[P\x90V[P\x90V[P\x90V[` \x91\x81R\x01\x90V[_\x7FArray lengths must be equal\0\0\0\0\0\x91\x01RV[a\x08\xCE`\x1B` \x92a\x08\x91V[a\x08\xD7\x81a\x08\x9AV[\x01\x90V[a\x08\xF0\x90` \x81\x01\x90_\x81\x83\x03\x91\x01Ra\x08\xC1V[\x90V[\x15a\x08\xFAWV[a\t\x02a\0\xF2V[bF\x1B\xCD`\xE5\x1B\x81R\x80a\t\x18`\x04\x82\x01a\x08\xDBV[\x03\x90\xFD[cNH{q`\xE0\x1B_R`2`\x04R`$_\xFD[\x91\x90\x81\x10\x15a\t@W` \x02\x01\x90V[a\t\x1CV[\x90V[a\t\\a\tWa\ta\x92a\x05\xDCV[a\tEV[a\x03;V[\x90V[5a\tn\x81a\x03>V[\x90V[\x90V[a\t\x88a\t\x83a\t\x8D\x92a\tqV[a\tEV[a\x03;V[\x90V[cNH{q`\xE0\x1B_R`\x11`\x04R`$_\xFD[a\t\xB3a\t\xB9\x91\x93\x92\x93a\x03;V[\x92a\x03;V[\x82\x03\x91\x82\x11a\t\xC4WV[a\t\x90V[a\t\xDDa\t\xD8a\t\xE2\x92a\x03;V[a\tEV[a\x03;V[\x90V[\x94\x91a\nt\x94a\n,\x92\x93a\no\x95a\t\xFF\x89\x87\x90a\x08\x85V[a\n\x1Ba\n\x15a\n\x10\x87\x85\x90a\x08\x89V[a\x03;V[\x91a\x03;V[\x14\x93\x84a\n\xBFW[PPPPa\x08\xF3V[a\n7\x84\x82\x90a\x08\x85V[a\nia\nVa\nQ\x87\x85a\nK_a\tHV[\x91a\t0V[a\tdV[\x95\x92\x91a\nc`\x01a\ttV[\x90a\t\xA4V[\x91a\t0V[a\tdV[a\n\xA7a\n\xA1\x7F\xFB?\x94,M\x87q\xACZ6/X\xBD8\x04\xE0u\x9E\xBDR\x81\x07#\x88J|\xDBS\x1D\x83\xB6\xF3\x93a\t\xC9V[\x91a\t\xC9V[\x91a\n\xB0a\0\xF2V[\x80a\n\xBA\x81a\x02\xFCV[\x03\x90\xA3V[a\n\xE7\x93\x94P\x91a\n\xD6a\n\xDC\x92a\n\xE1\x94a\x08\x89V[\x94a\x08\x8DV[a\x03;V[\x91a\x03;V[\x14_\x80\x80\x80a\n#V[\x90a\n\xFF\x95\x94\x93\x92\x91a\x08eV[V[a\x0B\x1A\x90a\x0B\x15a\x0B\x10a\x07\xB9V[a\r\xD4V[a\x0BUV[V[\x90a\x0B(_\x19\x91a\x05\xDFV[\x91\x81\x19\x16\x91\x16\x17\x90V[\x90V[\x90a\x0BJa\x0BEa\x0BQ\x92a\t\xC9V[a\x0B2V[\x82Ta\x0B\x1CV[\x90UV[a\x0B`\x90`\x01a\x0B5V[V[a\x0Bk\x90a\x0B\x01V[V[_\x90V[a\x0Bz\x90a\x03\xB2V[\x90V[\x90a\x0B\x87\x90a\x0BqV[_R` R`@_ \x90V[_\x1C\x90V[\x90V[a\x0B\xA7a\x0B\xAC\x91a\x0B\x93V[a\x0B\x98V[\x90V[a\x0B\xB9\x90Ta\x0B\x9BV[\x90V[`\x01a\x0B\xD4a\x0B\xDA\x92a\x0B\xCDa\x0BmV[P_a\x0B}V[\x01a\x0B\xAFV[\x90V[\x90a\x0B\xF8\x91a\x0B\xF3a\x0B\xEE\x82a\x0B\xBCV[a\r\xD4V[a\x0B\xFAV[V[\x90a\x0C\x04\x91a\x0E-V[PV[\x90a\x0C\x11\x91a\x0B\xDDV[V[\x90\x80a\x0C.a\x0C(a\x0C#a\x0E\xDCV[a\x04XV[\x91a\x04XV[\x03a\x0C?Wa\x0C<\x91a\x0E\xE9V[PV[a\x0CGa\0\xF2V[c3K\xD9\x19`\xE1\x1B\x81R\x80a\x0C^`\x04\x82\x01a\x02\xFCV[\x03\x90\xFD[a\x0Cva\x0Cqa\x0C{\x92a\x04MV[a\tEV[a\x04MV[\x90V[a\x0C\x87\x90a\x0CbV[\x90V[a\x0C\x93\x90a\x0C~V[\x90V[\x90a\x0C\xA0\x90a\x0C\x8AV[_R` R`@_ \x90V[`\xFF\x16\x90V[a\x0C\xBEa\x0C\xC3\x91a\x0B\x93V[a\x0C\xACV[\x90V[a\x0C\xD0\x90Ta\x0C\xB2V[\x90V[a\x0C\xF9\x91_a\x0C\xEEa\x0C\xF4\x93a\x0C\xE7a\x08!V[P\x82a\x0B}V[\x01a\x0C\x96V[a\x0C\xC6V[\x90V[\x90a\r\x18\x93\x92\x91a\r\x13a\r\x0Ea\x07\xB9V[a\r\xD4V[a\r\x1AV[V[\x92PPP\x80a\rRa\rL\x7F\xFB?\x94,M\x87q\xACZ6/X\xBD8\x04\xE0u\x9E\xBDR\x81\x07#\x88J|\xDBS\x1D\x83\xB6\xF3\x93a\t\xC9V[\x91a\t\xC9V[\x91a\r[a\0\xF2V[\x80a\re\x81a\x02\xFCV[\x03\x90\xA3V[\x90a\rv\x93\x92\x91a\x0C\xFCV[V[\x90a\r\x93\x91a\r\x8Ea\r\x89\x82a\x0B\xBCV[a\r\xD4V[a\r\x95V[V[\x90a\r\x9F\x91a\x0E\xE9V[PV[\x90a\r\xAC\x91a\rxV[V[a\r\xB6a\x08!V[Pa\r\xD0a\r\xCAc\x01\xFF\xC9\xA7`\xE0\x1Ba\x01\x04V[\x91a\x01\x04V[\x14\x90V[a\r\xE6\x90a\r\xE0a\x0E\xDCV[\x90a\x0F\xBAV[V[\x90a\r\xF4`\xFF\x91a\x05\xDFV[\x91\x81\x19\x16\x91\x16\x17\x90V[a\x0E\x07\x90a\x01QV[\x90V[\x90V[\x90a\x0E\"a\x0E\x1Da\x0E)\x92a\r\xFEV[a\x0E\nV[\x82Ta\r\xE8V[\x90UV[a\x0E5a\x08!V[Pa\x0EJa\x0ED\x82\x84\x90a\x0C\xD3V[\x15a\x01QV[_\x14a\x0E\xD2Wa\x0Eq`\x01a\x0El_a\x0Ed\x81\x86\x90a\x0B}V[\x01\x85\x90a\x0C\x96V[a\x0E\rV[\x90a\x0Eza\x0E\xDCV[\x90a\x0E\xB7a\x0E\xB1a\x0E\xAB\x7F/\x87\x88\x11~~\xFF\x1D\x82\xE9&\xECyI\x01\xD1|x\x02JP'\t@0E@\xA73eo\r\x95a\x0BqV[\x92a\x0C\x8AV[\x92a\x0C\x8AV[\x92a\x0E\xC0a\0\xF2V[\x80a\x0E\xCA\x81a\x02\xFCV[\x03\x90\xA4`\x01\x90V[PP_\x90V[_\x90V[a\x0E\xE4a\x0E\xD8V[P3\x90V[a\x0E\xF1a\x08!V[Pa\x0E\xFD\x81\x83\x90a\x0C\xD3V[_\x14a\x0F\x84Wa\x0F#_a\x0F\x1E_a\x0F\x16\x81\x86\x90a\x0B}V[\x01\x85\x90a\x0C\x96V[a\x0E\rV[\x90a\x0F,a\x0E\xDCV[\x90a\x0Fia\x0Fca\x0F]\x7F\xF69\x1F\\2\xD9\xC6\x9D*G\xEAg\x0BD)t\xB595\xD1\xED\xC7\xFDd\xEB!\xE0G\xA89\x17\x1B\x95a\x0BqV[\x92a\x0C\x8AV[\x92a\x0C\x8AV[\x92a\x0Fra\0\xF2V[\x80a\x0F|\x81a\x02\xFCV[\x03\x90\xA4`\x01\x90V[PP_\x90V[a\x0F\x93\x90a\x04XV[\x90RV[\x91` a\x0F\xB8\x92\x94\x93a\x0F\xB1`@\x82\x01\x96_\x83\x01\x90a\x0F\x8AV[\x01\x90a\x03\xF6V[V[\x90a\x0F\xCFa\x0F\xC9\x83\x83\x90a\x0C\xD3V[\x15a\x01QV[a\x0F\xD7WPPV[a\x0F\xF8a\x0F\xE2a\0\xF2V[\x92\x83\x92c\xE2Q}?`\xE0\x1B\x84R`\x04\x84\x01a\x0F\x97V[\x03\x90\xFD\xFE\xA2dipfsX\"\x12 \xD9\"z5\xCF\xF5)p~\xBB\xD2.\x99<u\xAE\xA4\xCE7\xD2\x16\x07g\xF6(m\xEC\x15\x07\xBA\xA6\x89dsolcC\0\x08\x19\x003",
     );
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `AccessControlBadConfirmation()` and selector `0x6697b232`.
 ```solidity
 error AccessControlBadConfirmation();
@@ -494,7 +493,6 @@ error AccessControlBadConfirmation();
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `AccessControlUnauthorizedAccount(address,bytes32)` and selector `0xe2517d3f`.
 ```solidity
 error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
@@ -582,7 +580,6 @@ error AccessControlUnauthorizedAccount(address account, bytes32 neededRole);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `EpochRangeProcessed(uint256,uint256)` and selector `0xfb3f942c4d8771ac5a362f58bd3804e0759ebd52810723884a7cdb531d83b6f3`.
 ```solidity
 event EpochRangeProcessed(uint256 indexed startEpochNumber, uint256 indexed endEpochNumber);
@@ -621,9 +618,38 @@ event EpochRangeProcessed(uint256 indexed startEpochNumber, uint256 indexed endE
             );
             const SIGNATURE: &'static str = "EpochRangeProcessed(uint256,uint256)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                251u8, 63u8, 148u8, 44u8, 77u8, 135u8, 113u8, 172u8, 90u8, 54u8, 47u8,
-                88u8, 189u8, 56u8, 4u8, 224u8, 117u8, 158u8, 189u8, 82u8, 129u8, 7u8,
-                35u8, 136u8, 74u8, 124u8, 219u8, 83u8, 29u8, 131u8, 182u8, 243u8,
+                251u8,
+                63u8,
+                148u8,
+                44u8,
+                77u8,
+                135u8,
+                113u8,
+                172u8,
+                90u8,
+                54u8,
+                47u8,
+                88u8,
+                189u8,
+                56u8,
+                4u8,
+                224u8,
+                117u8,
+                158u8,
+                189u8,
+                82u8,
+                129u8,
+                7u8,
+                35u8,
+                136u8,
+                74u8,
+                124u8,
+                219u8,
+                83u8,
+                29u8,
+                131u8,
+                182u8,
+                243u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -701,7 +727,6 @@ event EpochRangeProcessed(uint256 indexed startEpochNumber, uint256 indexed endE
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `RoleAdminChanged(bytes32,bytes32,bytes32)` and selector `0xbd79b86ffe0ab8e8776151514217cd7cacd52c909f66475c3af44e129f0b00ff`.
 ```solidity
 event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, bytes32 indexed newAdminRole);
@@ -743,9 +768,38 @@ event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, 
             );
             const SIGNATURE: &'static str = "RoleAdminChanged(bytes32,bytes32,bytes32)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                189u8, 121u8, 184u8, 111u8, 254u8, 10u8, 184u8, 232u8, 119u8, 97u8, 81u8,
-                81u8, 66u8, 23u8, 205u8, 124u8, 172u8, 213u8, 44u8, 144u8, 159u8, 102u8,
-                71u8, 92u8, 58u8, 244u8, 78u8, 18u8, 159u8, 11u8, 0u8, 255u8,
+                189u8,
+                121u8,
+                184u8,
+                111u8,
+                254u8,
+                10u8,
+                184u8,
+                232u8,
+                119u8,
+                97u8,
+                81u8,
+                81u8,
+                66u8,
+                23u8,
+                205u8,
+                124u8,
+                172u8,
+                213u8,
+                44u8,
+                144u8,
+                159u8,
+                102u8,
+                71u8,
+                92u8,
+                58u8,
+                244u8,
+                78u8,
+                18u8,
+                159u8,
+                11u8,
+                0u8,
+                255u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -828,7 +882,6 @@ event RoleAdminChanged(bytes32 indexed role, bytes32 indexed previousAdminRole, 
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `RoleGranted(bytes32,address,address)` and selector `0x2f8788117e7eff1d82e926ec794901d17c78024a50270940304540a733656f0d`.
 ```solidity
 event RoleGranted(bytes32 indexed role, address indexed account, address indexed sender);
@@ -870,9 +923,38 @@ event RoleGranted(bytes32 indexed role, address indexed account, address indexed
             );
             const SIGNATURE: &'static str = "RoleGranted(bytes32,address,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                47u8, 135u8, 136u8, 17u8, 126u8, 126u8, 255u8, 29u8, 130u8, 233u8, 38u8,
-                236u8, 121u8, 73u8, 1u8, 209u8, 124u8, 120u8, 2u8, 74u8, 80u8, 39u8, 9u8,
-                64u8, 48u8, 69u8, 64u8, 167u8, 51u8, 101u8, 111u8, 13u8,
+                47u8,
+                135u8,
+                136u8,
+                17u8,
+                126u8,
+                126u8,
+                255u8,
+                29u8,
+                130u8,
+                233u8,
+                38u8,
+                236u8,
+                121u8,
+                73u8,
+                1u8,
+                209u8,
+                124u8,
+                120u8,
+                2u8,
+                74u8,
+                80u8,
+                39u8,
+                9u8,
+                64u8,
+                48u8,
+                69u8,
+                64u8,
+                167u8,
+                51u8,
+                101u8,
+                111u8,
+                13u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -955,7 +1037,6 @@ event RoleGranted(bytes32 indexed role, address indexed account, address indexed
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `RoleRevoked(bytes32,address,address)` and selector `0xf6391f5c32d9c69d2a47ea670b442974b53935d1edc7fd64eb21e047a839171b`.
 ```solidity
 event RoleRevoked(bytes32 indexed role, address indexed account, address indexed sender);
@@ -997,9 +1078,38 @@ event RoleRevoked(bytes32 indexed role, address indexed account, address indexed
             );
             const SIGNATURE: &'static str = "RoleRevoked(bytes32,address,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                246u8, 57u8, 31u8, 92u8, 50u8, 217u8, 198u8, 157u8, 42u8, 71u8, 234u8,
-                103u8, 11u8, 68u8, 41u8, 116u8, 181u8, 57u8, 53u8, 209u8, 237u8, 199u8,
-                253u8, 100u8, 235u8, 33u8, 224u8, 71u8, 168u8, 57u8, 23u8, 27u8,
+                246u8,
+                57u8,
+                31u8,
+                92u8,
+                50u8,
+                217u8,
+                198u8,
+                157u8,
+                42u8,
+                71u8,
+                234u8,
+                103u8,
+                11u8,
+                68u8,
+                41u8,
+                116u8,
+                181u8,
+                57u8,
+                53u8,
+                209u8,
+                237u8,
+                199u8,
+                253u8,
+                100u8,
+                235u8,
+                33u8,
+                224u8,
+                71u8,
+                168u8,
+                57u8,
+                23u8,
+                27u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -1173,7 +1283,6 @@ constructor(address admin, address manager, uint256 l3ChainId_);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `DEFAULT_ADMIN_ROLE()` and selector `0xa217fddf`.
 ```solidity
 function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
@@ -1181,7 +1290,6 @@ function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct DEFAULT_ADMIN_ROLECall {}
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`DEFAULT_ADMIN_ROLE()`](DEFAULT_ADMIN_ROLECall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1298,7 +1406,6 @@ function DEFAULT_ADMIN_ROLE() external view returns (bytes32);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `MANAGER_ROLE()` and selector `0xec87621c`.
 ```solidity
 function MANAGER_ROLE() external view returns (bytes32);
@@ -1306,7 +1413,6 @@ function MANAGER_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MANAGER_ROLECall {}
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`MANAGER_ROLE()`](MANAGER_ROLECall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1419,7 +1525,6 @@ function MANAGER_ROLE() external view returns (bytes32);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `getRoleAdmin(bytes32)` and selector `0x248a9ca3`.
 ```solidity
 function getRoleAdmin(bytes32 role) external view returns (bytes32);
@@ -1430,7 +1535,6 @@ function getRoleAdmin(bytes32 role) external view returns (bytes32);
         #[allow(missing_docs)]
         pub role: alloy::sol_types::private::FixedBytes<32>,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`getRoleAdmin(bytes32)`](getRoleAdminCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1547,7 +1651,6 @@ function getRoleAdmin(bytes32 role) external view returns (bytes32);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `grantRole(bytes32,address)` and selector `0x2f2ff15d`.
 ```solidity
 function grantRole(bytes32 role, address account) external;
@@ -1688,7 +1791,6 @@ function grantRole(bytes32 role, address account) external;
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `hasRole(bytes32,address)` and selector `0x91d14854`.
 ```solidity
 function hasRole(bytes32 role, address account) external view returns (bool);
@@ -1701,7 +1803,6 @@ function hasRole(bytes32 role, address account) external view returns (bool);
         #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`hasRole(bytes32,address)`](hasRoleCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1833,7 +1934,6 @@ function hasRole(bytes32 role, address account) external view returns (bool);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `indexFromBlock()` and selector `0xcce5d2f6`.
 ```solidity
 function indexFromBlock() external view returns (uint256);
@@ -1841,7 +1941,6 @@ function indexFromBlock() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct indexFromBlockCall {}
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`indexFromBlock()`](indexFromBlockCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1958,7 +2057,6 @@ function indexFromBlock() external view returns (uint256);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `l3ChainId()` and selector `0x77bfdd19`.
 ```solidity
 function l3ChainId() external view returns (uint256);
@@ -1966,7 +2064,6 @@ function l3ChainId() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct l3ChainIdCall {}
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`l3ChainId()`](l3ChainIdCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -2081,7 +2178,6 @@ function l3ChainId() external view returns (uint256);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `renounceRole(bytes32,address)` and selector `0x36568abe`.
 ```solidity
 function renounceRole(bytes32 role, address callerConfirmation) external;
@@ -2222,7 +2318,6 @@ function renounceRole(bytes32 role, address callerConfirmation) external;
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `revokeRole(bytes32,address)` and selector `0xd547741f`.
 ```solidity
 function revokeRole(bytes32 role, address account) external;
@@ -2363,7 +2458,6 @@ function revokeRole(bytes32 role, address account) external;
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `save(uint256,bytes32,bytes)` and selector `0xb1d06045`.
 ```solidity
 function save(uint256 epochNumber, bytes32, bytes memory) external;
@@ -2513,7 +2607,6 @@ function save(uint256 epochNumber, bytes32, bytes memory) external;
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `saveForMany(uint256[],bytes32[],bytes[])` and selector `0x048420a7`.
 ```solidity
 function saveForMany(uint256[] memory epochNumbers, bytes32[] memory epochHashes, bytes[] memory batches) external;
@@ -2675,7 +2768,6 @@ function saveForMany(uint256[] memory epochNumbers, bytes32[] memory epochHashes
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `setIndexFromBlock(uint256)` and selector `0x0ffd1380`.
 ```solidity
 function setIndexFromBlock(uint256 blockNumber) external;
@@ -2805,7 +2897,6 @@ function setIndexFromBlock(uint256 blockNumber) external;
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `supportsInterface(bytes4)` and selector `0x01ffc9a7`.
 ```solidity
 function supportsInterface(bytes4 interfaceId) external view returns (bool);
@@ -2816,7 +2907,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         #[allow(missing_docs)]
         pub interfaceId: alloy::sol_types::private::FixedBytes<4>,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`supportsInterface(bytes4)`](supportsInterfaceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -2938,7 +3028,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         }
     };
     ///Container for all the [`MetafillerStorage`](self) function calls.
-    #[derive()]
     pub enum MetafillerStorageCalls {
         #[allow(missing_docs)]
         DEFAULT_ADMIN_ROLE(DEFAULT_ADMIN_ROLECall),
@@ -3374,7 +3463,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         }
     }
     ///Container for all the [`MetafillerStorage`](self) custom errors.
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum MetafillerStorageErrors {
         #[allow(missing_docs)]
         AccessControlBadConfirmation(AccessControlBadConfirmation),
@@ -3502,7 +3590,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         }
     }
     ///Container for all the [`MetafillerStorage`](self) events.
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum MetafillerStorageEvents {
         #[allow(missing_docs)]
         EpochRangeProcessed(EpochRangeProcessed),
@@ -3523,24 +3610,140 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                47u8, 135u8, 136u8, 17u8, 126u8, 126u8, 255u8, 29u8, 130u8, 233u8, 38u8,
-                236u8, 121u8, 73u8, 1u8, 209u8, 124u8, 120u8, 2u8, 74u8, 80u8, 39u8, 9u8,
-                64u8, 48u8, 69u8, 64u8, 167u8, 51u8, 101u8, 111u8, 13u8,
+                47u8,
+                135u8,
+                136u8,
+                17u8,
+                126u8,
+                126u8,
+                255u8,
+                29u8,
+                130u8,
+                233u8,
+                38u8,
+                236u8,
+                121u8,
+                73u8,
+                1u8,
+                209u8,
+                124u8,
+                120u8,
+                2u8,
+                74u8,
+                80u8,
+                39u8,
+                9u8,
+                64u8,
+                48u8,
+                69u8,
+                64u8,
+                167u8,
+                51u8,
+                101u8,
+                111u8,
+                13u8,
             ],
             [
-                189u8, 121u8, 184u8, 111u8, 254u8, 10u8, 184u8, 232u8, 119u8, 97u8, 81u8,
-                81u8, 66u8, 23u8, 205u8, 124u8, 172u8, 213u8, 44u8, 144u8, 159u8, 102u8,
-                71u8, 92u8, 58u8, 244u8, 78u8, 18u8, 159u8, 11u8, 0u8, 255u8,
+                189u8,
+                121u8,
+                184u8,
+                111u8,
+                254u8,
+                10u8,
+                184u8,
+                232u8,
+                119u8,
+                97u8,
+                81u8,
+                81u8,
+                66u8,
+                23u8,
+                205u8,
+                124u8,
+                172u8,
+                213u8,
+                44u8,
+                144u8,
+                159u8,
+                102u8,
+                71u8,
+                92u8,
+                58u8,
+                244u8,
+                78u8,
+                18u8,
+                159u8,
+                11u8,
+                0u8,
+                255u8,
             ],
             [
-                246u8, 57u8, 31u8, 92u8, 50u8, 217u8, 198u8, 157u8, 42u8, 71u8, 234u8,
-                103u8, 11u8, 68u8, 41u8, 116u8, 181u8, 57u8, 53u8, 209u8, 237u8, 199u8,
-                253u8, 100u8, 235u8, 33u8, 224u8, 71u8, 168u8, 57u8, 23u8, 27u8,
+                246u8,
+                57u8,
+                31u8,
+                92u8,
+                50u8,
+                217u8,
+                198u8,
+                157u8,
+                42u8,
+                71u8,
+                234u8,
+                103u8,
+                11u8,
+                68u8,
+                41u8,
+                116u8,
+                181u8,
+                57u8,
+                53u8,
+                209u8,
+                237u8,
+                199u8,
+                253u8,
+                100u8,
+                235u8,
+                33u8,
+                224u8,
+                71u8,
+                168u8,
+                57u8,
+                23u8,
+                27u8,
             ],
             [
-                251u8, 63u8, 148u8, 44u8, 77u8, 135u8, 113u8, 172u8, 90u8, 54u8, 47u8,
-                88u8, 189u8, 56u8, 4u8, 224u8, 117u8, 158u8, 189u8, 82u8, 129u8, 7u8,
-                35u8, 136u8, 74u8, 124u8, 219u8, 83u8, 29u8, 131u8, 182u8, 243u8,
+                251u8,
+                63u8,
+                148u8,
+                44u8,
+                77u8,
+                135u8,
+                113u8,
+                172u8,
+                90u8,
+                54u8,
+                47u8,
+                88u8,
+                189u8,
+                56u8,
+                4u8,
+                224u8,
+                117u8,
+                158u8,
+                189u8,
+                82u8,
+                129u8,
+                7u8,
+                35u8,
+                136u8,
+                74u8,
+                124u8,
+                219u8,
+                83u8,
+                29u8,
+                131u8,
+                182u8,
+                243u8,
             ],
         ];
     }

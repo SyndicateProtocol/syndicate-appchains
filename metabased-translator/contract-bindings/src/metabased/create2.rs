@@ -47,7 +47,6 @@ pub mod Create2 {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 p\x84v\xEEUg\xF9\xBCu\xA1\x14o\xC3Q\xCB\xC7\x95!\xE2=\x8F*]\xCF\xFBR\x8D\xFD\x18i\xAC\xF2dsolcC\0\x08\x19\x003",
     );
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `Create2EmptyBytecode()` and selector `0x4ca249dc`.
 ```solidity
 error Create2EmptyBytecode();
@@ -113,7 +112,6 @@ error Create2EmptyBytecode();
         }
     };
     ///Container for all the [`Create2`](self) custom errors.
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum Create2Errors {
         #[allow(missing_docs)]
         Create2EmptyBytecode(Create2EmptyBytecode),

@@ -79,7 +79,6 @@ pub mod Nonces {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `InvalidAccountNonce(address,uint256)` and selector `0x752d88c0`.
 ```solidity
 error InvalidAccountNonce(address account, uint256 currentNonce);
@@ -165,7 +164,6 @@ error InvalidAccountNonce(address account, uint256 currentNonce);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `nonces(address)` and selector `0x7ecebe00`.
 ```solidity
 function nonces(address owner) external view returns (uint256);
@@ -176,7 +174,6 @@ function nonces(address owner) external view returns (uint256);
         #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`nonces(address)`](noncesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -296,7 +293,6 @@ function nonces(address owner) external view returns (uint256);
         }
     };
     ///Container for all the [`Nonces`](self) function calls.
-    #[derive()]
     pub enum NoncesCalls {
         #[allow(missing_docs)]
         nonces(noncesCall),
@@ -383,7 +379,6 @@ function nonces(address owner) external view returns (uint256);
         }
     }
     ///Container for all the [`Nonces`](self) custom errors.
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum NoncesErrors {
         #[allow(missing_docs)]
         InvalidAccountNonce(InvalidAccountNonce),

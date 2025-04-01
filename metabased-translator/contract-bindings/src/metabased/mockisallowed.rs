@@ -139,7 +139,6 @@ constructor(bool _allowed);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isAllowed(address)` and selector `0xbabcc539`.
 ```solidity
 function isAllowed(address) external view returns (bool);
@@ -150,7 +149,6 @@ function isAllowed(address) external view returns (bool);
         #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -268,7 +266,6 @@ function isAllowed(address) external view returns (bool);
         }
     };
     ///Container for all the [`MockIsAllowed`](self) function calls.
-    #[derive()]
     pub enum MockIsAllowedCalls {
         #[allow(missing_docs)]
         isAllowed(isAllowedCall),

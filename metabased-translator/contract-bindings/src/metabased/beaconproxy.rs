@@ -128,7 +128,6 @@ pub mod BeaconProxy {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@Ra\0\x0Ca\x01(V[a\x01\xBDV[_\x90V[`\x01\x80`\xA0\x1B\x03\x16\x90V[\x90V[a\x007a\x002a\0<\x92a\0\x15V[a\0 V[a\0\x15V[\x90V[a\0H\x90a\0#V[\x90V[a\0T\x90a\0?V[\x90V[a\0`\x90a\0#V[\x90V[a\0l\x90a\0WV[\x90V[`@Q\x90V[`\x1F\x80\x19\x91\x01\x16\x90V[cNH{q`\xE0\x1B_R`A`\x04R`$_\xFD[\x90a\0\x9D\x90a\0uV[\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\0\xB7W`@RV[a\0\x7FV[`\xE0\x1B\x90V[_\x80\xFD[a\0\xCF\x90a\0\x15V[\x90V[a\0\xDB\x81a\0\xC6V[\x03a\0\xE2WV[_\x80\xFD[\x90PQ\x90a\0\xF3\x82a\0\xD2V[V[\x90` \x82\x82\x03\x12a\x01\x0EWa\x01\x0B\x91_\x01a\0\xE6V[\x90V[a\0\xC2V[_\x01\x90V[a\x01 a\0oV[=_\x82>=\x90\xFD[a\x010a\0\x11V[Pa\x01d` a\x01Na\x01Ia\x01Da\x01\xDBV[a\0KV[a\0cV[c\\`\xDA\x1B\x90a\x01\\a\0oV[\x93\x84\x92a\0\xBCV[\x82R\x81\x80a\x01t`\x04\x82\x01a\x01\x13V[\x03\x91Z\xFA\x90\x81\x15a\x01\xB8W_\x91a\x01\x8AW[P\x90V[a\x01\xAB\x91P` =\x81\x11a\x01\xB1W[a\x01\xA3\x81\x83a\0\x93V[\x81\x01\x90a\0\xF5V[_a\x01\x86V[P=a\x01\x99V[a\x01\x18V[_\x80\x916\x82\x807\x816\x91Z\xF4=_\x80>_\x14a\x01\xD7W=_\xF3[=_\xFD[a\x01\xE3a\0\x11V[P\x7F\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x90V\xFE\xA2dipfsX\"\x12 c>K}\xBD&\x88\xFC9\x91^(\xCF8!\x96\xD1\x01\xE6i\xF4\x9C\xC2\x825S\xB5\xCD\x0B0:\xBBdsolcC\0\x08\x19\x003",
     );
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `AddressEmptyCode(address)` and selector `0x9996b315`.
 ```solidity
 error AddressEmptyCode(address target);
@@ -200,7 +199,6 @@ error AddressEmptyCode(address target);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC1967InvalidBeacon(address)` and selector `0x64ced0ec`.
 ```solidity
 error ERC1967InvalidBeacon(address beacon);
@@ -272,7 +270,6 @@ error ERC1967InvalidBeacon(address beacon);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC1967InvalidImplementation(address)` and selector `0x4c9c8ce3`.
 ```solidity
 error ERC1967InvalidImplementation(address implementation);
@@ -346,7 +343,6 @@ error ERC1967InvalidImplementation(address implementation);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC1967NonPayable()` and selector `0xb398979f`.
 ```solidity
 error ERC1967NonPayable();
@@ -411,7 +407,6 @@ error ERC1967NonPayable();
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `FailedCall()` and selector `0xd6bda275`.
 ```solidity
 error FailedCall();
@@ -476,7 +471,6 @@ error FailedCall();
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `BeaconUpgraded(address)` and selector `0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e`.
 ```solidity
 event BeaconUpgraded(address indexed beacon);
@@ -512,9 +506,38 @@ event BeaconUpgraded(address indexed beacon);
             );
             const SIGNATURE: &'static str = "BeaconUpgraded(address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                28u8, 243u8, 176u8, 58u8, 108u8, 241u8, 159u8, 162u8, 186u8, 186u8, 77u8,
-                241u8, 72u8, 233u8, 220u8, 171u8, 237u8, 234u8, 127u8, 138u8, 92u8, 7u8,
-                132u8, 14u8, 32u8, 126u8, 92u8, 8u8, 155u8, 233u8, 93u8, 62u8,
+                28u8,
+                243u8,
+                176u8,
+                58u8,
+                108u8,
+                241u8,
+                159u8,
+                162u8,
+                186u8,
+                186u8,
+                77u8,
+                241u8,
+                72u8,
+                233u8,
+                220u8,
+                171u8,
+                237u8,
+                234u8,
+                127u8,
+                138u8,
+                92u8,
+                7u8,
+                132u8,
+                14u8,
+                32u8,
+                126u8,
+                92u8,
+                8u8,
+                155u8,
+                233u8,
+                93u8,
+                62u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -665,7 +688,6 @@ constructor(address beacon, bytes data) payable;
         }
     };
     ///Container for all the [`BeaconProxy`](self) custom errors.
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum BeaconProxyErrors {
         #[allow(missing_docs)]
         AddressEmptyCode(AddressEmptyCode),
@@ -876,7 +898,6 @@ constructor(address beacon, bytes data) payable;
         }
     }
     ///Container for all the [`BeaconProxy`](self) events.
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum BeaconProxyEvents {
         #[allow(missing_docs)]
         BeaconUpgraded(BeaconUpgraded),
@@ -891,9 +912,38 @@ constructor(address beacon, bytes data) payable;
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                28u8, 243u8, 176u8, 58u8, 108u8, 241u8, 159u8, 162u8, 186u8, 186u8, 77u8,
-                241u8, 72u8, 233u8, 220u8, 171u8, 237u8, 234u8, 127u8, 138u8, 92u8, 7u8,
-                132u8, 14u8, 32u8, 126u8, 92u8, 8u8, 155u8, 233u8, 93u8, 62u8,
+                28u8,
+                243u8,
+                176u8,
+                58u8,
+                108u8,
+                241u8,
+                159u8,
+                162u8,
+                186u8,
+                186u8,
+                77u8,
+                241u8,
+                72u8,
+                233u8,
+                220u8,
+                171u8,
+                237u8,
+                234u8,
+                127u8,
+                138u8,
+                92u8,
+                7u8,
+                132u8,
+                14u8,
+                32u8,
+                126u8,
+                92u8,
+                8u8,
+                155u8,
+                233u8,
+                93u8,
+                62u8,
             ],
         ];
     }

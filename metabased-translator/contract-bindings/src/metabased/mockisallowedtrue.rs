@@ -61,7 +61,6 @@ pub mod MockIsAllowedTrue {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R`\x046\x10\x15`\x11W[`\xD5V[`\x19_5`&V[c\xBA\xBC\xC59\x03`\rW`\xAAV[`\xE0\x1C\x90V[`@Q\x90V[_\x80\xFD[_\x80\xFD[`\x01\x80`\xA0\x1B\x03\x16\x90V[`L\x90`:V[\x90V[`V\x81`EV[\x03`\\WV[_\x80\xFD[\x90P5\x90`k\x82`OV[V[\x90` \x82\x82\x03\x12`\x83W`\x80\x91_\x01``V[\x90V[`6V[\x15\x15\x90V[`\x93\x90`\x87V[\x90RV[\x91\x90`\xA8\x90_` \x85\x01\x94\x01\x90`\x8CV[V[4`\xD1W`\xCD`\xBF`\xBB6`\x04`mV[`\xDDV[`\xC5`,V[\x91\x82\x91\x82`\x97V[\x03\x90\xF3[`2V[_\x80\xFD[_\x90V[P`\xE4`\xD9V[P`\x01\x90V\xFE\xA2dipfsX\"\x12 \xD1c\xC5b\x8A\x8A\x1B\xE8\x91x\xBB\x93u;,\x9E\xB3\x9A[\xCDh3\xFAO\x9Ds\xBB\x95Z\xD0k\x13dsolcC\0\x08\x19\x003",
     );
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isAllowed(address)` and selector `0xbabcc539`.
 ```solidity
 function isAllowed(address) external pure returns (bool);
@@ -72,7 +71,6 @@ function isAllowed(address) external pure returns (bool);
         #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -190,7 +188,6 @@ function isAllowed(address) external pure returns (bool);
         }
     };
     ///Container for all the [`MockIsAllowedTrue`](self) function calls.
-    #[derive()]
     pub enum MockIsAllowedTrueCalls {
         #[allow(missing_docs)]
         isAllowed(isAllowedCall),

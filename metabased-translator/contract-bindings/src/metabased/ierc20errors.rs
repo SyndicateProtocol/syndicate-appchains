@@ -133,7 +133,6 @@ pub mod IERC20Errors {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC20InsufficientAllowance(address,uint256,uint256)` and selector `0xfb8f41b2`.
 ```solidity
 error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 needed);
@@ -229,7 +228,6 @@ error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 nee
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC20InsufficientBalance(address,uint256,uint256)` and selector `0xe450d38c`.
 ```solidity
 error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);
@@ -325,7 +323,6 @@ error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC20InvalidApprover(address)` and selector `0xe602df05`.
 ```solidity
 error ERC20InvalidApprover(address approver);
@@ -397,7 +394,6 @@ error ERC20InvalidApprover(address approver);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC20InvalidReceiver(address)` and selector `0xec442f05`.
 ```solidity
 error ERC20InvalidReceiver(address receiver);
@@ -469,7 +465,6 @@ error ERC20InvalidReceiver(address receiver);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC20InvalidSender(address)` and selector `0x96c6fd1e`.
 ```solidity
 error ERC20InvalidSender(address sender);
@@ -541,7 +536,6 @@ error ERC20InvalidSender(address sender);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC20InvalidSpender(address)` and selector `0x94280d62`.
 ```solidity
 error ERC20InvalidSpender(address spender);
@@ -614,7 +608,6 @@ error ERC20InvalidSpender(address spender);
         }
     };
     ///Container for all the [`IERC20Errors`](self) custom errors.
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum IERC20ErrorsErrors {
         #[allow(missing_docs)]
         ERC20InsufficientAllowance(ERC20InsufficientAllowance),

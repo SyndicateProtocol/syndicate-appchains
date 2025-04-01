@@ -138,7 +138,6 @@ pub mod MockAgentApplication {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R`\x046\x10\x15a\0\x13W[a\x03\x0FV[a\0\x1D_5a\0lV[\x80cK\x0B\xDD\xD2\x14a\0gW\x80cu\xB28\xFC\x14a\0bW\x80c\x91\xD1HT\x14a\0]W\x80c\x9AtK\xC0\x14a\0XWc\x9ET\x95\x15\x03a\0\x0EWa\x02\xDAV[a\x02\x88V[a\x02RV[a\x01\xABV[a\x01\x14V[`\xE0\x1C\x90V[`@Q\x90V[_\x80\xFD[_\x80\xFD[`\x01\x80`\xA0\x1B\x03\x16\x90V[a\0\x94\x90a\0\x80V[\x90V[a\0\xA0\x81a\0\x8BV[\x03a\0\xA7WV[_\x80\xFD[\x90P5\x90a\0\xB8\x82a\0\x97V[V[\x15\x15\x90V[a\0\xC8\x81a\0\xBAV[\x03a\0\xCFWV[_\x80\xFD[\x90P5\x90a\0\xE0\x82a\0\xBFV[V[\x91\x90`@\x83\x82\x03\x12a\x01\nW\x80a\0\xFEa\x01\x07\x92_\x86\x01a\0\xABV[\x93` \x01a\0\xD3V[\x90V[a\0|V[_\x01\x90V[4a\x01CWa\x01-a\x01'6`\x04a\0\xE2V[\x90a\x03\xAAV[a\x015a\0rV[\x80a\x01?\x81a\x01\x0FV[\x03\x90\xF3[a\0xV[_\x91\x03\x12a\x01RWV[a\0|V[\x7F\xA4\x98\x07 \\\xE4\xD3U\t.\xF5\xA8\xA1\x8FV\xE8\x91<\xF4\xA2\x01\xFB\xE2\x87\x82[\tV\x93\xC2\x17u\x90V[a\x01\x83a\x01WV[\x90V[\x90V[a\x01\x92\x90a\x01\x86V[\x90RV[\x91\x90a\x01\xA9\x90_` \x85\x01\x94\x01\x90a\x01\x89V[V[4a\x01\xDBWa\x01\xBB6`\x04a\x01HV[a\x01\xD7a\x01\xC6a\x01{V[a\x01\xCEa\0rV[\x91\x82\x91\x82a\x01\x96V[\x03\x90\xF3[a\0xV[a\x01\xE9\x81a\x01\x86V[\x03a\x01\xF0WV[_\x80\xFD[\x90P5\x90a\x02\x01\x82a\x01\xE0V[V[\x91\x90`@\x83\x82\x03\x12a\x02+W\x80a\x02\x1Fa\x02(\x92_\x86\x01a\x01\xF4V[\x93` \x01a\0\xABV[\x90V[a\0|V[a\x029\x90a\0\xBAV[\x90RV[\x91\x90a\x02P\x90_` \x85\x01\x94\x01\x90a\x020V[V[4a\x02\x83Wa\x02\x7Fa\x02na\x02h6`\x04a\x02\x03V[\x90a\x03\xF0V[a\x02va\0rV[\x91\x82\x91\x82a\x02=V[\x03\x90\xF3[a\0xV[4a\x02\xB7Wa\x02\xA1a\x02\x9B6`\x04a\0\xE2V[\x90a\x042V[a\x02\xA9a\0rV[\x80a\x02\xB3\x81a\x01\x0FV[\x03\x90\xF3[a\0xV[\x90` \x82\x82\x03\x12a\x02\xD5Wa\x02\xD2\x91_\x01a\0\xABV[\x90V[a\0|V[4a\x03\nWa\x03\x06a\x02\xF5a\x02\xF06`\x04a\x02\xBCV[a\x04GV[a\x02\xFDa\0rV[\x91\x82\x91\x82a\x02=V[\x03\x90\xF3[a\0xV[_\x80\xFD[\x90V[a\x03*a\x03%a\x03/\x92a\0\x80V[a\x03\x13V[a\0\x80V[\x90V[a\x03;\x90a\x03\x16V[\x90V[a\x03G\x90a\x032V[\x90V[\x90a\x03T\x90a\x03>V[_R` R`@_ \x90V[_\x1B\x90V[\x90a\x03q`\xFF\x91a\x03`V[\x91\x81\x19\x16\x91\x16\x17\x90V[a\x03\x84\x90a\0\xBAV[\x90V[\x90V[\x90a\x03\x9Fa\x03\x9Aa\x03\xA6\x92a\x03{V[a\x03\x87V[\x82Ta\x03eV[\x90UV[a\x03\xB9a\x03\xBE\x92\x91`\x01a\x03JV[a\x03\x8AV[V[_\x90V[_\x1C\x90V[`\xFF\x16\x90V[a\x03\xDBa\x03\xE0\x91a\x03\xC4V[a\x03\xC9V[\x90V[a\x03\xED\x90Ta\x03\xCFV[\x90V[a\x03\xF8a\x03\xC0V[Pa\x04\x12a\x04\x0Ca\x04\x07a\x01WV[a\x01\x86V[\x91a\x01\x86V[\x14a\x04\x1CWP_\x90V[a\x04*a\x04/\x91`\x01a\x03JV[a\x03\xE3V[\x90V[a\x04@a\x04E\x92\x91_a\x03JV[a\x03\x8AV[V[a\x04]a\x04b\x91a\x04Va\x03\xC0V[P_a\x03JV[a\x03\xE3V[\x90V\xFE\xA2dipfsX\"\x12 m\xB1\xF2y)z\x1A\xDE\xAC\xFA\xFDP\xA0S\x8DQ\x1E\x838\x1DS\xC8\x89\xC1\x89l\x8A$/y\x9F8dsolcC\0\x08\x19\x003",
     );
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `ADMIN_ROLE()` and selector `0x75b238fc`.
 ```solidity
 function ADMIN_ROLE() external view returns (bytes32);
@@ -146,7 +145,6 @@ function ADMIN_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ADMIN_ROLECall {}
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`ADMIN_ROLE()`](ADMIN_ROLECall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -259,7 +257,6 @@ function ADMIN_ROLE() external view returns (bytes32);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `hasRole(bytes32,address)` and selector `0x91d14854`.
 ```solidity
 function hasRole(bytes32 role, address account) external view returns (bool);
@@ -272,7 +269,6 @@ function hasRole(bytes32 role, address account) external view returns (bool);
         #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`hasRole(bytes32,address)`](hasRoleCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -404,7 +400,6 @@ function hasRole(bytes32 role, address account) external view returns (bool);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isPermittedByAddress(address)` and selector `0x9e549515`.
 ```solidity
 function isPermittedByAddress(address account) external view returns (bool);
@@ -415,7 +410,6 @@ function isPermittedByAddress(address account) external view returns (bool);
         #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isPermittedByAddress(address)`](isPermittedByAddressCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -536,7 +530,6 @@ function isPermittedByAddress(address account) external view returns (bool);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `setAdmin(address,bool)` and selector `0x4b0bddd2`.
 ```solidity
 function setAdmin(address account, bool status) external;
@@ -674,7 +667,6 @@ function setAdmin(address account, bool status) external;
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `setPermitted(address,bool)` and selector `0x9a744bc0`.
 ```solidity
 function setPermitted(address account, bool status) external;
@@ -813,7 +805,6 @@ function setPermitted(address account, bool status) external;
         }
     };
     ///Container for all the [`MockAgentApplication`](self) function calls.
-    #[derive()]
     pub enum MockAgentApplicationCalls {
         #[allow(missing_docs)]
         ADMIN_ROLE(ADMIN_ROLECall),

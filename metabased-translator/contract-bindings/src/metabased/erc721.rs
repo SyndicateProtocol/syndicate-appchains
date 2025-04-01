@@ -500,7 +500,6 @@ pub mod ERC721 {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721IncorrectOwner(address,uint256,address)` and selector `0x64283d7b`.
 ```solidity
 error ERC721IncorrectOwner(address sender, uint256 tokenId, address owner);
@@ -594,7 +593,6 @@ error ERC721IncorrectOwner(address sender, uint256 tokenId, address owner);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721InsufficientApproval(address,uint256)` and selector `0x177e802f`.
 ```solidity
 error ERC721InsufficientApproval(address operator, uint256 tokenId);
@@ -682,7 +680,6 @@ error ERC721InsufficientApproval(address operator, uint256 tokenId);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721InvalidApprover(address)` and selector `0xa9fbf51f`.
 ```solidity
 error ERC721InvalidApprover(address approver);
@@ -754,7 +751,6 @@ error ERC721InvalidApprover(address approver);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721InvalidOperator(address)` and selector `0x5b08ba18`.
 ```solidity
 error ERC721InvalidOperator(address operator);
@@ -826,7 +822,6 @@ error ERC721InvalidOperator(address operator);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721InvalidOwner(address)` and selector `0x89c62b64`.
 ```solidity
 error ERC721InvalidOwner(address owner);
@@ -898,7 +893,6 @@ error ERC721InvalidOwner(address owner);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721InvalidReceiver(address)` and selector `0x64a0ae92`.
 ```solidity
 error ERC721InvalidReceiver(address receiver);
@@ -970,7 +964,6 @@ error ERC721InvalidReceiver(address receiver);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721InvalidSender(address)` and selector `0x73c6ac6e`.
 ```solidity
 error ERC721InvalidSender(address sender);
@@ -1042,7 +1035,6 @@ error ERC721InvalidSender(address sender);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721NonexistentToken(uint256)` and selector `0x7e273289`.
 ```solidity
 error ERC721NonexistentToken(uint256 tokenId);
@@ -1116,7 +1108,6 @@ error ERC721NonexistentToken(uint256 tokenId);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `Approval(address,address,uint256)` and selector `0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925`.
 ```solidity
 event Approval(address indexed owner, address indexed approved, uint256 indexed tokenId);
@@ -1158,9 +1149,38 @@ event Approval(address indexed owner, address indexed approved, uint256 indexed 
             );
             const SIGNATURE: &'static str = "Approval(address,address,uint256)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                140u8, 91u8, 225u8, 229u8, 235u8, 236u8, 125u8, 91u8, 209u8, 79u8, 113u8,
-                66u8, 125u8, 30u8, 132u8, 243u8, 221u8, 3u8, 20u8, 192u8, 247u8, 178u8,
-                41u8, 30u8, 91u8, 32u8, 10u8, 200u8, 199u8, 195u8, 185u8, 37u8,
+                140u8,
+                91u8,
+                225u8,
+                229u8,
+                235u8,
+                236u8,
+                125u8,
+                91u8,
+                209u8,
+                79u8,
+                113u8,
+                66u8,
+                125u8,
+                30u8,
+                132u8,
+                243u8,
+                221u8,
+                3u8,
+                20u8,
+                192u8,
+                247u8,
+                178u8,
+                41u8,
+                30u8,
+                91u8,
+                32u8,
+                10u8,
+                200u8,
+                199u8,
+                195u8,
+                185u8,
+                37u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -1243,7 +1263,6 @@ event Approval(address indexed owner, address indexed approved, uint256 indexed 
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `ApprovalForAll(address,address,bool)` and selector `0x17307eab39ab6107e8899845ad3d59bd9653f200f220920489ca2b5937696c31`.
 ```solidity
 event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
@@ -1284,9 +1303,38 @@ event ApprovalForAll(address indexed owner, address indexed operator, bool appro
             );
             const SIGNATURE: &'static str = "ApprovalForAll(address,address,bool)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                23u8, 48u8, 126u8, 171u8, 57u8, 171u8, 97u8, 7u8, 232u8, 137u8, 152u8,
-                69u8, 173u8, 61u8, 89u8, 189u8, 150u8, 83u8, 242u8, 0u8, 242u8, 32u8,
-                146u8, 4u8, 137u8, 202u8, 43u8, 89u8, 55u8, 105u8, 108u8, 49u8,
+                23u8,
+                48u8,
+                126u8,
+                171u8,
+                57u8,
+                171u8,
+                97u8,
+                7u8,
+                232u8,
+                137u8,
+                152u8,
+                69u8,
+                173u8,
+                61u8,
+                89u8,
+                189u8,
+                150u8,
+                83u8,
+                242u8,
+                0u8,
+                242u8,
+                32u8,
+                146u8,
+                4u8,
+                137u8,
+                202u8,
+                43u8,
+                89u8,
+                55u8,
+                105u8,
+                108u8,
+                49u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -1365,7 +1413,6 @@ event ApprovalForAll(address indexed owner, address indexed operator, bool appro
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `Transfer(address,address,uint256)` and selector `0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef`.
 ```solidity
 event Transfer(address indexed from, address indexed to, uint256 indexed tokenId);
@@ -1407,9 +1454,38 @@ event Transfer(address indexed from, address indexed to, uint256 indexed tokenId
             );
             const SIGNATURE: &'static str = "Transfer(address,address,uint256)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                221u8, 242u8, 82u8, 173u8, 27u8, 226u8, 200u8, 155u8, 105u8, 194u8,
-                176u8, 104u8, 252u8, 55u8, 141u8, 170u8, 149u8, 43u8, 167u8, 241u8, 99u8,
-                196u8, 161u8, 22u8, 40u8, 245u8, 90u8, 77u8, 245u8, 35u8, 179u8, 239u8,
+                221u8,
+                242u8,
+                82u8,
+                173u8,
+                27u8,
+                226u8,
+                200u8,
+                155u8,
+                105u8,
+                194u8,
+                176u8,
+                104u8,
+                252u8,
+                55u8,
+                141u8,
+                170u8,
+                149u8,
+                43u8,
+                167u8,
+                241u8,
+                99u8,
+                196u8,
+                161u8,
+                22u8,
+                40u8,
+                245u8,
+                90u8,
+                77u8,
+                245u8,
+                35u8,
+                179u8,
+                239u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -1492,7 +1568,6 @@ event Transfer(address indexed from, address indexed to, uint256 indexed tokenId
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `approve(address,uint256)` and selector `0x095ea7b3`.
 ```solidity
 function approve(address to, uint256 tokenId) external;
@@ -1633,7 +1708,6 @@ function approve(address to, uint256 tokenId) external;
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `balanceOf(address)` and selector `0x70a08231`.
 ```solidity
 function balanceOf(address owner) external view returns (uint256);
@@ -1644,7 +1718,6 @@ function balanceOf(address owner) external view returns (uint256);
         #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`balanceOf(address)`](balanceOfCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1763,7 +1836,6 @@ function balanceOf(address owner) external view returns (uint256);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `getApproved(uint256)` and selector `0x081812fc`.
 ```solidity
 function getApproved(uint256 tokenId) external view returns (address);
@@ -1774,7 +1846,6 @@ function getApproved(uint256 tokenId) external view returns (address);
         #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`getApproved(uint256)`](getApprovedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1893,7 +1964,6 @@ function getApproved(uint256 tokenId) external view returns (address);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isApprovedForAll(address,address)` and selector `0xe985e9c5`.
 ```solidity
 function isApprovedForAll(address owner, address operator) external view returns (bool);
@@ -1906,7 +1976,6 @@ function isApprovedForAll(address owner, address operator) external view returns
         #[allow(missing_docs)]
         pub operator: alloy::sol_types::private::Address,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isApprovedForAll(address,address)`](isApprovedForAllCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -2042,7 +2111,6 @@ function isApprovedForAll(address owner, address operator) external view returns
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `name()` and selector `0x06fdde03`.
 ```solidity
 function name() external view returns (string memory);
@@ -2050,7 +2118,6 @@ function name() external view returns (string memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct nameCall {}
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`name()`](nameCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -2163,7 +2230,6 @@ function name() external view returns (string memory);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `ownerOf(uint256)` and selector `0x6352211e`.
 ```solidity
 function ownerOf(uint256 tokenId) external view returns (address);
@@ -2174,7 +2240,6 @@ function ownerOf(uint256 tokenId) external view returns (address);
         #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`ownerOf(uint256)`](ownerOfCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -2293,7 +2358,6 @@ function ownerOf(uint256 tokenId) external view returns (address);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `safeTransferFrom(address,address,uint256)` and selector `0x42842e0e`.
 ```solidity
 function safeTransferFrom(address from, address to, uint256 tokenId) external;
@@ -2447,7 +2511,6 @@ function safeTransferFrom(address from, address to, uint256 tokenId) external;
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `safeTransferFrom(address,address,uint256,bytes)` and selector `0xb88d4fde`.
 ```solidity
 function safeTransferFrom(address from, address to, uint256 tokenId, bytes memory data) external;
@@ -2610,7 +2673,6 @@ function safeTransferFrom(address from, address to, uint256 tokenId, bytes memor
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `setApprovalForAll(address,bool)` and selector `0xa22cb465`.
 ```solidity
 function setApprovalForAll(address operator, bool approved) external;
@@ -2752,7 +2814,6 @@ function setApprovalForAll(address operator, bool approved) external;
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `supportsInterface(bytes4)` and selector `0x01ffc9a7`.
 ```solidity
 function supportsInterface(bytes4 interfaceId) external view returns (bool);
@@ -2763,7 +2824,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
         #[allow(missing_docs)]
         pub interfaceId: alloy::sol_types::private::FixedBytes<4>,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`supportsInterface(bytes4)`](supportsInterfaceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -2884,7 +2944,6 @@ function supportsInterface(bytes4 interfaceId) external view returns (bool);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `symbol()` and selector `0x95d89b41`.
 ```solidity
 function symbol() external view returns (string memory);
@@ -2892,7 +2951,6 @@ function symbol() external view returns (string memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct symbolCall {}
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`symbol()`](symbolCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -3005,7 +3063,6 @@ function symbol() external view returns (string memory);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `tokenURI(uint256)` and selector `0xc87b56dd`.
 ```solidity
 function tokenURI(uint256 tokenId) external view returns (string memory);
@@ -3016,7 +3073,6 @@ function tokenURI(uint256 tokenId) external view returns (string memory);
         #[allow(missing_docs)]
         pub tokenId: alloy::sol_types::private::primitives::aliases::U256,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`tokenURI(uint256)`](tokenURICall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -3135,7 +3191,6 @@ function tokenURI(uint256 tokenId) external view returns (string memory);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `transferFrom(address,address,uint256)` and selector `0x23b872dd`.
 ```solidity
 function transferFrom(address from, address to, uint256 tokenId) external;
@@ -3286,7 +3341,6 @@ function transferFrom(address from, address to, uint256 tokenId) external;
         }
     };
     ///Container for all the [`ERC721`](self) function calls.
-    #[derive()]
     pub enum ERC721Calls {
         #[allow(missing_docs)]
         approve(approveCall),
@@ -3708,7 +3762,6 @@ function transferFrom(address from, address to, uint256 tokenId) external;
         }
     }
     ///Container for all the [`ERC721`](self) custom errors.
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum ERC721Errors {
         #[allow(missing_docs)]
         ERC721IncorrectOwner(ERC721IncorrectOwner),
@@ -4014,7 +4067,6 @@ function transferFrom(address from, address to, uint256 tokenId) external;
         }
     }
     ///Container for all the [`ERC721`](self) events.
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum ERC721Events {
         #[allow(missing_docs)]
         Approval(Approval),
@@ -4033,19 +4085,106 @@ function transferFrom(address from, address to, uint256 tokenId) external;
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                23u8, 48u8, 126u8, 171u8, 57u8, 171u8, 97u8, 7u8, 232u8, 137u8, 152u8,
-                69u8, 173u8, 61u8, 89u8, 189u8, 150u8, 83u8, 242u8, 0u8, 242u8, 32u8,
-                146u8, 4u8, 137u8, 202u8, 43u8, 89u8, 55u8, 105u8, 108u8, 49u8,
+                23u8,
+                48u8,
+                126u8,
+                171u8,
+                57u8,
+                171u8,
+                97u8,
+                7u8,
+                232u8,
+                137u8,
+                152u8,
+                69u8,
+                173u8,
+                61u8,
+                89u8,
+                189u8,
+                150u8,
+                83u8,
+                242u8,
+                0u8,
+                242u8,
+                32u8,
+                146u8,
+                4u8,
+                137u8,
+                202u8,
+                43u8,
+                89u8,
+                55u8,
+                105u8,
+                108u8,
+                49u8,
             ],
             [
-                140u8, 91u8, 225u8, 229u8, 235u8, 236u8, 125u8, 91u8, 209u8, 79u8, 113u8,
-                66u8, 125u8, 30u8, 132u8, 243u8, 221u8, 3u8, 20u8, 192u8, 247u8, 178u8,
-                41u8, 30u8, 91u8, 32u8, 10u8, 200u8, 199u8, 195u8, 185u8, 37u8,
+                140u8,
+                91u8,
+                225u8,
+                229u8,
+                235u8,
+                236u8,
+                125u8,
+                91u8,
+                209u8,
+                79u8,
+                113u8,
+                66u8,
+                125u8,
+                30u8,
+                132u8,
+                243u8,
+                221u8,
+                3u8,
+                20u8,
+                192u8,
+                247u8,
+                178u8,
+                41u8,
+                30u8,
+                91u8,
+                32u8,
+                10u8,
+                200u8,
+                199u8,
+                195u8,
+                185u8,
+                37u8,
             ],
             [
-                221u8, 242u8, 82u8, 173u8, 27u8, 226u8, 200u8, 155u8, 105u8, 194u8,
-                176u8, 104u8, 252u8, 55u8, 141u8, 170u8, 149u8, 43u8, 167u8, 241u8, 99u8,
-                196u8, 161u8, 22u8, 40u8, 245u8, 90u8, 77u8, 245u8, 35u8, 179u8, 239u8,
+                221u8,
+                242u8,
+                82u8,
+                173u8,
+                27u8,
+                226u8,
+                200u8,
+                155u8,
+                105u8,
+                194u8,
+                176u8,
+                104u8,
+                252u8,
+                55u8,
+                141u8,
+                170u8,
+                149u8,
+                43u8,
+                167u8,
+                241u8,
+                99u8,
+                196u8,
+                161u8,
+                22u8,
+                40u8,
+                245u8,
+                90u8,
+                77u8,
+                245u8,
+                35u8,
+                179u8,
+                239u8,
             ],
         ];
     }

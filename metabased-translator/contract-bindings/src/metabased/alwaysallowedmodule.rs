@@ -81,7 +81,6 @@ pub mod AlwaysAllowedModule {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R`\x046\x10\x15a\0\x13W[a\x01\xBFV[a\0\x1D_5a\0<V[\x80c=\xFB^\xE7\x14a\x007Wc\xBA\xBC\xC59\x03a\0\x0EWa\x01\x8AV[a\0\xFCV[`\xE0\x1C\x90V[`@Q\x90V[_\x80\xFD[_\x80\xFD[_\x80\xFD[_\x80\xFD[_\x80\xFD[_\x80\xFD[\x90\x91\x82`\x1F\x83\x01\x12\x15a\0\x9AW\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\0\x95W` \x01\x92`\x01\x83\x02\x84\x01\x11a\0\x90WV[a\0\\V[a\0XV[a\0TV[\x90` \x82\x82\x03\x12a\0\xD0W_\x82\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\0\xCBWa\0\xC7\x92\x01a\0`V[\x90\x91V[a\0PV[a\0LV[\x15\x15\x90V[a\0\xE3\x90a\0\xD5V[\x90RV[\x91\x90a\0\xFA\x90_` \x85\x01\x94\x01\x90a\0\xDAV[V[4a\x01-Wa\x01)a\x01\x18a\x01\x126`\x04a\0\x9FV[\x90a\x01\xC7V[a\x01 a\0BV[\x91\x82\x91\x82a\0\xE7V[\x03\x90\xF3[a\0HV[`\x01\x80`\xA0\x1B\x03\x16\x90V[a\x01F\x90a\x012V[\x90V[a\x01R\x81a\x01=V[\x03a\x01YWV[_\x80\xFD[\x90P5\x90a\x01j\x82a\x01IV[V[\x90` \x82\x82\x03\x12a\x01\x85Wa\x01\x82\x91_\x01a\x01]V[\x90V[a\0LV[4a\x01\xBAWa\x01\xB6a\x01\xA5a\x01\xA06`\x04a\x01lV[a\x01\xD7V[a\x01\xADa\0BV[\x91\x82\x91\x82a\0\xE7V[\x03\x90\xF3[a\0HV[_\x80\xFD[_\x90V[PPa\x01\xD1a\x01\xC3V[P`\x01\x90V[Pa\x01\xE0a\x01\xC3V[P`\x01\x90V\xFE\xA2dipfsX\"\x12 \x9A\xC1R3\xCE\xB7LE\xBDP0\xDA0\xBBq\"\x15IH\x11\xA6n\xBC\x84\xFE'E[\xE41\x19\x0CdsolcC\0\x08\x19\x003",
     );
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isAllowed(address)` and selector `0xbabcc539`.
 ```solidity
 function isAllowed(address) external pure returns (bool);
@@ -92,7 +91,6 @@ function isAllowed(address) external pure returns (bool);
         #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -209,7 +207,6 @@ function isAllowed(address) external pure returns (bool);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isCalldataAllowed(bytes)` and selector `0x3dfb5ee7`.
 ```solidity
 function isCalldataAllowed(bytes memory) external pure returns (bool);
@@ -220,7 +217,6 @@ function isCalldataAllowed(bytes memory) external pure returns (bool);
         #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Bytes,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isCalldataAllowed(bytes)`](isCalldataAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -342,7 +338,6 @@ function isCalldataAllowed(bytes memory) external pure returns (bool);
         }
     };
     ///Container for all the [`AlwaysAllowedModule`](self) function calls.
-    #[derive()]
     pub enum AlwaysAllowedModuleCalls {
         #[allow(missing_docs)]
         isAllowed(isAllowedCall),

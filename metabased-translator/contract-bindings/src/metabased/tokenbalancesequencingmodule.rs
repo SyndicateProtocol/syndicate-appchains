@@ -189,7 +189,6 @@ constructor(address _tokenAddress, uint256 _minimumBalance);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isAllowed(address)` and selector `0xbabcc539`.
 ```solidity
 function isAllowed(address proposer) external view returns (bool);
@@ -200,7 +199,6 @@ function isAllowed(address proposer) external view returns (bool);
         #[allow(missing_docs)]
         pub proposer: alloy::sol_types::private::Address,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -317,7 +315,6 @@ function isAllowed(address proposer) external view returns (bool);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `minimumBalance()` and selector `0xb9d1d49b`.
 ```solidity
 function minimumBalance() external view returns (uint256);
@@ -325,7 +322,6 @@ function minimumBalance() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct minimumBalanceCall {}
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`minimumBalance()`](minimumBalanceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -442,7 +438,6 @@ function minimumBalance() external view returns (uint256);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `tokenAddress()` and selector `0x9d76ea58`.
 ```solidity
 function tokenAddress() external view returns (address);
@@ -450,7 +445,6 @@ function tokenAddress() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct tokenAddressCall {}
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`tokenAddress()`](tokenAddressCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -564,7 +558,6 @@ function tokenAddress() external view returns (address);
         }
     };
     ///Container for all the [`TokenBalanceSequencingModule`](self) function calls.
-    #[derive()]
     pub enum TokenBalanceSequencingModuleCalls {
         #[allow(missing_docs)]
         isAllowed(isAllowedCall),

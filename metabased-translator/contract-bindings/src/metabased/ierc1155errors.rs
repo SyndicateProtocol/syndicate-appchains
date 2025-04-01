@@ -150,7 +150,6 @@ pub mod IERC1155Errors {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC1155InsufficientBalance(address,uint256,uint256,uint256)` and selector `0x03dee4c5`.
 ```solidity
 error ERC1155InsufficientBalance(address sender, uint256 balance, uint256 needed, uint256 tokenId);
@@ -254,7 +253,6 @@ error ERC1155InsufficientBalance(address sender, uint256 balance, uint256 needed
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC1155InvalidApprover(address)` and selector `0x3e31884e`.
 ```solidity
 error ERC1155InvalidApprover(address approver);
@@ -326,7 +324,6 @@ error ERC1155InvalidApprover(address approver);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC1155InvalidArrayLength(uint256,uint256)` and selector `0x5b059991`.
 ```solidity
 error ERC1155InvalidArrayLength(uint256 idsLength, uint256 valuesLength);
@@ -414,7 +411,6 @@ error ERC1155InvalidArrayLength(uint256 idsLength, uint256 valuesLength);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC1155InvalidOperator(address)` and selector `0xced3e100`.
 ```solidity
 error ERC1155InvalidOperator(address operator);
@@ -486,7 +482,6 @@ error ERC1155InvalidOperator(address operator);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC1155InvalidReceiver(address)` and selector `0x57f447ce`.
 ```solidity
 error ERC1155InvalidReceiver(address receiver);
@@ -558,7 +553,6 @@ error ERC1155InvalidReceiver(address receiver);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC1155InvalidSender(address)` and selector `0x01a83514`.
 ```solidity
 error ERC1155InvalidSender(address sender);
@@ -630,7 +624,6 @@ error ERC1155InvalidSender(address sender);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC1155MissingApprovalForAll(address,address)` and selector `0xe237d922`.
 ```solidity
 error ERC1155MissingApprovalForAll(address operator, address owner);
@@ -719,7 +712,6 @@ error ERC1155MissingApprovalForAll(address operator, address owner);
         }
     };
     ///Container for all the [`IERC1155Errors`](self) custom errors.
-    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum IERC1155ErrorsErrors {
         #[allow(missing_docs)]
         ERC1155InsufficientBalance(ERC1155InsufficientBalance),

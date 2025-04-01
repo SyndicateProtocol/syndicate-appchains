@@ -100,7 +100,6 @@ pub mod IAgentApplication {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `ADMIN_ROLE()` and selector `0x75b238fc`.
 ```solidity
 function ADMIN_ROLE() external view returns (bytes32);
@@ -108,7 +107,6 @@ function ADMIN_ROLE() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ADMIN_ROLECall {}
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`ADMIN_ROLE()`](ADMIN_ROLECall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -221,7 +219,6 @@ function ADMIN_ROLE() external view returns (bytes32);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `hasRole(bytes32,address)` and selector `0x91d14854`.
 ```solidity
 function hasRole(bytes32 role, address account) external view returns (bool);
@@ -234,7 +231,6 @@ function hasRole(bytes32 role, address account) external view returns (bool);
         #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`hasRole(bytes32,address)`](hasRoleCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -366,7 +362,6 @@ function hasRole(bytes32 role, address account) external view returns (bool);
             }
         }
     };
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isPermittedByAddress(address)` and selector `0x9e549515`.
 ```solidity
 function isPermittedByAddress(address agentAddress) external view returns (bool);
@@ -377,7 +372,6 @@ function isPermittedByAddress(address agentAddress) external view returns (bool)
         #[allow(missing_docs)]
         pub agentAddress: alloy::sol_types::private::Address,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isPermittedByAddress(address)`](isPermittedByAddressCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -499,7 +493,6 @@ function isPermittedByAddress(address agentAddress) external view returns (bool)
         }
     };
     ///Container for all the [`IAgentApplication`](self) function calls.
-    #[derive()]
     pub enum IAgentApplicationCalls {
         #[allow(missing_docs)]
         ADMIN_ROLE(ADMIN_ROLECall),

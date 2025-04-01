@@ -76,7 +76,6 @@ pub mod IERC721Receiver {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `onERC721Received(address,address,uint256,bytes)` and selector `0x150b7a02`.
 ```solidity
 function onERC721Received(address operator, address from, uint256 tokenId, bytes memory data) external returns (bytes4);
@@ -93,7 +92,6 @@ function onERC721Received(address operator, address from, uint256 tokenId, bytes
         #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
-    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`onERC721Received(address,address,uint256,bytes)`](onERC721ReceivedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -244,7 +242,6 @@ function onERC721Received(address operator, address from, uint256 tokenId, bytes
         }
     };
     ///Container for all the [`IERC721Receiver`](self) function calls.
-    #[derive()]
     pub enum IERC721ReceiverCalls {
         #[allow(missing_docs)]
         onERC721Received(onERC721ReceivedCall),
