@@ -71,6 +71,7 @@ pub mod ECDSA {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xAA\xEE\x91\xDD\x1DI\x97\x05\xF6[\xCAADv\xD8Zb\xF9\xB2`\x97\xE6\xD6V\xA3\xE9\0\xAES\x85\xF8\x9DdsolcC\0\x08\x19\x003",
     );
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ECDSAInvalidSignature()` and selector `0xf645eedf`.
 ```solidity
 error ECDSAInvalidSignature();
@@ -135,6 +136,7 @@ error ECDSAInvalidSignature();
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ECDSAInvalidSignatureLength(uint256)` and selector `0xfce698f7`.
 ```solidity
 error ECDSAInvalidSignatureLength(uint256 length);
@@ -210,6 +212,7 @@ error ECDSAInvalidSignatureLength(uint256 length);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ECDSAInvalidSignatureS(bytes32)` and selector `0xd78bce0c`.
 ```solidity
 error ECDSAInvalidSignatureS(bytes32 s);
@@ -282,6 +285,7 @@ error ECDSAInvalidSignatureS(bytes32 s);
         }
     };
     ///Container for all the [`ECDSA`](self) custom errors.
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum ECDSAErrors {
         #[allow(missing_docs)]
         ECDSAInvalidSignature(ECDSAInvalidSignature),

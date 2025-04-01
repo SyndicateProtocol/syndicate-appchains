@@ -152,6 +152,7 @@ pub mod IERC721Errors {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721IncorrectOwner(address,uint256,address)` and selector `0x64283d7b`.
 ```solidity
 error ERC721IncorrectOwner(address sender, uint256 tokenId, address owner);
@@ -245,6 +246,7 @@ error ERC721IncorrectOwner(address sender, uint256 tokenId, address owner);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721InsufficientApproval(address,uint256)` and selector `0x177e802f`.
 ```solidity
 error ERC721InsufficientApproval(address operator, uint256 tokenId);
@@ -332,6 +334,7 @@ error ERC721InsufficientApproval(address operator, uint256 tokenId);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721InvalidApprover(address)` and selector `0xa9fbf51f`.
 ```solidity
 error ERC721InvalidApprover(address approver);
@@ -403,6 +406,7 @@ error ERC721InvalidApprover(address approver);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721InvalidOperator(address)` and selector `0x5b08ba18`.
 ```solidity
 error ERC721InvalidOperator(address operator);
@@ -474,6 +478,7 @@ error ERC721InvalidOperator(address operator);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721InvalidOwner(address)` and selector `0x89c62b64`.
 ```solidity
 error ERC721InvalidOwner(address owner);
@@ -545,6 +550,7 @@ error ERC721InvalidOwner(address owner);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721InvalidReceiver(address)` and selector `0x64a0ae92`.
 ```solidity
 error ERC721InvalidReceiver(address receiver);
@@ -616,6 +622,7 @@ error ERC721InvalidReceiver(address receiver);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721InvalidSender(address)` and selector `0x73c6ac6e`.
 ```solidity
 error ERC721InvalidSender(address sender);
@@ -687,6 +694,7 @@ error ERC721InvalidSender(address sender);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `ERC721NonexistentToken(uint256)` and selector `0x7e273289`.
 ```solidity
 error ERC721NonexistentToken(uint256 tokenId);
@@ -761,6 +769,7 @@ error ERC721NonexistentToken(uint256 tokenId);
         }
     };
     ///Container for all the [`IERC721Errors`](self) custom errors.
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum IERC721ErrorsErrors {
         #[allow(missing_docs)]
         ERC721IncorrectOwner(ERC721IncorrectOwner),

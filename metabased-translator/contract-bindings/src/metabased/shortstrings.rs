@@ -59,6 +59,7 @@ pub mod ShortStrings {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xCF.\x8E\x04\x15\xA2\x83\xF0f&\xA7\x94\xBD\xFE\x9FQ\x85y\xF3\x08\xAB\xBAW\x7F\x96]\xF9\xCA\xC8\x03V\xE1dsolcC\0\x08\x19\x003",
     );
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `InvalidShortString()` and selector `0xb3512b0c`.
 ```solidity
 error InvalidShortString();
@@ -123,6 +124,7 @@ error InvalidShortString();
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `StringTooLong(string)` and selector `0x305a27a9`.
 ```solidity
 error StringTooLong(string str);
@@ -195,6 +197,7 @@ error StringTooLong(string str);
         }
     };
     ///Container for all the [`ShortStrings`](self) custom errors.
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum ShortStringsErrors {
         #[allow(missing_docs)]
         InvalidShortString(InvalidShortString),

@@ -373,6 +373,7 @@ pub mod RequireAllModule {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R`\x046\x10\x15a\0\x13W[a\x05GV[a\0\x1D_5a\0\xCCV[\x80c\x04\xA8\xCCP\x14a\0\xC7W\x80c\x1B\xA3\x9A\x12\x14a\0\xC2W\x80c=\xFB^\xE7\x14a\0\xBDW\x80cB\xFD\x07V\x14a\0\xB8W\x80cp@[\x0B\x14a\0\xB3W\x80cqP\x18\xA6\x14a\0\xAEW\x80c\x8D\xA5\xCB[\x14a\0\xA9W\x80c\x98\xA7\xE5\xC2\x14a\0\xA4W\x80c\xA7\xF76\xF2\x14a\0\x9FW\x80c\xBA\xBC\xC59\x14a\0\x9AWc\xF2\xFD\xE3\x8B\x03a\0\x0EWa\x05\x14V[a\x04\xDFV[a\x04\xABV[a\x04wV[a\x03\xF2V[a\x03\x9DV[a\x03hV[a\x035V[a\x02\xFFV[a\x02\"V[a\x01AV[`\xE0\x1C\x90V[`@Q\x90V[_\x80\xFD[_\x80\xFD[_\x80\xFD[`\x01\x80`\xA0\x1B\x03\x16\x90V[a\0\xF8\x90a\0\xE4V[\x90V[a\x01\x04\x81a\0\xEFV[\x03a\x01\x0BWV[_\x80\xFD[\x90P5\x90a\x01\x1C\x82a\0\xFBV[V[\x90` \x82\x82\x03\x12a\x017Wa\x014\x91_\x01a\x01\x0FV[\x90V[a\0\xDCV[_\x01\x90V[4a\x01oWa\x01Ya\x01T6`\x04a\x01\x1EV[a\x07FV[a\x01aa\0\xD2V[\x80a\x01k\x81a\x01<V[\x03\x90\xF3[a\0\xD8V[_\x91\x03\x12a\x01~WV[a\0\xDCV[Q\x90V[` \x91\x81R\x01\x90V[` \x01\x90V[a\x01\x9F\x90a\0\xEFV[\x90RV[\x90a\x01\xB0\x81` \x93a\x01\x96V[\x01\x90V[` \x01\x90V[\x90a\x01\xD7a\x01\xD1a\x01\xCA\x84a\x01\x83V[\x80\x93a\x01\x87V[\x92a\x01\x90V[\x90_[\x81\x81\x10a\x01\xE7WPPP\x90V[\x90\x91\x92a\x02\0a\x01\xFA`\x01\x92\x86Qa\x01\xA3V[\x94a\x01\xB4V[\x91\x01\x91\x90\x91a\x01\xDAV[a\x02\x1F\x91` \x82\x01\x91_\x81\x84\x03\x91\x01Ra\x01\xBAV[\x90V[4a\x02RWa\x0226`\x04a\x01tV[a\x02Na\x02=a\x08\xA3V[a\x02Ea\0\xD2V[\x91\x82\x91\x82a\x02\nV[\x03\x90\xF3[a\0\xD8V[_\x80\xFD[_\x80\xFD[_\x80\xFD[\x90\x91\x82`\x1F\x83\x01\x12\x15a\x02\x9DW\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x02\x98W` \x01\x92`\x01\x83\x02\x84\x01\x11a\x02\x93WV[a\x02_V[a\x02[V[a\x02WV[\x90` \x82\x82\x03\x12a\x02\xD3W_\x82\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x02\xCEWa\x02\xCA\x92\x01a\x02cV[\x90\x91V[a\0\xE0V[a\0\xDCV[\x15\x15\x90V[a\x02\xE6\x90a\x02\xD8V[\x90RV[\x91\x90a\x02\xFD\x90_` \x85\x01\x94\x01\x90a\x02\xDDV[V[4a\x030Wa\x03,a\x03\x1Ba\x03\x156`\x04a\x02\xA2V[\x90a\n;V[a\x03#a\0\xD2V[\x91\x82\x91\x82a\x02\xEAV[\x03\x90\xF3[a\0\xD8V[4a\x03cWa\x03Ma\x03H6`\x04a\x01\x1EV[a\x0CvV[a\x03Ua\0\xD2V[\x80a\x03_\x81a\x01<V[\x03\x90\xF3[a\0\xD8V[4a\x03\x98Wa\x03x6`\x04a\x01tV[a\x03\x94a\x03\x83a\x0C\x81V[a\x03\x8Ba\0\xD2V[\x91\x82\x91\x82a\x02\nV[\x03\x90\xF3[a\0\xD8V[4a\x03\xCBWa\x03\xAD6`\x04a\x01tV[a\x03\xB5a\r\x82V[a\x03\xBDa\0\xD2V[\x80a\x03\xC7\x81a\x01<V[\x03\x90\xF3[a\0\xD8V[a\x03\xD9\x90a\0\xEFV[\x90RV[\x91\x90a\x03\xF0\x90_` \x85\x01\x94\x01\x90a\x03\xD0V[V[4a\x04\"Wa\x04\x026`\x04a\x01tV[a\x04\x1Ea\x04\ra\r\xC1V[a\x04\x15a\0\xD2V[\x91\x82\x91\x82a\x03\xDDV[\x03\x90\xF3[a\0\xD8V[a\x040\x81a\x02\xD8V[\x03a\x047WV[_\x80\xFD[\x90P5\x90a\x04H\x82a\x04'V[V[\x91\x90`@\x83\x82\x03\x12a\x04rW\x80a\x04fa\x04o\x92_\x86\x01a\x01\x0FV[\x93` \x01a\x04;V[\x90V[a\0\xDCV[4a\x04\xA6Wa\x04\x90a\x04\x8A6`\x04a\x04JV[\x90a\x0FuV[a\x04\x98a\0\xD2V[\x80a\x04\xA2\x81a\x01<V[\x03\x90\xF3[a\0\xD8V[4a\x04\xDAWa\x04\xC4a\x04\xBE6`\x04a\x04JV[\x90a\x10\x9EV[a\x04\xCCa\0\xD2V[\x80a\x04\xD6\x81a\x01<V[\x03\x90\xF3[a\0\xD8V[4a\x05\x0FWa\x05\x0Ba\x04\xFAa\x04\xF56`\x04a\x01\x1EV[a\x10\xF1V[a\x05\x02a\0\xD2V[\x91\x82\x91\x82a\x02\xEAV[\x03\x90\xF3[a\0\xD8V[4a\x05BWa\x05,a\x05'6`\x04a\x01\x1EV[a\x12\x83V[a\x054a\0\xD2V[\x80a\x05>\x81a\x01<V[\x03\x90\xF3[a\0\xD8V[_\x80\xFD[a\x05\\\x90a\x05Wa\x12\x8EV[a\x06NV[V[\x90V[\x90V[a\x05xa\x05sa\x05}\x92a\x05^V[a\x05aV[a\0\xE4V[\x90V[a\x05\x89\x90a\x05dV[\x90V[\x90V[` \x91\x81R\x01\x90V[_\x7FAddress not removed\0\0\0\0\0\0\0\0\0\0\0\0\0\x91\x01RV[a\x05\xCC`\x13` \x92a\x05\x8FV[a\x05\xD5\x81a\x05\x98V[\x01\x90V[a\x05\xEE\x90` \x81\x01\x90_\x81\x83\x03\x91\x01Ra\x05\xBFV[\x90V[\x15a\x05\xF8WV[a\x06\0a\0\xD2V[bF\x1B\xCD`\xE5\x1B\x81R\x80a\x06\x16`\x04\x82\x01a\x05\xD9V[\x03\x90\xFD[a\x06.a\x06)a\x063\x92a\0\xE4V[a\x05aV[a\0\xE4V[\x90V[a\x06?\x90a\x06\x1AV[\x90V[a\x06K\x90a\x066V[\x90V[\x80a\x06ia\x06ca\x06^_a\x05\x80V[a\0\xEFV[\x91a\0\xEFV[\x14a\x07#Wa\x06\x8Ba\x06\x85`\x03a\x06\x80\x84\x91a\x05\x8CV[a\x130V[\x15a\x02\xD8V[a\x07\0Wa\x06\xBEa\x06\xA6`\x03a\x06\xA1\x84\x91a\x05\x8CV[a\x15YV[a\x06\xB8a\x06\xB2\x84a\0\xEFV[\x91a\0\xEFV[\x14a\x05\xF1V[a\x06\xE8\x7F\xC861\xD6\x96\x1F\xB0\x8DZ\xD5\x89v,B\x1F\x82V\xCBM\xB3\xAC\xCE\x18X\xEF\xFB\xF5\x81\xA1\xD4\xF8P\x91a\x06BV[\x90a\x06\xF1a\0\xD2V[\x80a\x06\xFB\x81a\x01<V[\x03\x90\xA2V[a\x07\x08a\0\xD2V[c=\x0F)=`\xE0\x1B\x81R\x80a\x07\x1F`\x04\x82\x01a\x01<V[\x03\x90\xFD[a\x07+a\0\xD2V[c\xE6\xC4${`\xE0\x1B\x81R\x80a\x07B`\x04\x82\x01a\x01<V[\x03\x90\xFD[a\x07O\x90a\x05KV[V[``\x90V[`\x1F\x80\x19\x91\x01\x16\x90V[cNH{q`\xE0\x1B_R`A`\x04R`$_\xFD[\x90a\x07~\x90a\x07VV[\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\x07\x98W`@RV[a\x07`V[\x90a\x07\xB0a\x07\xA9a\0\xD2V[\x92\x83a\x07tV[V[g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x07\xCAW` \x80\x91\x02\x01\x90V[a\x07`V[\x90a\x07\xE1a\x07\xDC\x83a\x07\xB2V[a\x07\x9DV[\x91\x82RV[6\x907V[\x90a\x08\x10a\x07\xF8\x83a\x07\xCFV[\x92` \x80a\x08\x06\x86\x93a\x07\xB2V[\x92\x01\x91\x03\x90a\x07\xE6V[V[\x90V[a\x08)a\x08$a\x08.\x92a\x05^V[a\x05aV[a\x08\x12V[\x90V[cNH{q`\xE0\x1B_R`\x11`\x04R`$_\xFD[a\x08N\x90a\x08\x12V[_\x19\x81\x14a\x08\\W`\x01\x01\x90V[a\x081V[cNH{q`\xE0\x1B_R`2`\x04R`$_\xFD[\x90a\x08\x7F\x82a\x01\x83V[\x81\x10\x15a\x08\x90W` \x80\x91\x02\x01\x01\x90V[a\x08aV[\x90a\x08\x9F\x90a\0\xEFV[\x90RV[a\x08\xABa\x07QV[Pa\x08\xBEa\x08\xB9`\x01a\x05\x8CV[a\x16\x91V[a\x08\xC7\x81a\x07\xEBV[a\x08\xD9a\x08\xD4`\x01a\x05\x8CV[a\x16\xA8V[a\x08\xE2_a\x08\x15V[\x90[\x81a\x08\xF7a\x08\xF1\x86a\x08\x12V[\x91a\x08\x12V[\x10\x80a\t\\W[\x15a\tSWa\t/\x81a\t a\t7\x93a\t\x1B\x87\x91\x87\x90\x92a\x08uV[a\x08\x95V[a\t*`\x01a\x05\x8CV[a\x16\xE2V[\x91\x90\x15a\x02\xD8V[a\tKWa\tE\x90\x91a\x08EV[\x90a\x08\xE4V[PP\x90P[\x90V[PP\x90Pa\tPV[P\x80a\txa\tra\tm_a\x05\x80V[a\0\xEFV[\x91a\0\xEFV[\x14\x15a\x08\xFEV[_\x90V[a\t\x8C\x90a\x06\x1AV[\x90V[a\t\x98\x90a\t\x83V[\x90V[a\t\xA4\x90a\x066V[\x90V[`\xE0\x1B\x90V[\x90PQ\x90a\t\xBA\x82a\x04'V[V[\x90` \x82\x82\x03\x12a\t\xD5Wa\t\xD2\x91_\x01a\t\xADV[\x90V[a\0\xDCV[` \x91\x81R\x01\x90V[\x90\x82_\x93\x92\x827\x01RV[\x91\x90a\n\x08\x81a\n\x01\x81a\n\r\x95a\t\xDAV[\x80\x95a\t\xE3V[a\x07VV[\x01\x90V[\x90\x91a\n(\x92` \x83\x01\x92_\x81\x85\x03\x91\x01Ra\t\xEEV[\x90V[a\n3a\0\xD2V[=_\x82>=\x90\xFD[\x91\x90\x91a\nFa\t\x7FV[Pa\nYa\nT`\x03a\x05\x8CV[a\x16\xA8V[[\x80a\nua\noa\nj_a\x05\x80V[a\0\xEFV[\x91a\0\xEFV[\x14a\x0BbWa\n\x8Ba\n\x86\x82a\t\x8FV[a\t\x9BV[` c=\xFB^\xE7\x91\x84\x90a\n\xB1\x88\x94a\n\xBCa\n\xA5a\0\xD2V[\x96\x87\x95\x86\x94\x85\x94a\t\xA7V[\x84R`\x04\x84\x01a\n\x11V[\x03\x91Z\xFA\x80\x15a\x0B]Wa\n\xD8\x91_\x91a\x0B/W[P\x15a\x02\xD8V[a\x0B\tWa\n\xF2a\n\xFA\x91a\n\xED`\x03a\x05\x8CV[a\x16\xE2V[\x91\x90\x15a\x02\xD8V[\x15a\nZWPP\x90P[`\x01\x90V[a\x0B+\x90a\x0B\x15a\0\xD2V[\x91\x82\x91cI\xB8\xDF\xF7`\xE0\x1B\x83R`\x04\x83\x01a\x03\xDDV[\x03\x90\xFD[a\x0BP\x91P` =\x81\x11a\x0BVW[a\x0BH\x81\x83a\x07tV[\x81\x01\x90a\t\xBCV[_a\n\xD1V[P=a\x0B>V[a\n+V[PP\x90Pa\x0B\x04V[a\x0B|\x90a\x0Bwa\x12\x8EV[a\x0B~V[V[\x80a\x0B\x99a\x0B\x93a\x0B\x8E_a\x05\x80V[a\0\xEFV[\x91a\0\xEFV[\x14a\x0CSWa\x0B\xBBa\x0B\xB5`\x01a\x0B\xB0\x84\x91a\x05\x8CV[a\x130V[\x15a\x02\xD8V[a\x0C0Wa\x0B\xEEa\x0B\xD6`\x01a\x0B\xD1\x84\x91a\x05\x8CV[a\x15YV[a\x0B\xE8a\x0B\xE2\x84a\0\xEFV[\x91a\0\xEFV[\x14a\x05\xF1V[a\x0C\x18\x7F\xD4\xC6XA\x991\x8A\xBFY\xE9Y\x99\x06\xD3\xEE\xC5PP\x9Bm\x1D\x84\x1B\xDA\xB9\x91<\xD5kp\xCD7\x91a\x06BV[\x90a\x0C!a\0\xD2V[\x80a\x0C+\x81a\x01<V[\x03\x90\xA2V[a\x0C8a\0\xD2V[c=\x0F)=`\xE0\x1B\x81R\x80a\x0CO`\x04\x82\x01a\x01<V[\x03\x90\xFD[a\x0C[a\0\xD2V[c\xE6\xC4${`\xE0\x1B\x81R\x80a\x0Cr`\x04\x82\x01a\x01<V[\x03\x90\xFD[a\x0C\x7F\x90a\x0BkV[V[a\x0C\x89a\x07QV[Pa\x0C\x9Ca\x0C\x97`\x03a\x05\x8CV[a\x16\x91V[a\x0C\xA5\x81a\x07\xEBV[a\x0C\xB7a\x0C\xB2`\x03a\x05\x8CV[a\x16\xA8V[a\x0C\xC0_a\x08\x15V[\x90[\x81a\x0C\xD5a\x0C\xCF\x86a\x08\x12V[\x91a\x08\x12V[\x10\x80a\r:W[\x15a\r1Wa\r\r\x81a\x0C\xFEa\r\x15\x93a\x0C\xF9\x87\x91\x87\x90\x92a\x08uV[a\x08\x95V[a\r\x08`\x03a\x05\x8CV[a\x16\xE2V[\x91\x90\x15a\x02\xD8V[a\r)Wa\r#\x90\x91a\x08EV[\x90a\x0C\xC2V[PP\x90P[\x90V[PP\x90Pa\r.V[P\x80a\rVa\rPa\rK_a\x05\x80V[a\0\xEFV[\x91a\0\xEFV[\x14\x15a\x0C\xDCV[a\rea\x12\x8EV[a\rma\roV[V[a\r\x80a\r{_a\x05\x80V[a\x17IV[V[a\r\x8Aa\r]V[V[_\x90V[_\x1C\x90V[`\x01\x80`\xA0\x1B\x03\x16\x90V[a\r\xACa\r\xB1\x91a\r\x90V[a\r\x95V[\x90V[a\r\xBE\x90Ta\r\xA0V[\x90V[a\r\xC9a\r\x8CV[Pa\r\xD3_a\r\xB4V[\x90V[\x90a\r\xE8\x91a\r\xE3a\x12\x8EV[a\x0ElV[V[_\x7FAddress not added\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\x91\x01RV[a\x0E\x1E`\x11` \x92a\x05\x8FV[a\x0E'\x81a\r\xEAV[\x01\x90V[a\x0E@\x90` \x81\x01\x90_\x81\x83\x03\x91\x01Ra\x0E\x11V[\x90V[\x15a\x0EJWV[a\x0ERa\0\xD2V[bF\x1B\xCD`\xE5\x1B\x81R\x80a\x0Eh`\x04\x82\x01a\x0E+V[\x03\x90\xFD[\x90\x81a\x0E\x88a\x0E\x82a\x0E}_a\x05\x80V[a\0\xEFV[\x91a\0\xEFV[\x14a\x0FRWa\x0E\xA1`\x01a\x0E\x9C\x84\x91a\x05\x8CV[a\x130V[a\x0F/Wa\x0E\xADa\t\x7FV[P_\x14a\x0F\x13Wa\x0E\xD1a\x0E\xCB`\x01a\x0E\xC6\x84\x91a\x05\x8CV[a\x17\xC8V[[a\x0ECV[a\x0E\xFB\x7Fz\xFARx\xB1\x13v\xDE\xFF\x82\xD6\xD0\xBE\x86]\xB7=cw\x02r\x8B}&Y\xFE\xE0\x0E=\x11\xB9\x06\x91a\x06BV[\x90a\x0F\x04a\0\xD2V[\x80a\x0F\x0E\x81a\x01<V[\x03\x90\xA2V[a\x0E\xD1a\x0F*`\x01a\x0F%\x84\x91a\x05\x8CV[a\x17\xA8V[a\x0E\xCCV[a\x0F7a\0\xD2V[cQl5\x0F`\xE1\x1B\x81R\x80a\x0FN`\x04\x82\x01a\x01<V[\x03\x90\xFD[a\x0FZa\0\xD2V[c\xE6\xC4${`\xE0\x1B\x81R\x80a\x0Fq`\x04\x82\x01a\x01<V[\x03\x90\xFD[\x90a\x0F\x7F\x91a\r\xD6V[V[\x90a\x0F\x93\x91a\x0F\x8Ea\x12\x8EV[a\x0F\x95V[V[\x90\x81a\x0F\xB1a\x0F\xABa\x0F\xA6_a\x05\x80V[a\0\xEFV[\x91a\0\xEFV[\x14a\x10{Wa\x0F\xCA`\x03a\x0F\xC5\x84\x91a\x05\x8CV[a\x130V[a\x10XWa\x0F\xD6a\t\x7FV[P_\x14a\x10<Wa\x0F\xFAa\x0F\xF4`\x03a\x0F\xEF\x84\x91a\x05\x8CV[a\x17\xC8V[[a\x0ECV[a\x10$\x7F\xE4\x0F\xA3\x8A%\xF4\x8Bf\x05u\xFC\x03\xB5\xA6\xDA\x87\x97GO\xA8\xC0\xC1\x8D\xCE\xC2\xED\xC2\xED\x83\xCE\\\xD1\x91a\x06BV[\x90a\x10-a\0\xD2V[\x80a\x107\x81a\x01<V[\x03\x90\xA2V[a\x0F\xFAa\x10S`\x03a\x10N\x84\x91a\x05\x8CV[a\x17\xA8V[a\x0F\xF5V[a\x10`a\0\xD2V[cQl5\x0F`\xE1\x1B\x81R\x80a\x10w`\x04\x82\x01a\x01<V[\x03\x90\xFD[a\x10\x83a\0\xD2V[c\xE6\xC4${`\xE0\x1B\x81R\x80a\x10\x9A`\x04\x82\x01a\x01<V[\x03\x90\xFD[\x90a\x10\xA8\x91a\x0F\x81V[V[a\x10\xB3\x90a\x06\x1AV[\x90V[a\x10\xBF\x90a\x10\xAAV[\x90V[a\x10\xCB\x90a\x066V[\x90V[\x91` a\x10\xEF\x92\x94\x93a\x10\xE8`@\x82\x01\x96_\x83\x01\x90a\x03\xD0V[\x01\x90a\x03\xD0V[V[a\x10\xF9a\t\x7FV[Pa\x11\x0Ca\x11\x07`\x01a\x05\x8CV[a\x16\xA8V[[\x80a\x11(a\x11\"a\x11\x1D_a\x05\x80V[a\0\xEFV[\x91a\0\xEFV[\x14a\x12\x10Wa\x11m` a\x11Ca\x11>\x84a\x10\xB6V[a\x10\xC2V[c\xBA\xBC\xC59\x90a\x11b\x86\x92a\x11Va\0\xD2V[\x95\x86\x94\x85\x93\x84\x93a\t\xA7V[\x83R`\x04\x83\x01a\x03\xDDV[\x03\x91Z\xFA\x80\x15a\x12\x0BWa\x11\x89\x91_\x91a\x11\xDDW[P\x15a\x02\xD8V[a\x11\xB8Wa\x11\xA3a\x11\xAB\x91a\x11\x9E`\x01a\x05\x8CV[a\x16\xE2V[\x91\x90\x15a\x02\xD8V[\x15a\x11\rWPP[`\x01\x90V[a\x11\xD9a\x11\xC3a\0\xD2V[\x92\x83\x92c\x0B-\x15/`\xE0\x1B\x84R`\x04\x84\x01a\x10\xCEV[\x03\x90\xFD[a\x11\xFE\x91P` =\x81\x11a\x12\x04W[a\x11\xF6\x81\x83a\x07tV[\x81\x01\x90a\t\xBCV[_a\x11\x82V[P=a\x11\xECV[a\n+V[PPa\x11\xB3V[a\x12(\x90a\x12#a\x12\x8EV[a\x12*V[V[\x80a\x12Ea\x12?a\x12:_a\x05\x80V[a\0\xEFV[\x91a\0\xEFV[\x14a\x12UWa\x12S\x90a\x17IV[V[a\x12\x7Fa\x12a_a\x05\x80V[a\x12ia\0\xD2V[\x91\x82\x91c\x1EO\xBD\xF7`\xE0\x1B\x83R`\x04\x83\x01a\x03\xDDV[\x03\x90\xFD[a\x12\x8C\x90a\x12\x17V[V[a\x12\x96a\r\xC1V[a\x12\xAFa\x12\xA9a\x12\xA4a\x17\xE8V[a\0\xEFV[\x91a\0\xEFV[\x03a\x12\xB6WV[a\x12\xDFa\x12\xC1a\x17\xE8V[a\x12\xC9a\0\xD2V[\x91\x82\x91c\x11\x8C\xDA\xA7`\xE0\x1B\x83R`\x04\x83\x01a\x03\xDDV[\x03\x90\xFD[\x90a\x12\xED\x90a\x06BV[_R` R`@_ \x90V[_\x90V[a\x13\x06\x90a\x02\xD8V[\x90V[\x90a\x13\x13\x90a\x12\xFDV[_R` R`@_ \x90V[a\x13(_a\x05\x80V[\x90V[`\x01\x90V[a\x138a\t\x7FV[Pa\x13`a\x13[a\x13M`\x01\x84\x01\x85\x90a\x12\xE3V[a\x13Ua\x12\xF9V[\x90a\x13\tV[a\r\xB4V[a\x13ya\x13sa\x13na\x13\x1FV[a\0\xEFV[\x91a\0\xEFV[\x14\x80a\x13\xDDW[_\x14a\x13\xD6Wa\x13\xC0a\x13\xBAa\x13\xB5a\x13\xA7`\x01a\x13\xC6\x95\x01a\x13\xA1a\x13\x1FV[\x90a\x12\xE3V[a\x13\xAFa\x13+V[\x90a\x13\tV[a\r\xB4V[\x92a\0\xEFV[\x91a\0\xEFV[\x14_\x14a\x13\xD2W`\x01\x90V[_\x90V[PP`\x01\x90V[Pa\x14\x05a\x14\0a\x13\xF2`\x01\x84\x01\x85\x90a\x12\xE3V[a\x13\xFAa\x13+V[\x90a\x13\tV[a\r\xB4V[a\x14\x1Ea\x14\x18a\x14\x13a\x13\x1FV[a\0\xEFV[\x91a\0\xEFV[\x14a\x13\x80V[a\x14-_a\x05\x80V[\x90V[\x1B\x90V[\x91\x90`\x08a\x14T\x91\x02\x91a\x14N`\x01\x80`\xA0\x1B\x03\x84a\x140V[\x92a\x140V[\x91\x81\x19\x16\x91\x16\x17\x90V[\x90V[\x91\x90a\x14wa\x14ra\x14\x7F\x93a\x06BV[a\x14^V[\x90\x83Ta\x144V[\x90UV[a\x14\x95\x91a\x14\x8Fa\r\x8CV[\x91a\x14aV[V[\x90V[a\x14\xAEa\x14\xA9a\x14\xB3\x92a\x14\x97V[a\x05aV[a\x08\x12V[\x90V[\x90V[a\x14\xC5a\x14\xCA\x91a\r\x90V[a\x14\xB6V[\x90V[a\x14\xD7\x90Ta\x14\xB9V[\x90V[a\x14\xE9a\x14\xEF\x91\x93\x92\x93a\x08\x12V[\x92a\x08\x12V[\x82\x03\x91\x82\x11a\x14\xFAWV[a\x081V[_\x1B\x90V[\x90a\x15\x10_\x19\x91a\x14\xFFV[\x91\x81\x19\x16\x91\x16\x17\x90V[a\x15.a\x15)a\x153\x92a\x08\x12V[a\x05aV[a\x08\x12V[\x90V[\x90V[\x90a\x15Na\x15Ia\x15U\x92a\x15\x1AV[a\x156V[\x82Ta\x15\x04V[\x90UV[a\x15aa\r\x8CV[P\x81a\x15|a\x15va\x15qa\x14$V[a\0\xEFV[\x91a\0\xEFV[\x14\x80\x15a\x16sW[a\x16eW\x80a\x15\xEDa\x16b\x92a\x15\xB7a\x15\xB2a\x15\xA4`\x01\x86\x01\x88\x90a\x12\xE3V[a\x15\xACa\x12\xF9V[\x90a\x13\tV[a\r\xB4V[a\x15\xDEa\x15\xD9a\x15\xCB`\x01\x87\x01\x89\x90a\x12\xE3V[a\x15\xD3a\x13+V[\x90a\x13\tV[a\r\xB4V[\x90a\x15\xE7a\x13+V[\x92a\x17\xF5V[a\x16\x15_a\x16\x10a\x16\x02`\x01\x85\x01\x87\x90a\x12\xE3V[a\x16\na\x12\xF9V[\x90a\x13\tV[a\x14\x83V[a\x16=_a\x168a\x16*`\x01\x85\x01\x87\x90a\x12\xE3V[a\x162a\x13+V[\x90a\x13\tV[a\x14\x83V[a\x16\\_a\x16K`\x01a\x14\x9AV[\x92\x01\x91a\x16W\x83a\x14\xCDV[a\x14\xDAV[\x90a\x159V[\x90V[PPa\x16p_a\x05\x80V[\x90V[Pa\x16\x88a\x16\x82\x82\x84\x90a\x130V[\x15a\x02\xD8V[a\x15\x84V[_\x90V[_a\x16\xA5\x91a\x16\x9Ea\x16\x8DV[P\x01a\x14\xCDV[\x90V[a\x16\xDAa\x16\xCC`\x01a\x16\xDF\x93a\x16\xBCa\r\x8CV[P\x01a\x16\xC6a\x13\x1FV[\x90a\x12\xE3V[a\x16\xD4a\x13+V[\x90a\x13\tV[a\r\xB4V[\x90V[\x90a\x17\x08\x91a\x16\xEFa\t\x7FV[Pa\x16\xF8a\r\x8CV[P\x90a\x17\x02a\x13+V[\x91a\x18@V[\x91\x90\x91\x90V[\x90a\x17\x1F`\x01\x80`\xA0\x1B\x03\x91a\x14\xFFV[\x91\x81\x19\x16\x91\x16\x17\x90V[\x90a\x17>a\x179a\x17E\x92a\x06BV[a\x14^V[\x82Ta\x17\x0EV[\x90UV[a\x17R_a\r\xB4V[a\x17\\\x82_a\x17)V[\x90a\x17\x90a\x17\x8A\x7F\x8B\xE0\x07\x9CS\x16Y\x14\x13D\xCD\x1F\xD0\xA4\xF2\x84\x19I\x7F\x97\"\xA3\xDA\xAF\xE3\xB4\x18okdW\xE0\x93a\x06BV[\x91a\x06BV[\x91a\x17\x99a\0\xD2V[\x80a\x17\xA3\x81a\x01<V[\x03\x90\xA3V[\x90a\x17\xC5\x91a\x17\xB5a\t\x7FV[P\x90a\x17\xBFa\x12\xF9V[\x91a\x18\xBCV[\x90V[\x90a\x17\xE5\x91a\x17\xD5a\t\x7FV[P\x90a\x17\xDFa\x13+V[\x91a\x18\xBCV[\x90V[a\x17\xF0a\r\x8CV[P3\x90V[\x91\x92a\x184a\x189\x92`\x01a\x18>\x96a\x18-\x83a\x18(a\x18\x18\x85\x8B\x01\x85\x90a\x12\xE3V[a\x18\"\x89\x15a\x02\xD8V[\x90a\x13\tV[a\x17)V[\x95\x01a\x12\xE3V[a\x13\tV[a\x17)V[V[\x91a\x18Ia\t\x7FV[Pa\x18Ra\r\x8CV[Pa\x18ga\x18a\x84\x84\x90a\x130V[\x15a\x02\xD8V[_\x14a\x18~WPPP_\x90a\x18{_a\x05\x80V[\x90V[a\x18\x91a\x18\x96\x92`\x01a\x18\x9B\x95\x01a\x12\xE3V[a\x13\tV[a\r\xB4V[\x90\x81a\x18\xB6a\x18\xB0a\x18\xABa\x13\x1FV[a\0\xEFV[\x91a\0\xEFV[\x14\x15\x91\x90V[\x91a\x18\xDB\x92a\x18\xC9a\t\x7FV[P\x91a\x18\xD3a\x13\x1FV[\x90\x91\x92a\x19\x03V[\x90V[a\x18\xEDa\x18\xF3\x91\x93\x92\x93a\x08\x12V[\x92a\x08\x12V[\x82\x01\x80\x92\x11a\x18\xFEWV[a\x081V[\x91a\x19\x0Ca\t\x7FV[Pa\x19!a\x19\x1B\x84\x83\x90a\x130V[\x15a\x02\xD8V[\x80a\x19\x9EW[a\x193WPPPP_\x90V[a\x19\x99\x93a\x19t\x92a\x19ja\x19^a\x19Ya\x19R`\x01\x89\x01\x85\x90a\x12\xE3V[\x85\x90a\x13\tV[a\r\xB4V[\x91\x86\x90\x85\x90\x85\x92a\x17\xF5V[\x84\x92\x90\x91\x92a\x17\xF5V[a\x19\x93_a\x19\x82`\x01a\x14\x9AV[\x92\x01\x91a\x19\x8E\x83a\x14\xCDV[a\x18\xDEV[\x90a\x159V[`\x01\x90V[Pa\x19\xAA\x83\x83\x90a\x130V[a\x19'V\xFE\xA2dipfsX\"\x12 \xB5\xB7\x8B\x92=-\xCE\xC6%c\x99\xD1\x88S@\x19V\xC9\xF8\x047\x0E\x0Caf\xF7'\x93$\xA1c\xF3dsolcC\0\x08\x19\x003",
     );
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `AddressAlreadyExists()` and selector `0xa2d86a1e`.
 ```solidity
 error AddressAlreadyExists();
@@ -437,6 +438,7 @@ error AddressAlreadyExists();
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `AddressDoesNotExist()` and selector `0x3d0f293d`.
 ```solidity
 error AddressDoesNotExist();
@@ -501,6 +503,7 @@ error AddressDoesNotExist();
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `CalldataCheckFailed(address)` and selector `0x49b8dff7`.
 ```solidity
 error CalldataCheckFailed(address requireAddress);
@@ -572,6 +575,7 @@ error CalldataCheckFailed(address requireAddress);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `CheckFailed(address,address)` and selector `0x0b2d152f`.
 ```solidity
 error CheckFailed(address requireAddress, address batchSubmitter);
@@ -657,6 +661,7 @@ error CheckFailed(address requireAddress, address batchSubmitter);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `InvalidAddress()` and selector `0xe6c4247b`.
 ```solidity
 error InvalidAddress();
@@ -721,6 +726,7 @@ error InvalidAddress();
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `OwnableInvalidOwner(address)` and selector `0x1e4fbdf7`.
 ```solidity
 error OwnableInvalidOwner(address owner);
@@ -792,6 +798,7 @@ error OwnableInvalidOwner(address owner);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `OwnableUnauthorizedAccount(address)` and selector `0x118cdaa7`.
 ```solidity
 error OwnableUnauthorizedAccount(address account);
@@ -865,6 +872,7 @@ error OwnableUnauthorizedAccount(address account);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `CalldataCheckAdded(address)` and selector `0xe40fa38a25f48b660575fc03b5a6da8797474fa8c0c18dcec2edc2ed83ce5cd1`.
 ```solidity
 event CalldataCheckAdded(address indexed check);
@@ -900,38 +908,9 @@ event CalldataCheckAdded(address indexed check);
             );
             const SIGNATURE: &'static str = "CalldataCheckAdded(address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                228u8,
-                15u8,
-                163u8,
-                138u8,
-                37u8,
-                244u8,
-                139u8,
-                102u8,
-                5u8,
-                117u8,
-                252u8,
-                3u8,
-                181u8,
-                166u8,
-                218u8,
-                135u8,
-                151u8,
-                71u8,
-                79u8,
-                168u8,
-                192u8,
-                193u8,
-                141u8,
-                206u8,
-                194u8,
-                237u8,
-                194u8,
-                237u8,
-                131u8,
-                206u8,
-                92u8,
-                209u8,
+                228u8, 15u8, 163u8, 138u8, 37u8, 244u8, 139u8, 102u8, 5u8, 117u8, 252u8,
+                3u8, 181u8, 166u8, 218u8, 135u8, 151u8, 71u8, 79u8, 168u8, 192u8, 193u8,
+                141u8, 206u8, 194u8, 237u8, 194u8, 237u8, 131u8, 206u8, 92u8, 209u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -999,6 +978,7 @@ event CalldataCheckAdded(address indexed check);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `CalldataCheckRemoved(address)` and selector `0xc83631d6961fb08d5ad589762c421f8256cb4db3acce1858effbf581a1d4f850`.
 ```solidity
 event CalldataCheckRemoved(address indexed check);
@@ -1034,38 +1014,9 @@ event CalldataCheckRemoved(address indexed check);
             );
             const SIGNATURE: &'static str = "CalldataCheckRemoved(address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                200u8,
-                54u8,
-                49u8,
-                214u8,
-                150u8,
-                31u8,
-                176u8,
-                141u8,
-                90u8,
-                213u8,
-                137u8,
-                118u8,
-                44u8,
-                66u8,
-                31u8,
-                130u8,
-                86u8,
-                203u8,
-                77u8,
-                179u8,
-                172u8,
-                206u8,
-                24u8,
-                88u8,
-                239u8,
-                251u8,
-                245u8,
-                129u8,
-                161u8,
-                212u8,
-                248u8,
-                80u8,
+                200u8, 54u8, 49u8, 214u8, 150u8, 31u8, 176u8, 141u8, 90u8, 213u8, 137u8,
+                118u8, 44u8, 66u8, 31u8, 130u8, 86u8, 203u8, 77u8, 179u8, 172u8, 206u8,
+                24u8, 88u8, 239u8, 251u8, 245u8, 129u8, 161u8, 212u8, 248u8, 80u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -1133,6 +1084,7 @@ event CalldataCheckRemoved(address indexed check);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `OwnershipTransferred(address,address)` and selector `0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0`.
 ```solidity
 event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -1171,38 +1123,9 @@ event OwnershipTransferred(address indexed previousOwner, address indexed newOwn
             );
             const SIGNATURE: &'static str = "OwnershipTransferred(address,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                139u8,
-                224u8,
-                7u8,
-                156u8,
-                83u8,
-                22u8,
-                89u8,
-                20u8,
-                19u8,
-                68u8,
-                205u8,
-                31u8,
-                208u8,
-                164u8,
-                242u8,
-                132u8,
-                25u8,
-                73u8,
-                127u8,
-                151u8,
-                34u8,
-                163u8,
-                218u8,
-                175u8,
-                227u8,
-                180u8,
-                24u8,
-                111u8,
-                107u8,
-                100u8,
-                87u8,
-                224u8,
+                139u8, 224u8, 7u8, 156u8, 83u8, 22u8, 89u8, 20u8, 19u8, 68u8, 205u8,
+                31u8, 208u8, 164u8, 242u8, 132u8, 25u8, 73u8, 127u8, 151u8, 34u8, 163u8,
+                218u8, 175u8, 227u8, 180u8, 24u8, 111u8, 107u8, 100u8, 87u8, 224u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -1280,6 +1203,7 @@ event OwnershipTransferred(address indexed previousOwner, address indexed newOwn
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `ProposerCheckAdded(address)` and selector `0x7afa5278b11376deff82d6d0be865db73d637702728b7d2659fee00e3d11b906`.
 ```solidity
 event ProposerCheckAdded(address indexed check);
@@ -1315,38 +1239,9 @@ event ProposerCheckAdded(address indexed check);
             );
             const SIGNATURE: &'static str = "ProposerCheckAdded(address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                122u8,
-                250u8,
-                82u8,
-                120u8,
-                177u8,
-                19u8,
-                118u8,
-                222u8,
-                255u8,
-                130u8,
-                214u8,
-                208u8,
-                190u8,
-                134u8,
-                93u8,
-                183u8,
-                61u8,
-                99u8,
-                119u8,
-                2u8,
-                114u8,
-                139u8,
-                125u8,
-                38u8,
-                89u8,
-                254u8,
-                224u8,
-                14u8,
-                61u8,
-                17u8,
-                185u8,
-                6u8,
+                122u8, 250u8, 82u8, 120u8, 177u8, 19u8, 118u8, 222u8, 255u8, 130u8,
+                214u8, 208u8, 190u8, 134u8, 93u8, 183u8, 61u8, 99u8, 119u8, 2u8, 114u8,
+                139u8, 125u8, 38u8, 89u8, 254u8, 224u8, 14u8, 61u8, 17u8, 185u8, 6u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -1414,6 +1309,7 @@ event ProposerCheckAdded(address indexed check);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `ProposerCheckRemoved(address)` and selector `0xd4c6584199318abf59e9599906d3eec550509b6d1d841bdab9913cd56b70cd37`.
 ```solidity
 event ProposerCheckRemoved(address indexed check);
@@ -1449,38 +1345,9 @@ event ProposerCheckRemoved(address indexed check);
             );
             const SIGNATURE: &'static str = "ProposerCheckRemoved(address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                212u8,
-                198u8,
-                88u8,
-                65u8,
-                153u8,
-                49u8,
-                138u8,
-                191u8,
-                89u8,
-                233u8,
-                89u8,
-                153u8,
-                6u8,
-                211u8,
-                238u8,
-                197u8,
-                80u8,
-                80u8,
-                155u8,
-                109u8,
-                29u8,
-                132u8,
-                27u8,
-                218u8,
-                185u8,
-                145u8,
-                60u8,
-                213u8,
-                107u8,
-                112u8,
-                205u8,
-                55u8,
+                212u8, 198u8, 88u8, 65u8, 153u8, 49u8, 138u8, 191u8, 89u8, 233u8, 89u8,
+                153u8, 6u8, 211u8, 238u8, 197u8, 80u8, 80u8, 155u8, 109u8, 29u8, 132u8,
+                27u8, 218u8, 185u8, 145u8, 60u8, 213u8, 107u8, 112u8, 205u8, 55u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -1613,6 +1480,7 @@ constructor(address admin);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `addCalldataCheck(address,bool)` and selector `0xa7f736f2`.
 ```solidity
 function addCalldataCheck(address _address, bool addToHead) external;
@@ -1754,6 +1622,7 @@ function addCalldataCheck(address _address, bool addToHead) external;
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `addProposerCheck(address,bool)` and selector `0x98a7e5c2`.
 ```solidity
 function addProposerCheck(address _address, bool addToHead) external;
@@ -1895,6 +1764,7 @@ function addProposerCheck(address _address, bool addToHead) external;
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `getAllCalldataChecks()` and selector `0x70405b0b`.
 ```solidity
 function getAllCalldataChecks() external view returns (address[] memory);
@@ -1902,6 +1772,7 @@ function getAllCalldataChecks() external view returns (address[] memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getAllCalldataChecksCall {}
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`getAllCalldataChecks()`](getAllCalldataChecksCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -2024,6 +1895,7 @@ function getAllCalldataChecks() external view returns (address[] memory);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `getAllProposerChecks()` and selector `0x1ba39a12`.
 ```solidity
 function getAllProposerChecks() external view returns (address[] memory);
@@ -2031,6 +1903,7 @@ function getAllProposerChecks() external view returns (address[] memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getAllProposerChecksCall {}
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`getAllProposerChecks()`](getAllProposerChecksCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -2153,6 +2026,7 @@ function getAllProposerChecks() external view returns (address[] memory);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isAllowed(address)` and selector `0xbabcc539`.
 ```solidity
 function isAllowed(address proposer) external view returns (bool);
@@ -2163,6 +2037,7 @@ function isAllowed(address proposer) external view returns (bool);
         #[allow(missing_docs)]
         pub proposer: alloy::sol_types::private::Address,
     }
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -2279,6 +2154,7 @@ function isAllowed(address proposer) external view returns (bool);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isCalldataAllowed(bytes)` and selector `0x3dfb5ee7`.
 ```solidity
 function isCalldataAllowed(bytes memory data) external view returns (bool);
@@ -2289,6 +2165,7 @@ function isCalldataAllowed(bytes memory data) external view returns (bool);
         #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isCalldataAllowed(bytes)`](isCalldataAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -2409,6 +2286,7 @@ function isCalldataAllowed(bytes memory data) external view returns (bool);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `owner()` and selector `0x8da5cb5b`.
 ```solidity
 function owner() external view returns (address);
@@ -2416,6 +2294,7 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerCall {}
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`owner()`](ownerCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -2528,6 +2407,7 @@ function owner() external view returns (address);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `removeCalldataCheck(address)` and selector `0x04a8cc50`.
 ```solidity
 function removeCalldataCheck(address _address) external;
@@ -2655,6 +2535,7 @@ function removeCalldataCheck(address _address) external;
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `removeProposerCheck(address)` and selector `0x42fd0756`.
 ```solidity
 function removeProposerCheck(address _address) external;
@@ -2782,6 +2663,7 @@ function removeProposerCheck(address _address) external;
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `renounceOwnership()` and selector `0x715018a6`.
 ```solidity
 function renounceOwnership() external;
@@ -2902,6 +2784,7 @@ function renounceOwnership() external;
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `transferOwnership(address)` and selector `0xf2fde38b`.
 ```solidity
 function transferOwnership(address newOwner) external;
@@ -3030,6 +2913,7 @@ function transferOwnership(address newOwner) external;
         }
     };
     ///Container for all the [`RequireAllModule`](self) function calls.
+    #[derive()]
     pub enum RequireAllModuleCalls {
         #[allow(missing_docs)]
         addCalldataCheck(addCalldataCheckCall),
@@ -3416,6 +3300,7 @@ function transferOwnership(address newOwner) external;
         }
     }
     ///Container for all the [`RequireAllModule`](self) custom errors.
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum RequireAllModuleErrors {
         #[allow(missing_docs)]
         AddressAlreadyExists(AddressAlreadyExists),
@@ -3689,6 +3574,7 @@ function transferOwnership(address newOwner) external;
         }
     }
     ///Container for all the [`RequireAllModule`](self) events.
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum RequireAllModuleEvents {
         #[allow(missing_docs)]
         CalldataCheckAdded(CalldataCheckAdded),
@@ -3711,174 +3597,29 @@ function transferOwnership(address newOwner) external;
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                122u8,
-                250u8,
-                82u8,
-                120u8,
-                177u8,
-                19u8,
-                118u8,
-                222u8,
-                255u8,
-                130u8,
-                214u8,
-                208u8,
-                190u8,
-                134u8,
-                93u8,
-                183u8,
-                61u8,
-                99u8,
-                119u8,
-                2u8,
-                114u8,
-                139u8,
-                125u8,
-                38u8,
-                89u8,
-                254u8,
-                224u8,
-                14u8,
-                61u8,
-                17u8,
-                185u8,
-                6u8,
+                122u8, 250u8, 82u8, 120u8, 177u8, 19u8, 118u8, 222u8, 255u8, 130u8,
+                214u8, 208u8, 190u8, 134u8, 93u8, 183u8, 61u8, 99u8, 119u8, 2u8, 114u8,
+                139u8, 125u8, 38u8, 89u8, 254u8, 224u8, 14u8, 61u8, 17u8, 185u8, 6u8,
             ],
             [
-                139u8,
-                224u8,
-                7u8,
-                156u8,
-                83u8,
-                22u8,
-                89u8,
-                20u8,
-                19u8,
-                68u8,
-                205u8,
-                31u8,
-                208u8,
-                164u8,
-                242u8,
-                132u8,
-                25u8,
-                73u8,
-                127u8,
-                151u8,
-                34u8,
-                163u8,
-                218u8,
-                175u8,
-                227u8,
-                180u8,
-                24u8,
-                111u8,
-                107u8,
-                100u8,
-                87u8,
-                224u8,
+                139u8, 224u8, 7u8, 156u8, 83u8, 22u8, 89u8, 20u8, 19u8, 68u8, 205u8,
+                31u8, 208u8, 164u8, 242u8, 132u8, 25u8, 73u8, 127u8, 151u8, 34u8, 163u8,
+                218u8, 175u8, 227u8, 180u8, 24u8, 111u8, 107u8, 100u8, 87u8, 224u8,
             ],
             [
-                200u8,
-                54u8,
-                49u8,
-                214u8,
-                150u8,
-                31u8,
-                176u8,
-                141u8,
-                90u8,
-                213u8,
-                137u8,
-                118u8,
-                44u8,
-                66u8,
-                31u8,
-                130u8,
-                86u8,
-                203u8,
-                77u8,
-                179u8,
-                172u8,
-                206u8,
-                24u8,
-                88u8,
-                239u8,
-                251u8,
-                245u8,
-                129u8,
-                161u8,
-                212u8,
-                248u8,
-                80u8,
+                200u8, 54u8, 49u8, 214u8, 150u8, 31u8, 176u8, 141u8, 90u8, 213u8, 137u8,
+                118u8, 44u8, 66u8, 31u8, 130u8, 86u8, 203u8, 77u8, 179u8, 172u8, 206u8,
+                24u8, 88u8, 239u8, 251u8, 245u8, 129u8, 161u8, 212u8, 248u8, 80u8,
             ],
             [
-                212u8,
-                198u8,
-                88u8,
-                65u8,
-                153u8,
-                49u8,
-                138u8,
-                191u8,
-                89u8,
-                233u8,
-                89u8,
-                153u8,
-                6u8,
-                211u8,
-                238u8,
-                197u8,
-                80u8,
-                80u8,
-                155u8,
-                109u8,
-                29u8,
-                132u8,
-                27u8,
-                218u8,
-                185u8,
-                145u8,
-                60u8,
-                213u8,
-                107u8,
-                112u8,
-                205u8,
-                55u8,
+                212u8, 198u8, 88u8, 65u8, 153u8, 49u8, 138u8, 191u8, 89u8, 233u8, 89u8,
+                153u8, 6u8, 211u8, 238u8, 197u8, 80u8, 80u8, 155u8, 109u8, 29u8, 132u8,
+                27u8, 218u8, 185u8, 145u8, 60u8, 213u8, 107u8, 112u8, 205u8, 55u8,
             ],
             [
-                228u8,
-                15u8,
-                163u8,
-                138u8,
-                37u8,
-                244u8,
-                139u8,
-                102u8,
-                5u8,
-                117u8,
-                252u8,
-                3u8,
-                181u8,
-                166u8,
-                218u8,
-                135u8,
-                151u8,
-                71u8,
-                79u8,
-                168u8,
-                192u8,
-                193u8,
-                141u8,
-                206u8,
-                194u8,
-                237u8,
-                194u8,
-                237u8,
-                131u8,
-                206u8,
-                92u8,
-                209u8,
+                228u8, 15u8, 163u8, 138u8, 37u8, 244u8, 139u8, 102u8, 5u8, 117u8, 252u8,
+                3u8, 181u8, 166u8, 218u8, 135u8, 151u8, 71u8, 79u8, 168u8, 192u8, 193u8,
+                141u8, 206u8, 194u8, 237u8, 194u8, 237u8, 131u8, 206u8, 92u8, 209u8,
             ],
         ];
     }

@@ -61,6 +61,7 @@ pub mod MockCalldataAllowedFalse {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R`\x046\x10\x15a\0\x13W[a\x01\"V[a\0\x1D_5a\0,V[c=\xFB^\xE7\x03a\0\x0EWa\0\xECV[`\xE0\x1C\x90V[`@Q\x90V[_\x80\xFD[_\x80\xFD[_\x80\xFD[_\x80\xFD[_\x80\xFD[_\x80\xFD[\x90\x91\x82`\x1F\x83\x01\x12\x15a\0\x8AW\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\0\x85W` \x01\x92`\x01\x83\x02\x84\x01\x11a\0\x80WV[a\0LV[a\0HV[a\0DV[\x90` \x82\x82\x03\x12a\0\xC0W_\x82\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\0\xBBWa\0\xB7\x92\x01a\0PV[\x90\x91V[a\0@V[a\0<V[\x15\x15\x90V[a\0\xD3\x90a\0\xC5V[\x90RV[\x91\x90a\0\xEA\x90_` \x85\x01\x94\x01\x90a\0\xCAV[V[4a\x01\x1DWa\x01\x19a\x01\x08a\x01\x026`\x04a\0\x8FV[\x90a\x01*V[a\x01\x10a\x002V[\x91\x82\x91\x82a\0\xD7V[\x03\x90\xF3[a\08V[_\x80\xFD[_\x90V[PPa\x014a\x01&V[P_\x90V\xFE\xA2dipfsX\"\x12 x\x96H\xCA\x93\xDFox\xD54\xB7\xE5&v\x19\x9B'Z\x85=\x1Dm?\xDCo\xB0>0\x0C\x01zJdsolcC\0\x08\x19\x003",
     );
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isCalldataAllowed(bytes)` and selector `0x3dfb5ee7`.
 ```solidity
 function isCalldataAllowed(bytes memory) external pure returns (bool);
@@ -71,6 +72,7 @@ function isCalldataAllowed(bytes memory) external pure returns (bool);
         #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Bytes,
     }
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isCalldataAllowed(bytes)`](isCalldataAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -192,6 +194,7 @@ function isCalldataAllowed(bytes memory) external pure returns (bool);
         }
     };
     ///Container for all the [`MockCalldataAllowedFalse`](self) function calls.
+    #[derive()]
     pub enum MockCalldataAllowedFalseCalls {
         #[allow(missing_docs)]
         isCalldataAllowed(isCalldataAllowedCall),

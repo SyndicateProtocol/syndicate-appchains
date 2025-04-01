@@ -53,6 +53,7 @@ pub mod Address {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x90\x03i8\xFE:\xA6.\xC2w\x8BY\r\x04H;oGB\xAA=\xF4\x1EI\x14\xFC\x03\xD2\\n\x8CjdsolcC\0\x08\x19\x003",
     );
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `AddressEmptyCode(address)` and selector `0x9996b315`.
 ```solidity
 error AddressEmptyCode(address target);
@@ -125,6 +126,7 @@ error AddressEmptyCode(address target);
         }
     };
     ///Container for all the [`Address`](self) custom errors.
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum AddressErrors {
         #[allow(missing_docs)]
         AddressEmptyCode(AddressEmptyCode),

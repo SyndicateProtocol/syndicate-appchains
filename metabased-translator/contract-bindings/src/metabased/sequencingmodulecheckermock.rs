@@ -268,6 +268,7 @@ pub mod SequencingModuleCheckerMock {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"`\x80`@R`\x046\x10\x15a\0\x13W[a\x05\tV[a\0\x1D_5a\0\xACV[\x80c=\xFB^\xE7\x14a\0\xA7W\x80cH\\\xC9U\x14a\0\xA2W\x80cqP\x18\xA6\x14a\0\x9DW\x80c\x8D\xA5\xCB[\x14a\0\x98W\x80c\xA80\xB6C\x14a\0\x93W\x80c\xAA\xA6\x07\x07\x14a\0\x8EW\x80c\xBA\xBC\xC59\x14a\0\x89W\x80c\xD4\xF0\xEBM\x14a\0\x84Wc\xF2\xFD\xE3\x8B\x03a\0\x0EWa\x04\xD6V[a\x04\xA3V[a\x04nV[a\x04\x1BV[a\x03xV[a\x02\xA6V[a\x02QV[a\x02\x0EV[a\x01lV[`\xE0\x1C\x90V[`@Q\x90V[_\x80\xFD[_\x80\xFD[_\x80\xFD[_\x80\xFD[_\x80\xFD[_\x80\xFD[\x90\x91\x82`\x1F\x83\x01\x12\x15a\x01\nW\x815\x91g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x83\x11a\x01\x05W` \x01\x92`\x01\x83\x02\x84\x01\x11a\x01\0WV[a\0\xCCV[a\0\xC8V[a\0\xC4V[\x90` \x82\x82\x03\x12a\x01@W_\x82\x015g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x81\x11a\x01;Wa\x017\x92\x01a\0\xD0V[\x90\x91V[a\0\xC0V[a\0\xBCV[\x15\x15\x90V[a\x01S\x90a\x01EV[\x90RV[\x91\x90a\x01j\x90_` \x85\x01\x94\x01\x90a\x01JV[V[4a\x01\x9DWa\x01\x99a\x01\x88a\x01\x826`\x04a\x01\x0FV[\x90a\x06&V[a\x01\x90a\0\xB2V[\x91\x82\x91\x82a\x01WV[\x03\x90\xF3[a\0\xB8V[`\x01\x80`\xA0\x1B\x03\x16\x90V[a\x01\xB6\x90a\x01\xA2V[\x90V[a\x01\xC2\x81a\x01\xADV[\x03a\x01\xC9WV[_\x80\xFD[\x90P5\x90a\x01\xDA\x82a\x01\xB9V[V[\x91\x90`@\x83\x82\x03\x12a\x02\x04W\x80a\x01\xF8a\x02\x01\x92_\x86\x01a\x01\xCDV[\x93` \x01a\x01\xCDV[\x90V[a\0\xBCV[_\x01\x90V[4a\x02=Wa\x02'a\x02!6`\x04a\x01\xDCV[\x90a\x08\xD2V[a\x02/a\0\xB2V[\x80a\x029\x81a\x02\tV[\x03\x90\xF3[a\0\xB8V[_\x91\x03\x12a\x02LWV[a\0\xBCV[4a\x02\x7FWa\x02a6`\x04a\x02BV[a\x02ia\t\x03V[a\x02qa\0\xB2V[\x80a\x02{\x81a\x02\tV[\x03\x90\xF3[a\0\xB8V[a\x02\x8D\x90a\x01\xADV[\x90RV[\x91\x90a\x02\xA4\x90_` \x85\x01\x94\x01\x90a\x02\x84V[V[4a\x02\xD6Wa\x02\xB66`\x04a\x02BV[a\x02\xD2a\x02\xC1a\t=V[a\x02\xC9a\0\xB2V[\x91\x82\x91\x82a\x02\x91V[\x03\x90\xF3[a\0\xB8V[\x1C\x90V[`\x01\x80`\xA0\x1B\x03\x16\x90V[a\x02\xFA\x90`\x08a\x02\xFF\x93\x02a\x02\xDBV[a\x02\xDFV[\x90V[\x90a\x03\r\x91Ta\x02\xEAV[\x90V[a\x03\x1C`\x01_\x90a\x03\x02V[\x90V[\x90V[a\x036a\x031a\x03;\x92a\x01\xA2V[a\x03\x1FV[a\x01\xA2V[\x90V[a\x03G\x90a\x03\"V[\x90V[a\x03S\x90a\x03>V[\x90V[a\x03_\x90a\x03JV[\x90RV[\x91\x90a\x03v\x90_` \x85\x01\x94\x01\x90a\x03VV[V[4a\x03\xA8Wa\x03\x886`\x04a\x02BV[a\x03\xA4a\x03\x93a\x03\x10V[a\x03\x9Ba\0\xB2V[\x91\x82\x91\x82a\x03cV[\x03\x90\xF3[a\0\xB8V[`\x01\x80`\xA0\x1B\x03\x16\x90V[a\x03\xC8\x90`\x08a\x03\xCD\x93\x02a\x02\xDBV[a\x03\xADV[\x90V[\x90a\x03\xDB\x91Ta\x03\xB8V[\x90V[a\x03\xEA`\x02_\x90a\x03\xD0V[\x90V[a\x03\xF6\x90a\x03>V[\x90V[a\x04\x02\x90a\x03\xEDV[\x90RV[\x91\x90a\x04\x19\x90_` \x85\x01\x94\x01\x90a\x03\xF9V[V[4a\x04KWa\x04+6`\x04a\x02BV[a\x04Ga\x046a\x03\xDEV[a\x04>a\0\xB2V[\x91\x82\x91\x82a\x04\x06V[\x03\x90\xF3[a\0\xB8V[\x90` \x82\x82\x03\x12a\x04iWa\x04f\x91_\x01a\x01\xCDV[\x90V[a\0\xBCV[4a\x04\x9EWa\x04\x9Aa\x04\x89a\x04\x846`\x04a\x04PV[a\tsV[a\x04\x91a\0\xB2V[\x91\x82\x91\x82a\x01WV[\x03\x90\xF3[a\0\xB8V[4a\x04\xD1Wa\x04\xBBa\x04\xB66`\x04a\x04PV[a\n\xBBV[a\x04\xC3a\0\xB2V[\x80a\x04\xCD\x81a\x02\tV[\x03\x90\xF3[a\0\xB8V[4a\x05\x04Wa\x04\xEEa\x04\xE96`\x04a\x04PV[a\x0B2V[a\x04\xF6a\0\xB2V[\x80a\x05\0\x81a\x02\tV[\x03\x90\xF3[a\0\xB8V[_\x80\xFD[_\x90V[_\x1C\x90V[a\x05\"a\x05'\x91a\x05\x11V[a\x03\xADV[\x90V[a\x054\x90Ta\x05\x16V[\x90V[`\x1F\x80\x19\x91\x01\x16\x90V[cNH{q`\xE0\x1B_R`A`\x04R`$_\xFD[\x90a\x05_\x90a\x057V[\x81\x01\x90\x81\x10g\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF\x82\x11\x17a\x05yW`@RV[a\x05AV[`\xE0\x1B\x90V[a\x05\x8D\x81a\x01EV[\x03a\x05\x94WV[_\x80\xFD[\x90PQ\x90a\x05\xA5\x82a\x05\x84V[V[\x90` \x82\x82\x03\x12a\x05\xC0Wa\x05\xBD\x91_\x01a\x05\x98V[\x90V[a\0\xBCV[` \x91\x81R\x01\x90V[\x90\x82_\x93\x92\x827\x01RV[\x91\x90a\x05\xF3\x81a\x05\xEC\x81a\x05\xF8\x95a\x05\xC5V[\x80\x95a\x05\xCEV[a\x057V[\x01\x90V[\x90\x91a\x06\x13\x92` \x83\x01\x92_\x81\x85\x03\x91\x01Ra\x05\xD9V[\x90V[a\x06\x1Ea\0\xB2V[=_\x82>=\x90\xFD[\x90` \x90a\x062a\x05\rV[Pa\x06Ea\x06@`\x02a\x05*V[a\x03\xEDV[a\x06gc=\xFB^\xE7\x94\x92\x94a\x06ra\x06[a\0\xB2V[\x96\x87\x95\x86\x94\x85\x94a\x05~V[\x84R`\x04\x84\x01a\x05\xFCV[\x03\x91Z\xFA\x90\x81\x15a\x06\xB6W_\x91a\x06\x88W[P\x90V[a\x06\xA9\x91P` =\x81\x11a\x06\xAFW[a\x06\xA1\x81\x83a\x05UV[\x81\x01\x90a\x05\xA7V[_a\x06\x84V[P=a\x06\x97V[a\x06\x16V[\x90a\x06\xCD\x91a\x06\xC8a\x0B=V[a\x08#V[V[`\xA0\x1C\x90V[`\xFF\x16\x90V[a\x06\xE7a\x06\xEC\x91a\x06\xCFV[a\x06\xD5V[\x90V[a\x06\xF9\x90Ta\x06\xDBV[\x90V[\x90V[a\x07\x13a\x07\x0Ea\x07\x18\x92a\x06\xFCV[a\x03\x1FV[a\x01\xA2V[\x90V[a\x07$\x90a\x06\xFFV[\x90V[`\xA0\x1B\x90V[\x90a\x07<`\xFF`\xA0\x1B\x91a\x07'V[\x91\x81\x19\x16\x91\x16\x17\x90V[a\x07O\x90a\x01EV[\x90V[\x90V[\x90a\x07ja\x07ea\x07q\x92a\x07FV[a\x07RV[\x82Ta\x07-V[\x90UV[a\x07~\x90a\x03\"V[\x90V[a\x07\x8A\x90a\x07uV[\x90V[_\x1B\x90V[\x90a\x07\xA3`\x01\x80`\xA0\x1B\x03\x91a\x07\x8DV[\x91\x81\x19\x16\x91\x16\x17\x90V[a\x07\xB6\x90a\x07uV[\x90V[\x90V[\x90a\x07\xD1a\x07\xCCa\x07\xD8\x92a\x07\xADV[a\x07\xB9V[\x82Ta\x07\x92V[\x90UV[a\x07\xE5\x90a\x03\"V[\x90V[a\x07\xF1\x90a\x07\xDCV[\x90V[a\x07\xFD\x90a\x07\xDCV[\x90V[\x90V[\x90a\x08\x18a\x08\x13a\x08\x1F\x92a\x07\xF4V[a\x08\0V[\x82Ta\x07\x92V[\x90UV[a\x08-`\x02a\x06\xEFV[a\x08\xB0W\x81a\x08La\x08Fa\x08A_a\x07\x1BV[a\x01\xADV[\x91a\x01\xADV[\x14a\x08\x8DWa\x08\x86a\x08\x7Fa\x08\x8B\x93a\x08g`\x01`\x02a\x07UV[a\x08za\x08s\x82a\x07\x81V[`\x01a\x07\xBCV[a\x07\xE8V[`\x02a\x08\x03V[a\x0B2V[V[a\x08\x95a\0\xB2V[c.\x7F<\x7F`\xE1\x1B\x81R\x80a\x08\xAC`\x04\x82\x01a\x02\tV[\x03\x90\xFD[a\x08\xB8a\0\xB2V[b\xDC\x14\x9F`\xE4\x1B\x81R\x80a\x08\xCE`\x04\x82\x01a\x02\tV[\x03\x90\xFD[\x90a\x08\xDC\x91a\x06\xBBV[V[a\x08\xE6a\x0B=V[a\x08\xEEa\x08\xF0V[V[a\t\x01a\x08\xFC_a\x07\x1BV[a\x0B\xB5V[V[a\t\x0Ba\x08\xDEV[V[_\x90V[`\x01\x80`\xA0\x1B\x03\x16\x90V[a\t(a\t-\x91a\x05\x11V[a\t\x11V[\x90V[a\t:\x90Ta\t\x1CV[\x90V[a\tEa\t\rV[Pa\tO_a\t0V[\x90V[a\t^a\tc\x91a\x05\x11V[a\x02\xDFV[\x90V[a\tp\x90Ta\tRV[\x90V[` a\t\xBB\x91a\t\x81a\x05\rV[Pa\t\x94a\t\x8F`\x01a\tfV[a\x03JV[a\t\xB0c\xBA\xBC\xC59a\t\xA4a\0\xB2V[\x95\x86\x94\x85\x93\x84\x93a\x05~V[\x83R`\x04\x83\x01a\x02\x91V[\x03\x91Z\xFA\x90\x81\x15a\t\xFFW_\x91a\t\xD1W[P\x90V[a\t\xF2\x91P` =\x81\x11a\t\xF8W[a\t\xEA\x81\x83a\x05UV[\x81\x01\x90a\x05\xA7V[_a\t\xCDV[P=a\t\xE0V[a\x06\x16V[a\n\x15\x90a\n\x10a\x0B=V[a\n#V[V[a\n \x90a\x03>V[\x90V[\x80a\n>a\n8a\n3_a\x07\x1BV[a\x01\xADV[\x91a\x01\xADV[\x14a\n\x98Wa\nVa\nO\x82a\x07\x81V[`\x01a\x07\xBCV[a\n\x80\x7F%5\x80\xF8\x06t\x1C\x11\xB3\xD4\xAA`\xD9\xCA\xCC[\xEF\x0C\xEB\xB3WHv\x7F\xE2?\x11\x91n/\x04\xB9\x91a\n\x17V[\x90a\n\x89a\0\xB2V[\x80a\n\x93\x81a\x02\tV[\x03\x90\xA2V[a\n\xA0a\0\xB2V[c.\x7F<\x7F`\xE1\x1B\x81R\x80a\n\xB7`\x04\x82\x01a\x02\tV[\x03\x90\xFD[a\n\xC4\x90a\n\x04V[V[a\n\xD7\x90a\n\xD2a\x0B=V[a\n\xD9V[V[\x80a\n\xF4a\n\xEEa\n\xE9_a\x07\x1BV[a\x01\xADV[\x91a\x01\xADV[\x14a\x0B\x04Wa\x0B\x02\x90a\x0B\xB5V[V[a\x0B.a\x0B\x10_a\x07\x1BV[a\x0B\x18a\0\xB2V[\x91\x82\x91c\x1EO\xBD\xF7`\xE0\x1B\x83R`\x04\x83\x01a\x02\x91V[\x03\x90\xFD[a\x0B;\x90a\n\xC6V[V[a\x0BEa\t=V[a\x0B^a\x0BXa\x0BSa\x0C\x14V[a\x01\xADV[\x91a\x01\xADV[\x03a\x0BeWV[a\x0B\x8Ea\x0Bpa\x0C\x14V[a\x0Bxa\0\xB2V[\x91\x82\x91c\x11\x8C\xDA\xA7`\xE0\x1B\x83R`\x04\x83\x01a\x02\x91V[\x03\x90\xFD[\x90V[\x90a\x0B\xAAa\x0B\xA5a\x0B\xB1\x92a\n\x17V[a\x0B\x92V[\x82Ta\x07\x92V[\x90UV[a\x0B\xBE_a\t0V[a\x0B\xC8\x82_a\x0B\x95V[\x90a\x0B\xFCa\x0B\xF6\x7F\x8B\xE0\x07\x9CS\x16Y\x14\x13D\xCD\x1F\xD0\xA4\xF2\x84\x19I\x7F\x97\"\xA3\xDA\xAF\xE3\xB4\x18okdW\xE0\x93a\n\x17V[\x91a\n\x17V[\x91a\x0C\x05a\0\xB2V[\x80a\x0C\x0F\x81a\x02\tV[\x03\x90\xA3V[a\x0C\x1Ca\t\rV[P3\x90V\xFE\xA2dipfsX\"\x12 7\x03C\xF0\x8E\xFE\xD3\x0B\x92\x18\xD0\xC1\x15\xA5\xD8\xF6\xFC|\xA4\x18\x96\x7F\xCC\x81\x1A\x0Cv-\xEBe\xBB\xC3dsolcC\0\x08\x19\x003",
     );
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `AlreadyInitialized()` and selector `0x0dc149f0`.
 ```solidity
 error AlreadyInitialized();
@@ -332,6 +333,7 @@ error AlreadyInitialized();
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `CalldataNotAllowed()` and selector `0xc180a962`.
 ```solidity
 error CalldataNotAllowed();
@@ -396,6 +398,7 @@ error CalldataNotAllowed();
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `InvalidModuleAddress()` and selector `0x5cfe78fe`.
 ```solidity
 error InvalidModuleAddress();
@@ -460,6 +463,7 @@ error InvalidModuleAddress();
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `NotAllowed(address)` and selector `0xfa5cd00f`.
 ```solidity
 error NotAllowed(address batchSubmitter);
@@ -531,6 +535,7 @@ error NotAllowed(address batchSubmitter);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `OwnableInvalidOwner(address)` and selector `0x1e4fbdf7`.
 ```solidity
 error OwnableInvalidOwner(address owner);
@@ -602,6 +607,7 @@ error OwnableInvalidOwner(address owner);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `OwnableUnauthorizedAccount(address)` and selector `0x118cdaa7`.
 ```solidity
 error OwnableUnauthorizedAccount(address account);
@@ -675,6 +681,7 @@ error OwnableUnauthorizedAccount(address account);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `OwnershipTransferred(address,address)` and selector `0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0`.
 ```solidity
 event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -713,38 +720,9 @@ event OwnershipTransferred(address indexed previousOwner, address indexed newOwn
             );
             const SIGNATURE: &'static str = "OwnershipTransferred(address,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                139u8,
-                224u8,
-                7u8,
-                156u8,
-                83u8,
-                22u8,
-                89u8,
-                20u8,
-                19u8,
-                68u8,
-                205u8,
-                31u8,
-                208u8,
-                164u8,
-                242u8,
-                132u8,
-                25u8,
-                73u8,
-                127u8,
-                151u8,
-                34u8,
-                163u8,
-                218u8,
-                175u8,
-                227u8,
-                180u8,
-                24u8,
-                111u8,
-                107u8,
-                100u8,
-                87u8,
-                224u8,
+                139u8, 224u8, 7u8, 156u8, 83u8, 22u8, 89u8, 20u8, 19u8, 68u8, 205u8,
+                31u8, 208u8, 164u8, 242u8, 132u8, 25u8, 73u8, 127u8, 151u8, 34u8, 163u8,
+                218u8, 175u8, 227u8, 180u8, 24u8, 111u8, 107u8, 100u8, 87u8, 224u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -822,6 +800,7 @@ event OwnershipTransferred(address indexed previousOwner, address indexed newOwn
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `RequirementModuleUpdated(address)` and selector `0x253580f806741c11b3d4aa60d9cacc5bef0cebb35748767fe23f11916e2f04b9`.
 ```solidity
 event RequirementModuleUpdated(address indexed newModule);
@@ -857,38 +836,9 @@ event RequirementModuleUpdated(address indexed newModule);
             );
             const SIGNATURE: &'static str = "RequirementModuleUpdated(address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                37u8,
-                53u8,
-                128u8,
-                248u8,
-                6u8,
-                116u8,
-                28u8,
-                17u8,
-                179u8,
-                212u8,
-                170u8,
-                96u8,
-                217u8,
-                202u8,
-                204u8,
-                91u8,
-                239u8,
-                12u8,
-                235u8,
-                179u8,
-                87u8,
-                72u8,
-                118u8,
-                127u8,
-                226u8,
-                63u8,
-                17u8,
-                145u8,
-                110u8,
-                47u8,
-                4u8,
-                185u8,
+                37u8, 53u8, 128u8, 248u8, 6u8, 116u8, 28u8, 17u8, 179u8, 212u8, 170u8,
+                96u8, 217u8, 202u8, 204u8, 91u8, 239u8, 12u8, 235u8, 179u8, 87u8, 72u8,
+                118u8, 127u8, 226u8, 63u8, 17u8, 145u8, 110u8, 47u8, 4u8, 185u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -958,6 +908,7 @@ event RequirementModuleUpdated(address indexed newModule);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `calldataRequirementModule()` and selector `0xaaa60707`.
 ```solidity
 function calldataRequirementModule() external view returns (address);
@@ -965,6 +916,7 @@ function calldataRequirementModule() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct calldataRequirementModuleCall {}
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`calldataRequirementModule()`](calldataRequirementModuleCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1081,6 +1033,7 @@ function calldataRequirementModule() external view returns (address);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `initialize(address,address)` and selector `0x485cc955`.
 ```solidity
 function initialize(address admin, address _requirementModule) external;
@@ -1221,6 +1174,7 @@ function initialize(address admin, address _requirementModule) external;
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isAllowed(address)` and selector `0xbabcc539`.
 ```solidity
 function isAllowed(address proposer) external view returns (bool);
@@ -1231,6 +1185,7 @@ function isAllowed(address proposer) external view returns (bool);
         #[allow(missing_docs)]
         pub proposer: alloy::sol_types::private::Address,
     }
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1347,6 +1302,7 @@ function isAllowed(address proposer) external view returns (bool);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isCalldataAllowed(bytes)` and selector `0x3dfb5ee7`.
 ```solidity
 function isCalldataAllowed(bytes memory data) external view returns (bool);
@@ -1357,6 +1313,7 @@ function isCalldataAllowed(bytes memory data) external view returns (bool);
         #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isCalldataAllowed(bytes)`](isCalldataAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1477,6 +1434,7 @@ function isCalldataAllowed(bytes memory data) external view returns (bool);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `owner()` and selector `0x8da5cb5b`.
 ```solidity
 function owner() external view returns (address);
@@ -1484,6 +1442,7 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerCall {}
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`owner()`](ownerCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1596,6 +1555,7 @@ function owner() external view returns (address);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `proposerRequirementModule()` and selector `0xa830b643`.
 ```solidity
 function proposerRequirementModule() external view returns (address);
@@ -1603,6 +1563,7 @@ function proposerRequirementModule() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct proposerRequirementModuleCall {}
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`proposerRequirementModule()`](proposerRequirementModuleCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1719,6 +1680,7 @@ function proposerRequirementModule() external view returns (address);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `renounceOwnership()` and selector `0x715018a6`.
 ```solidity
 function renounceOwnership() external;
@@ -1839,6 +1801,7 @@ function renounceOwnership() external;
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `transferOwnership(address)` and selector `0xf2fde38b`.
 ```solidity
 function transferOwnership(address newOwner) external;
@@ -1966,6 +1929,7 @@ function transferOwnership(address newOwner) external;
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `updateRequirementModule(address)` and selector `0xd4f0eb4d`.
 ```solidity
 function updateRequirementModule(address _newModule) external;
@@ -2094,6 +2058,7 @@ function updateRequirementModule(address _newModule) external;
         }
     };
     ///Container for all the [`SequencingModuleCheckerMock`](self) function calls.
+    #[derive()]
     pub enum SequencingModuleCheckerMockCalls {
         #[allow(missing_docs)]
         calldataRequirementModule(calldataRequirementModuleCall),
@@ -2424,6 +2389,7 @@ function updateRequirementModule(address _newModule) external;
         }
     }
     ///Container for all the [`SequencingModuleCheckerMock`](self) custom errors.
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SequencingModuleCheckerMockErrors {
         #[allow(missing_docs)]
         AlreadyInitialized(AlreadyInitialized),
@@ -2666,6 +2632,7 @@ function updateRequirementModule(address _newModule) external;
         }
     }
     ///Container for all the [`SequencingModuleCheckerMock`](self) events.
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SequencingModuleCheckerMockEvents {
         #[allow(missing_docs)]
         OwnershipTransferred(OwnershipTransferred),
@@ -2682,72 +2649,14 @@ function updateRequirementModule(address _newModule) external;
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                37u8,
-                53u8,
-                128u8,
-                248u8,
-                6u8,
-                116u8,
-                28u8,
-                17u8,
-                179u8,
-                212u8,
-                170u8,
-                96u8,
-                217u8,
-                202u8,
-                204u8,
-                91u8,
-                239u8,
-                12u8,
-                235u8,
-                179u8,
-                87u8,
-                72u8,
-                118u8,
-                127u8,
-                226u8,
-                63u8,
-                17u8,
-                145u8,
-                110u8,
-                47u8,
-                4u8,
-                185u8,
+                37u8, 53u8, 128u8, 248u8, 6u8, 116u8, 28u8, 17u8, 179u8, 212u8, 170u8,
+                96u8, 217u8, 202u8, 204u8, 91u8, 239u8, 12u8, 235u8, 179u8, 87u8, 72u8,
+                118u8, 127u8, 226u8, 63u8, 17u8, 145u8, 110u8, 47u8, 4u8, 185u8,
             ],
             [
-                139u8,
-                224u8,
-                7u8,
-                156u8,
-                83u8,
-                22u8,
-                89u8,
-                20u8,
-                19u8,
-                68u8,
-                205u8,
-                31u8,
-                208u8,
-                164u8,
-                242u8,
-                132u8,
-                25u8,
-                73u8,
-                127u8,
-                151u8,
-                34u8,
-                163u8,
-                218u8,
-                175u8,
-                227u8,
-                180u8,
-                24u8,
-                111u8,
-                107u8,
-                100u8,
-                87u8,
-                224u8,
+                139u8, 224u8, 7u8, 156u8, 83u8, 22u8, 89u8, 20u8, 19u8, 68u8, 205u8,
+                31u8, 208u8, 164u8, 242u8, 132u8, 25u8, 73u8, 127u8, 151u8, 34u8, 163u8,
+                218u8, 175u8, 227u8, 180u8, 24u8, 111u8, 107u8, 100u8, 87u8, 224u8,
             ],
         ];
     }

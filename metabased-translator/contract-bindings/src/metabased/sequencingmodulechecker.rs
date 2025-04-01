@@ -268,6 +268,7 @@ pub mod SequencingModuleChecker {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `AlreadyInitialized()` and selector `0x0dc149f0`.
 ```solidity
 error AlreadyInitialized();
@@ -332,6 +333,7 @@ error AlreadyInitialized();
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `CalldataNotAllowed()` and selector `0xc180a962`.
 ```solidity
 error CalldataNotAllowed();
@@ -396,6 +398,7 @@ error CalldataNotAllowed();
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `InvalidModuleAddress()` and selector `0x5cfe78fe`.
 ```solidity
 error InvalidModuleAddress();
@@ -460,6 +463,7 @@ error InvalidModuleAddress();
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `NotAllowed(address)` and selector `0xfa5cd00f`.
 ```solidity
 error NotAllowed(address batchSubmitter);
@@ -531,6 +535,7 @@ error NotAllowed(address batchSubmitter);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `OwnableInvalidOwner(address)` and selector `0x1e4fbdf7`.
 ```solidity
 error OwnableInvalidOwner(address owner);
@@ -602,6 +607,7 @@ error OwnableInvalidOwner(address owner);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Custom error with signature `OwnableUnauthorizedAccount(address)` and selector `0x118cdaa7`.
 ```solidity
 error OwnableUnauthorizedAccount(address account);
@@ -675,6 +681,7 @@ error OwnableUnauthorizedAccount(address account);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `OwnershipTransferred(address,address)` and selector `0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0`.
 ```solidity
 event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -713,38 +720,9 @@ event OwnershipTransferred(address indexed previousOwner, address indexed newOwn
             );
             const SIGNATURE: &'static str = "OwnershipTransferred(address,address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                139u8,
-                224u8,
-                7u8,
-                156u8,
-                83u8,
-                22u8,
-                89u8,
-                20u8,
-                19u8,
-                68u8,
-                205u8,
-                31u8,
-                208u8,
-                164u8,
-                242u8,
-                132u8,
-                25u8,
-                73u8,
-                127u8,
-                151u8,
-                34u8,
-                163u8,
-                218u8,
-                175u8,
-                227u8,
-                180u8,
-                24u8,
-                111u8,
-                107u8,
-                100u8,
-                87u8,
-                224u8,
+                139u8, 224u8, 7u8, 156u8, 83u8, 22u8, 89u8, 20u8, 19u8, 68u8, 205u8,
+                31u8, 208u8, 164u8, 242u8, 132u8, 25u8, 73u8, 127u8, 151u8, 34u8, 163u8,
+                218u8, 175u8, 227u8, 180u8, 24u8, 111u8, 107u8, 100u8, 87u8, 224u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -822,6 +800,7 @@ event OwnershipTransferred(address indexed previousOwner, address indexed newOwn
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Event with signature `RequirementModuleUpdated(address)` and selector `0x253580f806741c11b3d4aa60d9cacc5bef0cebb35748767fe23f11916e2f04b9`.
 ```solidity
 event RequirementModuleUpdated(address indexed newModule);
@@ -857,38 +836,9 @@ event RequirementModuleUpdated(address indexed newModule);
             );
             const SIGNATURE: &'static str = "RequirementModuleUpdated(address)";
             const SIGNATURE_HASH: alloy_sol_types::private::B256 = alloy_sol_types::private::B256::new([
-                37u8,
-                53u8,
-                128u8,
-                248u8,
-                6u8,
-                116u8,
-                28u8,
-                17u8,
-                179u8,
-                212u8,
-                170u8,
-                96u8,
-                217u8,
-                202u8,
-                204u8,
-                91u8,
-                239u8,
-                12u8,
-                235u8,
-                179u8,
-                87u8,
-                72u8,
-                118u8,
-                127u8,
-                226u8,
-                63u8,
-                17u8,
-                145u8,
-                110u8,
-                47u8,
-                4u8,
-                185u8,
+                37u8, 53u8, 128u8, 248u8, 6u8, 116u8, 28u8, 17u8, 179u8, 212u8, 170u8,
+                96u8, 217u8, 202u8, 204u8, 91u8, 239u8, 12u8, 235u8, 179u8, 87u8, 72u8,
+                118u8, 127u8, 226u8, 63u8, 17u8, 145u8, 110u8, 47u8, 4u8, 185u8,
             ]);
             const ANONYMOUS: bool = false;
             #[allow(unused_variables)]
@@ -958,6 +908,7 @@ event RequirementModuleUpdated(address indexed newModule);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `calldataRequirementModule()` and selector `0xaaa60707`.
 ```solidity
 function calldataRequirementModule() external view returns (address);
@@ -965,6 +916,7 @@ function calldataRequirementModule() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct calldataRequirementModuleCall {}
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`calldataRequirementModule()`](calldataRequirementModuleCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1081,6 +1033,7 @@ function calldataRequirementModule() external view returns (address);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `initialize(address,address)` and selector `0x485cc955`.
 ```solidity
 function initialize(address admin, address _requirementModule) external;
@@ -1221,6 +1174,7 @@ function initialize(address admin, address _requirementModule) external;
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isAllowed(address)` and selector `0xbabcc539`.
 ```solidity
 function isAllowed(address proposer) external view returns (bool);
@@ -1231,6 +1185,7 @@ function isAllowed(address proposer) external view returns (bool);
         #[allow(missing_docs)]
         pub proposer: alloy::sol_types::private::Address,
     }
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1347,6 +1302,7 @@ function isAllowed(address proposer) external view returns (bool);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isCalldataAllowed(bytes)` and selector `0x3dfb5ee7`.
 ```solidity
 function isCalldataAllowed(bytes memory data) external view returns (bool);
@@ -1357,6 +1313,7 @@ function isCalldataAllowed(bytes memory data) external view returns (bool);
         #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isCalldataAllowed(bytes)`](isCalldataAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1477,6 +1434,7 @@ function isCalldataAllowed(bytes memory data) external view returns (bool);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `owner()` and selector `0x8da5cb5b`.
 ```solidity
 function owner() external view returns (address);
@@ -1484,6 +1442,7 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerCall {}
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`owner()`](ownerCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1596,6 +1555,7 @@ function owner() external view returns (address);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `proposerRequirementModule()` and selector `0xa830b643`.
 ```solidity
 function proposerRequirementModule() external view returns (address);
@@ -1603,6 +1563,7 @@ function proposerRequirementModule() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct proposerRequirementModuleCall {}
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`proposerRequirementModule()`](proposerRequirementModuleCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -1719,6 +1680,7 @@ function proposerRequirementModule() external view returns (address);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `renounceOwnership()` and selector `0x715018a6`.
 ```solidity
 function renounceOwnership() external;
@@ -1839,6 +1801,7 @@ function renounceOwnership() external;
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `transferOwnership(address)` and selector `0xf2fde38b`.
 ```solidity
 function transferOwnership(address newOwner) external;
@@ -1966,6 +1929,7 @@ function transferOwnership(address newOwner) external;
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `updateRequirementModule(address)` and selector `0xd4f0eb4d`.
 ```solidity
 function updateRequirementModule(address _newModule) external;
@@ -2094,6 +2058,7 @@ function updateRequirementModule(address _newModule) external;
         }
     };
     ///Container for all the [`SequencingModuleChecker`](self) function calls.
+    #[derive()]
     pub enum SequencingModuleCheckerCalls {
         #[allow(missing_docs)]
         calldataRequirementModule(calldataRequirementModuleCall),
@@ -2418,6 +2383,7 @@ function updateRequirementModule(address _newModule) external;
         }
     }
     ///Container for all the [`SequencingModuleChecker`](self) custom errors.
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SequencingModuleCheckerErrors {
         #[allow(missing_docs)]
         AlreadyInitialized(AlreadyInitialized),
@@ -2660,6 +2626,7 @@ function updateRequirementModule(address _newModule) external;
         }
     }
     ///Container for all the [`SequencingModuleChecker`](self) events.
+    #[derive(Debug, PartialEq, Eq, Hash)]
     pub enum SequencingModuleCheckerEvents {
         #[allow(missing_docs)]
         OwnershipTransferred(OwnershipTransferred),
@@ -2676,72 +2643,14 @@ function updateRequirementModule(address _newModule) external;
         /// Prefer using `SolInterface` methods instead.
         pub const SELECTORS: &'static [[u8; 32usize]] = &[
             [
-                37u8,
-                53u8,
-                128u8,
-                248u8,
-                6u8,
-                116u8,
-                28u8,
-                17u8,
-                179u8,
-                212u8,
-                170u8,
-                96u8,
-                217u8,
-                202u8,
-                204u8,
-                91u8,
-                239u8,
-                12u8,
-                235u8,
-                179u8,
-                87u8,
-                72u8,
-                118u8,
-                127u8,
-                226u8,
-                63u8,
-                17u8,
-                145u8,
-                110u8,
-                47u8,
-                4u8,
-                185u8,
+                37u8, 53u8, 128u8, 248u8, 6u8, 116u8, 28u8, 17u8, 179u8, 212u8, 170u8,
+                96u8, 217u8, 202u8, 204u8, 91u8, 239u8, 12u8, 235u8, 179u8, 87u8, 72u8,
+                118u8, 127u8, 226u8, 63u8, 17u8, 145u8, 110u8, 47u8, 4u8, 185u8,
             ],
             [
-                139u8,
-                224u8,
-                7u8,
-                156u8,
-                83u8,
-                22u8,
-                89u8,
-                20u8,
-                19u8,
-                68u8,
-                205u8,
-                31u8,
-                208u8,
-                164u8,
-                242u8,
-                132u8,
-                25u8,
-                73u8,
-                127u8,
-                151u8,
-                34u8,
-                163u8,
-                218u8,
-                175u8,
-                227u8,
-                180u8,
-                24u8,
-                111u8,
-                107u8,
-                100u8,
-                87u8,
-                224u8,
+                139u8, 224u8, 7u8, 156u8, 83u8, 22u8, 89u8, 20u8, 19u8, 68u8, 205u8,
+                31u8, 208u8, 164u8, 242u8, 132u8, 25u8, 73u8, 127u8, 151u8, 34u8, 163u8,
+                218u8, 175u8, 227u8, 180u8, 24u8, 111u8, 107u8, 100u8, 87u8, 224u8,
             ],
         ];
     }

@@ -175,6 +175,7 @@ pub mod IRequirementModule {
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
         b"",
     );
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `addCalldataCheck(address,bool)` and selector `0xa7f736f2`.
 ```solidity
 function addCalldataCheck(address _address, bool addToHead) external;
@@ -316,6 +317,7 @@ function addCalldataCheck(address _address, bool addToHead) external;
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `addProposerCheck(address,bool)` and selector `0x98a7e5c2`.
 ```solidity
 function addProposerCheck(address _address, bool addToHead) external;
@@ -457,6 +459,7 @@ function addProposerCheck(address _address, bool addToHead) external;
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `getAllCalldataChecks()` and selector `0x70405b0b`.
 ```solidity
 function getAllCalldataChecks() external view returns (address[] memory);
@@ -464,6 +467,7 @@ function getAllCalldataChecks() external view returns (address[] memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getAllCalldataChecksCall {}
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`getAllCalldataChecks()`](getAllCalldataChecksCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -586,6 +590,7 @@ function getAllCalldataChecks() external view returns (address[] memory);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `getAllProposerChecks()` and selector `0x1ba39a12`.
 ```solidity
 function getAllProposerChecks() external view returns (address[] memory);
@@ -593,6 +598,7 @@ function getAllProposerChecks() external view returns (address[] memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getAllProposerChecksCall {}
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`getAllProposerChecks()`](getAllProposerChecksCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -715,6 +721,7 @@ function getAllProposerChecks() external view returns (address[] memory);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isAllowed(address)` and selector `0xbabcc539`.
 ```solidity
 function isAllowed(address proposer) external view returns (bool);
@@ -725,6 +732,7 @@ function isAllowed(address proposer) external view returns (bool);
         #[allow(missing_docs)]
         pub proposer: alloy::sol_types::private::Address,
     }
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -841,6 +849,7 @@ function isAllowed(address proposer) external view returns (bool);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `isCalldataAllowed(bytes)` and selector `0x3dfb5ee7`.
 ```solidity
 function isCalldataAllowed(bytes memory data) external view returns (bool);
@@ -851,6 +860,7 @@ function isCalldataAllowed(bytes memory data) external view returns (bool);
         #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     ///Container type for the return parameters of the [`isCalldataAllowed(bytes)`](isCalldataAllowedCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
@@ -971,6 +981,7 @@ function isCalldataAllowed(bytes memory data) external view returns (bool);
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `removeCalldataCheck(address)` and selector `0x04a8cc50`.
 ```solidity
 function removeCalldataCheck(address _address) external;
@@ -1098,6 +1109,7 @@ function removeCalldataCheck(address _address) external;
             }
         }
     };
+    #[derive(Default, Debug, PartialEq, Eq, Hash)]
     /**Function with signature `removeProposerCheck(address)` and selector `0x42fd0756`.
 ```solidity
 function removeProposerCheck(address _address) external;
@@ -1226,6 +1238,7 @@ function removeProposerCheck(address _address) external;
         }
     };
     ///Container for all the [`IRequirementModule`](self) function calls.
+    #[derive()]
     pub enum IRequirementModuleCalls {
         #[allow(missing_docs)]
         addCalldataCheck(addCalldataCheckCall),
