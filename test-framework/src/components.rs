@@ -1,7 +1,5 @@
-//! Integration tests for the metabased stack
-#![allow(missing_docs)]
+//! Components for the integration tests
 
-use crate::port_manager::PortManager;
 use alloy::{
     eips::BlockNumberOrTag,
     network::EthereumWallet,
@@ -37,6 +35,7 @@ use std::{
     str::FromStr,
     time::Duration,
 };
+use test_utils::port_manager::PortManager;
 use tokio::{
     process::{Child, Command},
     runtime::Handle,

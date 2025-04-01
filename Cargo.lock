@@ -1607,7 +1607,6 @@ dependencies = [
  "metrics",
  "prometheus-client",
  "reqwest",
- "serde",
  "strum 0.27.1",
  "strum_macros 0.27.1",
  "test-utils",

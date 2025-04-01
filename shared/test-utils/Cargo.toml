@@ -1,5 +1,5 @@
 [package]
-description            = "Common test utilities for metabased-translator"
+description            = "Common test utilities"
 edition.workspace      = true
 homepage.workspace     = true
 license.workspace      = true

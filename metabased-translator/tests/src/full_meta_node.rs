@@ -1,7 +1,6 @@
 //! Integration tests for the metabased stack
 #![allow(missing_docs)]
 
-use crate::port_manager::PortManager;
 use alloy::{
     eips::BlockNumberOrTag,
     network::EthereumWallet,
@@ -33,7 +32,7 @@ use metabased_translator::{config::MetabasedConfig, spawn::run};
 use metrics::metrics::{MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
 use std::{sync::Arc, time::Duration};
-use test_utils::test_path;
+use test_utils::{port_manager::PortManager, utils::test_path};
 use tokio::{
     process::{Child, Command},
     runtime::Handle,

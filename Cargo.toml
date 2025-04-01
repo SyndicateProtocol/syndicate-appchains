@@ -12,6 +12,7 @@ members = [
     "metabased-translator/crates/slotter",
     "metabased-translator/tests",
     "shared",
+    "shared/test-utils",
     "tc-sequencer",
     "test-framework",
 ]
@@ -37,8 +38,9 @@ contract-bindings    = { path = "metabased-translator/contract-bindings" }
 ingestor             = { path = "metabased-translator/crates/ingestor" }
 metabased-translator = { path = "metabased-translator/bin/metabased-translator" }
 metrics              = { path = "metabased-translator/crates/metrics" }
+shared               = { path = "shared" }
 slotter              = { path = "metabased-translator/crates/slotter" }
-test-utils           = { path = "metabased-translator/crates/test-utils" }
+test-utils           = { path = "shared/test-utils" }
 
 alloy              = { version = "0.11.1" }
 alloy-primitives   = "0.8.22"

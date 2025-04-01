@@ -25,7 +25,7 @@ use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use std::time::Duration;
-use test_utils::wait_until;
+use test_utils::{utils::assert_eventually, wait_until};
 use tracing::Level;
 /// mine a mchain block with a delay - for testing only
 async fn mine_block(
