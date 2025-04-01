@@ -252,8 +252,9 @@ mod tests {
 
     /// This is a quirk of the `byte-unit` library. When a [`Byte`] value is created that has an
     /// exact binary representation in bits, the alternate formatter `:#` will choose bits (e.g.
-    /// `KiB`) over Bytes. In other words, because `128 KB` == `125 KiB`, the formatter will
-    /// output `125 KiB`. The internal representation of `128000` remains unchanged.
+    /// `KiB`) over Bytes in order to be maximally explicit by using the IEC standard unit. In other
+    /// words, because `128 KB` == `125 KiB`, the formatter will output `125 KiB`. The internal
+    /// representation of `128000` remains unchanged.
     #[test]
     fn test_check_tx_size_exceeds_limit_formatter_quirk() {
         // Define a limit of 128 KB
