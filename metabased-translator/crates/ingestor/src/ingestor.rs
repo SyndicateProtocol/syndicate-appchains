@@ -30,6 +30,8 @@ struct BatchContext<'a> {
     chain: Chain,
     addresses: &'a Vec<Address>,
     shutdown_rx: &'a mut oneshot::Receiver<()>,
+    backoff_initial_interval: u64,
+    backoff_scaling_factor: u64,
 }
 
 /// Starts a new ingestor task.
@@ -68,9 +70,15 @@ pub async fn run(
     metrics: IngestorMetrics,
     mut shutdown_rx: oneshot::Receiver<()>,
 ) -> Result<(), Error> {
-    let initial_chain_head =
-        fetch_block_with_retry(&*client, BlockNumberOrTag::Latest, chain).await?.number;
-    // client.get_block_by_number().await?.number;
+    let initial_chain_head = fetch_block_with_retry(
+        &*client,
+        BlockNumberOrTag::Latest,
+        chain,
+        config.backoff_initial_interval,
+        config.backoff_scaling_factor,
+    )
+    .await?
+    .number;
     let batch_size = config.syncing_batch_size;
     let polling_interval = config.polling_interval;
     let start_block = config.start_block;
@@ -100,6 +108,8 @@ pub async fn run(
                     chain,
                     addresses:&addresses,
                     shutdown_rx: &mut shutdown_rx,
+                    backoff_initial_interval: config.backoff_initial_interval,
+                    backoff_scaling_factor: config.backoff_scaling_factor,
                 }).await;
                 if should_terminate {
                     info!("{} ingestor stopped", chain);
@@ -145,13 +155,27 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
     for &block_number in &block_numbers {
         let client = ctx.client.clone();
         let addresses = ctx.addresses.clone();
+        let backoff_initial_interval = ctx.backoff_initial_interval;
+        let backoff_scaling_factor = ctx.backoff_scaling_factor;
 
         tasks.spawn(async move {
             // Fetch block and receipts
-            let mut block =
-                fetch_block_with_retry(&*client, BlockNumberOrTag::Number(block_number), ctx.chain)
-                    .await?;
-            let receipts = fetch_receipts_with_retry(&*client, block_number, ctx.chain).await?;
+            let mut block = fetch_block_with_retry(
+                &*client,
+                BlockNumberOrTag::Number(block_number),
+                ctx.chain,
+                backoff_initial_interval,
+                backoff_scaling_factor,
+            )
+            .await?;
+            let receipts = fetch_receipts_with_retry(
+                &*client,
+                block_number,
+                ctx.chain,
+                backoff_initial_interval,
+                backoff_scaling_factor,
+            )
+            .await?;
             // Filter receipts that include logs for any of the addresses in ctx.addresses
             let filtered_receipts: Vec<Receipt> = receipts
                 .into_iter()
@@ -227,19 +251,17 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
     false
 }
 
-// TODO make initial_backoff_ms configurable
-// TODO make max_retries configurable (default 0)
 // TODO try to re-use the exponential backoff logic duplicated in these 2 functions
-
-const INITIAL_BACKOFF_MS: u64 = 50;
 
 async fn fetch_block_with_retry(
     client: &dyn RPCClient,
     b: BlockNumberOrTag,
     chain: Chain,
+    backoff_initial_interval: u64,
+    backoff_scaling_factor: u64,
 ) -> Result<Block, Error> {
     let mut retry_count = 0;
-    let mut backoff_ms = INITIAL_BACKOFF_MS;
+    let mut backoff_ms = backoff_initial_interval;
     let context = format!("fetched block #{}", b);
 
     loop {
@@ -261,7 +283,7 @@ async fn fetch_block_with_retry(
                             b, chain, err, retry_count
                         );
                         tokio::time::sleep(Duration::from_millis(backoff_ms)).await;
-                        backoff_ms *= 2; // Exponential backoff
+                        backoff_ms *= backoff_scaling_factor; // Exponential backoff
                     }
                 }
             }
@@ -273,9 +295,11 @@ async fn fetch_receipts_with_retry(
     client: &dyn RPCClient,
     block_number: u64,
     chain: Chain,
+    backoff_initial_interval: u64,
+    backoff_scaling_factor: u64,
 ) -> Result<Vec<Receipt>, Error> {
     let mut retry_count = 0;
-    let mut backoff_ms = INITIAL_BACKOFF_MS;
+    let mut backoff_ms = backoff_initial_interval;
     let context = format!("fetched block #{}", block_number);
     let block_number_hex = format!("0x{:x}", block_number);
 
@@ -298,7 +322,7 @@ async fn fetch_receipts_with_retry(
                             block_number, chain, err, retry_count
                         );
                         tokio::time::sleep(Duration::from_millis(backoff_ms)).await;
-                        backoff_ms *= 2; // Exponential backoff
+                        backoff_ms *= backoff_scaling_factor; // Exponential backoff
                     }
                 }
             }
@@ -392,7 +416,13 @@ mod tests {
     async fn test_start_polling_simple_and_shutdown() -> Result<(), Error> {
         let start_block = 1;
         let polling_interval = Duration::from_millis(10);
-        let config = ChainIngestorConfig { start_block, polling_interval, ..Default::default() };
+        let config = ChainIngestorConfig {
+            start_block,
+            polling_interval,
+            backoff_initial_interval: 50,
+            backoff_scaling_factor: 2,
+            ..Default::default()
+        };
 
         let (sender, _) = channel(10);
         let mut mock_client = MockRPCClientMock::new();
@@ -427,6 +457,8 @@ mod tests {
             start_block,
             syncing_batch_size,
             polling_interval: Duration::from_millis(10),
+            backoff_initial_interval: 50,
+            backoff_scaling_factor: 2,
             ..Default::default()
         };
         let chain_head = start_block + syncing_batch_size;

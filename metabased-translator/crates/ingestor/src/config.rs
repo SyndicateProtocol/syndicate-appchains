@@ -27,6 +27,8 @@ pub struct ChainIngestorConfig {
     pub rpc_url: String,
     pub start_block: u64,
     pub syncing_batch_size: u64,
+    pub backoff_initial_interval: u64,
+    pub backoff_scaling_factor: u64,
 }
 
 // Due to `clap` not supporting prefixes, we need to redefine the SequencingChainConfig and
@@ -63,6 +65,22 @@ pub struct SequencingChainConfig {
         default_value_t = 50
     )]
     pub sequencing_syncing_batch_size: u64,
+
+    /// The initial backoff interval in milliseconds for retries
+    #[arg(
+        long = "sequencing-backoff-initial-interval",
+        env = "SEQUENCING_BACKOFF_INITIAL_INTERVAL",
+        default_value_t = 50
+    )]
+    pub sequencing_backoff_initial_interval: u64,
+
+    /// The scaling factor for exponential backoff
+    #[arg(
+        long = "sequencing-backoff-scaling-factor",
+        env = "SEQUENCING_BACKOFF_SCALING_FACTOR",
+        default_value_t = 2
+    )]
+    pub sequencing_backoff_scaling_factor: u64,
 }
 
 /// Configuration for the settlement chain
@@ -96,6 +114,22 @@ pub struct SettlementChainConfig {
         default_value_t = 50
     )]
     pub settlement_syncing_batch_size: u64,
+
+    /// The initial backoff interval in milliseconds for retries
+    #[arg(
+        long = "settlement-backoff-initial-interval",
+        env = "SETTLEMENT_BACKOFF_INITIAL_INTERVAL",
+        default_value_t = 50
+    )]
+    pub settlement_backoff_initial_interval: u64,
+
+    /// The scaling factor for exponential backoff
+    #[arg(
+        long = "settlement-backoff-scaling-factor",
+        env = "SETTLEMENT_BACKOFF_SCALING_FACTOR",
+        default_value_t = 2
+    )]
+    pub settlement_backoff_scaling_factor: u64,
 }
 
 impl From<ChainIngestorConfig> for SequencingChainConfig {
@@ -106,6 +140,8 @@ impl From<ChainIngestorConfig> for SequencingChainConfig {
             sequencing_rpc_url: config.rpc_url,
             sequencing_start_block: config.start_block,
             sequencing_syncing_batch_size: config.syncing_batch_size,
+            sequencing_backoff_initial_interval: config.backoff_initial_interval,
+            sequencing_backoff_scaling_factor: config.backoff_scaling_factor,
         }
     }
 }
@@ -118,6 +154,8 @@ impl From<SequencingChainConfig> for ChainIngestorConfig {
             rpc_url: config.sequencing_rpc_url,
             start_block: config.sequencing_start_block,
             syncing_batch_size: config.sequencing_syncing_batch_size,
+            backoff_initial_interval: config.sequencing_backoff_initial_interval,
+            backoff_scaling_factor: config.sequencing_backoff_scaling_factor,
         }
     }
 }
@@ -130,6 +168,8 @@ impl From<ChainIngestorConfig> for SettlementChainConfig {
             settlement_rpc_url: config.rpc_url,
             settlement_start_block: config.start_block,
             settlement_syncing_batch_size: config.syncing_batch_size,
+            settlement_backoff_initial_interval: config.backoff_initial_interval,
+            settlement_backoff_scaling_factor: config.backoff_scaling_factor,
         }
     }
 }
@@ -142,6 +182,8 @@ impl From<SettlementChainConfig> for ChainIngestorConfig {
             rpc_url: config.settlement_rpc_url,
             start_block: config.settlement_start_block,
             syncing_batch_size: config.settlement_syncing_batch_size,
+            backoff_initial_interval: config.settlement_backoff_initial_interval,
+            backoff_scaling_factor: config.settlement_backoff_scaling_factor,
         }
     }
 }
@@ -154,6 +196,8 @@ impl From<&SequencingChainConfig> for ChainIngestorConfig {
             rpc_url: config.sequencing_rpc_url.clone(),
             start_block: config.sequencing_start_block,
             syncing_batch_size: config.sequencing_syncing_batch_size,
+            backoff_initial_interval: config.sequencing_backoff_initial_interval,
+            backoff_scaling_factor: config.sequencing_backoff_scaling_factor,
         }
     }
 }
@@ -166,6 +210,8 @@ impl From<&SettlementChainConfig> for ChainIngestorConfig {
             rpc_url: config.settlement_rpc_url.clone(),
             start_block: config.settlement_start_block,
             syncing_batch_size: config.settlement_syncing_batch_size,
+            backoff_initial_interval: config.settlement_backoff_initial_interval,
+            backoff_scaling_factor: config.settlement_backoff_scaling_factor,
         }
     }
 }
@@ -197,6 +243,10 @@ pub enum ConfigError {
     EmptyRpcUrl(),
     #[error("Invalid batch size: {0}")]
     InvalidBatchSize(String),
+    #[error("Invalid backoff interval: {0}")]
+    InvalidBackoffInterval(String),
+    #[error("Invalid backoff scaling factor: {0}")]
+    InvalidBackoffScalingFactor(String),
 }
 
 // uses clap defaults
@@ -245,6 +295,8 @@ impl Default for ChainIngestorConfig {
             rpc_url: "http://localhost:8545".to_string(),
             start_block: 1,
             syncing_batch_size: 50,
+            backoff_initial_interval: 50,
+            backoff_scaling_factor: 2,
         }
     }
 }
@@ -257,9 +309,18 @@ impl ChainIngestorConfig {
         buffer_size: usize,
         polling_interval: Duration,
         syncing_batch_size: u64,
+        backoff_initial_interval: u64,
+        backoff_scaling_factor: u64,
     ) -> Result<Self, ConfigError> {
-        let config =
-            Self { rpc_url, start_block, buffer_size, polling_interval, syncing_batch_size };
+        let config = Self {
+            rpc_url,
+            start_block,
+            buffer_size,
+            polling_interval,
+            syncing_batch_size,
+            backoff_initial_interval,
+            backoff_scaling_factor,
+        };
         debug!("Created chain ingestor config: {:?}", config);
         config.validate()?;
         Ok(config)
@@ -291,6 +352,18 @@ impl ChainIngestorConfig {
             )));
         }
 
+        if self.backoff_initial_interval == 0 {
+            return Err(ConfigError::InvalidBackoffInterval(
+                "Backoff initial interval must be greater than 0".to_string(),
+            ));
+        }
+
+        if self.backoff_scaling_factor == 0 {
+            return Err(ConfigError::InvalidBackoffScalingFactor(
+                "Backoff scaling factor must be greater than 0".to_string(),
+            ));
+        }
+
         Ok(())
     }
 }
@@ -307,6 +380,8 @@ mod tests {
             10,
             Duration::from_secs(5),
             50,
+            50,
+            2,
         )
         .unwrap()
     }
@@ -320,6 +395,8 @@ mod tests {
             10,
             Duration::from_secs(5),
             50,
+            50,
+            2,
         )
         .unwrap();
         assert!(config.validate().is_ok());
@@ -331,6 +408,8 @@ mod tests {
             buffer_size: 10,
             polling_interval: Duration::from_secs(0),
             syncing_batch_size: 50,
+            backoff_initial_interval: 50,
+            backoff_scaling_factor: 2,
         };
         assert_matches!(config.validate(), Err(ConfigError::InvalidPollingInterval(_)));
 
@@ -341,6 +420,8 @@ mod tests {
             buffer_size: 0,
             polling_interval: Duration::from_secs(5),
             syncing_batch_size: 50,
+            backoff_initial_interval: 50,
+            backoff_scaling_factor: 2,
         };
         assert_matches!(config.validate(), Err(ConfigError::InvalidBufferSize(_)));
     }
@@ -355,6 +436,8 @@ mod tests {
             buffer_size: 0, // Invalid
             polling_interval: Duration::from_secs(5),
             syncing_batch_size: 50,
+            backoff_initial_interval: 50,
+            backoff_scaling_factor: 2,
         };
 
         // Pipeline should fail validation if any component fails
@@ -388,6 +471,8 @@ mod tests {
             rpc_url: "http://sequencer:8545".to_string(),
             start_block: 0,
             syncing_batch_size: 50,
+            backoff_initial_interval: 50,
+            backoff_scaling_factor: 2,
         };
 
         let specific: SequencingChainConfig = generic.into();
