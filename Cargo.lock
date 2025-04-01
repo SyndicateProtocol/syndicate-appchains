@@ -4007,6 +4007,7 @@ dependencies = [
  "clap",
  "common",
  "eyre",
+ "humantime",
  "prometheus-client",
  "test-case",
  "test-utils",
