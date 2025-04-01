@@ -15,8 +15,10 @@ use contract_bindings::arbitrum::{
 use eyre::Result;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use test_framework::components::{
-    get_rollup_contract_address, Components, ConfigurationOptions, ContractVersion, APPCHAIN_OWNER,
+use test_framework::{
+    components::{Components, ConfigurationOptions, ContractVersion},
+    preloaded_config::APPCHAIN_OWNER,
+    rollup_utils::get_rollup_contract_address,
 };
 use test_utils::{utils::assert_eventually, wait_until};
 use tokio::time::sleep;
