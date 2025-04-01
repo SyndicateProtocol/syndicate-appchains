@@ -4115,7 +4115,6 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "byte-unit",
- "derive_more 1.0.0",
  "jsonrpsee",
  "serde_json",
  "thiserror 2.0.11",
