@@ -315,6 +315,7 @@ error OwnableInvalidOwner(address owner);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct OwnableInvalidOwner {
+        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -385,6 +386,7 @@ error OwnableUnauthorizedAccount(address account);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct OwnableUnauthorizedAccount {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -947,6 +949,7 @@ function beacon() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct beaconReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1061,6 +1064,7 @@ function createArbChainConfig(uint256 chainId, bool mineEmptyBlocks, address arb
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createArbChainConfigCall {
+        #[allow(missing_docs)]
         pub chainId: alloy::sol_types::private::primitives::aliases::U256,
         pub mineEmptyBlocks: bool,
         pub arbitrumBridgeAddress: alloy::sol_types::private::Address,
@@ -1077,6 +1081,7 @@ function createArbChainConfig(uint256 chainId, bool mineEmptyBlocks, address arb
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createArbChainConfigReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1419,12 +1424,14 @@ function getArbChainConfigAddress(uint256 chainId) external view returns (addres
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getArbChainConfigAddressCall {
+        #[allow(missing_docs)]
         pub chainId: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`getArbChainConfigAddress(uint256)`](getArbChainConfigAddressCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct getArbChainConfigAddressReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1553,6 +1560,7 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1787,6 +1795,7 @@ function transferOwnership(address newOwner) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferOwnershipCall {
+        #[allow(missing_docs)]
         pub newOwner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`transferOwnership(address)`](transferOwnershipCall) function.
@@ -1913,6 +1922,7 @@ function upgradeImplementation(address newImplementation) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct upgradeImplementationCall {
+        #[allow(missing_docs)]
         pub newImplementation: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`upgradeImplementation(address)`](upgradeImplementationCall) function.
@@ -2034,13 +2044,21 @@ function upgradeImplementation(address newImplementation) external;
     };
     ///Container for all the [`ArbConfigManager`](self) function calls.
     pub enum ArbConfigManagerCalls {
+        #[allow(missing_docs)]
         beacon(beaconCall),
+        #[allow(missing_docs)]
         createArbChainConfig(createArbChainConfigCall),
+        #[allow(missing_docs)]
         deployedConfigs(deployedConfigsCall),
+        #[allow(missing_docs)]
         getArbChainConfigAddress(getArbChainConfigAddressCall),
+        #[allow(missing_docs)]
         owner(ownerCall),
+        #[allow(missing_docs)]
         renounceOwnership(renounceOwnershipCall),
+        #[allow(missing_docs)]
         transferOwnership(transferOwnershipCall),
+        #[allow(missing_docs)]
         upgradeImplementation(upgradeImplementationCall),
     }
     #[automatically_derived]
@@ -2317,7 +2335,9 @@ function upgradeImplementation(address newImplementation) external;
     }
     ///Container for all the [`ArbConfigManager`](self) custom errors.
     pub enum ArbConfigManagerErrors {
+        #[allow(missing_docs)]
         OwnableInvalidOwner(OwnableInvalidOwner),
+        #[allow(missing_docs)]
         OwnableUnauthorizedAccount(OwnableUnauthorizedAccount),
     }
     #[automatically_derived]
@@ -2440,8 +2460,11 @@ function upgradeImplementation(address newImplementation) external;
     }
     ///Container for all the [`ArbConfigManager`](self) events.
     pub enum ArbConfigManagerEvents {
+        #[allow(missing_docs)]
         ArbChainConfigCreated(ArbChainConfigCreated),
+        #[allow(missing_docs)]
         ImplementationUpgraded(ImplementationUpgraded),
+        #[allow(missing_docs)]
         OwnershipTransferred(OwnershipTransferred),
     }
     #[automatically_derived]

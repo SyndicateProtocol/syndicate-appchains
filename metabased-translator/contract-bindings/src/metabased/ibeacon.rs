@@ -66,6 +66,7 @@ function implementation() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct implementationReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -177,6 +178,7 @@ function implementation() external view returns (address);
     };
     ///Container for all the [`IBeacon`](self) function calls.
     pub enum IBeaconCalls {
+        #[allow(missing_docs)]
         implementation(implementationCall),
     }
     #[automatically_derived]
