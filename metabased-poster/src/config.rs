@@ -2,7 +2,8 @@
 
 use alloy::primitives::Address;
 use clap::Parser;
-use std::{fmt::Debug, str::FromStr, time::Duration};
+use shared::parse::{parse_address, parse_url};
+use std::{fmt::Debug, time::Duration};
 use thiserror::Error;
 use url::Url;
 
@@ -47,27 +48,6 @@ pub struct Config {
     /// Port for metrics
     #[arg(short = 'm', long, env = "POSTER_METRICS_PORT", default_value_t = 9292)]
     pub metrics_port: u16,
-}
-
-/// Parse a string into an Ethereum `Address`.
-fn parse_address(value: &str) -> Result<Address, String> {
-    Address::from_str(value).map_err(|_| format!("Invalid address: {}", value))
-}
-
-/// Parse default string into a valid [`URL`].
-fn parse_url(value: &str) -> Result<Url, ConfigError> {
-    Url::parse(value).map_or_else(
-        |_err| Err(ConfigError::InvalidURL(value.to_string())),
-        |url| {
-            if !url.has_host() {
-                return Err(ConfigError::InvalidURLHost);
-            }
-            match url.scheme() {
-                "http" | "https" => Ok(url),
-                _ => Err(ConfigError::InvalidURLScheme(url.scheme().to_string())),
-            }
-        },
-    )
 }
 
 impl Config {

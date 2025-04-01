@@ -16,10 +16,7 @@ use block_builder::{
         shared::RollupAdapter,
     },
 };
-use common::{
-    tracing::init_test_tracing,
-    types::{Block, BlockRef},
-};
+use common::types::{Block, BlockRef};
 use contract_bindings::arbitrum::{
     arbgasinfo::ArbGasInfo, arbownerpublic::ArbOwnerPublic, arbsys::ArbSys,
     assertionposter::AssertionPoster, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox,
@@ -33,8 +30,8 @@ use metabased_translator::config::MetabasedConfig;
 use metrics::metrics::MetricsState;
 use prometheus_client::registry::Registry;
 use serde::{Deserialize, Serialize};
+use shared::{logger::init_test_tracing, wait_until};
 use std::time::Duration;
-use test_utils::wait_until;
 use tracing::Level;
 
 const ARB_SYS_PRECOMPILE_ADDRESS: Address = address!("0x0000000000000000000000000000000000000064");

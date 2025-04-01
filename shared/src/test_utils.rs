@@ -1,3 +1,7 @@
+//! The `test_utils` module contains test utilities used across the repo.
+
+#![allow(clippy::unwrap_used)] // These functions are used in tests only
+
 use std::{
     fs,
     future::Future,
@@ -105,9 +109,9 @@ where
 /// async fn example() {
 ///     use std::time::Duration;
 ///     use test_utils::wait_until;
-///     
+///
 ///     let mut counter = 0;
-///     
+///
 ///     // Basic usage
 ///     wait_until!(counter += 1; counter >= 3, Duration::from_secs(1));
 /// }
