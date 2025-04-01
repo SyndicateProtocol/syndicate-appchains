@@ -1,15 +1,5 @@
 //! Components for the integration tests
 
-use crate::{
-    anvil_utils::{mine_block, start_anvil, start_anvil_with_args, FilledProvider},
-    docker_utils::{launch_nitro_node, start_reth, Docker},
-    preloaded_config::{
-        APPCHAIN_OWNER, DEFAULT_PRIVATE_KEY_SIGNER, PRELOAD_BRIDGE_ADDRESS_231,
-        PRELOAD_BRIDGE_ADDRESS_300, PRELOAD_INBOX_ADDRESS_231, PRELOAD_INBOX_ADDRESS_300,
-        PRELOAD_POSTER_ADDRESS_231, PRELOAD_POSTER_ADDRESS_300,
-    },
-    rollup_utils::{get_rollup_contract_address, rollup_config, MCHAIN_ID},
-};
 use alloy::{
     node_bindings::AnvilInstance,
     primitives::{Address, U256},
@@ -30,7 +20,17 @@ use std::{
     fmt::{self, Display},
     time::Duration,
 };
-use test_utils::port_manager::PortManager;
+use test_utils::{
+    anvil::{mine_block, start_anvil, start_anvil_with_args, FilledProvider},
+    docker::{launch_nitro_node, start_reth, Docker},
+    port_manager::PortManager,
+    preloaded_config::{
+        APPCHAIN_OWNER, DEFAULT_PRIVATE_KEY_SIGNER, PRELOAD_BRIDGE_ADDRESS_231,
+        PRELOAD_BRIDGE_ADDRESS_300, PRELOAD_INBOX_ADDRESS_231, PRELOAD_INBOX_ADDRESS_300,
+        PRELOAD_POSTER_ADDRESS_231, PRELOAD_POSTER_ADDRESS_300,
+    },
+    rollup::{get_rollup_contract_address, rollup_config, MCHAIN_ID},
+};
 use tokio::{process::Command, time::sleep};
 use tracing::{info, Level};
 use tracing_subscriber::{fmt as subscriber_fmt, EnvFilter};
@@ -318,7 +318,7 @@ impl Components {
             APPCHAIN_CHAIN_ID,
             APPCHAIN_OWNER,
             node.http_port,
-            sequencer_config.sequencer_port,
+            Some(sequencer_config.sequencer_port),
             &tags.nitro_tag,
         )
         .await?;

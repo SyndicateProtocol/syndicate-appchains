@@ -1,6 +1,6 @@
 //! Anvil components for the integration tests
 
-use crate::preloaded_config::get_default_private_key_signer;
+use crate::{port_manager::PortManager, preloaded_config::get_default_private_key_signer};
 use alloy::{
     eips::BlockNumberOrTag,
     network::EthereumWallet,
@@ -16,7 +16,6 @@ use alloy::{
     rpc::types::{anvil::MineOptions, Block, BlockTransactionsKind},
 };
 use eyre::{eyre, Result};
-use test_utils::port_manager::PortManager;
 
 #[allow(missing_docs)]
 pub type FilledProvider = FillProvider<

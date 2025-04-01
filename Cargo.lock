@@ -1675,7 +1675,6 @@ dependencies = [
  "common",
  "contract-bindings",
  "eyre",
- "metabased-translator",
  "metrics",
  "prometheus-client",
  "reqwest",
@@ -1685,7 +1684,6 @@ dependencies = [
  "test-utils",
  "thiserror 2.0.11",
  "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -4482,6 +4480,7 @@ dependencies = [
 name = "test-utils"
 version = "0.1.0"
 dependencies = [
+ "alloy",
  "eyre",
  "thiserror 2.0.11",
  "tokio",

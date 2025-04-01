@@ -27,6 +27,8 @@ pub const DEFAULT_PRIVATE_KEY_SIGNER: &str =
     "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // address = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 pub const APPCHAIN_OWNER: Address = address!("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266");
 
+pub const APPCHAIN_CHAIN_ID: u64 = 13331370;
+
 pub fn get_default_private_key_signer() -> LocalSigner<SigningKey> {
     PrivateKeySigner::from_str(DEFAULT_PRIVATE_KEY_SIGNER)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err))

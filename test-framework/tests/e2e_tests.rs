@@ -15,12 +15,11 @@ use contract_bindings::arbitrum::{
 use eyre::Result;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use test_framework::{
-    components::{Components, ConfigurationOptions, ContractVersion},
-    preloaded_config::APPCHAIN_OWNER,
-    rollup_utils::get_rollup_contract_address,
+use test_framework::components::{Components, ConfigurationOptions, ContractVersion};
+use test_utils::{
+    preloaded_config::APPCHAIN_OWNER, rollup::get_rollup_contract_address,
+    utils::assert_eventually, wait_until,
 };
-use test_utils::{utils::assert_eventually, wait_until};
 use tokio::time::sleep;
 
 const ARB_SYS_PRECOMPILE_ADDRESS: Address = address!("0x0000000000000000000000000000000000000064");
@@ -460,6 +459,114 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
     // Assert new balance is equal to withdrawal amount
     let balance_after = components.settlement_provider.get_balance(to_address).await?;
     assert_eq!(balance_after, withdrawal_value);
+
+    Ok(())
+}
+
+#[tokio::test(flavor = "multi_thread")]
+#[ignore]
+// TODO (SEQ-761): fix reorg test
+async fn test_settlement_reorg() -> Result<()> {
+    let components = new_test_with_synced_chains(None, Some(ContractVersion::V213)).await?;
+
+    // NOTE: at this point the mchain is on block 1 (initial mchain block) - we can't reorg to
+    // genesis, so we need to create two slots on top of it before the reorg happens.
+
+    sleep(Duration::from_secs(3)).await;
+    components.mine_both(1).await?; //mine mchain block 2 (only works because there are delayed txs to proccess, otherwise the
+                                    // mchain block would be empty/skipped)
+                                    // Wait for mchain to reach block 2
+
+    let wallet_address = components.settlement_provider.default_signer_address();
+    let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
+
+    // create a deposit1 (that won't be rolled back) that will fit on mchain's block 3
+    let balance_before_deposit = components.appchain_provider.get_balance(wallet_address).await?;
+    _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
+
+    components.mine_both(100).await?;
+    components.mine_both(1).await?; // extra blocks to close the slot
+
+    // Wait for deposit1 to be processed
+    wait_until!(
+        components.appchain_provider.get_balance(wallet_address).await? >=
+            balance_before_deposit + parse_ether("1")?,
+        Duration::from_secs(3)
+    );
+
+    // send a deposit2 that will be reorged
+
+    let balance_before_deposit = components.appchain_provider.get_balance(wallet_address).await?;
+
+    _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
+
+    // make this deposit2 fit into a slot that will be reorged
+    components.mine_both(200).await?; // will be reorged leaving this slot opened
+    components.mine_both(1).await?; // mine an extra block to close the slot (will be reorged later)
+
+    // Wait for deposit2 to be processed
+    wait_until!(
+        components.appchain_provider.get_balance(wallet_address).await? ==
+            balance_before_deposit + parse_ether("1")?,
+        Duration::from_secs(3)
+    );
+
+    // the rollup head has not been updated yet
+    let rollup_head_before_reorg = components
+        .appchain_provider
+        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
+
+    // reorg, assert that the L3 balance has disappeared
+    let reorg_depth = 2;
+    let current_block = components.settlement_provider.get_block_number().await?;
+    components.settlement_provider.anvil_rollback(Some(reorg_depth)).await?;
+    assert_eq!(
+        components.settlement_provider.get_block_number().await?,
+        current_block - reorg_depth
+    );
+
+    //NOTE: mine an extra block. (the ingestor currently polls by block number, so it won't detect
+    // a reorg at a given block height, until a block with a bigger height is mined)
+    // if we switch to a different ingestor implementation this could be removed.
+
+    for _ in 0..reorg_depth + 1 {
+        components.mine_set_block(0).await?;
+    }
+
+    // Wait for reorg to be processed
+    // wait_until!(
+    //         let block = components
+    //             .mchain_provider
+    //             .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+    //             .await?
+    //             .unwrap();
+    //         block == mchain_block_before_deposit
+    //     ,
+    //     Duration::from_secs(3)
+    // );
+
+    // the rollup should have reorged to a pre-deposit block
+
+    // create new slots
+    _ = inbox.depositEth().value(parse_ether("0.01")?).send().await?;
+    components.mine_both(500).await?;
+    components.mine_both(500).await?; // build mchain to an height above what the rollup has seen before the reorg
+
+    wait_until!(let rollup_head = components
+        .appchain_provider
+        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
+        rollup_head.header.number == rollup_head_before_reorg.header.number &&
+        rollup_head.header.hash != rollup_head_before_reorg.header.hash,
+        Duration::from_secs(10)
+    );
+
+    // balance should be correct (reorged deposit is not included)
+    let balance_after_reorg = components.appchain_provider.get_balance(wallet_address).await?;
+    assert_eq!(balance_after_reorg, balance_before_deposit + parse_ether("0.01")?);
 
     Ok(())
 }

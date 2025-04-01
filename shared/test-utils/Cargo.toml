@@ -9,8 +9,16 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-eyre               = { workspace = true }
-thiserror          = { workspace = true }
-tokio              = { workspace = true }
-tracing            = { workspace = true }
+alloy = { workspace = true, features = [
+    "node-bindings",
+    "provider-engine-api",
+    "provider-ipc",
+    "providers",
+    "rpc-types-anvil",
+    "sol-types",
+] }
+eyre = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
+tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

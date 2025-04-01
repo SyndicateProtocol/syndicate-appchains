@@ -1,13 +1,15 @@
 //! Docker components for the integration tests
 
-use crate::rollup_utils::{chain_config, rollup_config, rollup_info};
+use crate::{
+    port_manager::PortManager,
+    rollup::{chain_config, rollup_config, rollup_info},
+};
 use alloy::{
     primitives::Address,
     providers::{IpcConnect, Provider, ProviderBuilder, RootProvider},
 };
 use eyre::Result;
 use std::{env, time::Duration};
-use test_utils::port_manager::PortManager;
 use tokio::{
     process::{Child, Command},
     runtime::Handle,
@@ -148,19 +150,19 @@ pub async fn launch_nitro_node(
     chain_id: u64,
     chain_owner: Address,
     mchain_port: u16,
-    sequencer_port: u16,
+    sequencer_port: Option<u16>,
     tag: &str,
 ) -> Result<(Docker, RootProvider, String)> {
     let port = PortManager::instance().next_port();
-    let nitro = Command::new("docker")
-        .arg("run")
+
+    let mut cmd = Command::new("docker");
+    cmd.arg("run")
         .arg("--init")
         .arg("--rm")
         .arg("--net=host")
         .arg(format!("offchainlabs/nitro-node:{tag}"))
         .arg(format!("--parent-chain.connection.url=http://localhost:{mchain_port}"))
         .arg("--node.dangerous.disable-blob-reader")
-        .arg(format!("--execution.forwarding-target=http://localhost:{sequencer_port}"))
         .arg("--execution.parent-chain-reader.old-header-timeout=1000h")
         .arg("--node.inbox-reader.check-delay=10ms")
         .arg("--node.staker.enable=false")
@@ -171,8 +173,18 @@ pub async fn launch_nitro_node(
         ))
         .arg("--http.addr=0.0.0.0")
         .arg(format!("--http.port={}", port))
-        .arg("--log-level=info")
-        .spawn()?;
+        .arg("--log-level=info");
+
+    match sequencer_port {
+        Some(port) => {
+            cmd.arg(format!("--execution.forwarding-target=http://localhost:{port}"));
+        }
+        None => {
+            cmd.arg("--execution.forwarding-target=null");
+        }
+    }
+
+    let nitro = cmd.spawn()?;
     let rollup = ProviderBuilder::default().on_http(format!("http://localhost:{}", port).parse()?);
     // give it two minutes to launch (in case it needs to download the image)
     timeout(Duration::from_secs(120), async {
