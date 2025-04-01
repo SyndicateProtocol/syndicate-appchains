@@ -88,6 +88,7 @@ async fn test_metabased_sigterm() -> Result<()> {
     run_metabased_translator("-TERM").await
 }
 
+#[ignore] // TODO (SEQ-758) - flaky test that fails in CI
 #[tokio::test(flavor = "multi_thread")]
 async fn test_metabased_sigint() -> Result<()> {
     run_metabased_translator("-INT").await

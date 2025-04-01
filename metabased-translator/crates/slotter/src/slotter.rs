@@ -3,7 +3,7 @@
 use crate::{config::SlotterConfig, metrics::SlotterMetrics};
 use alloy::primitives::B256;
 use common::types::{Block, BlockAndReceipts, BlockRef, Chain, KnownState, Slot, SlotProcessor};
-use eyre::{Error, Report};
+use eyre::Report;
 use std::{collections::VecDeque, sync::Arc};
 use thiserror::Error;
 use tokio::{
@@ -31,6 +31,7 @@ use tracing::{debug, error, info, trace, warn};
 #[derive(Debug)]
 struct Slotter<P: SlotProcessor> {
     settlement_delay: u64,
+    max_source_chain_time_gap: u64,
 
     latest_sequencing_block: Option<BlockRef>,
     latest_settlement_block: Option<BlockRef>,
@@ -57,7 +58,7 @@ pub async fn run(
     slot_processor: impl SlotProcessor,
     metrics: SlotterMetrics,
     shutdown_rx: oneshot::Receiver<()>,
-) -> Result<(), Error> {
+) -> Result<(), SlotterError> {
     let (latest_sequencing_block, latest_settlement_block) = match known_state {
         Some(known_state) => {
             (Some(known_state.sequencing_block), Some(known_state.settlement_block))
@@ -73,6 +74,7 @@ pub async fn run(
 
     let slotter = Slotter {
         settlement_delay: config.settlement_delay,
+        max_source_chain_time_gap: config.max_source_chain_time_gap,
         latest_sequencing_block,
         latest_settlement_block,
         min_chain_head_timestamp,
@@ -83,6 +85,14 @@ pub async fn run(
     };
     slotter.main_loop(sequencing_rx, settlement_rx, shutdown_rx).await
 }
+
+struct PrioritizeLaggingChainResult<'a>(
+    &'a mut Receiver<Arc<BlockAndReceipts>>,
+    Chain,
+    &'a mut Receiver<Arc<BlockAndReceipts>>,
+    Chain,
+    u64,
+);
 
 impl<P: SlotProcessor> Slotter<P> {
     /// Starts the [`Slotter`] main loop.
@@ -100,39 +110,44 @@ impl<P: SlotProcessor> Slotter<P> {
         mut sequencing_rx: Receiver<Arc<BlockAndReceipts>>,
         mut settlement_rx: Receiver<Arc<BlockAndReceipts>>,
         mut shutdown_rx: oneshot::Receiver<()>,
-    ) -> Result<(), Error> {
+    ) -> Result<(), SlotterError> {
         info!("Starting Slotter");
 
         loop {
-            let (first_rx, first_chain, second_rx, second_chain) =
-                self.prioritize_lagging_chain(&mut sequencing_rx, &mut settlement_rx);
+            let PrioritizeLaggingChainResult(
+                first_rx,
+                first_chain,
+                second_rx,
+                second_chain,
+                chains_time_gap,
+            ) = self.prioritize_lagging_chain(&mut sequencing_rx, &mut settlement_rx);
 
             trace!("Prioritized lagging chain: {:?}", first_chain);
+
+            let ignore_second_chain = self.max_source_chain_time_gap > 0 &&
+                chains_time_gap > self.max_source_chain_time_gap;
 
             let process_result = select! {
                 biased;
                 Some(block) = first_rx.recv() => {
                     self.process_block(block, first_chain).await
                 }
-                Some(block) = second_rx.recv() => {
+                Some(block) = second_rx.recv(), if !ignore_second_chain => {
                     self.process_block(block, second_chain).await
                 }
                 _ = &mut shutdown_rx => {
                     info!("Slotter shut down");
-                    return Err(Report::from(SlotterError::Shutdown));
+                    return Err(SlotterError::Shutdown);
                 }
             };
 
             match process_result {
                 Ok(_) => (),
                 Err(e) => match e {
-                    SlotterError::ReorgDetected { .. } => {
-                        panic!("Reorgs not yet implemented {e}"); // TODO SEQ-429 - implement reorg
-                                                                  // handing
-                    }
+                    SlotterError::ReorgDetected { .. } => return Err(e),
                     SlotterError::Shutdown => {
                         warn!("Slotter shut down");
-                        return Err(Report::from(e));
+                        return Err(e);
                     }
                     _ => panic!("Slotter error: {e}"),
                 },
@@ -144,20 +159,27 @@ impl<P: SlotProcessor> Slotter<P> {
         &self,
         sequencing_rx: &'a mut Receiver<Arc<BlockAndReceipts>>,
         settlement_rx: &'a mut Receiver<Arc<BlockAndReceipts>>,
-    ) -> (
-        &'a mut Receiver<Arc<BlockAndReceipts>>,
-        Chain,
-        &'a mut Receiver<Arc<BlockAndReceipts>>,
-        Chain,
-    ) {
+    ) -> PrioritizeLaggingChainResult<'a> {
         let seq_ts = self.latest_sequencing_block.as_ref().map_or(0, |b| b.timestamp);
         let set_ts = self.latest_settlement_block.as_ref().map_or(0, |b| b.timestamp);
 
         // prefer to consume from the chain that is lagging behind
         if seq_ts <= set_ts {
-            (sequencing_rx, Chain::Sequencing, settlement_rx, Chain::Settlement)
+            PrioritizeLaggingChainResult(
+                sequencing_rx,
+                Chain::Sequencing,
+                settlement_rx,
+                Chain::Settlement,
+                set_ts - seq_ts,
+            )
         } else {
-            (settlement_rx, Chain::Settlement, sequencing_rx, Chain::Sequencing)
+            PrioritizeLaggingChainResult(
+                settlement_rx,
+                Chain::Settlement,
+                sequencing_rx,
+                Chain::Sequencing,
+                seq_ts - set_ts,
+            )
         }
     }
 
@@ -200,16 +222,17 @@ impl<P: SlotProcessor> Slotter<P> {
             if block.number > latest.number + 1 {
                 return Err(SlotterError::BlockNumberSkipped {
                     chain,
-                    current_block_number: latest.number,
-                    received_block_number: block.number,
+                    current_block: Box::new(latest.clone()),
+                    received_block: Box::new(BlockRef::new(block)),
                 });
             }
 
             if !block.parent_hash.eq(&latest.hash) {
                 return Err(SlotterError::ReorgDetected {
                     chain,
-                    current_block_number: latest.number,
-                    received_block_number: block.number,
+                    current_block: Box::new(latest.clone()),
+                    received_block: Box::new(BlockRef::new(block)),
+                    received_parent_hash: block.parent_hash,
                 });
             }
 
@@ -281,6 +304,7 @@ impl<P: SlotProcessor> Slotter<P> {
 
         // Add the new slot
         self.metrics.record_last_slot_created(new_slot.sequencing.block.number);
+        self.metrics.update_unassigned_settlement_blocks(self.unassigned_settlement_blocks.len());
         self.slots.push_back(new_slot);
         Ok(())
     }
@@ -298,7 +322,11 @@ impl<P: SlotProcessor> Slotter<P> {
                 continue;
             }
             slot.push_settlement_block(set_block.clone());
-            debug!(block_number = set_block.block.number, "block added to the slot");
+            debug!(
+                block_number = set_block.block.number,
+                slot_timestamp = slot.timestamp(),
+                "block added to a slot"
+            );
             trace!("settlement block added to slot: {:?}", slot);
             //add the slot back to the front of the list
             self.slots.push_front(slot);
@@ -334,11 +362,18 @@ pub enum SlotterError {
     #[error("Failed to send slot through channel: {0}")]
     SlotSendError(String),
 
-    #[error("{chain} chain reorg detected. Current: #{current_block_number}, Received: #{received_block_number}")]
-    ReorgDetected { chain: Chain, current_block_number: u64, received_block_number: u64 },
+    #[error(
+        "{chain} chain reorg detected. Current: #{current_block}, Received: #{received_block}, Received parent hash: #{received_parent_hash}"
+    )]
+    ReorgDetected {
+        chain: Chain,
+        current_block: Box<BlockRef>,
+        received_block: Box<BlockRef>,
+        received_parent_hash: B256,
+    },
 
-    #[error("{chain} chain block number skipped. Current: #{current_block_number}, Received: #{received_block_number}")]
-    BlockNumberSkipped { chain: Chain, current_block_number: u64, received_block_number: u64 },
+    #[error("{chain} chain block number skipped. Current: #{current_block}, Received: #{received_block}")]
+    BlockNumberSkipped { chain: Chain, current_block: Box<BlockRef>, received_block: Box<BlockRef> },
 
     #[error("{chain} chain timestamp must not decrease. Current: {current}, Received: {received}")]
     EarlierTimestamp { chain: Chain, current: u64, received: u64 },
@@ -404,7 +439,7 @@ mod tests {
 
     #[async_trait]
     impl SlotProcessor for MockSlotProcessor {
-        async fn process_slot(&self, slot: &Slot) -> Result<(), Error> {
+        async fn process_slot(&self, slot: &Slot) -> Result<(), eyre::Error> {
             self.processed_slots.lock().unwrap().push(slot.clone());
             Ok(())
         }
@@ -442,6 +477,7 @@ mod tests {
             slots: VecDeque::new(),
             unassigned_settlement_blocks: VecDeque::new(),
             settlement_delay: config.settlement_delay,
+            max_source_chain_time_gap: config.max_source_chain_time_gap,
             metrics,
             min_chain_head_timestamp: 0,
             slot_processor: processor,
@@ -529,7 +565,11 @@ mod tests {
         // NOTE: IMPORTANT - keep _shutdown_tx in scope, otherwise `slotter` will be terminated
         // immediatelly
         let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown_tx } =
-            create_slotter_and_spawn(&SlotterConfig { settlement_delay: 0 }).await;
+            create_slotter_and_spawn(&SlotterConfig {
+                settlement_delay: 0,
+                max_source_chain_time_gap: 0,
+            })
+            .await;
 
         // send initial blocks, these should fit in slot [START_SLOT], send channel should be empty
         sequencing_tx.send(create_test_block(1, 10)).await.unwrap();
@@ -639,7 +679,11 @@ mod tests {
     #[traced_test]
     async fn test_insert_block_between_slots() {
         let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
-            create_slotter_and_spawn(&SlotterConfig { settlement_delay: 0 }).await;
+            create_slotter_and_spawn(&SlotterConfig {
+                settlement_delay: 0,
+                max_source_chain_time_gap: 0,
+            })
+            .await;
 
         // Create initial slots by sending blocks
         // Slot ts=10
@@ -680,7 +724,11 @@ mod tests {
     #[traced_test]
     async fn test_settlement_delay() {
         let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
-            create_slotter_and_spawn(&SlotterConfig { settlement_delay: 60 }).await;
+            create_slotter_and_spawn(&SlotterConfig {
+                settlement_delay: 60,
+                max_source_chain_time_gap: 0,
+            })
+            .await;
 
         // Send initial blocks with timestamp  100
         settlement_tx.send(create_test_block(1, 100)).await.unwrap(); // Will be placed in slot 160 due to delay
@@ -733,8 +781,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_last_settlement_block_has_latest_timestamp() {
-        let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
-            create_slotter_and_spawn(&SlotterConfig { settlement_delay: 0 }).await;
+        let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown_tx } =
+            create_slotter_and_spawn(&SlotterConfig {
+                settlement_delay: 0,
+                max_source_chain_time_gap: 0,
+            })
+            .await;
 
         // Send sequencing block to create a slot
         sequencing_tx.send(create_test_block(1, 100)).await.unwrap();
@@ -881,5 +933,49 @@ mod tests {
 
         let result = slotter.update_latest_block(&reorg_block.block, chain);
         assert_matches!(result, Err(SlotterError::ReorgDetected { .. }));
+    }
+
+    #[tokio::test]
+    async fn test_max_source_chain_time_gap() {
+        test_time_gap(Chain::Sequencing).await;
+        test_time_gap(Chain::Settlement).await;
+    }
+
+    async fn test_time_gap(late_chain: Chain) {
+        //NOTE: this tests assumes the input channels are created with a capacity of 100
+        // Create a slotter with max_source_chain_latency = 10 seconds
+        let config = SlotterConfig { settlement_delay: 0, max_source_chain_time_gap: 10 };
+
+        let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown_tx } =
+            create_slotter_and_spawn(&config).await;
+
+        let (fast_chain, slow_chain) = if late_chain == Chain::Sequencing {
+            (settlement_tx, sequencing_tx)
+        } else {
+            (sequencing_tx, settlement_tx)
+        };
+
+        // Send initial blocks for both chains with close timestamps
+        slow_chain.send(create_test_block(1, 100)).await.unwrap();
+        fast_chain.send(create_test_block(1, 110)).await.unwrap();
+
+        // No slots should be processed yet
+        assert_eq!(processor.get_processed_slots().len(), 0);
+
+        // Advance sequencing chain significantly ahead (beyond max_latency)
+        fast_chain.send(create_test_block(2, 111)).await.unwrap();
+
+        // Try to advance sequencing chain even further - this should not be consumed
+        fast_chain.send(create_test_block(3, 112)).await.unwrap();
+
+        tokio::time::sleep(Duration::from_millis(50)).await;
+        assert_eq!(fast_chain.capacity(), 100 - 1);
+
+        // Now catch up the settlement chain
+        slow_chain.send(create_test_block(2, 125)).await.unwrap(); // This brings settlement chain close enough to consume sequencing again
+        tokio::time::sleep(Duration::from_millis(50)).await;
+
+        assert_eq!(fast_chain.capacity(), 100);
+        assert_eq!(slow_chain.capacity(), 100);
     }
 }

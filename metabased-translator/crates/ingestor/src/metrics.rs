@@ -29,7 +29,7 @@ pub struct ChainLabel {
 }
 
 /// Structure holding metrics related to blockchain data ingestion.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct IngestorMetrics {
     /// Records rpc calls
     pub ingestor_rpc_calls: Family<MethodLabel, Counter>,

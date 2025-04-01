@@ -21,7 +21,7 @@ pub struct Labels {
 }
 
 /// Structure holding metrics related to the Slotter.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SlotterMetrics {
     /// Records the last block number processed by the Slotter
     pub slotter_last_processed_block: Family<Labels, Gauge>,
@@ -35,6 +35,8 @@ pub struct SlotterMetrics {
     pub slotter_channel_capacity: Gauge,
     /// Tracks the last slot created
     pub slotter_last_slot_created: Gauge,
+    /// Tracks the number of unassigned settlement blocks
+    pub slotter_unassigned_settlement_blocks: Gauge,
 }
 
 impl SlotterMetrics {
@@ -46,6 +48,7 @@ impl SlotterMetrics {
         let slotter_blocks_per_slot = Histogram::new(exponential_buckets(1.0, 2.0, 8));
         let slotter_channel_capacity = Gauge::default();
         let slotter_last_slot_created = Gauge::default();
+        let slotter_unassigned_settlement_blocks = Gauge::default();
 
         registry.register(
             "slotter_last_processed_block",
@@ -83,6 +86,12 @@ impl SlotterMetrics {
             slotter_last_slot_created.clone(),
         );
 
+        registry.register(
+            "slotter_unassigned_settlement_blocks",
+            "Tracks the number of unassigned settlement blocks",
+            slotter_unassigned_settlement_blocks.clone(),
+        );
+
         Self {
             slotter_last_processed_block,
             slotter_active_slots,
@@ -90,6 +99,7 @@ impl SlotterMetrics {
             slotter_blocks_per_slot,
             slotter_channel_capacity,
             slotter_last_slot_created,
+            slotter_unassigned_settlement_blocks,
         }
     }
 
@@ -136,6 +146,11 @@ impl SlotterMetrics {
     /// Records the last slot number created
     pub fn record_last_slot_created(&self, slot_number: u64) {
         self.slotter_last_slot_created.set(slot_number as i64);
+    }
+
+    /// Update the count of unassigned settlement blocks
+    pub fn update_unassigned_settlement_blocks(&self, count: usize) {
+        self.slotter_unassigned_settlement_blocks.set(count as i64);
     }
 }
 
