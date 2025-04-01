@@ -1,8 +1,8 @@
 pragma solidity >= 0.8.0;
 
-import {PermissionModule} from "src/interfaces/PermissionModule.sol";
+import {ProposerPermissionModule} from "src/interfaces/ProposerPermissionModule.sol";
 
-contract PermissionModuleBasic is PermissionModule {
+contract ProposerPermissionModuleBasic is ProposerPermissionModule {
     mapping(address => bool) allowed;
 
     constructor() {

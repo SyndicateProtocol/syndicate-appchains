@@ -77,7 +77,9 @@ jobs:
           version: stable
 
       - name: Install Certora Prover
-        run: pip3 install certora-cli==7.22.2
+        run: |
+          pip3 install setuptools==75.8.2
+          pip3 install certora-cli==7.26.0
 
       - name: Install dependencies
         run: forge install
