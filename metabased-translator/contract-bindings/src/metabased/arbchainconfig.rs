@@ -565,7 +565,6 @@ error OwnableInvalidOwner(address owner);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct OwnableInvalidOwner {
-        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -636,7 +635,6 @@ error OwnableUnauthorizedAccount(address account);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct OwnableUnauthorizedAccount {
-        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1320,7 +1318,6 @@ function ARBITRUM_BRIDGE_ADDRESS() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ARBITRUM_BRIDGE_ADDRESSReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1443,7 +1440,6 @@ function ARBITRUM_IGNORE_DELAYED_MESSAGES() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ARBITRUM_IGNORE_DELAYED_MESSAGESReturn {
-        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -1566,7 +1562,6 @@ function ARBITRUM_INBOX_ADDRESS() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ARBITRUM_INBOX_ADDRESSReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1689,7 +1684,6 @@ function CHAIN_ID() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct CHAIN_IDReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1810,7 +1804,6 @@ function DEFAULT_SEQUENCING_CHAIN_RPC_URL() external view returns (string memory
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct DEFAULT_SEQUENCING_CHAIN_RPC_URLReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::String,
     }
     #[allow(
@@ -1933,7 +1926,6 @@ function MINE_EMPTY_BLOCKS() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct MINE_EMPTY_BLOCKSReturn {
-        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2056,7 +2048,6 @@ function ROLLUP_OWNER() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ROLLUP_OWNERReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2175,7 +2166,6 @@ function SEQUENCING_CONTRACT_ADDRESS() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct SEQUENCING_CONTRACT_ADDRESSReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -2298,7 +2288,6 @@ function SEQUENCING_START_BLOCK() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct SEQUENCING_START_BLOCKReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2423,7 +2412,6 @@ function SETTLEMENT_DELAY() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct SETTLEMENT_DELAYReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2548,7 +2536,6 @@ function SETTLEMENT_START_BLOCK() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct SETTLEMENT_START_BLOCKReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2669,27 +2656,16 @@ function initialize(uint256 chainId, bool mineEmptyBlocks, address arbitrumBridg
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct initializeCall {
-        #[allow(missing_docs)]
         pub chainId: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub mineEmptyBlocks: bool,
-        #[allow(missing_docs)]
         pub arbitrumBridgeAddress: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub arbitrumInboxAddress: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub arbitrumIgnoreDelayedMessages: bool,
-        #[allow(missing_docs)]
         pub settlementDelay: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub settlementStartBlock: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub sequencingContractAddress: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub sequencingStartBlock: alloy::sol_types::private::primitives::aliases::U256,
-        #[allow(missing_docs)]
         pub rollupOwner: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub sequencingChainRpcUrl: alloy::sol_types::private::String,
     }
     ///Container type for the return parameters of the [`initialize(uint256,bool,address,address,bool,uint256,uint256,address,uint256,address,string)`](initializeCall) function.
@@ -2906,7 +2882,6 @@ function owner() external view returns (address);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ownerReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -3141,7 +3116,6 @@ function transferOwnership(address newOwner) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferOwnershipCall {
-        #[allow(missing_docs)]
         pub newOwner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`transferOwnership(address)`](transferOwnershipCall) function.
@@ -3268,7 +3242,6 @@ function updateDefaultSequencingChainRpcUrl(string memory newRpcUrl) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct updateDefaultSequencingChainRpcUrlCall {
-        #[allow(missing_docs)]
         pub newRpcUrl: alloy::sol_types::private::String,
     }
     ///Container type for the return parameters of the [`updateDefaultSequencingChainRpcUrl(string)`](updateDefaultSequencingChainRpcUrlCall) function.
@@ -3395,7 +3368,6 @@ function updateRollupOwner(address newRollupOwner) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct updateRollupOwnerCall {
-        #[allow(missing_docs)]
         pub newRollupOwner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`updateRollupOwner(address)`](updateRollupOwnerCall) function.
@@ -3517,39 +3489,22 @@ function updateRollupOwner(address newRollupOwner) external;
     };
     ///Container for all the [`ArbChainConfig`](self) function calls.
     pub enum ArbChainConfigCalls {
-        #[allow(missing_docs)]
         ARBITRUM_BRIDGE_ADDRESS(ARBITRUM_BRIDGE_ADDRESSCall),
-        #[allow(missing_docs)]
         ARBITRUM_IGNORE_DELAYED_MESSAGES(ARBITRUM_IGNORE_DELAYED_MESSAGESCall),
-        #[allow(missing_docs)]
         ARBITRUM_INBOX_ADDRESS(ARBITRUM_INBOX_ADDRESSCall),
-        #[allow(missing_docs)]
         CHAIN_ID(CHAIN_IDCall),
-        #[allow(missing_docs)]
         DEFAULT_SEQUENCING_CHAIN_RPC_URL(DEFAULT_SEQUENCING_CHAIN_RPC_URLCall),
-        #[allow(missing_docs)]
         MINE_EMPTY_BLOCKS(MINE_EMPTY_BLOCKSCall),
-        #[allow(missing_docs)]
         ROLLUP_OWNER(ROLLUP_OWNERCall),
-        #[allow(missing_docs)]
         SEQUENCING_CONTRACT_ADDRESS(SEQUENCING_CONTRACT_ADDRESSCall),
-        #[allow(missing_docs)]
         SEQUENCING_START_BLOCK(SEQUENCING_START_BLOCKCall),
-        #[allow(missing_docs)]
         SETTLEMENT_DELAY(SETTLEMENT_DELAYCall),
-        #[allow(missing_docs)]
         SETTLEMENT_START_BLOCK(SETTLEMENT_START_BLOCKCall),
-        #[allow(missing_docs)]
         initialize(initializeCall),
-        #[allow(missing_docs)]
         owner(ownerCall),
-        #[allow(missing_docs)]
         renounceOwnership(renounceOwnershipCall),
-        #[allow(missing_docs)]
         transferOwnership(transferOwnershipCall),
-        #[allow(missing_docs)]
         updateDefaultSequencingChainRpcUrl(updateDefaultSequencingChainRpcUrlCall),
-        #[allow(missing_docs)]
         updateRollupOwner(updateRollupOwnerCall),
     }
     #[automatically_derived]
@@ -4079,13 +4034,9 @@ function updateRollupOwner(address newRollupOwner) external;
     }
     ///Container for all the [`ArbChainConfig`](self) custom errors.
     pub enum ArbChainConfigErrors {
-        #[allow(missing_docs)]
         InvalidInitialization(InvalidInitialization),
-        #[allow(missing_docs)]
         NotInitializing(NotInitializing),
-        #[allow(missing_docs)]
         OwnableInvalidOwner(OwnableInvalidOwner),
-        #[allow(missing_docs)]
         OwnableUnauthorizedAccount(OwnableUnauthorizedAccount),
     }
     #[automatically_derived]
@@ -4264,13 +4215,9 @@ function updateRollupOwner(address newRollupOwner) external;
     }
     ///Container for all the [`ArbChainConfig`](self) events.
     pub enum ArbChainConfigEvents {
-        #[allow(missing_docs)]
         DefaultSequencingChainRpcUrlUpdated(DefaultSequencingChainRpcUrlUpdated),
-        #[allow(missing_docs)]
         Initialized(Initialized),
-        #[allow(missing_docs)]
         OwnershipTransferred(OwnershipTransferred),
-        #[allow(missing_docs)]
         RollupOwnerUpdated(RollupOwnerUpdated),
     }
     #[automatically_derived]

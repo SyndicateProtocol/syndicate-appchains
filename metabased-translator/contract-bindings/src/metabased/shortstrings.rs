@@ -42,22 +42,22 @@ pub mod ShortStrings {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220cf2e8e0415a283f06626a794bdfe9f518579f308abba577f965df9cac80356e164736f6c63430008190033
+    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220d9f25ade485e6392da3b1ce4722e08f120e3276bbafe70f082801e5820387aee64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xCF.\x8E\x04\x15\xA2\x83\xF0f&\xA7\x94\xBD\xFE\x9FQ\x85y\xF3\x08\xAB\xBAW\x7F\x96]\xF9\xCA\xC8\x03V\xE1dsolcC\0\x08\x19\x003",
+        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xD9\xF2Z\xDEH^c\x92\xDA;\x1C\xE4r.\x08\xF1 \xE3'k\xBA\xFEp\xF0\x82\x80\x1EX 8z\xEEdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea2646970667358221220cf2e8e0415a283f06626a794bdfe9f518579f308abba577f965df9cac80356e164736f6c63430008190033
+    ///0x5f80fdfea2646970667358221220d9f25ade485e6392da3b1ce4722e08f120e3276bbafe70f082801e5820387aee64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xCF.\x8E\x04\x15\xA2\x83\xF0f&\xA7\x94\xBD\xFE\x9FQ\x85y\xF3\x08\xAB\xBAW\x7F\x96]\xF9\xCA\xC8\x03V\xE1dsolcC\0\x08\x19\x003",
+        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xD9\xF2Z\xDEH^c\x92\xDA;\x1C\xE4r.\x08\xF1 \xE3'k\xBA\xFEp\xF0\x82\x80\x1EX 8z\xEEdsolcC\0\x08\x19\x003",
     );
     /**Custom error with signature `InvalidShortString()` and selector `0xb3512b0c`.
 ```solidity
@@ -130,7 +130,6 @@ error StringTooLong(string str);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct StringTooLong {
-        #[allow(missing_docs)]
         pub str: alloy::sol_types::private::String,
     }
     #[allow(
@@ -196,9 +195,7 @@ error StringTooLong(string str);
     };
     ///Container for all the [`ShortStrings`](self) custom errors.
     pub enum ShortStringsErrors {
-        #[allow(missing_docs)]
         InvalidShortString(InvalidShortString),
-        #[allow(missing_docs)]
         StringTooLong(StringTooLong),
     }
     #[automatically_derived]

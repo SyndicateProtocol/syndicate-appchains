@@ -66,22 +66,22 @@ pub mod ERC1967Utils {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea2646970667358221220e0f16ad249d38b4149ac8558210a312017fe6844cfe15360f548cc463408944764736f6c63430008190033
+    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220f1761e3aad94aa1c4962126289c4b8d615e19c42dceed940c18a6cf7cf0b808364736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xE0\xF1j\xD2I\xD3\x8BAI\xAC\x85X!\n1 \x17\xFEhD\xCF\xE1S`\xF5H\xCCF4\x08\x94GdsolcC\0\x08\x19\x003",
+        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xF1v\x1E:\xAD\x94\xAA\x1CIb\x12b\x89\xC4\xB8\xD6\x15\xE1\x9CB\xDC\xEE\xD9@\xC1\x8Al\xF7\xCF\x0B\x80\x83dsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x60806040525f80fdfea2646970667358221220e0f16ad249d38b4149ac8558210a312017fe6844cfe15360f548cc463408944764736f6c63430008190033
+    ///0x5f80fdfea2646970667358221220f1761e3aad94aa1c4962126289c4b8d615e19c42dceed940c18a6cf7cf0b808364736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \xE0\xF1j\xD2I\xD3\x8BAI\xAC\x85X!\n1 \x17\xFEhD\xCF\xE1S`\xF5H\xCCF4\x08\x94GdsolcC\0\x08\x19\x003",
+        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xF1v\x1E:\xAD\x94\xAA\x1CIb\x12b\x89\xC4\xB8\xD6\x15\xE1\x9CB\xDC\xEE\xD9@\xC1\x8Al\xF7\xCF\x0B\x80\x83dsolcC\0\x08\x19\x003",
     );
     /**Custom error with signature `ERC1967InvalidAdmin(address)` and selector `0x62e77ba2`.
 ```solidity
@@ -90,7 +90,6 @@ error ERC1967InvalidAdmin(address admin);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC1967InvalidAdmin {
-        #[allow(missing_docs)]
         pub admin: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -161,7 +160,6 @@ error ERC1967InvalidBeacon(address beacon);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC1967InvalidBeacon {
-        #[allow(missing_docs)]
         pub beacon: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -232,7 +230,6 @@ error ERC1967InvalidImplementation(address implementation);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC1967InvalidImplementation {
-        #[allow(missing_docs)]
         pub implementation: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -364,13 +361,9 @@ error ERC1967NonPayable();
     };
     ///Container for all the [`ERC1967Utils`](self) custom errors.
     pub enum ERC1967UtilsErrors {
-        #[allow(missing_docs)]
         ERC1967InvalidAdmin(ERC1967InvalidAdmin),
-        #[allow(missing_docs)]
         ERC1967InvalidBeacon(ERC1967InvalidBeacon),
-        #[allow(missing_docs)]
         ERC1967InvalidImplementation(ERC1967InvalidImplementation),
-        #[allow(missing_docs)]
         ERC1967NonPayable(ERC1967NonPayable),
     }
     #[automatically_derived]

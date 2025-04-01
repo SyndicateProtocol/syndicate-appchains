@@ -86,9 +86,7 @@ error InvalidAccountNonce(address account, uint256 currentNonce);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InvalidAccountNonce {
-        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
-        #[allow(missing_docs)]
         pub currentNonce: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -171,14 +169,12 @@ function nonces(address owner) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct noncesCall {
-        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`nonces(address)`](noncesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct noncesReturn {
-        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -294,7 +290,6 @@ function nonces(address owner) external view returns (uint256);
     };
     ///Container for all the [`Nonces`](self) function calls.
     pub enum NoncesCalls {
-        #[allow(missing_docs)]
         nonces(noncesCall),
     }
     #[automatically_derived]
@@ -380,7 +375,6 @@ function nonces(address owner) external view returns (uint256);
     }
     ///Container for all the [`Nonces`](self) custom errors.
     pub enum NoncesErrors {
-        #[allow(missing_docs)]
         InvalidAccountNonce(InvalidAccountNonce),
     }
     #[automatically_derived]
