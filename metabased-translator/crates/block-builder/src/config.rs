@@ -7,6 +7,7 @@ use alloy::{
     },
 };
 use clap::{Parser, ValueEnum};
+use shared::parse::parse_address;
 use std::{fmt::Debug, str::FromStr};
 use thiserror::Error;
 
@@ -68,11 +69,6 @@ pub struct BlockBuilderConfig {
 pub enum TargetRollupType {
     OPTIMISM,
     ARBITRUM,
-}
-
-/// Parse a string into an Ethereum `Address`.
-fn parse_address(value: &str) -> Result<Address, String> {
-    Address::from_str(value).map_err(|_| format!("Invalid address: {}", value))
 }
 
 /// Parse default string into a `PrivateKeySigner`.

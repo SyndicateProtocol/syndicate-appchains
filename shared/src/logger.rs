@@ -14,7 +14,8 @@ use tracing_subscriber::{
 ///
 /// Callers of this function need to use the [`Subscriber`] to enable it,
 ///
-/// e.g. `tracing::subscriber::set_global_default(default_subscriber)?;`
+/// e.g. `tracing::subscriber::set_global_default(default_subscriber)?;`, or use
+/// [`set_global_default_subscriber()`] below
 pub fn build_default_subscriber() -> Subscriber<JsonFields, Format<Json>, EnvFilter> {
     // Build an EnvFilter from the `RUST_LOG` environment variable, defaulting to `info` if the env
     // variable is not set.
@@ -44,6 +45,7 @@ pub fn set_global_default_subscriber() -> Result<(), Error> {
 }
 
 /// Errors relating to the logger
+#[allow(missing_docs)]
 #[derive(Error, Debug)]
 pub enum Error {
     /// error initializing the default logger

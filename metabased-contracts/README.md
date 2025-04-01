@@ -26,6 +26,40 @@ $ forge test
 forge coverage
 ```
 
+## Certora Verification
+
+### Setup
+
+1. Install Certora CLI ([installation guide](https://docs.certora.com/en/latest/docs/user-guide/install.html))
+
+   ```bash
+   # Recommended for macOS
+   brew install pipx
+   pipx install certora-cli
+   ```
+
+2. Get your Certora key from [certora.com/signup](https://www.certora.com/signup)
+
+3. Add key to your environment
+   ```bash
+   echo 'export CERTORAKEY=your_key_here' >> ~/.zshrc  # or ~/.bashrc
+   source ~/.zshrc  # or ~/.bashrc
+   ```
+
+### Running Specs
+
+```bash
+certoraRun certora/conf/MetabasedSequencerChain.conf
+```
+
+### Troubleshooting
+
+If CERTORAKEY isn't recognized, check with `echo $CERTORAKEY` or set it manually:
+
+```bash
+export CERTORAKEY=your_key_here
+```
+
 ### Documentation
 
 Generate documentation for the Solidity contracts:
@@ -35,6 +69,7 @@ $ forge doc
 ```
 
 This command generates markdown documentation for all Solidity source files in the project. By default, it:
+
 - Outputs documentation to the `docs/` directory in the project root
 - Generates markdown files for each contract, interface, and library
 - Includes function signatures, parameters, return values, events, and errors
@@ -51,16 +86,19 @@ This command generates markdown documentation for all Solidity source files in t
 #### Examples:
 
 Generate and build documentation:
+
 ```shell
 $ forge doc --build
 ```
 
 Generate documentation with a custom output directory:
+
 ```shell
 $ forge doc --out ./custom-docs
 ```
 
 Generate, build, and serve documentation locally:
+
 ```shell
 $ forge doc --build --serve --port 3000
 ```

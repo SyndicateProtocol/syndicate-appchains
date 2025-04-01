@@ -22,6 +22,7 @@ metabased-translator = { workspace = true }
 metrics = { workspace = true }
 prometheus-client = { workspace = true }
 reqwest = { workspace = true }
+shared = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
 test-utils = { workspace = true }

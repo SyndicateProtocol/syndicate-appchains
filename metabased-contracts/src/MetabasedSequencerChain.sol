@@ -24,14 +24,22 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
 
     /// @notice Processes a single compressed transaction.
     /// @param data The compressed transaction data.
-    function processTransactionRaw(bytes calldata data) external onlyWhenAllowed(msg.sender) {
+    function processTransactionRaw(bytes calldata data)
+        external
+        onlyWhenAllowed(msg.sender)
+        revertForUnallowedCalldata(data)
+    {
         emit TransactionProcessed(msg.sender, data);
     }
 
     /// @notice process transactions
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
     /// @param data The transaction data
-    function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender) {
+    function processTransaction(bytes calldata data)
+        external
+        onlyWhenAllowed(msg.sender)
+        revertForUnallowedCalldata(data)
+    {
         emit TransactionProcessed(msg.sender, prependZeroByte(data));
     }
 
@@ -43,6 +51,8 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
 
         // Process all transactions
         for (uint256 i = 0; i < dataCount; i++) {
+            _revertForUnallowedCalldata(data[i]);
+
             emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
         }
     }

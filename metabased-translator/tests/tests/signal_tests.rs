@@ -1,13 +1,11 @@
 //! Integration tests for the metabased-translator handling termination signals
 
 use block_builder::connectors::mchain::MCHAIN_ID;
-use e2e_tests::{
-    full_meta_node::{start_anvil, start_reth},
-    port_manager::PortManager,
-};
+use e2e_tests::full_meta_node::{start_anvil, start_reth};
 use eyre::Result;
 use reqwest::Client;
 use std::{process::Command, time::Duration};
+use test_utils::port_manager::PortManager;
 use tokio::{process::Command as TokioCommand, time::sleep};
 
 async fn wait_for_service(url: &str) -> Result<()> {

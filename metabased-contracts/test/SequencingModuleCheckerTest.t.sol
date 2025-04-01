@@ -30,7 +30,7 @@ contract SequencingModuleCheckerTest is Test {
         emit SequencingModuleChecker.RequirementModuleUpdated(newModule);
         manager.updateRequirementModule(newModule);
 
-        assertEq(address(manager.requirementModule()), newModule);
+        assertEq(address(manager.proposerRequirementModule()), newModule);
     }
 
     function testUpdateMasterModuleNonAdmin() public {
