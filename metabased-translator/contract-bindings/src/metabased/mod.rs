@@ -88,6 +88,7 @@ pub mod r#strings;
 pub mod r#syndicatetoken;
 pub mod r#tokenbalancesequencingmodule;
 pub mod r#upgradeablebeacon;
+pub mod r#walletpool;
 pub mod r#ierc1155errors;
 pub mod r#ierc20errors;
 pub mod r#ierc721errors;

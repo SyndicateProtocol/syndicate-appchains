@@ -11,11 +11,13 @@ version.workspace = true
 [dependencies]
 url = { workspace = true }
 thiserror          = { workspace = true }
-alloy = {workspace = true, features = ["rlp"]}
-jsonrpsee = {workspace = true, features = ["jsonrpsee-types"]}
+alloy = {workspace = true, features = ["rlp", "k256"]}
+jsonrpsee = {workspace = true, features = ["jsonrpsee-types", "server"]}
 serde_json = {workspace = true}
 tracing = {workspace = true}
 tracing-subscriber = {workspace = true, features = ["env-filter", "json"] }
+byte-unit = { workspace = true, features = ["default"] }
+tokio = { workspace = true }
 
 [lints]
 workspace = true

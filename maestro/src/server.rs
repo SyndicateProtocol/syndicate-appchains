@@ -1,13 +1,6 @@
 //! The JSON-RPC server module for the Maestro sequencer.
 
-use crate::{
-    errors::{
-        Error,
-        Error::InvalidParams,
-        InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount},
-    },
-    layers::HeadersLayer,
-};
+use crate::layers::HeadersLayer;
 use alloy::primitives::Bytes;
 use http::Extensions;
 use jsonrpsee::{
@@ -17,6 +10,7 @@ use jsonrpsee::{
     RpcModule,
 };
 use serde_json::Value as JsonValue;
+use shared::json_rpc::parse_send_raw_transaction_params;
 use std::{net::SocketAddr, sync::Arc};
 use tower::ServiceBuilder;
 use tracing::info;
@@ -59,21 +53,17 @@ pub async fn send_raw_transaction_handler(
     _extensions: Extensions,
 ) -> RpcResult<String> {
     // let start = Instant::now();
-    let result = async {
-        let _tx_data = parse_send_raw_transaction_params(params)?;
 
-        // TODO spam plane
+    let _tx_data = parse_send_raw_transaction_params(params)?;
 
-        // TODO control plane
+    // TODO spam plane
 
-        // TODO return real hash
-        // let tx_hash = service.process_transaction(tx_data).await?;
-        let tx_hash = Bytes::from("1234");
-        Ok::<_, Error>(format!("0x{}", alloy::hex::encode(tx_hash)))
-    }
-    .await;
+    // TODO control plane
 
-    result.map_err(|e| e.to_json_rpc_error())
+    // TODO return real hash
+    // let tx_hash = service.process_transaction(tx_data).await?;
+    let tx_hash = Bytes::from("1234");
+    Ok(format!("0x{}", alloy::hex::encode(tx_hash)))
 
     // let duration = start.elapsed();
     //
@@ -100,18 +90,4 @@ impl MaestroService {
     pub const fn new() -> Self {
         Self {}
     }
-}
-
-// TODO [SEQ-663]: Refactor this function
-fn parse_send_raw_transaction_params(params: Params<'static>) -> eyre::Result<Bytes, Error> {
-    let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap_or("[]"))?;
-    let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
-    if arr.len() != 1 {
-        return Err(InvalidParams(WrongParamCount(arr.len())));
-    }
-    let item = arr.pop().ok_or(InvalidParams(MissingParam))?;
-    let raw_tx = item.as_str().ok_or(InvalidParams(NotHexEncoded))?.to_string();
-    let tx_data: Bytes = alloy::hex::decode(&raw_tx).map(Bytes::from)?;
-
-    Ok(tx_data)
 }
