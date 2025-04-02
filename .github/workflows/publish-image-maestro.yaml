@@ -1,4 +1,4 @@
-name: Maestro - Build + Push Poster Image to Github and Google Registries
+name: Maestro - Build + Push Image to Github and Google Registries
 on:
   push:
     branches:
