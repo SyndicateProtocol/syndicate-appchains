@@ -184,13 +184,12 @@ impl Block {
     }
 }
 
-fn create_log(block_num: u64, ts: u64, data: alloy::primitives::LogData) -> alloy::rpc::types::Log {
+fn create_log(block_num: u64, data: alloy::primitives::LogData) -> alloy::rpc::types::Log {
     alloy::rpc::types::Log {
         inner: alloy::primitives::Log { address: get_rollup_contract_address(), data },
         transaction_hash: Some(FixedBytes::ZERO),
         block_number: Some(block_num),
         block_hash: Some(U256::from(block_num).into()),
-        block_timestamp: Some(ts),
         ..Default::default()
     }
 }
@@ -300,7 +299,6 @@ impl<T: KVDB + Send + Sync + 'static> MDB<T> {
                     let block = db.get_block(ind + 1).map_err(to_err)?;
                     return Ok(vec![create_log(
                         ind + 1,
-                        block.timestamp,
                         ISequencerInbox::SequencerBatchData {
                             batchSequenceNumber: U256::from(ind),
                             data: block.batch,
@@ -326,7 +324,6 @@ impl<T: KVDB + Send + Sync + 'static> MDB<T> {
                         for (j, (msg, acc)) in block.messages.iter().enumerate() {
                             events.push(create_log(
                                 i,
-                                block.timestamp,
                                 IBridge::MessageDelivered {
                                     messageIndex: U256::from(block.before_message_count + j as u64),
                                     beforeInboxAcc: before_acc,
@@ -348,7 +345,6 @@ impl<T: KVDB + Send + Sync + 'static> MDB<T> {
                         let block = db.get_block(i).map_err(to_err)?;
                         events.push(create_log(
                             i,
-                            block.timestamp,
                             ISequencerInbox::SequencerBatchDelivered {
                                 batchSequenceNumber: U256::from(i - 1),
                                 beforeAcc: block.before_batch_acc,
@@ -373,7 +369,6 @@ impl<T: KVDB + Send + Sync + 'static> MDB<T> {
                         for (j, (msg, _)) in block.messages.iter().enumerate() {
                             events.push(create_log(
                                 i,
-                                block.timestamp,
                                 IInbox::InboxMessageDelivered {
                                     messageNum: U256::from(block.before_message_count + j as u64),
                                     data: msg.data.clone(),
