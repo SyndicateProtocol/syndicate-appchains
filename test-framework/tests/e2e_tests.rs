@@ -17,10 +17,11 @@ use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use test_framework::components::{Components, ConfigurationOptions, ContractVersion};
 use test_utils::{
-    preloaded_config::APPCHAIN_OWNER, rollup::get_rollup_contract_address,
-    utils::assert_eventually, wait_until,
+    logger::init_test_tracing, preloaded_config::APPCHAIN_OWNER,
+    rollup::get_rollup_contract_address, utils::assert_eventually, wait_until,
 };
 use tokio::time::sleep;
+use tracing::Level;
 
 const ARB_SYS_PRECOMPILE_ADDRESS: Address = address!("0x0000000000000000000000000000000000000064");
 const NODE_INTERFACE_PRECOMPILE_ADDRESS: Address =
@@ -28,6 +29,8 @@ const NODE_INTERFACE_PRECOMPILE_ADDRESS: Address =
 
 #[tokio::test(flavor = "multi_thread")]
 async fn arb_owner_test() -> Result<()> {
+    let _ = init_test_tracing(Level::INFO);
+
     const ARB_OWNER_CONTRACT_ADDRESS: Address =
         address!("0x000000000000000000000000000000000000006b");
 
@@ -41,6 +44,7 @@ async fn arb_owner_test() -> Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn no_l1_fees_test() -> Result<()> {
+    let _ = init_test_tracing(Level::INFO);
     const ARB_GAS_INFO_CONTRACT_ADDRESS: Address =
         address!("0x000000000000000000000000000000000000006c");
     let components = Components::new(None, None).await?;
@@ -56,6 +60,7 @@ async fn new_test_with_synced_chains(
     config: Option<ConfigurationOptions>,
     contract_version: Option<ContractVersion>,
 ) -> Result<Components> {
+    let _ = init_test_tracing(Level::INFO);
     // Start the meta node (pre-loaded with the full set of Arb contracts)
     let config_options = config.unwrap_or(ConfigurationOptions {
         sequencing_start_block: 3,
@@ -83,6 +88,7 @@ async fn new_test_with_synced_chains(
 /// are sequenced via the metabased translator and show up on the rollup.
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_settlement_test() -> Result<()> {
+    let _ = init_test_tracing(Level::INFO);
     let components = new_test_with_synced_chains(None, Some(ContractVersion::V300)).await?;
 
     // Grab the wallet address for the test
@@ -237,6 +243,7 @@ async fn e2e_settlement_test() -> Result<()> {
 
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_test() -> Result<()> {
+    let _ = init_test_tracing(Level::INFO);
     let config = ConfigurationOptions {
         sequencing_start_block: 3,
         settlement_start_block: 1,
@@ -376,6 +383,8 @@ async fn e2e_settlement_fast_withdrawal_213() -> Result<()> {
 }
 
 async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
+    let _ = init_test_tracing(Level::INFO);
+
     let components = new_test_with_synced_chains(None, Some(version)).await?;
 
     let block: Block = components
@@ -489,6 +498,8 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
 #[ignore]
 // TODO (SEQ-761): fix reorg test
 async fn test_settlement_reorg() -> Result<()> {
+    let _ = init_test_tracing(Level::INFO);
+
     let components = new_test_with_synced_chains(None, Some(ContractVersion::V300)).await?;
 
     // NOTE: at this point the mchain is on block 1 (initial mchain block) - we can't reorg to

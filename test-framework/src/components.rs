@@ -14,12 +14,7 @@ use contract_bindings::{
 };
 use eyre::{eyre, Result};
 use reqwest::Client;
-use std::{
-    env,
-    error::Error,
-    fmt::{self, Display},
-    time::Duration,
-};
+use std::{env, time::Duration};
 use test_utils::{
     anvil::{mine_block, start_anvil, start_anvil_with_args, FilledProvider},
     docker::{launch_nitro_node, start_reth, Docker},
@@ -32,33 +27,7 @@ use test_utils::{
     rollup::{get_rollup_contract_address, rollup_config, MCHAIN_ID},
 };
 use tokio::{process::Command, time::sleep};
-use tracing::{info, Level};
-use tracing_subscriber::{fmt as subscriber_fmt, EnvFilter};
-
-#[derive(Debug)]
-enum TracingError {
-    SubscriberInit(String),
-}
-
-impl Display for TracingError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::SubscriberInit(msg) => {
-                write!(f, "Failed to initialize subscriber: {}", msg)
-            }
-        }
-    }
-}
-
-impl Error for TracingError {}
-/// Initializes a tracing subscriber for testing purposes
-fn init_test_tracing(level: Level) -> Result<(), TracingError> {
-    subscriber_fmt()
-        .with_env_filter(EnvFilter::new(level.to_string()))
-        .try_init()
-        .map_err(|e| TracingError::SubscriberInit(format!("{:?}", e)))?;
-    Ok(())
-}
+use tracing::info;
 
 const APPCHAIN_CHAIN_ID: u64 = 13331370;
 
@@ -163,7 +132,6 @@ impl Components {
         pre_loaded: Option<ContractVersion>,
         options: Option<ConfigurationOptions>,
     ) -> Result<Self> {
-        let _ = init_test_tracing(Level::INFO);
         info!("Setting tags...");
         let mut tags = ImageTags::default();
         if let Ok(tag) = env::var("NITRO_TAG") {
