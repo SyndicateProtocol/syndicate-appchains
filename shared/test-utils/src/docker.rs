@@ -43,7 +43,7 @@ pub struct NodeInfo {
 pub async fn start_reth(
     chain_id: u64,
     tag: &str,
-) -> Result<(NodeInfo, (Docker, Option<(Docker, Docker, Docker, Docker)>))> {
+) -> Result<(NodeInfo, (Docker, Option<(Docker, Docker, Docker, Docker)>), u16)> {
     let manager = PortManager::instance();
     let port = manager.next_port();
     let auth_port = manager.next_port();
@@ -141,7 +141,7 @@ pub async fn start_reth(
         while r.get_chain_id().await.is_err() {
             sleep(Duration::from_millis(100)).await;
         }
-        Ok::<_, eyre::Error>((NodeInfo { ipc, auth_ipc, http_port }, (reth, socat)))
+        Ok::<_, eyre::Error>((NodeInfo { ipc, auth_ipc, http_port }, (reth, socat), http_port))
     })
     .await?
 }

@@ -27,7 +27,7 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
     let (seq_port, _seq_instance, _seq_provider) = start_anvil(15).await?;
     let (set_port, _set_instance, _set_provider) = start_anvil(20).await?;
 
-    let (node, _mchain) = start_reth(MCHAIN_ID, "2.0.0").await?;
+    let (node, _mchain, _mchain_port) = start_reth(MCHAIN_ID, "2.0.0").await?;
     let metrics_port = PortManager::instance().next_port();
     let mut metabased_process = TokioCommand::new("cargo")
         .arg("run")

@@ -464,7 +464,6 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
 }
 
 #[tokio::test(flavor = "multi_thread")]
-#[ignore]
 // TODO (SEQ-761): fix reorg test
 async fn test_settlement_reorg() -> Result<()> {
     let components = new_test_with_synced_chains(None, Some(ContractVersion::V213)).await?;
@@ -472,10 +471,11 @@ async fn test_settlement_reorg() -> Result<()> {
     // NOTE: at this point the mchain is on block 1 (initial mchain block) - we can't reorg to
     // genesis, so we need to create two slots on top of it before the reorg happens.
 
-    sleep(Duration::from_secs(3)).await;
     components.mine_both(1).await?; //mine mchain block 2 (only works because there are delayed txs to proccess, otherwise the
                                     // mchain block would be empty/skipped)
                                     // Wait for mchain to reach block 2
+
+    wait_until!(components.mchain_provider.get_block_number().await? == 2, Duration::from_secs(4));
 
     let wallet_address = components.settlement_provider.default_signer_address();
     let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
@@ -495,6 +495,12 @@ async fn test_settlement_reorg() -> Result<()> {
     );
 
     // send a deposit2 that will be reorged
+    let mchain_block_before_deposit = components
+        .mchain_provider
+        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
+    assert_eq!(mchain_block_before_deposit.header.number, 3);
 
     let balance_before_deposit = components.appchain_provider.get_balance(wallet_address).await?;
 
@@ -510,6 +516,7 @@ async fn test_settlement_reorg() -> Result<()> {
             balance_before_deposit + parse_ether("1")?,
         Duration::from_secs(3)
     );
+    assert_eq!(components.mchain_provider.get_block_number().await?, 4);
 
     // the rollup head has not been updated yet
     let rollup_head_before_reorg = components
@@ -535,17 +542,26 @@ async fn test_settlement_reorg() -> Result<()> {
         components.mine_set_block(0).await?;
     }
 
+    sleep(Duration::from_secs(10)).await;
+    assert_eq!(
+        components
+            .mchain_provider
+            .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+            .await?
+            .unwrap(),
+        mchain_block_before_deposit
+    );
     // Wait for reorg to be processed
-    // wait_until!(
-    //         let block = components
-    //             .mchain_provider
-    //             .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
-    //             .await?
-    //             .unwrap();
-    //         block == mchain_block_before_deposit
-    //     ,
-    //     Duration::from_secs(3)
-    // );
+    wait_until!(
+            let block = components
+                .mchain_provider
+                .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+                .await?
+                .unwrap();
+            block == mchain_block_before_deposit
+        ,
+        Duration::from_secs(10)
+    );
 
     // the rollup should have reorged to a pre-deposit block
 
@@ -563,6 +579,8 @@ async fn test_settlement_reorg() -> Result<()> {
         rollup_head.header.hash != rollup_head_before_reorg.header.hash,
         Duration::from_secs(10)
     );
+
+    assert_eq!(components.mchain_provider.get_block_number().await?, 4);
 
     // balance should be correct (reorged deposit is not included)
     let balance_after_reorg = components.appchain_provider.get_balance(wallet_address).await?;

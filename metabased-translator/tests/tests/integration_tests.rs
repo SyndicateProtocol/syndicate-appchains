@@ -44,7 +44,7 @@ async fn mine_block(
 
 #[tokio::test(flavor = "multi_thread")]
 async fn test_rollback() -> Result<()> {
-    let (node, _mchain) = start_reth(MCHAIN_ID, "2.0.0").await?;
+    let (node, _mchain, _mchain_port) = start_reth(MCHAIN_ID, "2.0.0").await?;
     let block_builder_cfg = BlockBuilderConfig {
         mchain_ipc_path: node.ipc,
         mchain_auth_ipc_path: node.auth_ipc,
@@ -88,7 +88,7 @@ async fn test_rollback() -> Result<()> {
 // regression test
 #[tokio::test(flavor = "multi_thread")]
 async fn test_rollback_regression() -> Result<()> {
-    let (node, _mchain) = start_reth(MCHAIN_ID, "2.0.0").await?;
+    let (node, _mchain, _mchain_port) = start_reth(MCHAIN_ID, "2.0.0").await?;
     let block_builder_cfg = BlockBuilderConfig {
         mchain_ipc_path: node.ipc,
         mchain_auth_ipc_path: node.auth_ipc,
@@ -118,7 +118,7 @@ async fn test_rollback_regression() -> Result<()> {
 /// via the block builder code and posted to the dummy rollup contract.
 #[tokio::test(flavor = "multi_thread")]
 async fn test_nitro_batch() -> Result<()> {
-    let (node, _mchain) = start_reth(MCHAIN_ID, "2.0.0").await?;
+    let (node, _mchain, _mchain_port) = start_reth(MCHAIN_ID, "2.0.0").await?;
     let block_builder_cfg = BlockBuilderConfig {
         mchain_ipc_path: node.ipc,
         mchain_auth_ipc_path: node.auth_ipc,
@@ -217,7 +217,7 @@ async fn test_nitro_batch() -> Result<()> {
 /// Regression test
 #[tokio::test(flavor = "multi_thread")]
 async fn test_nitro_batch_two_tx() -> Result<()> {
-    let (node, _mchain) = start_reth(MCHAIN_ID, "2.0.0").await?;
+    let (node, _mchain, _mchain_port) = start_reth(MCHAIN_ID, "2.0.0").await?;
     let block_builder_cfg = BlockBuilderConfig {
         mchain_ipc_path: node.ipc,
         mchain_auth_ipc_path: node.auth_ipc,

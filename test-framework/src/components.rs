@@ -3,7 +3,7 @@
 use alloy::{
     node_bindings::AnvilInstance,
     primitives::{Address, U256},
-    providers::{RootProvider, WalletProvider},
+    providers::{ProviderBuilder, RootProvider, WalletProvider},
 };
 use contract_bindings::{
     arbitrum::rollup::Rollup,
@@ -77,6 +77,9 @@ pub struct Components {
 
     /// Appchain
     pub appchain_provider: RootProvider,
+
+    /// Mchain
+    pub mchain_provider: RootProvider,
 
     // References to keep the processes/tasks alive
     _mchain: (Docker, Option<(Docker, Docker, Docker, Docker)>),
@@ -214,7 +217,9 @@ impl Components {
         sequencer_config.sequencing_contract_address = get_rollup_contract_address();
 
         info!("Starting reth...");
-        let (node, _mchain) = start_reth(MCHAIN_ID, &tags.reth_tag).await?;
+        let (node, _mchain, mchain_port) = start_reth(MCHAIN_ID, &tags.reth_tag).await?;
+        let mchain_provider: RootProvider = ProviderBuilder::default()
+            .on_http(format!("http://localhost:{}", mchain_port).parse()?);
         translator_config.mchain_ipc_path = node.ipc;
         translator_config.mchain_auth_ipc_path = node.auth_ipc;
 
@@ -349,6 +354,7 @@ impl Components {
             bridge_address: translator_config.arbitrum_bridge_address,
             inbox_address: translator_config.arbitrum_inbox_address,
             assertion_poster_contract_address: poster_config.assertion_poster_contract_address,
+            mchain_provider,
 
             _mchain,
             _seq_anvil: seq_anvil,
