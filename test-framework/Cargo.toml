@@ -10,12 +10,12 @@ version.workspace      = true
 
 [dependencies]
 alloy = { workspace = true, features = [
-    "node-bindings",
-    "provider-engine-api",
-    "provider-ipc",
-    "providers",
-    "rpc-types-anvil",
-    "sol-types",
+  "node-bindings",
+  "provider-engine-api",
+  "provider-ipc",
+  "providers",
+  "rpc-types-anvil",
+  "sol-types",
 ] }
 contract-bindings = { workspace = true }
 eyre = { workspace = true }
