@@ -3006,6 +3006,7 @@ dependencies = [
  "http-body",
  "jsonrpsee",
  "redis",
+ "serde",
  "serde_json",
  "shared",
  "thiserror 2.0.11",

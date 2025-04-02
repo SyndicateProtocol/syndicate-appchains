@@ -4,4 +4,5 @@
 pub mod config;
 pub mod errors;
 pub mod layers;
+pub mod redis_manager;
 pub mod server;
