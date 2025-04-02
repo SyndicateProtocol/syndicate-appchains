@@ -4,15 +4,14 @@ This is a service that ingests L2 transaction data, organizes the data into slot
 
 It consists of a `common` crate and 3 component crates: `ingestor`, `slotter` and `block-builder`
 
-An execution client such as reth must be available at the mchain ipc and auth ipc paths prior to starting the translator -
+The mchain server must be available at the mchain rpc url prior to starting the translator -
 see the provided docker-compose.yaml file for more information.
 
 #### Metachain configuration
 
 The metachain has chain id 84532 and a genesis timestamp of 0.
 
-The rollup contract is deployed to 0x5FbDB2315678afecb367f032d93F642f64180aa3 on the first metachain block
-with the following on-chain configuration:
+The rollup precompile is installed at 0x5FbDB2315678afecb367f032d93F642f64180aa3 with the following on-chain configuration:
 {
    "chainId": 13331370,
    "homesteadBlock": 0,

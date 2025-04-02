@@ -9,6 +9,7 @@ rust-version.workspace = true
 version.workspace = true
 
 [dependencies]
+eyre = { workspace = true }
 url = { workspace = true }
 thiserror          = { workspace = true }
 alloy = {workspace = true, features = ["rlp", "k256"]}

@@ -23,14 +23,8 @@ pub struct BlockBuilderConfig {
     #[arg(long, env = "ROLLUP_OWNER_ADDRESS", value_parser = parse_address, default_value_t = Address::ZERO)]
     pub rollup_owner_address: Address,
 
-    #[arg(long, env = "MINE_EMPTY_BLOCKS", default_value_t = false)]
-    pub mine_empty_blocks: bool,
-
-    #[arg(long, env = "MCHAIN_AUTH_IPC_PATH")]
-    pub mchain_auth_ipc_path: String,
-
-    #[arg(long, env = "MCHAIN_IPC_PATH")]
-    pub mchain_ipc_path: String,
+    #[arg(long, env = "MCHAIN_RPC_URL")]
+    pub mchain_rpc_url: String,
 
     /// The chain ID of the Appchain rollup (not the mchain)
     #[arg(short = 'c', long, env = "TARGET_CHAIN_ID", default_value_t = 13331370)]
@@ -86,8 +80,7 @@ impl Debug for BlockBuilderConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockBuilderConfig")
             .field("rollup_owner_address", &self.rollup_owner_address)
-            .field("mchain_auth_ipc_path", &self.mchain_auth_ipc_path)
-            .field("mchain_ipc_path", &self.mchain_ipc_path)
+            .field("mchain_rpc_url", &self.mchain_rpc_url)
             .field("target_chain_id", &self.target_chain_id)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
             .field("target_rollup_type", &self.target_rollup_type)
@@ -102,19 +95,7 @@ impl Debug for BlockBuilderConfig {
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
         let zero = Address::ZERO.to_string();
-        Self::parse_from([
-            "",
-            "-s",
-            &zero,
-            "-b",
-            &zero,
-            "-i",
-            &zero,
-            "--mchain-ipc-path",
-            "",
-            "--mchain-auth-ipc-path",
-            "",
-        ])
+        Self::parse_from(["", "-s", &zero, "-b", &zero, "-i", &zero, "--mchain-rpc-url", ""])
     }
 }
 

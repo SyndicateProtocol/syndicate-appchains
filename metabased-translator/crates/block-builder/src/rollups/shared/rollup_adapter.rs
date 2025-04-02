@@ -5,16 +5,39 @@
 
 use crate::rollups::shared::SequencingTransactionParser;
 use alloy::{
-    eips::BlockNumberOrTag, primitives::Bytes, providers::Provider, rpc::types::TransactionRequest,
+    eips::BlockNumberOrTag,
+    primitives::{Address, Bytes, FixedBytes},
+    providers::Provider,
 };
 use async_trait::async_trait;
 use common::types::{BlockAndReceipts, KnownState, Slot};
 use eyre::{Error, Result};
+use serde::{Deserialize, Serialize};
 use std::{
     fmt::Debug,
     marker::{Send, Sync},
     sync::Arc,
 };
+
+#[allow(missing_docs)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct DelayedMessage {
+    pub kind: u8,
+    pub sender: Address,
+    pub data: Bytes,
+}
+
+#[allow(missing_docs)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct MBlock {
+    pub timestamp: u64,
+    pub messages: Vec<DelayedMessage>,
+    pub batch: Bytes,
+    pub seq_block_number: u64,
+    pub seq_block_hash: FixedBytes<32>,
+    pub set_block_number: u64,
+    pub set_block_hash: FixedBytes<32>,
+}
 
 /// Trait for rollup-specific block builders that construct batches from transactions
 #[async_trait]
@@ -47,10 +70,7 @@ pub trait RollupAdapter: Debug + Send + Sync + Unpin + Clone + 'static {
         &self,
         slot: &Slot,
         mchain_block_number: u64,
-    ) -> Result<Vec<TransactionRequest>, Error>;
-
-    /// decodes an error from the rollup contract - useful for humanly readable logs
-    fn decode_error(&self, output: &Bytes) -> String;
+    ) -> Result<Option<MBlock>, Error>;
 
     /// Gets the source chain's processed blocks from the rollup
     async fn get_processed_blocks<T: Provider>(

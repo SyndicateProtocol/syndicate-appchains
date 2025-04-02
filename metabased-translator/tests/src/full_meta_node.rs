@@ -7,9 +7,7 @@ use alloy::{
     network::EthereumWallet,
     node_bindings::{Anvil, AnvilInstance},
     primitives::{address, Address, U256},
-    providers::{
-        ext::AnvilApi as _, IpcConnect, Provider, ProviderBuilder, RootProvider, WalletProvider,
-    },
+    providers::{ext::AnvilApi as _, Provider, ProviderBuilder, RootProvider, WalletProvider},
     rpc::types::anvil::MineOptions,
 };
 use block_builder::{
@@ -63,152 +61,35 @@ impl Drop for Docker {
     }
 }
 
-fn chain_config(chain_id: u64) -> String {
-    r#"{"config": {
-    "chainId": "#
-        .to_string() +
-        &chain_id.to_string() +
-        r#",
-    "homesteadBlock": 0,
-    "eip150Block": 0,
-    "eip155Block": 0,
-    "eip158Block": 0,
-    "byzantiumBlock": 0,
-    "constantinopleBlock": 0,
-    "petersburgBlock": 0,
-    "istanbulBlock": 0,
-    "berlinBlock": 0,
-    "londonBlock": 0,
-    "terminalTotalDifficulty": 0,
-    "shanghaiTime": 0,
-    "cancunTime": 0
-  },
-  "nonce": "0x0",
-  "timestamp": "0x0",
-  "extraData": "0x",
-  "gasLimit": "0x1c9c380",
-  "difficulty": "0x0",
-  "mixHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
-  "coinbase": "0x0000000000000000000000000000000000000000",
-  "alloc": {
-    "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266": {
-      "balance": "0xD3C21BCECCEDA1000000"
-    }
-  },
-  "number": "0x0",
-  "gasUsed": "0x0",
-  "parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000"
-}"#
-}
-
-#[derive(Debug)]
-pub struct NodeInfo {
-    pub ipc: String,
-    pub auth_ipc: String,
-    pub http_port: u16,
-}
-
-pub async fn start_reth(
-    chain_id: u64,
-) -> Result<(NodeInfo, (Docker, Option<(Docker, Docker, Docker, Docker)>))> {
-    let dir = test_path("reth");
-    let manager = PortManager::instance();
-    let port = manager.next_port();
-    let auth_port = manager.next_port();
-    let http_port = manager.next_port();
-    let ipc = format!("{dir}/{port}.ipc");
-    let auth_ipc = format!("{dir}/{auth_port}.ipc");
-    let chain_cfg = chain_config(chain_id);
-    let reth = Docker(
-        Command::new("docker")
+pub async fn start_mchain(chain_id: u64, chain_owner: Address) -> Result<(u16, Docker)> {
+    let temp = test_path("mchain");
+    let port = PortManager::instance().next_port();
+    let docker = Docker(
+        Command::new("cargo")
+            .current_dir("../")
             .arg("run")
-            .arg("--init")
-            .arg("--rm")
-            .arg("--entrypoint")
-            .arg("/bin/sh")
-            .arg("-v")
-            .arg(if cfg!(target_os = "macos") { "ipc" } else { &dir }.to_owned() + ":/ipc")
-            .arg("-p")
-            .arg(format!("{http_port}:{http_port}"))
-            .arg("ghcr.io/syndicateprotocol/reth:2.0.0")
-            .arg("-c")
-            .arg(format!("umask 0 && exec reth node --http --http.addr=0.0.0.0 --http.port={http_port} --ipcpath=/ipc/{port}.ipc --auth-ipc --auth-ipc.path=/ipc/{auth_port}.ipc --chain='{chain_cfg}'"))
-            .spawn()?
+            .arg("--bin")
+            .arg("mchain")
+            .arg("--")
+            .args([
+                "--chain-id",
+                &chain_id.to_string(),
+                "--chain-owner",
+                &chain_owner.to_string(),
+                "--port",
+                &port.to_string(),
+                "--datadir",
+                &temp.to_string(),
+            ])
+            .spawn()?,
     );
-    #[cfg(not(target_os = "macos"))]
-    let socat = None;
-
-    // on mac, use socat to route traffic over tcp as unix domain sockets cannot cross the os
-    // boundary. host port.ipc -> host socat -> container socat -> container port.ipc
-    // on linux, the port.ipc socket file can be shared between the docker container and host os
-    // directly.
-    #[cfg(target_os = "macos")]
-    let socat = Some((
-        Docker(
-            Command::new("socat")
-                .arg(format!("UNIX-LISTEN:{ipc},reuseaddr,fork"))
-                .arg(format!("TCP4:127.0.0.1:{port}"))
-                .spawn()?,
-        ),
-        Docker(
-            Command::new("docker")
-                .arg("run")
-                .arg("--init")
-                .arg("--rm")
-                .arg("-p")
-                .arg(format!("{port}:{port}"))
-                .arg("-v")
-                .arg("ipc:/ipc")
-                .arg("alpine/socat:1.8.0.1")
-                .arg(format!("TCP4-LISTEN:{port},reuseaddr,fork,bind=0.0.0.0"))
-                .arg(format!("UNIX-CONNECT:/ipc/{port}.ipc,retry=1200,interval=0.1"))
-                .spawn()?,
-        ),
-        Docker(
-            Command::new("socat")
-                .arg(format!("UNIX-LISTEN:{auth_ipc},reuseaddr,fork"))
-                .arg(format!("TCP4:127.0.0.1:{auth_port}"))
-                .spawn()?,
-        ),
-        Docker(
-            Command::new("docker")
-                .arg("run")
-                .arg("--init")
-                .arg("--rm")
-                .arg("-p")
-                .arg(format!("{auth_port}:{auth_port}"))
-                .arg("-v")
-                .arg("ipc:/ipc")
-                .arg("alpine/socat:1.8.0.1")
-                .arg(format!("TCP4-LISTEN:{auth_port},reuseaddr,fork,bind=0.0.0.0"))
-                .arg(format!("UNIX-CONNECT:/ipc/{auth_port}.ipc,retry=1200,interval=0.1"))
-                .spawn()?,
-        ),
-    ));
-    // give it two minutes to launch (in case it needs to download the image)
+    let mchain: RootProvider =
+        ProviderBuilder::default().on_http(format!("http://localhost:{}", port).parse()?);
     timeout(Duration::from_secs(120), async {
-        let mut rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(ipc.clone())).await;
-        while rollup.is_err() {
-            tokio::time::sleep(Duration::from_millis(100)).await;
-            rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(ipc.clone())).await;
+        while mchain.get_chain_id().await.is_err() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
         }
-        let mut auth_rollup =
-            ProviderBuilder::new().on_ipc(IpcConnect::new(auth_ipc.clone())).await;
-        while auth_rollup.is_err() {
-            tokio::time::sleep(Duration::from_millis(100)).await;
-            auth_rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(auth_ipc.clone())).await;
-        }
-        #[allow(clippy::unwrap_used)]
-        let r = rollup.unwrap();
-        while r.get_chain_id().await.is_err() {
-            tokio::time::sleep(Duration::from_millis(100)).await;
-        }
-        #[allow(clippy::unwrap_used)]
-        let r = auth_rollup.unwrap();
-        while r.get_chain_id().await.is_err() {
-            tokio::time::sleep(Duration::from_millis(100)).await;
-        }
-        Ok::<_, eyre::Error>((NodeInfo { ipc, auth_ipc, http_port }, (reth, socat)))
+        Ok::<_, eyre::Error>((port, docker))
     })
     .await?
 }
@@ -279,34 +160,36 @@ pub async fn launch_nitro_node(
     mchain_port: u16,
 ) -> Result<(Docker, RootProvider)> {
     let port = PortManager::instance().next_port();
-    let nitro = Command::new("docker")
-        .arg("run")
-        .arg("--init")
-        .arg("--rm")
-        .arg("--net=host")
-        .arg("offchainlabs/nitro-node:v3.4.0-d896e9c-slim")
-        .arg(format!("--parent-chain.connection.url=http://localhost:{mchain_port}"))
-        .arg("--node.dangerous.disable-blob-reader")
-        .arg("--execution.forwarding-target=null")
-        .arg("--execution.parent-chain-reader.old-header-timeout=1000h")
-        .arg("--node.inbox-reader.check-delay=10ms")
-        .arg("--node.staker.enable=false")
-        .arg("--ensure-rollup-deployment=false")
-        .arg(format!(
-            "--chain.info-json={}",
-            rollup_info(&rollup_config(chain_id, chain_owner), "test")
-        ))
-        .arg("--http.addr=0.0.0.0")
-        .arg(format!("--http.port={}", port))
-        .arg("--log-level=info")
-        .spawn()?;
+    let nitro = Docker(
+        Command::new("docker")
+            .arg("run")
+            .arg("--init")
+            .arg("--rm")
+            .arg("--net=host")
+            .arg("offchainlabs/nitro-node:v3.4.0-d896e9c-slim")
+            .arg(format!("--parent-chain.connection.url=http://localhost:{mchain_port}"))
+            .arg("--node.dangerous.disable-blob-reader")
+            .arg("--execution.forwarding-target=null")
+            .arg("--execution.parent-chain-reader.old-header-timeout=1000h")
+            .arg("--node.inbox-reader.check-delay=10ms")
+            .arg("--node.staker.enable=false")
+            .arg("--ensure-rollup-deployment=false")
+            .arg(format!(
+                "--chain.info-json={}",
+                rollup_info(&rollup_config(chain_id, chain_owner), "test")
+            ))
+            .arg("--http.addr=0.0.0.0")
+            .arg(format!("--http.port={}", port))
+            .arg("--log-level=debug")
+            .spawn()?,
+    );
     let rollup = ProviderBuilder::default().on_http(format!("http://localhost:{}", port).parse()?);
     // give it two minutes to launch (in case it needs to download the image)
     timeout(Duration::from_secs(120), async {
         while rollup.get_chain_id().await.is_err() {
             tokio::time::sleep(Duration::from_millis(10)).await;
         }
-        Ok::<_, eyre::Error>((Docker(nitro), rollup))
+        Ok::<_, eyre::Error>((nitro, rollup))
     })
     .await?
 }
@@ -324,7 +207,7 @@ pub struct MetaNode {
     pub bridge_address: Address,
     pub inbox_address: Address,
 
-    pub mchain: (Docker, Option<(Docker, Docker, Docker, Docker)>),
+    pub mchain: Docker,
     pub mchain_provider: MetaChainProvider<ArbitrumAdapter>,
 
     // References to keep the processes/tasks alive
@@ -363,9 +246,12 @@ impl MetaNode {
 
         config.block_builder.sequencing_contract_address = get_rollup_contract_address();
 
-        let (node, mchain) = start_reth(MCHAIN_ID).await?;
-        config.block_builder.mchain_ipc_path = node.ipc;
-        config.block_builder.mchain_auth_ipc_path = node.auth_ipc;
+        let (mchain_port, mchain) = start_mchain(
+            config.block_builder.target_chain_id,
+            config.block_builder.rollup_owner_address,
+        )
+        .await?;
+        config.block_builder.mchain_rpc_url = format!("http://localhost:{mchain_port}");
 
         // Launch mock sequencing chain and deploy contracts
         let (seq_port, seq_anvil, seq_provider) = start_anvil(15).await?;
@@ -473,7 +359,7 @@ impl MetaNode {
         let (nitro_docker, metabased_rollup) = launch_nitro_node(
             config.block_builder.target_chain_id,
             config.block_builder.rollup_owner_address,
-            node.http_port,
+            mchain_port,
         )
         .await?;
 

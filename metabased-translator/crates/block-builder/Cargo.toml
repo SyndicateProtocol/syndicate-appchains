@@ -9,12 +9,7 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy = { workspace = true, features = [
-  "provider-engine-api",
-  "provider-ipc",
-  "provider-trace-api",
-  "rlp",
-] }
+alloy = { workspace = true, features = [ "rlp" ] }
 async-trait = { workspace = true }
 base64 = { workspace = true }
 brotli = { workspace = true }

@@ -133,8 +133,7 @@ mod tests {
         ("SEQUENCING_CONTRACT_ADDRESS", Some(ZERO)),
         ("ARBITRUM_BRIDGE_ADDRESS", Some(ZERO)),
         ("ARBITRUM_INBOX_ADDRESS", Some(ZERO)),
-        ("MCHAIN_IPC_PATH", Some("")),
-        ("MCHAIN_AUTH_IPC_PATH", Some("")),
+        ("MCHAIN_RPC_URL", Some("")),
     ];
 
     #[test]

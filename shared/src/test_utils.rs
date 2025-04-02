@@ -70,11 +70,10 @@ pub fn test_path(prefix: &str) -> String {
 ///     .await
 /// }
 /// ```
-pub async fn assert_eventually<F, Fut, E>(mut check: F, timeout: Duration) -> Result<(), String>
+pub async fn assert_eventually<F, Fut>(mut check: F, timeout: Duration) -> eyre::Result<(), String>
 where
-    F: FnMut() -> Fut,
-    Fut: Future<Output = Result<bool, E>>,
-    E: std::fmt::Debug,
+    F: FnMut() -> Fut + Send,
+    Fut: Future<Output = eyre::Result<bool>> + Send,
 {
     const DEFAULT_CHECK_INTERVAL: Duration = Duration::from_millis(50);
     let start = Instant::now();

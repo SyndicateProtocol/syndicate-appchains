@@ -1,8 +1,8 @@
 //! Integration tests for the metabased-translator handling termination signals
 
-use block_builder::connectors::mchain::MCHAIN_ID;
+use alloy::primitives::Address;
 use e2e_tests::{
-    full_meta_node::{start_anvil, start_reth},
+    full_meta_node::{start_anvil, start_mchain},
     port_manager::PortManager,
 };
 use eyre::Result;
@@ -30,7 +30,7 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
     let (seq_port, _seq_instance, _seq_provider) = start_anvil(15).await?;
     let (set_port, _set_instance, _set_provider) = start_anvil(20).await?;
 
-    let (node, _mchain) = start_reth(MCHAIN_ID).await?;
+    let (mchain_port, _mchain) = start_mchain(13331370, Address::ZERO).await?;
     let metrics_port = PortManager::instance().next_port();
     let mut metabased_process = TokioCommand::new("cargo")
         .arg("run")
@@ -39,10 +39,8 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
         .current_dir("../bin/metabased-translator")
         .arg("--")
         .args([
-            "--mchain-ipc-path",
-            &node.ipc,
-            "--mchain-auth-ipc-path",
-            &node.auth_ipc,
+            "--mchain-rpc-url",
+            &format!("http://localhost:{mchain_port}"),
             "--sequencing-contract-address",
             "0x0000000000000000000000000000000000000001",
             "--arbitrum-bridge-address",
