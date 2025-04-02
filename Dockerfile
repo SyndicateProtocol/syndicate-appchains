@@ -28,6 +28,7 @@ COPY . .
 RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --bin metabased-translator
 RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --package metabased-sequencer
 RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --package metabased-poster
+RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --package maestro
 
 # Stage 4: Optional Foundry install (in separate stage to avoid bloating runtime image)
 FROM debian:bullseye-slim AS foundry
@@ -57,7 +58,15 @@ COPY --from=builder /app/target/release/metabased-poster /usr/local/bin/metabase
 ENTRYPOINT ["/usr/local/bin/metabased-poster"]
 LABEL service=metabased-poster
 
-# --------- Debugging image ---------
+# Stage 8: Runtime image for maestro
+FROM gcr.io/distroless/cc AS maestro
+COPY --from=builder /app/target/release/maestro /usr/local/bin/maestro
+ENTRYPOINT ["/usr/local/bin/maestro"]
+EXPOSE 8545 8546
+LABEL service=maestro
+
+
+# --------- Debugging image for translator ---------
 FROM ubuntu:22.04 AS metabased-translator-debug
 RUN apt-get update && apt-get install -y heaptrack libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /app/target/release/metabased-translator /usr/local/bin/metabased-translator
@@ -66,4 +75,3 @@ ENV PATH="/root/.foundry/bin:${PATH}"
 ENTRYPOINT ["/usr/local/bin/metabased-translator"]
 EXPOSE 8545 8546
 LABEL service=metabased-translator
-

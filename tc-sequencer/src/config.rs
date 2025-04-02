@@ -24,10 +24,9 @@ impl TCEndpoint {
         match value.to_lowercase().as_str() {
             "staging" => Ok(Self::Staging),
             "production" => Ok(Self::Production),
-            // TODO [SEQ-722]: Use the common URL parser when implemented
-            url => Url::parse(url)
+            url => shared::parse::parse_url(url)
                 .map(Self::Raw)
-                .map_err(|_| ConfigError::InvalidTCEndpoint(url.to_string())),
+                .map_err(|err| ConfigError::InvalidTCEndpoint(format!("for {}, {}", url, err))),
         }
     }
 
@@ -87,7 +86,7 @@ pub struct Config {
         // Default value is the address of the metabased sequencer factory on Exo
         // https://syndicate-exo.explorer.alchemy.com/address/0xFEA8A2BA8B760348ea95492516620ad45a299d53
         default_value = V1_FACTORY_ADDRESS,
-        value_parser = parse_address
+        value_parser = parse_and_check_supported_address
     )]
     pub metabased_sequencer_factory_address: Address,
 
@@ -97,13 +96,23 @@ pub struct Config {
 }
 
 /// Parse a string into an Ethereum `Address` and check if it is supported.
-fn parse_address(value: &str) -> Result<Address, ConfigError> {
-    let address =
-        Address::from_str(value).map_err(|_| ConfigError::InvalidAddress(value.to_string()))?;
+fn parse_and_check_supported_address(value: &str) -> Result<Address, ConfigError> {
+    let address = shared::parse::parse_address(value)?;
     if !is_supported_factory_address(address) {
         return Err(ConfigError::UnsupportedFactoryAddress(value.to_string()));
     }
     Ok(address)
+}
+
+impl From<shared::parse::Error> for ConfigError {
+    fn from(error: shared::parse::Error) -> Self {
+        match error {
+            shared::parse::Error::URL(_) => {
+                unreachable!("parse_address should only return Error::EthereumAddress")
+            }
+            shared::parse::Error::EthereumAddress(error) => Self::InvalidAddress(error),
+        }
+    }
 }
 
 impl Config {

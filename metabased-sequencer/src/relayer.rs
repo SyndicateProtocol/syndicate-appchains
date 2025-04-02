@@ -1,15 +1,8 @@
 //! The `service` module handles the business logic for the metabased sequencer.
 
 use crate::{
-    config::Config,
-    contract::MetabasedSequencerChain::processTransactionCall,
-    errors::{
-        Error,
-        Error::{Contract, InvalidParams},
-        InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount},
-    },
+    config::Config, contract::MetabasedSequencerChain::processTransactionCall,
     metrics::RelayerMetrics,
-    validation::validate_transaction,
 };
 use alloy::{
     hex,
@@ -28,6 +21,14 @@ use alloy::{
 };
 use eyre::Result;
 use jsonrpsee::{core::RpcResult, types::Params, Extensions};
+use shared::{
+    json_rpc::{
+        Error,
+        Error::{Contract, InvalidParams},
+        InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount},
+    },
+    tx_validation::validate_transaction,
+};
 use std::{
     sync::Arc,
     time::{Duration, Instant},
@@ -110,7 +111,7 @@ impl RelayerService {
 
     async fn process_transaction(&self, raw_tx: Bytes) -> Result<TxHash, Error> {
         info!("Processing transaction: {}", hex::encode(&raw_tx));
-        let original_tx_hash = validate_transaction(&raw_tx)?;
+        let original_tx = validate_transaction(&raw_tx)?;
 
         debug!("Submitting validated transaction to chain");
         let data = processTransactionCall { encodedTxn: raw_tx };
@@ -142,7 +143,7 @@ impl RelayerService {
                 }
 
                 debug!("Transaction submitted: {}", hex::encode(hash));
-                Ok(original_tx_hash)
+                Ok(*original_tx.tx_hash())
             }
             Err(e) => {
                 error!(error = ?e, "Transaction submission failed");
