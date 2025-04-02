@@ -11,7 +11,7 @@ pub struct Config {
     pub port: i32,
 
     /// Port to listen on
-    #[arg(short = 'r', long, env = "REDIS_ADDRESS", default_value = "0.0.0.0:6379")]
+    #[arg(short = 'r', long, env = "REDIS_ADDRESS", default_value = "redis://0.0.0.0:6379")]
     pub redis_address: String,
 }
 
@@ -24,6 +24,6 @@ impl Config {
 
 impl Default for Config {
     fn default() -> Self {
-        Self { port: 8080, redis_address: "0.0.0.0:6379".to_string() }
+        Self::parse()
     }
 }
