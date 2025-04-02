@@ -100,7 +100,7 @@ pub fn init_tracing_with_extra_fields(
 pub fn init_test_tracing(level: Level) -> Result<(), TracingError> {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
         EnvFilter::new(format!(
-            "off,metabased_translator={level},ingestor={level},slotter={level},block_builder={level}" // off == suppress logs from non-specified crates
+            "error,metabased_translator={level},ingestor={level},slotter={level},block_builder={level}" // off == suppress logs from non-specified crates
         ))
     });
 
