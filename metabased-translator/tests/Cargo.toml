@@ -8,6 +8,11 @@ repository.workspace   = true
 rust-version.workspace = true
 version.workspace      = true
 
+[package.metadata.cargo-machete]
+# strum is used via a macro from strum_macros - machete does not detect it
+ignored = ["strum"]
+
+
 [dependencies]
 alloy = { workspace = true, features = [
   "node-bindings",
@@ -27,10 +32,6 @@ strum_macros = { workspace = true }
 test-utils = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }
-
-[package.metadata.cargo-machete]
-# strum is used via a macro from strum_macros - machete does not detect it
-ignored = ["strum"]
 
 [features]
 env-tests = []
