@@ -86,7 +86,7 @@ jobs:
           command: machete
 
   taplo:
-    name: Taplo Cargo.toml Validation
+    name: Cargo.toml format validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
