@@ -1,37 +1,38 @@
 [package]
-name = "metabased-sequencer"
-version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+name              = "metabased-sequencer"
+version.workspace = true
 
 [dependencies]
 alloy = { workspace = true, features = [
-  "rlp",
+  "contract",
+  "k256",
+  "node-bindings",
   "provider-engine-api",
   "providers",
+  "rlp",
   "rpc-types",
-  "contract",
-  "signers",
   "signer-local",
-  "k256",
-  "node-bindings"
+  "signers",
 ] }
-reqwest = { workspace = true }
-axum              = { workspace = true }
-prometheus-client = { workspace = true }
+axum = { workspace = true }
+bytes = { workspace = true }
 clap = { workspace = true, features = ["derive", "env"] }
-eyre = {workspace = true}
-hex = {workspace = true}
-jsonrpsee = { workspace = true, features = ["server", "http-client"] }
-serde_json = {workspace = true}
-tokio = { workspace = true, features = ["full"] }
-tracing = {workspace = true}
-tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
-url = {workspace = true}
-thiserror = {workspace = true}
-tower = {workspace = true}
-bytes = {workspace = true}
-flate2 = {workspace = true}
+eyre = { workspace = true }
+flate2 = { workspace = true }
+hex = { workspace = true }
 humantime = { workspace = true }
+jsonrpsee = { workspace = true, features = ["http-client", "server"] }
+prometheus-client = { workspace = true }
+reqwest = { workspace = true }
+serde_json = { workspace = true }
+shared = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+tower = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
+url = { workspace = true }
 
 [lints]
 workspace = true

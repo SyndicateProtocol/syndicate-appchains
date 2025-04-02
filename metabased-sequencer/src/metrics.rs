@@ -1,6 +1,5 @@
 //! The `metrics` module  handles metrics recording for the metabased translator
 
-use crate::errors::Error;
 use axum::{
     body::Body,
     extract::State,
@@ -18,6 +17,7 @@ use prometheus_client::{
     },
     registry::Registry,
 };
+use shared::json_rpc::Error;
 use std::{sync::Arc, time::Duration};
 use tokio::sync::RwLock;
 
@@ -79,7 +79,7 @@ pub fn error_to_metric_category(error: Option<&Error>) -> &'static str {
         Error::InvalidRequest | Error::Parse | Error::InvalidInput(_) => "validation_error",
         Error::MethodNotFound(_) | Error::MethodNotSupported => "method_error",
         Error::ResourceNotFound | Error::ResourceUnavailable => "resource_error",
-        Error::Internal | Error::Server => "server_error",
+        Error::Internal(_) | Error::Server => "server_error",
         Error::Contract(_) => "contract_error",
         Error::InvalidParams(_) => "params_error",
         Error::TransactionRejected(_) => "tx_error",

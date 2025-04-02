@@ -257,7 +257,7 @@ fn format_block(b: &BlockAndReceipts) -> String {
 }
 
 /// A reference to a block containing just its number and timestamp.
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
 pub struct BlockRef {
     /// The block number.
     pub number: u64,

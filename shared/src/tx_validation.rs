@@ -1,17 +1,18 @@
-//! Utility function for validating transactions
+//! The `tx_validation` module contains functions for validating the content of an Ethereum
+//! transaction
 
-use crate::errors::{
+use crate::json_rpc::{
     Error,
     Error::{InvalidInput, TransactionRejected},
-    InvalidInputError::{MissingChainID, UnableToRLPDecode},
+    InvalidInputError::{MissingChainID, TransactionTooLarge, UnableToRLPDecode},
     Rejection::FeeTooHigh,
 };
 use alloy::{
     consensus::{Transaction, TxEnvelope},
-    primitives::{Bytes, TxHash, U256},
+    primitives::{Bytes, U256},
     rlp::Decodable,
 };
-use eyre::Result;
+use byte_unit::Unit;
 use tracing::debug;
 
 fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, Error> {
@@ -50,23 +51,42 @@ fn check_signature(tx: &TxEnvelope) -> Result<(), Error> {
 }
 
 fn check_gas_price(tx: &TxEnvelope) -> Result<(), Error> {
-    // TODO(SEQ-179): introduce optional global tx cap config. See op-geth's checkTxFee() +
+    //TODO(SEQ-179): introduce optional global tx cap config. See op-geth's checkTxFee() +
     // RPCTxFeeCap for equivalent skip check if unset
-    let tx_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
+    let tx_fee_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
 
     let gas_price = U256::try_from(tx.max_fee_per_gas())?;
     let gas = U256::try_from(tx.gas_limit())?;
     let fee_wei = gas_price.saturating_mul(gas);
 
-    if fee_wei > tx_cap_in_wei {
+    if fee_wei > tx_fee_cap_in_wei {
         return Err(TransactionRejected(FeeTooHigh));
     }
     Ok(())
 }
 
+fn check_tx_size(limit: byte_unit::Byte, raw_tx: &Bytes) -> Result<(), Error> {
+    let limit_size = limit.as_u128() as usize;
+
+    let tx_size = raw_tx.len();
+    if tx_size > limit_size {
+        let actual = byte_unit::Byte::from_u64(tx_size as u64);
+
+        return Err(InvalidInput(TransactionTooLarge(format!("{limit:#}"), format!("{actual:#}"))));
+    }
+    Ok(())
+}
+
 /// Validate a transaction
-pub fn validate_transaction(raw_tx: &Bytes) -> Result<TxHash, Error> {
+pub fn validate_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, Error> {
     debug!(bytes_length = raw_tx.len(), "Starting transaction validation");
+    // Check tx size
+    let kb_128 = byte_unit::Byte::from_u128_with_unit(128, Unit::KB).ok_or_else(|| {
+        // This should be impossible
+        Error::Internal("failed to create default tx size".to_string())
+    })?;
+    check_tx_size(kb_128, raw_tx)?;
+
     // Decoding:
     let tx = decode_transaction(raw_tx)?;
 
@@ -80,7 +100,7 @@ pub fn validate_transaction(raw_tx: &Bytes) -> Result<TxHash, Error> {
     // Check gas price
     check_gas_price(&tx)?;
 
-    Ok(tx.tx_hash().to_owned())
+    Ok(tx)
 }
 
 #[cfg(test)]
@@ -90,6 +110,7 @@ mod tests {
         consensus::{Signed, TxEip1559, TxLegacy},
         primitives::{b256, Bytes, PrimitiveSignature},
     };
+    use byte_unit::Byte;
     use std::str::FromStr;
 
     #[test]
@@ -99,9 +120,9 @@ mod tests {
         let result = validate_transaction(&valid_tx);
         // The validation should pass since this is a valid RLP-encoded transaction
         assert!(result.is_ok());
-        let tx_hash = result.unwrap();
+        let tx = result.unwrap();
         assert_eq!(
-            tx_hash.to_string(),
+            tx.tx_hash().to_string(),
             "0xc429e5f128387d224ba8bed6885e86525e14bfdc2eb24b5e9c3351a1176fd81f"
         );
     }
@@ -191,5 +212,82 @@ mod tests {
             check_gas_price(&invalid_eip1559_tx),
             Err(TransactionRejected(FeeTooHigh))
         ));
+    }
+
+    #[test]
+    fn test_check_tx_size_within_limit() {
+        // Define a limit of 128 KB
+        let limit = Byte::from_u128_with_unit(128, Unit::KB).unwrap();
+
+        // Create a raw_tx with size within the limit (e.g., 64 KB)
+        let raw_tx = Bytes::from(vec![0u8; 64 * 1000]);
+
+        // Check that it passes without error
+        let result = check_tx_size(limit, &raw_tx);
+        assert!(result.is_ok(), "Expected the transaction to be within the size limit");
+    }
+
+    #[test]
+    fn test_check_tx_size_exceeds_limit() {
+        // Define a limit of 127 KB
+        let limit = Byte::from_u128_with_unit(127, Unit::KB).unwrap();
+
+        // Create a raw_tx with size exceeding the limit (e.g., 200 KB)
+        let raw_tx = Bytes::from(vec![0u8; 200 * 1000]);
+
+        // Check that it returns an error
+        let result = check_tx_size(limit, &raw_tx);
+        assert!(result.is_err(), "Expected the transaction to exceed the size limit");
+
+        // Verify the error message
+        if let Err(error) = result {
+            let error_message = error.to_string();
+            assert_eq!(
+                error_message, "invalid input: transaction too large: limit 127 KB - got 200 KB",
+                "Unexpected error message: {}",
+                error_message
+            );
+        }
+    }
+
+    /// This is a quirk of the `byte-unit` library. When a [`Byte`] value is created that has an
+    /// exact binary representation in bits, the alternate formatter `:#` will choose bits (e.g.
+    /// `KiB`) over Bytes in order to be maximally explicit by using the IEC standard unit. In other
+    /// words, because `128 KB` == `125 KiB`, the formatter will output `125 KiB`. The internal
+    /// representation of `128000` remains unchanged.
+    #[test]
+    fn test_check_tx_size_exceeds_limit_formatter_quirk() {
+        // Define a limit of 128 KB
+        let limit = Byte::from_u128_with_unit(128, Unit::KB).unwrap();
+
+        // Create a raw_tx with size exceeding the limit (e.g., 200 KB)
+        let raw_tx = Bytes::from(vec![0u8; 200 * 1000]);
+
+        // Check that it returns an error
+        let result = check_tx_size(limit, &raw_tx);
+        assert!(result.is_err(), "Expected the transaction to exceed the size limit");
+
+        // Verify the error message
+        if let Err(error) = result {
+            let error_message = error.to_string();
+            assert_eq!(
+                error_message, "invalid input: transaction too large: limit 125 KiB - got 200 KB",
+                "Unexpected error message: {}",
+                error_message
+            );
+        }
+    }
+
+    #[test]
+    fn test_check_tx_size_at_limit() {
+        // Define a limit of 128 KB
+        let limit = Byte::from_u128_with_unit(128, Unit::KB).unwrap();
+
+        // Create a raw_tx with size exactly at the limit (128 KB)
+        let raw_tx = Bytes::from(vec![0u8; 128 * 1000]);
+
+        // Check that it passes without error
+        let result = check_tx_size(limit, &raw_tx);
+        assert!(result.is_ok(), "Expected the transaction size exactly at the limit to pass");
     }
 }

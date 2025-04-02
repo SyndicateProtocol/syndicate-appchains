@@ -4,8 +4,8 @@
 //! other crates used in the Metabased Translator as well.
 
 use core::fmt;
-use std::{error::Error, fmt::Display};
-use tracing::{Event, Level, Subscriber};
+use thiserror::Error;
+use tracing::{Event, Subscriber};
 use tracing_subscriber::{
     fmt as subscriber_fmt,
     fmt::{
@@ -18,22 +18,11 @@ use tracing_subscriber::{
 };
 
 #[allow(missing_docs)]
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum TracingError {
+    #[error("failed to initialize subscriber: {0}")]
     SubscriberInit(String),
 }
-
-impl Display for TracingError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::SubscriberInit(msg) => {
-                write!(f, "Failed to initialize subscriber: {}", msg)
-            }
-        }
-    }
-}
-
-impl Error for TracingError {}
 
 /// A wrapper around a JSON formatter that iterates `extra_fields` and appends them all to every
 /// log event.
@@ -94,14 +83,6 @@ pub fn init_tracing_with_extra_fields(
         .try_init()
         .map_err(|e| TracingError::SubscriberInit(format!("{:?}", e)))?;
 
-    Ok(())
-}
-/// Initializes a tracing subscriber for testing purposes
-pub fn init_test_tracing(level: Level) -> Result<(), TracingError> {
-    subscriber_fmt()
-        .with_env_filter(EnvFilter::new(level.to_string()))
-        .try_init()
-        .map_err(|e| TracingError::SubscriberInit(format!("{:?}", e)))?;
     Ok(())
 }
 

@@ -1,9 +1,0 @@
-[package]
-name = "test-utils"
-version.workspace = true
-description = "Common test utilities for metabased-translator"
-edition.workspace = true
-rust-version.workspace = true
-license.workspace = true
-homepage.workspace = true
-repository.workspace = true
