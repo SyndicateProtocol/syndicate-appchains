@@ -23,17 +23,15 @@ block-builder = { workspace = true }
 common = { workspace = true }
 contract-bindings = { workspace = true }
 eyre = { workspace = true }
-metabased-translator = { workspace = true }
 metrics = { workspace = true }
 prometheus-client = { workspace = true }
 reqwest = { workspace = true }
-serde = { workspace = true }
 shared = { workspace = true }
 strum = { workspace = true }
 strum_macros = { workspace = true }
+test-utils = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }
-tracing = { workspace = true }
 
 [features]
 env-tests = []

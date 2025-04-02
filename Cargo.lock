@@ -1685,17 +1685,15 @@ dependencies = [
  "common",
  "contract-bindings",
  "eyre",
- "metabased-translator",
  "metrics",
  "prometheus-client",
  "reqwest",
- "serde",
  "shared",
  "strum 0.27.1",
  "strum_macros 0.27.1",
+ "test-utils",
  "thiserror 2.0.11",
  "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -4503,6 +4501,32 @@ dependencies = [
  "quote",
  "syn 2.0.96",
  "test-case-core",
+]
+
+[[package]]
+name = "test-framework"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "contract-bindings",
+ "eyre",
+ "reqwest",
+ "serde",
+ "test-utils",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "test-utils"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "eyre",
+ "thiserror 2.0.11",
+ "tokio",
+ "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
