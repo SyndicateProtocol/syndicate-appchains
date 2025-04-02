@@ -1,4 +1,4 @@
-name: Maestro - Build Image to Github and Google Registries - Dry run Check
+name: Build Maestro Image to Github and Google Registries - Dry run Check
 
 on:
   pull_request:
