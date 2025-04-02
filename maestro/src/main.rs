@@ -1,6 +1,7 @@
 //! Maestro is a service that filters and coordinates transaction requests to sequencers
 
 use eyre::Result;
+use maestro::config::Config;
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
 
@@ -10,14 +11,12 @@ async fn main() -> Result<()> {
     // Initialize logging
     FmtSubscriber::builder().with_max_level(Level::DEBUG).json().with_target(true).init();
 
-    // TODO
-    // let config = Config::initialize();
-    // info!("Config: {:?}", config);
+    let config = Config::initialize();
+    info!("Config: {:?}", config);
 
     // TODO metrics, if necessary
 
-    let port = 8111;
-    let (addr, handle) = maestro::server::run(port).await?;
+    let (addr, handle) = maestro::server::run(config.port).await?;
 
     info!(
         addr = %addr,
