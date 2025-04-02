@@ -8,7 +8,7 @@ use tracing_subscriber::EnvFilter;
 /// filtered out
 pub fn init_test_tracing(level: Level) -> Result<(), Error> {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-        // TODO add other MB packages below and make sure they work 
+        // TODO SEQ-765: add other MB packages below and make sure they work 
         EnvFilter::new(format!(
             "off,metabased_translator={level},ingestor={level},slotter={level},block_builder={level}"
         ))

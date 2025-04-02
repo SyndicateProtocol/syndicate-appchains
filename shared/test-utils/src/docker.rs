@@ -40,6 +40,7 @@ pub struct NodeInfo {
     pub http_port: u16,
 }
 
+/// Starts reth instance
 pub async fn start_reth(
     chain_id: u64,
     tag: &str,
@@ -146,6 +147,7 @@ pub async fn start_reth(
     .await?
 }
 
+/// Starts nitro instance
 pub async fn launch_nitro_node(
     chain_id: u64,
     chain_owner: Address,
@@ -154,6 +156,8 @@ pub async fn launch_nitro_node(
     tag: &str,
 ) -> Result<(Docker, RootProvider, String)> {
     let port = PortManager::instance().next_port();
+
+    let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
 
     let mut cmd = Command::new("docker");
     cmd.arg("run")
@@ -173,7 +177,7 @@ pub async fn launch_nitro_node(
         ))
         .arg("--http.addr=0.0.0.0")
         .arg(format!("--http.port={}", port))
-        .arg("--log-level=info");
+        .arg(format!("--log-level={log_level}"));
 
     match sequencer_port {
         Some(port) => {

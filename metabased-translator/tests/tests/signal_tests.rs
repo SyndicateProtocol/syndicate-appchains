@@ -3,7 +3,7 @@
 use block_builder::connectors::mchain::MCHAIN_ID;
 use eyre::Result;
 use reqwest::Client;
-use std::{process::Command, time::Duration};
+use std::{env, process::Command, time::Duration};
 use test_utils::{anvil::start_anvil, docker::start_reth, port_manager::PortManager};
 use tokio::{process::Command as TokioCommand, time::sleep};
 
@@ -27,7 +27,8 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
     let (seq_port, _seq_instance, _seq_provider) = start_anvil(15).await?;
     let (set_port, _set_instance, _set_provider) = start_anvil(20).await?;
 
-    let (node, _mchain, _mchain_port) = start_reth(MCHAIN_ID, "2.0.0").await?;
+    let reth_tag = env::var("RETH_TAG").unwrap_or_else(|_| "2.0.0".to_string());
+    let (node, _mchain, _mchain_port) = start_reth(MCHAIN_ID, &reth_tag).await?;
     let metrics_port = PortManager::instance().next_port();
     let mut metabased_process = TokioCommand::new("cargo")
         .arg("run")
