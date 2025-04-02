@@ -7,7 +7,7 @@ use common::{
     eth_client::RPCClient,
     types::{Block, BlockAndReceipts, Chain, Receipt},
 };
-use eyre::{eyre, Error};
+use eyre::Error;
 use std::{
     cmp::{max, min},
     collections::BTreeMap,
@@ -40,6 +40,12 @@ struct BatchContext<'a> {
 enum IngestorError {
     #[error("Block number mismatch: current={current}, got={received}")]
     BlockNumberMismatch { current: u64, received: u64 },
+
+    #[error("{resource} not yet available")]
+    ResourceNotAvailable { resource: String },
+
+    #[error("Failed to send block and receipts")]
+    SendError,
 }
 
 /// Starts a new ingestor task.
@@ -136,7 +142,7 @@ async fn push_block_and_receipts(
     current_block_number: &mut u64,
     block_and_receipts: Arc<BlockAndReceipts>,
     chain: Chain,
-) -> Result<(), Error> {
+) -> Result<(), IngestorError> {
     if block_and_receipts.block.number != *current_block_number {
         error!(
             "Block number mismatch on chain {:?}. Current block {:?}. Got {:?}",
@@ -145,10 +151,9 @@ async fn push_block_and_receipts(
         return Err(IngestorError::BlockNumberMismatch {
             current: *current_block_number,
             received: block_and_receipts.block.number,
-        }
-        .into());
+        });
     }
-    sender.send(block_and_receipts).await?;
+    sender.send(block_and_receipts).await.map_err(|_| IngestorError::SendError)?;
     *current_block_number += 1;
     metrics.update_channel_capacity(chain, sender.capacity());
     Ok(())
@@ -268,15 +273,78 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
     false
 }
 
+/// Executes an operation with exponential backoff retry logic.
+///
+/// This utility function provides a resilient way to execute remote operations (like RPC calls)
+/// with built-in retry behavior using an exponential backoff strategy.
+///
+/// # Features
+///
+/// - Exponential backoff: Retry intervals increase exponentially up to a configurable maximum
+/// - Special handling for "not found" errors: Allows differentiating between temporary failures and
+///   genuine "not found" conditions
+///
+/// # Arguments
+///
+/// * `operation` - A function that returns a future which performs the operation being retried
+/// * `context` - A descriptive string that identifies the operation (used in logs and error
+///   messages)
+/// * `backoff_initial_interval` - The initial delay between retry attempts
+/// * `backoff_scaling_factor` - The multiplier applied to the backoff time after each failure
+/// * `max_backoff` - The maximum duration to wait between retry attempts
+/// * `is_not_found_error` - A predicate function that identifies special "not found" error cases
+///
+/// # Type Parameters
+///
+/// * `T` - The return type of the operation
+/// * `F` - The type of the function that returns the future
+/// * `Fut` - The future returned by the function
+/// * `P` - The type of the predicate function
+///
+/// # Returns
+///
+/// Returns a `Result<T, Error>` where:
+/// - `Ok(T)` is returned when the operation succeeds
+/// - `Err(Error)` is returned either immediately for "not found" errors
+///
+/// # Behavior
+///
+/// 1. Calls the provided operation
+/// 2. If successful, returns the result
+/// 3. If the error is identified as a "not found" error by the predicate, returns an error
+///    immediately
+/// 4. For other errors, waits for the current backoff duration, increases the backoff duration, and
+///    retries
+/// 5. Retries indefinitely until either success or a "not found" error
+///
+/// # Examples
+///
+/// ```no_compile
+/// use common::eth_client::RPCClientError;
+/// use std::time::Duration;
+///
+/// async fn example_usage(client: &dyn RPCClient) -> Result<Block, Error> {
+///     let context = "fetch block #100 on Settlement chain";
+///
+///     fetch_with_retry(
+///         || client.get_block_by_number(BlockNumberOrTag::Number(100)),
+///         context.to_string(),
+///         Duration::from_millis(100),
+///         2,
+///         Duration::from_secs(5),
+///         |err| matches!(err, RPCClientError::BlockNotFound(_)),
+///     )
+///     .await
+/// }
+/// ```
 async fn fetch_with_retry<T, F, Fut, P>(
     operation: F,
     context: String,
-    chain: Chain,
     backoff_initial_interval: Duration,
     backoff_scaling_factor: u64,
     max_backoff: Duration,
     is_not_found_error: P,
-) -> Result<T, Error>
+) -> Result<T, IngestorError>
 where
     F: Fn() -> Fut,
     Fut: std::future::Future<Output = Result<T, common::eth_client::RPCClientError>>,
@@ -288,18 +356,18 @@ where
     loop {
         match operation().await {
             Ok(response) => {
-                trace!("Successfully {} on {:?} chain", context, chain);
+                trace!("Successfully {}", context);
                 return Ok(response);
             }
             Err(err) => {
                 if is_not_found_error(&err) {
-                    trace!("{} not yet available on {:?} chain", context, chain);
-                    return Err(eyre!("{} not yet available", context));
+                    trace!("{} not yet available", context);
+                    return Err(IngestorError::ResourceNotAvailable { resource: context.clone() });
                 }
                 retry_count += 1;
                 error!(
-                    "Failed to {} on {:?} chain: {} retry_count: {} next_retry_in: {:?}",
-                    context, chain, err, retry_count, backoff
+                    "Failed to {}: {} retry_count: {} next_retry_in: {:?}",
+                    context, err, retry_count, backoff
                 );
                 tokio::time::sleep(backoff).await;
 
@@ -320,13 +388,12 @@ async fn fetch_block_with_retry(
     backoff_initial_interval: Duration,
     backoff_scaling_factor: u64,
     max_backoff: Duration,
-) -> Result<Block, Error> {
-    let context = format!("fetched block #{}", b);
+) -> Result<Block, IngestorError> {
+    let context = format!("fetched block #{} on {:?} chain", b, chain);
 
     fetch_with_retry(
         || client.get_block_by_number(b),
         context,
-        chain,
         backoff_initial_interval,
         backoff_scaling_factor,
         max_backoff,
@@ -342,14 +409,13 @@ async fn fetch_receipts_with_retry(
     backoff_initial_interval: Duration,
     backoff_scaling_factor: u64,
     max_backoff: Duration,
-) -> Result<Vec<Receipt>, Error> {
-    let context = format!("fetched block #{}", block_number);
+) -> Result<Vec<Receipt>, IngestorError> {
+    let context = format!("fetched block receipts #{} on {:?} chain", block_number, chain);
     let block_number_hex = format!("0x{:x}", block_number);
 
     fetch_with_retry(
         || client.get_block_receipts(&block_number_hex),
         context,
-        chain,
         backoff_initial_interval,
         backoff_scaling_factor,
         max_backoff,
@@ -452,29 +518,17 @@ mod tests {
         let block = get_dummy_block_and_receipts(wrong_block);
         let arc_block = Arc::new(block);
 
-        let result = push_block_and_receipts(
+        let err = push_block_and_receipts(
             &sender,
             &metrics,
             &mut current_block_number,
             arc_block,
             Chain::Sequencing,
         )
-        .await;
+        .await
+        .expect_err("Should fail with block number mismatch");
 
-        assert!(result.is_err());
-        if let Err(e) = result {
-            let downcast_result = e.downcast::<IngestorError>();
-            assert!(downcast_result.is_ok());
-
-            if let Ok(ingestor_error) = downcast_result {
-                match ingestor_error {
-                    IngestorError::BlockNumberMismatch { current, received } => {
-                        assert_eq!(current, start_block);
-                        assert_eq!(received, wrong_block);
-                    }
-                }
-            }
-        }
+        matches!(err, IngestorError::BlockNumberMismatch { current, received } if current == start_block && received == wrong_block);
     }
 
     #[tokio::test]
@@ -580,5 +634,84 @@ mod tests {
         polling_handle.await?;
 
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_fetch_with_retry_success_first_try() {
+        let expected_value = 42u64;
+        let operation = || async { Ok::<u64, RPCClientError>(expected_value) };
+
+        let result = fetch_with_retry(
+            operation,
+            "test operation".to_string(),
+            Duration::from_millis(10),
+            2,
+            Duration::from_millis(100),
+            |_| false,
+        )
+        .await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), expected_value);
+    }
+
+    #[tokio::test]
+    async fn test_fetch_with_retry_not_found_error() {
+        let operation = || async {
+            Result::<u64, RPCClientError>::Err(RPCClientError::BlockNotFound(
+                "test block".to_string(),
+            ))
+        };
+
+        let err = fetch_with_retry(
+            operation,
+            "test operation".to_string(),
+            Duration::from_millis(10),
+            2,
+            Duration::from_millis(100),
+            |err| matches!(err, RPCClientError::BlockNotFound(_)),
+        )
+        .await
+        .expect_err("Should fail with resource not available");
+
+        matches!(err, IngestorError::ResourceNotAvailable { resource } if resource == "test operation");
+    }
+
+    #[tokio::test]
+    async fn test_fetch_with_retry_success_after_retries() {
+        // Counter to track how many times the operation is called
+        let counter = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let counter_clone = counter.clone();
+
+        // Operation that fails twice then succeeds
+        let operation = move || {
+            let count = counter_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            async move {
+                if count < 2 {
+                    Result::<u64, RPCClientError>::Err(RPCClientError::RpcError(
+                        alloy::transports::RpcError::Transport(
+                            alloy::transports::TransportErrorKind::Custom(
+                                eyre::eyre!("temporary failure").into(),
+                            ),
+                        ),
+                    ))
+                } else {
+                    Ok(42u64)
+                }
+            }
+        };
+
+        let result = fetch_with_retry(
+            operation,
+            "test operation".to_string(),
+            Duration::from_millis(10), // Small duration for test speed
+            2,
+            Duration::from_millis(100),
+            |err| matches!(err, RPCClientError::BlockNotFound(_)),
+        )
+        .await;
+
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 42);
     }
 }
