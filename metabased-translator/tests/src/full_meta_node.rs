@@ -26,7 +26,6 @@ use contract_bindings::{
     metabased::{
         alwaysallowedmodule::AlwaysAllowedModule,
         metabasedsequencerchain::MetabasedSequencerChain::{self, MetabasedSequencerChainInstance},
-        walletpoolsequencingmodule,
     },
 };
 use eyre::{eyre, Result};
@@ -376,13 +375,11 @@ impl MetaNode {
         )
         .send()
         .await?;
-
-        // Continue to deploy AlwaysAllowedModule for compatibility
         let always_allowed_contract =
             AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
         mine_block(&seq_provider, 0).await?;
         let receipt = always_allowed_contract.get_receipt().await?;
-        let _always_allowed_module_address = match receipt.contract_address {
+        let always_allowed_module_address = match receipt.contract_address {
             Some(address) => address,
             None => {
                 eprintln!("Deployment failed: No contract address found.");
@@ -390,54 +387,12 @@ impl MetaNode {
             }
         };
 
-        let wallet_pool_module =
-            walletpoolsequencingmodule::WalletPoolSequencingModule::deploy_builder(
-                &seq_provider,
-                seq_provider.default_signer_address(), // admin
-            )
-            .send()
-            .await?;
-        mine_block(&seq_provider, 0).await?;
-        let wallet_receipt = wallet_pool_module.get_receipt().await?;
-        let wallet_pool_address = match wallet_receipt.contract_address {
-            Some(address) => address,
-            None => {
-                eprintln!("Wallet pool deployment failed: No contract address found.");
-                return Err(eyre!("Wallet pool deployment failed: No contract address found."));
-            }
-        };
-
-        // Add the default wallet to the pool
-        let wallet_pool = walletpoolsequencingmodule::WalletPoolSequencingModule::new(
-            wallet_pool_address,
-            seq_provider.clone(),
-        );
-        // Add the default sequencing wallet to the pool
-        _ = wallet_pool.addToWalletPool(seq_provider.default_signer_address()).send().await?;
-        mine_block(&seq_provider, 0).await?;
-
-        // Add test addresses used in integration tests to the wallet pool
-        // This is necessary for e2e_test, e2e_test_empty_blocks, e2e_settlement_fast_withdrawal
-        // tests
-        let test_addresses = [
-            // Default settlement wallet address
-            seq_provider.default_signer_address(),
-            // Common test addresses used in integration tests
-            address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"),
-            address!("0xA9ec1Ed7008fDfdE38978Dfef4cF2754A969E5FA"),
-            // Add any other addresses that might be used in tests
-        ];
-        for addr in test_addresses {
-            _ = wallet_pool.addToWalletPool(addr).send().await?;
-            mine_block(&seq_provider, 0).await?;
-        }
-
-        // Setup the sequencing contract with the wallet pool module
+        // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
         let sequencing_contract =
             MetabasedSequencerChain::new(get_rollup_contract_address(), provider_clone);
         _ = sequencing_contract
-            .initialize(seq_provider.default_signer_address(), wallet_pool_address)
+            .initialize(seq_provider.default_signer_address(), always_allowed_module_address)
             .send()
             .await?;
         mine_block(&seq_provider, 0).await?;
