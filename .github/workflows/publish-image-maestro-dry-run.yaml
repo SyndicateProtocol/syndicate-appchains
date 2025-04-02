@@ -2,6 +2,7 @@ name: Build Maestro Image to Github and Google Registries - Dry run Check
 
 on:
   pull_request:
+#    TODO uncomment below
 #    branches: [main]
 #    paths:
 #      - "maestro/**"
