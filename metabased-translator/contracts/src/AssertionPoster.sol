@@ -45,6 +45,8 @@ interface IRollup is IRollupCore, IOwnable {
      *         This is because the protocol assume there is only 1 unique confirmable child assertion.
      */
     function fastConfirmNewAssertion(AssertionInputs calldata assertion, bytes32 expectedAssertionHash) external;
+
+    function paused() external view returns (bool);
 }
 
 contract AssertionPoster is Ownable {
@@ -95,7 +97,9 @@ contract AssertionPoster is Ownable {
         if (legacy) {
             IAccessControl(address(executor)).grantRole(keccak256("EXECUTOR_ROLE"), self);
             // prevent anyone except the admin account from creating assertions
-            IRollupAdmin(address(rollup)).pause();
+            if (!rollup.paused()) {
+                IRollupAdmin(address(rollup)).pause();
+            }
         } else {
             address[] memory validators = rollup.getValidators();
             // prevent validators from creating assertions
