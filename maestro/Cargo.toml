@@ -33,6 +33,9 @@ futures-util = {workspace = true}
 http-body = {workspace = true}
 http = {workspace = true}
 clap = { workspace = true, features = ["derive", "env"] }
+redis = { workspace = true, features = ["tokio-comp", "streams"] }
+shared = { workspace = true}
+thiserror = {workspace = true}
 
 [lints]
 workspace = true
