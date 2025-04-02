@@ -14,6 +14,7 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+use thiserror::Error;
 use tokio::{
     sync::{mpsc::Sender, oneshot},
     task::JoinSet,
@@ -33,6 +34,12 @@ struct BatchContext<'a> {
     backoff_initial_interval: Duration,
     backoff_scaling_factor: u64,
     max_backoff: Duration,
+}
+
+#[derive(Debug, Error)]
+enum IngestorError {
+    #[error("Block number mismatch: current={current}, got={received}")]
+    BlockNumberMismatch { current: u64, received: u64 },
 }
 
 /// Starts a new ingestor task.
@@ -135,7 +142,11 @@ async fn push_block_and_receipts(
             "Block number mismatch on chain {:?}. Current block {:?}. Got {:?}",
             chain, current_block_number, block_and_receipts.block.number
         );
-        return Err(eyre!("Block number mismatch"));
+        return Err(IngestorError::BlockNumberMismatch {
+            current: *current_block_number,
+            received: block_and_receipts.block.number,
+        }
+        .into());
     }
     sender.send(block_and_receipts).await?;
     *current_block_number += 1;
@@ -427,6 +438,43 @@ mod tests {
             panic!("No block received");
         }
         Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_block_number_mismatch() {
+        let start_block = 100;
+        let wrong_block = 101;
+        let (sender, _) = channel(10);
+        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let metrics = IngestorMetrics::new(&mut metrics_state.registry);
+        let mut current_block_number = start_block;
+
+        let block = get_dummy_block_and_receipts(wrong_block);
+        let arc_block = Arc::new(block);
+
+        let result = push_block_and_receipts(
+            &sender,
+            &metrics,
+            &mut current_block_number,
+            arc_block,
+            Chain::Sequencing,
+        )
+        .await;
+
+        assert!(result.is_err());
+        if let Err(e) = result {
+            let downcast_result = e.downcast::<IngestorError>();
+            assert!(downcast_result.is_ok());
+
+            if let Ok(ingestor_error) = downcast_result {
+                match ingestor_error {
+                    IngestorError::BlockNumberMismatch { current, received } => {
+                        assert_eq!(current, start_block);
+                        assert_eq!(received, wrong_block);
+                    }
+                }
+            }
+        }
     }
 
     #[tokio::test]
