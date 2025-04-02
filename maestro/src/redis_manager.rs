@@ -57,15 +57,8 @@ impl StreamManager {
     /// Initialize stream consumer group
     pub async fn init_consumer_group(&mut self) -> Result<(), Error> {
         // Create consumer group if it doesn't exist
-        // XGROUP CREATE key groupname id [MKSTREAM]
-        let result: RedisResult<String> = redis::cmd("XGROUP")
-            .arg("CREATE")
-            .arg(TX_STREAM_KEY)
-            .arg(CONSUMER_GROUP)
-            .arg("$") // Start processing from new messages only
-            .arg("MKSTREAM") // Create stream if it doesn't exist
-            .query_async(&mut self.conn)
-            .await;
+        let result: RedisResult<String> =
+            self.conn.xgroup_create_mkstream(TX_STREAM_KEY, CONSUMER_GROUP, "$").await;
 
         match result {
             Ok(_) => {
@@ -94,7 +87,6 @@ impl StreamManager {
         let serialized = serde_json::to_string(&tx_req)?;
 
         // Add to stream with XADD
-        // XADD key * field value [field value ...]
         let id: String = self
             .conn
             .xadd(
@@ -149,46 +141,29 @@ impl StreamManager {
     /// Read pending messages (delivered but not acknowledged)
     async fn read_pending_messages(
         &mut self,
-    ) -> Result<Vec<(String, HashMap<String, String>)>, Error> {
-        // XPENDING to get info about pending messages
-        let pending: Value = redis::cmd("XPENDING")
-            .arg(TX_STREAM_KEY)
-            .arg(CONSUMER_GROUP)
-            .arg("-") // Start with any ID
-            .arg("+") // End with any ID
-            .arg(BATCH_SIZE) // Count
-            .query_async(&mut self.conn)
-            .await?;
+    ) -> Result<Vec<(String, HashMap<String, Value>)>, Error> {
+        // Get all pending message IDs
+        let pending_info: redis::streams::StreamPendingCountReply =
+            self.conn.xpending_count(TX_STREAM_KEY, CONSUMER_GROUP, "-", "+", BATCH_SIZE).await?;
 
-        let pending_ids = match pending {
-            Value::Array(items) => items
-                .iter()
-                .filter_map(|item| {
-                    if let Value::Array(entry) = item {
-                        if let Some(Value::BulkString(id_bytes)) = entry.first() {
-                            if let Ok(id) = String::from_utf8(id_bytes.clone()) {
-                                return Some(id);
-                            }
-                        }
-                    }
-                    None
-                })
-                .collect::<Vec<String>>(),
-            _ => vec![],
-        };
-
-        if pending_ids.is_empty() {
+        if pending_info.ids.is_empty() {
             return Ok(vec![]);
         }
 
-        // XCLAIM to claim these pending messages
-        let claimed: Vec<(String, HashMap<String, String>)> = redis::cmd("XCLAIM")
-            .arg(TX_STREAM_KEY)
-            .arg(CONSUMER_GROUP)
-            .arg(CONSUMER_NAME)
-            .arg(0) // Min idle time (0 = claim immediately)
-            .arg(pending_ids)
-            .query_async(&mut self.conn)
+        // Extract the message IDs
+        let pending_ids: Vec<String> =
+            pending_info.ids.iter().map(|item| item.id.clone()).collect();
+
+        // Claim these pending messages using XCLAIM
+        let claimed: Vec<(String, HashMap<String, Value>)> = self
+            .conn
+            .xclaim(
+                TX_STREAM_KEY,
+                CONSUMER_GROUP,
+                CONSUMER_NAME,
+                0, // Min idle time (claim immediately)
+                &pending_ids,
+            )
             .await?;
 
         if !claimed.is_empty() {
@@ -199,31 +174,32 @@ impl StreamManager {
     }
 
     /// Read new messages from the stream
-    async fn read_new_messages(&mut self) -> Result<Vec<(String, HashMap<String, String>)>, Error> {
-        // XREADGROUP to read new messages
-        // Format: XREADGROUP GROUP group consumer [COUNT count] [BLOCK milliseconds] STREAMS key
-        // [key ...] > [ID ...]
-        let streams: Vec<(String, HashMap<String, String>)> = redis::cmd("XREADGROUP")
-            .arg("GROUP")
-            .arg(CONSUMER_GROUP)
-            .arg(CONSUMER_NAME)
-            .arg("COUNT")
-            .arg(BATCH_SIZE)
-            .arg("BLOCK")
-            .arg(BLOCK_MS)
-            .arg("STREAMS")
-            .arg(TX_STREAM_KEY)
-            .arg(">") // Only new messages
-            .query_async(&mut self.conn)
-            .await?;
+    async fn read_new_messages(&mut self) -> Result<Vec<(String, HashMap<String, Value>)>, Error> {
+        // Use StreamReadOptions to read from the group
+        let options = redis::streams::StreamReadOptions::default()
+            .group(CONSUMER_GROUP, CONSUMER_NAME)
+            .count(BATCH_SIZE)
+            .block(BLOCK_MS);
 
-        Ok(streams)
+        // Use XREADGROUP to read new messages
+        let result: redis::streams::StreamReadReply =
+            self.conn.xread_options(&[TX_STREAM_KEY], &[">"], &options).await?;
+
+        // Convert the StreamReadReply to the expected format
+        let mut messages = Vec::new();
+        for stream_key in result.keys {
+            for message in stream_key.ids {
+                messages.push((message.id, message.map));
+            }
+        }
+
+        Ok(messages)
     }
 
     /// Process the received messages
     async fn process_messages(
         &mut self,
-        messages: Vec<(String, HashMap<String, String>)>,
+        messages: Vec<(String, HashMap<String, Value>)>,
     ) -> Result<usize, Error> {
         if messages.is_empty() {
             return Ok(0);
@@ -251,11 +227,24 @@ impl StreamManager {
     }
 
     /// Process a single transaction
-    async fn process_transaction(&self, tx_data: &str) -> Result<(), Error> {
+    async fn process_transaction(&self, tx_data: &Value) -> Result<(), Error> {
         // Deserialize the transaction
-        let tx_req: TransactionRequest = serde_json::from_str(tx_data)?;
+        let json_string = match tx_data {
+            Value::BulkString(bytes) => std::str::from_utf8(bytes)?.to_string(),
+            Value::SimpleString(s) => s.clone(),
+            Value::Int(i) => i.to_string(),
+            Value::Double(d) => d.to_string(),
+            _ => {
+                return Err(Error::Redis(redis::RedisError::from((
+                    redis::ErrorKind::TypeError,
+                    "Expected string value for transaction data",
+                ))))
+            }
+        };
 
-        // TODO: Implement your actual transaction processing logic here
+        let tx_req: TransactionRequest = serde_json::from_str(json_string.as_str())?;
+
+        // TODO: Implement txn processing logic here
         info!("Processing transaction: {} from sender {}", tx_req.tx_hash, tx_req.sender);
 
         // Simulate some processing work
@@ -266,7 +255,7 @@ impl StreamManager {
 
     /// Acknowledge a message as processed
     async fn acknowledge_message(&mut self, id: &str) -> Result<(), Error> {
-        // XACK to acknowledge message
+        // Use XACK to acknowledge message
         let result: i32 = self.conn.xack(TX_STREAM_KEY, CONSUMER_GROUP, &[id]).await?;
 
         if result != 1 {
