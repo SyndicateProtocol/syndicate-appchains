@@ -294,6 +294,15 @@ async fn e2e_test() -> Result<()> {
         components.appchain_provider.get_block_number().await? == 2,
         Duration::from_secs(3)
     );
+    assert_eq!(components.mchain_provider.get_block_number().await?, 2);
+    // check mchain blocks
+    let mchain_block = components
+        .mchain_provider
+        .get_block_by_number(BlockNumberOrTag::Number(2), BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
+    assert_eq!(mchain_block.header.timestamp, config.settlement_delay);
+    assert_eq!(mchain_block.transactions.len(), 2);
 
     // check rollup blocks
     // check the first rollup block
@@ -323,6 +332,19 @@ async fn e2e_test() -> Result<()> {
 
     // mine the pending settlement block (which contains a deposit tx)
     components.mine_both(1).await?;
+
+    // Wait for blocks to be processed
+    wait_until!(components.mchain_provider.get_block_number().await? >= 3, Duration::from_secs(2));
+
+    // check mchain block
+    assert_eq!(components.mchain_provider.get_block_number().await?, 3);
+    let mchain_block = components
+        .mchain_provider
+        .get_block_by_number(BlockNumberOrTag::Number(3), BlockTransactionsKind::Hashes)
+        .await?
+        .unwrap();
+    assert_eq!(mchain_block.header.timestamp, config.settlement_delay + 1);
+    assert_eq!(mchain_block.transactions.len(), 2);
 
     // check rollup block
     wait_until!(
