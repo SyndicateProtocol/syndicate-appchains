@@ -28,6 +28,7 @@ COPY . .
 RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --bin metabased-translator
 RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --package metabased-sequencer
 RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --package metabased-poster
+RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --package maestro
 
 # Stage 4: Optional Foundry install (in separate stage to avoid bloating runtime image)
 FROM debian:bullseye-slim AS foundry
@@ -56,3 +57,10 @@ FROM gcr.io/distroless/cc AS metabased-poster
 COPY --from=builder /app/target/release/metabased-poster /usr/local/bin/metabased-poster
 ENTRYPOINT ["/usr/local/bin/metabased-poster"]
 LABEL service=metabased-poster
+
+# Stage 8: Runtime image for maestro
+FROM gcr.io/distroless/cc AS maestro
+COPY --from=builder /app/target/release/maestro /usr/local/bin/maestro
+ENTRYPOINT ["/usr/local/bin/maestro"]
+EXPOSE 8545 8546
+LABEL service=maestro

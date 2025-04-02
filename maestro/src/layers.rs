@@ -1,6 +1,5 @@
 //! The `layers` module contains code relating to the  `Maestro` service server layers
 
-use crate::errors::Error;
 use axum::http::Response;
 use bytes::Bytes as HyperBytes;
 use futures_util::TryFutureExt;
@@ -8,6 +7,7 @@ use jsonrpsee::core::{
     http_helpers::{Body as HttpBody, Request as HttpRequest},
     BoxError,
 };
+use shared::json_rpc::Error;
 use std::{
     collections::HashMap,
     future::Future,

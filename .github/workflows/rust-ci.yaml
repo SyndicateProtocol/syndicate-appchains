@@ -10,8 +10,9 @@ on:
     paths:
       - "metabased-sequencer/**"
       - "metabased-translator/**"
-      - "maestro"
       - "**/Cargo.toml"
+      - "tc-sequencer/**"
+      - "maestro/**"
       - "Cargo.lock"
       - ".github/workflows/rust-ci.yaml"
 
