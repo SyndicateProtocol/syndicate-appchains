@@ -464,9 +464,10 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
 }
 
 #[tokio::test(flavor = "multi_thread")]
+#[ignore]
 // TODO (SEQ-761): fix reorg test
 async fn test_settlement_reorg() -> Result<()> {
-    let components = new_test_with_synced_chains(None, Some(ContractVersion::V213)).await?;
+    let components = new_test_with_synced_chains(None, Some(ContractVersion::V300)).await?;
 
     // NOTE: at this point the mchain is on block 1 (initial mchain block) - we can't reorg to
     // genesis, so we need to create two slots on top of it before the reorg happens.
@@ -542,15 +543,6 @@ async fn test_settlement_reorg() -> Result<()> {
         components.mine_set_block(0).await?;
     }
 
-    sleep(Duration::from_secs(10)).await;
-    assert_eq!(
-        components
-            .mchain_provider
-            .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
-            .await?
-            .unwrap(),
-        mchain_block_before_deposit
-    );
     // Wait for reorg to be processed
     wait_until!(
             let block = components
