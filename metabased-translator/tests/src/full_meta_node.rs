@@ -390,12 +390,13 @@ impl MetaNode {
             }
         };
 
-        let wallet_pool_module = walletpoolsequencingmodule::WalletPoolSequencingModule::deploy_builder(
-            &seq_provider,
-            seq_provider.default_signer_address(), // admin
-        )
-        .send()
-        .await?;
+        let wallet_pool_module =
+            walletpoolsequencingmodule::WalletPoolSequencingModule::deploy_builder(
+                &seq_provider,
+                seq_provider.default_signer_address(), // admin
+            )
+            .send()
+            .await?;
         mine_block(&seq_provider, 0).await?;
         let wallet_receipt = wallet_pool_module.get_receipt().await?;
         let wallet_pool_address = match wallet_receipt.contract_address {
@@ -407,12 +408,12 @@ impl MetaNode {
         };
 
         // Add the default wallet to the pool
-        let wallet_pool = walletpoolsequencingmodule::WalletPoolSequencingModule::new(wallet_pool_address, seq_provider.clone());
+        let wallet_pool = walletpoolsequencingmodule::WalletPoolSequencingModule::new(
+            wallet_pool_address,
+            seq_provider.clone(),
+        );
         // Add the default sequencing wallet to the pool
-        _ = wallet_pool
-            .addToWalletPool(seq_provider.default_signer_address())
-            .send()
-            .await?;
+        _ = wallet_pool.addToWalletPool(seq_provider.default_signer_address()).send().await?;
         mine_block(&seq_provider, 0).await?;
 
         // Add test addresses used in integration tests to the wallet pool
