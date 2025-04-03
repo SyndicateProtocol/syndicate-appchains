@@ -31,7 +31,7 @@ contract WalletPoolTest is Test {
         vm.stopPrank();
     }
 
-    function testConstructorSetsRoles() public {
+    function testConstructorSetsRoles() public view {
         assertTrue(walletPool.hasRole(DEFAULT_ADMIN_ROLE, admin));
         assertTrue(walletPool.hasRole(MANAGER_ROLE, admin));
     }

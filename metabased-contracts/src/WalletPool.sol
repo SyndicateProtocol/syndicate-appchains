@@ -131,7 +131,7 @@ contract WalletPool is AccessControl {
         }
 
         // Call appropriate function based on whether we're adding or removing
-        (bool success, bytes memory returnData) = allowlistModule.call(
+        (bool success,) = allowlistModule.call(
             abi.encodeWithSignature(isAllowed ? "addToAllowlist(address)" : "removeFromAllowlist(address)", wallet)
         );
 
