@@ -36,22 +36,22 @@ pub mod Address {
     /// The creation / init bytecode of the contract.
     ///
     /// ```text
-    ///0x6080806040523460175760399081601c823930815050f35b5f80fdfe5f80fdfea2646970667358221220f6ec9140fc9c52be68362ee3afe8e70ca6939833e93c43b1d534f79f434e862064736f6c63430008190033
+    ///0x608060405234601d57600e6021565b603e602c823930815050603e90f35b6027565b60405190565b5f80fdfe60806040525f80fdfea264697066735822122090036938fe3aa62ec2778b590d04483b6f4742aa3df41e4914fc03d25c6e8c6a64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"`\x80\x80`@R4`\x17W`9\x90\x81`\x1C\x8290\x81PP\xF3[_\x80\xFD\xFE_\x80\xFD\xFE\xA2dipfsX\"\x12 \xF6\xEC\x91@\xFC\x9CR\xBEh6.\xE3\xAF\xE8\xE7\x0C\xA6\x93\x983\xE9<C\xB1\xD54\xF7\x9FCN\x86 dsolcC\0\x08\x19\x003",
+        b"`\x80`@R4`\x1DW`\x0E`!V[`>`,\x8290\x81PP`>\x90\xF3[`'V[`@Q\x90V[_\x80\xFD\xFE`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x90\x03i8\xFE:\xA6.\xC2w\x8BY\r\x04H;oGB\xAA=\xF4\x1EI\x14\xFC\x03\xD2\\n\x8CjdsolcC\0\x08\x19\x003",
     );
     /// The runtime bytecode of the contract, as deployed on the network.
     ///
     /// ```text
-    ///0x5f80fdfea2646970667358221220f6ec9140fc9c52be68362ee3afe8e70ca6939833e93c43b1d534f79f434e862064736f6c63430008190033
+    ///0x60806040525f80fdfea264697066735822122090036938fe3aa62ec2778b590d04483b6f4742aa3df41e4914fc03d25c6e8c6a64736f6c63430008190033
     /// ```
     #[rustfmt::skip]
     #[allow(clippy::all)]
     pub static DEPLOYED_BYTECODE: alloy_sol_types::private::Bytes = alloy_sol_types::private::Bytes::from_static(
-        b"_\x80\xFD\xFE\xA2dipfsX\"\x12 \xF6\xEC\x91@\xFC\x9CR\xBEh6.\xE3\xAF\xE8\xE7\x0C\xA6\x93\x983\xE9<C\xB1\xD54\xF7\x9FCN\x86 dsolcC\0\x08\x19\x003",
+        b"`\x80`@R_\x80\xFD\xFE\xA2dipfsX\"\x12 \x90\x03i8\xFE:\xA6.\xC2w\x8BY\r\x04H;oGB\xAA=\xF4\x1EI\x14\xFC\x03\xD2\\n\x8CjdsolcC\0\x08\x19\x003",
     );
     /**Custom error with signature `AddressEmptyCode(address)` and selector `0x9996b315`.
 ```solidity
@@ -60,6 +60,7 @@ error AddressEmptyCode(address target);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct AddressEmptyCode {
+        #[allow(missing_docs)]
         pub target: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -125,6 +126,7 @@ error AddressEmptyCode(address target);
     };
     ///Container for all the [`Address`](self) custom errors.
     pub enum AddressErrors {
+        #[allow(missing_docs)]
         AddressEmptyCode(AddressEmptyCode),
     }
     #[automatically_derived]
