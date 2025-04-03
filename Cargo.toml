@@ -72,8 +72,10 @@ serde                = "1.0.217"
 serde-hex            = "0.1.0"
 serde_json           = "1.0.135"
 shared               = { path = "shared" }
+slotter              = { path = "metabased-translator/crates/slotter" }
 strum                = "0.27.1"
 strum_macros         = "0.27.1"
+test-utils           = { path = "shared/test-utils" }
 thiserror            = { version = "2.0.11" }
 tokio                = { version = "1.43" }
 tower                = { version = "0.4.0" }                                      # can't be updated until a new version of jsonrpsee is released
@@ -82,8 +84,6 @@ tower-service        = { version = "0.3.3" }
 tracing              = "0.1.41"
 tracing-subscriber   = "0.3.19"
 url                  = { version = "2.5.4" }
-slotter              = { path = "metabased-translator/crates/slotter" }
-test-utils           = { path = "shared/test-utils" }
 
 # dev dependencies
 const_format = { version = "0.2" }
