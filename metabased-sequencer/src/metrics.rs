@@ -1,5 +1,6 @@
 //! The `metrics` module  handles metrics recording for the metabased translator
 
+use alloy::primitives::Address;
 use axum::{
     body::Body,
     extract::State,
@@ -13,6 +14,7 @@ use prometheus_client::{
     metrics::{
         counter::Counter,
         family::Family,
+        gauge::Gauge,
         histogram::{exponential_buckets, Histogram},
     },
     registry::Registry,
@@ -28,6 +30,15 @@ pub struct Labels {
     error_category: &'static str,
 }
 
+/// Labels for the wallet balance metric
+#[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
+pub struct WalletBalanceLabels {
+    /// The wallet address being monitored
+    wallet_address: String,
+    /// The status of the balance check
+    status: &'static str,
+}
+
 /// Structure holding metrics related to blockchain data ingestion.
 #[derive(Debug)]
 pub struct RelayerMetrics {
@@ -35,6 +46,8 @@ pub struct RelayerMetrics {
     pub relayer_rpc_calls: Family<Labels, Counter>,
     /// Records rpc calls latency
     pub relayer_rpc_calls_latency: Family<Labels, Histogram>,
+    /// Records wallet balance
+    pub wallet_balance: Family<WalletBalanceLabels, Gauge>,
 }
 
 impl RelayerMetrics {
@@ -54,8 +67,14 @@ impl RelayerMetrics {
             "Latency of RPC method calls responses",
             relayer_rpc_calls_latency.clone(),
         );
+        let wallet_balance = Family::<WalletBalanceLabels, Gauge>::default();
+        registry.register(
+            "wallet_balance",
+            "Current wallet balance in wei",
+            wallet_balance.clone(),
+        );
 
-        Self { relayer_rpc_calls, relayer_rpc_calls_latency }
+        Self { relayer_rpc_calls, relayer_rpc_calls_latency, wallet_balance }
     }
 
     /// Records an RPC call event, incrementing counters and measuring duration.
@@ -70,6 +89,26 @@ impl RelayerMetrics {
         self.relayer_rpc_calls_latency
             .get_or_create(&Labels { rpc_method: method, error_category })
             .observe(duration.as_secs_f64());
+    }
+
+    /// Records the current wallet balance
+    pub fn record_wallet_balance(&self, balance: u128, wallet_address: Address) {
+        self.wallet_balance
+            .get_or_create(&WalletBalanceLabels {
+                wallet_address: format!("{:#x}", wallet_address),
+                status: "success",
+            })
+            .set(balance as i64);
+    }
+
+    /// Records a failed wallet balance check
+    pub fn record_wallet_balance_error(&self, wallet_address: Address) {
+        self.wallet_balance
+            .get_or_create(&WalletBalanceLabels {
+                wallet_address: format!("{:#x}", wallet_address),
+                status: "error",
+            })
+            .set(0);
     }
 }
 

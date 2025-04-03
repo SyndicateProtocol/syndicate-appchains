@@ -130,16 +130,18 @@ impl RelayerService {
         {
             Ok(hash) => {
                 match self.provider.get_balance(self.wallet_address).await {
-                    Ok(balance) => info!(
-                        ?self.wallet_address,
-                        "Wallet balance in wei : {:#x}",
-                        balance
-                    ),
-                    Err(e) => warn!(
-                        ?self.wallet_address,
-                        "Error getting wallet balance: {}",
-                        e
-                    ),
+                    Ok(balance) => {
+                        self.metrics
+                            .record_wallet_balance(balance.to::<u128>(), self.wallet_address);
+                    }
+                    Err(e) => {
+                        warn!(
+                            ?self.wallet_address,
+                            "Error getting wallet balance: {}",
+                            e
+                        );
+                        self.metrics.record_wallet_balance_error(self.wallet_address);
+                    }
                 }
 
                 debug!("Transaction submitted: {}", hex::encode(hash));
