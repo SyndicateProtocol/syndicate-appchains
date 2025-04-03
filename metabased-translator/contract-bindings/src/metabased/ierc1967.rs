@@ -502,11 +502,8 @@ event Upgraded(address indexed implementation);
     };
     ///Container for all the [`IERC1967`](self) events.
     pub enum IERC1967Events {
-        #[allow(missing_docs)]
         AdminChanged(AdminChanged),
-        #[allow(missing_docs)]
         BeaconUpgraded(BeaconUpgraded),
-        #[allow(missing_docs)]
         Upgraded(Upgraded),
     }
     #[automatically_derived]
