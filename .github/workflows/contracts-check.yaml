@@ -6,11 +6,11 @@ on:
   push:
     branches:
       - main
-  # Only run on PRs that touch shared/contracts
+  # Only run on PRs that touch shared contracts
   pull_request:
     paths:
       - "metabased-contracts/**"
-      - "shared/contracts/**"
+      - "shared/arb-contracts/**"
       - "shared/contract-bindings/**"
 
 concurrency:
@@ -27,7 +27,7 @@ jobs:
       # This helps catch issues early and prevents wasting CI resources
       fail-fast: true
       matrix:
-        contract-dir: ["shared/contracts", "metabased-contracts"]
+        contract-dir: ["shared/arb-contracts", "metabased-contracts"]
 
     name: ${{ matrix.contract-dir }} Check
     runs-on: ubuntu-latest
@@ -68,7 +68,7 @@ jobs:
       # -C to create bindings only for a specific directory
 
       - name: Check Rust contract bindings for shared contratcs
-        if: matrix.contract-dir == 'shared/contracts'
+        if: matrix.contract-dir == 'shared/arb-contracts'
         run: |
           forge bind --alloy --force
           mv out/bindings/src/lib.rs out/bindings/src/mod.rs

@@ -48,8 +48,8 @@ repos:
       - id: forge-test-shared-contracts
         name: forge test metabased translator contracts
         entry: forge test
-        args: ["--root", "shared/contracts"]
+        args: ["--root", "shared/arb-contracts"]
         language: system
         types: [solidity]
-        files: ^(shared)/contracts/
+        files: ^(shared)/arb-contracts/
         pass_filenames: false

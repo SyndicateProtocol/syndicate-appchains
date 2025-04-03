@@ -64,7 +64,7 @@ e2e_tests_root := repository_root + "/metabased-translator/tests"
 
 # Define root directory of the shared folder
 shared_root := repository_root + "/shared"
-shared_contracts_root := shared_root + "/contracts" 
+shared_contracts_root := shared_root + "/arb-contracts" 
 
 # Define file for localnet environment variables
 envrc_file := repository_root + "/.envrc"
