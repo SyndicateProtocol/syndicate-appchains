@@ -1,15 +1,24 @@
 //! Integration tests for the metabased stack
 use alloy::{
     eips::{eip2718::Encodable2718, BlockId::Number, BlockNumberOrTag},
-    network::TransactionBuilder,
+    network::{EthereumWallet, TransactionBuilder},
     primitives::{address, utils::parse_ether, Address, Bytes, B256, U256},
     providers::{ext::AnvilApi as _, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, BlockTransactionsKind, TransactionRequest},
-    sol_types::SolCall,
+    sol_types::{SolCall, SolValue},
 };
 use block_builder::{
     self,
-    config::{get_default_private_key_signer, get_rollup_contract_address},
+    config::{get_default_private_key_signer, get_rollup_contract_address, BlockBuilderConfig},
+    connectors::mchain::MetaChainProvider,
+    metrics::BlockBuilderMetrics,
+    rollups::{
+        arbitrum::{
+            self,
+            arbitrum_adapter::{ArbitrumAdapter, L1MessageType},
+        },
+        shared::rollup_adapter::{DelayedMessage, MBlock},
+    },
 };
 use common::types::{Block, BlockRef};
 use contract_bindings::arbitrum::{
@@ -19,9 +28,11 @@ use contract_bindings::arbitrum::{
     isequencerinbox::ISequencerInbox, iupgradeexecutor::IUpgradeExecutor,
     nodeinterface::NodeInterface, rollup::Rollup,
 };
-use e2e_tests::full_meta_node::{ContractVersion, MetaNode};
+use e2e_tests::full_meta_node::{launch_nitro_node, start_mchain, ContractVersion, MetaNode};
 use eyre::{Ok, Result};
 use metabased_translator::config::MetabasedConfig;
+use metrics::metrics::MetricsState;
+use prometheus_client::registry::Registry;
 use serde::{Deserialize, Serialize};
 use shared::{logger::init_test_tracing, wait_until};
 use std::time::Duration;
@@ -36,11 +47,9 @@ async fn arb_owner_test() -> Result<()> {
     const ARB_OWNER_CONTRACT_ADDRESS: Address =
         address!("0x000000000000000000000000000000000000006b");
     let _ = init_test_tracing(Level::INFO);
-    let mut cfg = MetabasedConfig::default();
     let owner = address!("0x0000000000000000000000000000000000000001");
-    cfg.block_builder.rollup_owner_address = owner;
     // Start the meta node
-    let meta_node = MetaNode::new(None, cfg).await?;
+    let meta_node = MetaNode::new(None, owner, Default::default()).await?;
     let arb_owner_public =
         ArbOwnerPublic::new(ARB_OWNER_CONTRACT_ADDRESS, &meta_node.metabased_rollup);
     assert_eq!(arb_owner_public.getAllChainOwners().call().await?._0, [owner]);
@@ -53,7 +62,7 @@ async fn no_l1_fees_test() -> Result<()> {
         address!("0x000000000000000000000000000000000000006c");
     let _ = init_test_tracing(Level::INFO);
     // Start the meta node
-    let meta_node = MetaNode::new(None, MetabasedConfig::default()).await?;
+    let meta_node = MetaNode::new(None, Address::ZERO, MetabasedConfig::default()).await?;
     let arb_gas_info = ArbGasInfo::new(ARB_GAS_INFO_CONTRACT_ADDRESS, &meta_node.metabased_rollup);
     assert_eq!(arb_gas_info.getL1BaseFeeEstimate().call().await?._0, U256::ZERO);
 
@@ -67,7 +76,7 @@ async fn new_test_with_synced_chains() -> Result<MetaNode> {
     config.slotter.settlement_delay = 0;
     config.settlement.settlement_start_block = 1;
     config.sequencing.sequencing_start_block = 3;
-    let meta_node = MetaNode::new(Some(ContractVersion::V300), config).await?;
+    let meta_node = MetaNode::new(Some(ContractVersion::V300), Address::ZERO, config).await?;
 
     // Sync the tips of the sequencing and settlement chains
     let block = meta_node
@@ -224,8 +233,6 @@ async fn e2e_settlement_test() -> Result<()> {
     // Mine a set block to process the slot
     meta_node.mine_set_block(1).await?;
 
-    tokio::time::sleep(Duration::from_secs(2)).await;
-    assert_eq!(meta_node.metabased_rollup.get_block_number().await?, 17);
     // Process the slot - wait for block 17 to be reached
     wait_until!(meta_node.metabased_rollup.get_block_number().await? == 17, Duration::from_secs(2));
 
@@ -240,13 +247,192 @@ async fn e2e_settlement_test() -> Result<()> {
     Ok(())
 }
 
+fn deposit_eth(src: Address, dest: Address, value: U256) -> DelayedMessage {
+    DelayedMessage {
+        kind: L1MessageType::EthDeposit as u8,
+        sender: src,
+        data: (dest, value).abi_encode_packed().into(),
+    }
+}
+
+/// This test tests that rollup blocks are properly derived from batches created
+/// via the block builder code and posted to the dummy rollup contract.
+#[tokio::test(flavor = "multi_thread")]
+async fn test_nitro_batch() -> Result<()> {
+    let target_chain_id = 13331370;
+    let (mchain_port, _mchain) = start_mchain(target_chain_id, Address::ZERO).await?;
+    let (_nitro, rollup) = launch_nitro_node(target_chain_id, Address::ZERO, mchain_port).await?;
+
+    let block_builder_cfg = BlockBuilderConfig {
+        mchain_rpc_url: format!("http://localhost:{mchain_port}"),
+        ..Default::default()
+    };
+
+    let mut metrics_state = MetricsState { registry: Registry::default() };
+    let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
+    let mchain = MetaChainProvider::start(
+        &block_builder_cfg,
+        metrics,
+        ArbitrumAdapter::new(&block_builder_cfg),
+    )
+    .await?;
+
+    // deposit 1 eth
+    mchain
+        .add_batch(MBlock {
+            messages: vec![deposit_eth(
+                Address::ZERO,
+                get_default_private_key_signer().address(),
+                parse_ether("1")?,
+            )],
+            batch: arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
+            ..Default::default()
+        })
+        .await;
+
+    // wait for the batch to be processed and for block 1 to be derived
+    wait_until!(rollup.get_block_number().await? == 1, Duration::from_secs(1));
+
+    // check that the deposit succeeded
+    assert_eq!(
+        rollup.get_balance(get_default_private_key_signer().address()).await?,
+        parse_ether("1")?
+    );
+
+    // include a tx in a batch
+    let mut tx = vec![];
+    let inner_tx = TransactionRequest::default()
+        .with_to(address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"))
+        .with_value(U256::from(1))
+        .with_nonce(0)
+        .with_gas_limit(100_000)
+        .with_chain_id(target_chain_id)
+        .with_max_fee_per_gas(100000000)
+        .with_max_priority_fee_per_gas(0)
+        .build(&EthereumWallet::from(get_default_private_key_signer()))
+        .await?;
+
+    inner_tx.encode_2718(&mut tx);
+    let batch = arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::L2(
+        arbitrum::batch::L1IncomingMessage { header: Default::default(), l2_msg: vec![tx.into()] },
+    )]);
+    mchain.add_batch(MBlock { batch: batch.encode()?, ..Default::default() }).await;
+
+    // Wait for batch processing to complete and block 2 to be derived
+    wait_until!(rollup.get_block_number().await? == 2, Duration::from_millis(500));
+
+    // check that the tx was sequenced
+    let block: Block = rollup
+        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
+        .await?;
+    assert_eq!(block.transactions.len(), 2);
+    // tx hash should match
+    assert_eq!(block.transactions[1].hash, *inner_tx.tx_hash());
+
+    Ok(())
+}
+
+/// Regression test
+#[tokio::test(flavor = "multi_thread")]
+async fn test_nitro_batch_two_tx() -> Result<()> {
+    let target_chain_id = 13331370;
+    let (mchain_port, _mchain) = start_mchain(target_chain_id, Address::ZERO).await?;
+    let (_nitro, rollup) = launch_nitro_node(target_chain_id, Address::ZERO, mchain_port).await?;
+
+    let block_builder_cfg = BlockBuilderConfig {
+        mchain_rpc_url: format!("http://localhost:{mchain_port}"),
+        ..Default::default()
+    };
+
+    let mut metrics_state = MetricsState { registry: Registry::default() };
+    let metrics = BlockBuilderMetrics::new(&mut metrics_state.registry);
+    let mchain = MetaChainProvider::start(
+        &block_builder_cfg,
+        metrics,
+        ArbitrumAdapter::new(&block_builder_cfg),
+    )
+    .await?;
+
+    // deposit 1 eth
+    mchain
+        .add_batch(MBlock {
+            messages: vec![deposit_eth(
+                Address::ZERO,
+                get_default_private_key_signer().address(),
+                parse_ether("1")?,
+            )],
+            batch: arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
+            ..Default::default()
+        })
+        .await;
+
+    // Wait for the batch to be processed and for block 1 to be derived
+    wait_until!(rollup.get_block_number().await? == 1, Duration::from_millis(500));
+
+    // check that the deposit succeeded
+    assert_eq!(
+        rollup.get_balance(get_default_private_key_signer().address()).await?,
+        parse_ether("1")?
+    );
+
+    // include two tx in a batch
+    let mut tx = vec![];
+    let mut tx2 = vec![];
+    let inner_tx = TransactionRequest::default()
+        .with_to(address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"))
+        .with_value(U256::from(0))
+        .with_nonce(0)
+        .with_gas_limit(100_000)
+        .with_chain_id(target_chain_id)
+        .with_max_fee_per_gas(100000000)
+        .with_max_priority_fee_per_gas(0)
+        .build(&EthereumWallet::from(get_default_private_key_signer()))
+        .await?;
+
+    let second_tx = TransactionRequest::default()
+        .with_to(address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"))
+        .with_value(U256::from(0))
+        .with_nonce(1)
+        .with_gas_limit(100_000)
+        .with_chain_id(target_chain_id)
+        .with_max_fee_per_gas(100000000)
+        .with_max_priority_fee_per_gas(0)
+        .build(&EthereumWallet::from(get_default_private_key_signer()))
+        .await?;
+
+    second_tx.encode_2718(&mut tx2);
+
+    inner_tx.encode_2718(&mut tx);
+    let batch = arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::L2(
+        arbitrum::batch::L1IncomingMessage {
+            header: Default::default(),
+            l2_msg: vec![tx.clone().into(), tx.into(), tx2.into()],
+        },
+    )]);
+    mchain.add_batch(MBlock { batch: batch.encode()?, ..Default::default() }).await;
+
+    // Wait for the batch to be processed and for block 2 to be derived
+    wait_until!(rollup.get_block_number().await? == 2, Duration::from_millis(500));
+
+    // check that the tx was sequenced
+    let block: Block = rollup
+        .raw_request("eth_getBlockByNumber".into(), (BlockNumberOrTag::Number(2), true))
+        .await?;
+    assert_eq!(block.transactions.len(), 3);
+    // tx hash should match
+    assert_eq!(block.transactions[1].hash, *inner_tx.tx_hash());
+    assert_eq!(block.transactions[2].hash, *second_tx.tx_hash());
+
+    Ok(())
+}
+
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_test() -> Result<()> {
     let _ = init_test_tracing(Level::INFO);
     // Start the meta node (no pre-loaded contracts)
     let mut config = MetabasedConfig::default();
     config.sequencing.sequencing_start_block = 3; // skip the contract deployment blocks
-    let meta_node = MetaNode::new(None, config.clone()).await?;
+    let meta_node = MetaNode::new(None, Address::ZERO, config.clone()).await?;
     // Setup the settlement rollup contract
     let set_rollup = Rollup::new(get_rollup_contract_address(), &meta_node.settlement_provider);
 
@@ -419,7 +605,7 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
     config.slotter.settlement_delay = 0;
     config.settlement.settlement_start_block = 1;
     config.sequencing.sequencing_start_block = 3;
-    let meta_node = MetaNode::new(Some(version), config).await?;
+    let meta_node = MetaNode::new(Some(version), Address::ZERO, config).await?;
 
     let block: Block = meta_node
         .settlement_provider

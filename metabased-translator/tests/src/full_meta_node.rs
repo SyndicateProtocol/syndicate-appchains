@@ -226,6 +226,7 @@ pub enum ContractVersion {
 impl MetaNode {
     pub async fn new(
         pre_loaded: Option<ContractVersion>,
+        rollup_owner_address: Address,
         mut config: MetabasedConfig,
     ) -> Result<Self> {
         let port_manager = PortManager::instance();
@@ -246,21 +247,15 @@ impl MetaNode {
 
         config.block_builder.sequencing_contract_address = get_rollup_contract_address();
 
-        let (mchain_port, mchain) = start_mchain(
-            config.block_builder.target_chain_id,
-            config.block_builder.rollup_owner_address,
-        )
-        .await?;
+        const TARGET_CHAIN_ID: u64 = 13331370;
+        let (mchain_port, mchain) = start_mchain(TARGET_CHAIN_ID, rollup_owner_address).await?;
         config.block_builder.mchain_rpc_url = format!("http://localhost:{mchain_port}");
 
         // Launch mock sequencing chain and deploy contracts
         let (seq_port, seq_anvil, seq_provider) = start_anvil(15).await?;
-        _ = MetabasedSequencerChain::deploy_builder(
-            &seq_provider,
-            U256::from(config.block_builder.target_chain_id),
-        )
-        .send()
-        .await?;
+        _ = MetabasedSequencerChain::deploy_builder(&seq_provider, U256::from(TARGET_CHAIN_ID))
+            .send()
+            .await?;
         let always_allowed_contract =
             AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
         mine_block(&seq_provider, 0).await?;
@@ -309,11 +304,8 @@ impl MetaNode {
             // contracts
             _ = Rollup::deploy_builder(
                 &set_provider,
-                U256::from(config.block_builder.target_chain_id),
-                rollup_config(
-                    config.block_builder.target_chain_id,
-                    config.block_builder.rollup_owner_address,
-                ),
+                U256::from(TARGET_CHAIN_ID),
+                rollup_config(TARGET_CHAIN_ID, rollup_owner_address),
             )
             .nonce(0)
             .send()
@@ -356,12 +348,8 @@ impl MetaNode {
         });
 
         // Launch the nitro rollup
-        let (nitro_docker, metabased_rollup) = launch_nitro_node(
-            config.block_builder.target_chain_id,
-            config.block_builder.rollup_owner_address,
-            mchain_port,
-        )
-        .await?;
+        let (nitro_docker, metabased_rollup) =
+            launch_nitro_node(TARGET_CHAIN_ID, rollup_owner_address, mchain_port).await?;
 
         Ok(Self {
             sequencing_contract,
@@ -371,7 +359,7 @@ impl MetaNode {
             settlement_client,
             metabased_rollup,
 
-            chain_id: config.block_builder.target_chain_id,
+            chain_id: TARGET_CHAIN_ID,
             bridge_address: config.block_builder.arbitrum_bridge_address,
             inbox_address: config.block_builder.arbitrum_inbox_address,
 

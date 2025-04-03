@@ -3,7 +3,7 @@ use crate::{
     block_builder::BlockBuilderError,
     config::{get_default_private_key_signer, BlockBuilderConfig},
     metrics::BlockBuilderMetrics,
-    rollups::shared::RollupAdapter,
+    rollups::shared::{rollup_adapter::MBlock, RollupAdapter},
 };
 use alloy::{
     eips::BlockNumberOrTag,
@@ -50,7 +50,7 @@ pub type HttpProvider = FillProvider<
 #[derive(Debug, Clone)]
 #[allow(missing_docs)]
 pub struct MetaChainProvider<R: RollupAdapter> {
-    pub provider: FilledProvider,
+    provider: FilledProvider,
 
     pub rollup_adapter: R,
 
@@ -70,6 +70,15 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
             .await?
             .ok_or_eyre("latest block not found")?;
         Ok(block.header.number)
+    }
+
+    #[allow(missing_docs)]
+    pub async fn add_batch(&self, batch: MBlock) {
+        let result: Result<(), _> =
+            self.provider.raw_request("mchain_addBatch".into(), (batch,)).await;
+        if let Err(e) = result {
+            panic!("Error submitting transaction: {}", e);
+        }
     }
 
     /// Create a provider for the `MetaChain`

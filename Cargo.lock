@@ -2960,6 +2960,7 @@ dependencies = [
  "jsonrpsee",
  "rocksdb",
  "serde",
+ "tokio",
 ]
 
 [[package]]

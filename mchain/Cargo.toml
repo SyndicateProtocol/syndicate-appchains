@@ -18,6 +18,7 @@ serde = { workspace = true }
 bincode = { workspace = true }
 block-builder = {workspace = true}
 contract-bindings = {workspace = true}
+tokio = { workspace = true, features = [ "signal" ] }
 
 [lints]
 workspace = true

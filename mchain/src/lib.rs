@@ -5,4 +5,6 @@
 //! a rocksdb database instead.
 
 #[allow(missing_docs)]
+pub mod db;
+#[allow(missing_docs)]
 pub mod mchain;

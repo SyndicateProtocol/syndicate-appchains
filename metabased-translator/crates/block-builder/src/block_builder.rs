@@ -1,10 +1,7 @@
 //! Block builder service for processing and building L3 blocks.
 
 use crate::{connectors::mchain::MetaChainProvider, rollups::shared::RollupAdapter};
-use alloy::{
-    providers::Provider,
-    transports::{RpcError, TransportErrorKind},
-};
+use alloy::transports::{RpcError, TransportErrorKind};
 use async_trait::async_trait;
 use common::types::{Slot, SlotProcessor};
 use eyre::{Error, Result};
@@ -42,14 +39,7 @@ impl<R: RollupAdapter> SlotProcessor for MetaChainProvider<R> {
         self.metrics.record_transactions_per_slot(batch.messages.len() + 1);
 
         // Submit transactions to mchain
-        let result: Result<()> = self
-            .provider
-            .raw_request("mchain_addBatch".into(), (batch,))
-            .await
-            .map_err(|e| e.into());
-        if let Err(e) = result {
-            panic!("Error submitting transaction: {}", e);
-        }
+        self.add_batch(batch).await;
 
         Ok(())
     }
