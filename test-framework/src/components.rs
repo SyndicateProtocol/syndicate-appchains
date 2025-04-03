@@ -14,7 +14,11 @@ use contract_bindings::{
 };
 use eyre::{eyre, Result};
 use reqwest::Client;
-use std::{env, time::Duration};
+use std::{
+    env,
+    io::{stderr, Write},
+    time::{Duration, SystemTime},
+};
 use test_utils::{
     anvil::{mine_block, start_anvil, start_anvil_with_args, FilledProvider},
     docker::{launch_nitro_node, start_reth, Docker},
@@ -33,6 +37,10 @@ const APPCHAIN_CHAIN_ID: u64 = 13331370;
 
 #[derive(Debug)]
 pub struct Components {
+    /// Timer for latency measurement
+    /// Keep this on top - the top element gets destroyed first
+    _timer: TestTimer,
+
     /// Sequencing
     pub sequencing_contract: MetabasedSequencerChainInstance<(), FilledProvider>,
     pub sequencing_provider: FilledProvider,
@@ -50,7 +58,7 @@ pub struct Components {
     /// Mchain
     pub mchain_provider: RootProvider,
 
-    // References to keep the processes/tasks alive
+    /// References to keep the processes/tasks alive
     _mchain: (Docker, Option<(Docker, Docker, Docker, Docker)>),
     _seq_anvil: AnvilInstance,
     _set_anvil: AnvilInstance,
@@ -58,6 +66,22 @@ pub struct Components {
     _translator: Docker,
     _poster: Option<Docker>,
     _sequencer: Docker,
+}
+
+#[derive(Debug)]
+pub struct TestTimer(SystemTime);
+
+impl Drop for TestTimer {
+    fn drop(&mut self) {
+        let thread = std::thread::current();
+        let elapsed = format!(
+            "---- SYN ---- Test {:?} took: {:.2?}\n",
+            thread.name().unwrap_or_default(),
+            self.0.elapsed().unwrap_or_default()
+        );
+        // Write directly to stderr (bypasses test harness output capture)
+        let _ = stderr().write_all(elapsed.as_bytes());
+    }
 }
 
 /// nitro contract version on the settlement chain used for testing
@@ -314,6 +338,8 @@ impl Components {
 
         // Launch sequencer
         Ok(Self {
+            _timer: TestTimer(SystemTime::now()),
+
             sequencing_contract,
             sequencing_provider: seq_provider,
             settlement_provider: set_provider,
