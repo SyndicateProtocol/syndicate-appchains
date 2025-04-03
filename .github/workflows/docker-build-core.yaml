@@ -23,7 +23,7 @@ on:
 
 env:
   GITHUB_REGISTRY: ghcr.io
-  GOOGLE_REGISTRY: europe-west6-docker.pkg.dev
+  GOOGLE_REGISTRY: us-central1-docker.pkg.dev
   PROJECT_ID: metabased-testnet
   REPO_NAME: metabased-rollup
   WORKLOAD_IDENTITY_PROVIDER: projects/112197761096/locations/global/workloadIdentityPools/cloud-run-github-pool/providers/id-001
@@ -72,7 +72,7 @@ jobs:
         with:
           images: |
             ${{ env.GITHUB_REGISTRY }}/${{ github.repository }}/${{ inputs.target_name }}
-            ${{ env.GOOGLE_REGISTRY }}/${{ env.PROJECT_ID }}/cloud-run-source-deploy/${{ env.REPO_NAME }}/${{ inputs.target_name }}
+            ${{ env.GOOGLE_REGISTRY }}/${{ env.PROJECT_ID }}/images/${{ env.REPO_NAME }}/${{ inputs.target_name }}
           tags: |
             type=sha,format=long
             type=semver,pattern={{version}}
