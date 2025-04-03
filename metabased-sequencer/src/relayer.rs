@@ -140,7 +140,6 @@ impl RelayerService {
                             "Error getting wallet balance: {}",
                             e
                         );
-                        self.metrics.record_wallet_balance_error(self.wallet_address);
                     }
                 }
 

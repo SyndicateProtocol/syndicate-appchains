@@ -35,8 +35,6 @@ pub struct Labels {
 pub struct WalletBalanceLabels {
     /// The wallet address being monitored
     wallet_address: String,
-    /// The status of the balance check
-    status: &'static str,
 }
 
 /// Structure holding metrics related to blockchain data ingestion.
@@ -96,19 +94,8 @@ impl RelayerMetrics {
         self.wallet_balance
             .get_or_create(&WalletBalanceLabels {
                 wallet_address: format!("{:#x}", wallet_address),
-                status: "success",
             })
             .set(balance as i64);
-    }
-
-    /// Records a failed wallet balance check
-    pub fn record_wallet_balance_error(&self, wallet_address: Address) {
-        self.wallet_balance
-            .get_or_create(&WalletBalanceLabels {
-                wallet_address: format!("{:#x}", wallet_address),
-                status: "error",
-            })
-            .set(0);
     }
 }
 
