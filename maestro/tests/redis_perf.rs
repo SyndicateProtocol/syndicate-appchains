@@ -3,10 +3,11 @@
 use eyre::{eyre, Result};
 use maestro::{
     errors::Error,
-    redis_manager::{StreamManager, TransactionRequest},
+    redis_manager::{StreamConsumer, StreamManager, StreamProducer, TransactionRequest},
 };
 use rand::{distributions::Alphanumeric, Rng};
 use std::{
+    fmt,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -86,6 +87,21 @@ pub struct BenchmarkResults {
     pub runtime_seconds: f64,
 }
 
+impl fmt::Display for BenchmarkResults {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        writeln!(f)?;
+        writeln!(f, "=== BENCHMARK RESULTS ===")?;
+        writeln!(f, "Total Runtime: {:.2} seconds", self.runtime_seconds)?;
+        writeln!(f, "Transactions Produced: {}", self.transactions_produced)?;
+        writeln!(f, "Transactions Consumed: {}", self.transactions_consumed)?;
+        writeln!(f, "Enqueue Throughput: {:.2} TPS", self.enqueue_tps)?;
+        writeln!(f, "Dequeue Throughput: {:.2} TPS", self.dequeue_tps)?;
+        writeln!(f, "Avg Enqueue Latency: {:.2} μs", self.avg_enqueue_latency_us)?;
+        writeln!(f, "Avg Dequeue Latency: {:.2} μs", self.avg_dequeue_latency_us)?;
+        writeln!(f, "=======================")
+    }
+}
+
 /// Statistics collected during benchmark
 #[derive(Debug, Default)]
 struct BenchmarkStats {
@@ -103,7 +119,7 @@ pub async fn start_redis(port: u16) -> Result<Docker> {
     let container_name = format!("redis-benchmark-{}", port);
 
     // Stop any existing container with the same name to avoid conflicts
-    let _ = Command::new("docker").args(["stop", "redis-benchmark"]).output().await;
+    let _ = Command::new("docker").args(["stop", &container_name]).output().await;
 
     let redis = Command::new("docker")
         .args([
@@ -191,6 +207,11 @@ pub async fn run_benchmark(config: BenchmarkConfig) -> Result<BenchmarkResults> 
     // Calculate transactions per producer
     let txs_per_producer = config.transaction_count / config.producer_count;
 
+    // Create a stream manager to initialize the consumer group
+    let conn = client.get_multiplexed_async_connection().await?;
+    let mut stream_manager = StreamManager::new(conn);
+    stream_manager.init_consumer_group().await?;
+
     // Start the producer tasks
     let producer_handles = (0..config.producer_count)
         .map(|id| {
@@ -202,7 +223,8 @@ pub async fn run_benchmark(config: BenchmarkConfig) -> Result<BenchmarkResults> 
 
             tokio::spawn(async move {
                 let conn = client_clone.get_multiplexed_async_connection().await?;
-                let mut producer = StreamManager::new(conn);
+                let stream_manager = StreamManager::new(conn);
+                let mut producer = stream_manager.create_producer()?;
 
                 // Wait for all tasks to be ready
                 barrier_clone.wait().await;
@@ -230,10 +252,8 @@ pub async fn run_benchmark(config: BenchmarkConfig) -> Result<BenchmarkResults> 
 
             tokio::spawn(async move {
                 let conn = client_clone.get_multiplexed_async_connection().await?;
-                let mut consumer = StreamManager::new(conn);
-
-                // Initialize the consumer group
-                consumer.init_consumer_group().await?;
+                let stream_manager = StreamManager::new(conn);
+                let mut consumer = stream_manager.create_consumer(id)?;
 
                 // Wait for all tasks to be ready
                 barrier_clone.wait().await;
@@ -321,7 +341,7 @@ pub async fn run_benchmark(config: BenchmarkConfig) -> Result<BenchmarkResults> 
 /// Producer task that generates and enqueues transactions
 async fn producer_task(
     id: usize,
-    producer: &mut StreamManager,
+    producer: &mut StreamProducer,
     transaction_count: usize,
     transaction_size: usize,
     stats: Arc<Mutex<BenchmarkStats>>,
@@ -371,7 +391,7 @@ async fn producer_task(
 /// Consumer task that dequeues and processes transactions
 async fn consumer_task(
     id: usize,
-    consumer: &mut StreamManager,
+    consumer: &mut StreamConsumer,
     stats: Arc<Mutex<BenchmarkStats>>,
     stop: Arc<Mutex<bool>>,
 ) -> Result<(), Error> {
@@ -470,15 +490,7 @@ mod tests {
 
         let results = run_benchmark_with_redis().await.expect("Benchmark failed");
 
-        println!("=== REDIS STREAMS BENCHMARK RESULTS ===");
-        println!("Total Runtime: {:.2} seconds", results.runtime_seconds);
-        println!("Transactions Produced: {}", results.transactions_produced);
-        println!("Transactions Consumed: {}", results.transactions_consumed);
-        println!("Enqueue Throughput: {:.2} TPS", results.enqueue_tps);
-        println!("Dequeue Throughput: {:.2} TPS", results.dequeue_tps);
-        println!("Avg Enqueue Latency: {:.2} μs", results.avg_enqueue_latency_us);
-        println!("Avg Dequeue Latency: {:.2} μs", results.avg_dequeue_latency_us);
-        println!("=======================================");
+        println!("{}", results);
 
         // Add assertions to verify minimum performance
         assert!(results.enqueue_tps > 100.0, "Enqueue throughput too low");
@@ -505,15 +517,7 @@ mod tests {
         let _redis = start_redis(port).await.expect("Failed to start Redis");
         let results = run_benchmark(config).await.expect("Benchmark failed");
 
-        println!("=== BACKPRESSURE BENCHMARK RESULTS ===");
-        println!("Total Runtime: {:.2} seconds", results.runtime_seconds);
-        println!("Transactions Produced: {}", results.transactions_produced);
-        println!("Transactions Consumed: {}", results.transactions_consumed);
-        println!("Enqueue Throughput: {:.2} TPS", results.enqueue_tps);
-        println!("Dequeue Throughput: {:.2} TPS", results.dequeue_tps);
-        println!("Avg Enqueue Latency: {:.2} μs", results.avg_enqueue_latency_us);
-        println!("Avg Dequeue Latency: {:.2} μs", results.avg_dequeue_latency_us);
-        println!("=======================================");
+        println!("{}", results);
 
         // Verify we produced more than we consumed (backpressure)
         assert!(
@@ -544,15 +548,7 @@ mod tests {
         let _redis = start_redis(port).await.expect("Failed to start Redis");
         let results = run_benchmark(config).await.expect("Benchmark failed");
 
-        println!("=== COMPLETE PROCESSING BENCHMARK RESULTS ===");
-        println!("Total Runtime: {:.2} seconds", results.runtime_seconds);
-        println!("Transactions Produced: {}", results.transactions_produced);
-        println!("Transactions Consumed: {}", results.transactions_consumed);
-        println!("Enqueue Throughput: {:.2} TPS", results.enqueue_tps);
-        println!("Dequeue Throughput: {:.2} TPS", results.dequeue_tps);
-        println!("Avg Enqueue Latency: {:.2} μs", results.avg_enqueue_latency_us);
-        println!("Avg Dequeue Latency: {:.2} μs", results.avg_dequeue_latency_us);
-        println!("==============================================");
+        println!("{}", results);
 
         // Verify that all or most transactions were consumed
         let consumption_ratio =

@@ -5,7 +5,7 @@ use redis::{aio::MultiplexedConnection, AsyncCommands, Client, RedisResult, Valu
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, time::Duration};
 use tokio::time::sleep;
-use tracing::{debug, error, info, trace, warn};
+use tracing::{debug, error, info, warn};
 
 /// Connect to a Redis instance
 pub async fn connect(config: Config) -> eyre::Result<(Client, MultiplexedConnection), Error> {
@@ -26,8 +26,7 @@ pub async fn connect(config: Config) -> eyre::Result<(Client, MultiplexedConnect
 
 // Stream constants
 const TX_STREAM_KEY: &str = "maestro:transactions";
-const CONSUMER_GROUP: &str = "maestro-processors";
-const CONSUMER_NAME: &str = "processor";
+const DEFAULT_GROUP: &str = "maestro-processors";
 const BLOCK_MS: usize = 2000; // How long to block waiting for new messages
 const BATCH_SIZE: usize = 10; // How many messages to process at once
 const _MAX_RETRIES: usize = 3; // Number of retries for failed processing
@@ -42,33 +41,38 @@ pub struct TransactionRequest {
     pub timestamp: u64,
 }
 
-/// Redis Streams manager
+/// Redis Streams manager for stream configuration and setup
 #[derive(Debug)]
 pub struct StreamManager {
     conn: MultiplexedConnection,
 }
 
 impl StreamManager {
-    /// Create a new [`StreamManager`] with the provided Redis connection
+    /// Create a new StreamManager with the provided Redis connection
     pub const fn new(conn: MultiplexedConnection) -> Self {
         Self { conn }
     }
 
     /// Initialize stream consumer group
     pub async fn init_consumer_group(&mut self) -> Result<(), Error> {
+        self.init_consumer_group_with_name(DEFAULT_GROUP).await
+    }
+
+    /// Initialize stream consumer group with a specific name
+    pub async fn init_consumer_group_with_name(&mut self, group_name: &str) -> Result<(), Error> {
         // Create consumer group if it doesn't exist
         let result: RedisResult<String> =
-            self.conn.xgroup_create_mkstream(TX_STREAM_KEY, CONSUMER_GROUP, "$").await;
+            self.conn.xgroup_create_mkstream(TX_STREAM_KEY, group_name, "$").await;
 
         match result {
             Ok(_) => {
-                info!("Created consumer group: {}", CONSUMER_GROUP);
+                info!("Created consumer group: {}", group_name);
                 Ok(())
             }
             Err(e) => {
                 // BUSYGROUP error means the group already exists, which is fine
                 if e.to_string().contains("BUSYGROUP") {
-                    info!("Consumer group already exists: {}", CONSUMER_GROUP);
+                    info!("Consumer group already exists: {}", group_name);
                     Ok(())
                 } else {
                     error!("Failed to create consumer group: {}", e);
@@ -76,6 +80,40 @@ impl StreamManager {
                 }
             }
         }
+    }
+
+    /// Create a producer for this stream
+    pub fn create_producer(&self) -> Result<StreamProducer, Error> {
+        let conn = self.conn.clone();
+        Ok(StreamProducer::new(conn))
+    }
+
+    /// Create a consumer with a specific ID using the default group
+    pub fn create_consumer(&self, id: usize) -> Result<StreamConsumer, Error> {
+        self.create_consumer_with_group(DEFAULT_GROUP, id)
+    }
+
+    /// Create a consumer with a specific ID and group
+    pub fn create_consumer_with_group(
+        &self,
+        group_name: &str,
+        id: usize,
+    ) -> Result<StreamConsumer, Error> {
+        let conn = self.conn.clone();
+        Ok(StreamConsumer::new(conn, group_name.to_string(), format!("consumer-{}", id)))
+    }
+}
+
+/// Redis Stream producer for enqueueing transactions
+#[derive(Debug)]
+pub struct StreamProducer {
+    conn: MultiplexedConnection,
+}
+
+impl StreamProducer {
+    /// Create a new producer with the provided Redis connection
+    pub fn new(conn: MultiplexedConnection) -> Self {
+        Self { conn }
     }
 
     /// Enqueue a transaction request to the stream
@@ -99,23 +137,41 @@ impl StreamManager {
         debug!("Enqueued transaction with ID: {}", id);
         Ok(id)
     }
+}
+
+/// Redis Stream consumer for processing transactions
+#[derive(Debug)]
+pub struct StreamConsumer {
+    conn: MultiplexedConnection,
+    group_name: String,
+    consumer_name: String,
+}
+
+impl StreamConsumer {
+    /// Create a new consumer with a specific group and consumer name
+    pub fn new(conn: MultiplexedConnection, group_name: String, consumer_name: String) -> Self {
+        Self { conn, group_name, consumer_name }
+    }
 
     /// Start a background task to process messages from the stream
     pub async fn start_processing_loop(&mut self) -> Result<(), Error> {
-        // Initialize consumer group
-        self.init_consumer_group().await?;
-
-        info!("Starting Redis Streams processing loop");
+        info!("Starting Redis Streams processing loop for consumer {}", self.consumer_name);
 
         loop {
             match self.process_batch().await {
                 Ok(count) => {
                     if count > 0 {
-                        debug!("Processed {} transaction(s) from stream", count);
+                        debug!(
+                            "Consumer {} processed {} transaction(s) from stream",
+                            self.consumer_name, count
+                        );
                     }
                 }
                 Err(e) => {
-                    error!("Error processing stream batch: {}", e);
+                    error!(
+                        "Error processing stream batch by consumer {}: {}",
+                        self.consumer_name, e
+                    );
                 }
             }
 
@@ -144,7 +200,7 @@ impl StreamManager {
     ) -> Result<Vec<(String, HashMap<String, Value>)>, Error> {
         // Get all pending message IDs
         let pending_info: redis::streams::StreamPendingCountReply =
-            self.conn.xpending_count(TX_STREAM_KEY, CONSUMER_GROUP, "-", "+", BATCH_SIZE).await?;
+            self.conn.xpending_count(TX_STREAM_KEY, &self.group_name, "-", "+", BATCH_SIZE).await?;
 
         if pending_info.ids.is_empty() {
             return Ok(vec![]);
@@ -159,15 +215,15 @@ impl StreamManager {
             .conn
             .xclaim(
                 TX_STREAM_KEY,
-                CONSUMER_GROUP,
-                CONSUMER_NAME,
+                &self.group_name,
+                &self.consumer_name,
                 0, // Min idle time (claim immediately)
                 &pending_ids,
             )
             .await?;
 
         if !claimed.is_empty() {
-            debug!("Claimed {} pending message(s)", claimed.len());
+            debug!("Consumer {} claimed {} pending message(s)", self.consumer_name, claimed.len());
         }
 
         Ok(claimed)
@@ -177,7 +233,7 @@ impl StreamManager {
     async fn read_new_messages(&mut self) -> Result<Vec<(String, HashMap<String, Value>)>, Error> {
         // Use StreamReadOptions to read from the group
         let options = redis::streams::StreamReadOptions::default()
-            .group(CONSUMER_GROUP, CONSUMER_NAME)
+            .group(&self.group_name, &self.consumer_name)
             .count(BATCH_SIZE)
             .block(BLOCK_MS);
 
@@ -208,15 +264,20 @@ impl StreamManager {
         let mut processed = 0;
 
         for (id, data) in messages {
+            info!("Consumer {} processing message {}", self.consumer_name, id);
             if let Some(tx_data) = data.get("data") {
                 match self.process_transaction(tx_data).await {
                     Ok(_) => {
                         // Acknowledge successful processing
                         self.acknowledge_message(&id).await?;
+                        info!("Consumer {} acknowledged message {}", self.consumer_name, id);
                         processed += 1;
                     }
                     Err(e) => {
-                        warn!("Failed to process transaction {}: {}", id, e);
+                        warn!(
+                            "Consumer {} failed to process transaction {}: {}",
+                            self.consumer_name, id, e
+                        );
                         // Note: we don't acknowledge, so it will be redelivered as pending
                     }
                 }
@@ -245,7 +306,7 @@ impl StreamManager {
         let tx_req: TransactionRequest = serde_json::from_str(json_string.as_str())?;
 
         // TODO: Implement txn processing logic here
-        trace!("Processing transaction: {} from sender {}", tx_req.tx_hash, tx_req.sender);
+        info!("Processing transaction: {} from sender {}", tx_req.tx_hash, tx_req.sender);
 
         // Simulate some processing work
         sleep(Duration::from_millis(50)).await;
@@ -256,10 +317,13 @@ impl StreamManager {
     /// Acknowledge a message as processed
     async fn acknowledge_message(&mut self, id: &str) -> Result<(), Error> {
         // Use XACK to acknowledge message
-        let result: i32 = self.conn.xack(TX_STREAM_KEY, CONSUMER_GROUP, &[id]).await?;
+        let result: i32 = self.conn.xack(TX_STREAM_KEY, &self.group_name, &[id]).await?;
 
         if result != 1 {
-            warn!("Failed to acknowledge message {}: unexpected result {}", id, result);
+            warn!(
+                "Consumer {} failed to acknowledge message {}: unexpected result {}",
+                self.consumer_name, id, result
+            );
         }
 
         Ok(())

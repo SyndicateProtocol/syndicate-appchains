@@ -47,13 +47,15 @@ async fn main() -> Result<()> {
             .duration_since(UNIX_EPOCH)?
             .as_secs(),
     };
-    let tx_id = stream_manager.enqueue_transaction(example_tx).await?;
+    let mut producer = stream_manager.create_producer()?;
+    let tx_id = producer.enqueue_transaction(example_tx).await?;
+
     info!("Enqueued example transaction with ID: {}", tx_id);
 
     // Start processing in a separate task
-    let mut stream_manager_clone = StreamManager::new(redis_conn.clone());
+    let mut consumer = stream_manager.create_consumer(1)?;
     tokio::spawn(async move {
-        match stream_manager_clone.start_processing_loop().await {
+        match consumer.start_processing_loop().await {
             Ok(_) => unreachable!("Processing loop should run indefinitely"),
             Err(e) => error!("Stream processing loop failed: {}", e),
         }
