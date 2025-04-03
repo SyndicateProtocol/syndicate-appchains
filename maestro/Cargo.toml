@@ -29,6 +29,8 @@ futures-util       = { workspace = true }
 http               = { workspace = true }
 http-body          = { workspace = true }
 jsonrpsee          = { workspace = true, features = ["full"] }
+mockall            = { workspace = true }
+rand               = "0.8.5"
 redis              = { workspace = true, features = ["streams", "tokio-comp"] }
 serde              = { workspace = true, features = ["derive"] }
 serde_json         = { workspace = true }
@@ -39,7 +41,6 @@ tokio              = { workspace = true, features = ["full"] }
 tower              = { workspace = true }
 tracing            = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
-rand = "0.8.5"
 
 [lints]
 workspace = true

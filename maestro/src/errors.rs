@@ -1,12 +1,16 @@
 //! The `errors` module contains the error types for Maestro.
 
 use redis::RedisError;
-use std::str::Utf8Error;
+use std::{str::Utf8Error, time::SystemTimeError};
 
 // Source: https://github.com/MetaMask/rpc-errors/blob/main/src/errors.ts
 /// Primary error type for the `maestro` service
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
+    /// Internal error
+    #[error("Internal error: {0}")]
+    Internal(String),
+
     /// Error relating to Redis
     #[error(transparent)]
     Redis(#[from] RedisError),
@@ -18,4 +22,8 @@ pub enum Error {
     /// Error relating to byte to string conversion
     #[error(transparent)]
     ByteConversion(#[from] Utf8Error),
+
+    /// Error relating to time conversion
+    #[error(transparent)]
+    TimeConversion(#[from] SystemTimeError),
 }

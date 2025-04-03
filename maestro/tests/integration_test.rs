@@ -4,11 +4,19 @@ use alloy::transports::http::{reqwest::Response, Client};
 use eyre::Result;
 use jsonrpsee::server::ServerHandle;
 use maestro::server;
+use mockall::mock;
 use serde_json::{json, Value};
 use std::{future::Future, net::SocketAddr, time::Duration};
 use tokio::time::sleep;
 
 #[cfg(test)]
+mock! {
+pub Redis {
+    async fn cmd(&self) -> redis::RedisResult<()>;
+    // Add more methods as needed based on what your code uses
+}
+}
+
 mod tests {
     use super::*;
     use std::collections::HashMap;
@@ -19,7 +27,9 @@ mod tests {
         // Start the server
         // Always use 0 for dynamic port allocation
         // This lets the OS assign an available port automatically
-        let (addr, handle) = server::run(0).await.expect("Failed to start server");
+
+        #[allow(clippy::expect_used)]
+        let (addr, handle) = server::run(0, None).await.expect("Failed to start server");
         let base_url = format!("http://{}", addr);
         println!("Server started at {} (OS assigned port {})", &base_url, addr.port());
 

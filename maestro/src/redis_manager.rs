@@ -1,6 +1,6 @@
 //! The `redis_manager` module is for connecting to `redis` instances and sending messages
 
-use crate::{config::Config, errors::Error};
+use crate::errors::Error;
 use redis::{aio::MultiplexedConnection, AsyncCommands, Client, RedisResult, Value};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, time::Duration};
@@ -8,9 +8,11 @@ use tokio::time::sleep;
 use tracing::{debug, error, info, warn};
 
 /// Connect to a Redis instance
-pub async fn connect(config: Config) -> eyre::Result<(Client, MultiplexedConnection), Error> {
-    info!("Connecting to Redis server at {}...", config.redis_address);
-    let client = Client::open(config.redis_address)?;
+pub async fn connect(
+    redis_address: String,
+) -> eyre::Result<(Client, MultiplexedConnection), Error> {
+    info!("Connecting to Redis server at {}...", redis_address);
+    let client = Client::open(redis_address)?;
     info!("Got Redis client");
     let mut conn = client.get_multiplexed_async_connection().await?;
     info!("Got Redis connection");
@@ -48,18 +50,21 @@ pub struct StreamManager {
 }
 
 impl StreamManager {
-    /// Create a new StreamManager with the provided Redis connection
+    /// Create a new [`StreamManager`] with the provided Redis connection
     pub const fn new(conn: MultiplexedConnection) -> Self {
         Self { conn }
     }
 
     /// Initialize stream consumer group
-    pub async fn init_consumer_group(&mut self) -> Result<(), Error> {
+    pub async fn init_consumer_group(&mut self) -> Result<String, Error> {
         self.init_consumer_group_with_name(DEFAULT_GROUP).await
     }
 
     /// Initialize stream consumer group with a specific name
-    pub async fn init_consumer_group_with_name(&mut self, group_name: &str) -> Result<(), Error> {
+    pub async fn init_consumer_group_with_name(
+        &mut self,
+        group_name: &str,
+    ) -> Result<String, Error> {
         // Create consumer group if it doesn't exist
         let result: RedisResult<String> =
             self.conn.xgroup_create_mkstream(TX_STREAM_KEY, group_name, "$").await;
@@ -67,13 +72,13 @@ impl StreamManager {
         match result {
             Ok(_) => {
                 info!("Created consumer group: {}", group_name);
-                Ok(())
+                Ok(group_name.to_string())
             }
             Err(e) => {
                 // BUSYGROUP error means the group already exists, which is fine
                 if e.to_string().contains("BUSYGROUP") {
                     info!("Consumer group already exists: {}", group_name);
-                    Ok(())
+                    Ok(group_name.to_string())
                 } else {
                     error!("Failed to create consumer group: {}", e);
                     Err(e.into())

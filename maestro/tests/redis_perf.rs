@@ -6,12 +6,13 @@ use maestro::{
     redis_manager::{StreamConsumer, StreamManager, StreamProducer, TransactionRequest},
 };
 use rand::{distributions::Alphanumeric, Rng};
+use redis::AsyncCommands;
 use std::{
     fmt,
     sync::Arc,
     time::{Duration, Instant},
 };
-use test_utils::port_manager::PortManager;
+use test_utils::{port_manager::PortManager, wait_until};
 use tokio::{
     process::{Child, Command},
     runtime::Handle,
@@ -20,6 +21,8 @@ use tokio::{
     time::timeout,
 };
 use tracing::{debug, error, info};
+
+const TX_STREAM_KEY: &str = "maestro:transactions";
 
 /// Struct to manage Docker container lifecycle
 #[derive(Debug)]
@@ -171,7 +174,7 @@ pub async fn start_redis(port: u16) -> Result<Docker> {
     Ok(Docker(redis))
 }
 
-/// Run the Redis Streams benchmark with a managed Redis instance
+/// Run the Redis Streams benchmark with a test Redis instance
 pub async fn run_benchmark_with_redis() -> Result<BenchmarkResults> {
     // Get a port for Redis
     let port = PortManager::instance().next_port();
@@ -209,8 +212,9 @@ pub async fn run_benchmark(config: BenchmarkConfig) -> Result<BenchmarkResults> 
 
     // Create a stream manager to initialize the consumer group
     let conn = client.get_multiplexed_async_connection().await?;
-    let mut stream_manager = StreamManager::new(conn);
-    stream_manager.init_consumer_group().await?;
+    let mut stream_manager = StreamManager::new(conn.clone());
+    let consumer_group_name = stream_manager.init_consumer_group().await?;
+    let consumer_group_name_arc = Arc::new(consumer_group_name.to_string());
 
     // Start the producer tasks
     let producer_handles = (0..config.producer_count)
@@ -250,10 +254,12 @@ pub async fn run_benchmark(config: BenchmarkConfig) -> Result<BenchmarkResults> 
             let stats_clone = stats.clone();
             let stop_clone = stop.clone();
 
+            let group_name_clone = Arc::clone(&consumer_group_name_arc);
             tokio::spawn(async move {
                 let conn = client_clone.get_multiplexed_async_connection().await?;
                 let stream_manager = StreamManager::new(conn);
-                let mut consumer = stream_manager.create_consumer(id)?;
+                let mut consumer =
+                    stream_manager.create_consumer_with_group(group_name_clone.as_str(), id)?;
 
                 // Wait for all tasks to be ready
                 barrier_clone.wait().await;
@@ -333,6 +339,11 @@ pub async fn run_benchmark(config: BenchmarkConfig) -> Result<BenchmarkResults> 
         dequeue_tps: stats_guard.transactions_consumed as f64 / runtime_seconds,
         runtime_seconds,
     };
+
+    #[allow(clippy::expect_used)]
+    let stream_info: redis::Value =
+        conn.clone().xinfo_stream(TX_STREAM_KEY).await.expect("Failed to get stream info");
+    info!("Stream info: {:?}", stream_info);
 
     info!("Benchmark complete! Results: {:?}", results);
     Ok(results)
@@ -577,5 +588,35 @@ mod tests {
             "Expected dequeue latency to be under 2ms, but was {:.2} μs",
             results.avg_dequeue_latency_us
         );
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    #[ignore]
+    async fn test_redis_stream_correctness() {
+        // Initialize detailed logging for debugging
+        let _ = tracing_subscriber::fmt().with_env_filter("debug").try_init();
+
+        // Get a port for Redis
+        let port = PortManager::instance().next_port();
+
+        // Create a simple configuration with minimal tasks
+        let config = BenchmarkConfig {
+            producer_count: 1,
+            consumer_count: 2,
+            transaction_count: 10, // Just 10 transactions
+            transaction_size: 128, // Smaller transactions for quicker testing
+            duration_seconds: 5,   // Short duration
+            redis_port: port,
+        };
+
+        // Start Redis
+        let _redis = start_redis(port).await.expect("Failed to start Redis");
+        let results = run_benchmark(config).await.expect("Benchmark failed");
+
+        println!("{}", results);
+
+        // Assert correctness
+        assert_eq!(results.transactions_produced, 10, "Should have produced 10 messages");
+        assert_eq!(results.transactions_consumed, 10, "Should have consumed 10 messages");
     }
 }
