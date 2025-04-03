@@ -63,8 +63,8 @@ sequencer_root := repository_root + "/metabased-sequencer"
 e2e_tests_root := repository_root + "/metabased-translator/tests"
 
 # Define root directory of the metabased translator project
-metabased_translator_root := repository_root + "/metabased-translator"
-metabased_translator_contracts_root := metabased_translator_root + "/contracts" 
+shared_root := repository_root + "/shared"
+shared_contracts_root := shared_root + "/contracts" 
 
 # Define file for localnet environment variables
 envrc_file := repository_root + "/.envrc"
@@ -414,7 +414,7 @@ contracts-setup: foundry-upgrade
     @just _log-start "contracts-setup"
     
     cd {{ contracts_root }} && forge install
-    cd {{ metabased_translator_contracts_root }} && forge install
+    cd {{ shared_contracts_root }} && forge install
 
     @echo "Foundry and contract dependencies installed"
     @echo "Open a new zsh terminal window to use Foundry"
