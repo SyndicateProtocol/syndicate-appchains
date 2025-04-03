@@ -64,3 +64,4 @@ docs/
 .certora_internal/
 
 broadcast/
+metabased-translator/docker-compose/heaptrack_output/

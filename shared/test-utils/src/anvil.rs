@@ -13,7 +13,7 @@ use alloy::{
         },
         Identity, Provider, ProviderBuilder, RootProvider,
     },
-    rpc::types::{anvil::MineOptions, Block, BlockTransactionsKind},
+    rpc::types::{anvil::MineOptions, Block},
 };
 use eyre::{eyre, Result};
 
@@ -52,7 +52,7 @@ pub async fn start_anvil_with_args(
 /// mine a block with a delay
 pub async fn mine_block(provider: &FilledProvider, delay: u64) -> Result<()> {
     let block: Block = provider
-        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+        .get_block_by_number(BlockNumberOrTag::Latest)
         .await?
         .ok_or_else(|| eyre!("Block not found"))?;
     provider.evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp + delay)))).await?;

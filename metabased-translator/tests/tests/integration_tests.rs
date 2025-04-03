@@ -4,7 +4,7 @@ use alloy::{
     network::{EthereumWallet, TransactionBuilder},
     primitives::{address, utils::parse_ether, Address, BlockHash, U256},
     providers::Provider,
-    rpc::types::{BlockTransactionsKind, TransactionRequest},
+    rpc::types::TransactionRequest,
 };
 use block_builder::{
     config::BlockBuilderConfig,
@@ -29,17 +29,18 @@ use test_utils::{
 
 /// mine a mchain block with a delay - for testing only
 async fn mine_block(
-    provider: &MetaChainProvider<impl RollupAdapter>,
+    mchain: &MetaChainProvider<impl RollupAdapter>,
     delay: u64,
 ) -> Result<BlockHash> {
     #[allow(clippy::expect_used)]
-    let ts = provider
-        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+    let ts = mchain
+        .provider
+        .get_block_by_number(BlockNumberOrTag::Latest)
         .await?
         .expect("failed to get latest block")
         .header
         .timestamp;
-    provider.mine_block(ts + delay).await
+    mchain.mine_block(ts + delay).await
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -61,7 +62,8 @@ async fn test_rollback() -> Result<()> {
     .await?;
 
     let b1 = mchain
-        .get_block_by_number(BlockNumberOrTag::Number(1), BlockTransactionsKind::Hashes)
+        .provider
+        .get_block_by_number(BlockNumberOrTag::Number(1))
         .await?
         .expect("could not find first block")
         .header
