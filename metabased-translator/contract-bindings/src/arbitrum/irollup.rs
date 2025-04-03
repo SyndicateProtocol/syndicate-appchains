@@ -8757,7 +8757,6 @@ function paused() external view returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct pausedReturn {
-        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -10294,12 +10293,7 @@ function withdrawalAddress(address staker) external view returns (address);
         minimumAssertionPeriod(minimumAssertionPeriodCall),
         outbox(outboxCall),
         owner(ownerCall),
-        #[allow(missing_docs)]
         paused(pausedCall),
-
-      
-      
-      
         rollupEventInbox(rollupEventInboxCall),
         sequencerInbox(sequencerInboxCall),
         stakeToken(stakeTokenCall),
