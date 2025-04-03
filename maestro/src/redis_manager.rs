@@ -5,7 +5,7 @@ use redis::{aio::MultiplexedConnection, AsyncCommands, Client, RedisResult, Valu
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, time::Duration};
 use tokio::time::sleep;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info, trace, warn};
 
 /// Connect to a Redis instance
 pub async fn connect(config: Config) -> eyre::Result<(Client, MultiplexedConnection), Error> {
@@ -49,7 +49,7 @@ pub struct StreamManager {
 }
 
 impl StreamManager {
-    /// Create a new [`StreamManager` ]with the provided Redis connection
+    /// Create a new [`StreamManager`] with the provided Redis connection
     pub const fn new(conn: MultiplexedConnection) -> Self {
         Self { conn }
     }
@@ -125,7 +125,7 @@ impl StreamManager {
     }
 
     /// Process a batch of messages from the stream
-    async fn process_batch(&mut self) -> Result<usize, Error> {
+    pub async fn process_batch(&mut self) -> Result<usize, Error> {
         // Read pending messages first (messages that were delivered but not acknowledged)
         let pending_msgs = self.read_pending_messages().await?;
 
@@ -245,7 +245,7 @@ impl StreamManager {
         let tx_req: TransactionRequest = serde_json::from_str(json_string.as_str())?;
 
         // TODO: Implement txn processing logic here
-        info!("Processing transaction: {} from sender {}", tx_req.tx_hash, tx_req.sender);
+        trace!("Processing transaction: {} from sender {}", tx_req.tx_hash, tx_req.sender);
 
         // Simulate some processing work
         sleep(Duration::from_millis(50)).await;
