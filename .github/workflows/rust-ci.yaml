@@ -10,9 +10,9 @@ on:
     paths:
       - "metabased-sequencer/**"
       - "metabased-translator/**"
+      - "**/Cargo.toml"
       - "tc-sequencer/**"
       - "maestro/**"
-      - "Cargo.toml"
       - "Cargo.lock"
       - ".github/workflows/rust-ci.yaml"
 
@@ -85,6 +85,34 @@ jobs:
         uses: clechasseur/rs-cargo@v2
         with:
           command: machete
+
+  taplo:
+    name: Cargo.toml format validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install taplo using cargo
+      - name: Install Taplo
+        uses: clechasseur/rs-cargo@v2
+        with:
+          command: install
+          args: taplo-cli@0.9.0
+
+      # Cache Cargo dependencies
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Cache entire workspace
+          workspaces: "."
+
+      # Run Taplo validation on all Cargo.toml files in the workspace
+      - name: Validate Cargo.toml files
+        run: taplo lint "**/Cargo.toml" --verbose
+
+      # Check Cargo.toml formatting
+      - name: Check Cargo.toml formatting. Remove `--check` from command to apply changes
+        run: taplo fmt --check "**/Cargo.toml" --verbose
 
   test:
     name: Tests

@@ -2,6 +2,7 @@
 
 #![allow(clippy::unwrap_used)] // These functions are used in tests only
 
+use eyre::{eyre, Result};
 use std::{
     fs,
     future::Future,
@@ -70,11 +71,10 @@ pub fn test_path(prefix: &str) -> String {
 ///     .await
 /// }
 /// ```
-pub async fn assert_eventually<F, Fut, E>(mut check: F, timeout: Duration) -> Result<(), String>
+pub async fn assert_eventually<F, Fut>(mut check: F, timeout: Duration) -> Result<()>
 where
     F: FnMut() -> Fut,
-    Fut: Future<Output = Result<bool, E>>,
-    E: std::fmt::Debug,
+    Fut: Future<Output = Result<bool>>,
 {
     const DEFAULT_CHECK_INTERVAL: Duration = Duration::from_millis(50);
     let start = Instant::now();
@@ -83,14 +83,14 @@ where
         match check().await {
             Ok(true) => return Ok(()),
             Ok(false) => (),
-            Err(e) => return Err(format!("Check function failed with error: {:?}", e)),
+            Err(e) => return Err(eyre!("Check function failed with error: {:?}", e)),
         }
 
         // Sleep before the next check
         tokio::time::sleep(DEFAULT_CHECK_INTERVAL).await;
     }
 
-    Err(format!("Condition not satisfied within {:?}", timeout))
+    Err(eyre!("Condition not satisfied within {:?}", timeout))
 }
 
 /// A macro for waiting until a condition becomes true or times out.
@@ -117,10 +117,9 @@ where
 /// }
 /// ```
 #[macro_export]
-macro_rules! wait_until {
-    // With setup code
+macro_rules! wait_until {    // With setup code
     ($setup:stmt; $condition:expr, $timeout:expr) => {{
-        let wait_result = $crate::assert_eventually(
+        let wait_result = assert_eventually(
             || async {
                 $setup;
                 Ok($condition)

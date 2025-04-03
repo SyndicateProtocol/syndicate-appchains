@@ -27,8 +27,8 @@ env-tests = []
 
 [dev-dependencies]
 alloy = { workspace = true, features = [
-    "node-bindings",
-    "rpc-types-anvil",
-    "sol-types",
+  "node-bindings",
+  "rpc-types-anvil",
+  "sol-types",
 ] }
 jsonrpsee = { workspace = true, features = ["server"] }

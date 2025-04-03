@@ -8,20 +8,27 @@ services:
   translator:
     build:
       context: ../../
-      target: metabased-translator
+      target: metabased-translator-debug
       dockerfile: Dockerfile
     environment:
+      - RUST_LOG=debug
       - MCHAIN_AUTH_IPC_PATH=/ipc/auth.ipc
       - MCHAIN_IPC_PATH=/ipc/reth.ipc
-      - SEQUENCING_CONTRACT_ADDRESS=0x0000000000000000000000000000000000000001
-      - ARBITRUM_BRIDGE_ADDRESS=0x0000000000000000000000000000000000000001
-      - ARBITRUM_INBOX_ADDRESS=0x0000000000000000000000000000000000000001
-      - SEQUENCING_RPC_URL=http://reth:8050
-      - SEQUENCING_START_BLOCK=0
-      - SETTLEMENT_RPC_URL=http://reth:8050
-      - SETTLEMENT_START_BLOCK=0
+      - TARGET_CHAIN_ID=63821
+      - SEQUENCING_CONTRACT_ADDRESS=0x536EA7C009ebE418501a1DB133b281a4a01d50f5
+      - ARBITRUM_BRIDGE_ADDRESS=0x9682E8DFfdadA5C5834ea0c905543798C72690F2
+      - ARBITRUM_INBOX_ADDRESS=0x5573d100711322FA0B28923A0786Cec221bb2e67
+      - SEQUENCING_RPC_URL=REPLACE_ME
+      - SEQUENCING_START_BLOCK=422342
+      - SETTLEMENT_RPC_URL=REPLACE_ME
+      - SETTLEMENT_START_BLOCK=22074164
+
     volumes:
       - ipc:/ipc
+      - ./heaptrack_output:/heaptrack_output
+    # Run the translator through heaptrack
+    entrypoint: []
+    command: sh -c "mkdir -p /heaptrack_output && heaptrack -o /heaptrack_output/translator /usr/local/bin/metabased-translator"
     depends_on:
       - reth
   nitro:
@@ -33,3 +40,4 @@ services:
       - .:/cfg:ro
 volumes:
   ipc:
+  heaptrack_output:

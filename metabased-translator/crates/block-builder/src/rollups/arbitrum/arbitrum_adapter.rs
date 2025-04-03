@@ -15,7 +15,7 @@ use alloy::{
     eips::{BlockId, BlockNumberOrTag},
     primitives::{Address, Bytes, FixedBytes, U256},
     providers::Provider,
-    rpc::types::{BlockTransactionsKind, TransactionRequest},
+    rpc::types::TransactionRequest,
     sol_types::{SolCall, SolEvent, SolInterface},
 };
 use async_trait::async_trait;
@@ -94,7 +94,7 @@ impl std::fmt::Display for L1MessageType {
 #[derive(Debug, Clone)]
 /// Builder for constructing Arbitrum blocks from transactions
 pub struct ArbitrumAdapter {
-    // Sequencing chain address
+    // Transaction parser for sequencing chain
     transaction_parser: SequencingTransactionParser,
 
     // Settlement chain address
@@ -165,12 +165,7 @@ impl RollupAdapter for ArbitrumAdapter {
         let block_number = match block {
             BlockNumberOrTag::Number(num) => num,
             tag => {
-                provider
-                    .get_block(BlockId::Number(tag), BlockTransactionsKind::Hashes)
-                    .await?
-                    .unwrap_or_default()
-                    .header
-                    .number
+                provider.get_block(BlockId::Number(tag)).await?.unwrap_or_default().header.number
             }
         };
         let block_id = BlockId::Number(BlockNumberOrTag::Number(block_number));
@@ -216,6 +211,14 @@ impl RollupAdapter for ArbitrumAdapter {
                 ),
             },
         )
+    }
+
+    fn interesting_sequencing_addresses(&self) -> Vec<Address> {
+        vec![self.transaction_parser.sequencing_contract_address]
+    }
+
+    fn interesting_settlement_addresses(&self) -> Vec<Address> {
+        vec![self.bridge_address, self.inbox_address]
     }
 }
 
