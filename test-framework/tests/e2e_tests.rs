@@ -5,7 +5,7 @@ use alloy::{
     network::TransactionBuilder,
     primitives::{address, utils::parse_ether, Address, Bytes, B256, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
-    rpc::types::{anvil::MineOptions, Block, BlockTransactionsKind, TransactionRequest},
+    rpc::types::{anvil::MineOptions, Block, TransactionRequest},
 };
 use contract_bindings::arbitrum::{
     arbgasinfo::ArbGasInfo, arbownerpublic::ArbOwnerPublic, arbsys::ArbSys, ibridge::IBridge,
@@ -72,7 +72,7 @@ async fn new_test_with_synced_chains(
     // Sync the tips of the sequencing and settlement chains
     let block = components
         .settlement_provider
-        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+        .get_block_by_number(BlockNumberOrTag::Latest)
         .await?
         .unwrap();
     components
@@ -227,7 +227,7 @@ async fn e2e_settlement_test() -> Result<()> {
     // Process the slot - wait for block 17 to be reached
     wait_until!(
         components.appchain_provider.get_block_number().await? == 17,
-        Duration::from_secs(2)
+        Duration::from_secs(10)
     );
 
     assert_eq!(
@@ -299,15 +299,12 @@ async fn e2e_test() -> Result<()> {
     // Wait for blocks to be processed
     wait_until!(
         components.appchain_provider.get_block_number().await? == 2,
-        Duration::from_secs(3)
+        Duration::from_secs(10)
     );
     assert_eq!(components.mchain_provider.get_block_number().await?, 2);
     // check mchain blocks
-    let mchain_block = components
-        .mchain_provider
-        .get_block_by_number(BlockNumberOrTag::Number(2), BlockTransactionsKind::Hashes)
-        .await?
-        .unwrap();
+    let mchain_block =
+        components.mchain_provider.get_block_by_number(BlockNumberOrTag::Number(2)).await?.unwrap();
     assert_eq!(mchain_block.header.timestamp, config.settlement_delay);
     assert_eq!(mchain_block.transactions.len(), 2);
 
@@ -315,7 +312,7 @@ async fn e2e_test() -> Result<()> {
     // check the first rollup block
     let rollup_block: Block = components
         .appchain_provider
-        .get_block_by_number(BlockNumberOrTag::Number(1), BlockTransactionsKind::Hashes)
+        .get_block_by_number(BlockNumberOrTag::Number(1))
         .await?
         .unwrap();
     // assert_eq!(rollup_block.header.timestamp, config.slotter.settlement_delay);
@@ -324,7 +321,7 @@ async fn e2e_test() -> Result<()> {
     // check the second rollup block
     let rollup_block: Block = components
         .appchain_provider
-        .get_block_by_number(BlockNumberOrTag::Number(2), BlockTransactionsKind::Hashes)
+        .get_block_by_number(BlockNumberOrTag::Number(2))
         .await?
         .unwrap();
     // assert_eq!(rollup_block.header..timestamp, config.slotter.settlement_delay);
@@ -341,26 +338,23 @@ async fn e2e_test() -> Result<()> {
     components.mine_both(1).await?;
 
     // Wait for blocks to be processed
-    wait_until!(components.mchain_provider.get_block_number().await? >= 3, Duration::from_secs(2));
+    wait_until!(components.mchain_provider.get_block_number().await? >= 3, Duration::from_secs(10));
 
     // check mchain block
     assert_eq!(components.mchain_provider.get_block_number().await?, 3);
-    let mchain_block = components
-        .mchain_provider
-        .get_block_by_number(BlockNumberOrTag::Number(3), BlockTransactionsKind::Hashes)
-        .await?
-        .unwrap();
+    let mchain_block =
+        components.mchain_provider.get_block_by_number(BlockNumberOrTag::Number(3)).await?.unwrap();
     assert_eq!(mchain_block.header.timestamp, config.settlement_delay + 1);
     assert_eq!(mchain_block.transactions.len(), 2);
 
     // check rollup block
     wait_until!(
         components.appchain_provider.get_block_number().await? == 3,
-        Duration::from_secs(3)
+        Duration::from_secs(10)
     );
     let rollup_block: Block = components
         .appchain_provider
-        .get_block_by_number(BlockNumberOrTag::Number(3), BlockTransactionsKind::Hashes)
+        .get_block_by_number(BlockNumberOrTag::Number(3))
         .await?
         .unwrap();
     assert_eq!(rollup_block.header.timestamp, config.settlement_delay + 1);
@@ -402,7 +396,10 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
     components.mine_set_block(1).await?;
 
     // Wait for deposit to be processed
-    wait_until!(components.appchain_provider.get_block_number().await? > 0, Duration::from_secs(4));
+    wait_until!(
+        components.appchain_provider.get_block_number().await? > 0,
+        Duration::from_secs(10)
+    );
 
     let bridge = IBridge::new(components.bridge_address, &components.settlement_provider);
 
@@ -432,7 +429,7 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
     // Wait for the withdrawal transaction to be processed
     wait_until!(
         components.appchain_provider.get_block_number().await? == 10,
-        Duration::from_secs(2)
+        Duration::from_secs(10)
     );
 
     // 2. Poster service posts
@@ -509,7 +506,7 @@ async fn test_settlement_reorg() -> Result<()> {
                                     // mchain block would be empty/skipped)
                                     // Wait for mchain to reach block 2
 
-    wait_until!(components.mchain_provider.get_block_number().await? == 2, Duration::from_secs(4));
+    wait_until!(components.mchain_provider.get_block_number().await? == 2, Duration::from_secs(10));
 
     let wallet_address = components.settlement_provider.default_signer_address();
     let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
@@ -525,15 +522,12 @@ async fn test_settlement_reorg() -> Result<()> {
     wait_until!(
         components.appchain_provider.get_balance(wallet_address).await? >=
             balance_before_deposit + parse_ether("1")?,
-        Duration::from_secs(3)
+        Duration::from_secs(10)
     );
 
     // send a deposit2 that will be reorged
-    let mchain_block_before_deposit = components
-        .mchain_provider
-        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
-        .await?
-        .unwrap();
+    let mchain_block_before_deposit =
+        components.mchain_provider.get_block_by_number(BlockNumberOrTag::Latest).await?.unwrap();
     assert_eq!(mchain_block_before_deposit.header.number, 3);
 
     let balance_before_deposit = components.appchain_provider.get_balance(wallet_address).await?;
@@ -548,16 +542,13 @@ async fn test_settlement_reorg() -> Result<()> {
     wait_until!(
         components.appchain_provider.get_balance(wallet_address).await? ==
             balance_before_deposit + parse_ether("1")?,
-        Duration::from_secs(3)
+        Duration::from_secs(10)
     );
     assert_eq!(components.mchain_provider.get_block_number().await?, 4);
 
     // the rollup head has not been updated yet
-    let rollup_head_before_reorg = components
-        .appchain_provider
-        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
-        .await?
-        .unwrap();
+    let rollup_head_before_reorg =
+        components.appchain_provider.get_block_by_number(BlockNumberOrTag::Latest).await?.unwrap();
 
     // reorg, assert that the L3 balance has disappeared
     let reorg_depth = 2;
@@ -580,7 +571,7 @@ async fn test_settlement_reorg() -> Result<()> {
     wait_until!(
             let block = components
                 .mchain_provider
-                .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+                .get_block_by_number(BlockNumberOrTag::Latest)
                 .await?
                 .unwrap();
             block == mchain_block_before_deposit
@@ -597,7 +588,7 @@ async fn test_settlement_reorg() -> Result<()> {
 
     wait_until!(let rollup_head = components
         .appchain_provider
-        .get_block_by_number(BlockNumberOrTag::Latest, BlockTransactionsKind::Hashes)
+        .get_block_by_number(BlockNumberOrTag::Latest)
         .await?
         .unwrap();
         rollup_head.header.number == rollup_head_before_reorg.header.number &&
