@@ -2,12 +2,12 @@ name: Build Maestro Image to Github and Google Registries - Dry run Check
 
 on:
   pull_request:
-    branches: [main]
-    paths:
-      - "maestro/**"
-      - "Dockerfile"
-      - "**/Cargo.toml"
-      - ".github/workflows/**"
+#    branches: [main]
+#    paths:
+#      - "maestro/**"
+#      - "Dockerfile"
+#      - "**/Cargo.toml"
+#      - ".github/workflows/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
@@ -22,6 +22,7 @@ jobs:
   build-no-push:
     uses: ./.github/workflows/docker-build-core.yaml
     with:
-      do_push: false
+#      DO NOT COMMIT THIS FILE! CHANGE ME BACK!
+      do_push: true
       target_name: maestro
     secrets: inherit
