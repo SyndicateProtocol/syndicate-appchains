@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
         "Maestro server running"
     );
 
-    let (redis_client, redis_conn) = redis_manager::connect(config).await?;
+    let (_redis_client, redis_conn) = redis_manager::connect(config).await?;
 
     info!("Connected to Redis successfully!");
 
