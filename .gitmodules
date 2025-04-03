@@ -4,6 +4,6 @@
 [submodule "metabased-contracts/lib/openzeppelin-contracts"]
 	path = metabased-contracts/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
-[submodule "metabased-translator/contracts/lib/forge-std"]
-	path = metabased-translator/contracts/lib/forge-std
+[submodule "shared/contracts/lib/forge-std"]
+	path = shared/contracts/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
