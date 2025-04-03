@@ -15,24 +15,25 @@ alloy = { workspace = true, features = [
   "signer-local",
   "signers",
 ] }
-axum = { workspace = true }
-bytes = { workspace = true }
-clap = { workspace = true, features = ["derive", "env"] }
-eyre = { workspace = true }
-flate2 = { workspace = true }
-hex = { workspace = true }
-humantime = { workspace = true }
-jsonrpsee = { workspace = true, features = ["http-client", "server"] }
-prometheus-client = { workspace = true }
-reqwest = { workspace = true }
-serde_json = { workspace = true }
-shared = { workspace = true }
-thiserror = { workspace = true }
-tokio = { workspace = true, features = ["full"] }
-tower = { workspace = true }
-tracing = { workspace = true }
+
+axum               = { workspace = true }
+bytes              = { workspace = true }
+clap               = { workspace = true, features = ["derive", "env"] }
+eyre               = { workspace = true }
+flate2             = { workspace = true }
+hex                = { workspace = true }
+humantime          = { workspace = true }
+jsonrpsee          = { workspace = true, features = ["http-client", "server"] }
+prometheus-client  = { workspace = true }
+reqwest            = { workspace = true }
+serde_json         = { workspace = true }
+shared             = { workspace = true }
+thiserror          = { workspace = true }
+tokio              = { workspace = true, features = ["full"] }
+tower              = { workspace = true }
+tracing            = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
-url = { workspace = true }
+url                = { workspace = true }
 
 [lints]
 workspace = true

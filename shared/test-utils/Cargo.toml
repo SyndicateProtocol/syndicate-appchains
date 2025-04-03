@@ -1,0 +1,24 @@
+[package]
+description            = "Common test utilities"
+edition.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "test-utils"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[dependencies]
+alloy = { workspace = true, features = [
+  "node-bindings",
+  "provider-engine-api",
+  "provider-ipc",
+  "providers",
+  "rpc-types-anvil",
+  "sol-types",
+] }
+eyre = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
