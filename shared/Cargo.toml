@@ -12,6 +12,7 @@ version.workspace      = true
 alloy              = { workspace = true, features = ["k256", "rlp"] }
 byte-unit          = { workspace = true, features = ["default"] }
 jsonrpsee          = { workspace = true, features = ["jsonrpsee-types", "server"] }
+prometheus-client  = { version = "0.23.1" }
 serde_json         = { workspace = true }
 thiserror          = { workspace = true }
 tokio              = { workspace = true }

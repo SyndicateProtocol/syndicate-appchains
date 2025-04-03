@@ -13,15 +13,9 @@ use prometheus_client::{
     metrics::{family::Family, gauge::Gauge},
     registry::Registry,
 };
+use shared::metrics::WalletBalanceLabels;
 use std::sync::Arc;
 use tokio::{sync::RwLock, task::JoinHandle};
-/// Labels for the wallet balance metric
-#[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
-pub struct WalletBalanceLabels {
-    /// The wallet address being monitored
-    wallet_address: String,
-}
-
 /// Structure holding metrics related to the `Poster`.
 #[derive(Debug, Clone)]
 pub struct PosterMetrics {
@@ -60,9 +54,7 @@ impl PosterMetrics {
     /// Records the current wallet balance
     pub fn record_wallet_balance(&self, balance: u128, wallet_address: Address) {
         self.wallet_balance
-            .get_or_create(&WalletBalanceLabels {
-                wallet_address: format!("{:#x}", wallet_address),
-            })
+            .get_or_create(&WalletBalanceLabels::new(wallet_address))
             .set(balance as i64);
     }
 }

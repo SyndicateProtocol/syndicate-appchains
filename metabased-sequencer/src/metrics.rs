@@ -19,7 +19,7 @@ use prometheus_client::{
     },
     registry::Registry,
 };
-use shared::json_rpc::Error;
+use shared::{json_rpc::Error, metrics::WalletBalanceLabels};
 use std::{sync::Arc, time::Duration};
 use tokio::sync::RwLock;
 
@@ -28,13 +28,6 @@ use tokio::sync::RwLock;
 pub struct Labels {
     rpc_method: &'static str,
     error_category: &'static str,
-}
-
-/// Labels for the wallet balance metric
-#[derive(Clone, Debug, Hash, PartialEq, Eq, EncodeLabelSet)]
-pub struct WalletBalanceLabels {
-    /// The wallet address being monitored
-    wallet_address: String,
 }
 
 /// Structure holding metrics related to blockchain data ingestion.
@@ -92,9 +85,7 @@ impl RelayerMetrics {
     /// Records the current wallet balance
     pub fn record_wallet_balance(&self, balance: u128, wallet_address: Address) {
         self.wallet_balance
-            .get_or_create(&WalletBalanceLabels {
-                wallet_address: format!("{:#x}", wallet_address),
-            })
+            .get_or_create(&WalletBalanceLabels::new(wallet_address))
             .set(balance as i64);
     }
 }
