@@ -5013,6 +5013,7 @@ dependencies = [
  "mchain",
  "tokio",
  "tracing",
+ "tracing-subscriber",
 ]
 
 [[package]]
