@@ -9,7 +9,7 @@ use alloy::{
     primitives::{Address, Bytes},
 };
 use async_trait::async_trait;
-use common::types::{BlockAndReceipts, KnownState, Slot};
+use common::types::{KnownState, PartialBlock, Slot};
 use eyre::{Error, Result};
 use mchain::db::MBlock;
 use std::{
@@ -31,11 +31,10 @@ pub trait RollupAdapter: Debug + Send + Sync + Unpin + Clone + 'static {
     ///
     /// # Returns
     /// A vector of extracted transactions in raw `Bytes` format.
-    fn parse_block_to_mbtxs(&self, input: Arc<BlockAndReceipts>) -> Vec<Bytes> {
+    fn parse_block_to_mbtxs(&self, input: Arc<PartialBlock>) -> Vec<Bytes> {
         input
-            .receipts
+            .logs
             .iter()
-            .flat_map(|receipt| &receipt.logs)
             .filter_map(|log| self.transaction_parser().get_event_transactions(log).ok())
             .flatten()
             .collect()
@@ -62,8 +61,8 @@ pub trait RollupAdapter: Debug + Send + Sync + Unpin + Clone + 'static {
     async fn get_last_sequencing_block_processed(&self, provider: &MetaChainProvider<Self>) -> u64;
 
     /// Returns a list of addresses that are interesting to monitor on the sequencing chain
-    fn interesting_sequencing_addresses(&self) -> Vec<Address>;
+    fn sequencing_addresses_to_monitor(&self) -> Vec<Address>;
 
     /// Returns a list of addresses that are interesting to monitor on the settlement chain
-    fn interesting_settlement_addresses(&self) -> Vec<Address>;
+    fn settlement_addresses_to_monitor(&self) -> Vec<Address>;
 }

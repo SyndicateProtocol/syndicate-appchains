@@ -15,10 +15,8 @@ use mchain::db::{DelayedMessage, MBlock};
 use std::{str::FromStr as _, time::Duration};
 use test_utils::{
     docker::{launch_nitro_node, start_mchain},
-    utils::assert_eventually,
     wait_until,
 };
-use tokio::time::sleep;
 
 // an arbitrary chain id used for testing
 const APPCHAIN_CHAIN_ID: u64 = 13331370;
@@ -94,8 +92,7 @@ async fn no_l1_fees_test() -> Result<()> {
             ..Default::default()
         })
         .await?;
-    sleep(Duration::from_secs(1)).await;
-    wait_until!(rollup.get_block_number().await? == 2, Duration::from_secs(1));
+    wait_until!(rollup.get_block_number().await? == 2, Duration::from_secs(2));
     assert_eq!(rollup.get_balance(TEST_ADDR).await?, qty + qty);
     assert_eq!(arb_gas_info.getL1BaseFeeEstimate().call().await?._0, U256::ZERO);
     Ok(())

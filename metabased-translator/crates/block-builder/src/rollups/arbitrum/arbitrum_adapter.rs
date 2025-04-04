@@ -18,7 +18,7 @@ use alloy::{
     sol_types::{SolCall, SolEvent},
 };
 use async_trait::async_trait;
-use common::types::{BlockAndReceipts, BlockRef, KnownState, Log, Slot};
+use common::types::{BlockRef, KnownState, PartialBlock, PartialLogWithTxdata, Slot};
 use contract_bindings::arbitrum::{
     ibridge::IBridge::MessageDelivered,
     idelayedmessageprovider::IDelayedMessageProvider::{
@@ -136,10 +136,8 @@ impl RollupAdapter for ArbitrumAdapter {
 
         // Always build a batch transaction even if there are no transactions
         // This ensures we always produce a block
-        let (set_block_number, set_block_hash) = slot
-            .settlement
-            .last()
-            .map_or((0, FixedBytes::ZERO), |b| (b.block.number, b.block.hash));
+        let (set_block_number, set_block_hash) =
+            slot.settlement.last().map_or((0, FixedBytes::ZERO), |b| (b.number, b.hash));
         Ok(Some(MBlock {
             timestamp: slot.timestamp(),
             batch: self
@@ -151,8 +149,8 @@ impl RollupAdapter for ArbitrumAdapter {
                 )
                 .await?,
             messages: delayed_messages,
-            seq_block_hash: slot.sequencing.block.hash,
-            seq_block_number: slot.sequencing.block.number,
+            seq_block_hash: slot.sequencing.hash,
+            seq_block_number: slot.sequencing.number,
             set_block_hash,
             set_block_number,
         }))
@@ -191,11 +189,11 @@ impl RollupAdapter for ArbitrumAdapter {
             .0
     }
 
-    fn interesting_sequencing_addresses(&self) -> Vec<Address> {
+    fn sequencing_addresses_to_monitor(&self) -> Vec<Address> {
         vec![self.transaction_parser.sequencing_contract_address]
     }
 
-    fn interesting_settlement_addresses(&self) -> Vec<Address> {
+    fn settlement_addresses_to_monitor(&self) -> Vec<Address> {
         vec![self.bridge_address, self.inbox_address]
     }
 }
@@ -219,24 +217,19 @@ impl ArbitrumAdapter {
     /// Processes settlement chain receipts into delayed messages
     async fn process_delayed_messages(
         &self,
-        blocks: Vec<Arc<BlockAndReceipts>>,
+        blocks: Vec<Arc<PartialBlock>>,
     ) -> Result<Vec<DelayedMessage>> {
         // Create a local map to store message data
         let mut message_data: HashMap<U256, Bytes> = HashMap::new();
         // Process all bridge logs in all receipts in all blocks
-        let delayed_messages = blocks
-            .iter()
-            .flat_map(|block| &block.receipts)
-            .flat_map(|receipt| &receipt.logs)
-            .filter(|log| {
-                log.address == self.bridge_address && log.topics[0] == MSG_DELIVERED_EVENT_HASH
-            });
+        let delayed_messages = blocks.iter().flat_map(|block| &block.logs).filter(|log| {
+            log.address == self.bridge_address && log.topics[0] == MSG_DELIVERED_EVENT_HASH
+        });
 
         // Process all inbox logs in all receipts in all blocks
         blocks
             .iter()
-            .flat_map(|block| &block.receipts)
-            .flat_map(|receipt| &receipt.logs)
+            .flat_map(|block| &block.logs)
             .filter(|log| log.address == self.inbox_address)
             .for_each(|log| {
                 match log.topics[0] {
@@ -263,12 +256,8 @@ impl ArbitrumAdapter {
                     INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH => {
                         let message_num = U256::from_be_slice(log.topics[1].as_slice());
 
-                        let block_index = (log.block_number - blocks[0].block.number) as usize;
-                        let txn_index = log.transaction_index as usize;
-                        let txn = blocks[block_index].block.transactions[txn_index].clone();
-
                         // Decode the transaction input using the contract bindings
-                        match sendL2MessageFromOriginCall::abi_decode(&txn.input, false) {
+                        match sendL2MessageFromOriginCall::abi_decode(&log.tx_calldata, false) {
                             Ok(decoded) => {
                                 message_data.insert(message_num, decoded.messageData);
                             }
@@ -307,7 +296,7 @@ impl ArbitrumAdapter {
 
     fn delayed_message_to_mchain_txn(
         &self,
-        log: &Log,
+        log: &PartialLogWithTxdata,
         message_data: HashMap<U256, Bytes>,
     ) -> Result<DelayedMessage> {
         let msg = MessageDelivered::decode_raw_log(&log.topics, &log.data, true)
@@ -386,7 +375,7 @@ mod tests {
     use super::*;
     use alloy::primitives::{hex, keccak256};
     use assert_matches::assert_matches;
-    use common::types::{Block, BlockAndReceipts, Log, Receipt, Transaction};
+    use common::types::PartialBlock;
     use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain::TransactionProcessed;
     use std::{str::FromStr, sync::Arc};
 
@@ -443,7 +432,7 @@ mod tests {
         let builder = ArbitrumAdapter::default();
 
         // Create an empty slot
-        let slot = Slot { settlement: vec![], sequencing: Arc::new(BlockAndReceipts::default()) };
+        let slot = Slot { settlement: vec![], sequencing: Arc::new(PartialBlock::default()) };
 
         let result = builder.build_block_from_slot(&slot, 1).await;
         assert!(result.is_ok());
@@ -452,26 +441,21 @@ mod tests {
         assert!(txns.is_none()); // Should contain no transactions
     }
 
-    fn create_mock_log(
+    const fn create_mock_log(
         address: Address,
         topics: Vec<FixedBytes<32>>,
         data: Bytes,
-        block_number: u64,
-        transaction_index: u64,
-    ) -> Log {
-        Log { address, topics, data, block_number, transaction_index, ..Default::default() }
+        tx_calldata: Bytes,
+    ) -> PartialLogWithTxdata {
+        PartialLogWithTxdata { address, topics, data, tx_calldata }
     }
 
-    fn create_mock_block_and_receipts(
+    fn create_mock_block(
         number: u64,
         hash: FixedBytes<32>,
-        transactions: Vec<Transaction>,
-        receipts: Vec<Receipt>,
-    ) -> Arc<BlockAndReceipts> {
-        Arc::new(BlockAndReceipts {
-            block: Block { number, hash, transactions, ..Default::default() },
-            receipts,
-        })
+        logs: Vec<PartialLogWithTxdata>,
+    ) -> Arc<PartialBlock> {
+        Arc::new(PartialBlock { number, hash, logs, ..Default::default() })
     }
 
     #[tokio::test]
@@ -503,8 +487,7 @@ mod tests {
                 before_inbox_acc,
             ],
             msg_delivered_event.encode_data().into(),
-            1,
-            0,
+            Bytes::new(),
         );
 
         let inbox_msg_log = create_mock_log(
@@ -513,20 +496,14 @@ mod tests {
             InboxMessageDelivered { messageNum: message_index, data: message_data }
                 .encode_data()
                 .into(),
-            1,
-            0,
+            Bytes::new(),
         );
 
         // Create mock block with receipts
-        let block = create_mock_block_and_receipts(
-            1,
-            U256::from(1111).into(),
-            vec![],
-            vec![Receipt { logs: vec![msg_delivered_log, inbox_msg_log], ..Default::default() }],
-        );
+        let block =
+            create_mock_block(1, U256::from(1111).into(), vec![msg_delivered_log, inbox_msg_log]);
 
-        let slot =
-            Slot { settlement: vec![block], sequencing: Arc::new(BlockAndReceipts::default()) };
+        let slot = Slot { settlement: vec![block], sequencing: Arc::new(PartialBlock::default()) };
 
         let result = builder.build_block_from_slot(&slot, 1).await;
         assert!(result.is_ok());
@@ -549,19 +526,18 @@ mod tests {
             builder.transaction_parser.sequencing_contract_address,
             vec![TransactionProcessed::SIGNATURE_HASH, Address::ZERO.into_word()],
             txn_processed_event.encode_data().into(),
-            1,
-            0,
+            Bytes::new(),
         );
-        let block =
-            Block { number: 1, transactions: vec![Transaction::default()], ..Default::default() };
 
-        let slot = Slot {
-            settlement: vec![],
-            sequencing: Arc::new(BlockAndReceipts {
-                block,
-                receipts: vec![Receipt { logs: vec![txn_processed_log], ..Default::default() }],
-            }),
-        };
+        // Create block with zero hash to match assertion expectations
+        let sequencing_block = Arc::new(PartialBlock {
+            number: 1,
+            hash: FixedBytes::ZERO,
+            logs: vec![txn_processed_log],
+            ..Default::default()
+        });
+
+        let slot = Slot { settlement: vec![], sequencing: sequencing_block };
 
         let result = builder.build_block_from_slot(&slot, 1).await;
         assert!(result.is_ok());
@@ -593,13 +569,16 @@ mod tests {
             builder.transaction_parser.sequencing_contract_address,
             vec![TransactionProcessed::SIGNATURE_HASH, Address::ZERO.into_word()],
             txn_processed_event.encode_data().into(),
-            1,
-            0,
+            Bytes::new(),
         );
 
-        let sequencing_receipt = Receipt { logs: vec![txn_processed_log], ..Default::default() };
-        let sequencing_block =
-            Block { number: 1, transactions: vec![Transaction::default()], ..Default::default() };
+        // Create blocks with zero hash to match assertion expectations
+        let sequencing_block = Arc::new(PartialBlock {
+            number: 1,
+            hash: FixedBytes::ZERO,
+            logs: vec![txn_processed_log],
+            ..Default::default()
+        });
 
         // Create mock delayed message logs
         let message_num = U256::from(1);
@@ -625,8 +604,7 @@ mod tests {
                 before_inbox_acc,
             ],
             msg_delivered_event.encode_data().into(),
-            1,
-            0,
+            Bytes::new(),
         );
 
         let inbox_log = create_mock_log(
@@ -635,24 +613,17 @@ mod tests {
             InboxMessageDelivered { messageNum: message_num, data: delayed_message_data.clone() }
                 .encode_data()
                 .into(),
-            1,
-            0,
+            Bytes::new(),
         );
 
-        let settlement_block = Block { number: 1, ..Default::default() };
-        let settlement_receipt =
-            Receipt { logs: vec![delayed_log, inbox_log], ..Default::default() };
+        let settlement_block = Arc::new(PartialBlock {
+            number: 1,
+            hash: FixedBytes::ZERO,
+            logs: vec![delayed_log, inbox_log],
+            ..Default::default()
+        });
 
-        let slot = Slot {
-            settlement: vec![Arc::new(BlockAndReceipts {
-                block: settlement_block,
-                receipts: vec![settlement_receipt],
-            })],
-            sequencing: Arc::new(BlockAndReceipts {
-                block: sequencing_block,
-                receipts: vec![sequencing_receipt],
-            }),
-        };
+        let slot = Slot { settlement: vec![settlement_block], sequencing: sequencing_block };
 
         let result = builder.build_block_from_slot(&slot, 1).await;
         assert!(result.is_ok());
@@ -709,7 +680,7 @@ mod tests {
         };
 
         // Create the log
-        let log = Log {
+        let log = PartialLogWithTxdata {
             address: builder.bridge_address,
             topics: vec![
                 MSG_DELIVERED_EVENT_HASH,
@@ -717,8 +688,6 @@ mod tests {
                 FixedBytes::from([1u8; 32]),
             ],
             data: msg_delivered.encode_data().into(),
-            block_number: 1,
-            transaction_index: 0,
             ..Default::default()
         };
 
@@ -757,7 +726,7 @@ mod tests {
             timestamp: 0u64,
         };
 
-        let log = Log {
+        let log = PartialLogWithTxdata {
             address: builder.bridge_address,
             topics: vec![
                 MSG_DELIVERED_EVENT_HASH,
@@ -765,8 +734,6 @@ mod tests {
                 FixedBytes::from([1u8; 32]),
             ],
             data: msg_delivered.encode_data().into(),
-            block_number: 1,
-            transaction_index: 0,
             ..Default::default()
         };
 
@@ -788,12 +755,10 @@ mod tests {
         let message_map = HashMap::new();
 
         // Create log with invalid event data
-        let log = Log {
+        let log = PartialLogWithTxdata {
             address: builder.bridge_address,
             topics: vec![MSG_DELIVERED_EVENT_HASH],
             data: Bytes::from(vec![1, 2, 3]), // Invalid data that can't be decoded
-            block_number: 1,
-            transaction_index: 0,
             ..Default::default()
         };
 
@@ -832,7 +797,7 @@ mod tests {
         };
 
         // Create the log
-        let log = Log {
+        let log = PartialLogWithTxdata {
             address: builder.bridge_address,
             topics: vec![
                 MSG_DELIVERED_EVENT_HASH,
@@ -840,8 +805,6 @@ mod tests {
                 FixedBytes::from([1u8; 32]),
             ],
             data: msg_delivered.encode_data().into(),
-            block_number: 1,
-            transaction_index: 0,
             ..Default::default()
         };
 
@@ -880,7 +843,7 @@ mod tests {
         };
 
         // Create the log
-        let log = Log {
+        let log = PartialLogWithTxdata {
             address: builder.bridge_address,
             topics: vec![
                 MSG_DELIVERED_EVENT_HASH,
@@ -888,8 +851,6 @@ mod tests {
                 FixedBytes::from([1u8; 32]),
             ],
             data: msg_delivered.encode_data().into(),
-            block_number: 1,
-            transaction_index: 0,
             ..Default::default()
         };
 

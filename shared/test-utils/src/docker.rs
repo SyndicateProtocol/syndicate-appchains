@@ -1,6 +1,6 @@
 //! Docker components for the integration tests
 
-use crate::{port_manager::PortManager, rollup::rollup_info, utils::test_path};
+use crate::{port_manager::PortManager, rollup::rollup_info, utils::test_path, wait_until};
 use alloy::{
     primitives::Address,
     providers::{Provider, ProviderBuilder, RootProvider},
@@ -15,7 +15,6 @@ use std::{
 use tokio::{
     io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
-    time::{sleep, timeout},
 };
 use tracing::info;
 
@@ -130,13 +129,8 @@ pub async fn start_mchain(
     .await?;
     let url = format!("http://localhost:{port}");
     let mchain = MProvider::new(url.parse()?);
-    timeout(Duration::from_secs(120), async {
-        while !mchain.connected().await {
-            tokio::time::sleep(Duration::from_millis(10)).await;
-        }
-        Ok::<_, eyre::Error>((url, docker, mchain))
-    })
-    .await?
+    wait_until!(mchain.connected().await, Duration::from_secs(120));
+    Ok((url, docker, mchain))
 }
 
 /// Starts nitro instance
@@ -182,11 +176,6 @@ pub async fn launch_nitro_node(
 
     let rollup = ProviderBuilder::default().on_http(url.parse()?);
     // give it two minutes to launch (in case it needs to download the image)
-    timeout(Duration::from_secs(120), async {
-        while rollup.get_chain_id().await.is_err() {
-            sleep(Duration::from_millis(10)).await;
-        }
-        Ok::<_, eyre::Error>((nitro, rollup, url))
-    })
-    .await?
+    wait_until!(rollup.get_chain_id().await.is_ok(), Duration::from_secs(120));
+    Ok((nitro, rollup, url))
 }

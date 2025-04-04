@@ -119,9 +119,10 @@ where
 #[macro_export]
 macro_rules! wait_until {    // With setup code
     ($setup:stmt; $condition:expr, $timeout:expr) => {{
+        use $crate::utils::assert_eventually;
         let wait_result = assert_eventually(
             || async {
-                $setup;
+                $setup
                 Ok($condition)
             },
             $timeout

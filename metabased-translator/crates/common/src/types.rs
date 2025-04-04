@@ -3,6 +3,7 @@
 use alloy::{
     hex,
     primitives::{Address, Bytes, B256},
+    rpc::types::Header,
 };
 use async_trait::async_trait;
 use eyre::Error;
@@ -14,13 +15,165 @@ use serde::{
 use std::{fmt, sync::Arc};
 use strum_macros::Display;
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Default)]
-/// **`BlockAndReceipts`**: Contains both a `Block` and the associated list of `Receipt` objects.
-pub struct BlockAndReceipts {
-    /// The block data.
-    pub block: Block,
-    /// The transaction receipts for the block.
-    pub receipts: Vec<Receipt>,
+#[allow(missing_docs)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
+pub struct PartialLogWithTxdata {
+    pub address: Address,
+    pub topics: Vec<B256>,
+    pub data: Bytes,
+    pub tx_calldata: Bytes,
+}
+
+#[allow(missing_docs)]
+impl PartialLogWithTxdata {
+    pub fn new(log: alloy::rpc::types::Log, tx_data: Bytes) -> Self {
+        Self {
+            address: log.address(),
+            topics: log.topics().into(),
+            data: log.data().data.clone(),
+            tx_calldata: tx_data,
+        }
+    }
+}
+
+#[allow(missing_docs)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
+pub struct PartialBlock {
+    pub number: u64,
+    pub hash: B256,
+    pub timestamp: u64,
+    pub parent_hash: B256,
+    pub logs: Vec<PartialLogWithTxdata>,
+}
+
+#[allow(missing_docs)]
+impl PartialBlock {
+    pub fn new(header: Header, logs: Vec<PartialLogWithTxdata>) -> Self {
+        Self {
+            hash: header.hash,
+            logs,
+            parent_hash: header.parent_hash,
+            timestamp: header.timestamp,
+            number: header.number,
+        }
+    }
+}
+
+#[allow(missing_docs)] // self-explanatory
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
+#[strum(serialize_all = "lowercase")]
+pub enum Chain {
+    Sequencing,
+    Settlement,
+}
+
+impl From<Chain> for &'static str {
+    fn from(chain: Chain) -> &'static str {
+        match chain {
+            Chain::Sequencing => "sequencing",
+            Chain::Settlement => "settlement",
+        }
+    }
+}
+
+/// A trait for processing slots of blocks from the sequencing and settlement chains.
+/// Implementors of this trait define how to translate each slot into the mchain state.
+#[async_trait]
+pub trait SlotProcessor: Send {
+    /// Process a single slot
+    async fn process_slot(&self, slot: &Slot) -> Result<(), Error>;
+}
+
+/// A `Slot` is a collection of source chain blocks to be sent to the block builder.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
+pub struct Slot {
+    /// the block from the sequencing chain to be included in the slot.
+    pub sequencing: Arc<PartialBlock>,
+    /// the blocks from the settlement chain to be included in the slot.
+    pub settlement: Vec<Arc<PartialBlock>>,
+}
+
+impl Slot {
+    /// Creates a new slot
+    pub const fn new(sequencing_block: Arc<PartialBlock>) -> Self {
+        Self { sequencing: sequencing_block, settlement: Vec::new() }
+    }
+
+    /// Adds a block to the slot's chain-specific block list
+    pub fn push_settlement_block(&mut self, block: Arc<PartialBlock>) {
+        self.settlement.push(block)
+    }
+
+    /// Returns the timestamp of the slot
+    #[allow(clippy::missing_const_for_fn)] // false positive (cannot deref Arc in a const fn)
+    pub fn timestamp(&self) -> u64 {
+        self.sequencing.timestamp
+    }
+}
+
+impl Display for Slot {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(
+            f,
+            "Slot [Sequencing block: {}, Settlement blocks (total: {}): {}]",
+            format_block(&self.sequencing),
+            self.settlement.len(),
+            format_blocks(&self.settlement),
+        )
+    }
+}
+
+fn format_blocks(blocks: &[Arc<PartialBlock>]) -> String {
+    if blocks.is_empty() {
+        return "none".to_string();
+    }
+    blocks
+        .iter()
+        .map(|arc_block| {
+            let b = arc_block.as_ref();
+            format!("#{} ({})", b.number, b.hash)
+        })
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+fn format_block(b: &PartialBlock) -> String {
+    format!("number: {}, hash: {}, total_logs: {}", b.number, b.hash, b.logs.len())
+}
+
+/// A reference to a block containing just its number and timestamp.
+#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
+pub struct BlockRef {
+    /// The block number.
+    pub number: u64,
+    /// The block timestamp.
+    pub timestamp: u64,
+    /// The block hash.
+    pub hash: B256,
+}
+
+impl BlockRef {
+    /// Creates a new `BlockRef` from a `Block`.
+    pub const fn new(block: &PartialBlock) -> Self {
+        Self { number: block.number, timestamp: block.timestamp, hash: block.hash }
+    }
+}
+
+impl Display for BlockRef {
+    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
+        write!(f, "number: {}, ts: {}, hash: {}", self.number, self.timestamp, self.hash)
+    }
+}
+
+/// A known state of the translator
+#[derive(Debug)]
+pub struct KnownState {
+    /// mchain block number for this state
+    pub mchain_block_number: u64,
+    /// The latest block from the sequencing chain that has been processed
+    pub sequencing_block: BlockRef,
+    /// The latest block from the settlement chain that has been processed
+    pub settlement_block: BlockRef,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
@@ -169,128 +322,6 @@ pub struct Log {
     pub transaction_hash: B256,
 }
 
-#[allow(missing_docs)] // self-explanatory
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Display)]
-#[strum(serialize_all = "lowercase")]
-pub enum Chain {
-    Sequencing,
-    Settlement,
-}
-
-impl From<Chain> for &'static str {
-    fn from(chain: Chain) -> &'static str {
-        match chain {
-            Chain::Sequencing => "sequencing",
-            Chain::Settlement => "settlement",
-        }
-    }
-}
-
-/// A trait for processing slots of blocks from the sequencing and settlement chains.
-/// Implementors of this trait define how to translate each slot into the mchain state.
-#[async_trait]
-pub trait SlotProcessor: Send {
-    /// Process a single slot
-    async fn process_slot(&self, slot: &Slot) -> Result<(), Error>;
-}
-
-/// A `Slot` is a collection of source chain blocks to be sent to the block builder.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
-pub struct Slot {
-    /// the block from the sequencing chain to be included in the slot.
-    pub sequencing: Arc<BlockAndReceipts>,
-    /// the blocks from the settlement chain to be included in the slot.
-    pub settlement: Vec<Arc<BlockAndReceipts>>,
-}
-
-impl Slot {
-    /// Creates a new slot
-    pub const fn new(sequencing_block: Arc<BlockAndReceipts>) -> Self {
-        Self { sequencing: sequencing_block, settlement: Vec::new() }
-    }
-
-    /// Adds a block to the slot's chain-specific block list
-    pub fn push_settlement_block(&mut self, block: Arc<BlockAndReceipts>) {
-        self.settlement.push(block)
-    }
-
-    /// Returns the timestamp of the slot
-    #[allow(clippy::missing_const_for_fn)] // false positive (cannot deref Arc in a const fn)
-    pub fn timestamp(&self) -> u64 {
-        self.sequencing.block.timestamp
-    }
-}
-
-impl Display for Slot {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        write!(
-            f,
-            "Slot [Sequencing block: {}, Settlement blocks (total: {}): {}]",
-            format_block(&self.sequencing),
-            self.settlement.len(),
-            format_blocks(&self.settlement),
-        )
-    }
-}
-
-fn format_blocks(blocks: &[Arc<BlockAndReceipts>]) -> String {
-    if blocks.is_empty() {
-        return "none".to_string();
-    }
-    blocks
-        .iter()
-        .map(|arc_block| {
-            let b = arc_block.as_ref();
-            format!("#{} ({})", b.block.number, b.block.hash)
-        })
-        .collect::<Vec<_>>()
-        .join(", ")
-}
-
-fn format_block(b: &BlockAndReceipts) -> String {
-    format!(
-        "number: {}, hash: {}, total_receipts: {}",
-        b.block.number,
-        b.block.hash,
-        b.receipts.len()
-    )
-}
-
-/// A reference to a block containing just its number and timestamp.
-#[derive(Debug, Serialize, Deserialize, Eq, PartialEq, Clone)]
-pub struct BlockRef {
-    /// The block number.
-    pub number: u64,
-    /// The block timestamp.
-    pub timestamp: u64,
-    /// The block hash.
-    pub hash: B256,
-}
-
-impl BlockRef {
-    /// Creates a new `BlockRef` from a `Block`.
-    pub const fn new(block: &Block) -> Self {
-        Self { number: block.number, timestamp: block.timestamp, hash: block.hash }
-    }
-}
-
-impl Display for BlockRef {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        write!(f, "number: {}, ts: {}, hash: {}", self.number, self.timestamp, self.hash)
-    }
-}
-
-/// A known state of the translator
-#[derive(Debug)]
-pub struct KnownState {
-    /// mchain block number for this state
-    pub mchain_block_number: u64,
-    /// The latest block from the sequencing chain that has been processed
-    pub sequencing_block: BlockRef,
-    /// The latest block from the settlement chain that has been processed
-    pub settlement_block: BlockRef,
-}
-
 fn deserialize_address<'de, D>(deserializer: D) -> Result<Address, D::Error>
 where
     D: Deserializer<'de>,
@@ -419,117 +450,50 @@ where
 #[cfg(test)]
 mod test {
     use super::*;
-    use alloy::{
-        hex::FromHex,
-        primitives::{fixed_bytes, B256},
-    };
+    use alloy::{hex::FromHex, primitives::B256};
 
     fn create_test_slot() -> Slot {
-        // Add sequencing chain block with transaction and receipt
-        let sequencing_block = Arc::new(BlockAndReceipts {
-            block: Block {
-                hash: B256::from_hex(
-                    "0x1234567890123456789012345678901234567890123456789012345678901234",
+        // Add sequencing chain block
+        let sequencing_block = Arc::new(PartialBlock {
+            hash: B256::from_hex(
+                "0x1234567890123456789012345678901234567890123456789012345678901234",
+            )
+            .unwrap(),
+            number: 100,
+            parent_hash: B256::ZERO,
+            timestamp: 1000,
+            logs: vec![PartialLogWithTxdata {
+                address: Address::from_hex("0x1234567890123456789012345678901234567890").unwrap(),
+                topics: vec![B256::from_hex(
+                    "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
                 )
-                .unwrap(),
-                number: 100,
-                parent_hash: B256::ZERO,
-                logs_bloom: "0x01".to_string(),
-                transactions_root: "0x02".to_string(),
-                state_root: "0x03".to_string(),
-                receipts_root: "0x04".to_string(),
-                timestamp: 1000,
-                transactions: vec![Transaction {
-                    block_hash: B256::from_hex(
-                        "0x1234567890123456789012345678901234567890123456789012345678901234",
-                    )
-                    .unwrap(),
-                    block_number: 100,
-                    from: Address::from_hex("0x1234567890123456789012345678901234567890").unwrap(),
-                    hash: B256::from_hex(
-                        "0xabcd567890123456789012345678901234567890123456789012345678901234",
-                    )
-                    .unwrap(),
-                    input: hex::decode("0x123456").unwrap().into(),
-                    nonce: 1,
-                    to: Some(
-                        Address::from_hex("0x9876543210987654321098765432109876543210").unwrap(),
-                    ),
-                    transaction_index: "0x0".to_string(),
-                    value: "0x0".to_string(),
-                    gas: "0x0".to_string(),
-                }],
-            },
-            receipts: vec![Receipt {
-                block_hash: B256::from_hex(
-                    "0x1234567890123456789012345678901234567890123456789012345678901234",
-                )
-                .unwrap(),
-                block_number: 100,
-                from: Address::from_hex("0x1234567890123456789012345678901234567890").unwrap(),
-                to: Some(Address::from_hex("0x9876543210987654321098765432109876543210").unwrap()),
-                contract_address: None,
-                logs: vec![Log {
-                    block_hash: B256::from_hex(
-                        "0x1234567890123456789012345678901234567890123456789012345678901234",
-                    )
-                    .unwrap(),
-                    block_number: 100,
-                    transaction_index: 0,
-                    address: Address::from_hex("0x1234567890123456789012345678901234567890")
-                        .unwrap(),
-                    log_index: 0,
-                    data: Bytes::from_hex("0xdeadbeef").unwrap(),
-                    removed: false,
-                    topics: vec![B256::from_hex(
-                        "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-                    )
-                    .unwrap()],
-                    transaction_hash: B256::from_hex(
-                        "0xabcd567890123456789012345678901234567890123456789012345678901234",
-                    )
-                    .unwrap(),
-                }],
-                logs_bloom: "0x0".to_string(),
-                status: 1,
-                receipt_type: "0x0".to_string(),
-                transaction_index: 0,
-                transaction_hash: fixed_bytes!(
-                    "0xabcd567890123456789012345678901234567890123456789012345678901234"
-                ),
-                gas_used: 0,
+                .unwrap()],
+                data: Bytes::from_hex("0xdead").unwrap(),
+                tx_calldata: Bytes::from_hex("0xbeef").unwrap(),
             }],
         });
 
         let mut slot = Slot::new(sequencing_block);
 
         // Add settlement chain block
-        slot.settlement.push(Arc::new(BlockAndReceipts {
-            block: Block {
-                hash: B256::from_hex(
-                    "0x5678901234567890123456789012345678901234567890123456789012345678",
-                )
-                .unwrap(),
-                number: 200,
-                parent_hash: B256::from_hex(
-                    "0x1111111111111111111111111111111111111111111111111111111111111111",
-                )
-                .unwrap(),
-                logs_bloom: "0x05".to_string(),
-                transactions_root: "0x06".to_string(),
-                state_root: "0x07".to_string(),
-                receipts_root: "0x08".to_string(),
-                timestamp: 1100,
-                transactions: vec![],
-            },
-            receipts: vec![],
+        slot.push_settlement_block(Arc::new(PartialBlock {
+            hash: B256::from_hex(
+                "0x5678901234567890123456789012345678901234567890123456789012345678",
+            )
+            .unwrap(),
+            number: 200,
+            parent_hash: B256::from_hex(
+                "0x1111111111111111111111111111111111111111111111111111111111111111",
+            )
+            .unwrap(),
+            timestamp: 1100,
+            logs: vec![],
         }));
 
         slot
     }
 
     #[test]
-    #[ignore] // NOTE: binary serialization fails. The current serialization logic is only for JSON.
     fn test_bincode_serialization() {
         let slot = create_test_slot();
         let encoded = bincode::serialize(&slot).unwrap();

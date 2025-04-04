@@ -5,7 +5,7 @@ use crate::{config::ChainIngestorConfig, metrics::IngestorMetrics};
 use alloy::{primitives::Address, rpc::types::BlockNumberOrTag};
 use common::{
     eth_client::RPCClient,
-    types::{Block, BlockAndReceipts, Chain, Receipt},
+    types::{Block, Chain, PartialBlock, PartialLogWithTxdata, Receipt},
 };
 use eyre::Error;
 use std::{
@@ -23,7 +23,7 @@ use tracing::{debug, error, info, trace, warn};
 
 struct BatchContext<'a> {
     client: &'a Arc<dyn RPCClient>,
-    sender: &'a Sender<Arc<BlockAndReceipts>>,
+    sender: &'a Sender<Arc<PartialBlock>>,
     metrics: &'a IngestorMetrics,
     current_block_number: &'a mut u64,
     initial_chain_head: u64,
@@ -80,7 +80,7 @@ pub async fn run(
     config: &ChainIngestorConfig,
     addresses: Vec<Address>,
     client: Arc<dyn RPCClient>,
-    sender: Sender<Arc<BlockAndReceipts>>,
+    sender: Sender<Arc<PartialBlock>>,
     metrics: IngestorMetrics,
     mut shutdown_rx: oneshot::Receiver<()>,
 ) -> Result<(), Error> {
@@ -137,20 +137,20 @@ pub async fn run(
 }
 
 async fn push_block_and_receipts(
-    sender: &Sender<Arc<BlockAndReceipts>>,
+    sender: &Sender<Arc<PartialBlock>>,
     metrics: &IngestorMetrics,
     current_block_number: &mut u64,
-    block_and_receipts: Arc<BlockAndReceipts>,
+    block_and_receipts: Arc<PartialBlock>,
     chain: Chain,
 ) -> Result<(), IngestorError> {
-    if block_and_receipts.block.number != *current_block_number {
+    if block_and_receipts.number != *current_block_number {
         error!(
             "Block number mismatch on chain {:?}. Current block {:?}. Got {:?}",
-            chain, current_block_number, block_and_receipts.block.number
+            chain, current_block_number, block_and_receipts.number
         );
         return Err(IngestorError::BlockNumberMismatch {
             current: *current_block_number,
-            received: block_and_receipts.block.number,
+            received: block_and_receipts.number,
         });
     }
     sender.send(block_and_receipts).await.map_err(|_| IngestorError::SendError)?;
@@ -168,7 +168,7 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
         .collect();
     trace!("Fetching blocks {:?} on {:?}", block_numbers, ctx.chain);
 
-    let mut tasks: JoinSet<Result<(u64, BlockAndReceipts), Error>> = JoinSet::new();
+    let mut tasks: JoinSet<Result<(u64, PartialBlock), Error>> = JoinSet::new();
 
     // Spawn tasks for each block number
     for &block_number in &block_numbers {
@@ -180,7 +180,7 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
 
         tasks.spawn(async move {
             // Fetch block and receipts
-            let mut block = fetch_block_with_retry(
+            let block = fetch_block_with_retry(
                 &*client,
                 BlockNumberOrTag::Number(block_number),
                 ctx.chain,
@@ -199,23 +199,38 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
             )
             .await?;
             // Filter receipts that include logs for any of the addresses in ctx.addresses
-            let filtered_receipts: Vec<Receipt> = receipts
+            let filtered_logs: Vec<PartialLogWithTxdata> = receipts
                 .into_iter()
-                .filter(|receipt| {
-                    // Keep receipts where at least one log is related to the monitored
-                    // addresses
-                    receipt.logs.iter().any(|log| addresses.contains(&log.address))
+                .flat_map(|receipt| {
+                    // Keep the relevant logs and related tx calldata
+                    let logs: Vec<PartialLogWithTxdata> = receipt
+                        .logs
+                        .into_iter()
+                        .filter(|log| addresses.contains(&log.address))
+                        .map(|log| PartialLogWithTxdata {
+                            address: log.address,
+                            topics: log.topics,
+                            data: log.data,
+                            tx_calldata: block.transactions[log.transaction_index as usize]
+                                .input
+                                .clone(),
+                        })
+                        .collect();
+                    logs
                 })
                 .collect();
 
-            // TODO SEQ-759 - this is just a low hanging fruit memory optimization, but we should
-            // expand it to NOT keep any txs we don't need in memory
-            if filtered_receipts.is_empty() {
-                block.transactions = vec![];
-            }
-
             // Return the block and receipts
-            Ok((block_number, BlockAndReceipts { block, receipts: filtered_receipts }))
+            Ok((
+                block_number,
+                PartialBlock {
+                    number: block.number,
+                    hash: block.hash,
+                    timestamp: block.timestamp,
+                    parent_hash: block.parent_hash,
+                    logs: filtered_logs,
+                },
+            ))
         });
     }
 
@@ -432,7 +447,7 @@ mod tests {
     use async_trait::async_trait;
     use common::{
         eth_client::RPCClientError,
-        types::{Block, BlockAndReceipts},
+        types::{Block, PartialBlock},
     };
     use eyre::Result;
     use mockall::{mock, predicate::*};
@@ -445,8 +460,8 @@ mod tests {
         pub registry: Registry,
     }
 
-    fn get_dummy_block_and_receipts(number: u64) -> BlockAndReceipts {
-        let block: Block = Block {
+    fn get_dummy_block(number: u64) -> Block {
+        Block {
             hash: B256::from_str(
                 "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
             )
@@ -462,8 +477,7 @@ mod tests {
             receipts_root: "0xRec".to_string(),
             timestamp: 1000000000,
             transactions: vec![],
-        };
-        BlockAndReceipts { block, receipts: vec![] }
+        }
     }
 
     mock! {
@@ -485,8 +499,14 @@ mod tests {
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
         let mut current_block_number = start_block;
 
-        let block = get_dummy_block_and_receipts(start_block);
-        let arc_block = Arc::new(block);
+        let block = get_dummy_block(start_block);
+        let arc_block = Arc::new(PartialBlock {
+            number: block.number,
+            hash: block.hash,
+            timestamp: block.timestamp,
+            parent_hash: block.parent_hash,
+            logs: vec![],
+        });
 
         push_block_and_receipts(
             &sender,
@@ -499,7 +519,7 @@ mod tests {
         .expect("Failed to poll block");
 
         if let Some(arc_block) = receiver.recv().await {
-            assert_eq!(arc_block.block.number, start_block);
+            assert_eq!(arc_block.number, start_block);
         } else {
             panic!("No block received");
         }
@@ -515,8 +535,14 @@ mod tests {
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
         let mut current_block_number = start_block;
 
-        let block = get_dummy_block_and_receipts(wrong_block);
-        let arc_block = Arc::new(block);
+        let block = get_dummy_block(wrong_block);
+        let arc_block = Arc::new(PartialBlock {
+            number: block.number,
+            hash: block.hash,
+            timestamp: block.timestamp,
+            parent_hash: block.parent_hash,
+            logs: vec![],
+        });
 
         let err = push_block_and_receipts(
             &sender,
@@ -548,7 +574,7 @@ mod tests {
         let mut mock_client = MockRPCClientMock::new();
         mock_client
             .expect_get_block_by_number()
-            .returning(move |_| Ok(get_dummy_block_and_receipts(start_block).block));
+            .returning(move |_| Ok(get_dummy_block(start_block)));
         mock_client.expect_get_block_receipts().returning(move |_| Ok(vec![]));
         let client: Arc<dyn RPCClient> = Arc::new(mock_client);
         let mut metrics_state = MetricsState { registry: Registry::default() };
@@ -594,8 +620,8 @@ mod tests {
             .expect_get_block_by_number()
             .times((syncing_batch_size as usize) + 1)
             .returning(move |num| match num {
-                BlockNumberOrTag::Number(num) => Ok(get_dummy_block_and_receipts(num).block),
-                BlockNumberOrTag::Latest => Ok(get_dummy_block_and_receipts(chain_head).block),
+                BlockNumberOrTag::Number(num) => Ok(get_dummy_block(num)),
+                BlockNumberOrTag::Latest => Ok(get_dummy_block(chain_head)),
                 _ => Err(RPCClientError::BlockNotFound(num.to_string())),
             });
         mock_client
@@ -621,7 +647,7 @@ mod tests {
 
         let mut received_blocks = Vec::new();
         while let Ok(block) = receiver.try_recv() {
-            received_blocks.push(block.block.number);
+            received_blocks.push(block.number);
         }
 
         assert_eq!(received_blocks.len(), syncing_batch_size as usize);
