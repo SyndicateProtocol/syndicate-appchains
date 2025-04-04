@@ -107,6 +107,16 @@ impl StreamManager {
         let conn = self.conn.clone();
         Ok(StreamConsumer::new(conn, group_name.to_string(), format!("consumer-{}", id)))
     }
+
+    /// Create a consumer with a specific group and custom consumer name
+    pub fn create_consumer_with_group_and_name(
+        &self,
+        group_name: &str,
+        consumer_name: &str,
+    ) -> Result<StreamConsumer, Error> {
+        let conn = self.conn.clone();
+        Ok(StreamConsumer::new(conn, group_name.to_string(), consumer_name.to_string()))
+    }
 }
 
 /// Redis Stream producer for enqueueing transactions
@@ -203,7 +213,7 @@ impl StreamConsumer {
     async fn read_pending_messages(
         &mut self,
     ) -> Result<Vec<(String, HashMap<String, Value>)>, Error> {
-        // Get all pending message IDs
+        // Get pending messages specific to this consumer
         let pending_info: redis::streams::StreamPendingCountReply =
             self.conn.xpending_count(TX_STREAM_KEY, &self.group_name, "-", "+", BATCH_SIZE).await?;
 
@@ -211,9 +221,19 @@ impl StreamConsumer {
             return Ok(vec![]);
         }
 
-        // Extract the message IDs
-        let pending_ids: Vec<String> =
-            pending_info.ids.iter().map(|item| item.id.clone()).collect();
+        // Filter for messages assigned to this consumer
+        let mut messages_to_claim = Vec::new();
+        for pending_item in pending_info.ids {
+            // Check if the message is assigned to this consumer or has been idle for too long
+            // (delivery_count > 1 means it has been delivered before and not acknowledged)
+            if pending_item.consumer == self.consumer_name || pending_item.times_delivered > 1 {
+                messages_to_claim.push(pending_item.id);
+            }
+        }
+
+        if messages_to_claim.is_empty() {
+            return Ok(vec![]);
+        }
 
         // Claim these pending messages using XCLAIM
         let claimed: Vec<(String, HashMap<String, Value>)> = self
@@ -222,8 +242,8 @@ impl StreamConsumer {
                 TX_STREAM_KEY,
                 &self.group_name,
                 &self.consumer_name,
-                0, // Min idle time (claim immediately)
-                &pending_ids,
+                5000, // Min idle time (only claim if idle for >5 seconds)
+                &messages_to_claim,
             )
             .await?;
 
@@ -310,7 +330,8 @@ impl StreamConsumer {
 
         let tx_req: TransactionRequest = serde_json::from_str(json_string.as_str())?;
 
-        // TODO: Implement txn processing logic here
+        // TODO: Implement txn processing logic here. E.g. send txn to TC
+
         info!("Processing transaction: {} from sender {}", tx_req.tx_hash, tx_req.sender);
 
         // Simulate some processing work

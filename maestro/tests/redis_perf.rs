@@ -9,10 +9,11 @@ use rand::{distributions::Alphanumeric, Rng};
 use redis::AsyncCommands;
 use std::{
     fmt,
+    fmt::Write,
     sync::Arc,
     time::{Duration, Instant},
 };
-use test_utils::{port_manager::PortManager, wait_until};
+use test_utils::port_manager::PortManager;
 use tokio::{
     process::{Child, Command},
     runtime::Handle,
@@ -21,6 +22,7 @@ use tokio::{
     time::timeout,
 };
 use tracing::{debug, error, info};
+use uuid::Uuid;
 
 const TX_STREAM_KEY: &str = "maestro:transactions";
 
@@ -213,8 +215,13 @@ pub async fn run_benchmark(config: BenchmarkConfig) -> Result<BenchmarkResults> 
     // Create a stream manager to initialize the consumer group
     let conn = client.get_multiplexed_async_connection().await?;
     let mut stream_manager = StreamManager::new(conn.clone());
-    let consumer_group_name = stream_manager.init_consumer_group().await?;
-    let consumer_group_name_arc = Arc::new(consumer_group_name.to_string());
+
+    // Create a unique consumer group for each test run to avoid conflicts
+    let consumer_group_name =
+        format!("maestro-processors-{}", chrono::Utc::now().timestamp_millis());
+    let consumer_group_name_arc = Arc::new(consumer_group_name.clone());
+
+    let _result = stream_manager.init_consumer_group_with_name(&consumer_group_name).await?;
 
     // Start the producer tasks
     let producer_handles = (0..config.producer_count)
@@ -255,11 +262,17 @@ pub async fn run_benchmark(config: BenchmarkConfig) -> Result<BenchmarkResults> 
             let stop_clone = stop.clone();
 
             let group_name_clone = Arc::clone(&consumer_group_name_arc);
+
+            // Create a truly unique consumer name
+            let unique_consumer_name = format!("consumer-{}-{}", id, Uuid::new_v4());
+
             tokio::spawn(async move {
                 let conn = client_clone.get_multiplexed_async_connection().await?;
                 let stream_manager = StreamManager::new(conn);
-                let mut consumer =
-                    stream_manager.create_consumer_with_group(group_name_clone.as_str(), id)?;
+                let mut consumer = stream_manager.create_consumer_with_group_and_name(
+                    group_name_clone.as_str(),
+                    &unique_consumer_name,
+                )?;
 
                 // Wait for all tasks to be ready
                 barrier_clone.wait().await;
@@ -339,6 +352,7 @@ pub async fn run_benchmark(config: BenchmarkConfig) -> Result<BenchmarkResults> 
         dequeue_tps: stats_guard.transactions_consumed as f64 / runtime_seconds,
         runtime_seconds,
     };
+    drop(stats_guard);
 
     #[allow(clippy::expect_used)]
     let stream_info: redis::Value =
@@ -381,6 +395,7 @@ async fn producer_task(
                 let mut stats_guard = stats.lock().await;
                 stats_guard.transactions_produced += 1;
                 stats_guard.enqueue_latency_us_sum += latency_us;
+                drop(stats_guard);
 
                 count += 1;
                 if count % 1000 == 0 {
@@ -428,6 +443,7 @@ async fn consumer_task(
                     let mut stats_guard = stats.lock().await;
                     stats_guard.transactions_consumed += processed;
                     stats_guard.dequeue_latency_us_sum += latency_us * processed as u128;
+                    drop(stats_guard);
 
                     count += processed;
                     debug!("Consumer {id} processed {processed} transactions (total: {count})");
@@ -457,12 +473,22 @@ fn generate_random_transaction(size: usize) -> TransactionRequest {
     let mut rng = rand::thread_rng();
 
     // Generate random hex string for tx_hash (fixed size)
-    let tx_hash =
-        format!("0x{}", (0..64).map(|_| format!("{:x}", rng.gen::<u8>())).collect::<String>());
+    let tx_hash = {
+        let mut acc = String::from("0x");
+        (0..64).for_each(|_| {
+            let _ = write!(acc, "{:x}", rng.gen::<u8>());
+        });
+        acc
+    };
 
     // Generate random address for sender (fixed size)
-    let sender =
-        format!("0x{}", (0..40).map(|_| format!("{:x}", rng.gen::<u8>())).collect::<String>());
+    let sender = {
+        let mut acc = String::from("0x");
+        (0..40).for_each(|_| {
+            let _ = write!(acc, "{:x}", rng.gen::<u8>());
+        });
+        acc
+    };
 
     // Generate random raw tx with remaining size
     let remaining_size = size.saturating_sub(tx_hash.len() + sender.len() + 20);
