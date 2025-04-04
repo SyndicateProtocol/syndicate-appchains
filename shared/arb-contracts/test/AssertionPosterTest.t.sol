@@ -336,6 +336,10 @@ contract MockRollup {
         _sequencerInbox = new MockSequencerInbox(_bridge);
     }
 
+    function paused() external pure returns (bool) {
+        return false;
+    }
+
     // Additional setter to allow delegatecall tests to work.
     function setOwner(address newOwner) external {
         _owner = newOwner;
