@@ -8,11 +8,11 @@ name: Certora
 on:
   push:
     branches: [main]
-  # Only run on PRs that touch metabased-contracts .sol and .spec files to avoid unnecessary CI runs
+  # Only run on PRs that touch shared .sol and .spec files to avoid unnecessary CI runs
   pull_request:
     paths:
-      - "metabased-contracts/src/**/*.sol"
-      - "metabased-contracts/certora/specs/**/*.spec"
+      - "shared/src/**/*.sol"
+      - "shared/certora/specs/**/*.spec"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
@@ -31,19 +31,10 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: metabased-contracts
+        working-directory: shared
     strategy:
       matrix:
-        rule:
-          [
-            "MetabasedSequencerChain",
-            "AllowlistSequencingModule",
-            "AtomicSequencer",
-            "AtomicSequencerImplementation",
-            "SyndicateToken",
-            "RequireAllModule",
-            "RequireAnyModule",
-          ]
+        rule: ["AssertionPoster"]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -88,12 +79,12 @@ jobs:
       - name: Install solc
         run: |
           pipx install solc-select
-          solc-select install 0.8.25
-          solc-select use 0.8.25
+          solc-select install 0.8.28
+          solc-select use 0.8.28
           ls ~/.solc-select/artifacts/
           which solc
 
-      - name: Verify metabased-contracts Certora rules
+      - name: Verify Certora Specs on Shared Folder
         env:
           CERTORAKEY: ${{ secrets.CERTORAKEY }}
         run: certoraRun certora/conf/${{ matrix.rule }}.conf --wait_for_results=all
