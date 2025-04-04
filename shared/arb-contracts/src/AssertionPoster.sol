@@ -162,7 +162,9 @@ contract AssertionPoster is Ownable {
     function _configureLegacy() private {
         IAccessControl(address(executor)).grantRole(keccak256("EXECUTOR_ROLE"), self);
         // Prevent anyone except the admin account from creating assertions
-        IRollupAdmin(address(rollup)).pause();
+        if (!rollup.paused()) {
+            IRollupAdmin(address(rollup)).pause();
+        }
     }
 
     /**
