@@ -127,7 +127,7 @@ pub struct StreamProducer {
 
 impl StreamProducer {
     /// Create a new producer with the provided Redis connection
-    pub fn new(conn: MultiplexedConnection) -> Self {
+    pub const fn new(conn: MultiplexedConnection) -> Self {
         Self { conn }
     }
 
@@ -164,7 +164,11 @@ pub struct StreamConsumer {
 
 impl StreamConsumer {
     /// Create a new consumer with a specific group and consumer name
-    pub fn new(conn: MultiplexedConnection, group_name: String, consumer_name: String) -> Self {
+    pub const fn new(
+        conn: MultiplexedConnection,
+        group_name: String,
+        consumer_name: String,
+    ) -> Self {
         Self { conn, group_name, consumer_name }
     }
 

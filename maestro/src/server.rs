@@ -106,7 +106,7 @@ pub struct MaestroService {
 
 impl MaestroService {
     /// Create a new instance of the Maestro service
-    pub fn new(redis_conn: Option<MultiplexedConnection>) -> Self {
+    pub const fn new(redis_conn: Option<MultiplexedConnection>) -> Self {
         Self { redis_conn }
     }
 
