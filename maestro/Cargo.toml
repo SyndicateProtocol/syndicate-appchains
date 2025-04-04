@@ -23,7 +23,6 @@ alloy = { workspace = true, features = [
 
 axum               = { workspace = true }
 bytes              = { workspace = true }
-chrono             = "0.4.40"
 clap               = { workspace = true, features = ["derive", "env"] }
 eyre               = { workspace = true }
 futures-util       = { workspace = true }
@@ -31,7 +30,6 @@ http               = { workspace = true }
 http-body          = { workspace = true }
 jsonrpsee          = { workspace = true, features = ["full"] }
 mockall            = { workspace = true }
-rand               = "0.8.5"
 redis              = { workspace = true, features = ["streams", "tokio-comp"] }
 serde              = { workspace = true, features = ["derive"] }
 serde_json         = { workspace = true }
@@ -42,7 +40,11 @@ tokio              = { workspace = true, features = ["full"] }
 tower              = { workspace = true }
 tracing            = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
-uuid               = { version = "1.16.0", features = ["v4"] }
+
+[dev-dependencies]
+chrono = { version = "0.4.40" }
+rand   = { version = "0.8.5" }
+uuid   = { version = "1.16.0", features = ["v4"] }
 
 [lints]
 workspace = true
