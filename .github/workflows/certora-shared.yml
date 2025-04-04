@@ -11,8 +11,8 @@ on:
   # Only run on PRs that touch shared .sol and .spec files to avoid unnecessary CI runs
   pull_request:
     paths:
-      - "shared/src/**/*.sol"
-      - "shared/certora/specs/**/*.spec"
+      - "shared/arb-contracts/src/**/*.sol"
+      - "shared/arb-contracts/certora/specs/**/*.spec"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
