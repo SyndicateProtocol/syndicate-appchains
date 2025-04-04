@@ -45,11 +45,11 @@ repos:
         types: [solidity]
         files: ^(metabased-contracts)/
         pass_filenames: false
-      - id: forge-test-metabased-translator-contracts
+      - id: forge-test-shared-contracts
         name: forge test metabased translator contracts
         entry: forge test
-        args: ["--root", "metabased-translator/contracts"]
+        args: ["--root", "shared/arb-contracts"]
         language: system
         types: [solidity]
-        files: ^(metabased-translator)/contracts/
+        files: ^(shared)/arb-contracts/
         pass_filenames: false

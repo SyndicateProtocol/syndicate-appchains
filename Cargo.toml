@@ -4,7 +4,6 @@ members = [
   "metabased-poster",
   "metabased-sequencer",
   "metabased-translator/bin/metabased-translator",
-  "metabased-translator/contract-bindings",
   "metabased-translator/crates/block-builder",
   "metabased-translator/crates/common",
   "metabased-translator/crates/ingestor",
@@ -12,6 +11,7 @@ members = [
   "metabased-translator/crates/slotter",
   "metabased-translator/tests",
   "shared",
+  "shared/contract-bindings",
   "shared/test-utils",
   "tc-sequencer",
   "test-framework",
@@ -46,7 +46,7 @@ byte-unit            = "5.1.6"
 bytes                = "1.9.0"
 clap                 = { version = "4.5.26" }
 common               = { path = "metabased-translator/crates/common" }
-contract-bindings    = { path = "metabased-translator/contract-bindings" }
+contract-bindings    = { path = "shared/contract-bindings" }
 derivative           = "2.2"
 derive_more          = { version = "1.0.0", features = ["display"] }
 eyre                 = { version = "0.6.12" }
