@@ -6,7 +6,7 @@
 use crate::block_builder::BlockBuilderError;
 use alloy::{primitives::Bytes, rlp};
 use base64::prelude::*;
-use eyre::{Error, Result};
+use eyre::Result;
 use serde::{ser::Error as _, Serialize, Serializer};
 
 const BROTLI_MESSAGE_HEADER_BYTE: u8 = 0;
@@ -66,9 +66,7 @@ impl Batch {
         let mut input = vec![];
         for msg in &self.0 {
             let mut data = match msg {
-                BatchMessage::Delayed => {
-                    Ok::<_, Error>(rlp::encode(BatchSegmentKind::DelayedMessages as u8))
-                }
+                BatchMessage::Delayed => rlp::encode(BatchSegmentKind::DelayedMessages as u8),
                 BatchMessage::L2(x) => {
                     let mut data = vec![];
                     if ts != x.header.timestamp {
@@ -89,9 +87,9 @@ impl Batch {
                     buffer.push(BatchSegmentKind::L2Message as u8);
                     buffer.append(&mut l2_msg_to_bytes(&x.l2_msg)?.into());
                     data.append(&mut rlp::encode(buffer.as_slice()));
-                    Ok(data)
+                    data
                 }
-            }?;
+            };
             input.append(&mut data);
         }
         let mut out: Vec<u8> = vec![];

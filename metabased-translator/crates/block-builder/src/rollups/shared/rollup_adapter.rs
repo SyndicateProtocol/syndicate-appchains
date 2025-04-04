@@ -3,41 +3,20 @@
 //! This module provides the core [`RollupAdapter`] trait that defines how
 //! different rollup implementations can construct and process their blocks.
 
-use crate::rollups::shared::SequencingTransactionParser;
+use crate::{connectors::mchain::MetaChainProvider, rollups::shared::SequencingTransactionParser};
 use alloy::{
     eips::BlockNumberOrTag,
-    primitives::{Address, Bytes, FixedBytes},
-    providers::Provider,
+    primitives::{Address, Bytes},
 };
 use async_trait::async_trait;
 use common::types::{BlockAndReceipts, KnownState, Slot};
 use eyre::{Error, Result};
-use serde::{Deserialize, Serialize};
+use mchain::db::MBlock;
 use std::{
     fmt::Debug,
     marker::{Send, Sync},
     sync::Arc,
 };
-
-#[allow(missing_docs)]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
-pub struct DelayedMessage {
-    pub kind: u8,
-    pub sender: Address,
-    pub data: Bytes,
-}
-
-#[allow(missing_docs)]
-#[derive(Serialize, Deserialize, Debug, Clone, Default)]
-pub struct MBlock {
-    pub timestamp: u64,
-    pub messages: Vec<DelayedMessage>,
-    pub batch: Bytes,
-    pub seq_block_number: u64,
-    pub seq_block_hash: FixedBytes<32>,
-    pub set_block_number: u64,
-    pub set_block_hash: FixedBytes<32>,
-}
 
 /// Trait for rollup-specific block builders that construct batches from transactions
 #[async_trait]
@@ -73,12 +52,18 @@ pub trait RollupAdapter: Debug + Send + Sync + Unpin + Clone + 'static {
     ) -> Result<Option<MBlock>, Error>;
 
     /// Gets the source chain's processed blocks from the rollup
-    async fn get_processed_blocks<T: Provider>(
+    async fn get_processed_blocks(
         &self,
-        provider: &T,
+        provider: &MetaChainProvider<Self>,
         block: BlockNumberOrTag,
     ) -> Result<Option<(KnownState, u64)>>;
 
     /// Gets the last sequencing block processed
-    async fn get_last_sequencing_block_processed<T: Provider>(&self, provider: &T) -> Result<u64>;
+    async fn get_last_sequencing_block_processed(&self, provider: &MetaChainProvider<Self>) -> u64;
+
+    /// Returns a list of addresses that are interesting to monitor on the sequencing chain
+    fn interesting_sequencing_addresses(&self) -> Vec<Address>;
+
+    /// Returns a list of addresses that are interesting to monitor on the settlement chain
+    fn interesting_settlement_addresses(&self) -> Vec<Address>;
 }

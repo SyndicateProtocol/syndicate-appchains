@@ -26,6 +26,7 @@ shared = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = ["process", "rt-multi-thread"] }
 tracing = { workspace = true }
+mchain = { workspace = true }
 
 [dev-dependencies]
 assert_matches = { workspace = true }

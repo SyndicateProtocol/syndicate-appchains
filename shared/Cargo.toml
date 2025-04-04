@@ -1,24 +1,23 @@
 [package]
-name = "shared"
-edition.workspace = true
-exclude.workspace = true
-homepage.workspace = true
-license.workspace = true
-repository.workspace = true
+edition.workspace      = true
+exclude.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "shared"
+repository.workspace   = true
 rust-version.workspace = true
-version.workspace = true
+version.workspace      = true
 
 [dependencies]
-eyre = { workspace = true }
-url = { workspace = true }
+alloy              = { workspace = true, features = ["k256", "rlp"] }
+byte-unit          = { workspace = true, features = ["default"] }
+jsonrpsee          = { workspace = true, features = ["jsonrpsee-types", "server"] }
+serde_json         = { workspace = true }
 thiserror          = { workspace = true }
-alloy = {workspace = true, features = ["rlp", "k256"]}
-jsonrpsee = {workspace = true, features = ["jsonrpsee-types", "server"]}
-serde_json = {workspace = true}
-tracing = {workspace = true}
-tracing-subscriber = {workspace = true, features = ["env-filter", "json"] }
-byte-unit = { workspace = true, features = ["default"] }
-tokio = { workspace = true }
+tokio              = { workspace = true }
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
+url                = { workspace = true }
 
 [lints]
 workspace = true

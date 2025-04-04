@@ -56,12 +56,7 @@ async fn e2e_poster_test() -> Result<()> {
     let _poster_handler = tokio::spawn(poster::run(config, metrics));
     tokio::time::sleep(Duration::from_secs(1)).await;
 
-    let block_option = set_provider
-        .get_block_by_number(
-            BlockNumberOrTag::Latest,
-            alloy::rpc::types::BlockTransactionsKind::Full,
-        )
-        .await?;
+    let block_option = set_provider.get_block_by_number(BlockNumberOrTag::Latest).full().await?;
 
     assert!(block_option.is_some());
 

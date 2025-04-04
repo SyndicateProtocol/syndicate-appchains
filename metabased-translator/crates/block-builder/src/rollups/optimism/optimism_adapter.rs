@@ -6,23 +6,24 @@
 
 use crate::{
     config::BlockBuilderConfig,
+    connectors::mchain::MetaChainProvider,
     rollups::{
         optimism::{
             batch::{new_batcher_tx, Batch},
             frame::to_data,
         },
-        shared::{rollup_adapter::MBlock, RollupAdapter, SequencingTransactionParser},
+        shared::{RollupAdapter, SequencingTransactionParser},
     },
 };
 use alloy::{
     eips::BlockNumberOrTag,
     primitives::{Address, Bytes, B256},
-    providers::Provider,
     rpc::types::TransactionRequest,
 };
 use async_trait::async_trait;
 use common::types::{BlockAndReceipts, KnownState, Slot};
 use eyre::Result;
+use mchain::db::MBlock;
 use std::{str::FromStr, sync::Arc};
 
 #[derive(Debug, Clone)]
@@ -45,15 +46,28 @@ impl RollupAdapter for OptimismAdapter {
         &self.transaction_parser
     }
 
-    async fn get_processed_blocks<T: Provider>(
+    async fn get_processed_blocks(
         &self,
-        _provider: &T,
+        _provider: &MetaChainProvider<Self>,
         _block: BlockNumberOrTag,
     ) -> Result<Option<(KnownState, u64)>> {
         panic!("Not implemented")
     }
 
-    async fn get_last_sequencing_block_processed<T: Provider>(&self, _provider: &T) -> Result<u64> {
+    async fn get_last_sequencing_block_processed(
+        &self,
+        _provider: &MetaChainProvider<Self>,
+    ) -> u64 {
+        panic!("Not implemented")
+    }
+
+    /// Returns a list of addresses that are interesting to monitor on the sequencing chain
+    fn interesting_sequencing_addresses(&self) -> Vec<Address> {
+        panic!("Not implemented")
+    }
+
+    /// Returns a list of addresses that are interesting to monitor on the settlement chain
+    fn interesting_settlement_addresses(&self) -> Vec<Address> {
         panic!("Not implemented")
     }
 }

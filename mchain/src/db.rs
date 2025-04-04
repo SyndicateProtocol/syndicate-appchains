@@ -1,12 +1,32 @@
 use alloy::{
-    primitives::{keccak256, Bytes, FixedBytes, U256},
+    primitives::{keccak256, Address, Bytes, FixedBytes, U256},
     sol_types::SolValue as _,
 };
-use block_builder::rollups::shared::rollup_adapter::{DelayedMessage, MBlock};
 use jsonrpsee::types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned};
 use rocksdb::{DBWithThreadMode, ThreadMode};
 use serde::{Deserialize, Serialize};
 use std::fmt;
+
+#[allow(missing_docs)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct DelayedMessage {
+    pub kind: u8,
+    pub sender: Address,
+    pub data: Bytes,
+    pub base_fee_l1: U256,
+}
+
+#[allow(missing_docs)]
+#[derive(Serialize, Deserialize, Debug, Clone, Default)]
+pub struct MBlock {
+    pub timestamp: u64,
+    pub messages: Vec<DelayedMessage>,
+    pub batch: Bytes,
+    pub seq_block_number: u64,
+    pub seq_block_hash: FixedBytes<32>,
+    pub set_block_number: u64,
+    pub set_block_hash: FixedBytes<32>,
+}
 
 /// key-value db trait
 #[allow(missing_docs)]
@@ -65,7 +85,7 @@ pub trait ArbitrumDB {
     fn put_message_acc(&self, key: u64, value: FixedBytes<32>);
     fn delete_message_acc(&self, key: u64);
     /// Create a new block that a contains a batch
-    fn add_batch(&self, block: MBlock);
+    fn add_batch(&self, block: MBlock) -> Result<(), ErrorObjectOwned>;
 }
 
 impl<T: KVDB> ArbitrumDB for T {
@@ -108,15 +128,20 @@ impl<T: KVDB> ArbitrumDB for T {
     fn delete_message_acc(&self, key: u64) {
         self.delete(DBKey::MessageAcc(key).to_string())
     }
-    fn add_batch(&self, mblock: MBlock) {
+    fn add_batch(&self, mblock: MBlock) -> Result<(), ErrorObjectOwned> {
         let block_number = self.get_block_number() + 1;
         let prev_block = if block_number > 1 {
-            #[allow(clippy::unwrap_used)]
-            self.get_block(block_number - 1).unwrap()
+            self.get_block(block_number - 1)?
         } else {
             // genesis block
             Block::default()
         };
+        if mblock.timestamp < prev_block.timestamp {
+            return Err(to_err(format!(
+                "batch timestamp too low: {} < {}",
+                mblock.timestamp, prev_block.timestamp
+            )));
+        }
         let mut block = Block {
             timestamp: mblock.timestamp,
             batch: mblock.batch,
@@ -139,7 +164,7 @@ impl<T: KVDB> ArbitrumDB for T {
                     block_number,
                     mblock.timestamp,
                     U256::from(block.before_message_count + i as u64),
-                    U256::ZERO,
+                    msg.base_fee_l1,
                     keccak256(&msg.data),
                 )
                     .abi_encode_packed(),
@@ -157,12 +182,14 @@ impl<T: KVDB> ArbitrumDB for T {
         self.put_block(block_number, block);
         // update the block number last - incomplete blocks can be ignored
         self.put_block_number(block_number);
+        Ok(())
     }
 }
 
 /// Block data stored in rocksdb
 /// Note that the block hash does not affect derived block hashes and therefore
 /// this implementation should be fully compatible with existing reth metachains.
+#[allow(missing_docs)]
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Block {
     /// block epoch timestamp in seconds
@@ -198,6 +225,7 @@ impl Block {
     }
 }
 
+#[allow(missing_docs)]
 pub fn to_err<T: ToString>(err: T) -> ErrorObjectOwned {
     ErrorObjectOwned::owned(INTERNAL_ERROR_CODE, err.to_string(), None::<()>)
 }

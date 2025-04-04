@@ -1,13 +1,10 @@
 //! Integration tests for the metabased-translator handling termination signals
 
 use alloy::primitives::Address;
-use e2e_tests::{
-    full_meta_node::{start_anvil, start_mchain},
-    port_manager::PortManager,
-};
 use eyre::Result;
 use reqwest::Client;
 use std::{process::Command, time::Duration};
+use test_utils::{anvil::start_anvil, docker::start_mchain, port_manager::PortManager};
 use tokio::{process::Command as TokioCommand, time::sleep};
 
 async fn wait_for_service(url: &str) -> Result<()> {
@@ -30,7 +27,7 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
     let (seq_port, _seq_instance, _seq_provider) = start_anvil(15).await?;
     let (set_port, _set_instance, _set_provider) = start_anvil(20).await?;
 
-    let (mchain_port, _mchain) = start_mchain(13331370, Address::ZERO).await?;
+    let (mchain_url, _mchain, _) = start_mchain(13331370, Address::ZERO, 0).await?;
     let metrics_port = PortManager::instance().next_port();
     let mut metabased_process = TokioCommand::new("cargo")
         .arg("run")
@@ -40,7 +37,7 @@ async fn run_metabased_translator(signal: &str) -> Result<()> {
         .arg("--")
         .args([
             "--mchain-rpc-url",
-            &format!("http://localhost:{mchain_port}"),
+            &mchain_url,
             "--sequencing-contract-address",
             "0x0000000000000000000000000000000000000001",
             "--arbitrum-bridge-address",

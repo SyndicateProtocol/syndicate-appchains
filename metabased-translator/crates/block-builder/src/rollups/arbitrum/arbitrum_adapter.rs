@@ -6,19 +6,15 @@
 
 use crate::{
     config::BlockBuilderConfig,
+    connectors::mchain::MetaChainProvider,
     rollups::{
         arbitrum::batch::{Batch, BatchMessage, L1IncomingMessage, L1IncomingMessageHeader},
-        shared::{
-            rollup_adapter::{DelayedMessage, MBlock},
-            RollupAdapter, SequencingTransactionParser,
-        },
+        shared::{RollupAdapter, SequencingTransactionParser},
     },
 };
 use alloy::{
     eips::BlockNumberOrTag,
     primitives::{Address, Bytes, FixedBytes, U256},
-    providers::Provider,
-    rpc::types::BlockTransactionsKind,
     sol_types::{SolCall, SolEvent},
 };
 use async_trait::async_trait;
@@ -31,6 +27,7 @@ use contract_bindings::arbitrum::{
     iinboxbase::IInboxBase::sendL2MessageFromOriginCall,
 };
 use eyre::Result;
+use mchain::db::{DelayedMessage, MBlock};
 use std::{collections::HashMap, sync::Arc};
 use thiserror::Error;
 use tracing::{debug, error, info, trace};
@@ -96,7 +93,7 @@ impl std::fmt::Display for L1MessageType {
 #[derive(Debug, Clone)]
 /// Builder for constructing Arbitrum blocks from transactions
 pub struct ArbitrumAdapter {
-    // Sequencing chain address
+    // Transaction parser for sequencing chain
     transaction_parser: SequencingTransactionParser,
 
     // Settlement chain address
@@ -162,30 +159,13 @@ impl RollupAdapter for ArbitrumAdapter {
     }
 
     // NOTE: timestamp of the blockRefs will be 0
-    async fn get_processed_blocks<T: Provider>(
+    async fn get_processed_blocks(
         &self,
-        provider: &T,
+        provider: &MetaChainProvider<Self>,
         block: BlockNumberOrTag,
     ) -> Result<Option<(KnownState, u64)>> {
-        let block_number = match block {
-            BlockNumberOrTag::Number(num) => num,
-            tag => {
-                provider
-                    .get_block_by_number(tag, BlockTransactionsKind::Hashes)
-                    .await?
-                    .unwrap_or_default()
-                    .header
-                    .number
-            }
-        };
-
-        let (seq_num, seq_hash, set_num, set_hash): (u64, FixedBytes<32>, u64, FixedBytes<32>) =
-            provider
-                .raw_request(
-                    "mchain_getSourceChainsProcessedBlocks".into(),
-                    BlockNumberOrTag::Number(block_number),
-                )
-                .await?;
+        let (seq_num, seq_hash, set_num, set_hash, block_number) =
+            provider.provider.get_source_chains_processed_blocks(block).await?;
 
         if seq_num == 0 {
             return Ok(None);
@@ -201,11 +181,22 @@ impl RollupAdapter for ArbitrumAdapter {
         )))
     }
 
-    async fn get_last_sequencing_block_processed<T: Provider>(&self, provider: &T) -> Result<u64> {
-        let (seq_num, _, _, _): (u64, FixedBytes<32>, u64, FixedBytes<32>) = provider
-            .raw_request("mchain_getSourceChainsProcessedBlocks".into(), BlockNumberOrTag::Latest)
-            .await?;
-        Ok(seq_num)
+    async fn get_last_sequencing_block_processed(&self, provider: &MetaChainProvider<Self>) -> u64 {
+        #[allow(clippy::unwrap_used)]
+        return provider
+            .provider
+            .get_source_chains_processed_blocks(BlockNumberOrTag::Latest)
+            .await
+            .unwrap()
+            .0
+    }
+
+    fn interesting_sequencing_addresses(&self) -> Vec<Address> {
+        vec![self.transaction_parser.sequencing_contract_address]
+    }
+
+    fn interesting_settlement_addresses(&self) -> Vec<Address> {
+        vec![self.bridge_address, self.inbox_address]
     }
 }
 
@@ -253,7 +244,7 @@ impl ArbitrumAdapter {
                         let message_num = U256::from_be_slice(log.topics[1].as_slice());
 
                         // Decode the event using the contract bindings
-                        match InboxMessageDelivered::abi_decode_data(&log.data, false) {
+                        match InboxMessageDelivered::abi_decode_data(&log.data, true) {
                             Ok(decoded) => {
                                 message_data.insert(message_num, decoded.0);
                             }
@@ -319,24 +310,25 @@ impl ArbitrumAdapter {
         log: &Log,
         message_data: HashMap<U256, Bytes>,
     ) -> Result<DelayedMessage> {
-        let msg_delivered = MessageDelivered::abi_decode_data(&log.data, true)
+        let msg = MessageDelivered::decode_raw_log(&log.topics, &log.data, true)
             .map_err(|e| ArbitrumBlockBuilderError::DecodingError("MessageDelivered", e.into()))?;
 
-        let message_index = U256::from_be_slice(log.topics[1].as_slice()); // First indexed field is message index
-        let kind = L1MessageType::from_u8_panic(msg_delivered.1);
+        let kind = L1MessageType::from_u8_panic(msg.kind);
 
         if self.should_ignore_delayed_message(&kind) {
             return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind).into());
         }
 
-        // Extract sender (third non-indexed field)
-        let sender = msg_delivered.2;
-
         let data = message_data
-            .get(&message_index)
-            .ok_or_else(|| ArbitrumBlockBuilderError::MissingInboxMessageData(message_index))?;
+            .get(&msg.messageIndex)
+            .ok_or_else(|| ArbitrumBlockBuilderError::MissingInboxMessageData(msg.messageIndex))?;
 
-        Ok(DelayedMessage { kind: kind as u8, sender, data: data.clone() })
+        Ok(DelayedMessage {
+            kind: msg.kind,
+            sender: msg.sender,
+            data: data.clone(),
+            base_fee_l1: msg.baseFeeL1,
+        })
     }
 
     /// Builds a batch of transactions into an Arbitrum batch
@@ -676,6 +668,7 @@ mod tests {
                 kind: L1MessageType::L2Message as u8,
                 sender: Address::repeat_byte(1),
                 data: delayed_message_data,
+                base_fee_l1: U256::ZERO,
             }
         );
 
@@ -742,6 +735,7 @@ mod tests {
                 kind: L1MessageType::L2Message as u8,
                 sender: Address::repeat_byte(1),
                 data: message_data,
+                base_fee_l1: U256::ZERO,
             }
         );
     }
@@ -911,6 +905,7 @@ mod tests {
                 kind: L1MessageType::EthDeposit as u8,
                 sender: Address::repeat_byte(1),
                 data: message_data,
+                base_fee_l1: U256::ZERO,
             }
         );
     }

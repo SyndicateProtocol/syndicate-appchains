@@ -18,7 +18,7 @@ impl<R: RollupAdapter> SlotProcessor for MetaChainProvider<R> {
         // [OP / ARB] Build block of MChain transactions from slot
         let batch = match self
             .rollup_adapter
-            .build_block_from_slot(slot, self.get_current_block_number().await + 1)
+            .build_block_from_slot(slot, self.provider.get_block_number().await + 1)
             .await
         {
             Ok(batch) => batch,
@@ -39,17 +39,9 @@ impl<R: RollupAdapter> SlotProcessor for MetaChainProvider<R> {
         self.metrics.record_transactions_per_slot(batch.messages.len() + 1);
 
         // Submit transactions to mchain
-        self.add_batch(batch).await;
+        self.provider.add_batch(batch).await?;
 
         Ok(())
-    }
-}
-
-impl<R: RollupAdapter> MetaChainProvider<R> {
-    async fn get_current_block_number(&self) -> u64 {
-        self.get_block_number().await.unwrap_or_else(|e| {
-            panic!("Error getting current block number: {}", e);
-        })
     }
 }
 

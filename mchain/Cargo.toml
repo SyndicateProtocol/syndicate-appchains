@@ -16,7 +16,6 @@ alloy = { workspace = true, features = ["provider-engine-api"] }
 jsonrpsee = {workspace = true, features = ["server"]}
 serde = { workspace = true }
 bincode = { workspace = true }
-block-builder = {workspace = true}
 contract-bindings = {workspace = true}
 tokio = { workspace = true, features = [ "signal" ] }
 

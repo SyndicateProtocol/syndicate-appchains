@@ -1,12 +1,10 @@
 //! The metachain is used for rollup block derivation.
 
 use alloy::primitives::Address;
-use block_builder::config::get_default_private_key_signer;
 use clap::Parser;
 use jsonrpsee::server::{RpcServiceBuilder, Server};
 use mchain::mchain::start_mchain;
 use rocksdb::DB;
-use std::sync::Arc;
 use tokio::{
     signal::unix::{signal, SignalKind},
     sync::oneshot,
@@ -17,6 +15,9 @@ use tokio::{
 #[command(version, about)]
 #[allow(missing_docs)]
 struct Config {
+    // time delay until a block is considered finalized
+    #[arg(long, env = "FINALITY_DELAY", default_value_t = 60)]
+    finality_delay: u64,
     #[arg(long, env = "DATADIR", default_value = "./datadir")]
     datadir: String,
     #[arg(long, env = "PORT", default_value_t = 8545)]
@@ -25,7 +26,7 @@ struct Config {
     metrics_port: u64,
     #[arg(long, env = "CHAIN_ID")]
     chain_id: u64,
-    #[arg(long, env = "CHAIN_OWNER", default_value_t = get_default_private_key_signer().address())]
+    #[arg(long, env = "CHAIN_OWNER", default_value = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")]
     chain_owner: Address,
 }
 
@@ -55,8 +56,8 @@ fn init_signal_handler(runtime: &tokio::runtime::Runtime, shutdown_tx: oneshot::
 #[tokio::main]
 async fn main() -> eyre::Result<()> {
     let cfg = Config::parse();
-    let db = Arc::new(DB::open_default(cfg.datadir)?);
-    let module = start_mchain(cfg.chain_id, cfg.chain_owner, db).await?;
+    let db = DB::open_default(cfg.datadir)?;
+    let module = start_mchain(cfg.chain_id, cfg.chain_owner, cfg.finality_delay, db).await;
     let _handle = Server::builder()
         .set_rpc_middleware(RpcServiceBuilder::new().rpc_logger(1024))
         .build(format!("0.0.0.0:{}", cfg.port))
