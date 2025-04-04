@@ -535,7 +535,6 @@ interface IRollup {
     function minimumAssertionPeriod() external view returns (uint256);
     function outbox() external view returns (address);
     function owner() external view returns (address);
-    function paused() external view returns (bool);
     function rollupEventInbox() external view returns (address);
     function sequencerInbox() external view returns (address);
     function stakeToken() external view returns (address);
@@ -1303,19 +1302,6 @@ interface IRollup {
         "name": "",
         "type": "address",
         "internalType": "address"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "paused",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
       }
     ],
     "stateMutability": "view"
@@ -8827,125 +8813,6 @@ function owner() external view returns (address);
             }
         }
     };
-    /**Function with signature `paused()` and selector `0x5c975abb`.
-```solidity
-function paused() external view returns (bool);
-```*/
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct pausedCall {}
-    ///Container type for the return parameters of the [`paused()`](pausedCall) function.
-    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
-    #[derive(Clone)]
-    pub struct pausedReturn {
-        #[allow(missing_docs)]
-        pub _0: bool,
-    }
-    #[allow(
-        non_camel_case_types,
-        non_snake_case,
-        clippy::pub_underscore_fields,
-        clippy::style
-    )]
-    const _: () = {
-        use alloy::sol_types as alloy_sol_types;
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = ();
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = ();
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<pausedCall> for UnderlyingRustTuple<'_> {
-                fn from(value: pausedCall) -> Self {
-                    ()
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for pausedCall {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self {}
-                }
-            }
-        }
-        {
-            #[doc(hidden)]
-            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
-            #[doc(hidden)]
-            type UnderlyingRustTuple<'a> = (bool,);
-            #[cfg(test)]
-            #[allow(dead_code, unreachable_patterns)]
-            fn _type_assertion(
-                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
-            ) {
-                match _t {
-                    alloy_sol_types::private::AssertTypeEq::<
-                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
-                    >(_) => {}
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<pausedReturn> for UnderlyingRustTuple<'_> {
-                fn from(value: pausedReturn) -> Self {
-                    (value._0,)
-                }
-            }
-            #[automatically_derived]
-            #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for pausedReturn {
-                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
-                    Self { _0: tuple.0 }
-                }
-            }
-        }
-        #[automatically_derived]
-        impl alloy_sol_types::SolCall for pausedCall {
-            type Parameters<'a> = ();
-            type Token<'a> = <Self::Parameters<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = pausedReturn;
-            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
-            type ReturnToken<'a> = <Self::ReturnTuple<
-                'a,
-            > as alloy_sol_types::SolType>::Token<'a>;
-            const SIGNATURE: &'static str = "paused()";
-            const SELECTOR: [u8; 4] = [92u8, 151u8, 90u8, 187u8];
-            #[inline]
-            fn new<'a>(
-                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
-            ) -> Self {
-                tuple.into()
-            }
-            #[inline]
-            fn tokenize(&self) -> Self::Token<'_> {
-                ()
-            }
-            #[inline]
-            fn abi_decode_returns(
-                data: &[u8],
-                validate: bool,
-            ) -> alloy_sol_types::Result<Self::Return> {
-                <Self::ReturnTuple<
-                    '_,
-                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
-                    .map(Into::into)
-            }
-        }
-    };
     /**Function with signature `rollupEventInbox()` and selector `0xaa38a6e7`.
 ```solidity
 function rollupEventInbox() external view returns (address);
@@ -10421,8 +10288,6 @@ function withdrawalAddress(address staker) external view returns (address);
         #[allow(missing_docs)]
         owner(ownerCall),
         #[allow(missing_docs)]
-        paused(pausedCall),
-        #[allow(missing_docs)]
         rollupEventInbox(rollupEventInboxCall),
         #[allow(missing_docs)]
         sequencerInbox(sequencerInboxCall),
@@ -10470,7 +10335,6 @@ function withdrawalAddress(address staker) external view returns (address);
             [71u8, 13u8, 206u8, 78u8],
             [81u8, 237u8, 106u8, 48u8],
             [86u8, 187u8, 201u8, 230u8],
-            [92u8, 151u8, 90u8, 187u8],
             [97u8, 119u8, 253u8, 24u8],
             [100u8, 32u8, 251u8, 159u8],
             [101u8, 247u8, 248u8, 13u8],
@@ -10500,7 +10364,7 @@ function withdrawalAddress(address staker) external view returns (address);
     impl alloy_sol_types::SolInterface for IRollupCalls {
         const NAME: &'static str = "IRollupCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 40usize;
+        const COUNT: usize = 39usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
@@ -10578,7 +10442,6 @@ function withdrawalAddress(address staker) external view returns (address);
                 }
                 Self::outbox(_) => <outboxCall as alloy_sol_types::SolCall>::SELECTOR,
                 Self::owner(_) => <ownerCall as alloy_sol_types::SolCall>::SELECTOR,
-                Self::paused(_) => <pausedCall as alloy_sol_types::SolCall>::SELECTOR,
                 Self::rollupEventInbox(_) => {
                     <rollupEventInboxCall as alloy_sol_types::SolCall>::SELECTOR
                 }
@@ -10840,19 +10703,6 @@ function withdrawalAddress(address staker) external view returns (address);
                             .map(IRollupCalls::getSecondChildCreationBlock)
                     }
                     getSecondChildCreationBlock
-                },
-                {
-                    fn paused(
-                        data: &[u8],
-                        validate: bool,
-                    ) -> alloy_sol_types::Result<IRollupCalls> {
-                        <pausedCall as alloy_sol_types::SolCall>::abi_decode_raw(
-                                data,
-                                validate,
-                            )
-                            .map(IRollupCalls::paused)
-                    }
-                    paused
                 },
                 {
                     fn isStaked(
@@ -11291,9 +11141,6 @@ function withdrawalAddress(address staker) external view returns (address);
                 Self::owner(inner) => {
                     <ownerCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
-                Self::paused(inner) => {
-                    <pausedCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
-                }
                 Self::rollupEventInbox(inner) => {
                     <rollupEventInboxCall as alloy_sol_types::SolCall>::abi_encoded_size(
                         inner,
@@ -11507,9 +11354,6 @@ function withdrawalAddress(address staker) external view returns (address);
                 }
                 Self::owner(inner) => {
                     <ownerCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
-                }
-                Self::paused(inner) => {
-                    <pausedCall as alloy_sol_types::SolCall>::abi_encode_raw(inner, out)
                 }
                 Self::rollupEventInbox(inner) => {
                     <rollupEventInboxCall as alloy_sol_types::SolCall>::abi_encode_raw(
@@ -12329,10 +12173,6 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
         ///Creates a new call builder for the [`owner`] function.
         pub fn owner(&self) -> alloy_contract::SolCallBuilder<T, &P, ownerCall, N> {
             self.call_builder(&ownerCall {})
-        }
-        ///Creates a new call builder for the [`paused`] function.
-        pub fn paused(&self) -> alloy_contract::SolCallBuilder<T, &P, pausedCall, N> {
-            self.call_builder(&pausedCall {})
         }
         ///Creates a new call builder for the [`rollupEventInbox`] function.
         pub fn rollupEventInbox(
