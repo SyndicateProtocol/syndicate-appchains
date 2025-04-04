@@ -9,38 +9,33 @@ import {IMetabasedSequencerChain} from "../interfaces/IMetabasedSequencerChain.s
  * @dev This contract is a wrapper for TC wallet, inheriting from the AllowlistSequencingModule.
  */
 contract WalletPoolWrapperModule is AllowlistSequencingModule {
-    /// @notice metabased sequencer chain address
-    address public immutable metabasedSequencerChain;
-
-    event WalletPoolWrapperTransactionSent(address indexed from);
+    event WalletPoolWrapperTransactionSent(address indexed from, address indexed metabasedSequencerChain);
 
     /**
      * @dev Constructor that sets the admin address.
      * @param _admin The address of the admin who can modify the allowlist.
-     * @param _metabasedSequencerChain The address of the metabased sequencer chain.
      */
-    constructor(address _admin, address _metabasedSequencerChain) AllowlistSequencingModule(_admin) {
-        if (_metabasedSequencerChain == address(0)) {
-            revert AddressNotAllowed();
-        }
-
-        metabasedSequencerChain = _metabasedSequencerChain;
-    }
+    constructor(address _admin) AllowlistSequencingModule(_admin) {}
 
     /**
      * @dev Function to process a transaction.
+     * @notice metabased sequencer chain address
      * @param data The transaction data to process.
      */
-    function processTransaction(bytes calldata data) external {
+    function processTransaction(address _metabasedSequencerChain, bytes calldata data) external {
         // Check if the sender is allowed to process the transaction
         if (!allowlist[msg.sender]) {
             revert AddressNotAllowed();
         }
 
+        if (_metabasedSequencerChain == address(0)) {
+            revert AddressNotAllowed();
+        }
+
         // Forward the transaction to the metabased sequencer chain
-        IMetabasedSequencerChain(metabasedSequencerChain).processTransaction(data);
+        IMetabasedSequencerChain(_metabasedSequencerChain).processTransaction(data);
 
         // Emit an event indicating the transaction was sent
-        emit WalletPoolWrapperTransactionSent(msg.sender);
+        emit WalletPoolWrapperTransactionSent(msg.sender, _metabasedSequencerChain);
     }
 }
