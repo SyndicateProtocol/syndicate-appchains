@@ -13,6 +13,8 @@ on:
     paths:
       - "metabased-contracts/src/**/*.sol"
       - "metabased-contracts/certora/specs/**/*.spec"
+      - "shared/arb-contracts/src/**/*.sol"
+      - "shared/arb-contracts/certora/specs/**/*.spec"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
