@@ -31,7 +31,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: shared
+        working-directory: shared/arb-contracts
     strategy:
       matrix:
         rule: ["AssertionPoster"]
