@@ -229,3 +229,45 @@ impl Block {
 pub fn to_err<T: ToString>(err: T) -> ErrorObjectOwned {
     ErrorObjectOwned::owned(INTERNAL_ERROR_CODE, err.to_string(), None::<()>)
 }
+
+// fully in-memory kv db for testing
+#[cfg(test)]
+mod tests {
+    use super::KVDB;
+    use crate::db::{ArbitrumDB as _, MBlock};
+    use alloy::primitives::Bytes;
+    use std::{collections::HashMap, sync::RwLock};
+
+    struct TestDB(RwLock<HashMap<Bytes, Bytes>>);
+    impl TestDB {
+        fn new() -> Self {
+            Self(RwLock::new(HashMap::new()))
+        }
+    }
+    impl KVDB for TestDB {
+        fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes> {
+            #[allow(clippy::unwrap_used)]
+            self.0.read().unwrap().get(key.as_ref()).cloned()
+        }
+        fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V) {
+            #[allow(clippy::unwrap_used)]
+            self.0
+                .write()
+                .unwrap()
+                .insert(key.as_ref().to_owned().into(), value.as_ref().to_owned().into());
+        }
+        fn delete<K: AsRef<[u8]>>(&self, key: K) {
+            #[allow(clippy::unwrap_used)]
+            self.0.write().unwrap().remove(key.as_ref());
+        }
+    }
+
+    #[tokio::test]
+    async fn test_invalid_batch() -> eyre::Result<()> {
+        let db = TestDB::new();
+        db.add_batch(MBlock { timestamp: 0, ..Default::default() })?;
+        db.add_batch(MBlock { timestamp: 1, ..Default::default() })?;
+        assert!(db.add_batch(MBlock { timestamp: 0, ..Default::default() }).is_err());
+        Ok(())
+    }
+}
