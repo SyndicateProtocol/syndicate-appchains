@@ -62,6 +62,7 @@ function processTransaction(bytes memory data) external;
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct processTransactionCall {
+        #[allow(missing_docs)]
         pub data: alloy::sol_types::private::Bytes,
     }
     ///Container type for the return parameters of the [`processTransaction(bytes)`](processTransactionCall) function.
@@ -183,6 +184,7 @@ function processTransaction(bytes memory data) external;
     };
     ///Container for all the [`IMetabasedSequencerChain`](self) function calls.
     pub enum IMetabasedSequencerChainCalls {
+        #[allow(missing_docs)]
         processTransaction(processTransactionCall),
     }
     #[automatically_derived]

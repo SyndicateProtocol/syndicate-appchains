@@ -662,6 +662,7 @@ error ECDSAInvalidSignatureLength(uint256 length);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ECDSAInvalidSignatureLength {
+        #[allow(missing_docs)]
         pub length: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -736,6 +737,7 @@ error ECDSAInvalidSignatureS(bytes32 s);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ECDSAInvalidSignatureS {
+        #[allow(missing_docs)]
         pub s: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -806,8 +808,11 @@ error ERC20InsufficientAllowance(address spender, uint256 allowance, uint256 nee
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC20InsufficientAllowance {
+        #[allow(missing_docs)]
         pub spender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub allowance: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub needed: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -898,8 +903,11 @@ error ERC20InsufficientBalance(address sender, uint256 balance, uint256 needed);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC20InsufficientBalance {
+        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub balance: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub needed: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -990,6 +998,7 @@ error ERC20InvalidApprover(address approver);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC20InvalidApprover {
+        #[allow(missing_docs)]
         pub approver: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1060,6 +1069,7 @@ error ERC20InvalidReceiver(address receiver);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC20InvalidReceiver {
+        #[allow(missing_docs)]
         pub receiver: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1130,6 +1140,7 @@ error ERC20InvalidSender(address sender);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC20InvalidSender {
+        #[allow(missing_docs)]
         pub sender: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1200,6 +1211,7 @@ error ERC20InvalidSpender(address spender);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC20InvalidSpender {
+        #[allow(missing_docs)]
         pub spender: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1270,6 +1282,7 @@ error ERC2612ExpiredSignature(uint256 deadline);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC2612ExpiredSignature {
+        #[allow(missing_docs)]
         pub deadline: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1342,7 +1355,9 @@ error ERC2612InvalidSigner(address signer, address owner);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct ERC2612InvalidSigner {
+        #[allow(missing_docs)]
         pub signer: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     #[allow(
@@ -1425,7 +1440,9 @@ error InvalidAccountNonce(address account, uint256 currentNonce);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct InvalidAccountNonce {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub currentNonce: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -1572,6 +1589,7 @@ error StringTooLong(string str);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct StringTooLong {
+        #[allow(missing_docs)]
         pub str: alloy::sol_types::private::String,
     }
     #[allow(
@@ -2071,6 +2089,7 @@ function DOMAIN_SEPARATOR() external view returns (bytes32);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct DOMAIN_SEPARATORReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::FixedBytes<32>,
     }
     #[allow(
@@ -2189,13 +2208,16 @@ function allowance(address owner, address spender) external view returns (uint25
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowanceCall {
+        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub spender: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`allowance(address,address)`](allowanceCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct allowanceReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2331,13 +2353,16 @@ function approve(address spender, uint256 value) external returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct approveCall {
+        #[allow(missing_docs)]
         pub spender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`approve(address,uint256)`](approveCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct approveReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -2471,12 +2496,14 @@ function balanceOf(address account) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct balanceOfCall {
+        #[allow(missing_docs)]
         pub account: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`balanceOf(address)`](balanceOfCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct balanceOfReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -2601,6 +2628,7 @@ function decimals() external view returns (uint8);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct decimalsReturn {
+        #[allow(missing_docs)]
         pub _0: u8,
     }
     #[allow(
@@ -2719,12 +2747,19 @@ function eip712Domain() external view returns (bytes1 fields, string memory name
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct eip712DomainReturn {
+        #[allow(missing_docs)]
         pub fields: alloy::sol_types::private::FixedBytes<1>,
+        #[allow(missing_docs)]
         pub name: alloy::sol_types::private::String,
+        #[allow(missing_docs)]
         pub version: alloy::sol_types::private::String,
+        #[allow(missing_docs)]
         pub chainId: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub verifyingContract: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub salt: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub extensions: alloy::sol_types::private::Vec<
             alloy::sol_types::private::primitives::aliases::U256,
         >,
@@ -2887,6 +2922,7 @@ function name() external view returns (string memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct nameReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::String,
     }
     #[allow(
@@ -3001,12 +3037,14 @@ function nonces(address owner) external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct noncesCall {
+        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
     }
     ///Container type for the return parameters of the [`nonces(address)`](noncesCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct noncesReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3127,12 +3165,19 @@ function permit(address owner, address spender, uint256 value, uint256 deadline,
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct permitCall {
+        #[allow(missing_docs)]
         pub owner: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub spender: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub deadline: alloy::sol_types::private::primitives::aliases::U256,
+        #[allow(missing_docs)]
         pub v: u8,
+        #[allow(missing_docs)]
         pub r: alloy::sol_types::private::FixedBytes<32>,
+        #[allow(missing_docs)]
         pub s: alloy::sol_types::private::FixedBytes<32>,
     }
     ///Container type for the return parameters of the [`permit(address,address,uint256,uint256,uint8,bytes32,bytes32)`](permitCall) function.
@@ -3317,6 +3362,7 @@ function symbol() external view returns (string memory);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct symbolReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::String,
     }
     #[allow(
@@ -3435,6 +3481,7 @@ function totalSupply() external view returns (uint256);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct totalSupplyReturn {
+        #[allow(missing_docs)]
         pub _0: alloy::sol_types::private::primitives::aliases::U256,
     }
     #[allow(
@@ -3551,13 +3598,16 @@ function transfer(address to, uint256 value) external returns (bool);
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferCall {
+        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`transfer(address,uint256)`](transferCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -3691,14 +3741,18 @@ function transferFrom(address from, address to, uint256 value) external returns 
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferFromCall {
+        #[allow(missing_docs)]
         pub from: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub to: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
         pub value: alloy::sol_types::private::primitives::aliases::U256,
     }
     ///Container type for the return parameters of the [`transferFrom(address,address,uint256)`](transferFromCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct transferFromReturn {
+        #[allow(missing_docs)]
         pub _0: bool,
     }
     #[allow(
@@ -3834,18 +3888,31 @@ function transferFrom(address from, address to, uint256 value) external returns 
     };
     ///Container for all the [`ERC20Permit`](self) function calls.
     pub enum ERC20PermitCalls {
+        #[allow(missing_docs)]
         DOMAIN_SEPARATOR(DOMAIN_SEPARATORCall),
+        #[allow(missing_docs)]
         allowance(allowanceCall),
+        #[allow(missing_docs)]
         approve(approveCall),
+        #[allow(missing_docs)]
         balanceOf(balanceOfCall),
+        #[allow(missing_docs)]
         decimals(decimalsCall),
+        #[allow(missing_docs)]
         eip712Domain(eip712DomainCall),
+        #[allow(missing_docs)]
         name(nameCall),
+        #[allow(missing_docs)]
         nonces(noncesCall),
+        #[allow(missing_docs)]
         permit(permitCall),
+        #[allow(missing_docs)]
         symbol(symbolCall),
+        #[allow(missing_docs)]
         totalSupply(totalSupplyCall),
+        #[allow(missing_docs)]
         transfer(transferCall),
+        #[allow(missing_docs)]
         transferFrom(transferFromCall),
     }
     #[automatically_derived]
@@ -4229,19 +4296,33 @@ function transferFrom(address from, address to, uint256 value) external returns 
     }
     ///Container for all the [`ERC20Permit`](self) custom errors.
     pub enum ERC20PermitErrors {
+        #[allow(missing_docs)]
         ECDSAInvalidSignature(ECDSAInvalidSignature),
+        #[allow(missing_docs)]
         ECDSAInvalidSignatureLength(ECDSAInvalidSignatureLength),
+        #[allow(missing_docs)]
         ECDSAInvalidSignatureS(ECDSAInvalidSignatureS),
+        #[allow(missing_docs)]
         ERC20InsufficientAllowance(ERC20InsufficientAllowance),
+        #[allow(missing_docs)]
         ERC20InsufficientBalance(ERC20InsufficientBalance),
+        #[allow(missing_docs)]
         ERC20InvalidApprover(ERC20InvalidApprover),
+        #[allow(missing_docs)]
         ERC20InvalidReceiver(ERC20InvalidReceiver),
+        #[allow(missing_docs)]
         ERC20InvalidSender(ERC20InvalidSender),
+        #[allow(missing_docs)]
         ERC20InvalidSpender(ERC20InvalidSpender),
+        #[allow(missing_docs)]
         ERC2612ExpiredSignature(ERC2612ExpiredSignature),
+        #[allow(missing_docs)]
         ERC2612InvalidSigner(ERC2612InvalidSigner),
+        #[allow(missing_docs)]
         InvalidAccountNonce(InvalidAccountNonce),
+        #[allow(missing_docs)]
         InvalidShortString(InvalidShortString),
+        #[allow(missing_docs)]
         StringTooLong(StringTooLong),
     }
     #[automatically_derived]
@@ -4698,8 +4779,11 @@ function transferFrom(address from, address to, uint256 value) external returns 
     }
     ///Container for all the [`ERC20Permit`](self) events.
     pub enum ERC20PermitEvents {
+        #[allow(missing_docs)]
         Approval(Approval),
+        #[allow(missing_docs)]
         EIP712DomainChanged(EIP712DomainChanged),
+        #[allow(missing_docs)]
         Transfer(Transfer),
     }
     #[automatically_derived]
