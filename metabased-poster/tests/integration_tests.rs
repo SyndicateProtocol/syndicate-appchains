@@ -15,6 +15,7 @@ use jsonrpsee::types::ErrorObjectOwned;
 use metabased_poster::{config::Config, metrics::PosterMetrics, poster, types::NitroBlock};
 use prometheus_client::registry::Registry;
 use std::{str::FromStr, time::Duration};
+use tokio::time::sleep;
 use url::Url;
 #[tokio::test(flavor = "multi_thread")]
 async fn e2e_poster_test() -> Result<()> {
@@ -47,6 +48,7 @@ async fn e2e_poster_test() -> Result<()> {
         assertion_poster_contract_address,
         private_key: utils::DEFAULT_PRIVATE_KEY_SIGNER.to_string(),
         polling_interval: Duration::from_secs(60),
+        port: 8888,
         metrics_port: 9090,
     };
 
@@ -54,7 +56,7 @@ async fn e2e_poster_test() -> Result<()> {
     let metrics = PosterMetrics::new(&mut registry);
 
     let _poster_handler = tokio::spawn(poster::run(config, metrics));
-    tokio::time::sleep(Duration::from_secs(1)).await;
+    sleep(Duration::from_secs(1)).await;
 
     let block_option = set_provider.get_block_by_number(BlockNumberOrTag::Latest).full().await?;
 
@@ -62,6 +64,35 @@ async fn e2e_poster_test() -> Result<()> {
 
     let block = block_option.unwrap();
     assert_eq!(block.header.number, 1);
+    assert_eq!(block.transactions.len(), 1);
+
+    let transactions = match block.transactions {
+        BlockTransactions::Full(tx) => tx,
+        _ => panic!("Empty block"),
+    };
+    let tx = transactions[0].clone();
+    assert_eq!(tx.inner.to(), Some(assertion_poster_contract_address));
+    let decode = AssertionPoster::postAssertionCall::abi_decode(tx.inner.input(), true)?;
+    assert_eq!(nitro_block.hash, decode.blockHash);
+    assert_eq!(nitro_block.send_root, decode.sendRoot);
+
+    // Trigger the /post endpoint
+    let client = reqwest::Client::new();
+    let response = client
+        .post("http://localhost:8888/post")
+        .send()
+        .await
+        .expect("Failed to send POST to /post");
+
+    assert!(response.status().is_success(), "Expected 200 OK, got {}", response.status());
+    let body = response.text().await?;
+    assert!(body.contains("Assertion posted successfully"), "Unexpected response body: {}", body);
+
+    let block_option = set_provider.get_block_by_number(BlockNumberOrTag::Latest).full().await?;
+    assert!(block_option.is_some());
+
+    let block = block_option.unwrap();
+    assert_eq!(block.header.number, 2);
     assert_eq!(block.transactions.len(), 1);
 
     let transactions = match block.transactions {

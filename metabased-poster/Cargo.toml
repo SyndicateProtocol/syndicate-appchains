@@ -32,3 +32,4 @@ alloy = { workspace = true, features = [
   "sol-types",
 ] }
 jsonrpsee = { workspace = true, features = ["server"] }
+reqwest = { workspace = true }

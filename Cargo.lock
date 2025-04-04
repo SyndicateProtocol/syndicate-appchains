@@ -3048,6 +3048,7 @@ dependencies = [
  "humantime",
  "jsonrpsee",
  "prometheus-client",
+ "reqwest",
  "serde",
  "shared",
  "thiserror 2.0.11",
