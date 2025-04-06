@@ -1,4 +1,4 @@
-use common::{eth_client::RPCClientError, tracing::TracingError};
+use common::eth_client::RPCClientError;
 use eyre::Report;
 use thiserror::Error;
 use tracing::error;
@@ -19,9 +19,6 @@ pub enum RuntimeError {
 
     #[error("Invalid config")]
     InvalidConfig(String),
-
-    #[error(transparent)]
-    Tracing(#[from] TracingError),
 
     #[error(transparent)]
     BlockBuilderConfig(#[from] block_builder::config::ConfigError),

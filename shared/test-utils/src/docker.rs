@@ -7,27 +7,90 @@ use alloy::{
 };
 use eyre::Result;
 use mchain::mchain::{rollup_config, MProvider};
-use std::{env, time::Duration};
+use std::{
+    env,
+    process::{ExitStatus, Stdio},
+    time::Duration,
+};
 use tokio::{
+    io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
-    runtime::Handle,
-    task,
     time::{sleep, timeout},
 };
+use tracing::info;
 
 #[derive(Debug)]
-pub struct Docker(pub Child);
+pub struct Docker(Child);
+
+impl Docker {
+    pub fn new(cmd: &mut Command) -> Result<Self> {
+        let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
+        let stdout = child.stdout.take().unwrap();
+        // force tests to capture output from stdout
+        tokio::spawn(async move {
+            let mut reader = BufReader::new(stdout).lines();
+            while let Some(line) = reader.next_line().await.unwrap() {
+                println!("{}", line);
+            }
+        });
+        // force tests to capture output from stderr
+        let stderr = child.stderr.take().unwrap();
+        tokio::spawn(async move {
+            let mut reader = BufReader::new(stderr).lines();
+            while let Some(line) = reader.next_line().await.unwrap() {
+                eprintln!("{}", line);
+            }
+        });
+        Ok(Self(child))
+    }
+    pub fn id(&self) -> Option<u32> {
+        self.0.id()
+    }
+    pub async fn wait(&mut self) -> std::io::Result<ExitStatus> {
+        self.0.wait().await
+    }
+}
 
 impl Drop for Docker {
     fn drop(&mut self) {
         if let Some(x) = self.0.id() {
-            _ = std::process::Command::new("kill").arg(x.to_string()).output();
-            task::block_in_place(move || {
-                Handle::current().block_on(async move {
-                    _ = self.0.wait().await;
-                })
-            })
+            // drop the file descriptors to suppress termination output.
+            self.0.stdin.take();
+            self.0.stdout.take();
+            self.0.stderr.take();
+            // tell the process to terminate. do not wait for it to shutdown.
+            _ = std::process::Command::new("kill").arg(x.to_string()).spawn();
         }
+    }
+}
+
+pub async fn start_component(
+    executable_name: &str,
+    args: Vec<String>,
+    cargs: Vec<String>,
+) -> Result<Docker> {
+    info!("launching {}", executable_name);
+    if let Ok(tag) = env::var(executable_name.to_uppercase().replace("-", "_") + "_TAG") {
+        Docker::new(
+            Command::new("docker")
+                .arg("run")
+                .arg("--init")
+                .arg("--rm")
+                .arg("--net=host")
+                .arg(format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}"))
+                .args(args),
+        )
+    } else {
+        Docker::new(
+            Command::new("cargo")
+                .arg("run")
+                .current_dir(env!("CARGO_WORKSPACE_DIR"))
+                .arg("--bin")
+                .arg(executable_name)
+                .arg("--")
+                .args(args)
+                .args(cargs),
+        )
     }
 }
 
@@ -38,27 +101,24 @@ pub async fn start_mchain(
 ) -> Result<(String, Docker, MProvider)> {
     let temp = test_path("mchain");
     let port = PortManager::instance().next_port();
-    let docker = Docker(
-        Command::new("cargo")
-            .current_dir("../")
-            .arg("run")
-            .arg("--bin")
-            .arg("mchain")
-            .arg("--")
-            .args([
-                "--chain-id",
-                &chain_id.to_string(),
-                "--chain-owner",
-                &chain_owner.to_string(),
-                "--port",
-                &port.to_string(),
-                "--datadir",
-                &temp.to_string(),
-                "--finality-delay",
-                &finality_delay.to_string(),
-            ])
-            .spawn()?,
-    );
+    let metric_port = PortManager::instance().next_port();
+    let docker = start_component(
+        "mchain",
+        vec![
+            "--chain-id".to_string(),
+            chain_id.to_string(),
+            "--chain-owner".to_string(),
+            chain_owner.to_string(),
+            "--port".to_string(),
+            port.to_string(),
+            "--metrics-port".to_string(),
+            metric_port.to_string(),
+            "--finality-delay".to_string(),
+            finality_delay.to_string(),
+        ],
+        vec!["--datadir".to_string(), temp.to_string()],
+    )
+    .await?;
     let url = format!("http://localhost:{port}");
     let mchain = MProvider::new(url.parse()?);
     timeout(Duration::from_secs(120), async {
@@ -82,43 +142,42 @@ pub async fn launch_nitro_node(
 
     let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
 
-    let mut cmd = Command::new("docker");
-    cmd.arg("run")
-        .arg("--init")
-        .arg("--rm")
-        .arg("--net=host")
-        .arg(format!("offchainlabs/nitro-node:{tag}"))
-        .arg(format!("--parent-chain.connection.url={mchain_url}"))
-        .arg("--node.dangerous.disable-blob-reader")
-        .arg("--node.inbox-reader.check-delay=100ms")
-        .arg("--node.staker.enable=false")
-        .arg("--ensure-rollup-deployment=false")
-        .arg(format!(
-            "--chain.info-json={}",
-            rollup_info(&rollup_config(chain_id, chain_owner), "test")
-        ))
-        .arg("--http.addr=0.0.0.0")
-        .arg("--http.api=net,web3,eth,debug,trace")
-        .arg(format!("--http.port={}", port))
-        .arg(format!("--log-level={log_level}"));
+    let nitro = Docker::new(
+        Command::new("docker")
+            .arg("run")
+            .arg("--init")
+            .arg("--rm")
+            .arg("--net=host")
+            .arg(format!("offchainlabs/nitro-node:{tag}"))
+            .arg(format!("--parent-chain.connection.url={mchain_url}"))
+            .arg("--node.dangerous.disable-blob-reader")
+            .arg("--node.inbox-reader.check-delay=50ms")
+            .arg("--node.staker.enable=false")
+            .arg("--ensure-rollup-deployment=false")
+            .arg(format!(
+                "--chain.info-json={}",
+                rollup_info(&rollup_config(chain_id, chain_owner), "test")
+            ))
+            .arg("--http.addr=0.0.0.0")
+            .arg("--http.api=net,web3,eth,debug,trace")
+            .arg(format!("--http.port={}", port))
+            .arg(format!("--log-level={log_level}"))
+            .arg(if let Some(port) = sequencer_port {
+                format!("--execution.forwarding-target=http://localhost:{port}")
+            } else {
+                "--execution.forwarding-target=null".to_string()
+            }),
+    )?;
 
-    match sequencer_port {
-        Some(port) => {
-            cmd.arg(format!("--execution.forwarding-target=http://localhost:{port}"));
-        }
-        None => {
-            cmd.arg("--execution.forwarding-target=null");
-        }
-    }
+    let url = format!("http://localhost:{}", port);
 
-    let nitro = Docker(cmd.spawn()?);
-    let rollup = ProviderBuilder::default().on_http(format!("http://localhost:{}", port).parse()?);
+    let rollup = ProviderBuilder::default().on_http(url.parse()?);
     // give it two minutes to launch (in case it needs to download the image)
     timeout(Duration::from_secs(120), async {
         while rollup.get_chain_id().await.is_err() {
             sleep(Duration::from_millis(10)).await;
         }
-        Ok::<_, eyre::Error>((nitro, rollup, format!("http://localhost:{}", port)))
+        Ok::<_, eyre::Error>((nitro, rollup, url))
     })
     .await?
 }

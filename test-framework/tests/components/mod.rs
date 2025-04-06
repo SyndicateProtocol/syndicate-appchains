@@ -1,7 +1,8 @@
 //! Components for the integration tests
 
 use alloy::{
-    eips::BlockNumberOrTag,
+    consensus::{EthereumTxEnvelope, TxEip4844Variant},
+    eips::{BlockNumberOrTag, Encodable2718},
     node_bindings::AnvilInstance,
     primitives::{Address, U256},
     providers::{ext::AnvilApi as _, Provider as _, RootProvider, WalletProvider},
@@ -13,7 +14,7 @@ use contract_bindings::{
         alwaysallowedmodule::AlwaysAllowedModule, metabasedsequencerchain::MetabasedSequencerChain,
     },
 };
-use eyre::{eyre, Result};
+use eyre::Result;
 use mchain::mchain::{rollup_config, MProvider};
 use reqwest::Client;
 use std::{
@@ -23,23 +24,25 @@ use std::{
 };
 use test_utils::{
     anvil::{mine_block, start_anvil, start_anvil_with_args, FilledProvider},
-    docker::{launch_nitro_node, start_mchain, Docker},
-    logger::init_test_tracing,
+    docker::{launch_nitro_node, start_component, start_mchain, Docker},
     port_manager::PortManager,
     preloaded_config::{
-        APPCHAIN_OWNER, DEFAULT_PRIVATE_KEY_SIGNER, PRELOAD_BRIDGE_ADDRESS_231,
-        PRELOAD_BRIDGE_ADDRESS_300, PRELOAD_INBOX_ADDRESS_231, PRELOAD_INBOX_ADDRESS_300,
-        PRELOAD_POSTER_ADDRESS_231, PRELOAD_POSTER_ADDRESS_300,
+        PRELOAD_BRIDGE_ADDRESS_231, PRELOAD_BRIDGE_ADDRESS_300, PRELOAD_INBOX_ADDRESS_231,
+        PRELOAD_INBOX_ADDRESS_300, PRELOAD_POSTER_ADDRESS_231, PRELOAD_POSTER_ADDRESS_300,
     },
-    rollup::get_rollup_contract_address,
 };
-use tokio::{process::Command, time::sleep};
-use tracing::{info, Level};
+use tokio::time::timeout;
+use tracing::info;
 
-const APPCHAIN_CHAIN_ID: u64 = 13331370;
+// needs to be different from the regular private key to prevent nonce collisions
+// needs to match the owner of the poster contract
+// anvil account 0
+const POSTER_SEQUENCER_PRIVATE_KEY: &str =
+    "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 
 #[derive(Debug)]
-pub struct Components {
+#[allow(clippy::redundant_pub_crate)]
+pub(crate) struct Components {
     /// Timer for latency measurement
     /// Keep this on top - the top element gets destroyed first
     _timer: TestTimer,
@@ -52,7 +55,6 @@ pub struct Components {
     pub chain_id: u64,
     pub bridge_address: Address,
     pub inbox_address: Address,
-    pub assertion_poster_contract_address: Address,
 
     /// Appchain
     pub appchain_provider: RootProvider,
@@ -71,15 +73,16 @@ pub struct Components {
 }
 
 #[derive(Debug)]
-pub struct TestTimer(SystemTime);
+struct TestTimer(SystemTime, Duration);
 
 impl Drop for TestTimer {
     fn drop(&mut self) {
         let thread = std::thread::current();
         let elapsed = format!(
-            "---- SYN ---- Test {:?} took: {:.2?}\n",
+            "---- SYN ---- Test {:?} took: {:.2?} (setup: {:.2?})\n",
             thread.name().unwrap_or_default(),
-            self.0.elapsed().unwrap_or_default()
+            self.0.elapsed().unwrap_or_default(),
+            self.1,
         );
         // Write directly to stderr (bypasses test harness output capture)
         let _ = stderr().write_all(elapsed.as_bytes());
@@ -88,7 +91,8 @@ impl Drop for TestTimer {
 
 /// nitro contract version on the settlement chain used for testing
 #[derive(Debug, Clone)]
-pub enum ContractVersion {
+#[allow(clippy::redundant_pub_crate)]
+pub(crate) enum ContractVersion {
     V213,
     V300,
 }
@@ -106,14 +110,15 @@ struct TranslatorConfig {
     settlement_start_block: u64,
     settlement_delay: u64,
 }
+
 #[derive(Debug)]
 struct PosterConfig {
     assertion_poster_contract_address: Address,
     settlement_rpc_url: String,
     appchain_rpc_url: String,
-    polling_interval: Duration,
     metrics_port: u16,
 }
+
 #[derive(Debug)]
 struct SequencerConfig {
     sequencing_contract_address: Address,
@@ -121,16 +126,10 @@ struct SequencerConfig {
     sequencer_port: u16,
     metrics_port: u16,
 }
-#[allow(missing_docs)]
-#[derive(Debug, Default)]
-pub struct ImageTags {
-    poster_tag: Option<String>,
-    translator_tag: Option<String>,
-    sequencer_tag: Option<String>,
-}
 
 #[derive(Debug, Clone)]
-pub struct ConfigurationOptions {
+#[allow(clippy::redundant_pub_crate)]
+pub(crate) struct ConfigurationOptions {
     pub pre_loaded: Option<ContractVersion>,
     pub sequencing_start_block: u64,
     pub settlement_start_block: u64,
@@ -144,37 +143,21 @@ impl Default for ConfigurationOptions {
     fn default() -> Self {
         Self {
             pre_loaded: None,
-            sequencing_start_block: 3,
-            settlement_start_block: 1,
+            sequencing_start_block: 1, // skip the genesis block
+            settlement_start_block: 1, // skip the genesis block
             settlement_delay: 0,
-            appchain_owner: APPCHAIN_OWNER,
-            appchain_chain_id: APPCHAIN_CHAIN_ID,
+            appchain_owner: Address::ZERO,
+            appchain_chain_id: 13331370,
             finality_delay: 60,
         }
     }
 }
 
 impl Components {
-    pub async fn new(options: &ConfigurationOptions) -> Result<Self> {
-        // This can be made per-test once we switch to nextest.
-        // Until then, the tracer from the first test persists for all the tests
-        // and additional calls to init_test_tracing() fail and have no effect.
-        _ = init_test_tracing(Level::INFO);
-
-        info!("Setting tags...");
-        let mut tags = ImageTags::default();
-        if let Ok(tag) = env::var("POSTER_TAG") {
-            tags.poster_tag = Some(tag);
-        }
-        if let Ok(tag) = env::var("TRANSLATOR_TAG") {
-            tags.translator_tag = Some(tag);
-        }
-        if let Ok(tag) = env::var("SEQUENCER_TAG") {
-            tags.sequencer_tag = Some(tag);
-        }
+    pub(crate) async fn new(options: &ConfigurationOptions) -> Result<Self> {
+        let start_time = SystemTime::now();
 
         info!("Starting components...");
-
         info!("Starting mchain...");
         let (mchain_rpc_url, _mchain, mchain_provider) =
             start_mchain(options.appchain_chain_id, options.appchain_owner, options.finality_delay)
@@ -189,22 +172,14 @@ impl Components {
         )
         .send()
         .await?;
-        let always_allowed_contract =
-            AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
-        mine_block(&seq_provider, 0).await?;
-        let receipt = always_allowed_contract.get_receipt().await?;
-        let always_allowed_module_address = match receipt.contract_address {
-            Some(address) => address,
-            None => {
-                eprintln!("Deployment failed: No contract address found.");
-                return Err(eyre!("Deployment failed: No contract address found."));
-            }
-        };
+        let sequencing_contract_address = seq_provider.default_signer_address().create(0);
+        _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
+        let always_allowed_module_address = seq_provider.default_signer_address().create(1);
 
         // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
         let sequencing_contract =
-            MetabasedSequencerChain::new(get_rollup_contract_address(), provider_clone);
+            MetabasedSequencerChain::new(sequencing_contract_address, provider_clone);
         _ = sequencing_contract
             .initialize(seq_provider.default_signer_address(), always_allowed_module_address)
             .send()
@@ -260,13 +235,13 @@ impl Components {
         // Launch components
         info!("Starting sequencer...");
         let sequencer_config = SequencerConfig {
-            sequencing_contract_address: get_rollup_contract_address(),
+            sequencing_contract_address,
             sequencing_rpc_url: sequencing_rpc_url.clone(),
             sequencer_port: PortManager::instance().next_port(),
             metrics_port: PortManager::instance().next_port(),
         };
         let sequencer =
-            start_component("metabased-sequencer", tags.sequencer_tag, sequencer_config.cli_args())
+            start_component("metabased-sequencer", sequencer_config.cli_args(), Default::default())
                 .await?;
         wait_for_service(sequencer_config.metrics_port).await?;
 
@@ -276,20 +251,20 @@ impl Components {
             settlement_start_block: options.settlement_start_block,
             settlement_delay: options.settlement_delay,
             arbitrum_bridge_address: options.pre_loaded.as_ref().map_or_else(
-                get_rollup_contract_address,
+                || set_provider.default_signer_address().create(0),
                 |version| match version {
                     ContractVersion::V300 => PRELOAD_BRIDGE_ADDRESS_300,
                     ContractVersion::V213 => PRELOAD_BRIDGE_ADDRESS_231,
                 },
             ),
             arbitrum_inbox_address: options.pre_loaded.as_ref().map_or_else(
-                get_rollup_contract_address,
+                || set_provider.default_signer_address().create(0),
                 |version| match version {
                     ContractVersion::V300 => PRELOAD_INBOX_ADDRESS_300,
                     ContractVersion::V213 => PRELOAD_INBOX_ADDRESS_231,
                 },
             ),
-            sequencing_contract_address: get_rollup_contract_address(),
+            sequencing_contract_address,
             mchain_rpc_url: mchain_rpc_url.clone(),
             metrics_port: PortManager::instance().next_port(),
             sequencing_rpc_url,
@@ -297,8 +272,8 @@ impl Components {
         };
         let translator = start_component(
             "metabased-translator",
-            tags.translator_tag,
             translator_config.cli_args(),
+            Default::default(),
         )
         .await?;
         wait_for_service(translator_config.metrics_port).await?;
@@ -313,25 +288,23 @@ impl Components {
         )
         .await?;
 
-        let assertion_poster_contract_address = options.pre_loaded.as_ref().map_or_else(
-            || Address::ZERO,
-            |version| match version {
-                ContractVersion::V300 => PRELOAD_POSTER_ADDRESS_300,
-                ContractVersion::V213 => PRELOAD_POSTER_ADDRESS_231,
-            },
-        );
         let mut poster = None;
         if options.pre_loaded.is_some() {
             info!("Starting poster...");
             let poster_config = PosterConfig {
-                assertion_poster_contract_address,
+                assertion_poster_contract_address: options.pre_loaded.as_ref().map_or(
+                    Address::ZERO,
+                    |version| match version {
+                        ContractVersion::V300 => PRELOAD_POSTER_ADDRESS_300,
+                        ContractVersion::V213 => PRELOAD_POSTER_ADDRESS_231,
+                    },
+                ),
                 settlement_rpc_url: settlement_rpc_url.clone(),
                 metrics_port: PortManager::instance().next_port(),
                 appchain_rpc_url: nitro_url,
-                polling_interval: Duration::from_secs(1),
             };
             poster = Some(
-                start_component("metabased-poster", tags.poster_tag, poster_config.cli_args())
+                start_component("metabased-poster", poster_config.cli_args(), Default::default())
                     .await?,
             );
             wait_for_service(poster_config.metrics_port).await?;
@@ -339,7 +312,8 @@ impl Components {
 
         // Launch sequencer
         Ok(Self {
-            _timer: TestTimer(SystemTime::now()),
+            #[allow(clippy::unwrap_used)]
+            _timer: TestTimer(SystemTime::now(), start_time.elapsed().unwrap()),
 
             sequencing_provider: seq_provider,
             settlement_provider: set_provider,
@@ -347,7 +321,6 @@ impl Components {
             chain_id: options.appchain_chain_id,
             bridge_address: translator_config.arbitrum_bridge_address,
             inbox_address: translator_config.arbitrum_inbox_address,
-            assertion_poster_contract_address,
             mchain_provider,
 
             _mchain,
@@ -360,67 +333,50 @@ impl Components {
         })
     }
 
-    pub async fn mine_seq_block(&self, delay: u64) -> Result<()> {
+    pub(crate) async fn mine_seq_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.sequencing_provider, delay).await?;
         Ok(())
     }
 
-    pub async fn mine_set_block(&self, delay: u64) -> Result<()> {
+    pub(crate) async fn send_tx_and_mine_block(
+        &self,
+        tx: &EthereumTxEnvelope<TxEip4844Variant>,
+        delay: u64,
+    ) -> Result<()> {
+        self.sequencing_provider.anvil_set_block_timestamp_interval(delay).await?;
+        self.sequencing_provider.anvil_set_auto_mine(true).await?;
+        _ = self.appchain_provider.send_raw_transaction(&tx.encoded_2718()).await?;
+        self.sequencing_provider.anvil_set_auto_mine(false).await?;
+        self.sequencing_provider.anvil_remove_block_timestamp_interval().await?;
+        Ok(())
+    }
+
+    pub(crate) async fn mine_set_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.settlement_provider, delay).await?;
         Ok(())
     }
 
-    pub async fn mine_both(&self, delay: u64) -> Result<()> {
+    pub(crate) async fn mine_both(&self, delay: u64) -> Result<()> {
         self.mine_seq_block(delay).await?;
         self.mine_set_block(delay).await?;
         Ok(())
     }
 }
 
-async fn start_component(
-    executable_name: &str,
-    tag: Option<String>,
-    args: Vec<String>,
-) -> Result<Docker> {
-    if let Some(tag) = tag {
-        Ok(Docker(
-            Command::new("docker")
-                .arg("run")
-                .arg("--init")
-                .arg("--rm")
-                .arg("--net=host")
-                .arg(format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}"))
-                .args(args)
-                .spawn()?,
-        ))
-    } else {
-        Ok(Docker(
-            Command::new("cargo")
-                .current_dir("../")
-                .arg("run")
-                .arg("--bin")
-                .arg(executable_name)
-                .arg("--")
-                .args(args)
-                .spawn()?,
-        ))
-    }
-}
-
 async fn wait_for_service(port: u16) -> Result<()> {
     let client = Client::new();
-    loop {
-        match client.get(format!("http://localhost:{port}/metrics")).send().await {
-            Ok(response) if response.status().is_success() => {
-                println!("Metabased-translator is now running.");
-                return Ok(());
-            }
-            _ => {
-                println!("Waiting for metabased-translator to start...");
-                sleep(Duration::from_millis(500)).await;
-            }
+    timeout(Duration::from_secs(120), async {
+        while !client
+            .get(format!("http://localhost:{port}/metrics"))
+            .send()
+            .await
+            .is_ok_and(|x| x.status().is_success())
+        {
+            tokio::time::sleep(Duration::from_millis(50)).await;
         }
-    }
+        Ok(())
+    })
+    .await?
 }
 
 impl TranslatorConfig {
@@ -447,9 +403,9 @@ impl TranslatorConfig {
             "--settlement-delay".to_string(),
             self.settlement_delay.to_string(),
             "--sequencing-polling-interval".to_string(),
-            "100ms".to_string(),
+            "50ms".to_string(),
             "--settlement-polling-interval".to_string(),
-            "100ms".to_string(),
+            "50ms".to_string(),
         ]
     }
 }
@@ -458,7 +414,7 @@ impl PosterConfig {
     fn cli_args(&self) -> Vec<String> {
         vec![
             "--private-key".to_string(),
-            DEFAULT_PRIVATE_KEY_SIGNER.to_string(),
+            POSTER_SEQUENCER_PRIVATE_KEY.to_string(),
             "--appchain-rpc-url".to_string(),
             self.appchain_rpc_url.to_string(),
             "--assertion-poster-contract-address".to_string(),
@@ -468,7 +424,7 @@ impl PosterConfig {
             "--metrics-port".to_string(),
             self.metrics_port.to_string(),
             "--polling-interval".to_string(),
-            self.polling_interval.as_secs().to_string() + "s",
+            "1s".to_string(),
         ]
     }
 }
@@ -477,7 +433,7 @@ impl SequencerConfig {
     fn cli_args(&self) -> Vec<String> {
         vec![
             "--private-key".to_string(),
-            DEFAULT_PRIVATE_KEY_SIGNER.to_string(),
+            POSTER_SEQUENCER_PRIVATE_KEY.to_string(),
             "--chain-contract-address".to_string(),
             self.sequencing_contract_address.to_string(),
             "--chain-rpc-url".to_string(),

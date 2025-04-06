@@ -53,3 +53,10 @@ repos:
         types: [solidity]
         files: ^(shared)/arb-contracts/
         pass_filenames: false
+      - id: taplo-fmt
+        name: taplo fmt
+        entry: taplo fmt
+        args: ["--check", "**/Cargo.toml", "--verbose"]
+        language: system
+        types: [cargo]
+        pass_filenames: false

@@ -19,7 +19,7 @@ use tokio::{
     sync::{mpsc::Sender, oneshot},
     task::JoinSet,
 };
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, info, trace, warn};
 
 struct BatchContext<'a> {
     client: &'a Arc<dyn RPCClient>,
@@ -240,7 +240,7 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
                 results_map.insert(block_num, block_and_receipts);
             }
             Ok(Err(err)) => {
-                error!("Failed to fetch block and receipts on {:?}: {:?}", ctx.chain, err);
+                warn!("Failed to fetch block and receipts on {:?}: {:?}", ctx.chain, err);
             }
             Err(err) => {
                 error!("Task failed: {:?}", err);

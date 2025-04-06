@@ -85,7 +85,7 @@ pub trait ArbitrumDB {
     fn put_message_acc(&self, key: u64, value: FixedBytes<32>);
     fn delete_message_acc(&self, key: u64);
     /// Create a new block that a contains a batch
-    fn add_batch(&self, block: MBlock) -> Result<(), ErrorObjectOwned>;
+    fn add_batch(&self, block: MBlock) -> Result<u64, ErrorObjectOwned>;
 }
 
 impl<T: KVDB> ArbitrumDB for T {
@@ -128,7 +128,7 @@ impl<T: KVDB> ArbitrumDB for T {
     fn delete_message_acc(&self, key: u64) {
         self.delete(DBKey::MessageAcc(key).to_string())
     }
-    fn add_batch(&self, mblock: MBlock) -> Result<(), ErrorObjectOwned> {
+    fn add_batch(&self, mblock: MBlock) -> Result<u64, ErrorObjectOwned> {
         let block_number = self.get_block_number() + 1;
         let prev_block = if block_number > 1 {
             self.get_block(block_number - 1)?
@@ -182,7 +182,7 @@ impl<T: KVDB> ArbitrumDB for T {
         self.put_block(block_number, block);
         // update the block number last - incomplete blocks can be ignored
         self.put_block_number(block_number);
-        Ok(())
+        Ok(block_number)
     }
 }
 
@@ -262,8 +262,8 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn test_invalid_batch() -> eyre::Result<()> {
+    #[test]
+    fn test_invalid_batch() -> eyre::Result<()> {
         let db = TestDB::new();
         db.add_batch(MBlock { timestamp: 0, ..Default::default() })?;
         db.add_batch(MBlock { timestamp: 1, ..Default::default() })?;

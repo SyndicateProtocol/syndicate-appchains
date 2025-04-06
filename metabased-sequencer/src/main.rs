@@ -9,19 +9,14 @@ use metabased_sequencer::{
     metrics::{start_metrics, MetricsState, RelayerMetrics},
     server::run_server,
 };
-use tracing::{info, Level};
-use tracing_subscriber::FmtSubscriber;
+use shared::logger::set_global_default_subscriber;
+use tracing::info;
 
 #[tokio::main]
 #[allow(clippy::redundant_pub_crate)]
 async fn main() -> Result<()> {
     // Initialize logging
-    FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .json()
-        .with_target(true)
-        .with_env_filter("info")
-        .init();
+    set_global_default_subscriber()?;
 
     // Parse config
     let config = Config::initialize();

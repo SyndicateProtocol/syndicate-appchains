@@ -8,7 +8,7 @@ repository.workspace   = true
 rust-version.workspace = true
 version.workspace      = true
 
-[dependencies]
+[dev-dependencies]
 alloy = { workspace = true, features = [
   "node-bindings",
   "provider-engine-api",
@@ -18,13 +18,15 @@ alloy = { workspace = true, features = [
   "sol-types",
 ] }
 contract-bindings = { workspace = true }
+ctor = { workspace = true }
 eyre = { workspace = true }
+mchain = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
+shared = { workspace = true }
 test-utils = { workspace = true }
 tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
 tracing = { workspace = true }
-mchain = { workspace = true }
 
 [features]
 env-tests = []

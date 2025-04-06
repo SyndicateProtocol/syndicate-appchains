@@ -12,7 +12,6 @@ use eyre::{Report, Result};
 use ingestor::config::ChainIngestorConfig;
 use metrics::metrics::{start_metrics, MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
-use serde_json::Value;
 use slotter::SlotterError;
 use std::sync::Arc;
 use tokio::{
@@ -249,11 +248,6 @@ pub async fn clients(
             .map_err(RuntimeError::RPCClient)?,
     );
     Ok((sequencing_client, settlement_client))
-}
-
-/// These extra fields are added to every log event for additional context. Add more as needed
-pub fn get_extra_fields_for_logging(_base_config: MetabasedConfig) -> Vec<(String, Value)> {
-    vec![]
 }
 
 pub async fn init_metrics(config: &MetabasedConfig) -> TranslatorMetrics {

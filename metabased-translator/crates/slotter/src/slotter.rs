@@ -401,6 +401,12 @@ impl From<SendError<Slot>> for SlotterError {
 }
 
 #[cfg(test)]
+#[ctor::ctor]
+fn init() {
+    shared::logger::set_global_default_subscriber();
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
     use alloy::primitives::B256;
@@ -414,7 +420,6 @@ mod tests {
         time::Duration,
     };
     use tokio::sync::mpsc::{channel, Sender};
-    use tracing_test::traced_test;
 
     struct MetricsState {
         /// Prometheus registry
@@ -560,7 +565,6 @@ mod tests {
     /// # block number
     /// ```
     #[tokio::test]
-    #[traced_test]
     async fn test_slotter() {
         // NOTE: IMPORTANT - keep _shutdown_tx in scope, otherwise `slotter` will be terminated
         // immediatelly
@@ -676,7 +680,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[traced_test]
     async fn test_insert_block_between_slots() {
         let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
             create_slotter_and_spawn(&SlotterConfig {
@@ -721,7 +724,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[traced_test]
     async fn test_settlement_delay() {
         let TestSetup { processor, sequencing_tx, settlement_tx, shutdown_tx: _shutdown } =
             create_slotter_and_spawn(&SlotterConfig {

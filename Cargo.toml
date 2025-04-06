@@ -91,12 +91,12 @@ url                  = { version = "2.5.4" }
 # dev dependencies
 const_format = { version = "0.2" }
 criterion    = { version = "0.5" }
+ctor         = "0.4.1"
 mockall      = "0.13.1"
 mockito      = { version = "1.7.0" }
 serial_test  = { version = "3.2.0" }
 temp-env     = "0.3.6"
 test-case    = { version = "3" }
-tracing-test = { version = "0.2.5" }
 
 
 [workspace.lints.rust]

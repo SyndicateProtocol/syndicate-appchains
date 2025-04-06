@@ -1,4 +1,4 @@
-//! Integration tests for the metabased stack
+//! e2e tests for the metabased stack
 
 use alloy::{
     eips::{BlockNumberOrTag, Encodable2718},
@@ -7,6 +7,7 @@ use alloy::{
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, Block, TransactionRequest},
 };
+use components::{Components, ConfigurationOptions, ContractVersion};
 use contract_bindings::arbitrum::{
     arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox, irollupcore::IRollupCore,
     nodeinterface::NodeInterface, rollup::Rollup,
@@ -14,38 +15,40 @@ use contract_bindings::arbitrum::{
 use eyre::Result;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use test_framework::components::{Components, ConfigurationOptions, ContractVersion};
-use test_utils::{
-    anvil::mine_block, preloaded_config::APPCHAIN_OWNER, rollup::get_rollup_contract_address,
-    utils::assert_eventually, wait_until,
-};
+use test_utils::{utils::assert_eventually, wait_until};
 use tokio::time::sleep;
+
+mod components;
 
 const ARB_SYS_PRECOMPILE_ADDRESS: Address = address!("0x0000000000000000000000000000000000000064");
 const NODE_INTERFACE_PRECOMPILE_ADDRESS: Address =
     address!("0x00000000000000000000000000000000000000c8");
 
-#[tokio::test(flavor = "multi_thread")]
+// an arbitrary eoa address used for testing
+const TEST_ADDR: Address = address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380");
+
+#[cfg(test)]
+#[ctor::ctor]
+fn init() {
+    shared::logger::set_global_default_subscriber();
+}
+
+#[tokio::test]
 async fn e2e_test() -> Result<()> {
-    let config = ConfigurationOptions {
-        sequencing_start_block: 3, // skip the contract deployment blocks
-        settlement_start_block: 1,
-        settlement_delay: 60,
-        appchain_owner: Address::ZERO,
-        ..Default::default()
-    };
+    let config = ConfigurationOptions { settlement_delay: 60, ..Default::default() };
     let components = Components::new(&config).await?;
 
     // Setup the settlement rollup contract
-    let set_rollup = Rollup::new(get_rollup_contract_address(), &components.settlement_provider);
+    let set_rollup = Rollup::new(components.inbox_address, &components.settlement_provider);
+    let wallet_address = components.settlement_provider.default_signer_address();
 
     // Send a deposit
-    _ = set_rollup.depositEth(APPCHAIN_OWNER, APPCHAIN_OWNER, parse_ether("1")?).send().await?;
+    _ = set_rollup.depositEth(wallet_address, wallet_address, parse_ether("1")?).send().await?;
     components.mine_seq_block(config.settlement_delay).await?;
     components.mine_set_block(0).await?;
     // mine 1 set block to close the opened slot that contains the other deposit
     let test_addr: Address = "0xA9ec1Ed7008fDfdE38978Dfef4cF2754A969E5FA".parse()?;
-    _ = set_rollup.depositEth(APPCHAIN_OWNER, test_addr, parse_ether("1")?).send().await?;
+    _ = set_rollup.depositEth(wallet_address, test_addr, parse_ether("1")?).send().await?;
     components.mine_set_block(1).await?;
 
     // Wait for the deposit to arrive
@@ -63,27 +66,20 @@ async fn e2e_test() -> Result<()> {
     assert_eq!(rollup_block.header.timestamp, config.settlement_delay);
     // the first transaction is the startBlock transaction
     assert_eq!(rollup_block.transactions.len(), 2);
-    assert_eq!(components.appchain_provider.get_balance(APPCHAIN_OWNER).await?, parse_ether("1")?);
+    assert_eq!(components.appchain_provider.get_balance(wallet_address).await?, parse_ether("1")?);
 
     // Send a sequenced tx
-    let mut tx = vec![];
-    let req = TransactionRequest::default()
-        .with_to(address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380"))
+    let tx = TransactionRequest::default()
+        .with_to(TEST_ADDR)
         .with_value(U256::from(1))
         .with_nonce(0)
         .with_gas_limit(100_000)
         .with_chain_id(components.chain_id)
         .with_max_fee_per_gas(100000000)
-        .with_max_priority_fee_per_gas(0);
-    let inner_tx = req.clone().build(components.sequencing_provider.wallet()).await?;
-    inner_tx.encode_2718(&mut tx);
-    // TODO: fix this hack
-    let seq_copy = components.sequencing_provider.clone();
-    tokio::spawn(async move {
-        sleep(Duration::from_secs(1)).await;
-        let _ = mine_block(&seq_copy, 0).await;
-    });
-    _ = components.appchain_provider.send_raw_transaction(&tx).await?;
+        .with_max_priority_fee_per_gas(0)
+        .build(components.sequencing_provider.wallet())
+        .await?;
+    components.send_tx_and_mine_block(&tx, 0).await?;
 
     // Wait for the tx to arrive
     wait_until!(
@@ -102,7 +98,7 @@ async fn e2e_test() -> Result<()> {
     assert_eq!(rollup_block.transactions.len(), 2);
     // tx hash should match
     let hashes: Vec<_> = rollup_block.transactions.hashes().collect();
-    assert_eq!(hashes[1], *inner_tx.tx_hash());
+    assert_eq!(hashes[1], *tx.tx_hash());
 
     // sequence an empty slot
     components.mine_seq_block(0).await?;
@@ -138,17 +134,16 @@ async fn e2e_test() -> Result<()> {
 /// This test sends different types of delayed messages
 /// via the inbox contract and ensures that all of them
 /// are sequenced via the metabased translator and show up on the rollup.
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn e2e_settlement_test() -> Result<()> {
+    // Sequencer fees go to the zero address
     let components = Components::new(&ConfigurationOptions {
         pre_loaded: Some(ContractVersion::V300),
         ..Default::default()
     })
     .await?;
 
-    // Grab the wallet address for the test
-    // Sequencer fees go to the owner address
-    let wallet_address = APPCHAIN_OWNER;
+    let wallet_address = components.settlement_provider.default_signer_address();
 
     // Send a deposit (unaliased address) delayed message
     // Deposit is from the arbos address and does not increment the nonce
@@ -286,19 +281,19 @@ async fn e2e_settlement_test() -> Result<()> {
     );
 
     assert_eq!(
-        components.appchain_provider.get_balance(APPCHAIN_OWNER).await?,
-        parse_ether("4.6001407626")?
+        components.appchain_provider.get_balance(wallet_address).await?,
+        parse_ether("4.6000316")?
     );
 
     Ok(())
 }
 
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn e2e_settlement_fast_withdrawal_300() -> Result<()> {
     e2e_settlement_fast_withdrawal_base(ContractVersion::V300).await
 }
 
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn e2e_settlement_fast_withdrawal_213() -> Result<()> {
     e2e_settlement_fast_withdrawal_base(ContractVersion::V213).await
 }
@@ -317,28 +312,30 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
         .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
         .await?;
 
+    let wallet_address = components.settlement_provider.default_signer_address();
+    let value = parse_ether("1")?;
     let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
-    _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
+    _ = inbox.depositEth().value(value).send().await?;
     components.mine_set_block(0).await?;
     components.mine_set_block(1).await?;
 
     // Wait for deposit to be processed
     wait_until!(
-        components.appchain_provider.get_block_number().await? > 0,
+        components.appchain_provider.get_balance(wallet_address).await? >= value,
         Duration::from_secs(10)
     );
+    assert_eq!(components.appchain_provider.get_block_number().await?, 9);
 
     let bridge = IBridge::new(components.bridge_address, &components.settlement_provider);
 
     // 2. Send withdrawal transaction on the Appchain
-    let mut tx = vec![];
     let arbsys = ArbSys::new(ARB_SYS_PRECOMPILE_ADDRESS, &components.appchain_provider);
     let gas_limit: u64 = 100_000;
     let max_fee_per_gas: u128 = 100_000_000;
     let withdrawal_value = parse_ether("0.1")?;
     let withdrawal_wallet = components.sequencing_provider.wallet();
     let to_address = address!("0x0000000000000000000000000000000000000001");
-    arbsys
+    let tx = arbsys
         .withdrawEth(to_address)
         .value(withdrawal_value)
         .nonce(0)
@@ -348,16 +345,8 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
         .max_priority_fee_per_gas(0)
         .into_transaction_request()
         .build(withdrawal_wallet)
-        .await?
-        .encode_2718(&mut tx);
-    // TODO: fix this hack
-    let seq_copy = components.sequencing_provider.clone();
-    tokio::spawn(async move {
-        sleep(Duration::from_secs(1)).await;
-        let _ = mine_block(&seq_copy, 0).await;
-    });
-    _ = components.appchain_provider.send_raw_transaction(&tx).await?;
-    components.mine_seq_block(0).await?;
+        .await?;
+    components.send_tx_and_mine_block(&tx, 0).await?;
 
     // Wait for the withdrawal transaction to be processed
     wait_until!(
@@ -404,7 +393,7 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
         .executeTransaction(
             proof.proof,           // proof
             U256::from(0),         // index
-            APPCHAIN_OWNER,        // l2Sender
+            wallet_address,        // l2Sender
             to_address,            // to
             block.number,          // l2Block,
             block.l1_block_number, // l1Block,
@@ -424,13 +413,16 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
     Ok(())
 }
 
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn test_settlement_reorg() -> Result<()> {
     let components = Components::new(&ConfigurationOptions {
         pre_loaded: Some(ContractVersion::V300),
         ..Default::default()
     })
     .await?;
+
+    let counter = tokio::sync::Mutex::new(0);
+    wait_until!(*counter.lock().await += 1; *counter.lock().await >= 3, Duration::from_secs(1));
 
     // NOTE: at this point the mchain is on block 1 (initial mchain block) - we can't reorg to
     // genesis, so we need to create two slots on top of it before the reorg happens.
@@ -441,11 +433,10 @@ async fn test_settlement_reorg() -> Result<()> {
 
     wait_until!(components.mchain_provider.get_block_number().await == 2, Duration::from_secs(10));
 
-    let wallet_address = APPCHAIN_OWNER;
+    let wallet_address = components.settlement_provider.default_signer_address();
     let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
 
     // create a deposit1 (that won't be rolled back) that will fit on mchain's block 3
-    let balance_before_deposit = components.appchain_provider.get_balance(wallet_address).await?;
     _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
 
     components.mine_both(100).await?;
@@ -453,16 +444,13 @@ async fn test_settlement_reorg() -> Result<()> {
 
     // Wait for deposit1 to be processed
     wait_until!(
-        components.appchain_provider.get_balance(wallet_address).await? >=
-            balance_before_deposit + parse_ether("1")?,
+        components.appchain_provider.get_balance(wallet_address).await? == parse_ether("1")?,
         Duration::from_secs(10)
     );
 
     // send a deposit2 that will be reorged
     let mchain_block_before_deposit = components.mchain_provider.get_block_number().await;
     assert_eq!(mchain_block_before_deposit, 3);
-
-    let balance_before_deposit = components.appchain_provider.get_balance(wallet_address).await?;
 
     _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
 
@@ -472,8 +460,7 @@ async fn test_settlement_reorg() -> Result<()> {
 
     // Wait for deposit2 to be processed
     wait_until!(
-        components.appchain_provider.get_balance(wallet_address).await? ==
-            balance_before_deposit + parse_ether("1")?,
+        components.appchain_provider.get_balance(wallet_address).await? == parse_ether("2")?,
         Duration::from_secs(10)
     );
     assert_eq!(components.mchain_provider.get_block_number().await, 4);
@@ -531,7 +518,7 @@ async fn test_settlement_reorg() -> Result<()> {
 
     // balance should be correct (reorged deposit is not included)
     let balance_after_reorg = components.appchain_provider.get_balance(wallet_address).await?;
-    assert_eq!(balance_after_reorg, balance_before_deposit + parse_ether("0.01")?);
+    assert_eq!(balance_after_reorg, parse_ether("1.01")?);
 
     Ok(())
 }

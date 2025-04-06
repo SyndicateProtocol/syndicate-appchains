@@ -1,16 +1,10 @@
 //! Rollup utils for the integration tests
 
-use crate::preloaded_config::get_default_private_key_signer;
 use alloy::primitives::Address;
-use mchain::mchain::MCHAIN_ID;
-
-pub fn get_rollup_contract_address() -> Address {
-    get_default_private_key_signer().address().create(0)
-}
+use mchain::mchain::{MCHAIN_ID, ROLLUP};
 
 /// Get the nitro json configuration data for the rollup
 pub fn rollup_info(rollup_config: &str, chain_name: &str) -> String {
-    let rollup = get_rollup_contract_address();
     let deployed_at: u64 = 1;
     let zero = Address::ZERO;
     format!(
@@ -26,9 +20,9 @@ pub fn rollup_info(rollup_config: &str, chain_name: &str) -> String {
               "has-genesis-state": false,
               "chain-config": {rollup_config},
               "rollup": {{
-                "bridge": "{rollup}",
+                "bridge": "{ROLLUP}",
                 "inbox": "{zero}",
-                "sequencer-inbox": "{rollup}",
+                "sequencer-inbox": "{ROLLUP}",
                 "deployed-at": {deployed_at},
                 "rollup": "{zero}",
                 "native-token": "{zero}",

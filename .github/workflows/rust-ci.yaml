@@ -145,6 +145,9 @@ jobs:
           which anvil
           anvil --version
 
+      - name: Build Tests
+        run: cargo test --workspace --exclude maestro --no-run
+
       # Run tests on entire workspace. `maestro` is excluded because it is tested separately by Nextest below
       - name: Run Tests
         run: cargo test --workspace --exclude maestro

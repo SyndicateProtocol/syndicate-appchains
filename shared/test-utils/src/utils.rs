@@ -55,16 +55,16 @@ pub fn test_path(prefix: &str) -> String {
 ///
 /// # Example
 ///
-/// ```compile_fail
-/// async fn example() -> Result<(), String> {
+/// ```
+/// async fn example() -> eyre::Result<()> {
 ///     use std::time::Duration;
-///     use test_utils::assert_eventually;
+///     use test_utils::utils::assert_eventually;
 ///
-///     let mut counter = 0;
+///     let counter = tokio::sync::Mutex::new(0);
 ///     assert_eventually(
 ///         || async {
-///             counter += 1;
-///             Ok(counter >= 3)
+///             *counter.lock().await += 1;
+///             Ok(*counter.lock().await >= 3)
 ///         },
 ///         Duration::from_secs(1),
 ///     )
@@ -105,15 +105,15 @@ where
 ///
 /// # Example
 ///
-/// ```compile_fail
+/// ```
 /// async fn example() {
 ///     use std::time::Duration;
-///     use test_utils::wait_until;
+///     use test_utils::{utils::assert_eventually, wait_until};
 ///
-///     let mut counter = 0;
+///     let counter = tokio::sync::Mutex::new(0);
 ///
 ///     // Basic usage
-///     wait_until!(counter += 1; counter >= 3, Duration::from_secs(1));
+///     wait_until!(*counter.lock().await += 1; *counter.lock().await >= 3, Duration::from_secs(1));
 /// }
 /// ```
 #[macro_export]

@@ -1245,7 +1245,6 @@ dependencies = [
  "thiserror 2.0.12",
  "tokio",
  "tracing",
- "tracing-test",
 ]
 
 [[package]]
@@ -1534,7 +1533,6 @@ dependencies = [
  "strum_macros",
  "thiserror 2.0.12",
  "tracing",
- "tracing-subscriber",
  "url",
 ]
 
@@ -1676,6 +1674,22 @@ dependencies = [
  "generic-array",
  "typenum",
 ]
+
+[[package]]
+name = "ctor"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "07e9666f4a9a948d4f1dff0c08a4512b0f7c86414b23960104c243c10d79f4c3"
+dependencies = [
+ "ctor-proc-macro",
+ "dtor",
+]
+
+[[package]]
+name = "ctor-proc-macro"
+version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4f211af61d8efdd104f96e57adf5e426ba1bc3ed7a4ead616e15e5881fd79c4d"
 
 [[package]]
 name = "darling"
@@ -1860,6 +1874,21 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d6add3b8cff394282be81f3fc1a0605db594ed69890078ca6e2cab1c408bcf04"
 
 [[package]]
+name = "dtor"
+version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "222ef136a1c687d4aa0395c175f2c4586e379924c352fd02f7870cf7de783c23"
+dependencies = [
+ "dtor-proc-macro",
+]
+
+[[package]]
+name = "dtor-proc-macro"
+version = "0.0.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7454e41ff9012c00d53cf7f475c5e3afa3b91b7c90568495495e8d9bf47a1055"
+
+[[package]]
 name = "dunce"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1878,9 +1907,11 @@ dependencies = [
  "alloy",
  "block-builder",
  "contract-bindings",
+ "ctor",
  "eyre",
  "mchain",
  "reqwest",
+ "shared",
  "strum",
  "strum_macros",
  "test-utils",
@@ -3174,7 +3205,6 @@ dependencies = [
  "tokio",
  "tower 0.4.13",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -3200,11 +3230,15 @@ dependencies = [
  "bincode",
  "clap",
  "contract-bindings",
+ "ctor",
  "eyre",
  "jsonrpsee",
  "rocksdb",
  "serde",
+ "shared",
+ "test-utils",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -3221,6 +3255,7 @@ dependencies = [
  "axum",
  "clap",
  "contract-bindings",
+ "ctor",
  "eyre",
  "humantime",
  "jsonrpsee",
@@ -3230,7 +3265,6 @@ dependencies = [
  "thiserror 2.0.12",
  "tokio",
  "tracing",
- "tracing-subscriber",
  "url",
 ]
 
@@ -3255,7 +3289,6 @@ dependencies = [
  "tokio",
  "tower 0.4.13",
  "tracing",
- "tracing-subscriber",
  "url",
 ]
 
@@ -3272,7 +3305,7 @@ dependencies = [
  "metrics",
  "mockall",
  "prometheus-client",
- "serde_json",
+ "shared",
  "slotter",
  "temp-env",
  "thiserror 2.0.12",
@@ -4687,14 +4720,15 @@ dependencies = [
  "async-trait",
  "clap",
  "common",
+ "ctor",
  "eyre",
  "humantime",
  "prometheus-client",
+ "shared",
  "test-case",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
- "tracing-test",
 ]
 
 [[package]]
@@ -4888,7 +4922,6 @@ dependencies = [
  "tokio",
  "tower 0.4.13",
  "tracing",
- "tracing-subscriber",
  "url",
 ]
 
@@ -4959,10 +4992,12 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "contract-bindings",
+ "ctor",
  "eyre",
  "mchain",
  "reqwest",
  "serde",
+ "shared",
  "test-utils",
  "tokio",
  "tracing",
@@ -4975,10 +5010,8 @@ dependencies = [
  "alloy",
  "eyre",
  "mchain",
- "thiserror 2.0.12",
  "tokio",
  "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]
@@ -5325,27 +5358,6 @@ dependencies = [
  "tracing-core",
  "tracing-log",
  "tracing-serde",
-]
-
-[[package]]
-name = "tracing-test"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "557b891436fe0d5e0e363427fc7f217abf9ccd510d5136549847bdcbcd011d68"
-dependencies = [
- "tracing-core",
- "tracing-subscriber",
- "tracing-test-macro",
-]
-
-[[package]]
-name = "tracing-test-macro"
-version = "0.2.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "04659ddb06c87d233c566112c1c9c5b9e98256d9af50ec3bc9c8327f873a7568"
-dependencies = [
- "quote",
- "syn 2.0.100",
 ]
 
 [[package]]

@@ -5,10 +5,8 @@ use clap::Parser;
 use jsonrpsee::server::{RpcServiceBuilder, Server};
 use mchain::mchain::start_mchain;
 use rocksdb::DB;
-use tokio::{
-    signal::unix::{signal, SignalKind},
-    sync::oneshot,
-};
+use shared::logger::set_global_default_subscriber;
+use tokio::signal::unix::{signal, SignalKind};
 
 /// CLI args for the mchain executable
 #[derive(Parser, Debug, Clone)]
@@ -30,41 +28,36 @@ struct Config {
     chain_owner: Address,
 }
 
-#[allow(clippy::redundant_pub_crate)]
-fn init_signal_handler(runtime: &tokio::runtime::Runtime, shutdown_tx: oneshot::Sender<()>) {
-    runtime.spawn(async move {
-        #[allow(clippy::expect_used)]
-        let mut sigint =
-            signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
-        #[allow(clippy::expect_used)]
-        let mut sigterm =
-            signal(SignalKind::terminate()).expect("Failed to register SIGTERM handler");
-
-        tokio::select! {
-            _ = sigint.recv() => {
-                println!("Received SIGINT (Ctrl+C), initiating shutdown...");
-            }
-            _ = sigterm.recv() => {
-                println!("Received SIGTERM, initiating shutdown...");
-            }
-        };
-
-        assert!(shutdown_tx.send(()).is_ok(), "Failed to send shutdown signal")
-    });
-}
-
 #[tokio::main]
+#[allow(clippy::redundant_pub_crate)]
 async fn main() -> eyre::Result<()> {
+    // Initialize logging
+    set_global_default_subscriber()?;
+
     let cfg = Config::parse();
     let db = DB::open_default(cfg.datadir)?;
     let module = start_mchain(cfg.chain_id, cfg.chain_owner, cfg.finality_delay, db).await;
-    let _handle = Server::builder()
+    let handle = Server::builder()
         .set_rpc_middleware(RpcServiceBuilder::new().rpc_logger(1024))
         .build(format!("0.0.0.0:{}", cfg.port))
         .await?
         .start(module);
-    let runtime = tokio::runtime::Runtime::new()?;
-    let (shutdown_tx, shutdown_rx) = oneshot::channel();
-    init_signal_handler(&runtime, shutdown_tx);
-    Ok(shutdown_rx.await?)
+
+    #[allow(clippy::expect_used)]
+    let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
+    #[allow(clippy::expect_used)]
+    let mut sigterm = signal(SignalKind::terminate()).expect("Failed to register SIGTERM handler");
+
+    tokio::select! {
+        _ = sigint.recv() => {
+            println!("Received SIGINT (Ctrl+C), initiating shutdown...");
+        }
+        _ = sigterm.recv() => {
+            println!("Received SIGTERM, initiating shutdown...");
+        }
+    };
+
+    handle.stop()?;
+    handle.stopped().await;
+    Ok(())
 }

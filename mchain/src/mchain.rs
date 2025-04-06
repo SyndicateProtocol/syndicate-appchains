@@ -16,6 +16,7 @@ use jsonrpsee::{
     RpcModule,
 };
 use std::{collections::VecDeque, sync::Mutex, time::SystemTime};
+use tracing::error;
 
 /// The chain id of the metachain. This is the same for all rollups.
 /// TODO(SEQ-652): this should be configurable
@@ -96,7 +97,7 @@ impl MProvider {
             .header
             .number
     }
-    pub async fn add_batch(&self, batch: MBlock) -> eyre::Result<()> {
+    pub async fn add_batch(&self, batch: MBlock) -> eyre::Result<u64> {
         Ok(self.0.raw_request("mchain_addBatch".into(), (batch,)).await?)
     }
     pub async fn get_source_chains_processed_blocks(
@@ -147,40 +148,46 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     } else {
         let db_init = &db.get_block(1).unwrap().messages[0].0;
         if db_init != &init_msg {
-            eprintln!("init message does not match - are the cli arguments correct?");
+            error!("init message does not match - are the cli arguments correct?");
             assert_eq!(db_init, &init_msg);
         }
         // search for the finalized head. store unfinalized timestamps in a queue.
         finalized_block = db.get_block_number();
-        let ts = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+        let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
         while finalized_block > 1 {
             let block_ts = db.get_block(finalized_block).unwrap().timestamp;
-            if ts - block_ts >= finality_delay {
+            if block_ts + finality_delay <= now {
                 break;
             }
             finalized_block -= 1;
             pending_ts.push_front(block_ts);
         }
     }
+    assert_eq!(finalized_block + pending_ts.len() as u64, db.get_block_number());
     let mut module = RpcModule::new((db, Mutex::new((finalized_block, pending_ts))));
 
     // -------------------------------------------------
     // mchain methods
     // -------------------------------------------------
     module
-        .register_method("mchain_addBatch", move |p, (db, m), _| -> Result<(), ErrorObjectOwned> {
-            let (batch,): (MBlock,) = p.parse()?;
-            let mut data = m.lock().unwrap();
-            data.1.push_back(batch.timestamp);
-            drop(data);
-            db.add_batch(batch)?;
-            Ok(())
-        })
+        .register_method(
+            "mchain_addBatch",
+            move |p, (db, mutex), _| -> Result<u64, ErrorObjectOwned> {
+                let (batch,): (MBlock,) = p.parse()?;
+                let timestamp = batch.timestamp;
+                let block = db.add_batch(batch)?;
+                let mut data = mutex.lock().unwrap();
+                data.1.push_back(timestamp);
+                assert_eq!(data.0 + data.1.len() as u64, block);
+                drop(data);
+                Ok(block)
+            },
+        )
         .unwrap();
     module
         .register_method(
             "mchain_rollbackToBlock",
-            move |p, (db, m), _| -> Result<(), ErrorObjectOwned> {
+            move |p, (db, mutex), _| -> Result<(), ErrorObjectOwned> {
                 let (block,): (u64,) = p.parse()?;
                 let latest = db.get_block_number();
                 if block == latest {
@@ -202,17 +209,17 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
                 for i in start_block.after_message_count()..end_block.after_message_count() {
                     db.delete_message_acc(i);
                 }
-                let mut data = m.lock().unwrap();
+                let mut data = mutex.lock().unwrap();
                 if block < data.0 {
                     data.0 = block;
-                }
-                let removed = (latest - block) as usize;
-                let data_len = data.1.len();
-                if removed >= data_len {
                     data.1.clear();
                 } else {
+                    let removed = (latest - block) as usize;
+                    let data_len = data.1.len();
+                    assert!(data_len >= removed);
                     data.1.truncate(data_len - removed);
                 }
+                assert_eq!(data.0 + data.1.len() as u64, block);
                 drop(data);
                 Ok(())
             },
@@ -372,18 +379,18 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     module
         .register_method(
             "eth_getBlockByNumber",
-            move |p, (db, m), _| -> Result<alloy::rpc::types::Block, ErrorObjectOwned> {
+            move |p, (db, mutex), _| -> Result<alloy::rpc::types::Block, ErrorObjectOwned> {
                 let (tag, _): (BlockNumberOrTag, bool) = p.parse()?;
                 let number = match tag {
                     BlockNumberOrTag::Latest => db.get_block_number(),
                     BlockNumberOrTag::Finalized => {
-                        let mut data = m.lock().unwrap();
-                        let ts = SystemTime::now()
+                        let mut data = mutex.lock().unwrap();
+                        let now = SystemTime::now()
                             .duration_since(SystemTime::UNIX_EPOCH)
                             .unwrap()
                             .as_secs();
                         while let Some(block_ts) = data.1.front() {
-                            if ts - block_ts < finality_delay {
+                            if block_ts + finality_delay > now {
                                 break;
                             }
                             data.0 += 1;
@@ -441,4 +448,46 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
         .unwrap();
 
     module
+}
+
+// fully in-memory kv db for testing
+#[cfg(test)]
+mod tests {
+    use super::KVDB;
+    use crate::db::{ArbitrumDB as _, MBlock};
+    use alloy::primitives::Bytes;
+    use std::{collections::HashMap, sync::RwLock};
+
+    struct TestDB(RwLock<HashMap<Bytes, Bytes>>);
+    impl TestDB {
+        fn new() -> Self {
+            Self(RwLock::new(HashMap::new()))
+        }
+    }
+    impl KVDB for TestDB {
+        fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes> {
+            #[allow(clippy::unwrap_used)]
+            self.0.read().unwrap().get(key.as_ref()).cloned()
+        }
+        fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V) {
+            #[allow(clippy::unwrap_used)]
+            self.0
+                .write()
+                .unwrap()
+                .insert(key.as_ref().to_owned().into(), value.as_ref().to_owned().into());
+        }
+        fn delete<K: AsRef<[u8]>>(&self, key: K) {
+            #[allow(clippy::unwrap_used)]
+            self.0.write().unwrap().remove(key.as_ref());
+        }
+    }
+
+    #[test]
+    fn test_invalid_batch() -> eyre::Result<()> {
+        let db = TestDB::new();
+        db.add_batch(MBlock { timestamp: 0, ..Default::default() })?;
+        db.add_batch(MBlock { timestamp: 1, ..Default::default() })?;
+        assert!(db.add_batch(MBlock { timestamp: 0, ..Default::default() }).is_err());
+        Ok(())
+    }
 }

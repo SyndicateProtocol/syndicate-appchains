@@ -1,18 +1,9 @@
 //! Configuration for the block builder service
-use alloy::{
-    primitives::Address,
-    signers::{
-        k256::ecdsa::SigningKey,
-        local::{LocalSigner, PrivateKeySigner},
-    },
-};
+use alloy::primitives::Address;
 use clap::{Parser, ValueEnum};
 use shared::parse::parse_address;
-use std::{fmt::Debug, str::FromStr};
+use std::fmt::Debug;
 use thiserror::Error;
-
-const DEFAULT_PRIVATE_KEY_SIGNER: &str =
-    "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // address = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 
 /// Configuration for the block builder service
 #[derive(Parser, Clone)]
@@ -54,17 +45,6 @@ pub struct BlockBuilderConfig {
 pub enum TargetRollupType {
     OPTIMISM,
     ARBITRUM,
-}
-
-/// Parse default string into a `PrivateKeySigner`.
-pub fn get_default_private_key_signer() -> LocalSigner<SigningKey> {
-    PrivateKeySigner::from_str(DEFAULT_PRIVATE_KEY_SIGNER)
-        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err))
-}
-
-#[allow(missing_docs)]
-pub fn get_rollup_contract_address() -> Address {
-    get_default_private_key_signer().address().create(0)
 }
 
 impl Debug for BlockBuilderConfig {
@@ -146,13 +126,14 @@ pub enum ConfigError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy::primitives::address;
     use assert_matches::assert_matches;
 
     #[test]
     fn test_validate_rollup_type() {
         let config = BlockBuilderConfig {
             target_rollup_type: TargetRollupType::OPTIMISM,
-            sequencing_contract_address: get_rollup_contract_address(),
+            sequencing_contract_address: address!("0x0000000000000000000000000000000000000001"),
             ..Default::default()
         };
         assert_matches!(config.validate(), Err(ConfigError::UnsupportedRollupType(_)));

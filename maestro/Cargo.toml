@@ -21,22 +21,21 @@ alloy = { workspace = true, features = [
   "signers",
 ] }
 
-axum               = { workspace = true }
-bytes              = { workspace = true }
-clap               = { workspace = true, features = ["derive", "env"] }
-eyre               = { workspace = true }
-futures-util       = { workspace = true }
-http               = { workspace = true }
-http-body          = { workspace = true }
-jsonrpsee          = { workspace = true, features = ["full"] }
-redis              = { workspace = true, features = ["streams", "tokio-comp"] }
-serde_json         = { workspace = true }
-shared             = { workspace = true }
-thiserror          = { workspace = true }
-tokio              = { workspace = true, features = ["full"] }
-tower              = { workspace = true }
-tracing            = { workspace = true }
-tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
+axum         = { workspace = true }
+bytes        = { workspace = true }
+clap         = { workspace = true, features = ["derive", "env"] }
+eyre         = { workspace = true }
+futures-util = { workspace = true }
+http         = { workspace = true }
+http-body    = { workspace = true }
+jsonrpsee    = { workspace = true, features = ["full"] }
+redis        = { workspace = true, features = ["streams", "tokio-comp"] }
+serde_json   = { workspace = true }
+shared       = { workspace = true }
+thiserror    = { workspace = true }
+tokio        = { workspace = true, features = ["full"] }
+tower        = { workspace = true }
+tracing      = { workspace = true }
 
 [lints]
 workspace = true
