@@ -10,7 +10,6 @@ use common::{
 use eyre::Error;
 use std::{
     cmp::{max, min},
-    collections::BTreeMap,
     sync::Arc,
     time::Duration,
 };
@@ -234,8 +233,8 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
         });
     }
 
-    // Create ordered map to collect results in correct sequence
-    let mut results_map = BTreeMap::new();
+    // Create a vector to collect results in the correct order
+    let mut results = vec![None; block_numbers.len()];
 
     // Process results as they complete
     loop {
@@ -252,7 +251,8 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
 
         match result {
             Ok(Ok((block_num, block_and_receipts))) => {
-                results_map.insert(block_num, block_and_receipts);
+                let index = (block_num - block_numbers[0]) as usize;
+                results[index] = Some(block_and_receipts);
             }
             Ok(Err(err)) => {
                 warn!("Failed to fetch block and receipts on {:?}: {:?}", ctx.chain, err);
@@ -264,25 +264,27 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
         }
     }
 
-    // Process blocks in order
-    for &block_number in &block_numbers {
-        if let Some(block_and_receipts) = results_map.remove(&block_number) {
-            if let Err(err) = push_block_and_receipts(
-                ctx.sender,
-                ctx.metrics,
-                ctx.current_block_number,
-                Arc::new(block_and_receipts),
-                ctx.chain,
-            )
-            .await
-            {
-                error!("Failed to push block and receipts: {:?}", err);
+    // Process blocks in order, stopping at first gap
+    for (i, block_and_receipts) in results.into_iter().enumerate() {
+        match block_and_receipts {
+            Some(block_and_receipts) => {
+                if let Err(err) = push_block_and_receipts(
+                    ctx.sender,
+                    ctx.metrics,
+                    ctx.current_block_number,
+                    Arc::new(block_and_receipts),
+                    ctx.chain,
+                )
+                .await
+                {
+                    error!("Failed to push block and receipts: {:?}", err);
+                    break;
+                }
+            }
+            None => {
+                debug!("No block found for number: {:?}", block_numbers[i]);
                 break;
             }
-        } else {
-            // no block found, stop iterating
-            debug!("No block found for number: {:?}", block_number);
-            break;
         }
     }
     false
