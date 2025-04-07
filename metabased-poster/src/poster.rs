@@ -105,9 +105,8 @@ impl Poster {
     async fn main_loop(&self) -> Result<()> {
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
-            tokio::select! {
-                _ = interval.tick() => self.fetch_and_post().await?
-            }
+            interval.tick().await;
+            self.fetch_and_post().await?;
         }
     }
 
