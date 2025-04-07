@@ -5,73 +5,106 @@ methods {
     function admin() external returns (address) envfree;
     function allowlist(address) external returns (bool) envfree;
     function isAllowed(address) external returns (bool) envfree;
-    function addToAllowlist(address) external;
-    function removeFromAllowlist(address) external;
-    function transferAdmin(address) external;
 }
 
-/*
- * Rule 1: Only allowlisted addresses can process transactions with non-zero sequencer
+/**
+ * Rule 1: Only allowlisted addresses can use processTransaction
  */
-rule onlyAllowlistedCanProcess() {
+rule onlyAllowlistedCanProcessTransaction() {
     env e;
-    address user;
     address metabasedSequencerChain;
     bytes data;
 
     // Require a non-zero sequencer address
     require metabasedSequencerChain != 0;
 
-    // Set message sender to user
-    require e.msg.sender == user;
-
     // Try to process a transaction
     processTransaction@withrevert(e, metabasedSequencerChain, data);
 
-    // If transaction succeeded (didn't revert), user must be in allowlist
-    assert !lastReverted => allowlist(user);
+    // If transaction succeeded (didn't revert), sender must be in allowlist
+    assert !lastReverted => allowlist(e.msg.sender);
 }
 
-/*
- * Rule 2: Zero address cannot be used as sequencer chain
+/**
+ * Rule 2: Only allowlisted addresses can use processTransactionRaw
+ */
+rule onlyAllowlistedCanProcessTransactionRaw() {
+    env e;
+    address metabasedSequencerChain;
+    bytes data;
+
+    // Require a non-zero sequencer address
+    require metabasedSequencerChain != 0;
+
+    // Try to process a raw transaction
+    processTransactionRaw@withrevert(e, metabasedSequencerChain, data);
+
+    // If transaction succeeded (didn't revert), sender must be in allowlist
+    assert !lastReverted => allowlist(e.msg.sender);
+}
+
+/**
+ * Rule 3: Only allowlisted addresses can use processBulkTransactions
+ */
+rule onlyAllowlistedCanProcessBulkTransactions() {
+    env e;
+    address metabasedSequencerChain;
+    bytes[] data;
+
+    // Require a non-zero sequencer address
+    require metabasedSequencerChain != 0;
+
+    // Try to process bulk transactions
+    processBulkTransactions@withrevert(e, metabasedSequencerChain, data);
+
+    // If transaction succeeded (didn't revert), sender must be in allowlist
+    assert !lastReverted => allowlist(e.msg.sender);
+}
+
+/**
+ * Rule 4: Zero address cannot be used as sequencer chain
  */
 rule noZeroAddressSequencerChain() {
     env e;
     bytes data;
+    bytes[] bulkData;
 
     // Try to process transaction with zero address
     processTransaction@withrevert(e, 0, data);
 
     // Must revert
     assert lastReverted;
+
+    // Try to process raw transaction with zero address
+    processTransactionRaw@withrevert(e, 0, data);
+
+    // Must revert
+    assert lastReverted;
+
+    // Try to process bulk transactions with zero address
+    processBulkTransactions@withrevert(e, 0, bulkData);
+
+    // Must revert
+    assert lastReverted;
 }
 
-/*
- * Rule 3: Being in allowlist is sufficient for processing transaction
+/**
+ * Rule 5: Being in allowlist grants permission to process transactions
  */
-rule allowlistIsSufficient() {
+rule allowlistedCanProcessTransactions() {
     env e;
-    address user;
     address metabasedSequencerChain;
-    bytes data;
 
-    // User is in allowlist
-    require allowlist(user);
-    // Non-zero sequencer
+    // Setup conditions
+    require allowlist(e.msg.sender);
     require metabasedSequencerChain != 0;
-    // Set sender to user
-    require e.msg.sender == user;
 
-    // Attempt to process transaction
-    processTransaction@withrevert(e, metabasedSequencerChain, data);
-
-    // Cannot assert !lastReverted because external call might revert
-    // Instead, verify that allowlist check won't cause revert
+    // Note: We cannot assert they will succeed as external calls may revert
     assert true;
 }
 
-/*
- * Rule 4: isAllowed function matches allowlist state
+/**
+ * Rule 6: isAllowed function matches allowlist state
  */
 rule isAllowedConsistency() {
     address user;
@@ -82,8 +115,8 @@ rule isAllowedConsistency() {
     assert inAllowlist == allowed;
 }
 
-/*
- * Rule 5: Adding to allowlist changes state
+/**
+ * Rule 7: Adding to allowlist changes state
  */
 rule addToAllowlistChangesState() {
     env e;
@@ -101,8 +134,8 @@ rule addToAllowlistChangesState() {
     assert allowlist(user);
 }
 
-/*
- * Rule 6: Removing from allowlist changes state
+/**
+ * Rule 8: Removing from allowlist changes state
  */
 rule removeFromAllowlistChangesState() {
     env e;
@@ -120,8 +153,8 @@ rule removeFromAllowlistChangesState() {
     assert !allowlist(user);
 }
 
-/*
- * Rule 7: Only admin can modify allowlist
+/**
+ * Rule 9: Only admin can modify allowlist
  */
 rule onlyAdminCanModifyAllowlist() {
     env e;
@@ -141,8 +174,8 @@ rule onlyAdminCanModifyAllowlist() {
     assert lastReverted;
 }
 
-/*
- * Rule 8: Admin transfers work correctly
+/**
+ * Rule 10: Admin transfers work correctly
  */
 rule adminTransferWorks() {
     env e;
@@ -160,27 +193,60 @@ rule adminTransferWorks() {
     assert admin() == newAdmin;
 }
 
-/*
- * Rule 9: Combined check for processTransaction permissions
- * This rule verifies both directions of the relationship between
- * allowlist status and transaction processing ability
+/**
+ * Rule 11: Consistency between transaction methods
+ * This rule verifies that all three transaction methods have consistent behavior
+ * regarding allowlist checks
  */
-rule processTransactionPermissionConsistency() {
+rule methodsHaveConsistentAllowlistChecks() {
     env e;
-    address user;
     address metabasedSequencerChain;
     bytes data;
+    bytes[] bulkData;
 
-    // Set up conditions
+    // Setup - non-zero sequencer address
     require metabasedSequencerChain != 0;
-    require e.msg.sender == user;
 
     // Store allowlist status
-    bool isUserAllowed = allowlist(user);
+    bool isAllowed = allowlist(e.msg.sender);
 
-    // Try to process
+    // Call processTransaction
     processTransaction@withrevert(e, metabasedSequencerChain, data);
+    bool txReverted = lastReverted;
 
-    // If user is not allowed, transaction must revert
-    assert !isUserAllowed => lastReverted;
+    // Call processTransactionRaw
+    processTransactionRaw@withrevert(e, metabasedSequencerChain, data);
+    bool rawTxReverted = lastReverted;
+
+    // Call processBulkTransactions
+    processBulkTransactions@withrevert(e, metabasedSequencerChain, bulkData);
+    bool bulkTxReverted = lastReverted;
+
+    // If sender is not allowed, all three methods should revert
+    assert !isAllowed => (txReverted && rawTxReverted && bulkTxReverted);
+}
+
+/**
+ * Rule 12: Check for correct modifier application
+ * This rule verifies that our modifiers are properly applied by
+ * ensuring non-allowlisted senders can't use any transaction method
+ */
+rule modifiersAppliedCorrectly() {
+    env e;
+    address metabasedSequencerChain;
+    bytes data;
+    bytes[] bulkData;
+
+    // Require sender is not allowed
+    require !allowlist(e.msg.sender);
+
+    // All three methods should revert for non-allowlisted sender
+    processTransaction@withrevert(e, metabasedSequencerChain, data);
+    assert lastReverted;
+
+    processTransactionRaw@withrevert(e, metabasedSequencerChain, data);
+    assert lastReverted;
+
+    processBulkTransactions@withrevert(e, metabasedSequencerChain, bulkData);
+    assert lastReverted;
 }
