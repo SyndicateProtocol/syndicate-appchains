@@ -372,7 +372,7 @@ async fn wait_for_service(port: u16) -> Result<()> {
             .await
             .is_ok_and(|x| x.status().is_success())
         {
-            tokio::time::sleep(Duration::from_millis(50)).await;
+            tokio::time::sleep(Duration::from_millis(10)).await;
         }
         Ok(())
     })

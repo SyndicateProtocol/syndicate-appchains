@@ -83,8 +83,17 @@ pub async fn start_component(
     } else {
         Docker::new(
             Command::new("cargo")
-                .arg("run")
+                // ring has a custom build.rs script that rebuilds whenever certain environment vars
+                // change
+                .env_remove("CARGO_MANIFEST_DIR")
+                .env_remove("CARGO_PKG_NAME")
+                .env_remove("CARGO_PKG_VERSION_MAJOR")
+                .env_remove("CARGO_PKG_VERSION_MINOR")
+                .env_remove("CARGO_PKG_VERSION_PATCH")
+                .env_remove("CARGO_PKG_VERSION_PRE")
+                .env_remove("CARGO_MANIFEST_LINKS")
                 .current_dir(env!("CARGO_WORKSPACE_DIR"))
+                .arg("run")
                 .arg("--bin")
                 .arg(executable_name)
                 .arg("--")
