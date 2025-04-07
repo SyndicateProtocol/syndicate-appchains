@@ -145,6 +145,9 @@ jobs:
           which anvil
           anvil --version
 
+      - name: Build Packges
+        run: cargo build --workspace
+
       - name: Build Tests
         run: cargo test --workspace --exclude maestro --no-run
 
