@@ -8,6 +8,7 @@ import {IMetabasedSequencerChain} from "src/interfaces/IMetabasedSequencerChain.
 // Mock MetabasedSequencerChain for testing
 contract MockMetabasedSequencerChain is IMetabasedSequencerChain {
     bytes public lastProcessedData;
+    bytes[] public lastProcessedBulkData;
     bool public shouldRevert;
 
     function processTransaction(bytes calldata data) external {
@@ -15,6 +16,23 @@ contract MockMetabasedSequencerChain is IMetabasedSequencerChain {
             revert("Sequencer error");
         }
         lastProcessedData = data;
+    }
+
+    function processTransactionRaw(bytes calldata data) external {
+        if (shouldRevert) {
+            revert("Sequencer error");
+        }
+        lastProcessedData = data;
+    }
+
+    function processBulkTransactions(bytes[] calldata data) external {
+        if (shouldRevert) {
+            revert("Sequencer error");
+        }
+        delete lastProcessedBulkData;
+        for (uint256 i = 0; i < data.length; i++) {
+            lastProcessedBulkData.push(data[i]);
+        }
     }
 
     function setRevertFlag(bool _shouldRevert) external {
@@ -32,6 +50,7 @@ contract WalletPoolWrapperModuleTest is Test {
     address metabasedSequencerChainAddress;
 
     bytes testData = abi.encode("test transaction data");
+    bytes[] testBulkData;
 
     function setUp() public {
         // Deploy the mock sequencer chain
@@ -45,6 +64,12 @@ contract WalletPoolWrapperModuleTest is Test {
         // Add the allowed wallet to the allowlist
         vm.prank(admin);
         walletPoolWrapper.addToAllowlist(allowedWallet);
+
+        // Setup bulk data for testing
+        testBulkData = new bytes[](3);
+        testBulkData[0] = abi.encode("data1");
+        testBulkData[1] = abi.encode("data2");
+        testBulkData[2] = abi.encode("data3");
     }
 
     function testProcessTransactionFromAllowedWallet() public {
@@ -72,8 +97,8 @@ contract WalletPoolWrapperModuleTest is Test {
     function testProcessTransactionWithZeroAddress() public {
         vm.prank(allowedWallet);
 
-        // Expect the call to revert when sequencer address is zero
-        vm.expectRevert(AllowlistSequencingModule.AddressNotAllowed.selector);
+        // Expect the call to revert with different error
+        vm.expectRevert(WalletPoolWrapperModule.ZeroSequencerAddressNotAllowed.selector);
         walletPoolWrapper.processTransaction(address(0), testData);
     }
 
@@ -135,6 +160,62 @@ contract WalletPoolWrapperModuleTest is Test {
         // Process transaction with second sequencer
         walletPoolWrapper.processTransaction(sequencerAddress2, testData2);
         assertEq(mockSequencerChain2.lastProcessedData(), testData2);
+    }
+
+    function testProcessTransactionRaw() public {
+        vm.prank(allowedWallet);
+
+        // Expect the event to be emitted
+        vm.expectEmit(true, true, false, false);
+        emit WalletPoolWrapperModule.WalletPoolWrapperTransactionSent(allowedWallet, metabasedSequencerChainAddress);
+
+        // Process the raw transaction
+        walletPoolWrapper.processTransactionRaw(metabasedSequencerChainAddress, testData);
+
+        // Verify the data was forwarded to the sequencer chain
+        assertEq(mockSequencerChain.lastProcessedData(), testData);
+    }
+
+    function testProcessTransactionRawWithZeroAddress() public {
+        vm.prank(allowedWallet);
+
+        // Expect the call to revert with ZeroSequencerAddressNotAllowed error
+        vm.expectRevert(WalletPoolWrapperModule.ZeroSequencerAddressNotAllowed.selector);
+        walletPoolWrapper.processTransactionRaw(address(0), testData);
+    }
+
+    function testProcessBulkTransactions() public {
+        vm.prank(allowedWallet);
+
+        // Expect the event to be emitted
+        vm.expectEmit(true, true, false, false);
+        emit WalletPoolWrapperModule.WalletPoolWrapperBulkTransactionsSent(
+            allowedWallet, metabasedSequencerChainAddress, testBulkData.length
+        );
+
+        // Process bulk transactions
+        walletPoolWrapper.processBulkTransactions(metabasedSequencerChainAddress, testBulkData);
+
+        // Verify each piece of data was forwarded to the sequencer chain
+        assertEq(mockSequencerChain.lastProcessedBulkData(0), testBulkData[0]);
+        assertEq(mockSequencerChain.lastProcessedBulkData(1), testBulkData[1]);
+        assertEq(mockSequencerChain.lastProcessedBulkData(2), testBulkData[2]);
+    }
+
+    function testProcessBulkTransactionsWithZeroAddress() public {
+        vm.prank(allowedWallet);
+
+        // Expect the call to revert with ZeroSequencerAddressNotAllowed error
+        vm.expectRevert(WalletPoolWrapperModule.ZeroSequencerAddressNotAllowed.selector);
+        walletPoolWrapper.processBulkTransactions(address(0), testBulkData);
+    }
+
+    function testProcessBulkTransactionsFromNonAllowedWallet() public {
+        vm.prank(nonAllowedWallet);
+
+        // Expect the call to revert
+        vm.expectRevert(AllowlistSequencingModule.AddressNotAllowed.selector);
+        walletPoolWrapper.processBulkTransactions(metabasedSequencerChainAddress, testBulkData);
     }
 
     function testAllowlistIntegration() public {

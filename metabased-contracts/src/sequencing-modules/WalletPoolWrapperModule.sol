@@ -10,6 +10,11 @@ import {IMetabasedSequencerChain} from "../interfaces/IMetabasedSequencerChain.s
  */
 contract WalletPoolWrapperModule is AllowlistSequencingModule {
     event WalletPoolWrapperTransactionSent(address indexed from, address indexed metabasedSequencerChain);
+    event WalletPoolWrapperBulkTransactionsSent(
+        address indexed from, address indexed metabasedSequencerChain, uint256 count
+    );
+
+    error ZeroSequencerAddressNotAllowed();
 
     /**
      * @dev Constructor that sets the admin address.
@@ -18,24 +23,74 @@ contract WalletPoolWrapperModule is AllowlistSequencingModule {
     constructor(address _admin) AllowlistSequencingModule(_admin) {}
 
     /**
-     * @dev Function to process a transaction.
-     * @notice metabased sequencer chain address
-     * @param data The transaction data to process.
+     * @dev Modifier to check if the caller is allowed to process transactions.
      */
-    function processTransaction(address _metabasedSequencerChain, bytes calldata data) external {
-        // Check if the sender is allowed to process the transaction
+    modifier onlyAllowed() {
         if (!allowlist[msg.sender]) {
             revert AddressNotAllowed();
         }
+        _;
+    }
 
+    /**
+     * @dev Modifier to check if the metabased sequencer chain address is not zero.
+     * @param _metabasedSequencerChain The metabased sequencer chain address
+     */
+    modifier metabasedSequencerChainNotZero(address _metabasedSequencerChain) {
         if (_metabasedSequencerChain == address(0)) {
-            revert AddressNotAllowed();
+            revert ZeroSequencerAddressNotAllowed();
         }
+        _;
+    }
 
+    /**
+     * @dev Function to process a transaction.
+     * @param _metabasedSequencerChain The metabased sequencer chain address
+     * @param data The transaction data to process.
+     */
+    function processTransaction(address _metabasedSequencerChain, bytes calldata data)
+        external
+        onlyAllowed
+        metabasedSequencerChainNotZero(_metabasedSequencerChain)
+    {
         // Forward the transaction to the metabased sequencer chain
         IMetabasedSequencerChain(_metabasedSequencerChain).processTransaction(data);
 
         // Emit an event indicating the transaction was sent
         emit WalletPoolWrapperTransactionSent(msg.sender, _metabasedSequencerChain);
+    }
+
+    /**
+     * @dev Function to process a raw transaction.
+     * @param _metabasedSequencerChain The metabased sequencer chain address
+     * @param data The transaction data to process.
+     */
+    function processTransactionRaw(address _metabasedSequencerChain, bytes calldata data)
+        external
+        onlyAllowed
+        metabasedSequencerChainNotZero(_metabasedSequencerChain)
+    {
+        // Forward the transaction to the metabased sequencer chain
+        IMetabasedSequencerChain(_metabasedSequencerChain).processTransactionRaw(data);
+
+        // Emit an event indicating the transaction was sent
+        emit WalletPoolWrapperTransactionSent(msg.sender, _metabasedSequencerChain);
+    }
+
+    /**
+     * @dev Function to process bulk transactions.
+     * @param _metabasedSequencerChain The metabased sequencer chain address
+     * @param data The array of transaction data to process.
+     */
+    function processBulkTransactions(address _metabasedSequencerChain, bytes[] calldata data)
+        external
+        onlyAllowed
+        metabasedSequencerChainNotZero(_metabasedSequencerChain)
+    {
+        // Forward the transactions to the metabased sequencer chain
+        IMetabasedSequencerChain(_metabasedSequencerChain).processBulkTransactions(data);
+
+        // Emit an event indicating the bulk transactions were sent
+        emit WalletPoolWrapperBulkTransactionsSent(msg.sender, _metabasedSequencerChain, data.length);
     }
 }
