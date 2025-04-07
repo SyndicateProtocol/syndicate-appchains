@@ -3263,6 +3263,7 @@ dependencies = [
  "reqwest",
  "serde",
  "shared",
+ "test-utils",
  "thiserror 2.0.12",
  "tokio",
  "tracing",

@@ -15,6 +15,7 @@ use jsonrpsee::types::ErrorObjectOwned;
 use metabased_poster::{config::Config, metrics::PosterMetrics, poster, types::NitroBlock};
 use prometheus_client::registry::Registry;
 use std::{str::FromStr, time::Duration};
+use test_utils::port_manager::PortManager;
 use tokio::time::sleep;
 use url::Url;
 
@@ -26,8 +27,9 @@ fn init() {
 
 #[tokio::test]
 async fn e2e_poster_test() -> Result<()> {
-    let set_port = 8080;
-    let app_port = 8081;
+    let set_port = PortManager::instance().next_port();
+    let app_port = PortManager::instance().next_port();
+    let poster_port = PortManager::instance().next_port();
 
     let (_set_anvil, set_provider) = utils::start_anvil(1, set_port).await?;
 
@@ -55,7 +57,7 @@ async fn e2e_poster_test() -> Result<()> {
         assertion_poster_contract_address,
         private_key: utils::DEFAULT_PRIVATE_KEY_SIGNER.to_string(),
         polling_interval: Duration::from_secs(60),
-        port: 8888,
+        port: poster_port,
         metrics_port: 9090,
     };
 
@@ -86,7 +88,7 @@ async fn e2e_poster_test() -> Result<()> {
     // Trigger the /post endpoint
     let client = reqwest::Client::new();
     let response = client
-        .post("http://localhost:8888/post")
+        .post(format!("http://localhost:{}/post", poster_port))
         .send()
         .await
         .expect("Failed to send POST to /post");
