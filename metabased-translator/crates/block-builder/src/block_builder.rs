@@ -1,11 +1,7 @@
 //! Block builder service for processing and building L3 blocks.
 
 use crate::{connectors::mchain::MetaChainProvider, rollups::shared::RollupAdapter};
-use alloy::{
-    eips::BlockNumberOrTag,
-    providers::ext::TraceApi,
-    transports::{RpcError, TransportErrorKind},
-};
+use alloy::transports::{RpcError, TransportErrorKind};
 use async_trait::async_trait;
 use common::types::{Slot, SlotProcessor};
 use eyre::{Error, Result};
@@ -20,84 +16,32 @@ impl<R: RollupAdapter> SlotProcessor for MetaChainProvider<R> {
         self.metrics.record_last_slot(slot.sequencing.block.number);
 
         // [OP / ARB] Build block of MChain transactions from slot
-        let transactions = match self
+        let batch = match self
             .rollup_adapter
-            .build_block_from_slot(slot, self.get_current_block_number().await + 1)
+            .build_block_from_slot(slot, self.provider.get_block_number().await + 1)
             .await
         {
-            Ok(transactions) => transactions,
+            Ok(batch) => batch,
             Err(e) => {
                 panic!("Error building batch transaction: {}", e);
             }
         };
 
-        let transactions_len = transactions.len();
-        if transactions_len == 0 && !self.mine_empty_blocks {
-            trace!("Skipping empty block");
-            return Ok(());
-        }
+        let batch = match batch {
+            None => {
+                trace!("Skipping empty block");
+                return Ok(());
+            }
+            Some(x) => x,
+        };
 
-        trace!("Submitting {} transactions", transactions_len);
-        self.metrics.record_transactions_per_slot(transactions_len);
+        trace!("Submitting {} transactions", batch.messages.len() + 1);
+        self.metrics.record_transactions_per_slot(batch.messages.len() + 1);
 
         // Submit transactions to mchain
-        if let Err(e) = self.submit_txns(transactions).await {
-            panic!("Error submitting transaction: {}", e);
-        }
+        self.provider.add_batch(batch).await?;
 
-        // Mine the actual block with slot timestamp
-        if let Err(e) = self.mine_block(slot.timestamp()).await {
-            panic!("Error mining block: {}", e);
-        }
-
-        // TODO(SEQ-623): add a flag to enable/disable this check
-        self.verify_block(transactions_len, slot.sequencing.block.number).await;
         Ok(())
-    }
-}
-
-impl<R: RollupAdapter> MetaChainProvider<R> {
-    async fn verify_block(&self, transactions_len: usize, slot_seq_number: u64) {
-        let current_block = self.get_current_block_number().await;
-        trace!("Mined block: {:?} from slot: {:?}", current_block, slot_seq_number);
-
-        // Verify transactions are all included and succeeded
-        // TODO(SEQ-623): check to make sure the tx hashes match as well
-        let receipts =
-            self.get_block_receipts(BlockNumberOrTag::Number(current_block)).await.unwrap_or_else(
-                |e| panic!("Failed to fetch receipts for block {:#?}: {:#?}", current_block, e),
-            );
-
-        assert!(
-            receipts.len() == transactions_len,
-            "expected {:#?} receipts, got {:#?}",
-            transactions_len,
-            receipts
-        );
-
-        for r in receipts {
-            if r.status != 1 {
-                let trace =
-                    self.provider.trace_transaction(r.transaction_hash).await.unwrap_or_default();
-                let error_msg = trace
-                    .first()
-                    .and_then(|t| t.trace.result.as_ref())
-                    .map_or_else(String::new, |output| {
-                        self.rollup_adapter.decode_error(output.output())
-                    });
-
-                panic!(
-                    "tx failed: receipt: {:#?} trace: {:#?}, humanly_readable_error: {}",
-                    r, trace, error_msg
-                );
-            }
-        }
-    }
-
-    async fn get_current_block_number(&self) -> u64 {
-        self.get_block_number().await.unwrap_or_else(|e| {
-            panic!("Error getting current block number: {}", e);
-        })
     }
 }
 

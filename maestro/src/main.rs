@@ -3,14 +3,14 @@
 use eyre::Result;
 use maestro::{config::Config, errors::Error};
 use redis::{aio::MultiplexedConnection, AsyncCommands, Client};
-use tracing::{info, Level};
-use tracing_subscriber::FmtSubscriber;
+use shared::logger::set_global_default_subscriber;
+use tracing::info;
 
 #[tokio::main]
 #[allow(clippy::redundant_pub_crate)]
 async fn main() -> Result<()> {
     // Initialize logging
-    FmtSubscriber::builder().with_max_level(Level::DEBUG).json().with_target(true).init();
+    set_global_default_subscriber()?;
 
     let config = Config::initialize();
     info!("Config: {:?}", config);

@@ -19,7 +19,7 @@ use tokio::{
     sync::{mpsc::Sender, oneshot},
     task::JoinSet,
 };
-use tracing::{debug, error, info, trace};
+use tracing::{debug, error, info, trace, warn};
 
 struct BatchContext<'a> {
     client: &'a Arc<dyn RPCClient>,
@@ -240,7 +240,7 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
                 results_map.insert(block_num, block_and_receipts);
             }
             Ok(Err(err)) => {
-                error!("Failed to fetch block and receipts on {:?}: {:?}", ctx.chain, err);
+                warn!("Failed to fetch block and receipts on {:?}: {:?}", ctx.chain, err);
             }
             Err(err) => {
                 error!("Task failed: {:?}", err);
@@ -337,7 +337,7 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
 ///     .await
 /// }
 /// ```
-async fn fetch_with_retry<T, F, Fut, P>(
+async fn fetch_with_retry<T: Send, F, Fut, P>(
     operation: F,
     context: String,
     backoff_initial_interval: Duration,
@@ -346,9 +346,9 @@ async fn fetch_with_retry<T, F, Fut, P>(
     is_not_found_error: P,
 ) -> Result<T, IngestorError>
 where
-    F: Fn() -> Fut,
-    Fut: std::future::Future<Output = Result<T, common::eth_client::RPCClientError>>,
-    P: Fn(&common::eth_client::RPCClientError) -> bool,
+    F: Fn() -> Fut + Send,
+    Fut: std::future::Future<Output = Result<T, common::eth_client::RPCClientError>> + Send,
+    P: Fn(&common::eth_client::RPCClientError) -> bool + Send,
 {
     let mut retry_count = 0;
     let mut backoff = backoff_initial_interval;

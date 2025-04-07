@@ -1,40 +1,16 @@
 //! Configuration for the block builder service
-use alloy::{
-    primitives::Address,
-    signers::{
-        k256::ecdsa::SigningKey,
-        local::{LocalSigner, PrivateKeySigner},
-    },
-};
+use alloy::primitives::Address;
 use clap::{Parser, ValueEnum};
 use shared::parse::parse_address;
-use std::{fmt::Debug, str::FromStr};
+use std::fmt::Debug;
 use thiserror::Error;
-
-const DEFAULT_PRIVATE_KEY_SIGNER: &str =
-    "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"; // address = 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 
 /// Configuration for the block builder service
 #[derive(Parser, Clone)]
 #[allow(missing_docs)]
 pub struct BlockBuilderConfig {
-    // TODO(SEQ-686): Remove this variable and read the owner address from the settlement chain
-    // contract instead.
-    #[arg(long, env = "ROLLUP_OWNER_ADDRESS", value_parser = parse_address, default_value_t = Address::ZERO)]
-    pub rollup_owner_address: Address,
-
-    #[arg(long, env = "MINE_EMPTY_BLOCKS", default_value_t = false)]
-    pub mine_empty_blocks: bool,
-
-    #[arg(long, env = "MCHAIN_AUTH_IPC_PATH")]
-    pub mchain_auth_ipc_path: String,
-
-    #[arg(long, env = "MCHAIN_IPC_PATH")]
-    pub mchain_ipc_path: String,
-
-    /// The chain ID of the Appchain rollup (not the mchain)
-    #[arg(short = 'c', long, env = "TARGET_CHAIN_ID", default_value_t = 13331370)]
-    pub target_chain_id: u64,
+    #[arg(long, env = "MCHAIN_RPC_URL")]
+    pub mchain_rpc_url: String,
 
     /// Sequencing contract address on the sequencing chain
     #[arg(short = 's', long, env = "SEQUENCING_CONTRACT_ADDRESS",
@@ -71,24 +47,10 @@ pub enum TargetRollupType {
     ARBITRUM,
 }
 
-/// Parse default string into a `PrivateKeySigner`.
-pub fn get_default_private_key_signer() -> LocalSigner<SigningKey> {
-    PrivateKeySigner::from_str(DEFAULT_PRIVATE_KEY_SIGNER)
-        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err))
-}
-
-#[allow(missing_docs)]
-pub fn get_rollup_contract_address() -> Address {
-    get_default_private_key_signer().address().create(0)
-}
-
 impl Debug for BlockBuilderConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("BlockBuilderConfig")
-            .field("rollup_owner_address", &self.rollup_owner_address)
-            .field("mchain_auth_ipc_path", &self.mchain_auth_ipc_path)
-            .field("mchain_ipc_path", &self.mchain_ipc_path)
-            .field("target_chain_id", &self.target_chain_id)
+            .field("mchain_rpc_url", &self.mchain_rpc_url)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
             .field("target_rollup_type", &self.target_rollup_type)
             .field("arbitrum_bridge_address", &self.arbitrum_bridge_address)
@@ -102,29 +64,13 @@ impl Debug for BlockBuilderConfig {
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
         let zero = Address::ZERO.to_string();
-        Self::parse_from([
-            "",
-            "-s",
-            &zero,
-            "-b",
-            &zero,
-            "-i",
-            &zero,
-            "--mchain-ipc-path",
-            "",
-            "--mchain-auth-ipc-path",
-            "",
-        ])
+        Self::parse_from(["", "-s", &zero, "-b", &zero, "-i", &zero, "--mchain-rpc-url", ""])
     }
 }
 
 impl BlockBuilderConfig {
     /// Validates the config values and complains about impossible ones
     pub fn validate(&self) -> Result<(), ConfigError> {
-        if self.target_chain_id == 0 {
-            return Err(ConfigError::InvalidChainId("Chain ID cannot be 0".to_string()));
-        }
-
         if self.sequencing_contract_address == Address::ZERO {
             return Err(ConfigError::InvalidAddress(
                 "Sequencing contract address cannot be 0".to_string(),
@@ -180,19 +126,14 @@ pub enum ConfigError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloy::primitives::address;
     use assert_matches::assert_matches;
-
-    #[test]
-    fn test_validate_chain_id() {
-        let config = BlockBuilderConfig { target_chain_id: 0, ..Default::default() };
-        assert_matches!(config.validate(), Err(ConfigError::InvalidChainId(_)));
-    }
 
     #[test]
     fn test_validate_rollup_type() {
         let config = BlockBuilderConfig {
             target_rollup_type: TargetRollupType::OPTIMISM,
-            sequencing_contract_address: get_rollup_contract_address(),
+            sequencing_contract_address: address!("0x0000000000000000000000000000000000000001"),
             ..Default::default()
         };
         assert_matches!(config.validate(), Err(ConfigError::UnsupportedRollupType(_)));
