@@ -1,0 +1,94 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.25;
+
+import {ProposerPermissionModule} from "../interfaces/ProposerPermissionModule.sol";
+import {CalldataPermissionModule} from "../interfaces/CalldataPermissionModule.sol";
+
+/**
+ * @title AllowlistSequencingModuleExtended
+ * @dev This contract implements both proposer and calldata permission modules
+ */
+contract AllowlistSequencingModuleExtended is ProposerPermissionModule, CalldataPermissionModule {
+    /// @notice The address of the admin who can modify the allowlist.
+    address public admin;
+    /// @notice Mapping to store allowed addresses.
+    mapping(address user => bool isAllowed) public allowlist;
+
+    event UserAdded(address indexed user);
+    event UserRemoved(address indexed user);
+    event AdminTransferred(address indexed previousAdmin, address indexed newAdmin);
+
+    error NotAdmin();
+    error AddressNotAllowed();
+
+    /**
+     * @dev Sets the deployer as the initial admin.
+     */
+    constructor(address _admin) {
+        if (_admin == address(0)) {
+            revert AddressNotAllowed();
+        }
+
+        admin = _admin;
+    }
+
+    /**
+     * @dev Modifier to check if the caller is the admin.
+     */
+    modifier onlyAdmin() {
+        if (msg.sender != admin) {
+            revert NotAdmin();
+        }
+        _;
+    }
+
+    /**
+     * @notice Adds an address to the allowlist.
+     * @param user The address to be added to the allowlist.
+     */
+    function addToAllowlist(address user) external onlyAdmin {
+        allowlist[user] = true;
+        emit UserAdded(user);
+    }
+
+    /**
+     * @notice Removes an address from the allowlist.
+     * @param user The address to be removed from the allowlist.
+     */
+    function removeFromAllowlist(address user) external onlyAdmin {
+        allowlist[user] = false;
+        emit UserRemoved(user);
+    }
+
+    /**
+     * @notice Transfers the admin role to a new address.
+     * @param newAdmin The address of the new admin. Cannot be address(0).
+     */
+    function transferAdmin(address newAdmin) external onlyAdmin {
+        if (newAdmin == address(0)) {
+            revert AddressNotAllowed();
+        }
+
+        admin = newAdmin;
+        emit AdminTransferred(msg.sender, newAdmin);
+    }
+
+    /**
+     * @notice Checks if the proposer is allowed.
+     * @param proposer The address to check permission for.
+     * @return bool indicating if the proposer is allowed.
+     */
+    function isAllowed(address proposer) external view override returns (bool) {
+        return allowlist[proposer];
+    }
+
+    /**
+     * @notice Checks if the calldata is allowed.
+     * @return bool indicating if the calldata is allowed.
+     */
+    function isCalldataAllowed(bytes calldata) external pure override returns (bool) {
+        // Simple implementation that allows all calldata
+        // In a real implementation, you would add specific validation logic here
+        return true;
+    }
+}
