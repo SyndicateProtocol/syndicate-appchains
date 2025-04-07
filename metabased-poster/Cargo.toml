@@ -4,20 +4,19 @@ name              = "metabased-poster"
 version.workspace = true
 
 [dependencies]
-alloy              = { workspace = true, features = ["provider-engine-api", "providers"] }
-axum               = { workspace = true }
-clap               = { workspace = true, features = ["derive", "env"] }
-contract-bindings  = { workspace = true }
-eyre               = { workspace = true }
-humantime          = { workspace = true }
-prometheus-client  = { workspace = true }
-serde              = { workspace = true }
-shared             = { workspace = true }
-thiserror          = { workspace = true }
-tokio              = { workspace = true, features = ["full", "sync"] }
-tracing            = { workspace = true }
-tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
-url                = { workspace = true }
+alloy             = { workspace = true, features = ["provider-engine-api", "providers"] }
+axum              = { workspace = true }
+clap              = { workspace = true, features = ["derive", "env"] }
+contract-bindings = { workspace = true }
+eyre              = { workspace = true }
+humantime         = { workspace = true }
+prometheus-client = { workspace = true }
+serde             = { workspace = true }
+shared            = { workspace = true }
+thiserror         = { workspace = true }
+tokio             = { workspace = true, features = ["full", "sync"] }
+tracing           = { workspace = true }
+url               = { workspace = true }
 
 [lints]
 workspace = true
@@ -31,5 +30,6 @@ alloy = { workspace = true, features = [
   "rpc-types-anvil",
   "sol-types",
 ] }
+ctor = { workspace = true }
 jsonrpsee = { workspace = true, features = ["server"] }
 reqwest = { workspace = true }

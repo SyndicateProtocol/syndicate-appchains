@@ -6,6 +6,7 @@
 
 use crate::{
     config::BlockBuilderConfig,
+    connectors::mchain::MetaChainProvider,
     rollups::{
         optimism::{
             batch::{new_batcher_tx, Batch},
@@ -17,12 +18,12 @@ use crate::{
 use alloy::{
     eips::BlockNumberOrTag,
     primitives::{Address, Bytes, B256},
-    providers::Provider,
     rpc::types::TransactionRequest,
 };
 use async_trait::async_trait;
 use common::types::{BlockAndReceipts, KnownState, Slot};
 use eyre::Result;
+use mchain::db::MBlock;
 use std::{str::FromStr, sync::Arc};
 
 #[derive(Debug, Clone)]
@@ -35,21 +36,9 @@ pub struct OptimismAdapter {
 impl RollupAdapter for OptimismAdapter {
     async fn build_block_from_slot(
         &self,
-        slot: &Slot,
+        _slot: &Slot,
         _mchain_block_number: u64,
-    ) -> Result<Vec<TransactionRequest>> {
-        let deposited_txns = self.process_deposited_txns(slot.settlement.clone()).await?;
-
-        let mbtxs = self.parse_block_to_mbtxs(slot.sequencing.clone());
-
-        let batch_txn = self.build_batch_txn(mbtxs).await?;
-
-        let mut result: Vec<TransactionRequest> = vec![batch_txn];
-        result.extend(deposited_txns);
-        Ok(result)
-    }
-
-    fn decode_error(&self, _output: &Bytes) -> String {
+    ) -> Result<Option<MBlock>, eyre::Error> {
         panic!("Not implemented")
     }
 
@@ -57,15 +46,18 @@ impl RollupAdapter for OptimismAdapter {
         &self.transaction_parser
     }
 
-    async fn get_processed_blocks<T: Provider>(
+    async fn get_processed_blocks(
         &self,
-        _provider: &T,
+        _provider: &MetaChainProvider<Self>,
         _block: BlockNumberOrTag,
     ) -> Result<Option<(KnownState, u64)>> {
         panic!("Not implemented")
     }
 
-    async fn get_last_sequencing_block_processed<T: Provider>(&self, _provider: &T) -> Result<u64> {
+    async fn get_last_sequencing_block_processed(
+        &self,
+        _provider: &MetaChainProvider<Self>,
+    ) -> u64 {
         panic!("Not implemented")
     }
 
@@ -80,6 +72,7 @@ impl RollupAdapter for OptimismAdapter {
     }
 }
 
+#[allow(dead_code)]
 impl OptimismAdapter {
     /// Creates a new Optimism block builder
     pub const fn new(config: &BlockBuilderConfig) -> Self {

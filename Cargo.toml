@@ -1,6 +1,7 @@
 [workspace]
 members = [
   "maestro",
+  "mchain",
   "metabased-poster",
   "metabased-sequencer",
   "metabased-translator/bin/metabased-translator",
@@ -61,6 +62,7 @@ humantime            = "2.1.0"
 hyper                = { version = "1.5.2" }
 ingestor             = { path = "metabased-translator/crates/ingestor" }
 jsonrpsee            = { version = "0.24.7" }
+mchain               = { path = "mchain" }
 metabased-translator = { path = "metabased-translator/bin/metabased-translator" }
 metrics              = { path = "metabased-translator/crates/metrics" }
 pin-project-lite     = "0.2.16"
@@ -68,6 +70,7 @@ prometheus-client    = { version = "0.23.1" }
 rand                 = { version = "0.9.0" }
 redis                = "0.29.2"
 reqwest              = "0.12.12"
+rocksdb              = "0.23.0"
 serde                = "1.0.217"
 serde-hex            = "0.1.0"
 serde_json           = "1.0.135"
@@ -88,12 +91,12 @@ url                  = { version = "2.5.4" }
 # dev dependencies
 const_format = { version = "0.2" }
 criterion    = { version = "0.5" }
+ctor         = "0.4.1"
 mockall      = "0.13.1"
 mockito      = { version = "1.7.0" }
 serial_test  = { version = "3.2.0" }
 temp-env     = "0.3.6"
 test-case    = { version = "3" }
-tracing-test = { version = "0.2.5" }
 
 
 [workspace.lints.rust]

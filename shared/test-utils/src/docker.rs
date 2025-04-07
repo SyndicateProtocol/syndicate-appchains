@@ -1,148 +1,140 @@
 //! Docker components for the integration tests
 
-use crate::{
-    port_manager::PortManager,
-    rollup::{chain_config, rollup_config, rollup_info},
-};
+use crate::{port_manager::PortManager, rollup::rollup_info, utils::test_path};
 use alloy::{
     primitives::Address,
-    providers::{IpcConnect, Provider, ProviderBuilder, RootProvider},
+    providers::{Provider, ProviderBuilder, RootProvider},
 };
 use eyre::Result;
-use std::{env, time::Duration};
+use mchain::mchain::{rollup_config, MProvider};
+use std::{
+    env,
+    process::{ExitStatus, Stdio},
+    time::Duration,
+};
 use tokio::{
+    io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
-    runtime::Handle,
-    task,
     time::{sleep, timeout},
 };
+use tracing::info;
 
 #[derive(Debug)]
-pub struct Docker(pub Child);
+pub struct Docker(Child);
+
+impl Docker {
+    pub fn new(cmd: &mut Command) -> Result<Self> {
+        let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
+        let stdout = child.stdout.take().unwrap();
+        // force tests to capture output from stdout
+        tokio::spawn(async move {
+            let mut reader = BufReader::new(stdout).lines();
+            while let Some(line) = reader.next_line().await.unwrap() {
+                println!("{}", line);
+            }
+        });
+        // force tests to capture output from stderr
+        let stderr = child.stderr.take().unwrap();
+        tokio::spawn(async move {
+            let mut reader = BufReader::new(stderr).lines();
+            while let Some(line) = reader.next_line().await.unwrap() {
+                eprintln!("{}", line);
+            }
+        });
+        Ok(Self(child))
+    }
+    pub fn id(&self) -> Option<u32> {
+        self.0.id()
+    }
+    pub async fn wait(&mut self) -> std::io::Result<ExitStatus> {
+        self.0.wait().await
+    }
+}
 
 impl Drop for Docker {
     fn drop(&mut self) {
         if let Some(x) = self.0.id() {
-            _ = std::process::Command::new("kill").arg(x.to_string()).output();
-            task::block_in_place(move || {
-                Handle::current().block_on(async move {
-                    _ = self.0.wait().await;
-                })
-            })
+            // drop the file descriptors to suppress termination output.
+            self.0.stdin.take();
+            self.0.stdout.take();
+            self.0.stderr.take();
+            // tell the process to terminate. do not wait for it to shutdown.
+            _ = std::process::Command::new("kill").arg(x.to_string()).spawn();
         }
     }
 }
 
-#[derive(Debug)]
-pub struct NodeInfo {
-    pub ipc: String,
-    pub auth_ipc: String,
-    pub http_port: u16,
+pub async fn start_component(
+    executable_name: &str,
+    args: Vec<String>,
+    cargs: Vec<String>,
+) -> Result<Docker> {
+    info!("launching {}", executable_name);
+    if let Ok(tag) = env::var(executable_name.to_uppercase().replace("-", "_") + "_TAG") {
+        Docker::new(
+            Command::new("docker")
+                .arg("run")
+                .arg("--init")
+                .arg("--rm")
+                .arg("--net=host")
+                .arg(format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}"))
+                .args(args),
+        )
+    } else {
+        Docker::new(
+            Command::new("cargo")
+                // ring has a custom build.rs script that rebuilds whenever certain environment vars
+                // change
+                .env_remove("CARGO_MANIFEST_DIR")
+                .env_remove("CARGO_PKG_NAME")
+                .env_remove("CARGO_PKG_VERSION_MAJOR")
+                .env_remove("CARGO_PKG_VERSION_MINOR")
+                .env_remove("CARGO_PKG_VERSION_PATCH")
+                .env_remove("CARGO_PKG_VERSION_PRE")
+                .env_remove("CARGO_MANIFEST_LINKS")
+                .current_dir(env!("CARGO_WORKSPACE_DIR"))
+                .arg("run")
+                .arg("--bin")
+                .arg(executable_name)
+                .arg("--")
+                .args(args)
+                .args(cargs),
+        )
+    }
 }
 
-/// Starts reth instance
-pub async fn start_reth(
+pub async fn start_mchain(
     chain_id: u64,
-    tag: &str,
-) -> Result<(NodeInfo, (Docker, Option<(Docker, Docker, Docker, Docker)>), u16)> {
-    let manager = PortManager::instance();
-    let port = manager.next_port();
-    let auth_port = manager.next_port();
-    let http_port = manager.next_port();
-    let dir = env!("CARGO_MANIFEST_DIR");
-    let ipc = format!("{dir}/{port}.ipc");
-    let auth_ipc = format!("{dir}/{auth_port}.ipc");
-    let chain_cfg = chain_config(chain_id);
-    let reth = Docker(
-        Command::new("docker")
-            .arg("run")
-            .arg("--init")
-            .arg("--rm")
-            .arg("--entrypoint")
-            .arg("/bin/sh")
-            .arg("-v")
-            .arg(if cfg!(target_os = "macos") { "ipc" } else { dir }.to_string() + ":/ipc")
-            .arg("-p")
-            .arg(format!("{http_port}:{http_port}"))
-            .arg(format!("ghcr.io/syndicateprotocol/reth:{tag}"))
-            .arg("-c")
-            .arg(format!("umask 0 && exec reth node --http --http.addr=0.0.0.0 --http.port={http_port} --ipcpath=/ipc/{port}.ipc --auth-ipc --auth-ipc.path=/ipc/{auth_port}.ipc --chain='{chain_cfg}'"))
-            .spawn()?
-    );
-    #[cfg(not(target_os = "macos"))]
-    let socat = None;
-
-    // on mac, use socat to route traffic over tcp as unix domain sockets cannot cross the os
-    // boundary. host port.ipc -> host socat -> container socat -> container port.ipc
-    // on linux, the port.ipc socket file can be shared between the docker container and host os
-    // directly.
-    #[cfg(target_os = "macos")]
-    let socat = Some((
-        Docker(
-            Command::new("socat")
-                .arg(format!("UNIX-LISTEN:{ipc},reuseaddr,fork"))
-                .arg(format!("TCP4:127.0.0.1:{port}"))
-                .spawn()?,
-        ),
-        Docker(
-            Command::new("docker")
-                .arg("run")
-                .arg("--init")
-                .arg("--rm")
-                .arg("-p")
-                .arg(format!("{port}:{port}"))
-                .arg("-v")
-                .arg("ipc:/ipc")
-                .arg("alpine/socat:1.8.0.1")
-                .arg(format!("TCP4-LISTEN:{port},reuseaddr,fork,bind=0.0.0.0"))
-                .arg(format!("UNIX-CONNECT:/ipc/{port}.ipc,retry=1200,interval=0.1"))
-                .spawn()?,
-        ),
-        Docker(
-            Command::new("socat")
-                .arg(format!("UNIX-LISTEN:{auth_ipc},reuseaddr,fork"))
-                .arg(format!("TCP4:127.0.0.1:{auth_port}"))
-                .spawn()?,
-        ),
-        Docker(
-            Command::new("docker")
-                .arg("run")
-                .arg("--init")
-                .arg("--rm")
-                .arg("-p")
-                .arg(format!("{auth_port}:{auth_port}"))
-                .arg("-v")
-                .arg("ipc:/ipc")
-                .arg("alpine/socat:1.8.0.1")
-                .arg(format!("TCP4-LISTEN:{auth_port},reuseaddr,fork,bind=0.0.0.0"))
-                .arg(format!("UNIX-CONNECT:/ipc/{auth_port}.ipc,retry=1200,interval=0.1"))
-                .spawn()?,
-        ),
-    ));
-    // give it two minutes to launch (in case it needs to download the image)
+    chain_owner: Address,
+    finality_delay: u64,
+) -> Result<(String, Docker, MProvider)> {
+    let temp = test_path("mchain");
+    let port = PortManager::instance().next_port();
+    let metric_port = PortManager::instance().next_port();
+    let docker = start_component(
+        "mchain",
+        vec![
+            "--chain-id".to_string(),
+            chain_id.to_string(),
+            "--chain-owner".to_string(),
+            chain_owner.to_string(),
+            "--port".to_string(),
+            port.to_string(),
+            "--metrics-port".to_string(),
+            metric_port.to_string(),
+            "--finality-delay".to_string(),
+            finality_delay.to_string(),
+        ],
+        vec!["--datadir".to_string(), temp.to_string()],
+    )
+    .await?;
+    let url = format!("http://localhost:{port}");
+    let mchain = MProvider::new(url.parse()?);
     timeout(Duration::from_secs(120), async {
-        let mut rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(ipc.clone())).await;
-        while rollup.is_err() {
-            sleep(Duration::from_millis(100)).await;
-            rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(ipc.clone())).await;
+        while !mchain.connected().await {
+            tokio::time::sleep(Duration::from_millis(10)).await;
         }
-        let mut auth_rollup =
-            ProviderBuilder::new().on_ipc(IpcConnect::new(auth_ipc.clone())).await;
-        while auth_rollup.is_err() {
-            sleep(Duration::from_millis(100)).await;
-            auth_rollup = ProviderBuilder::new().on_ipc(IpcConnect::new(auth_ipc.clone())).await;
-        }
-        #[allow(clippy::unwrap_used)]
-        let r = rollup.unwrap();
-        while r.get_chain_id().await.is_err() {
-            sleep(Duration::from_millis(100)).await;
-        }
-        #[allow(clippy::unwrap_used)]
-        let r = auth_rollup.unwrap();
-        while r.get_chain_id().await.is_err() {
-            sleep(Duration::from_millis(100)).await;
-        }
-        Ok::<_, eyre::Error>((NodeInfo { ipc, auth_ipc, http_port }, (reth, socat), http_port))
+        Ok::<_, eyre::Error>((url, docker, mchain))
     })
     .await?
 }
@@ -151,51 +143,50 @@ pub async fn start_reth(
 pub async fn launch_nitro_node(
     chain_id: u64,
     chain_owner: Address,
-    mchain_port: u16,
+    mchain_url: &str,
     sequencer_port: Option<u16>,
-    tag: &str,
 ) -> Result<(Docker, RootProvider, String)> {
+    let tag = env::var("NITRO_TAG").unwrap_or("v3.4.0-d896e9c-slim".to_string());
     let port = PortManager::instance().next_port();
 
     let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
 
-    let mut cmd = Command::new("docker");
-    cmd.arg("run")
-        .arg("--init")
-        .arg("--rm")
-        .arg("--net=host")
-        .arg(format!("offchainlabs/nitro-node:{tag}"))
-        .arg(format!("--parent-chain.connection.url=http://localhost:{mchain_port}"))
-        .arg("--node.dangerous.disable-blob-reader")
-        .arg("--execution.parent-chain-reader.old-header-timeout=1000h")
-        .arg("--node.inbox-reader.check-delay=10ms")
-        .arg("--node.staker.enable=false")
-        .arg("--ensure-rollup-deployment=false")
-        .arg(format!(
-            "--chain.info-json={}",
-            rollup_info(&rollup_config(chain_id, chain_owner), "test")
-        ))
-        .arg("--http.addr=0.0.0.0")
-        .arg(format!("--http.port={}", port))
-        .arg(format!("--log-level={log_level}"));
+    let nitro = Docker::new(
+        Command::new("docker")
+            .arg("run")
+            .arg("--init")
+            .arg("--rm")
+            .arg("--net=host")
+            .arg(format!("offchainlabs/nitro-node:{tag}"))
+            .arg(format!("--parent-chain.connection.url={mchain_url}"))
+            .arg("--node.dangerous.disable-blob-reader")
+            .arg("--node.inbox-reader.check-delay=50ms")
+            .arg("--node.staker.enable=false")
+            .arg("--ensure-rollup-deployment=false")
+            .arg(format!(
+                "--chain.info-json={}",
+                rollup_info(&rollup_config(chain_id, chain_owner), "test")
+            ))
+            .arg("--http.addr=0.0.0.0")
+            .arg("--http.api=net,web3,eth,debug,trace")
+            .arg(format!("--http.port={}", port))
+            .arg(format!("--log-level={log_level}"))
+            .arg(if let Some(port) = sequencer_port {
+                format!("--execution.forwarding-target=http://localhost:{port}")
+            } else {
+                "--execution.forwarding-target=null".to_string()
+            }),
+    )?;
 
-    match sequencer_port {
-        Some(port) => {
-            cmd.arg(format!("--execution.forwarding-target=http://localhost:{port}"));
-        }
-        None => {
-            cmd.arg("--execution.forwarding-target=null");
-        }
-    }
+    let url = format!("http://localhost:{}", port);
 
-    let nitro = cmd.spawn()?;
-    let rollup = ProviderBuilder::default().on_http(format!("http://localhost:{}", port).parse()?);
+    let rollup = ProviderBuilder::default().on_http(url.parse()?);
     // give it two minutes to launch (in case it needs to download the image)
     timeout(Duration::from_secs(120), async {
         while rollup.get_chain_id().await.is_err() {
             sleep(Duration::from_millis(10)).await;
         }
-        Ok::<_, eyre::Error>((Docker(nitro), rollup, format!("http://localhost:{}", port)))
+        Ok::<_, eyre::Error>((nitro, rollup, url))
     })
     .await?
 }

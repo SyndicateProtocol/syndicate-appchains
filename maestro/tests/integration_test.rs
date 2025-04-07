@@ -31,9 +31,9 @@ mod tests {
         (addr, handle, base_url)
     }
 
-    async fn with_test_server<Fut>(test_fn: impl FnOnce(Client, String) -> Fut) -> Result<()>
+    async fn with_test_server<Fut>(test_fn: impl FnOnce(Client, String) -> Fut + Send) -> Result<()>
     where
-        Fut: Future<Output = Result<()>>,
+        Fut: Future<Output = Result<()>> + Send,
     {
         let (_addr, handle, base_url) = setup_server().await;
         let client = Client::new();

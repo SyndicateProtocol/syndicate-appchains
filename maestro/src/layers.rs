@@ -108,7 +108,9 @@ mod tests {
     use tower::service_fn;
 
     // Mock service that correctly returns `Response<HttpBody>`
-    async fn inner_mock_service<B>(_req: HttpRequest<B>) -> Result<Response<HttpBody>, Infallible> {
+    async fn inner_mock_service<B: Send>(
+        _req: HttpRequest<B>,
+    ) -> Result<Response<HttpBody>, Infallible> {
         Ok(Response::builder().status(StatusCode::OK).body(HttpBody::empty()).unwrap())
     }
 

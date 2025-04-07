@@ -3,16 +3,15 @@
 //! This module provides the core [`RollupAdapter`] trait that defines how
 //! different rollup implementations can construct and process their blocks.
 
-use crate::rollups::shared::SequencingTransactionParser;
+use crate::{connectors::mchain::MetaChainProvider, rollups::shared::SequencingTransactionParser};
 use alloy::{
     eips::BlockNumberOrTag,
     primitives::{Address, Bytes},
-    providers::Provider,
-    rpc::types::TransactionRequest,
 };
 use async_trait::async_trait;
 use common::types::{BlockAndReceipts, KnownState, Slot};
 use eyre::{Error, Result};
+use mchain::db::MBlock;
 use std::{
     fmt::Debug,
     marker::{Send, Sync},
@@ -50,20 +49,17 @@ pub trait RollupAdapter: Debug + Send + Sync + Unpin + Clone + 'static {
         &self,
         slot: &Slot,
         mchain_block_number: u64,
-    ) -> Result<Vec<TransactionRequest>, Error>;
-
-    /// decodes an error from the rollup contract - useful for humanly readable logs
-    fn decode_error(&self, output: &Bytes) -> String;
+    ) -> Result<Option<MBlock>, Error>;
 
     /// Gets the source chain's processed blocks from the rollup
-    async fn get_processed_blocks<T: Provider>(
+    async fn get_processed_blocks(
         &self,
-        provider: &T,
+        provider: &MetaChainProvider<Self>,
         block: BlockNumberOrTag,
     ) -> Result<Option<(KnownState, u64)>>;
 
     /// Gets the last sequencing block processed
-    async fn get_last_sequencing_block_processed<T: Provider>(&self, provider: &T) -> Result<u64>;
+    async fn get_last_sequencing_block_processed(&self, provider: &MetaChainProvider<Self>) -> u64;
 
     /// Returns a list of addresses that are interesting to monitor on the sequencing chain
     fn interesting_sequencing_addresses(&self) -> Vec<Address>;

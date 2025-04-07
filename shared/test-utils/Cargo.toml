@@ -12,13 +12,11 @@ version.workspace      = true
 alloy = { workspace = true, features = [
   "node-bindings",
   "provider-engine-api",
-  "provider-ipc",
   "providers",
   "rpc-types-anvil",
   "sol-types",
 ] }
 eyre = { workspace = true }
-thiserror = { workspace = true }
+mchain = { workspace = true }
 tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
 tracing = { workspace = true }
-tracing-subscriber = { workspace = true }

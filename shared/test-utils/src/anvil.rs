@@ -1,6 +1,6 @@
 //! Anvil components for the integration tests
 
-use crate::{port_manager::PortManager, preloaded_config::get_default_private_key_signer};
+use crate::port_manager::PortManager;
 use alloy::{
     eips::BlockNumberOrTag,
     network::EthereumWallet,
@@ -14,8 +14,10 @@ use alloy::{
         Identity, Provider, ProviderBuilder, RootProvider,
     },
     rpc::types::{anvil::MineOptions, Block},
+    signers::local::PrivateKeySigner,
 };
 use eyre::{eyre, Result};
+use std::str::FromStr as _;
 
 #[allow(missing_docs)]
 pub type FilledProvider = FillProvider<
@@ -28,6 +30,9 @@ pub type FilledProvider = FillProvider<
     >,
     RootProvider,
 >;
+
+// anvil account 1
+const PRIVATE_KEY: &str = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
 
 pub async fn start_anvil(chain_id: u64) -> Result<(u16, AnvilInstance, FilledProvider)> {
     start_anvil_with_args(chain_id, Default::default()).await
@@ -44,7 +49,9 @@ pub async fn start_anvil_with_args(
     let anvil = Anvil::new().port(port).chain_id(chain_id).args(cmd).try_spawn()?;
 
     let provider = ProviderBuilder::new()
-        .wallet(EthereumWallet::from(get_default_private_key_signer()))
+        .wallet(PrivateKeySigner::from_str(PRIVATE_KEY).unwrap_or_else(|err| {
+            panic!("Failed to parse default private key for signer: {}", err)
+        }))
         .on_http(anvil.endpoint_url());
     Ok((port, anvil, provider))
 }

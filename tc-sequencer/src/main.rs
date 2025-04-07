@@ -4,20 +4,16 @@
 //! It provides a JSON-RPC interface for submitting transactions and checking service health.
 
 use eyre::Result;
+use shared::logger::set_global_default_subscriber;
 use tc_sequencer::{config::Config, server::run_server};
-use tracing::{info, Level};
-use tracing_subscriber::FmtSubscriber;
+use tokio::signal::unix::{signal, SignalKind};
+use tracing::info;
 
 #[tokio::main]
 #[allow(clippy::redundant_pub_crate)]
 async fn main() -> Result<()> {
     // Initialize logging
-    FmtSubscriber::builder()
-        .with_max_level(Level::INFO)
-        .json()
-        .with_target(true)
-        .with_env_filter("info")
-        .init();
+    set_global_default_subscriber()?;
 
     // Parse config
     let config = Config::initialize();
@@ -31,7 +27,21 @@ async fn main() -> Result<()> {
         "TC Sequencer server running"
     );
 
-    // Keep the server running
+    #[allow(clippy::expect_used)]
+    let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
+    #[allow(clippy::expect_used)]
+    let mut sigterm = signal(SignalKind::terminate()).expect("Failed to register SIGTERM handler");
+
+    tokio::select! {
+        _ = sigint.recv() => {
+            println!("Received SIGINT (Ctrl+C), initiating shutdown...");
+        }
+        _ = sigterm.recv() => {
+            println!("Received SIGTERM, initiating shutdown...");
+        }
+    };
+
+    handle.stop()?;
     handle.stopped().await;
 
     Ok(())

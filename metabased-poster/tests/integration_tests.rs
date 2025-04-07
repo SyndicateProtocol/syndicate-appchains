@@ -17,7 +17,14 @@ use prometheus_client::registry::Registry;
 use std::{str::FromStr, time::Duration};
 use tokio::time::sleep;
 use url::Url;
-#[tokio::test(flavor = "multi_thread")]
+
+#[cfg(test)]
+#[ctor::ctor]
+fn init() {
+    shared::logger::set_global_default_subscriber();
+}
+
+#[tokio::test]
 async fn e2e_poster_test() -> Result<()> {
     let set_port = 8080;
     let app_port = 8081;

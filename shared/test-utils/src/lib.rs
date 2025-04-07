@@ -2,7 +2,6 @@
 //! stack.
 pub mod anvil;
 pub mod docker;
-pub mod logger;
 pub mod port_manager;
 pub mod preloaded_config;
 pub mod rollup;

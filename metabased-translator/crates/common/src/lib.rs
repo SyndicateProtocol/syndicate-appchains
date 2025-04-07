@@ -2,5 +2,4 @@
 
 pub mod compression;
 pub mod eth_client;
-pub mod tracing;
 pub mod types;

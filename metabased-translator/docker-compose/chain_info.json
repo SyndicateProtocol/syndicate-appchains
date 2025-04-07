@@ -1,7 +1,7 @@
 [
   {
     "chain-name": "test",
-    "parent-chain-id": 13331370,
+    "parent-chain-id": 84532,
     "parent-chain-is-arbitrum": false,
     "sequencer-url": "",
     "secondary-forwarding-target": "",
@@ -34,7 +34,7 @@
         "AllowDebugPrecompiles": false,
         "DataAvailabilityCommittee": false,
         "InitialArbOSVersion": 32,
-        "InitialChainOwner": "0x1234123412341234123412341234123412341234",
+        "InitialChainOwner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
         "GenesisBlockNum": 0
       }
     },
