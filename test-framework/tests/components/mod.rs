@@ -62,6 +62,8 @@ pub(crate) struct Components {
     /// Mchain
     pub mchain_provider: MProvider,
 
+    pub poster_url: String,
+
     /// References to keep the processes/tasks alive
     _mchain: Docker,
     _seq_anvil: AnvilInstance,
@@ -117,6 +119,7 @@ struct PosterConfig {
     settlement_rpc_url: String,
     appchain_rpc_url: String,
     metrics_port: u16,
+    port: u16,
 }
 
 #[derive(Debug)]
@@ -289,6 +292,7 @@ impl Components {
         .await?;
 
         let mut poster = None;
+        let mut poster_url = String::new();
         if options.pre_loaded.is_some() {
             info!("Starting poster...");
             let poster_config = PosterConfig {
@@ -301,12 +305,14 @@ impl Components {
                 ),
                 settlement_rpc_url: settlement_rpc_url.clone(),
                 metrics_port: PortManager::instance().next_port(),
+                port: PortManager::instance().next_port(),
                 appchain_rpc_url: nitro_url,
             };
             poster = Some(
                 start_component("metabased-poster", poster_config.cli_args(), Default::default())
                     .await?,
             );
+            poster_url = format!("http://localhost:{}", poster_config.port);
             wait_for_service(poster_config.metrics_port).await?;
         }
 
@@ -322,6 +328,7 @@ impl Components {
             bridge_address: translator_config.arbitrum_bridge_address,
             inbox_address: translator_config.arbitrum_inbox_address,
             mchain_provider,
+            poster_url,
 
             _mchain,
             _seq_anvil: seq_anvil,
@@ -424,7 +431,9 @@ impl PosterConfig {
             "--metrics-port".to_string(),
             self.metrics_port.to_string(),
             "--polling-interval".to_string(),
-            "1s".to_string(),
+            "1h".to_string(),
+            "--port".to_string(),
+            self.port.to_string(),
         ]
     }
 }
