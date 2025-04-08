@@ -16,7 +16,6 @@ use eyre::Result;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 use test_utils::wait_until;
-use tokio::time::sleep;
 
 mod components;
 
@@ -34,7 +33,7 @@ fn init() {
 }
 
 #[tokio::test]
-async fn e2e_test() -> Result<()> {
+async fn e2e_send_transaction() -> Result<()> {
     let config = ConfigurationOptions { settlement_delay: 60, ..Default::default() };
     let components = Components::new(&config).await?;
 
@@ -135,7 +134,7 @@ async fn e2e_test() -> Result<()> {
 /// via the inbox contract and ensures that all of them
 /// are sequenced via the metabased translator and show up on the rollup.
 #[tokio::test]
-async fn e2e_settlement_test() -> Result<()> {
+async fn e2e_deposit() -> Result<()> {
     // Sequencer fees go to the zero address
     let components = Components::new(&ConfigurationOptions {
         pre_loaded: Some(ContractVersion::V300),
@@ -289,16 +288,16 @@ async fn e2e_settlement_test() -> Result<()> {
 }
 
 #[tokio::test]
-async fn e2e_settlement_fast_withdrawal_300() -> Result<()> {
-    e2e_settlement_fast_withdrawal_base(ContractVersion::V300).await
+async fn e2e_fast_withdrawal_300() -> Result<()> {
+    e2e_fast_withdrawal_base(ContractVersion::V300).await
 }
 
 #[tokio::test]
-async fn e2e_settlement_fast_withdrawal_213() -> Result<()> {
-    e2e_settlement_fast_withdrawal_base(ContractVersion::V213).await
+async fn e2e_fast_withdrawal_213() -> Result<()> {
+    e2e_fast_withdrawal_base(ContractVersion::V213).await
 }
 
-async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
+async fn e2e_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
     let components =
         Components::new(&ConfigurationOptions { pre_loaded: Some(version), ..Default::default() })
             .await?;
@@ -355,7 +354,9 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
     );
 
     // 2. Poster service posts
-    sleep(Duration::from_secs(2)).await;
+    let client = reqwest::Client::new();
+    let response = client.post(format!("{}/post", components.poster_url)).send().await?;
+    assert!(response.status().is_success(), "Expected 200 OK, got {}", response.status());
 
     // 3. Execute transaction (usually done by end-user)
 
@@ -414,7 +415,7 @@ async fn e2e_settlement_fast_withdrawal_base(version: ContractVersion) -> Result
 }
 
 #[tokio::test]
-async fn test_settlement_reorg() -> Result<()> {
+async fn e2e_settlement_reorg() -> Result<()> {
     let components = Components::new(&ConfigurationOptions {
         pre_loaded: Some(ContractVersion::V300),
         ..Default::default()

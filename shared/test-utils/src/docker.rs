@@ -52,13 +52,15 @@ impl Docker {
 
 impl Drop for Docker {
     fn drop(&mut self) {
-        if let Some(x) = self.0.id() {
-            // drop the file descriptors to suppress termination output.
-            self.0.stdin.take();
-            self.0.stdout.take();
-            self.0.stderr.take();
-            // tell the process to terminate. do not wait for it to shutdown.
-            _ = std::process::Command::new("kill").arg(x.to_string()).spawn();
+        if let Some(pid) = self.0.id() {
+            if let Ok(None) = self.0.try_wait() {
+                // drop the file descriptors to suppress termination output.
+                self.0.stdin.take();
+                self.0.stdout.take();
+                self.0.stderr.take();
+
+                let _ = std::process::Command::new("kill").arg(pid.to_string()).spawn();
+            }
         }
     }
 }

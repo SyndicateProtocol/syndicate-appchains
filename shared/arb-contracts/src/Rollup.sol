@@ -1,11 +1,9 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.25;
+pragma solidity 0.8.28;
 
 import "@arbitrum/nitro-contracts/src/bridge/IBridge.sol";
 import "@arbitrum/nitro-contracts/src/bridge/ISequencerInbox.sol";
 import "@arbitrum/nitro-contracts/src/bridge/IDelayedMessageProvider.sol";
-import "@arbitrum/nitro-contracts/src/libraries/MessageTypes.sol";
-import "@arbitrum/nitro-contracts/src/libraries/Error.sol";
 
 contract Rollup {
     // TODO: set these values properly
@@ -29,6 +27,15 @@ contract Rollup {
 
     // ISequencerInbox.sol
     uint256 public totalDelayedMessagesRead;
+
+    /// @dev Provided data was too large
+    /// @param dataLength The length of the data that is too large
+    /// @param maxDataLength The max length the data can be
+    error DataTooLarge(uint256 dataLength, uint256 maxDataLength);
+
+    // message types
+    uint8 constant INITIALIZATION_MSG_TYPE = 11;
+    uint8 constant L1MessageType_ethDeposit = 12;
 
     constructor(uint256 chainId, string memory chainConfig) {
         require(bytes(chainConfig).length > 0, "EMPTY_CHAIN_CONFIG");
