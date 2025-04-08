@@ -84,8 +84,11 @@ async fn test_e2e_counter_contract() -> Result<()> {
 
         //
         // assert the tx was picked up by the L3 and the counter was incremented
-        let receipt =
-            env.l3_chain().get_transaction_receipt(increment_tx.tx_hash().to_owned()).await?.unwrap();
+        let receipt = env
+            .l3_chain()
+            .get_transaction_receipt(increment_tx.tx_hash().to_owned())
+            .await?
+            .unwrap();
         assert!(receipt.status(), "Counter increment failed");
 
         let number = counter.number().call().await?._0.to::<u64>();
