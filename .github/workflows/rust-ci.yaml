@@ -8,6 +8,7 @@ on:
   # Run on PRs that touch Rust code or the workflow itself
   pull_request:
     paths:
+      - "metabased-contracts/lib/**"
       - "metabased-sequencer/**"
       - "metabased-translator/**"
       - "**/Cargo.toml"
