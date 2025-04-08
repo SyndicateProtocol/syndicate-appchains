@@ -45,6 +45,10 @@ pub struct Config {
     #[arg( long, env = "POSTER_POLLING_INTERVAL", default_value = "10m", value_parser = humantime::parse_duration )]
     pub polling_interval: Duration,
 
+    /// Port for Poster
+    #[arg(short = 'p', long, env = "POSTER_PORT", default_value_t = 8080)]
+    pub port: u16,
+
     /// Port for metrics
     #[arg(short = 'm', long, env = "POSTER_METRICS_PORT", default_value_t = 9292)]
     pub metrics_port: u16,

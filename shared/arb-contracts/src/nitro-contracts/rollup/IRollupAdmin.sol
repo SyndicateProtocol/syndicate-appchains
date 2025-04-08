@@ -92,6 +92,12 @@ interface IRollupAdmin {
     function pause() external;
 
     /**
+     * @notice Check if the rollup contract is paused
+     * @return True if the rollup contract is paused
+     */
+    function paused() external view returns (bool);
+
+    /**
      * @notice Resume interaction with the rollup contract
      */
     function resume() external;

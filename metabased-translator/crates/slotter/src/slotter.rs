@@ -2,7 +2,7 @@
 
 use crate::{config::SlotterConfig, metrics::SlotterMetrics};
 use alloy::primitives::B256;
-use common::types::{Block, BlockAndReceipts, BlockRef, Chain, KnownState, Slot, SlotProcessor};
+use common::types::{BlockRef, Chain, KnownState, PartialBlock, Slot, SlotProcessor};
 use eyre::Report;
 use std::{collections::VecDeque, sync::Arc};
 use thiserror::Error;
@@ -41,7 +41,7 @@ struct Slotter<P: SlotProcessor> {
     slots: VecDeque<Slot>,
 
     /// Unassigned settlement blocks
-    unassigned_settlement_blocks: VecDeque<BlockAndReceipts>,
+    unassigned_settlement_blocks: VecDeque<PartialBlock>,
 
     slot_processor: P,
 
@@ -53,8 +53,8 @@ struct Slotter<P: SlotProcessor> {
 pub async fn run(
     config: &SlotterConfig,
     known_state: Option<KnownState>,
-    sequencing_rx: Receiver<Arc<BlockAndReceipts>>,
-    settlement_rx: Receiver<Arc<BlockAndReceipts>>,
+    sequencing_rx: Receiver<Arc<PartialBlock>>,
+    settlement_rx: Receiver<Arc<PartialBlock>>,
     slot_processor: impl SlotProcessor,
     metrics: SlotterMetrics,
     shutdown_rx: oneshot::Receiver<()>,
@@ -87,9 +87,9 @@ pub async fn run(
 }
 
 struct PrioritizeLaggingChainResult<'a>(
-    &'a mut Receiver<Arc<BlockAndReceipts>>,
+    &'a mut Receiver<Arc<PartialBlock>>,
     Chain,
-    &'a mut Receiver<Arc<BlockAndReceipts>>,
+    &'a mut Receiver<Arc<PartialBlock>>,
     Chain,
     u64,
 );
@@ -107,8 +107,8 @@ impl<P: SlotProcessor> Slotter<P> {
     /// The receiver that was created during [`Slotter::new`] will get slots as they are processed
     async fn main_loop(
         mut self,
-        mut sequencing_rx: Receiver<Arc<BlockAndReceipts>>,
-        mut settlement_rx: Receiver<Arc<BlockAndReceipts>>,
+        mut sequencing_rx: Receiver<Arc<PartialBlock>>,
+        mut settlement_rx: Receiver<Arc<PartialBlock>>,
         mut shutdown_rx: oneshot::Receiver<()>,
     ) -> Result<(), SlotterError> {
         info!("Starting Slotter");
@@ -157,8 +157,8 @@ impl<P: SlotProcessor> Slotter<P> {
 
     fn prioritize_lagging_chain<'a>(
         &self,
-        sequencing_rx: &'a mut Receiver<Arc<BlockAndReceipts>>,
-        settlement_rx: &'a mut Receiver<Arc<BlockAndReceipts>>,
+        sequencing_rx: &'a mut Receiver<Arc<PartialBlock>>,
+        settlement_rx: &'a mut Receiver<Arc<PartialBlock>>,
     ) -> PrioritizeLaggingChainResult<'a> {
         let seq_ts = self.latest_sequencing_block.as_ref().map_or(0, |b| b.timestamp);
         let set_ts = self.latest_settlement_block.as_ref().map_or(0, |b| b.timestamp);
@@ -183,21 +183,21 @@ impl<P: SlotProcessor> Slotter<P> {
         }
     }
 
-    const fn settlement_timestamp(&self, block: &BlockAndReceipts) -> u64 {
-        block.block.timestamp + self.settlement_delay
+    const fn settlement_timestamp(&self, block: &PartialBlock) -> u64 {
+        block.timestamp + self.settlement_delay
     }
 
     async fn process_block(
         &mut self,
-        block_info: Arc<BlockAndReceipts>,
+        block_info: Arc<PartialBlock>,
         chain: Chain,
     ) -> Result<(), SlotterError> {
-        self.update_latest_block(&block_info.block, chain)?;
+        self.update_latest_block(&block_info, chain)?;
         debug!(
             ?chain,
-            block_number = block_info.block.number,
-            block_timestamp = block_info.block.timestamp,
-            block_hash = %block_info.block.hash,
+            block_number = block_info.number,
+            block_timestamp = block_info.timestamp,
+            block_hash = %block_info.hash,
             "Processing block"
         );
 
@@ -214,7 +214,11 @@ impl<P: SlotProcessor> Slotter<P> {
         Ok(())
     }
 
-    fn update_latest_block(&mut self, block: &Block, chain: Chain) -> Result<(), SlotterError> {
+    fn update_latest_block(
+        &mut self,
+        block: &PartialBlock,
+        chain: Chain,
+    ) -> Result<(), SlotterError> {
         if let Some(latest) = match chain {
             Chain::Sequencing => self.latest_sequencing_block.as_ref(),
             Chain::Settlement => self.latest_settlement_block.as_ref(),
@@ -273,7 +277,7 @@ impl<P: SlotProcessor> Slotter<P> {
 
     async fn process_sequencing_block(
         &mut self,
-        block_info: Arc<BlockAndReceipts>,
+        block_info: Arc<PartialBlock>,
     ) -> Result<(), SlotterError> {
         let latest_slot = self.slots.back_mut();
         trace!("latest_slot: {:?}", latest_slot);
@@ -290,7 +294,7 @@ impl<P: SlotProcessor> Slotter<P> {
                 // can be closed
                 self.slot_processor.process_slot(&new_slot).await?;
                 debug!(%new_slot, "slot processed");
-                self.metrics.record_last_slot_created(new_slot.sequencing.block.number);
+                self.metrics.record_last_slot_created(new_slot.sequencing.number);
                 return Ok(());
             }
             let block = self.unassigned_settlement_blocks.pop_front().ok_or_else(|| {
@@ -303,7 +307,7 @@ impl<P: SlotProcessor> Slotter<P> {
         debug!(%new_slot, "new opened slot created");
 
         // Add the new slot
-        self.metrics.record_last_slot_created(new_slot.sequencing.block.number);
+        self.metrics.record_last_slot_created(new_slot.sequencing.number);
         self.metrics.update_unassigned_settlement_blocks(self.unassigned_settlement_blocks.len());
         self.slots.push_back(new_slot);
         Ok(())
@@ -311,7 +315,7 @@ impl<P: SlotProcessor> Slotter<P> {
 
     async fn process_settlement_block(
         &mut self,
-        set_block: Arc<BlockAndReceipts>,
+        set_block: Arc<PartialBlock>,
     ) -> Result<(), SlotterError> {
         let set_ts = self.settlement_timestamp(&set_block);
 
@@ -323,7 +327,7 @@ impl<P: SlotProcessor> Slotter<P> {
             }
             slot.push_settlement_block(set_block.clone());
             debug!(
-                block_number = set_block.block.number,
+                block_number = set_block.number,
                 slot_timestamp = slot.timestamp(),
                 "block added to a slot"
             );
@@ -412,7 +416,7 @@ mod tests {
     use alloy::primitives::B256;
     use assert_matches::assert_matches;
     use async_trait::async_trait;
-    use common::types::BlockAndReceipts;
+    use common::types::PartialBlock;
     use prometheus_client::registry::Registry;
     use std::{
         str::FromStr,
@@ -452,8 +456,8 @@ mod tests {
 
     struct TestSetup {
         processor: MockSlotProcessor,
-        sequencing_tx: Sender<Arc<BlockAndReceipts>>,
-        settlement_tx: Sender<Arc<BlockAndReceipts>>,
+        sequencing_tx: Sender<Arc<PartialBlock>>,
+        settlement_tx: Sender<Arc<PartialBlock>>,
         shutdown_tx: oneshot::Sender<()>,
     }
 
@@ -462,8 +466,8 @@ mod tests {
         let slotter = create_slotter(config, processor.clone());
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let (seq_tx, seq_rx) = channel::<Arc<BlockAndReceipts>>(100);
-        let (settle_tx, settle_rx) = channel::<Arc<BlockAndReceipts>>(100);
+        let (seq_tx, seq_rx) = channel::<Arc<PartialBlock>>(100);
+        let (settle_tx, settle_rx) = channel::<Arc<PartialBlock>>(100);
         tokio::spawn(async move { slotter.main_loop(seq_rx, settle_rx, shutdown_rx).await });
 
         TestSetup { processor, sequencing_tx: seq_tx, settlement_tx: settle_tx, shutdown_tx }
@@ -489,26 +493,19 @@ mod tests {
         }
     }
 
-    fn create_test_block(number: u64, timestamp: u64) -> Arc<BlockAndReceipts> {
-        Arc::new(BlockAndReceipts {
-            block: Block {
-                hash: B256::from_str(
-                    "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-                )
-                .unwrap(),
-                number,
-                parent_hash: B256::from_str(
-                    "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-                )
-                .unwrap(),
-                logs_bloom: "0x0".to_string(),
-                transactions_root: "0x0".to_string(),
-                state_root: "0x0".to_string(),
-                receipts_root: "0x0".to_string(),
-                timestamp,
-                transactions: vec![],
-            },
-            receipts: vec![],
+    fn create_test_block(number: u64, timestamp: u64) -> Arc<PartialBlock> {
+        Arc::new(PartialBlock {
+            hash: B256::from_str(
+                "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            )
+            .unwrap(),
+            number,
+            parent_hash: B256::from_str(
+                "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            )
+            .unwrap(),
+            timestamp,
+            logs: vec![],
         })
     }
 
@@ -604,8 +601,8 @@ mod tests {
         for i in 1..4 {
             let slot_idx = i;
             assert_eq!(slots[slot_idx].timestamp(), 10 + i as u64);
-            assert_eq!(slots[slot_idx].sequencing.block.number, 1 + i as u64);
-            assert_eq!(slots[slot_idx].sequencing.block.timestamp, 10 + i as u64);
+            assert_eq!(slots[slot_idx].sequencing.number, 1 + i as u64);
+            assert_eq!(slots[slot_idx].sequencing.timestamp, 10 + i as u64);
             assert_eq!(slots[slot_idx].settlement.len(), 0);
         }
 
@@ -628,9 +625,9 @@ mod tests {
         let slots = wait_for_processed_slots(&processor, 5, 1000).await.unwrap();
         let last_slot = &slots[4];
         assert_eq!(last_slot.timestamp(), 40);
-        assert_eq!(last_slot.sequencing.block.timestamp, 40);
+        assert_eq!(last_slot.sequencing.timestamp, 40);
         assert_eq!(last_slot.settlement.len(), 1);
-        assert_eq!(last_slot.settlement[0].block.timestamp, 20);
+        assert_eq!(last_slot.settlement[0].timestamp, 20);
     }
 
     #[tokio::test]
@@ -638,8 +635,8 @@ mod tests {
         let processor = MockSlotProcessor::new();
         let mut slotter = create_slotter(&SlotterConfig::default(), processor);
         let block = create_test_block(2, 200);
-        slotter.latest_sequencing_block = Some(BlockRef::new(&create_test_block(1, 100).block));
-        let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
+        slotter.latest_sequencing_block = Some(BlockRef::new(&create_test_block(1, 100)));
+        let result = slotter.update_latest_block(&block, Chain::Sequencing);
 
         assert!(result.is_ok());
         assert_eq!(slotter.latest_sequencing_block.unwrap().number, 2);
@@ -650,8 +647,8 @@ mod tests {
         let processor = MockSlotProcessor::new();
         let mut slotter = create_slotter(&SlotterConfig::default(), processor);
         let block = create_test_block(3, 300);
-        slotter.latest_settlement_block = Some(BlockRef::new(&create_test_block(2, 200).block));
-        let result = slotter.update_latest_block(&block.block, Chain::Settlement);
+        slotter.latest_settlement_block = Some(BlockRef::new(&create_test_block(2, 200)));
+        let result = slotter.update_latest_block(&block, Chain::Settlement);
 
         assert!(result.is_ok());
         assert_eq!(slotter.latest_settlement_block.unwrap().number, 3);
@@ -662,8 +659,8 @@ mod tests {
         let processor = MockSlotProcessor::new();
         let mut slotter = create_slotter(&SlotterConfig::default(), processor);
         let block = create_test_block(4, 400);
-        slotter.latest_settlement_block = Some(BlockRef::new(&create_test_block(2, 200).block));
-        let result = slotter.update_latest_block(&block.block, Chain::Settlement);
+        slotter.latest_settlement_block = Some(BlockRef::new(&create_test_block(2, 200)));
+        let result = slotter.update_latest_block(&block, Chain::Settlement);
 
         assert_matches!(result, Err(SlotterError::BlockNumberSkipped { .. }));
     }
@@ -673,8 +670,8 @@ mod tests {
         let processor = MockSlotProcessor::new();
         let mut slotter = create_slotter(&SlotterConfig::default(), processor);
         let block = create_test_block(2, 50);
-        slotter.latest_sequencing_block = Some(BlockRef::new(&create_test_block(1, 100).block));
-        let result = slotter.update_latest_block(&block.block, Chain::Sequencing);
+        slotter.latest_sequencing_block = Some(BlockRef::new(&create_test_block(1, 100)));
+        let result = slotter.update_latest_block(&block, Chain::Sequencing);
 
         assert_matches!(result, Err(SlotterError::EarlierTimestamp { .. }));
     }
@@ -713,14 +710,14 @@ mod tests {
 
         // First slot should be ts=10 with no settlement blocks
         assert_eq!(slots[0].timestamp(), 10);
-        assert_eq!(slots[0].sequencing.block.number, 1);
+        assert_eq!(slots[0].sequencing.number, 1);
         assert_eq!(slots[0].settlement.len(), 0);
 
         // Second slot should be ts=12 with one settlement block
         assert_eq!(slots[1].timestamp(), 12);
-        assert_eq!(slots[1].sequencing.block.number, 2);
+        assert_eq!(slots[1].sequencing.number, 2);
         assert_eq!(slots[1].settlement.len(), 1);
-        assert_eq!(slots[1].settlement[0].block.number, 1);
+        assert_eq!(slots[1].settlement[0].number, 1);
     }
 
     #[tokio::test]
@@ -747,7 +744,7 @@ mod tests {
         // Wait for the first slot to be processed
         let slots = wait_for_processed_slots(&processor, 1, 1000).await.unwrap();
         assert_eq!(slots[0].timestamp(), 100);
-        assert_eq!(slots[0].sequencing.block.number, 1);
+        assert_eq!(slots[0].sequencing.number, 1);
         // Settlement block should not be in this slot since it was delayed to timestamp 160
         assert_eq!(slots[0].settlement.len(), 0);
 
@@ -759,11 +756,11 @@ mod tests {
 
         // There should be a slot at ts=110 and empty slot at ts=150
         assert_eq!(slots[1].timestamp(), 110);
-        assert_eq!(slots[1].sequencing.block.number, 2);
+        assert_eq!(slots[1].sequencing.number, 2);
         assert_eq!(slots[1].settlement.len(), 0);
 
         assert_eq!(slots[2].timestamp(), 150);
-        assert_eq!(slots[2].sequencing.block.number, 3);
+        assert_eq!(slots[2].sequencing.number, 3);
         assert_eq!(slots[2].settlement.len(), 0);
 
         // Send settlement and sequencing blocks with timestamp 170
@@ -777,8 +774,8 @@ mod tests {
         // ts=160
         assert_eq!(slots[3].timestamp(), 170);
         assert_eq!(slots[3].settlement.len(), 1);
-        assert_eq!(slots[3].settlement[0].block.number, 1);
-        assert_eq!(slots[3].sequencing.block.number, 4);
+        assert_eq!(slots[3].settlement[0].number, 1);
+        assert_eq!(slots[3].sequencing.number, 4);
     }
 
     #[tokio::test]
@@ -806,18 +803,17 @@ mod tests {
 
         // Verify the slot contains all settlement blocks
         assert_eq!(slots[0].timestamp(), 100);
-        assert_eq!(slots[0].sequencing.block.number, 1);
+        assert_eq!(slots[0].sequencing.number, 1);
         assert_eq!(slots[0].settlement.len(), 3);
 
         // Now verify that the last settlement block has the latest timestamp
         if let Some(last_settlement) = slots[0].settlement.last() {
-            assert_eq!(last_settlement.block.timestamp, 90);
+            assert_eq!(last_settlement.timestamp, 90);
 
             // Also verify all settlement blocks are in ascending timestamp order
             for i in 0..slots[0].settlement.len() - 1 {
                 assert!(
-                    slots[0].settlement[i].block.timestamp <
-                        slots[0].settlement[i + 1].block.timestamp,
+                    slots[0].settlement[i].timestamp < slots[0].settlement[i + 1].timestamp,
                     "Settlement blocks are not in ascending timestamp order"
                 );
             }
@@ -842,32 +838,25 @@ mod tests {
 
         // Create and set the first block
         let first_block = create_test_block(1, 50);
-        slotter.update_latest_block(&first_block.block, chain).unwrap();
+        slotter.update_latest_block(&first_block, chain).unwrap();
 
         // Create a second block with correct number (2) but different parent hash
-        let second_block = Arc::new(BlockAndReceipts {
-            block: Block {
-                hash: B256::from_str(
-                    "2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-                )
-                .unwrap(),
-                number: 2, // Correct sequential number
-                parent_hash: B256::from_str(
-                    "0000000000abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-                )
-                .unwrap(), // Different hash than first_block.hash
-                logs_bloom: "0x0".to_string(),
-                transactions_root: "0x0".to_string(),
-                state_root: "0x0".to_string(),
-                receipts_root: "0x0".to_string(),
-                timestamp: 60,
-                transactions: vec![],
-            },
-            receipts: vec![],
+        let second_block = Arc::new(PartialBlock {
+            hash: B256::from_str(
+                "2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            )
+            .unwrap(),
+            number: 2, // Correct sequential number
+            parent_hash: B256::from_str(
+                "0000000000abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            )
+            .unwrap(), // Different hash than first_block.hash
+            timestamp: 60,
+            logs: vec![],
         });
 
         // Attempt to update with the second block - should fail due to parent hash mismatch
-        let result = slotter.update_latest_block(&second_block.block, chain);
+        let result = slotter.update_latest_block(&second_block, chain);
 
         // Verify that a reorg was detected
         assert_matches!(result, Err(SlotterError::ReorgDetected { .. }));
@@ -888,52 +877,38 @@ mod tests {
         let mut slotter = create_slotter(&SlotterConfig::default(), processor);
 
         // Set up first block at number 2
-        let first_block = Arc::new(BlockAndReceipts {
-            block: Block {
-                hash: B256::from_str(
-                    "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-                )
-                .unwrap(),
-                number: 2,
-                parent_hash: B256::from_str(
-                    "0000000000000000000000000000000000000000000000000000000000000000",
-                )
-                .unwrap(),
-                logs_bloom: "0x0".to_string(),
-                transactions_root: "0x0".to_string(),
-                state_root: "0x0".to_string(),
-                receipts_root: "0x0".to_string(),
-                timestamp: 100,
-                transactions: vec![],
-            },
-            receipts: vec![],
+        let first_block = Arc::new(PartialBlock {
+            hash: B256::from_str(
+                "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            )
+            .unwrap(),
+            number: 2,
+            parent_hash: B256::from_str(
+                "0000000000000000000000000000000000000000000000000000000000000000",
+            )
+            .unwrap(),
+            timestamp: 100,
+            logs: vec![],
         });
 
-        slotter.update_latest_block(&first_block.block, chain).unwrap();
+        slotter.update_latest_block(&first_block, chain).unwrap();
 
         // Create block with block number 1 (lower than current)
-        let reorg_block = Arc::new(BlockAndReceipts {
-            block: Block {
-                hash: B256::from_str(
-                    "2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-                )
-                .unwrap(),
-                number: 1, // Lower block number should trigger reorg
-                parent_hash: B256::from_str(
-                    "0000000000abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-                )
-                .unwrap(),
-                logs_bloom: "0x0".to_string(),
-                transactions_root: "0x0".to_string(),
-                state_root: "0x0".to_string(),
-                receipts_root: "0x0".to_string(),
-                timestamp: 50,
-                transactions: vec![],
-            },
-            receipts: vec![],
+        let reorg_block = Arc::new(PartialBlock {
+            hash: B256::from_str(
+                "2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            )
+            .unwrap(),
+            number: 1, // Lower block number should trigger reorg
+            parent_hash: B256::from_str(
+                "0000000000abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+            )
+            .unwrap(),
+            timestamp: 50,
+            logs: vec![],
         });
 
-        let result = slotter.update_latest_block(&reorg_block.block, chain);
+        let result = slotter.update_latest_block(&reorg_block, chain);
         assert_matches!(result, Err(SlotterError::ReorgDetected { .. }));
     }
 
