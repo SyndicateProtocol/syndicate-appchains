@@ -29,6 +29,7 @@ RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --b
 RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --package metabased-sequencer
 RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --package metabased-poster
 RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --package maestro
+RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --package tc-sequencer
 RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --package mchain
 
 # Stage 4: Optional Foundry install (in separate stage to avoid bloating runtime image)
@@ -66,7 +67,14 @@ ENTRYPOINT ["/usr/local/bin/maestro"]
 EXPOSE 8545 8546
 LABEL service=maestro
 
-# Step 9: Runtime image for mchain
+# Stage 9: Runtime image for tc-sequencer
+FROM gcr.io/distroless/cc AS tc-sequencer
+COPY --from=builder /app/target/release/tc-sequencer /usr/local/bin/tc-sequencer
+ENTRYPOINT ["/usr/local/bin/tc-sequencer"]
+EXPOSE 8545 8546
+LABEL service=tc-sequencer
+
+# Step 10: Runtime image for mchain
 FROM gcr.io/distroless/cc AS mchain
 COPY --from=builder /app/target/release/mchain /usr/local/bin/mchain
 ENTRYPOINT ["/usr/local/bin/mchain"]
