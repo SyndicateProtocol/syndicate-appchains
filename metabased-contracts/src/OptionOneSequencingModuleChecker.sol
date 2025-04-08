@@ -2,12 +2,11 @@
 pragma solidity 0.8.25;
 
 import {ConsolidatedPermissionModule} from "./interfaces/ConsolidatedPermissionModule.sol";
-import {NotInitializedModule} from "./sequencing-modules/NotInitializedModule.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 /// @title OptionOneSequencingModuleChecker
 /// @notice A contract that delegates permission checks to a single module for both proposer and calldata validation
-abstract contract OptionOneSequencingModuleChecker is Ownable {
+abstract contract OptionOneSequencingModuleChecker is Ownable, ConsolidatedPermissionModule {
     /// @notice The module that validates both proposers and calldata
     ConsolidatedPermissionModule public requirementModule;
 
@@ -48,6 +47,14 @@ abstract contract OptionOneSequencingModuleChecker is Ownable {
     /// @return bool indicating if the proposer is allowed
     function isAllowed(address proposer) public view returns (bool) {
         return requirementModule.isAllowed(proposer, "");
+    }
+
+    // @notice Checks if both the proposer and calldata are allowed
+    /// @param proposer The address to check
+    /// @param data The calldata to check
+    /// @return bool indicating if both the proposer and calldata are allowed
+    function isAllowed(address proposer, bytes calldata data) public view returns (bool) {
+        return requirementModule.isAllowed(proposer, data);
     }
 
     /// @notice Checks if the calldata is allowed

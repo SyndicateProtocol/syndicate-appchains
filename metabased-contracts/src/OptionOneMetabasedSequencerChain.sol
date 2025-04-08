@@ -24,7 +24,7 @@ contract OptionOneMetabasedSequencerChain is OptionOneSequencingModuleChecker {
     /// @notice Processes a single compressed transaction.
     /// @param data The compressed transaction data.
     function processTransactionRaw(bytes calldata data) external {
-        isAllowedWithCalldata(msg.sender, data);
+        isAllowed(msg.sender, data);
         emit TransactionProcessed(msg.sender, data);
     }
 
@@ -32,7 +32,7 @@ contract OptionOneMetabasedSequencerChain is OptionOneSequencingModuleChecker {
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
     /// @param data The transaction data
     function processTransaction(bytes calldata data) external {
-        isAllowedWithCalldata(msg.sender, data);
+        isAllowed(msg.sender, data);
         emit TransactionProcessed(msg.sender, prependZeroByte(data));
     }
 
@@ -44,7 +44,7 @@ contract OptionOneMetabasedSequencerChain is OptionOneSequencingModuleChecker {
 
         // Process all transactions
         for (uint256 i = 0; i < dataCount; i++) {
-            isAllowedWithCalldata(msg.sender, data[i]);
+            isAllowed(msg.sender, data[i]);
 
             emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
         }
