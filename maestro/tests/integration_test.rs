@@ -12,6 +12,7 @@ use tokio::time::sleep;
 mod tests {
     use super::*;
     use std::collections::HashMap;
+    use test_utils::transaction::{get_eip1559_transaction_hex, get_legacy_transaction_hex};
     // Static server setup - one per test function
 
     // Initialize the server for this test function
@@ -84,16 +85,18 @@ mod tests {
 
     #[tokio::test]
     async fn test_valid_transaction() -> Result<()> {
+        let tx_hex = get_legacy_transaction_hex(4, 690);
+
         with_test_server(|client, base_url| async move {
             // Test with valid transaction input
             let tx_response = client
                 .post(base_url)
-                .header("x-synd-chain-id", "1")
+                .header("x-synd-chain-id", "4")
                 .json(&json!({
                     "jsonrpc": "2.0",
                     "id": 1,
                     "method": "eth_sendRawTransaction",
-                    "params": ["0x1234"]
+                    "params": [tx_hex]
                 }))
                 .send()
                 .await?;
@@ -107,7 +110,67 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_chain_id_mismatch() -> Result<()> {
+        with_test_server(|client, base_url| async move {
+            // Create transaction with chain ID that doesn't match the header
+            let tx_hex = get_legacy_transaction_hex(5, 690);
+
+            let mismatch_response = client
+                .post(&base_url)
+                .header("x-synd-chain-id", "4") // Different from tx chain ID (5)
+                .json(&json!({
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "eth_sendRawTransaction",
+                    "params": [tx_hex]
+                }))
+                .send()
+                .await?;
+
+            let mismatch_json: Value = mismatch_response.json().await?;
+            assert!(
+                mismatch_json.get("error").is_some(),
+                "Chain ID mismatch should return an error"
+            );
+
+            Ok(())
+        })
+        .await
+    }
+
+    #[tokio::test]
+    async fn test_eip1559_transaction() -> Result<()> {
+        with_test_server(|client, base_url| async move {
+            // Test EIP-1559 transaction
+            let eip1559_tx = get_eip1559_transaction_hex(4, 123);
+
+            let response = client
+                .post(&base_url)
+                .header("x-synd-chain-id", "4")
+                .json(&json!({
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "eth_sendRawTransaction",
+                    "params": [eip1559_tx]
+                }))
+                .send()
+                .await?;
+
+            assert!(response.status().is_success(), "EIP-1559 transaction request failed");
+            let json_resp: Value = response.json().await?;
+            assert!(
+                json_resp.get("result").is_some(),
+                "Transaction response missing 'result' field"
+            );
+
+            Ok(())
+        })
+        .await
+    }
+
+    #[tokio::test]
     async fn test_headers_missing() -> Result<()> {
+        let tx_hex = get_legacy_transaction_hex(4, 690);
         with_test_server(|client, base_url| async move {
             // Test request with missing optional headers
             let no_headers_response = client
@@ -116,7 +179,7 @@ mod tests {
                     "jsonrpc": "2.0",
                     "id": 1,
                     "method": "eth_sendRawTransaction",
-                    "params": ["0x1234"]
+                    "params": [tx_hex]
                 }))
                 .send()
                 .await?;
@@ -133,6 +196,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_headers_malformed_key() -> Result<()> {
+        let tx_hex = get_legacy_transaction_hex(4, 690);
         with_test_server(|client, base_url| async move {
             // Test with malformed headers
             let malformed_headers_response = client
@@ -142,7 +206,7 @@ mod tests {
                     "jsonrpc": "2.0",
                     "id": 1,
                     "method": "eth_sendRawTransaction",
-                    "params": ["0x1234"]
+                    "params": [tx_hex]
                 }))
                 .send()
                 .await?;
@@ -161,6 +225,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_headers_valid_key_invalid_value() -> Result<()> {
+        let tx_hex = get_legacy_transaction_hex(4, 690);
         with_test_server(|client, base_url| async move {
             // Test with malformed headers
             let malformed_headers_response = client
@@ -170,7 +235,7 @@ mod tests {
                     "jsonrpc": "2.0",
                     "id": 1,
                     "method": "eth_sendRawTransaction",
-                    "params": ["0x1234"]
+                    "params": [tx_hex]
                 }))
                 .send()
                 .await?;
@@ -199,13 +264,15 @@ mod tests {
 
     #[tokio::test]
     async fn test_wrong_param_count() -> Result<()> {
+        let tx_hex = get_legacy_transaction_hex(4, 690);
+        let tx_hex2 = get_legacy_transaction_hex(4, 691);
         with_test_server(|client, base_url| async move {
             // Test with wrong param count
             let wrong_count_response = send_rpc_request(
                 &client,
                 &base_url,
                 "eth_sendRawTransaction",
-                json!(["0x1234", "0x5678"]),
+                json!([tx_hex, tx_hex2]),
             )
             .await?;
 
