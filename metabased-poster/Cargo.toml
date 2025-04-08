@@ -32,3 +32,5 @@ alloy = { workspace = true, features = [
 ] }
 ctor = { workspace = true }
 jsonrpsee = { workspace = true, features = ["server"] }
+reqwest = { workspace = true }
+test-utils = { workspace = true }

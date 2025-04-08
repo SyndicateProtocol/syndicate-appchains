@@ -6,7 +6,7 @@ use crate::{
 use block_builder::{connectors::mchain::MetaChainProvider, rollups::shared::RollupAdapter};
 use common::{
     eth_client::{EthClient, RPCClient},
-    types::{BlockAndReceipts, Chain, KnownState},
+    types::{Chain, KnownState, PartialBlock},
 };
 use eyre::{Report, Result};
 use ingestor::config::ChainIngestorConfig;
@@ -128,9 +128,9 @@ impl ComponentHandles {
         shutdown_rx: ShutdownRx,
     ) -> Self {
         let (sequencing_tx, sequencing_rx) =
-            channel::<Arc<BlockAndReceipts>>(config.sequencing.sequencing_buffer_size);
+            channel::<Arc<PartialBlock>>(config.sequencing.sequencing_buffer_size);
         let (settlement_tx, settlement_rx) =
-            channel::<Arc<BlockAndReceipts>>(config.settlement.settlement_buffer_size);
+            channel::<Arc<PartialBlock>>(config.settlement.settlement_buffer_size);
 
         let mut sequencing_config: ChainIngestorConfig = config.sequencing.clone().into();
         let mut settlement_config: ChainIngestorConfig = config.settlement.clone().into();
@@ -143,8 +143,8 @@ impl ComponentHandles {
 
         let slotter_config = config.slotter.clone();
 
-        let sequencing_addresses = mchain.rollup_adapter.interesting_sequencing_addresses();
-        let settlement_addresses = mchain.rollup_adapter.interesting_settlement_addresses();
+        let sequencing_addresses = mchain.rollup_adapter.sequencing_addresses_to_monitor();
+        let settlement_addresses = mchain.rollup_adapter.settlement_addresses_to_monitor();
 
         let sequencing = tokio::spawn(async move {
             ingestor::run(
