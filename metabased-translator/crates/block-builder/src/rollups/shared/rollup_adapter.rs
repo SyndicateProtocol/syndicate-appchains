@@ -15,7 +15,6 @@ use mchain::db::MBlock;
 use std::{
     fmt::Debug,
     marker::{Send, Sync},
-    sync::Arc,
 };
 
 /// Trait for rollup-specific block builders that construct batches from transactions
@@ -31,7 +30,7 @@ pub trait RollupAdapter: Debug + Send + Sync + Unpin + Clone + 'static {
     ///
     /// # Returns
     /// A vector of extracted transactions in raw `Bytes` format.
-    fn parse_block_to_mbtxs(&self, input: Arc<PartialBlock>) -> Vec<Bytes> {
+    fn parse_block_to_mbtxs(&self, input: PartialBlock) -> Vec<Bytes> {
         input
             .logs
             .iter()

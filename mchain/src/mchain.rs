@@ -1,4 +1,7 @@
-use crate::db::{to_err, ArbitrumDB as _, DelayedMessage, MBlock, KVDB};
+use crate::{
+    db::{to_err, ArbitrumDB as _, DelayedMessage, MBlock, KVDB},
+    metrics::MchainMetrics,
+};
 use alloy::{
     eips::BlockNumberOrTag,
     primitives::{address, keccak256, Address, Bytes, FixedBytes, U256},
@@ -83,9 +86,6 @@ impl MProvider {
     pub fn new(url: alloy::transports::http::reqwest::Url) -> Self {
         Self(ProviderBuilder::default().on_http(url))
     }
-    pub async fn connected(&self) -> bool {
-        self.0.get_chain_id().await.is_ok()
-    }
     pub async fn get_block_number(&self) -> u64 {
         #[allow(clippy::unwrap_used)]
         #[allow(clippy::expect_used)]
@@ -117,7 +117,8 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     chain_owner: Address,
     finality_delay: u64,
     db: T,
-) -> RpcModule<(T, Mutex<(u64, VecDeque<u64>)>)> {
+    metrics: MchainMetrics,
+) -> RpcModule<(T, MchainMetrics, Mutex<(u64, VecDeque<u64>)>)> {
     let init_msg = DelayedMessage {
         kind: 11, // L1MessageType::Initialize
         sender: Address::ZERO,
@@ -164,7 +165,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
         }
     }
     assert_eq!(finalized_block + pending_ts.len() as u64, db.get_block_number());
-    let mut module = RpcModule::new((db, Mutex::new((finalized_block, pending_ts))));
+    let mut module = RpcModule::new((db, metrics, Mutex::new((finalized_block, pending_ts))));
 
     // -------------------------------------------------
     // mchain methods
@@ -172,10 +173,11 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     module
         .register_method(
             "mchain_addBatch",
-            move |p, (db, mutex), _| -> Result<u64, ErrorObjectOwned> {
+            move |p, (db, metrics, mutex), _| -> Result<u64, ErrorObjectOwned> {
                 let (batch,): (MBlock,) = p.parse()?;
                 let timestamp = batch.timestamp;
                 let block = db.add_batch(batch)?;
+                metrics.record_last_block(block, timestamp);
                 let mut data = mutex.lock().unwrap();
                 data.1.push_back(timestamp);
                 assert_eq!(data.0 + data.1.len() as u64, block);
@@ -187,7 +189,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     module
         .register_method(
             "mchain_rollbackToBlock",
-            move |p, (db, mutex), _| -> Result<(), ErrorObjectOwned> {
+            move |p, (db, metrics, mutex), _| -> Result<(), ErrorObjectOwned> {
                 let (block,): (u64,) = p.parse()?;
                 let latest = db.get_block_number();
                 if block == latest {
@@ -202,6 +204,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
                 // remove stale ts data & delete blocks, messages
                 db.put_block_number(block);
                 let start_block = db.get_block(block)?;
+                metrics.record_reorg(block, latest, start_block.timestamp);
                 let end_block = db.get_block(latest)?;
                 for i in block..latest {
                     db.delete_block(i + 1);
@@ -211,6 +214,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
                 }
                 let mut data = mutex.lock().unwrap();
                 if block < data.0 {
+                    metrics.record_finalized_block(block, start_block.timestamp);
                     data.0 = block;
                     data.1.clear();
                 } else {
@@ -228,7 +232,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     module.register_method(
         "mchain_getSourceChainsProcessedBlocks",
         move |p,
-              (db, _),
+              (db, _, _),
               _|
               -> Result<(u64, FixedBytes<32>, u64, FixedBytes<32>, u64), ErrorObjectOwned> {
             let tag: BlockNumberOrTag = p.parse()?;
@@ -256,7 +260,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     module
         .register_method(
             "eth_getLogs",
-            move |p, (db, _), _| -> Result<Vec<alloy::rpc::types::Log>, ErrorObjectOwned> {
+            move |p, (db, _, _), _| -> Result<Vec<alloy::rpc::types::Log>, ErrorObjectOwned> {
                 let (f,): (alloy::rpc::types::Filter,) = p.parse()?;
                 // these are unique
                 if f.address != ROLLUP.into() {
@@ -379,7 +383,10 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     module
         .register_method(
             "eth_getBlockByNumber",
-            move |p, (db, mutex), _| -> Result<alloy::rpc::types::Block, ErrorObjectOwned> {
+            move |p,
+                  (db, metrics, mutex),
+                  _|
+                  -> Result<alloy::rpc::types::Block, ErrorObjectOwned> {
                 let (tag, _): (BlockNumberOrTag, bool) = p.parse()?;
                 let number = match tag {
                     BlockNumberOrTag::Latest => db.get_block_number(),
@@ -389,12 +396,17 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
                             .duration_since(SystemTime::UNIX_EPOCH)
                             .unwrap()
                             .as_secs();
+                        let mut ts = 0u64;
                         while let Some(block_ts) = data.1.front() {
                             if block_ts + finality_delay > now {
                                 break;
                             }
+                            ts = *block_ts;
                             data.0 += 1;
                             data.1.pop_front();
+                        }
+                        if ts > 0 {
+                            metrics.record_finalized_block(data.0, ts);
                         }
 
                         data.0
@@ -412,7 +424,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
         )
         .unwrap();
     module
-        .register_method("eth_call", move |p, (db, _), _| -> Result<Bytes, ErrorObjectOwned> {
+        .register_method("eth_call", move |p, (db, _, _), _| -> Result<Bytes, ErrorObjectOwned> {
             let (input, _): (TransactionRequest, BlockNumberOrTag) = p.parse()?;
             if input.to != Some(alloy::primitives::TxKind::Call(ROLLUP)) {
                 return Ok(Default::default());

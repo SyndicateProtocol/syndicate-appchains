@@ -22,11 +22,11 @@ async fn run_mchain(signal: &str) -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_metabased_sigterm() -> Result<()> {
+async fn test_mchain_sigterm() -> Result<()> {
     run_mchain("-TERM").await
 }
 
 #[tokio::test]
-async fn test_metabased_sigint() -> Result<()> {
+async fn test_mchain_sigint() -> Result<()> {
     run_mchain("-INT").await
 }
