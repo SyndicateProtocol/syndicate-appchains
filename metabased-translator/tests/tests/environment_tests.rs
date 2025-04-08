@@ -29,6 +29,11 @@ async fn test_e2e_counter_contract() -> Result<()> {
     // create and sign a transaction to deploy the counter contract
     let nonce = env.l3_chain().get_transaction_count(env.accounts().bob.address).await?;
 
+    #[cfg(feature = "env-tests")]
+    let input = Counter::BYTECODE.clone();
+    #[cfg(not(feature = "env-tests"))]
+    let input = vec![].into();
+
     let counter_deploy_tx = TransactionRequest::default()
         .with_to(env.accounts().bob.address)
         .with_nonce(nonce)
@@ -37,7 +42,7 @@ async fn test_e2e_counter_contract() -> Result<()> {
         .with_gas_limit(21_000)
         .with_max_priority_fee_per_gas(1_000_000_000)
         .with_max_fee_per_gas(20_000_000_000)
-        .with_input(Counter::BYTECODE.clone())
+        .with_input(input)
         .build(&bob_wallet)
         .await?;
 
@@ -56,33 +61,36 @@ async fn test_e2e_counter_contract() -> Result<()> {
         .unwrap();
     assert!(receipt.status(), "Contract deployment failed");
 
-    let l3_counter_address = receipt.contract_address.unwrap();
-    let counter = Counter::new(l3_counter_address, env.l3_chain());
-    let number = counter.number().call().await?._0.to::<u64>();
-    assert_eq!(number, 0, "Initial counter value should be 0");
+    #[cfg(feature = "env-tests")]
+    {
+        let l3_counter_address = receipt.contract_address.unwrap();
+        let counter = Counter::new(l3_counter_address, env.l3_chain());
+        let number = counter.number().call().await?._0.to::<u64>();
+        assert_eq!(number, 0, "Initial counter value should be 0");
 
-    let increment_tx = TransactionRequest::default()
-        .with_to(env.accounts().bob.address)
-        .with_nonce(nonce + 1)
-        .with_chain_id(env.l3_chain_id())
-        .with_value(U256::from(100))
-        .with_gas_limit(21_000)
-        .with_max_priority_fee_per_gas(1_000_000_000)
-        .with_max_fee_per_gas(20_000_000_000)
-        .with_input(counter.increment().calldata().clone())
-        .build(&bob_wallet)
-        .await?;
+        let increment_tx = TransactionRequest::default()
+            .with_to(env.accounts().bob.address)
+            .with_nonce(nonce + 1)
+            .with_chain_id(env.l3_chain_id())
+            .with_value(U256::from(100))
+            .with_gas_limit(21_000)
+            .with_max_priority_fee_per_gas(1_000_000_000)
+            .with_max_fee_per_gas(20_000_000_000)
+            .with_input(counter.increment().calldata().clone())
+            .build(&bob_wallet)
+            .await?;
 
-    env.sequence_tx(increment_tx.encoded_2718().into()).await?;
+        env.sequence_tx(increment_tx.encoded_2718().into()).await?;
 
-    //
-    // assert the tx was picked up by the L3 and the counter was incremented
-    let receipt =
-        env.l3_chain().get_transaction_receipt(increment_tx.tx_hash().to_owned()).await?.unwrap();
-    assert!(receipt.status(), "Counter increment failed");
+        //
+        // assert the tx was picked up by the L3 and the counter was incremented
+        let receipt =
+            env.l3_chain().get_transaction_receipt(increment_tx.tx_hash().to_owned()).await?.unwrap();
+        assert!(receipt.status(), "Counter increment failed");
 
-    let number = counter.number().call().await?._0.to::<u64>();
-    assert_eq!(number, 1, "Counter should be incremented to 1");
+        let number = counter.number().call().await?._0.to::<u64>();
+        assert_eq!(number, 1, "Counter should be incremented to 1");
+    }
 
     Ok(())
 }
@@ -105,6 +113,11 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
     let address_without_balance = signer_without_balance.address();
     let wallet_without_balance = EthereumWallet::from(signer_without_balance);
 
+    #[cfg(feature = "env-tests")]
+    let input = Counter::BYTECODE.clone();
+    #[cfg(not(feature = "env-tests"))]
+    let input = vec![].into();
+
     let invalid_tx = TransactionRequest::default()
         .with_to(env.accounts().bob.address)
         .with_nonce(0)
@@ -113,7 +126,7 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
         .with_gas_limit(21_000)
         .with_max_priority_fee_per_gas(1_000_000_000)
         .with_max_fee_per_gas(20_000_000_000)
-        .with_input(Counter::BYTECODE.clone())
+        .with_input(input)
         .build(&wallet_without_balance)
         .await?;
 
@@ -125,6 +138,11 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
     let bob_wallet = wallet_from_private_key(&env.accounts().bob.private_key, env.l3_chain_id());
     let nonce = env.l3_chain().get_transaction_count(env.accounts().bob.address).await?;
 
+    #[cfg(feature = "env-tests")]
+    let input = Counter::BYTECODE.clone();
+    #[cfg(not(feature = "env-tests"))]
+    let input = vec![].into();
+
     let counter_deploy_tx = TransactionRequest::default()
         .with_to(env.accounts().bob.address)
         .with_nonce(nonce)
@@ -133,7 +151,7 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
         .with_gas_limit(21_000)
         .with_max_priority_fee_per_gas(1_000_000_000)
         .with_max_fee_per_gas(20_000_000_000)
-        .with_input(Counter::BYTECODE.clone())
+        .with_input(input)
         .build(&bob_wallet)
         .await?;
 
