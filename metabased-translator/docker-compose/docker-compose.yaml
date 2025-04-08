@@ -17,7 +17,6 @@ services:
       target: metabased-translator-debug
       dockerfile: Dockerfile
     environment:
-<<<<<<< HEAD
       - MCHAIN_RPC_URL=http://mchain:8050
       - SEQUENCING_CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
       - ARBITRUM_BRIDGE_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
@@ -26,20 +25,6 @@ services:
       - SEQUENCING_START_BLOCK=0
       - SETTLEMENT_RPC_URL=http://set:8041
       - SETTLEMENT_START_BLOCK=0
-=======
-      - RUST_LOG=debug
-      - MCHAIN_AUTH_IPC_PATH=/ipc/auth.ipc
-      - MCHAIN_IPC_PATH=/ipc/reth.ipc
-      - TARGET_CHAIN_ID=63821
-      - SEQUENCING_CONTRACT_ADDRESS=0x536EA7C009ebE418501a1DB133b281a4a01d50f5
-      - ARBITRUM_BRIDGE_ADDRESS=0x9682E8DFfdadA5C5834ea0c905543798C72690F2
-      - ARBITRUM_INBOX_ADDRESS=0x5573d100711322FA0B28923A0786Cec221bb2e67
-      - SEQUENCING_RPC_URL=REPLACE_ME
-      - SEQUENCING_START_BLOCK=422342
-      - SETTLEMENT_RPC_URL=REPLACE_ME
-      - SETTLEMENT_START_BLOCK=22074164
-
->>>>>>> refs/remotes/origin/main
     volumes:
       - ipc:/ipc
       - ./heaptrack_output:/heaptrack_output

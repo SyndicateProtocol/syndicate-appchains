@@ -22,22 +22,26 @@ use tracing::info;
 pub struct Docker(Child);
 
 impl Docker {
-    pub fn new(cmd: &mut Command) -> Result<Self> {
-        let mut child = cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).spawn()?;
+    pub fn new(cmd: &mut Command, name: &str) -> Result<Self> {
+        let mut child =
+            cmd.stdout(Stdio::piped()).stderr(Stdio::piped()).env("CLICOLOR_FORCE", "1").spawn()?;
+
         let stdout = child.stdout.take().unwrap();
         // force tests to capture output from stdout
+        let name_clone = name.to_string();
         tokio::spawn(async move {
             let mut reader = BufReader::new(stdout).lines();
             while let Some(line) = reader.next_line().await.unwrap() {
-                println!("{}", line);
+                println!("{}: {}", name_clone, line);
             }
         });
         // force tests to capture output from stderr
+        let name_clone = name.to_string();
         let stderr = child.stderr.take().unwrap();
         tokio::spawn(async move {
             let mut reader = BufReader::new(stderr).lines();
             while let Some(line) = reader.next_line().await.unwrap() {
-                eprintln!("{}", line);
+                eprintln!("{}: {}", name_clone, line);
             }
         });
         Ok(Self(child))
@@ -80,6 +84,7 @@ pub async fn start_component(
                 .arg("--net=host")
                 .arg(format!("ghcr.io/syndicateprotocol/{executable_name}:{tag}"))
                 .args(args),
+            executable_name,
         )
     } else {
         Docker::new(
@@ -100,6 +105,7 @@ pub async fn start_component(
                 .arg("--")
                 .args(args)
                 .args(cargs),
+            executable_name,
         )
     }
 }
@@ -172,6 +178,7 @@ pub async fn launch_nitro_node(
             } else {
                 "--execution.forwarding-target=null".to_string()
             }),
+        "nitro",
     )?;
 
     let url = format!("http://localhost:{}", port);
