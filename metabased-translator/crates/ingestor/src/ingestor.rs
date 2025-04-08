@@ -97,7 +97,7 @@ pub async fn run(
     let polling_interval = config.polling_interval;
     let start_block = config.start_block;
 
-    info!("Starting polling for {}", chain);
+    info!(%chain, "Starting polling");
 
     let mut interval = tokio::time::interval(polling_interval);
     let mut current_block_number = start_block;
@@ -106,7 +106,7 @@ pub async fn run(
         tokio::select! {
             biased;
             _ = &mut shutdown_rx => {
-                info!("{} ingestor stopped", chain);
+                info!(%chain, "Ingestor stopped");
                 return Ok(());
             }
             _ = interval.tick() => {
@@ -127,7 +127,7 @@ pub async fn run(
                     max_backoff: config.max_backoff,
                 }).await;
                 if should_terminate {
-                    info!("{} ingestor stopped", chain);
+                    info!(%chain, "Ingestor stopped");
                     return Ok(())
                 }
             }
@@ -144,45 +144,59 @@ async fn push_block_and_receipts(
 ) -> Result<(), IngestorError> {
     if block_and_receipts.number != *current_block_number {
         error!(
-            "Block number mismatch on chain {:?}. Current block {:?}. Got {:?}",
-            chain, current_block_number, block_and_receipts.number
+            %chain,
+            current_block = %current_block_number,
+            received_block = %block_and_receipts.number,
+            "Block number mismatch"
         );
         return Err(IngestorError::BlockNumberMismatch {
             current: *current_block_number,
             received: block_and_receipts.number,
         });
     }
-    sender.send(block_and_receipts).await.map_err(|_| IngestorError::SendError)?;
+    trace!(%chain, block_number = %block_and_receipts.number, "Attempting to send block");
+    sender.send(block_and_receipts).await.map_err(|e| {
+        error!(%chain, error = %e, "Failed during sender.send().await");
+        IngestorError::SendError
+    })?;
+    trace!(%chain, old_block_number = %*current_block_number, new_block_number = %(*current_block_number + 1), "Successfully sent block, incrementing block number");
     *current_block_number += 1;
     metrics.update_channel_capacity(chain, sender.capacity());
     Ok(())
 }
 
 async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
-    let block_numbers: Vec<u64> = (*ctx.current_block_number..
-        min(
-            max(ctx.initial_chain_head, *ctx.current_block_number) + 1,
-            *ctx.current_block_number + ctx.syncing_batch_size,
-        ))
-        .collect();
-    trace!("Fetching blocks {:?} on {:?}", block_numbers, ctx.chain);
+    let start_block_num = *ctx.current_block_number;
+    let upper_bound = min(
+        max(ctx.initial_chain_head, start_block_num) + 1,
+        start_block_num + ctx.syncing_batch_size,
+    );
+    let block_numbers: Vec<u64> = (start_block_num..upper_bound).collect();
 
-    let mut tasks: JoinSet<Result<(u64, PartialBlock), Error>> = JoinSet::new();
+    if block_numbers.is_empty() {
+        warn!(%ctx.chain, current_block = %start_block_num, initial_chain_head = %ctx.initial_chain_head, syncing_batch_size = %ctx.syncing_batch_size, "Calculated empty block range, skipping fetch cycle.");
+        return false;
+    }
+    info!(%ctx.chain, range = ?block_numbers, "Calculated fetch range");
+
+    let mut tasks: JoinSet<Result<(u64, PartialBlock), IngestorError>> = JoinSet::new();
 
     // Spawn tasks for each block number
     for &block_number in &block_numbers {
+        trace!(%ctx.chain, block_number, "Spawning fetch task");
         let client = ctx.client.clone();
         let addresses = ctx.addresses.clone();
         let backoff_initial_interval = ctx.backoff_initial_interval;
         let backoff_scaling_factor = ctx.backoff_scaling_factor;
         let max_backoff = ctx.max_backoff;
+        let chain = ctx.chain;
 
         tasks.spawn(async move {
             // Fetch block and receipts
             let block = fetch_block_with_retry(
                 &*client,
                 BlockNumberOrTag::Number(block_number),
-                ctx.chain,
+                chain,
                 backoff_initial_interval,
                 backoff_scaling_factor,
                 max_backoff,
@@ -191,7 +205,7 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
             let receipts = fetch_receipts_with_retry(
                 &*client,
                 block_number,
-                ctx.chain,
+                chain,
                 backoff_initial_interval,
                 backoff_scaling_factor,
                 max_backoff,
@@ -241,33 +255,45 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
         let result = tokio::select! {
             biased;
             _ = &mut *ctx.shutdown_rx => {
+                warn!(%ctx.chain, "Shutdown signal received during task joining, aborting all fetch tasks.");
                 tasks.abort_all();
                 return true;
             }
             result = tasks.join_next() => result
         };
 
-        let Some(result) = result else { break };
+        let Some(result) = result else {
+            trace!(%ctx.chain, "No more tasks in JoinSet.");
+            break;
+        };
 
         match result {
             Ok(Ok((block_num, block_and_receipts))) => {
+                trace!(%ctx.chain, block_num, "Task completed successfully");
                 let index = (block_num - block_numbers[0]) as usize;
                 results[index] = Some(block_and_receipts);
             }
             Ok(Err(err)) => {
-                warn!("Failed to fetch block and receipts on {:?}: {:?}", ctx.chain, err);
+                if !matches!(err, IngestorError::ResourceNotAvailable { .. }) {
+                    warn!(%ctx.chain, %err, "Failed to fetch block and receipts");
+                }
             }
             Err(err) => {
-                error!("Task failed: {:?}", err);
+                error!(%ctx.chain, %err, "Task failed");
                 panic!("unexpected task failure: {:?}", err);
             }
         }
     }
 
+    let num_fetched = results.iter().filter(|r| r.is_some()).count();
+    debug!(%ctx.chain, fetched = %num_fetched, total_requested = %block_numbers.len(), "Processing fetched results");
+
     // Process blocks in order, stopping at first gap
     for (i, block_and_receipts) in results.into_iter().enumerate() {
+        let current_processing_block_num = block_numbers[i];
         match block_and_receipts {
             Some(block_and_receipts) => {
+                trace!(%ctx.chain, block_number = %current_processing_block_num, "Processing result: Some, attempting push");
                 if let Err(err) = push_block_and_receipts(
                     ctx.sender,
                     ctx.metrics,
@@ -277,12 +303,12 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
                 )
                 .await
                 {
-                    error!("Failed to push block and receipts: {:?}", err);
+                    error!(%ctx.chain, block_number = %current_processing_block_num, error = %err, "Failed to push block and receipts, stopping batch processing.");
                     break;
                 }
             }
             None => {
-                debug!("No block found for number: {:?}", block_numbers[i]);
+                debug!(%ctx.chain, block_number = %current_processing_block_num, "Processing result: None, stopping batch processing at first gap.");
                 break;
             }
         }
@@ -361,6 +387,7 @@ async fn fetch_with_retry<T: Send, F, Fut, P>(
     backoff_scaling_factor: u64,
     max_backoff: Duration,
     is_not_found_error: P,
+    chain: Chain,
 ) -> Result<T, IngestorError>
 where
     F: Fn() -> Fut + Send,
@@ -371,20 +398,23 @@ where
     let mut backoff = backoff_initial_interval;
 
     loop {
+        trace!(%chain, %context, attempt = %(retry_count + 1), "Attempting operation");
         match operation().await {
             Ok(response) => {
-                trace!("Successfully {}", context);
+                trace!(%chain, %context, "Operation successful");
                 return Ok(response);
             }
             Err(err) => {
                 if is_not_found_error(&err) {
-                    trace!("{} not yet available", context);
+                    debug!(%chain, %context, error = %err, "Resource not yet available");
                     return Err(IngestorError::ResourceNotAvailable { resource: context.clone() });
                 }
                 retry_count += 1;
                 error!(
-                    "Failed to {}: {} retry_count: {} next_retry_in: {:?}",
-                    context, err, retry_count, backoff
+                    %chain,
+                    %context, %retry_count, error = %err,
+                    next_retry_in = ?backoff,
+                    "Operation failed, retrying"
                 );
                 tokio::time::sleep(backoff).await;
 
@@ -406,7 +436,7 @@ async fn fetch_block_with_retry(
     backoff_scaling_factor: u64,
     max_backoff: Duration,
 ) -> Result<Block, IngestorError> {
-    let context = format!("fetched block #{} on {:?} chain", b, chain);
+    let context = format!("fetch block #{}", b);
 
     fetch_with_retry(
         || client.get_block_by_number(b),
@@ -415,6 +445,7 @@ async fn fetch_block_with_retry(
         backoff_scaling_factor,
         max_backoff,
         |err| matches!(err, common::eth_client::RPCClientError::BlockNotFound(_)),
+        chain,
     )
     .await
 }
@@ -427,7 +458,7 @@ async fn fetch_receipts_with_retry(
     backoff_scaling_factor: u64,
     max_backoff: Duration,
 ) -> Result<Vec<Receipt>, IngestorError> {
-    let context = format!("fetched block receipts #{} on {:?} chain", block_number, chain);
+    let context = format!("fetch block receipts #{}", block_number);
     let block_number_hex = format!("0x{:x}", block_number);
 
     fetch_with_retry(
@@ -437,6 +468,7 @@ async fn fetch_receipts_with_retry(
         backoff_scaling_factor,
         max_backoff,
         |err| matches!(err, common::eth_client::RPCClientError::BlockReceiptsNotFound(_)),
+        chain,
     )
     .await
 }
@@ -676,6 +708,7 @@ mod tests {
             2,
             Duration::from_millis(100),
             |_| false,
+            Chain::Sequencing,
         )
         .await;
 
@@ -698,6 +731,7 @@ mod tests {
             2,
             Duration::from_millis(100),
             |err| matches!(err, RPCClientError::BlockNotFound(_)),
+            Chain::Sequencing,
         )
         .await
         .expect_err("Should fail with resource not available");
@@ -736,6 +770,7 @@ mod tests {
             2,
             Duration::from_millis(100),
             |err| matches!(err, RPCClientError::BlockNotFound(_)),
+            Chain::Sequencing,
         )
         .await;
 
