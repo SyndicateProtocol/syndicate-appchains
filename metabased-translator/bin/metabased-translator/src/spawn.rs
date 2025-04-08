@@ -238,14 +238,20 @@ pub async fn clients(
     config: &MetabasedConfig,
 ) -> Result<(Arc<dyn RPCClient>, Arc<dyn RPCClient>), RuntimeError> {
     let sequencing_client: Arc<dyn RPCClient> = Arc::new(
-        EthClient::new(&config.sequencing.sequencing_rpc_url)
-            .await
-            .map_err(RuntimeError::RPCClient)?,
+        EthClient::new(
+            &config.sequencing.sequencing_rpc_url,
+            config.sequencing.sequencing_rpc_timeout,
+        )
+        .await
+        .map_err(RuntimeError::RPCClient)?,
     );
     let settlement_client: Arc<dyn RPCClient> = Arc::new(
-        EthClient::new(&config.settlement.settlement_rpc_url)
-            .await
-            .map_err(RuntimeError::RPCClient)?,
+        EthClient::new(
+            &config.settlement.settlement_rpc_url,
+            config.settlement.settlement_rpc_timeout,
+        )
+        .await
+        .map_err(RuntimeError::RPCClient)?,
     );
     Ok((sequencing_client, settlement_client))
 }
