@@ -50,3 +50,4 @@ pub mod r#stdconstants;
 pub mod r#valuelib;
 pub mod r#valuearraylib;
 pub mod r#valuestacklib;
+pub mod counter;
