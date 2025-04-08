@@ -15,6 +15,9 @@ on:
       - "maestro/**"
       - "Cargo.lock"
       - ".github/workflows/rust-ci.yaml"
+      - "metabased-contracts/**"
+      - "shared/arb-contracts/**"
+      - "shared/contract-bindings/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
