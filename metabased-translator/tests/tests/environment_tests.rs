@@ -32,7 +32,7 @@ async fn test_e2e_counter_contract() -> Result<()> {
     #[cfg(feature = "env-tests")]
     let input = Counter::BYTECODE.clone();
     #[cfg(not(feature = "env-tests"))]
-    let input = vec![].into();
+    let input = alloy::primitives::Bytes::default();
 
     let counter_deploy_tx = TransactionRequest::default()
         .with_to(env.accounts().bob.address)
@@ -119,7 +119,7 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
     #[cfg(feature = "env-tests")]
     let input = Counter::BYTECODE.clone();
     #[cfg(not(feature = "env-tests"))]
-    let input = vec![].into();
+    let input = alloy::primitives::Bytes::default();
 
     let invalid_tx = TransactionRequest::default()
         .with_to(env.accounts().bob.address)
@@ -144,7 +144,7 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
     #[cfg(feature = "env-tests")]
     let input = Counter::BYTECODE.clone();
     #[cfg(not(feature = "env-tests"))]
-    let input = vec![].into();
+    let input = alloy::primitives::Bytes::default();
 
     let counter_deploy_tx = TransactionRequest::default()
         .with_to(env.accounts().bob.address)
