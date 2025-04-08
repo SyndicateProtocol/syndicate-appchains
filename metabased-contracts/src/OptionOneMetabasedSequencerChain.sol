@@ -23,34 +23,28 @@ contract OptionOneMetabasedSequencerChain is OptionOneSequencingModuleChecker {
 
     /// @notice Processes a single compressed transaction.
     /// @param data The compressed transaction data.
-    function processTransactionRaw(bytes calldata data)
-        external
-        onlyWhenAllowed(msg.sender)
-        revertForUnallowedCalldata(data)
-    {
+    function processTransactionRaw(bytes calldata data) external {
+        isAllowedWithCalldata(msg.sender, data);
         emit TransactionProcessed(msg.sender, data);
     }
 
     /// @notice process transactions
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
     /// @param data The transaction data
-    function processTransaction(bytes calldata data)
-        external
-        onlyWhenAllowed(msg.sender)
-        revertForUnallowedCalldata(data)
-    {
+    function processTransaction(bytes calldata data) external {
+        isAllowedWithCalldata(msg.sender, data);
         emit TransactionProcessed(msg.sender, prependZeroByte(data));
     }
 
     /// @notice Processes multiple transactions in bulk.
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
     /// @param data An array of transaction data.
-    function processBulkTransactions(bytes[] calldata data) external onlyWhenAllowed(msg.sender) {
+    function processBulkTransactions(bytes[] calldata data) external {
         uint256 dataCount = data.length;
 
         // Process all transactions
         for (uint256 i = 0; i < dataCount; i++) {
-            _revertForUnallowedCalldata(data[i]);
+            isAllowedWithCalldata(msg.sender, data[i]);
 
             emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
         }
