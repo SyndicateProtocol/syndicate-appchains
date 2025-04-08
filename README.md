@@ -65,3 +65,14 @@ docker run -it -e RUST_LOG=debug metabased-translator \ \
   etc.
   ...
 ```
+
+### Lints
+(April 2024)
+Here is a terminal alias that will run our CI lint checks locally for ease of development. Note that these are mutating commands and will change your code. If you don't want that, add `--check` flags as necessary
+
+```
+alias rt='cargo +nightly fmt --all -- --unstable-features && \
+cargo clippy --workspace --all-targets --all-features && \
+cargo machete && \
+taplo fmt "**/Cargo.toml"'
+```

@@ -2,7 +2,7 @@
 
 use crate::{constants::HEADER_CHAIN_ID, layers::HeadersLayer};
 use alloy::{
-    consensus::{Transaction, TxEnvelope},
+    consensus::Transaction,
     hex,
     primitives::{Bytes, ChainId, TxHash},
 };
@@ -64,22 +64,11 @@ pub async fn send_raw_transaction_handler_v1(
 
     let tx_data = parse_send_raw_transaction_params(params)?;
     let request_chain_id = get_request_chain_id(extensions);
+    let tx_hash = service.process_raw_transaction_v1(tx_data, request_chain_id).await?;
 
-    let result = async {
-        let tx_hash = service.process_raw_transaction(tx_data, request_chain_id).await?;
-        Ok::<_, Error>(format!("0x{}", hex::encode(tx_hash)))
-    }
-    .await;
-
-    result.map_err(|e| e.to_json_rpc_error())
+    Ok(format!("0x{}", hex::encode(tx_hash)))
 
     // TODO spam plane
-
-    // TODO control plane
-
-    // TODO return real hash
-    // let tx_hash = service.process_transaction(tx_data).await?;
-    // Ok(format!("0x{}", alloy::hex::encode(tx_hash)))
 
     // let duration = start.elapsed();
     //
@@ -114,14 +103,14 @@ impl MaestroService {
         Self {}
     }
 
-    async fn process_raw_transaction(
+    async fn process_raw_transaction_v1(
         &self,
         raw_tx: Bytes,
         request_chain_id: Option<ChainId>,
     ) -> Result<TxHash, Error> {
         info!("Processing raw transaction: {}", hex::encode(&raw_tx));
         let original_tx = validate_transaction(&raw_tx)?;
-        Self::check_chain_ids_from_req_and_txn(request_chain_id, original_tx.clone())?;
+        Self::validate_chain_id(request_chain_id, original_tx.chain_id())?;
 
         debug!("Submitting validated transaction to Nitro");
 
@@ -129,21 +118,18 @@ impl MaestroService {
         Ok(*original_tx.tx_hash())
     }
 
-    fn check_chain_ids_from_req_and_txn(
+    fn validate_chain_id(
         request_chain_id: Option<ChainId>,
-        original_tx: TxEnvelope,
+        txn_chain_id: Option<ChainId>,
     ) -> Result<(), Error> {
-        #[allow(clippy::expect_used)]
-        let txn_chain_id = original_tx.chain_id().expect("validated txn should have chain id");
-        if let Some(req_chain_id) = request_chain_id {
-            if req_chain_id != txn_chain_id {
-                return Err(Error::InvalidInput(ChainIDMismatched(
-                    req_chain_id.to_string(),
-                    txn_chain_id.to_string(),
-                )));
-            }
+        match (request_chain_id, txn_chain_id) {
+            (None, _) => Ok(()),
+            (Some(req_id), Some(txn_id)) if req_id == txn_id => Ok(()),
+            (req_id, txn_id) => Err(Error::InvalidInput(ChainIDMismatched(
+                req_id.map_or("none".to_string(), |id| id.to_string()),
+                txn_id.map_or("none".to_string(), |id| id.to_string()),
+            ))),
         }
-        Ok(())
     }
 }
 

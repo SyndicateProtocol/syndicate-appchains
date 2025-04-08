@@ -204,7 +204,7 @@ pub enum InvalidInputError {
     #[error("missing chain ID")]
     ChainIDMissing,
     /// Chain ID is missing
-    #[error("chain ID mismatch: request {0} - transaction {1}")]
+    #[error("chain ID mismatch: expected {0} got {1}")]
     ChainIDMismatched(String, String),
     /// Transaction too large
     #[error("transaction too large: limit {0} - got {1}")]
