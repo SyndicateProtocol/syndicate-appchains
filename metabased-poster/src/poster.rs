@@ -13,11 +13,19 @@ use alloy::{
     },
     signers::local::PrivateKeySigner,
 };
+use axum::{
+    extract::State,
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    routing::post,
+    serve, Router,
+};
 use contract_bindings::arbitrum::assertionposter::AssertionPoster::{
     self, AssertionPosterInstance,
 };
 use eyre::{eyre, Result};
-use std::{str::FromStr, time::Duration};
+use std::{str::FromStr, sync::Arc, time::Duration};
+use tokio::{net::TcpListener, task::JoinHandle};
 use tracing::{error, info};
 
 #[allow(missing_docs)]
@@ -52,34 +60,53 @@ pub async fn run(config: Config, metrics: PosterMetrics) -> Result<()> {
     let assertion_poster =
         AssertionPoster::new(config.assertion_poster_contract_address, settlement_provider);
 
-    let poster = Poster {
+    let poster = Arc::new(Poster {
         appchain_provider,
         polling_interval: config.polling_interval,
         assertion_poster,
         metrics,
-    };
-    poster.main_loop().await
+    });
+
+    // Clone for both tasks
+    let poster_polling = Arc::clone(&poster);
+    let poster_http = Arc::clone(&poster);
+
+    // Start polling loop
+    let polling_task: JoinHandle<Result<()>> =
+        tokio::spawn(async move { poster_polling.main_loop().await });
+
+    // Start HTTP server with /post endpoint
+    let app = Router::new().route("/post", post(post_assertion_handler)).with_state(poster_http);
+    let listener = TcpListener::bind(format!("0.0.0.0:{}", config.port)).await?;
+
+    let server_task = tokio::spawn(async move {
+        if let Err(err) = serve(listener, app).await {
+            eprintln!("HTTP server error: {:?}", err);
+        }
+    });
+
+    // Wait for both tasks
+    let _ = tokio::try_join!(polling_task, server_task)?;
+    Ok(())
+}
+
+async fn post_assertion_handler(State(poster): State<Arc<Poster>>) -> Response {
+    match poster.fetch_and_post().await {
+        Ok(_) => (StatusCode::OK, "Assertion posted successfully").into_response(),
+        Err(err) => {
+            error!("Handler error: {:?}", err);
+            (StatusCode::INTERNAL_SERVER_ERROR, format!("Failed to post assertion: {:?}", err))
+                .into_response()
+        }
+    }
 }
 
 impl Poster {
-    async fn main_loop(self) -> Result<()> {
+    async fn main_loop(&self) -> Result<()> {
         let mut interval = tokio::time::interval(self.polling_interval);
         loop {
-            tokio::select! {
-                _ = interval.tick() => {
-                    match self.fetch_block().await {
-                        Ok(block) => {
-                            if let Err(err) = self.post_assertion(block).await {
-                                error!("Failed to post assertion: {:?}", err);
-                            }
-                        }
-                        Err(err) => {
-                            error!("Failed to fetch block: {:?}", err);
-                        }
-                    }
-
-                }
-            }
+            interval.tick().await;
+            self.fetch_and_post().await?;
         }
     }
 
@@ -94,6 +121,20 @@ impl Poster {
         let _ = self.assertion_poster.postAssertion(block.hash, block.send_root).send().await?;
         self.metrics.record_last_block_posted(block.number.to());
         info!("Assertion submitted for block: {:?}", block);
+        Ok(())
+    }
+
+    async fn fetch_and_post(&self) -> Result<()> {
+        match self.fetch_block().await {
+            Ok(block) => {
+                if let Err(err) = self.post_assertion(block).await {
+                    error!("Failed to post assertion: {:?}", err);
+                }
+            }
+            Err(err) => {
+                error!("Failed to fetch block: {:?}", err);
+            }
+        }
         Ok(())
     }
 }

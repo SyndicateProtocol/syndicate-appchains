@@ -13,6 +13,8 @@ on:
     paths:
       - "metabased-contracts/src/**/*.sol"
       - "metabased-contracts/certora/specs/**/*.spec"
+      - "shared/arb-contracts/src/**/*.sol"
+      - "shared/arb-contracts/certora/specs/**/*.spec"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
@@ -43,6 +45,7 @@ jobs:
             "SyndicateToken",
             "RequireAllModule",
             "RequireAnyModule",
+            "WalletPoolWrapperModule",
           ]
     steps:
       - name: Checkout repository
@@ -93,7 +96,7 @@ jobs:
           ls ~/.solc-select/artifacts/
           which solc
 
-      - name: Verify
+      - name: Verify metabased-contracts Certora rules
         env:
           CERTORAKEY: ${{ secrets.CERTORAKEY }}
         run: certoraRun certora/conf/${{ matrix.rule }}.conf --wait_for_results=all

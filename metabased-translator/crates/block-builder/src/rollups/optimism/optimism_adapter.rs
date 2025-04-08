@@ -21,7 +21,7 @@ use alloy::{
     rpc::types::TransactionRequest,
 };
 use async_trait::async_trait;
-use common::types::{BlockAndReceipts, KnownState, Slot};
+use common::types::{KnownState, PartialBlock, Slot};
 use eyre::Result;
 use mchain::db::MBlock;
 use std::{str::FromStr, sync::Arc};
@@ -62,12 +62,12 @@ impl RollupAdapter for OptimismAdapter {
     }
 
     /// Returns a list of addresses that are interesting to monitor on the sequencing chain
-    fn interesting_sequencing_addresses(&self) -> Vec<Address> {
+    fn sequencing_addresses_to_monitor(&self) -> Vec<Address> {
         panic!("Not implemented")
     }
 
     /// Returns a list of addresses that are interesting to monitor on the settlement chain
-    fn interesting_settlement_addresses(&self) -> Vec<Address> {
+    fn settlement_addresses_to_monitor(&self) -> Vec<Address> {
         panic!("Not implemented")
     }
 }
@@ -83,7 +83,7 @@ impl OptimismAdapter {
 
     async fn process_deposited_txns(
         &self,
-        _txns: Vec<Arc<BlockAndReceipts>>,
+        _txns: Vec<Arc<PartialBlock>>,
     ) -> Result<Vec<TransactionRequest>> {
         // TODO: Implement
         Ok(vec![])
