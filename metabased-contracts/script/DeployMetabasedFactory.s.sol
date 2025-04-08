@@ -35,6 +35,10 @@ contract DeployMetabasedFactoryDirect is Script {
         address factoryAddress;
         assembly {
             factoryAddress := create2(0, add(bytecode, 0x20), mload(bytecode), factorySalt)
+            if iszero(factoryAddress) {
+                mstore(0x00, "Deployment failed")
+                revert(0x00, 0x20)
+            }
         }
 
         console2.log("MetabasedFactory deployed to:", factoryAddress);
