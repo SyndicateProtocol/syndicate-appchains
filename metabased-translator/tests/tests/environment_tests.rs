@@ -10,7 +10,7 @@ use alloy::{
     signers::{k256::ecdsa::SigningKey, local::PrivateKeySigner, Signer},
 };
 #[cfg(feature = "env-tests")]
-use contract_bindings::arbitrum::r#counter::Counter;
+use contract_bindings::arbitrum::r#counter;
 use e2e_tests::e2e_env::{wallet_from_private_key, TestEnv};
 use eyre::Result;
 
@@ -30,7 +30,7 @@ async fn test_e2e_counter_contract() -> Result<()> {
     let nonce = env.l3_chain().get_transaction_count(env.accounts().bob.address).await?;
 
     #[cfg(feature = "env-tests")]
-    let input = Counter::BYTECODE.into();
+    let input = counter::Counter::BYTECODE.clone();
     #[cfg(not(feature = "env-tests"))]
     let input = alloy::primitives::Bytes::default();
 
@@ -64,7 +64,7 @@ async fn test_e2e_counter_contract() -> Result<()> {
     #[cfg(feature = "env-tests")]
     {
         let l3_counter_address = receipt.contract_address.unwrap();
-        let counter = Counter::new(l3_counter_address, env.l3_chain());
+        let counter = counter::new(l3_counter_address, env.l3_chain());
         let number = counter.number().call().await?._0.to::<u64>();
         assert_eq!(number, 0, "Initial counter value should be 0");
 
@@ -76,7 +76,7 @@ async fn test_e2e_counter_contract() -> Result<()> {
             .with_gas_limit(100_000)
             .with_max_priority_fee_per_gas(1_000_000_000)
             .with_max_fee_per_gas(20_000_000_000)
-            .with_input(counter.increment().calldata())
+            .with_input(counter.increment().calldata(&counter.increment()))
             .build(&bob_wallet)
             .await?;
 
@@ -116,7 +116,7 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
     let wallet_without_balance = EthereumWallet::from(signer_without_balance);
 
     #[cfg(feature = "env-tests")]
-    let input = Counter::BYTECODE.into();
+    let input = counter::Counter::BYTECODE.clone();
     #[cfg(not(feature = "env-tests"))]
     let input = alloy::primitives::Bytes::default();
 
@@ -141,7 +141,7 @@ async fn test_e2e_resist_garbage_data() -> Result<()> {
     let nonce = env.l3_chain().get_transaction_count(env.accounts().bob.address).await?;
 
     #[cfg(feature = "env-tests")]
-    let input = Counter::BYTECODE.into();
+    let input = counter::Counter::BYTECODE.clone();
     #[cfg(not(feature = "env-tests"))]
     let input = alloy::primitives::Bytes::default();
 
