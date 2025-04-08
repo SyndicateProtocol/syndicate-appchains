@@ -15,10 +15,7 @@ use jsonrpsee::{
 };
 use serde_json::Value as JsonValue;
 use shared::{
-    json_rpc::{
-        parse_send_raw_transaction_params, Error, InvalidInputError,
-        InvalidInputError::ChainIDMismatched,
-    },
+    json_rpc::{parse_send_raw_transaction_params, Error, InvalidInputError::ChainIDMismatched},
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};

@@ -16,7 +16,7 @@ use std::{
     task::{Context, Poll},
 };
 use tower::{Layer, Service};
-use tracing::{debug, trace};
+use tracing::trace;
 
 /// Layer to check for headers in the request
 #[derive(Debug, Clone)]
