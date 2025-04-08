@@ -24,7 +24,7 @@ jobs:
 
   # Trigger Cloud Run here to prevent race condition
   cloud-run-deployment:
-    ## **NOTE**: Intentionally disabling for now while sequencer is deprioritized. Content is useful
+    ## **NOTE**: Intentionally disabling for now while sequencer is deprioritized. Content is useful. TODO(SEQ-793)
     if: ${{ false }}
     needs: build-and-push
     runs-on: ubuntu-latest
