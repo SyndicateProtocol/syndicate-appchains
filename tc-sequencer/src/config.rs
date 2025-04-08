@@ -11,28 +11,20 @@ use url::Url;
 pub fn get_sequencing_addresses_default() -> HashMap<u64, Address> {
     let mut map = HashMap::new();
     // Manchego Chain
-    #[allow(clippy::expect_used)]
     map.insert(510000, get_address("0x180972BF154c9Aea86c43149D83B7Ea078c33f48"));
     // Burrata Chain
-    #[allow(clippy::expect_used)]
     map.insert(510001, get_address("0xC1cacFC14624c4E241286Ade61DF545b90f850B4"));
     // IRL Chain
-    #[allow(clippy::expect_used)]
     map.insert(63821, get_address("0x536EA7C009ebE418501a1DB133b281a4a01d50f5"));
     // Commerce Chain
-    #[allow(clippy::expect_used)]
     map.insert(63822, get_address("0x7C8d3922298AbbEF7beE5F3dACC4238326482789"));
     // Dream Chain
-    #[allow(clippy::expect_used)]
     map.insert(63823, get_address("0x62B82d1AF6D61DdfE5b4af38Eb5dE982A7f7565f"));
     // Amino Chain
-    #[allow(clippy::expect_used)]
     map.insert(63824, get_address("0x8CcaC248CcFCA1283981678B7291F48f6e26ad39"));
     // Eco Chain
-    #[allow(clippy::expect_used)]
     map.insert(63825, get_address("0x47ec452FA5035C24217daCC66aA305802F1d0fbe"));
     // Playground Chain
-    #[allow(clippy::expect_used)]
     map.insert(63826, get_address("0x4e001110D16bE154EB586e73d2da823721E1a9cD"));
     map
 }

@@ -15,7 +15,7 @@ use jsonrpsee::{
 use reqwest::Client;
 use serde as _;
 use shared::{
-    json_rpc::{parse_send_raw_transaction_params, Error},
+    json_rpc::{parse_send_raw_transaction_params, Error, InvalidInputError::UnsupportedChainID},
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, sync::Arc};
@@ -74,9 +74,10 @@ impl TCClient {
     }
 
     fn get_contract_address(&self, chain_id: u64) -> Result<Address, Error> {
-        self.sequencing_addresses.get(&chain_id).copied().ok_or_else(|| {
-            Error::Internal(format!("Sequencing on chain {} is not supported", chain_id))
-        })
+        self.sequencing_addresses
+            .get(&chain_id)
+            .copied()
+            .ok_or_else(|| Error::InvalidInput(UnsupportedChainID(chain_id)))
     }
 
     async fn send_transaction(
@@ -142,7 +143,7 @@ pub async fn send_raw_transaction_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::{get_sequencing_addresses_default, Config};
+    use crate::config::Config;
     use alloy::primitives::Bytes;
     use std::str::FromStr;
 
@@ -161,72 +162,6 @@ mod tests {
 
     #[test]
     fn test_get_contract_address() {
-        // Set up a test service with a mock config
-        let config = Config {
-            sequencing_addresses: get_sequencing_addresses_default(),
-            ..Default::default()
-        };
-        let service = TCClient::new(&config).unwrap();
-
-        // Manchego Chain
-        let contract_address = service.get_contract_address(510000).unwrap();
-        assert_eq!(
-            contract_address,
-            Address::from_str("0x180972BF154c9Aea86c43149D83B7Ea078c33f48").unwrap()
-        );
-
-        // Burrata Chain
-        let contract_address = service.get_contract_address(510001).unwrap();
-        assert_eq!(
-            contract_address,
-            Address::from_str("0xC1cacFC14624c4E241286Ade61DF545b90f850B4").unwrap()
-        );
-
-        // IRL Chain
-        let contract_address = service.get_contract_address(63821).unwrap();
-        assert_eq!(
-            contract_address,
-            Address::from_str("0x536EA7C009ebE418501a1DB133b281a4a01d50f5").unwrap()
-        );
-
-        // Commerce Chain
-        let contract_address = service.get_contract_address(63822).unwrap();
-        assert_eq!(
-            contract_address,
-            Address::from_str("0x7C8d3922298AbbEF7beE5F3dACC4238326482789").unwrap()
-        );
-
-        // Dream Chain
-        let contract_address = service.get_contract_address(63823).unwrap();
-        assert_eq!(
-            contract_address,
-            Address::from_str("0x62B82d1AF6D61DdfE5b4af38Eb5dE982A7f7565f").unwrap()
-        );
-
-        // Amino Chain
-        let contract_address = service.get_contract_address(63824).unwrap();
-        assert_eq!(
-            contract_address,
-            Address::from_str("0x8CcaC248CcFCA1283981678B7291F48f6e26ad39").unwrap()
-        );
-
-        // Eco Chain
-        let contract_address = service.get_contract_address(63825).unwrap();
-        assert_eq!(
-            contract_address,
-            Address::from_str("0x47ec452FA5035C24217daCC66aA305802F1d0fbe").unwrap()
-        );
-
-        // Playground Chain
-        let contract_address = service.get_contract_address(63826).unwrap();
-        assert_eq!(
-            contract_address,
-            Address::from_str("0x4e001110D16bE154EB586e73d2da823721E1a9cD").unwrap()
-        );
-    }
-
-    #[test]
-    fn test_get_contract_address_with_override() {
         let config = Config {
             sequencing_addresses: HashMap::from([(
                 510001,
@@ -241,6 +176,17 @@ mod tests {
             contract_address,
             Address::from_str("0x0000000000000000000000000000000000000001").unwrap()
         );
+    }
+
+    #[test]
+    fn test_get_contract_address_not_supported() {
+        let config = Config::default();
+        let service = TCClient::new(&config).unwrap();
+
+        let contract_address = service.get_contract_address(1);
+        assert!(contract_address.is_err());
+        let error = contract_address.unwrap_err().to_json_rpc_error();
+        assert_eq!(error.message(), "invalid input: unsupported chain ID: 1");
     }
 
     #[tokio::test]
