@@ -9,7 +9,7 @@ use alloy::{
 };
 use common::{
     compression::{get_compression_type, CompressionType},
-    types::Log,
+    types::PartialLogWithTxdata,
 };
 use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain::TransactionProcessed;
 use thiserror::Error;
@@ -56,7 +56,7 @@ impl SequencingTransactionParser {
     }
 
     /// Checks if a log is a `TransactionProcessed` event
-    pub fn is_log_transaction_processed(&self, eth_log: Log) -> bool {
+    pub fn is_log_transaction_processed(&self, eth_log: PartialLogWithTxdata) -> bool {
         eth_log.address == self.sequencing_contract_address &&
             eth_log
                 .topics
@@ -88,7 +88,7 @@ impl SequencingTransactionParser {
     /// Decodes the event data into a vector of transactions
     pub fn get_event_transactions(
         &self,
-        eth_log: &Log,
+        eth_log: &PartialLogWithTxdata,
     ) -> Result<Vec<Bytes>, SequencingParserError> {
         if !self.is_log_transaction_processed(eth_log.clone()) {
             return Err(SequencingParserError::InvalidLogEvent);
@@ -113,7 +113,7 @@ mod tests {
     );
     const DUMMY_TXN_VALUE: &[u8] = &hex!("02");
 
-    fn generate_valid_test_log(contract_address: Address) -> Log {
+    fn generate_valid_test_log(contract_address: Address) -> PartialLogWithTxdata {
         let topics = vec![
             keccak256("TransactionProcessed(address,bytes)".as_bytes()),
             B256::from_slice(
@@ -122,16 +122,11 @@ mod tests {
             ),
         ];
 
-        Log {
-            block_hash: B256::from([0u8; 32]),
-            transaction_hash: B256::from([0u8; 32]),
-            transaction_index: 1,
-            block_number: 100,
-            log_index: 0,
-            removed: false,
+        PartialLogWithTxdata {
             address: contract_address,
             data: Bytes::from(DUMMY_ENCODED_DATA),
             topics,
+            ..Default::default()
         }
     }
 

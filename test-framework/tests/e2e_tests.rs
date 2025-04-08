@@ -15,7 +15,7 @@ use contract_bindings::arbitrum::{
 use eyre::Result;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use test_utils::{utils::assert_eventually, wait_until};
+use test_utils::wait_until;
 
 mod components;
 

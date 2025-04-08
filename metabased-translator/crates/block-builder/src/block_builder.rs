@@ -13,7 +13,7 @@ use tracing::trace;
 impl<R: RollupAdapter> SlotProcessor for MetaChainProvider<R> {
     async fn process_slot(&self, slot: &Slot) -> Result<(), Error> {
         trace!("Received slot: {:?}", slot);
-        self.metrics.record_last_slot(slot.sequencing.block.number);
+        self.metrics.record_last_slot(slot.sequencing.number);
 
         // [OP / ARB] Build block of MChain transactions from slot
         let batch = match self
