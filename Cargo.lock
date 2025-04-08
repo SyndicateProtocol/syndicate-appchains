@@ -1910,12 +1910,9 @@ dependencies = [
  "ctor",
  "eyre",
  "mchain",
- "reqwest",
  "shared",
  "strum",
- "strum_macros",
  "test-utils",
- "thiserror 2.0.12",
  "tokio",
 ]
 
