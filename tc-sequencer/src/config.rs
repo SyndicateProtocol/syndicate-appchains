@@ -93,10 +93,9 @@ pub enum ConfigError {
     /// Invalid address
     #[error("Invalid address: {0}")]
     InvalidAddress(String),
-    // TODO []: Remove once we get this from config file
-    /// Invalid sequencing addresses override
-    #[error("Invalid sequencing addresses override: {0}")]
-    InvalidSequencingAddressesOverride(String),
+    /// Invalid sequencing addresses mapping
+    #[error("Invalid sequencing addresses mapping: {0}")]
+    InvalidSequencingAddressesMapping(String),
 }
 
 /// Configuration for the tc sequencer
@@ -130,10 +129,10 @@ fn parse_sequencing_addresses(value: &str) -> Result<HashMap<u64, Address>, Conf
     for line in value.split(',') {
         let parts = line.split('=').collect::<Vec<_>>();
         let chain_id = parts[0].parse::<u64>().map_err(|e| {
-            ConfigError::InvalidSequencingAddressesOverride(format!("Invalid chain ID: {}", e))
+            ConfigError::InvalidSequencingAddressesMapping(format!("Invalid chain ID: {}", e))
         })?;
         let address = parts[1].parse::<Address>().map_err(|e| {
-            ConfigError::InvalidSequencingAddressesOverride(format!("Invalid address: {}", e))
+            ConfigError::InvalidSequencingAddressesMapping(format!("Invalid address: {}", e))
         })?;
         map.insert(chain_id, address);
     }
