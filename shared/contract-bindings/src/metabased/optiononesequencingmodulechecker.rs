@@ -15,6 +15,7 @@ interface OptionOneSequencingModuleChecker {
 
     function initialize(address admin, address _requirementModule) external;
     function isAllowed(address proposer) external view returns (bool);
+    function isAllowed(address proposer, bytes memory data) external view returns (bool);
     function isAllowedWithCalldata(address proposer, bytes memory data) external view returns (bool);
     function isCalldataAllowed(bytes memory data) external view returns (bool);
     function owner() external view returns (address);
@@ -54,6 +55,30 @@ interface OptionOneSequencingModuleChecker {
         "name": "proposer",
         "type": "address",
         "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isAllowed",
+    "inputs": [
+      {
+        "name": "proposer",
+        "type": "address",
+        "internalType": "address"
+      },
+      {
+        "name": "data",
+        "type": "bytes",
+        "internalType": "bytes"
       }
     ],
     "outputs": [
@@ -1115,14 +1140,14 @@ function isAllowed(address proposer) external view returns (bool);
 ```*/
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct isAllowedCall {
+    pub struct isAllowed_0Call {
         #[allow(missing_docs)]
         pub proposer: alloy::sol_types::private::Address,
     }
-    ///Container type for the return parameters of the [`isAllowed(address)`](isAllowedCall) function.
+    ///Container type for the return parameters of the [`isAllowed(address)`](isAllowed_0Call) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
-    pub struct isAllowedReturn {
+    pub struct isAllowed_0Return {
         #[allow(missing_docs)]
         pub _0: bool,
     }
@@ -1152,14 +1177,14 @@ function isAllowed(address proposer) external view returns (bool);
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<isAllowedCall> for UnderlyingRustTuple<'_> {
-                fn from(value: isAllowedCall) -> Self {
+            impl ::core::convert::From<isAllowed_0Call> for UnderlyingRustTuple<'_> {
+                fn from(value: isAllowed_0Call) -> Self {
                     (value.proposer,)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for isAllowedCall {
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for isAllowed_0Call {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self { proposer: tuple.0 }
                 }
@@ -1183,26 +1208,26 @@ function isAllowed(address proposer) external view returns (bool);
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<isAllowedReturn> for UnderlyingRustTuple<'_> {
-                fn from(value: isAllowedReturn) -> Self {
+            impl ::core::convert::From<isAllowed_0Return> for UnderlyingRustTuple<'_> {
+                fn from(value: isAllowed_0Return) -> Self {
                     (value._0,)
                 }
             }
             #[automatically_derived]
             #[doc(hidden)]
-            impl ::core::convert::From<UnderlyingRustTuple<'_>> for isAllowedReturn {
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for isAllowed_0Return {
                 fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
                     Self { _0: tuple.0 }
                 }
             }
         }
         #[automatically_derived]
-        impl alloy_sol_types::SolCall for isAllowedCall {
+        impl alloy_sol_types::SolCall for isAllowed_0Call {
             type Parameters<'a> = (alloy::sol_types::sol_data::Address,);
             type Token<'a> = <Self::Parameters<
                 'a,
             > as alloy_sol_types::SolType>::Token<'a>;
-            type Return = isAllowedReturn;
+            type Return = isAllowed_0Return;
             type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
             type ReturnToken<'a> = <Self::ReturnTuple<
                 'a,
@@ -1220,6 +1245,149 @@ function isAllowed(address proposer) external view returns (bool);
                 (
                     <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
                         &self.proposer,
+                    ),
+                )
+            }
+            #[inline]
+            fn abi_decode_returns(
+                data: &[u8],
+                validate: bool,
+            ) -> alloy_sol_types::Result<Self::Return> {
+                <Self::ReturnTuple<
+                    '_,
+                > as alloy_sol_types::SolType>::abi_decode_sequence(data, validate)
+                    .map(Into::into)
+            }
+        }
+    };
+    /**Function with signature `isAllowed(address,bytes)` and selector `0xe3f756de`.
+```solidity
+function isAllowed(address proposer, bytes memory data) external view returns (bool);
+```*/
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct isAllowed_1Call {
+        #[allow(missing_docs)]
+        pub proposer: alloy::sol_types::private::Address,
+        #[allow(missing_docs)]
+        pub data: alloy::sol_types::private::Bytes,
+    }
+    ///Container type for the return parameters of the [`isAllowed(address,bytes)`](isAllowed_1Call) function.
+    #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
+    #[derive(Clone)]
+    pub struct isAllowed_1Return {
+        #[allow(missing_docs)]
+        pub _0: bool,
+    }
+    #[allow(
+        non_camel_case_types,
+        non_snake_case,
+        clippy::pub_underscore_fields,
+        clippy::style
+    )]
+    const _: () = {
+        use alloy::sol_types as alloy_sol_types;
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (
+                alloy::sol_types::sol_data::Address,
+                alloy::sol_types::sol_data::Bytes,
+            );
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (
+                alloy::sol_types::private::Address,
+                alloy::sol_types::private::Bytes,
+            );
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<isAllowed_1Call> for UnderlyingRustTuple<'_> {
+                fn from(value: isAllowed_1Call) -> Self {
+                    (value.proposer, value.data)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for isAllowed_1Call {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self {
+                        proposer: tuple.0,
+                        data: tuple.1,
+                    }
+                }
+            }
+        }
+        {
+            #[doc(hidden)]
+            type UnderlyingSolTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            #[doc(hidden)]
+            type UnderlyingRustTuple<'a> = (bool,);
+            #[cfg(test)]
+            #[allow(dead_code, unreachable_patterns)]
+            fn _type_assertion(
+                _t: alloy_sol_types::private::AssertTypeEq<UnderlyingRustTuple>,
+            ) {
+                match _t {
+                    alloy_sol_types::private::AssertTypeEq::<
+                        <UnderlyingSolTuple as alloy_sol_types::SolType>::RustType,
+                    >(_) => {}
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<isAllowed_1Return> for UnderlyingRustTuple<'_> {
+                fn from(value: isAllowed_1Return) -> Self {
+                    (value._0,)
+                }
+            }
+            #[automatically_derived]
+            #[doc(hidden)]
+            impl ::core::convert::From<UnderlyingRustTuple<'_>> for isAllowed_1Return {
+                fn from(tuple: UnderlyingRustTuple<'_>) -> Self {
+                    Self { _0: tuple.0 }
+                }
+            }
+        }
+        #[automatically_derived]
+        impl alloy_sol_types::SolCall for isAllowed_1Call {
+            type Parameters<'a> = (
+                alloy::sol_types::sol_data::Address,
+                alloy::sol_types::sol_data::Bytes,
+            );
+            type Token<'a> = <Self::Parameters<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            type Return = isAllowed_1Return;
+            type ReturnTuple<'a> = (alloy::sol_types::sol_data::Bool,);
+            type ReturnToken<'a> = <Self::ReturnTuple<
+                'a,
+            > as alloy_sol_types::SolType>::Token<'a>;
+            const SIGNATURE: &'static str = "isAllowed(address,bytes)";
+            const SELECTOR: [u8; 4] = [227u8, 247u8, 86u8, 222u8];
+            #[inline]
+            fn new<'a>(
+                tuple: <Self::Parameters<'a> as alloy_sol_types::SolType>::RustType,
+            ) -> Self {
+                tuple.into()
+            }
+            #[inline]
+            fn tokenize(&self) -> Self::Token<'_> {
+                (
+                    <alloy::sol_types::sol_data::Address as alloy_sol_types::SolType>::tokenize(
+                        &self.proposer,
+                    ),
+                    <alloy::sol_types::sol_data::Bytes as alloy_sol_types::SolType>::tokenize(
+                        &self.data,
                     ),
                 )
             }
@@ -2133,7 +2301,9 @@ function updateRequirementModule(address _newModule) external;
         #[allow(missing_docs)]
         initialize(initializeCall),
         #[allow(missing_docs)]
-        isAllowed(isAllowedCall),
+        isAllowed_0(isAllowed_0Call),
+        #[allow(missing_docs)]
+        isAllowed_1(isAllowed_1Call),
         #[allow(missing_docs)]
         isAllowedWithCalldata(isAllowedWithCalldataCall),
         #[allow(missing_docs)]
@@ -2166,6 +2336,7 @@ function updateRequirementModule(address _newModule) external;
             [141u8, 165u8, 203u8, 91u8],
             [186u8, 188u8, 197u8, 57u8],
             [212u8, 240u8, 235u8, 77u8],
+            [227u8, 247u8, 86u8, 222u8],
             [242u8, 253u8, 227u8, 139u8],
         ];
     }
@@ -2173,15 +2344,18 @@ function updateRequirementModule(address _newModule) external;
     impl alloy_sol_types::SolInterface for OptionOneSequencingModuleCheckerCalls {
         const NAME: &'static str = "OptionOneSequencingModuleCheckerCalls";
         const MIN_DATA_LENGTH: usize = 0usize;
-        const COUNT: usize = 9usize;
+        const COUNT: usize = 10usize;
         #[inline]
         fn selector(&self) -> [u8; 4] {
             match self {
                 Self::initialize(_) => {
                     <initializeCall as alloy_sol_types::SolCall>::SELECTOR
                 }
-                Self::isAllowed(_) => {
-                    <isAllowedCall as alloy_sol_types::SolCall>::SELECTOR
+                Self::isAllowed_0(_) => {
+                    <isAllowed_0Call as alloy_sol_types::SolCall>::SELECTOR
+                }
+                Self::isAllowed_1(_) => {
+                    <isAllowed_1Call as alloy_sol_types::SolCall>::SELECTOR
                 }
                 Self::isAllowedWithCalldata(_) => {
                     <isAllowedWithCalldataCall as alloy_sol_types::SolCall>::SELECTOR
@@ -2310,17 +2484,17 @@ function updateRequirementModule(address _newModule) external;
                     owner
                 },
                 {
-                    fn isAllowed(
+                    fn isAllowed_0(
                         data: &[u8],
                         validate: bool,
                     ) -> alloy_sol_types::Result<OptionOneSequencingModuleCheckerCalls> {
-                        <isAllowedCall as alloy_sol_types::SolCall>::abi_decode_raw(
+                        <isAllowed_0Call as alloy_sol_types::SolCall>::abi_decode_raw(
                                 data,
                                 validate,
                             )
-                            .map(OptionOneSequencingModuleCheckerCalls::isAllowed)
+                            .map(OptionOneSequencingModuleCheckerCalls::isAllowed_0)
                     }
-                    isAllowed
+                    isAllowed_0
                 },
                 {
                     fn updateRequirementModule(
@@ -2336,6 +2510,19 @@ function updateRequirementModule(address _newModule) external;
                             )
                     }
                     updateRequirementModule
+                },
+                {
+                    fn isAllowed_1(
+                        data: &[u8],
+                        validate: bool,
+                    ) -> alloy_sol_types::Result<OptionOneSequencingModuleCheckerCalls> {
+                        <isAllowed_1Call as alloy_sol_types::SolCall>::abi_decode_raw(
+                                data,
+                                validate,
+                            )
+                            .map(OptionOneSequencingModuleCheckerCalls::isAllowed_1)
+                    }
+                    isAllowed_1
                 },
                 {
                     fn transferOwnership(
@@ -2369,8 +2556,15 @@ function updateRequirementModule(address _newModule) external;
                 Self::initialize(inner) => {
                     <initializeCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
                 }
-                Self::isAllowed(inner) => {
-                    <isAllowedCall as alloy_sol_types::SolCall>::abi_encoded_size(inner)
+                Self::isAllowed_0(inner) => {
+                    <isAllowed_0Call as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
+                }
+                Self::isAllowed_1(inner) => {
+                    <isAllowed_1Call as alloy_sol_types::SolCall>::abi_encoded_size(
+                        inner,
+                    )
                 }
                 Self::isAllowedWithCalldata(inner) => {
                     <isAllowedWithCalldataCall as alloy_sol_types::SolCall>::abi_encoded_size(
@@ -2416,8 +2610,14 @@ function updateRequirementModule(address _newModule) external;
                         out,
                     )
                 }
-                Self::isAllowed(inner) => {
-                    <isAllowedCall as alloy_sol_types::SolCall>::abi_encode_raw(
+                Self::isAllowed_0(inner) => {
+                    <isAllowed_0Call as alloy_sol_types::SolCall>::abi_encode_raw(
+                        inner,
+                        out,
+                    )
+                }
+                Self::isAllowed_1(inner) => {
+                    <isAllowed_1Call as alloy_sol_types::SolCall>::abi_encode_raw(
                         inner,
                         out,
                     )
@@ -3072,12 +3272,20 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
                 },
             )
         }
-        ///Creates a new call builder for the [`isAllowed`] function.
-        pub fn isAllowed(
+        ///Creates a new call builder for the [`isAllowed_0`] function.
+        pub fn isAllowed_0(
             &self,
             proposer: alloy::sol_types::private::Address,
-        ) -> alloy_contract::SolCallBuilder<T, &P, isAllowedCall, N> {
-            self.call_builder(&isAllowedCall { proposer })
+        ) -> alloy_contract::SolCallBuilder<T, &P, isAllowed_0Call, N> {
+            self.call_builder(&isAllowed_0Call { proposer })
+        }
+        ///Creates a new call builder for the [`isAllowed_1`] function.
+        pub fn isAllowed_1(
+            &self,
+            proposer: alloy::sol_types::private::Address,
+            data: alloy::sol_types::private::Bytes,
+        ) -> alloy_contract::SolCallBuilder<T, &P, isAllowed_1Call, N> {
+            self.call_builder(&isAllowed_1Call { proposer, data })
         }
         ///Creates a new call builder for the [`isAllowedWithCalldata`] function.
         pub fn isAllowedWithCalldata(
