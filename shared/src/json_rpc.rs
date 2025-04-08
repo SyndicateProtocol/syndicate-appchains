@@ -202,7 +202,10 @@ pub enum InvalidInputError {
     UnableToRLPDecode,
     /// Chain ID is missing
     #[error("missing chain ID")]
-    MissingChainID,
+    ChainIDMissing,
+    /// Chain ID is missing
+    #[error("chain ID mismatch: expected {0} got {1}")]
+    ChainIDMismatched(String, String),
     /// Transaction too large
     #[error("transaction too large: limit {0} - got {1}")]
     TransactionTooLarge(String, String),
