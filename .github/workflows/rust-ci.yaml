@@ -8,6 +8,7 @@ on:
   # Run on PRs that touch Rust code or the workflow itself
   pull_request:
     paths:
+      - "metabased-contracts/**"
       - "metabased-sequencer/**"
       - "metabased-translator/**"
       - "**/Cargo.toml"
@@ -15,6 +16,7 @@ on:
       - "maestro/**"
       - "Cargo.lock"
       - ".github/workflows/rust-ci.yaml"
+      - "shared/**"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
