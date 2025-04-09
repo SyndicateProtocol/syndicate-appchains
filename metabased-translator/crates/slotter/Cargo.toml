@@ -10,12 +10,21 @@ version.workspace      = true
 
 [dependencies]
 alloy             = { workspace = true, features = ["provider-engine-api"] }
+async-trait       = { workspace = true }
+clap              = { workspace = true, features = ["derive", "env"] }
 common            = { workspace = true }
 eyre              = { workspace = true }
+humantime         = { workspace = true }
 prometheus-client = { workspace = true }
 thiserror         = { workspace = true }
 tokio             = { workspace = true, features = ["macros", "rt", "sync", "time"] }
 tracing           = { workspace = true }
+
+[dev-dependencies]
+assert_matches = { workspace = true }
+ctor           = { workspace = true }
+shared         = { workspace = true }
+test-case      = { workspace = true }
 
 [lints]
 workspace = true

@@ -25,26 +25,41 @@ pub struct Labels {
 pub struct SlotterMetrics {
     /// Records the last block number processed by the Slotter
     pub slotter_last_processed_block: Family<Labels, Gauge>,
+    /// Tracks the current number of active slots
+    pub slotter_active_slots: Gauge,
     /// Tracks the timestamp lag (ms)
     pub slotter_timestamp_lag_ms: Family<Labels, Gauge>,
     /// Tracks blocks processed per slot
     pub slotter_blocks_per_slot: Histogram,
+    /// Tracks the channel capacity
+    pub slotter_channel_capacity: Gauge,
     /// Tracks the last slot created
     pub slotter_last_slot_created: Gauge,
+    /// Tracks the number of unassigned settlement blocks
+    pub slotter_unassigned_settlement_blocks: Gauge,
 }
 
 impl SlotterMetrics {
     /// Creates a new `SlotterMetrics` instance and registers metrics in the provided registry.
     pub fn new(registry: &mut Registry) -> Self {
         let slotter_last_processed_block = Family::<Labels, Gauge>::default();
+        let slotter_active_slots = Gauge::default();
         let slotter_timestamp_lag_ms = Family::<Labels, Gauge>::default();
         let slotter_blocks_per_slot = Histogram::new(exponential_buckets(1.0, 2.0, 8));
+        let slotter_channel_capacity = Gauge::default();
         let slotter_last_slot_created = Gauge::default();
+        let slotter_unassigned_settlement_blocks = Gauge::default();
 
         registry.register(
             "slotter_last_processed_block",
             "Tracks the last sequencing block number processed by the Slotter",
             slotter_last_processed_block.clone(),
+        );
+
+        registry.register(
+            "slotter_active_slots",
+            "Tracks the number of active slots being processed",
+            slotter_active_slots.clone(),
         );
 
         registry.register(
@@ -60,16 +75,31 @@ impl SlotterMetrics {
         );
 
         registry.register(
+            "slotter_channel_capacity",
+            "Tracks the capacity of the sequencing chain channel",
+            slotter_channel_capacity.clone(),
+        );
+
+        registry.register(
             "slotter_last_slot_created",
             "Tracks the last slot created",
             slotter_last_slot_created.clone(),
         );
 
+        registry.register(
+            "slotter_unassigned_settlement_blocks",
+            "Tracks the number of unassigned settlement blocks",
+            slotter_unassigned_settlement_blocks.clone(),
+        );
+
         Self {
             slotter_last_processed_block,
+            slotter_active_slots,
             slotter_timestamp_lag_ms,
             slotter_blocks_per_slot,
+            slotter_channel_capacity,
             slotter_last_slot_created,
+            slotter_unassigned_settlement_blocks,
         }
     }
 
@@ -78,6 +108,11 @@ impl SlotterMetrics {
         self.slotter_last_processed_block
             .get_or_create(&Labels { chain: chain.into() })
             .set(block_number as i64);
+    }
+
+    /// Updates the number of active slots.
+    pub fn update_active_slots(&self, slots: usize) {
+        self.slotter_active_slots.set(slots as i64);
     }
 
     /// Updates the timestamp lag metric (current time - latest block timestamp)
@@ -103,9 +138,19 @@ impl SlotterMetrics {
         self.slotter_blocks_per_slot.observe(blocks as f64);
     }
 
+    /// Updates the channel capacity
+    pub fn update_channel_capacity(&self, capacity: usize) {
+        self.slotter_channel_capacity.set(capacity as i64);
+    }
+
     /// Records the last slot number created
     pub fn record_last_slot_created(&self, slot_number: u64) {
         self.slotter_last_slot_created.set(slot_number as i64);
+    }
+
+    /// Update the count of unassigned settlement blocks
+    pub fn update_unassigned_settlement_blocks(&self, count: usize) {
+        self.slotter_unassigned_settlement_blocks.set(count as i64);
     }
 }
 
@@ -127,6 +172,7 @@ mod tests {
                 .get(),
             0
         );
+        assert_eq!(metrics.slotter_active_slots.get(), 0);
     }
 
     #[test]
@@ -151,6 +197,18 @@ mod tests {
                 .get(),
             84
         );
+    }
+
+    #[test]
+    fn test_update_active_slots() {
+        let mut registry = Registry::default();
+        let metrics = SlotterMetrics::new(&mut registry);
+
+        metrics.update_active_slots(10);
+        assert_eq!(metrics.slotter_active_slots.get(), 10);
+
+        metrics.update_active_slots(0);
+        assert_eq!(metrics.slotter_active_slots.get(), 0);
     }
 
     #[test]
@@ -183,6 +241,15 @@ mod tests {
         metrics.record_blocks_per_slot(10);
         metrics.record_blocks_per_slot(20);
         // Histogram records values but cannot assert specific values directly
+    }
+
+    #[test]
+    fn test_update_channel_capacity() {
+        let mut registry = Registry::default();
+        let metrics = SlotterMetrics::new(&mut registry);
+
+        metrics.update_channel_capacity(50);
+        assert_eq!(metrics.slotter_channel_capacity.get(), 50);
     }
 
     #[test]

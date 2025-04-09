@@ -12,7 +12,7 @@ use eyre::{Report, Result};
 use ingestor::config::ChainIngestorConfig;
 use metrics::metrics::TranslatorMetrics;
 use shared::metrics::{start_metrics, MetricsState};
-use slotter::slotter::SlotterError;
+use slotter::SlotterError;
 use std::sync::Arc;
 use tokio::{
     sync::{
@@ -170,15 +170,16 @@ impl ComponentHandles {
             .await
         });
 
-        let settlement_delay = config.settlement_delay;
+        let slotter_config = config.slotter.clone();
         let slotter = tokio::spawn(async move {
-            slotter::slotter::run(
-                settlement_delay,
+            slotter::run(
+                &slotter_config,
                 known_state,
                 sequencing_rx,
                 settlement_rx,
                 mchain,
                 metrics.slotter,
+                shutdown_rx.slotter,
             )
             .await
         });
