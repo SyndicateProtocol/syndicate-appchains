@@ -16,7 +16,7 @@ use std::{
     task::{Context, Poll},
 };
 use tower::{Layer, Service};
-use tracing::debug;
+use tracing::trace;
 
 /// Layer to check for headers in the request
 #[derive(Debug, Clone)]
@@ -76,13 +76,13 @@ where
         for header_name in optional_headers.iter() {
             // Get header value if it exists
             let Some(header_value) = request.headers().get(header_name) else {
-                debug!("Header '{}' not found in request; skipping it", header_name);
+                trace!("Header '{}' not found in request; skipping it", header_name);
                 continue;
             };
 
             // Validate header value is ASCII
             let Ok(value) = header_value.to_str() else {
-                debug!("Header '{}' value contains non-ASCII characters; skipping it", header_name);
+                trace!("Header '{}' value contains non-ASCII characters; skipping it", header_name);
                 continue;
             };
 

@@ -1532,6 +1532,7 @@ dependencies = [
  "serde_json",
  "strum_macros",
  "thiserror 2.0.12",
+ "tokio",
  "tracing",
  "url",
 ]
@@ -3198,6 +3199,7 @@ dependencies = [
  "redis",
  "serde_json",
  "shared",
+ "test-utils",
  "thiserror 2.0.12",
  "tokio",
  "tower 0.4.13",
