@@ -1,10 +1,10 @@
 //! The `service` module handles the business logic for the tc sequencer.
 
-use crate::{bytecode::get_bytecode, config::Config};
+use crate::config::Config;
 use alloy::{
     consensus::Transaction,
     hex::{self},
-    primitives::{keccak256, Address, Bytes, TxHash, U256},
+    primitives::{Address, Bytes, TxHash},
 };
 use eyre::Result;
 use jsonrpsee::{
@@ -15,7 +15,7 @@ use jsonrpsee::{
 use reqwest::Client;
 use serde as _;
 use shared::{
-    json_rpc::{parse_send_raw_transaction_params, Error},
+    json_rpc::{parse_send_raw_transaction_params, Error, InvalidInputError::UnsupportedChainID},
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, sync::Arc};
@@ -55,7 +55,7 @@ pub struct TCClient {
     tc_project_id: String,
     tc_api_key: String,
 
-    factory_address: Address,
+    sequencing_addresses: HashMap<u64, Address>,
     client: Client,
 }
 
@@ -68,17 +68,16 @@ impl TCClient {
             tc_url: config.tc_endpoint.get_url(),
             tc_project_id: config.tc_project_id.clone(),
             tc_api_key: config.tc_api_key.clone(),
-            factory_address: config.metabased_sequencer_factory_address,
+            sequencing_addresses: config.sequencing_addresses.clone(),
             client,
         })
     }
 
-    fn get_contract_address(&self, chain_id: u64) -> Address {
-        let chain_salt = U256::from(chain_id).to_be_bytes();
-        let mut packed = get_bytecode(self.factory_address).to_vec();
-        packed.extend_from_slice(&chain_salt);
-        let bytecode = Bytes::from(packed);
-        self.factory_address.create2(chain_salt, keccak256(&bytecode))
+    fn get_contract_address(&self, chain_id: u64) -> Result<Address, Error> {
+        self.sequencing_addresses
+            .get(&chain_id)
+            .copied()
+            .ok_or_else(|| Error::InvalidInput(UnsupportedChainID(chain_id)))
     }
 
     async fn send_transaction(
@@ -120,7 +119,7 @@ impl TCClient {
 
         // Determine the contract address
         let contract_address =
-            self.get_contract_address(original_tx.chain_id().unwrap_or_default());
+            self.get_contract_address(original_tx.chain_id().unwrap_or_default())?;
 
         debug!("Submitting validated transaction to TC");
         self.send_transaction(contract_address, raw_tx).await?;
@@ -163,15 +162,31 @@ mod tests {
 
     #[test]
     fn test_get_contract_address() {
-        // Set up a test service with a mock config
+        let config = Config {
+            sequencing_addresses: HashMap::from([(
+                510001,
+                Address::from_str("0x0000000000000000000000000000000000000001").unwrap(),
+            )]),
+            ..Default::default()
+        };
+        let service = TCClient::new(&config).unwrap();
+
+        let contract_address = service.get_contract_address(510001).unwrap();
+        assert_eq!(
+            contract_address,
+            Address::from_str("0x0000000000000000000000000000000000000001").unwrap()
+        );
+    }
+
+    #[test]
+    fn test_get_contract_address_not_supported() {
         let config = Config::default();
         let service = TCClient::new(&config).unwrap();
 
-        let contract_address = service.get_contract_address(510001);
-        assert_eq!(
-            contract_address,
-            Address::from_str("0xC1cacFC14624c4E241286Ade61DF545b90f850B4").unwrap()
-        );
+        let contract_address = service.get_contract_address(1);
+        assert!(contract_address.is_err());
+        let error = contract_address.unwrap_err().to_json_rpc_error();
+        assert_eq!(error.message(), "invalid input: unsupported chain ID: 1");
     }
 
     #[tokio::test]
