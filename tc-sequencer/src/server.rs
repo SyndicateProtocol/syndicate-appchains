@@ -48,11 +48,12 @@ pub async fn run_server(config: &Config) -> Result<(SocketAddr, ServerHandle)> {
 mod tests {
     use super::*;
     use crate::config::TCEndpoint;
+    use alloy::primitives::Address;
     use jsonrpsee::{core::client::ClientT, http_client::HttpClient};
     use mockito::{self, Matcher};
     use reqwest::{Client, StatusCode};
     use serde_json::Value as JsonValue;
-    use std::str::FromStr;
+    use std::{collections::HashMap, str::FromStr};
     use url::Url;
 
     #[tokio::test]
@@ -63,7 +64,15 @@ mod tests {
             server.mock("POST", Matcher::Any).with_status(200).create_async().await;
 
         let url = Url::from_str(server.url().as_str()).unwrap();
-        let config = Config { tc_endpoint: TCEndpoint::Raw(url), ..Default::default() };
+        let sequencing_addresses = HashMap::from([(
+            4,
+            Address::from_str("0x0000000000000000000000000000000000000001").unwrap(),
+        )]);
+        let config = Config {
+            tc_endpoint: TCEndpoint::Raw(url),
+            sequencing_addresses,
+            ..Default::default()
+        };
 
         // Start server
         let (_addr, _handle) = run_server(&config).await.unwrap();
