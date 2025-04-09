@@ -119,9 +119,10 @@ $ make deploy-based-sequencerchain-frame
 
 ### Syndicate Exo
 
-| Contract Name    | Address                                    |
-| ---------------- | ------------------------------------------ |
-| MetabasedFactory | 0xFEA8A2BA8B760348ea95492516620ad45a299d53 |
+| Contract Name           | Address                                    |
+| ----------------------- | ------------------------------------------ |
+| MetabasedFactory        | 0xFEA8A2BA8B760348ea95492516620ad45a299d53 |
+| WalletPoolWrapperModule | 0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8 |
 
 #### Base Sepolia
 
