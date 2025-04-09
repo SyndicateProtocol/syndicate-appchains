@@ -15,19 +15,25 @@ async fn main() -> Result<()> {
     let config = Config::initialize();
     info!("Config: {:?}", config);
 
+    config.validate().await?;
+
     // TODO metrics, if necessary
 
-    let (addr, handle) = maestro::server::run(config.port).await?;
+    match config.redis_address {
+        None => {
+            info!("Redis is disabled")
+        }
+        Some(redis_address) => {
+            let (_redis_client, _redis_conn) = connect(redis_address).await?;
+            info!("Connected to Redis successfully!");
+        }
+    }
 
+    let (addr, handle) = maestro::server::run(config.port).await?;
     info!(
-        addr = %addr,
+        %addr,
         "Maestro server running"
     );
-
-    let (_redis_client, _redis_conn) = connect(config).await?;
-
-    info!("Connected to Redis successfully!");
-
     // Keep the server running
     tokio::select! {
         _ = handle.stopped() => {}
@@ -35,9 +41,9 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn connect(config: Config) -> Result<(Client, MultiplexedConnection), Error> {
-    info!("Connecting to Redis server at {}...", config.redis_address);
-    let client = Client::open(config.redis_address)?;
+async fn connect(redis_address: String) -> Result<(Client, MultiplexedConnection), Error> {
+    info!("Connecting to Redis server at {}...", redis_address);
+    let client = Client::open(redis_address)?;
     info!("Got Redis client");
     let mut conn = client.get_multiplexed_async_connection().await?;
     info!("Got Redis connection");

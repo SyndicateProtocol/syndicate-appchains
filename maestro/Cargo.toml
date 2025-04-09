@@ -28,6 +28,7 @@ eyre         = { workspace = true }
 futures-util = { workspace = true }
 http         = { workspace = true }
 http-body    = { workspace = true }
+humantime    = { workspace = true }
 jsonrpsee    = { workspace = true, features = ["full"] }
 redis        = { workspace = true, features = ["streams", "tokio-comp"] }
 serde_json   = { workspace = true }
