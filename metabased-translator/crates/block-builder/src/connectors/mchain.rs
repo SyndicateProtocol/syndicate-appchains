@@ -15,12 +15,11 @@ use alloy::{
     },
 };
 use common::{
-    eth_client::RPCClient,
+    eth_client::Client,
     types::{BlockRef, KnownState},
 };
 use eyre::Result;
 use mchain::mchain::MProvider;
-use std::sync::Arc;
 use tracing::{error, info};
 
 #[allow(missing_docs)]
@@ -89,8 +88,8 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
     /// * `Err` - An error occurred during reconciliation
     pub async fn reconcile_mchain_with_source_chains(
         &self,
-        sequencing_client: &Arc<dyn RPCClient>,
-        settlement_client: &Arc<dyn RPCClient>,
+        sequencing_client: &Client,
+        settlement_client: &Client,
     ) -> Result<Option<KnownState>> {
         let mchain_block_before = self.provider.get_block_number().await;
 
@@ -140,8 +139,8 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
     /// against the source chain clients
     pub async fn get_safe_state(
         &self,
-        sequencing_client: &Arc<dyn RPCClient>,
-        settlement_client: &Arc<dyn RPCClient>,
+        sequencing_client: &Client,
+        settlement_client: &Client,
     ) -> Option<KnownState> {
         let mut current_block = BlockNumberOrTag::Latest;
         // NOTE: in case there has been a settlement reorg, we need to restart from the [FOUND
@@ -187,10 +186,7 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
     }
 }
 
-async fn validate_block_add_timestamp(
-    client: &Arc<dyn RPCClient>,
-    expected_block: &mut BlockRef,
-) -> bool {
+async fn validate_block_add_timestamp(client: &Client, expected_block: &mut BlockRef) -> bool {
     match client.get_block_by_number(BlockNumberOrTag::Number(expected_block.number)).await {
         Ok(block) => {
             expected_block.timestamp = block.timestamp;
@@ -209,6 +205,7 @@ mod tests {
         eth_client::{RPCClient, RPCClientError},
         types::{Block, Receipt},
     };
+    use std::sync::Arc;
 
     #[derive(Debug, Clone)]
     struct MockRPCClient {
@@ -249,6 +246,7 @@ mod tests {
 
         let client: Arc<dyn RPCClient> =
             Arc::new(MockRPCClient { block_hash: expected_hash, timestamp: expected_timestamp });
+        let client: Client = Client::Http(client);
 
         assert!(validate_block_add_timestamp(&client, &mut test_block).await);
         assert_eq!(test_block.timestamp, expected_timestamp);
@@ -260,6 +258,7 @@ mod tests {
             )),
             timestamp: expected_timestamp,
         });
+        let client_mismatch: Client = Client::Http(client_mismatch);
 
         let mut test_block = BlockRef { hash: expected_hash, number: 1, timestamp: 0 };
 

@@ -5,7 +5,7 @@ use crate::{
 };
 use block_builder::{connectors::mchain::MetaChainProvider, rollups::shared::RollupAdapter};
 use common::{
-    eth_client::{EthClient, RPCClient},
+    eth_client::{client, Client, EthClient, RPCClient},
     types::{Chain, KnownState, PartialBlock},
 };
 use eyre::{Report, Result};
@@ -32,7 +32,9 @@ pub async fn run(
     shutdown_rx: &mut oneshot::Receiver<()>,
 ) -> Result<(), RuntimeError> {
     info!("Initializing Metabased Translator components");
-    let (sequencing_client, settlement_client) = clients(config).await?;
+
+    let sequencing_client = client(&config.sequencing.sequencing_rpc_url).await?;
+    let settlement_client = client(&config.settlement.settlement_rpc_url).await?;
 
     let metrics = init_metrics(config).await;
 
@@ -45,10 +47,7 @@ pub async fn run(
 
     loop {
         let safe_state = mchain
-            .reconcile_mchain_with_source_chains(
-                &sequencing_client.clone(),
-                &settlement_client.clone(),
-            )
+            .reconcile_mchain_with_source_chains(&sequencing_client, &settlement_client)
             .await?;
 
         let (tx, rx) = ShutdownChannels::new().split();
@@ -121,8 +120,8 @@ impl ComponentHandles {
     fn spawn(
         config: &MetabasedConfig,
         known_state: Option<KnownState>,
-        sequencing_client: Arc<dyn RPCClient>,
-        settlement_client: Arc<dyn RPCClient>,
+        sequencing_client: Client,
+        settlement_client: Client,
         metrics: TranslatorMetrics,
         mchain: MetaChainProvider<impl RollupAdapter>,
         shutdown_rx: ShutdownRx,
@@ -151,7 +150,7 @@ impl ComponentHandles {
                 Chain::Sequencing,
                 &sequencing_config,
                 sequencing_addresses,
-                sequencing_client,
+                &sequencing_client,
                 sequencing_tx,
                 metrics.ingestor_sequencing,
                 shutdown_rx.sequencing,
@@ -164,7 +163,7 @@ impl ComponentHandles {
                 Chain::Settlement,
                 &settlement_config,
                 settlement_addresses,
-                settlement_client,
+                &settlement_client,
                 settlement_tx,
                 metrics.ingestor_settlement,
                 shutdown_rx.settlement,

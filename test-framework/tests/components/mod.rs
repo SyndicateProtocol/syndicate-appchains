@@ -111,6 +111,7 @@ struct TranslatorConfig {
     sequencing_start_block: u64,
     settlement_start_block: u64,
     settlement_delay: u64,
+    rpc_timeout: Duration,
 }
 
 #[derive(Debug)]
@@ -232,6 +233,7 @@ impl Components {
 
             mine_block(&set_provider, 0).await?;
         }
+
         let sequencing_rpc_url = format!("http://localhost:{}", seq_port);
         let settlement_rpc_url = format!("http://localhost:{}", set_port);
 
@@ -249,6 +251,11 @@ impl Components {
         wait_for_service(sequencer_config.metrics_port).await?;
 
         info!("Starting translator...");
+
+        //TODO add flag to use http or ws
+        let sequencing_rpc_url_ws = format!("ws://localhost:{}", seq_port);
+        let settlement_rpc_url_ws = format!("ws://localhost:{}", set_port);
+
         let translator_config = TranslatorConfig {
             sequencing_start_block: options.sequencing_start_block,
             settlement_start_block: options.settlement_start_block,
@@ -270,8 +277,9 @@ impl Components {
             sequencing_contract_address,
             mchain_rpc_url: mchain_rpc_url.clone(),
             metrics_port: PortManager::instance().next_port(),
-            sequencing_rpc_url,
-            settlement_rpc_url: settlement_rpc_url.clone(),
+            sequencing_rpc_url: sequencing_rpc_url_ws,
+            settlement_rpc_url: settlement_rpc_url_ws,
+            rpc_timeout: Duration::from_millis(500),
         };
         let translator = start_component(
             "metabased-translator",
@@ -413,6 +421,10 @@ impl TranslatorConfig {
             "50ms".to_string(),
             "--settlement-polling-interval".to_string(),
             "50ms".to_string(),
+            "--sequencing-rpc-timeout".to_string(),
+            self.rpc_timeout.as_millis().to_string() + "ms",
+            "--settlement-rpc-timeout".to_string(),
+            self.rpc_timeout.as_millis().to_string() + "ms",
         ]
     }
 }

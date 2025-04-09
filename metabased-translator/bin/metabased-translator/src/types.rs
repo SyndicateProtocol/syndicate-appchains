@@ -1,4 +1,4 @@
-use common::eth_client::RPCClientError;
+use common::eth_client::{ClientError, RPCClientError};
 use eyre::Report;
 use thiserror::Error;
 use tracing::error;
@@ -34,6 +34,9 @@ pub enum RuntimeError {
 
     #[error(transparent)]
     RPCClient(#[from] RPCClientError),
+
+    #[error(transparent)]
+    InitClientError(#[from] ClientError),
 
     #[error(transparent)]
     Other(#[from] Report),

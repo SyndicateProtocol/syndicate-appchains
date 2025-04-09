@@ -17,7 +17,7 @@ pub enum ConfigError {
     #[error("Invalid URL: no host")]
     InvalidURLHost,
     /// Invalid URL scheme
-    #[error("Invalid URL scheme: {0}. Only http and https are supported")]
+    #[error("Invalid URL scheme: {0}")]
     InvalidURLScheme(String),
 }
 

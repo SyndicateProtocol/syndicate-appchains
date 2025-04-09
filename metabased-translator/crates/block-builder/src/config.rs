@@ -111,7 +111,7 @@ pub enum ConfigError {
     InvalidURL(String),
     #[error("Invalid URL: no host")]
     InvalidURLHost,
-    #[error("Invalid URL scheme: {0}. Only http and https are supported")]
+    #[error("Invalid URL scheme: {0}")]
     InvalidURLScheme(String),
     #[error("Invalid chain ID: {0}")]
     InvalidChainId(String),

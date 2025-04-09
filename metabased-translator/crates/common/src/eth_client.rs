@@ -1,19 +1,96 @@
 //! The `eth_client` module provides a client for interacting with an Ethereum-like blockchain.
 
-use crate::types::{Block, Receipt};
+use crate::types::{Block, PartialBlock, Receipt};
 use alloy::{
+    providers::{IpcConnect, Provider, ProviderBuilder, WsConnect},
     rpc::{
-        client::{ClientBuilder, RpcClient},
+        client::{BuiltInConnectionString, ClientBuilder, RpcClient},
         types::BlockNumberOrTag,
     },
     transports::{RpcError, TransportErrorKind},
 };
 use async_trait::async_trait;
-use std::{fmt::Debug, time::Duration};
+use std::{fmt::Debug, sync::Arc, time::Duration};
 use thiserror::Error;
 use tokio::time::timeout;
 use url::Url;
 
+#[allow(missing_docs)]
+#[allow(missing_debug_implementations)]
+#[derive(Clone)]
+pub enum Client {
+    Subscription(Arc<dyn Provider>),
+    Http(Arc<dyn RPCClient>),
+}
+
+#[allow(missing_docs)]
+#[derive(Debug, Error)]
+pub enum ClientError {
+    #[error("Invalid RPC URL {0}")]
+    InvalidRpcURL(String),
+}
+
+pub async fn client(url: &str) -> Result<Client, ClientError> {
+    let parsed_url = url
+        .parse::<BuiltInConnectionString>()
+        .map_err(|_| ClientError::InvalidRpcURL(url.to_string()))?;
+    match parsed_url {
+        BuiltInConnectionString::Http(_) => {
+            let client = EthClient::new(url, Duration::from_secs(10)) //TODO pass the configured timeout
+                .await
+                .map_err(|_| ClientError::InvalidRpcURL(url.to_string()))?;
+            Ok(Client::Http(Arc::new(client)))
+        }
+        BuiltInConnectionString::Ws(ws_url, _authorization) => {
+            // TODO handle WS with auth
+            let ws = WsConnect::new(ws_url);
+            let provider = ProviderBuilder::new()
+                .on_ws(ws)
+                .await
+                .map_err(|_| ClientError::InvalidRpcURL(url.to_string()))?;
+
+            Ok(Client::Subscription(Arc::new(provider)))
+        }
+        BuiltInConnectionString::Ipc(ipc_url) => {
+            let ipc = IpcConnect::new(ipc_url);
+            let provider = ProviderBuilder::new()
+                .on_ipc(ipc)
+                .await
+                .map_err(|_| ClientError::InvalidRpcURL(url.to_string()))?;
+
+            Ok(Client::Subscription(Arc::new(provider)))
+        }
+        _ => todo!(),
+    }
+}
+
+impl Client {
+    pub async fn get_block_by_number(
+        &self,
+        block_number: BlockNumberOrTag,
+    ) -> Result<PartialBlock, RPCClientError> {
+        match self {
+            Self::Subscription(provider) => {
+                let block = provider
+                    .get_block_by_number(block_number)
+                    .await
+                    .map_err(|e| RPCClientError::RpcError(e))?
+                    .ok_or_else(|| RPCClientError::BlockNotFound(block_number.to_string()))?;
+                Ok(PartialBlock::new(block.header, vec![]))
+            }
+            Self::Http(client) => {
+                let block = client.get_block_by_number(block_number).await?;
+                Ok(PartialBlock {
+                    number: block.number,
+                    hash: block.hash,
+                    timestamp: block.timestamp,
+                    parent_hash: block.parent_hash,
+                    logs: vec![],
+                })
+            }
+        }
+    }
+}
 /// Errors that can occur while interacting with the Ethereum RPC client.
 #[derive(Debug, Error)]
 pub enum RPCClientError {

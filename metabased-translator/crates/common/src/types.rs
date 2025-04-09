@@ -165,6 +165,12 @@ impl Display for BlockRef {
     }
 }
 
+impl From<Arc<PartialBlock>> for BlockRef {
+    fn from(block: Arc<PartialBlock>) -> Self {
+        Self::new(block.as_ref())
+    }
+}
+
 /// A known state of the translator
 #[derive(Debug)]
 pub struct KnownState {

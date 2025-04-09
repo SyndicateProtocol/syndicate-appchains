@@ -27,7 +27,7 @@ pub struct ChainIngestorConfig {
     pub rpc_url: String,
     pub rpc_timeout: Duration,
     pub start_block: u64,
-    pub syncing_batch_size: u64,
+    pub syncing_batch_size: u64, // TODO rename to "parallel something"
     pub backoff_initial_interval: Duration,
     pub backoff_scaling_factor: u64,
     pub max_backoff: Duration,

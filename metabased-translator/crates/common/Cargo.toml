@@ -9,7 +9,7 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy        = { workspace = true, features = ["provider-engine-api"] }
+alloy        = { workspace = true, features = ["provider-ipc", "provider-ws"] }
 async-trait  = { workspace = true }
 bincode      = { workspace = true }
 eyre         = { workspace = true }
