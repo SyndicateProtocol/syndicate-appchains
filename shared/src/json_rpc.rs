@@ -6,7 +6,7 @@ use crate::json_rpc::{
 };
 use alloy::{
     contract, hex,
-    primitives::{ruint::ToUintError, Bytes, SignatureError},
+    primitives::{ruint::ToUintError, Bytes, ChainId, SignatureError},
     rlp,
 };
 use jsonrpsee::types::{error, ErrorObject, ErrorObjectOwned, Params};
@@ -206,6 +206,9 @@ pub enum InvalidInputError {
     /// Chain ID is missing
     #[error("chain ID mismatch: expected {0} got {1}")]
     ChainIDMismatched(String, String),
+    /// Unsupported Chain ID
+    #[error("unsupported chain id: {0}")]
+    UnsupportedChainId(ChainId),
     /// Transaction too large
     #[error("transaction too large: limit {0} - got {1}")]
     TransactionTooLarge(String, String),

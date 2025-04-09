@@ -16,12 +16,16 @@ use jsonrpsee::{
 };
 use serde_json::Value as JsonValue;
 use shared::{
-    json_rpc::{parse_send_raw_transaction_params, Error, InvalidInputError::ChainIDMismatched},
+    json_rpc::{
+        parse_send_raw_transaction_params, Error,
+        Error::{Internal, InvalidInput},
+        InvalidInputError::{ChainIDMismatched, UnsupportedChainId},
+    },
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use tower::ServiceBuilder;
-use tracing::{debug, info};
+use tracing::{debug, error, info, warn};
 
 /// Runs the base server for the sequencer
 pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
@@ -35,7 +39,9 @@ pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
         .build(format!("0.0.0.0:{}", config.port))
         .await?;
 
-    let service = MaestroService::new(config);
+    let client = Client::builder().timeout(config.validation_timeout).build()?;
+
+    let service = MaestroService::new(config, client);
     let mut module = RpcModule::new(service);
 
     // Register RPC methods
@@ -91,27 +97,14 @@ fn get_request_chain_id(extensions: Extensions) -> Option<ChainId> {
 /// The service for filtering and directing transactions
 #[derive(Debug)]
 pub struct MaestroService {
-    _chain_id_nitro_urls: HashMap<String, String>,
-    _client: Client,
+    chain_id_nitro_urls: HashMap<String, String>,
+    client: Client,
 }
-
-// impl Default for MaestroService {
-//     fn default() -> Self {
-//         Self::new()
-//     }
-// }
 
 impl MaestroService {
     /// Create a new instance of the Maestro service
-    pub fn new(config: Config) -> Self {
-        // TODO remove .expect() ?
-        #[allow(clippy::expect_used)]
-        let client = Client::builder()
-            .timeout(config.validation_timeout)
-            .build()
-            .expect("client should work");
-
-        Self { _chain_id_nitro_urls: config.chain_id_nitro_urls, _client: client }
+    pub fn new(config: Config, client: Client) -> Self {
+        Self { chain_id_nitro_urls: config.chain_id_nitro_urls, client }
     }
 
     async fn process_raw_transaction_v1(
@@ -121,55 +114,56 @@ impl MaestroService {
     ) -> Result<TxHash, Error> {
         info!("Processing raw transaction: {}", hex::encode(&raw_tx));
         let original_tx = validate_transaction(&raw_tx)?;
-        Self::validate_chain_id(request_chain_id, original_tx.chain_id())?;
+        let txn_chain_id = Self::validate_chain_id(request_chain_id, original_tx.chain_id())?;
+        let tx_hash = original_tx.tx_hash().to_string();
         debug!(
-            "{} {}",
+            %tx_hash,
             "Submitting validated transaction to Nitro: ",
-            original_tx.tx_hash().to_string()
         );
 
-        // TODO finish req sending
+        // JSON-RPC request payload for eth_getBlockByNumber
+        let raw_txn_payload = serde_json::json!({
+            "jsonrpc": "2.0",
+            "method": "eth_sendRawTransaction",
+            "params": [raw_tx],
+            "id": 1
+        });
 
-        // // JSON-RPC request payload for eth_getBlockByNumber
-        // let health_check_payload = serde_json::json!({
-        //     "jsonrpc": "2.0",
-        //     "method": "eth_sendRawTransaction",
-        //     "params": [raw_tx, false],
-        //     "id": 1
-        // });
-        //
-        //
-        // let nitro_url = self.chain_id_nitro_urls.get(&HEADER_CHAIN_ID).ma
-        //
-        // let response = self.client
-        //     .post(nitro_url)
-        //     .header("Content-Type", "application/json")
-        //     .json(&health_check_payload)
-        //     .send()
-        //     .await
-        //     .map_err(|e| ConfigError::NitroUrlConnection(chain_id.clone(), url.clone(), e))?;
-        //
-        // // Check for successful status code (2xx)
-        // if !response.status().is_success() {
-        //     return Err(ConfigError::NitroUrlInvalidStatus(
-        //         chain_id.clone(),
-        //         url.clone(),
-        //         response.status().to_string(),
-        //     ));
-        // }
+        let nitro_url =
+            self.chain_id_nitro_urls.get(&txn_chain_id.to_string()).ok_or_else(|| {
+                error!(%txn_chain_id, %tx_hash, "txn attempted to unsupported Nitro");
+                InvalidInput(UnsupportedChainId(txn_chain_id))
+            })?;
 
-        // TODO (SEQ-782): send to Nitro
+        // Fire and forget
+        let response = self
+            .client
+            .post(nitro_url)
+            .header("Content-Type", "application/json")
+            .json(&raw_txn_payload)
+            .send()
+            .await
+            .map_err(|e| {
+                error!(%nitro_url, %tx_hash, %e, "reqwest client error forwarding txn to Nitros");
+                Internal("internal error sending transaction".to_string())
+            })?;
+
+        if !response.status().is_success() {
+            warn!(%nitro_url, %tx_hash, %txn_chain_id, "Nitro returned non-200 status for forwarded txn");
+        }
+
         Ok(*original_tx.tx_hash())
     }
 
+    /// Returns `txn_chain_id` unwrapped if valid
     fn validate_chain_id(
         request_chain_id: Option<ChainId>,
         txn_chain_id: Option<ChainId>,
-    ) -> Result<(), Error> {
+    ) -> Result<ChainId, Error> {
         match (request_chain_id, txn_chain_id) {
-            (None, _) => Ok(()),
-            (Some(req_id), Some(txn_id)) if req_id == txn_id => Ok(()),
-            (req_id, txn_id) => Err(Error::InvalidInput(ChainIDMismatched(
+            (None, Some(txn_id)) => Ok(txn_id),
+            (Some(req_id), Some(txn_id)) if req_id == txn_id => Ok(txn_id),
+            (req_id, txn_id) => Err(InvalidInput(ChainIDMismatched(
                 req_id.map_or("none".to_string(), |id| id.to_string()),
                 txn_id.map_or("none".to_string(), |id| id.to_string()),
             ))),
