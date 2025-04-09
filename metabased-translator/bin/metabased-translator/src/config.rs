@@ -140,7 +140,7 @@ mod tests {
         )
         .unwrap();
         // default value
-        assert_eq!(config.settlement.settlement_syncing_batch_size, 50);
+        assert_eq!(config.settlement.settlement_max_parallel_requests, 50);
         // default value + env var override
         assert_eq!(config.settlement.settlement_buffer_size, 200);
         // defeault value + env var + cli override

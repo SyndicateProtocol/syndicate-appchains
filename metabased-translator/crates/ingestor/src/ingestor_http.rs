@@ -84,7 +84,7 @@ pub async fn run_http(
     )
     .await?
     .number;
-    let batch_size = config.syncing_batch_size;
+    let batch_size = config.max_parallel_requests;
     let polling_interval = config.polling_interval;
     let start_block = config.start_block;
 
@@ -632,7 +632,7 @@ mod tests {
         let syncing_batch_size = 5;
         let config = ChainIngestorConfig {
             start_block,
-            syncing_batch_size,
+            max_parallel_requests: syncing_batch_size,
             polling_interval: Duration::from_millis(10),
             backoff_initial_interval: Duration::from_millis(50),
             backoff_scaling_factor: 2,

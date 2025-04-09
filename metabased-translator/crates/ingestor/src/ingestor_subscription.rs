@@ -85,8 +85,9 @@ pub async fn run_subscription(
     info!(%chain, "Subscribed to new block headers");
 
     //limit parallelism to the maximum batch size
-    let tasks = Arc::new(Mutex::new(BoundedJoinSet::new(config.syncing_batch_size as usize + 1))); // +1 for the task that spawns all the others
-    let (result_sender, mut result_receiver) = mpsc::channel(config.syncing_batch_size as usize);
+    let tasks =
+        Arc::new(Mutex::new(BoundedJoinSet::new(config.max_parallel_requests as usize + 1))); // +1 for the task that spawns all the others
+    let (result_sender, mut result_receiver) = mpsc::channel(config.max_parallel_requests as usize);
 
     // Update channel capacity metric
     metrics.update_channel_capacity(chain, result_receiver.capacity());

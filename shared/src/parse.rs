@@ -14,7 +14,7 @@ pub fn parse_url(value: &str) -> Result<Url, Error> {
                 return Err(Error::URL(URLErrorType::InvalidHost));
             }
             match url.scheme() {
-                "http" | "https" | "ws" | "ipc" => Ok(url), // TODO: add wss
+                "http" | "https" | "ws" | "ipc" => Ok(url), // TODO SEQ-796 - add wss
                 _ => Err(Error::URL(URLErrorType::InvalidScheme(url.scheme().to_string()))),
             }
         },

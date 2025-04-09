@@ -58,7 +58,6 @@ pub enum IngestorError {
     #[error("Failed to get initial chain head: {0}")]
     GetInitialChainHead(#[from] RpcError<TransportErrorKind>),
 
-    // TODO ?
     #[error("{resource} not yet available")]
     ResourceNotAvailable { resource: String },
 

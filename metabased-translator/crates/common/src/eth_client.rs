@@ -31,19 +31,19 @@ pub enum ClientError {
 }
 
 /// Generates a client for the given URL (supports http, ws, and ipc)
-pub async fn client(url: &str) -> Result<Client, ClientError> {
+pub async fn client(url: &str, rpc_timeout: Duration) -> Result<Client, ClientError> {
     let parsed_url = url
         .parse::<BuiltInConnectionString>()
         .map_err(|_| ClientError::InvalidRpcURL(url.to_string()))?;
     match parsed_url {
         BuiltInConnectionString::Http(_) => {
-            let client = EthClient::new(url, Duration::from_secs(10)) //TODO pass the configured timeout
+            let client = EthClient::new(url, rpc_timeout)
                 .await
                 .map_err(|_| ClientError::InvalidRpcURL(url.to_string()))?;
             Ok(Client::Http(Arc::new(client)))
         }
         BuiltInConnectionString::Ws(ws_url, _authorization) => {
-            // TODO handle WS with auth
+            // TODO SEQ-796 - handle WS with auth
             let ws = WsConnect::new(ws_url);
             let provider = ProviderBuilder::new()
                 .on_ws(ws)
@@ -61,7 +61,7 @@ pub async fn client(url: &str) -> Result<Client, ClientError> {
 
             Ok(Client::Subscription(Arc::new(provider)))
         }
-        _ => todo!(),
+        _ => panic!("Unsupported connection type"),
     }
 }
 
@@ -108,8 +108,8 @@ pub enum RPCClientError {
     BlockReceiptsNotFound(String),
 
     /// Error returned when the RPC request times out.
-    #[error("RPC request timed out")]
-    Timeout,
+    #[error("RPC request timed out after {0:?}")]
+    Timeout(Duration),
 
     /// Generic RPC communication failure
     #[error("RPC request failed: {0}")]
@@ -195,7 +195,7 @@ impl RPCClient for EthClient {
             Ok(Ok(Some(block))) => Ok(block),
             Ok(Ok(None)) => Err(RPCClientError::BlockNotFound(block_identifier.to_string())),
             Ok(Err(rpc_err)) => Err(RPCClientError::RpcError(rpc_err)),
-            Err(_) => Err(RPCClientError::Timeout),
+            Err(_) => Err(RPCClientError::Timeout(self.timeout)),
         }
     }
 
@@ -214,7 +214,7 @@ impl RPCClient for EthClient {
                 Err(RPCClientError::BlockReceiptsNotFound(block_number_hex.to_string()))
             }
             Ok(Err(rpc_err)) => Err(RPCClientError::RpcError(rpc_err)),
-            Err(_) => Err(RPCClientError::Timeout),
+            Err(_) => Err(RPCClientError::Timeout(self.timeout)),
         }
     }
 }

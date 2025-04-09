@@ -33,8 +33,12 @@ pub async fn run(
 ) -> Result<(), RuntimeError> {
     info!("Initializing Metabased Translator components");
 
-    let sequencing_client = client(&config.sequencing.sequencing_rpc_url).await?;
-    let settlement_client = client(&config.settlement.settlement_rpc_url).await?;
+    let sequencing_client =
+        client(&config.sequencing.sequencing_rpc_url, config.sequencing.sequencing_rpc_timeout)
+            .await?;
+    let settlement_client =
+        client(&config.settlement.settlement_rpc_url, config.settlement.settlement_rpc_timeout)
+            .await?;
 
     let metrics = init_metrics(config).await;
 
@@ -268,16 +272,14 @@ pub async fn clients(
             &config.sequencing.sequencing_rpc_url,
             config.sequencing.sequencing_rpc_timeout,
         )
-        .await
-        .map_err(RuntimeError::RPCClient)?,
+        .await?,
     );
     let settlement_client: Arc<dyn RPCClient> = Arc::new(
         EthClient::new(
             &config.settlement.settlement_rpc_url,
             config.settlement.settlement_rpc_timeout,
         )
-        .await
-        .map_err(RuntimeError::RPCClient)?,
+        .await?,
     );
     Ok((sequencing_client, settlement_client))
 }

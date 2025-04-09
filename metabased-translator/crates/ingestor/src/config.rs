@@ -27,7 +27,7 @@ pub struct ChainIngestorConfig {
     pub rpc_url: String,
     pub rpc_timeout: Duration,
     pub start_block: u64,
-    pub syncing_batch_size: u64, // TODO rename to "parallel something"
+    pub max_parallel_requests: u64,
     pub backoff_initial_interval: Duration,
     pub backoff_scaling_factor: u64,
     pub max_backoff: Duration,
@@ -71,11 +71,11 @@ pub struct SequencingChainConfig {
 
     /// The batch size used to sync the m-chain
     #[arg(
-        long = "sequencing-syncing-batch-size",
-        env = "SEQUENCING_SYNCING_BATCH_SIZE",
+        long = "sequencing-max-parallel-requests",
+        env = "SEQUENCING_MAX_PARALLEL_REQUESTS",
         default_value_t = 50
     )]
-    pub sequencing_syncing_batch_size: u64,
+    pub sequencing_max_parallel_requests: u64,
 
     /// The initial backoff interval for retries
     #[arg(
@@ -139,11 +139,11 @@ pub struct SettlementChainConfig {
 
     /// The batch size used to sync the m-chain
     #[arg(
-        long = "settlement-syncing-batch-size",
-        env = "SETTLEMENT_SYNCING_BATCH_SIZE",
+        long = "settlement-max-parallel-requests",
+        env = "SETTLEMENT_MAX_PARALLEL_REQUESTS",
         default_value_t = 50
     )]
-    pub settlement_syncing_batch_size: u64,
+    pub settlement_max_parallel_requests: u64,
 
     /// The initial backoff interval for retries
     #[arg(
@@ -180,7 +180,7 @@ impl From<ChainIngestorConfig> for SequencingChainConfig {
             sequencing_rpc_url: config.rpc_url,
             sequencing_rpc_timeout: config.rpc_timeout,
             sequencing_start_block: config.start_block,
-            sequencing_syncing_batch_size: config.syncing_batch_size,
+            sequencing_max_parallel_requests: config.max_parallel_requests,
             sequencing_backoff_initial_interval: config.backoff_initial_interval,
             sequencing_backoff_scaling_factor: config.backoff_scaling_factor,
             sequencing_max_backoff: config.max_backoff,
@@ -196,7 +196,7 @@ impl From<SequencingChainConfig> for ChainIngestorConfig {
             rpc_url: config.sequencing_rpc_url,
             rpc_timeout: config.sequencing_rpc_timeout,
             start_block: config.sequencing_start_block,
-            syncing_batch_size: config.sequencing_syncing_batch_size,
+            max_parallel_requests: config.sequencing_max_parallel_requests,
             backoff_initial_interval: config.sequencing_backoff_initial_interval,
             backoff_scaling_factor: config.sequencing_backoff_scaling_factor,
             max_backoff: config.sequencing_max_backoff,
@@ -212,7 +212,7 @@ impl From<ChainIngestorConfig> for SettlementChainConfig {
             settlement_rpc_url: config.rpc_url,
             settlement_rpc_timeout: config.rpc_timeout,
             settlement_start_block: config.start_block,
-            settlement_syncing_batch_size: config.syncing_batch_size,
+            settlement_max_parallel_requests: config.max_parallel_requests,
             settlement_backoff_initial_interval: config.backoff_initial_interval,
             settlement_backoff_scaling_factor: config.backoff_scaling_factor,
             settlement_max_backoff: config.max_backoff,
@@ -228,7 +228,7 @@ impl From<SettlementChainConfig> for ChainIngestorConfig {
             rpc_url: config.settlement_rpc_url,
             rpc_timeout: config.settlement_rpc_timeout,
             start_block: config.settlement_start_block,
-            syncing_batch_size: config.settlement_syncing_batch_size,
+            max_parallel_requests: config.settlement_max_parallel_requests,
             backoff_initial_interval: config.settlement_backoff_initial_interval,
             backoff_scaling_factor: config.settlement_backoff_scaling_factor,
             max_backoff: config.settlement_max_backoff,
@@ -244,7 +244,7 @@ impl From<&SequencingChainConfig> for ChainIngestorConfig {
             rpc_url: config.sequencing_rpc_url.clone(),
             rpc_timeout: config.sequencing_rpc_timeout,
             start_block: config.sequencing_start_block,
-            syncing_batch_size: config.sequencing_syncing_batch_size,
+            max_parallel_requests: config.sequencing_max_parallel_requests,
             backoff_initial_interval: config.sequencing_backoff_initial_interval,
             backoff_scaling_factor: config.sequencing_backoff_scaling_factor,
             max_backoff: config.sequencing_max_backoff,
@@ -260,7 +260,7 @@ impl From<&SettlementChainConfig> for ChainIngestorConfig {
             rpc_url: config.settlement_rpc_url.clone(),
             rpc_timeout: config.settlement_rpc_timeout,
             start_block: config.settlement_start_block,
-            syncing_batch_size: config.settlement_syncing_batch_size,
+            max_parallel_requests: config.settlement_max_parallel_requests,
             backoff_initial_interval: config.settlement_backoff_initial_interval,
             backoff_scaling_factor: config.settlement_backoff_scaling_factor,
             max_backoff: config.settlement_max_backoff,
@@ -351,7 +351,7 @@ impl Default for ChainIngestorConfig {
             rpc_url: "http://localhost:8545".to_string(),
             rpc_timeout: Duration::from_secs(5),
             start_block: 1,
-            syncing_batch_size: 50,
+            max_parallel_requests: 50,
             backoff_initial_interval: Duration::from_millis(50),
             backoff_scaling_factor: 2,
             max_backoff: Duration::from_secs(30),
@@ -379,7 +379,7 @@ impl ChainIngestorConfig {
             start_block,
             buffer_size,
             polling_interval,
-            syncing_batch_size,
+            max_parallel_requests: syncing_batch_size,
             backoff_initial_interval,
             backoff_scaling_factor,
             max_backoff,
@@ -414,10 +414,10 @@ impl ChainIngestorConfig {
         }
 
         // See docs for more context https://docs.alchemy.com/reference/batch-requests
-        if self.syncing_batch_size > 1000 {
+        if self.max_parallel_requests > 1000 {
             return Err(ConfigError::InvalidBatchSize(format!(
                 "Batch size must not be greater than 1000, found: {}",
-                self.syncing_batch_size
+                self.max_parallel_requests
             )));
         }
 
@@ -497,7 +497,7 @@ mod tests {
 
         // Invalid batch size
         let mut config = test_chain_ingestor_config();
-        config.syncing_batch_size = 1001;
+        config.max_parallel_requests = 1001;
         assert_matches!(config.validate(), Err(ConfigError::InvalidBatchSize(_)));
     }
 
@@ -510,7 +510,7 @@ mod tests {
             start_block: 100,
             buffer_size: 0, // Invalid
             polling_interval: Duration::from_secs(5),
-            syncing_batch_size: 50,
+            max_parallel_requests: 50,
             backoff_initial_interval: Duration::from_millis(50),
             backoff_scaling_factor: 2,
             max_backoff: Duration::from_secs(30),
@@ -539,7 +539,7 @@ mod tests {
         assert_eq!(config.start_block, cloned.start_block);
         assert_eq!(config.buffer_size, cloned.buffer_size);
         assert_eq!(config.polling_interval, cloned.polling_interval);
-        assert_eq!(config.syncing_batch_size, cloned.syncing_batch_size);
+        assert_eq!(config.max_parallel_requests, cloned.max_parallel_requests);
         assert_eq!(config.backoff_initial_interval, cloned.backoff_initial_interval);
         assert_eq!(config.backoff_scaling_factor, cloned.backoff_scaling_factor);
         assert_eq!(config.max_backoff, cloned.max_backoff);
@@ -553,7 +553,7 @@ mod tests {
             rpc_url: "http://sequencer:8545".to_string(),
             rpc_timeout: Duration::from_secs(7),
             start_block: 0,
-            syncing_batch_size: 50,
+            max_parallel_requests: 50,
             backoff_initial_interval: Duration::from_millis(50),
             backoff_scaling_factor: 2,
             max_backoff: Duration::from_secs(30),

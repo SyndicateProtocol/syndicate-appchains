@@ -20,7 +20,7 @@ pub fn set_global_default_subscriber() -> Result<(), Error> {
 
     tracing_subscriber::fmt()
         // output in JSON format
-        .json() // TODO add an option to disable this - so we can get colorized output in tests
+        .json() // TODO SEQ-797 - add an option to disable this - so we can get colorized output in tests
         // include codepath origin of log
         .with_target(true)
         // log level is controlled by RUST_LOG setting
