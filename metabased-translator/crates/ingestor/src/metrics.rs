@@ -81,6 +81,19 @@ impl IngestorMetrics {
         }
     }
 
+    /// Creates a new `IngestorMetrics` instance without registering for testing purposes.
+    #[cfg(test)]
+    pub fn new_noop() -> Self {
+        Self {
+            ingestor_rpc_calls: Family::default(),
+            ingestor_rpc_calls_duration: Family::new_with_constructor(|| {
+                Histogram::new(exponential_buckets(0.01, 2.0, 10))
+            }),
+            ingestor_last_block_fetched: Family::default(),
+            ingestor_channel_capacity: Family::default(),
+        }
+    }
+
     /// Records the last block number fetched for a given label.
     pub fn record_last_block_fetched(&self, chain: Chain, block_number: u64) {
         self.ingestor_last_block_fetched

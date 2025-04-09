@@ -30,6 +30,7 @@ pub enum ClientError {
     InvalidRpcURL(String),
 }
 
+/// Generates a client for the given URL (supports http, ws, and ipc)
 pub async fn client(url: &str) -> Result<Client, ClientError> {
     let parsed_url = url
         .parse::<BuiltInConnectionString>()
@@ -65,6 +66,7 @@ pub async fn client(url: &str) -> Result<Client, ClientError> {
 }
 
 impl Client {
+    /// Retrieves a block by its number with a timeout.
     pub async fn get_block_by_number(
         &self,
         block_number: BlockNumberOrTag,
@@ -73,8 +75,7 @@ impl Client {
             Self::Subscription(provider) => {
                 let block = provider
                     .get_block_by_number(block_number)
-                    .await
-                    .map_err(|e| RPCClientError::RpcError(e))?
+                    .await?
                     .ok_or_else(|| RPCClientError::BlockNotFound(block_number.to_string()))?;
                 Ok(PartialBlock::new(block.header, vec![]))
             }

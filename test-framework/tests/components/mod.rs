@@ -252,10 +252,6 @@ impl Components {
 
         info!("Starting translator...");
 
-        //TODO add flag to use http or ws
-        let sequencing_rpc_url_ws = format!("ws://localhost:{}", seq_port);
-        let settlement_rpc_url_ws = format!("ws://localhost:{}", set_port);
-
         let translator_config = TranslatorConfig {
             sequencing_start_block: options.sequencing_start_block,
             settlement_start_block: options.settlement_start_block,
@@ -277,8 +273,8 @@ impl Components {
             sequencing_contract_address,
             mchain_rpc_url: mchain_rpc_url.clone(),
             metrics_port: PortManager::instance().next_port(),
-            sequencing_rpc_url: sequencing_rpc_url_ws,
-            settlement_rpc_url: settlement_rpc_url_ws,
+            sequencing_rpc_url: sequencing_rpc_url.clone(),
+            settlement_rpc_url: settlement_rpc_url.clone(),
             rpc_timeout: Duration::from_millis(500),
         };
         let translator = start_component(

@@ -144,7 +144,6 @@ impl<P: SlotProcessor> Slotter<P> {
             match process_result {
                 Ok(_) => (),
                 Err(e) => match e {
-                    SlotterError::ReorgDetected { .. } => return Err(e),
                     SlotterError::Shutdown => {
                         warn!("Slotter shut down");
                         return Err(e);
@@ -228,15 +227,6 @@ impl<P: SlotProcessor> Slotter<P> {
                     chain,
                     current_block: Box::new(latest.clone()),
                     received_block: Box::new(BlockRef::new(block)),
-                });
-            }
-
-            if !block.parent_hash.eq(&latest.hash) {
-                return Err(SlotterError::ReorgDetected {
-                    chain,
-                    current_block: Box::new(latest.clone()),
-                    received_block: Box::new(BlockRef::new(block)),
-                    received_parent_hash: block.parent_hash,
                 });
             }
 
@@ -364,17 +354,7 @@ pub enum SlotterError {
     NoSlotsAvailable(String),
 
     #[error("Failed to send slot through channel: {0}")]
-    SlotSendError(String),
-
-    #[error(
-        "{chain} chain reorg detected. Current: #{current_block}, Received: #{received_block}, Received parent hash: #{received_parent_hash}"
-    )]
-    ReorgDetected {
-        chain: Chain,
-        current_block: Box<BlockRef>,
-        received_block: Box<BlockRef>,
-        received_parent_hash: B256,
-    },
+    SlotSendError(#[from] SendError<Slot>),
 
     #[error("{chain} chain block number skipped. Current: #{current_block}, Received: #{received_block}")]
     BlockNumberSkipped { chain: Chain, current_block: Box<BlockRef>, received_block: Box<BlockRef> },
@@ -396,12 +376,6 @@ pub enum SlotterError {
 
     #[error("Slotter was shut down")]
     Shutdown,
-}
-
-impl From<SendError<Slot>> for SlotterError {
-    fn from(e: SendError<Slot>) -> Self {
-        Self::SlotSendError(e.to_string())
-    }
 }
 
 #[cfg(test)]
@@ -820,96 +794,6 @@ mod tests {
         } else {
             panic!("Expected settlement blocks but found none");
         }
-    }
-
-    #[tokio::test]
-    async fn test_parent_hash_mismatch_reorg_sequencing() {
-        test_parent_hash_mismatch_reorg_helper(Chain::Sequencing).await;
-    }
-
-    #[tokio::test]
-    async fn test_parent_hash_mismatch_reorg_settlement() {
-        test_parent_hash_mismatch_reorg_helper(Chain::Settlement).await;
-    }
-
-    async fn test_parent_hash_mismatch_reorg_helper(chain: Chain) {
-        let processor = MockSlotProcessor::new();
-        let mut slotter = create_slotter(&SlotterConfig::default(), processor);
-
-        // Create and set the first block
-        let first_block = create_test_block(1, 50);
-        slotter.update_latest_block(&first_block, chain).unwrap();
-
-        // Create a second block with correct number (2) but different parent hash
-        let second_block = Arc::new(PartialBlock {
-            hash: B256::from_str(
-                "2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-            )
-            .unwrap(),
-            number: 2, // Correct sequential number
-            parent_hash: B256::from_str(
-                "0000000000abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-            )
-            .unwrap(), // Different hash than first_block.hash
-            timestamp: 60,
-            logs: vec![],
-        });
-
-        // Attempt to update with the second block - should fail due to parent hash mismatch
-        let result = slotter.update_latest_block(&second_block, chain);
-
-        // Verify that a reorg was detected
-        assert_matches!(result, Err(SlotterError::ReorgDetected { .. }));
-    }
-
-    #[tokio::test]
-    async fn test_reorg_detected_block_number_sequencing() {
-        test_reorg_detected_block_number_helper(Chain::Sequencing).await;
-    }
-
-    #[tokio::test]
-    async fn test_reorg_detected_block_number_settlement() {
-        test_reorg_detected_block_number_helper(Chain::Settlement).await;
-    }
-
-    async fn test_reorg_detected_block_number_helper(chain: Chain) {
-        let processor = MockSlotProcessor::new();
-        let mut slotter = create_slotter(&SlotterConfig::default(), processor);
-
-        // Set up first block at number 2
-        let first_block = Arc::new(PartialBlock {
-            hash: B256::from_str(
-                "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-            )
-            .unwrap(),
-            number: 2,
-            parent_hash: B256::from_str(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap(),
-            timestamp: 100,
-            logs: vec![],
-        });
-
-        slotter.update_latest_block(&first_block, chain).unwrap();
-
-        // Create block with block number 1 (lower than current)
-        let reorg_block = Arc::new(PartialBlock {
-            hash: B256::from_str(
-                "2234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-            )
-            .unwrap(),
-            number: 1, // Lower block number should trigger reorg
-            parent_hash: B256::from_str(
-                "0000000000abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-            )
-            .unwrap(),
-            timestamp: 50,
-            logs: vec![],
-        });
-
-        let result = slotter.update_latest_block(&reorg_block, chain);
-        assert_matches!(result, Err(SlotterError::ReorgDetected { .. }));
     }
 
     #[tokio::test]

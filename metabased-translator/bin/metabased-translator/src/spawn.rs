@@ -8,8 +8,8 @@ use common::{
     eth_client::{client, Client, EthClient, RPCClient},
     types::{Chain, KnownState, PartialBlock},
 };
-use eyre::{Report, Result};
-use ingestor::config::ChainIngestorConfig;
+use eyre::Result;
+use ingestor::{self, config::ChainIngestorConfig, ingestor::IngestorError};
 use metrics::metrics::{start_metrics, MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
 use slotter::SlotterError;
@@ -87,32 +87,72 @@ async fn termination_handling(
     tx: ShutdownTx,
     mut handles: ComponentHandles,
 ) -> Result<(), TerminationError> {
+    fn handle_ingestor_result(
+        result: Result<Result<(), IngestorError>, tokio::task::JoinError>,
+        component: &str,
+    ) -> Result<(), TerminationError> {
+        match result {
+            Ok(Ok(_)) => Ok(()),
+            Ok(Err(IngestorError::ReorgDetected {
+                chain,
+                current_block,
+                received_block,
+                received_parent_hash,
+            })) => {
+                error!("restarting the translator components due to {chain} chain reorg: current={:?}, received={:?}, parent_hash={:?}", 
+                    current_block, received_block, received_parent_hash);
+                Err(TerminationError::ReorgDetected())
+            }
+            Ok(Err(e)) => Err(TerminationError::Err(RuntimeError::TaskFailedRecoverable(format!(
+                "{component}: {e}"
+            )))),
+            Err(e) => Err(TerminationError::Err(RuntimeError::TaskFailedUnrecoverable(format!(
+                "{component}: {e}"
+            )))),
+        }
+    }
+
+    fn handle_slotter_result(
+        result: Result<Result<(), SlotterError>, tokio::task::JoinError>,
+    ) -> Result<(), TerminationError> {
+        match result {
+            Ok(Ok(_)) => Ok(()),
+            Ok(Err(e)) => Err(TerminationError::Err(RuntimeError::TaskFailedRecoverable(format!(
+                "Slotter: {e}"
+            )))),
+            Err(e) => Err(TerminationError::Err(RuntimeError::TaskFailedUnrecoverable(format!(
+                "Slotter: {e}"
+            )))),
+        }
+    }
+
     // MAIN SELECT LOOP - wait for shutdown signal or task failure
-    tokio::select! {
+    let result = tokio::select! {
         _ = shutdown_rx => {
-            handles.graceful_shutdown(tx).await;
             Ok(())
         },
-        res = &mut handles.sequencing => handles.check_error(res, "Sequencing chain ingestor").map_err(TerminationError::Err),
-        res = &mut handles.settlement => handles.check_error(res, "Settlement chain ingestor").map_err(TerminationError::Err),
-        res = &mut handles.slotter => {
-            match res {
-                Ok(Ok(_)) => Ok(()),
-                Ok(Err(e @ SlotterError::ReorgDetected { .. })) => {
-                    error!("restarting the translator components: {e}");
-                    handles.graceful_shutdown(tx).await;
-                    Err(TerminationError::ReorgDetected())
-                }
-                Ok(Err(e)) => Err(TerminationError::Err(RuntimeError::TaskFailedRecoverable(format!("Slotter: {e}")))),
-                Err(e) => Err(TerminationError::Err(RuntimeError::TaskFailedUnrecoverable(format!("Slotter: {e}")))),
-            }
+        res = &mut handles.sequencing => {
+            handle_ingestor_result(res, "Sequencing chain ingestor")
         },
+        res = &mut handles.settlement => {
+            handle_ingestor_result(res, "Settlement chain ingestor")
+        },
+        res = &mut handles.slotter => {
+            handle_slotter_result(res)
+        },
+    };
+
+    // Only perform graceful shutdown if there was an error or explicit shutdown request
+    if result.is_err() || matches!(result, Ok(())) {
+        handles.graceful_shutdown(tx).await;
     }
+
+    result
 }
 
 struct ComponentHandles {
-    sequencing: JoinHandle<Result<(), Report>>,
-    settlement: JoinHandle<Result<(), Report>>,
+    sequencing: JoinHandle<Result<(), IngestorError>>,
+    settlement: JoinHandle<Result<(), IngestorError>>,
     slotter: JoinHandle<Result<(), SlotterError>>,
 }
 
@@ -146,7 +186,7 @@ impl ComponentHandles {
         let settlement_addresses = mchain.rollup_adapter.settlement_addresses_to_monitor();
 
         let sequencing = tokio::spawn(async move {
-            ingestor::run(
+            ingestor::ingestor::run(
                 Chain::Sequencing,
                 &sequencing_config,
                 sequencing_addresses,
@@ -159,7 +199,7 @@ impl ComponentHandles {
         });
 
         let settlement = tokio::spawn(async move {
-            ingestor::run(
+            ingestor::ingestor::run(
                 Chain::Settlement,
                 &settlement_config,
                 settlement_addresses,
@@ -194,42 +234,29 @@ impl ComponentHandles {
         info!("Shutting down ingestors...");
         let _ = tx.sequencer.send(());
         let _ = tx.settlement.send(());
-        if let Err(e) = self.sequencing.await {
-            warn!("Error shutting down sequencing ingestor: {}", e);
+
+        // if this function is called on reorg, an ingestor will already be stopped
+        if !self.sequencing.is_finished() {
+            if let Err(e) = self.sequencing.await {
+                warn!("Error shutting down sequencing ingestor: {}", e);
+            }
         }
-        if let Err(e) = self.settlement.await {
-            warn!("Error shutting down settlement ingestor: {}", e);
+        if !self.settlement.is_finished() {
+            if let Err(e) = self.settlement.await {
+                warn!("Error shutting down settlement ingestor: {}", e);
+            }
         }
 
         // 2. Stop slotter
         info!("Shutting down slotter...");
         let _ = tx.slotter.send(());
         if !self.slotter.is_finished() {
-            // if this function is called on reorg, the slotter will already be stopped
             if let Err(e) = self.slotter.await {
                 warn!("Error shutting down slotter: {}", e);
             }
         }
 
         info!("Metabased Translator shutdown complete");
-    }
-
-    /// Outer error is unrecoverable task panic, inner error is recoverable
-    pub fn check_error(
-        self,
-        handle_result: Result<eyre::Result<(), Report>, tokio::task::JoinError>,
-        component: &str,
-    ) -> Result<(), RuntimeError> {
-        match handle_result {
-            Ok(res) => match res {
-                Ok(_) => {
-                    info!("{component} task completed successfully");
-                    Ok(())
-                }
-                Err(e) => Err(RuntimeError::TaskFailedRecoverable(format!("{component}: {e}"))),
-            },
-            Err(e) => Err(RuntimeError::TaskFailedUnrecoverable(format!("{component}: {e}"))),
-        }
     }
 }
 

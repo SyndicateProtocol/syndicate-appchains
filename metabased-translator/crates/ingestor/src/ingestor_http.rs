@@ -1,19 +1,21 @@
 //! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a
 //! consumer using a channel
 
-use crate::{config::ChainIngestorConfig, metrics::IngestorMetrics};
+use crate::{
+    config::ChainIngestorConfig,
+    ingestor::{check_reorg, IngestorError},
+    metrics::IngestorMetrics,
+};
 use alloy::{primitives::Address, rpc::types::BlockNumberOrTag};
 use common::{
     eth_client::RPCClient,
-    types::{Block, Chain, PartialBlock, PartialLogWithTxdata, Receipt},
+    types::{Block, BlockRef, Chain, PartialBlock, PartialLogWithTxdata, Receipt},
 };
-use eyre::Error;
 use std::{
     cmp::{max, min},
     sync::Arc,
     time::Duration,
 };
-use thiserror::Error;
 use tokio::{
     sync::{mpsc::Sender, oneshot},
     task::JoinSet,
@@ -25,6 +27,7 @@ struct BatchContext<'a> {
     sender: &'a Sender<Arc<PartialBlock>>,
     metrics: &'a IngestorMetrics,
     current_block_number: &'a mut u64,
+    last_block_sent: &'a mut Option<BlockRef>,
     initial_chain_head: u64,
     syncing_batch_size: u64,
     chain: Chain,
@@ -33,18 +36,6 @@ struct BatchContext<'a> {
     backoff_initial_interval: Duration,
     backoff_scaling_factor: u64,
     max_backoff: Duration,
-}
-
-#[derive(Debug, Error)]
-enum IngestorError {
-    #[error("Block number mismatch: current={current}, got={received}")]
-    BlockNumberMismatch { current: u64, received: u64 },
-
-    #[error("{resource} not yet available")]
-    ResourceNotAvailable { resource: String },
-
-    #[error("Failed to send block and receipts")]
-    SendError,
 }
 
 /// Starts a new ingestor task.
@@ -82,7 +73,7 @@ pub async fn run_http(
     sender: Sender<Arc<PartialBlock>>,
     metrics: IngestorMetrics,
     mut shutdown_rx: oneshot::Receiver<()>,
-) -> Result<(), Error> {
+) -> Result<(), IngestorError> {
     let initial_chain_head = fetch_block_with_retry(
         &*client,
         BlockNumberOrTag::Latest,
@@ -101,6 +92,7 @@ pub async fn run_http(
 
     let mut interval = tokio::time::interval(polling_interval);
     let mut current_block_number = start_block;
+    let mut last_block_sent = None;
 
     loop {
         tokio::select! {
@@ -112,11 +104,12 @@ pub async fn run_http(
             _ = interval.tick() => {
                // Skip missed ticks
                 interval.reset();
-                let should_terminate = fetch_and_push_batch(BatchContext {
+                fetch_and_push_batch(BatchContext {
                     client: &client,
                     sender: &sender,
                     metrics: &metrics,
                     current_block_number: &mut current_block_number,
+                    last_block_sent: &mut last_block_sent,
                     initial_chain_head,
                     syncing_batch_size: batch_size,
                     chain,
@@ -125,11 +118,7 @@ pub async fn run_http(
                     backoff_initial_interval: config.backoff_initial_interval,
                     backoff_scaling_factor: config.backoff_scaling_factor,
                     max_backoff: config.max_backoff,
-                }).await;
-                if should_terminate {
-                    info!(%chain, "Ingestor stopped");
-                    return Ok(())
-                }
+                }).await?;
             }
         }
     }
@@ -139,6 +128,7 @@ async fn push_block_and_receipts(
     sender: &Sender<Arc<PartialBlock>>,
     metrics: &IngestorMetrics,
     current_block_number: &mut u64,
+    last_block_sent: &mut Option<BlockRef>,
     block_and_receipts: Arc<PartialBlock>,
     chain: Chain,
 ) -> Result<(), IngestorError> {
@@ -155,17 +145,19 @@ async fn push_block_and_receipts(
         });
     }
     trace!(%chain, block_number = %block_and_receipts.number, "Attempting to send block");
-    sender.send(block_and_receipts).await.map_err(|e| {
-        error!(%chain, error = %e, "Failed during sender.send().await");
-        IngestorError::SendError
-    })?;
-    trace!(%chain, old_block_number = %*current_block_number, new_block_number = %(*current_block_number + 1), "Successfully sent block, incrementing block number");
+    match last_block_sent {
+        Some(last_block_sent) => check_reorg(chain, last_block_sent, &block_and_receipts)?,
+        None => *last_block_sent = Some(BlockRef::new(&block_and_receipts)),
+    }
+    *last_block_sent = Some(BlockRef::new(&block_and_receipts));
     *current_block_number += 1;
+    sender.send(block_and_receipts).await?;
+    trace!(%chain, old_block_number = %*current_block_number, new_block_number = %(*current_block_number + 1), "Successfully sent block, incrementing block number");
     metrics.update_channel_capacity(chain, sender.capacity());
     Ok(())
 }
 
-async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
+async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> Result<(), IngestorError> {
     let start_block_num = *ctx.current_block_number;
     let upper_bound = min(
         max(ctx.initial_chain_head, start_block_num) + 1,
@@ -175,7 +167,7 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
 
     if block_numbers.is_empty() {
         warn!(%ctx.chain, current_block = %start_block_num, initial_chain_head = %ctx.initial_chain_head, syncing_batch_size = %ctx.syncing_batch_size, "Calculated empty block range, skipping fetch cycle.");
-        return false;
+        return Ok(());
     }
     info!(%ctx.chain, range = ?block_numbers, "Calculated fetch range");
 
@@ -257,7 +249,7 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
             _ = &mut *ctx.shutdown_rx => {
                 warn!(%ctx.chain, "Shutdown signal received during task joining, aborting all fetch tasks.");
                 tasks.abort_all();
-                return true;
+                return Ok(());
             }
             result = tasks.join_next() => result
         };
@@ -294,18 +286,15 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
         match block_and_receipts {
             Some(block_and_receipts) => {
                 trace!(%ctx.chain, block_number = %current_processing_block_num, "Processing result: Some, attempting push");
-                if let Err(err) = push_block_and_receipts(
+                push_block_and_receipts(
                     ctx.sender,
                     ctx.metrics,
                     ctx.current_block_number,
+                    ctx.last_block_sent,
                     Arc::new(block_and_receipts),
                     ctx.chain,
                 )
-                .await
-                {
-                    error!(%ctx.chain, block_number = %current_processing_block_num, error = %err, "Failed to push block and receipts, stopping batch processing.");
-                    break;
-                }
+                .await?;
             }
             None => {
                 debug!(%ctx.chain, block_number = %current_processing_block_num, "Processing result: None, stopping batch processing at first gap.");
@@ -313,7 +302,7 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
             }
         }
     }
-    false
+    Ok(())
 }
 
 /// Executes an operation with exponential backoff retry logic.
@@ -502,7 +491,8 @@ mod tests {
             .unwrap(),
             number,
             parent_hash: B256::from_str(
-                "0234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                // all blocks have same hash/parent hash to prevent reorg detection triggering
+                "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
             )
             .unwrap(),
             logs_bloom: "0xLog".to_string(),
@@ -526,12 +516,13 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_push_block_and_receipts() -> Result<(), Error> {
+    async fn test_push_block_and_receipts() -> Result<(), IngestorError> {
         let start_block = 19486923;
         let (sender, mut receiver) = channel(10);
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
         let mut current_block_number = start_block;
+        let mut last_block_sent = None;
 
         let block = get_dummy_block(start_block);
         let arc_block = Arc::new(PartialBlock {
@@ -546,6 +537,7 @@ mod tests {
             &sender,
             &metrics,
             &mut current_block_number,
+            &mut last_block_sent,
             arc_block,
             Chain::Sequencing,
         )
@@ -568,6 +560,7 @@ mod tests {
         let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
         let mut current_block_number = start_block;
+        let mut last_block_sent = None;
 
         let block = get_dummy_block(wrong_block);
         let arc_block = Arc::new(PartialBlock {
@@ -582,6 +575,7 @@ mod tests {
             &sender,
             &metrics,
             &mut current_block_number,
+            &mut last_block_sent,
             arc_block,
             Chain::Sequencing,
         )
@@ -592,7 +586,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_start_polling_simple_and_shutdown() -> Result<(), Error> {
+    async fn test_start_polling_simple_and_shutdown() -> Result<(), IngestorError> {
         let start_block = 1;
         let polling_interval = Duration::from_millis(10);
         let config = ChainIngestorConfig {
@@ -604,11 +598,13 @@ mod tests {
             ..Default::default()
         };
 
-        let (sender, _) = channel(10);
+        let (sender, _receiver) = channel(10);
         let mut mock_client = MockRPCClientMock::new();
-        mock_client
-            .expect_get_block_by_number()
-            .returning(move |_| Ok(get_dummy_block(start_block)));
+        mock_client.expect_get_block_by_number().returning(move |num| match num {
+            BlockNumberOrTag::Number(num) => Ok(get_dummy_block(num)),
+            BlockNumberOrTag::Latest => Ok(get_dummy_block(start_block)),
+            _ => Err(RPCClientError::BlockNotFound(num.to_string())),
+        });
         mock_client.expect_get_block_receipts().returning(move |_| Ok(vec![]));
         let client: Arc<dyn RPCClient> = Arc::new(mock_client);
         let mut metrics_state = MetricsState { registry: Registry::default() };
@@ -625,13 +621,13 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(50)).await;
 
         let _ = shutdown_tx.send(());
-        polling_handle.await?;
+        polling_handle.await.unwrap();
 
         Ok(())
     }
 
     #[tokio::test]
-    async fn test_start_polling_batching() -> Result<(), Error> {
+    async fn test_start_polling_batching() -> Result<(), IngestorError> {
         let start_block = 100;
         let syncing_batch_size = 5;
         let config = ChainIngestorConfig {
@@ -693,7 +689,7 @@ mod tests {
         );
 
         let _ = shutdown_tx.send(());
-        polling_handle.await?;
+        polling_handle.await.unwrap();
 
         Ok(())
     }
