@@ -1,10 +1,11 @@
 //! The JSON-RPC server module for the Maestro sequencer.
 
-use crate::{constants::HEADER_CHAIN_ID, layers::HeadersLayer};
+use crate::{config::Config, constants::HEADER_CHAIN_ID, layers::HeadersLayer};
 use alloy::{
     consensus::Transaction,
     hex,
     primitives::{Bytes, ChainId, TxHash},
+    transports::http::Client,
 };
 use http::Extensions;
 use jsonrpsee::{
@@ -23,7 +24,7 @@ use tower::ServiceBuilder;
 use tracing::{debug, info};
 
 /// Runs the base server for the sequencer
-pub async fn run(port: i32) -> eyre::Result<(SocketAddr, ServerHandle)> {
+pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
     let optional_headers = vec!["x-synd-chain-id".to_string()];
     let http_middleware = ServiceBuilder::new()
         .layer(HeadersLayer::new(optional_headers)?)
@@ -31,10 +32,10 @@ pub async fn run(port: i32) -> eyre::Result<(SocketAddr, ServerHandle)> {
 
     let server = Server::builder()
         .set_http_middleware(http_middleware)
-        .build(format!("0.0.0.0:{}", port))
+        .build(format!("0.0.0.0:{}", config.port))
         .await?;
 
-    let service = MaestroService::new();
+    let service = MaestroService::new(config);
     let mut module = RpcModule::new(service);
 
     // Register RPC methods
@@ -89,18 +90,28 @@ fn get_request_chain_id(extensions: Extensions) -> Option<ChainId> {
 
 /// The service for filtering and directing transactions
 #[derive(Debug)]
-pub struct MaestroService {}
-
-impl Default for MaestroService {
-    fn default() -> Self {
-        Self::new()
-    }
+pub struct MaestroService {
+    _chain_id_nitro_urls: HashMap<String, String>,
+    _client: Client,
 }
+
+// impl Default for MaestroService {
+//     fn default() -> Self {
+//         Self::new()
+//     }
+// }
 
 impl MaestroService {
     /// Create a new instance of the Maestro service
-    pub const fn new() -> Self {
-        Self {}
+    pub fn new(config: Config) -> Self {
+        // TODO remove .expect() ?
+        #[allow(clippy::expect_used)]
+        let client = Client::builder()
+            .timeout(config.validation_timeout)
+            .build()
+            .expect("client should work");
+
+        Self { _chain_id_nitro_urls: config.chain_id_nitro_urls, _client: client }
     }
 
     async fn process_raw_transaction_v1(
@@ -111,8 +122,41 @@ impl MaestroService {
         info!("Processing raw transaction: {}", hex::encode(&raw_tx));
         let original_tx = validate_transaction(&raw_tx)?;
         Self::validate_chain_id(request_chain_id, original_tx.chain_id())?;
+        debug!(
+            "{} {}",
+            "Submitting validated transaction to Nitro: ",
+            original_tx.tx_hash().to_string()
+        );
 
-        debug!("Submitting validated transaction to Nitro");
+        // TODO finish req sending
+
+        // // JSON-RPC request payload for eth_getBlockByNumber
+        // let health_check_payload = serde_json::json!({
+        //     "jsonrpc": "2.0",
+        //     "method": "eth_sendRawTransaction",
+        //     "params": [raw_tx, false],
+        //     "id": 1
+        // });
+        //
+        //
+        // let nitro_url = self.chain_id_nitro_urls.get(&HEADER_CHAIN_ID).ma
+        //
+        // let response = self.client
+        //     .post(nitro_url)
+        //     .header("Content-Type", "application/json")
+        //     .json(&health_check_payload)
+        //     .send()
+        //     .await
+        //     .map_err(|e| ConfigError::NitroUrlConnection(chain_id.clone(), url.clone(), e))?;
+        //
+        // // Check for successful status code (2xx)
+        // if !response.status().is_success() {
+        //     return Err(ConfigError::NitroUrlInvalidStatus(
+        //         chain_id.clone(),
+        //         url.clone(),
+        //         response.status().to_string(),
+        //     ));
+        // }
 
         // TODO (SEQ-782): send to Nitro
         Ok(*original_tx.tx_hash())

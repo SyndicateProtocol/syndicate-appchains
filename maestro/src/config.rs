@@ -7,6 +7,7 @@ use std::{collections::HashMap, time::Duration};
 use tracing::{debug, error};
 
 /// Configuration for Maestro
+#[allow(clippy::doc_markdown)]
 #[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]
 pub struct Config {

@@ -23,13 +23,13 @@ async fn main() -> Result<()> {
         None => {
             info!("Redis is disabled")
         }
-        Some(redis_address) => {
-            let (_redis_client, _redis_conn) = connect(redis_address).await?;
+        Some(ref redis_address) => {
+            let (_redis_client, _redis_conn) = connect(redis_address.to_string()).await?;
             info!("Connected to Redis successfully!");
         }
     }
 
-    let (addr, handle) = maestro::server::run(config.port).await?;
+    let (addr, handle) = maestro::server::run(config).await?;
     info!(
         %addr,
         "Maestro server running"

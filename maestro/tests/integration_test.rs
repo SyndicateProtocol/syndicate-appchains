@@ -11,16 +11,26 @@ use tokio::time::sleep;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use maestro::config::Config;
     use std::collections::HashMap;
     use test_utils::transaction::{get_eip1559_transaction_hex, get_legacy_transaction_hex};
-    // Static server setup - one per test function
+
+    fn dummy_config() -> Config {
+        Config {
+            port: 0,
+            redis_address: None,
+            chain_id_nitro_urls: Default::default(),
+            validation_timeout: Default::default(),
+            skip_validation: false,
+        }
+    }
 
     // Initialize the server for this test function
     async fn setup_server() -> (SocketAddr, ServerHandle, String) {
         // Start the server
         // Always use 0 for dynamic port allocation
         // This lets the OS assign an available port automatically
-        let (addr, handle) = server::run(0).await.expect("Failed to start server");
+        let (addr, handle) = server::run(dummy_config()).await.expect("Failed to start server");
         let base_url = format!("http://{}", addr);
         println!("Server started at {} (OS assigned port {})", &base_url, addr.port());
 
