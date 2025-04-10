@@ -311,6 +311,30 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn test_unsupported_chain_id() -> Result<()> {
+        let tx_hex = get_legacy_transaction_hex(9999, 2); // Unsupported in dummy config
+        with_test_server(|client, base_url| async move {
+            // Test with wrong param count
+            let wrong_chain_id_response =
+                send_rpc_request(&client, &base_url, "eth_sendRawTransaction", json!([tx_hex]))
+                    .await?;
+
+            let json: Value = wrong_chain_id_response.json().await?;
+            println!("{:#?}", json);
+            assert!(json.get("error").is_some(), "Wrong parameter count should return an error");
+            // Access the error message and check if it contains our substring
+            let error_message = json["error"]["message"].as_str().unwrap_or("");
+            assert!(
+                error_message.contains("chain ID mismatch"),
+                "Error message should mention 'chain ID mismatch', but got: '{}'",
+                error_message
+            );
+            Ok(())
+        })
+        .await
+    }
+
+    #[tokio::test]
     async fn test_invalid_hex() -> Result<()> {
         with_test_server(|client, base_url| async move {
             // Test with invalid hex
