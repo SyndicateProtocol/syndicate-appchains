@@ -43,7 +43,7 @@ impl SendTransactionRequest {
             contract_address,
             chain_id: DEFAULT_SEQUENCING_CHAIN_ID,
             function_signature: DEFAULT_FUNCTION_SIGNATURE.to_string(),
-            args: HashMap::from([(TC_DATA_KEY.to_string(), hex::encode(data))]),
+            args: HashMap::from([(TC_DATA_KEY.to_string(), format!("0x{}", hex::encode(data)))]),
         }
     }
 }
