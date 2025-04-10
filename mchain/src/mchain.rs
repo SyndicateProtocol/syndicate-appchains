@@ -18,7 +18,11 @@ use jsonrpsee::{
     types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned},
     RpcModule,
 };
-use std::{collections::VecDeque, sync::Mutex, time::SystemTime};
+#[cfg(not(test))]
+use std::time::SystemTime;
+use std::{collections::VecDeque, sync::Mutex, time::UNIX_EPOCH};
+#[cfg(test)]
+use tests::SystemTime;
 use tracing::error;
 
 /// The chain id of the metachain. This is the same for all rollups.
@@ -87,12 +91,11 @@ impl MProvider {
         Self(ProviderBuilder::default().on_http(url))
     }
     pub async fn get_block_number(&self) -> u64 {
-        #[allow(clippy::unwrap_used)]
         #[allow(clippy::expect_used)]
         self.0
             .get_block_by_number(BlockNumberOrTag::Latest)
             .await
-            .unwrap()
+            .expect("get_block_number failed")
             .expect("latest block not found")
             .header
             .number
@@ -154,7 +157,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
         }
         // search for the finalized head. store unfinalized timestamps in a queue.
         finalized_block = db.get_block_number();
-        let now = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs();
+        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         while finalized_block > 1 {
             let block_ts = db.get_block(finalized_block).unwrap().timestamp;
             if block_ts + finality_delay <= now {
@@ -392,10 +395,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
                     BlockNumberOrTag::Latest => db.get_block_number(),
                     BlockNumberOrTag::Finalized => {
                         let mut data = mutex.lock().unwrap();
-                        let now = SystemTime::now()
-                            .duration_since(SystemTime::UNIX_EPOCH)
-                            .unwrap()
-                            .as_secs();
+                        let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
                         let mut ts = 0u64;
                         while let Some(block_ts) = data.1.front() {
                             if block_ts + finality_delay > now {
@@ -462,44 +462,161 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     module
 }
 
-// fully in-memory kv db for testing
 #[cfg(test)]
 mod tests {
-    use super::KVDB;
-    use crate::db::{ArbitrumDB as _, MBlock};
-    use alloy::primitives::Bytes;
-    use std::{collections::HashMap, sync::RwLock};
+    use super::start_mchain;
+    use crate::{
+        db::{tests::TestDB, DelayedMessage, MBlock, KVDB},
+        mchain::MProvider,
+        metrics::MchainMetrics,
+    };
+    use alloy::{
+        eips::BlockNumberOrTag,
+        primitives::{Address, Bytes},
+        providers::Provider as _,
+    };
+    use jsonrpsee::server::{Server, ServerHandle};
+    use std::{
+        sync::{Arc, RwLock},
+        time::UNIX_EPOCH,
+    };
+    use test_utils::port_manager::PortManager;
 
-    struct TestDB(RwLock<HashMap<Bytes, Bytes>>);
-    impl TestDB {
-        fn new() -> Self {
-            Self(RwLock::new(HashMap::new()))
+    #[ctor::ctor]
+    fn init() {
+        shared::logger::set_global_default_subscriber();
+    }
+
+    #[allow(clippy::redundant_pub_crate)]
+    pub(crate) struct SystemTime(RwLock<u64>);
+    static TIME: SystemTime = SystemTime(RwLock::new(0));
+    impl SystemTime {
+        pub(crate) fn now() -> &'static Self {
+            &TIME
+        }
+        pub(crate) fn duration_since(&self, from: std::time::SystemTime) -> Option<&Self> {
+            assert_eq!(from, UNIX_EPOCH);
+            Some(&TIME)
+        }
+        pub(crate) fn as_secs(&self) -> u64 {
+            *self.0.read().unwrap()
+        }
+        fn set(&self, secs: u64) {
+            *self.0.write().unwrap() = secs;
         }
     }
-    impl KVDB for TestDB {
+
+    impl KVDB for Arc<TestDB> {
         fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes> {
-            #[allow(clippy::unwrap_used)]
-            self.0.read().unwrap().get(key.as_ref()).cloned()
+            self.as_ref().get(key)
         }
         fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V) {
-            #[allow(clippy::unwrap_used)]
-            self.0
-                .write()
-                .unwrap()
-                .insert(key.as_ref().to_owned().into(), value.as_ref().to_owned().into());
+            self.as_ref().put(key, value)
         }
         fn delete<K: AsRef<[u8]>>(&self, key: K) {
-            #[allow(clippy::unwrap_used)]
-            self.0.write().unwrap().remove(key.as_ref());
+            self.as_ref().delete(key)
         }
     }
 
-    #[test]
-    fn test_invalid_batch() -> eyre::Result<()> {
-        let db = TestDB::new();
-        db.add_batch(MBlock { timestamp: 0, ..Default::default() })?;
-        db.add_batch(MBlock { timestamp: 1, ..Default::default() })?;
-        assert!(db.add_batch(MBlock { timestamp: 0, ..Default::default() }).is_err());
+    impl MProvider {
+        async fn get_finalized_block(&self) -> u64 {
+            self.0
+                .get_block_by_number(BlockNumberOrTag::Finalized)
+                .await
+                .expect("get_finalized_block failed")
+                .expect("finalized block not found")
+                .header
+                .number
+        }
+    }
+
+    async fn setup() -> eyre::Result<(MProvider, Arc<TestDB>, ServerHandle)> {
+        let db = Arc::new(TestDB::new());
+        let mchain =
+            start_mchain(10, Address::ZERO, 60, db.clone(), MchainMetrics::default()).await;
+        let port = PortManager::instance().next_port();
+        let handle = Server::builder().build(format!("0.0.0.0:{}", port)).await?.start(mchain);
+        let provider = MProvider::new(format!("http://localhost:{}", port).parse()?);
+        Ok((provider, db, handle))
+    }
+
+    #[tokio::test]
+    async fn rollback_to_block() -> eyre::Result<()> {
+        let empty = DelayedMessage {
+            kind: 0,
+            sender: Address::ZERO,
+            data: Default::default(),
+            base_fee_l1: Default::default(),
+        };
+        let (mchain, db, _handle) = setup().await?;
+        assert_eq!(db.0.read().unwrap().keys().len(), 3); // init msg, block number, batch (1)
+        assert_eq!(mchain.get_block_number().await, 1);
+        mchain.add_batch(MBlock::default()).await?;
+        assert_eq!(db.0.read().unwrap().keys().len(), 4); // block (2)
+        assert_eq!(mchain.get_block_number().await, 2);
+        mchain.add_batch(MBlock { messages: vec![empty.clone()], ..Default::default() }).await?; // block + messages (3)
+        assert_eq!(db.0.read().unwrap().keys().len(), 6);
+        assert_eq!(mchain.get_block_number().await, 3);
+        mchain.add_batch(MBlock { messages: vec![empty; 2], ..Default::default() }).await?; // block + 2 messagess (4)
+        assert_eq!(db.0.read().unwrap().keys().len(), 9);
+        assert_eq!(mchain.get_block_number().await, 4);
+        mchain.rollback_to_block(2).await?; // rm 2 blocks + 3 messages
+        assert_eq!(db.0.read().unwrap().keys().len(), 4);
+        assert_eq!(mchain.get_block_number().await, 2);
+        mchain.rollback_to_block(1).await?; // rm block
+        assert_eq!(db.0.read().unwrap().keys().len(), 3);
+        assert_eq!(mchain.get_block_number().await, 1);
+        assert!(mchain.rollback_to_block(0).await.is_err());
+        assert!(mchain.rollback_to_block(2).await.is_err());
+        assert_eq!(db.0.read().unwrap().keys().len(), 3);
+        assert_eq!(mchain.get_block_number().await, 1);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn finality() -> eyre::Result<()> {
+        let (mchain, _, _handle) = setup().await?;
+        assert_eq!(mchain.get_block_number().await, 1);
+        assert_eq!(mchain.get_finalized_block().await, 1);
+        mchain.add_batch(MBlock::default()).await?;
+        mchain.add_batch(MBlock { timestamp: 1, ..Default::default() }).await?;
+        mchain.add_batch(MBlock { timestamp: 1, ..Default::default() }).await?;
+        assert_eq!(mchain.get_block_number().await, 4);
+        assert_eq!(mchain.get_finalized_block().await, 1);
+        TIME.set(59);
+        assert_eq!(mchain.get_block_number().await, 4);
+        assert_eq!(mchain.get_finalized_block().await, 1);
+        TIME.set(60);
+        assert_eq!(mchain.get_block_number().await, 4);
+        assert_eq!(mchain.get_finalized_block().await, 2);
+        TIME.set(61);
+        assert_eq!(mchain.get_block_number().await, 4);
+        assert_eq!(mchain.get_finalized_block().await, 4);
+        mchain.rollback_to_block(3).await?;
+        assert_eq!(mchain.get_block_number().await, 3);
+        assert_eq!(mchain.get_finalized_block().await, 3);
+        mchain.add_batch(MBlock { timestamp: 1, ..Default::default() }).await?;
+        assert_eq!(mchain.get_block_number().await, 4);
+        assert_eq!(mchain.get_finalized_block().await, 4);
+        mchain.add_batch(MBlock { timestamp: 2, ..Default::default() }).await?;
+        assert_eq!(mchain.get_block_number().await, 5);
+        assert_eq!(mchain.get_finalized_block().await, 4);
+        mchain.rollback_to_block(4).await?;
+        TIME.set(62);
+        assert_eq!(mchain.get_block_number().await, 4);
+        assert_eq!(mchain.get_finalized_block().await, 4);
+        mchain.add_batch(MBlock { timestamp: 100, ..Default::default() }).await?;
+        assert_eq!(mchain.get_block_number().await, 5);
+        assert_eq!(mchain.get_finalized_block().await, 4);
+        TIME.set(0);
+        assert_eq!(mchain.get_block_number().await, 5);
+        assert_eq!(mchain.get_finalized_block().await, 4);
+        mchain.rollback_to_block(2).await?;
+        assert_eq!(mchain.get_block_number().await, 2);
+        assert_eq!(mchain.get_finalized_block().await, 2);
+        TIME.set(1000);
+        assert_eq!(mchain.get_block_number().await, 2);
+        assert_eq!(mchain.get_finalized_block().await, 2);
         Ok(())
     }
 }

@@ -404,12 +404,6 @@ impl From<SendError<Slot>> for SlotterError {
 }
 
 #[cfg(test)]
-#[ctor::ctor]
-fn init() {
-    shared::logger::set_global_default_subscriber();
-}
-
-#[cfg(test)]
 mod tests {
     use super::*;
     use alloy::primitives::B256;
@@ -423,6 +417,11 @@ mod tests {
         time::Duration,
     };
     use tokio::sync::mpsc::{channel, Sender};
+
+    #[ctor::ctor]
+    fn init() {
+        shared::logger::set_global_default_subscriber();
+    }
 
     struct MetricsState {
         /// Prometheus registry

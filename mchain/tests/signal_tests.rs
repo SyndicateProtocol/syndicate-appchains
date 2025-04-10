@@ -5,7 +5,6 @@ use eyre::Result;
 use std::process::Command;
 use test_utils::docker::start_mchain;
 
-#[cfg(test)]
 #[ctor::ctor]
 fn init() {
     shared::logger::set_global_default_subscriber();

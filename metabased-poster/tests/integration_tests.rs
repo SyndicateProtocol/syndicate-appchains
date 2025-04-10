@@ -19,7 +19,6 @@ use test_utils::port_manager::PortManager;
 use tokio::time::sleep;
 use url::Url;
 
-#[cfg(test)]
 #[ctor::ctor]
 fn init() {
     shared::logger::set_global_default_subscriber();

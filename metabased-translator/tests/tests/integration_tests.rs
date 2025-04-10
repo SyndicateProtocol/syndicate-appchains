@@ -27,7 +27,6 @@ const TEST_PRIVATE_KEY: &str = "0x8734a70a2db460d7aacc114ac822de780967cbe9c8b4ee
 // an arbitrary eoa address. does not contain funds.
 const TEST_ADDR: Address = address!("0x0000000000000000000000000000000000000001");
 
-#[cfg(test)]
 #[ctor::ctor]
 fn init() {
     shared::logger::set_global_default_subscriber();
