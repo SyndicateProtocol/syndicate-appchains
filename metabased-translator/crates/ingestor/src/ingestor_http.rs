@@ -2,8 +2,7 @@
 //! consumer using a channel
 
 use crate::{
-    config::ChainIngestorConfig,
-    ingestor::{process_and_send_block, IngestorError},
+    ingestor::{process_and_send_block, IngestorArgs, IngestorError},
     metrics::IngestorMetrics,
 };
 use alloy::{primitives::Address, rpc::types::BlockNumberOrTag};
@@ -57,24 +56,23 @@ struct BatchContext<'a> {
 /// and retried within the loop.
 ///
 /// # Arguments
-/// - `chain`: Specifies whether the ingestor is targeting the `Settlement` or `Sequencing` chain.
-/// - `config`: Configuration parameters, including the RPC endpoint URL and starting block number.
+/// - `args`: Specifies the ingestor parameters, including the chain, configuration, and addresses.
 /// - `client`: An asynchronous RPC client used for fetching block data.
-/// - `sender`: A channel for sending blocks to the consumer.
-/// - `metrics`: Metrics collection for monitoring ingestion performance.
-/// - `shutdown_rx`: A channel for receiving shutdown signals.
 ///
 /// # Returns
 /// A `Result` indicating the success or failure of the ingestor execution.
-pub async fn run_http(
-    chain: Chain,
-    config: &ChainIngestorConfig,
-    addresses: Vec<Address>,
-    client: Arc<dyn RPCClient>,
-    sender: Sender<Arc<PartialBlock>>,
-    metrics: IngestorMetrics,
-    mut shutdown_rx: oneshot::Receiver<()>,
-) -> Result<(), IngestorError> {
+pub async fn run_http(args: IngestorArgs, client: Arc<dyn RPCClient>) -> Result<(), IngestorError> {
+    // Extract commonly used values from args
+    let chain = args.chain;
+    let config = &args.config;
+    let addresses = args.addresses.clone();
+    let metrics = &args.metrics;
+    let sender = &args.sender;
+    let mut shutdown_rx = args.shutdown_rx;
+    let start_block = config.start_block;
+
+    info!(%chain, "Starting ingestor http");
+
     let initial_chain_head = fetch_block_with_retry(
         &*client,
         BlockNumberOrTag::Latest,
@@ -87,14 +85,13 @@ pub async fn run_http(
     .number;
     let batch_size = config.max_parallel_requests;
     let polling_interval = config.polling_interval;
-    let start_block = config.start_block;
 
     info!(%chain, "Starting polling");
 
     let mut interval = tokio::time::interval(polling_interval);
     interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
     let mut current_block_number = start_block;
-    let mut last_block_sent = None;
+    let mut last_block_sent = args.known_block;
 
     loop {
         tokio::select! {
@@ -107,14 +104,14 @@ pub async fn run_http(
                // Skip missed ticks
                 fetch_and_push_batch(BatchContext {
                     client: &client,
-                    sender: &sender,
-                    metrics: &metrics,
+                    sender,
+                    metrics,
                     current_block_number: &mut current_block_number,
                     last_block_sent: &mut last_block_sent,
                     initial_chain_head,
                     syncing_batch_size: batch_size,
                     chain,
-                    addresses:&addresses,
+                    addresses: &addresses,
                     shutdown_rx: &mut shutdown_rx,
                     backoff_initial_interval: config.backoff_initial_interval,
                     backoff_scaling_factor: config.backoff_scaling_factor,
@@ -612,9 +609,19 @@ mod tests {
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let polling_handle = tokio::spawn(async move {
-            let result =
-                run_http(Chain::Sequencing, &config, vec![], client, sender, metrics, shutdown_rx)
-                    .await;
+            let result = run_http(
+                IngestorArgs {
+                    chain: Chain::Sequencing,
+                    config,
+                    sender,
+                    addresses: vec![],
+                    metrics,
+                    shutdown_rx,
+                    known_block: None,
+                },
+                client,
+            )
+            .await;
             assert!(result.is_ok(), "Polling task failed: {:?}", result);
         });
 
@@ -669,9 +676,19 @@ mod tests {
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let polling_handle = tokio::spawn(async move {
-            let result =
-                run_http(Chain::Sequencing, &config, vec![], client, sender, metrics, shutdown_rx)
-                    .await;
+            let result = run_http(
+                IngestorArgs {
+                    chain: Chain::Sequencing,
+                    config,
+                    sender,
+                    addresses: vec![],
+                    metrics,
+                    shutdown_rx,
+                    known_block: None,
+                },
+                client,
+            )
+            .await;
             assert!(result.is_ok(), "Polling task failed: {:?}", result);
         });
 

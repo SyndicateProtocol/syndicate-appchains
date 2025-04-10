@@ -2,13 +2,11 @@
 //! consumer using a channel
 
 use crate::{
-    config::ChainIngestorConfig,
-    ingestor::{process_and_send_block, IngestorError},
+    ingestor::{process_and_send_block, IngestorArgs, IngestorError},
     metrics::IngestorMetrics,
 };
 use alloy::{
     consensus::{Transaction, TxEnvelope},
-    primitives::Address,
     providers::Provider,
     rlp::Decodable,
     rpc::types::{BlockNumberOrTag, Filter, Header},
@@ -21,7 +19,7 @@ use tokio::{
     select,
     sync::{
         mpsc::{self, Sender},
-        oneshot, Mutex,
+        Mutex,
     },
 };
 use tracing::{error, info, trace};
@@ -42,13 +40,8 @@ use tracing::{error, info, trace};
 /// - Sending blocks in order once gaps are filled
 ///
 /// # Arguments
-/// * `chain` - The chain to monitor (Sequencing or Settlement)
-/// * `config` - Configuration parameters for the ingestor
-/// * `addresses` - List of contract addresses to filter logs for
+/// * `args` - The ingestor arguments
 /// * `client` - Ethereum client provider for RPC calls
-/// * `sender` - Channel sender for processed blocks
-/// * `metrics` - Metrics collector for monitoring performance
-/// * `shutdown_rx` - Receiver for shutdown signals
 ///
 /// # Returns
 /// * `Result<(), IngestorError>` - Ok on successful completion, Err on failure
@@ -67,17 +60,19 @@ use tracing::{error, info, trace};
 /// * Last block fetched
 /// * Block processing latency
 pub async fn run_subscription(
-    chain: Chain,
-    config: &ChainIngestorConfig,
-    addresses: Vec<Address>,
+    args: IngestorArgs,
     client: Arc<dyn Provider>,
-    sender: Sender<Arc<PartialBlock>>,
-    metrics: IngestorMetrics,
-    mut shutdown_rx: oneshot::Receiver<()>,
 ) -> Result<(), IngestorError> {
-    info!(%chain, "Starting ingestor subscription");
-    let base_filter = Filter::new().address(addresses);
+    // Extract commonly used values from args
+    let chain = args.chain;
+    let config = &args.config;
+    let addresses = args.addresses.clone();
+    let metrics = &args.metrics;
     let start_block = config.start_block;
+    let mut shutdown_rx = args.shutdown_rx;
+
+    info!(%chain, "Starting ingestor subscription");
+    let base_filter = Filter::new().address(addresses.clone());
 
     let start_time = std::time::Instant::now();
     let mut new_heads_sub = client.subscribe_blocks().await?;
@@ -119,6 +114,7 @@ pub async fn run_subscription(
 
     let tasks_clone = tasks.clone();
     let metrics_clone = metrics.clone();
+    let sender = &args.sender;
 
     tasks.lock().await.spawn(async move {
         // ingest all blocks from `config.start_block` to the latest head
@@ -181,7 +177,7 @@ pub async fn run_subscription(
     });
 
     let mut blocks_collection: BTreeMap<u64, Arc<PartialBlock>> = BTreeMap::new();
-    let mut latest_processed_block: Option<BlockRef> = None;
+    let mut latest_processed_block: Option<BlockRef> = args.known_block;
 
     trace!(%chain, "Starting ingestor loop");
     loop {
@@ -208,7 +204,7 @@ pub async fn run_subscription(
 
                         // Process the valid block using the shared function
                         trace!(%chain, block = %block.number, logs = %block.logs.len(), "Sending block");
-                        process_and_send_block(&sender, &metrics, &mut latest_processed_block, block.clone(), chain).await?;
+                        process_and_send_block(sender, metrics, &mut latest_processed_block, block.clone(), chain).await?;
 
                         // Process any subsequent blocks we have stored
                         while let Some(ref last_block) = latest_processed_block {
@@ -217,7 +213,7 @@ pub async fn run_subscription(
                                 break;
                             };
                             trace!(%chain, block = %next_block.number, logs = %next_block.logs.len(), "sending stored block");
-                            process_and_send_block(&sender, &metrics, &mut latest_processed_block, next_block.clone(), chain).await?;
+                            process_and_send_block(sender, metrics, &mut latest_processed_block, next_block.clone(), chain).await?;
                         }
                     }
                     None => {

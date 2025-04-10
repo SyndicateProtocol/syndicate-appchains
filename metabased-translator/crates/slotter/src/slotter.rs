@@ -1,7 +1,6 @@
 //! Slotter module for metabased-translator
 
 use crate::{config::SlotterConfig, metrics::SlotterMetrics};
-use alloy::primitives::B256;
 use common::types::{BlockRef, Chain, KnownState, PartialBlock, Slot, SlotProcessor};
 use eyre::Report;
 use std::{collections::VecDeque, sync::Arc};
@@ -218,27 +217,6 @@ impl<P: SlotProcessor> Slotter<P> {
         block: &PartialBlock,
         chain: Chain,
     ) -> Result<(), SlotterError> {
-        if let Some(latest) = match chain {
-            Chain::Sequencing => self.latest_sequencing_block.as_ref(),
-            Chain::Settlement => self.latest_settlement_block.as_ref(),
-        } {
-            if block.number > latest.number + 1 {
-                return Err(SlotterError::BlockNumberSkipped {
-                    chain,
-                    current_block: Box::new(latest.clone()),
-                    received_block: Box::new(BlockRef::new(block)),
-                });
-            }
-
-            if block.timestamp < latest.timestamp {
-                return Err(SlotterError::EarlierTimestamp {
-                    chain,
-                    current: latest.timestamp,
-                    received: block.timestamp,
-                });
-            }
-        }
-
         trace!(
             ?chain,
             block_number = block.number,
@@ -356,21 +334,6 @@ pub enum SlotterError {
     #[error("Failed to send slot through channel: {0}")]
     SlotSendError(#[from] SendError<Slot>),
 
-    #[error("{chain} chain block number skipped. Current: #{current_block}, Received: #{received_block}")]
-    BlockNumberSkipped { chain: Chain, current_block: Box<BlockRef>, received_block: Box<BlockRef> },
-
-    #[error("{chain} chain timestamp must not decrease. Current: {current}, Received: {received}")]
-    EarlierTimestamp { chain: Chain, current: u64, received: u64 },
-
-    #[error("Block timestamp is before the safe timestamp. Safe timestamp: {safe_timestamp}, Block timestamp: {block_timestamp}, Block number: {block_number}, Block hash: {block_hash}")]
-    BlockBeforeSafeTimestamp {
-        chain: Chain,
-        safe_timestamp: u64,
-        block_timestamp: u64,
-        block_number: u64,
-        block_hash: B256,
-    },
-
     #[error("Slot processor error: {0}")]
     SlotProcessorError(#[from] Report),
 
@@ -381,14 +344,13 @@ pub enum SlotterError {
 #[cfg(test)]
 #[ctor::ctor]
 fn init() {
-    shared::logger::set_global_default_subscriber();
+    shared::logger::set_global_default_subscriber_for_tests();
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use alloy::primitives::B256;
-    use assert_matches::assert_matches;
     use async_trait::async_trait;
     use common::types::PartialBlock;
     use prometheus_client::registry::Registry;
@@ -626,28 +588,6 @@ mod tests {
 
         assert!(result.is_ok());
         assert_eq!(slotter.latest_settlement_block.unwrap().number, 3);
-    }
-
-    #[tokio::test]
-    async fn test_block_number_skipped() {
-        let processor = MockSlotProcessor::new();
-        let mut slotter = create_slotter(&SlotterConfig::default(), processor);
-        let block = create_test_block(4, 400);
-        slotter.latest_settlement_block = Some(BlockRef::new(&create_test_block(2, 200)));
-        let result = slotter.update_latest_block(&block, Chain::Settlement);
-
-        assert_matches!(result, Err(SlotterError::BlockNumberSkipped { .. }));
-    }
-
-    #[tokio::test]
-    async fn test_earlier_timestamp() {
-        let processor = MockSlotProcessor::new();
-        let mut slotter = create_slotter(&SlotterConfig::default(), processor);
-        let block = create_test_block(2, 50);
-        slotter.latest_sequencing_block = Some(BlockRef::new(&create_test_block(1, 100)));
-        let result = slotter.update_latest_block(&block, Chain::Sequencing);
-
-        assert_matches!(result, Err(SlotterError::EarlierTimestamp { .. }));
     }
 
     #[tokio::test]

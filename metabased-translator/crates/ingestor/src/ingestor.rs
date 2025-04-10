@@ -1,7 +1,10 @@
 //! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a
 //! consumer using a channel
 
-use crate::{config::ChainIngestorConfig, metrics::IngestorMetrics, run_http, run_subscription};
+use crate::{
+    config::ChainIngestorConfig, ingestor_http::run_http, ingestor_subscription::run_subscription,
+    metrics::IngestorMetrics,
+};
 use alloy::{
     primitives::{Address, B256},
     transports::{RpcError, TransportErrorKind},
@@ -18,25 +21,25 @@ use tokio::sync::{
 };
 use tracing::trace;
 
+/// Container for all arguments needed by ingestor functions
+#[allow(missing_docs)]
+#[derive(Debug)]
+pub struct IngestorArgs {
+    pub chain: Chain,
+    pub config: ChainIngestorConfig,
+    pub addresses: Vec<Address>,
+    pub sender: Sender<Arc<PartialBlock>>,
+    pub known_block: Option<BlockRef>,
+    pub metrics: IngestorMetrics,
+    pub shutdown_rx: oneshot::Receiver<()>,
+}
+
 /// Runs the ingestor component for a given chain.
 /// it will use the correct client based on the URL scheme
-pub async fn run(
-    chain: Chain,
-    config: &ChainIngestorConfig,
-    addresses: Vec<Address>,
-    client: &Client,
-    sender: Sender<Arc<PartialBlock>>,
-    metrics: IngestorMetrics,
-    shutdown_rx: oneshot::Receiver<()>,
-) -> Result<(), IngestorError> {
+pub async fn run(args: IngestorArgs, client: &Client) -> Result<(), IngestorError> {
     match client {
-        Client::Http(client) => {
-            run_http(chain, config, addresses, client.clone(), sender, metrics, shutdown_rx).await
-        }
-        Client::Subscription(client) => {
-            run_subscription(chain, config, addresses, client.clone(), sender, metrics, shutdown_rx)
-                .await
-        }
+        Client::Http(client) => run_http(args, client.clone()).await,
+        Client::Subscription(client) => run_subscription(args, client.clone()).await,
     }
 }
 

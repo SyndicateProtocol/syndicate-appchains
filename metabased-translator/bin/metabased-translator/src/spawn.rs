@@ -9,7 +9,7 @@ use common::{
     types::{Chain, KnownState, PartialBlock},
 };
 use eyre::Result;
-use ingestor::{self, config::ChainIngestorConfig, ingestor::IngestorError};
+use ingestor::{self, config::ChainIngestorConfig, ingestor::IngestorError, IngestorArgs};
 use metrics::metrics::{start_metrics, MetricsState, TranslatorMetrics};
 use prometheus_client::registry::Registry;
 use slotter::SlotterError;
@@ -50,14 +50,14 @@ pub async fn run(
     .await?;
 
     loop {
-        let safe_state = mchain
+        let known_state = mchain
             .reconcile_mchain_with_source_chains(&sequencing_client, &settlement_client)
             .await?;
 
         let (tx, rx) = ShutdownChannels::new().split();
         let component_tasks = ComponentHandles::spawn(
             config,
-            safe_state,
+            known_state,
             sequencing_client.clone(),
             settlement_client.clone(),
             metrics.clone(),
@@ -187,28 +187,40 @@ impl ComponentHandles {
         let sequencing_addresses = mchain.rollup_adapter.sequencing_addresses_to_monitor();
         let settlement_addresses = mchain.rollup_adapter.settlement_addresses_to_monitor();
 
+        let sequencing_known_state =
+            known_state.as_ref().map(|state| state.sequencing_block.clone());
+
         let sequencing = tokio::spawn(async move {
             ingestor::ingestor::run(
-                Chain::Sequencing,
-                &sequencing_config,
-                sequencing_addresses,
+                IngestorArgs {
+                    chain: Chain::Sequencing,
+                    config: sequencing_config,
+                    addresses: sequencing_addresses,
+                    sender: sequencing_tx,
+                    known_block: sequencing_known_state,
+                    metrics: metrics.ingestor_sequencing,
+                    shutdown_rx: shutdown_rx.sequencing,
+                },
                 &sequencing_client,
-                sequencing_tx,
-                metrics.ingestor_sequencing,
-                shutdown_rx.sequencing,
             )
             .await
         });
 
+        let settlement_known_state =
+            known_state.as_ref().map(|state| state.settlement_block.clone());
+
         let settlement = tokio::spawn(async move {
             ingestor::ingestor::run(
-                Chain::Settlement,
-                &settlement_config,
-                settlement_addresses,
+                IngestorArgs {
+                    chain: Chain::Settlement,
+                    config: settlement_config,
+                    addresses: settlement_addresses,
+                    sender: settlement_tx,
+                    known_block: settlement_known_state,
+                    metrics: metrics.ingestor_settlement,
+                    shutdown_rx: shutdown_rx.settlement,
+                },
                 &settlement_client,
-                settlement_tx,
-                metrics.ingestor_settlement,
-                shutdown_rx.settlement,
             )
             .await
         });
