@@ -72,7 +72,10 @@ pub fn check_reorg(
     current_block: &BlockRef,
     next_block: &PartialBlock,
 ) -> Result<(), IngestorError> {
-    if next_block.number != current_block.number + 1 {
+    if next_block.number != current_block.number + 1 ||
+        next_block.parent_hash != current_block.hash ||
+        next_block.timestamp < current_block.timestamp
+    {
         return Err(IngestorError::ReorgDetected {
             chain,
             current_block: Box::new(current_block.clone()),
@@ -80,16 +83,6 @@ pub fn check_reorg(
             received_parent_hash: next_block.parent_hash,
         });
     }
-
-    if next_block.parent_hash != current_block.hash {
-        return Err(IngestorError::ReorgDetected {
-            chain,
-            current_block: Box::new(current_block.clone()),
-            received_block: Box::new(BlockRef::new(next_block)),
-            received_parent_hash: next_block.parent_hash,
-        });
-    }
-
     Ok(())
 }
 

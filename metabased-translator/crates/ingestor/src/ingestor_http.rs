@@ -19,6 +19,7 @@ use std::{
 use tokio::{
     sync::{mpsc::Sender, oneshot},
     task::JoinSet,
+    time::MissedTickBehavior,
 };
 use tracing::{debug, error, info, trace, warn};
 
@@ -91,6 +92,7 @@ pub async fn run_http(
     info!(%chain, "Starting polling");
 
     let mut interval = tokio::time::interval(polling_interval);
+    interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
     let mut current_block_number = start_block;
     let mut last_block_sent = None;
 
@@ -103,7 +105,6 @@ pub async fn run_http(
             }
             _ = interval.tick() => {
                // Skip missed ticks
-                interval.reset();
                 fetch_and_push_batch(BatchContext {
                     client: &client,
                     sender: &sender,
@@ -145,9 +146,8 @@ async fn push_block_and_receipts(
         });
     }
     trace!(%chain, block_number = %block_and_receipts.number, "Attempting to send block");
-    match last_block_sent {
-        Some(last_block_sent) => check_reorg(chain, last_block_sent, &block_and_receipts)?,
-        None => *last_block_sent = Some(BlockRef::new(&block_and_receipts)),
+    if let Some(last_block_sent) = last_block_sent {
+        check_reorg(chain, last_block_sent, &block_and_receipts)?;
     }
     *last_block_sent = Some(BlockRef::new(&block_and_receipts));
     *current_block_number += 1;
@@ -165,10 +165,7 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> Result<(), IngestorError
     );
     let block_numbers: Vec<u64> = (start_block_num..upper_bound).collect();
 
-    if block_numbers.is_empty() {
-        warn!(%ctx.chain, current_block = %start_block_num, initial_chain_head = %ctx.initial_chain_head, syncing_batch_size = %ctx.syncing_batch_size, "Calculated empty block range, skipping fetch cycle.");
-        return Ok(());
-    }
+    assert!(!block_numbers.is_empty());
     info!(%ctx.chain, range = ?block_numbers, "Calculated fetch range");
 
     let mut tasks: JoinSet<Result<(u64, PartialBlock), IngestorError>> = JoinSet::new();
@@ -185,15 +182,18 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> Result<(), IngestorError
 
         tasks.spawn(async move {
             // Fetch block and receipts
-            let block = fetch_block_with_retry(
-                &*client,
-                BlockNumberOrTag::Number(block_number),
-                chain,
-                backoff_initial_interval,
-                backoff_scaling_factor,
-                max_backoff,
-            )
-            .await?;
+            let client_copy = client.clone();
+            let block = tokio::spawn(async move {
+                fetch_block_with_retry(
+                    &*client_copy,
+                    BlockNumberOrTag::Number(block_number),
+                    chain,
+                    backoff_initial_interval,
+                    backoff_scaling_factor,
+                    max_backoff,
+                )
+                .await
+            });
             let receipts = fetch_receipts_with_retry(
                 &*client,
                 block_number,
@@ -203,6 +203,8 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> Result<(), IngestorError
                 max_backoff,
             )
             .await?;
+            #[allow(clippy::unwrap_used)]
+            let block = block.await.unwrap()?;
             // Filter receipts that include logs for any of the addresses in ctx.addresses
             let filtered_logs: Vec<PartialLogWithTxdata> = receipts
                 .into_iter()

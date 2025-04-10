@@ -147,9 +147,7 @@ async fn termination_handling(
     };
 
     // Only perform graceful shutdown if there was an error or explicit shutdown request
-    if result.is_err() || matches!(result, Ok(())) {
-        handles.graceful_shutdown(tx).await;
-    }
+    handles.graceful_shutdown(tx).await;
 
     result
 }
