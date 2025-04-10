@@ -28,7 +28,7 @@ pub async fn run(
     let mut slot: Slot = Default::default();
 
     loop {
-        info!("Waiting for sequencing block");
+        trace!("Waiting for sequencing block");
         slot.sequencing = validate_block(
             &mut latest_sequencing_block,
             sequencing_rx.recv().await.expect("sequencing channel closed"),
@@ -36,7 +36,7 @@ pub async fn run(
             &metrics,
         )?;
 
-        info!("Waiting for settlement blocks");
+        trace!("Waiting for settlement blocks");
         let mut block = match slot.settlement.pop() {
             Some(block) => block,
             None => validate_block(
@@ -57,7 +57,7 @@ pub async fn run(
             )?;
         }
 
-        info!("Processing slot");
+        trace!("Processing slot");
         metrics.record_blocks_per_slot(slot.settlement.len() as u64 + 1);
         metrics.record_last_slot_created(slot.sequencing.number);
         slot_processor
