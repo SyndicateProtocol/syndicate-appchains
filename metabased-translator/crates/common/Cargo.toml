@@ -17,6 +17,7 @@ serde        = { workspace = true, features = ["derive", "rc"] }
 serde_json   = { workspace = true }
 strum_macros = { workspace = true }
 thiserror    = { workspace = true }
+tokio        = { workspace = true }
 tracing      = { workspace = true, features = ["attributes"] }
 url          = { workspace = true }
 

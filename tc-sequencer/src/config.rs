@@ -1,11 +1,39 @@
 //! The `config` module handles configuration parsing for the metabased sequencer.
 
-use crate::bytecode::{is_supported_factory_address, V1_FACTORY_ADDRESS};
 use alloy::primitives::Address;
 use clap::Parser;
-use std::{fmt::Debug, str::FromStr};
+use std::{collections::HashMap, fmt::Debug, str::FromStr};
 use thiserror::Error;
 use url::Url;
+
+// TODO [SEQ-792]: Get the sequencing addresses map from a config file
+/// Get the sequencing addresses map
+pub fn get_sequencing_addresses_default() -> HashMap<u64, Address> {
+    let mut map = HashMap::new();
+    // Manchego Chain
+    map.insert(510000, get_address("0x180972BF154c9Aea86c43149D83B7Ea078c33f48"));
+    // Burrata Chain
+    map.insert(510001, get_address("0xC1cacFC14624c4E241286Ade61DF545b90f850B4"));
+    // IRL Chain
+    map.insert(63821, get_address("0x536EA7C009ebE418501a1DB133b281a4a01d50f5"));
+    // Commerce Chain
+    map.insert(63822, get_address("0x7C8d3922298AbbEF7beE5F3dACC4238326482789"));
+    // Dream Chain
+    map.insert(63823, get_address("0x62B82d1AF6D61DdfE5b4af38Eb5dE982A7f7565f"));
+    // Amino Chain
+    map.insert(63824, get_address("0x8CcaC248CcFCA1283981678B7291F48f6e26ad39"));
+    // Eco Chain
+    map.insert(63825, get_address("0x47ec452FA5035C24217daCC66aA305802F1d0fbe"));
+    // Playground Chain
+    map.insert(63826, get_address("0x4e001110D16bE154EB586e73d2da823721E1a9cD"));
+    map
+}
+
+// TODO [SEQ-792]: Remove once we get this from config file
+/// Get an address from a string [TEMPORARY]
+fn get_address(string: &str) -> Address {
+    Address::from_str(string).unwrap_or_else(|_| panic!("Invalid address: {}", string))
+}
 
 /// The environment of the TC API
 #[derive(Debug, Clone)]
@@ -57,9 +85,9 @@ pub enum ConfigError {
     /// Invalid address
     #[error("Invalid address: {0}")]
     InvalidAddress(String),
-    /// Unsupported factory address
-    #[error("Unsupported factory address: {0}")]
-    UnsupportedFactoryAddress(String),
+    /// Invalid sequencing addresses mapping
+    #[error("Invalid sequencing addresses mapping: {0}")]
+    InvalidSequencingAddressesMapping(String),
 }
 
 /// Configuration for the tc sequencer
@@ -78,30 +106,29 @@ pub struct Config {
     #[arg(short = 'k', long, env = "TC_API_KEY")]
     pub tc_api_key: String,
 
-    /// Metabased sequencer factory address
-    #[arg(
-        short = 'f',
-        long,
-        env = "METABASED_SEQUENCER_FACTORY_ADDRESS",
-        // Default value is the address of the metabased sequencer factory on Exo
-        // https://syndicate-exo.explorer.alchemy.com/address/0xFEA8A2BA8B760348ea95492516620ad45a299d53
-        default_value = V1_FACTORY_ADDRESS,
-        value_parser = parse_and_check_supported_address
-    )]
-    pub metabased_sequencer_factory_address: Address,
-
     /// Port to listen on
     #[arg(short = 'p', long, env = "PORT", default_value_t = 8456)]
     pub port: u16,
+
+    /// Mapping of chain IDs to their corresponding sequencing addresses
+    #[arg(short = 'a', long, env = "SEQUENCING_ADDRESSES", value_parser = parse_sequencing_addresses)]
+    pub sequencing_addresses: HashMap<u64, Address>,
 }
 
-/// Parse a string into an Ethereum `Address` and check if it is supported.
-fn parse_and_check_supported_address(value: &str) -> Result<Address, ConfigError> {
-    let address = shared::parse::parse_address(value)?;
-    if !is_supported_factory_address(address) {
-        return Err(ConfigError::UnsupportedFactoryAddress(value.to_string()));
+/// Parse a string into a map of chain IDs to their corresponding sequencing addresses
+fn parse_sequencing_addresses(value: &str) -> Result<HashMap<u64, Address>, ConfigError> {
+    let mut map = get_sequencing_addresses_default();
+    for line in value.split(',') {
+        let parts = line.split('=').collect::<Vec<_>>();
+        let chain_id = parts[0].parse::<u64>().map_err(|e| {
+            ConfigError::InvalidSequencingAddressesMapping(format!("Invalid chain ID: {}", e))
+        })?;
+        let address = parts[1].parse::<Address>().map_err(|e| {
+            ConfigError::InvalidSequencingAddressesMapping(format!("Invalid address: {}", e))
+        })?;
+        map.insert(chain_id, address);
     }
-    Ok(address)
+    Ok(map)
 }
 
 impl From<shared::parse::Error> for ConfigError {
@@ -128,10 +155,8 @@ impl Default for Config {
             tc_endpoint: TCEndpoint::Staging,
             tc_project_id: String::new(),
             tc_api_key: String::new(),
-            #[allow(clippy::expect_used)]
-            metabased_sequencer_factory_address: Address::from_str(V1_FACTORY_ADDRESS)
-                .expect("Failed to parse default factory address"),
             port: 8456,
+            sequencing_addresses: HashMap::new(),
         }
     }
 }

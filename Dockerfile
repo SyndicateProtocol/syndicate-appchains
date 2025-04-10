@@ -1,82 +1,91 @@
-# Stage 1: Base image with Rust & cargo-chef
-FROM lukemathwalker/cargo-chef:latest-rust-1.84 AS chef
+# Global build arguments
+ARG BUILD_PROFILE=release
+ARG FEATURES=""
+
+# Stage 1: Base image with Rust
+FROM rust:slim-bookworm AS builder
+ARG BUILD_PROFILE
+ARG FEATURES
 WORKDIR /app
 
-RUN apt-get update && \
-    apt-get install -y libclang-dev pkg-config build-essential && \
+# Install build dependencies
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt \
+    apt-get update && \
+    apt-get install -y libclang-dev pkg-config build-essential libssl-dev && \
     rm -rf /var/lib/apt/lists/*
 
-# Stage 2: Prepare cargo-chef recipe
-FROM chef AS planner
-COPY . .
-RUN cargo chef prepare --recipe-path recipe.json
-
-# Stage 3: Build dependencies and application
-FROM chef AS builder
-
-COPY --from=planner /app/recipe.json recipe.json
-
-ARG BUILD_PROFILE=release
-ENV BUILD_PROFILE=${BUILD_PROFILE}
-ARG FEATURES=""
-ENV FEATURES=${FEATURES}
-
-RUN cargo chef cook --profile ${BUILD_PROFILE} --features "${FEATURES}" --recipe-path recipe.json
-
+# Stage 2: Build
+FROM builder AS build
 COPY . .
 
-RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --bin metabased-translator
-RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --package metabased-sequencer
-RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --package metabased-poster
-RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --package maestro
-RUN cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --package mchain
+# Perform cargo build with cached Cargo and target directories
+RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/usr/local/cargo \
+    cargo build --profile ${BUILD_PROFILE} --features "${FEATURES}" --locked --workspace
 
-# Stage 4: Optional Foundry install (in separate stage to avoid bloating runtime image)
-FROM debian:bullseye-slim AS foundry
-RUN apt-get update && apt-get install -y curl git ca-certificates && \
+
+# Stage 3: Optional Foundry install
+FROM debian:bookworm-slim AS foundry
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt \
+    apt-get update && \
+    apt-get install -y curl git ca-certificates && \
     curl -L https://foundry.paradigm.xyz | bash && \
-    ~/.foundry/bin/foundryup
+    ~/.foundry/bin/foundryup && \
+    rm -rf /var/lib/apt/lists/*
 
-# Stage 5: Runtime image for metabased-translator
-FROM gcr.io/distroless/cc AS metabased-translator
-COPY --from=builder /app/target/release/metabased-translator /usr/local/bin/metabased-translator
+# Stage 3: Runtime images
+FROM gcr.io/distroless/cc AS runtime-base
+
+# Runtime images
+FROM runtime-base AS metabased-translator
+ARG BUILD_PROFILE
+COPY --from=build /app/target/${BUILD_PROFILE}/metabased-translator /usr/local/bin/metabased-translator
 COPY --from=foundry /root/.foundry /root/.foundry
 ENV PATH="/root/.foundry/bin:${PATH}"
 ENTRYPOINT ["/usr/local/bin/metabased-translator"]
 EXPOSE 8545 8546
 LABEL service=metabased-translator
 
-# Stage 6: Runtime image for metabased-sequencer
-FROM gcr.io/distroless/cc AS metabased-sequencer
-COPY --from=builder /app/target/release/metabased-sequencer /usr/local/bin/metabased-sequencer
+FROM runtime-base AS metabased-sequencer
+ARG BUILD_PROFILE
+COPY --from=build /app/target/${BUILD_PROFILE}/metabased-sequencer /usr/local/bin/metabased-sequencer
 ENTRYPOINT ["/usr/local/bin/metabased-sequencer"]
 EXPOSE 8545 8546
 LABEL service=metabased-sequencer
 
-# Stage 7: Runtime image for metabased-poster
-FROM gcr.io/distroless/cc AS metabased-poster
-COPY --from=builder /app/target/release/metabased-poster /usr/local/bin/metabased-poster
+FROM runtime-base AS metabased-poster
+ARG BUILD_PROFILE
+COPY --from=build /app/target/${BUILD_PROFILE}/metabased-poster /usr/local/bin/metabased-poster
 ENTRYPOINT ["/usr/local/bin/metabased-poster"]
 LABEL service=metabased-poster
 
-# Stage 8: Runtime image for maestro
-FROM gcr.io/distroless/cc AS maestro
-COPY --from=builder /app/target/release/maestro /usr/local/bin/maestro
+FROM runtime-base AS maestro
+ARG BUILD_PROFILE
+COPY --from=build /app/target/${BUILD_PROFILE}/maestro /usr/local/bin/maestro
 ENTRYPOINT ["/usr/local/bin/maestro"]
 EXPOSE 8545 8546
 LABEL service=maestro
 
-# Step 9: Runtime image for mchain
-FROM gcr.io/distroless/cc AS mchain
-COPY --from=builder /app/target/release/mchain /usr/local/bin/mchain
+FROM runtime-base AS tc-sequencer
+ARG BUILD_PROFILE
+COPY --from=build /app/target/${BUILD_PROFILE}/tc-sequencer /usr/local/bin/tc-sequencer
+ENTRYPOINT ["/usr/local/bin/tc-sequencer"]
+EXPOSE 8545 8546
+LABEL service=tc-sequencer
+
+FROM runtime-base AS mchain
+ARG BUILD_PROFILE
+COPY --from=build /app/target/${BUILD_PROFILE}/mchain /usr/local/bin/mchain
 ENTRYPOINT ["/usr/local/bin/mchain"]
 EXPOSE 8545 8546
 LABEL service=mchain
 
 # --------- Debugging image for translator ---------
 FROM ubuntu:22.04 AS metabased-translator-debug
+ARG BUILD_PROFILE
 RUN apt-get update && apt-get install -y heaptrack libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
-COPY --from=builder /app/target/release/metabased-translator /usr/local/bin/metabased-translator
+COPY --from=build /app/target/${BUILD_PROFILE}/metabased-translator /usr/local/bin/metabased-translator
 COPY --from=foundry /root/.foundry /root/.foundry
 ENV PATH="/root/.foundry/bin:${PATH}"
 ENTRYPOINT ["/usr/local/bin/metabased-translator"]
