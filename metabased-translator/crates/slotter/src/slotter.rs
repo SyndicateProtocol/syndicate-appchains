@@ -2,7 +2,6 @@
 use crate::metrics::SlotterMetrics;
 use alloy::primitives::B256;
 use common::types::{BlockRef, Chain, KnownState, PartialBlock, Slot, SlotProcessor};
-use eyre::Report;
 use thiserror::Error;
 use tokio::sync::mpsc::Receiver;
 use tracing::{error, info, trace};
@@ -61,11 +60,15 @@ pub async fn run(
         info!("Processing slot");
         metrics.record_blocks_per_slot(slot.settlement.len() as u64 + 1);
         metrics.record_last_slot_created(slot.sequencing.number);
-        slot_processor.process_slot(&slot).await?;
+        slot_processor
+            .process_slot(&slot)
+            .await
+            .map_err(|e| SlotterError::SlotProcessorError(e.to_string()))?;
         slot.settlement = vec![block];
     }
 }
 
+#[allow(clippy::result_large_err)]
 fn validate_block(
     latest: &mut Option<BlockRef>,
     block: PartialBlock,
@@ -76,16 +79,16 @@ fn validate_block(
         if block.number > latest.number + 1 {
             return Err(SlotterError::BlockNumberSkipped {
                 chain,
-                current_block: Box::new(latest.clone()),
-                received_block: Box::new(BlockRef::new(&block)),
+                current_block: latest.clone(),
+                received_block: BlockRef::new(&block),
             });
         }
 
         if !block.parent_hash.eq(&latest.hash) {
             return Err(SlotterError::ReorgDetected {
                 chain,
-                current_block: Box::new(latest.clone()),
-                received_block: Box::new(BlockRef::new(&block)),
+                current_block: latest.clone(),
+                received_block: BlockRef::new(&block),
                 received_parent_hash: block.parent_hash,
             });
         }
@@ -99,7 +102,7 @@ fn validate_block(
         }
     }
 
-    *latest = Some(BlockRef { number: block.number, timestamp: block.timestamp, hash: block.hash });
+    *latest = Some(BlockRef::new(&block));
 
     trace!(
         chain = ?chain,
@@ -115,24 +118,126 @@ fn validate_block(
 }
 
 #[allow(missing_docs)] // self-documenting
-#[derive(Debug, Error)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum SlotterError {
     #[error(
         "{chain} chain reorg detected. Current: #{current_block}, Received: #{received_block}, Received parent hash: #{received_parent_hash}"
     )]
     ReorgDetected {
         chain: Chain,
-        current_block: Box<BlockRef>,
-        received_block: Box<BlockRef>,
+        current_block: BlockRef,
+        received_block: BlockRef,
         received_parent_hash: B256,
     },
 
     #[error("{chain} chain block number skipped. Current: #{current_block}, Received: #{received_block}")]
-    BlockNumberSkipped { chain: Chain, current_block: Box<BlockRef>, received_block: Box<BlockRef> },
+    BlockNumberSkipped { chain: Chain, current_block: BlockRef, received_block: BlockRef },
 
     #[error("{chain} chain timestamp must not decrease. Current: {current}, Received: {received}")]
     EarlierTimestamp { chain: Chain, current: u64, received: u64 },
 
     #[error("Slot processor error: {0}")]
-    SlotProcessorError(#[from] Report),
+    SlotProcessorError(String),
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        metrics::SlotterMetrics,
+        slotter::{
+            validate_block,
+            SlotterError::{BlockNumberSkipped, EarlierTimestamp, ReorgDetected},
+        },
+    };
+    use alloy::primitives::{FixedBytes, U256};
+    use common::types::{BlockRef, Chain, PartialBlock};
+    use prometheus_client::registry::Registry;
+
+    #[test]
+    fn valid_block() {
+        for chain in [Chain::Sequencing, Chain::Settlement] {
+            let mut latest = Some(BlockRef { number: 0, timestamp: 0, hash: FixedBytes::ZERO });
+            let block = PartialBlock { number: 1, ..Default::default() };
+            assert_eq!(
+                validate_block(
+                    &mut latest,
+                    block.clone(),
+                    chain,
+                    &SlotterMetrics::new(&mut Registry::default())
+                ),
+                Ok(block)
+            );
+            let block = PartialBlock { number: 10, ..Default::default() };
+            assert_eq!(
+                validate_block(
+                    &mut None,
+                    block.clone(),
+                    chain,
+                    &SlotterMetrics::new(&mut Registry::default())
+                ),
+                Ok(block)
+            );
+        }
+    }
+
+    #[test]
+    fn block_number_skipped() {
+        for chain in [Chain::Sequencing, Chain::Settlement] {
+            let mut latest = Some(BlockRef { number: 0, timestamp: 0, hash: FixedBytes::ZERO });
+            let block = PartialBlock { number: 2, ..Default::default() };
+            assert_eq!(
+                validate_block(
+                    &mut latest,
+                    block.clone(),
+                    chain,
+                    &SlotterMetrics::new(&mut Registry::default())
+                ),
+                Err(BlockNumberSkipped {
+                    chain,
+                    current_block: latest.unwrap(),
+                    received_block: BlockRef::new(&block)
+                })
+            );
+        }
+    }
+
+    #[test]
+    fn reorg_detected() {
+        for chain in [Chain::Sequencing, Chain::Settlement] {
+            let mut latest = Some(BlockRef { number: 0, timestamp: 0, hash: FixedBytes::ZERO });
+            let block =
+                PartialBlock { number: 1, parent_hash: U256::from(1).into(), ..Default::default() };
+            assert_eq!(
+                validate_block(
+                    &mut latest,
+                    block.clone(),
+                    chain,
+                    &SlotterMetrics::new(&mut Registry::default())
+                ),
+                Err(ReorgDetected {
+                    chain,
+                    current_block: latest.unwrap(),
+                    received_block: BlockRef::new(&block),
+                    received_parent_hash: block.parent_hash,
+                })
+            );
+        }
+    }
+
+    #[test]
+    fn earlier_timestamp() {
+        for chain in [Chain::Sequencing, Chain::Settlement] {
+            let mut latest = Some(BlockRef { number: 0, timestamp: 1, hash: FixedBytes::ZERO });
+            let block = PartialBlock { number: 1, ..Default::default() };
+            assert_eq!(
+                validate_block(
+                    &mut latest,
+                    block.clone(),
+                    chain,
+                    &SlotterMetrics::new(&mut Registry::default())
+                ),
+                Err(EarlierTimestamp { chain, current: 1, received: 0 })
+            );
+        }
+    }
 }

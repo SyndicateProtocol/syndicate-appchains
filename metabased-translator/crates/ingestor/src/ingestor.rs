@@ -191,17 +191,22 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
         let max_backoff = ctx.max_backoff;
         let chain = ctx.chain;
 
+        // TODO(SEQ-801): benchmark this against the old code that uses a jsonrpc batch request
+        // instead of parallel ones and see which one is faster.
         tasks.spawn(async move {
-            // Fetch block and receipts
-            let block = fetch_block_with_retry(
-                &*client,
-                BlockNumberOrTag::Number(block_number),
-                chain,
-                backoff_initial_interval,
-                backoff_scaling_factor,
-                max_backoff,
-            )
-            .await?;
+            // Fetch block and receipts in parallel
+            let client_copy = client.clone();
+            let block = tokio::spawn(async move {
+                fetch_block_with_retry(
+                    &*client_copy,
+                    BlockNumberOrTag::Number(block_number),
+                    chain,
+                    backoff_initial_interval,
+                    backoff_scaling_factor,
+                    max_backoff,
+                )
+                .await
+            });
             let receipts = fetch_receipts_with_retry(
                 &*client,
                 block_number,
@@ -211,6 +216,8 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
                 max_backoff,
             )
             .await?;
+            #[allow(clippy::unwrap_used)]
+            let block = block.await.unwrap()?;
             // Filter receipts that include logs for any of the addresses in ctx.addresses
             let filtered_logs: Vec<PartialLogWithTxdata> = receipts
                 .into_iter()
@@ -631,7 +638,7 @@ mod tests {
         let config = ChainIngestorConfig {
             start_block,
             syncing_batch_size,
-            polling_interval: Duration::from_millis(10),
+            polling_interval: Duration::from_secs(1000),
             backoff_initial_interval: Duration::from_millis(50),
             backoff_scaling_factor: 2,
             max_backoff: Duration::from_secs(30),

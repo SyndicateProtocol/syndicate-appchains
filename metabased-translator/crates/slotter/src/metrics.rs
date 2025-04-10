@@ -24,13 +24,13 @@ pub struct Labels {
 #[derive(Debug, Clone)]
 pub struct SlotterMetrics {
     /// Records the last block number processed by the Slotter
-    pub slotter_last_processed_block: Family<Labels, Gauge>,
+    slotter_last_processed_block: Family<Labels, Gauge>,
     /// Tracks the timestamp lag (ms)
-    pub slotter_timestamp_lag_ms: Family<Labels, Gauge>,
+    slotter_timestamp_lag_ms: Family<Labels, Gauge>,
     /// Tracks blocks processed per slot
-    pub slotter_blocks_per_slot: Histogram,
+    slotter_blocks_per_slot: Histogram,
     /// Tracks the last slot created
-    pub slotter_last_slot_created: Gauge,
+    slotter_last_slot_created: Gauge,
 }
 
 impl SlotterMetrics {
