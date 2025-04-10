@@ -61,7 +61,6 @@ jobs:
       target_name: mchain
       runner_label: vip-large-01
     secrets: inherit
-
   cloud-run-deployment:
     needs: [publish-sequencer]
     runs-on: vip-large
