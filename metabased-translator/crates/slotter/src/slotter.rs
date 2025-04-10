@@ -25,28 +25,26 @@ pub async fn run(
     };
 
     info!("Starting Slotter");
-    let mut slot: Slot = Default::default();
+    let mut block = validate_block(
+        &mut latest_settlement_block,
+        settlement_rx.recv().await.expect("settlement channel closed"),
+        Chain::Settlement,
+        &metrics,
+    )?;
 
     loop {
         trace!("Waiting for sequencing block");
-        slot.sequencing = validate_block(
-            &mut latest_sequencing_block,
-            sequencing_rx.recv().await.expect("sequencing channel closed"),
-            Chain::Sequencing,
-            &metrics,
-        )?;
-
-        trace!("Waiting for settlement blocks");
-        let mut block = match slot.settlement.pop() {
-            Some(block) => block,
-            None => validate_block(
-                &mut latest_settlement_block,
-                settlement_rx.recv().await.expect("settlement channel closed"),
-                Chain::Settlement,
+        let mut slot = Slot {
+            sequencing: validate_block(
+                &mut latest_sequencing_block,
+                sequencing_rx.recv().await.expect("sequencing channel closed"),
+                Chain::Sequencing,
                 &metrics,
             )?,
+            settlement: Default::default(),
         };
 
+        trace!("Waiting for settlement blocks");
         while block.timestamp + settlement_delay <= slot.sequencing.timestamp {
             slot.settlement.push(block);
             block = validate_block(
@@ -64,7 +62,6 @@ pub async fn run(
             .process_slot(&slot)
             .await
             .map_err(|e| SlotterError::SlotProcessorError(e.to_string()))?;
-        slot.settlement = vec![block];
     }
 }
 
@@ -153,6 +150,11 @@ mod tests {
     use common::types::{BlockRef, Chain, PartialBlock};
     use prometheus_client::registry::Registry;
 
+    #[ctor::ctor]
+    fn init() {
+        shared::logger::set_global_default_subscriber();
+    }
+
     #[test]
     fn valid_block() {
         for chain in [Chain::Sequencing, Chain::Settlement] {
@@ -165,18 +167,21 @@ mod tests {
                     chain,
                     &SlotterMetrics::new(&mut Registry::default())
                 ),
-                Ok(block)
+                Ok(block.clone())
             );
+            assert_eq!(latest, Some(BlockRef::new(&block)));
+            let mut latest = None;
             let block = PartialBlock { number: 10, ..Default::default() };
             assert_eq!(
                 validate_block(
-                    &mut None,
+                    &mut latest,
                     block.clone(),
                     chain,
                     &SlotterMetrics::new(&mut Registry::default())
                 ),
-                Ok(block)
+                Ok(block.clone())
             );
+            assert_eq!(latest, Some(BlockRef::new(&block)));
         }
     }
 
@@ -184,6 +189,7 @@ mod tests {
     fn block_number_skipped() {
         for chain in [Chain::Sequencing, Chain::Settlement] {
             let mut latest = Some(BlockRef { number: 0, timestamp: 0, hash: FixedBytes::ZERO });
+            let latest_copy = latest.clone();
             let block = PartialBlock { number: 2, ..Default::default() };
             assert_eq!(
                 validate_block(
@@ -194,10 +200,11 @@ mod tests {
                 ),
                 Err(BlockNumberSkipped {
                     chain,
-                    current_block: latest.unwrap(),
+                    current_block: latest_copy.clone().unwrap(),
                     received_block: BlockRef::new(&block)
                 })
             );
+            assert_eq!(latest, latest_copy);
         }
     }
 
@@ -205,6 +212,7 @@ mod tests {
     fn reorg_detected() {
         for chain in [Chain::Sequencing, Chain::Settlement] {
             let mut latest = Some(BlockRef { number: 0, timestamp: 0, hash: FixedBytes::ZERO });
+            let latest_copy = latest.clone();
             let block =
                 PartialBlock { number: 1, parent_hash: U256::from(1).into(), ..Default::default() };
             assert_eq!(
@@ -216,11 +224,12 @@ mod tests {
                 ),
                 Err(ReorgDetected {
                     chain,
-                    current_block: latest.unwrap(),
+                    current_block: latest_copy.clone().unwrap(),
                     received_block: BlockRef::new(&block),
                     received_parent_hash: block.parent_hash,
                 })
             );
+            assert_eq!(latest, latest_copy);
         }
     }
 
@@ -228,6 +237,7 @@ mod tests {
     fn earlier_timestamp() {
         for chain in [Chain::Sequencing, Chain::Settlement] {
             let mut latest = Some(BlockRef { number: 0, timestamp: 1, hash: FixedBytes::ZERO });
+            let latest_copy = latest.clone();
             let block = PartialBlock { number: 1, ..Default::default() };
             assert_eq!(
                 validate_block(
@@ -238,6 +248,7 @@ mod tests {
                 ),
                 Err(EarlierTimestamp { chain, current: 1, received: 0 })
             );
+            assert_eq!(latest, latest_copy);
         }
     }
 }
