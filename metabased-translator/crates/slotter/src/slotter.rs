@@ -4,7 +4,7 @@ use crate::{config::SlotterConfig, metrics::SlotterMetrics};
 use alloy::primitives::B256;
 use common::types::{BlockRef, Chain, KnownState, PartialBlock, Slot, SlotProcessor};
 use eyre::Report;
-use std::{collections::VecDeque, sync::Arc};
+use std::collections::VecDeque;
 use thiserror::Error;
 use tokio::{
     select,
@@ -53,8 +53,8 @@ struct Slotter<P: SlotProcessor> {
 pub async fn run(
     config: &SlotterConfig,
     known_state: Option<KnownState>,
-    sequencing_rx: Receiver<Arc<PartialBlock>>,
-    settlement_rx: Receiver<Arc<PartialBlock>>,
+    sequencing_rx: Receiver<PartialBlock>,
+    settlement_rx: Receiver<PartialBlock>,
     slot_processor: impl SlotProcessor,
     metrics: SlotterMetrics,
     shutdown_rx: oneshot::Receiver<()>,
@@ -87,9 +87,9 @@ pub async fn run(
 }
 
 struct PrioritizeLaggingChainResult<'a>(
-    &'a mut Receiver<Arc<PartialBlock>>,
+    &'a mut Receiver<PartialBlock>,
     Chain,
-    &'a mut Receiver<Arc<PartialBlock>>,
+    &'a mut Receiver<PartialBlock>,
     Chain,
     u64,
 );
@@ -107,8 +107,8 @@ impl<P: SlotProcessor> Slotter<P> {
     /// The receiver that was created during [`Slotter::new`] will get slots as they are processed
     async fn main_loop(
         mut self,
-        mut sequencing_rx: Receiver<Arc<PartialBlock>>,
-        mut settlement_rx: Receiver<Arc<PartialBlock>>,
+        mut sequencing_rx: Receiver<PartialBlock>,
+        mut settlement_rx: Receiver<PartialBlock>,
         mut shutdown_rx: oneshot::Receiver<()>,
     ) -> Result<(), SlotterError> {
         info!("Starting Slotter");
@@ -157,8 +157,8 @@ impl<P: SlotProcessor> Slotter<P> {
 
     fn prioritize_lagging_chain<'a>(
         &self,
-        sequencing_rx: &'a mut Receiver<Arc<PartialBlock>>,
-        settlement_rx: &'a mut Receiver<Arc<PartialBlock>>,
+        sequencing_rx: &'a mut Receiver<PartialBlock>,
+        settlement_rx: &'a mut Receiver<PartialBlock>,
     ) -> PrioritizeLaggingChainResult<'a> {
         let seq_ts = self.latest_sequencing_block.as_ref().map_or(0, |b| b.timestamp);
         let set_ts = self.latest_settlement_block.as_ref().map_or(0, |b| b.timestamp);
@@ -189,7 +189,7 @@ impl<P: SlotProcessor> Slotter<P> {
 
     async fn process_block(
         &mut self,
-        block_info: Arc<PartialBlock>,
+        block_info: PartialBlock,
         chain: Chain,
     ) -> Result<(), SlotterError> {
         self.update_latest_block(&block_info, chain)?;
@@ -277,7 +277,7 @@ impl<P: SlotProcessor> Slotter<P> {
 
     async fn process_sequencing_block(
         &mut self,
-        block_info: Arc<PartialBlock>,
+        block_info: PartialBlock,
     ) -> Result<(), SlotterError> {
         let latest_slot = self.slots.back_mut();
         trace!("latest_slot: {:?}", latest_slot);
@@ -302,7 +302,7 @@ impl<P: SlotProcessor> Slotter<P> {
                     "Slot disappeared between front() and pop_front()".to_string(),
                 )
             })?;
-            new_slot.push_settlement_block(Arc::new(block));
+            new_slot.push_settlement_block(block);
         }
         debug!(%new_slot, "new opened slot created");
 
@@ -315,7 +315,7 @@ impl<P: SlotProcessor> Slotter<P> {
 
     async fn process_settlement_block(
         &mut self,
-        set_block: Arc<PartialBlock>,
+        set_block: PartialBlock,
     ) -> Result<(), SlotterError> {
         let set_ts = self.settlement_timestamp(&set_block);
 
@@ -338,8 +338,7 @@ impl<P: SlotProcessor> Slotter<P> {
         }
 
         // if we get here, the block doesn't fit in any slot
-        self.unassigned_settlement_blocks
-            .push_back(Arc::try_unwrap(set_block).unwrap_or_else(|arc| (*arc).clone()));
+        self.unassigned_settlement_blocks.push_back(set_block);
         debug!("block added to the unassigned list");
         Ok(())
     }
@@ -405,12 +404,6 @@ impl From<SendError<Slot>> for SlotterError {
 }
 
 #[cfg(test)]
-#[ctor::ctor]
-fn init() {
-    shared::logger::set_global_default_subscriber();
-}
-
-#[cfg(test)]
 mod tests {
     use super::*;
     use alloy::primitives::B256;
@@ -424,6 +417,11 @@ mod tests {
         time::Duration,
     };
     use tokio::sync::mpsc::{channel, Sender};
+
+    #[ctor::ctor]
+    fn init() {
+        shared::logger::set_global_default_subscriber();
+    }
 
     struct MetricsState {
         /// Prometheus registry
@@ -456,8 +454,8 @@ mod tests {
 
     struct TestSetup {
         processor: MockSlotProcessor,
-        sequencing_tx: Sender<Arc<PartialBlock>>,
-        settlement_tx: Sender<Arc<PartialBlock>>,
+        sequencing_tx: Sender<PartialBlock>,
+        settlement_tx: Sender<PartialBlock>,
         shutdown_tx: oneshot::Sender<()>,
     }
 
@@ -466,8 +464,8 @@ mod tests {
         let slotter = create_slotter(config, processor.clone());
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let (seq_tx, seq_rx) = channel::<Arc<PartialBlock>>(100);
-        let (settle_tx, settle_rx) = channel::<Arc<PartialBlock>>(100);
+        let (seq_tx, seq_rx) = channel::<PartialBlock>(100);
+        let (settle_tx, settle_rx) = channel::<PartialBlock>(100);
         tokio::spawn(async move { slotter.main_loop(seq_rx, settle_rx, shutdown_rx).await });
 
         TestSetup { processor, sequencing_tx: seq_tx, settlement_tx: settle_tx, shutdown_tx }
@@ -493,8 +491,8 @@ mod tests {
         }
     }
 
-    fn create_test_block(number: u64, timestamp: u64) -> Arc<PartialBlock> {
-        Arc::new(PartialBlock {
+    fn create_test_block(number: u64, timestamp: u64) -> PartialBlock {
+        PartialBlock {
             hash: B256::from_str(
                 "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
             )
@@ -506,7 +504,7 @@ mod tests {
             .unwrap(),
             timestamp,
             logs: vec![],
-        })
+        }
     }
 
     // Helper function to wait for a specific number of slots to be processed

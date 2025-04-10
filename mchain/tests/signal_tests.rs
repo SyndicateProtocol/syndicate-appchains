@@ -5,7 +5,6 @@ use eyre::Result;
 use std::process::Command;
 use test_utils::docker::start_mchain;
 
-#[cfg(test)]
 #[ctor::ctor]
 fn init() {
     shared::logger::set_global_default_subscriber();
@@ -22,11 +21,11 @@ async fn run_mchain(signal: &str) -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_metabased_sigterm() -> Result<()> {
+async fn test_mchain_sigterm() -> Result<()> {
     run_mchain("-TERM").await
 }
 
 #[tokio::test]
-async fn test_metabased_sigint() -> Result<()> {
+async fn test_mchain_sigint() -> Result<()> {
     run_mchain("-INT").await
 }

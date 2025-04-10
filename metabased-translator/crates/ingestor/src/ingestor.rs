@@ -22,7 +22,7 @@ use tracing::{debug, error, info, trace, warn};
 
 struct BatchContext<'a> {
     client: &'a Arc<dyn RPCClient>,
-    sender: &'a Sender<Arc<PartialBlock>>,
+    sender: &'a Sender<PartialBlock>,
     metrics: &'a IngestorMetrics,
     current_block_number: &'a mut u64,
     initial_chain_head: u64,
@@ -79,7 +79,7 @@ pub async fn run(
     config: &ChainIngestorConfig,
     addresses: Vec<Address>,
     client: Arc<dyn RPCClient>,
-    sender: Sender<Arc<PartialBlock>>,
+    sender: Sender<PartialBlock>,
     metrics: IngestorMetrics,
     mut shutdown_rx: oneshot::Receiver<()>,
 ) -> Result<(), Error> {
@@ -136,10 +136,10 @@ pub async fn run(
 }
 
 async fn push_block_and_receipts(
-    sender: &Sender<Arc<PartialBlock>>,
+    sender: &Sender<PartialBlock>,
     metrics: &IngestorMetrics,
     current_block_number: &mut u64,
-    block_and_receipts: Arc<PartialBlock>,
+    block_and_receipts: PartialBlock,
     chain: Chain,
 ) -> Result<(), IngestorError> {
     if block_and_receipts.number != *current_block_number {
@@ -298,7 +298,7 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
                     ctx.sender,
                     ctx.metrics,
                     ctx.current_block_number,
-                    Arc::new(block_and_receipts),
+                    block_and_receipts,
                     ctx.chain,
                 )
                 .await
@@ -485,14 +485,9 @@ mod tests {
     };
     use eyre::Result;
     use mockall::{mock, predicate::*};
-    use prometheus_client::registry::Registry;
+    use shared::metrics::MetricsState;
     use std::str::FromStr;
     use tokio::sync::mpsc::channel;
-
-    struct MetricsState {
-        /// Prometheus registry
-        pub registry: Registry,
-    }
 
     fn get_dummy_block(number: u64) -> Block {
         Block {
@@ -529,31 +524,31 @@ mod tests {
     async fn test_push_block_and_receipts() -> Result<(), Error> {
         let start_block = 19486923;
         let (sender, mut receiver) = channel(10);
-        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let mut metrics_state = MetricsState::default();
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
         let mut current_block_number = start_block;
 
         let block = get_dummy_block(start_block);
-        let arc_block = Arc::new(PartialBlock {
+        let block = PartialBlock {
             number: block.number,
             hash: block.hash,
             timestamp: block.timestamp,
             parent_hash: block.parent_hash,
             logs: vec![],
-        });
+        };
 
         push_block_and_receipts(
             &sender,
             &metrics,
             &mut current_block_number,
-            arc_block,
+            block,
             Chain::Sequencing,
         )
         .await
         .expect("Failed to poll block");
 
-        if let Some(arc_block) = receiver.recv().await {
-            assert_eq!(arc_block.number, start_block);
+        if let Some(block) = receiver.recv().await {
+            assert_eq!(block.number, start_block);
         } else {
             panic!("No block received");
         }
@@ -565,24 +560,24 @@ mod tests {
         let start_block = 100;
         let wrong_block = 101;
         let (sender, _) = channel(10);
-        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let mut metrics_state = MetricsState::default();
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
         let mut current_block_number = start_block;
 
         let block = get_dummy_block(wrong_block);
-        let arc_block = Arc::new(PartialBlock {
+        let block = PartialBlock {
             number: block.number,
             hash: block.hash,
             timestamp: block.timestamp,
             parent_hash: block.parent_hash,
             logs: vec![],
-        });
+        };
 
         let err = push_block_and_receipts(
             &sender,
             &metrics,
             &mut current_block_number,
-            arc_block,
+            block,
             Chain::Sequencing,
         )
         .await
@@ -611,7 +606,7 @@ mod tests {
             .returning(move |_| Ok(get_dummy_block(start_block)));
         mock_client.expect_get_block_receipts().returning(move |_| Ok(vec![]));
         let client: Arc<dyn RPCClient> = Arc::new(mock_client);
-        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let mut metrics_state = MetricsState::default();
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
@@ -645,7 +640,7 @@ mod tests {
         let chain_head = start_block + syncing_batch_size;
 
         let (sender, mut receiver) = channel(10);
-        let mut metrics_state = MetricsState { registry: Registry::default() };
+        let mut metrics_state = MetricsState::default();
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
 
         let mut mock_client = MockRPCClientMock::new();

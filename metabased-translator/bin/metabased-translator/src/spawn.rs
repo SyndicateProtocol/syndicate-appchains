@@ -10,8 +10,8 @@ use common::{
 };
 use eyre::{Report, Result};
 use ingestor::config::ChainIngestorConfig;
-use metrics::metrics::{start_metrics, MetricsState, TranslatorMetrics};
-use prometheus_client::registry::Registry;
+use metrics::metrics::TranslatorMetrics;
+use shared::metrics::{start_metrics, MetricsState};
 use slotter::SlotterError;
 use std::sync::Arc;
 use tokio::{
@@ -128,9 +128,9 @@ impl ComponentHandles {
         shutdown_rx: ShutdownRx,
     ) -> Self {
         let (sequencing_tx, sequencing_rx) =
-            channel::<Arc<PartialBlock>>(config.sequencing.sequencing_buffer_size);
+            channel::<PartialBlock>(config.sequencing.sequencing_buffer_size);
         let (settlement_tx, settlement_rx) =
-            channel::<Arc<PartialBlock>>(config.settlement.settlement_buffer_size);
+            channel::<PartialBlock>(config.settlement.settlement_buffer_size);
 
         let mut sequencing_config: ChainIngestorConfig = config.sequencing.clone().into();
         let mut settlement_config: ChainIngestorConfig = config.settlement.clone().into();
@@ -140,8 +140,6 @@ impl ComponentHandles {
             sequencing_config.start_block = state.sequencing_block.number + 1;
             settlement_config.start_block = state.settlement_block.number + 1;
         }
-
-        let slotter_config = config.slotter.clone();
 
         let sequencing_addresses = mchain.rollup_adapter.sequencing_addresses_to_monitor();
         let settlement_addresses = mchain.rollup_adapter.settlement_addresses_to_monitor();
@@ -172,6 +170,7 @@ impl ComponentHandles {
             .await
         });
 
+        let slotter_config = config.slotter.clone();
         let slotter = tokio::spawn(async move {
             slotter::run(
                 &slotter_config,
@@ -257,8 +256,7 @@ pub async fn clients(
 }
 
 pub async fn init_metrics(config: &MetabasedConfig) -> TranslatorMetrics {
-    let registry = Registry::default();
-    let mut metrics_state = MetricsState { registry };
+    let mut metrics_state = MetricsState::default();
     let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
     start_metrics(metrics_state, config.metrics.metrics_port).await;
     metrics

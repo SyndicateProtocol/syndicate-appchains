@@ -17,6 +17,7 @@ common            = { workspace = true }
 ingestor          = { workspace = true }
 prometheus-client = { workspace = true }
 reqwest           = { workspace = true }
+shared            = { workspace = true }
 slotter           = { workspace = true }
 thiserror         = { workspace = true }
 tokio             = { workspace = true }

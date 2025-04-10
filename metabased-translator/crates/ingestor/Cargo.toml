@@ -16,6 +16,7 @@ common = { workspace = true }
 eyre = { workspace = true }
 humantime = { workspace = true }
 prometheus-client = { workspace = true }
+shared = { workspace = true }
 thiserror = { workspace = true }
 tokio = { workspace = true, features = [
   "rt-multi-thread",

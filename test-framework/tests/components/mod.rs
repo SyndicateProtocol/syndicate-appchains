@@ -16,9 +16,9 @@ use contract_bindings::{
 };
 use eyre::Result;
 use mchain::mchain::{rollup_config, MProvider};
-use reqwest::Client;
 use std::{
     env,
+    future::Future,
     io::{stderr, Write},
     time::{Duration, SystemTime},
 };
@@ -31,7 +31,6 @@ use test_utils::{
         PRELOAD_INBOX_ADDRESS_300, PRELOAD_POSTER_ADDRESS_231, PRELOAD_POSTER_ADDRESS_300,
     },
 };
-use tokio::time::timeout;
 use tracing::info;
 
 // needs to be different from the regular private key to prevent nonce collisions
@@ -39,6 +38,17 @@ use tracing::info;
 // anvil account 0
 const POSTER_SEQUENCER_PRIVATE_KEY: &str =
     "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
+
+#[derive(Debug)]
+struct ComponentHandles {
+    _seq_anvil: AnvilInstance,
+    _set_anvil: AnvilInstance,
+    mchain: Docker,
+    nitro_docker: Docker,
+    translator: Docker,
+    poster: Option<Docker>,
+    sequencer: Docker,
+}
 
 #[derive(Debug)]
 #[allow(clippy::redundant_pub_crate)]
@@ -63,15 +73,6 @@ pub(crate) struct Components {
     pub mchain_provider: MProvider,
 
     pub poster_url: String,
-
-    /// References to keep the processes/tasks alive
-    _mchain: Docker,
-    _seq_anvil: AnvilInstance,
-    _set_anvil: AnvilInstance,
-    _nitro_docker: Docker,
-    _translator: Docker,
-    _poster: Option<Docker>,
-    _sequencer: Docker,
 }
 
 #[derive(Debug)]
@@ -157,12 +158,30 @@ impl Default for ConfigurationOptions {
 }
 
 impl Components {
-    pub(crate) async fn new(options: &ConfigurationOptions) -> Result<Self> {
+    #[allow(clippy::unwrap_used)]
+    pub(crate) async fn run<Fut: Future<Output = Result<()>> + Send>(
+        options: &ConfigurationOptions,
+        test: impl FnOnce(Self) -> Fut + Send,
+    ) -> Result<()> {
+        let (components, mut handles) = Self::new(options).await?;
+        let poster = handles.poster.take();
+        tokio::select! {
+            biased;
+            e = handles.mchain.wait() => panic!("mchain died: {:#?}", e),
+            e = handles.nitro_docker.wait() => panic!("nitro died: {:#?}", e),
+            e = handles.translator.wait() => panic!("translator died: {:#?}", e),
+            e = async {poster.unwrap().wait().await}, if poster.is_some() => panic!("poster died: {:#?}", e),
+            e = handles.sequencer.wait() => panic!("sequencer died: {:#?}", e),
+            r = test(components) => r
+        }
+    }
+
+    async fn new(options: &ConfigurationOptions) -> Result<(Self, ComponentHandles)> {
         let start_time = SystemTime::now();
 
         info!("Starting components...");
         info!("Starting mchain...");
-        let (mchain_rpc_url, _mchain, mchain_provider) =
+        let (mchain_rpc_url, mchain, mchain_provider) =
             start_mchain(options.appchain_chain_id, options.appchain_owner, options.finality_delay)
                 .await?;
 
@@ -243,10 +262,13 @@ impl Components {
             sequencer_port: PortManager::instance().next_port(),
             metrics_port: PortManager::instance().next_port(),
         };
-        let sequencer =
-            start_component("metabased-sequencer", sequencer_config.cli_args(), Default::default())
-                .await?;
-        wait_for_service(sequencer_config.metrics_port).await?;
+        let sequencer = start_component(
+            "metabased-sequencer",
+            sequencer_config.metrics_port,
+            sequencer_config.cli_args(),
+            Default::default(),
+        )
+        .await?;
 
         info!("Starting translator...");
         let translator_config = TranslatorConfig {
@@ -275,11 +297,11 @@ impl Components {
         };
         let translator = start_component(
             "metabased-translator",
+            translator_config.metrics_port,
             translator_config.cli_args(),
             Default::default(),
         )
         .await?;
-        wait_for_service(translator_config.metrics_port).await?;
 
         // Launch the nitro rollup
         info!("Starting nitro node...");
@@ -291,9 +313,7 @@ impl Components {
         )
         .await?;
 
-        let mut poster = None;
-        let mut poster_url = String::new();
-        if options.pre_loaded.is_some() {
+        let (poster, poster_url) = if options.pre_loaded.is_some() {
             info!("Starting poster...");
             let poster_config = PosterConfig {
                 assertion_poster_contract_address: options.pre_loaded.as_ref().map_or(
@@ -308,36 +328,47 @@ impl Components {
                 port: PortManager::instance().next_port(),
                 appchain_rpc_url: nitro_url,
             };
-            poster = Some(
-                start_component("metabased-poster", poster_config.cli_args(), Default::default())
+            (
+                Some(
+                    start_component(
+                        "metabased-poster",
+                        poster_config.metrics_port,
+                        poster_config.cli_args(),
+                        Default::default(),
+                    )
                     .await?,
-            );
-            poster_url = format!("http://localhost:{}", poster_config.port);
-            wait_for_service(poster_config.metrics_port).await?;
-        }
+                ),
+                format!("http://localhost:{}", poster_config.port),
+            )
+        } else {
+            (None, Default::default())
+        };
 
         // Launch sequencer
-        Ok(Self {
-            #[allow(clippy::unwrap_used)]
-            _timer: TestTimer(SystemTime::now(), start_time.elapsed().unwrap()),
+        Ok((
+            Self {
+                #[allow(clippy::unwrap_used)]
+                _timer: TestTimer(SystemTime::now(), start_time.elapsed().unwrap()),
 
-            sequencing_provider: seq_provider,
-            settlement_provider: set_provider,
-            appchain_provider,
-            chain_id: options.appchain_chain_id,
-            bridge_address: translator_config.arbitrum_bridge_address,
-            inbox_address: translator_config.arbitrum_inbox_address,
-            mchain_provider,
-            poster_url,
-
-            _mchain,
-            _seq_anvil: seq_anvil,
-            _set_anvil: set_anvil,
-            _nitro_docker: nitro_docker,
-            _translator: translator,
-            _poster: poster,
-            _sequencer: sequencer,
-        })
+                sequencing_provider: seq_provider,
+                settlement_provider: set_provider,
+                appchain_provider,
+                chain_id: options.appchain_chain_id,
+                bridge_address: translator_config.arbitrum_bridge_address,
+                inbox_address: translator_config.arbitrum_inbox_address,
+                mchain_provider,
+                poster_url,
+            },
+            ComponentHandles {
+                _seq_anvil: seq_anvil,
+                _set_anvil: set_anvil,
+                mchain,
+                nitro_docker,
+                translator,
+                poster,
+                sequencer,
+            },
+        ))
     }
 
     pub(crate) async fn mine_seq_block(&self, delay: u64) -> Result<()> {
@@ -368,22 +399,6 @@ impl Components {
         self.mine_set_block(delay).await?;
         Ok(())
     }
-}
-
-async fn wait_for_service(port: u16) -> Result<()> {
-    let client = Client::new();
-    timeout(Duration::from_secs(120), async {
-        while !client
-            .get(format!("http://localhost:{port}/metrics"))
-            .send()
-            .await
-            .is_ok_and(|x| x.status().is_success())
-        {
-            tokio::time::sleep(Duration::from_millis(10)).await;
-        }
-        Ok(())
-    })
-    .await?
 }
 
 impl TranslatorConfig {

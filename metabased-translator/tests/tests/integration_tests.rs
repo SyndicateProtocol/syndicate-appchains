@@ -27,7 +27,6 @@ const TEST_PRIVATE_KEY: &str = "0x8734a70a2db460d7aacc114ac822de780967cbe9c8b4ee
 // an arbitrary eoa address. does not contain funds.
 const TEST_ADDR: Address = address!("0x0000000000000000000000000000000000000001");
 
-#[cfg(test)]
 #[ctor::ctor]
 fn init() {
     shared::logger::set_global_default_subscriber();
@@ -226,5 +225,31 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
     assert_eq!(transactions[1], *inner_tx.tx_hash());
     assert_eq!(transactions[2], *second_tx.tx_hash());
 
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_nitro_end_of_block_tx() -> Result<()> {
+    let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, Address::ZERO, 0).await?;
+    let (_nitro, rollup, _) =
+        launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
+
+    mchain
+        .add_batch(MBlock {
+            messages: vec![
+                DelayedMessage {
+                    kind: L1MessageType::EndOfBlock as u8,
+                    sender: Address::ZERO,
+                    data: Default::default(),
+                    base_fee_l1: Default::default(),
+                };
+                3
+            ],
+            batch: arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
+            ..Default::default()
+        })
+        .await?;
+
+    wait_until!(rollup.get_block_number().await? == 3, Duration::from_secs(1));
     Ok(())
 }

@@ -12,7 +12,7 @@ use serde::{
     de::{self, Deserializer},
     Deserialize, Serialize, Serializer,
 };
-use std::{fmt, sync::Arc};
+use std::fmt;
 use strum_macros::Display;
 
 #[allow(missing_docs)]
@@ -88,25 +88,24 @@ pub trait SlotProcessor: Send {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
 pub struct Slot {
     /// the block from the sequencing chain to be included in the slot.
-    pub sequencing: Arc<PartialBlock>,
+    pub sequencing: PartialBlock,
     /// the blocks from the settlement chain to be included in the slot.
-    pub settlement: Vec<Arc<PartialBlock>>,
+    pub settlement: Vec<PartialBlock>,
 }
 
 impl Slot {
     /// Creates a new slot
-    pub const fn new(sequencing_block: Arc<PartialBlock>) -> Self {
+    pub const fn new(sequencing_block: PartialBlock) -> Self {
         Self { sequencing: sequencing_block, settlement: Vec::new() }
     }
 
     /// Adds a block to the slot's chain-specific block list
-    pub fn push_settlement_block(&mut self, block: Arc<PartialBlock>) {
+    pub fn push_settlement_block(&mut self, block: PartialBlock) {
         self.settlement.push(block)
     }
 
     /// Returns the timestamp of the slot
-    #[allow(clippy::missing_const_for_fn)] // false positive (cannot deref Arc in a const fn)
-    pub fn timestamp(&self) -> u64 {
+    pub const fn timestamp(&self) -> u64 {
         self.sequencing.timestamp
     }
 }
@@ -123,18 +122,11 @@ impl Display for Slot {
     }
 }
 
-fn format_blocks(blocks: &[Arc<PartialBlock>]) -> String {
+fn format_blocks(blocks: &[PartialBlock]) -> String {
     if blocks.is_empty() {
         return "none".to_string();
     }
-    blocks
-        .iter()
-        .map(|arc_block| {
-            let b = arc_block.as_ref();
-            format!("#{} ({})", b.number, b.hash)
-        })
-        .collect::<Vec<_>>()
-        .join(", ")
+    blocks.iter().map(|b| format!("#{} ({})", b.number, b.hash)).collect::<Vec<_>>().join(", ")
 }
 
 fn format_block(b: &PartialBlock) -> String {
@@ -454,7 +446,7 @@ mod test {
 
     fn create_test_slot() -> Slot {
         // Add sequencing chain block
-        let sequencing_block = Arc::new(PartialBlock {
+        let sequencing_block = PartialBlock {
             hash: B256::from_hex(
                 "0x1234567890123456789012345678901234567890123456789012345678901234",
             )
@@ -471,12 +463,12 @@ mod test {
                 data: Bytes::from_hex("0xdead").unwrap(),
                 tx_calldata: Bytes::from_hex("0xbeef").unwrap(),
             }],
-        });
+        };
 
         let mut slot = Slot::new(sequencing_block);
 
         // Add settlement chain block
-        slot.push_settlement_block(Arc::new(PartialBlock {
+        slot.push_settlement_block(PartialBlock {
             hash: B256::from_hex(
                 "0x5678901234567890123456789012345678901234567890123456789012345678",
             )
@@ -488,7 +480,7 @@ mod test {
             .unwrap(),
             timestamp: 1100,
             logs: vec![],
-        }));
+        });
 
         slot
     }
