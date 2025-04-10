@@ -4,7 +4,8 @@ use eyre::Result;
 use maestro::{config::Config, errors::Error};
 use redis::{aio::MultiplexedConnection, AsyncCommands, Client};
 use shared::logger::set_global_default_subscriber;
-use tracing::info;
+use tokio::signal::unix::{signal, SignalKind};
+use tracing::{info, log::warn};
 
 #[tokio::main]
 #[allow(clippy::redundant_pub_crate)]
@@ -21,7 +22,7 @@ async fn main() -> Result<()> {
 
     match config.redis_address {
         None => {
-            info!("Redis is disabled")
+            warn!("Redis is disabled")
         }
         Some(ref redis_address) => {
             let (_redis_client, _redis_conn) = connect(redis_address.to_string()).await?;
@@ -34,10 +35,24 @@ async fn main() -> Result<()> {
         %addr,
         "Maestro server running"
     );
-    // Keep the server running
+
+    #[allow(clippy::expect_used)]
+    let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
+    #[allow(clippy::expect_used)]
+    let mut sigterm = signal(SignalKind::terminate()).expect("Failed to register SIGTERM handler");
+
     tokio::select! {
-        _ = handle.stopped() => {}
-    }
+        _ = sigint.recv() => {
+            println!("Received SIGINT (Ctrl+C), initiating shutdown...");
+        }
+        _ = sigterm.recv() => {
+            println!("Received SIGTERM, initiating shutdown...");
+        }
+    };
+
+    handle.stop()?;
+    handle.stopped().await;
+
     Ok(())
 }
 
