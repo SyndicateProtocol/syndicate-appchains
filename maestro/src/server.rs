@@ -115,6 +115,7 @@ pub struct MaestroService {
 impl MaestroService {
     /// Create a new instance of the Maestro service
     pub fn new(config: Config, client: Client) -> Self {
+        info!("Initialized MaestroService with chain_id mappings: {:?}", config.chain_rpc_urls);
         Self { chain_id_nitro_urls: config.chain_rpc_urls, client }
     }
 
@@ -161,10 +162,38 @@ impl MaestroService {
                 Internal("internal error sending transaction".to_string())
             })?;
 
+        // Check HTTP status
         if !response.status().is_success() {
-            warn!(%nitro_url, %tx_hash, %txn_chain_id, "Nitro returned non-200 status for forwarded txn");
+            error!(
+                %nitro_url,
+                %tx_hash,
+                %txn_chain_id,
+                status = %response.status(),
+                "Nitro returned non-200 status for forwarded txn"
+            );
+            return Err(Internal(format!("RPC endpoint returned status {}", response.status())));
         }
 
+        // Parse the response body
+        let response_body = response.text().await.map_err(|e| {
+            error!(%nitro_url, %tx_hash, %txn_chain_id, %e, "Failed to read response body from Nitro");
+            Internal("Failed to read response from RPC endpoint".to_string())
+        })?;
+
+        // Parse as JSON
+        let json_response: serde_json::Value = serde_json::from_str(&response_body).map_err(|e| {
+            error!(%nitro_url, %tx_hash, %txn_chain_id, %e, "Failed to parse JSON response from Nitro");
+            Internal("Invalid JSON response from RPC endpoint".to_string())
+        })?;
+
+        // Check for JSON-RPC error
+        if let Some(error) = json_response.get("error") {
+            error!(%nitro_url, %tx_hash, %txn_chain_id, error = ?error, "Nitro returned JSON-RPC error");
+            return Err(Internal(format!("RPC endpoint returned error: {}", error)));
+        }
+
+        // Log success and return the hash
+        info!(%nitro_url, %tx_hash, %txn_chain_id, "Successfully forwarded transaction to Nitro");
         Ok(*original_tx.tx_hash())
     }
 
