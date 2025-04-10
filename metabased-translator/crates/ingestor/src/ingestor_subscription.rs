@@ -3,7 +3,7 @@
 
 use crate::{
     config::ChainIngestorConfig,
-    ingestor::{check_reorg, IngestorError},
+    ingestor::{process_and_send_block, IngestorError},
     metrics::IngestorMetrics,
 };
 use alloy::{
@@ -193,9 +193,6 @@ pub async fn run_subscription(
                 return Ok(());
             }
             received_block = result_receiver.recv() => {
-                // Update channel capacity metric
-                metrics.update_channel_capacity(chain, result_receiver.capacity());
-
                 match received_block {
                     Some(block) => {
                         trace!(%chain, block = %block.number, "Received block");
@@ -209,11 +206,9 @@ pub async fn run_subscription(
                             continue;
                         }
 
-                        // Process the valid block
+                        // Process the valid block using the shared function
                         trace!(%chain, block = %block.number, logs = %block.logs.len(), "Sending block");
-                        latest_processed_block = Some(block.clone().into());
-                        metrics.record_last_block_fetched(chain, block.number);
-                        sender.send(block).await?;
+                        process_and_send_block(&sender, &metrics, &mut latest_processed_block, block.clone(), chain).await?;
 
                         // Process any subsequent blocks we have stored
                         while let Some(ref last_block) = latest_processed_block {
@@ -222,10 +217,7 @@ pub async fn run_subscription(
                                 break;
                             };
                             trace!(%chain, block = %next_block.number, logs = %next_block.logs.len(), "sending stored block");
-                            check_reorg(chain,last_block, &next_block)?;
-                            latest_processed_block = Some(next_block.clone().into());
-                            metrics.record_last_block_fetched(chain, next_block.number);
-                            sender.send(next_block).await?;
+                            process_and_send_block(&sender, &metrics, &mut latest_processed_block, next_block.clone(), chain).await?;
                         }
                     }
                     None => {

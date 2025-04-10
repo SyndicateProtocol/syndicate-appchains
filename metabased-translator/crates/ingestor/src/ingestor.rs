@@ -16,6 +16,7 @@ use tokio::sync::{
     mpsc::{error::SendError, Sender},
     oneshot,
 };
+use tracing::trace;
 
 /// Runs the ingestor component for a given chain.
 /// it will use the correct client based on the URL scheme
@@ -83,6 +84,46 @@ pub fn check_reorg(
             received_parent_hash: next_block.parent_hash,
         });
     }
+    Ok(())
+}
+
+/// Process and send a block, handling common logic between HTTP and subscription ingestors.
+///
+/// This function:
+/// 1. Checks for chain reorganizations
+/// 2. Updates the latest processed block reference
+/// 3. Records metrics
+/// 4. Sends the block through the provided channel
+///
+/// Returns an error if a chain reorganization is detected or if sending fails.
+pub async fn process_and_send_block(
+    sender: &Sender<Arc<PartialBlock>>,
+    metrics: &IngestorMetrics,
+    last_block_sent: &mut Option<BlockRef>,
+    block: Arc<PartialBlock>,
+    chain: Chain,
+) -> Result<(), IngestorError> {
+    trace!(%chain, block_number = %block.number, "Processing and sending block");
+
+    // Check for chain reorganizations if we have a previous block
+    if let Some(last_block) = last_block_sent {
+        check_reorg(chain, last_block, &block)?;
+    }
+
+    // Update the reference to the latest processed block
+    *last_block_sent = Some(block.clone().into());
+
+    // Record metrics
+    metrics.record_last_block_fetched(chain, block.number);
+
+    let block_number = block.number;
+    // Send the block
+    sender.send(block).await?;
+
+    // Update channel capacity metric
+    metrics.update_channel_capacity(chain, sender.capacity());
+
+    trace!(%chain, block_number, "Successfully sent block");
     Ok(())
 }
 

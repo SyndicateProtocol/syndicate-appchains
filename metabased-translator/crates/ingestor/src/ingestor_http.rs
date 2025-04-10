@@ -3,7 +3,7 @@
 
 use crate::{
     config::ChainIngestorConfig,
-    ingestor::{check_reorg, IngestorError},
+    ingestor::{process_and_send_block, IngestorError},
     metrics::IngestorMetrics,
 };
 use alloy::{primitives::Address, rpc::types::BlockNumberOrTag};
@@ -145,15 +145,13 @@ async fn push_block_and_receipts(
             received: block_and_receipts.number,
         });
     }
-    trace!(%chain, block_number = %block_and_receipts.number, "Attempting to send block");
-    if let Some(last_block_sent) = last_block_sent {
-        check_reorg(chain, last_block_sent, &block_and_receipts)?;
-    }
-    *last_block_sent = Some(BlockRef::new(&block_and_receipts));
+
+    // Use the shared function for block processing
+    process_and_send_block(sender, metrics, last_block_sent, block_and_receipts, chain).await?;
+
+    // Update the current block number after successful processing
     *current_block_number += 1;
-    sender.send(block_and_receipts).await?;
-    trace!(%chain, old_block_number = %*current_block_number, new_block_number = %(*current_block_number + 1), "Successfully sent block, incrementing block number");
-    metrics.update_channel_capacity(chain, sender.capacity());
+
     Ok(())
 }
 
@@ -590,7 +588,7 @@ mod tests {
     #[tokio::test]
     async fn test_start_polling_simple_and_shutdown() -> Result<(), IngestorError> {
         let start_block = 1;
-        let polling_interval = Duration::from_millis(10);
+        let polling_interval = Duration::from_millis(100);
         let config = ChainIngestorConfig {
             start_block,
             polling_interval,
@@ -635,7 +633,7 @@ mod tests {
         let config = ChainIngestorConfig {
             start_block,
             max_parallel_requests: syncing_batch_size,
-            polling_interval: Duration::from_millis(10),
+            polling_interval: Duration::from_millis(100),
             backoff_initial_interval: Duration::from_millis(50),
             backoff_scaling_factor: 2,
             max_backoff: Duration::from_secs(30),
