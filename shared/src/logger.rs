@@ -18,31 +18,18 @@ pub fn set_global_default_subscriber() -> Result<(), Error> {
     // variable is not set.
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
-    tracing_subscriber::fmt()
+    let tracer = tracing_subscriber::fmt()
         // output in JSON format
         .json() // TODO SEQ-797 - add an option to disable this - so we can get colorized output in tests
         // include codepath origin of log
         .with_target(true)
         // log level is controlled by RUST_LOG setting
-        .with_env_filter(env_filter)
-        .try_init()
-        .map_err(|e| DefaultLoggerInit(e.to_string()))
-}
+        .with_env_filter(env_filter);
 
-/// equivalent to `set_global_default_subscriber` but with a test writer
-pub fn set_global_default_subscriber_for_tests() -> Result<(), Error> {
-    // Build an EnvFilter from the `RUST_LOG` environment variable, defaulting to `info` if the env
-    // variable is not set.
-    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    #[cfg(test)]
+    let tracer = tracer.with_test_writer();
 
-    tracing_subscriber::fmt()
-        // include codepath origin of log
-        .with_target(true)
-        // log level is controlled by RUST_LOG setting
-        .with_env_filter(env_filter)
-        .with_test_writer()
-        .try_init()
-        .map_err(|e| DefaultLoggerInit(e.to_string()))
+    tracer.try_init().map_err(|e| DefaultLoggerInit(e.to_string()))
 }
 
 /// Errors relating to the logger

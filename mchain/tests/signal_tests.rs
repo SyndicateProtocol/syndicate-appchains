@@ -8,7 +8,7 @@ use test_utils::docker::start_mchain;
 #[cfg(test)]
 #[ctor::ctor]
 fn init() {
-    shared::logger::set_global_default_subscriber_for_tests();
+    shared::logger::set_global_default_subscriber();
 }
 
 async fn run_mchain(signal: &str) -> Result<()> {

@@ -22,7 +22,7 @@ use url::Url;
 #[cfg(test)]
 #[ctor::ctor]
 fn init() {
-    shared::logger::set_global_default_subscriber_for_tests();
+    shared::logger::set_global_default_subscriber();
 }
 
 #[tokio::test]
