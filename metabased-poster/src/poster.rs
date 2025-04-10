@@ -131,7 +131,7 @@ impl Poster {
 
         let _ = self.assertion_poster.postAssertion(block.hash, block.send_root).send().await?;
         self.metrics.record_last_block_posted(block.number.to());
-        
+
         info!("Assertion submitted for block: {:?}", block);
         Ok(())
     }

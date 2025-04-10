@@ -37,10 +37,7 @@ impl PosterMetrics {
             wallet_balance.clone(),
         );
 
-        Self { 
-            last_posted_block_number,
-            wallet_balance,
-        }
+        Self { last_posted_block_number, wallet_balance }
     }
 
     /// Updates the last posted block number.
