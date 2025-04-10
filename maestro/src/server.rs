@@ -29,6 +29,8 @@ use tracing::{debug, error, info, warn};
 
 /// Runs the base server for the sequencer
 pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
+    info!("Starting Maestro server:run");
+
     let optional_headers = vec!["x-synd-chain-id".to_string()];
     let http_middleware = ServiceBuilder::new()
         .layer(HeadersLayer::new(optional_headers)?)
@@ -69,9 +71,14 @@ pub async fn send_raw_transaction_handler_v1(
 ) -> RpcResult<JsonValue> {
     // let start = Instant::now();
 
+    info!("Entered send_raw_transaction_handler_v1");
+
     let tx_data = parse_send_raw_transaction_params(params)?;
+    info!("parse params succeeded");
     let request_chain_id = get_request_chain_id(extensions);
+    info!("got request chain id");
     let tx_hash = service.process_raw_transaction_v1(tx_data, request_chain_id).await?;
+    info!(%tx_hash, "got txhash");
 
     Ok(serde_json::json!({
         "jsonrpc": "2.0",
