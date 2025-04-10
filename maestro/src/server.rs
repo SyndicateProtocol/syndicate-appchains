@@ -104,7 +104,7 @@ pub struct MaestroService {
 impl MaestroService {
     /// Create a new instance of the Maestro service
     pub fn new(config: Config, client: Client) -> Self {
-        Self { chain_id_nitro_urls: config.chain_id_nitro_urls, client }
+        Self { chain_id_nitro_urls: config.chain_rpc_urls, client }
     }
 
     async fn process_raw_transaction_v1(
@@ -121,7 +121,7 @@ impl MaestroService {
             "Submitting validated transaction to Nitro: ",
         );
 
-        // JSON-RPC request payload for eth_getBlockByNumber
+        // JSON-RPC request payload for eth_sendRawTransaction
         let raw_txn_payload = serde_json::json!({
             "jsonrpc": "2.0",
             "method": "eth_sendRawTransaction",

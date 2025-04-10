@@ -20,16 +20,16 @@ pub struct Config {
     #[arg(short = 'r', long, env = "REDIS_ADDRESS")]
     pub redis_address: Option<String>,
 
-    /// Chain ID to Nitro URL mappings as a JSON string object
+    /// Chain ID to RPC URL mappings as a JSON string object
     /// Example: '{"1": "https://example.com", "2": "https://another.com"}'
     #[arg(
         short = 'c',
         long,
-        env = "CHAIN_ID_NITRO_URLS",
+        env = "CHAIN_RPC_URLS",
         default_value = "{}",
-        value_parser = parse_chain_id_nitro_urls_map
+        value_parser = parse_chain_rpc_urls_map
     )]
-    pub chain_id_nitro_urls: HashMap<String, String>,
+    pub chain_rpc_urls: HashMap<String, String>,
 
     /// Timeout in seconds for connection validation
     #[arg(long, env = "VALIDATION_TIMEOUT", default_value = "5s",
@@ -70,7 +70,7 @@ impl Config {
     /// Checks that all Nitro URLs are accessible by making a test connection
     async fn ping_nitro_urls(&self) -> Result<(), ConfigError> {
         // Validate Nitro URLs by trying to connect to each one
-        if self.chain_id_nitro_urls.is_empty() {
+        if self.chain_rpc_urls.is_empty() {
             return Ok(())
         }
 
@@ -87,7 +87,7 @@ impl Config {
             .build()
             .map_err(ConfigError::HttpClient)?;
 
-        for (chain_id, url) in &self.chain_id_nitro_urls {
+        for (chain_id, url) in &self.chain_rpc_urls {
             debug!(%chain_id, %url, "Sending test JSON-RPC request");
 
             let response = client
@@ -113,7 +113,7 @@ impl Config {
 }
 
 /// Parse the chain ID to URL mappings from the JSON string
-fn parse_chain_id_nitro_urls_map(s: &str) -> Result<HashMap<String, String>, ConfigError> {
+fn parse_chain_rpc_urls_map(s: &str) -> Result<HashMap<String, String>, ConfigError> {
     let map: HashMap<String, String> =
         serde_json::from_str(s).map_err(|e| ConfigError::ChainIdNitroUrlParse(e.to_string()))?;
     Ok(map)
@@ -124,7 +124,7 @@ impl Default for Config {
         Self {
             port: 8080,
             redis_address: None,
-            chain_id_nitro_urls: HashMap::new(),
+            chain_rpc_urls: HashMap::new(),
             validation_timeout: Duration::from_secs(5),
             skip_validation: false,
         }
@@ -138,7 +138,7 @@ mod tests {
     #[test]
     fn test_parse_chain_id_nitro_urls_map_empty() {
         // Test with empty JSON object
-        let result = parse_chain_id_nitro_urls_map("{}");
+        let result = parse_chain_rpc_urls_map("{}");
         assert!(result.is_ok());
         let map = result.unwrap();
         assert!(map.is_empty());
@@ -148,7 +148,7 @@ mod tests {
     fn test_parse_chain_id_nitro_urls_map_valid() {
         // Test with valid JSON object
         let json = r#"{"1": "https://example1.com", "2": "https://example2.com"}"#;
-        let result = parse_chain_id_nitro_urls_map(json);
+        let result = parse_chain_rpc_urls_map(json);
         assert!(result.is_ok());
 
         let map = result.unwrap();
@@ -161,7 +161,7 @@ mod tests {
     fn test_parse_chain_id_nitro_urls_map_whitespace() {
         // Test with whitespace in JSON
         let json = r#" { "1" : "https://example1.com" , "2" : "https://example2.com" } "#;
-        let result = parse_chain_id_nitro_urls_map(json);
+        let result = parse_chain_rpc_urls_map(json);
         assert!(result.is_ok());
 
         let map = result.unwrap();
@@ -175,7 +175,7 @@ mod tests {
         // Test with URLs containing special characters
         let json =
             r#"{"1": "https://example.com/path?query=value", "2": "http://192.168.1.1:8545"}"#;
-        let result = parse_chain_id_nitro_urls_map(json);
+        let result = parse_chain_rpc_urls_map(json);
         assert!(result.is_ok());
 
         let map = result.unwrap();
@@ -188,7 +188,7 @@ mod tests {
     fn test_parse_chain_id_nitro_urls_map_malformed_urls() {
         // Test with valid JSON but malformed URLs (should still parse)
         let json = r#"{"1": "not a url", "2": "also-not-url"}"#;
-        let result = parse_chain_id_nitro_urls_map(json);
+        let result = parse_chain_rpc_urls_map(json);
         assert!(result.is_ok());
 
         let map = result.unwrap();

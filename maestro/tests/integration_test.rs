@@ -1,4 +1,4 @@
-//! This crate is for testing the `Maestro` server
+//! This crate is for testing the `Maestro` server with maximum realism
 
 use alloy::transports::http::{reqwest::Response, Client};
 use eyre::Result;
@@ -25,7 +25,7 @@ mod tests {
         Config {
             port: 0,
             redis_address: None,
-            chain_id_nitro_urls,
+            chain_rpc_urls: chain_id_nitro_urls,
             validation_timeout: Duration::from_secs(1),
             skip_validation: false,
         }
