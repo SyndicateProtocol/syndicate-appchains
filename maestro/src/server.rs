@@ -66,14 +66,18 @@ pub async fn send_raw_transaction_handler_v1(
     params: Params<'static>,
     service: Arc<MaestroService>,
     extensions: Extensions,
-) -> RpcResult<String> {
+) -> RpcResult<JsonValue> {
     // let start = Instant::now();
 
     let tx_data = parse_send_raw_transaction_params(params)?;
     let request_chain_id = get_request_chain_id(extensions);
     let tx_hash = service.process_raw_transaction_v1(tx_data, request_chain_id).await?;
 
-    Ok(format!("0x{}", hex::encode(tx_hash)))
+    Ok(serde_json::json!({
+        "jsonrpc": "2.0",
+        "result": format!("0x{}", hex::encode(tx_hash)),
+        "id": 1
+    }))
 
     // TODO spam plane
 
