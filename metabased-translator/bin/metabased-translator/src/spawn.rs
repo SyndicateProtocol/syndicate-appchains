@@ -14,13 +14,7 @@ use metrics::metrics::TranslatorMetrics;
 use shared::metrics::{start_metrics, MetricsState};
 use slotter::slotter::SlotterError;
 use std::sync::Arc;
-use tokio::{
-    sync::{
-        mpsc::channel,
-        oneshot::{self, Receiver},
-    },
-    task::JoinHandle,
-};
+use tokio::{sync::mpsc::channel, task::JoinHandle};
 use tracing::{error, log::info, warn};
 
 /// Entry point for the async runtime
@@ -29,7 +23,6 @@ use tracing::{error, log::info, warn};
 pub async fn run(
     config: &MetabasedConfig,
     rollup_adapter: impl RollupAdapter,
-    shutdown_rx: &mut oneshot::Receiver<()>,
 ) -> Result<(), RuntimeError> {
     info!("Initializing Metabased Translator components");
     let (sequencing_client, settlement_client) = clients(config).await?;
@@ -63,7 +56,7 @@ pub async fn run(
         );
 
         info!("Starting Metabased Translator");
-        match termination_handling(shutdown_rx, tx, component_tasks).await {
+        match termination_handling(tx, component_tasks).await {
             Ok(()) => std::process::exit(0),
             Err(e) => match e {
                 TerminationError::Err(e) => {
@@ -84,16 +77,11 @@ enum TerminationError {
 }
 
 async fn termination_handling(
-    shutdown_rx: &mut Receiver<()>,
     tx: ShutdownTx,
     mut handles: ComponentHandles,
 ) -> Result<(), TerminationError> {
     // MAIN SELECT LOOP - wait for shutdown signal or task failure
     tokio::select! {
-        _ = shutdown_rx => {
-            handles.graceful_shutdown(tx).await;
-            Ok(())
-        },
         res = &mut handles.sequencing => handles.check_error(res, "Sequencing chain ingestor").map_err(TerminationError::Err),
         res = &mut handles.settlement => handles.check_error(res, "Settlement chain ingestor").map_err(TerminationError::Err),
         res = &mut handles.slotter => {
@@ -198,16 +186,6 @@ impl ComponentHandles {
         }
         if let Err(e) = self.settlement.await {
             warn!("Error shutting down settlement ingestor: {}", e);
-        }
-
-        // 2. Stop slotter
-        info!("Shutting down slotter...");
-        let _ = tx.slotter.send(());
-        if !self.slotter.is_finished() {
-            // if this function is called on reorg, the slotter will already be stopped
-            if let Err(e) = self.slotter.await {
-                warn!("Error shutting down slotter: {}", e);
-            }
         }
 
         info!("Metabased Translator shutdown complete");
