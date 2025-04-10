@@ -25,7 +25,7 @@ pub async fn run(
     };
 
     info!("Starting Slotter");
-    let mut block = validate_block(
+    let mut set_block = get_next_block(
         &mut latest_settlement_block,
         settlement_rx.recv().await.expect("settlement channel closed"),
         Chain::Settlement,
@@ -35,7 +35,7 @@ pub async fn run(
     loop {
         trace!("Waiting for sequencing block");
         let mut slot = Slot {
-            sequencing: validate_block(
+            sequencing: get_next_block(
                 &mut latest_sequencing_block,
                 sequencing_rx.recv().await.expect("sequencing channel closed"),
                 Chain::Sequencing,
@@ -45,9 +45,9 @@ pub async fn run(
         };
 
         trace!("Waiting for settlement blocks");
-        while block.timestamp + settlement_delay <= slot.sequencing.timestamp {
-            slot.settlement.push(block);
-            block = validate_block(
+        while set_block.timestamp + settlement_delay <= slot.sequencing.timestamp {
+            slot.settlement.push(set_block);
+            set_block = get_next_block(
                 &mut latest_settlement_block,
                 settlement_rx.recv().await.expect("settlement channel closed"),
                 Chain::Settlement,
@@ -66,7 +66,7 @@ pub async fn run(
 }
 
 #[allow(clippy::result_large_err)]
-fn validate_block(
+fn get_next_block(
     latest: &mut Option<BlockRef>,
     block: PartialBlock,
     chain: Chain,
@@ -142,7 +142,7 @@ mod tests {
     use crate::{
         metrics::SlotterMetrics,
         slotter::{
-            validate_block,
+            get_next_block,
             SlotterError::{BlockNumberSkipped, EarlierTimestamp, ReorgDetected},
         },
     };
@@ -161,7 +161,7 @@ mod tests {
             let mut latest = Some(BlockRef { number: 0, timestamp: 0, hash: FixedBytes::ZERO });
             let block = PartialBlock { number: 1, ..Default::default() };
             assert_eq!(
-                validate_block(
+                get_next_block(
                     &mut latest,
                     block.clone(),
                     chain,
@@ -173,7 +173,7 @@ mod tests {
             let mut latest = None;
             let block = PartialBlock { number: 10, ..Default::default() };
             assert_eq!(
-                validate_block(
+                get_next_block(
                     &mut latest,
                     block.clone(),
                     chain,
@@ -192,7 +192,7 @@ mod tests {
             let latest_copy = latest.clone();
             let block = PartialBlock { number: 2, ..Default::default() };
             assert_eq!(
-                validate_block(
+                get_next_block(
                     &mut latest,
                     block.clone(),
                     chain,
@@ -216,7 +216,7 @@ mod tests {
             let block =
                 PartialBlock { number: 1, parent_hash: U256::from(1).into(), ..Default::default() };
             assert_eq!(
-                validate_block(
+                get_next_block(
                     &mut latest,
                     block.clone(),
                     chain,
@@ -240,7 +240,7 @@ mod tests {
             let latest_copy = latest.clone();
             let block = PartialBlock { number: 1, ..Default::default() };
             assert_eq!(
-                validate_block(
+                get_next_block(
                     &mut latest,
                     block.clone(),
                     chain,

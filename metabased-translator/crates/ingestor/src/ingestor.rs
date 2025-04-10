@@ -216,8 +216,8 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
                 max_backoff,
             )
             .await?;
-            #[allow(clippy::unwrap_used)]
-            let block = block.await.unwrap()?;
+            #[allow(clippy::expect_used)]
+            let block = block.await.expect("task failed")?;
             // Filter receipts that include logs for any of the addresses in ctx.addresses
             let filtered_logs: Vec<PartialLogWithTxdata> = receipts
                 .into_iter()
