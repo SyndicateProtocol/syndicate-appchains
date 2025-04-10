@@ -4,12 +4,11 @@
 //! It provides a JSON-RPC interface for submitting transactions and checking service health.
 
 use eyre::Result;
-use metabased_sequencer::{
-    config::Config,
-    metrics::{start_metrics, MetricsState, RelayerMetrics},
-    server::run_server,
+use metabased_sequencer::{config::Config, metrics::RelayerMetrics, server::run_server};
+use shared::{
+    logger::set_global_default_subscriber,
+    metrics::{start_metrics, MetricsState},
 };
-use shared::logger::set_global_default_subscriber;
 use tracing::info;
 
 #[tokio::main]
@@ -23,7 +22,7 @@ async fn main() -> Result<()> {
     info!("Config: {:?}", config);
 
     // Initialize metrics
-    let mut metrics = MetricsState::new();
+    let mut metrics = MetricsState::default();
     let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
     let metrics_handler = start_metrics(metrics, config.metrics_port).await;
 

@@ -9,7 +9,7 @@ use alloy::{
             BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
             WalletFiller,
         },
-        Identity, Provider, ProviderBuilder, RootProvider,
+        Identity, Provider as _, ProviderBuilder, RootProvider, WalletProvider as _,
     },
     signers::local::PrivateKeySigner,
 };
@@ -117,9 +117,21 @@ impl Poster {
             .map_err(|err| eyre!("eth_getBlockByNumber request failed: {:?}", err))
     }
 
+    async fn record_wallet_balance(&self) -> Result<()> {
+        let provider = self.assertion_poster.provider();
+        let wallet_address = provider.default_signer_address();
+
+        let balance = provider.get_balance(wallet_address).await?;
+        self.metrics.record_wallet_balance(balance.to());
+        Ok(())
+    }
+
     async fn post_assertion(&self, block: NitroBlock) -> Result<()> {
+        self.record_wallet_balance().await?;
+
         let _ = self.assertion_poster.postAssertion(block.hash, block.send_root).send().await?;
         self.metrics.record_last_block_posted(block.number.to());
+
         info!("Assertion submitted for block: {:?}", block);
         Ok(())
     }

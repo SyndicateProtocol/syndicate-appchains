@@ -6,3 +6,4 @@
 #![allow(missing_docs)]
 pub mod db;
 pub mod mchain;
+pub mod metrics;

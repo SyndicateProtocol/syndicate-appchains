@@ -2745,6 +2745,7 @@ dependencies = [
  "humantime",
  "mockall",
  "prometheus-client",
+ "shared",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
@@ -3232,6 +3233,7 @@ dependencies = [
  "ctor",
  "eyre",
  "jsonrpsee",
+ "prometheus-client",
  "rocksdb",
  "serde",
  "shared",
@@ -3305,7 +3307,6 @@ dependencies = [
  "ingestor",
  "metrics",
  "mockall",
- "prometheus-client",
  "shared",
  "slotter",
  "temp-env",
@@ -3326,6 +3327,7 @@ dependencies = [
  "ingestor",
  "prometheus-client",
  "reqwest",
+ "shared",
  "slotter",
  "thiserror 2.0.12",
  "tokio",
@@ -4656,8 +4658,10 @@ name = "shared"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "axum",
  "byte-unit",
  "jsonrpsee",
+ "prometheus-client",
  "serde_json",
  "thiserror 2.0.12",
  "tokio",
@@ -4717,16 +4721,10 @@ name = "slotter"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "assert_matches",
- "async-trait",
- "clap",
  "common",
  "ctor",
- "eyre",
- "humantime",
  "prometheus-client",
  "shared",
- "test-case",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
@@ -4953,39 +4951,6 @@ name = "termtree"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8f50febec83f5ee1df3015341d8bd429f2d1cc62bcba7ea2076759d315084683"
-
-[[package]]
-name = "test-case"
-version = "3.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "eb2550dd13afcd286853192af8601920d959b14c401fcece38071d53bf0768a8"
-dependencies = [
- "test-case-macros",
-]
-
-[[package]]
-name = "test-case-core"
-version = "3.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "adcb7fd841cd518e279be3d5a3eb0636409487998a4aff22f3de87b81e88384f"
-dependencies = [
- "cfg-if",
- "proc-macro2",
- "quote",
- "syn 2.0.100",
-]
-
-[[package]]
-name = "test-case-macros"
-version = "3.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5c89e72a01ed4c579669add59014b9a524d609c0c88c6a585ce37485879f6ffb"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn 2.0.100",
- "test-case-core",
-]
 
 [[package]]
 name = "test-framework"

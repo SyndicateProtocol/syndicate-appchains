@@ -194,9 +194,10 @@ pub async fn send_raw_transaction_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{config::Config, metrics::MetricsState};
+    use crate::config::Config;
     use alloy::primitives::{Bytes, B256};
     use jsonrpsee::types::Params;
+    use shared::metrics::MetricsState;
     use std::str::FromStr;
     use url::Url;
 
@@ -210,7 +211,7 @@ mod tests {
             tx_confirmations: 2,
             tx_timeout: Duration::from_secs(60),
         };
-        let mut metrics = MetricsState::new();
+        let mut metrics = MetricsState::default();
         let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
         RelayerService::new(&config, relayer_metrics).unwrap()
     }
@@ -226,7 +227,7 @@ mod tests {
             tx_confirmations: 2,
             tx_timeout: Duration::from_secs(60),
         };
-        let mut metrics = MetricsState::new();
+        let mut metrics = MetricsState::default();
         let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
 
         let result = RelayerService::new(&config, relayer_metrics);
@@ -247,7 +248,7 @@ mod tests {
             tx_confirmations: 2,
             tx_timeout: Duration::from_secs(60),
         };
-        let mut metrics = MetricsState::new();
+        let mut metrics = MetricsState::default();
         let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
 
         let result = RelayerService::new(&config, relayer_metrics);

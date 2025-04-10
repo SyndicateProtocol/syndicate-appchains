@@ -24,9 +24,6 @@ pub enum RuntimeError {
     BlockBuilderConfig(#[from] block_builder::config::ConfigError),
 
     #[error(transparent)]
-    SlotterConfig(#[from] slotter::config::ConfigError),
-
-    #[error(transparent)]
     IngestorConfig(#[from] ingestor::config::ConfigError),
 
     #[error(transparent)]

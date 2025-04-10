@@ -7,10 +7,7 @@ use block_builder::{
 use eyre::Result;
 use metabased_translator::{config::MetabasedConfig, spawn::run};
 use shared::logger::set_global_default_subscriber;
-use tokio::{
-    signal::unix::{signal, SignalKind},
-    sync::oneshot,
-};
+use tokio::signal::unix::{signal, SignalKind};
 use tracing::{error, info};
 
 #[tokio::main]
@@ -44,15 +41,12 @@ async fn main() -> Result<()> {
     });
 
     // Run the async process
-    let (_shutdown_tx, mut shutdown_rx) = oneshot::channel();
     match base_config.block_builder.target_rollup_type {
         OPTIMISM => {
-            run(&base_config, OptimismAdapter::new(&base_config.block_builder), &mut shutdown_rx)
-                .await?;
+            run(&base_config, OptimismAdapter::new(&base_config.block_builder)).await?;
         }
         ARBITRUM => {
-            run(&base_config, ArbitrumAdapter::new(&base_config.block_builder), &mut shutdown_rx)
-                .await?;
+            run(&base_config, ArbitrumAdapter::new(&base_config.block_builder)).await?;
         }
     }
 
