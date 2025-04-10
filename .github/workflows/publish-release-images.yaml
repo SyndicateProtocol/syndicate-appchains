@@ -54,6 +54,13 @@ jobs:
       runner_label: vip-large-01
     secrets: inherit
 
+  publish-mchain:
+    uses: ./.github/workflows/docker-build-core.yaml
+    with:
+      do_push: true
+      target_name: mchain
+      runner_label: vip-large-01
+    secrets: inherit
   cloud-run-deployment:
     needs: [publish-sequencer]
     runs-on: vip-large
