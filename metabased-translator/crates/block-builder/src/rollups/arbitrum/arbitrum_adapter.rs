@@ -301,7 +301,6 @@ impl ArbitrumAdapter {
                         })
                     }
                     Err(e) => {
-                        error!("Fatal error: {}", e);
                         panic!("Fatal error: {}", e)
                     }
                 }
