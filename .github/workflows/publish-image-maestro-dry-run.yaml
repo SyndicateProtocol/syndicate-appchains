@@ -24,4 +24,5 @@ jobs:
     with:
       do_push: true # TODO CHANGE BACK
       target_name: maestro
+      runner_label: vip-large-01 #TODO REMOVE
     secrets: inherit
