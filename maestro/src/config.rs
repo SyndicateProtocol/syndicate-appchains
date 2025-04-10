@@ -3,8 +3,9 @@
 use crate::errors::ConfigError;
 use alloy::transports::http::Client;
 use clap::Parser;
+use serde_json::Value;
 use std::{collections::HashMap, time::Duration};
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 
 /// Configuration for Maestro
 #[allow(clippy::doc_markdown)]
@@ -36,7 +37,7 @@ pub struct Config {
     value_parser = humantime::parse_duration)]
     pub validation_timeout: Duration,
 
-    /// Skip validation of Nitro URLs
+    /// Skip validation of RPC URLs
     #[arg(long, env = "SKIP_VALIDATION", default_value_t = false)]
     pub skip_validation: bool,
 }
@@ -77,8 +78,8 @@ impl Config {
         // JSON-RPC request payload for eth_getBlockByNumber
         let health_check_payload = serde_json::json!({
             "jsonrpc": "2.0",
-            "method": "eth_getBlockByNumber",
-            "params": ["latest", false],
+            "method": "eth_chainId",
+            "params": [],
             "id": 1
         });
 
@@ -106,10 +107,33 @@ impl Config {
                     response.status().to_string(),
                 ));
             }
+
+            // check that result chain_id matches ours
+            let json: Value = response.json().await?;
+            info!("{:#?}", json);
+            let hex_chain_id = json["result"].as_str().unwrap_or("");
+            info!("{:#?}", hex_chain_id);
+            let dec_chain_id = hex_to_decimal(hex_chain_id).unwrap_or(0);
+            info!("{:#?}", dec_chain_id);
+
+            if *chain_id != dec_chain_id.to_string() {
+                return Err(ConfigError::NitroUrlInvalidChainId(
+                    url.clone(),
+                    chain_id.to_string(),
+                    dec_chain_id.to_string(),
+                ));
+            }
+
             debug!(%chain_id, %url, "Successful JSON-RPC request");
         }
         Ok(())
     }
+}
+
+fn hex_to_decimal(hex_str: &str) -> Result<u64, std::num::ParseIntError> {
+    // Remove "0x" prefix if present
+    let cleaned_hex = hex_str.trim_start_matches("0x");
+    u64::from_str_radix(cleaned_hex, 16)
 }
 
 /// Parse the chain ID to URL mappings from the JSON string
@@ -134,6 +158,39 @@ impl Default for Config {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_hex_to_decimal_with_prefix() {
+        assert_eq!(hex_to_decimal("0x7c830").unwrap(), 510000);
+        assert_eq!(hex_to_decimal("0x1A").unwrap(), 26);
+        assert_eq!(hex_to_decimal("0xdeadbeef").unwrap(), 3735928559);
+        assert_eq!(hex_to_decimal("0x0").unwrap(), 0);
+    }
+
+    #[test]
+    fn test_hex_to_decimal_without_prefix() {
+        assert_eq!(hex_to_decimal("7c830").unwrap(), 510000);
+        assert_eq!(hex_to_decimal("1A").unwrap(), 26);
+        assert_eq!(hex_to_decimal("deadbeef").unwrap(), 3735928559);
+        assert_eq!(hex_to_decimal("0").unwrap(), 0);
+    }
+
+    #[test]
+    fn test_hex_to_decimal_case_insensitive() {
+        assert_eq!(hex_to_decimal("0xDeadBeef").unwrap(), 3735928559);
+        assert_eq!(hex_to_decimal("0xDEADBEEF").unwrap(), 3735928559);
+        assert_eq!(hex_to_decimal("0xdeadbeef").unwrap(), 3735928559);
+    }
+
+    #[test]
+    fn test_hex_to_decimal_error_cases() {
+        assert!(hex_to_decimal("0xG").is_err()); // Invalid hex character
+        assert!(hex_to_decimal("").is_err()); // Empty string
+        assert!(hex_to_decimal("0x").is_err()); // Only prefix
+
+        // Test value too large for u64
+        assert!(hex_to_decimal("0xFFFFFFFFFFFFFFFFFF").is_err());
+    }
 
     #[test]
     fn test_parse_chain_id_nitro_urls_map_empty() {

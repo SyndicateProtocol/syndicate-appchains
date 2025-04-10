@@ -202,10 +202,10 @@ pub enum InvalidInputError {
     UnableToRLPDecode,
     /// Chain ID is missing
     #[error("missing chain ID")]
-    ChainIDMissing,
+    ChainIdMissing,
     /// Chain ID is missing
     #[error("chain ID mismatch: expected {0} got {1}")]
-    ChainIDMismatched(String, String),
+    ChainIdMismatched(String, String),
     /// Unsupported Chain ID
     #[error("unsupported chain ID: {0}")]
     UnsupportedChainId(ChainId),

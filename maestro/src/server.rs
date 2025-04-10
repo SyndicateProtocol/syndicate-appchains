@@ -19,7 +19,7 @@ use shared::{
     json_rpc::{
         parse_send_raw_transaction_params, Error,
         Error::{Internal, InvalidInput},
-        InvalidInputError::{ChainIDMismatched, UnsupportedChainId},
+        InvalidInputError::{ChainIdMismatched, UnsupportedChainId},
     },
     tx_validation::validate_transaction,
 };
@@ -119,7 +119,8 @@ impl MaestroService {
         let tx_hash = original_tx.tx_hash().to_string();
         debug!(
             %tx_hash,
-            "Submitting validated transaction to Nitro: ",
+            %txn_chain_id,
+            "Submitting validated transaction to Nitro",
         );
 
         // JSON-RPC request payload for eth_sendRawTransaction
@@ -132,7 +133,7 @@ impl MaestroService {
 
         let nitro_url =
             self.chain_id_nitro_urls.get(&txn_chain_id.to_string()).ok_or_else(|| {
-                error!(%txn_chain_id, %tx_hash, "txn attempted to unsupported Nitro");
+                error!(%txn_chain_id, %tx_hash, "txn attempted to unsupported Nitro RPC");
                 InvalidInput(UnsupportedChainId(txn_chain_id))
             })?;
 
@@ -145,7 +146,7 @@ impl MaestroService {
             .send()
             .await
             .map_err(|e| {
-                error!(%nitro_url, %tx_hash, %e, "reqwest client error forwarding txn to Nitros");
+                error!(%nitro_url, %tx_hash, %txn_chain_id, %e, "reqwest client error forwarding txn to Nitro");
                 Internal("internal error sending transaction".to_string())
             })?;
 
@@ -164,7 +165,7 @@ impl MaestroService {
         match (request_chain_id, txn_chain_id) {
             (None, Some(txn_id)) => Ok(txn_id),
             (Some(req_id), Some(txn_id)) if req_id == txn_id => Ok(txn_id),
-            (req_id, txn_id) => Err(InvalidInput(ChainIDMismatched(
+            (req_id, txn_id) => Err(InvalidInput(ChainIdMismatched(
                 req_id.map_or("none".to_string(), |id| id.to_string()),
                 txn_id.map_or("none".to_string(), |id| id.to_string()),
             ))),

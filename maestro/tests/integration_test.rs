@@ -320,7 +320,6 @@ mod tests {
                     .await?;
 
             let json: Value = wrong_chain_id_response.json().await?;
-            println!("{:#?}", json);
             assert!(json.get("error").is_some(), "Wrong parameter count should return an error");
             // Access the error message and check if it contains our substring
             let error_message = json["error"]["message"].as_str().unwrap_or("");
