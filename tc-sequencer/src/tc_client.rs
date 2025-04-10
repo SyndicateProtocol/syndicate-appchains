@@ -4,7 +4,7 @@ use crate::config::Config;
 use alloy::{
     consensus::Transaction,
     hex::{self},
-    primitives::{Address, Bytes, TxHash},
+    primitives::{Address, Bytes, ChainId, TxHash},
 };
 use eyre::Result;
 use jsonrpsee::{
@@ -15,7 +15,7 @@ use jsonrpsee::{
 use reqwest::Client;
 use serde as _;
 use shared::{
-    json_rpc::{parse_send_raw_transaction_params, Error, InvalidInputError::UnsupportedChainID},
+    json_rpc::{parse_send_raw_transaction_params, Error, InvalidInputError::UnsupportedChainId},
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, sync::Arc};
@@ -73,11 +73,11 @@ impl TCClient {
         })
     }
 
-    fn get_contract_address(&self, chain_id: u64) -> Result<Address, Error> {
+    fn get_contract_address(&self, chain_id: ChainId) -> Result<Address, Error> {
         self.sequencing_addresses
             .get(&chain_id)
             .copied()
-            .ok_or_else(|| Error::InvalidInput(UnsupportedChainID(chain_id)))
+            .ok_or_else(|| Error::InvalidInput(UnsupportedChainId(chain_id)))
     }
 
     async fn send_transaction(

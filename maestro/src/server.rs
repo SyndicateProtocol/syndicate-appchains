@@ -112,7 +112,8 @@ impl MaestroService {
         raw_tx: Bytes,
         request_chain_id: Option<ChainId>,
     ) -> Result<TxHash, Error> {
-        info!("Processing raw transaction: {}", hex::encode(&raw_tx));
+        let hex_tx = format!("0x{}", hex::encode(&raw_tx));
+        info!("Processing raw transaction: {}", hex_tx);
         let original_tx = validate_transaction(&raw_tx)?;
         let txn_chain_id = Self::validate_chain_id(request_chain_id, original_tx.chain_id())?;
         let tx_hash = original_tx.tx_hash().to_string();
@@ -125,7 +126,7 @@ impl MaestroService {
         let raw_txn_payload = serde_json::json!({
             "jsonrpc": "2.0",
             "method": "eth_sendRawTransaction",
-            "params": [raw_tx],
+            "params": [hex_tx],
             "id": 1
         });
 

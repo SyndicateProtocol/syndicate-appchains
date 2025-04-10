@@ -207,14 +207,11 @@ pub enum InvalidInputError {
     #[error("chain ID mismatch: expected {0} got {1}")]
     ChainIDMismatched(String, String),
     /// Unsupported Chain ID
-    #[error("unsupported chain id: {0}")]
+    #[error("unsupported chain ID: {0}")]
     UnsupportedChainId(ChainId),
     /// Transaction too large
     #[error("transaction too large: limit {0} - got {1}")]
     TransactionTooLarge(String, String),
-    /// Unsupported chain ID
-    #[error("unsupported chain ID: {0}")]
-    UnsupportedChainID(u64),
 }
 
 impl From<serde_json::Error> for Error {
