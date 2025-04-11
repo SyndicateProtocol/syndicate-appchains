@@ -142,12 +142,7 @@ impl RollupAdapter for ArbitrumAdapter {
         Ok(Some(MBlock {
             timestamp: slot.timestamp(),
             batch: self
-                .build_batch_txn(
-                    mb_transactions,
-                    mchain_block_number,
-                    slot.timestamp(),
-                    delayed_messages.len(),
-                )
+                .build_batch_txn(mb_transactions, mchain_block_number, slot.timestamp())
                 .await?,
             messages: delayed_messages,
             seq_block_hash: slot.sequencing.hash,
@@ -342,12 +337,8 @@ impl ArbitrumAdapter {
         txs: Vec<Bytes>,
         mchain_block_number: u64,
         mchain_timestamp: u64,
-        delayed_message_count: usize,
     ) -> Result<Bytes> {
-        if delayed_message_count > 0 {
-            info!("Adding {} delayed messages to batch", delayed_message_count);
-        }
-        let mut messages = vec![BatchMessage::Delayed; delayed_message_count];
+        let mut messages = vec![];
 
         if !txs.is_empty() {
             info!("Adding {} sequenced transactions to batch", txs.len());
@@ -415,7 +406,7 @@ mod tests {
     async fn test_build_batch_empty_txs() {
         let builder = ArbitrumAdapter::default();
         let txs = vec![];
-        let batch = builder.build_batch_txn(txs, 0, 0, 0).await.unwrap();
+        let batch = builder.build_batch_txn(txs, 0, 0).await.unwrap();
 
         // For empty batch, should create BatchMessage::Delayed
         let expected_batch = Batch(vec![]);
@@ -431,7 +422,7 @@ mod tests {
             hex!("1234").into(), // Sample transaction data
             hex!("5678").into(),
         ];
-        let batch = builder.build_batch_txn(txs.clone(), 0, 0, 0).await.unwrap();
+        let batch = builder.build_batch_txn(txs.clone(), 0, 0).await.unwrap();
 
         // For non-empty batch, should create BatchMessage::L2
         let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
@@ -662,13 +653,10 @@ mod tests {
         // Verify the batch transaction contains our sequencing tx data
         let batch_txn = &txns.as_ref().unwrap().batch;
         let txn_data_without_prefix = txn_data[1..].to_vec();
-        let expected_batch = Batch(vec![
-            BatchMessage::Delayed,
-            BatchMessage::L2(L1IncomingMessage {
-                header: L1IncomingMessageHeader { block_number: 1, timestamp: 0 },
-                l2_msg: vec![txn_data_without_prefix.into()],
-            }),
-        ]);
+        let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
+            header: L1IncomingMessageHeader { block_number: 1, timestamp: 0 },
+            l2_msg: vec![txn_data_without_prefix.into()],
+        })]);
         let expected_encoded = expected_batch.encode().unwrap();
         assert_eq!(batch_txn, &expected_encoded.to_vec());
     }
