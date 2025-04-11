@@ -29,11 +29,11 @@ pub enum ConfigError {
     HttpClient(#[from] reqwest::Error),
 
     #[error("failed to connect to chain ID: {0} RPC URL: {1}")]
-    NitroUrlConnection(String, String),
+    RpcUrlConnection(String, String),
 
     #[error("bad response code from chain ID: {0} RPC URL: {1} response status: {2}")]
-    NitroUrlInvalidStatus(String, String, String),
+    RpcUrlInvalidStatus(String, String, String),
 
     #[error("failed to connect to chain RPC URL: {0} expected chain ID: {1} got {2}")]
-    NitroUrlInvalidChainId(String, String, String),
+    RpcUrlInvalidChainId(String, String, String),
 }

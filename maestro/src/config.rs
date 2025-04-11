@@ -98,11 +98,11 @@ impl Config {
                 .json(&health_check_payload)
                 .send()
                 .await
-                .map_err(|_| ConfigError::NitroUrlConnection(chain_id.clone(), url.clone()))?;
+                .map_err(|_| ConfigError::RpcUrlConnection(chain_id.clone(), url.clone()))?;
 
             // Check for successful status code (2xx)
             if !response.status().is_success() {
-                return Err(ConfigError::NitroUrlInvalidStatus(
+                return Err(ConfigError::RpcUrlInvalidStatus(
                     chain_id.clone(),
                     url.clone(),
                     response.status().to_string(),
@@ -115,7 +115,7 @@ impl Config {
             let dec_chain_id = hex_to_decimal(hex_chain_id).unwrap_or(0);
 
             if *chain_id != dec_chain_id.to_string() {
-                return Err(ConfigError::NitroUrlInvalidChainId(
+                return Err(ConfigError::RpcUrlInvalidChainId(
                     url.clone(),
                     chain_id.to_string(),
                     dec_chain_id.to_string(),
