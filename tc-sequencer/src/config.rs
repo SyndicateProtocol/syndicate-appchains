@@ -2,6 +2,7 @@
 
 use alloy::primitives::Address;
 use clap::Parser;
+use shared::parse::parse_address;
 use std::{collections::HashMap, fmt::Debug, str::FromStr};
 use thiserror::Error;
 use url::Url;
@@ -113,6 +114,10 @@ pub struct Config {
     /// Mapping of chain IDs to their corresponding sequencing addresses
     #[arg(short = 'a', long, env = "SEQUENCING_ADDRESSES", value_parser = parse_sequencing_addresses)]
     pub sequencing_addresses: HashMap<u64, Address>,
+
+    /// Address of the wallet pool contract
+    #[arg(short = 'p', long, env = "WALLET_POOL_ADDRESS", value_parser = parse_address, default_value = "0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8")]
+    pub wallet_pool_address: Address,
 }
 
 /// Parse a string into a map of chain IDs to their corresponding sequencing addresses
@@ -156,6 +161,7 @@ impl Default for Config {
             tc_project_id: String::new(),
             tc_api_key: String::new(),
             port: 8456,
+            wallet_pool_address: Address::ZERO,
             sequencing_addresses: HashMap::new(),
         }
     }

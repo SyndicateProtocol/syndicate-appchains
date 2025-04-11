@@ -23,8 +23,9 @@ use tracing::{debug, error, info};
 use url::Url;
 
 const DEFAULT_SEQUENCING_CHAIN_ID: u64 = 5113;
-const DEFAULT_FUNCTION_SIGNATURE: &str = "processTransaction(bytes data)";
+const DEFAULT_FUNCTION_SIGNATURE: &str = "processTransaction(address chain_address, bytes data)";
 const TC_DATA_KEY: &str = "data";
+const TC_CHAIN_KEY: &str = "chain_address";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -37,13 +38,21 @@ struct SendTransactionRequest {
 }
 
 impl SendTransactionRequest {
-    fn new(project_id: String, contract_address: String, data: Bytes) -> Self {
+    fn new(
+        project_id: String,
+        contract_address: Address,
+        chain_address: Address,
+        data: Bytes,
+    ) -> Self {
         Self {
             project_id,
-            contract_address,
+            contract_address: contract_address.to_string(),
             chain_id: DEFAULT_SEQUENCING_CHAIN_ID,
             function_signature: DEFAULT_FUNCTION_SIGNATURE.to_string(),
-            args: HashMap::from([(TC_DATA_KEY.to_string(), format!("0x{}", hex::encode(data)))]),
+            args: HashMap::from([
+                (TC_CHAIN_KEY.to_string(), format!("0x{}", chain_address.to_string())),
+                (TC_DATA_KEY.to_string(), format!("0x{}", hex::encode(data))),
+            ]),
         }
     }
 }
@@ -55,6 +64,7 @@ pub struct TCClient {
     tc_project_id: String,
     tc_api_key: String,
 
+    wallet_pool_address: Address,
     sequencing_addresses: HashMap<u64, Address>,
     client: Client,
 }
@@ -63,11 +73,11 @@ impl TCClient {
     /// Create a new `TCClient` instance.
     pub fn new(config: &Config) -> Result<Self> {
         let client = Client::new();
-
         Ok(Self {
             tc_url: config.tc_endpoint.get_url(),
             tc_project_id: config.tc_project_id.clone(),
             tc_api_key: config.tc_api_key.clone(),
+            wallet_pool_address: config.wallet_pool_address,
             sequencing_addresses: config.sequencing_addresses.clone(),
             client,
         })
@@ -87,7 +97,8 @@ impl TCClient {
     ) -> Result<(), Error> {
         let request = SendTransactionRequest::new(
             self.tc_project_id.clone(),
-            contract_address.to_string(),
+            self.wallet_pool_address.clone(),
+            contract_address,
             raw_tx,
         );
 
@@ -180,8 +191,7 @@ mod tests {
 
     #[test]
     fn test_get_contract_address_not_supported() {
-        let config = Config::default();
-        let service = TCClient::new(&config).unwrap();
+        let service = setup_test_service();
 
         let contract_address = service.get_contract_address(1);
         assert!(contract_address.is_err());
