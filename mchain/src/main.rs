@@ -3,9 +3,12 @@
 use alloy::primitives::Address;
 use clap::Parser;
 use jsonrpsee::server::{RpcServiceBuilder, Server};
-use mchain::mchain::start_mchain;
+use mchain::{mchain::start_mchain, metrics::MchainMetrics};
 use rocksdb::DB;
-use shared::logger::set_global_default_subscriber;
+use shared::{
+    logger::set_global_default_subscriber,
+    metrics::{start_metrics, MetricsState},
+};
 use tokio::signal::unix::{signal, SignalKind};
 
 /// CLI args for the mchain executable
@@ -21,7 +24,7 @@ struct Config {
     #[arg(long, env = "PORT", default_value_t = 8545)]
     port: u64,
     #[arg(long, env = "METRICS_PORT", default_value_t = 8546)]
-    metrics_port: u64,
+    metrics_port: u16,
     #[arg(long, env = "CHAIN_ID")]
     chain_id: u64,
     #[arg(long, env = "CHAIN_OWNER", default_value = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")]
@@ -36,7 +39,10 @@ async fn main() -> eyre::Result<()> {
 
     let cfg = Config::parse();
     let db = DB::open_default(cfg.datadir)?;
-    let module = start_mchain(cfg.chain_id, cfg.chain_owner, cfg.finality_delay, db).await;
+    let mut metrics_state = MetricsState::default();
+    let metrics = MchainMetrics::new(&mut metrics_state.registry);
+    tokio::spawn(start_metrics(metrics_state, cfg.metrics_port));
+    let module = start_mchain(cfg.chain_id, cfg.chain_owner, cfg.finality_delay, db, metrics).await;
     let handle = Server::builder()
         .set_rpc_middleware(RpcServiceBuilder::new().rpc_logger(1024))
         .build(format!("0.0.0.0:{}", cfg.port))

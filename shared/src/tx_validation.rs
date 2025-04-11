@@ -4,7 +4,7 @@
 use crate::json_rpc::{
     Error,
     Error::{InvalidInput, TransactionRejected},
-    InvalidInputError::{ChainIDMissing, TransactionTooLarge, UnableToRLPDecode},
+    InvalidInputError::{ChainIdMissing, TransactionTooLarge, UnableToRLPDecode},
     Rejection::FeeTooHigh,
 };
 use alloy::{
@@ -26,7 +26,7 @@ fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, Error> {
 
 fn check_chain_id(tx: &TxEnvelope) -> Result<(), Error> {
     if tx.chain_id().is_none() {
-        let error = InvalidInput(ChainIDMissing);
+        let error = InvalidInput(ChainIdMissing);
         debug!(
             error = %error,
             tx_type = ?tx.tx_type(),
@@ -163,7 +163,7 @@ mod tests {
 
         // Legacy ransaction without chain ID should fail
         let invalid_tx = wrap_txn_legacy(TxLegacy { chain_id: None, ..Default::default() });
-        assert!(matches!(check_chain_id(&invalid_tx), Err(InvalidInput(ChainIDMissing))));
+        assert!(matches!(check_chain_id(&invalid_tx), Err(InvalidInput(ChainIdMissing))));
     }
 
     #[test]

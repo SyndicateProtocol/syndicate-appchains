@@ -1,7 +1,8 @@
 //! The `parse` module contains functions for parsing data into types.
 
 use alloy::primitives::Address;
-use std::str::FromStr;
+use serde::Deserialize;
+use std::{collections::HashMap, hash::Hash, str::FromStr};
 use thiserror::Error;
 use url::Url;
 
@@ -26,6 +27,15 @@ pub fn parse_address(value: &str) -> Result<Address, Error> {
     Address::from_str(value).map_err(|_| Error::EthereumAddress(value.to_string()))
 }
 
+/// Parse a JSON string into a map
+pub fn parse_map<K, V>(s: &str) -> Result<HashMap<K, V>, Error>
+where
+    K: Hash + Eq + for<'de> Deserialize<'de>,
+    V: for<'de> Deserialize<'de>,
+{
+    serde_json::from_str(s).map_err(|e| Error::InvalidMap(e.to_string()))
+}
+
 #[allow(missing_docs)]
 #[derive(Debug, Error)]
 /// Possible parsing errors
@@ -34,6 +44,8 @@ pub enum Error {
     URL(URLErrorType),
     #[error("Invalid address: {0}")]
     EthereumAddress(String),
+    #[error("Invalid map: {0}")]
+    InvalidMap(String),
 }
 
 #[allow(missing_docs)]
@@ -148,5 +160,73 @@ mod tests {
             Err(Error::EthereumAddress(_)) => {}
             _ => panic!("Expected EthereumAddress error for: {}", invalid_input),
         }
+    }
+
+    #[test]
+    fn test_parse_map_empty() {
+        // Test with empty JSON object
+        let result = parse_map("{}");
+        assert!(result.is_ok());
+        let map: HashMap<String, String> = result.unwrap();
+        assert!(map.is_empty());
+    }
+
+    #[test]
+    fn test_parse_map_valid() {
+        // Test with valid JSON object
+        let json = r#"{"1": "https://example1.com", "2": "https://example2.com"}"#;
+        let result = parse_map(json);
+        assert!(result.is_ok());
+
+        let map: HashMap<String, String> = result.unwrap();
+        assert_eq!(map.len(), 2);
+        assert_eq!(map.get("1"), Some(&"https://example1.com".to_string()));
+        assert_eq!(map.get("2"), Some(&"https://example2.com".to_string()));
+    }
+
+    #[test]
+    fn test_parse_map_valid_u64_address() {
+        // Test with valid JSON object
+        let json = r#"{"1": "0x742d35cc6634c0532925a3b844bc454e4438f44e", "2": "0x742d35cc6634c0532925a3b844bc454e4438f44e"}"#;
+        let result: Result<HashMap<u64, Address>, Error> = parse_map(json);
+        assert!(result.is_ok());
+
+        let map: HashMap<u64, Address> = result.unwrap();
+        assert_eq!(map.len(), 2);
+        assert_eq!(
+            map.get(&1),
+            Some(&Address::from_str("0x742d35cc6634c0532925a3b844bc454e4438f44e").unwrap())
+        );
+        assert_eq!(
+            map.get(&2),
+            Some(&Address::from_str("0x742d35cc6634c0532925a3b844bc454e4438f44e").unwrap())
+        );
+    }
+
+    #[test]
+    fn test_parse_map_whitespace() {
+        // Test with whitespace in JSON
+        let json = r#" { "1" : "https://example1.com" , "2" : "https://example2.com" } "#;
+        let result = parse_map(json);
+        assert!(result.is_ok());
+
+        let map: HashMap<String, String> = result.unwrap();
+        assert_eq!(map.len(), 2);
+        assert_eq!(map.get("1"), Some(&"https://example1.com".to_string()));
+        assert_eq!(map.get("2"), Some(&"https://example2.com".to_string()));
+    }
+
+    #[test]
+    fn test_parse_map_special_chars() {
+        // Test with URLs containing special characters
+        let json =
+            r#"{"1": "https://example.com/path?query=value", "2": "http://192.168.1.1:8545"}"#;
+        let result = parse_map(json);
+        assert!(result.is_ok());
+
+        let map: HashMap<String, String> = result.unwrap();
+        assert_eq!(map.len(), 2);
+        assert_eq!(map.get("1"), Some(&"https://example.com/path?query=value".to_string()));
+        assert_eq!(map.get("2"), Some(&"http://192.168.1.1:8545".to_string()));
     }
 }

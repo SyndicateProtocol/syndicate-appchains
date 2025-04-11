@@ -232,15 +232,16 @@ pub fn to_err<T: ToString>(err: T) -> ErrorObjectOwned {
 
 // fully in-memory kv db for testing
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::KVDB;
     use crate::db::{ArbitrumDB as _, MBlock};
     use alloy::primitives::Bytes;
     use std::{collections::HashMap, sync::RwLock};
 
-    struct TestDB(RwLock<HashMap<Bytes, Bytes>>);
+    #[allow(clippy::redundant_pub_crate)]
+    pub(crate) struct TestDB(pub RwLock<HashMap<Bytes, Bytes>>);
     impl TestDB {
-        fn new() -> Self {
+        pub(crate) fn new() -> Self {
             Self(RwLock::new(HashMap::new()))
         }
     }
@@ -263,7 +264,7 @@ mod tests {
     }
 
     #[test]
-    fn test_invalid_batch() -> eyre::Result<()> {
+    fn invalid_batch() -> eyre::Result<()> {
         let db = TestDB::new();
         db.add_batch(MBlock { timestamp: 0, ..Default::default() })?;
         db.add_batch(MBlock { timestamp: 1, ..Default::default() })?;

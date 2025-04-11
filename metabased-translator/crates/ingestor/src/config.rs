@@ -69,7 +69,7 @@ pub struct SequencingChainConfig {
     #[arg(long = "sequencing-start-block", env = "SEQUENCING_START_BLOCK")]
     pub sequencing_start_block: u64,
 
-    /// The batch size used to sync the m-chain
+    /// The number of parallel requests used for syncing the m-chain
     #[arg(
         long = "sequencing-syncing-batch-size",
         env = "SEQUENCING_SYNCING_BATCH_SIZE",
@@ -137,7 +137,7 @@ pub struct SettlementChainConfig {
     #[arg(long = "settlement-start-block", env = "SETTLEMENT_START_BLOCK")]
     pub settlement_start_block: u64,
 
-    /// The batch size used to sync the m-chain
+    /// The number of parallel requests used for syncing the m-chain
     #[arg(
         long = "settlement-syncing-batch-size",
         env = "SETTLEMENT_SYNCING_BATCH_SIZE",
