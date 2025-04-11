@@ -115,7 +115,8 @@ impl TCClient {
             })?;
 
         if !response.status().is_success() {
-            error!("Failed to send transaction to TC: {}", response.status());
+            let error_msg = response.text().await.unwrap_or_default();
+            error!("Failed to send transaction to TC: {}", error_msg);
             return Err(Error::Internal("failed to submit transaction to sequencer".to_string()));
         }
 
