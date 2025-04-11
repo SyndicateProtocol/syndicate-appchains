@@ -22,18 +22,18 @@ pub enum Error {
 #[allow(missing_docs)]
 #[derive(Debug, Error)]
 pub enum ConfigError {
-    #[error("unable to parse Arbitrum Nitro URLs map: {0}")]
+    #[error("unable to parse RPC URLs map: {0}")]
     ChainIdNitroUrlParse(String),
 
     #[error("unable to connect to server: {0}")]
     HttpClient(#[from] reqwest::Error),
 
-    #[error("failed to connect to chain ID: {0} nitro URL: {1} error: {2}")]
-    NitroUrlConnection(String, String, reqwest::Error),
+    #[error("failed to connect to chain ID: {0} RPC URL: {1}")]
+    NitroUrlConnection(String, String),
 
-    #[error("failed to connect to chain ID: {0} nitro URL: {1} status: {2}")]
+    #[error("bad response code from chain ID: {0} RPC URL: {1} response status: {2}")]
     NitroUrlInvalidStatus(String, String, String),
 
-    #[error("failed to connect to chain nitro URL: {0} expected chain ID: {1} got {2}")]
+    #[error("failed to connect to chain RPC URL: {0} expected chain ID: {1} got {2}")]
     NitroUrlInvalidChainId(String, String, String),
 }
