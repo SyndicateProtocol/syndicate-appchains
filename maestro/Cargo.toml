@@ -28,6 +28,7 @@ eyre         = { workspace = true }
 futures-util = { workspace = true }
 http         = { workspace = true }
 http-body    = { workspace = true }
+humantime    = { workspace = true }
 jsonrpsee    = { workspace = true, features = ["full"] }
 redis        = { workspace = true, features = ["streams", "tokio-comp"] }
 serde_json   = { workspace = true }
@@ -37,6 +38,9 @@ thiserror    = { workspace = true }
 tokio        = { workspace = true, features = ["full"] }
 tower        = { workspace = true }
 tracing      = { workspace = true }
+
+[dev-dependencies]
+wiremock = { workspace = true }
 
 [lints]
 workspace = true
