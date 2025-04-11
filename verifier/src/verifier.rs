@@ -62,8 +62,31 @@ fn validate_block_hash(block: &Block) -> Result<()> {
     Ok(())
 }
 
-fn generate_mblock(_seq_blocks: Vec<Block>, _set_blocks: Vec<Block>) -> Result<MBlock> {
-    // TODO: implement
+fn generate_mblock(seq_blocks: Vec<Block>, set_blocks: Vec<Block>) -> Result<MBlock> {
+    let (set_block_number, set_block_hash, set_timestamp) = set_blocks
+        .last()
+        .map_or((0, FixedBytes::ZERO, 0), |b| (b.header.number, b.header.hash, b.header.timestamp));
+
+    let (seq_block_number, seq_block_hash, seq_timestamp) = seq_blocks
+        .last()
+        .map_or((0, FixedBytes::ZERO, 0), |b| (b.header.number, b.header.hash, b.header.timestamp));
+
+    // let mblock = MBlock {
+    //     timestamp: set_timestamp,
+    //     batch: self
+    //         .build_batch_txn(
+    //             mb_transactions,
+    //             mchain_block_number,
+    //             slot.timestamp(),
+    //             delayed_messages.len(),
+    //         )
+    //         .await?,
+    //     messages: delayed_messages,
+    //     seq_block_hash,
+    //     seq_block_number,
+    //     set_block_hash,
+    //     set_block_number,
+    // };
     let mblock = MBlock::default();
 
     Ok(mblock)
