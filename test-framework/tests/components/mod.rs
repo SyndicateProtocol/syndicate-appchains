@@ -59,9 +59,12 @@ pub(crate) struct Components {
 
     /// Sequencing
     pub sequencing_provider: FilledProvider,
+    pub sequencing_rpc_url: String,
+    pub sequencing_contract_address: Address,
 
     /// Settlement
     pub settlement_provider: FilledProvider,
+    pub settlement_rpc_url: String,
     pub chain_id: u64,
     pub bridge_address: Address,
     pub inbox_address: Address,
@@ -101,17 +104,102 @@ pub(crate) enum ContractVersion {
 }
 
 #[derive(Debug)]
-struct TranslatorConfig {
-    arbitrum_bridge_address: Address,
-    arbitrum_inbox_address: Address,
-    sequencing_contract_address: Address,
-    mchain_rpc_url: String,
-    sequencing_rpc_url: String,
-    settlement_rpc_url: String,
-    metrics_port: u16,
-    sequencing_start_block: u64,
-    settlement_start_block: u64,
-    settlement_delay: u64,
+pub struct TranslatorConfig {
+    pub arbitrum_bridge_address: Option<Address>,
+    pub arbitrum_inbox_address: Option<Address>,
+    pub sequencing_contract_address: Option<Address>,
+    pub arbitrum_ignore_delayed_messages: Option<bool>,
+    pub config_manager_address: Option<Address>,
+    pub appchain_chain_id: Option<u64>,
+    pub mchain_rpc_url: String,
+    pub sequencing_rpc_url: Option<String>,
+    pub settlement_rpc_url: String,
+    pub metrics_port: u16,
+    pub sequencing_start_block: Option<u64>,
+    pub settlement_start_block: Option<u64>,
+    pub settlement_delay: Option<u64>,
+}
+
+impl Default for TranslatorConfig {
+    fn default() -> Self {
+        Self {
+            arbitrum_bridge_address: None,
+            arbitrum_inbox_address: None,
+            sequencing_contract_address: None,
+            arbitrum_ignore_delayed_messages: None,
+            config_manager_address: None,
+            appchain_chain_id: None,
+            mchain_rpc_url: String::new(),
+            sequencing_rpc_url: None,
+            settlement_rpc_url: String::new(),
+            metrics_port: 0,
+            sequencing_start_block: None,
+            settlement_start_block: None,
+            settlement_delay: None,
+        }
+    }
+}
+
+impl TranslatorConfig {
+    pub fn cli_args(&self) -> Vec<String> {
+        let mut args = vec![
+            "--mchain-rpc-url".to_string(),
+            self.mchain_rpc_url.to_string(),
+            "--settlement-rpc-url".to_string(),
+            self.settlement_rpc_url.to_string(),
+            "--metrics-port".to_string(),
+            self.metrics_port.to_string(),
+        ];
+
+        if let Some(url) = &self.sequencing_rpc_url {
+            args.extend(vec!["--sequencing-rpc-url".to_string(), url.to_string()]);
+        }
+
+        if let Some(addr) = self.arbitrum_bridge_address {
+            args.extend(vec!["--arbitrum-bridge-address".to_string(), addr.to_string()]);
+        }
+
+        if let Some(addr) = self.arbitrum_inbox_address {
+            args.extend(vec!["--arbitrum-inbox-address".to_string(), addr.to_string()]);
+        }
+
+        if let Some(block) = self.sequencing_start_block {
+            args.extend(vec!["--sequencing-start-block".to_string(), block.to_string()]);
+        }
+
+        if let Some(block) = self.settlement_start_block {
+            args.extend(vec!["--settlement-start-block".to_string(), block.to_string()]);
+        }
+
+        if let Some(delay) = self.settlement_delay {
+            args.extend(vec!["--settlement-delay".to_string(), delay.to_string()]);
+        }
+
+        if let Some(ignore) = self.arbitrum_ignore_delayed_messages {
+            args.extend(vec!["--arbitrum-ignore-delayed-messages".to_string(), ignore.to_string()]);
+        }
+
+        if let Some(addr) = self.sequencing_contract_address {
+            args.extend(vec!["--sequencing-contract-address".to_string(), addr.to_string()]);
+        }
+
+        if let Some(addr) = self.config_manager_address {
+            args.extend(vec!["--config-manager-address".to_string(), addr.to_string()]);
+        }
+
+        if let Some(chain_id) = self.appchain_chain_id {
+            args.extend(vec!["--appchain-chain-id".to_string(), chain_id.to_string()]);
+        }
+
+        args.extend(vec![
+            "--sequencing-polling-interval".to_string(),
+            "50ms".to_string(),
+            "--settlement-polling-interval".to_string(),
+            "50ms".to_string(),
+        ]);
+
+        args
+    }
 }
 
 #[derive(Debug)]
@@ -272,28 +360,31 @@ impl Components {
 
         info!("Starting translator...");
         let translator_config = TranslatorConfig {
-            sequencing_start_block: options.sequencing_start_block,
-            settlement_start_block: options.settlement_start_block,
-            settlement_delay: options.settlement_delay,
+            sequencing_start_block: Some(options.sequencing_start_block),
+            settlement_start_block: Some(options.settlement_start_block),
+            settlement_delay: Some(options.settlement_delay),
             arbitrum_bridge_address: options.pre_loaded.as_ref().map_or_else(
-                || set_provider.default_signer_address().create(0),
+                || Some(set_provider.default_signer_address().create(0)),
                 |version| match version {
-                    ContractVersion::V300 => PRELOAD_BRIDGE_ADDRESS_300,
-                    ContractVersion::V213 => PRELOAD_BRIDGE_ADDRESS_231,
+                    ContractVersion::V300 => Some(PRELOAD_BRIDGE_ADDRESS_300),
+                    ContractVersion::V213 => Some(PRELOAD_BRIDGE_ADDRESS_231),
                 },
             ),
             arbitrum_inbox_address: options.pre_loaded.as_ref().map_or_else(
-                || set_provider.default_signer_address().create(0),
+                || Some(set_provider.default_signer_address().create(0)),
                 |version| match version {
-                    ContractVersion::V300 => PRELOAD_INBOX_ADDRESS_300,
-                    ContractVersion::V213 => PRELOAD_INBOX_ADDRESS_231,
+                    ContractVersion::V300 => Some(PRELOAD_INBOX_ADDRESS_300),
+                    ContractVersion::V213 => Some(PRELOAD_INBOX_ADDRESS_231),
                 },
             ),
-            sequencing_contract_address,
+            sequencing_contract_address: Some(sequencing_contract_address),
             mchain_rpc_url: mchain_rpc_url.clone(),
             metrics_port: PortManager::instance().next_port(),
-            sequencing_rpc_url,
+            sequencing_rpc_url: Some(sequencing_rpc_url),
             settlement_rpc_url: settlement_rpc_url.clone(),
+            arbitrum_ignore_delayed_messages: Some(false),
+            config_manager_address: None,
+            appchain_chain_id: Some(options.appchain_chain_id),
         };
         let translator = start_component(
             "metabased-translator",
@@ -351,11 +442,15 @@ impl Components {
                 _timer: TestTimer(SystemTime::now(), start_time.elapsed().unwrap()),
 
                 sequencing_provider: seq_provider,
+                sequencing_rpc_url: seq_anvil.endpoint_url().to_string(),
+                sequencing_contract_address,
+
                 settlement_provider: set_provider,
+                settlement_rpc_url: set_anvil.endpoint_url().to_string(),
                 appchain_provider,
                 chain_id: options.appchain_chain_id,
-                bridge_address: translator_config.arbitrum_bridge_address,
-                inbox_address: translator_config.arbitrum_inbox_address,
+                bridge_address: translator_config.arbitrum_bridge_address.unwrap_or_default(),
+                inbox_address: translator_config.arbitrum_inbox_address.unwrap_or_default(),
                 mchain_provider,
                 poster_url,
             },
@@ -398,37 +493,6 @@ impl Components {
         self.mine_seq_block(delay).await?;
         self.mine_set_block(delay).await?;
         Ok(())
-    }
-}
-
-impl TranslatorConfig {
-    fn cli_args(&self) -> Vec<String> {
-        vec![
-            "--mchain-rpc-url".to_string(),
-            self.mchain_rpc_url.to_string(),
-            "--sequencing-contract-address".to_string(),
-            self.sequencing_contract_address.to_string(),
-            "--arbitrum-bridge-address".to_string(),
-            self.arbitrum_bridge_address.to_string(),
-            "--arbitrum-inbox-address".to_string(),
-            self.arbitrum_inbox_address.to_string(),
-            "--sequencing-rpc-url".to_string(),
-            self.sequencing_rpc_url.to_string(),
-            "--settlement-rpc-url".to_string(),
-            self.settlement_rpc_url.to_string(),
-            "--metrics-port".to_string(),
-            self.metrics_port.to_string(),
-            "--sequencing-start-block".to_string(),
-            self.sequencing_start_block.to_string(),
-            "--settlement-start-block".to_string(),
-            self.settlement_start_block.to_string(),
-            "--settlement-delay".to_string(),
-            self.settlement_delay.to_string(),
-            "--sequencing-polling-interval".to_string(),
-            "50ms".to_string(),
-            "--settlement-polling-interval".to_string(),
-            "50ms".to_string(),
-        ]
     }
 }
 

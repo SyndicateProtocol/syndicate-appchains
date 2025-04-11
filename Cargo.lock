@@ -1527,6 +1527,7 @@ dependencies = [
  "alloy",
  "async-trait",
  "bincode",
+ "contract-bindings",
  "eyre",
  "serde",
  "serde_json",
@@ -3319,14 +3320,17 @@ dependencies = [
 name = "metabased-translator"
 version = "0.1.0"
 dependencies = [
+ "alloy",
  "async-trait",
  "block-builder",
  "clap",
  "common",
+ "contract-bindings",
  "eyre",
  "ingestor",
  "metrics",
  "mockall",
+ "prometheus-client",
  "shared",
  "slotter",
  "temp-env",

@@ -1,5 +1,6 @@
 //! e2e tests for the metabased stack
 
+use crate::components::{Components, ConfigurationOptions, ContractVersion};
 use alloy::{
     eips::{BlockNumberOrTag, Encodable2718},
     network::TransactionBuilder,
@@ -7,15 +8,17 @@ use alloy::{
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, Block, TransactionRequest},
 };
-use components::{Components, ConfigurationOptions, ContractVersion};
-use contract_bindings::arbitrum::{
-    arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox, irollupcore::IRollupCore,
-    nodeinterface::NodeInterface, rollup::Rollup,
+use contract_bindings::{
+    arbitrum::{
+        arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox,
+        irollupcore::IRollupCore, nodeinterface::NodeInterface, rollup::Rollup,
+    },
+    metabased::arbconfigmanager::ArbConfigManager,
 };
 use eyre::Result;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
-use test_utils::wait_until;
+use test_utils::{docker::start_mchain, port_manager::PortManager, wait_until};
 
 mod components;
 
@@ -539,5 +542,93 @@ async fn e2e_settlement_reorg() -> Result<()> {
             Ok(())
         },
     )
+    .await
+}
+
+#[tokio::test]
+async fn e2e_config_manager() -> Result<()> {
+    let config = ConfigurationOptions { settlement_delay: 60, ..Default::default() };
+    Components::run(&config, |components| async move {
+        println!("POTATO1");
+
+        // Deploy config manager
+        let config_manager = ArbConfigManager::deploy(
+            &components.settlement_provider,
+            components.settlement_provider.default_signer_address(),
+        )
+        .await?;
+
+        println!("POTATO2");
+
+        let chain_config_address = config_manager
+            .createArbChainConfig(
+                components.chain_id.try_into().unwrap(),
+                false,
+                components.bridge_address,
+                components.inbox_address,
+                false,
+                config.settlement_delay.try_into().unwrap(),
+                config.settlement_start_block.try_into().unwrap(),
+                components.sequencing_contract_address,
+                config.sequencing_start_block.try_into().unwrap(),
+                config.appchain_owner,
+                components.sequencing_rpc_url,
+            )
+            .call()
+            .await
+            .unwrap()
+            ._0;
+
+        //sanity check
+        assert_eq!(
+            config_manager
+                .getArbChainConfigAddress(config.appchain_chain_id.try_into().unwrap())
+                .call()
+                .await
+                .unwrap()
+                ._0,
+            chain_config_address
+        );
+
+        println!("POTATO3");
+
+        // let (
+        //     mchain_with_cfg_mgr_rpc_url,
+        //     _mchain_with_cfg_mgr_handle,
+        //     mchain_with_cfg_mgr_provider,
+        // ) = start_mchain(config.appchain_chain_id, config.appchain_owner, config.finality_delay)
+        //     .await?;
+
+        // // only set the settlement rpc URL, config_manager address and appchain_chain_id
+        // let translator_config = TranslatorConfig {
+        //     settlement_rpc_url: components.settlement_rpc_url,
+        //     config_manager_address: Some(config_manager.address().to_owned()),
+        //     appchain_chain_id: Some(components.chain_id),
+        //     arbitrum_bridge_address: None,
+        //     arbitrum_inbox_address: None,
+        //     sequencing_contract_address: None,
+        //     arbitrum_ignore_delayed_messages: None,
+        //     mchain_rpc_url: mchain_with_cfg_mgr_rpc_url,
+        //     sequencing_rpc_url: None,
+        //     metrics_port: PortManager::instance().next_port(),
+        //     sequencing_start_block: None,
+        //     settlement_start_block: None,
+        //     settlement_delay: None,
+        // };
+
+        // // start a second translator that will use the on-chain configuration
+        // let translator_with_cfg_mgr = start_component(
+        //     "metabased-translator",
+        //     translator_config.metrics_port,
+        //     translator_config.cli_args(),
+        //     Default::default(),
+        // )
+        // .await?;
+
+        // TODO make a deposit
+        // TODO assert both translators mchains reach the same state
+
+        Ok(())
+    })
     .await
 }

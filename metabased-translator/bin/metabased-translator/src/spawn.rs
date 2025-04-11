@@ -1,8 +1,10 @@
 use crate::{
     config::MetabasedConfig,
+    config_manager::with_onchain_config,
     shutdown_channels::{ShutdownChannels, ShutdownRx, ShutdownTx},
     types::RuntimeError,
 };
+use alloy::{providers::ProviderBuilder, rpc::client::ClientBuilder};
 use block_builder::{connectors::mchain::MetaChainProvider, rollups::shared::RollupAdapter};
 use common::{
     eth_client::{EthClient, RPCClient},
@@ -25,9 +27,19 @@ pub async fn run(
     rollup_adapter: impl RollupAdapter,
 ) -> Result<(), RuntimeError> {
     info!("Initializing Metabased Translator components");
-    let (sequencing_client, settlement_client) = clients(config).await?;
 
-    let metrics = init_metrics(config).await;
+    // TODO this could use the same `settlement_client` that is used everywhere else, but that
+    // doesn't implement Provider..
+    // Load chain config from ConfigManager if available
+    let settlement_provider = ProviderBuilder::new().on_client(
+        ClientBuilder::default().connect(&config.settlement.settlement_rpc_url).await.unwrap(),
+    );
+    let config = with_onchain_config(config, settlement_provider).await;
+    // TODO check all mandatory fields have values
+
+    let (sequencing_client, settlement_client) = clients(&config).await?;
+
+    let metrics = init_metrics(&config).await;
 
     let mchain = MetaChainProvider::start(
         &config.block_builder,
@@ -46,14 +58,15 @@ pub async fn run(
 
         let (tx, rx) = ShutdownChannels::new().split();
         let component_tasks = ComponentHandles::spawn(
-            config,
+            &config,
             safe_state,
             sequencing_client.clone(),
             settlement_client.clone(),
             metrics.clone(),
             mchain.clone(),
             rx,
-        );
+        )
+        .await;
 
         info!("Starting Metabased Translator");
         match termination_handling(tx, component_tasks).await {
@@ -106,7 +119,7 @@ struct ComponentHandles {
 }
 
 impl ComponentHandles {
-    fn spawn(
+    async fn spawn(
         config: &MetabasedConfig,
         known_state: Option<KnownState>,
         sequencing_client: Arc<dyn RPCClient>,
@@ -161,7 +174,7 @@ impl ComponentHandles {
         let settlement_delay = config.settlement_delay;
         let slotter = tokio::spawn(async move {
             slotter::slotter::run(
-                settlement_delay,
+                settlement_delay.unwrap(), // TODO revisit
                 known_state,
                 sequencing_rx,
                 settlement_rx,
@@ -215,7 +228,7 @@ pub async fn clients(
 ) -> Result<(Arc<dyn RPCClient>, Arc<dyn RPCClient>), RuntimeError> {
     let sequencing_client: Arc<dyn RPCClient> = Arc::new(
         EthClient::new(
-            &config.sequencing.sequencing_rpc_url,
+            config.sequencing.sequencing_rpc_url.as_ref().unwrap(), // TODO revisit
             config.sequencing.sequencing_rpc_timeout,
         )
         .await
