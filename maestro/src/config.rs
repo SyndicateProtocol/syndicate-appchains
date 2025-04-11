@@ -4,6 +4,7 @@ use crate::errors::ConfigError;
 use alloy::transports::http::Client;
 use clap::Parser;
 use serde_json::Value;
+use shared::parse::parse_map;
 use std::{collections::HashMap, time::Duration};
 use tracing::{debug, error};
 
@@ -28,7 +29,7 @@ pub struct Config {
         long,
         env = "CHAIN_RPC_URLS",
         default_value = "{}",
-        value_parser = parse_chain_rpc_urls_map
+        value_parser = parse_map::<String, String>
     )]
     pub chain_rpc_urls: HashMap<String, String>,
 
@@ -97,11 +98,11 @@ impl Config {
                 .json(&health_check_payload)
                 .send()
                 .await
-                .map_err(|_| ConfigError::NitroUrlConnection(chain_id.clone(), url.clone()))?;
+                .map_err(|_| ConfigError::RpcUrlConnection(chain_id.clone(), url.clone()))?;
 
             // Check for successful status code (2xx)
             if !response.status().is_success() {
-                return Err(ConfigError::NitroUrlInvalidStatus(
+                return Err(ConfigError::RpcUrlInvalidStatus(
                     chain_id.clone(),
                     url.clone(),
                     response.status().to_string(),
@@ -114,7 +115,7 @@ impl Config {
             let dec_chain_id = hex_to_decimal(hex_chain_id).unwrap_or(0);
 
             if *chain_id != dec_chain_id.to_string() {
-                return Err(ConfigError::NitroUrlInvalidChainId(
+                return Err(ConfigError::RpcUrlInvalidChainId(
                     url.clone(),
                     chain_id.to_string(),
                     dec_chain_id.to_string(),
@@ -131,13 +132,6 @@ fn hex_to_decimal(hex_str: &str) -> Result<u64, std::num::ParseIntError> {
     // Remove "0x" prefix if present
     let cleaned_hex = hex_str.trim_start_matches("0x");
     u64::from_str_radix(cleaned_hex, 16)
-}
-
-/// Parse the chain ID to URL mappings from the JSON string
-fn parse_chain_rpc_urls_map(s: &str) -> Result<HashMap<String, String>, ConfigError> {
-    let map: HashMap<String, String> =
-        serde_json::from_str(s).map_err(|e| ConfigError::ChainIdNitroUrlParse(e.to_string()))?;
-    Ok(map)
 }
 
 impl Default for Config {
@@ -187,67 +181,5 @@ mod tests {
 
         // Test value too large for u64
         assert!(hex_to_decimal("0xFFFFFFFFFFFFFFFFFF").is_err());
-    }
-
-    #[test]
-    fn test_parse_chain_id_nitro_urls_map_empty() {
-        // Test with empty JSON object
-        let result = parse_chain_rpc_urls_map("{}");
-        assert!(result.is_ok());
-        let map = result.unwrap();
-        assert!(map.is_empty());
-    }
-
-    #[test]
-    fn test_parse_chain_id_nitro_urls_map_valid() {
-        // Test with valid JSON object
-        let json = r#"{"1": "https://example1.com", "2": "https://example2.com"}"#;
-        let result = parse_chain_rpc_urls_map(json);
-        assert!(result.is_ok());
-
-        let map = result.unwrap();
-        assert_eq!(map.len(), 2);
-        assert_eq!(map.get("1"), Some(&"https://example1.com".to_string()));
-        assert_eq!(map.get("2"), Some(&"https://example2.com".to_string()));
-    }
-
-    #[test]
-    fn test_parse_chain_id_nitro_urls_map_whitespace() {
-        // Test with whitespace in JSON
-        let json = r#" { "1" : "https://example1.com" , "2" : "https://example2.com" } "#;
-        let result = parse_chain_rpc_urls_map(json);
-        assert!(result.is_ok());
-
-        let map = result.unwrap();
-        assert_eq!(map.len(), 2);
-        assert_eq!(map.get("1"), Some(&"https://example1.com".to_string()));
-        assert_eq!(map.get("2"), Some(&"https://example2.com".to_string()));
-    }
-
-    #[test]
-    fn test_parse_chain_id_nitro_urls_map_special_chars() {
-        // Test with URLs containing special characters
-        let json =
-            r#"{"1": "https://example.com/path?query=value", "2": "http://192.168.1.1:8545"}"#;
-        let result = parse_chain_rpc_urls_map(json);
-        assert!(result.is_ok());
-
-        let map = result.unwrap();
-        assert_eq!(map.len(), 2);
-        assert_eq!(map.get("1"), Some(&"https://example.com/path?query=value".to_string()));
-        assert_eq!(map.get("2"), Some(&"http://192.168.1.1:8545".to_string()));
-    }
-
-    #[test]
-    fn test_parse_chain_id_nitro_urls_map_malformed_urls() {
-        // Test with valid JSON but malformed URLs (should still parse)
-        let json = r#"{"1": "not a url", "2": "also-not-url"}"#;
-        let result = parse_chain_rpc_urls_map(json);
-        assert!(result.is_ok());
-
-        let map = result.unwrap();
-        assert_eq!(map.len(), 2);
-        assert_eq!(map.get("1"), Some(&"not a url".to_string()));
-        assert_eq!(map.get("2"), Some(&"also-not-url".to_string()));
     }
 }
