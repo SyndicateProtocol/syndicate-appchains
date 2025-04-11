@@ -25,7 +25,7 @@ use shared::{
 };
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use tower::ServiceBuilder;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, info};
 
 /// Runs the base server for the sequencer
 pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
