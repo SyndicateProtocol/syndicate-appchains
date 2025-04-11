@@ -1,4 +1,4 @@
-//! The JSON-RPC server module for the Maestro sequencer.
+//! The JSON-RPC server module for the Maestro service.
 
 use crate::{config::Config, constants::HEADER_CHAIN_ID, layers::HeadersLayer};
 use alloy::{
@@ -71,14 +71,11 @@ pub async fn send_raw_transaction_handler_v1(
 ) -> RpcResult<JsonValue> {
     // let start = Instant::now();
 
-    info!("Entered send_raw_transaction_handler_v1");
-
     let tx_data = parse_send_raw_transaction_params(params)?;
-    info!("parse params succeeded");
     let request_chain_id = get_request_chain_id(extensions);
-    info!("got request chain id");
     let tx_hash = service.process_raw_transaction_v1(tx_data, request_chain_id).await?;
-    info!(%tx_hash, "got txhash");
+
+    debug!(%tx_hash, "Successfully processed raw txn");
 
     Ok(serde_json::json!({
         "jsonrpc": "2.0",
@@ -193,7 +190,7 @@ impl MaestroService {
         }
 
         // Log success and return the hash
-        info!(%nitro_url, %tx_hash, %txn_chain_id, "Successfully forwarded transaction to Nitro");
+        debug!(%nitro_url, %tx_hash, %txn_chain_id, "Successfully forwarded transaction to Nitro");
         Ok(*original_tx.tx_hash())
     }
 

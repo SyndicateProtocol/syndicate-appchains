@@ -5,7 +5,7 @@ use alloy::transports::http::Client;
 use clap::Parser;
 use serde_json::Value;
 use std::{collections::HashMap, time::Duration};
-use tracing::{debug, error, info};
+use tracing::{debug, error};
 
 /// Configuration for Maestro
 #[allow(clippy::doc_markdown)]
@@ -97,7 +97,7 @@ impl Config {
                 .json(&health_check_payload)
                 .send()
                 .await
-                .map_err(|e| ConfigError::NitroUrlConnection(chain_id.clone(), url.clone(), e))?;
+                .map_err(|_| ConfigError::NitroUrlConnection(chain_id.clone(), url.clone()))?;
 
             // Check for successful status code (2xx)
             if !response.status().is_success() {
@@ -110,11 +110,8 @@ impl Config {
 
             // check that result chain_id matches ours
             let json: Value = response.json().await?;
-            info!("{:#?}", json);
             let hex_chain_id = json["result"].as_str().unwrap_or("");
-            info!("{:#?}", hex_chain_id);
             let dec_chain_id = hex_to_decimal(hex_chain_id).unwrap_or(0);
-            info!("{:#?}", dec_chain_id);
 
             if *chain_id != dec_chain_id.to_string() {
                 return Err(ConfigError::NitroUrlInvalidChainId(
