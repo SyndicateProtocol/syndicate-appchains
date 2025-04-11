@@ -50,7 +50,7 @@ impl SendTransactionRequest {
             chain_id: DEFAULT_SEQUENCING_CHAIN_ID,
             function_signature: DEFAULT_FUNCTION_SIGNATURE.to_string(),
             args: HashMap::from([
-                (TC_CHAIN_KEY.to_string(), format!("0x{}", chain_address.to_string())),
+                (TC_CHAIN_KEY.to_string(), format!("0x{}", chain_address)),
                 (TC_DATA_KEY.to_string(), format!("0x{}", hex::encode(data))),
             ]),
         }
@@ -97,7 +97,7 @@ impl TCClient {
     ) -> Result<(), Error> {
         let request = SendTransactionRequest::new(
             self.tc_project_id.clone(),
-            self.wallet_pool_address.clone(),
+            self.wallet_pool_address,
             contract_address,
             raw_tx,
         );

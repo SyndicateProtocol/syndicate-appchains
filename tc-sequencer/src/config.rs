@@ -2,39 +2,10 @@
 
 use alloy::primitives::Address;
 use clap::Parser;
-use shared::parse::parse_address;
-use std::{collections::HashMap, fmt::Debug, str::FromStr};
+use shared::parse::{parse_address, parse_map};
+use std::{collections::HashMap, fmt::Debug};
 use thiserror::Error;
 use url::Url;
-
-// TODO [SEQ-792]: Get the sequencing addresses map from a config file
-/// Get the sequencing addresses map
-pub fn get_sequencing_addresses_default() -> HashMap<u64, Address> {
-    let mut map = HashMap::new();
-    // Manchego Chain
-    map.insert(510000, get_address("0x180972BF154c9Aea86c43149D83B7Ea078c33f48"));
-    // Burrata Chain
-    map.insert(510001, get_address("0xC1cacFC14624c4E241286Ade61DF545b90f850B4"));
-    // IRL Chain
-    map.insert(63821, get_address("0x536EA7C009ebE418501a1DB133b281a4a01d50f5"));
-    // Commerce Chain
-    map.insert(63822, get_address("0x7C8d3922298AbbEF7beE5F3dACC4238326482789"));
-    // Dream Chain
-    map.insert(63823, get_address("0x62B82d1AF6D61DdfE5b4af38Eb5dE982A7f7565f"));
-    // Amino Chain
-    map.insert(63824, get_address("0x8CcaC248CcFCA1283981678B7291F48f6e26ad39"));
-    // Eco Chain
-    map.insert(63825, get_address("0x47ec452FA5035C24217daCC66aA305802F1d0fbe"));
-    // Playground Chain
-    map.insert(63826, get_address("0x4e001110D16bE154EB586e73d2da823721E1a9cD"));
-    map
-}
-
-// TODO [SEQ-792]: Remove once we get this from config file
-/// Get an address from a string [TEMPORARY]
-fn get_address(string: &str) -> Address {
-    Address::from_str(string).unwrap_or_else(|_| panic!("Invalid address: {}", string))
-}
 
 /// The environment of the TC API
 #[derive(Debug, Clone)]
@@ -86,9 +57,9 @@ pub enum ConfigError {
     /// Invalid address
     #[error("Invalid address: {0}")]
     InvalidAddress(String),
-    /// Invalid sequencing addresses mapping
-    #[error("Invalid sequencing addresses mapping: {0}")]
-    InvalidSequencingAddressesMapping(String),
+    /// Invalid sequencing addresses
+    #[error("Invalid sequencing addresses: {0}")]
+    InvalidSequencingAddresses(String),
 }
 
 /// Configuration for the tc sequencer
@@ -112,28 +83,12 @@ pub struct Config {
     pub port: u16,
 
     /// Mapping of chain IDs to their corresponding sequencing addresses
-    #[arg(short = 'a', long, env = "SEQUENCING_ADDRESSES", value_parser = parse_sequencing_addresses)]
+    #[arg(short = 'a', long, env = "SEQUENCING_ADDRESSES", value_parser = parse_map::<u64, Address>)]
     pub sequencing_addresses: HashMap<u64, Address>,
 
     /// Address of the wallet pool contract
     #[arg(short = 'p', long, env = "WALLET_POOL_ADDRESS", value_parser = parse_address, default_value = "0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8")]
     pub wallet_pool_address: Address,
-}
-
-/// Parse a string into a map of chain IDs to their corresponding sequencing addresses
-fn parse_sequencing_addresses(value: &str) -> Result<HashMap<u64, Address>, ConfigError> {
-    let mut map = get_sequencing_addresses_default();
-    for line in value.split(',') {
-        let parts = line.split('=').collect::<Vec<_>>();
-        let chain_id = parts[0].parse::<u64>().map_err(|e| {
-            ConfigError::InvalidSequencingAddressesMapping(format!("Invalid chain ID: {}", e))
-        })?;
-        let address = parts[1].parse::<Address>().map_err(|e| {
-            ConfigError::InvalidSequencingAddressesMapping(format!("Invalid address: {}", e))
-        })?;
-        map.insert(chain_id, address);
-    }
-    Ok(map)
 }
 
 impl From<shared::parse::Error> for ConfigError {
@@ -143,6 +98,7 @@ impl From<shared::parse::Error> for ConfigError {
                 unreachable!("parse_address should only return Error::EthereumAddress")
             }
             shared::parse::Error::EthereumAddress(error) => Self::InvalidAddress(error),
+            shared::parse::Error::InvalidMap(error) => Self::InvalidSequencingAddresses(error),
         }
     }
 }
