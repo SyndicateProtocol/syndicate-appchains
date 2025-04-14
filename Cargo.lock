@@ -1527,7 +1527,6 @@ dependencies = [
  "alloy",
  "async-trait",
  "bincode",
- "contract-bindings",
  "eyre",
  "serde",
  "serde_json",
