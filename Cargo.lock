@@ -4795,7 +4795,6 @@ dependencies = [
 name = "slotter"
 version = "0.1.0"
 dependencies = [
- "alloy",
  "common",
  "ctor",
  "prometheus-client",

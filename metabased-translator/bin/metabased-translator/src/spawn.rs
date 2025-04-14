@@ -102,9 +102,9 @@ async fn termination_handling(
                     current_block, received_block, received_parent_hash);
                 Err(TerminationError::ReorgDetected())
             }
-            Ok(Err(e)) => Err(TerminationError::Err(RuntimeError::TaskFailedRecoverable(format!(
-                "{component}: {e}"
-            )))),
+            Ok(Err(e)) => Err(TerminationError::Err(RuntimeError::TaskFailedUnrecoverable(
+                format!("{component}: {e}"),
+            ))),
             Err(e) => Err(TerminationError::Err(RuntimeError::TaskFailedUnrecoverable(format!(
                 "{component}: {e}"
             )))),
@@ -116,9 +116,9 @@ async fn termination_handling(
     ) -> Result<(), TerminationError> {
         match result {
             Ok(Ok(_)) => Ok(()),
-            Ok(Err(e)) => Err(TerminationError::Err(RuntimeError::TaskFailedRecoverable(format!(
-                "Slotter: {e}"
-            )))),
+            Ok(Err(e)) => Err(TerminationError::Err(RuntimeError::TaskFailedUnrecoverable(
+                format!("Slotter: {e}"),
+            ))),
             Err(e) => Err(TerminationError::Err(RuntimeError::TaskFailedUnrecoverable(format!(
                 "Slotter: {e}"
             )))),
@@ -138,7 +138,6 @@ async fn termination_handling(
         },
     };
 
-    // Only perform graceful shutdown if there was an error or explicit shutdown request
     handles.graceful_shutdown(tx).await;
 
     result
@@ -219,7 +218,6 @@ impl ComponentHandles {
         let slotter = tokio::spawn(async move {
             slotter::slotter::run(
                 settlement_delay,
-                known_state,
                 sequencing_rx,
                 settlement_rx,
                 mchain,

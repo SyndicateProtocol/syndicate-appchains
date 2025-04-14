@@ -11,9 +11,6 @@ pub enum RuntimeError {
     #[error("Component shutdown error: {0}")]
     Shutdown(String),
 
-    #[error("Task recoverable error: {0}")]
-    TaskFailedRecoverable(String),
-
     #[error("Task unrecoverable error: {0}")]
     TaskFailedUnrecoverable(String),
 

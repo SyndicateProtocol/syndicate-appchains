@@ -1,11 +1,15 @@
 //! The `ingestor` module  handles block polling from a remote Ethereum chain and forwards them to a
 //! consumer using a channel
 
-use crate::{ingestor::IngestorError, metrics::IngestorMetrics, IngestorArgs};
+use crate::{
+    ingestor::{process_and_send_block, IngestorError},
+    metrics::IngestorMetrics,
+    IngestorArgs,
+};
 use alloy::{primitives::Address, rpc::types::BlockNumberOrTag};
 use common::{
     eth_client::RPCClient,
-    types::{Block, Chain, PartialBlock, PartialLogWithTxdata, Receipt},
+    types::{Block, BlockRef, Chain, PartialBlock, PartialLogWithTxdata, Receipt},
 };
 use std::{
     cmp::{max, min},
@@ -23,6 +27,7 @@ struct BatchContext<'a> {
     sender: &'a Sender<PartialBlock>,
     metrics: &'a IngestorMetrics,
     current_block_number: &'a mut u64,
+    last_block_sent: &'a mut Option<BlockRef>,
     initial_chain_head: u64,
     syncing_batch_size: u64,
     chain: Chain,
@@ -78,6 +83,7 @@ pub async fn run_http(args: IngestorArgs, client: Arc<dyn RPCClient>) -> Result<
 
     let mut interval = tokio::time::interval(polling_interval);
     let mut current_block_number = config.start_block;
+    let mut last_block_sent = args.known_block;
 
     loop {
         tokio::select! {
@@ -89,11 +95,12 @@ pub async fn run_http(args: IngestorArgs, client: Arc<dyn RPCClient>) -> Result<
             _ = interval.tick() => {
                // Skip missed ticks
                 interval.reset();
-                let should_terminate = fetch_and_push_batch(BatchContext {
+                match fetch_and_push_batch(BatchContext {
                     client: &client,
                     sender: &args.sender,
                     metrics: &args.metrics,
                     current_block_number: &mut current_block_number,
+                    last_block_sent: &mut last_block_sent,
                     initial_chain_head,
                     syncing_batch_size: batch_size,
                     chain,
@@ -102,44 +109,20 @@ pub async fn run_http(args: IngestorArgs, client: Arc<dyn RPCClient>) -> Result<
                     backoff_initial_interval: config.backoff_initial_interval,
                     backoff_scaling_factor: config.backoff_scaling_factor,
                     max_backoff: config.max_backoff,
-                }).await;
-                if should_terminate {
-                    info!(%chain, "Ingestor stopped");
-                    return Ok(())
+                }).await {
+                    Ok(_) => (),
+                    Err(IngestorError::Shutdown) => {
+                        info!(%chain, "Ingestor stopped");
+                        return Ok(());
+                    }
+                    Err(e) => return Err(e),
                 }
             }
         }
     }
 }
 
-async fn push_block_and_receipts(
-    sender: &Sender<PartialBlock>,
-    metrics: &IngestorMetrics,
-    current_block_number: &mut u64,
-    block_and_receipts: PartialBlock,
-    chain: Chain,
-) -> Result<(), IngestorError> {
-    if block_and_receipts.number != *current_block_number {
-        error!(
-            %chain,
-            current_block = %current_block_number,
-            received_block = %block_and_receipts.number,
-            "Block number mismatch"
-        );
-        return Err(IngestorError::BlockNumberMismatch {
-            current: *current_block_number,
-            received: block_and_receipts.number,
-        });
-    }
-    trace!(%chain, block_number = %block_and_receipts.number, "Attempting to send block");
-    sender.send(block_and_receipts).await?;
-    trace!(%chain, old_block_number = %*current_block_number, new_block_number = %(*current_block_number + 1), "Successfully sent block, incrementing block number");
-    *current_block_number += 1;
-    metrics.update_channel_capacity(chain, sender.capacity());
-    Ok(())
-}
-
-async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
+async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> Result<(), IngestorError> {
     let start_block_num = *ctx.current_block_number;
     let upper_bound = min(
         max(ctx.initial_chain_head, start_block_num) + 1,
@@ -147,11 +130,8 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
     );
     let block_numbers: Vec<u64> = (start_block_num..upper_bound).collect();
 
-    if block_numbers.is_empty() {
-        warn!(%ctx.chain, current_block = %start_block_num, initial_chain_head = %ctx.initial_chain_head, syncing_batch_size = %ctx.syncing_batch_size, "Calculated empty block range, skipping fetch cycle.");
-        return false;
-    }
-    info!(%ctx.chain, range = ?block_numbers, "Calculated fetch range");
+    assert!(!block_numbers.is_empty());
+    trace!(%ctx.chain, range = ?block_numbers, "Calculated fetch range");
 
     let mut tasks: JoinSet<Result<(u64, PartialBlock), IngestorError>> = JoinSet::new();
 
@@ -234,7 +214,7 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
             _ = &mut *ctx.shutdown_rx => {
                 warn!(%ctx.chain, "Shutdown signal received during task joining, aborting all fetch tasks.");
                 tasks.abort_all();
-                return true;
+                return Err(IngestorError::Shutdown);
             }
             result = tasks.join_next() => result
         };
@@ -271,18 +251,15 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
         match block_and_receipts {
             Some(block_and_receipts) => {
                 trace!(%ctx.chain, block_number = %current_processing_block_num, "Processing result: Some, attempting push");
-                if let Err(err) = push_block_and_receipts(
+                process_and_send_block(
                     ctx.sender,
                     ctx.metrics,
-                    ctx.current_block_number,
+                    ctx.last_block_sent,
                     block_and_receipts,
                     ctx.chain,
                 )
-                .await
-                {
-                    error!(%ctx.chain, block_number = %current_processing_block_num, error = %err, "Failed to push block and receipts, stopping batch processing.");
-                    break;
-                }
+                .await?;
+                *ctx.current_block_number += 1;
             }
             None => {
                 debug!(%ctx.chain, block_number = %current_processing_block_num, "Processing result: None, stopping batch processing at first gap.");
@@ -290,7 +267,7 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
             }
         }
     }
-    false
+    Ok(())
 }
 
 /// Executes an operation with exponential backoff retry logic.
@@ -456,12 +433,10 @@ mod tests {
     use crate::{config::ChainIngestorConfig, metrics::IngestorMetrics};
     use alloy::{primitives::B256, rpc::types::BlockNumberOrTag};
     use async_trait::async_trait;
-    use common::{
-        eth_client::RPCClientError,
-        types::{Block, PartialBlock},
-    };
+    use common::{eth_client::RPCClientError, types::Block};
     use eyre::{Error, Result};
     use mockall::{mock, predicate::*};
+    use prometheus_client::registry::Registry;
     use shared::metrics::MetricsState;
     use std::str::FromStr;
     use tokio::sync::mpsc::channel;
@@ -474,7 +449,8 @@ mod tests {
             .unwrap(),
             number,
             parent_hash: B256::from_str(
-                "0234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+                // all blocks have same hash/parent hash to prevent reorg detection triggering
+                "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
             )
             .unwrap(),
             logs_bloom: "0xLog".to_string(),
@@ -498,75 +474,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_push_block_and_receipts() -> Result<(), Error> {
-        let start_block = 19486923;
-        let (sender, mut receiver) = channel(10);
-        let mut metrics_state = MetricsState::default();
-        let metrics = IngestorMetrics::new(&mut metrics_state.registry);
-        let mut current_block_number = start_block;
-
-        let block = get_dummy_block(start_block);
-        let block = PartialBlock {
-            number: block.number,
-            hash: block.hash,
-            timestamp: block.timestamp,
-            parent_hash: block.parent_hash,
-            logs: vec![],
-        };
-
-        push_block_and_receipts(
-            &sender,
-            &metrics,
-            &mut current_block_number,
-            block,
-            Chain::Sequencing,
-        )
-        .await
-        .expect("Failed to poll block");
-
-        if let Some(block) = receiver.recv().await {
-            assert_eq!(block.number, start_block);
-        } else {
-            panic!("No block received");
-        }
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn test_block_number_mismatch() {
-        let start_block = 100;
-        let wrong_block = 101;
-        let (sender, _) = channel(10);
-        let mut metrics_state = MetricsState::default();
-        let metrics = IngestorMetrics::new(&mut metrics_state.registry);
-        let mut current_block_number = start_block;
-
-        let block = get_dummy_block(wrong_block);
-        let block = PartialBlock {
-            number: block.number,
-            hash: block.hash,
-            timestamp: block.timestamp,
-            parent_hash: block.parent_hash,
-            logs: vec![],
-        };
-
-        let err = push_block_and_receipts(
-            &sender,
-            &metrics,
-            &mut current_block_number,
-            block,
-            Chain::Sequencing,
-        )
-        .await
-        .expect_err("Should fail with block number mismatch");
-
-        matches!(err, IngestorError::BlockNumberMismatch { current, received } if current == start_block && received == wrong_block);
-    }
-
-    #[tokio::test]
     async fn test_start_polling_simple_and_shutdown() -> Result<(), Error> {
         let start_block = 1;
-        let polling_interval = Duration::from_millis(10);
+        let polling_interval = Duration::from_millis(100);
         let config = ChainIngestorConfig {
             start_block,
             polling_interval,
@@ -576,48 +486,51 @@ mod tests {
             ..Default::default()
         };
 
-        let (sender, _) = channel(10);
+        let (sender, _receiver) = channel(10);
         let mut mock_client = MockRPCClientMock::new();
-        mock_client
-            .expect_get_block_by_number()
-            .returning(move |_| Ok(get_dummy_block(start_block)));
+        mock_client.expect_get_block_by_number().returning(move |num| match num {
+            BlockNumberOrTag::Number(num) => Ok(get_dummy_block(num)),
+            BlockNumberOrTag::Latest => Ok(get_dummy_block(start_block)),
+            _ => Err(RPCClientError::BlockNotFound(num.to_string())),
+        });
         mock_client.expect_get_block_receipts().returning(move |_| Ok(vec![]));
         let client: Arc<dyn RPCClient> = Arc::new(mock_client);
-        let mut metrics_state = MetricsState::default();
+        let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let config_clone = config.clone();
         let polling_handle = tokio::spawn(async move {
-            let args = IngestorArgs {
-                chain: Chain::Sequencing,
-                config: config_clone,
-                addresses: vec![],
-                sender,
-                known_block: None,
-                metrics,
-                shutdown_rx,
-            };
-            let result = run_http(args, client).await;
+            let result = run_http(
+                IngestorArgs {
+                    chain: Chain::Sequencing,
+                    config,
+                    sender,
+                    addresses: vec![],
+                    metrics,
+                    shutdown_rx,
+                    known_block: None,
+                },
+                client,
+            )
+            .await;
             assert!(result.is_ok(), "Polling task failed: {:?}", result);
         });
 
         tokio::time::sleep(Duration::from_millis(50)).await;
 
         let _ = shutdown_tx.send(());
-        polling_handle.await?;
+        polling_handle.await.unwrap();
 
         Ok(())
     }
-
     #[tokio::test]
-    async fn test_start_polling_batching() -> Result<(), Error> {
+    async fn test_start_polling_batching() -> Result<(), IngestorError> {
         let start_block = 100;
         let syncing_batch_size = 5;
         let config = ChainIngestorConfig {
             start_block,
             max_parallel_requests: syncing_batch_size,
-            polling_interval: Duration::from_secs(1000),
+            polling_interval: Duration::from_millis(100),
             backoff_initial_interval: Duration::from_millis(50),
             backoff_scaling_factor: 2,
             max_backoff: Duration::from_secs(30),
@@ -626,7 +539,7 @@ mod tests {
         let chain_head = start_block + syncing_batch_size;
 
         let (sender, mut receiver) = channel(10);
-        let mut metrics_state = MetricsState::default();
+        let mut metrics_state = MetricsState { registry: Registry::default() };
         let metrics = IngestorMetrics::new(&mut metrics_state.registry);
 
         let mut mock_client = MockRPCClientMock::new();
@@ -652,18 +565,20 @@ mod tests {
         let client: Arc<dyn RPCClient> = Arc::new(mock_client);
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let config_clone = config.clone();
         let polling_handle = tokio::spawn(async move {
-            let args = IngestorArgs {
-                chain: Chain::Sequencing,
-                config: config_clone,
-                addresses: vec![],
-                sender,
-                known_block: None,
-                metrics,
-                shutdown_rx,
-            };
-            let result = run_http(args, client).await;
+            let result = run_http(
+                IngestorArgs {
+                    chain: Chain::Sequencing,
+                    config,
+                    sender,
+                    addresses: vec![],
+                    metrics,
+                    shutdown_rx,
+                    known_block: None,
+                },
+                client,
+            )
+            .await;
             assert!(result.is_ok(), "Polling task failed: {:?}", result);
         });
 
@@ -681,7 +596,7 @@ mod tests {
         );
 
         let _ = shutdown_tx.send(());
-        polling_handle.await?;
+        polling_handle.await.unwrap();
 
         Ok(())
     }

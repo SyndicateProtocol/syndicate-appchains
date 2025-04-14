@@ -9,7 +9,6 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy             = { workspace = true, features = ["provider-engine-api"] }
 common            = { workspace = true }
 prometheus-client = { workspace = true }
 thiserror         = { workspace = true }

@@ -66,27 +66,9 @@ pub enum IngestorError {
 
     #[error("Block number mismatch: current={current}, got={received}")]
     BlockNumberMismatch { current: u64, received: u64 },
-}
 
-/// Checks if the next block is a valid continuation of the current chain, will return an error if a
-/// reorg has taken place
-pub fn check_reorg(
-    chain: Chain,
-    current_block: &BlockRef,
-    next_block: &PartialBlock,
-) -> Result<(), IngestorError> {
-    if next_block.number != current_block.number + 1 ||
-        next_block.parent_hash != current_block.hash ||
-        next_block.timestamp < current_block.timestamp
-    {
-        return Err(IngestorError::ReorgDetected {
-            chain,
-            current_block: Box::new(current_block.clone()),
-            received_block: Box::new(BlockRef::new(next_block)),
-            received_parent_hash: next_block.parent_hash,
-        });
-    }
-    Ok(())
+    #[error("Shutdown signal received")]
+    Shutdown,
 }
 
 /// Process and send a block, handling common logic between HTTP and subscription ingestors.
@@ -126,6 +108,27 @@ pub async fn process_and_send_block(
     metrics.update_channel_capacity(chain, sender.capacity());
 
     trace!(%chain, block_number, "Successfully sent block");
+    Ok(())
+}
+
+/// Checks if the next block is a valid continuation of the current chain, will return an error if a
+/// reorg has taken place
+pub fn check_reorg(
+    chain: Chain,
+    current_block: &BlockRef,
+    next_block: &PartialBlock,
+) -> Result<(), IngestorError> {
+    if next_block.number != current_block.number + 1 ||
+        next_block.parent_hash != current_block.hash ||
+        next_block.timestamp < current_block.timestamp
+    {
+        return Err(IngestorError::ReorgDetected {
+            chain,
+            current_block: Box::new(current_block.clone()),
+            received_block: Box::new(BlockRef::new(next_block)),
+            received_parent_hash: next_block.parent_hash,
+        });
+    }
     Ok(())
 }
 
