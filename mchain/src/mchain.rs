@@ -112,12 +112,15 @@ impl MProvider {
     pub async fn rollback_to_block(&self, block_number: u64) -> eyre::Result<()> {
         Ok(self.0.raw_request("mchain_rollbackToBlock".into(), (block_number,)).await?)
     }
+    pub async fn rollup_owner(&self) -> eyre::Result<Address> {
+        Ok(self.0.raw_request("mchain_rollupOwner".into(), ()).await?)
+    }
 }
 
 #[allow(clippy::unwrap_used)]
 pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     chain_id: u64,
-    chain_owner: Address,
+    rollup_owner: Address,
     finality_delay: u64,
     db: T,
     metrics: MchainMetrics,
@@ -129,7 +132,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
             U256::from(chain_id),
             [1u8],      // initMsgVersion
             U256::ZERO, // currentDataCost
-            rollup_config(chain_id, chain_owner),
+            rollup_config(chain_id, rollup_owner),
         )
             .abi_encode_packed()
             .into(),
@@ -230,6 +233,12 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
                 drop(data);
                 Ok(())
             },
+        )
+        .unwrap();
+    module
+        .register_method(
+            "mchain_rollupOwner",
+            move |_p, (_db, _, _), _| -> Result<Address, ErrorObjectOwned> { Ok(rollup_owner) },
         )
         .unwrap();
     module.register_method(

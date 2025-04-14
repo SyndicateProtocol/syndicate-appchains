@@ -4,14 +4,15 @@ use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     eips::{BlockNumberOrTag, Encodable2718},
     node_bindings::AnvilInstance,
-    primitives::{Address, U256},
-    providers::{ext::AnvilApi as _, Provider as _, RootProvider, WalletProvider},
+    primitives::{address, Address, U256},
+    providers::{ext::AnvilApi as _, Provider, RootProvider, WalletProvider},
     rpc::types::anvil::MineOptions,
 };
 use contract_bindings::{
     arbitrum::rollup::Rollup,
     metabased::{
-        alwaysallowedmodule::AlwaysAllowedModule, metabasedsequencerchain::MetabasedSequencerChain,
+        alwaysallowedmodule::AlwaysAllowedModule, arbconfigmanager::ArbConfigManager,
+        metabasedsequencerchain::MetabasedSequencerChain,
     },
 };
 use eyre::Result;
@@ -59,12 +60,9 @@ pub(crate) struct Components {
 
     /// Sequencing
     pub sequencing_provider: FilledProvider,
-    pub sequencing_rpc_url: String,
-    pub sequencing_contract_address: Address,
 
     /// Settlement
     pub settlement_provider: FilledProvider,
-    pub settlement_rpc_url: String,
     pub chain_id: u64,
     pub bridge_address: Address,
     pub inbox_address: Address,
@@ -103,45 +101,25 @@ pub(crate) enum ContractVersion {
     V300,
 }
 
-#[derive(Debug)]
-pub struct TranslatorConfig {
-    pub arbitrum_bridge_address: Option<Address>,
-    pub arbitrum_inbox_address: Option<Address>,
-    pub sequencing_contract_address: Option<Address>,
-    pub arbitrum_ignore_delayed_messages: Option<bool>,
-    pub config_manager_address: Option<Address>,
-    pub appchain_chain_id: Option<u64>,
-    pub mchain_rpc_url: String,
-    pub sequencing_rpc_url: Option<String>,
-    pub settlement_rpc_url: String,
-    pub metrics_port: u16,
-    pub sequencing_start_block: Option<u64>,
-    pub settlement_start_block: Option<u64>,
-    pub settlement_delay: Option<u64>,
-}
-
-impl Default for TranslatorConfig {
-    fn default() -> Self {
-        Self {
-            arbitrum_bridge_address: None,
-            arbitrum_inbox_address: None,
-            sequencing_contract_address: None,
-            arbitrum_ignore_delayed_messages: None,
-            config_manager_address: None,
-            appchain_chain_id: None,
-            mchain_rpc_url: String::new(),
-            sequencing_rpc_url: None,
-            settlement_rpc_url: String::new(),
-            metrics_port: 0,
-            sequencing_start_block: None,
-            settlement_start_block: None,
-            settlement_delay: None,
-        }
-    }
+#[derive(Debug, Default)]
+struct TranslatorConfig {
+    arbitrum_bridge_address: Option<Address>,
+    arbitrum_inbox_address: Option<Address>,
+    sequencing_contract_address: Option<Address>,
+    arbitrum_ignore_delayed_messages: Option<bool>,
+    config_manager_address: Option<Address>,
+    appchain_chain_id: Option<u64>,
+    mchain_rpc_url: String,
+    sequencing_rpc_url: Option<String>,
+    settlement_rpc_url: String,
+    metrics_port: u16,
+    sequencing_start_block: Option<u64>,
+    settlement_start_block: Option<u64>,
+    settlement_delay: Option<u64>,
 }
 
 impl TranslatorConfig {
-    pub fn cli_args(&self) -> Vec<String> {
+    fn cli_args(&self) -> Vec<String> {
         let mut args = vec![
             "--mchain-rpc-url".to_string(),
             self.mchain_rpc_url.to_string(),
@@ -226,7 +204,7 @@ pub(crate) struct ConfigurationOptions {
     pub sequencing_start_block: u64,
     pub settlement_start_block: u64,
     pub settlement_delay: u64,
-    pub appchain_owner: Address,
+    pub rollup_owner: Address,
     pub appchain_chain_id: u64,
     pub finality_delay: u64,
 }
@@ -235,10 +213,12 @@ impl Default for ConfigurationOptions {
     fn default() -> Self {
         Self {
             pre_loaded: None,
-            sequencing_start_block: 1, // skip the genesis block
-            settlement_start_block: 1, // skip the genesis block
+            // skip the genesis block
+            sequencing_start_block: 1,
+            // skip the genesis block and the 2 blocks used to deploy the config manager
+            settlement_start_block: 1 + 2,
             settlement_delay: 0,
-            appchain_owner: Address::ZERO,
+            rollup_owner: Address::ZERO,
             appchain_chain_id: 13331370,
             finality_delay: 60,
         }
@@ -264,14 +244,10 @@ impl Components {
         }
     }
 
+    #[allow(clippy::unwrap_used)]
     async fn new(options: &ConfigurationOptions) -> Result<(Self, ComponentHandles)> {
+        let mut options = options.clone();
         let start_time = SystemTime::now();
-
-        info!("Starting components...");
-        info!("Starting mchain...");
-        let (mchain_rpc_url, mchain, mchain_provider) =
-            start_mchain(options.appchain_chain_id, options.appchain_owner, options.finality_delay)
-                .await?;
 
         // Launch mock sequencing chain and deploy contracts
         info!("Starting sequencing chain...");
@@ -331,7 +307,7 @@ impl Components {
             _ = Rollup::deploy_builder(
                 &set_provider,
                 U256::from(options.appchain_chain_id),
-                rollup_config(options.appchain_chain_id, options.appchain_owner),
+                rollup_config(options.appchain_chain_id, options.rollup_owner),
             )
             .nonce(0)
             .send()
@@ -339,8 +315,43 @@ impl Components {
 
             mine_block(&set_provider, 0).await?;
         }
+
+        let arbitrum_bridge_address = options
+            .pre_loaded
+            .as_ref()
+            .map_or_else(
+                || Some(set_provider.default_signer_address().create(0)),
+                |version| match version {
+                    ContractVersion::V300 => Some(PRELOAD_BRIDGE_ADDRESS_300),
+                    ContractVersion::V213 => Some(PRELOAD_BRIDGE_ADDRESS_231),
+                },
+            )
+            .unwrap();
+        let arbitrum_inbox_address = options
+            .pre_loaded
+            .as_ref()
+            .map_or_else(
+                || Some(set_provider.default_signer_address().create(0)),
+                |version| match version {
+                    ContractVersion::V300 => Some(PRELOAD_INBOX_ADDRESS_300),
+                    ContractVersion::V213 => Some(PRELOAD_INBOX_ADDRESS_231),
+                },
+            )
+            .unwrap();
+
         let sequencing_rpc_url = format!("http://localhost:{}", seq_port);
         let settlement_rpc_url = format!("http://localhost:{}", set_port);
+
+        // overwrite the rollup owner in case it's not set (cannot be empty in config manager)
+        if options.rollup_owner == Address::ZERO {
+            options.rollup_owner = address!("0x0000000000000000000000000000000000000064");
+        }
+
+        info!("Starting components...");
+        info!("Starting mchain...");
+        let (mchain_rpc_url, mchain, mchain_provider) =
+            start_mchain(options.appchain_chain_id, options.rollup_owner, options.finality_delay)
+                .await?;
 
         // Launch components
         info!("Starting sequencer...");
@@ -358,34 +369,36 @@ impl Components {
         )
         .await?;
 
+        // Setup config manager and get chain config address
+        let config_manager_address = setup_config_manager(
+            &set_provider,
+            &options,
+            sequencing_contract_address,
+            arbitrum_bridge_address,
+            arbitrum_inbox_address,
+            &sequencing_rpc_url,
+        )
+        .await?;
+
         info!("Starting translator...");
+        // only set the settlement rpc URL, config_manager address and appchain_chain_id - the
+        // translator will use the on-chain configuration
         let translator_config = TranslatorConfig {
-            sequencing_start_block: Some(options.sequencing_start_block),
-            settlement_start_block: Some(options.settlement_start_block),
-            settlement_delay: Some(options.settlement_delay),
-            arbitrum_bridge_address: options.pre_loaded.as_ref().map_or_else(
-                || Some(set_provider.default_signer_address().create(0)),
-                |version| match version {
-                    ContractVersion::V300 => Some(PRELOAD_BRIDGE_ADDRESS_300),
-                    ContractVersion::V213 => Some(PRELOAD_BRIDGE_ADDRESS_231),
-                },
-            ),
-            arbitrum_inbox_address: options.pre_loaded.as_ref().map_or_else(
-                || Some(set_provider.default_signer_address().create(0)),
-                |version| match version {
-                    ContractVersion::V300 => Some(PRELOAD_INBOX_ADDRESS_300),
-                    ContractVersion::V213 => Some(PRELOAD_INBOX_ADDRESS_231),
-                },
-            ),
-            sequencing_contract_address: Some(sequencing_contract_address),
+            settlement_rpc_url: settlement_rpc_url.clone(),
+            config_manager_address: Some(config_manager_address),
+            appchain_chain_id: Some(options.appchain_chain_id),
             mchain_rpc_url: mchain_rpc_url.clone(),
             metrics_port: PortManager::instance().next_port(),
-            sequencing_rpc_url: Some(sequencing_rpc_url),
-            settlement_rpc_url: settlement_rpc_url.clone(),
-            arbitrum_ignore_delayed_messages: Some(false),
-            config_manager_address: None,
-            appchain_chain_id: Some(options.appchain_chain_id),
+            arbitrum_bridge_address: None,
+            arbitrum_inbox_address: None,
+            sequencing_contract_address: None,
+            arbitrum_ignore_delayed_messages: None,
+            sequencing_rpc_url: None,
+            sequencing_start_block: None,
+            settlement_start_block: None,
+            settlement_delay: None,
         };
+
         let translator = start_component(
             "metabased-translator",
             translator_config.metrics_port,
@@ -398,7 +411,7 @@ impl Components {
         info!("Starting nitro node...");
         let (nitro_docker, appchain_provider, nitro_url) = launch_nitro_node(
             options.appchain_chain_id,
-            options.appchain_owner,
+            options.rollup_owner,
             &mchain_rpc_url,
             Some(sequencer_config.sequencer_port),
         )
@@ -442,15 +455,12 @@ impl Components {
                 _timer: TestTimer(SystemTime::now(), start_time.elapsed().unwrap()),
 
                 sequencing_provider: seq_provider,
-                sequencing_rpc_url: seq_anvil.endpoint_url().to_string(),
-                sequencing_contract_address,
 
                 settlement_provider: set_provider,
-                settlement_rpc_url: set_anvil.endpoint_url().to_string(),
                 appchain_provider,
                 chain_id: options.appchain_chain_id,
-                bridge_address: translator_config.arbitrum_bridge_address.unwrap_or_default(),
-                inbox_address: translator_config.arbitrum_inbox_address.unwrap_or_default(),
+                bridge_address: arbitrum_bridge_address,
+                inbox_address: arbitrum_inbox_address,
                 mchain_provider,
                 poster_url,
             },
@@ -532,4 +542,48 @@ impl SequencerConfig {
             self.sequencer_port.to_string(),
         ]
     }
+}
+
+/// Sets up the config manager and creates the chain configuration
+#[allow(clippy::unwrap_used)]
+async fn setup_config_manager(
+    set_provider: &FilledProvider,
+    options: &ConfigurationOptions,
+    sequencing_contract_address: Address,
+    arbitrum_bridge_address: Address,
+    arbitrum_inbox_address: Address,
+    sequencing_rpc_url: &str,
+) -> Result<Address> {
+    // Deploy config manager
+    let config_manager_owner = set_provider.default_signer_address();
+    let config_manager_tx =
+        ArbConfigManager::deploy_builder(set_provider, config_manager_owner).send().await?;
+    mine_block(set_provider, 0).await?;
+    let config_manager_address = config_manager_tx.get_receipt().await?.contract_address.unwrap();
+    let config_manager = ArbConfigManager::new(config_manager_address, set_provider.clone());
+
+    let options_clone = options.clone();
+    let sequencing_rpc_url_clone = sequencing_rpc_url.to_string();
+
+    let create_chain_config_tx = config_manager
+        .createArbChainConfig(
+            options_clone.appchain_chain_id.try_into().unwrap(),
+            false,
+            arbitrum_bridge_address,
+            arbitrum_inbox_address,
+            false,
+            options_clone.settlement_delay.try_into().unwrap(),
+            options_clone.settlement_start_block.try_into().unwrap(),
+            sequencing_contract_address,
+            options_clone.sequencing_start_block.try_into().unwrap(),
+            options_clone.rollup_owner,
+            sequencing_rpc_url_clone,
+        )
+        .send()
+        .await?;
+    mine_block(set_provider, 0).await?;
+
+    assert!(create_chain_config_tx.get_receipt().await?.status());
+
+    Ok(config_manager.address().to_owned())
 }

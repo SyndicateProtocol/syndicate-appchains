@@ -67,9 +67,9 @@ pub async fn with_onchain_config<T: Provider + Clone>(
         config.sequencing.sequencing_rpc_url = Some(onchain.default_sequencing_chain_rpc_url)
     }
 
-    // TODO remove
-    // mine_empty_blocks: bool,
-    // rollup_owner: Address,
+    if config.rollup_owner.is_none() {
+        config.rollup_owner = Some(onchain.rollup_owner);
+    }
 
     config
 }
@@ -147,5 +147,5 @@ struct ChainConfig {
     sequencing_start_block: U256,
     sequencing_contract_address: Address,
     default_sequencing_chain_rpc_url: String,
-    rollup_owner: Address, // TODO remove from the contract?
+    rollup_owner: Address,
 }

@@ -202,7 +202,7 @@ impl ArbitrumAdapter {
     ///
     /// # Arguments
     /// - `config`: The configuration for the block builder.
-    #[allow(clippy::unwrap_used)] // TODO revisit
+    #[allow(clippy::unwrap_used)] //it's okay to unwrap here because we know the config is valid
     pub const fn new(config: &BlockBuilderConfig) -> Self {
         Self {
             transaction_parser: SequencingTransactionParser::new(

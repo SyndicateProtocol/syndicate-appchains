@@ -1,3 +1,4 @@
+use alloy::{providers::ProviderBuilder, rpc::client::ClientBuilder};
 use block_builder::{
     config::TargetRollupType::{ARBITRUM, OPTIMISM},
     rollups::{
@@ -5,7 +6,9 @@ use block_builder::{
     },
 };
 use eyre::Result;
-use metabased_translator::{config::MetabasedConfig, spawn::run};
+use metabased_translator::{
+    config::MetabasedConfig, config_manager::with_onchain_config, spawn::run,
+};
 use shared::logger::set_global_default_subscriber;
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::{error, info};
@@ -40,13 +43,20 @@ async fn main() -> Result<()> {
         std::process::exit(0);
     });
 
+    // Load chain config from ConfigManager if available
+    let settlement_provider = ProviderBuilder::new().on_client(
+        ClientBuilder::default().connect(&base_config.settlement.settlement_rpc_url).await.unwrap(),
+    );
+    let config = with_onchain_config(&base_config, settlement_provider).await;
+    config.validate_strict()?;
+
     // Run the async process
-    match base_config.block_builder.target_rollup_type {
+    match config.block_builder.target_rollup_type {
         OPTIMISM => {
-            run(&base_config, OptimismAdapter::new(&base_config.block_builder)).await?;
+            run(&config, OptimismAdapter::new(&config.block_builder)).await?;
         }
         ARBITRUM => {
-            run(&base_config, ArbitrumAdapter::new(&base_config.block_builder)).await?;
+            run(&config, ArbitrumAdapter::new(&config.block_builder)).await?;
         }
     }
 

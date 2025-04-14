@@ -56,6 +56,10 @@ pub struct MetabasedConfig {
     #[arg(long, env = "SETTLEMENT_DELAY")]
     pub settlement_delay: Option<u64>,
 
+    /// The address of the rollup owner on the settlement chain
+    #[arg(long, env = "ROLLUP_OWNER")]
+    pub rollup_owner: Option<Address>,
+
     /// The address of the ConfigManager contract on the settlement chain
     #[arg(
         long = "config-manager-address",
@@ -81,6 +85,16 @@ impl MetabasedConfig {
         self.sequencing.validate().map_err(ConfigError::Ingestor)?;
         self.settlement.validate().map_err(ConfigError::Ingestor)?;
         self.metrics.validate().map_err(ConfigError::Metrics)?;
+        Ok(())
+    }
+
+    /// Validates the config and ensures all mandatory fields have values (including optional fields
+    /// that might have been defined by the `ConfigManager` contract)
+    pub fn validate_strict(&self) -> Result<(), ConfigError> {
+        self.validate()?;
+        self.block_builder.validate_strict().map_err(ConfigError::BlockBuilder)?;
+        self.sequencing.validate_strict().map_err(ConfigError::Ingestor)?;
+        self.settlement.validate_strict().map_err(ConfigError::Ingestor)?;
         Ok(())
     }
 
@@ -113,6 +127,7 @@ impl Default for MetabasedConfig {
         Self {
             block_builder: BlockBuilderConfig::default(),
             settlement_delay: Some(60),
+            rollup_owner: None,
             sequencing: SequencingChainConfig::default(),
             settlement: SettlementChainConfig::default(),
             metrics: MetricsConfig::default(),

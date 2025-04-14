@@ -83,6 +83,25 @@ impl BlockBuilderConfig {
 
         Ok(())
     }
+
+    /// Validates the config and ensures all mandatory fields have values (including optional fields
+    /// that might have been defined by the `ConfigManager` contract)
+    pub fn validate_strict(&self) -> Result<(), ConfigError> {
+        self.validate()?;
+        if self.sequencing_contract_address.is_none() {
+            return Err(ConfigError::SequencingContractAddressMissing);
+        }
+        if self.arbitrum_bridge_address.is_none() {
+            return Err(ConfigError::ArbitrumBridgeAddressMissing);
+        }
+        if self.arbitrum_inbox_address.is_none() {
+            return Err(ConfigError::ArbitrumInboxAddressMissing);
+        }
+        if self.arbitrum_ignore_delayed_messages.is_none() {
+            return Err(ConfigError::ArbitrumIgnoreDelayedMessagesMissing);
+        }
+        Ok(())
+    }
 }
 
 #[allow(missing_docs)]
@@ -91,4 +110,16 @@ impl BlockBuilderConfig {
 pub enum ConfigError {
     #[error("Unsupported rollup type: {0}")]
     UnsupportedRollupType(String),
+
+    #[error("Sequencing contract address is missing")]
+    SequencingContractAddressMissing,
+
+    #[error("Arbitrum inbox address is missing")]
+    ArbitrumInboxAddressMissing,
+
+    #[error("Arbitrum bridge address is missing")]
+    ArbitrumBridgeAddressMissing,
+
+    #[error("Arbitrum ignore delayed messages is missing")]
+    ArbitrumIgnoreDelayedMessagesMissing,
 }
