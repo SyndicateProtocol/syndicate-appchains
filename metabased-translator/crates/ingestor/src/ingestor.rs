@@ -194,19 +194,17 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
         // TODO(SEQ-801): benchmark this against the old code that uses a jsonrpc batch request
         // instead of parallel ones and see which one is faster.
         tasks.spawn(async move {
-            // Fetch block and receipts in parallel
-            let client_copy = client.clone();
-            let block = tokio::spawn(async move {
-                fetch_block_with_retry(
-                    &*client_copy,
-                    BlockNumberOrTag::Number(block_number),
-                    chain,
-                    backoff_initial_interval,
-                    backoff_scaling_factor,
-                    max_backoff,
-                )
-                .await
-            });
+            // Fetch block and receipts
+            // TODO(SEQ-818): fetch block and receipts in parallel
+            let block = fetch_block_with_retry(
+                &*client,
+                BlockNumberOrTag::Number(block_number),
+                chain,
+                backoff_initial_interval,
+                backoff_scaling_factor,
+                max_backoff,
+            )
+            .await?;
             let receipts = fetch_receipts_with_retry(
                 &*client,
                 block_number,
@@ -216,8 +214,6 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
                 max_backoff,
             )
             .await?;
-            #[allow(clippy::expect_used)]
-            let block = block.await.expect("task failed")?;
             // Filter receipts that include logs for any of the addresses in ctx.addresses
             let filtered_logs: Vec<PartialLogWithTxdata> = receipts
                 .into_iter()

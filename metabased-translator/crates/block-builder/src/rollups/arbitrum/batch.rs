@@ -99,6 +99,8 @@ impl Batch {
             };
             input.append(&mut data);
         }
+        // TOOD(SEQ-815): add logic to split large batches which exceed these limits into multiple
+        // batches
         if segments > MAX_SEGMENTS_PER_SEQUENCER_MESSAGE {
             return Err(eyre::eyre!("too many batch segments"));
         }
