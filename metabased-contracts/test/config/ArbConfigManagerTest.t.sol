@@ -14,7 +14,6 @@ contract ArbConfigManagerTest is Test {
     address public rollupOwner = address(2);
 
     uint256 public constant CHAIN_ID = 123456;
-    bool public constant MINE_EMPTY_BLOCKS = true;
     address public constant ARBITRUM_BRIDGE_ADDRESS = address(0x1234);
     address public constant ARBITRUM_INBOX_ADDRESS = address(0x5678);
     bool public constant ARBITRUM_IGNORE_DELAYED_MESSAGES = false;
@@ -55,7 +54,6 @@ contract ArbConfigManagerTest is Test {
         // Deploy the config without expecting event
         address deployedAddress = configManager.createArbChainConfig(
             CHAIN_ID,
-            MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -83,7 +81,6 @@ contract ArbConfigManagerTest is Test {
 
         // Verify the values
         assertEq(chainConfig.CHAIN_ID(), CHAIN_ID);
-        assertEq(chainConfig.MINE_EMPTY_BLOCKS(), MINE_EMPTY_BLOCKS);
         assertEq(chainConfig.ARBITRUM_BRIDGE_ADDRESS(), ARBITRUM_BRIDGE_ADDRESS);
         assertEq(chainConfig.ARBITRUM_INBOX_ADDRESS(), ARBITRUM_INBOX_ADDRESS);
         assertEq(chainConfig.ARBITRUM_IGNORE_DELAYED_MESSAGES(), ARBITRUM_IGNORE_DELAYED_MESSAGES);
@@ -103,7 +100,6 @@ contract ArbConfigManagerTest is Test {
         // Deploy the first config
         configManager.createArbChainConfig(
             CHAIN_ID,
-            MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -119,7 +115,6 @@ contract ArbConfigManagerTest is Test {
         vm.expectRevert("Config already exists for this chain ID");
         configManager.createArbChainConfig(
             CHAIN_ID,
-            MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -140,7 +135,6 @@ contract ArbConfigManagerTest is Test {
         vm.expectRevert("Chain ID cannot be zero");
         configManager.createArbChainConfig(
             0, // Zero chain ID
-            MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -161,7 +155,6 @@ contract ArbConfigManagerTest is Test {
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(999)));
         configManager.createArbChainConfig(
             CHAIN_ID,
-            MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -179,7 +172,6 @@ contract ArbConfigManagerTest is Test {
         vm.prank(owner);
         address deployedAddress = configManager.createArbChainConfig(
             CHAIN_ID,
-            MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -206,7 +198,6 @@ contract ArbConfigManagerTest is Test {
         vm.prank(owner);
         address deployedAddress = configManager.createArbChainConfig(
             CHAIN_ID,
-            MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -237,7 +228,6 @@ contract ArbConfigManagerTest is Test {
         // Deploy a config first
         address deployedAddress = configManager.createArbChainConfig(
             CHAIN_ID,
-            MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -320,7 +310,6 @@ contract ArbConfigManagerTest is Test {
         // Deploy the config
         address deployedAddress = configManager.createArbChainConfig(
             CHAIN_ID,
-            MINE_EMPTY_BLOCKS,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,

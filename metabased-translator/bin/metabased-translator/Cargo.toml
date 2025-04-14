@@ -18,7 +18,6 @@ contract-bindings = { workspace = true }
 eyre              = { workspace = true }
 ingestor          = { workspace = true }
 metrics           = { workspace = true }
-prometheus-client = { workspace = true }
 shared            = { workspace = true }
 slotter           = { workspace = true }
 thiserror         = { workspace = true }

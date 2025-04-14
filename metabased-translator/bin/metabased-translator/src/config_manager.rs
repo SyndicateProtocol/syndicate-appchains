@@ -84,7 +84,6 @@ async fn get_config<T: Provider + Clone>(
     let arb_chain_config_contract =
         arbchainconfig::ArbChainConfig::new(config_address._0, provider);
 
-    let mine_empty_blocks_call = arb_chain_config_contract.MINE_EMPTY_BLOCKS();
     let arbitrum_bridge_address_call = arb_chain_config_contract.ARBITRUM_BRIDGE_ADDRESS();
     let arbitrum_inbox_address_call = arb_chain_config_contract.ARBITRUM_INBOX_ADDRESS();
     let arbitrum_ignore_delayed_messages_call =
@@ -98,7 +97,6 @@ async fn get_config<T: Provider + Clone>(
     let rollup_owner_call = arb_chain_config_contract.ROLLUP_OWNER();
 
     let (
-        mine_empty_blocks,
         arbitrum_bridge_address,
         arbitrum_inbox_address,
         arbitrum_ignore_delayed_messages,
@@ -109,7 +107,6 @@ async fn get_config<T: Provider + Clone>(
         default_sequencing_chain_rpc_url,
         rollup_owner,
     ) = tokio::try_join!(
-        mine_empty_blocks_call.call(),
         arbitrum_bridge_address_call.call(),
         arbitrum_inbox_address_call.call(),
         arbitrum_ignore_delayed_messages_call.call(),
@@ -122,7 +119,6 @@ async fn get_config<T: Provider + Clone>(
     )?;
 
     Ok(ChainConfig {
-        mine_empty_blocks: mine_empty_blocks._0,
         arbitrum_bridge_address: arbitrum_bridge_address._0,
         arbitrum_inbox_address: arbitrum_inbox_address._0,
         arbitrum_ignore_delayed_messages: arbitrum_ignore_delayed_messages._0,
@@ -138,7 +134,6 @@ async fn get_config<T: Provider + Clone>(
 /// representation of the chain configuration that lives on-chain
 #[allow(missing_docs)]
 struct ChainConfig {
-    mine_empty_blocks: bool, // TODO remove this from the contract
     arbitrum_bridge_address: Address,
     arbitrum_inbox_address: Address,
     arbitrum_ignore_delayed_messages: bool,

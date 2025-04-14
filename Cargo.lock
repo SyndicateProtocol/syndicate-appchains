@@ -3330,7 +3330,6 @@ dependencies = [
  "ingestor",
  "metrics",
  "mockall",
- "prometheus-client",
  "shared",
  "slotter",
  "temp-env",

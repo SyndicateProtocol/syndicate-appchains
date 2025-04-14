@@ -14,7 +14,6 @@ contract ArbChainConfig is Initializable, Ownable {
     event DefaultSequencingChainRpcUrlUpdated(string newRpcUrl);
 
     uint256 public CHAIN_ID;
-    bool public MINE_EMPTY_BLOCKS;
     address public ARBITRUM_BRIDGE_ADDRESS;
     address public ARBITRUM_INBOX_ADDRESS;
     bool public ARBITRUM_IGNORE_DELAYED_MESSAGES;
@@ -36,7 +35,6 @@ contract ArbChainConfig is Initializable, Ownable {
     /**
      * @dev Initializer function - replaces constructor for proxy pattern
      * @param chainId The chain ID
-     * @param mineEmptyBlocks Whether to mine empty blocks
      * @param arbitrumBridgeAddress Address of the Arbitrum bridge
      * @param arbitrumInboxAddress Address of the Arbitrum inbox
      * @param arbitrumIgnoreDelayedMessages Whether to ignore delayed messages
@@ -49,7 +47,6 @@ contract ArbChainConfig is Initializable, Ownable {
      */
     function initialize(
         uint256 chainId,
-        bool mineEmptyBlocks,
         address arbitrumBridgeAddress,
         address arbitrumInboxAddress,
         bool arbitrumIgnoreDelayedMessages,
@@ -68,7 +65,6 @@ contract ArbChainConfig is Initializable, Ownable {
         require(rollupOwner != address(0), "Rollup owner cannot be zero address");
 
         CHAIN_ID = chainId;
-        MINE_EMPTY_BLOCKS = mineEmptyBlocks;
         ARBITRUM_BRIDGE_ADDRESS = arbitrumBridgeAddress;
         ARBITRUM_INBOX_ADDRESS = arbitrumInboxAddress;
         ARBITRUM_IGNORE_DELAYED_MESSAGES = arbitrumIgnoreDelayedMessages;

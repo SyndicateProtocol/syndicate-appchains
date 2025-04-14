@@ -568,7 +568,6 @@ async fn setup_config_manager(
     let create_chain_config_tx = config_manager
         .createArbChainConfig(
             options_clone.appchain_chain_id.try_into().unwrap(),
-            false,
             arbitrum_bridge_address,
             arbitrum_inbox_address,
             false,

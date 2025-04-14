@@ -37,7 +37,6 @@ contract ArbConfigManager is Ownable {
     /**
      * @dev Create a new ArbChainConfig contract for a specific chainId
      * @param chainId The chain ID
-     * @param mineEmptyBlocks Whether to mine empty blocks
      * @param arbitrumBridgeAddress Address of the Arbitrum bridge
      * @param arbitrumInboxAddress Address of the Arbitrum inbox
      * @param arbitrumIgnoreDelayedMessages Whether to ignore delayed messages
@@ -51,7 +50,6 @@ contract ArbConfigManager is Ownable {
      */
     function createArbChainConfig(
         uint256 chainId,
-        bool mineEmptyBlocks,
         address arbitrumBridgeAddress,
         address arbitrumInboxAddress,
         bool arbitrumIgnoreDelayedMessages,
@@ -78,7 +76,6 @@ contract ArbConfigManager is Ownable {
         // Initialize the proxy contract
         ArbChainConfig(proxyAddress).initialize(
             chainId,
-            mineEmptyBlocks,
             arbitrumBridgeAddress,
             arbitrumInboxAddress,
             arbitrumIgnoreDelayedMessages,
@@ -114,10 +111,7 @@ contract ArbConfigManager is Ownable {
 
         // Generate the bytecode for BeaconProxy
         // Include constructor arguments in bytecode
-        bytes memory bytecode = abi.encodePacked(
-            type(BeaconProxy).creationCode,
-            abi.encode(address(beacon), "")
-        );
+        bytes memory bytecode = abi.encodePacked(type(BeaconProxy).creationCode, abi.encode(address(beacon), ""));
 
         // Calculate CREATE2 address
         bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));
