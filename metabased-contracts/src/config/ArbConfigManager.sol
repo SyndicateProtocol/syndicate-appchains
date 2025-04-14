@@ -113,7 +113,11 @@ contract ArbConfigManager is Ownable {
         bytes32 salt = keccak256(abi.encodePacked(chainId));
 
         // Generate the bytecode for BeaconProxy
-        bytes memory bytecode = abi.encodePacked(type(BeaconProxy).creationCode);
+        // Include constructor arguments in bytecode
+        bytes memory bytecode = abi.encodePacked(
+            type(BeaconProxy).creationCode,
+            abi.encode(address(beacon), "")
+        );
 
         // Calculate CREATE2 address
         bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));

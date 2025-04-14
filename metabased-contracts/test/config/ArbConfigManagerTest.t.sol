@@ -191,11 +191,14 @@ contract ArbConfigManagerTest is Test {
             DEFAULT_RPC_URL
         );
 
-        // Now that it's deployed, the getArbChainConfigAddress should return the deployed address
+        // Get the stored address
+        address storedAddress = configManager.deployedConfigs(CHAIN_ID);
         address returnedAddress = configManager.getArbChainConfigAddress(CHAIN_ID);
 
-        // Verify getArbChainConfigAddress returns the deployed address
-        assertEq(returnedAddress, deployedAddress);
+        // Verify all addresses match
+        assertEq(returnedAddress, deployedAddress, "Returned address should match deployed address");
+        assertEq(storedAddress, deployedAddress, "Stored address should match deployed address");
+        assertEq(returnedAddress, storedAddress, "Returned address should match stored address");
     }
 
     function testRollupWnerIsArbConfigChainOwner() public {
@@ -304,6 +307,33 @@ contract ArbConfigManagerTest is Test {
         address newImpl = IBeacon(address(configManager.beacon())).implementation();
         assertEq(newImpl, address(newImplementation));
         assertNotEq(newImpl, currentImpl);
+
+        vm.stopPrank();
+    }
+
+    function testAddressCalculation() public {
+        vm.startPrank(owner);
+
+        // Calculate the expected address before deployment
+        address expectedAddress = configManager.getArbChainConfigAddress(CHAIN_ID);
+
+        // Deploy the config
+        address deployedAddress = configManager.createArbChainConfig(
+            CHAIN_ID,
+            MINE_EMPTY_BLOCKS,
+            ARBITRUM_BRIDGE_ADDRESS,
+            ARBITRUM_INBOX_ADDRESS,
+            ARBITRUM_IGNORE_DELAYED_MESSAGES,
+            SETTLEMENT_DELAY,
+            SETTLEMENT_START_BLOCK,
+            SEQUENCING_CONTRACT_ADDRESS,
+            SEQUENCING_START_BLOCK,
+            rollupOwner,
+            DEFAULT_RPC_URL
+        );
+
+        // Verify the addresses match
+        assertEq(deployedAddress, expectedAddress, "Deployed address should match calculated address");
 
         vm.stopPrank();
     }
