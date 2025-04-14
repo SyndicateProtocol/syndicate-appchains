@@ -28,7 +28,6 @@ pub struct Config {
         short = 'c',
         long,
         env = "CHAIN_RPC_URLS",
-        default_value = "{}",
         value_parser = parse_map::<String, String>
     )]
     pub chain_rpc_urls: HashMap<String, String>,
@@ -57,26 +56,26 @@ impl Config {
             return Ok(());
         }
 
-        match self.ping_nitro_urls().await {
+        match self.ping_rpc_urls().await {
             Ok(_) => {
-                debug!("All Nitro URLs validated successfully");
+                debug!("All RPC URLs validated successfully");
                 Ok(())
             }
             Err(e) => {
-                error!(%e, "Nitro URL validation failed");
+                error!(%e, "RPC URL validation failed");
                 Err(e)
             }
         }
     }
 
-    /// Checks that all Nitro URLs are accessible by making a test connection
-    async fn ping_nitro_urls(&self) -> Result<(), ConfigError> {
-        // Validate Nitro URLs by trying to connect to each one
+    /// Checks that all RPC URLs are accessible by making a test connection
+    async fn ping_rpc_urls(&self) -> Result<(), ConfigError> {
+        // Validate RPC URLs by trying to connect to each one
         if self.chain_rpc_urls.is_empty() {
             return Ok(())
         }
 
-        // JSON-RPC request payload for eth_getBlockByNumber
+        // JSON-RPC request payload for eth_chainId
         let health_check_payload = serde_json::json!({
             "jsonrpc": "2.0",
             "method": "eth_chainId",

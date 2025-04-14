@@ -58,18 +58,24 @@ pub struct L1IncomingMessageHeader {
     pub timestamp: u64,
 }
 
+// See arbstate/inbox.go for the nitro version of these constants
+const MAX_DECOMPRESSED_LEN: usize = 1024 * 1024 * 16; // 16 MiB
+const MAX_SEGMENTS_PER_SEQUENCER_MESSAGE: usize = 100 * 1024;
+
 impl Batch {
     /// Encode the `Batch` into RLP calldata
     pub fn encode(&self) -> Result<Bytes> {
         let mut ts = 0;
         let mut block = 0;
         let mut input = vec![];
+        let mut segments = self.0.len();
         for msg in &self.0 {
             let mut data = match msg {
                 BatchMessage::Delayed => rlp::encode(BatchSegmentKind::DelayedMessages as u8),
                 BatchMessage::L2(x) => {
                     let mut data = vec![];
                     if ts != x.header.timestamp {
+                        segments += 1;
                         let mut buffer = vec![];
                         buffer.push(BatchSegmentKind::AdvanceTimestamp as u8);
                         buffer.append(&mut rlp::encode(x.header.timestamp.wrapping_sub(ts)));
@@ -77,6 +83,7 @@ impl Batch {
                         ts = x.header.timestamp;
                     }
                     if block != x.header.block_number {
+                        segments += 1;
                         let mut buffer = vec![];
                         buffer.push(BatchSegmentKind::AdvanceL1BlockNumber as u8);
                         buffer.append(&mut rlp::encode(x.header.block_number.wrapping_sub(block)));
@@ -92,7 +99,17 @@ impl Batch {
             };
             input.append(&mut data);
         }
+        // TOOD(SEQ-815): add logic to split large batches which exceed these limits into multiple
+        // batches
+        if segments > MAX_SEGMENTS_PER_SEQUENCER_MESSAGE {
+            return Err(eyre::eyre!("too many batch segments"));
+        }
+        if input.len() > MAX_DECOMPRESSED_LEN {
+            return Err(eyre::eyre!("batch data exceeds the 16 mb size limit"));
+        }
         let mut out: Vec<u8> = vec![];
+        // TODO(SEQ-806): configure brotli compression settings & try to make compression
+        // deterministic if possible
         brotli::enc::BrotliCompress(
             &mut input.as_slice(),
             &mut out,

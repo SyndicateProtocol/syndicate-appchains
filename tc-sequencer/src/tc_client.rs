@@ -23,9 +23,9 @@ use tracing::{debug, error, info};
 use url::Url;
 
 const DEFAULT_SEQUENCING_CHAIN_ID: u64 = 5113;
-const DEFAULT_FUNCTION_SIGNATURE: &str = "processTransaction(address chain_address, bytes data)";
+const DEFAULT_FUNCTION_SIGNATURE: &str = "processTransaction(address chainAddress, bytes data)";
+const TC_CHAIN_ADDRESS_KEY: &str = "chainAddress";
 const TC_DATA_KEY: &str = "data";
-const TC_CHAIN_KEY: &str = "chain_address";
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -50,7 +50,7 @@ impl SendTransactionRequest {
             chain_id: DEFAULT_SEQUENCING_CHAIN_ID,
             function_signature: DEFAULT_FUNCTION_SIGNATURE.to_string(),
             args: HashMap::from([
-                (TC_CHAIN_KEY.to_string(), format!("0x{}", chain_address)),
+                (TC_CHAIN_ADDRESS_KEY.to_string(), chain_address.to_string()),
                 (TC_DATA_KEY.to_string(), format!("0x{}", hex::encode(data))),
             ]),
         }
@@ -110,15 +110,14 @@ impl TCClient {
             .send()
             .await
             .map_err(|e| {
-                let error_msg = format!("Failed to send transaction to TC: {}", e);
-                error!(error_msg);
-                Error::Internal(error_msg)
+                error!("Failed to send transaction to TC: {}", e);
+                Error::Internal("failed to submit transaction to sequencer".to_string())
             })?;
 
         if !response.status().is_success() {
-            let error_msg = format!("Failed to send transaction to TC: {}", response.status());
-            error!(error_msg);
-            return Err(Error::Internal(error_msg));
+            let error_msg = response.text().await.unwrap_or_default();
+            error!("Failed to send transaction to TC: {}", error_msg);
+            return Err(Error::Internal("failed to submit transaction to sequencer".to_string()));
         }
 
         Ok(())
