@@ -22,9 +22,6 @@ pub enum Error {
 #[allow(missing_docs)]
 #[derive(Debug, Error)]
 pub enum ConfigError {
-    #[error("unable to parse RPC URLs map: {0}")]
-    ChainIdNitroUrlParse(String),
-
     #[error("unable to connect to server: {0}")]
     HttpClient(#[from] reqwest::Error),
 

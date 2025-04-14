@@ -17,15 +17,15 @@ mod tests {
     use wiremock::{matchers::method, Mock, MockServer, ResponseTemplate};
 
     fn dummy_config_with_url(mock_url: String) -> Config {
-        let mut chain_id_nitro_urls = HashMap::new();
+        let mut chain_id_rpc_urls = HashMap::new();
         // Add URLs for the chain IDs used in tests
-        chain_id_nitro_urls.insert("4".to_string(), mock_url.clone());
-        chain_id_nitro_urls.insert("5".to_string(), mock_url);
+        chain_id_rpc_urls.insert("4".to_string(), mock_url.clone());
+        chain_id_rpc_urls.insert("5".to_string(), mock_url);
 
         Config {
             port: 0,
             redis_address: None,
-            chain_rpc_urls: chain_id_nitro_urls,
+            chain_rpc_urls: chain_id_rpc_urls,
             validation_timeout: Duration::from_secs(1),
             skip_validation: false,
         }

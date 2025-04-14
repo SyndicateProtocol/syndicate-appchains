@@ -68,7 +68,7 @@ pub async fn send_raw_transaction_handler_v1(
     params: Params<'static>,
     service: Arc<MaestroService>,
     extensions: Extensions,
-) -> RpcResult<JsonValue> {
+) -> RpcResult<String> {
     // let start = Instant::now();
 
     let tx_data = parse_send_raw_transaction_params(params)?;
@@ -77,11 +77,7 @@ pub async fn send_raw_transaction_handler_v1(
 
     debug!(%tx_hash, "Successfully processed raw txn");
 
-    Ok(serde_json::json!({
-        "jsonrpc": "2.0",
-        "result": format!("0x{}", hex::encode(tx_hash)),
-        "id": 1
-    }))
+    Ok(format!("0x{}", hex::encode(tx_hash)))
 
     // TODO spam plane
 
@@ -105,15 +101,15 @@ fn get_request_chain_id(extensions: Extensions) -> Option<ChainId> {
 /// The service for filtering and directing transactions
 #[derive(Debug)]
 pub struct MaestroService {
-    chain_id_nitro_urls: HashMap<String, String>,
+    chain_rpc_urls: HashMap<String, String>,
     client: Client,
 }
 
 impl MaestroService {
     /// Create a new instance of the Maestro service
     pub fn new(config: Config, client: Client) -> Self {
-        info!("Initialized MaestroService with chain_id mappings: {:?}", config.chain_rpc_urls);
-        Self { chain_id_nitro_urls: config.chain_rpc_urls, client }
+        info!("Initialized MaestroService with RPC urls: {:?}", config.chain_rpc_urls);
+        Self { chain_rpc_urls: config.chain_rpc_urls, client }
     }
 
     async fn process_raw_transaction_v1(
@@ -129,7 +125,7 @@ impl MaestroService {
         debug!(
             %tx_hash,
             %txn_chain_id,
-            "Submitting validated transaction to Nitro",
+            "Submitting validated transaction to RPC",
         );
 
         // JSON-RPC request payload for eth_sendRawTransaction
@@ -140,57 +136,56 @@ impl MaestroService {
             "id": 1
         });
 
-        let nitro_url =
-            self.chain_id_nitro_urls.get(&txn_chain_id.to_string()).ok_or_else(|| {
-                error!(%txn_chain_id, %tx_hash, "txn attempted to unsupported Nitro RPC");
-                InvalidInput(UnsupportedChainId(txn_chain_id))
-            })?;
+        let rpc_url = self.chain_rpc_urls.get(&txn_chain_id.to_string()).ok_or_else(|| {
+            error!(%txn_chain_id, %tx_hash, "txn attempted to unsupported RPC");
+            InvalidInput(UnsupportedChainId(txn_chain_id))
+        })?;
 
         // Fire and forget
         let response = self
             .client
-            .post(nitro_url)
+            .post(rpc_url)
             .header("Content-Type", "application/json")
             .json(&raw_txn_payload)
             .send()
             .await
             .map_err(|e| {
-                error!(%nitro_url, %tx_hash, %txn_chain_id, %e, "reqwest client error forwarding txn to Nitro");
+                error!(%rpc_url, %tx_hash, %txn_chain_id, %e, "reqwest client error forwarding txn to RPC");
                 Internal("internal error sending transaction".to_string())
             })?;
 
         // Check HTTP status
         if !response.status().is_success() {
             error!(
-                %nitro_url,
+                %rpc_url,
                 %tx_hash,
                 %txn_chain_id,
                 status = %response.status(),
-                "Nitro returned non-200 status for forwarded txn"
+                "RPC returned non-200 status for forwarded txn"
             );
             return Err(Internal(format!("RPC endpoint returned status {}", response.status())));
         }
 
         // Parse the response body
         let response_body = response.text().await.map_err(|e| {
-            error!(%nitro_url, %tx_hash, %txn_chain_id, %e, "Failed to read response body from Nitro");
+            error!(%rpc_url, %tx_hash, %txn_chain_id, %e, "Failed to read response body from RPC");
             Internal("Failed to read response from RPC endpoint".to_string())
         })?;
 
         // Parse as JSON
         let json_response: serde_json::Value = serde_json::from_str(&response_body).map_err(|e| {
-            error!(%nitro_url, %tx_hash, %txn_chain_id, %e, "Failed to parse JSON response from Nitro");
+            error!(%rpc_url, %tx_hash, %txn_chain_id, %e, "Failed to parse JSON response from RPC");
             Internal("Invalid JSON response from RPC endpoint".to_string())
         })?;
 
         // Check for JSON-RPC error
         if let Some(error) = json_response.get("error") {
-            error!(%nitro_url, %tx_hash, %txn_chain_id, error = ?error, "Nitro returned JSON-RPC error");
+            error!(%rpc_url, %tx_hash, %txn_chain_id, error = ?error, "RPC returned JSON-RPC error");
             return Err(Internal(format!("RPC endpoint returned error: {}", error)));
         }
 
         // Log success and return the hash
-        debug!(%nitro_url, %tx_hash, %txn_chain_id, "Successfully forwarded transaction to Nitro");
+        debug!(%rpc_url, %tx_hash, %txn_chain_id, "Successfully forwarded transaction to RPC");
         Ok(*original_tx.tx_hash())
     }
 
