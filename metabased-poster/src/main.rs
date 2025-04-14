@@ -2,13 +2,11 @@
 //! assertions to the settlement chain.
 
 use eyre::Result;
-use metabased_poster::{
-    config::Config,
-    metrics::{start_metrics, MetricsState, PosterMetrics},
-    poster,
+use metabased_poster::{config::Config, metrics::PosterMetrics, poster};
+use shared::{
+    logger::set_global_default_subscriber,
+    metrics::{start_metrics, MetricsState},
 };
-use prometheus_client::registry::Registry;
-use shared::logger::set_global_default_subscriber;
 use tracing::info;
 
 #[tokio::main]
@@ -19,9 +17,8 @@ async fn main() -> Result<()> {
     let config = Config::initialize();
     info!("Config: {:?}", config);
 
-    let mut registry = Registry::default();
-    let metrics = PosterMetrics::new(&mut registry);
-    let metrics_state = MetricsState { registry };
+    let mut metrics_state = MetricsState::default();
+    let metrics = PosterMetrics::new(&mut metrics_state.registry);
     tokio::spawn(start_metrics(metrics_state, config.metrics_port));
 
     info!("Starting Poster service...");

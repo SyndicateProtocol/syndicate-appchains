@@ -17,6 +17,7 @@ services:
       target: metabased-translator-debug
       dockerfile: Dockerfile
     environment:
+      - RUST_LOG=debug
       - MCHAIN_RPC_URL=http://mchain:8050
       - SEQUENCING_CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
       - ARBITRUM_BRIDGE_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3

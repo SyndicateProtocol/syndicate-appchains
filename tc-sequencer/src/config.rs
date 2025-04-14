@@ -1,9 +1,9 @@
 //! The `config` module handles configuration parsing for the metabased sequencer.
 
-use crate::bytecode::{is_supported_factory_address, V1_FACTORY_ADDRESS};
 use alloy::primitives::Address;
 use clap::Parser;
-use std::{fmt::Debug, str::FromStr};
+use shared::parse::{parse_address, parse_map};
+use std::{collections::HashMap, fmt::Debug};
 use thiserror::Error;
 use url::Url;
 
@@ -57,9 +57,9 @@ pub enum ConfigError {
     /// Invalid address
     #[error("Invalid address: {0}")]
     InvalidAddress(String),
-    /// Unsupported factory address
-    #[error("Unsupported factory address: {0}")]
-    UnsupportedFactoryAddress(String),
+    /// Invalid sequencing addresses
+    #[error("Invalid sequencing addresses: {0}")]
+    InvalidSequencingAddresses(String),
 }
 
 /// Configuration for the tc sequencer
@@ -78,30 +78,17 @@ pub struct Config {
     #[arg(short = 'k', long, env = "TC_API_KEY")]
     pub tc_api_key: String,
 
-    /// Metabased sequencer factory address
-    #[arg(
-        short = 'f',
-        long,
-        env = "METABASED_SEQUENCER_FACTORY_ADDRESS",
-        // Default value is the address of the metabased sequencer factory on Exo
-        // https://syndicate-exo.explorer.alchemy.com/address/0xFEA8A2BA8B760348ea95492516620ad45a299d53
-        default_value = V1_FACTORY_ADDRESS,
-        value_parser = parse_and_check_supported_address
-    )]
-    pub metabased_sequencer_factory_address: Address,
-
     /// Port to listen on
     #[arg(short = 'p', long, env = "PORT", default_value_t = 8456)]
     pub port: u16,
-}
 
-/// Parse a string into an Ethereum `Address` and check if it is supported.
-fn parse_and_check_supported_address(value: &str) -> Result<Address, ConfigError> {
-    let address = shared::parse::parse_address(value)?;
-    if !is_supported_factory_address(address) {
-        return Err(ConfigError::UnsupportedFactoryAddress(value.to_string()));
-    }
-    Ok(address)
+    /// Mapping of chain IDs to their corresponding sequencing addresses
+    #[arg(short = 'a', long, env = "SEQUENCING_ADDRESSES", value_parser = parse_map::<u64, Address>)]
+    pub sequencing_addresses: HashMap<u64, Address>,
+
+    /// Address of the wallet pool contract
+    #[arg(short = 'p', long, env = "WALLET_POOL_ADDRESS", value_parser = parse_address, default_value = "0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8")]
+    pub wallet_pool_address: Address,
 }
 
 impl From<shared::parse::Error> for ConfigError {
@@ -111,6 +98,7 @@ impl From<shared::parse::Error> for ConfigError {
                 unreachable!("parse_address should only return Error::EthereumAddress")
             }
             shared::parse::Error::EthereumAddress(error) => Self::InvalidAddress(error),
+            shared::parse::Error::InvalidMap(error) => Self::InvalidSequencingAddresses(error),
         }
     }
 }
@@ -128,10 +116,9 @@ impl Default for Config {
             tc_endpoint: TCEndpoint::Staging,
             tc_project_id: String::new(),
             tc_api_key: String::new(),
-            #[allow(clippy::expect_used)]
-            metabased_sequencer_factory_address: Address::from_str(V1_FACTORY_ADDRESS)
-                .expect("Failed to parse default factory address"),
             port: 8456,
+            wallet_pool_address: Address::ZERO,
+            sequencing_addresses: HashMap::new(),
         }
     }
 }

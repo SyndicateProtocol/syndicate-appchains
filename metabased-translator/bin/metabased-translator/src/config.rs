@@ -9,7 +9,6 @@ use common::eth_client::RPCClientError;
 use eyre::Result;
 use ingestor::config::{ChainIngestorConfig, SequencingChainConfig, SettlementChainConfig};
 use metrics::config::MetricsConfig;
-use slotter::config::SlotterConfig;
 use std::fmt::Debug;
 use thiserror::Error;
 use tracing::error;
@@ -27,9 +26,6 @@ pub enum ConfigError {
     #[error("Block builder configuration error: {0}")]
     BlockBuilder(#[from] block_builder::config::ConfigError),
 
-    #[error("Slotter configuration error: {0}")]
-    Slotter(#[from] slotter::config::ConfigError),
-
     #[error("Ingestor chain configuration error: {0}")]
     Ingestor(#[from] ingestor::config::ConfigError),
 
@@ -45,8 +41,8 @@ pub struct MetabasedConfig {
     #[command(flatten)]
     pub block_builder: BlockBuilderConfig,
 
-    #[command(flatten)]
-    pub slotter: SlotterConfig,
+    #[arg(long, env = "SETTLEMENT_DELAY", default_value_t = 60)]
+    pub settlement_delay: u64,
 
     #[command(flatten)]
     pub sequencing: SequencingChainConfig,
@@ -67,7 +63,6 @@ impl MetabasedConfig {
     /// Validate MetabasedConfig
     pub fn validate(&self) -> Result<(), ConfigError> {
         self.block_builder.validate().map_err(ConfigError::BlockBuilder)?;
-        self.slotter.validate().map_err(ConfigError::Slotter)?;
         self.sequencing.validate().map_err(ConfigError::Ingestor)?;
         self.settlement.validate().map_err(ConfigError::Ingestor)?;
         self.metrics.validate().map_err(ConfigError::Metrics)?;
@@ -88,7 +83,6 @@ impl MetabasedConfig {
         }
 
         add_fields::<BlockBuilderConfig>(&mut cmd);
-        add_fields::<SlotterConfig>(&mut cmd);
         add_fields::<SequencingChainConfig>(&mut cmd);
         add_fields::<SettlementChainConfig>(&mut cmd);
         add_fields::<MetricsConfig>(&mut cmd);
@@ -104,7 +98,7 @@ impl Default for MetabasedConfig {
         let ingestor_config = ChainIngestorConfig::default();
         Self {
             block_builder: BlockBuilderConfig::default(),
-            slotter: SlotterConfig::default(),
+            settlement_delay: 60,
             sequencing: ingestor_config.clone().into(),
             settlement: ingestor_config.into(),
             metrics: MetricsConfig::default(),

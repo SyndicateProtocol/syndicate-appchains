@@ -28,7 +28,7 @@ use contract_bindings::arbitrum::{
 };
 use eyre::Result;
 use mchain::db::{DelayedMessage, MBlock};
-use std::{collections::HashMap, sync::Arc};
+use std::collections::HashMap;
 use thiserror::Error;
 use tracing::{debug, error, info, trace};
 
@@ -55,6 +55,7 @@ pub enum ArbitrumBlockBuilderError {
 /// `<https://github.com/OffchainLabs/nitro/blob/c7f3429e2456bf5ca296a49cec3bb437420bc2bb/contracts/src/libraries/MessageTypes.sol>`
 pub enum L1MessageType {
     L2Message = 3,
+    EndOfBlock = 6, // dummy message that is not emitted by the nitro contracts
     L2FundedByL1 = 7,
     SubmitRetryable = 9,
     Initialize = 11,
@@ -141,12 +142,7 @@ impl RollupAdapter for ArbitrumAdapter {
         Ok(Some(MBlock {
             timestamp: slot.timestamp(),
             batch: self
-                .build_batch_txn(
-                    mb_transactions,
-                    mchain_block_number,
-                    slot.timestamp(),
-                    delayed_messages.len(),
-                )
+                .build_batch_txn(mb_transactions, mchain_block_number, slot.timestamp())
                 .await?,
             messages: delayed_messages,
             seq_block_hash: slot.sequencing.hash,
@@ -217,7 +213,7 @@ impl ArbitrumAdapter {
     /// Processes settlement chain receipts into delayed messages
     async fn process_delayed_messages(
         &self,
-        blocks: Vec<Arc<PartialBlock>>,
+        blocks: Vec<PartialBlock>,
     ) -> Result<Vec<DelayedMessage>> {
         // Create a local map to store message data
         let mut message_data: HashMap<U256, Bytes> = HashMap::new();
@@ -281,11 +277,26 @@ impl ArbitrumAdapter {
 
         let delayed_msg_txns = delayed_messages
             .filter_map(|msg_log| {
-                match self.delayed_message_to_mchain_txn(msg_log, message_data.clone()) {
+                match self.delayed_message_to_mchain_txn(msg_log, &message_data) {
                     Ok(txn) => Some(txn),
-                    Err(e) => {
-                        error!("Failed to process delayed message: {}", e);
+                    Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(
+                        L1MessageType::Initialize,
+                    )) => {
+                        error!("Ignoring init message: the rollup is already initialized");
                         None
+                    }
+                    Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(e)) => {
+                        // replace ignored messages with a dummy message to burn the nonce
+                        error!("Replacing ignored delayed message with an empty block: {}", e);
+                        Some(DelayedMessage {
+                            kind: L1MessageType::EndOfBlock as u8,
+                            sender: Address::ZERO,
+                            data: Default::default(),
+                            base_fee_l1: U256::ZERO,
+                        })
+                    }
+                    Err(e) => {
+                        panic!("Fatal error: {}", e)
                     }
                 }
             })
@@ -297,15 +308,15 @@ impl ArbitrumAdapter {
     fn delayed_message_to_mchain_txn(
         &self,
         log: &PartialLogWithTxdata,
-        message_data: HashMap<U256, Bytes>,
-    ) -> Result<DelayedMessage> {
+        message_data: &HashMap<U256, Bytes>,
+    ) -> Result<DelayedMessage, ArbitrumBlockBuilderError> {
         let msg = MessageDelivered::decode_raw_log(&log.topics, &log.data, true)
             .map_err(|e| ArbitrumBlockBuilderError::DecodingError("MessageDelivered", e.into()))?;
 
         let kind = L1MessageType::from_u8_panic(msg.kind);
 
         if self.should_ignore_delayed_message(&kind) {
-            return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind).into());
+            return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind));
         }
 
         let data = message_data
@@ -326,12 +337,8 @@ impl ArbitrumAdapter {
         txs: Vec<Bytes>,
         mchain_block_number: u64,
         mchain_timestamp: u64,
-        delayed_message_count: usize,
     ) -> Result<Bytes> {
-        if delayed_message_count > 0 {
-            info!("Adding {} delayed messages to batch", delayed_message_count);
-        }
-        let mut messages = vec![BatchMessage::Delayed; delayed_message_count];
+        let mut messages = vec![];
 
         if !txs.is_empty() {
             info!("Adding {} sequenced transactions to batch", txs.len());
@@ -377,7 +384,7 @@ mod tests {
     use assert_matches::assert_matches;
     use common::types::PartialBlock;
     use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain::TransactionProcessed;
-    use std::{str::FromStr, sync::Arc};
+    use std::str::FromStr;
 
     #[test]
     fn test_new_builder() {
@@ -399,7 +406,7 @@ mod tests {
     async fn test_build_batch_empty_txs() {
         let builder = ArbitrumAdapter::default();
         let txs = vec![];
-        let batch = builder.build_batch_txn(txs, 0, 0, 0).await.unwrap();
+        let batch = builder.build_batch_txn(txs, 0, 0).await.unwrap();
 
         // For empty batch, should create BatchMessage::Delayed
         let expected_batch = Batch(vec![]);
@@ -415,7 +422,7 @@ mod tests {
             hex!("1234").into(), // Sample transaction data
             hex!("5678").into(),
         ];
-        let batch = builder.build_batch_txn(txs.clone(), 0, 0, 0).await.unwrap();
+        let batch = builder.build_batch_txn(txs.clone(), 0, 0).await.unwrap();
 
         // For non-empty batch, should create BatchMessage::L2
         let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
@@ -432,7 +439,7 @@ mod tests {
         let builder = ArbitrumAdapter::default();
 
         // Create an empty slot
-        let slot = Slot { settlement: vec![], sequencing: Arc::new(PartialBlock::default()) };
+        let slot = Slot { settlement: vec![], sequencing: PartialBlock::default() };
 
         let result = builder.build_block_from_slot(&slot, 1).await;
         assert!(result.is_ok());
@@ -454,8 +461,8 @@ mod tests {
         number: u64,
         hash: FixedBytes<32>,
         logs: Vec<PartialLogWithTxdata>,
-    ) -> Arc<PartialBlock> {
-        Arc::new(PartialBlock { number, hash, logs, ..Default::default() })
+    ) -> PartialBlock {
+        PartialBlock { number, hash, logs, ..Default::default() }
     }
 
     #[tokio::test]
@@ -503,7 +510,7 @@ mod tests {
         let block =
             create_mock_block(1, U256::from(1111).into(), vec![msg_delivered_log, inbox_msg_log]);
 
-        let slot = Slot { settlement: vec![block], sequencing: Arc::new(PartialBlock::default()) };
+        let slot = Slot { settlement: vec![block], sequencing: PartialBlock::default() };
 
         let result = builder.build_block_from_slot(&slot, 1).await;
         assert!(result.is_ok());
@@ -530,12 +537,12 @@ mod tests {
         );
 
         // Create block with zero hash to match assertion expectations
-        let sequencing_block = Arc::new(PartialBlock {
+        let sequencing_block = PartialBlock {
             number: 1,
             hash: FixedBytes::ZERO,
             logs: vec![txn_processed_log],
             ..Default::default()
-        });
+        };
 
         let slot = Slot { settlement: vec![], sequencing: sequencing_block };
 
@@ -573,12 +580,12 @@ mod tests {
         );
 
         // Create blocks with zero hash to match assertion expectations
-        let sequencing_block = Arc::new(PartialBlock {
+        let sequencing_block = PartialBlock {
             number: 1,
             hash: FixedBytes::ZERO,
             logs: vec![txn_processed_log],
             ..Default::default()
-        });
+        };
 
         // Create mock delayed message logs
         let message_num = U256::from(1);
@@ -616,12 +623,12 @@ mod tests {
             Bytes::new(),
         );
 
-        let settlement_block = Arc::new(PartialBlock {
+        let settlement_block = PartialBlock {
             number: 1,
             hash: FixedBytes::ZERO,
             logs: vec![delayed_log, inbox_log],
             ..Default::default()
-        });
+        };
 
         let slot = Slot { settlement: vec![settlement_block], sequencing: sequencing_block };
 
@@ -646,13 +653,10 @@ mod tests {
         // Verify the batch transaction contains our sequencing tx data
         let batch_txn = &txns.as_ref().unwrap().batch;
         let txn_data_without_prefix = txn_data[1..].to_vec();
-        let expected_batch = Batch(vec![
-            BatchMessage::Delayed,
-            BatchMessage::L2(L1IncomingMessage {
-                header: L1IncomingMessageHeader { block_number: 1, timestamp: 0 },
-                l2_msg: vec![txn_data_without_prefix.into()],
-            }),
-        ]);
+        let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
+            header: L1IncomingMessageHeader { block_number: 1, timestamp: 0 },
+            l2_msg: vec![txn_data_without_prefix.into()],
+        })]);
         let expected_encoded = expected_batch.encode().unwrap();
         assert_eq!(batch_txn, &expected_encoded.to_vec());
     }
@@ -692,7 +696,7 @@ mod tests {
         };
 
         // Call the function
-        let result = builder.delayed_message_to_mchain_txn(&log, message_map);
+        let result = builder.delayed_message_to_mchain_txn(&log, &message_map);
         assert!(result.is_ok());
 
         let txn = result.unwrap();
@@ -741,12 +745,9 @@ mod tests {
         let message_map = HashMap::new();
 
         // Call should fail with MissingInboxMessageData error
-        let result = builder.delayed_message_to_mchain_txn(&log, message_map);
+        let result = builder.delayed_message_to_mchain_txn(&log, &message_map);
         assert!(result.is_err());
-        assert_matches!(
-            result.unwrap_err().downcast::<ArbitrumBlockBuilderError>().unwrap(),
-            ArbitrumBlockBuilderError::MissingInboxMessageData(_)
-        );
+        assert_matches!(result.unwrap_err(), ArbitrumBlockBuilderError::MissingInboxMessageData(_));
     }
 
     #[test]
@@ -763,12 +764,9 @@ mod tests {
         };
 
         // Call should fail with DecodingError
-        let result = builder.delayed_message_to_mchain_txn(&log, message_map);
+        let result = builder.delayed_message_to_mchain_txn(&log, &message_map);
         assert!(result.is_err());
-        assert_matches!(
-            result.unwrap_err().downcast::<ArbitrumBlockBuilderError>().unwrap(),
-            ArbitrumBlockBuilderError::DecodingError(_, _)
-        );
+        assert_matches!(result.unwrap_err(), ArbitrumBlockBuilderError::DecodingError(_, _));
     }
 
     #[test]
@@ -809,12 +807,9 @@ mod tests {
         };
 
         // Call the function
-        let result = builder.delayed_message_to_mchain_txn(&log, message_map);
+        let result = builder.delayed_message_to_mchain_txn(&log, &message_map);
         assert!(result.is_err());
-        assert_matches!(
-            result.unwrap_err().downcast::<ArbitrumBlockBuilderError>().unwrap(),
-            ArbitrumBlockBuilderError::DelayedMessageIgnored(_)
-        );
+        assert_matches!(result.unwrap_err(), ArbitrumBlockBuilderError::DelayedMessageIgnored(_));
     }
 
     #[test]
@@ -854,7 +849,7 @@ mod tests {
             ..Default::default()
         };
 
-        let result = builder.delayed_message_to_mchain_txn(&log, message_map);
+        let result = builder.delayed_message_to_mchain_txn(&log, &message_map);
         assert!(result.is_ok());
 
         let txn = result.unwrap();

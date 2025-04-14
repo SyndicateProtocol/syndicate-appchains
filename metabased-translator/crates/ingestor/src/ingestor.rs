@@ -13,7 +13,6 @@ use common::{
     eth_client::Client,
     types::{BlockRef, Chain, PartialBlock},
 };
-use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::{
     mpsc::{error::SendError, Sender},
@@ -28,7 +27,7 @@ pub struct IngestorArgs {
     pub chain: Chain,
     pub config: ChainIngestorConfig,
     pub addresses: Vec<Address>,
-    pub sender: Sender<Arc<PartialBlock>>,
+    pub sender: Sender<PartialBlock>,
     pub known_block: Option<BlockRef>,
     pub metrics: IngestorMetrics,
     pub shutdown_rx: oneshot::Receiver<()>,
@@ -57,7 +56,7 @@ pub enum IngestorError {
     },
 
     #[error("Failed to send slot through channel: {0}")]
-    Send(#[from] SendError<Arc<PartialBlock>>),
+    Send(#[from] SendError<PartialBlock>),
 
     #[error("Failed to get initial chain head: {0}")]
     GetInitialChainHead(#[from] RpcError<TransportErrorKind>),
@@ -100,10 +99,10 @@ pub fn check_reorg(
 ///
 /// Returns an error if a chain reorganization is detected or if sending fails.
 pub async fn process_and_send_block(
-    sender: &Sender<Arc<PartialBlock>>,
+    sender: &Sender<PartialBlock>,
     metrics: &IngestorMetrics,
     last_block_sent: &mut Option<BlockRef>,
-    block: Arc<PartialBlock>,
+    block: PartialBlock,
     chain: Chain,
 ) -> Result<(), IngestorError> {
     trace!(%chain, block_number = %block.number, "Processing and sending block");

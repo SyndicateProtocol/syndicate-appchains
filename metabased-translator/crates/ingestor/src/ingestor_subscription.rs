@@ -176,7 +176,7 @@ pub async fn run_subscription(
         }
     });
 
-    let mut blocks_collection: BTreeMap<u64, Arc<PartialBlock>> = BTreeMap::new();
+    let mut blocks_collection: BTreeMap<u64, PartialBlock> = BTreeMap::new();
     let mut latest_processed_block: Option<BlockRef> = args.known_block;
 
     trace!(%chain, "Starting ingestor loop");
@@ -204,7 +204,7 @@ pub async fn run_subscription(
 
                         // Process the valid block using the shared function
                         trace!(%chain, block = %block.number, logs = %block.logs.len(), "Sending block");
-                        process_and_send_block(sender, metrics, &mut latest_processed_block, block.clone(), chain).await?;
+                        process_and_send_block(sender, metrics, &mut latest_processed_block, block, chain).await?;
 
                         // Process any subsequent blocks we have stored
                         while let Some(ref last_block) = latest_processed_block {
@@ -213,7 +213,7 @@ pub async fn run_subscription(
                                 break;
                             };
                             trace!(%chain, block = %next_block.number, logs = %next_block.logs.len(), "sending stored block");
-                            process_and_send_block(sender, metrics, &mut latest_processed_block, next_block.clone(), chain).await?;
+                            process_and_send_block(sender, metrics, &mut latest_processed_block, next_block, chain).await?;
                         }
                     }
                     None => {
@@ -231,7 +231,7 @@ async fn process_block(
     client: &dyn Provider,
     header: Header,
     base_filter: &Filter,
-    tx: &Sender<Arc<PartialBlock>>,
+    tx: &Sender<PartialBlock>,
     chain: Chain,
     metrics: IngestorMetrics,
 ) -> Result<(), Error> {
@@ -263,7 +263,7 @@ async fn process_block(
         logs_with_tx.push(PartialLogWithTxdata::new(log, tx.input().to_owned()));
     }
     trace!(%chain, block = %header.number, logs = %logs_with_tx.len(), "Block processed");
-    tx.send(Arc::new(PartialBlock::new(header, logs_with_tx))).await?;
+    tx.send(PartialBlock::new(header, logs_with_tx)).await?;
     Ok(())
 }
 

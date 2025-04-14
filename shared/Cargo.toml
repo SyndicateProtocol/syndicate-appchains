@@ -10,8 +10,11 @@ version.workspace      = true
 
 [dependencies]
 alloy              = { workspace = true, features = ["k256", "rlp"] }
+axum               = { workspace = true }
 byte-unit          = { workspace = true, features = ["default"] }
 jsonrpsee          = { workspace = true, features = ["jsonrpsee-types", "server"] }
+prometheus-client  = { workspace = true }
+serde              = { workspace = true, features = ["derive"] }
 serde_json         = { workspace = true }
 thiserror          = { workspace = true }
 tokio              = { workspace = true }

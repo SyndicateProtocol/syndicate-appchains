@@ -4,5 +4,6 @@
 pub mod bounded_join_set;
 pub mod json_rpc;
 pub mod logger;
+pub mod metrics;
 pub mod parse;
 pub mod tx_validation;

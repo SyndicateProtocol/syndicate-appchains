@@ -52,7 +52,6 @@ pub async fn run_server(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::metrics::MetricsState;
     use alloy::{
         node_bindings::Anvil,
         primitives::{Address, B256},
@@ -61,6 +60,7 @@ mod tests {
     use jsonrpsee::{core::client::ClientT, http_client::HttpClient};
     use reqwest::{Client, StatusCode};
     use serde_json::Value as JsonValue;
+    use shared::metrics::MetricsState;
     use std::{str::FromStr, time::Duration};
     use url::Url;
 
@@ -89,7 +89,7 @@ mod tests {
             tx_confirmations: 2,
             tx_timeout: Duration::from_secs(60),
         };
-        let mut metrics = MetricsState::new();
+        let mut metrics = MetricsState::default();
         let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
 
         // Start server
