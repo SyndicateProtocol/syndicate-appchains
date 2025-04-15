@@ -5,7 +5,9 @@ use alloy::{
     consensus::Transaction,
     hex,
     primitives::{Bytes, ChainId, TxHash},
-    transports::http::Client,
+    providers::{Provider, ProviderBuilder},
+    rpc::client::RpcClient,
+    transports::http::{Client, Http},
 };
 use http::Extensions;
 use jsonrpsee::{
@@ -117,8 +119,6 @@ impl MaestroService {
         raw_tx: Bytes,
         request_chain_id: Option<ChainId>,
     ) -> Result<TxHash, Error> {
-        let hex_tx = format!("0x{}", hex::encode(&raw_tx));
-        info!("Processing raw transaction: {}", hex_tx);
         let original_tx = validate_transaction(&raw_tx)?;
         let txn_chain_id = Self::validate_chain_id(request_chain_id, original_tx.chain_id())?;
         let tx_hash = original_tx.tx_hash().to_string();
@@ -128,65 +128,27 @@ impl MaestroService {
             "Submitting validated transaction to RPC",
         );
 
-        // JSON-RPC request payload for eth_sendRawTransaction
-        let raw_txn_payload = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "eth_sendRawTransaction",
-            "params": [hex_tx],
-            "id": 1
-        });
-
         let rpc_url = self.chain_rpc_urls.get(&txn_chain_id.to_string()).ok_or_else(|| {
             error!(%txn_chain_id, %tx_hash, "txn attempted to unsupported RPC");
             InvalidInput(UnsupportedChainId(txn_chain_id))
         })?;
 
-        // Fire and forget
-        let response = self
-            .client
-            .post(rpc_url)
-            .header("Content-Type", "application/json")
-            .json(&raw_txn_payload)
-            .send()
-            .await
-            .map_err(|e| {
-                error!(%rpc_url, %tx_hash, %txn_chain_id, %e, "reqwest client error forwarding txn to RPC");
-                Internal("internal error sending transaction".to_string())
-            })?;
+        let transport = Http::with_client(
+            self.client.clone(),
+            rpc_url.parse().map_err(|e| {
+                error!(%txn_chain_id, %tx_hash, %e, "Invalid RPC URL");
+                Internal("Invalid RPC URL".to_string())
+            })?,
+        );
+        let provider = ProviderBuilder::new().on_client(RpcClient::new(transport, false));
 
-        // Check HTTP status
-        if !response.status().is_success() {
-            error!(
-                %rpc_url,
-                %tx_hash,
-                %txn_chain_id,
-                status = %response.status(),
-                "RPC returned non-200 status for forwarded txn"
-            );
-            return Err(Internal(format!("RPC endpoint returned status {}", response.status())));
-        }
-
-        // Parse the response body
-        let response_body = response.text().await.map_err(|e| {
-            error!(%rpc_url, %tx_hash, %txn_chain_id, %e, "Failed to read response body from RPC");
-            Internal("Failed to read response from RPC endpoint".to_string())
+        let tx = provider.send_raw_transaction(&raw_tx).await.map_err(|e| {
+            error!(%rpc_url, %tx_hash, %txn_chain_id, %e, "Failed to send raw transaction to RPC");
+            Internal("Failed to send raw transaction to RPC endpoint".to_string())
         })?;
-
-        // Parse as JSON
-        let json_response: serde_json::Value = serde_json::from_str(&response_body).map_err(|e| {
-            error!(%rpc_url, %tx_hash, %txn_chain_id, %e, "Failed to parse JSON response from RPC");
-            Internal("Invalid JSON response from RPC endpoint".to_string())
-        })?;
-
-        // Check for JSON-RPC error
-        if let Some(error) = json_response.get("error") {
-            error!(%rpc_url, %tx_hash, %txn_chain_id, error = ?error, "RPC returned JSON-RPC error");
-            return Err(Internal(format!("RPC endpoint returned error: {}", error)));
-        }
-
-        // Log success and return the hash
+        let tx_hash = tx.tx_hash();
         debug!(%rpc_url, %tx_hash, %txn_chain_id, "Successfully forwarded transaction to RPC");
-        Ok(*original_tx.tx_hash())
+        Ok(*tx_hash)
     }
 
     /// Returns `txn_chain_id` unwrapped if valid
