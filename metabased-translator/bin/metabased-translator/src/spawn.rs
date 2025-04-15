@@ -58,8 +58,7 @@ pub async fn run(
             metrics.clone(),
             mchain.clone(),
             rx,
-        )
-        .await;
+        );
 
         info!("Starting Metabased Translator");
         match termination_handling(tx, component_tasks).await {
@@ -112,7 +111,7 @@ struct ComponentHandles {
 }
 
 impl ComponentHandles {
-    async fn spawn(
+    fn spawn(
         config: &MetabasedConfig,
         known_state: Option<KnownState>,
         sequencing_client: Arc<dyn RPCClient>,

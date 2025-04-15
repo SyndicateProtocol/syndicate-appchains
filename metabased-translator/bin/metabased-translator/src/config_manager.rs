@@ -5,7 +5,7 @@ use alloy::{
 };
 use contract_bindings::metabased::{arbchainconfig, arbconfigmanager::ArbConfigManager};
 use eyre::Result;
-use tracing::error;
+use tracing::{error, info};
 
 pub async fn with_onchain_config<T: Provider + Clone>(
     config: &MetabasedConfig,
@@ -32,42 +32,72 @@ pub async fn with_onchain_config<T: Provider + Clone>(
 
     // Update config with onchain values
     if config.block_builder.arbitrum_bridge_address.is_none() {
+        info!(
+            "Using the arbitrum_bridge_address from on-chain config: {:?}",
+            onchain.arbitrum_bridge_address
+        );
         config.block_builder.arbitrum_bridge_address = Some(onchain.arbitrum_bridge_address);
     };
 
     if config.block_builder.arbitrum_inbox_address.is_none() {
+        info!(
+            "Using the arbitrum_inbox_address from on-chain config: {:?}",
+            onchain.arbitrum_inbox_address
+        );
         config.block_builder.arbitrum_inbox_address = Some(onchain.arbitrum_inbox_address);
     };
 
     if config.block_builder.arbitrum_ignore_delayed_messages.is_none() {
+        info!(
+            "Using the arbitrum_ignore_delayed_messages from on-chain config: {}",
+            onchain.arbitrum_ignore_delayed_messages
+        );
         config.block_builder.arbitrum_ignore_delayed_messages =
             Some(onchain.arbitrum_ignore_delayed_messages);
     };
 
     if config.settlement_delay.is_none() {
+        info!("Using the settlement_delay from on-chain config: {}", onchain.settlement_delay);
         config.settlement_delay = Some(onchain.settlement_delay.try_into().unwrap());
     }
 
     if config.settlement.settlement_start_block.is_none() {
+        info!(
+            "Using the settlement_start_block from on-chain config: {}",
+            onchain.settlement_start_block
+        );
         config.settlement.settlement_start_block =
             Some(onchain.settlement_start_block.try_into().unwrap());
     }
 
     if config.sequencing.sequencing_start_block.is_none() {
+        info!(
+            "Using the sequencing_start_block from on-chain config: {}",
+            onchain.sequencing_start_block
+        );
         config.sequencing.sequencing_start_block =
             Some(onchain.sequencing_start_block.try_into().unwrap());
     }
 
     if config.block_builder.sequencing_contract_address.is_none() {
+        info!(
+            "Using the sequencing_contract_address from on-chain config: {:?}",
+            onchain.sequencing_contract_address
+        );
         config.block_builder.sequencing_contract_address =
             Some(onchain.sequencing_contract_address);
     }
 
     if config.sequencing.sequencing_rpc_url.is_none() {
+        info!(
+            "Using the sequencing_rpc_url from on-chain config: {}",
+            onchain.default_sequencing_chain_rpc_url
+        );
         config.sequencing.sequencing_rpc_url = Some(onchain.default_sequencing_chain_rpc_url)
     }
 
     if config.rollup_owner.is_none() {
+        info!("Using the rollup_owner from on-chain config: {:?}", onchain.rollup_owner);
         config.rollup_owner = Some(onchain.rollup_owner);
     }
 
