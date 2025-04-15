@@ -177,7 +177,7 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
         warn!(%ctx.chain, current_block = %start_block_num, initial_chain_head = %ctx.initial_chain_head, syncing_batch_size = %ctx.syncing_batch_size, "Calculated empty block range, skipping fetch cycle.");
         return false;
     }
-    info!(%ctx.chain, range = ?block_numbers, "Calculated fetch range");
+    debug!(%ctx.chain, range = ?block_numbers, "Calculated fetch range");
 
     let mut tasks: JoinSet<Result<(u64, PartialBlock), IngestorError>> = JoinSet::new();
 

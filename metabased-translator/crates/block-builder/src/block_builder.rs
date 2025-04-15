@@ -1,7 +1,10 @@
 //! Block builder service for processing and building L3 blocks.
 
 use crate::{connectors::mchain::MetaChainProvider, rollups::shared::RollupAdapter};
-use alloy::transports::{RpcError, TransportErrorKind};
+use alloy::{
+    primitives::Address,
+    transports::{RpcError, TransportErrorKind},
+};
 use async_trait::async_trait;
 use common::types::{Slot, SlotProcessor};
 use eyre::{Error, Result};
@@ -68,4 +71,10 @@ pub enum BlockBuilderError {
 
     #[error("Block builder was shut down")]
     Shutdown,
+
+    #[error("Rollup owner mismatch: configured owner {0} != mchain owner {1}")]
+    RollupOwnerMismatch(Address, Address),
+
+    #[error("Error calling mchain: {0}")]
+    MChainCallError(String),
 }

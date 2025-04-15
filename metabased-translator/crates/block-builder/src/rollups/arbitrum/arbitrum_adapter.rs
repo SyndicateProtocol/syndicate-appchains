@@ -109,7 +109,10 @@ pub struct ArbitrumAdapter {
 
 impl Default for ArbitrumAdapter {
     fn default() -> Self {
-        Self::new(&BlockBuilderConfig::default())
+        Self::new(&BlockBuilderConfig {
+            arbitrum_ignore_delayed_messages: Some(false),
+            ..Default::default()
+        })
     }
 }
 
@@ -199,14 +202,15 @@ impl ArbitrumAdapter {
     ///
     /// # Arguments
     /// - `config`: The configuration for the block builder.
+    #[allow(clippy::unwrap_used)] //it's okay to unwrap here because we know the config is valid
     pub const fn new(config: &BlockBuilderConfig) -> Self {
         Self {
             transaction_parser: SequencingTransactionParser::new(
-                config.sequencing_contract_address,
+                config.sequencing_contract_address.unwrap(),
             ),
-            bridge_address: config.arbitrum_bridge_address,
-            inbox_address: config.arbitrum_inbox_address,
-            ignore_delayed_messages: config.arbitrum_ignore_delayed_messages,
+            bridge_address: config.arbitrum_bridge_address.unwrap(),
+            inbox_address: config.arbitrum_inbox_address.unwrap(),
+            ignore_delayed_messages: config.arbitrum_ignore_delayed_messages.unwrap(),
         }
     }
 
@@ -392,8 +396,9 @@ mod tests {
             Address::from_str("0x1234000000000000000000000000000000000000")
                 .expect("Invalid address format");
         let config = BlockBuilderConfig {
-            sequencing_contract_address,
-            arbitrum_bridge_address: sequencing_contract_address,
+            sequencing_contract_address: Some(sequencing_contract_address),
+            arbitrum_bridge_address: Some(sequencing_contract_address),
+            arbitrum_ignore_delayed_messages: Some(false),
             ..Default::default()
         };
 
@@ -772,7 +777,7 @@ mod tests {
     #[test]
     fn test_delayed_message_to_mchain_txn_ignore_message() {
         let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            arbitrum_ignore_delayed_messages: true,
+            arbitrum_ignore_delayed_messages: Some(true),
             ..Default::default()
         });
 
@@ -815,7 +820,7 @@ mod tests {
     #[test]
     fn test_delayed_message_to_mchain_txn_do_not_ignore_deposit() {
         let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            arbitrum_ignore_delayed_messages: true,
+            arbitrum_ignore_delayed_messages: Some(true),
             ..Default::default()
         });
 
@@ -869,7 +874,7 @@ mod tests {
     #[test]
     fn test_should_ignore_delayed_message() {
         let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            arbitrum_ignore_delayed_messages: true,
+            arbitrum_ignore_delayed_messages: Some(true),
             ..Default::default()
         });
 
@@ -883,7 +888,7 @@ mod tests {
         assert!(!builder.should_ignore_delayed_message(&L1MessageType::EthDeposit));
 
         let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
-            arbitrum_ignore_delayed_messages: false,
+            arbitrum_ignore_delayed_messages: Some(false),
             ..Default::default()
         });
 
