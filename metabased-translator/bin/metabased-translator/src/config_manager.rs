@@ -1,16 +1,14 @@
 use crate::config::MetabasedConfig;
 use alloy::{
     primitives::{Address, U256},
-    providers::Provider,
+    providers::{Provider, ProviderBuilder},
+    rpc::client::ClientBuilder,
 };
 use contract_bindings::metabased::{arbchainconfig, arbconfigmanager::ArbConfigManager};
 use eyre::Result;
 use tracing::{error, info};
 
-pub async fn with_onchain_config<T: Provider + Clone>(
-    config: &MetabasedConfig,
-    provider: T,
-) -> MetabasedConfig {
+pub async fn with_onchain_config(config: &MetabasedConfig) -> MetabasedConfig {
     let address = match config.config_manager_address {
         Some(addr) => addr,
         None => return config.clone(),
@@ -19,6 +17,10 @@ pub async fn with_onchain_config<T: Provider + Clone>(
         Some(chain_id) => chain_id,
         None => return config.clone(),
     };
+
+    let provider = ProviderBuilder::new().on_client(
+        ClientBuilder::default().connect(&config.settlement.settlement_rpc_url).await.unwrap(),
+    );
 
     let onchain = match get_config(address, U256::from(chain_id), provider).await {
         Ok(c) => c,

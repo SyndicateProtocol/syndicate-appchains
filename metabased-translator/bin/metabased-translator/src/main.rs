@@ -1,4 +1,3 @@
-use alloy::{providers::ProviderBuilder, rpc::client::ClientBuilder};
 use block_builder::{
     config::TargetRollupType::{ARBITRUM, OPTIMISM},
     rollups::{
@@ -44,10 +43,7 @@ async fn main() -> Result<()> {
     });
 
     // Load chain config from ConfigManager if available
-    let settlement_provider = ProviderBuilder::new().on_client(
-        ClientBuilder::default().connect(&base_config.settlement.settlement_rpc_url).await.unwrap(),
-    );
-    let config = with_onchain_config(&base_config, settlement_provider).await;
+    let config = with_onchain_config(&base_config).await;
     config.validate_strict()?;
 
     // Run the async process
