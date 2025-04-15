@@ -1,9 +1,8 @@
 //! This module contains `config` for the `maestro` service
 
 use crate::errors::ConfigError;
-use alloy::transports::http::Client;
+use alloy::providers::{Provider, ProviderBuilder};
 use clap::Parser;
-use serde_json::Value;
 use shared::parse::parse_map;
 use std::{collections::HashMap, time::Duration};
 use tracing::{debug, error};
@@ -75,62 +74,23 @@ impl Config {
             return Ok(())
         }
 
-        // JSON-RPC request payload for eth_chainId
-        let health_check_payload = serde_json::json!({
-            "jsonrpc": "2.0",
-            "method": "eth_chainId",
-            "params": [],
-            "id": 1
-        });
-
-        let client = Client::builder()
-            .timeout(self.validation_timeout)
-            .build()
-            .map_err(ConfigError::HttpClient)?;
-
         for (chain_id, url) in &self.chain_rpc_urls {
             debug!(%chain_id, %url, "Sending test JSON-RPC request");
 
-            let response = client
-                .post(url)
-                .header("Content-Type", "application/json")
-                .json(&health_check_payload)
-                .send()
-                .await
-                .map_err(|_| ConfigError::RpcUrlConnection(chain_id.clone(), url.clone()))?;
+            let provider = ProviderBuilder::new().connect(url).await?;
+            let resp_chain_id = provider.get_chain_id().await?;
 
-            // Check for successful status code (2xx)
-            if !response.status().is_success() {
-                return Err(ConfigError::RpcUrlInvalidStatus(
-                    chain_id.clone(),
-                    url.clone(),
-                    response.status().to_string(),
-                ));
-            }
-
-            // check that result chain_id matches ours
-            let json: Value = response.json().await?;
-            let hex_chain_id = json["result"].as_str().unwrap_or("");
-            let dec_chain_id = hex_to_decimal(hex_chain_id).unwrap_or(0);
-
-            if *chain_id != dec_chain_id.to_string() {
+            if resp_chain_id.to_string() != *chain_id {
                 return Err(ConfigError::RpcUrlInvalidChainId(
                     url.clone(),
                     chain_id.to_string(),
-                    dec_chain_id.to_string(),
+                    resp_chain_id.to_string(),
                 ));
             }
-
             debug!(%chain_id, %url, "Successful JSON-RPC request");
         }
         Ok(())
     }
-}
-
-fn hex_to_decimal(hex_str: &str) -> Result<u64, std::num::ParseIntError> {
-    // Remove "0x" prefix if present
-    let cleaned_hex = hex_str.trim_start_matches("0x");
-    u64::from_str_radix(cleaned_hex, 16)
 }
 
 impl Default for Config {
@@ -142,43 +102,5 @@ impl Default for Config {
             validation_timeout: Duration::from_secs(5),
             skip_validation: false,
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_hex_to_decimal_with_prefix() {
-        assert_eq!(hex_to_decimal("0x7c830").unwrap(), 510000);
-        assert_eq!(hex_to_decimal("0x1A").unwrap(), 26);
-        assert_eq!(hex_to_decimal("0xdeadbeef").unwrap(), 3735928559);
-        assert_eq!(hex_to_decimal("0x0").unwrap(), 0);
-    }
-
-    #[test]
-    fn test_hex_to_decimal_without_prefix() {
-        assert_eq!(hex_to_decimal("7c830").unwrap(), 510000);
-        assert_eq!(hex_to_decimal("1A").unwrap(), 26);
-        assert_eq!(hex_to_decimal("deadbeef").unwrap(), 3735928559);
-        assert_eq!(hex_to_decimal("0").unwrap(), 0);
-    }
-
-    #[test]
-    fn test_hex_to_decimal_case_insensitive() {
-        assert_eq!(hex_to_decimal("0xDeadBeef").unwrap(), 3735928559);
-        assert_eq!(hex_to_decimal("0xDEADBEEF").unwrap(), 3735928559);
-        assert_eq!(hex_to_decimal("0xdeadbeef").unwrap(), 3735928559);
-    }
-
-    #[test]
-    fn test_hex_to_decimal_error_cases() {
-        assert!(hex_to_decimal("0xG").is_err()); // Invalid hex character
-        assert!(hex_to_decimal("").is_err()); // Empty string
-        assert!(hex_to_decimal("0x").is_err()); // Only prefix
-
-        // Test value too large for u64
-        assert!(hex_to_decimal("0xFFFFFFFFFFFFFFFFFF").is_err());
     }
 }
