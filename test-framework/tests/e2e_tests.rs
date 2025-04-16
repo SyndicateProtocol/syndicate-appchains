@@ -1,5 +1,6 @@
 //! e2e tests for the metabased stack
 
+use crate::components::{Components, ConfigurationOptions, ContractVersion};
 use alloy::{
     eips::{BlockNumberOrTag, Encodable2718},
     network::TransactionBuilder,
@@ -7,7 +8,6 @@ use alloy::{
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, Block, TransactionRequest},
 };
-use components::{Components, ConfigurationOptions, ContractVersion};
 use contract_bindings::arbitrum::{
     arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox, irollupcore::IRollupCore,
     nodeinterface::NodeInterface, rollup::Rollup,

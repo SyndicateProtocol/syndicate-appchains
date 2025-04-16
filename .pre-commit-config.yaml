@@ -54,7 +54,7 @@ repos:
         files: ^(shared)/arb-contracts/
         pass_filenames: false
       - id: taplo-fmt
-        name: taplo fmt
+        name: Cargo.toml format validation
         entry: taplo fmt
         args: ["--check", "**/Cargo.toml", "--verbose"]
         language: system

@@ -3334,10 +3334,12 @@ dependencies = [
 name = "metabased-translator"
 version = "0.1.0"
 dependencies = [
+ "alloy",
  "async-trait",
  "block-builder",
  "clap",
  "common",
+ "contract-bindings",
  "eyre",
  "ingestor",
  "metrics",

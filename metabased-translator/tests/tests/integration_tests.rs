@@ -52,12 +52,12 @@ async fn arb_owner_test() -> Result<()> {
         address!("0x000000000000000000000000000000000000006b");
 
     // Start the meta node
-    let appchain_owner = address!("0x0000000000000000000000000000000000000001");
-    let (mchain_url, _mchain, _) = start_mchain(APPCHAIN_CHAIN_ID, appchain_owner, 0).await?;
+    let rollup_owner = address!("0x0000000000000000000000000000000000000001");
+    let (mchain_url, _mchain, _) = start_mchain(APPCHAIN_CHAIN_ID, rollup_owner, 0).await?;
     let (_nitro, rollup, _) =
-        launch_nitro_node(APPCHAIN_CHAIN_ID, appchain_owner, &mchain_url, None).await?;
+        launch_nitro_node(APPCHAIN_CHAIN_ID, rollup_owner, &mchain_url, None).await?;
     let arb_owner_public = ArbOwnerPublic::new(ARB_OWNER_CONTRACT_ADDRESS, &rollup);
-    assert_eq!(arb_owner_public.getAllChainOwners().call().await?._0, [appchain_owner]);
+    assert_eq!(arb_owner_public.getAllChainOwners().call().await?._0, [rollup_owner]);
     Ok(())
 }
 
