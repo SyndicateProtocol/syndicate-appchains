@@ -46,7 +46,11 @@ pub struct BatcherConfig {
 
     /// Batch size
     #[arg(short = 'b', long, env = "BATCH_SIZE", default_value_t = 10)]
-    pub batch_size: usize,
+    pub transactions_in_batch: usize,
+
+    /// Max batch size in bytes
+    #[arg(long, env = "MAX_BATCH_SIZE", default_value_t = 90 * 1024)] // 90 kilobytes
+    pub max_batch_size: usize,
 
     /// Polling interval for the batcher in milliseconds
     #[arg( long, env = "BATCHER_POLLING_INTERVAL", default_value = "500ms", value_parser = humantime::parse_duration )]
@@ -69,7 +73,8 @@ impl Default for BatcherConfig {
         Self {
             redis_address: "0.0.0.0:6379".to_string(),
             chain_id: 1,
-            batch_size: 10,
+            transactions_in_batch: 10,
+            max_batch_size: 90 * 1024,
             polling_interval: Duration::from_millis(500),
             sequencer_client_url: "http://localhost:8080".to_string(),
         }

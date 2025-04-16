@@ -22,14 +22,13 @@ impl StreamManager {
     }
 }
 
-/// Maximum allowed compressed batch size: 90 KB
-const MAX_BATCH_SIZE: usize = 90 * 1024; // 90 kilobytes
-
 /// Batcher service
 #[derive(Debug, Clone)]
 struct Batcher {
-    /// The batch size for the batcher
-    batch_size: usize,
+    /// The transactions in batch for the batcher
+    transactions_in_batch: usize,
+    /// The max batch size for the batcher
+    max_batch_size: usize,
     /// The Redis client for the batcher
     redis_client: StreamManager,
     /// The stream key for the batcher
@@ -67,7 +66,8 @@ impl Batcher {
     fn new(config: &BatcherConfig, tc_client: TCClient) -> Self {
         let redis_client = StreamManager {};
         Self {
-            batch_size: config.batch_size,
+            transactions_in_batch: config.transactions_in_batch,
+            max_batch_size: config.max_batch_size,
             redis_client,
             stream_key: "txs:".to_string(),
             tc_client,
@@ -77,7 +77,7 @@ impl Batcher {
     }
     async fn read_and_batch_transactions(&self) -> Result<(), Error> {
         let stream_group = format!("{}{}", self.stream_key, self.chain_id);
-        match self.redis_client.read_next_batch(stream_group, self.batch_size).await {
+        match self.redis_client.read_next_batch(stream_group, self.transactions_in_batch).await {
             Ok(Some(transactions)) => {
                 info!("Batch read successfully");
                 let batch = self.batch_transactions(transactions);
@@ -99,18 +99,18 @@ impl Batcher {
     }
 
     fn batch_transactions(&self, transactions: Vec<Bytes>) -> Vec<Bytes> {
-        transactions.into_iter().take(self.batch_size).collect()
+        transactions.into_iter().take(self.transactions_in_batch).collect()
     }
 
     async fn compress_and_send_batch(&self, batch: Vec<Bytes>) -> Result<()> {
         let compressed_batch = compress_transactions(&batch)?;
 
         // Check if the batch is too large
-        if compressed_batch.len() > MAX_BATCH_SIZE {
+        if compressed_batch.len() > self.max_batch_size {
             error!(
                 "Compressed batch size ({}) exceeds maximum allowed ({})",
                 compressed_batch.len(),
-                MAX_BATCH_SIZE
+                self.max_batch_size
             );
             return Err(eyre!("batch is too large"));
         }
