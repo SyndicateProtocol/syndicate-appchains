@@ -20,6 +20,91 @@ $ forge build
 $ forge test
 ```
 
+#### Run coverage test:
+
+```shell
+forge coverage
+```
+
+## Certora Verification
+
+### Setup
+
+1. Install Certora CLI ([installation guide](https://docs.certora.com/en/latest/docs/user-guide/install.html))
+
+   ```bash
+   # Recommended for macOS
+   brew install pipx
+   pipx install certora-cli
+   ```
+
+2. Get your Certora key from [certora.com/signup](https://www.certora.com/signup)
+
+3. Add key to your environment
+   ```bash
+   echo 'export CERTORAKEY=your_key_here' >> ~/.zshrc  # or ~/.bashrc
+   source ~/.zshrc  # or ~/.bashrc
+   ```
+
+### Running Specs
+
+```bash
+certoraRun certora/conf/MetabasedSequencerChain.conf
+```
+
+### Troubleshooting
+
+If CERTORAKEY isn't recognized, check with `echo $CERTORAKEY` or set it manually:
+
+```bash
+export CERTORAKEY=your_key_here
+```
+
+### Documentation
+
+Generate documentation for the Solidity contracts:
+
+```shell
+$ forge doc
+```
+
+This command generates markdown documentation for all Solidity source files in the project. By default, it:
+
+- Outputs documentation to the `docs/` directory in the project root
+- Generates markdown files for each contract, interface, and library
+- Includes function signatures, parameters, return values, events, and errors
+- Does not build or serve the documentation (requires additional flags)
+
+#### Options:
+
+- `--out <PATH>`: Specify a custom output directory for the documentation
+- `--build`: Build the documentation into an mdbook
+- `--serve`: Serve the documentation locally
+- `--port <PORT>`: Specify the port for serving documentation (requires `--serve`)
+- `--hostname <HOSTNAME>`: Specify the hostname for serving documentation (requires `--serve`)
+
+#### Examples:
+
+Generate and build documentation:
+
+```shell
+$ forge doc --build
+```
+
+Generate documentation with a custom output directory:
+
+```shell
+$ forge doc --out ./custom-docs
+```
+
+Generate, build, and serve documentation locally:
+
+```shell
+$ forge doc --build --serve --port 3000
+```
+
+The documentation includes details about contracts, functions, events, and errors, similar to the files in the `pre-audit/` directory.
+
 ### Deploy
 
 Look at Makefile for more details.
@@ -31,6 +116,13 @@ $ make deploy-based-sequencerchain-frame
 ```
 
 ### Deployed Contracts
+
+### Syndicate Exo
+
+| Contract Name           | Address                                    |
+| ----------------------- | ------------------------------------------ |
+| MetabasedFactory        | 0xFEA8A2BA8B760348ea95492516620ad45a299d53 |
+| WalletPoolWrapperModule | 0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8 |
 
 #### Base Sepolia
 
@@ -64,8 +156,15 @@ $ make deploy-based-sequencerchain-frame
 | RequiredAllModule (Ham)         | 0xAfeA8F68921242A90ae9e35f4DDF0d3769dE3150 |
 | RequiredAllModule (Frame)       | 0x7Bc475096B936Ad04Cfc544FB56aC54B3661beE6 |
 
+#### ETH Holesky
+
+| Contract Name                | Address                                    |
+| ---------------------------- | ------------------------------------------ |
+| SynGasToken holSYND (Devnet) | 0x19aaf160dA8985c54bb97adAF9304B5aC7890421 |
+| SynGasToken SYND (Testnet)   | 0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba |
+
 #### ETH Sepolia
 
-| Contract Name | Address                                    |
-| ------------- | ------------------------------------------ |
-| SynGasToken   | 0x8c8861c1bBd3a47deC0cfc5dc82e4B5E88810BfE |
+| Contract Name  | Address                                    |
+| -------------- | ------------------------------------------ |
+| SyndicateToken | 0xC89095a650BB50336e1C7A8ffD4dD4bce2456e23 |

@@ -1,0 +1,4 @@
+Configuration files used for integration tests
+
+anvil.json contains an anvil snapshot of a settlement chain that has a nitro rollup deployed to it.
+It has 8 pending messages in the delayed inbox created at deployment time.

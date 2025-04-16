@@ -15,9 +15,8 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
 
     /// @notice Constructs the MetabasedSequencerChain contract.
     /// @param _l3ChainId The ID of the L3 chain that this contract is sequencing transactions for.
-    /// @param admin The address that will be set as the admin
-    /// @param masterModule The address of the master permission module
-    constructor(uint256 _l3ChainId, address admin, address masterModule) SequencingModuleChecker(admin, masterModule) {
+    // [Olympix Warning: no parameter validation in constructor] Admin and masterModule validation handled by SequencingModuleChecker
+    constructor(uint256 _l3ChainId) SequencingModuleChecker() {
         // chain id zero has no replay protection : https://eips.ethereum.org/EIPS/eip-3788
         require(_l3ChainId != 0, "L3 chain ID cannot be 0");
         l3ChainId = _l3ChainId;
@@ -25,14 +24,22 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
 
     /// @notice Processes a single compressed transaction.
     /// @param data The compressed transaction data.
-    function processTransactionRaw(bytes calldata data) external onlyWhenAllowed(msg.sender) {
+    function processTransactionRaw(bytes calldata data)
+        external
+        onlyWhenAllowed(msg.sender)
+        revertForUnallowedCalldata(data)
+    {
         emit TransactionProcessed(msg.sender, data);
     }
 
     /// @notice process transactions
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
     /// @param data The transaction data
-    function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender) {
+    function processTransaction(bytes calldata data)
+        external
+        onlyWhenAllowed(msg.sender)
+        revertForUnallowedCalldata(data)
+    {
         emit TransactionProcessed(msg.sender, prependZeroByte(data));
     }
 
@@ -44,6 +51,8 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
 
         // Process all transactions
         for (uint256 i = 0; i < dataCount; i++) {
+            _revertForUnallowedCalldata(data[i]);
+
             emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
         }
     }

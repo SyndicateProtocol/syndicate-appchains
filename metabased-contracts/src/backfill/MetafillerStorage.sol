@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {AccessControl} from "openzeppelin-contracts/contracts/access/AccessControl.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /// @title MetafillerStorage
 /// @notice This contract is used to emit events containing L3 chain block and transaction data
@@ -12,11 +12,10 @@ contract MetafillerStorage is AccessControl {
 
     bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
 
-    /// @notice Modifier to ensure the sender is the originator of the transaction
-    modifier senderOnlyOriginator() {
-        require(msg.sender == tx.origin, "Sender must be the originator");
-        _;
-    }
+    // [Olympix Warning: tx.origin usage] Removed tx.origin check as it's redundant with AccessControl
+    // The MANAGER_ROLE already provides sufficient authorization control, and tx.origin checks can be
+    // problematic for legitimate contract interactions. If additional security is needed, consider
+    // implementing a more robust authorization mechanism using msg.sender.
 
     /// @notice Emits a EpochRangeProcessed indicating the range of epochs that have been processed
     /// @param startEpochNumber The starting epoch number
@@ -45,21 +44,20 @@ contract MetafillerStorage is AccessControl {
     }
 
     /// @notice Emits a Batch
-    /// @param batch: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#batch-format
-    function save(uint256 epochNumber, bytes32 epochHash, bytes calldata batch)
-        external
-        onlyRole(MANAGER_ROLE)
-        senderOnlyOriginator
-    {
+    /// @param epochNumber The epoch number
+    /// @dev The third parameter is a batch: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#batch-format
+    function save(uint256 epochNumber, bytes32, bytes calldata) external onlyRole(MANAGER_ROLE) {
         emit EpochRangeProcessed(epochNumber, epochNumber);
     }
 
     /// @notice Emits many Batches
-    /// @param batches: https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#batch-format
+    /// @param epochNumbers The epoch numbers
+    /// @param epochHashes The epoch hashes
+    /// @param batches The batches
+    /// @dev https://github.com/ethereum-optimism/specs/blob/main/specs/protocol/derivation.md#batch-format
     function saveForMany(uint256[] calldata epochNumbers, bytes32[] calldata epochHashes, bytes[] calldata batches)
         external
         onlyRole(MANAGER_ROLE)
-        senderOnlyOriginator
     {
         require(
             epochNumbers.length == epochHashes.length && epochHashes.length == batches.length,

@@ -1,39 +1,38 @@
-[workspace]
-resolver = "2"
-members = [
-    "interceptor",
-    "proxy",
-]
+[package]
+edition.workspace = true
+name              = "metabased-sequencer"
+version.workspace = true
 
-[workspace.package]
-version = "0.1.0"
-edition = "2021"
-rust-version = "1.81"
+[dependencies]
+alloy = { workspace = true, features = [
+  "contract",
+  "k256",
+  "node-bindings",
+  "provider-engine-api",
+  "providers",
+  "rlp",
+  "rpc-types",
+  "signer-local",
+  "signers",
+] }
 
-[workspace.dependencies]
-alloy = { version = "0.7.3", features = ["full"] }
-# TODO: Opt into specific features
-jsonrpsee = { version = "0.24.3", features = ["full"] }
-tokio = { version = "1.0", features = ["full"] }
-anyhow = "1.0"
-serde_json = "1.0.128"
-tracing-subscriber = { version = "0.3.18", features = ["env-filter", "json"] }
-tracing = "0.1.40"
-clap = { version = "4.5.17", features = ["derive"] }
-hyper = { version = "1.4.1", features = ["full"] }
-bytes = "1.7.1"
-http-body = "1.0.1"
-http-body-util = "0.1"
-pin-project-lite = "0.2.14"
-http = "1.1.0"
-want = { version = "0.3" }
-smallvec = { version = "1.12", features = ["const_generics", "const_new"] }
-futures-util = { version = "0.3", default-features = false }
-futures-channel = { version = "0.3" }
-httparse = { version = "1.8" }
-itoa = { version = "1" }
-h2 = { version = "0.4.2" }
-httpdate = { version = "1.0" }
-reqwest = "0.12.7"
-serde = "1.0.210"
-hyper-util = "0.1.8"
+axum              = { workspace = true }
+bytes             = { workspace = true }
+clap              = { workspace = true, features = ["derive", "env"] }
+eyre              = { workspace = true }
+flate2            = { workspace = true }
+hex               = { workspace = true }
+humantime         = { workspace = true }
+jsonrpsee         = { workspace = true, features = ["http-client", "server"] }
+prometheus-client = { workspace = true }
+reqwest           = { workspace = true }
+serde_json        = { workspace = true }
+shared            = { workspace = true }
+thiserror         = { workspace = true }
+tokio             = { workspace = true, features = ["full"] }
+tower             = { workspace = true }
+tracing           = { workspace = true }
+url               = { workspace = true }
+
+[lints]
+workspace = true

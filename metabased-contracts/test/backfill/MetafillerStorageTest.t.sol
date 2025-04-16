@@ -36,25 +36,11 @@ contract MetafillerStorageTest is Test {
         assertEq(l3Storage.indexFromBlock(), 1);
     }
 
+    // [Olympix Warning: tx.origin usage] Test removed as tx.origin check was removed for security
+    // The MANAGER_ROLE provides sufficient authorization control
     function testOnlyOriginatorCanSave() public {
-        vm.expectRevert();
-        vm.prank(manager, notManager);
+        vm.prank(manager);
         l3Storage.save(1, 0x505f3a50f83559ab090dbd840556254a7248404f2dedb53b4f12b26748a8ec08, "0x");
-    }
-
-    function testOnlyOriginatorCanSaveForMany() public {
-        vm.expectRevert();
-        uint256[] memory epochNumbers = new uint256[](1);
-        epochNumbers[0] = 1;
-
-        bytes32[] memory epochHashes = new bytes32[](1);
-        epochHashes[0] = 0x505f3a50f83559ab090dbd840556254a7248404f2dedb53b4f12b26748a8ec08;
-
-        bytes[] memory batches = new bytes[](1);
-        batches[0] = "0x";
-        vm.expectRevert();
-        vm.prank(manager, notManager);
-        l3Storage.saveForMany(epochNumbers, epochHashes, batches);
     }
 
     function testOnlyManagerCanSaveForMany() public {
@@ -135,6 +121,27 @@ contract MetafillerStorageTest is Test {
         l3Storage.save(1, 0x351e92084d6040b02259b6f0aa89141a23f7c796909f7d81731e228a84529f92, "");
         uint256 gasUsed = gasStart - gasleft();
         console.log("Gas used for empty emit:", gasUsed);
+    }
+
+    function testRevertsOnZeroAdmin() public {
+        vm.expectRevert("Admin address cannot be 0");
+        new MetafillerStorage(address(0), manager, 10042001);
+    }
+
+    function testRevertsOnZeroManager() public {
+        vm.expectRevert("Manager address cannot be 0");
+        new MetafillerStorage(admin, address(0), 10042001);
+    }
+
+    function testRevertsOnZeroChainId() public {
+        vm.expectRevert("L3 chain ID cannot be 0");
+        new MetafillerStorage(admin, manager, 0);
+    }
+
+    function testConstructorSetsCorrectValues() public view {
+        assertTrue(l3Storage.hasRole(l3Storage.DEFAULT_ADMIN_ROLE(), admin), "Admin role not set correctly");
+        assertTrue(l3Storage.hasRole(l3Storage.MANAGER_ROLE(), manager), "Manager role not set correctly");
+        assertEq(l3Storage.l3ChainId(), 10042001, "Chain ID not set correctly");
     }
 
     function testGasForIncreasingBatchSizes() public {

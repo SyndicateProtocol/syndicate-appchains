@@ -18,9 +18,20 @@ add-batch-transactions-to-metabased-sequencerchain :; forge script script/AddBat
 deploy-metafiller-storage :; forge create --rpc-url metabased_stratos --private-key ${ETH_PRIVATE_KEY} src/backfill/MetafillerStorage.sol:MetafillerStorage --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR} ${L3_CHAIN_ID} --legacy
 allowlist-metafiller-storage-addresses :; forge script script/AllowlistMetafillerStorageAddresses.s.sol:AllowlistMetafillerStorageAddresses --rpc-url metabased_stratos --private-key ${ETH_PRIVATE_KEY} --legacy --skip-simulation --broadcast -vvv
 
-## deploy SynGasToken to Sepolia
-deploy-syn-gas-token :; forge create --rpc-url ${ETH_SEPOLIA_RPC_URL} --private-key ${ETH_PRIVATE_KEY} src/token/SynGasToken.sol:SynGasToken --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
+# deploy SyndicateToken to Holesky
+deploy-syndicate-token :; forge create --rpc-url ${ETH_HOLESKY_RPC_URL} --private-key ${ETH_PRIVATE_KEY} src/token/SyndicateToken.sol:SyndicateToken --broadcast --etherscan-api-key ${ETHERSCAN_API_KEY} --verify -vv --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
 
+## grant Minter Role
+grant-minter-role :; forge script script/SYNDScript.s.sol:GrantMinterRole --rpc-url holesky --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+
+# mint SYND to addresses
+mint-synd-to-addresses :; forge script script/SYNDScript.s.sol:MintSYNDToAddresses --rpc-url holesky --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
+
+# deploy AgentApplication to Syndicate Exo
+deploy-agent-application :; forge create --rpc-url exo --private-key ${ETH_PRIVATE_KEY} src/use-cases/dream/AgentApplication.sol:AgentApplication --legacy --broadcast --verify --verifier blockscout --verifier-url 'https://syndicate-exo.explorer.alchemy.com/api/' -vvv --constructor-args ${ADMIN_ADDR}
+
+# verify AgentApplication contract
+verify-agent-application :; forge verify-contract --rpc-url exo --verifier blockscout --verifier-url 'https://syndicate-exo.explorer.alchemy.com/api/' ${CONTRACT_ADDRESS} src/use-cases/dream/AgentApplication.sol:AgentApplication
 
 ## Tx Limit Test
 # run tx limit test against OP Mainnet or Base Sepolia
