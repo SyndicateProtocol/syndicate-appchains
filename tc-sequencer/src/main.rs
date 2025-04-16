@@ -28,7 +28,8 @@ async fn main() -> Result<()> {
     run_batcher(&config.batcher, tc_client.clone()).await?;
 
     // Start server
-    run_server(&config, tc_client).await?;
+    let (addr, handle) = run_server(&config, tc_client).await?;
+    info!("Server started at {}", addr);
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
@@ -41,6 +42,9 @@ async fn main() -> Result<()> {
         }
         _ = sigterm.recv() => {
             println!("Received SIGTERM, initiating shutdown...");
+        }
+        _ = handle.stopped() => {
+            println!("Server stopped, initiating shutdown...");
         }
     };
 
