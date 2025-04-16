@@ -6,3 +6,4 @@ pub mod logger;
 pub mod metrics;
 pub mod parse;
 pub mod tx_validation;
+pub mod zlib_compression;

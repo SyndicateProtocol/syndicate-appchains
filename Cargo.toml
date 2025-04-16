@@ -1,7 +1,6 @@
 [workspace]
 members = [
   "maestro",
-  "maestro/crates/batcher",
   "mchain",
   "metabased-poster",
   "metabased-sequencer",
@@ -16,6 +15,7 @@ members = [
   "shared/contract-bindings",
   "shared/test-utils",
   "tc-sequencer",
+  "tc-sequencer/crates/batcher",
   "test-framework",
   "verifier",
 ]
@@ -41,7 +41,7 @@ async-trait          = { version = "0.1" }
 axum                 = "0.8.1"
 axum-server          = "0.7.2"
 base64               = "0.22.1"
-batcher              = { path = "maestro/crates/batcher" }
+batcher              = { path = "tc-sequencer/crates/batcher" }
 bincode              = "1.3"
 block-builder        = { path = "metabased-translator/crates/block-builder" }
 brotli               = "7.0.0"
