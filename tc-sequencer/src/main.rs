@@ -7,7 +7,7 @@ use batcher::batcher::run_batcher;
 use eyre::Result;
 use shared::logger::set_global_default_subscriber;
 use tc_client::tc_client::TCClient;
-use tc_sequencer::config::TCSequencerConfig;
+use tc_sequencer::{config::TCSequencerConfig, server::run_server};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 
@@ -25,7 +25,10 @@ async fn main() -> Result<()> {
     let tc_client = TCClient::new(&config.tc)?;
 
     // Start batcher
-    run_batcher(&config.batcher, tc_client).await?;
+    run_batcher(&config.batcher, tc_client.clone()).await?;
+
+    // Start server
+    run_server(&config, tc_client).await?;
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");

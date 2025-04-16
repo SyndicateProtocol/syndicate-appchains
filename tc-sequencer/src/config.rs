@@ -15,6 +15,9 @@ pub struct TCSequencerConfig {
     #[command(flatten)]
     /// The tc client config
     pub tc: TCConfig,
+    /// The server config
+    #[arg(short = 'p', long, env = "PORT", default_value_t = 8456)]
+    pub port: u16,
 }
 
 impl TCSequencerConfig {

@@ -4,17 +4,22 @@ name              = "tc-sequencer"
 version.workspace = true
 
 [dependencies]
-batcher   = { workspace = true }
-clap      = { workspace = true }
-eyre      = { workspace = true }
-shared    = { workspace = true }
-tc-client = { workspace = true }
-tokio     = { workspace = true, features = ["signal"] }
-tracing   = { workspace = true }
-
+batcher    = { workspace = true }
+clap       = { workspace = true, features = ["derive", "env"] }
+eyre       = { workspace = true }
+jsonrpsee  = { workspace = true, features = ["http-client", "server"] }
+reqwest    = { workspace = true }
+serde_json = { workspace = true }
+shared     = { workspace = true }
+tc-client  = { workspace = true }
+tokio      = { workspace = true, features = ["signal"] }
+tower      = { workspace = true }
+tracing    = { workspace = true }
 
 [lints]
 workspace = true
 
 [dev-dependencies]
+alloy   = { workspace = true }
 mockito = { workspace = true }
+url     = { workspace = true }
