@@ -2,8 +2,8 @@
 
 use alloy::primitives::Address;
 use clap::Parser;
-use shared::parse::{parse_address, parse_map};
-use std::{collections::HashMap, fmt::Debug};
+use shared::parse::parse_address;
+use std::fmt::Debug;
 use thiserror::Error;
 use url::Url;
 
@@ -83,8 +83,8 @@ pub struct TCConfig {
     pub port: u16,
 
     /// Mapping of chain IDs to their corresponding sequencing addresses
-    #[arg(short = 'a', long, env = "SEQUENCING_ADDRESSES", value_parser = parse_map::<u64, Address>)]
-    pub sequencing_addresses: HashMap<u64, Address>,
+    #[arg(short = 'a', long, env = "SEQUENCING_ADDRESS", value_parser = parse_address)]
+    pub sequencing_address: Address,
 
     /// Address of the wallet pool contract
     #[arg(short = 'p', long, env = "WALLET_POOL_ADDRESS", value_parser = parse_address, default_value = "0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8")]
@@ -118,7 +118,7 @@ impl Default for TCConfig {
             tc_api_key: String::new(),
             port: 8456,
             wallet_pool_address: Address::ZERO,
-            sequencing_addresses: HashMap::new(),
+            sequencing_address: Address::ZERO,
         }
     }
 }

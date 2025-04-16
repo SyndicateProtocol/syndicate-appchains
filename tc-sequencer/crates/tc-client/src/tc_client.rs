@@ -2,9 +2,8 @@
 
 use crate::config::TCConfig;
 use alloy::{
-    consensus::Transaction,
     hex::{self},
-    primitives::{Address, Bytes, ChainId, TxHash},
+    primitives::{Address, Bytes, TxHash},
 };
 use eyre::Result;
 use jsonrpsee::{
@@ -15,7 +14,7 @@ use jsonrpsee::{
 use reqwest::Client;
 use serde as _;
 use shared::{
-    json_rpc::{parse_send_raw_transaction_params, Error, InvalidInputError::UnsupportedChainId},
+    json_rpc::{parse_send_raw_transaction_params, Error},
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, sync::Arc};
@@ -23,7 +22,10 @@ use tracing::{debug, error, info};
 use url::Url;
 
 const DEFAULT_SEQUENCING_CHAIN_ID: u64 = 5113;
+/// The function signature for the transaction function
 const DEFAULT_FUNCTION_SIGNATURE: &str = "processTransaction(address chainAddress, bytes data)";
+/// The function signature for the batch function
+pub const BATCH_FUNCTION_SIGNATURE: &str = "processBatch(address chainAddress, bytes[] data)";
 const TC_CHAIN_ADDRESS_KEY: &str = "chainAddress";
 const TC_DATA_KEY: &str = "data";
 
@@ -43,12 +45,13 @@ impl SendTransactionRequest {
         contract_address: Address,
         chain_address: Address,
         data: Bytes,
+        function_signature: String,
     ) -> Self {
         Self {
             project_id,
             contract_address: contract_address.to_string(),
             chain_id: DEFAULT_SEQUENCING_CHAIN_ID,
-            function_signature: DEFAULT_FUNCTION_SIGNATURE.to_string(),
+            function_signature,
             args: HashMap::from([
                 (TC_CHAIN_ADDRESS_KEY.to_string(), chain_address.to_string()),
                 (TC_DATA_KEY.to_string(), format!("0x{}", hex::encode(data))),
@@ -65,7 +68,7 @@ pub struct TCClient {
     tc_api_key: String,
 
     wallet_pool_address: Address,
-    sequencing_addresses: HashMap<u64, Address>,
+    sequencing_address: Address,
     client: Client,
 }
 
@@ -78,28 +81,22 @@ impl TCClient {
             tc_project_id: config.tc_project_id.clone(),
             tc_api_key: config.tc_api_key.clone(),
             wallet_pool_address: config.wallet_pool_address,
-            sequencing_addresses: config.sequencing_addresses.clone(),
+            sequencing_address: config.sequencing_address,
             client,
         })
     }
 
-    fn get_contract_address(&self, chain_id: ChainId) -> Result<Address, Error> {
-        self.sequencing_addresses
-            .get(&chain_id)
-            .copied()
-            .ok_or_else(|| Error::InvalidInput(UnsupportedChainId(chain_id)))
-    }
-
     async fn send_transaction(
         &self,
-        contract_address: Address,
         raw_tx: Bytes,
+        function_signature: String,
     ) -> Result<(), Error> {
         let request = SendTransactionRequest::new(
             self.tc_project_id.clone(),
             self.wallet_pool_address,
-            contract_address,
+            self.sequencing_address,
             raw_tx,
+            function_signature,
         );
 
         let response = self
@@ -124,16 +121,19 @@ impl TCClient {
     }
 
     /// Process a transaction by submitting it to the TC
-    pub async fn process_transaction(&self, raw_tx: Bytes) -> Result<TxHash, Error> {
+    pub async fn process_transaction(
+        &self,
+        raw_tx: Bytes,
+        function_signature: Option<String>,
+    ) -> Result<TxHash, Error> {
         info!("Processing transaction: {}", hex::encode(&raw_tx));
         let original_tx = validate_transaction(&raw_tx)?;
 
-        // Determine the contract address
-        let contract_address =
-            self.get_contract_address(original_tx.chain_id().unwrap_or_default())?;
+        let function_signature =
+            function_signature.unwrap_or_else(|| DEFAULT_FUNCTION_SIGNATURE.to_string());
 
         debug!("Submitting validated transaction to TC");
-        self.send_transaction(contract_address, raw_tx).await?;
+        self.send_transaction(raw_tx, function_signature).await?;
 
         Ok(*original_tx.tx_hash())
     }
@@ -146,7 +146,8 @@ pub async fn send_raw_transaction_handler(
     _: Extensions,
 ) -> RpcResult<String> {
     let tx_data = parse_send_raw_transaction_params(params)?;
-    let tx_hash = service.process_transaction(tx_data).await?;
+    let tx_hash =
+        service.process_transaction(tx_data, Some(DEFAULT_FUNCTION_SIGNATURE.to_string())).await?;
 
     Ok(format!("0x{}", hex::encode(tx_hash)))
 }
@@ -171,40 +172,14 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    #[test]
-    fn test_get_contract_address() {
-        let config = TCConfig {
-            sequencing_addresses: HashMap::from([(
-                510001,
-                Address::from_str("0x0000000000000000000000000000000000000001").unwrap(),
-            )]),
-            ..Default::default()
-        };
-        let service = TCClient::new(&config).unwrap();
-
-        let contract_address = service.get_contract_address(510001).unwrap();
-        assert_eq!(
-            contract_address,
-            Address::from_str("0x0000000000000000000000000000000000000001").unwrap()
-        );
-    }
-
-    #[test]
-    fn test_get_contract_address_not_supported() {
-        let service = setup_test_service();
-
-        let contract_address = service.get_contract_address(1);
-        assert!(contract_address.is_err());
-        let error = contract_address.unwrap_err().to_json_rpc_error();
-        assert_eq!(error.message(), "invalid input: unsupported chain ID: 1");
-    }
-
     #[tokio::test]
     async fn test_process_transaction() {
         let service = setup_test_service();
         let test_tx = Bytes::from_str("0xf86d8202b28477359400825208944592d8f8d7b001e72cb26a73e4fa1806a51ac79d880de0b6b3a7640000802ca05924bde7ef10aa88db9c66dd4f5fb16b46dff2319b9968be983118b57bb50562a001b24b31010004f13d9a26b320845257a6cfc2bf819a3d55e3fc86263c5f0772").unwrap();
 
-        let result = service.process_transaction(test_tx).await;
+        let result = service
+            .process_transaction(test_tx, Some(DEFAULT_FUNCTION_SIGNATURE.to_string()))
+            .await;
         // This will fail since we're not connected to a real node
         assert!(result.is_err());
     }

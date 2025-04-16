@@ -5,9 +5,9 @@ use alloy::primitives::Bytes;
 use eyre::{eyre, Error, Result};
 use shared::zlib_compression::compress_transactions;
 use std::{sync::Arc, time::Duration};
-use tc_client::tc_client::TCClient;
+use tc_client::tc_client::{TCClient, BATCH_FUNCTION_SIGNATURE};
 use tracing::{error, info};
-// Implemented in Daniils PR
+// TODO (SEQ-772): Redis interface
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
 
@@ -113,6 +113,7 @@ impl Batcher {
                 self.max_batch_size
             );
             return Err(eyre!("batch is too large"));
+            // TODO: Question? What should we do if the batch is too large?
         }
 
         // Send the batch to the sequencer
@@ -123,6 +124,8 @@ impl Batcher {
                     batch.len(),
                     compressed_batch.len()
                 );
+                // TODO: Question? Do we need to ack the batch?
+
                 Ok(())
             }
             Err(e) => {
@@ -133,7 +136,9 @@ impl Batcher {
     }
 
     async fn send_batch_to_sequencer(&self, data: Bytes) -> Result<()> {
-        self.tc_client.process_transaction(data).await?;
+        self.tc_client
+            .process_transaction(data, Some(BATCH_FUNCTION_SIGNATURE.to_string()))
+            .await?;
         Ok(())
     }
 }

@@ -52,7 +52,7 @@ mod tests {
     use mockito::{self, Matcher};
     use reqwest::{Client, StatusCode};
     use serde_json::Value as JsonValue;
-    use std::{collections::HashMap, str::FromStr};
+    use std::str::FromStr;
     use tc_client::config::{TCConfig, TCEndpoint};
     use url::Url;
 
@@ -64,15 +64,12 @@ mod tests {
             server.mock("POST", Matcher::Any).with_status(200).create_async().await;
 
         let url = Url::from_str(server.url().as_str()).unwrap();
-        let sequencing_addresses = HashMap::from([(
-            4,
-            Address::from_str("0x0000000000000000000000000000000000000001").unwrap(),
-        )]);
+
         let config = TCSequencerConfig {
             batcher: Default::default(),
             tc: TCConfig {
                 tc_endpoint: TCEndpoint::Raw(url),
-                sequencing_addresses,
+                sequencing_address: Address::ZERO,
                 ..Default::default()
             },
             port: 8080,
