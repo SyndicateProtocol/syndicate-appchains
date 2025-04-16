@@ -81,6 +81,10 @@ impl Batcher {
             Ok(Some(transactions)) => {
                 info!("Batch read successfully");
                 let batch = self.batch_transactions(transactions);
+                if batch.is_empty() {
+                    info!("No transactions to send");
+                    return Ok(());
+                }
                 if let Err(e) = self.compress_and_send_batch(batch.clone()).await {
                     error!("Error sending batch: {}", e);
                     return Err(e);

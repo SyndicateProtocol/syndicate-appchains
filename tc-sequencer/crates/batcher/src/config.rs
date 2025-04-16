@@ -41,7 +41,7 @@ pub struct BatcherConfig {
     pub redis_address: String,
 
     /// Chain ID
-    #[arg(short = 'i', long, env = "CHAIN_ID")]
+    #[arg(short = 'c', long, env = "CHAIN_ID")]
     pub chain_id: u64,
 
     /// Batch size

@@ -78,16 +78,12 @@ pub struct TCConfig {
     #[arg(short = 'k', long, env = "TC_API_KEY")]
     pub tc_api_key: String,
 
-    /// Port to listen on
-    #[arg(short = 'p', long, env = "PORT", default_value_t = 8456)]
-    pub port: u16,
-
     /// Mapping of chain IDs to their corresponding sequencing addresses
     #[arg(short = 'a', long, env = "SEQUENCING_ADDRESS", value_parser = parse_address)]
     pub sequencing_address: Address,
 
     /// Address of the wallet pool contract
-    #[arg(short = 'p', long, env = "WALLET_POOL_ADDRESS", value_parser = parse_address, default_value = "0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8")]
+    #[arg(short = 'w', long, env = "WALLET_POOL_ADDRESS", value_parser = parse_address, default_value = "0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8")]
     pub wallet_pool_address: Address,
 }
 
@@ -116,7 +112,6 @@ impl Default for TCConfig {
             tc_endpoint: TCEndpoint::Staging,
             tc_project_id: String::new(),
             tc_api_key: String::new(),
-            port: 8456,
             wallet_pool_address: Address::ZERO,
             sequencing_address: Address::ZERO,
         }
