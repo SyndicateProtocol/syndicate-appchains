@@ -15,7 +15,7 @@ pub struct BlockBuilderConfig {
     /// Sequencing contract address on the sequencing chain
     #[arg(short = 's', long, env = "SEQUENCING_CONTRACT_ADDRESS",
         value_parser = parse_address)]
-    pub sequencing_contract_address: Address,
+    pub sequencing_contract_address: Option<Address>,
 
     /// Target rollup type for the [`block-builder`]
     #[arg(long, env = "TARGET_ROLLUP_TYPE", default_value = "arbitrum")]
@@ -25,18 +25,17 @@ pub struct BlockBuilderConfig {
     /// Bridge address on the settlement chain
     #[arg(short = 'b', long, env = "ARBITRUM_BRIDGE_ADDRESS",
         value_parser = parse_address)]
-    pub arbitrum_bridge_address: Address,
+    pub arbitrum_bridge_address: Option<Address>,
 
     /// Inbox address on the settlement chain
     #[arg(short = 'i', long, env = "ARBITRUM_INBOX_ADDRESS",
         value_parser = parse_address)]
-    pub arbitrum_inbox_address: Address,
+    pub arbitrum_inbox_address: Option<Address>,
 
-    // TODO (SEQ-567): Move ignore_delayed_messages config value on-chain
     /// Flag used to ignore delayed messages besides deposits
     /// Default is false
-    #[arg(long, env = "ARBITRUM_IGNORE_DELAYED_MESSAGES", default_value = "false")]
-    pub arbitrum_ignore_delayed_messages: bool,
+    #[arg(long, env = "ARBITRUM_IGNORE_DELAYED_MESSAGES")]
+    pub arbitrum_ignore_delayed_messages: Option<bool>,
 }
 
 /// Possible target rollup types for the [`block-builder`]
@@ -71,26 +70,9 @@ impl Default for BlockBuilderConfig {
 impl BlockBuilderConfig {
     /// Validates the config values and complains about impossible ones
     pub fn validate(&self) -> Result<(), ConfigError> {
-        if self.sequencing_contract_address == Address::ZERO {
-            return Err(ConfigError::InvalidAddress(
-                "Sequencing contract address cannot be 0".to_string(),
-            ));
-        }
-
         match self.target_rollup_type {
             // Validate Arbitrum specific configuration
-            TargetRollupType::ARBITRUM => {
-                if self.arbitrum_bridge_address == Address::ZERO {
-                    return Err(ConfigError::InvalidAddress(
-                        "Bridge address cannot be 0".to_string(),
-                    ));
-                }
-                if self.arbitrum_inbox_address == Address::ZERO {
-                    return Err(ConfigError::InvalidAddress(
-                        "Inbox address cannot be 0".to_string(),
-                    ));
-                }
-            }
+            TargetRollupType::ARBITRUM => {}
             // Validate Optimism specific configuration
             TargetRollupType::OPTIMISM => {
                 return Err(ConfigError::UnsupportedRollupType(
@@ -101,62 +83,43 @@ impl BlockBuilderConfig {
 
         Ok(())
     }
+
+    /// Validates the config and ensures all mandatory fields have values (including optional fields
+    /// that might have been defined by the `ConfigManager` contract)
+    pub fn validate_strict(&self) -> Result<(), ConfigError> {
+        self.validate()?;
+        if self.sequencing_contract_address.is_none() {
+            return Err(ConfigError::SequencingContractAddressMissing);
+        }
+        if self.arbitrum_bridge_address.is_none() {
+            return Err(ConfigError::ArbitrumBridgeAddressMissing);
+        }
+        if self.arbitrum_inbox_address.is_none() {
+            return Err(ConfigError::ArbitrumInboxAddressMissing);
+        }
+        if self.arbitrum_ignore_delayed_messages.is_none() {
+            return Err(ConfigError::ArbitrumIgnoreDelayedMessagesMissing);
+        }
+        Ok(())
+    }
 }
 
 #[allow(missing_docs)]
 /// Possible errors that can occur when initializing the block builder configuration
 #[derive(Debug, Error)]
 pub enum ConfigError {
-    #[error("Invalid URL: {0}")]
-    InvalidURL(String),
-    #[error("Invalid URL: no host")]
-    InvalidURLHost,
-    #[error("Invalid URL scheme: {0}. Only http and https are supported")]
-    InvalidURLScheme(String),
-    #[error("Invalid chain ID: {0}")]
-    InvalidChainId(String),
     #[error("Unsupported rollup type: {0}")]
     UnsupportedRollupType(String),
-    #[error("Invalid configuration address: {0}")]
-    InvalidAddress(String),
-    #[error("Invalid anvil state path: {0}")]
-    InvalidAnvilStatePath(String),
-}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use alloy::primitives::address;
-    use assert_matches::assert_matches;
+    #[error("Sequencing contract address is missing")]
+    SequencingContractAddressMissing,
 
-    #[test]
-    fn test_validate_rollup_type() {
-        let config = BlockBuilderConfig {
-            target_rollup_type: TargetRollupType::OPTIMISM,
-            sequencing_contract_address: address!("0x0000000000000000000000000000000000000001"),
-            ..Default::default()
-        };
-        assert_matches!(config.validate(), Err(ConfigError::UnsupportedRollupType(_)));
-    }
+    #[error("Arbitrum inbox address is missing")]
+    ArbitrumInboxAddressMissing,
 
-    #[test]
-    fn test_validate_bridge_address() {
-        let config =
-            BlockBuilderConfig { arbitrum_bridge_address: Address::ZERO, ..Default::default() };
-        assert_matches!(config.validate(), Err(ConfigError::InvalidAddress(_)));
-    }
+    #[error("Arbitrum bridge address is missing")]
+    ArbitrumBridgeAddressMissing,
 
-    #[test]
-    fn test_validate_inbox_address() {
-        let config =
-            BlockBuilderConfig { arbitrum_inbox_address: Address::ZERO, ..Default::default() };
-        assert_matches!(config.validate(), Err(ConfigError::InvalidAddress(_)));
-    }
-
-    #[test]
-    fn test_validate_sequencing_contract_address() {
-        let config =
-            BlockBuilderConfig { sequencing_contract_address: Address::ZERO, ..Default::default() };
-        assert_matches!(config.validate(), Err(ConfigError::InvalidAddress(_)));
-    }
+    #[error("Arbitrum ignore delayed messages is missing")]
+    ArbitrumIgnoreDelayedMessagesMissing,
 }

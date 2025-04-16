@@ -25,6 +25,7 @@ pub async fn run(
     rollup_adapter: impl RollupAdapter,
 ) -> Result<(), RuntimeError> {
     info!("Initializing Metabased Translator components");
+
     let (sequencing_client, settlement_client) = clients(config).await?;
 
     let metrics = init_metrics(config).await;
@@ -35,6 +36,10 @@ pub async fn run(
         rollup_adapter,
     )
     .await?;
+    mchain
+        .assert_rollup_owner(config.rollup_owner)
+        .await
+        .map_err(|e| RuntimeError::Initialization(e.to_string()))?;
 
     loop {
         let safe_state = mchain
@@ -161,7 +166,7 @@ impl ComponentHandles {
         let settlement_delay = config.settlement_delay;
         let slotter = tokio::spawn(async move {
             slotter::slotter::run(
-                settlement_delay,
+                settlement_delay.unwrap(),
                 known_state,
                 sequencing_rx,
                 settlement_rx,
@@ -215,7 +220,7 @@ pub async fn clients(
 ) -> Result<(Arc<dyn RPCClient>, Arc<dyn RPCClient>), RuntimeError> {
     let sequencing_client: Arc<dyn RPCClient> = Arc::new(
         EthClient::new(
-            &config.sequencing.sequencing_rpc_url,
+            config.sequencing.sequencing_rpc_url.as_ref().unwrap(),
             config.sequencing.sequencing_rpc_timeout,
         )
         .await

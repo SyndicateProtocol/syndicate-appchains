@@ -2,21 +2,10 @@
 //! pipeline
 
 use clap::Parser;
+use common::types::Chain;
 use std::time::Duration;
 use thiserror::Error;
 use tracing::debug;
-
-/// Configuration for the ingestion pipeline of the Metabased Translator. This includes the
-/// configuration for ingesting the sequencer and settlement chains
-#[derive(Parser, Debug, Clone)]
-pub struct IngestionPipelineConfig {
-    /// Configuration for the sequencer chain
-    #[command(flatten)]
-    pub sequencing: SequencingChainConfig,
-    /// Configuration for the settlement chain
-    #[command(flatten)]
-    pub settlement: SettlementChainConfig,
-}
 
 /// Configuration for a generic chain ingestor
 #[allow(missing_docs)]
@@ -54,7 +43,7 @@ pub struct SequencingChainConfig {
 
     /// The RPC URL of the sequencing chain
     #[arg(long = "sequencing-rpc-url", env = "SEQUENCING_RPC_URL")]
-    pub sequencing_rpc_url: String,
+    pub sequencing_rpc_url: Option<String>,
 
     /// The timeout duration for RPC requests to the sequencing chain
     #[arg(
@@ -67,7 +56,7 @@ pub struct SequencingChainConfig {
 
     /// The block number to start polling from on the sequencing chain
     #[arg(long = "sequencing-start-block", env = "SEQUENCING_START_BLOCK")]
-    pub sequencing_start_block: u64,
+    pub sequencing_start_block: Option<u64>,
 
     /// The number of parallel requests used for syncing the m-chain
     #[arg(
@@ -135,7 +124,7 @@ pub struct SettlementChainConfig {
 
     /// The block number to start polling from on the settlement chain
     #[arg(long = "settlement-start-block", env = "SETTLEMENT_START_BLOCK")]
-    pub settlement_start_block: u64,
+    pub settlement_start_block: Option<u64>,
 
     /// The number of parallel requests used for syncing the m-chain
     #[arg(
@@ -172,50 +161,18 @@ pub struct SettlementChainConfig {
     pub settlement_max_backoff: Duration,
 }
 
-impl From<ChainIngestorConfig> for SequencingChainConfig {
-    fn from(config: ChainIngestorConfig) -> Self {
-        Self {
-            sequencing_buffer_size: config.buffer_size,
-            sequencing_polling_interval: config.polling_interval,
-            sequencing_rpc_url: config.rpc_url,
-            sequencing_rpc_timeout: config.rpc_timeout,
-            sequencing_start_block: config.start_block,
-            sequencing_syncing_batch_size: config.syncing_batch_size,
-            sequencing_backoff_initial_interval: config.backoff_initial_interval,
-            sequencing_backoff_scaling_factor: config.backoff_scaling_factor,
-            sequencing_max_backoff: config.max_backoff,
-        }
-    }
-}
-
 impl From<SequencingChainConfig> for ChainIngestorConfig {
     fn from(config: SequencingChainConfig) -> Self {
         Self {
             buffer_size: config.sequencing_buffer_size,
             polling_interval: config.sequencing_polling_interval,
-            rpc_url: config.sequencing_rpc_url,
+            rpc_url: config.sequencing_rpc_url.unwrap_or_default(), // TODO come back to this
             rpc_timeout: config.sequencing_rpc_timeout,
-            start_block: config.sequencing_start_block,
+            start_block: config.sequencing_start_block.unwrap_or(0), // TODO come back to this
             syncing_batch_size: config.sequencing_syncing_batch_size,
             backoff_initial_interval: config.sequencing_backoff_initial_interval,
             backoff_scaling_factor: config.sequencing_backoff_scaling_factor,
             max_backoff: config.sequencing_max_backoff,
-        }
-    }
-}
-
-impl From<ChainIngestorConfig> for SettlementChainConfig {
-    fn from(config: ChainIngestorConfig) -> Self {
-        Self {
-            settlement_buffer_size: config.buffer_size,
-            settlement_polling_interval: config.polling_interval,
-            settlement_rpc_url: config.rpc_url,
-            settlement_rpc_timeout: config.rpc_timeout,
-            settlement_start_block: config.start_block,
-            settlement_syncing_batch_size: config.syncing_batch_size,
-            settlement_backoff_initial_interval: config.backoff_initial_interval,
-            settlement_backoff_scaling_factor: config.backoff_scaling_factor,
-            settlement_max_backoff: config.max_backoff,
         }
     }
 }
@@ -227,39 +184,7 @@ impl From<SettlementChainConfig> for ChainIngestorConfig {
             polling_interval: config.settlement_polling_interval,
             rpc_url: config.settlement_rpc_url,
             rpc_timeout: config.settlement_rpc_timeout,
-            start_block: config.settlement_start_block,
-            syncing_batch_size: config.settlement_syncing_batch_size,
-            backoff_initial_interval: config.settlement_backoff_initial_interval,
-            backoff_scaling_factor: config.settlement_backoff_scaling_factor,
-            max_backoff: config.settlement_max_backoff,
-        }
-    }
-}
-
-impl From<&SequencingChainConfig> for ChainIngestorConfig {
-    fn from(config: &SequencingChainConfig) -> Self {
-        Self {
-            buffer_size: config.sequencing_buffer_size,
-            polling_interval: config.sequencing_polling_interval,
-            rpc_url: config.sequencing_rpc_url.clone(),
-            rpc_timeout: config.sequencing_rpc_timeout,
-            start_block: config.sequencing_start_block,
-            syncing_batch_size: config.sequencing_syncing_batch_size,
-            backoff_initial_interval: config.sequencing_backoff_initial_interval,
-            backoff_scaling_factor: config.sequencing_backoff_scaling_factor,
-            max_backoff: config.sequencing_max_backoff,
-        }
-    }
-}
-
-impl From<&SettlementChainConfig> for ChainIngestorConfig {
-    fn from(config: &SettlementChainConfig) -> Self {
-        Self {
-            buffer_size: config.settlement_buffer_size,
-            polling_interval: config.settlement_polling_interval,
-            rpc_url: config.settlement_rpc_url.clone(),
-            rpc_timeout: config.settlement_rpc_timeout,
-            start_block: config.settlement_start_block,
+            start_block: config.settlement_start_block.unwrap_or(0), // TODO come back to this
             syncing_batch_size: config.settlement_syncing_batch_size,
             backoff_initial_interval: config.settlement_backoff_initial_interval,
             backoff_scaling_factor: config.settlement_backoff_scaling_factor,
@@ -272,7 +197,14 @@ impl SequencingChainConfig {
     #[allow(missing_docs)]
     pub fn validate(&self) -> Result<(), ConfigError> {
         let generic_config: ChainIngestorConfig = self.clone().into();
-        generic_config.validate()
+        generic_config.validate(Chain::Sequencing)
+    }
+
+    /// Validates the config and ensures all mandatory fields have values (including optional fields
+    /// that might have been defined by the `ConfigManager` contract)
+    pub fn validate_strict(&self) -> Result<(), ConfigError> {
+        let generic_config: ChainIngestorConfig = self.clone().into();
+        generic_config.validate_strict()
     }
 }
 
@@ -280,7 +212,14 @@ impl SettlementChainConfig {
     #[allow(missing_docs)]
     pub fn validate(&self) -> Result<(), ConfigError> {
         let generic_config: ChainIngestorConfig = self.clone().into();
-        generic_config.validate()
+        generic_config.validate(Chain::Settlement)
+    }
+
+    /// Validates the config and ensures all mandatory fields have values (including optional fields
+    /// that might have been defined by the `ConfigManager` contract)
+    pub fn validate_strict(&self) -> Result<(), ConfigError> {
+        let generic_config: ChainIngestorConfig = self.clone().into();
+        generic_config.validate_strict()
     }
 }
 
@@ -303,44 +242,8 @@ pub enum ConfigError {
     InvalidBackoffScalingFactor(String),
     #[error("Invalid max backoff interval: {0}")]
     InvalidMaxBackoff(String),
-}
-
-// uses clap defaults
-impl Default for IngestionPipelineConfig {
-    fn default() -> Self {
-        Self::parse_from([
-            "",
-            "--sequencing-rpc-url",
-            "",
-            "--sequencing-start-block",
-            "1",
-            "--settlement-rpc-url",
-            "",
-            "--settlement-start-block",
-            "1",
-        ])
-    }
-}
-
-impl IngestionPipelineConfig {
-    /// Creates a new `IngestionPipelineConfig` instance given the configs the sequencer and
-    /// settlement chain
-    pub fn new(
-        sequencing: ChainIngestorConfig,
-        settlement: ChainIngestorConfig,
-    ) -> Result<Self, ConfigError> {
-        let config = Self { sequencing: sequencing.into(), settlement: settlement.into() };
-        debug!("Created ingestor config: {:?}", config);
-        config.validate()?;
-        Ok(config)
-    }
-
-    /// Validates the configuration
-    pub fn validate(&self) -> Result<(), ConfigError> {
-        self.sequencing.validate()?;
-        self.settlement.validate()?;
-        Ok(())
-    }
+    #[error("Invalid start block: {0}")]
+    InvalidStartBlock(String),
 }
 
 impl Default for ChainIngestorConfig {
@@ -385,12 +288,11 @@ impl ChainIngestorConfig {
             max_backoff,
         };
         debug!("Created chain ingestor config: {:?}", config);
-        config.validate()?;
         Ok(config)
     }
 
     /// Validates the configuration
-    pub fn validate(&self) -> Result<(), ConfigError> {
+    pub fn validate(&self, chain: Chain) -> Result<(), ConfigError> {
         if self.polling_interval.is_zero() {
             return Err(ConfigError::InvalidPollingInterval(
                 "Polling interval must be greater than 0".to_string(),
@@ -403,7 +305,8 @@ impl ChainIngestorConfig {
             ));
         }
 
-        if self.rpc_url.is_empty() {
+        if chain == Chain::Settlement && self.rpc_url.is_empty() {
+            // only the settlement rpc url is mandatory
             return Err(ConfigError::EmptyRpcUrl());
         }
 
@@ -436,6 +339,22 @@ impl ChainIngestorConfig {
         if self.max_backoff.is_zero() {
             return Err(ConfigError::InvalidMaxBackoff(
                 "Max backoff interval must be greater than 0".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Validates the config and ensures all mandatory fields have values (including optional fields
+    /// that might have been defined by the `ConfigManager` contract)
+    pub fn validate_strict(&self) -> Result<(), ConfigError> {
+        if self.rpc_url.is_empty() {
+            return Err(ConfigError::EmptyRpcUrl());
+        }
+
+        if self.start_block == 0 {
+            return Err(ConfigError::InvalidStartBlock(
+                "Start block must be greater than 0".to_string(),
             ));
         }
 
@@ -478,48 +397,30 @@ mod tests {
             Duration::from_secs(30),
         )
         .unwrap();
-        assert!(config.validate().is_ok());
+        assert!(config.validate(Chain::Settlement).is_ok());
 
         // Invalid polling interval
         let mut config = test_chain_ingestor_config();
         config.polling_interval = Duration::from_secs(0);
-        assert_matches!(config.validate(), Err(ConfigError::InvalidPollingInterval(_)));
+        assert_matches!(
+            config.validate(Chain::Settlement),
+            Err(ConfigError::InvalidPollingInterval(_))
+        );
 
         // Invalid buffer size
         let mut config = test_chain_ingestor_config();
         config.buffer_size = 0;
-        assert_matches!(config.validate(), Err(ConfigError::InvalidBufferSize(_)));
+        assert_matches!(config.validate(Chain::Settlement), Err(ConfigError::InvalidBufferSize(_)));
 
         // Invalid RPC timeout
         let mut config = test_chain_ingestor_config();
         config.rpc_timeout = Duration::from_secs(0);
-        assert_matches!(config.validate(), Err(ConfigError::InvalidRpcTimeout(_)));
+        assert_matches!(config.validate(Chain::Settlement), Err(ConfigError::InvalidRpcTimeout(_)));
 
         // Invalid batch size
         let mut config = test_chain_ingestor_config();
         config.syncing_batch_size = 1001;
-        assert_matches!(config.validate(), Err(ConfigError::InvalidBatchSize(_)));
-    }
-
-    #[test]
-    fn test_pipeline_validation() {
-        let valid_config = test_chain_ingestor_config();
-
-        let invalid_config = ChainIngestorConfig {
-            rpc_url: "http://test:8545".to_string(),
-            start_block: 100,
-            buffer_size: 0, // Invalid
-            polling_interval: Duration::from_secs(5),
-            syncing_batch_size: 50,
-            backoff_initial_interval: Duration::from_millis(50),
-            backoff_scaling_factor: 2,
-            max_backoff: Duration::from_secs(30),
-            rpc_timeout: Duration::from_secs(5),
-        };
-
-        // Pipeline should fail validation if any component fails
-        let result = IngestionPipelineConfig::new(valid_config, invalid_config);
-        assert!(result.is_err());
+        assert_matches!(config.validate(Chain::Settlement), Err(ConfigError::InvalidBatchSize(_)));
     }
 
     #[test]
@@ -543,36 +444,5 @@ mod tests {
         assert_eq!(config.backoff_initial_interval, cloned.backoff_initial_interval);
         assert_eq!(config.backoff_scaling_factor, cloned.backoff_scaling_factor);
         assert_eq!(config.max_backoff, cloned.max_backoff);
-    }
-
-    #[test]
-    fn test_chain_config_conversions() {
-        let generic = ChainIngestorConfig {
-            buffer_size: 100,
-            polling_interval: Duration::from_secs(1),
-            rpc_url: "http://sequencer:8545".to_string(),
-            rpc_timeout: Duration::from_secs(7),
-            start_block: 0,
-            syncing_batch_size: 50,
-            backoff_initial_interval: Duration::from_millis(50),
-            backoff_scaling_factor: 2,
-            max_backoff: Duration::from_secs(30),
-        };
-
-        let specific: SequencingChainConfig = generic.clone().into();
-        assert_eq!(specific.sequencing_buffer_size, 100);
-        assert_eq!(specific.sequencing_rpc_url, "http://sequencer:8545");
-        assert_eq!(specific.sequencing_rpc_timeout, Duration::from_secs(7));
-
-        let back_generic: ChainIngestorConfig = specific.into();
-        assert_eq!(back_generic.rpc_timeout, Duration::from_secs(7));
-
-        let specific_settlement: SettlementChainConfig = generic.into();
-        assert_eq!(specific_settlement.settlement_buffer_size, 100);
-        assert_eq!(specific_settlement.settlement_rpc_url, "http://sequencer:8545");
-        assert_eq!(specific_settlement.settlement_rpc_timeout, Duration::from_secs(7));
-
-        let back_generic_settlement: ChainIngestorConfig = specific_settlement.into();
-        assert_eq!(back_generic_settlement.rpc_timeout, Duration::from_secs(7));
     }
 }

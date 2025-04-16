@@ -6,6 +6,7 @@ use crate::{
 use alloy::{
     eips::BlockNumberOrTag,
     network::EthereumWallet,
+    primitives::Address,
     providers::{
         fillers::{
             BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
@@ -184,6 +185,27 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
                 }
             };
         }
+    }
+
+    /// Asserts that the mchain rollup owner is the same as the translator's configured owner
+    pub async fn assert_rollup_owner(
+        &self,
+        config_rollup_owner: Option<Address>,
+    ) -> Result<(), BlockBuilderError> {
+        if let Some(config_rollup_owner) = config_rollup_owner {
+            let rollup_owner = self
+                .provider
+                .rollup_owner()
+                .await
+                .map_err(|e| BlockBuilderError::MChainCallError(e.to_string()))?;
+            if rollup_owner != config_rollup_owner {
+                return Err(BlockBuilderError::RollupOwnerMismatch(
+                    config_rollup_owner,
+                    rollup_owner,
+                ));
+            }
+        }
+        Ok(())
     }
 }
 

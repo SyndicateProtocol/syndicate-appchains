@@ -28,9 +28,7 @@ use std::{str::FromStr, sync::Arc};
 
 #[derive(Debug, Clone)]
 /// Builder for constructing Optimism blocks from transactions
-pub struct OptimismAdapter {
-    transaction_parser: SequencingTransactionParser,
-}
+pub struct OptimismAdapter {}
 
 #[async_trait]
 impl RollupAdapter for OptimismAdapter {
@@ -43,7 +41,7 @@ impl RollupAdapter for OptimismAdapter {
     }
 
     fn transaction_parser(&self) -> &SequencingTransactionParser {
-        &self.transaction_parser
+        panic!("Not implemented")
     }
 
     async fn get_processed_blocks(
@@ -75,10 +73,8 @@ impl RollupAdapter for OptimismAdapter {
 #[allow(dead_code)]
 impl OptimismAdapter {
     /// Creates a new Optimism block builder
-    pub const fn new(config: &BlockBuilderConfig) -> Self {
-        let transaction_parser =
-            SequencingTransactionParser::new(config.sequencing_contract_address);
-        Self { transaction_parser }
+    pub const fn new(_config: &BlockBuilderConfig) -> Self {
+        Self {}
     }
 
     async fn process_deposited_txns(
@@ -118,26 +114,13 @@ mod tests {
     use alloy::primitives::{Address, TxKind};
     use std::str::FromStr;
 
-    #[test]
-    fn test_new_builder() {
-        let sequencing_contract_address =
-            Address::from_str("0x1234000000000000000000000000000000000000")
-                .expect("Invalid address format");
-        let builder = OptimismAdapter::new(&BlockBuilderConfig {
-            sequencing_contract_address,
-            ..Default::default()
-        });
-        let parser = builder.transaction_parser();
-        assert!(!std::ptr::eq(parser, std::ptr::null()), "Transaction parser should not be null");
-    }
-
     #[tokio::test]
     async fn test_build_batch_txn() {
         let sequencing_contract_address =
             Address::from_str("0x1234000000000000000000000000000000000000")
                 .expect("Invalid address format");
         let builder = OptimismAdapter::new(&BlockBuilderConfig {
-            sequencing_contract_address,
+            sequencing_contract_address: Some(sequencing_contract_address),
             ..Default::default()
         });
         let txs = vec![];
