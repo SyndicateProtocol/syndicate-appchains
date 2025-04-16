@@ -3,12 +3,14 @@
 //! This module contains all possible configuration options for the Metabased Translator. Different
 //! crates each inherit a subset of these options to configure themselves
 
+use alloy::primitives::Address;
 use block_builder::config::BlockBuilderConfig;
 use clap::Parser;
 use common::eth_client::RPCClientError;
 use eyre::Result;
-use ingestor::config::{ChainIngestorConfig, SequencingChainConfig, SettlementChainConfig};
+use ingestor::config::{SequencingChainConfig, SettlementChainConfig};
 use metrics::config::MetricsConfig;
+use shared::parse::parse_address;
 use std::fmt::Debug;
 use thiserror::Error;
 use tracing::error;
@@ -41,9 +43,6 @@ pub struct MetabasedConfig {
     #[command(flatten)]
     pub block_builder: BlockBuilderConfig,
 
-    #[arg(long, env = "SETTLEMENT_DELAY", default_value_t = 60)]
-    pub settlement_delay: u64,
-
     #[command(flatten)]
     pub sequencing: SequencingChainConfig,
 
@@ -52,6 +51,26 @@ pub struct MetabasedConfig {
 
     #[command(flatten)]
     pub metrics: MetricsConfig,
+
+    /// The delay to be applied to settlement chain blocks (expressed in seconds)
+    #[arg(long, env = "SETTLEMENT_DELAY")]
+    pub settlement_delay: Option<u64>,
+
+    /// The address of the rollup owner on the settlement chain
+    #[arg(long, env = "ROLLUP_OWNER")]
+    pub rollup_owner: Option<Address>,
+
+    /// The address of the ConfigManager contract on the settlement chain
+    #[arg(
+        long = "config-manager-address",
+        env = "CONFIG_MANAGER_ADDRESS",
+        value_parser = parse_address
+    )]
+    pub config_manager_address: Option<Address>,
+
+    /// The chain ID of the Appchain rollup (not the mchain)
+    #[arg(long, env = "APPCHAIN_CHAIN_ID")]
+    pub appchain_chain_id: Option<u64>,
 }
 
 impl MetabasedConfig {
@@ -66,6 +85,16 @@ impl MetabasedConfig {
         self.sequencing.validate().map_err(ConfigError::Ingestor)?;
         self.settlement.validate().map_err(ConfigError::Ingestor)?;
         self.metrics.validate().map_err(ConfigError::Metrics)?;
+        Ok(())
+    }
+
+    /// Validates the config and ensures all mandatory fields have values (including optional fields
+    /// that might have been defined by the `ConfigManager` contract)
+    pub fn validate_strict(&self) -> Result<(), ConfigError> {
+        self.validate()?;
+        self.block_builder.validate_strict().map_err(ConfigError::BlockBuilder)?;
+        self.sequencing.validate_strict().map_err(ConfigError::Ingestor)?;
+        self.settlement.validate_strict().map_err(ConfigError::Ingestor)?;
         Ok(())
     }
 
@@ -95,13 +124,15 @@ impl MetabasedConfig {
 
 impl Default for MetabasedConfig {
     fn default() -> Self {
-        let ingestor_config = ChainIngestorConfig::default();
         Self {
             block_builder: BlockBuilderConfig::default(),
-            settlement_delay: 60,
-            sequencing: ingestor_config.clone().into(),
-            settlement: ingestor_config.into(),
+            settlement_delay: Some(60),
+            rollup_owner: None,
+            sequencing: SequencingChainConfig::default(),
+            settlement: SettlementChainConfig::default(),
             metrics: MetricsConfig::default(),
+            config_manager_address: None,
+            appchain_chain_id: None,
         }
     }
 }
