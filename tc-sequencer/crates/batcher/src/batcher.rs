@@ -3,11 +3,10 @@
 use crate::config::BatcherConfig;
 use alloy::primitives::Bytes;
 use eyre::{eyre, Error, Result};
-use reqwest::Client;
 use shared::zlib_compression::compress_transactions;
 use std::{sync::Arc, time::Duration};
+use tc_client::tc_client::TCClient;
 use tracing::{error, info};
-
 // Implemented in Daniils PR
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
@@ -28,26 +27,24 @@ const MAX_BATCH_SIZE: usize = 90 * 1024; // 90 kilobytes
 
 /// Batcher service
 #[derive(Debug, Clone)]
-pub struct Batcher {
-    /// The RPC URLs for the chains
-    pub chain_rpc_url: String,
+struct Batcher {
     /// The batch size for the batcher
-    pub batch_size: usize,
+    batch_size: usize,
     /// The Redis client for the batcher
-    pub redis_client: StreamManager,
+    redis_client: StreamManager,
     /// The stream key for the batcher
-    pub stream_key: String,
+    stream_key: String,
     /// The sequencer client for the batcher
-    pub sequencer_client: Client,
+    tc_client: TCClient,
     /// The polling interval for the batcher
-    pub polling_interval: Duration,
+    polling_interval: Duration,
     /// The chain ID for the batcher
-    pub chain_id: u64,
+    chain_id: u64,
 }
 
 /// Run the batcher service. Starts the server and listens for batch requests.
-pub async fn run_batcher(config: BatcherConfig) -> Result<()> {
-    let batcher = Arc::new(Batcher::new(config.clone()));
+pub async fn run_batcher(config: &BatcherConfig, tc_client: TCClient) -> Result<()> {
+    let batcher = Arc::new(Batcher::new(config, tc_client));
 
     tokio::spawn({
         let batcher = Arc::clone(&batcher);
@@ -67,15 +64,13 @@ pub async fn run_batcher(config: BatcherConfig) -> Result<()> {
 
 impl Batcher {
     /// Create a new instance of the Maestro service
-    pub fn new(config: BatcherConfig) -> Self {
+    fn new(config: &BatcherConfig, tc_client: TCClient) -> Self {
         let redis_client = StreamManager {};
-        let sequencer_client = Client::new();
         Self {
-            chain_rpc_url: config.chain_rpc_url,
             batch_size: config.batch_size,
             redis_client,
             stream_key: "txs:".to_string(),
-            sequencer_client,
+            tc_client,
             polling_interval: config.polling_interval,
             chain_id: config.chain_id,
         }
@@ -138,7 +133,7 @@ impl Batcher {
     }
 
     async fn send_batch_to_sequencer(&self, data: Bytes) -> Result<()> {
-        self.sequencer_client.post("/send_batch").json(&data).send().await?;
+        self.tc_client.process_transaction(data).await?;
         Ok(())
     }
 }

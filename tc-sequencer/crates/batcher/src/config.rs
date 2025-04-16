@@ -40,10 +40,6 @@ pub struct BatcherConfig {
     #[arg(short = 'r', long, env = "REDIS_ADDRESS")]
     pub redis_address: String,
 
-    /// Chain RPC URL
-    #[arg(short = 'c', long, env = "CHAIN_RPC_URL")]
-    pub chain_rpc_url: String,
-
     /// Chain ID
     #[arg(short = 'i', long, env = "CHAIN_ID")]
     pub chain_id: u64,
@@ -72,7 +68,6 @@ impl Default for BatcherConfig {
     fn default() -> Self {
         Self {
             redis_address: "0.0.0.0:6379".to_string(),
-            chain_rpc_url: "http://localhost:8545".to_string(),
             chain_id: 1,
             batch_size: 10,
             polling_interval: Duration::from_millis(500),

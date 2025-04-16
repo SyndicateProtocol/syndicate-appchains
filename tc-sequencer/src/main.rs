@@ -3,9 +3,11 @@
 //!
 //! It provides a JSON-RPC interface for submitting transactions and checking service health.
 
+use batcher::batcher::run_batcher;
 use eyre::Result;
 use shared::logger::set_global_default_subscriber;
-use tc_sequencer::{config::Config, server::run_server};
+use tc_client::tc_client::TCClient;
+use tc_sequencer::config::TCSequencerConfig;
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 
@@ -16,16 +18,14 @@ async fn main() -> Result<()> {
     set_global_default_subscriber()?;
 
     // Parse config
-    let config = Config::initialize();
-    info!("Config: {:?}", config);
+    let config = TCSequencerConfig::initialize();
+    info!("TCSequencerConfig: {:?}", config);
 
-    // Start server
-    let (addr, handle) = run_server(&config).await?;
+    // Start tc-client
+    let tc_client = TCClient::new(&config.tc)?;
 
-    info!(
-        addr = %addr,
-        "TC Sequencer server running"
-    );
+    // Start batcher
+    run_batcher(&config.batcher, tc_client).await?;
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
@@ -40,9 +40,6 @@ async fn main() -> Result<()> {
             println!("Received SIGTERM, initiating shutdown...");
         }
     };
-
-    handle.stop()?;
-    handle.stopped().await;
 
     Ok(())
 }

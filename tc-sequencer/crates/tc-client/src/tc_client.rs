@@ -1,6 +1,6 @@
 //! The `service` module handles the business logic for the tc sequencer.
 
-use crate::config::Config;
+use crate::config::TCConfig;
 use alloy::{
     consensus::Transaction,
     hex::{self},
@@ -58,7 +58,7 @@ impl SendTransactionRequest {
 }
 
 /// The service for relaying transactions to the sequencing contract.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TCClient {
     tc_url: Url,
     tc_project_id: String,
@@ -71,7 +71,7 @@ pub struct TCClient {
 
 impl TCClient {
     /// Create a new `TCClient` instance.
-    pub fn new(config: &Config) -> Result<Self> {
+    pub fn new(config: &TCConfig) -> Result<Self> {
         let client = Client::new();
         Ok(Self {
             tc_url: config.tc_endpoint.get_url(),
@@ -123,7 +123,8 @@ impl TCClient {
         Ok(())
     }
 
-    async fn process_transaction(&self, raw_tx: Bytes) -> Result<TxHash, Error> {
+    /// Process a transaction by submitting it to the TC
+    pub async fn process_transaction(&self, raw_tx: Bytes) -> Result<TxHash, Error> {
         info!("Processing transaction: {}", hex::encode(&raw_tx));
         let original_tx = validate_transaction(&raw_tx)?;
 
@@ -153,18 +154,18 @@ pub async fn send_raw_transaction_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::Config;
+    use crate::config::TCConfig;
     use alloy::primitives::Bytes;
     use std::str::FromStr;
 
     fn setup_test_service() -> TCClient {
-        let config = Config::default();
+        let config = TCConfig::default();
         TCClient::new(&config).unwrap()
     }
 
     #[test]
     fn test_new_service_creation() {
-        let config = Config::default();
+        let config = TCConfig::default();
 
         let result = TCClient::new(&config);
         assert!(result.is_ok());
@@ -172,7 +173,7 @@ mod tests {
 
     #[test]
     fn test_get_contract_address() {
-        let config = Config {
+        let config = TCConfig {
             sequencing_addresses: HashMap::from([(
                 510001,
                 Address::from_str("0x0000000000000000000000000000000000000001").unwrap(),
