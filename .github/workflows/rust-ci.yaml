@@ -141,11 +141,11 @@ jobs:
         run: cargo build --workspace
 
       - name: Build Tests
-        run: cargo test --workspace --exclude maestro --no-run
+        run: cargo test --workspace --no-run
 
       # Run tests on entire workspace. `maestro` is excluded because it is tested separately by Nextest below
       - name: Run Tests
-        run: cargo test --workspace --exclude maestro
+        run: cargo test --workspace
 
   nextest:
     name: Nextest Integration Tests
