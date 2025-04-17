@@ -37,7 +37,6 @@ struct Batcher {
 
 /// Run the batcher service. Starts the server and listens for batch requests.
 pub async fn run_batcher(config: &BatcherConfig, tc_client: TCClient) -> Result<()> {
-    // TODO (SEQ-772): Connect to real Redis interface
     let redis_client = StreamManager::new(config.redis_url.clone(), config.chain_id).await?;
     let batcher = Arc::new(Batcher::new(config, tc_client, redis_client));
     let polling_interval = batcher.polling_interval;
