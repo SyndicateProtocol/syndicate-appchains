@@ -17,7 +17,8 @@ impl StreamManager {
         Ok(Self {})
     }
     async fn recv(&self) -> Result<Option<Bytes>> {
-        Ok(Some(Bytes::default()))
+        let data = vec![0u8; 512]; // 512 bytes of zeros
+        Ok(Some(Bytes::from(data)))
     }
 }
 
@@ -69,6 +70,7 @@ impl Batcher {
     }
     async fn read_transactions(&self) -> Result<Vec<Bytes>> {
         let mut batch: Vec<Bytes> = Vec::new();
+        info!("Reading transactions from Redis");
 
         while let Some(txn) = self.redis_client.recv().await? {
             {
@@ -82,7 +84,10 @@ impl Batcher {
                 if compressed_size_if_added >= self.max_batch_size {
                     break;
                 }
-
+                info!(
+                    "Adding transaction to batch: {:?} - size: {}",
+                    txn, compressed_size_if_added
+                );
                 batch.push(txn);
             }
         }
@@ -96,6 +101,7 @@ impl Batcher {
             debug!("No transactions available to batch.");
             return Ok(());
         }
+        info!("Batching {} transactions", batch.len());
 
         self.compress_and_send_batch(batch.clone()).await
     }
