@@ -48,7 +48,7 @@ impl StreamConsumer {
     /// # Returns
     /// A new `StreamConsumer` instance configured to read from the stream for the given chain.
     pub fn new(conn: MultiplexedConnection, chain_id: u64, start_from_id: String) -> Self {
-        // TODO maybe we don't need MultiplexedConnection here (unless we want to have multiple
+        // NOTE maybe we don't need MultiplexedConnection here (unless we want to have multiple
         // consumers per service)
         Self { conn, stream_key: tx_stream_key(chain_id), last_id: start_from_id }
     }
@@ -57,6 +57,9 @@ impl StreamConsumer {
     ///
     /// This method blocks until a new transaction is available in the stream. It reads one
     /// message at a time and updates the internal `last_id` to track the position in the stream.
+    ///
+    /// # Arguments
+    /// * `number_of_messages` - The number of messages to read from the stream
     ///
     /// # Returns
     /// * `Ok(Some((Vec<u8>, String)))` - The raw transaction data and the last ID if a new message
@@ -68,14 +71,10 @@ impl StreamConsumer {
     /// * Currently reads one message at a time for simplicity. For high-throughput scenarios,
     ///   consider implementing batch reading with an internal buffer.
     /// * Blocks indefinitely until a new message arrives (block=0)
-    pub async fn recv(&mut self) -> eyre::Result<Option<(Vec<u8>, String)>> {
-        // TODO optimize (?)
-        // NOTE this is reading 1 message for simplicity. If this were to scale to thousands of
-        // messages per second, we could instead read a batch and have an internal buffer that take
-        // from every time recv is called
+    pub async fn recv(&mut self, max_msg_count: usize) -> eyre::Result<Option<(Vec<u8>, String)>> {
         let opts = StreamReadOptions::default()
             .block(0) //block indefinitely, until we get a new msg
-            .count(1);
+            .count(max_msg_count);
 
         let reply: Option<StreamReadReply> = self
             .conn
@@ -129,7 +128,7 @@ mod tests {
         producer.enqueue_transaction(test_data.clone()).await.unwrap();
 
         // Receive and verify
-        let received = consumer.recv().await.unwrap().unwrap();
+        let received = consumer.recv(1).await.unwrap().unwrap();
         assert_eq!(received.0, test_data);
         assert!(!received.1.is_empty());
     }
