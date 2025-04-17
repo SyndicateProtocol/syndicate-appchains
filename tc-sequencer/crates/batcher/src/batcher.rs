@@ -3,9 +3,10 @@
 use crate::config::BatcherConfig;
 use alloy::primitives::Bytes;
 use eyre::{eyre, Result};
-use shared::zlib_compression::compress_transactions;
-use std::{sync::Arc, time::Duration};
+use shared::additive_compression::AdditiveCompressor;
+use std::{mem::take, sync::Arc};
 use tc_client::tc_client::{TCClient, BATCH_FUNCTION_SIGNATURE};
+use tokio::sync::Mutex;
 use tracing::{debug, error, info};
 // TODO (SEQ-772): Redis interface
 #[allow(missing_docs)]
@@ -23,7 +24,7 @@ impl StreamManager {
 }
 
 /// Batcher service
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct Batcher {
     /// The max batch size for the batcher
     max_batch_size: usize,
@@ -31,22 +32,26 @@ struct Batcher {
     redis_client: StreamManager,
     /// The sequencer client for the batcher
     tc_client: TCClient,
-    /// The polling interval for the batcher
-    polling_interval: Duration,
+    /// The compressor for the batcher
+    compressor: AdditiveCompressor,
 }
 
 /// Run the batcher service. Starts the server and listens for batch requests.
 pub async fn run_batcher(config: &BatcherConfig, tc_client: TCClient) -> Result<()> {
     let redis_client = StreamManager::new(config.redis_url.clone(), config.chain_id).await?;
-    let batcher = Arc::new(Batcher::new(config, tc_client, redis_client));
-    let polling_interval = batcher.polling_interval;
+    let batcher = Arc::new(Mutex::new(Batcher::new(config, tc_client, redis_client)));
+    let polling_interval = config.polling_interval;
 
     tokio::spawn({
         let batcher = Arc::clone(&batcher);
 
         async move {
             loop {
-                if let Err(e) = batcher.read_and_batch_transactions().await {
+                let result = {
+                    let mut batcher = batcher.lock().await;
+                    batcher.read_and_batch_transactions().await
+                };
+                if let Err(e) = result {
                     error!("Batcher error: {:?}", e);
                 }
                 tokio::time::sleep(polling_interval).await;
@@ -59,42 +64,37 @@ pub async fn run_batcher(config: &BatcherConfig, tc_client: TCClient) -> Result<
 
 impl Batcher {
     /// Create a new instance of the Maestro service
-    const fn new(config: &BatcherConfig, tc_client: TCClient, redis_client: StreamManager) -> Self {
+    fn new(config: &BatcherConfig, tc_client: TCClient, redis_client: StreamManager) -> Self {
         Self {
             max_batch_size: config.max_batch_size,
             redis_client,
             tc_client,
-            polling_interval: config.polling_interval,
+            compressor: AdditiveCompressor::default(),
         }
     }
-    async fn read_transactions(&self) -> Result<Vec<Bytes>> {
+    async fn read_transactions(&mut self) -> Result<Vec<Bytes>> {
         let mut batch: Vec<Bytes> = Vec::new();
+
         info!("Reading transactions from Redis");
 
         while let Some(txn) = self.redis_client.recv().await? {
-            {
-                //TODO (SEQ-826): Refactor Compression Algorithm for Additive Behavior in
-                let compressed_size_if_added = {
-                    let mut candidate = batch.clone();
-                    candidate.push(txn.clone());
-                    compress_transactions(&candidate)?.len()
-                };
+            let size_if_added = self.compressor.peek_push_size(&txn)?;
 
-                if compressed_size_if_added >= self.max_batch_size {
-                    break;
-                }
-                info!(
-                    "Adding transaction to batch: {:?} - size: {}",
-                    txn, compressed_size_if_added
-                );
-                batch.push(txn);
+            if size_if_added >= self.max_batch_size {
+                break;
             }
+            info!(
+                "Adding transaction to batch: {:?} - compressed size so far: {}",
+                txn, size_if_added
+            );
+            self.compressor.try_push(&txn)?;
+            batch.push(txn);
         }
 
         Ok(batch)
     }
 
-    async fn read_and_batch_transactions(&self) -> Result<()> {
+    async fn read_and_batch_transactions(&mut self) -> Result<()> {
         let batch = self.read_transactions().await?;
         if batch.is_empty() {
             debug!("No transactions available to batch.");
@@ -105,8 +105,9 @@ impl Batcher {
         self.compress_and_send_batch(batch.clone()).await
     }
 
-    async fn compress_and_send_batch(&self, batch: Vec<Bytes>) -> Result<()> {
-        let compressed = compress_transactions(&batch)?;
+    async fn compress_and_send_batch(&mut self, batch: Vec<Bytes>) -> Result<()> {
+        let compressed = take(&mut self.compressor).finish()?;
+        self.compressor = AdditiveCompressor::default(); // Reset for next round
 
         // Check if the batch is too large
         if compressed.len() > self.max_batch_size {

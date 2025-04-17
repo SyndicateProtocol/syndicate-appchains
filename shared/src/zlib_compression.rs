@@ -127,7 +127,7 @@ fn validate_cm_bits<T: AsRef<[u8]>>(
 }
 
 /// Validates that CM bits are exactly 8
-fn is_valid_cm_bits_8_only<T: AsRef<[u8]>>(compressed: T) -> Result<(), Error> {
+pub fn is_valid_cm_bits_8_only<T: AsRef<[u8]>>(compressed: T) -> Result<(), Error> {
     validate_cm_bits(
         compressed,
         &[ZLIB_CM8],
