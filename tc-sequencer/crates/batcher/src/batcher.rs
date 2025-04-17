@@ -73,7 +73,7 @@ impl Batcher {
 
         while let Some(txn) = self.redis_client.recv().await? {
             {
-                // Estimate size *before* pushing to the real batch
+                //TODO (SEQ-826): Refactor Compression Algorithm for Additive Behavior in
                 let compressed_size_if_added = {
                     let mut candidate = batch.clone();
                     candidate.push(txn.clone());
