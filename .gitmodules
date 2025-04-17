@@ -7,3 +7,9 @@
 [submodule "shared/arb-contracts/lib/forge-std"]
 	path = shared/arb-contracts/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "use-cases/lib/forge-std"]
+	path = use-cases/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "use-cases/lib/openzeppelin-contracts"]
+	path = use-cases/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
