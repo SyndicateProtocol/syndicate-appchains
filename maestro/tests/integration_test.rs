@@ -13,41 +13,21 @@ mod tests {
     use super::*;
     use maestro::config::Config;
     use std::collections::HashMap;
-    use test_utils::transaction::{get_eip1559_transaction_hex, get_legacy_transaction_hex};
-    use wiremock::{matchers::method, Mock, MockServer, ResponseTemplate};
-
-    fn dummy_config_with_url(mock_url: String) -> Config {
-        let mut chain_rpc_urls = HashMap::new();
-        // Add URLs for the chain IDs used in tests
-        chain_rpc_urls.insert("4".to_string(), mock_url.clone());
-        chain_rpc_urls.insert("5".to_string(), mock_url);
-
-        Config {
-            port: 0,
-            redis_address: None,
-            chain_rpc_urls,
-            validation_timeout: Duration::from_secs(1),
-            skip_validation: false,
-        }
-    }
+    use test_utils::{
+        docker::start_redis,
+        transaction::{get_eip1559_transaction_hex, get_legacy_transaction_hex},
+    };
 
     // Initialize the server for this test function
-    async fn setup_server_with_mock_server() -> (SocketAddr, ServerHandle, String, MockServer) {
-        // Start the mock HTTP server first
-        let mock_server = MockServer::start().await;
-
-        // Set up mock response for eth_sendRawTransaction
-        Mock::given(method("POST"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "jsonrpc": "2.0",
-                "id": 1,
-                "result": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
-            })))
-            .mount(&mock_server)
-            .await;
-
+    async fn setup_server() -> (SocketAddr, ServerHandle, String) {
+        let (_redis, redis_url) = start_redis().await.unwrap();
         // Create config with mock server URL
-        let config = dummy_config_with_url(mock_server.uri());
+        let config = Config {
+            port: 0,
+            redis_url,
+            validation_timeout: Duration::from_secs(1),
+            skip_validation: false,
+        };
 
         // Start the actual Maestro server with our mocked config
         let (addr, handle) = server::run(config).await.expect("Failed to start server");
@@ -56,14 +36,14 @@ mod tests {
         // Give the server time to initialize
         sleep(Duration::from_millis(100)).await;
 
-        (addr, handle, base_url, mock_server)
+        (addr, handle, base_url)
     }
 
     async fn with_test_server<Fut>(test_fn: impl FnOnce(Client, String) -> Fut + Send) -> Result<()>
     where
         Fut: Future<Output = Result<()>> + Send,
     {
-        let (_addr, handle, base_url, _mock_server) = setup_server_with_mock_server().await;
+        let (_addr, handle, base_url) = setup_server().await;
         let client = Client::new();
 
         test_fn(client, base_url).await?;

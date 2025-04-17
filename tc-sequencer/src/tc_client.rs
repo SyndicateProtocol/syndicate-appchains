@@ -15,7 +15,9 @@ use jsonrpsee::{
 use reqwest::Client;
 use serde as _;
 use shared::{
-    json_rpc::{parse_send_raw_transaction_params, Error, InvalidInputError::UnsupportedChainId},
+    json_rpc::{
+        parse_send_raw_transaction_params, InvalidInputError::UnsupportedChainId, RpcError,
+    },
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, sync::Arc};
@@ -83,18 +85,18 @@ impl TCClient {
         })
     }
 
-    fn get_contract_address(&self, chain_id: ChainId) -> Result<Address, Error> {
+    fn get_contract_address(&self, chain_id: ChainId) -> Result<Address, RpcError> {
         self.sequencing_addresses
             .get(&chain_id)
             .copied()
-            .ok_or_else(|| Error::InvalidInput(UnsupportedChainId(chain_id)))
+            .ok_or_else(|| RpcError::InvalidInput(UnsupportedChainId(chain_id)))
     }
 
     async fn send_transaction(
         &self,
         contract_address: Address,
         raw_tx: Bytes,
-    ) -> Result<(), Error> {
+    ) -> Result<(), RpcError> {
         let request = SendTransactionRequest::new(
             self.tc_project_id.clone(),
             self.wallet_pool_address,
@@ -111,19 +113,19 @@ impl TCClient {
             .await
             .map_err(|e| {
                 error!("Failed to send transaction to TC: {}", e);
-                Error::Internal("failed to submit transaction to sequencer".to_string())
+                RpcError::Internal("failed to submit transaction to sequencer".to_string())
             })?;
 
         if !response.status().is_success() {
             let error_msg = response.text().await.unwrap_or_default();
             error!("Failed to send transaction to TC: {}", error_msg);
-            return Err(Error::Internal("failed to submit transaction to sequencer".to_string()));
+            return Err(RpcError::Internal("failed to submit transaction to sequencer".to_string()));
         }
 
         Ok(())
     }
 
-    async fn process_transaction(&self, raw_tx: Bytes) -> Result<TxHash, Error> {
+    async fn process_transaction(&self, raw_tx: Bytes) -> Result<TxHash, RpcError> {
         info!("Processing transaction: {}", hex::encode(&raw_tx));
         let original_tx = validate_transaction(&raw_tx)?;
 
@@ -194,8 +196,7 @@ mod tests {
 
         let contract_address = service.get_contract_address(1);
         assert!(contract_address.is_err());
-        let error = contract_address.unwrap_err().to_json_rpc_error();
-        assert_eq!(error.message(), "invalid input: unsupported chain ID: 1");
+        matches!(contract_address.unwrap_err(), RpcError::InvalidInput(UnsupportedChainId(1)));
     }
 
     #[tokio::test]

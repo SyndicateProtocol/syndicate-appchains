@@ -7,7 +7,7 @@ use jsonrpsee::core::{
     http_helpers::{Body as HttpBody, Request as HttpRequest},
     BoxError,
 };
-use shared::json_rpc::Error;
+use shared::json_rpc::RpcError;
 use std::{
     collections::HashMap,
     future::Future,
@@ -24,7 +24,7 @@ pub struct HeadersLayer(Option<Arc<Vec<String>>>);
 
 impl HeadersLayer {
     /// Creates new `HeadersLayer` with the given optional headers
-    pub fn new(optional_headers: Vec<String>) -> eyre::Result<Self, Error> {
+    pub fn new(optional_headers: Vec<String>) -> eyre::Result<Self, RpcError> {
         Ok(Self(Some(Arc::new(optional_headers))))
     }
 

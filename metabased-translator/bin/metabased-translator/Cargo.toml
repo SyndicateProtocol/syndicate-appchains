@@ -26,7 +26,6 @@ tracing           = { workspace = true }
 
 [dev-dependencies]
 async-trait = { workspace = true }
-mockall     = { workspace = true }
 temp-env    = { workspace = true }
 
 

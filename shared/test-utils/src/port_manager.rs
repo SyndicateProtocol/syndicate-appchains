@@ -36,7 +36,7 @@ impl PortManager {
         const MAX_ATTEMPTS: u32 = 100;
 
         while attempts < MAX_ATTEMPTS {
-            let next = self.next_port.fetch_add(1, Ordering::Relaxed);
+            let next = self.next_port.fetch_add(1, Ordering::SeqCst);
             assert!(next <= MAX_PORTS, "Port range exhausted");
 
             if is_port_available(next) {

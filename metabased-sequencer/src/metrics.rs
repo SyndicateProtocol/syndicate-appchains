@@ -9,7 +9,7 @@ use prometheus_client::{
     },
     registry::Registry,
 };
-use shared::json_rpc::Error;
+use shared::json_rpc::RpcError;
 use std::time::Duration;
 
 /// Labels for the metrics
@@ -54,7 +54,7 @@ impl RelayerMetrics {
         &self,
         method: &'static str,
         duration: Duration,
-        error_category: Option<&Error>,
+        error_category: Option<&RpcError>,
     ) {
         let error_category = error_to_metric_category(error_category);
         self.relayer_rpc_calls.get_or_create(&Labels { rpc_method: method, error_category }).inc();
@@ -65,16 +65,18 @@ impl RelayerMetrics {
 }
 
 /// Grouping errors into categories to reduce Prometheus metric cardinality
-pub fn error_to_metric_category(error: Option<&Error>) -> &'static str {
+pub fn error_to_metric_category(error: Option<&RpcError>) -> &'static str {
     error.map_or("none", |error| match error {
-        Error::InvalidRequest | Error::Parse | Error::InvalidInput(_) => "validation_error",
-        Error::MethodNotFound(_) | Error::MethodNotSupported => "method_error",
-        Error::ResourceNotFound | Error::ResourceUnavailable => "resource_error",
-        Error::Internal(_) | Error::Server => "server_error",
-        Error::Contract(_) => "contract_error",
-        Error::InvalidParams(_) => "params_error",
-        Error::TransactionRejected(_) => "tx_error",
-        Error::LimitExceeded => "limit_error",
+        RpcError::InvalidRequest | RpcError::Parse | RpcError::InvalidInput(_) => {
+            "validation_error"
+        }
+        RpcError::MethodNotFound(_) | RpcError::MethodNotSupported => "method_error",
+        RpcError::ResourceNotFound | RpcError::ResourceUnavailable => "resource_error",
+        RpcError::Internal(_) | RpcError::Server => "server_error",
+        RpcError::Contract(_) => "contract_error",
+        RpcError::InvalidParams(_) => "params_error",
+        RpcError::TransactionRejected(_) => "tx_error",
+        RpcError::LimitExceeded => "limit_error",
     })
 }
 

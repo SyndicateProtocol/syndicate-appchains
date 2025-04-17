@@ -6,6 +6,7 @@ use alloy::{
     providers::{Provider, ProviderBuilder, RootProvider},
     transports::http::Client,
 };
+use core::time;
 use eyre::Result;
 use mchain::mchain::{rollup_config, MProvider};
 use std::{
@@ -197,4 +198,26 @@ pub async fn launch_nitro_node(
     // give it two minutes to launch (in case it needs to download the image)
     wait_until!(rollup.get_chain_id().await.is_ok(), Duration::from_secs(120));
     Ok((nitro, rollup, url))
+}
+
+pub async fn start_redis() -> Result<(Docker, String)> {
+    let port = PortManager::instance().next_port();
+    let redis = Docker::new(
+        Command::new("docker")
+            .arg("run")
+            .arg("--init")
+            .arg("--rm")
+            .arg("-p")
+            .arg(format!("{port}:6379"))
+            .arg("redis:latest"),
+    )?;
+
+    let redis_url = format!("redis://127.0.0.1:{port}/");
+
+    let client = redis::Client::open(redis_url.as_str()).unwrap();
+    wait_until!(
+        client.get_multiplexed_async_connection().await.is_ok(),
+        time::Duration::from_secs(120) // give it time to download the image if necessary
+    );
+    Ok((redis, redis_url))
 }

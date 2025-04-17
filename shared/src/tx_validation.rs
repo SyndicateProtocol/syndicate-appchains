@@ -2,10 +2,10 @@
 //! transaction
 
 use crate::json_rpc::{
-    Error,
-    Error::{InvalidInput, TransactionRejected},
     InvalidInputError::{ChainIdMissing, TransactionTooLarge, UnableToRLPDecode},
     Rejection::FeeTooHigh,
+    RpcError,
+    RpcError::{InvalidInput, TransactionRejected},
 };
 use alloy::{
     consensus::{Transaction, TxEnvelope},
@@ -15,7 +15,7 @@ use alloy::{
 use byte_unit::Unit;
 use tracing::debug;
 
-fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, Error> {
+fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, RpcError> {
     let mut slice: &[u8] = raw_tx.as_ref();
     TxEnvelope::decode(&mut slice).map_err(|_| {
         let error = InvalidInput(UnableToRLPDecode);
@@ -24,7 +24,7 @@ fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, Error> {
     })
 }
 
-fn check_chain_id(tx: &TxEnvelope) -> Result<(), Error> {
+fn check_chain_id(tx: &TxEnvelope) -> Result<(), RpcError> {
     if tx.chain_id().is_none() {
         let error = InvalidInput(ChainIdMissing);
         debug!(
@@ -38,7 +38,7 @@ fn check_chain_id(tx: &TxEnvelope) -> Result<(), Error> {
     Ok(())
 }
 
-fn check_signature(tx: &TxEnvelope) -> Result<(), Error> {
+fn check_signature(tx: &TxEnvelope) -> Result<(), RpcError> {
     tx.recover_signer().map_err(|e| {
         debug!(
             error = ?e,
@@ -50,7 +50,7 @@ fn check_signature(tx: &TxEnvelope) -> Result<(), Error> {
     Ok(())
 }
 
-fn check_gas_price(tx: &TxEnvelope) -> Result<(), Error> {
+fn check_gas_price(tx: &TxEnvelope) -> Result<(), RpcError> {
     //TODO(SEQ-179): introduce optional global tx cap config. See op-geth's checkTxFee() +
     // RPCTxFeeCap for equivalent skip check if unset
     let tx_fee_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
@@ -65,7 +65,7 @@ fn check_gas_price(tx: &TxEnvelope) -> Result<(), Error> {
     Ok(())
 }
 
-fn check_tx_size(limit: byte_unit::Byte, raw_tx: &Bytes) -> Result<(), Error> {
+fn check_tx_size(limit: byte_unit::Byte, raw_tx: &Bytes) -> Result<(), RpcError> {
     let limit_size = limit.as_u128() as usize;
 
     let tx_size = raw_tx.len();
@@ -78,12 +78,12 @@ fn check_tx_size(limit: byte_unit::Byte, raw_tx: &Bytes) -> Result<(), Error> {
 }
 
 /// Validate a transaction
-pub fn validate_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, Error> {
+pub fn validate_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, RpcError> {
     debug!(bytes_length = raw_tx.len(), "Starting transaction validation");
     // Check tx size
     let kb_128 = byte_unit::Byte::from_u128_with_unit(128, Unit::KB).ok_or_else(|| {
         // This should be impossible
-        Error::Internal("failed to create default tx size".to_string())
+        RpcError::Internal("failed to create default tx size".to_string())
     })?;
     check_tx_size(kb_128, raw_tx)?;
 
