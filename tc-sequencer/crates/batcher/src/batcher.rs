@@ -2,48 +2,44 @@
 
 use crate::config::BatcherConfig;
 use alloy::primitives::Bytes;
-use eyre::{eyre, Error, Result};
+use eyre::{eyre, Result};
 use shared::zlib_compression::compress_transactions;
 use std::{sync::Arc, time::Duration};
 use tc_client::tc_client::{TCClient, BATCH_FUNCTION_SIGNATURE};
-use tracing::{error, info};
+use tracing::{debug, error, info};
 // TODO (SEQ-772): Redis interface
 #[allow(missing_docs)]
 #[derive(Debug, Clone)]
 
 pub struct StreamManager {}
 impl StreamManager {
-    async fn read_next_batch(
-        &self,
-        _key: String,
-        _batch_size: usize,
-    ) -> Result<Option<Vec<Bytes>>> {
-        Ok(Some(vec![])) // dummy for now
+    async fn new(_stream_key: String, _chain_id: u64) -> Result<Self> {
+        Ok(Self {})
+    }
+    async fn recv(&self) -> Result<Option<Bytes>> {
+        Ok(Some(Bytes::default()))
     }
 }
 
 /// Batcher service
 #[derive(Debug, Clone)]
 struct Batcher {
-    /// The transactions in batch for the batcher
-    transactions_in_batch: usize,
     /// The max batch size for the batcher
     max_batch_size: usize,
     /// The Redis client for the batcher
     redis_client: StreamManager,
-    /// The stream key for the batcher
-    stream_key: String,
     /// The sequencer client for the batcher
     tc_client: TCClient,
     /// The polling interval for the batcher
     polling_interval: Duration,
-    /// The chain ID for the batcher
-    chain_id: u64,
 }
 
 /// Run the batcher service. Starts the server and listens for batch requests.
 pub async fn run_batcher(config: &BatcherConfig, tc_client: TCClient) -> Result<()> {
-    let batcher = Arc::new(Batcher::new(config, tc_client));
+    // TODO (SEQ-772): Connect to real Redis interface
+    let redis_client = StreamManager::new(config.redis_url.clone(), config.chain_id).await?;
+    let batcher = Arc::new(Batcher::new(config, tc_client, redis_client));
+    let polling_interval = batcher.polling_interval;
 
     tokio::spawn({
         let batcher = Arc::clone(&batcher);
@@ -51,9 +47,9 @@ pub async fn run_batcher(config: &BatcherConfig, tc_client: TCClient) -> Result<
         async move {
             loop {
                 if let Err(e) = batcher.read_and_batch_transactions().await {
-                    panic!("Error while reading and batching transactions: {:?}", e);
+                    error!("Batcher error: {:?}", e);
                 }
-                tokio::time::sleep(batcher.polling_interval).await;
+                tokio::time::sleep(polling_interval).await;
             }
         }
     });
@@ -63,81 +59,67 @@ pub async fn run_batcher(config: &BatcherConfig, tc_client: TCClient) -> Result<
 
 impl Batcher {
     /// Create a new instance of the Maestro service
-    fn new(config: &BatcherConfig, tc_client: TCClient) -> Self {
-        // TODO (SEQ-772): Connect to real Redis interface
-        let redis_client = StreamManager {};
+    const fn new(config: &BatcherConfig, tc_client: TCClient, redis_client: StreamManager) -> Self {
         Self {
-            transactions_in_batch: config.transactions_in_batch,
             max_batch_size: config.max_batch_size,
             redis_client,
-            stream_key: "txs:".to_string(),
             tc_client,
             polling_interval: config.polling_interval,
-            chain_id: config.chain_id,
         }
     }
-    async fn read_and_batch_transactions(&self) -> Result<(), Error> {
-        let stream_group = format!("{}{}", self.stream_key, self.chain_id);
-        match self.redis_client.read_next_batch(stream_group, self.transactions_in_batch).await {
-            Ok(Some(transactions)) => {
-                info!("Batch read successfully");
-                let batch = self.batch_transactions(transactions);
-                if batch.is_empty() {
-                    info!("No transactions to send");
-                    return Ok(());
+    async fn read_transactions(&self) -> Result<Vec<Bytes>> {
+        let mut batch: Vec<Bytes> = Vec::new();
+
+        while let Some(txn) = self.redis_client.recv().await? {
+            {
+                // Estimate size *before* pushing to the real batch
+                let compressed_size_if_added = {
+                    let mut candidate = batch.clone();
+                    candidate.push(txn.clone());
+                    compress_transactions(&candidate)?.len()
+                };
+
+                if compressed_size_if_added >= self.max_batch_size {
+                    break;
                 }
-                if let Err(e) = self.compress_and_send_batch(batch.clone()).await {
-                    error!("Error sending batch: {}", e);
-                    return Err(e);
-                }
-                Ok(())
-            }
-            Ok(None) => {
-                info!("No batch found");
-                Ok(())
-            }
-            Err(e) => {
-                error!("Error reading batch from Redis: {}", e);
-                Err(eyre!("failed to read batch"))
+
+                batch.push(txn);
             }
         }
+
+        Ok(batch)
     }
 
-    fn batch_transactions(&self, transactions: Vec<Bytes>) -> Vec<Bytes> {
-        transactions.into_iter().take(self.transactions_in_batch).collect()
+    async fn read_and_batch_transactions(&self) -> Result<()> {
+        let batch = self.read_transactions().await?;
+        if batch.is_empty() {
+            debug!("No transactions available to batch.");
+            return Ok(());
+        }
+
+        self.compress_and_send_batch(batch.clone()).await
     }
 
     async fn compress_and_send_batch(&self, batch: Vec<Bytes>) -> Result<()> {
-        let compressed_batch = compress_transactions(&batch)?;
+        let compressed = compress_transactions(&batch)?;
 
         // Check if the batch is too large
-        if compressed_batch.len() > self.max_batch_size {
+        if compressed.len() > self.max_batch_size {
             error!(
-                "Compressed batch size ({}) exceeds maximum allowed ({})",
-                compressed_batch.len(),
+                "Compressed batch size ({}) exceeds limit ({})",
+                compressed.len(),
                 self.max_batch_size
             );
-            return Err(eyre!("batch is too large"));
-            // TODO: Question? What should we do if the batch is too large?
+            return Err(eyre!(
+                "Compressed batch size {} exceeds limit {}",
+                compressed.len(),
+                self.max_batch_size
+            ));
         }
 
-        // Send the batch to the sequencer
-        match self.send_batch_to_sequencer(compressed_batch.clone()).await {
-            Ok(_) => {
-                info!(
-                    "Successfully sent batch of {} txs ({} bytes)",
-                    batch.len(),
-                    compressed_batch.len()
-                );
-                // TODO: Question? Do we need to ack the batch?
-
-                Ok(())
-            }
-            Err(e) => {
-                error!("Failed to send batch to sequencer: {:?}", e);
-                Err(eyre!("Sending batch failed: {:?}", e))
-            }
-        }
+        self.send_batch_to_sequencer(compressed.clone()).await?;
+        info!("Batch sent: {} txs, compressed size: {} bytes", batch.len(), compressed.len());
+        Ok(())
     }
 
     async fn send_batch_to_sequencer(&self, data: Bytes) -> Result<()> {

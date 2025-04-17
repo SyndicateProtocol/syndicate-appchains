@@ -37,16 +37,12 @@ pub enum ConfigError {
 pub struct BatcherConfig {
     /// Redis address to listen on
     /// Example: "0.0.0.0:6379"
-    #[arg(short = 'r', long, env = "REDIS_ADDRESS")]
-    pub redis_address: String,
+    #[arg(short = 'r', long, env = "REDIS_URL")]
+    pub redis_url: String,
 
     /// Chain ID
     #[arg(short = 'c', long, env = "CHAIN_ID")]
     pub chain_id: u64,
-
-    /// Batch size
-    #[arg(short = 'b', long, env = "BATCH_SIZE", default_value_t = 10)]
-    pub transactions_in_batch: usize,
 
     /// Max batch size in bytes
     #[arg(long, env = "MAX_BATCH_SIZE", default_value_t = 90 * 1024)] // 90 kilobytes
@@ -71,9 +67,8 @@ impl BatcherConfig {
 impl Default for BatcherConfig {
     fn default() -> Self {
         Self {
-            redis_address: "0.0.0.0:6379".to_string(),
+            redis_url: "0.0.0.0:6379".to_string(),
             chain_id: 1,
-            transactions_in_batch: 10,
             max_batch_size: 90 * 1024,
             polling_interval: Duration::from_millis(500),
             sequencer_client_url: "http://localhost:8080".to_string(),
