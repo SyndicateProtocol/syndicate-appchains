@@ -64,6 +64,7 @@ pub async fn run_batcher(config: &BatcherConfig, tc_client: TCClient) -> Result<
 impl Batcher {
     /// Create a new instance of the Maestro service
     fn new(config: &BatcherConfig, tc_client: TCClient) -> Self {
+        // TODO (SEQ-772): Connect to real Redis interface
         let redis_client = StreamManager {};
         Self {
             transactions_in_batch: config.transactions_in_batch,
