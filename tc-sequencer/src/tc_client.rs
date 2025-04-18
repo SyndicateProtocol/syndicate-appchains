@@ -146,7 +146,7 @@ impl TCClient {
         debug!("Submitting validated transaction to TC");
         let transaction_id = self.send_transaction(contract_address, raw_tx).await?;
         info!(
-            "Transaction submitted successfully - Original hash: {}, TC transaction ID: {}",
+            "Transaction submitted successfully - Original hash: 0x{}, TC transaction ID: {}",
             hex::encode(original_tx_hash),
             transaction_id
         );
