@@ -144,9 +144,11 @@ impl TCClient {
             self.get_contract_address(original_tx.chain_id().unwrap_or_default())?;
 
         debug!("Submitting validated transaction to TC");
+        let raw_tx_clone = raw_tx.clone();
         let transaction_id = self.send_transaction(contract_address, raw_tx).await?;
         info!(
-            "Transaction submitted successfully - Original hash: 0x{}, TC transaction ID: {}",
+            "Transaction submitted successfully - Original raw tx: 0x{}, Original tx hash: 0x{}, TC transaction ID: {}",
+            hex::encode(&raw_tx_clone),
             hex::encode(original_tx_hash),
             transaction_id
         );
