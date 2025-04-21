@@ -13,7 +13,7 @@ use jsonrpsee::{
     Extensions,
 };
 use reqwest::Client;
-use serde as _;
+use serde::{self, Deserialize};
 use shared::{
     json_rpc::{
         parse_send_raw_transaction_params, InvalidInputError::UnsupportedChainId, RpcError,
@@ -37,6 +37,12 @@ struct SendTransactionRequest {
     chain_id: u64,
     function_signature: String,
     args: HashMap<String, String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SendTransactionResponse {
+    transaction_id: String,
 }
 
 impl SendTransactionRequest {
@@ -96,7 +102,7 @@ impl TCClient {
         &self,
         contract_address: Address,
         raw_tx: Bytes,
-    ) -> Result<(), RpcError> {
+    ) -> Result<String, RpcError> {
         let request = SendTransactionRequest::new(
             self.tc_project_id.clone(),
             self.wallet_pool_address,
@@ -122,21 +128,34 @@ impl TCClient {
             return Err(RpcError::Internal("failed to submit transaction to sequencer".to_string()));
         }
 
-        Ok(())
+        let response_body: SendTransactionResponse = response.json().await.map_err(|e| {
+            error!("Failed to parse response from TC: {}", e);
+            RpcError::Internal("failed to parse response from sequencer".to_string())
+        })?;
+
+        Ok(response_body.transaction_id)
     }
 
     async fn process_transaction(&self, raw_tx: Bytes) -> Result<TxHash, RpcError> {
         info!("Processing transaction: {}", hex::encode(&raw_tx));
         let original_tx = validate_transaction(&raw_tx)?;
+        let original_tx_hash = *original_tx.tx_hash();
 
         // Determine the contract address
         let contract_address =
             self.get_contract_address(original_tx.chain_id().unwrap_or_default())?;
 
         debug!("Submitting validated transaction to TC");
-        self.send_transaction(contract_address, raw_tx).await?;
+        let raw_tx_clone = raw_tx.clone();
+        let transaction_id = self.send_transaction(contract_address, raw_tx).await?;
+        debug!(
+            "Transaction submitted successfully - Original raw tx: 0x{}, Original tx hash: 0x{}, TC transaction ID: {}",
+            hex::encode(&raw_tx_clone),
+            hex::encode(original_tx_hash),
+            transaction_id
+        );
 
-        Ok(*original_tx.tx_hash())
+        Ok(original_tx_hash)
     }
 }
 

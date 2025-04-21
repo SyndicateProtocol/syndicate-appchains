@@ -60,8 +60,13 @@ mod tests {
     async fn test_run_server() {
         // Setup mock TC server
         let mut server = mockito::Server::new_async().await;
-        let mock_tc_server =
-            server.mock("POST", Matcher::Any).with_status(200).create_async().await;
+        let mock_tc_server = server
+            .mock("POST", Matcher::Any)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"transactionId": "561b77ed-6e35-4248-87ef-c6af93f3bad9"}"#)
+            .create_async()
+            .await;
 
         let url = Url::from_str(server.url().as_str()).unwrap();
         let sequencing_addresses = HashMap::from([(
