@@ -145,9 +145,6 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         settlement_client: &Arc<dyn RPCClient>,
     ) -> Option<KnownState> {
         let mut current_block = BlockNumberOrTag::Latest;
-        // NOTE: in case there has been a settlement reorg, we need to restart from the [FOUND
-        // STATE] that matches the world minus 1 this is because after a reorg, an incoming
-        // block might still fit the the latest found state that matches the observable world
         let mut found_block = false;
         loop {
             #[allow(clippy::unwrap_used)]
@@ -169,6 +166,17 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
                     }
 
                     if seq_valid && settle_valid {
+                        // if the latest settlement block on this slot is still part of the
+                        // cannonical chain (and not the head) it's safe to return this slot,
+                        // otherwise we walk back one more slot and return that
+                        if let Ok(block) = settlement_client
+                            .get_block_by_number(BlockNumberOrTag::Number(block_number + 1))
+                            .await
+                        {
+                            if block.parent_hash == state.settlement_block.hash {
+                                return Some(state);
+                            }
+                        }
                         found_block = true;
                     }
                     current_block = BlockNumberOrTag::Number(block_number.saturating_sub(1));
