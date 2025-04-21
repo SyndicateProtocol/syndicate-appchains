@@ -6,7 +6,7 @@ use jsonrpsee::server::ServerHandle;
 use maestro::server;
 use serde_json::{json, Value};
 use std::{future::Future, net::SocketAddr, time::Duration};
-use tokio::time::sleep;
+use test_utils::wait_until;
 
 #[cfg(test)]
 mod tests {
@@ -14,36 +14,46 @@ mod tests {
     use maestro::config::Config;
     use std::collections::HashMap;
     use test_utils::{
-        docker::start_redis,
+        docker::{start_redis, Docker},
         transaction::{get_eip1559_transaction_hex, get_legacy_transaction_hex},
     };
 
     // Initialize the server for this test function
-    async fn setup_server() -> (SocketAddr, ServerHandle, String) {
-        let (_redis, redis_url) = start_redis().await.unwrap();
+    async fn setup_server() -> (SocketAddr, ServerHandle, String, Docker) {
+        let (redis, redis_url) = start_redis().await.unwrap();
         // Create config with mock server URL
         let config = Config {
             port: 0,
             redis_url,
             validation_timeout: Duration::from_secs(1),
             skip_validation: false,
+            prune_interval: Duration::from_secs(60 * 60 * 24),
+            prune_max_age: Duration::from_secs(60 * 60 * 24),
         };
 
         // Start the actual Maestro server with our mocked config
         let (addr, handle) = server::run(config).await.expect("Failed to start server");
         let base_url = format!("http://{}", addr);
 
-        // Give the server time to initialize
-        sleep(Duration::from_millis(100)).await;
+        // Wait for server to be ready by checking health endpoint
+        let client = Client::new();
+        wait_until!(
+            client
+                .get(format!("{}/health", base_url))
+                .send()
+                .await
+                .is_ok_and(|x| x.status().is_success()),
+            Duration::from_secs(5)
+        );
 
-        (addr, handle, base_url)
+        (addr, handle, base_url, redis)
     }
 
     async fn with_test_server<Fut>(test_fn: impl FnOnce(Client, String) -> Fut + Send) -> Result<()>
     where
         Fut: Future<Output = Result<()>> + Send,
     {
-        let (_addr, handle, base_url) = setup_server().await;
+        let (_addr, handle, base_url, _redis) = setup_server().await;
         let client = Client::new();
 
         test_fn(client, base_url).await?;
@@ -110,7 +120,11 @@ mod tests {
 
             assert!(tx_response.status().is_success(), "Valid transaction request failed");
             let tx_json: Value = tx_response.json().await?;
-            assert!(tx_json.get("result").is_some(), "Transaction response missing 'result' field");
+            assert!(
+                tx_json.get("result").is_some(),
+                "Transaction response missing 'result' field: {}",
+                tx_json
+            );
             Ok(())
         })
         .await
@@ -167,7 +181,8 @@ mod tests {
             let json_resp: Value = response.json().await?;
             assert!(
                 json_resp.get("result").is_some(),
-                "Transaction response missing 'result' field"
+                "Transaction response missing 'result' field: {}",
+                json_resp
             );
 
             Ok(())

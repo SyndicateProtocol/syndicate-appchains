@@ -102,6 +102,7 @@ impl StreamConsumer {
 mod tests {
     use super::*;
     use crate::redis::producer::StreamProducer;
+    use std::time::Duration;
     use test_utils::docker::start_redis;
 
     #[tokio::test(flavor = "multi_thread")]
@@ -121,7 +122,12 @@ mod tests {
         let test_data = b"test transaction data".to_vec();
 
         // Create producer and consumer
-        let mut producer = StreamProducer::new(conn.clone(), chain_id);
+        let mut producer = StreamProducer::new(
+            conn.clone(),
+            chain_id,
+            Duration::from_secs(60),
+            Duration::from_secs(60),
+        );
         let mut consumer = StreamConsumer::new(conn, chain_id, "0-0".to_string());
 
         // Send transaction

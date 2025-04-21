@@ -22,11 +22,8 @@ use shared::{
     },
     tx_validation::validate_transaction,
 };
-use std::{
-    collections::HashMap,
-    net::SocketAddr,
-    sync::{Arc, Mutex},
-};
+use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use tokio::sync::Mutex;
 use tower::ServiceBuilder;
 use tracing::info;
 
@@ -50,7 +47,7 @@ pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
 
     let client = redis::Client::open(config.redis_url.as_str())?;
     let redis_conn = client.get_multiplexed_async_connection().await?;
-    let service = MaestroService::new(redis_conn);
+    let service = MaestroService::new(redis_conn, config);
     info!("Connected to Redis successfully!");
 
     let mut module = RpcModule::new(service);
@@ -119,21 +116,13 @@ fn validate_chain_id(
 pub struct MaestroService {
     redis_conn: MultiplexedConnection,
     producers: Mutex<HashMap<u64, StreamProducer>>,
+    config: Config,
 }
 
 impl MaestroService {
     /// Create a new instance of the Maestro service
-    pub fn new(redis_conn: MultiplexedConnection) -> Self {
-        Self { redis_conn, producers: Mutex::new(HashMap::new()) }
-    }
-
-    fn get_or_create_producer(&self, chain_id: u64) -> StreamProducer {
-        #[allow(clippy::unwrap_used)] // lock is not shared and cannot fail
-        let mut producers = self.producers.lock().unwrap();
-        producers
-            .entry(chain_id)
-            .or_insert_with(|| StreamProducer::new(self.redis_conn.clone(), chain_id))
-            .clone()
+    pub fn new(redis_conn: MultiplexedConnection, config: Config) -> Self {
+        Self { redis_conn, producers: Mutex::new(HashMap::new()), config }
     }
 
     async fn process_raw_transaction(
@@ -141,7 +130,17 @@ impl MaestroService {
         raw_tx: Bytes,
         chain_id: ChainId,
     ) -> Result<(), jsonrpsee::types::ErrorObjectOwned> {
-        let mut producer = self.get_or_create_producer(chain_id);
+        // get or create producer
+        let mut producers = self.producers.lock().await;
+        let producer = producers.entry(chain_id).or_insert_with(|| {
+            StreamProducer::new(
+                self.redis_conn.clone(),
+                chain_id,
+                self.config.prune_interval,
+                self.config.prune_max_age,
+            )
+        });
+
         producer.enqueue_transaction(raw_tx.into()).await.map_err(|e| {
             jsonrpsee::types::ErrorObjectOwned::owned(
                 ErrorCode::InternalError.code(),
@@ -149,6 +148,7 @@ impl MaestroService {
                 None::<()>,
             )
         })?;
+        drop(producers); // release the lock
         Ok(())
     }
 }

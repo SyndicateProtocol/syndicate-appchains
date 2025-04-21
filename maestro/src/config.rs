@@ -25,6 +25,16 @@ pub struct Config {
     /// Skip validation of RPC URLs
     #[arg(long, env = "SKIP_VALIDATION", default_value_t = false)]
     pub skip_validation: bool,
+
+    /// Prune interval duration
+    #[arg(long, env = "PRUNE_INTERVAL", default_value = "24h",
+    value_parser = humantime::parse_duration)]
+    pub prune_interval: Duration,
+
+    /// Prune max age duration
+    #[arg(long, env = "PRUNE_MAX_AGE", default_value = "24h",
+    value_parser = humantime::parse_duration)]
+    pub prune_max_age: Duration,
 }
 
 impl Config {
@@ -41,6 +51,8 @@ impl Default for Config {
             redis_url: String::new(),
             validation_timeout: Duration::from_secs(5),
             skip_validation: false,
+            prune_interval: Duration::from_secs(60 * 60 * 24),
+            prune_max_age: Duration::from_secs(60 * 60 * 24),
         }
     }
 }
