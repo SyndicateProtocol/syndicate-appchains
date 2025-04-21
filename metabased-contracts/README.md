@@ -133,6 +133,7 @@ $ make deploy-based-sequencerchain-frame
 | AlwaysAllowedModule     | 0x33aB24E0a47A7aAe869755420950A6326e3CB9F3 |
 | MetafillerStorage       | 0x91C77f7857EcD4Edd1d5242e38345E42Ad1212E4 |
 | RequiredAllModule       | 0xaE938C7D5b69106BaA2316BC007D0f30e6239826 |
+| ArbConfigManager        | 0xCaf9F341401cD3e72Fc49081E498Ef0F86055b67 |
 
 #### Metabased Testnet (Private Devnet)
 
