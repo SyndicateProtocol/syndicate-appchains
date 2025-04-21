@@ -26,12 +26,12 @@ pub struct Config {
     #[arg(long, env = "SKIP_VALIDATION", default_value_t = false)]
     pub skip_validation: bool,
 
-    /// Prune interval duration
+    /// Interval at which to prune the Redis stream
     #[arg(long, env = "PRUNE_INTERVAL", default_value = "24h",
     value_parser = humantime::parse_duration)]
     pub prune_interval: Duration,
 
-    /// Prune max age duration
+    /// Redis stream max age of messages to prune
     #[arg(long, env = "PRUNE_MAX_AGE", default_value = "24h",
     value_parser = humantime::parse_duration)]
     pub prune_max_age: Duration,
