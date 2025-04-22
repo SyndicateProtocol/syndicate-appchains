@@ -72,7 +72,7 @@ impl StreamConsumer {
     /// * Currently reads one message at a time for simplicity. For high-throughput scenarios,
     ///   consider implementing batch reading with an internal buffer.
     /// * Blocks indefinitely until a new message arrives (block=0)
-    pub async fn recv(&mut self, max_msg_count: usize) -> eyre::Result<(Vec<u8>, String)> {
+    pub async fn recv(&mut self, max_msg_count: usize) -> eyre::Result<Vec<(Vec<u8>, String)>> {
         let opts = StreamReadOptions::default()
             .block(0) //block indefinitely, until we get a new msg
             .count(max_msg_count);
@@ -84,14 +84,28 @@ impl StreamConsumer {
 
         let reply = reply
             .ok_or_else(|| eyre::eyre!("Got None from blocking read - this should not happen"))?;
-        self.last_id = reply.keys[0].ids[0].id.clone();
-        let raw_tx = reply.keys[0].ids[0].map.get("data");
 
-        match raw_tx {
-            Some(redis::Value::BulkString(data)) => Ok((data.clone(), self.last_id.clone())),
-            Some(_) => Err(eyre::eyre!("Expected binary data, got different type")),
-            None => Err(eyre::eyre!("No data found in message")),
+        let mut results = Vec::new();
+
+        for id in &reply.keys[0].ids {
+            let raw_tx = id.map.get("data");
+
+            match raw_tx {
+                Some(redis::Value::BulkString(data)) => {
+                    results.push((data.clone(), id.id.clone()));
+                }
+                Some(_) => return Err(eyre::eyre!("Expected binary data, got different type")),
+                None => return Err(eyre::eyre!("No data found in message")),
+            }
         }
+
+        self.last_id = reply.keys[0]
+            .ids
+            .last()
+            .ok_or_else(|| eyre::eyre!("No messages received - this should not happen"))?
+            .id
+            .clone();
+        Ok(results)
     }
 }
 
@@ -132,7 +146,47 @@ mod tests {
 
         // Receive and verify
         let received = consumer.recv(1).await.unwrap();
-        assert_eq!(received.0, test_data);
-        assert!(!received.1.is_empty());
+        assert_eq!(received.len(), 1);
+        assert_eq!(received[0].0, test_data);
+        assert!(!received[0].1.is_empty());
+    }
+
+    #[tokio::test(flavor = "multi_thread")]
+    async fn test_produce_consume_multiple_transactions() {
+        // Start Redis container
+        let (_redis, redis_url) = start_redis().await.unwrap();
+
+        // Connect to Redis
+        let conn = redis::Client::open(redis_url.as_str())
+            .unwrap()
+            .get_multiplexed_async_connection()
+            .await
+            .unwrap();
+
+        // Setup test data
+        let chain_id = 1;
+        let test_data1 = b"test transaction data 1".to_vec();
+        let test_data2 = b"test transaction data 2".to_vec();
+
+        // Create producer and consumer
+        let mut producer = StreamProducer::new(
+            conn.clone(),
+            chain_id,
+            Duration::from_secs(60),
+            Duration::from_secs(60),
+        );
+        let mut consumer = StreamConsumer::new(conn, chain_id, "0-0".to_string());
+
+        // Send transactions
+        producer.enqueue_transaction(test_data1.clone()).await.unwrap();
+        producer.enqueue_transaction(test_data2.clone()).await.unwrap();
+
+        // Receive and verify
+        let received = consumer.recv(2).await.unwrap();
+        assert_eq!(received.len(), 2);
+        assert_eq!(received[0].0, test_data1);
+        assert_eq!(received[1].0, test_data2);
+        assert!(!received[0].1.is_empty());
+        assert!(!received[1].1.is_empty());
     }
 }
