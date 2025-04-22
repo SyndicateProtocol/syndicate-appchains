@@ -15,7 +15,7 @@ use jsonrpsee::types::ErrorObjectOwned;
 use metabased_poster::{config::Config, metrics::PosterMetrics, poster, types::NitroBlock};
 use prometheus_client::registry::Registry;
 use std::{str::FromStr, time::Duration};
-use test_utils::port_manager::PortManager;
+use test_utils::{port_manager::PortManager, wait_until};
 use tokio::time::sleep;
 use url::Url;
 
@@ -95,6 +95,14 @@ async fn e2e_poster_test() -> Result<()> {
     assert!(response.status().is_success(), "Expected 200 OK, got {}", response.status());
     let body = response.text().await?;
     assert!(body.contains("Assertion posted successfully"), "Unexpected response body: {}", body);
+
+    wait_until!(
+        {
+            let block_option = set_provider.get_block_by_number(BlockNumberOrTag::Latest).await?;
+            block_option.is_some() && block_option.unwrap().header.number == 2
+        },
+        Duration::from_secs(10)
+    );
 
     let block_option = set_provider.get_block_by_number(BlockNumberOrTag::Latest).full().await?;
     assert!(block_option.is_some());
