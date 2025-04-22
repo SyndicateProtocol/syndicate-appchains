@@ -17,9 +17,9 @@ impl StreamManager {
     async fn new(_stream_key: String, _chain_id: u64) -> Result<Self> {
         Ok(Self {})
     }
-    async fn recv(&self) -> Result<Option<Bytes>> {
+    async fn recv(&self, _max_msg_count: usize) -> Result<Vec<(Vec<u8>, String)>> {
         let data = vec![0u8; 512]; // 512 bytes of zeros
-        Ok(Some(Bytes::from(data)))
+        Ok(vec![(data, String::new())])
     }
 }
 
@@ -72,40 +72,45 @@ impl Batcher {
             compressor: AdditiveCompressor::default(),
         }
     }
-    async fn read_transactions(&mut self) -> Result<Vec<Bytes>> {
-        let mut batch: Vec<Bytes> = Vec::new();
-
+    async fn read_transactions(&mut self) -> Result<()> {
         info!("Reading transactions from Redis");
-
-        while let Some(txn) = self.redis_client.recv().await? {
-            let size_if_added = self.compressor.peek_push_size(&txn)?;
-
-            if size_if_added >= self.max_batch_size {
+        loop {
+            // TODO: Configurable max msg count
+            let transactions = self.redis_client.recv(1).await?;
+            if transactions.is_empty() {
                 break;
             }
-            info!(
-                "Adding transaction to batch: {:?} - compressed size so far: {}",
-                txn, size_if_added
-            );
-            self.compressor.try_push(&txn)?;
-            batch.push(txn);
-        }
 
-        Ok(batch)
+            for (txn_bytes, _) in transactions {
+                let txn = Bytes::from(txn_bytes);
+
+                let size_if_added = self.compressor.peek_push_size(&txn)?;
+
+                if size_if_added >= self.max_batch_size {
+                    return Ok(());
+                }
+                info!(
+                    "Adding transaction to batch: {:?} - compressed size so far: {}",
+                    txn, size_if_added
+                );
+                self.compressor.try_push(&txn)?;
+            }
+        }
+        Ok(())
     }
 
     async fn read_and_batch_transactions(&mut self) -> Result<()> {
-        let batch = self.read_transactions().await?;
-        if batch.is_empty() {
+        self.read_transactions().await?;
+        if self.compressor.is_empty() {
             debug!("No transactions available to batch.");
             return Ok(());
         }
-        info!("Batching {} transactions", batch.len());
 
-        self.compress_and_send_batch(batch.clone()).await
+        self.send_compressed_batch().await
     }
 
-    async fn compress_and_send_batch(&mut self, batch: Vec<Bytes>) -> Result<()> {
+    async fn send_compressed_batch(&mut self) -> Result<()> {
+        let num_transactions = self.compressor.num_transactions();
         let compressed = take(&mut self.compressor).finish()?;
         self.compressor = AdditiveCompressor::default(); // Reset for next round
 
@@ -124,7 +129,7 @@ impl Batcher {
         }
 
         self.send_batch_to_sequencer(compressed.clone()).await?;
-        info!("Batch sent: {} txs, compressed size: {} bytes", batch.len(), compressed.len());
+        info!("Batch sent: {} txs, compressed size: {} bytes", num_transactions, compressed.len());
         Ok(())
     }
 

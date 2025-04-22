@@ -82,4 +82,14 @@ impl AdditiveCompressor {
 
         Ok(Bytes::from(compressed))
     }
+
+    /// Returns the number of transactions in the buffer
+    pub const fn num_transactions(&self) -> u32 {
+        self.num_transactions
+    }
+
+    /// Returns true if the buffer is empty
+    pub const fn is_empty(&self) -> bool {
+        self.num_transactions == 0
+    }
 }
