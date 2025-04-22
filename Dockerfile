@@ -28,7 +28,6 @@ RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/u
 FROM debian:bookworm-slim AS foundry
 RUN --mount=type=cache,target=/var/cache/apt \
     --mount=type=cache,target=/var/lib/apt \
-    apt-get clean && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
     curl \

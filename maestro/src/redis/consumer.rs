@@ -3,6 +3,7 @@
 //! and process transactions across different chains.
 
 use super::producer::tx_stream_key;
+use alloy::primitives::ChainId;
 use redis::{
     aio::MultiplexedConnection,
     streams::{StreamReadOptions, StreamReadReply},
@@ -47,7 +48,7 @@ impl StreamConsumer {
     ///   beginning)
     /// # Returns
     /// A new `StreamConsumer` instance configured to read from the stream for the given chain.
-    pub fn new(conn: MultiplexedConnection, chain_id: u64, start_from_id: String) -> Self {
+    pub fn new(conn: MultiplexedConnection, chain_id: ChainId, start_from_id: String) -> Self {
         // NOTE maybe we don't need MultiplexedConnection here (unless we want to have multiple
         // consumers per service)
         Self { conn, stream_key: tx_stream_key(chain_id), last_id: start_from_id }
@@ -71,7 +72,7 @@ impl StreamConsumer {
     /// * Currently reads one message at a time for simplicity. For high-throughput scenarios,
     ///   consider implementing batch reading with an internal buffer.
     /// * Blocks indefinitely until a new message arrives (block=0)
-    pub async fn recv(&mut self, max_msg_count: usize) -> eyre::Result<Option<(Vec<u8>, String)>> {
+    pub async fn recv(&mut self, max_msg_count: usize) -> eyre::Result<(Vec<u8>, String)> {
         let opts = StreamReadOptions::default()
             .block(0) //block indefinitely, until we get a new msg
             .count(max_msg_count);
@@ -80,20 +81,16 @@ impl StreamConsumer {
             .conn
             .xread_options(&[self.stream_key.as_str()], &[self.last_id.as_str()], &opts)
             .await?;
-        match reply {
-            Some(reply) => {
-                self.last_id = reply.keys[0].ids[0].id.clone();
-                let raw_tx = reply.keys[0].ids[0].map.get("data");
 
-                match raw_tx {
-                    Some(redis::Value::BulkString(data)) => {
-                        Ok(Some((data.clone(), self.last_id.clone())))
-                    }
-                    Some(_) => Err(eyre::eyre!("Expected binary data, got different type")),
-                    None => Err(eyre::eyre!("No data found in message")),
-                }
-            }
-            None => Ok(None),
+        let reply = reply
+            .ok_or_else(|| eyre::eyre!("Got None from blocking read - this should not happen"))?;
+        self.last_id = reply.keys[0].ids[0].id.clone();
+        let raw_tx = reply.keys[0].ids[0].map.get("data");
+
+        match raw_tx {
+            Some(redis::Value::BulkString(data)) => Ok((data.clone(), self.last_id.clone())),
+            Some(_) => Err(eyre::eyre!("Expected binary data, got different type")),
+            None => Err(eyre::eyre!("No data found in message")),
         }
     }
 }
@@ -134,7 +131,7 @@ mod tests {
         producer.enqueue_transaction(test_data.clone()).await.unwrap();
 
         // Receive and verify
-        let received = consumer.recv(1).await.unwrap().unwrap();
+        let received = consumer.recv(1).await.unwrap();
         assert_eq!(received.0, test_data);
         assert!(!received.1.is_empty());
     }

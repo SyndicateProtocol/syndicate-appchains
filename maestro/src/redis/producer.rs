@@ -53,7 +53,7 @@ pub fn tx_stream_key(chain_id: u64) -> String {
 pub struct StreamProducer {
     conn: MultiplexedConnection,
     stream_key: String,
-    _prune_handle: JoinHandle<()>,
+    _prune_handle: JoinHandle<()>, // handle to keep the pruning task running
 }
 
 impl StreamProducer {
@@ -62,8 +62,8 @@ impl StreamProducer {
     /// # Arguments
     /// * `conn` - An established Redis connection
     /// * `chain_id` - The chain identifier this producer will write to
-    /// * `prune_interval` - How often to prune old entries (default: 24 hours)
-    /// * `prune_max_age` - Maximum age of entries to keep (default: 24 hours)
+    /// * `prune_interval` - How often to prune old entries
+    /// * `prune_max_age` - Maximum age of entries to keep
     ///
     /// # Returns
     /// A new `StreamProducer` instance configured for the specified chain

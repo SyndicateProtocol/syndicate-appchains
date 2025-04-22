@@ -11,7 +11,7 @@ use test_utils::wait_until;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use maestro::config::Config;
+    use maestro::{config::Config, server::HEADER_CHAIN_ID};
     use std::collections::HashMap;
     use test_utils::{
         docker::{start_redis, Docker},
@@ -70,7 +70,7 @@ mod tests {
     ) -> Result<Response> {
         let response = client
             .post(url)
-            .header("x-synd-chain-id", "1")
+            .header(HEADER_CHAIN_ID, "1")
             .json(&json!({
                 "jsonrpc": "2.0",
                 "id": 1,
@@ -108,7 +108,7 @@ mod tests {
             // Test with valid transaction input
             let tx_response = client
                 .post(base_url)
-                .header("x-synd-chain-id", "4")
+                .header(HEADER_CHAIN_ID, "4")
                 .json(&json!({
                     "jsonrpc": "2.0",
                     "id": 1,
@@ -138,7 +138,7 @@ mod tests {
 
             let mismatch_response = client
                 .post(&base_url)
-                .header("x-synd-chain-id", "4") // Different from tx chain ID (5)
+                .header(HEADER_CHAIN_ID, "4") // Different from tx chain ID (5)
                 .json(&json!({
                     "jsonrpc": "2.0",
                     "id": 1,
@@ -167,7 +167,7 @@ mod tests {
 
             let response = client
                 .post(&base_url)
-                .header("x-synd-chain-id", "4")
+                .header(HEADER_CHAIN_ID, "4")
                 .json(&json!({
                     "jsonrpc": "2.0",
                     "id": 1,
@@ -252,7 +252,7 @@ mod tests {
             // Test with malformed headers
             let malformed_headers_response = client
                 .post(base_url)
-                .header("x-synd-chain-id", b"\xff\xff\xff".as_ref()) // Invalid ASCII that we can't parse
+                .header(HEADER_CHAIN_ID, b"\xff\xff\xff".as_ref()) // Invalid ASCII that we can't parse
                 .json(&json!({
                     "jsonrpc": "2.0",
                     "id": 1,

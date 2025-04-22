@@ -34,7 +34,7 @@ pub const HEADER_CHAIN_ID: &str = "x-synd-chain-id";
 pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
     info!("Starting Maestro server:run");
 
-    let optional_headers = vec!["x-synd-chain-id".to_string()];
+    let optional_headers = vec![HEADER_CHAIN_ID.to_string()];
     let http_middleware = ServiceBuilder::new()
         .layer(HeadersLayer::new(optional_headers)?)
         .layer(ProxyGetRequestLayer::new("/health", "health")?)
@@ -85,7 +85,7 @@ pub async fn send_raw_transaction_handler(
     let tx = validate_transaction(&raw_tx)?;
     let chain_id = validate_chain_id(get_request_chain_id(extensions), tx.chain_id())?;
 
-    service.process_raw_transaction(raw_tx, chain_id).await?;
+    service.enqueue_raw_transaction(raw_tx, chain_id).await?;
     Ok(format!("0x{}", alloy::hex::encode(tx.hash())))
 }
 
@@ -115,7 +115,7 @@ fn validate_chain_id(
 #[derive(Debug)]
 pub struct MaestroService {
     redis_conn: MultiplexedConnection,
-    producers: Mutex<HashMap<u64, StreamProducer>>,
+    producers: Mutex<HashMap<ChainId, StreamProducer>>,
     config: Config,
 }
 
@@ -125,7 +125,7 @@ impl MaestroService {
         Self { redis_conn, producers: Mutex::new(HashMap::new()), config }
     }
 
-    async fn process_raw_transaction(
+    async fn enqueue_raw_transaction(
         &self,
         raw_tx: Bytes,
         chain_id: ChainId,
@@ -157,6 +157,7 @@ impl MaestroService {
 mod tests {
     use super::*;
     use http::Extensions;
+    use shared::json_rpc::InvalidInputError::ChainIdMismatched;
     use std::collections::HashMap;
 
     #[test]
@@ -208,5 +209,37 @@ mod tests {
         // Ensure the function returns None when Extensions is empty
         let result = get_request_chain_id(extensions);
         assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_validate_chain_id_no_request_id() {
+        let result = validate_chain_id(None, Some(12345u64));
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 12345u64);
+    }
+
+    #[test]
+    fn test_validate_chain_id_matching_ids() {
+        let result = validate_chain_id(Some(12345u64), Some(12345u64));
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 12345u64);
+    }
+
+    #[test]
+    fn test_validate_chain_id_mismatched_ids() {
+        let result = validate_chain_id(Some(12345u64), Some(67890u64));
+        assert!(matches!(result, Err(InvalidInput(ChainIdMismatched(_, _)))));
+    }
+
+    #[test]
+    fn test_validate_chain_id_no_txn_id() {
+        let result = validate_chain_id(Some(12345u64), None);
+        assert!(matches!(result, Err(InvalidInput(ChainIdMismatched(_, _)))));
+    }
+
+    #[test]
+    fn test_validate_chain_id_both_none() {
+        let result = validate_chain_id(None, None);
+        assert!(matches!(result, Err(InvalidInput(ChainIdMismatched(_, _)))));
     }
 }
