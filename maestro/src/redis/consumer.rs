@@ -133,7 +133,7 @@ mod tests {
         let test_data = b"test transaction data".to_vec();
 
         // Create producer and consumer
-        let mut producer = StreamProducer::new(
+        let producer = StreamProducer::new(
             conn.clone(),
             chain_id,
             Duration::from_secs(60),
@@ -169,7 +169,7 @@ mod tests {
         let test_data2 = b"test transaction data 2".to_vec();
 
         // Create producer and consumer
-        let mut producer = StreamProducer::new(
+        let producer = StreamProducer::new(
             conn.clone(),
             chain_id,
             Duration::from_secs(60),

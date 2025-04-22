@@ -115,14 +115,29 @@ fn validate_chain_id(
 #[derive(Debug)]
 pub struct MaestroService {
     redis_conn: MultiplexedConnection,
-    producers: Mutex<HashMap<ChainId, StreamProducer>>,
+    producers: Mutex<HashMap<ChainId, Arc<StreamProducer>>>,
     config: Config,
 }
 
 impl MaestroService {
     /// Create a new instance of the Maestro service
-    pub fn new(redis_conn: MultiplexedConnection, config: Config) -> Self {
+    fn new(redis_conn: MultiplexedConnection, config: Config) -> Self {
         Self { redis_conn, producers: Mutex::new(HashMap::new()), config }
+    }
+
+    async fn get_or_create_producer(&self, chain_id: ChainId) -> Arc<StreamProducer> {
+        let mut producers = self.producers.lock().await;
+        producers
+            .entry(chain_id)
+            .or_insert_with(|| {
+                Arc::new(StreamProducer::new(
+                    self.redis_conn.clone(),
+                    chain_id,
+                    self.config.prune_interval,
+                    self.config.prune_max_age,
+                ))
+            })
+            .clone()
     }
 
     async fn enqueue_raw_transaction(
@@ -130,17 +145,10 @@ impl MaestroService {
         raw_tx: Bytes,
         chain_id: ChainId,
     ) -> Result<(), jsonrpsee::types::ErrorObjectOwned> {
-        // get or create producer
-        let mut producers = self.producers.lock().await;
-        let producer = producers.entry(chain_id).or_insert_with(|| {
-            StreamProducer::new(
-                self.redis_conn.clone(),
-                chain_id,
-                self.config.prune_interval,
-                self.config.prune_max_age,
-            )
-        });
+        // Get or create producer while holding lock
+        let producer = self.get_or_create_producer(chain_id).await;
 
+        // Release lock before making async call
         producer.enqueue_transaction(raw_tx.into()).await.map_err(|e| {
             jsonrpsee::types::ErrorObjectOwned::owned(
                 ErrorCode::InternalError.code(),
@@ -148,7 +156,6 @@ impl MaestroService {
                 None::<()>,
             )
         })?;
-        drop(producers); // release the lock
         Ok(())
     }
 }
