@@ -1,4 +1,4 @@
-//! The Batcher service for the Maestro.
+//! The Batcher service for the sequencer.
 
 use crate::config::BatcherConfig;
 use alloy::primitives::Bytes;

@@ -9,16 +9,14 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy      = { workspace = true }
-clap       = { workspace = true, features = ["derive", "env"] }
-eyre       = { workspace = true }
-humantime  = { workspace = true }
-serde_json = { workspace = true }
-shared     = { workspace = true }
-tc-client  = { workspace = true }
-thiserror  = { workspace = true }
-tokio      = { workspace = true, features = ["full"] }
-tracing    = { workspace = true }
+alloy     = { workspace = true }
+clap      = { workspace = true, features = ["derive", "env"] }
+eyre      = { workspace = true }
+humantime = { workspace = true }
+shared    = { workspace = true }
+tc-client = { workspace = true }
+tokio     = { workspace = true, features = ["full"] }
+tracing   = { workspace = true }
 
 
 [dev-dependencies]

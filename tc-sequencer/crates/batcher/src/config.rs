@@ -1,34 +1,7 @@
 //! This module contains `config` for the `Batcher` service
 
-use alloy::transports::http::reqwest::Error as ReqwestError;
 use clap::Parser;
 use std::{fmt::Debug, time::Duration};
-use thiserror::Error;
-use tracing::error;
-
-/// Errors that can occur during Batcher configuration or validation
-#[derive(Debug, Error)]
-pub enum ConfigError {
-    /// Failed to create the HTTP client
-    #[error("failed to build HTTP client: {0}")]
-    HttpClient(#[from] ReqwestError),
-
-    /// Failed to connect to the given RPC URL
-    #[error("failed to connect to RPC URL for chain {0} at {1}")]
-    RpcUrlConnection(String, String),
-
-    /// RPC endpoint responded with a non-success status code
-    #[error("invalid HTTP status from RPC URL {1} for chain {0}: {2}")]
-    RpcUrlInvalidStatus(String, String, String),
-
-    /// RPC endpoint returned a mismatched chain ID
-    #[error("RPC URL {0} returned mismatched chain ID. Expected: {1}, Got: {2}")]
-    RpcUrlInvalidChainId(String, String, String),
-
-    /// RPC response could not be parsed
-    #[error("failed to parse JSON-RPC response: {0}")]
-    JsonParseError(#[from] serde_json::Error),
-}
 
 /// Configuration for Batcher
 #[allow(clippy::doc_markdown)]

@@ -1136,10 +1136,8 @@ dependencies = [
  "eyre",
  "humantime",
  "mockall",
- "serde_json",
  "shared",
  "tc-client",
- "thiserror 2.0.12",
  "tokio",
  "tracing",
 ]
