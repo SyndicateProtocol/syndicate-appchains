@@ -91,7 +91,7 @@ mod tests {
     #[tokio::test]
     async fn test_start_metrics() {
         let metrics_state = MetricsState::default();
-        let port = 9001;
+        let port = test_utils::port_manager::PortManager::instance().next_port().await;
 
         let handle = start_metrics(metrics_state, port).await;
 

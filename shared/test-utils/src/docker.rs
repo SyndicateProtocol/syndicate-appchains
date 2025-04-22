@@ -128,8 +128,8 @@ pub async fn start_mchain(
     finality_delay: u64,
 ) -> Result<(String, Docker, MProvider)> {
     let temp = test_path("mchain");
-    let port = PortManager::instance().next_port();
-    let metric_port = PortManager::instance().next_port();
+    let port = PortManager::instance().next_port().await;
+    let metric_port = PortManager::instance().next_port().await;
     let docker = start_component(
         "mchain",
         metric_port,
@@ -161,7 +161,7 @@ pub async fn launch_nitro_node(
     sequencer_port: Option<u16>,
 ) -> Result<(Docker, RootProvider, String)> {
     let tag = env::var("NITRO_TAG").unwrap_or("v3.4.0-d896e9c-slim".to_string());
-    let port = PortManager::instance().next_port();
+    let port = PortManager::instance().next_port().await;
 
     let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
 
@@ -201,7 +201,7 @@ pub async fn launch_nitro_node(
 }
 
 pub async fn start_redis() -> Result<(Docker, String)> {
-    let port = PortManager::instance().next_port();
+    let port = PortManager::instance().next_port().await;
     let redis = Docker::new(
         Command::new("docker")
             .arg("run")

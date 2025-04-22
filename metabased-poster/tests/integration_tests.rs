@@ -26,9 +26,9 @@ fn init() {
 
 #[tokio::test]
 async fn e2e_poster_test() -> Result<()> {
-    let set_port = PortManager::instance().next_port();
-    let app_port = PortManager::instance().next_port();
-    let poster_port = PortManager::instance().next_port();
+    let set_port = PortManager::instance().next_port().await;
+    let app_port = PortManager::instance().next_port().await;
+    let poster_port = PortManager::instance().next_port().await;
 
     let (_set_anvil, set_provider) = utils::start_anvil(1, set_port).await?;
 
