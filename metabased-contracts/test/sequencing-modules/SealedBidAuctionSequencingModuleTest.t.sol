@@ -33,9 +33,13 @@ contract SealedBidAuctionSequencingModuleTest is Test {
 
         // reveal bids
         vm.prank(bidder1);
+        vm.expectEmit(true, false, false, false);
+        emit SealedBidAuctionSequencingModule.BidRevealed(bidder1, bidAmount, false);
         auction.revealBid(bidAmount, "salt1");
 
         vm.prank(bidder2);
+        vm.expectEmit(true, false, false, false);
+        emit SealedBidAuctionSequencingModule.BidRevealed(bidder2, bidAmount + 1 ether, true);
         auction.revealBid(bidAmount + 1 ether, "salt2");
 
         vm.warp(block.timestamp + auctionDuration + 1);
@@ -61,6 +65,8 @@ contract SealedBidAuctionSequencingModuleTest is Test {
         auction.revealBid(bidAmount + 1 ether, "salt2");
 
         vm.startPrank(bidder1);
+        vm.expectEmit(true, false, false, false);
+        emit SealedBidAuctionSequencingModule.BidRevealed(bidder1, bidAmount, false);
         auction.revealBid(bidAmount, "salt1");
         auction.withdrawFunds();
         vm.stopPrank();
@@ -77,6 +83,8 @@ contract SealedBidAuctionSequencingModuleTest is Test {
 
         vm.startPrank(bidder1);
         auction.bid{value: bidAmount}(sealedBid1);
+        vm.expectEmit(true, false, false, false);
+        emit SealedBidAuctionSequencingModule.BidRevealed(bidder1, bidAmount, true);
         auction.revealBid(bidAmount, "salt1");
         vm.stopPrank();
 
@@ -106,8 +114,42 @@ contract SealedBidAuctionSequencingModuleTest is Test {
         vm.stopPrank();
 
         vm.startPrank(bidder1);
-        vm.expectRevert(SealedBidAuctionSequencingModule.InvalidBidReveal.selector);
+        vm.expectRevert(SealedBidAuctionSequencingModule.BidExceedsDeposit.selector);
         auction.revealBid(bidAmount + 1 ether, "wrongSalt");
         vm.stopPrank();
+    }
+
+    function testRevertsOnZeroDuration() public {
+        vm.expectRevert(SealedBidAuctionSequencingModule.InvalidDuration.selector);
+        new SealedBidAuctionSequencingModule(0, treasury);
+    }
+
+    function testRevertsWhenAuctionNotActive() public {
+        bytes32 sealedBid = keccak256(abi.encodePacked(uint256(bidAmount), "salt1"));
+
+        vm.warp(block.timestamp + auctionDuration + 1);
+        auction.finalizeAuction();
+
+        vm.startPrank(bidder1);
+        vm.expectRevert(SealedBidAuctionSequencingModule.AuctionNotActive.selector);
+        auction.bid{value: bidAmount}(sealedBid);
+        vm.stopPrank();
+    }
+
+    function testRevertsWhenFinalizingActiveAuction() public {
+        vm.expectRevert(SealedBidAuctionSequencingModule.AuctionNotEnded.selector);
+        auction.finalizeAuction();
+    }
+
+    function testConstructorSetsCorrectValues() public view {
+        assertEq(auction.treasury(), treasury, "Treasury not set correctly");
+        assertEq(auction.auctionType(), "SealedBid", "Auction type not set correctly");
+        assertTrue(auction.auctionActive(), "Auction should be active");
+        assertEq(auction.endTime(), block.timestamp + auctionDuration, "End time not set correctly");
+    }
+
+    function testRevertsOnZeroTreasury() public {
+        vm.expectRevert(SealedBidAuctionSequencingModule.AddressNotAllowed.selector);
+        new SealedBidAuctionSequencingModule(auctionDuration, address(0));
     }
 }

@@ -1,0 +1,27 @@
+name: Build Translator Image to Github and Google Registries - Dry run Check
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "metabased-translator/**"
+      - "Dockerfile"
+      - "**/Cargo.toml"
+      - ".github/workflows/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
+jobs:
+  build-no-push:
+    uses: ./.github/workflows/docker-build-core.yaml
+    with:
+      do_push: false
+      target_name: metabased-translator
+    secrets: inherit

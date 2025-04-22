@@ -1,0 +1,176 @@
+name: Rust Workspace CI
+
+on:
+  # Run workflow on every push to main
+  push:
+    branches:
+      - main
+  # Mandatory checks - must run on all PRs
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref || github.run_id }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Make sure CI fails on all warnings, including Clippy lints
+  RUSTFLAGS: "-Dwarnings"
+
+jobs:
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Rust toolchain and clippy
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup component add clippy
+
+      # Cache Cargo dependencies
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Cache entire workspace
+          workspaces: "."
+
+      # Run Clippy checks on entire workspace
+      - name: Run Clippy
+        run: cargo clippy --workspace --all-targets --all-features
+
+  fmt:
+    name: Fmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Rust toolchain and rustfmt
+      - name: Install Rust toolchain
+        run: |
+          rustup toolchain install nightly --profile minimal
+          rustup component add --toolchain nightly-x86_64-unknown-linux-gnu rustfmt
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Cache entire workspace
+          workspaces: "."
+
+      # Run fmt check on entire workspace
+      - name: Run Fmt
+        run: cargo +nightly fmt --all --check -- --unstable-features
+
+  machete:
+    name: Machete
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cargo-machete
+        uses: clechasseur/rs-cargo@v2
+        with:
+          command: install
+          args: cargo-machete@0.7.0
+      - name: Machete
+        uses: clechasseur/rs-cargo@v2
+        with:
+          command: machete
+
+  taplo:
+    name: Cargo.toml format validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install taplo using cargo
+      - name: Install Taplo
+        uses: clechasseur/rs-cargo@v2
+        with:
+          command: install
+          args: taplo-cli@0.9.0
+
+      # Cache Cargo dependencies
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Cache entire workspace
+          workspaces: "."
+
+      # Run Taplo validation on all Cargo.toml files in the workspace
+      - name: Validate Cargo.toml files
+        run: taplo lint "**/Cargo.toml" --verbose
+
+      # Check Cargo.toml formatting
+      - name: Check Cargo.toml formatting. Remove `--check` from command to apply changes
+        run: taplo fmt --check "**/Cargo.toml" --verbose
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Rust toolchain
+      - name: Install Rust toolchain
+        run: rustup toolchain install stable --profile minimal
+
+      # Cache Cargo dependencies
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Cache entire workspace
+          workspaces: "."
+
+      # Install Foundry (required for Anvil, a local Ethereum node simulator)
+      # Anvil is a critical dependency for tests, particularly
+      # the block builder component which uses it to simulate blockchain operations
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: stable
+      
+      - name: Verify Foundry Installation
+        run: |
+          which anvil
+          anvil --version
+
+      - name: Build Packges
+        run: cargo build --workspace
+
+      - name: Build Tests
+        run: cargo test --workspace --exclude maestro --no-run
+
+      # Run tests on entire workspace. `maestro` is excluded because it is tested separately by Nextest below
+      - name: Run Tests
+        run: cargo test --workspace --exclude maestro
+
+  nextest:
+    name: Nextest Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      # Install Rust toolchain
+      - name: Install Rust toolchain
+        run: rustup toolchain install stable --profile minimal
+
+      # Cache Cargo dependencies
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          # Cache entire workspace
+          workspaces: "."
+
+      # Install nextest
+      - name: Install nextest
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-nextest
+
+      # Run maestro tests with nextest (using existing config)
+      - name: Run Integration Tests with Nextest
+        run: cargo nextest run --profile maestro -p maestro

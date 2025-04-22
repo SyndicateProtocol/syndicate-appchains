@@ -2,7 +2,7 @@
 pragma solidity 0.8.25;
 
 import {AtomicSequencerImplementation} from "./AtomicSequencerImplementation.sol";
-import {Proxy} from "openzeppelin-contracts/contracts/proxy/Proxy.sol";
+import {Proxy} from "@openzeppelin/contracts/proxy/Proxy.sol";
 
 /// @title AtomicSequencer
 /// @notice A wrapper contract that sequences transactions on two MetabasedChain contracts atomically.

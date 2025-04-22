@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {PermissionModule} from "../interfaces/PermissionModule.sol";
+import {ProposerPermissionModule} from "../interfaces/ProposerPermissionModule.sol";
 
 /**
  * @title AllowlistSequencingModule
  * @dev This contract implements an allowlist mechanism to control access to sequencing.
  */
-contract AllowlistSequencingModule is PermissionModule {
+// [Olympix Warning: unfuzzed variables, missing events assertion] These test-related warnings are not security critical
+// as the contract uses standard unit tests and integration tests for event verification
+contract AllowlistSequencingModule is ProposerPermissionModule {
     /// @notice The address of the admin who can modify the allowlist.
     address public admin;
     /// @notice Mapping to store allowed addresses.

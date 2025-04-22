@@ -236,8 +236,9 @@ library BidStructuredLinkedList {
     function _pop(List storage self, bool _direction) private returns (uint256, address) {
         uint256 adj;
         (, adj) = getAdjacent(self, _HEAD, _direction);
+        address bidder = self.bidder[adj]; // Store the bidder before it gets deleted
         uint256 bidAmount = remove(self, adj);
-        return (bidAmount, self.bidder[bidAmount]);
+        return (bidAmount, bidder);
     }
 
     /**

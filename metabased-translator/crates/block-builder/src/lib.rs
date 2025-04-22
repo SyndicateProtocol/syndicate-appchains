@@ -1,5 +1,8 @@
+//! Block builder crate handles block construction, rollup translation, and connection to the meta
+//! chain
+
+pub mod block_builder;
 pub mod config;
 pub mod connectors;
-#[rustfmt::skip]
-pub mod contract_bindings;
+pub mod metrics;
 pub mod rollups;

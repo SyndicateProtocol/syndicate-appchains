@@ -1,0 +1,23 @@
+services:
+  mchain:
+    build:
+      context: ../../
+      target: mchain
+      dockerfile: Dockerfile
+    command: "--chain-id 510000"
+  translator:
+    build:
+      context: ../../
+      target: metabased-translator
+      dockerfile: Dockerfile
+    environment:
+      - SEQUENCING_CONTRACT_ADDRESS=0x180972BF154c9Aea86c43149D83B7Ea078c33f48
+      - ARBITRUM_BRIDGE_ADDRESS=0x13Cb6F51e976287708D0ce926998ab717064b6C5
+      - ARBITRUM_INBOX_ADDRESS=0x141F33Fa64F669C71626beE5bFb1C3c5fB6fFbbD
+      - SEQUENCING_RPC_URL=https://syndicate-exo.g.alchemy.com/v2/nYkJi2K0LszDqj8jzWY-rMJmK9ugf0oF
+      - SEQUENCING_START_BLOCK=5527
+      - SETTLEMENT_RPC_URL=https://base-sepolia.g.alchemy.com/v2/nYkJi2K0LszDqj8jzWY-rMJmK9ugf0oF
+      - SETTLEMENT_START_BLOCK=21853620
+      - MCHAIN_RPC_URL=http://mchain:8050
+    depends_on:
+      - mchain

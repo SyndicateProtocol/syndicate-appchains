@@ -1,0 +1,37 @@
+[package]
+edition.workspace = true
+name              = "tc-sequencer"
+version.workspace = true
+
+[dependencies]
+alloy = { workspace = true, features = [
+  "contract",
+  "k256",
+  "node-bindings",
+  "provider-engine-api",
+  "providers",
+  "rlp",
+  "rpc-types",
+  "signer-local",
+  "signers",
+] }
+bytes = { workspace = true }
+clap = { workspace = true, features = ["derive", "env"] }
+eyre = { workspace = true }
+hex = { workspace = true }
+jsonrpsee = { workspace = true, features = ["http-client", "server"] }
+reqwest = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+shared = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+tower = { workspace = true }
+tracing = { workspace = true }
+url = { workspace = true }
+
+[lints]
+workspace = true
+
+[dev-dependencies]
+mockito = { workspace = true }

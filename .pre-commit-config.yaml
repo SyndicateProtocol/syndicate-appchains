@@ -1,15 +1,62 @@
 exclude: vendor|\.pb\.go
 
 repos:
-  - repo: https://github.com/Bahjat/pre-commit-golang
-    rev: v1.0.3
+  - repo: local
     hooks:
-      - id: go-fmt-import
-        files: ^(op-translator|metabased-publisher)/
-      - id: go-vet
-        files: ^(op-translator|metabased-publisher)/
-      - id: go-lint
-        files: ^(op-translator|metabased-publisher)/
-      - id: golangci-lint # requires github.com/golangci/golangci-lint
-        files: ^(op-translator|metabased-publisher)/
-        args: [--config=.golangci.yaml --allow-parallel-runners]
+      - id: fmt
+        name: fmt
+        args: ["--all", "--check", "--", "--unstable-features"] # nightly Rust required for `imports_granularity` feature
+        entry: cargo +nightly fmt
+        language: system
+        types: [rust]
+        pass_filenames: false
+      - id: clippy
+        name: clippy
+        args:
+          [
+            "--workspace",
+            "--all-targets",
+            "--all-features",
+            "--",
+            "-D",
+            "warnings",
+          ]
+        entry: cargo clippy
+        language: system
+        types: [rust]
+        pass_filenames: false
+      - id: cargo-machete
+        name: cargo machete
+        entry: cargo machete
+        language: system
+        types: [rust]
+        pass_filenames: false
+      - id: forge-fmt
+        name: forge fmt
+        entry: forge fmt
+        args: ["--check"]
+        language: system
+        types: [solidity]
+      - id: forge-test-metabased-contracts
+        name: forge test metabased contracts
+        entry: forge test
+        args: ["--root", "metabased-contracts"]
+        language: system
+        types: [solidity]
+        files: ^(metabased-contracts)/
+        pass_filenames: false
+      - id: forge-test-shared-contracts
+        name: forge test metabased translator contracts
+        entry: forge test
+        args: ["--root", "shared/arb-contracts"]
+        language: system
+        types: [solidity]
+        files: ^(shared)/arb-contracts/
+        pass_filenames: false
+      - id: taplo-fmt
+        name: Cargo.toml format validation
+        entry: taplo fmt
+        args: ["--check", "**/Cargo.toml", "--verbose"]
+        language: system
+        types: [cargo]
+        pass_filenames: false

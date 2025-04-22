@@ -5,9 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {AtomicSequencer, AtomicSequencerImplementation} from "src/atomic-sequencer/AtomicSequencer.sol";
 import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
-import {PermissionModule} from "src/interfaces/PermissionModule.sol";
+import {ProposerPermissionModule} from "src/interfaces/ProposerPermissionModule.sol";
 
-contract MockIsAllowed is PermissionModule {
+contract MockIsAllowed is ProposerPermissionModule {
     bool allowed;
 
     constructor(bool _allowed) {
@@ -37,10 +37,12 @@ contract AtomicSequencerTest is Test {
 
         vm.startPrank(admin);
         permissionModule = new RequireAllModule(admin);
-        chainA = new MetabasedSequencerChain(l3ChainIdA, admin, address(permissionModule));
-        chainB = new MetabasedSequencerChain(l3ChainIdB, admin, address(permissionModule));
+        chainA = new MetabasedSequencerChain(l3ChainIdA);
+        chainA.initialize(admin, address(permissionModule));
+        chainB = new MetabasedSequencerChain(l3ChainIdB);
+        chainB.initialize(admin, address(permissionModule));
         atomicSequencer = new AtomicSequencer();
-        permissionModule.addCheck(address(new MockIsAllowed(true)), false);
+        permissionModule.addProposerCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
     }
 
@@ -94,7 +96,8 @@ contract AtomicSequencerTest is Test {
     }
 
     function testProcessMultipleChains() public {
-        MetabasedSequencerChain chainC = new MetabasedSequencerChain(10042003, admin, address(permissionModule));
+        MetabasedSequencerChain chainC = new MetabasedSequencerChain(10042003);
+        chainC.initialize(admin, address(permissionModule));
 
         MetabasedSequencerChain[] memory chains = new MetabasedSequencerChain[](3);
         chains[0] = chainA;
@@ -138,6 +141,12 @@ contract AtomicSequencerTest is Test {
         vm.prank(originalCaller);
         (bool success,) = address(atomicSequencer).call(callData);
         assertTrue(success, "failure in processing same chain multiple times");
+    }
+
+    function testConstructorDeployment() public {
+        AtomicSequencer newSequencer = new AtomicSequencer();
+        assertTrue(address(newSequencer.implementation()) != address(0), "Implementation should be set");
+        assertTrue(address(newSequencer) != address(0), "Sequencer should be deployed");
     }
 
     function testRevertOnInvalidCalls() public {

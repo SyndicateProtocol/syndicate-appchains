@@ -1,17 +1,38 @@
 [package]
-name = "e2e-tests"
-version.workspace = true
-description = "e2e tests for metabased-translator."
-edition.workspace = true
+description            = "e2e tests for metabased-translator."
+edition.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "e2e-tests"
+repository.workspace   = true
 rust-version.workspace = true
-license.workspace = true
-homepage.workspace = true
-repository.workspace = true
+version.workspace      = true
+
+[package.metadata.cargo-machete]
+# strum is used via a macro from strum_macros - machete does not detect it
+ignored = ["strum"]
+
 
 [dependencies]
+alloy = { workspace = true, features = [
+  "node-bindings",
+  "rpc-types-anvil",
+  "sol-types",
+] }
 block-builder = { workspace = true }
-alloy = { version = "0.8", features = ["full"] }
-alloy-provider = "0.8.3"
-eyre = "0.6.12"
-reqwest = "0.12.9"
-tokio = { version = "1.42.0", features = ["rt", "rt-multi-thread", "macros"] }
+contract-bindings = { workspace = true }
+eyre = { workspace = true }
+mchain = { workspace = true }
+shared = { workspace = true }
+strum = { workspace = true }
+test-utils = { workspace = true }
+tokio = { workspace = true, features = ["fs"] }
+
+[dev-dependencies]
+ctor = { workspace = true }
+
+[features]
+env-tests = []
+
+[lints]
+workspace = true

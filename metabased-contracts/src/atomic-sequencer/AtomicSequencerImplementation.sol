@@ -5,6 +5,8 @@ import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
 
 /// @title AtomicSequencerImplementation
 /// @notice Implementation contract containing the logic for atomic sequencing
+// [Olympix Warning: unfuzzed variables, missing events assertion] These test-related warnings are not security critical
+// as the contract uses standard unit tests and integration tests. Parameter validation is handled through array length checks.
 contract AtomicSequencerImplementation {
     /// @dev Thrown when input array lengths don't match or are invalid
     error InputLengthMismatchError();
@@ -39,6 +41,10 @@ contract AtomicSequencerImplementation {
         MetabasedSequencerChain[] calldata chains,
         bytes[][] calldata transactions
     ) external {
+        if (chains.length == 0 || chains.length != transactions.length) {
+            revert InputLengthMismatchError();
+        }
+
         for (uint256 i = 0; i < chains.length; i++) {
             chains[i].processBulkTransactions(transactions[i]);
         }

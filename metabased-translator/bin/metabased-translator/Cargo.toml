@@ -1,0 +1,35 @@
+[package]
+edition.workspace      = true
+license.workspace      = true
+name                   = "metabased-translator"
+rust-version.workspace = true
+version.workspace      = true
+
+[[bin]]
+name = "metabased-translator"
+path = "src/main.rs"
+
+[dependencies]
+alloy             = { workspace = true }
+block-builder     = { workspace = true }
+clap              = { workspace = true }
+common            = { workspace = true }
+contract-bindings = { workspace = true }
+eyre              = { workspace = true }
+ingestor          = { workspace = true }
+metrics           = { workspace = true }
+shared            = { workspace = true }
+slotter           = { workspace = true }
+thiserror         = { workspace = true }
+tokio             = { workspace = true, features = ["signal"] }
+tracing           = { workspace = true }
+
+[dev-dependencies]
+async-trait = { workspace = true }
+mockall     = { workspace = true }
+temp-env    = { workspace = true }
+
+
+[[example]]
+name = "generate_run_command"
+path = "examples/generate_run_command.rs"

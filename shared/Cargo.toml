@@ -1,0 +1,26 @@
+[package]
+edition.workspace      = true
+exclude.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "shared"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[dependencies]
+alloy              = { workspace = true, features = ["k256", "rlp"] }
+axum               = { workspace = true }
+byte-unit          = { workspace = true, features = ["default"] }
+jsonrpsee          = { workspace = true, features = ["jsonrpsee-types", "server"] }
+prometheus-client  = { workspace = true }
+serde              = { workspace = true, features = ["derive"] }
+serde_json         = { workspace = true }
+thiserror          = { workspace = true }
+tokio              = { workspace = true }
+tracing            = { workspace = true }
+tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
+url                = { workspace = true }
+
+[lints]
+workspace = true
