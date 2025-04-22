@@ -140,3 +140,57 @@ impl Batcher {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use alloy::primitives::{Address, Bytes};
+    use tc_client::config::{TCConfig, TCEndpoint};
+
+    const TC_CONFIG: TCConfig = TCConfig {
+        tc_endpoint: TCEndpoint::Staging,
+        tc_project_id: String::new(),
+        tc_api_key: String::new(),
+        wallet_pool_address: Address::ZERO,
+        sequencing_address: Address::ZERO,
+    };
+
+    fn test_config() -> BatcherConfig {
+        BatcherConfig {
+            max_batch_size: 1024,
+            redis_url: "dummy".to_string(),
+            chain_id: 1,
+            polling_interval: std::time::Duration::from_millis(10),
+            sequencer_client_url: "dummy".to_string(),
+        }
+    }
+
+    #[tokio::test]
+    async fn test_read_transactions_adds_to_compressor() {
+        let config = test_config();
+        let redis_client = StreamManager::new("dummy".into(), 1).await.unwrap();
+        let tc_client = TCClient::new(&TC_CONFIG).unwrap();
+        let mut batcher = Batcher::new(&config, tc_client, redis_client);
+
+        let result = batcher.read_transactions().await;
+        assert!(result.is_ok());
+        assert!(!batcher.compressor.is_empty(), "Compressor should not be empty after read");
+    }
+
+    #[tokio::test]
+    async fn test_send_compressed_batch_returns_error_if_too_large() {
+        let config = BatcherConfig {
+            max_batch_size: 1, // force failure
+            ..test_config()
+        };
+        let redis_client = StreamManager::new("dummy".into(), 1).await.unwrap();
+        let tc_client = TCClient::new(&TC_CONFIG).unwrap();
+        let mut batcher = Batcher::new(&config, tc_client, redis_client);
+
+        // Insert dummy data
+        batcher.compressor.try_push(&Bytes::from(vec![2, 3, 4])).unwrap();
+
+        let result = batcher.send_compressed_batch().await;
+        assert!(result.is_err());
+    }
+}
