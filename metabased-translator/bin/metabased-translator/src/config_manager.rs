@@ -6,16 +6,22 @@ use alloy::{
 };
 use contract_bindings::metabased::{arbchainconfig, arbconfigmanager::ArbConfigManager};
 use eyre::Result;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 pub async fn with_onchain_config(config: &MetabasedConfig) -> MetabasedConfig {
     let address = match config.config_manager_address {
         Some(addr) => addr,
-        None => return config.clone(),
+        None => {
+            warn!("No config_manager_address provided, skipping on-chain config fetch");
+            return config.clone();
+        }
     };
     let chain_id = match config.appchain_chain_id {
         Some(chain_id) => chain_id,
-        None => return config.clone(),
+        None => {
+            warn!("No appchain_chain_id provided, skipping on-chain config fetch");
+            return config.clone();
+        }
     };
 
     let provider = ProviderBuilder::new().on_client(
