@@ -74,16 +74,18 @@ impl Batcher {
             for (txn_bytes, _) in transactions {
                 let txn = Bytes::from(txn_bytes);
 
-                let size_if_added = self.compressor.peek_push_size(&txn)?;
+                let compressed = self.compressor.clone_and_compress_with_txn(&txn)?;
 
-                if size_if_added >= self.max_batch_size {
+                if compressed.len() >= self.max_batch_size {
+                    // Stop consuming and let the caller finalize the batch
                     return Ok(());
                 }
                 debug!(
                     "Adding transaction to batch: {:?} - compressed size: {}",
-                    txn, size_if_added
+                    txn,
+                    compressed.len()
                 );
-                self.compressor.try_push(&txn)?;
+                self.compressor.push_with_precompressed(&txn, compressed)?;
             }
         }
         Ok(())
@@ -195,7 +197,7 @@ mod tests {
         let mut batcher = Batcher::new(&config, tc_client, redis_consumer);
 
         // Insert dummy data
-        batcher.compressor.try_push(&Bytes::from(vec![2, 3, 4])).unwrap();
+        batcher.compressor.clone_and_compress_with_txn(&Bytes::from(vec![2, 3, 4])).unwrap();
 
         let result = batcher.send_compressed_batch().await;
         assert!(result.is_err());

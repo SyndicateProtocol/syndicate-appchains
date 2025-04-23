@@ -32,29 +32,8 @@ impl AdditiveCompressor {
         }
     }
 
-    /// Attempts to add a transaction and returns the total compressed size so far
-    pub fn try_push(&mut self, txn: &Bytes) -> Result<usize, Error> {
-        // Append length prefix and transaction data to buffer
-        self.buffer.extend_from_slice(&(txn.len() as u32).to_be_bytes());
-        self.buffer.extend_from_slice(txn);
-        self.num_transactions += 1;
-
-        // Rewrite transaction count in header (overwrite the first 4 bytes)
-        let mut with_count = self.buffer.clone();
-        with_count[0..4].copy_from_slice(&(self.num_transactions).to_be_bytes());
-
-        // Reset encoder to compress full buffer
-        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-        encoder.write_all(&with_count)?;
-        let compressed = encoder.finish()?;
-
-        is_valid_cm_bits_8_only(&compressed)?;
-
-        Ok(compressed.len())
-    }
-
-    /// Attempts to add a transaction and returns the total compressed size so far
-    pub fn peek_push_size(&self, txn: &Bytes) -> Result<usize, Error> {
+    /// Clones the internal buffer, appends the txn, compresses, and returns compressed Vec
+    pub fn clone_and_compress_with_txn(&self, txn: &Bytes) -> Result<Vec<u8>, Error> {
         let mut buffer = self.buffer.clone();
         let tx_count = self.num_transactions + 1;
 
@@ -67,12 +46,25 @@ impl AdditiveCompressor {
         let compressed = encoder.finish()?;
 
         is_valid_cm_bits_8_only(&compressed)?;
-        Ok(compressed.len())
+
+        Ok(compressed)
     }
 
+    /// Caller provides already compressed buffer (for optimized flow)
+    pub fn push_with_precompressed(
+        &mut self,
+        txn: &Bytes,
+        _compressed: Vec<u8>,
+    ) -> Result<(), Error> {
+        // Only mutate state — compression result was already validated
+        self.buffer.extend_from_slice(&(txn.len() as u32).to_be_bytes());
+        self.buffer.extend_from_slice(txn);
+        self.num_transactions += 1;
+        self.buffer[0..4].copy_from_slice(&self.num_transactions.to_be_bytes());
+        Ok(())
+    }
     /// Finalizes the stream and returns the full compressed batch
     pub fn finish(mut self) -> Result<Bytes, Error> {
-        // Write the final transaction count
         self.buffer[0..4].copy_from_slice(&(self.num_transactions).to_be_bytes());
 
         self.encoder.write_all(&self.buffer)?;
@@ -111,45 +103,37 @@ mod tests {
     }
 
     #[test]
-    fn test_try_push_single_transaction() {
-        let mut compressor = AdditiveCompressor::new();
-        let txn = sample_txn(&[0xde, 0xad, 0xbe, 0xef]);
+    fn test_clone_and_compress_is_consistent() {
+        let compressor = AdditiveCompressor::new();
+        let txn = sample_txn(&[0x10, 0x20, 0x30]);
 
-        let size = compressor.try_push(&txn).unwrap();
-        assert!(size > 0);
+        let compressed = compressor.clone_and_compress_with_txn(&txn).unwrap();
+        assert!(!compressed.is_empty());
+    }
+
+    #[test]
+    fn test_push_with_precompressed_updates_state() {
+        let mut compressor = AdditiveCompressor::new();
+        let txn = sample_txn(&[0x42, 0x42]);
+
+        let compressed = compressor.clone_and_compress_with_txn(&txn).unwrap();
+        compressor.push_with_precompressed(&txn, compressed).unwrap();
+
         assert_eq!(compressor.num_transactions(), 1);
         assert!(!compressor.is_empty());
     }
 
     #[test]
-    fn test_try_push_multiple_transactions() {
+    fn test_multiple_transactions_accumulate_properly() {
         let mut compressor = AdditiveCompressor::new();
 
-        for i in 0..5 {
-            let data = vec![i; 10]; // 10-byte payloads
-            let txn = sample_txn(&data);
-            let size = compressor.try_push(&txn).unwrap();
-            assert!(size > 0);
+        for i in 0..3 {
+            let txn = sample_txn(&[i; 4]);
+            let compressed = compressor.clone_and_compress_with_txn(&txn).unwrap();
+            compressor.push_with_precompressed(&txn, compressed).unwrap();
         }
 
-        assert_eq!(compressor.num_transactions(), 5);
-    }
-
-    #[test]
-    fn test_peek_push_does_not_mutate_state() {
-        let mut compressor = AdditiveCompressor::new();
-        let txn = sample_txn(&[0xaa, 0xbb]);
-
-        let peek_size = compressor.peek_push_size(&txn).unwrap();
-        assert!(peek_size > 0);
-
-        // After peek, compressor state should be unchanged
-        assert_eq!(compressor.num_transactions(), 0);
-        assert!(compressor.is_empty());
-
-        // Now actually push and verify
-        compressor.try_push(&txn).unwrap();
-        assert_eq!(compressor.num_transactions(), 1);
+        assert_eq!(compressor.num_transactions(), 3);
     }
 
     #[test]
@@ -158,8 +142,11 @@ mod tests {
         let txn1 = sample_txn(&[1, 2, 3]);
         let txn2 = sample_txn(&[4, 5, 6]);
 
-        compressor.try_push(&txn1).unwrap();
-        compressor.try_push(&txn2).unwrap();
+        let c1 = compressor.clone_and_compress_with_txn(&txn1).unwrap();
+        compressor.push_with_precompressed(&txn1, c1).unwrap();
+
+        let c2 = compressor.clone_and_compress_with_txn(&txn2).unwrap();
+        compressor.push_with_precompressed(&txn2, c2).unwrap();
 
         let compressed = compressor.finish().unwrap();
         assert!(!compressed.is_empty());
@@ -172,16 +159,5 @@ mod tests {
 
         assert!(result.is_ok(), "Should be able to finish with 0 transactions");
         assert!(!result.unwrap().is_empty());
-    }
-
-    #[test]
-    fn test_txn_count_increments_properly() {
-        let mut compressor = AdditiveCompressor::new();
-
-        assert_eq!(compressor.num_transactions(), 0);
-        compressor.try_push(&sample_txn(&[10])).unwrap();
-        assert_eq!(compressor.num_transactions(), 1);
-        compressor.try_push(&sample_txn(&[20])).unwrap();
-        assert_eq!(compressor.num_transactions(), 2);
     }
 }
