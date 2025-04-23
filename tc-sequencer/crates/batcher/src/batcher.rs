@@ -137,7 +137,7 @@ impl Batcher {
         debug!(
             %self.chain_id, "Batch sent: {} txs, compressed size: {} bytes",
             num_transactions,
-            compressed.len()
+            compressed_len
         );
         Ok(())
     }
