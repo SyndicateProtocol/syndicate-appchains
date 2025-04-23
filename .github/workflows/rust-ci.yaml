@@ -137,6 +137,17 @@ jobs:
           which anvil
           anvil --version
 
+      - name: Verify Foundry Installation
+        run: |
+          which anvil
+          anvil --version
+
+      - name: Build Packges
+        run: cargo build --workspace
+
+      - name: Build Tests
+        run: cargo test --workspace --no-run
+
       # Install nextest
       - name: Install nextest
         uses: taiki-e/install-action@v2
