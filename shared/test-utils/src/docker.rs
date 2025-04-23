@@ -117,7 +117,7 @@ pub async fn start_component(
             .send()
             .await
             .is_ok_and(|x| x.status().is_success()),
-        Duration::from_secs(120)
+        Duration::from_secs(5*60)  // give it time to download the image if necessary
     );
     Ok(docker)
 }
@@ -196,7 +196,7 @@ pub async fn launch_nitro_node(
 
     let rollup = ProviderBuilder::default().on_http(url.parse()?);
     // give it two minutes to launch (in case it needs to download the image)
-    wait_until!(rollup.get_chain_id().await.is_ok(), Duration::from_secs(120));
+    wait_until!(rollup.get_chain_id().await.is_ok(), Duration::from_secs(5 * 60)); // give it time to download the image if necessary
     Ok((nitro, rollup, url))
 }
 
@@ -217,7 +217,7 @@ pub async fn start_redis() -> Result<(Docker, String)> {
     let client = redis::Client::open(redis_url.as_str()).unwrap();
     wait_until!(
         client.get_multiplexed_async_connection().await.is_ok(),
-        time::Duration::from_secs(120) // give it time to download the image if necessary
+        time::Duration::from_secs(5 * 60) // give it time to download the image if necessary
     );
     Ok((redis, redis_url))
 }
