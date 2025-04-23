@@ -24,7 +24,7 @@ reqwest = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 shared = { workspace = true }
 thiserror = { workspace = true }
-tokio = { workspace = true, features = ["full"] }
+tokio = { workspace = true }
 tracing = { workspace = true }
 url = { workspace = true }
 

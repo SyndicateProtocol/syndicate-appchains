@@ -25,7 +25,7 @@ async fn main() -> Result<()> {
     let tc_client = TCClient::new(&config.tc)?;
 
     // Start batcher
-    run_batcher(&config.batcher, tc_client.clone()).await?;
+    let batcher_handle = run_batcher(&config.batcher, tc_client.clone()).await?;
 
     // Start server
     let (addr, handle) = run_server(&config, tc_client).await?;
@@ -45,6 +45,9 @@ async fn main() -> Result<()> {
         }
         _ = handle.stopped() => {
             info!("Server stopped, initiating shutdown...");
+        }
+        _ = batcher_handle => {
+            info!("Batcher stopped, initiating shutdown...");
         }
     };
 

@@ -3,33 +3,20 @@
 use crate::config::BatcherConfig;
 use alloy::primitives::Bytes;
 use eyre::{eyre, Result};
+use maestro::redis::consumer::StreamConsumer;
+use redis::Client as RedisClient;
 use shared::additive_compression::AdditiveCompressor;
-use std::{mem::take, sync::Arc};
+use std::mem::take;
 use tc_client::tc_client::{TCClient, BATCH_FUNCTION_SIGNATURE};
-use tokio::sync::Mutex;
+use tokio::task::JoinHandle;
 use tracing::{debug, error, info};
-// TODO (SEQ-772): Redis interface
-#[allow(missing_docs)]
-#[derive(Debug, Clone)]
-
-pub struct StreamManager {}
-impl StreamManager {
-    async fn new(_stream_key: String, _chain_id: u64) -> Result<Self> {
-        Ok(Self {})
-    }
-    async fn recv(&self, _max_msg_count: usize) -> Result<Vec<(Vec<u8>, String)>> {
-        let data = vec![0u8; 512]; // 512 bytes of zeros
-        Ok(vec![(data, String::new())])
-    }
-}
-
 /// Batcher service
 #[derive(Debug)]
 struct Batcher {
     /// The max batch size for the batcher
     max_batch_size: usize,
-    /// The Redis client for the batcher
-    redis_client: StreamManager,
+    /// The Redis consumer for the batcher
+    redis_consumer: StreamConsumer,
     /// The sequencer client for the batcher
     tc_client: TCClient,
     /// The compressor for the batcher
@@ -37,36 +24,38 @@ struct Batcher {
 }
 
 /// Run the batcher service. Starts the server and listens for batch requests.
-pub async fn run_batcher(config: &BatcherConfig, tc_client: TCClient) -> Result<()> {
-    let redis_client = StreamManager::new(config.redis_url.clone(), config.chain_id).await?;
-    let batcher = Arc::new(Mutex::new(Batcher::new(config, tc_client, redis_client)));
+pub async fn run_batcher(config: &BatcherConfig, tc_client: TCClient) -> Result<JoinHandle<()>> {
+    let client = RedisClient::open(config.redis_url.as_str())
+        .map_err(|e| eyre!("Failed to open Redis client: {}", e))?;
+    let conn = client
+        .get_multiplexed_async_connection()
+        .await
+        .map_err(|e| eyre!("Failed to get Redis connection: {}", e))?;
+    let redis_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
+    let mut batcher = Batcher::new(config, tc_client, redis_consumer);
     let polling_interval = config.polling_interval;
 
-    tokio::spawn({
-        let batcher = Arc::clone(&batcher);
-
+    let handle = tokio::spawn({
         async move {
             loop {
-                let result = {
-                    let mut batcher = batcher.lock().await;
-                    batcher.read_and_batch_transactions().await
-                };
-                if let Err(e) = result {
+                if let Err(e) = batcher.read_and_batch_transactions().await {
                     error!("Batcher error: {:?}", e);
                 }
+                // In theory this could be removed, but we want to wait a reasonable amount of time
+                // to batch as many transactions as possible.
                 tokio::time::sleep(polling_interval).await;
             }
         }
     });
     info!("Batcher job started with {:?} poll interval", config.polling_interval);
-    Ok(())
+    Ok(handle)
 }
 
 impl Batcher {
-    fn new(config: &BatcherConfig, tc_client: TCClient, redis_client: StreamManager) -> Self {
+    fn new(config: &BatcherConfig, tc_client: TCClient, redis_consumer: StreamConsumer) -> Self {
         Self {
             max_batch_size: config.max_batch_size,
-            redis_client,
+            redis_consumer,
             tc_client,
             compressor: AdditiveCompressor::default(),
         }
@@ -74,8 +63,11 @@ impl Batcher {
     async fn read_transactions(&mut self) -> Result<()> {
         loop {
             // TODO: Configurable max msg count
-            let transactions = self.redis_client.recv(1).await?;
+            let transactions = self.redis_consumer.recv(1).await?;
+
+            // This should never happen. Just a sanity check to catch it.
             if transactions.is_empty() {
+                error!("No transactions available to batch.");
                 break;
             }
 
@@ -99,8 +91,10 @@ impl Batcher {
 
     async fn read_and_batch_transactions(&mut self) -> Result<()> {
         self.read_transactions().await?;
+
+        // This should never happen. Just a sanity check to catch it.
         if self.compressor.is_empty() {
-            debug!("No transactions available to batch.");
+            error!("No transactions available to batch.");
             return Ok(());
         }
 
@@ -141,6 +135,7 @@ mod tests {
     use super::*;
     use alloy::primitives::{Address, Bytes};
     use tc_client::config::{TCConfig, TCEndpoint};
+    use test_utils::docker::start_redis;
 
     const TC_CONFIG: TCConfig = TCConfig {
         tc_endpoint: TCEndpoint::Staging,
@@ -163,9 +158,17 @@ mod tests {
     #[tokio::test]
     async fn test_read_transactions_adds_to_compressor() {
         let config = test_config();
-        let redis_client = StreamManager::new("dummy".into(), 1).await.unwrap();
+        // Start Redis container
+        let (_redis, redis_url) = start_redis().await.unwrap();
+        // Connect to Redis
+        let conn = redis::Client::open(redis_url.as_str())
+            .unwrap()
+            .get_multiplexed_async_connection()
+            .await
+            .unwrap();
+        let redis_consumer = StreamConsumer::new(conn, 1, "0-0".to_string());
         let tc_client = TCClient::new(&TC_CONFIG).unwrap();
-        let mut batcher = Batcher::new(&config, tc_client, redis_client);
+        let mut batcher = Batcher::new(&config, tc_client, redis_consumer);
 
         let result = batcher.read_transactions().await;
         assert!(result.is_ok());
@@ -178,9 +181,18 @@ mod tests {
             max_batch_size: 1, // force failure
             ..test_config()
         };
-        let redis_client = StreamManager::new("dummy".into(), 1).await.unwrap();
+        // Start Redis container
+        let (_redis, redis_url) = start_redis().await.unwrap();
+
+        // Connect to Redis
+        let conn = redis::Client::open(redis_url.as_str())
+            .unwrap()
+            .get_multiplexed_async_connection()
+            .await
+            .unwrap();
+        let redis_consumer = StreamConsumer::new(conn, 1, "0-0".to_string());
         let tc_client = TCClient::new(&TC_CONFIG).unwrap();
-        let mut batcher = Batcher::new(&config, tc_client, redis_client);
+        let mut batcher = Batcher::new(&config, tc_client, redis_consumer);
 
         // Insert dummy data
         batcher.compressor.try_push(&Bytes::from(vec![2, 3, 4])).unwrap();

@@ -1135,9 +1135,12 @@ dependencies = [
  "clap",
  "eyre",
  "humantime",
+ "maestro",
  "mockall",
+ "redis",
  "shared",
  "tc-client",
+ "test-utils",
  "tokio",
  "tracing",
 ]
