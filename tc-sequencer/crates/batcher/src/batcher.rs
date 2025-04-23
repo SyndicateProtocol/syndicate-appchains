@@ -6,7 +6,7 @@ use eyre::{eyre, Result};
 use maestro::redis::consumer::StreamConsumer;
 use redis::Client as RedisClient;
 use shared::additive_compression::AdditiveCompressor;
-use std::mem::take;
+use std::{mem::take, time::Duration};
 use tc_client::tc_client::{TCClient, BATCH_FUNCTION_SIGNATURE};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info};
@@ -21,6 +21,8 @@ struct Batcher {
     tc_client: TCClient,
     /// The compressor for the batcher
     compressor: AdditiveCompressor,
+    /// The polling interval for the batcher
+    polling_interval: Duration,
 }
 
 /// Run the batcher service. Starts the server and listens for batch requests.
@@ -58,16 +60,16 @@ impl Batcher {
             redis_consumer,
             tc_client,
             compressor: AdditiveCompressor::default(),
+            polling_interval: config.polling_interval,
         }
     }
     async fn read_transactions(&mut self) -> Result<()> {
         loop {
             // TODO: Configurable max msg count
-            let transactions = self.redis_consumer.recv(1).await?;
+            let transactions = self.redis_consumer.recv(1, self.polling_interval).await?;
 
-            // This should never happen. Just a sanity check to catch it.
             if transactions.is_empty() {
-                error!("No transactions available to batch.");
+                debug!("No transactions available to batch.");
                 break;
             }
 
@@ -136,8 +138,10 @@ impl Batcher {
 mod tests {
     use super::*;
     use alloy::primitives::{Address, Bytes};
+    use maestro::redis::producer::StreamProducer;
     use tc_client::config::{TCConfig, TCEndpoint};
     use test_utils::docker::start_redis;
+    use tokio::time::Duration;
 
     const TC_CONFIG: TCConfig = TCConfig {
         tc_endpoint: TCEndpoint::Staging,
@@ -152,23 +156,33 @@ mod tests {
             max_batch_size: 1024,
             redis_url: "dummy".to_string(),
             chain_id: 1,
-            polling_interval: std::time::Duration::from_millis(10),
+            polling_interval: Duration::from_millis(10),
             sequencer_client_url: "dummy".to_string(),
         }
     }
 
-    #[tokio::test]
+    #[tokio::test(flavor = "multi_thread")]
     async fn test_read_transactions_adds_to_compressor() {
-        let config = test_config();
+        let mut config = test_config();
         // Start Redis container
         let (_redis, redis_url) = start_redis().await.unwrap();
+        config.redis_url = redis_url.clone();
+
         // Connect to Redis
         let conn = redis::Client::open(redis_url.as_str())
             .unwrap()
             .get_multiplexed_async_connection()
             .await
             .unwrap();
-        let redis_consumer = StreamConsumer::new(conn, 1, "0-0".to_string());
+        let chain_id = 1;
+        let redis_consumer = StreamConsumer::new(conn.clone(), chain_id, "0-0".to_string());
+        let producer =
+            StreamProducer::new(conn, chain_id, Duration::from_secs(60), Duration::from_secs(60));
+
+        // Send transaction
+        let test_data1 = b"test transaction data 1".to_vec();
+        producer.enqueue_transaction(test_data1.clone()).await.unwrap();
+
         let tc_client = TCClient::new(&TC_CONFIG).unwrap();
         let mut batcher = Batcher::new(&config, tc_client, redis_consumer);
 
