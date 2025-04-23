@@ -109,7 +109,7 @@ jobs:
   test:
     name: Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
 
@@ -136,6 +136,17 @@ jobs:
         run: |
           which anvil
           anvil --version
+
+      - name: Verify Foundry Installation
+        run: |
+          which anvil
+          anvil --version
+
+      - name: Build Packages
+        run: cargo build --workspace
+
+      - name: Build Tests
+        run: cargo test --workspace --no-run
 
       # Install nextest
       - name: Install nextest
