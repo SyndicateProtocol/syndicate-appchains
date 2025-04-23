@@ -100,27 +100,3 @@ jobs:
               --cache-to type=gha,mode=max \
               .
           done
-
-  cloud-run-deployment:
-    needs: [docker]
-    if: github.event_name == 'release'
-    runs-on: vip-large
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Configure Google Cloud credentials
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: "cloud-run-service-account@metabased-testnet.iam.gserviceaccount.com"
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Trigger Cloud Run Deployment
-        run: |
-          gcloud builds triggers run deploy-metabased-sequencer \
-            --region=global \
-            --project=metabased-testnet \
-            --branch=${GITHUB_REF#refs/heads/} 

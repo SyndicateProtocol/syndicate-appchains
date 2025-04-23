@@ -19,6 +19,8 @@ jobs:
     secrets: inherit
 
   cloud-run-deployment:
+    ## **NOTE**: Intentionally disabling for now while sequencer is deprioritized. Content is useful. TODO(SEQ-793)
+    if: ${{ false }}
     needs: [docker]
     runs-on: vip-large
     permissions:

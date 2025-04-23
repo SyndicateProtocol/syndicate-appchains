@@ -142,7 +142,7 @@ jobs:
           which anvil
           anvil --version
 
-      - name: Build Packges
+      - name: Build Packages
         run: cargo build --workspace
 
       - name: Build Tests
