@@ -1,0 +1,126 @@
+name: Publish Service Images
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      service:
+        description: 'Service to build (leave empty for all)'
+        required: false
+        type: string
+      dry_run:
+        description: 'Dry run mode'
+        required: false
+        type: boolean
+        default: false
+      runner_label:
+        description: 'Which runner label(s) to use'
+        required: false
+        type: string
+        default: 'ubuntu-latest'
+  workflow_call:
+    inputs:
+      service:
+        required: false
+        type: string
+      dry_run:
+        required: false
+        type: boolean
+        default: false
+      runner_label:
+        required: false
+        type: string
+        default: 'ubuntu-latest'
+        description: 'Which runner label(s) to use'
+
+env:
+  GITHUB_REGISTRY: ghcr.io
+  GOOGLE_REGISTRY: us-central1-docker.pkg.dev
+  PROJECT_ID: metabased-testnet
+  REPO_NAME: metabased-rollup
+  WORKLOAD_IDENTITY_PROVIDER: projects/112197761096/locations/global/workloadIdentityPools/cloud-run-github-pool/providers/id-001
+
+jobs:
+  docker:
+    name: Build and Push Services
+    runs-on: ${{ inputs.runner_label || 'ubuntu-latest' }}
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.GITHUB_REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Google Cloud credentials
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: 'cloud-run-service-account@metabased-testnet.iam.gserviceaccount.com'
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure docker auth for GAR
+        run: |
+          gcloud auth configure-docker ${{ env.GOOGLE_REGISTRY }} --quiet
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push services
+        run: |
+          if [ -z "${{ inputs.service }}" ]; then
+            SERVICES=("metabased-sequencer" "metabased-translator" "metabased-poster" "maestro" "mchain" "tc-sequencer")
+          else
+            SERVICES=("${{ inputs.service }}")
+          fi
+          
+          for service in "${SERVICES[@]}"; do
+            echo "Building $service..."
+            docker buildx build \
+              --platform linux/amd64 \
+              --push=${{ !inputs.dry_run }} \
+              --target "$service" \
+              --tag "${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/$service:latest" \
+              --tag "${{ env.GOOGLE_REGISTRY }}/${{ env.PROJECT_ID }}/images/${{ env.REPO_NAME }}/$service:latest" \
+              --cache-from type=gha \
+              --cache-to type=gha,mode=max \
+              .
+          done
+
+  cloud-run-deployment:
+    needs: [docker]
+    if: github.event_name == 'release'
+    runs-on: vip-large
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure Google Cloud credentials
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: "cloud-run-service-account@metabased-testnet.iam.gserviceaccount.com"
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Trigger Cloud Run Deployment
+        run: |
+          gcloud builds triggers run deploy-metabased-sequencer \
+            --region=global \
+            --project=metabased-testnet \
+            --branch=${GITHUB_REF#refs/heads/} 
