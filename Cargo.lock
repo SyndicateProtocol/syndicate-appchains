@@ -1128,6 +1128,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89e25b6adfb930f02d1981565a6e5d9c547ac15a96606256d3b59040e5cd4ca3"
 
 [[package]]
+name = "batcher"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "byte-unit",
+ "clap",
+ "eyre",
+ "humantime",
+ "maestro",
+ "mockall",
+ "redis",
+ "shared",
+ "tc-client",
+ "test-utils",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "bimap"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3278,10 +3298,8 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "axum",
- "bytes",
  "clap",
  "eyre",
- "flate2",
  "hex",
  "humantime",
  "jsonrpsee",
@@ -4663,6 +4681,8 @@ dependencies = [
  "alloy",
  "axum",
  "byte-unit",
+ "bytes",
+ "flate2",
  "jsonrpsee",
  "prometheus-client",
  "serde",
@@ -4907,7 +4927,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
-name = "tc-sequencer"
+name = "tc-client"
 version = "0.1.0"
 dependencies = [
  "alloy",
@@ -4919,9 +4939,27 @@ dependencies = [
  "mockito",
  "reqwest",
  "serde",
- "serde_json",
  "shared",
  "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "tc-sequencer"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "batcher",
+ "clap",
+ "eyre",
+ "jsonrpsee",
+ "mockito",
+ "reqwest",
+ "serde_json",
+ "shared",
+ "tc-client",
  "tokio",
  "tower 0.4.13",
  "tracing",

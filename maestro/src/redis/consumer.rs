@@ -9,6 +9,7 @@ use redis::{
     streams::{StreamReadOptions, StreamReadReply},
     AsyncCommands,
 };
+use std::time::Duration;
 
 /// A consumer for Redis streams that reads transaction data.
 ///
@@ -56,8 +57,8 @@ impl StreamConsumer {
 
     /// Receives the next transaction from the stream.
     ///
-    /// This method blocks until a new transaction is available in the stream. It reads one
-    /// message at a time and updates the internal `last_id` to track the position in the stream.
+    /// This method reads one message at a time and updates the internal `last_id` to track the
+    /// position in the stream.
     ///
     /// # Arguments
     /// * `number_of_messages` - The number of messages to read from the stream
@@ -65,16 +66,20 @@ impl StreamConsumer {
     /// # Returns
     /// * `Ok(Some((Vec<u8>, String)))` - The raw transaction data and the last ID if a new message
     ///   was received
-    /// * `Ok(None)` - If no new messages are available (should not happen due to blocking)
+    /// * `Ok([])` - If no new messages are available
     /// * `Err(_)` - If there was an error reading from the stream or parsing the message
     ///
     /// # Notes
     /// * Currently reads one message at a time for simplicity. For high-throughput scenarios,
     ///   consider implementing batch reading with an internal buffer.
-    /// * Blocks indefinitely until a new message arrives (block=0)
-    pub async fn recv(&mut self, max_msg_count: usize) -> eyre::Result<Vec<(Vec<u8>, String)>> {
+    /// * Blocks for `block_duration` waiting for a new message to arrive
+    pub async fn recv(
+        &mut self,
+        max_msg_count: usize,
+        block_duration: Duration,
+    ) -> eyre::Result<Vec<(Vec<u8>, String)>> {
         let opts = StreamReadOptions::default()
-            .block(0) //block indefinitely, until we get a new msg
+            .block(block_duration.as_millis() as usize)
             .count(max_msg_count);
 
         let reply: Option<StreamReadReply> = self
@@ -82,29 +87,38 @@ impl StreamConsumer {
             .xread_options(&[self.stream_key.as_str()], &[self.last_id.as_str()], &opts)
             .await?;
 
-        let reply = reply
-            .ok_or_else(|| eyre::eyre!("Got None from blocking read - this should not happen"))?;
+        let reply = match reply {
+            Some(r) => r,
+            None => return Ok(vec![]),
+        };
 
-        let mut results = Vec::new();
+        let key_data = reply
+            .keys
+            .first()
+            .ok_or_else(|| eyre::eyre!("Expected at least one stream key in reply"))?;
 
-        for id in &reply.keys[0].ids {
-            let raw_tx = id.map.get("data");
+        if key_data.ids.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let mut results = Vec::with_capacity(key_data.ids.len());
+
+        for id in &key_data.ids {
+            let raw_tx =
+                id.map.get("data").ok_or_else(|| eyre::eyre!("No data found in message"))?;
 
             match raw_tx {
-                Some(redis::Value::BulkString(data)) => {
+                redis::Value::BulkString(data) => {
                     results.push((data.clone(), id.id.clone()));
                 }
-                Some(_) => return Err(eyre::eyre!("Expected binary data, got different type")),
-                None => return Err(eyre::eyre!("No data found in message")),
+                _ => return Err(eyre::eyre!("Expected binary data, got different type")),
             }
         }
 
-        self.last_id = reply.keys[0]
-            .ids
-            .last()
-            .ok_or_else(|| eyre::eyre!("No messages received - this should not happen"))?
-            .id
-            .clone();
+        if let Some(last_id) = reply.keys[0].ids.last() {
+            self.last_id = last_id.id.clone();
+        }
+
         Ok(results)
     }
 }
@@ -145,7 +159,7 @@ mod tests {
         producer.enqueue_transaction(test_data.clone()).await.unwrap();
 
         // Receive and verify
-        let received = consumer.recv(1).await.unwrap();
+        let received = consumer.recv(1, Duration::from_secs(1)).await.unwrap();
         assert_eq!(received.len(), 1);
         assert_eq!(received[0].0, test_data);
         assert!(!received[0].1.is_empty());
@@ -182,7 +196,7 @@ mod tests {
         producer.enqueue_transaction(test_data2.clone()).await.unwrap();
 
         // Receive and verify
-        let received = consumer.recv(2).await.unwrap();
+        let received = consumer.recv(2, Duration::from_secs(1)).await.unwrap();
         assert_eq!(received.len(), 2);
         assert_eq!(received[0].0, test_data1);
         assert_eq!(received[1].0, test_data2);

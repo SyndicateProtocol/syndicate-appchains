@@ -17,10 +17,8 @@ alloy = { workspace = true, features = [
 ] }
 
 axum              = { workspace = true }
-bytes             = { workspace = true }
 clap              = { workspace = true, features = ["derive", "env"] }
 eyre              = { workspace = true }
-flate2            = { workspace = true }
 hex               = { workspace = true }
 humantime         = { workspace = true }
 jsonrpsee         = { workspace = true, features = ["http-client", "server"] }

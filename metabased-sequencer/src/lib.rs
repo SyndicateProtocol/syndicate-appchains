@@ -6,4 +6,3 @@ pub mod contract;
 pub mod metrics;
 pub mod relayer;
 pub mod server;
-pub mod zlib_compression;
