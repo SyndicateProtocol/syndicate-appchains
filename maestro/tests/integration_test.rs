@@ -6,64 +6,54 @@ use jsonrpsee::server::ServerHandle;
 use maestro::server;
 use serde_json::{json, Value};
 use std::{future::Future, net::SocketAddr, time::Duration};
-use tokio::time::sleep;
+use test_utils::wait_until;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use maestro::config::Config;
+    use maestro::{config::Config, server::HEADER_CHAIN_ID};
     use std::collections::HashMap;
-    use test_utils::transaction::{get_eip1559_transaction_hex, get_legacy_transaction_hex};
-    use wiremock::{matchers::method, Mock, MockServer, ResponseTemplate};
-
-    fn dummy_config_with_url(mock_url: String) -> Config {
-        let mut chain_rpc_urls = HashMap::new();
-        // Add URLs for the chain IDs used in tests
-        chain_rpc_urls.insert("4".to_string(), mock_url.clone());
-        chain_rpc_urls.insert("5".to_string(), mock_url);
-
-        Config {
-            port: 0,
-            redis_address: None,
-            chain_rpc_urls,
-            validation_timeout: Duration::from_secs(1),
-            skip_validation: false,
-        }
-    }
+    use test_utils::{
+        docker::{start_redis, Docker},
+        transaction::{get_eip1559_transaction_hex, get_legacy_transaction_hex},
+    };
 
     // Initialize the server for this test function
-    async fn setup_server_with_mock_server() -> (SocketAddr, ServerHandle, String, MockServer) {
-        // Start the mock HTTP server first
-        let mock_server = MockServer::start().await;
-
-        // Set up mock response for eth_sendRawTransaction
-        Mock::given(method("POST"))
-            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-                "jsonrpc": "2.0",
-                "id": 1,
-                "result": "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
-            })))
-            .mount(&mock_server)
-            .await;
-
+    async fn setup_server() -> (SocketAddr, ServerHandle, String, Docker) {
+        let (redis, redis_url) = start_redis().await.unwrap();
         // Create config with mock server URL
-        let config = dummy_config_with_url(mock_server.uri());
+        let config = Config {
+            port: 0,
+            redis_url,
+            validation_timeout: Duration::from_secs(1),
+            skip_validation: false,
+            prune_interval: Duration::from_secs(60 * 60 * 24),
+            prune_max_age: Duration::from_secs(60 * 60 * 24),
+        };
 
         // Start the actual Maestro server with our mocked config
         let (addr, handle) = server::run(config).await.expect("Failed to start server");
         let base_url = format!("http://{}", addr);
 
-        // Give the server time to initialize
-        sleep(Duration::from_millis(100)).await;
+        // Wait for server to be ready by checking health endpoint
+        let client = Client::new();
+        wait_until!(
+            client
+                .get(format!("{}/health", base_url))
+                .send()
+                .await
+                .is_ok_and(|x| x.status().is_success()),
+            Duration::from_secs(5)
+        );
 
-        (addr, handle, base_url, mock_server)
+        (addr, handle, base_url, redis)
     }
 
     async fn with_test_server<Fut>(test_fn: impl FnOnce(Client, String) -> Fut + Send) -> Result<()>
     where
         Fut: Future<Output = Result<()>> + Send,
     {
-        let (_addr, handle, base_url, _mock_server) = setup_server_with_mock_server().await;
+        let (_addr, handle, base_url, _redis) = setup_server().await;
         let client = Client::new();
 
         test_fn(client, base_url).await?;
@@ -80,7 +70,7 @@ mod tests {
     ) -> Result<Response> {
         let response = client
             .post(url)
-            .header("x-synd-chain-id", "1")
+            .header(HEADER_CHAIN_ID, "1")
             .json(&json!({
                 "jsonrpc": "2.0",
                 "id": 1,
@@ -118,7 +108,7 @@ mod tests {
             // Test with valid transaction input
             let tx_response = client
                 .post(base_url)
-                .header("x-synd-chain-id", "4")
+                .header(HEADER_CHAIN_ID, "4")
                 .json(&json!({
                     "jsonrpc": "2.0",
                     "id": 1,
@@ -130,7 +120,11 @@ mod tests {
 
             assert!(tx_response.status().is_success(), "Valid transaction request failed");
             let tx_json: Value = tx_response.json().await?;
-            assert!(tx_json.get("result").is_some(), "Transaction response missing 'result' field");
+            assert!(
+                tx_json.get("result").is_some(),
+                "Transaction response missing 'result' field: {}",
+                tx_json
+            );
             Ok(())
         })
         .await
@@ -144,7 +138,7 @@ mod tests {
 
             let mismatch_response = client
                 .post(&base_url)
-                .header("x-synd-chain-id", "4") // Different from tx chain ID (5)
+                .header(HEADER_CHAIN_ID, "4") // Different from tx chain ID (5)
                 .json(&json!({
                     "jsonrpc": "2.0",
                     "id": 1,
@@ -173,7 +167,7 @@ mod tests {
 
             let response = client
                 .post(&base_url)
-                .header("x-synd-chain-id", "4")
+                .header(HEADER_CHAIN_ID, "4")
                 .json(&json!({
                     "jsonrpc": "2.0",
                     "id": 1,
@@ -187,7 +181,8 @@ mod tests {
             let json_resp: Value = response.json().await?;
             assert!(
                 json_resp.get("result").is_some(),
-                "Transaction response missing 'result' field"
+                "Transaction response missing 'result' field: {}",
+                json_resp
             );
 
             Ok(())
@@ -257,7 +252,7 @@ mod tests {
             // Test with malformed headers
             let malformed_headers_response = client
                 .post(base_url)
-                .header("x-synd-chain-id", b"\xff\xff\xff".as_ref()) // Invalid ASCII that we can't parse
+                .header(HEADER_CHAIN_ID, b"\xff\xff\xff".as_ref()) // Invalid ASCII that we can't parse
                 .json(&json!({
                     "jsonrpc": "2.0",
                     "id": 1,

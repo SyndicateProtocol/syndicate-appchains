@@ -34,13 +34,13 @@ redis        = { workspace = true, features = ["streams", "tokio-comp"] }
 serde_json   = { workspace = true }
 shared       = { workspace = true }
 test-utils   = { workspace = true }
-thiserror    = { workspace = true }
 tokio        = { workspace = true, features = ["full"] }
 tower        = { workspace = true }
 tracing      = { workspace = true }
 
 [dev-dependencies]
-wiremock = { workspace = true }
+rand       = { workspace = true }
+test-utils = { workspace = true }
 
 [lints]
 workspace = true

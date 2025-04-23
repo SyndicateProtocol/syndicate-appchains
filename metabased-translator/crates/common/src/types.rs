@@ -497,7 +497,6 @@ mod test {
     fn test_json_serialization() {
         let slot = create_test_slot();
         let json = serde_json::to_string(&slot).unwrap();
-        println!("{}", json);
         let decoded: Slot = serde_json::from_str(&json).unwrap();
         assert_eq!(decoded, slot);
     }

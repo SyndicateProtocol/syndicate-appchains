@@ -34,10 +34,10 @@ async fn main() -> Result<()> {
 
     tokio::select! {
         _ = sigint.recv() => {
-            println!("Received SIGINT (Ctrl+C), initiating shutdown...");
+            info!("Received SIGINT (Ctrl+C), initiating shutdown...");
         }
         _ = sigterm.recv() => {
-            println!("Received SIGTERM, initiating shutdown...");
+            info!("Received SIGTERM, initiating shutdown...");
         }
     };
 
