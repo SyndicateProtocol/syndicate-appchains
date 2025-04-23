@@ -1,5 +1,7 @@
 //! This module contains `config` for the `Batcher` service
 
+use alloy::primitives::ChainId;
+use byte_unit::Byte;
 use clap::Parser;
 use std::{fmt::Debug, time::Duration};
 
@@ -9,17 +11,17 @@ use std::{fmt::Debug, time::Duration};
 #[command(version, about, long_about = None)]
 pub struct BatcherConfig {
     /// Redis address to listen on
-    /// Example: "0.0.0.0:6379"
+    /// Example: redis://0.0.0.0:6379
     #[arg(short = 'r', long, env = "REDIS_URL")]
     pub redis_url: String,
 
     /// Chain ID
     #[arg(short = 'c', long, env = "CHAIN_ID")]
-    pub chain_id: u64,
+    pub chain_id: ChainId,
 
     /// Max batch size in bytes
-    #[arg(long, env = "MAX_BATCH_SIZE", default_value_t = 90 * 1024)] // 90 kilobytes
-    pub max_batch_size: usize,
+    #[arg(long, env = "MAX_BATCH_SIZE", default_value = "90KiB")] // 90 kilobytes
+    pub max_batch_size: Byte,
 
     /// Polling interval for the batcher in milliseconds
     #[arg( long, env = "BATCHER_POLLING_INTERVAL", default_value = "500ms", value_parser = humantime::parse_duration )]
@@ -42,7 +44,7 @@ impl Default for BatcherConfig {
         Self {
             redis_url: "0.0.0.0:6379".to_string(),
             chain_id: 1,
-            max_batch_size: 90 * 1024,
+            max_batch_size: Byte::from_u64(90 * 1024),
             polling_interval: Duration::from_millis(500),
             sequencer_client_url: "http://localhost:8080".to_string(),
         }

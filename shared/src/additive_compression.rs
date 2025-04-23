@@ -1,4 +1,6 @@
 //! The `additive_compression` module provides functionality for incrementally compressing
+//! transactions using zlib.
+
 use crate::zlib_compression::is_valid_cm_bits_8_only;
 use alloy::primitives::Bytes;
 use bytes::BytesMut;
@@ -75,6 +77,13 @@ impl AdditiveCompressor {
         Ok(Bytes::from(compressed))
     }
 
+    /// Resets the compressor to its initial state
+    pub fn reset(&mut self) {
+        self.buffer = BytesMut::new();
+        self.num_transactions = 0;
+        self.encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+    }
+
     /// Returns the number of transactions in the buffer
     pub const fn num_transactions(&self) -> u32 {
         self.num_transactions
@@ -90,6 +99,8 @@ impl AdditiveCompressor {
 mod tests {
     use super::*;
     use alloy::primitives::Bytes;
+    use flate2::read::ZlibDecoder;
+    use std::io::Read;
 
     fn sample_txn(data: &[u8]) -> Bytes {
         Bytes::from(data.to_vec())
@@ -159,5 +170,46 @@ mod tests {
 
         assert!(result.is_ok(), "Should be able to finish with 0 transactions");
         assert!(!result.unwrap().is_empty());
+    }
+
+    #[test]
+    fn test_decoded_transactions_match_originals() {
+        let mut compressor = AdditiveCompressor::new();
+
+        let txns: Vec<Bytes> = vec![
+            sample_txn(&[0xAA, 0xBB]),
+            sample_txn(&[0xCC, 0xDD, 0xEE]),
+            sample_txn(&[0x01, 0x02, 0x03, 0x04]),
+        ];
+
+        // Push transactions
+        for txn in &txns {
+            let compressed = compressor.clone_and_compress_with_txn(txn).unwrap();
+            compressor.push_with_precompressed(txn, compressed).unwrap();
+        }
+
+        // Finalize and decompress
+        let compressed = compressor.finish().unwrap();
+        let mut decoder = ZlibDecoder::new(&compressed[..]);
+        let mut decompressed = Vec::new();
+        decoder.read_to_end(&mut decompressed).unwrap();
+
+        // Decode the transactions from the decompressed buffer
+        let mut cursor = 4; // skip the first 4 bytes (transaction count)
+        let mut decoded_txns = Vec::new();
+        while cursor < decompressed.len() {
+            let len_bytes: [u8; 4] = decompressed[cursor..cursor + 4].try_into().unwrap();
+            let txn_len = u32::from_be_bytes(len_bytes) as usize;
+            cursor += 4;
+
+            let txn = decompressed[cursor..cursor + txn_len].to_vec();
+            decoded_txns.push(Bytes::from(txn));
+            cursor += txn_len;
+        }
+
+        assert_eq!(decoded_txns.len(), txns.len());
+        for (original, decoded) in txns.iter().zip(decoded_txns.iter()) {
+            assert_eq!(original, decoded, "Decoded transaction does not match original");
+        }
     }
 }

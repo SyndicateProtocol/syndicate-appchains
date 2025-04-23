@@ -135,16 +135,11 @@ impl TCClient {
     pub async fn process_transaction(
         &self,
         raw_tx: Bytes,
-        function_signature: Option<String>,
+        function_signature: String,
     ) -> Result<TxHash, RpcError> {
         info!("Processing transaction: {}", hex::encode(&raw_tx));
         let original_tx = validate_transaction(&raw_tx)?;
         let original_tx_hash = *original_tx.tx_hash();
-
-        let function_signature =
-            function_signature.unwrap_or_else(|| DEFAULT_FUNCTION_SIGNATURE.to_string());
-
-        debug!("Submitting validated transaction to TC");
         let raw_tx_clone = raw_tx.clone();
         let transaction_id = self.send_transaction(raw_tx, function_signature).await?;
         debug!(
@@ -166,7 +161,7 @@ pub async fn send_raw_transaction_handler(
 ) -> RpcResult<String> {
     let tx_data = parse_send_raw_transaction_params(params)?;
     let tx_hash =
-        service.process_transaction(tx_data, Some(DEFAULT_FUNCTION_SIGNATURE.to_string())).await?;
+        service.process_transaction(tx_data, DEFAULT_FUNCTION_SIGNATURE.to_string()).await?;
 
     Ok(format!("0x{}", hex::encode(tx_hash)))
 }
@@ -196,9 +191,8 @@ mod tests {
         let service = setup_test_service();
         let test_tx = Bytes::from_str("0xf86d8202b28477359400825208944592d8f8d7b001e72cb26a73e4fa1806a51ac79d880de0b6b3a7640000802ca05924bde7ef10aa88db9c66dd4f5fb16b46dff2319b9968be983118b57bb50562a001b24b31010004f13d9a26b320845257a6cfc2bf819a3d55e3fc86263c5f0772").unwrap();
 
-        let result = service
-            .process_transaction(test_tx, Some(DEFAULT_FUNCTION_SIGNATURE.to_string()))
-            .await;
+        let result =
+            service.process_transaction(test_tx, DEFAULT_FUNCTION_SIGNATURE.to_string()).await;
         // This will fail since we're not connected to a real node
         assert!(result.is_err());
     }

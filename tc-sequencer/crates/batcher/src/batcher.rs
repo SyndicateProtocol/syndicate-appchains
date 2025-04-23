@@ -2,6 +2,7 @@
 
 use crate::config::BatcherConfig;
 use alloy::primitives::Bytes;
+use byte_unit::Byte;
 use eyre::{eyre, Result};
 use maestro::redis::consumer::StreamConsumer;
 use redis::Client as RedisClient;
@@ -14,7 +15,7 @@ use tracing::{debug, error, info};
 #[derive(Debug)]
 struct Batcher {
     /// The max batch size for the batcher
-    max_batch_size: usize,
+    max_batch_size: Byte,
     /// The Redis consumer for the batcher
     redis_consumer: StreamConsumer,
     /// The sequencer client for the batcher
@@ -23,6 +24,20 @@ struct Batcher {
     compressor: AdditiveCompressor,
     /// The polling interval for the batcher
     polling_interval: Duration,
+    /// The chain ID for the batcher
+    chain_id: u64,
+}
+
+#[derive(Debug, thiserror::Error)]
+enum BatchError {
+    #[error("Compressed batch too large: {0} bytes (limit: {1} bytes)")]
+    BatchTooLarge(usize, usize),
+
+    #[error(transparent)]
+    Io(#[from] std::io::Error),
+
+    #[error(transparent)]
+    Other(#[from] eyre::Report),
 }
 
 /// Run the batcher service. Starts the server and listens for batch requests.
@@ -61,6 +76,7 @@ impl Batcher {
             tc_client,
             compressor: AdditiveCompressor::default(),
             polling_interval: config.polling_interval,
+            chain_id: config.chain_id,
         }
     }
     async fn read_transactions(&mut self) -> Result<()> {
@@ -78,12 +94,13 @@ impl Batcher {
 
                 let compressed = self.compressor.clone_and_compress_with_txn(&txn)?;
 
-                if compressed.len() >= self.max_batch_size {
+                if compressed.len() as u64 >= self.max_batch_size.as_u64() {
                     // Stop consuming and let the caller finalize the batch
                     return Ok(());
                 }
                 debug!(
-                    "Adding transaction to batch: {:?} - compressed size: {}",
+                    "[Chain ID: {}] - Adding transaction to batch: {:?} - compressed size: {}",
+                    self.chain_id,
                     txn,
                     compressed.len()
                 );
@@ -93,43 +110,43 @@ impl Batcher {
         Ok(())
     }
 
-    async fn read_and_batch_transactions(&mut self) -> Result<()> {
+    async fn read_and_batch_transactions(&mut self) -> Result<(), BatchError> {
         self.read_transactions().await?;
 
-        // This should never happen. Just a sanity check to catch it.
         if self.compressor.is_empty() {
-            error!("No transactions available to batch.");
+            debug!("[Chain ID: {}] - No transactions available to batch.", self.chain_id);
             return Ok(());
         }
 
         self.send_compressed_batch().await
     }
 
-    async fn send_compressed_batch(&mut self) -> Result<()> {
+    async fn send_compressed_batch(&mut self) -> Result<(), BatchError> {
         let num_transactions = self.compressor.num_transactions();
         let compressed = take(&mut self.compressor).finish()?;
-        self.compressor = AdditiveCompressor::default(); // Reset for next round
+        self.compressor.reset(); // Reset for next round
 
-        if compressed.len() > self.max_batch_size {
-            let error_msg = format!(
-                "Compressed batch size ({}) exceeds limit ({})",
-                compressed.len(),
-                self.max_batch_size
-            );
-            error!(error_msg);
-            return Err(eyre!(error_msg));
+        let compressed_len = compressed.len();
+        let max_size = self.max_batch_size.as_u64() as usize;
+
+        if compressed_len >= max_size {
+            error!("Compressed batch size ({}) exceeds limit ({})", compressed_len, max_size);
+            return Err(BatchError::BatchTooLarge(compressed_len, max_size));
         }
 
         self.send_batch_to_sequencer(compressed.clone()).await?;
-        debug!("Batch sent: {} txs, compressed size: {} bytes", num_transactions, compressed.len());
+        debug!(
+            "[Chain ID: {}] - Batch sent: {} txs, compressed size: {} bytes",
+            self.chain_id,
+            num_transactions,
+            compressed.len()
+        );
         Ok(())
     }
 
     async fn send_batch_to_sequencer(&self, data: Bytes) -> Result<()> {
-        debug!("Sending batch to sequencer");
-        self.tc_client
-            .process_transaction(data, Some(BATCH_FUNCTION_SIGNATURE.to_string()))
-            .await?;
+        debug!("[Chain ID: {}] - Sending batch to sequencer", self.chain_id);
+        self.tc_client.process_transaction(data, BATCH_FUNCTION_SIGNATURE.to_string()).await?;
         Ok(())
     }
 }
@@ -153,7 +170,7 @@ mod tests {
 
     fn test_config() -> BatcherConfig {
         BatcherConfig {
-            max_batch_size: 1024,
+            max_batch_size: Byte::from_u64(1024),
             redis_url: "dummy".to_string(),
             chain_id: 1,
             polling_interval: Duration::from_millis(10),
@@ -194,7 +211,7 @@ mod tests {
     #[tokio::test]
     async fn test_send_compressed_batch_returns_error_if_too_large() {
         let config = BatcherConfig {
-            max_batch_size: 1, // force failure
+            max_batch_size: Byte::from_u64(1), // force failure
             ..test_config()
         };
         // Start Redis container
