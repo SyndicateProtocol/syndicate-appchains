@@ -63,7 +63,6 @@ pub async fn run_batcher(config: &BatcherConfig, tc_client: TCClient) -> Result<
 }
 
 impl Batcher {
-    /// Create a new instance of the Maestro service
     fn new(config: &BatcherConfig, tc_client: TCClient, redis_client: StreamManager) -> Self {
         Self {
             max_batch_size: config.max_batch_size,
@@ -73,7 +72,6 @@ impl Batcher {
         }
     }
     async fn read_transactions(&mut self) -> Result<()> {
-        info!("Reading transactions from Redis");
         loop {
             // TODO: Configurable max msg count
             let transactions = self.redis_client.recv(1).await?;
@@ -89,8 +87,8 @@ impl Batcher {
                 if size_if_added >= self.max_batch_size {
                     return Ok(());
                 }
-                info!(
-                    "Adding transaction to batch: {:?} - compressed size so far: {}",
+                debug!(
+                    "Adding transaction to batch: {:?} - compressed size: {}",
                     txn, size_if_added
                 );
                 self.compressor.try_push(&txn)?;
@@ -114,26 +112,23 @@ impl Batcher {
         let compressed = take(&mut self.compressor).finish()?;
         self.compressor = AdditiveCompressor::default(); // Reset for next round
 
-        // Check if the batch is too large
         if compressed.len() > self.max_batch_size {
-            error!(
+            let error_msg = format!(
                 "Compressed batch size ({}) exceeds limit ({})",
                 compressed.len(),
                 self.max_batch_size
             );
-            return Err(eyre!(
-                "Compressed batch size {} exceeds limit {}",
-                compressed.len(),
-                self.max_batch_size
-            ));
+            error!(error_msg);
+            return Err(eyre!(error_msg));
         }
 
         self.send_batch_to_sequencer(compressed.clone()).await?;
-        info!("Batch sent: {} txs, compressed size: {} bytes", num_transactions, compressed.len());
+        debug!("Batch sent: {} txs, compressed size: {} bytes", num_transactions, compressed.len());
         Ok(())
     }
 
     async fn send_batch_to_sequencer(&self, data: Bytes) -> Result<()> {
+        debug!("Sending batch to sequencer");
         self.tc_client
             .process_transaction(data, Some(BATCH_FUNCTION_SIGNATURE.to_string()))
             .await?;
