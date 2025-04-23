@@ -23,9 +23,9 @@ use eyre::Result;
 use jsonrpsee::{core::RpcResult, types::Params, Extensions};
 use shared::{
     json_rpc::{
-        Error,
-        Error::{Contract, InvalidParams},
         InvalidParamsError::{MissingParam, NotAnArray, NotHexEncoded, WrongParamCount},
+        RpcError,
+        RpcError::{Contract, InvalidParams},
     },
     tx_validation::validate_transaction,
 };
@@ -109,7 +109,7 @@ impl RelayerService {
         })
     }
 
-    async fn process_transaction(&self, raw_tx: Bytes) -> Result<TxHash, Error> {
+    async fn process_transaction(&self, raw_tx: Bytes) -> Result<TxHash, RpcError> {
         info!("Processing transaction: {}", hex::encode(&raw_tx));
         let original_tx = validate_transaction(&raw_tx)?;
 
@@ -155,7 +155,7 @@ impl RelayerService {
 
 // Params validation
 // TODO [SEQ-663]: Refactor this function
-fn parse_send_raw_transaction_params(params: Params<'static>) -> Result<Bytes, Error> {
+fn parse_send_raw_transaction_params(params: Params<'static>) -> Result<Bytes, RpcError> {
     let mut json: serde_json::Value = serde_json::from_str(params.as_str().unwrap_or("[]"))?;
     let arr = json.as_array_mut().ok_or(InvalidParams(NotAnArray))?;
     if arr.len() != 1 {
@@ -178,7 +178,7 @@ pub async fn send_raw_transaction_handler(
     let result = async {
         let tx_data = parse_send_raw_transaction_params(params)?;
         let tx_hash = service.process_transaction(tx_data).await?;
-        Ok::<_, Error>(format!("0x{}", hex::encode(tx_hash)))
+        Ok::<_, RpcError>(format!("0x{}", hex::encode(tx_hash)))
     }
     .await;
     let duration = start.elapsed();
@@ -187,7 +187,7 @@ pub async fn send_raw_transaction_handler(
         .inspect(|_| service.metrics.record_rpc_call("eth_sendRawTransaction", duration, None))
         .map_err(|e| {
             service.metrics.record_rpc_call("eth_sendRawTransaction", duration, Some(&e));
-            e.to_json_rpc_error()
+            e.into()
         })
 }
 

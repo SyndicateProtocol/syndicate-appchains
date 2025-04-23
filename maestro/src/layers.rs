@@ -7,7 +7,7 @@ use jsonrpsee::core::{
     http_helpers::{Body as HttpBody, Request as HttpRequest},
     BoxError,
 };
-use shared::json_rpc::Error;
+use shared::json_rpc::RpcError;
 use std::{
     collections::HashMap,
     future::Future,
@@ -24,7 +24,7 @@ pub struct HeadersLayer(Option<Arc<Vec<String>>>);
 
 impl HeadersLayer {
     /// Creates new `HeadersLayer` with the given optional headers
-    pub fn new(optional_headers: Vec<String>) -> eyre::Result<Self, Error> {
+    pub fn new(optional_headers: Vec<String>) -> eyre::Result<Self, RpcError> {
         Ok(Self(Some(Arc::new(optional_headers))))
     }
 
@@ -102,6 +102,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::server::HEADER_CHAIN_ID;
     use axum::body::Body;
     use http::StatusCode;
     use std::{collections::HashMap, convert::Infallible};
@@ -122,12 +123,12 @@ mod tests {
         // Create the HeadersService with a required header
         let mut headers_service = HeadersService {
             inner: mock_inner_service,
-            optional_headers: Some(Arc::new(vec!["x-synd-chain-id".to_string()])),
+            optional_headers: Some(Arc::new(vec![HEADER_CHAIN_ID.to_string()])),
         };
 
         // Create a mock request with the header
         let request =
-            HttpRequest::builder().header("x-synd-chain-id", "123").body(Body::empty()).unwrap();
+            HttpRequest::builder().header(HEADER_CHAIN_ID, "123").body(Body::empty()).unwrap();
 
         // Call the service
         let response = headers_service.call(request).await;

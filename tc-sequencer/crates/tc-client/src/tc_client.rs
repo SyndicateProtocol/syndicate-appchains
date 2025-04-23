@@ -14,7 +14,7 @@ use jsonrpsee::{
 use reqwest::Client;
 use serde::{self, Deserialize};
 use shared::{
-    json_rpc::{parse_send_raw_transaction_params, Error},
+    json_rpc::{parse_send_raw_transaction_params, RpcError},
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, sync::Arc};
@@ -92,12 +92,11 @@ impl TCClient {
             client,
         })
     }
-
     async fn send_transaction(
         &self,
         raw_tx: Bytes,
         function_signature: String,
-    ) -> Result<String, Error> {
+    ) -> Result<String, RpcError> {
         let request = SendTransactionRequest::new(
             self.tc_project_id.clone(),
             self.wallet_pool_address,
@@ -115,18 +114,18 @@ impl TCClient {
             .await
             .map_err(|e| {
                 error!("Failed to send transaction to TC: {}", e);
-                Error::Internal("failed to submit transaction to sequencer".to_string())
+                RpcError::Internal("failed to submit transaction to sequencer".to_string())
             })?;
 
         if !response.status().is_success() {
             let error_msg = response.text().await.unwrap_or_default();
             error!("Failed to send transaction to TC: {}", error_msg);
-            return Err(Error::Internal("failed to submit transaction to sequencer".to_string()));
+            return Err(RpcError::Internal("failed to submit transaction to sequencer".to_string()));
         }
 
         let response_body: SendTransactionResponse = response.json().await.map_err(|e| {
             error!("Failed to parse response from TC: {}", e);
-            Error::Internal("failed to parse response from sequencer".to_string())
+            RpcError::Internal("failed to parse response from sequencer".to_string())
         })?;
 
         Ok(response_body.transaction_id)
@@ -137,7 +136,7 @@ impl TCClient {
         &self,
         raw_tx: Bytes,
         function_signature: Option<String>,
-    ) -> Result<TxHash, Error> {
+    ) -> Result<TxHash, RpcError> {
         info!("Processing transaction: {}", hex::encode(&raw_tx));
         let original_tx = validate_transaction(&raw_tx)?;
         let original_tx_hash = *original_tx.tx_hash();

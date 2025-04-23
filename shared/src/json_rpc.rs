@@ -1,8 +1,8 @@
 //! The `json_rpc` module contains functionality relating to JSON-RPC request handling
 
 use crate::json_rpc::{
-    Error::InvalidParams,
     InvalidParamsError::{InvalidHex, MissingParam, NotAnArray, NotHexEncoded, WrongParamCount},
+    RpcError::InvalidParams,
 };
 use alloy::{
     contract, hex,
@@ -16,7 +16,7 @@ use thiserror::Error;
 // Source: https://github.com/MetaMask/rpc-errors/blob/main/src/errors.ts
 /// Primary error type for the metabased sequencer, following JSON-RPC error code mapping
 #[derive(Debug, Error)]
-pub enum Error {
+pub enum RpcError {
     /// The JSON sent is not a valid Request object
     #[error("invalid request")]
     InvalidRequest,
@@ -58,61 +58,12 @@ pub enum Error {
     Contract(contract::Error),
 }
 
-impl Error {
-    /// Convert the error to a JSON-RPC error object
-    pub fn to_json_rpc_error(&self) -> ErrorObjectOwned {
-        match self {
-            Self::InvalidRequest => {
-                ErrorObject::owned(error::INVALID_REQUEST_CODE, "invalid request", None::<()>)
-            }
-            Self::MethodNotFound(m) => ErrorObject::owned(
-                error::METHOD_NOT_FOUND_CODE,
-                format!("method not found: {}", m),
-                None::<()>,
-            ),
-            Self::InvalidParams(m) => ErrorObject::owned(
-                error::INVALID_PARAMS_CODE,
-                format!("invalid params: {}", m),
-                None::<()>,
-            ),
-            Self::Internal(m) => ErrorObject::owned(
-                error::INTERNAL_ERROR_CODE,
-                format!("internal error: {}", m),
-                None::<()>,
-            ),
-            Self::Parse => ErrorObject::owned(error::PARSE_ERROR_CODE, "parse error", None::<()>),
-            Self::InvalidInput(m) => ErrorObject::owned(
-                error::CALL_EXECUTION_FAILED_CODE,
-                format!("invalid input: {}", m),
-                None::<()>,
-            ),
-            Self::ResourceNotFound => {
-                ErrorObject::owned(error::UNKNOWN_ERROR_CODE, "resource not found", None::<()>)
-            }
-            Self::ResourceUnavailable => {
-                ErrorObject::owned(error::INVALID_REQUEST_CODE, "resource unavailable", None::<()>)
-            }
-            Self::TransactionRejected(m) => {
-                ErrorObject::owned(-32003, format!("transaction rejected: {}", m), None::<()>)
-            }
-            Self::MethodNotSupported => {
-                ErrorObject::owned(-32004, "method not supported", None::<()>)
-            }
-            Self::LimitExceeded => ErrorObject::owned(-32005, "limit exceeded", None::<()>),
-            Self::Server => ErrorObject::owned(-32099, "server error", None::<()>),
-            Self::Contract(e) => {
-                ErrorObject::owned(-32099, format!("contract error: {}", e), None::<()>)
-            }
-        }
-    }
-}
-
 /// Parses the input parameters for sending a raw transaction.
 ///
 /// This function converts the provided JSON-RPC request [`Params`] into a byte array
 /// representation, used for submitting an Ethereum raw transaction. If the conversion fails, it
 /// returns an `Error`.
-pub fn parse_send_raw_transaction_params(params: Params<'static>) -> Result<Bytes, Error> {
+pub fn parse_send_raw_transaction_params(params: Params<'static>) -> Result<Bytes, RpcError> {
     Bytes::try_from(ParamsWrapper::from(params))
 }
 
@@ -127,7 +78,7 @@ impl From<Params<'static>> for ParamsWrapper {
 }
 
 impl TryFrom<ParamsWrapper> for Bytes {
-    type Error = Error;
+    type Error = RpcError;
 
     fn try_from(wrapper: ParamsWrapper) -> Result<Self, Self::Error> {
         let ParamsWrapper(params) = wrapper;
@@ -145,9 +96,53 @@ impl TryFrom<ParamsWrapper> for Bytes {
     }
 }
 
-impl From<Error> for ErrorObjectOwned {
-    fn from(error: Error) -> Self {
-        error.to_json_rpc_error()
+impl From<RpcError> for ErrorObjectOwned {
+    fn from(error: RpcError) -> Self {
+        match error {
+            RpcError::InvalidRequest => {
+                ErrorObject::owned(error::INVALID_REQUEST_CODE, "invalid request", None::<()>)
+            }
+            RpcError::MethodNotFound(m) => ErrorObject::owned(
+                error::METHOD_NOT_FOUND_CODE,
+                format!("method not found: {}", m),
+                None::<()>,
+            ),
+            InvalidParams(m) => ErrorObject::owned(
+                error::INVALID_PARAMS_CODE,
+                format!("invalid params: {}", m),
+                None::<()>,
+            ),
+            RpcError::Internal(m) => ErrorObject::owned(
+                error::INTERNAL_ERROR_CODE,
+                format!("internal error: {}", m),
+                None::<()>,
+            ),
+            RpcError::Parse => {
+                ErrorObject::owned(error::PARSE_ERROR_CODE, "parse error", None::<()>)
+            }
+            RpcError::InvalidInput(m) => ErrorObject::owned(
+                error::CALL_EXECUTION_FAILED_CODE,
+                format!("invalid input: {}", m),
+                None::<()>,
+            ),
+            RpcError::ResourceNotFound => {
+                ErrorObject::owned(error::UNKNOWN_ERROR_CODE, "resource not found", None::<()>)
+            }
+            RpcError::ResourceUnavailable => {
+                ErrorObject::owned(error::INVALID_REQUEST_CODE, "resource unavailable", None::<()>)
+            }
+            RpcError::TransactionRejected(m) => {
+                ErrorObject::owned(-32003, format!("transaction rejected: {}", m), None::<()>)
+            }
+            RpcError::MethodNotSupported => {
+                ErrorObject::owned(-32004, "method not supported", None::<()>)
+            }
+            RpcError::LimitExceeded => ErrorObject::owned(-32005, "limit exceeded", None::<()>),
+            RpcError::Server => ErrorObject::owned(-32099, "server error", None::<()>),
+            RpcError::Contract(e) => {
+                ErrorObject::owned(-32099, format!("contract error: {}", e), None::<()>)
+            }
+        }
     }
 }
 
@@ -214,43 +209,43 @@ pub enum InvalidInputError {
     TransactionTooLarge(String, String),
 }
 
-impl From<serde_json::Error> for Error {
+impl From<serde_json::Error> for RpcError {
     fn from(_: serde_json::Error) -> Self {
         Self::InvalidInput(InvalidInputError::InvalidJson)
     }
 }
 
-impl From<hex::FromHexError> for Error {
+impl From<hex::FromHexError> for RpcError {
     fn from(_: hex::FromHexError) -> Self {
         InvalidParams(InvalidHex)
     }
 }
 
-impl From<rlp::Error> for Error {
+impl From<rlp::Error> for RpcError {
     fn from(_: rlp::Error) -> Self {
         Self::InvalidInput(InvalidInputError::UnableToRLPDecode)
     }
 }
 
-impl From<SignatureError> for Error {
+impl From<SignatureError> for RpcError {
     fn from(_: SignatureError) -> Self {
         Self::InvalidInput(InvalidInputError::InvalidTransactionSignature)
     }
 }
 
-impl<T> From<ToUintError<T>> for Error {
+impl<T> From<ToUintError<T>> for RpcError {
     fn from(_: ToUintError<T>) -> Self {
         Self::InvalidInput(InvalidInputError::InvalidUint)
     }
 }
 
-impl From<contract::Error> for Error {
+impl From<contract::Error> for RpcError {
     fn from(value: contract::Error) -> Self {
         Self::Contract(value)
     }
 }
 
-impl From<Infallible> for Error {
+impl From<Infallible> for RpcError {
     fn from(_value: Infallible) -> Self {
         unreachable!("Cannot instantiate infallible")
     }

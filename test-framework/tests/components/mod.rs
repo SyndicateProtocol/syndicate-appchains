@@ -358,8 +358,8 @@ impl Components {
         let sequencer_config = SequencerConfig {
             sequencing_contract_address,
             sequencing_rpc_url: sequencing_rpc_url.clone(),
-            sequencer_port: PortManager::instance().next_port(),
-            metrics_port: PortManager::instance().next_port(),
+            sequencer_port: PortManager::instance().next_port().await,
+            metrics_port: PortManager::instance().next_port().await,
         };
         let sequencer = start_component(
             "metabased-sequencer",
@@ -388,7 +388,7 @@ impl Components {
             config_manager_address: Some(config_manager_address),
             appchain_chain_id: Some(options.appchain_chain_id),
             mchain_rpc_url: mchain_rpc_url.clone(),
-            metrics_port: PortManager::instance().next_port(),
+            metrics_port: PortManager::instance().next_port().await,
             arbitrum_bridge_address: None,
             arbitrum_inbox_address: None,
             sequencing_contract_address: None,
@@ -428,8 +428,8 @@ impl Components {
                     },
                 ),
                 settlement_rpc_url: settlement_rpc_url.clone(),
-                metrics_port: PortManager::instance().next_port(),
-                port: PortManager::instance().next_port(),
+                metrics_port: PortManager::instance().next_port().await,
+                port: PortManager::instance().next_port().await,
                 appchain_rpc_url: nitro_url,
             };
             (

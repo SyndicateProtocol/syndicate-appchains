@@ -109,7 +109,7 @@ jobs:
   test:
     name: Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -137,34 +137,6 @@ jobs:
           which anvil
           anvil --version
 
-      - name: Build Packges
-        run: cargo build --workspace
-
-      - name: Build Tests
-        run: cargo test --workspace --exclude maestro --no-run
-
-      # Run tests on entire workspace. `maestro` is excluded because it is tested separately by Nextest below
-      - name: Run Tests
-        run: cargo test --workspace --exclude maestro
-
-  nextest:
-    name: Nextest Integration Tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-
-      # Install Rust toolchain
-      - name: Install Rust toolchain
-        run: rustup toolchain install stable --profile minimal
-
-      # Cache Cargo dependencies
-      - name: Cache dependencies
-        uses: Swatinem/rust-cache@v2
-        with:
-          # Cache entire workspace
-          workspaces: "."
-
       # Install nextest
       - name: Install nextest
         uses: taiki-e/install-action@v2
@@ -173,4 +145,4 @@ jobs:
 
       # Run maestro tests with nextest (using existing config)
       - name: Run Integration Tests with Nextest
-        run: cargo nextest run --profile maestro -p maestro
+        run: cargo nextest run --workspace
