@@ -26,9 +26,7 @@ RUN --mount=type=cache,target=/usr/local/cargo,from=rust:slim-bookworm,source=/u
 
 # Stage 3: Optional Foundry install
 FROM debian:bookworm-slim AS foundry
-RUN --mount=type=cache,target=/var/cache/apt \
-    --mount=type=cache,target=/var/lib/apt \
-    apt-get update && \
+RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     curl \
     git \
