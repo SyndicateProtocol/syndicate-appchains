@@ -20,7 +20,7 @@ pub struct BatcherConfig {
     pub chain_id: ChainId,
 
     /// Max batch size in bytes
-    #[arg(long, env = "MAX_BATCH_SIZE", default_value = "90KiB")] // 90 kilobytes
+    #[arg(long, env = "MAX_BATCH_SIZE", default_value = "90KB")] // 90 kilobytes
     pub max_batch_size: Byte,
 
     /// Polling interval for the batcher in milliseconds

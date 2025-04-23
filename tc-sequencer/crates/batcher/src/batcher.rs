@@ -99,8 +99,7 @@ impl Batcher {
                     return Ok(());
                 }
                 debug!(
-                    "[Chain ID: {}] - Adding transaction to batch: {:?} - compressed size: {}",
-                    self.chain_id,
+                    %self.chain_id, "Adding transaction to batch: {:?} - compressed size: {}",
                     txn,
                     compressed.len()
                 );
@@ -114,7 +113,7 @@ impl Batcher {
         self.read_transactions().await?;
 
         if self.compressor.is_empty() {
-            debug!("[Chain ID: {}] - No transactions available to batch.", self.chain_id);
+            debug!(%self.chain_id, "No transactions available to batch.");
             return Ok(());
         }
 
@@ -136,8 +135,7 @@ impl Batcher {
 
         self.send_batch_to_sequencer(compressed.clone()).await?;
         debug!(
-            "[Chain ID: {}] - Batch sent: {} txs, compressed size: {} bytes",
-            self.chain_id,
+            %self.chain_id, "Batch sent: {} txs, compressed size: {} bytes",
             num_transactions,
             compressed.len()
         );
@@ -145,7 +143,7 @@ impl Batcher {
     }
 
     async fn send_batch_to_sequencer(&self, data: Bytes) -> Result<()> {
-        debug!("[Chain ID: {}] - Sending batch to sequencer", self.chain_id);
+        debug!(%self.chain_id, "Sending batch to sequencer");
         self.tc_client.process_transaction(data, BATCH_FUNCTION_SIGNATURE.to_string()).await?;
         Ok(())
     }
