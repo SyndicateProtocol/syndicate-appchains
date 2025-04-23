@@ -81,7 +81,7 @@ impl Batcher {
     }
     async fn read_transactions(&mut self) -> Result<()> {
         loop {
-            // TODO: Configurable max msg count
+            // TODO (SEQ-842): Configurable max msg count
             let transactions = self.redis_consumer.recv(1, self.polling_interval).await?;
 
             if transactions.is_empty() {
