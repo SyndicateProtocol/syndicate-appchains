@@ -114,7 +114,12 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         let known_block_number = match known_safe_state {
             Some(known_state) => known_state.mchain_block_number,
             None => {
-                info!("No known block number to resume from, starting from genesis");
+                info!(
+                    "No known block number to resume from, starting from genesis (mchain block 1)"
+                );
+                self.provider.rollback_to_block(1).await.map_err(|e| {
+                    BlockBuilderError::ResumeFromBlock(format!("Unable to reorg to block: {}", e))
+                })?;
                 return Ok(());
             }
         };
