@@ -1,5 +1,5 @@
 use crate::{
-    db::{to_err, ArbitrumDB as _, DelayedMessage, MBlock, KVDB},
+    db::{to_err, ArbitrumDB as _, DelayedMessage, MBlock, Slot, KVDB},
     metrics::MchainMetrics,
 };
 use alloy::{
@@ -100,20 +100,28 @@ impl MProvider {
             .header
             .number
     }
-    pub async fn add_batch(&self, batch: MBlock) -> eyre::Result<u64> {
-        Ok(self.0.raw_request("mchain_addBatch".into(), (batch,)).await?)
+    pub async fn add_batch(&self, batch: &MBlock) -> eyre::Result<u64> {
+        Ok(self.0.raw_request("mchain_addBatch".into(), batch).await?)
     }
     pub async fn get_source_chains_processed_blocks(
         &self,
         tag: BlockNumberOrTag,
-    ) -> eyre::Result<(u64, FixedBytes<32>, u64, FixedBytes<32>, u64)> {
+    ) -> eyre::Result<(Slot, u64)> {
         Ok(self.0.raw_request("mchain_getSourceChainsProcessedBlocks".into(), tag).await?)
     }
     pub async fn rollback_to_block(&self, block_number: u64) -> eyre::Result<()> {
-        Ok(self.0.raw_request("mchain_rollbackToBlock".into(), (block_number,)).await?)
+        Ok(self.0.raw_request("mchain_rollbackToBlock".into(), block_number).await?)
     }
-    pub async fn rollup_owner(&self) -> eyre::Result<Address> {
-        Ok(self.0.raw_request("mchain_rollupOwner".into(), ()).await?)
+    pub async fn rollup_owner(&self) -> Address {
+        #[allow(clippy::unwrap_used)]
+        self.0.raw_request("mchain_rollupOwner".into(), ()).await.unwrap()
+    }
+    pub async fn slot(&self) -> Option<Slot> {
+        #[allow(clippy::unwrap_used)]
+        self.0.raw_request("mchain_slot".into(), ()).await.unwrap()
+    }
+    pub async fn update_slot(&self, slot: &Slot) -> eyre::Result<()> {
+        Ok(self.0.raw_request("mchain_updateSlot".into(), slot).await?)
     }
 }
 
@@ -143,13 +151,9 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     if db.get_block_number() == 0 {
         // 000b00800203 corresponds to a batch containing a single delayed message
         db.add_batch(MBlock {
-            timestamp: 0,
             messages: vec![init_msg],
-            batch: alloy::hex!("000b00800203").into(),
-            seq_block_hash: FixedBytes::ZERO,
-            seq_block_number: 0,
-            set_block_hash: FixedBytes::ZERO,
-            set_block_number: 0,
+            batch: Bytes::from_static(&alloy::hex!("000b00800203")),
+            ..Default::default()
         })
         .unwrap();
     } else {
@@ -180,7 +184,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
         .register_method(
             "mchain_addBatch",
             move |p, (db, metrics, mutex), _| -> Result<u64, ErrorObjectOwned> {
-                let (batch,): (MBlock,) = p.parse()?;
+                let batch: MBlock = p.parse()?;
                 let timestamp = batch.timestamp;
                 let block = db.add_batch(batch)?;
                 metrics.record_last_block(block, timestamp);
@@ -196,7 +200,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
         .register_method(
             "mchain_rollbackToBlock",
             move |p, (db, metrics, mutex), _| -> Result<(), ErrorObjectOwned> {
-                let (block,): (u64,) = p.parse()?;
+                let block: u64 = p.parse()?;
                 let latest = db.get_block_number();
                 if block == latest {
                     return Ok(());
@@ -209,9 +213,10 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
                 }
                 // remove stale ts data & delete blocks, messages
                 db.put_block_number(block);
-                let start_block = db.get_block(block)?;
+                let start_block = db.get_block(block).unwrap();
                 metrics.record_reorg(block, latest, start_block.timestamp);
-                let end_block = db.get_block(latest)?;
+                db.put_slot(&start_block.slot);
+                let end_block = db.get_block(latest).unwrap();
                 for i in block..latest {
                     db.delete_block(i + 1);
                 }
@@ -238,31 +243,53 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     module
         .register_method(
             "mchain_rollupOwner",
-            move |_p, (_db, _, _), _| -> Result<Address, ErrorObjectOwned> { Ok(rollup_owner) },
+            move |_, _, _| -> Result<Address, ErrorObjectOwned> { Ok(rollup_owner) },
         )
         .unwrap();
-    module.register_method(
-        "mchain_getSourceChainsProcessedBlocks",
-        move |p,
-              (db, _, _),
-              _|
-              -> Result<(u64, FixedBytes<32>, u64, FixedBytes<32>, u64), ErrorObjectOwned> {
-            let tag: BlockNumberOrTag = p.parse()?;
-            let block_num = match tag {
-                BlockNumberOrTag::Latest => db.get_block_number(),
-                BlockNumberOrTag::Number(i) => i,
-                _ => return Err(to_err(format!("unexpected block tag: {}", tag))),
-            };
-            let block = db.get_block(block_num)?;
-            Ok((
-                block.seq_block_number,
-                block.seq_block_hash,
-                block.set_block_number,
-                block.set_block_hash,
-                block_num,
-            ))
-        },
-    ).unwrap();
+    module
+        .register_method(
+            "mchain_slot",
+            move |_, (db, _, _), _| -> Result<Option<Slot>, ErrorObjectOwned> { Ok(db.get_slot()) },
+        )
+        .unwrap();
+    module
+        .register_method(
+            "mchain_updateSlot",
+            move |p, (db, _, _), _| -> Result<(), ErrorObjectOwned> {
+                let slot: Slot = p.parse()?;
+                if let Some(prev) = db.get_slot() {
+                    if slot.seq_block_number <= prev.seq_block_number ||
+                        slot.set_block_number < prev.set_block_number
+                    {
+                        return Err(to_err(format!(
+                            "slot block numbers too low: seq {} <= {} or set {} < {}",
+                            slot.seq_block_number,
+                            prev.seq_block_number,
+                            slot.set_block_number,
+                            prev.set_block_number
+                        )))
+                    }
+                }
+                db.put_slot(&slot);
+                Ok(())
+            },
+        )
+        .unwrap();
+    module
+        .register_method(
+            "mchain_getSourceChainsProcessedBlocks",
+            move |p, (db, _, _), _| -> Result<(Slot, u64), ErrorObjectOwned> {
+                let tag: BlockNumberOrTag = p.parse()?;
+                let block_num = match tag {
+                    BlockNumberOrTag::Latest => db.get_block_number(),
+                    BlockNumberOrTag::Number(i) => i,
+                    _ => return Err(to_err(format!("unexpected block tag: {}", tag))),
+                };
+                let block = db.get_block(block_num)?;
+                Ok((block.slot, block_num))
+            },
+        )
+        .unwrap();
 
     // -------------------------------------------------
     // eth methods
@@ -475,7 +502,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
 mod tests {
     use super::start_mchain;
     use crate::{
-        db::{tests::TestDB, DelayedMessage, MBlock, KVDB},
+        db::{tests::TestDB, DelayedMessage, MBlock, Slot, KVDB},
         mchain::MProvider,
         metrics::MchainMetrics,
     };
@@ -558,26 +585,43 @@ mod tests {
             base_fee_l1: Default::default(),
         };
         let (mchain, db, _handle) = setup().await?;
-        assert_eq!(db.0.read().unwrap().keys().len(), 3); // init msg, block number, batch (1)
+        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 1); // init msg, block number, batch (1)
         assert_eq!(mchain.get_block_number().await, 1);
-        mchain.add_batch(MBlock::default()).await?;
-        assert_eq!(db.0.read().unwrap().keys().len(), 4); // block (2)
+        mchain
+            .add_batch(&MBlock {
+                slot: Slot { seq_block_number: 1, ..Default::default() },
+                ..Default::default()
+            })
+            .await?;
+        assert_eq!(db.0.read().unwrap().keys().len(), 4 + 1); // block (2)
         assert_eq!(mchain.get_block_number().await, 2);
-        mchain.add_batch(MBlock { messages: vec![empty.clone()], ..Default::default() }).await?; // block + messages (3)
-        assert_eq!(db.0.read().unwrap().keys().len(), 6);
+        mchain
+            .add_batch(&MBlock {
+                messages: vec![empty.clone()],
+                slot: Slot { seq_block_number: 2, ..Default::default() },
+                ..Default::default()
+            })
+            .await?; // block + messages (3)
+        assert_eq!(db.0.read().unwrap().keys().len(), 6 + 1);
         assert_eq!(mchain.get_block_number().await, 3);
-        mchain.add_batch(MBlock { messages: vec![empty; 2], ..Default::default() }).await?; // block + 2 messagess (4)
-        assert_eq!(db.0.read().unwrap().keys().len(), 9);
+        mchain
+            .add_batch(&MBlock {
+                messages: vec![empty; 2],
+                slot: Slot { seq_block_number: 3, ..Default::default() },
+                ..Default::default()
+            })
+            .await?; // block + 2 messagess (4)
+        assert_eq!(db.0.read().unwrap().keys().len(), 9 + 1);
         assert_eq!(mchain.get_block_number().await, 4);
         mchain.rollback_to_block(2).await?; // rm 2 blocks + 3 messages
-        assert_eq!(db.0.read().unwrap().keys().len(), 4);
+        assert_eq!(db.0.read().unwrap().keys().len(), 4 + 1);
         assert_eq!(mchain.get_block_number().await, 2);
         mchain.rollback_to_block(1).await?; // rm block
-        assert_eq!(db.0.read().unwrap().keys().len(), 3);
+        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 1);
         assert_eq!(mchain.get_block_number().await, 1);
         assert!(mchain.rollback_to_block(0).await.is_err());
         assert!(mchain.rollback_to_block(2).await.is_err());
-        assert_eq!(db.0.read().unwrap().keys().len(), 3);
+        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 1);
         assert_eq!(mchain.get_block_number().await, 1);
         Ok(())
     }
@@ -587,9 +631,26 @@ mod tests {
         let (mchain, _, _handle) = setup().await?;
         assert_eq!(mchain.get_block_number().await, 1);
         assert_eq!(mchain.get_finalized_block().await, 1);
-        mchain.add_batch(MBlock::default()).await?;
-        mchain.add_batch(MBlock { timestamp: 1, ..Default::default() }).await?;
-        mchain.add_batch(MBlock { timestamp: 1, ..Default::default() }).await?;
+        mchain
+            .add_batch(&MBlock {
+                slot: Slot { seq_block_number: 1, ..Default::default() },
+                ..Default::default()
+            })
+            .await?;
+        mchain
+            .add_batch(&MBlock {
+                timestamp: 1,
+                slot: Slot { seq_block_number: 2, ..Default::default() },
+                ..Default::default()
+            })
+            .await?;
+        mchain
+            .add_batch(&MBlock {
+                timestamp: 1,
+                slot: Slot { seq_block_number: 3, ..Default::default() },
+                ..Default::default()
+            })
+            .await?;
         assert_eq!(mchain.get_block_number().await, 4);
         assert_eq!(mchain.get_finalized_block().await, 1);
         TIME.set(59);
@@ -604,17 +665,35 @@ mod tests {
         mchain.rollback_to_block(3).await?;
         assert_eq!(mchain.get_block_number().await, 3);
         assert_eq!(mchain.get_finalized_block().await, 3);
-        mchain.add_batch(MBlock { timestamp: 1, ..Default::default() }).await?;
+        mchain
+            .add_batch(&MBlock {
+                timestamp: 1,
+                slot: Slot { seq_block_number: 3, ..Default::default() },
+                ..Default::default()
+            })
+            .await?;
         assert_eq!(mchain.get_block_number().await, 4);
         assert_eq!(mchain.get_finalized_block().await, 4);
-        mchain.add_batch(MBlock { timestamp: 2, ..Default::default() }).await?;
+        mchain
+            .add_batch(&MBlock {
+                timestamp: 2,
+                slot: Slot { seq_block_number: 4, ..Default::default() },
+                ..Default::default()
+            })
+            .await?;
         assert_eq!(mchain.get_block_number().await, 5);
         assert_eq!(mchain.get_finalized_block().await, 4);
         mchain.rollback_to_block(4).await?;
         TIME.set(62);
         assert_eq!(mchain.get_block_number().await, 4);
         assert_eq!(mchain.get_finalized_block().await, 4);
-        mchain.add_batch(MBlock { timestamp: 100, ..Default::default() }).await?;
+        mchain
+            .add_batch(&MBlock {
+                timestamp: 100,
+                slot: Slot { seq_block_number: 4, ..Default::default() },
+                ..Default::default()
+            })
+            .await?;
         assert_eq!(mchain.get_block_number().await, 5);
         assert_eq!(mchain.get_finalized_block().await, 4);
         TIME.set(0);

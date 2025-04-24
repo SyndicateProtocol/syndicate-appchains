@@ -1,7 +1,6 @@
 //! Connector for the `MetaChain`
 use crate::{
-    block_builder::BlockBuilderError, config::BlockBuilderConfig, metrics::BlockBuilderMetrics,
-    rollups::shared::RollupAdapter,
+    block_builder::BlockBuilderError, config::BlockBuilderConfig, rollups::shared::RollupAdapter,
 };
 use alloy::{
     eips::BlockNumberOrTag,
@@ -22,7 +21,7 @@ use common::{
 use eyre::Result;
 use mchain::mchain::MProvider;
 use std::sync::Arc;
-use tracing::{error, info};
+use tracing::info;
 
 #[allow(missing_docs)]
 pub type FilledProvider = FillProvider<
@@ -49,27 +48,19 @@ pub type HttpProvider = FillProvider<
 #[allow(missing_docs)]
 pub struct MetaChainProvider<R: RollupAdapter> {
     pub provider: MProvider,
-
     pub rollup_adapter: R,
-
-    pub metrics: BlockBuilderMetrics,
 }
 
 impl<R: RollupAdapter> MetaChainProvider<R> {
     /// Create a provider for the `MetaChain`
-    pub async fn start(
-        config: &BlockBuilderConfig,
-        metrics: BlockBuilderMetrics,
-        rollup_adapter: R,
-    ) -> Result<Self> {
+    pub async fn start(config: &BlockBuilderConfig, rollup_adapter: R) -> Result<Self> {
         let provider = MProvider::new(config.mchain_rpc_url.parse()?);
 
-        let mchain = Self { provider, rollup_adapter, metrics };
+        let mchain = Self { provider, rollup_adapter };
 
         Ok(mchain)
     }
 
-    // TODO (SEQ-681) - re-use this function in case of reorg
     /// Reconciles the [`MetaChain`] state with the source chains (sequencing and settlement)
     ///
     /// This function is used during application startup and when handling reorgs to ensure
@@ -93,6 +84,41 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         sequencing_client: &Arc<dyn RPCClient>,
         settlement_client: &Arc<dyn RPCClient>,
     ) -> Result<Option<KnownState>> {
+        if let Some(slot) = self.provider.slot().await {
+            info!("checking latest slot: {:?}", slot);
+            let mut seq_block =
+                BlockRef { number: slot.seq_block_number, hash: slot.seq_block_hash, timestamp: 0 };
+            if validate_block_add_timestamp(sequencing_client, &mut seq_block).await {
+                let mut set_block = BlockRef {
+                    number: slot.set_block_number,
+                    hash: slot.set_block_hash,
+                    timestamp: 0,
+                };
+                if validate_block_add_timestamp(settlement_client, &mut set_block).await {
+                    let (state, mut mchain_block_number) = self
+                        .provider
+                        .get_source_chains_processed_blocks(BlockNumberOrTag::Latest)
+                        .await?;
+                    if state != slot {
+                        // block number is 0 if the slot is empty & a corresponding mchain block
+                        // does not exist
+                        mchain_block_number = 0;
+
+                        // just in case - make sure the slot comes after the latest mchain block
+                        assert!(
+                            state.seq_block_number < seq_block.number &&
+                                state.set_block_number <= set_block.number
+                        );
+                    }
+                    info!("latest slot is OK - no need to reorg");
+                    return Ok(Some(KnownState {
+                        mchain_block_number,
+                        sequencing_block: seq_block,
+                        settlement_block: set_block,
+                    }));
+                }
+            }
+        }
         let mchain_block_before = self.provider.get_block_number().await;
 
         let safe_state = self.get_safe_state(sequencing_client, settlement_client).await;
@@ -144,54 +170,24 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         sequencing_client: &Arc<dyn RPCClient>,
         settlement_client: &Arc<dyn RPCClient>,
     ) -> Option<KnownState> {
+        info!("getting safe state");
         let mut current_block = BlockNumberOrTag::Latest;
-        let mut found_block = false;
         loop {
             #[allow(clippy::unwrap_used)]
-            match self.rollup_adapter.get_processed_blocks(self, current_block).await.unwrap() {
-                Some((mut state, block_number)) => {
-                    let seq_valid = validate_block_add_timestamp(
-                        sequencing_client,
-                        &mut state.sequencing_block,
-                    )
-                    .await;
-                    let settle_valid = validate_block_add_timestamp(
-                        settlement_client,
-                        &mut state.settlement_block,
-                    )
-                    .await;
-
-                    if found_block {
-                        return Some(state);
-                    }
-
-                    if seq_valid && settle_valid {
-                        // if the latest settlement block on this slot is still part of the
-                        // cannonical chain (and not the head) it's safe to return this slot,
-                        // otherwise we walk back one more slot and return that
-                        if let Ok(block) = settlement_client
-                            .get_block_by_number(BlockNumberOrTag::Number(block_number + 1))
-                            .await
-                        {
-                            if block.parent_hash == state.settlement_block.hash {
-                                return Some(state);
-                            }
-                        }
-                        found_block = true;
-                    }
-                    current_block = BlockNumberOrTag::Number(block_number.saturating_sub(1));
-                }
-                None => {
-                    if found_block &&
-                        (current_block == BlockNumberOrTag::Number(1) ||
-                            current_block == BlockNumberOrTag::Number(0))
-                    {
-                        error!("reorging to genesis not supported");
-                        panic!("reorging to genesis not supported");
-                    }
-                    return None;
-                }
-            };
+            let mut state =
+                self.rollup_adapter.get_processed_blocks(self, current_block).await.unwrap()?;
+            info!("checking state {:?}", state);
+            let seq_valid =
+                validate_block_add_timestamp(sequencing_client, &mut state.sequencing_block).await;
+            let set_valid =
+                validate_block_add_timestamp(settlement_client, &mut state.settlement_block).await;
+            info!("seq valid: {}, set valid: {}", seq_valid, set_valid);
+            if seq_valid && set_valid {
+                info!("found safe state {:?}", state);
+                return Some(state)
+            }
+            assert_ne!(state.mchain_block_number, 0, "cannot reorg genesis block");
+            current_block = BlockNumberOrTag::Number(state.mchain_block_number - 1);
         }
     }
 
@@ -201,11 +197,7 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         config_rollup_owner: Option<Address>,
     ) -> Result<(), BlockBuilderError> {
         if let Some(config_rollup_owner) = config_rollup_owner {
-            let rollup_owner = self
-                .provider
-                .rollup_owner()
-                .await
-                .map_err(|e| BlockBuilderError::MChainCallError(e.to_string()))?;
+            let rollup_owner = self.provider.rollup_owner().await;
             if rollup_owner != config_rollup_owner {
                 return Err(BlockBuilderError::RollupOwnerMismatch(
                     config_rollup_owner,
@@ -221,13 +213,14 @@ async fn validate_block_add_timestamp(
     client: &Arc<dyn RPCClient>,
     expected_block: &mut BlockRef,
 ) -> bool {
-    match client.get_block_by_number(BlockNumberOrTag::Number(expected_block.number)).await {
-        Ok(block) => {
-            expected_block.timestamp = block.timestamp;
-            block.hash == expected_block.hash
-        }
-        Err(_) => false,
-    }
+    #[allow(clippy::expect_used)]
+    let block = client
+        .get_block_by_number(BlockNumberOrTag::Number(expected_block.number))
+        .await
+        .expect("could not find block");
+    assert_eq!(block.number, expected_block.number);
+    expected_block.timestamp = block.timestamp;
+    block.hash == expected_block.hash
 }
 
 #[cfg(test)]

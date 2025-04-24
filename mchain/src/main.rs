@@ -27,7 +27,8 @@ struct Config {
     metrics_port: u16,
     #[arg(long, env = "CHAIN_ID")]
     chain_id: u64,
-    #[arg(long, env = "CHAIN_OWNER", default_value = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")]
+    // TODO(SEQ-840): read the chain owner from the chain config contract instead
+    #[arg(long, env = "CHAIN_OWNER")]
     chain_owner: Address,
 }
 

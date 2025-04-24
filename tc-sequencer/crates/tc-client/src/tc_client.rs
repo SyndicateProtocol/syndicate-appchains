@@ -137,14 +137,13 @@ impl TCClient {
         raw_tx: Bytes,
         function_signature: String,
     ) -> Result<TxHash, RpcError> {
-        info!("Processing transaction: {}", hex::encode(&raw_tx));
+        debug!("Processing transaction: {}", hex::encode(&raw_tx));
         let original_tx = validate_transaction(&raw_tx)?;
         let original_tx_hash = *original_tx.tx_hash();
-        let raw_tx_clone = raw_tx.clone();
+        info!("Submitting transaction - tx hash: 0x{}", hex::encode(original_tx_hash));
         let transaction_id = self.send_transaction(raw_tx, function_signature).await?;
-        debug!(
-            "Transaction submitted successfully - Original raw tx: 0x{}, Original tx hash: 0x{}, TC transaction ID: {}",
-            hex::encode(&raw_tx_clone),
+        info!(
+            "Transaction submitted successfully - tx hash: 0x{}, TC transaction ID: {}",
             hex::encode(original_tx_hash),
             transaction_id
         );

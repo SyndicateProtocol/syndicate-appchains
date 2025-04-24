@@ -1258,7 +1258,6 @@ dependencies = [
  "flate2",
  "hex",
  "mchain",
- "prometheus-client",
  "serde",
  "serde_json",
  "shared",
@@ -1546,8 +1545,7 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "async-trait",
- "bincode",
- "eyre",
+ "mchain",
  "serde",
  "serde_json",
  "strum_macros",
@@ -2759,8 +2757,10 @@ dependencies = [
  "alloy",
  "assert_matches",
  "async-trait",
+ "block-builder",
  "clap",
  "common",
+ "ctor",
  "eyre",
  "humantime",
  "mockall",
@@ -3342,7 +3342,6 @@ version = "0.1.0"
 dependencies = [
  "assert_matches",
  "axum",
- "block-builder",
  "clap",
  "common",
  "ingestor",
@@ -4745,8 +4744,11 @@ name = "slotter"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "async-trait",
  "common",
  "ctor",
+ "eyre",
+ "mchain",
  "prometheus-client",
  "shared",
  "thiserror 2.0.12",

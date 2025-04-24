@@ -3,10 +3,13 @@ use crate::{
     shutdown_channels::{ShutdownChannels, ShutdownRx, ShutdownTx},
     types::RuntimeError,
 };
-use block_builder::{connectors::mchain::MetaChainProvider, rollups::shared::RollupAdapter};
+use block_builder::{
+    connectors::mchain::MetaChainProvider,
+    rollups::{arbitrum::arbitrum_adapter::ArbitrumAdapter, shared::RollupAdapter},
+};
 use common::{
     eth_client::{EthClient, RPCClient},
-    types::{Chain, KnownState, PartialBlock},
+    types::{Chain, KnownState},
 };
 use eyre::{Report, Result};
 use ingestor::config::ChainIngestorConfig;
@@ -30,12 +33,7 @@ pub async fn run(
 
     let metrics = init_metrics(config).await;
 
-    let mchain = MetaChainProvider::start(
-        &config.block_builder,
-        metrics.block_builder.clone(),
-        rollup_adapter,
-    )
-    .await?;
+    let mchain = MetaChainProvider::start(&config.block_builder, rollup_adapter).await?;
     mchain
         .assert_rollup_owner(config.rollup_owner)
         .await
@@ -120,10 +118,8 @@ impl ComponentHandles {
         mchain: MetaChainProvider<impl RollupAdapter>,
         shutdown_rx: ShutdownRx,
     ) -> Self {
-        let (sequencing_tx, sequencing_rx) =
-            channel::<PartialBlock>(config.sequencing.sequencing_buffer_size);
-        let (settlement_tx, settlement_rx) =
-            channel::<PartialBlock>(config.settlement.settlement_buffer_size);
+        let (sequencing_tx, sequencing_rx) = channel(config.sequencing.sequencing_buffer_size);
+        let (settlement_tx, settlement_rx) = channel(config.settlement.settlement_buffer_size);
 
         let mut sequencing_config: ChainIngestorConfig = config.sequencing.clone().into();
         let mut settlement_config: ChainIngestorConfig = config.settlement.clone().into();
@@ -131,19 +127,21 @@ impl ComponentHandles {
         // start the ingestors from the known safe state
         if let Some(state) = &known_state {
             sequencing_config.start_block = state.sequencing_block.number + 1;
-            settlement_config.start_block = state.settlement_block.number + 1;
+            // re-ingest the last known settlement block as it is not included in the latest mchain
+            // block
+            settlement_config.start_block = state.settlement_block.number;
         }
 
-        let sequencing_addresses = mchain.rollup_adapter.sequencing_addresses_to_monitor();
-        let settlement_addresses = mchain.rollup_adapter.settlement_addresses_to_monitor();
+        let arbitrum_adapter = Arc::new(ArbitrumAdapter::new(&config.block_builder));
 
+        let adapter = arbitrum_adapter.clone();
         let sequencing = tokio::spawn(async move {
             ingestor::run(
                 Chain::Sequencing,
                 &sequencing_config,
-                sequencing_addresses,
                 sequencing_client,
                 sequencing_tx,
+                adapter,
                 metrics.ingestor_sequencing,
                 shutdown_rx.sequencing,
             )
@@ -154,9 +152,9 @@ impl ComponentHandles {
             ingestor::run(
                 Chain::Settlement,
                 &settlement_config,
-                settlement_addresses,
                 settlement_client,
                 settlement_tx,
+                arbitrum_adapter,
                 metrics.ingestor_settlement,
                 shutdown_rx.settlement,
             )
@@ -170,7 +168,7 @@ impl ComponentHandles {
                 known_state,
                 sequencing_rx,
                 settlement_rx,
-                mchain,
+                &mchain.provider,
                 metrics.slotter,
             )
             .await

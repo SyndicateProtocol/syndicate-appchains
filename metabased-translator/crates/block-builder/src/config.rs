@@ -1,7 +1,7 @@
 //! Configuration for the block builder service
 use alloy::primitives::Address;
 use clap::{Parser, ValueEnum};
-use shared::parse::parse_address;
+use shared::parse::{parse_address, parse_addresses};
 use std::fmt::Debug;
 use thiserror::Error;
 
@@ -36,6 +36,12 @@ pub struct BlockBuilderConfig {
     /// Default is false
     #[arg(long, env = "ARBITRUM_IGNORE_DELAYED_MESSAGES")]
     pub arbitrum_ignore_delayed_messages: Option<bool>,
+
+    /// Flag used to allow delayed messages from privileged contracts
+    /// even when the ignore delayed messages flag is enabled.
+    /// TODO(SEQ-846): Add this variable to the chain config contract.
+    #[arg(long, env = "ALLOWED_SETTLEMENT_ADDRESSES", value_parser = parse_addresses)]
+    pub allowed_settlement_addresses: Vec<Address>,
 }
 
 /// Possible target rollup types for the [`block-builder`]

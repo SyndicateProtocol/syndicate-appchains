@@ -18,7 +18,7 @@ use alloy::{
     sol_types::{SolCall, SolEvent},
 };
 use async_trait::async_trait;
-use common::types::{BlockRef, KnownState, PartialBlock, PartialLogWithTxdata, Slot};
+use common::types::{BlockRef, KnownState, PartialBlock, PartialLogWithTxdata, EMPTY_BATCH};
 use contract_bindings::arbitrum::{
     ibridge::IBridge::MessageDelivered,
     idelayedmessageprovider::IDelayedMessageProvider::{
@@ -27,8 +27,9 @@ use contract_bindings::arbitrum::{
     iinboxbase::IInboxBase::sendL2MessageFromOriginCall,
 };
 use eyre::Result;
-use mchain::db::{DelayedMessage, MBlock};
-use std::collections::HashMap;
+use mchain::db::DelayedMessage;
+use shared::tx_validation::validate_transaction;
+use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 use tracing::{debug, error, info, trace};
 
@@ -105,6 +106,9 @@ pub struct ArbitrumAdapter {
 
     // Flag used to ignore Delayed messages (except Deposits)
     ignore_delayed_messages: bool,
+
+    // Whitelisted sender addresses for delayed messages
+    allowed_settlement_addresses: HashSet<Address>,
 }
 
 impl Default for ArbitrumAdapter {
@@ -122,159 +126,86 @@ impl RollupAdapter for ArbitrumAdapter {
         &self.transaction_parser
     }
 
-    /// Builds a block from a slot
-    async fn build_block_from_slot(
-        &self,
-        slot: &Slot,
-        mchain_block_number: u64,
-    ) -> Result<Option<MBlock>, eyre::Error> {
-        let delayed_messages = self.process_delayed_messages(slot.settlement.clone()).await?;
-        debug!("Delayed messages: {:?}", delayed_messages);
+    /// Builds a batch from a sequencing block
+    fn build_batch(&self, block: &PartialBlock) -> Result<(u64, Bytes)> {
+        let mb_transactions = self.parse_block_to_mbtxs(block);
 
-        let mb_transactions = self.parse_block_to_mbtxs(slot.sequencing.clone());
-
-        if delayed_messages.is_empty() && mb_transactions.is_empty() {
-            trace!("No delayed messages or MB transactions, skipping block");
-            return Ok(Default::default());
+        if mb_transactions.is_empty() {
+            return Ok((0, EMPTY_BATCH))
         }
 
-        // Always build a batch transaction even if there are no transactions
-        // This ensures we always produce a block
-        let (set_block_number, set_block_hash) =
-            slot.settlement.last().map_or((0, FixedBytes::ZERO), |b| (b.number, b.hash));
-        Ok(Some(MBlock {
-            timestamp: slot.timestamp(),
-            batch: self
-                .build_batch_txn(mb_transactions, mchain_block_number, slot.timestamp())
-                .await?,
-            messages: delayed_messages,
-            seq_block_hash: slot.sequencing.hash,
-            seq_block_number: slot.sequencing.number,
-            set_block_hash,
-            set_block_number,
-        }))
-    }
+        info!(
+            "Processing sequencer transactions: {:?}",
+            mb_transactions
+                .iter()
+                .filter_map(|b: &Bytes| validate_transaction(b).ok().map(|tx| *tx.hash()))
+                .collect::<Vec<_>>()
+        );
 
-    // NOTE: timestamp of the blockRefs will be 0
-    async fn get_processed_blocks(
-        &self,
-        provider: &MetaChainProvider<Self>,
-        block: BlockNumberOrTag,
-    ) -> Result<Option<(KnownState, u64)>> {
-        let (seq_num, seq_hash, set_num, set_hash, block_number) =
-            provider.provider.get_source_chains_processed_blocks(block).await?;
-
-        if seq_num == 0 {
-            return Ok(None);
-        }
-
-        Ok(Some((
-            KnownState {
-                mchain_block_number: block_number,
-                sequencing_block: BlockRef { number: seq_num, timestamp: 0, hash: seq_hash },
-                settlement_block: BlockRef { number: set_num, timestamp: 0, hash: set_hash },
-            },
-            block_number,
-        )))
-    }
-
-    async fn get_last_sequencing_block_processed(&self, provider: &MetaChainProvider<Self>) -> u64 {
-        #[allow(clippy::unwrap_used)]
-        return provider
-            .provider
-            .get_source_chains_processed_blocks(BlockNumberOrTag::Latest)
-            .await
-            .unwrap()
-            .0
-    }
-
-    fn sequencing_addresses_to_monitor(&self) -> Vec<Address> {
-        vec![self.transaction_parser.sequencing_contract_address]
-    }
-
-    fn settlement_addresses_to_monitor(&self) -> Vec<Address> {
-        vec![self.bridge_address, self.inbox_address]
-    }
-}
-
-impl ArbitrumAdapter {
-    /// Creates a new Arbitrum block builder.
-    ///
-    /// # Arguments
-    /// - `config`: The configuration for the block builder.
-    #[allow(clippy::unwrap_used)] //it's okay to unwrap here because we know the config is valid
-    pub const fn new(config: &BlockBuilderConfig) -> Self {
-        Self {
-            transaction_parser: SequencingTransactionParser::new(
-                config.sequencing_contract_address.unwrap(),
-            ),
-            bridge_address: config.arbitrum_bridge_address.unwrap(),
-            inbox_address: config.arbitrum_inbox_address.unwrap(),
-            ignore_delayed_messages: config.arbitrum_ignore_delayed_messages.unwrap(),
-        }
+        Ok((
+            mb_transactions.len() as u64,
+            self.build_batch_txn(
+                mb_transactions,
+                block.block_ref.number,
+                block.block_ref.timestamp,
+            )?,
+        ))
     }
 
     /// Processes settlement chain receipts into delayed messages
-    async fn process_delayed_messages(
-        &self,
-        blocks: Vec<PartialBlock>,
-    ) -> Result<Vec<DelayedMessage>> {
+    fn process_delayed_messages(&self, block: &PartialBlock) -> Result<Vec<DelayedMessage>> {
         // Create a local map to store message data
         let mut message_data: HashMap<U256, Bytes> = HashMap::new();
-        // Process all bridge logs in all receipts in all blocks
-        let delayed_messages = blocks.iter().flat_map(|block| &block.logs).filter(|log| {
+        // Process all bridge logs in all receipts
+        let delayed_messages = block.logs.iter().filter(|log| {
             log.address == self.bridge_address && log.topics[0] == MSG_DELIVERED_EVENT_HASH
         });
 
-        // Process all inbox logs in all receipts in all blocks
-        blocks
-            .iter()
-            .flat_map(|block| &block.logs)
-            .filter(|log| log.address == self.inbox_address)
-            .for_each(|log| {
-                match log.topics[0] {
-                    INBOX_MSG_DELIVERED_EVENT_HASH => {
-                        let message_num = U256::from_be_slice(log.topics[1].as_slice());
+        // Process all inbox logs in all receipts
+        block.logs.iter().filter(|log| log.address == self.inbox_address).for_each(|log| {
+            match log.topics[0] {
+                INBOX_MSG_DELIVERED_EVENT_HASH => {
+                    let message_num = U256::from_be_slice(log.topics[1].as_slice());
 
-                        // Decode the event using the contract bindings
-                        match InboxMessageDelivered::abi_decode_data(&log.data, true) {
-                            Ok(decoded) => {
-                                message_data.insert(message_num, decoded.0);
-                            }
-                            Err(e) => {
-                                panic!(
-                                    "{}",
-                                    ArbitrumBlockBuilderError::DecodingError(
-                                        "InboxMessageDelivered",
-                                        e.into()
-                                    )
-                                );
-                            }
+                    // Decode the event using the contract bindings
+                    match InboxMessageDelivered::abi_decode_data(&log.data, true) {
+                        Ok(decoded) => {
+                            message_data.insert(message_num, decoded.0);
+                        }
+                        Err(e) => {
+                            panic!(
+                                "{}",
+                                ArbitrumBlockBuilderError::DecodingError(
+                                    "InboxMessageDelivered",
+                                    e.into()
+                                )
+                            );
                         }
                     }
-
-                    INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH => {
-                        let message_num = U256::from_be_slice(log.topics[1].as_slice());
-
-                        // Decode the transaction input using the contract bindings
-                        match sendL2MessageFromOriginCall::abi_decode(&log.tx_calldata, false) {
-                            Ok(decoded) => {
-                                message_data.insert(message_num, decoded.messageData);
-                            }
-                            Err(e) => {
-                                panic!(
-                                    "{}",
-                                    ArbitrumBlockBuilderError::DecodingError(
-                                        "sendL2MessageFromOriginCall",
-                                        e.into()
-                                    )
-                                );
-                            }
-                        }
-                    }
-                    _ => {}
                 }
-            });
+
+                INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH => {
+                    let message_num = U256::from_be_slice(log.topics[1].as_slice());
+
+                    // Decode the transaction input using the contract bindings
+                    match sendL2MessageFromOriginCall::abi_decode(&log.tx_calldata, false) {
+                        Ok(decoded) => {
+                            message_data.insert(message_num, decoded.messageData);
+                        }
+                        Err(e) => {
+                            panic!(
+                                "{}",
+                                ArbitrumBlockBuilderError::DecodingError(
+                                    "sendL2MessageFromOriginCall",
+                                    e.into()
+                                )
+                            );
+                        }
+                    }
+                }
+                _ => {}
+            }
+        });
 
         trace!("Delayed message data: {:?}", message_data);
         trace!("Delayed messages: {:?}", delayed_messages);
@@ -306,7 +237,60 @@ impl ArbitrumAdapter {
             })
             .collect();
 
+        // TODO(SEQ-851): compute & log delayed message tx hashes
+
         Ok(delayed_msg_txns)
+    }
+
+    // NOTE: timestamp of the blockRefs will be 0
+    async fn get_processed_blocks(
+        &self,
+        provider: &MetaChainProvider<Self>,
+        block: BlockNumberOrTag,
+    ) -> Result<Option<KnownState>> {
+        let (slot, block_number) =
+            provider.provider.get_source_chains_processed_blocks(block).await?;
+
+        if slot.seq_block_number == 0 {
+            return Ok(None);
+        }
+
+        Ok(Some(KnownState {
+            mchain_block_number: block_number,
+            sequencing_block: BlockRef {
+                number: slot.seq_block_number,
+                timestamp: 0,
+                hash: slot.seq_block_hash,
+            },
+            settlement_block: BlockRef {
+                number: slot.set_block_number,
+                timestamp: 0,
+                hash: slot.set_block_hash,
+            },
+        }))
+    }
+}
+
+impl ArbitrumAdapter {
+    /// Creates a new Arbitrum block builder.
+    ///
+    /// # Arguments
+    /// - `config`: The configuration for the block builder.
+    #[allow(clippy::unwrap_used)] //it's okay to unwrap here because we know the config is valid
+    pub fn new(config: &BlockBuilderConfig) -> Self {
+        let mut allowed_settlement_addresses = HashSet::new();
+        for addr in &config.allowed_settlement_addresses {
+            allowed_settlement_addresses.insert(*addr);
+        }
+        Self {
+            transaction_parser: SequencingTransactionParser::new(
+                config.sequencing_contract_address.unwrap(),
+            ),
+            bridge_address: config.arbitrum_bridge_address.unwrap(),
+            inbox_address: config.arbitrum_inbox_address.unwrap(),
+            ignore_delayed_messages: config.arbitrum_ignore_delayed_messages.unwrap(),
+            allowed_settlement_addresses,
+        }
     }
 
     fn delayed_message_to_mchain_txn(
@@ -319,7 +303,7 @@ impl ArbitrumAdapter {
 
         let kind = L1MessageType::from_u8_panic(msg.kind);
 
-        if self.should_ignore_delayed_message(&kind) {
+        if self.should_ignore_delayed_message(&msg.sender, &kind) {
             return Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind));
         }
 
@@ -336,7 +320,7 @@ impl ArbitrumAdapter {
     }
 
     /// Builds a batch of transactions into an Arbitrum batch
-    async fn build_batch_txn(
+    fn build_batch_txn(
         &self,
         txs: Vec<Bytes>,
         mchain_block_number: u64,
@@ -345,7 +329,6 @@ impl ArbitrumAdapter {
         let mut messages = vec![];
 
         if !txs.is_empty() {
-            info!("Adding {} sequenced transactions to batch", txs.len());
             debug!("Sequenced transactions: {:?}", txs);
             messages.push(BatchMessage::L2(L1IncomingMessage {
                 header: L1IncomingMessageHeader {
@@ -365,15 +348,21 @@ impl ArbitrumAdapter {
         Ok(encoded_batch)
     }
 
-    fn should_ignore_delayed_message(&self, kind: &L1MessageType) -> bool {
-        // If self.ignore_delayed_messages enabled, ignore everything except for EthDeposit
-        if self.ignore_delayed_messages && *kind != L1MessageType::EthDeposit {
-            debug!("Delayed message ignored. Kind: {:?}.", kind);
+    fn should_ignore_delayed_message(&self, sender: &Address, kind: &L1MessageType) -> bool {
+        // Always ignore Initialize & BatchPostingReport message types.
+        // Except for the initial initialization message, these should not occur in practice.
+        if matches!(kind, L1MessageType::Initialize | L1MessageType::BatchPostingReport) {
+            error!("Ignoring unexpected delayed message. Kind: {:?}, Sender: {:?}", kind, sender);
             return true;
         }
 
-        // Ignore Initialize & BatchPostingReport message types
-        if matches!(kind, L1MessageType::Initialize | L1MessageType::BatchPostingReport) {
+        // If self.ignore_delayed_messages is enabled and the address is not privileged, ignore
+        // everything except for EthDeposit
+        if self.ignore_delayed_messages &&
+            *kind != L1MessageType::EthDeposit &&
+            !self.allowed_settlement_addresses.contains(sender)
+        {
+            debug!("Delayed message ignored. Kind: {:?}, Sender: {:?}", kind, sender);
             return true;
         }
 
@@ -386,8 +375,6 @@ mod tests {
     use super::*;
     use alloy::primitives::{hex, keccak256};
     use assert_matches::assert_matches;
-    use common::types::PartialBlock;
-    use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain::TransactionProcessed;
     use std::str::FromStr;
 
     #[test]
@@ -411,7 +398,7 @@ mod tests {
     async fn test_build_batch_empty_txs() {
         let builder = ArbitrumAdapter::default();
         let txs = vec![];
-        let batch = builder.build_batch_txn(txs, 0, 0).await.unwrap();
+        let batch = builder.build_batch_txn(txs, 0, 0).unwrap();
 
         // For empty batch, should create BatchMessage::Delayed
         let expected_batch = Batch(vec![]);
@@ -427,7 +414,7 @@ mod tests {
             hex!("1234").into(), // Sample transaction data
             hex!("5678").into(),
         ];
-        let batch = builder.build_batch_txn(txs.clone(), 0, 0).await.unwrap();
+        let batch = builder.build_batch_txn(txs.clone(), 0, 0).unwrap();
 
         // For non-empty batch, should create BatchMessage::L2
         let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
@@ -437,233 +424,6 @@ mod tests {
         let expected_encoded = expected_batch.encode().unwrap();
 
         assert_eq!(batch, expected_encoded);
-    }
-
-    #[tokio::test]
-    async fn test_empty_slot() {
-        let builder = ArbitrumAdapter::default();
-
-        // Create an empty slot
-        let slot = Slot { settlement: vec![], sequencing: PartialBlock::default() };
-
-        let result = builder.build_block_from_slot(&slot, 1).await;
-        assert!(result.is_ok());
-
-        let txns = result.unwrap();
-        assert!(txns.is_none()); // Should contain no transactions
-    }
-
-    const fn create_mock_log(
-        address: Address,
-        topics: Vec<FixedBytes<32>>,
-        data: Bytes,
-        tx_calldata: Bytes,
-    ) -> PartialLogWithTxdata {
-        PartialLogWithTxdata { address, topics, data, tx_calldata }
-    }
-
-    fn create_mock_block(
-        number: u64,
-        hash: FixedBytes<32>,
-        logs: Vec<PartialLogWithTxdata>,
-    ) -> PartialBlock {
-        PartialBlock { number, hash, logs, ..Default::default() }
-    }
-
-    #[tokio::test]
-    async fn test_build_block_from_slot_with_delayed_messages() {
-        let builder = ArbitrumAdapter::default();
-
-        // Create message data
-        let message_index = U256::from(1);
-        let before_inbox_acc = FixedBytes::from([1u8; 32]);
-        let message_data: Bytes = hex!("1234").into();
-
-        let msg_delivered_event = MessageDelivered {
-            messageIndex: message_index,
-            beforeInboxAcc: before_inbox_acc,
-            inbox: builder.inbox_address,
-            kind: L1MessageType::L2Message as u8,
-            sender: Address::ZERO,
-            messageDataHash: keccak256(message_data.clone()),
-            baseFeeL1: U256::ZERO,
-            timestamp: 0u64,
-        };
-
-        // Create mock logs
-        let msg_delivered_log = create_mock_log(
-            builder.bridge_address,
-            vec![
-                MSG_DELIVERED_EVENT_HASH,
-                FixedBytes::from(message_index.to_be_bytes()),
-                before_inbox_acc,
-            ],
-            msg_delivered_event.encode_data().into(),
-            Bytes::new(),
-        );
-
-        let inbox_msg_log = create_mock_log(
-            builder.inbox_address,
-            vec![INBOX_MSG_DELIVERED_EVENT_HASH, FixedBytes::from(message_index.to_be_bytes())],
-            InboxMessageDelivered { messageNum: message_index, data: message_data }
-                .encode_data()
-                .into(),
-            Bytes::new(),
-        );
-
-        // Create mock block with receipts
-        let block =
-            create_mock_block(1, U256::from(1111).into(), vec![msg_delivered_log, inbox_msg_log]);
-
-        let slot = Slot { settlement: vec![block], sequencing: PartialBlock::default() };
-
-        let result = builder.build_block_from_slot(&slot, 1).await;
-        assert!(result.is_ok());
-
-        let txns = result.unwrap();
-        assert_eq!(txns.map(|x| x.messages.len()), Some(1)); // Should contain batch transaction +
-                                                             // delayed message transaction
-    }
-
-    #[tokio::test]
-    async fn test_build_block_from_slot_with_sequencing_txns() {
-        let builder = ArbitrumAdapter::default();
-
-        // Create a mock L2 transaction
-        let txn_data: Bytes = hex!("001234").into();
-        let txn_processed_event =
-            TransactionProcessed { sender: Address::ZERO, data: txn_data.clone() };
-
-        let txn_processed_log = create_mock_log(
-            builder.transaction_parser.sequencing_contract_address,
-            vec![TransactionProcessed::SIGNATURE_HASH, Address::ZERO.into_word()],
-            txn_processed_event.encode_data().into(),
-            Bytes::new(),
-        );
-
-        // Create block with zero hash to match assertion expectations
-        let sequencing_block = PartialBlock {
-            number: 1,
-            hash: FixedBytes::ZERO,
-            logs: vec![txn_processed_log],
-            ..Default::default()
-        };
-
-        let slot = Slot { settlement: vec![], sequencing: sequencing_block };
-
-        let result = builder.build_block_from_slot(&slot, 1).await;
-        assert!(result.is_ok());
-
-        let txns = result.unwrap();
-        assert_eq!(txns.as_ref().map(|x| x.messages.len()), Some(0));
-
-        // Verify the batch transaction contains our tx data
-        let batch_txn_input: Bytes = txns.unwrap().batch;
-        let txn_data_without_prefix = txn_data[1..].to_vec();
-        let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
-            header: L1IncomingMessageHeader { block_number: 1, timestamp: 0 },
-            l2_msg: vec![txn_data_without_prefix.into()],
-        })]);
-        let expected_encoded = expected_batch.encode().unwrap();
-        assert_eq!(batch_txn_input, expected_encoded);
-    }
-
-    #[tokio::test]
-    async fn test_build_block_from_slot_with_sequencing_and_delayed_txns() {
-        let builder = ArbitrumAdapter::default();
-
-        // Create a mock L2 transaction
-        let txn_data: Bytes = hex!("001234").into();
-        let txn_processed_event =
-            TransactionProcessed { sender: Address::ZERO, data: txn_data.clone() };
-
-        let txn_processed_log = create_mock_log(
-            builder.transaction_parser.sequencing_contract_address,
-            vec![TransactionProcessed::SIGNATURE_HASH, Address::ZERO.into_word()],
-            txn_processed_event.encode_data().into(),
-            Bytes::new(),
-        );
-
-        // Create blocks with zero hash to match assertion expectations
-        let sequencing_block = PartialBlock {
-            number: 1,
-            hash: FixedBytes::ZERO,
-            logs: vec![txn_processed_log],
-            ..Default::default()
-        };
-
-        // Create mock delayed message logs
-        let message_num = U256::from(1);
-        let before_inbox_acc = FixedBytes::from([1u8; 32]);
-        let delayed_message_data: Bytes = hex!("5678").into();
-
-        let msg_delivered_event = MessageDelivered {
-            messageIndex: message_num,
-            beforeInboxAcc: before_inbox_acc,
-            inbox: builder.inbox_address,
-            kind: L1MessageType::L2Message as u8,
-            sender: Address::repeat_byte(1),
-            messageDataHash: keccak256(delayed_message_data.clone()),
-            baseFeeL1: U256::ZERO,
-            timestamp: 0u64,
-        };
-
-        let delayed_log = create_mock_log(
-            builder.bridge_address,
-            vec![
-                MSG_DELIVERED_EVENT_HASH,
-                FixedBytes::from(message_num.to_be_bytes::<32>()),
-                before_inbox_acc,
-            ],
-            msg_delivered_event.encode_data().into(),
-            Bytes::new(),
-        );
-
-        let inbox_log = create_mock_log(
-            builder.inbox_address,
-            vec![INBOX_MSG_DELIVERED_EVENT_HASH, FixedBytes::from(message_num.to_be_bytes::<32>())],
-            InboxMessageDelivered { messageNum: message_num, data: delayed_message_data.clone() }
-                .encode_data()
-                .into(),
-            Bytes::new(),
-        );
-
-        let settlement_block = PartialBlock {
-            number: 1,
-            hash: FixedBytes::ZERO,
-            logs: vec![delayed_log, inbox_log],
-            ..Default::default()
-        };
-
-        let slot = Slot { settlement: vec![settlement_block], sequencing: sequencing_block };
-
-        let result = builder.build_block_from_slot(&slot, 1).await;
-        assert!(result.is_ok());
-
-        let txns = result.unwrap();
-        assert_eq!(txns.as_ref().map(|x| x.messages.len()), Some(1)); // Should contain batch transaction + delayed message transaction
-
-        // Verify delayed message transaction
-        let delayed_tx = &txns.as_ref().unwrap().messages[0];
-        assert_eq!(
-            delayed_tx,
-            &DelayedMessage {
-                kind: L1MessageType::L2Message as u8,
-                sender: Address::repeat_byte(1),
-                data: delayed_message_data,
-                base_fee_l1: U256::ZERO,
-            }
-        );
-
-        // Verify the batch transaction contains our sequencing tx data
-        let batch_txn = &txns.as_ref().unwrap().batch;
-        let txn_data_without_prefix = txn_data[1..].to_vec();
-        let expected_batch = Batch(vec![BatchMessage::L2(L1IncomingMessage {
-            header: L1IncomingMessageHeader { block_number: 1, timestamp: 0 },
-            l2_msg: vec![txn_data_without_prefix.into()],
-        })]);
-        let expected_encoded = expected_batch.encode().unwrap();
-        assert_eq!(batch_txn, &expected_encoded.to_vec());
     }
 
     #[test]
@@ -878,26 +638,34 @@ mod tests {
             ..Default::default()
         });
 
-        assert!(builder.should_ignore_delayed_message(&L1MessageType::L2Message));
-        assert!(builder.should_ignore_delayed_message(&L1MessageType::L2FundedByL1));
-        assert!(builder.should_ignore_delayed_message(&L1MessageType::SubmitRetryable));
-        assert!(builder.should_ignore_delayed_message(&L1MessageType::Initialize));
-        assert!(builder.should_ignore_delayed_message(&L1MessageType::BatchPostingReport));
+        assert!(builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::L2Message));
+        assert!(builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::L2FundedByL1));
+        assert!(
+            builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::SubmitRetryable)
+        );
+        assert!(builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::Initialize));
+        assert!(builder
+            .should_ignore_delayed_message(&Address::ZERO, &L1MessageType::BatchPostingReport));
 
         // Message that should NOT be ignored (even if ignore_delayed_messages is true)
-        assert!(!builder.should_ignore_delayed_message(&L1MessageType::EthDeposit));
+        assert!(!builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::EthDeposit));
 
         let builder = ArbitrumAdapter::new(&BlockBuilderConfig {
             arbitrum_ignore_delayed_messages: Some(false),
             ..Default::default()
         });
 
-        assert!(!builder.should_ignore_delayed_message(&L1MessageType::L2Message));
-        assert!(!builder.should_ignore_delayed_message(&L1MessageType::L2FundedByL1));
-        assert!(!builder.should_ignore_delayed_message(&L1MessageType::SubmitRetryable));
-        assert!(!builder.should_ignore_delayed_message(&L1MessageType::EthDeposit));
+        assert!(!builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::L2Message));
+        assert!(
+            !builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::L2FundedByL1)
+        );
+        assert!(
+            !builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::SubmitRetryable)
+        );
+        assert!(!builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::EthDeposit));
 
-        assert!(builder.should_ignore_delayed_message(&L1MessageType::Initialize));
-        assert!(builder.should_ignore_delayed_message(&L1MessageType::BatchPostingReport));
+        assert!(builder.should_ignore_delayed_message(&Address::ZERO, &L1MessageType::Initialize));
+        assert!(builder
+            .should_ignore_delayed_message(&Address::ZERO, &L1MessageType::BatchPostingReport));
     }
 }

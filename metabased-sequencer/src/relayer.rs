@@ -142,7 +142,7 @@ impl RelayerService {
                     ),
                 }
 
-                debug!("Transaction submitted: {}", hex::encode(hash));
+                info!("Transaction submitted: {}", hex::encode(hash));
                 Ok(*original_tx.tx_hash())
             }
             Err(e) => {

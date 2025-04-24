@@ -84,9 +84,19 @@ pub async fn send_raw_transaction_handler(
     let raw_tx = parse_send_raw_transaction_params(params)?;
     let tx = validate_transaction(&raw_tx)?;
     let chain_id = validate_chain_id(get_request_chain_id(extensions), tx.chain_id())?;
+    let tx_hash = format!("0x{}", alloy::hex::encode(tx.hash()));
+
+    info!(
+        %tx_hash,
+        %chain_id,
+        "Submitting validated transaction",
+    );
 
     service.enqueue_raw_transaction(raw_tx, chain_id).await?;
-    Ok(format!("0x{}", alloy::hex::encode(tx.hash())))
+
+    info!(%tx_hash, %chain_id, "Submitted forwarded transaction");
+
+    Ok(tx_hash)
 }
 
 fn get_request_chain_id(extensions: Extensions) -> Option<ChainId> {

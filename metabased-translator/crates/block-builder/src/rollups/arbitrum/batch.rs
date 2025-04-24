@@ -178,6 +178,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use common::types::EMPTY_BATCH;
 
     #[test]
     fn test_json_encoding() -> Result<(), serde_json::Error> {
@@ -196,6 +197,13 @@ mod tests {
             serde_json::to_string(&batch)?,
             r#"[null,{"header":{"blockNumber":0,"timestamp":0},"l2Msg":"BA=="},{"header":{"blockNumber":0,"timestamp":0},"l2Msg":"AwAAAAAAAAABBAAAAAAAAAABBA=="}]"#
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_empty_batch() -> Result<()> {
+        let batch = Batch(vec![]);
+        assert_eq!(batch.encode()?, EMPTY_BATCH);
         Ok(())
     }
 

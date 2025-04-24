@@ -2,18 +2,36 @@
 
 use alloy::{
     hex,
-    primitives::{Address, Bytes, B256},
-    rpc::types::Header,
+    primitives::{Address, Bytes, FixedBytes, B256},
 };
-use async_trait::async_trait;
-use eyre::Error;
 use fmt::{Display, Formatter, Result as FmtResult};
+use mchain::db::DelayedMessage;
 use serde::{
     de::{self, Deserializer},
     Deserialize, Serialize, Serializer,
 };
 use std::fmt;
 use strum_macros::Display;
+
+#[allow(missing_docs)]
+pub const EMPTY_BATCH: Bytes = Bytes::from_static(&alloy::hex!("003b"));
+
+#[allow(missing_docs)]
+#[derive(Debug, Default, Clone)]
+pub struct SeqBlock {
+    pub block_ref: BlockRef,
+    pub parent_hash: FixedBytes<32>,
+    pub batch: Bytes,
+    pub tx_count: u64,
+}
+
+#[allow(missing_docs)]
+#[derive(Debug, Default, Clone)]
+pub struct SetBlock {
+    pub block_ref: BlockRef,
+    pub parent_hash: FixedBytes<32>,
+    pub messages: Vec<DelayedMessage>,
+}
 
 #[allow(missing_docs)]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
@@ -37,26 +55,11 @@ impl PartialLogWithTxdata {
 }
 
 #[allow(missing_docs)]
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct PartialBlock {
-    pub number: u64,
-    pub hash: B256,
-    pub timestamp: u64,
+    pub block_ref: BlockRef,
     pub parent_hash: B256,
     pub logs: Vec<PartialLogWithTxdata>,
-}
-
-#[allow(missing_docs)]
-impl PartialBlock {
-    pub fn new(header: Header, logs: Vec<PartialLogWithTxdata>) -> Self {
-        Self {
-            hash: header.hash,
-            logs,
-            parent_hash: header.parent_hash,
-            timestamp: header.timestamp,
-            number: header.number,
-        }
-    }
 }
 
 #[allow(missing_docs)] // self-explanatory
@@ -76,65 +79,8 @@ impl From<Chain> for &'static str {
     }
 }
 
-/// A trait for processing slots of blocks from the sequencing and settlement chains.
-/// Implementors of this trait define how to translate each slot into the mchain state.
-#[async_trait]
-pub trait SlotProcessor: Send {
-    /// Process a single slot
-    async fn process_slot(&self, slot: &Slot) -> Result<(), Error>;
-}
-
-/// A `Slot` is a collection of source chain blocks to be sent to the block builder.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Default)]
-pub struct Slot {
-    /// the block from the sequencing chain to be included in the slot.
-    pub sequencing: PartialBlock,
-    /// the blocks from the settlement chain to be included in the slot.
-    pub settlement: Vec<PartialBlock>,
-}
-
-impl Slot {
-    /// Creates a new slot
-    pub const fn new(sequencing_block: PartialBlock) -> Self {
-        Self { sequencing: sequencing_block, settlement: Vec::new() }
-    }
-
-    /// Adds a block to the slot's chain-specific block list
-    pub fn push_settlement_block(&mut self, block: PartialBlock) {
-        self.settlement.push(block)
-    }
-
-    /// Returns the timestamp of the slot
-    pub const fn timestamp(&self) -> u64 {
-        self.sequencing.timestamp
-    }
-}
-
-impl Display for Slot {
-    fn fmt(&self, f: &mut Formatter<'_>) -> FmtResult {
-        write!(
-            f,
-            "Slot [Sequencing block: {}, Settlement blocks (total: {}): {}]",
-            format_block(&self.sequencing),
-            self.settlement.len(),
-            format_blocks(&self.settlement),
-        )
-    }
-}
-
-fn format_blocks(blocks: &[PartialBlock]) -> String {
-    if blocks.is_empty() {
-        return "none".to_string();
-    }
-    blocks.iter().map(|b| format!("#{} ({})", b.number, b.hash)).collect::<Vec<_>>().join(", ")
-}
-
-fn format_block(b: &PartialBlock) -> String {
-    format!("number: {}, hash: {}, total_logs: {}", b.number, b.hash, b.logs.len())
-}
-
 /// A reference to a block containing just its number and timestamp.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct BlockRef {
     /// The block number.
     pub number: u64,
@@ -144,10 +90,26 @@ pub struct BlockRef {
     pub hash: B256,
 }
 
-impl BlockRef {
-    /// Creates a new `BlockRef` from a `Block`.
-    pub const fn new(block: &PartialBlock) -> Self {
-        Self { number: block.number, timestamp: block.timestamp, hash: block.hash }
+#[allow(missing_docs)]
+pub trait GetBlockRef {
+    fn block_ref(&self) -> &BlockRef;
+}
+
+impl GetBlockRef for SeqBlock {
+    fn block_ref(&self) -> &BlockRef {
+        &self.block_ref
+    }
+}
+
+impl GetBlockRef for SetBlock {
+    fn block_ref(&self) -> &BlockRef {
+        &self.block_ref
+    }
+}
+
+impl GetBlockRef for PartialBlock {
+    fn block_ref(&self) -> &BlockRef {
+        &self.block_ref
     }
 }
 
@@ -189,7 +151,8 @@ pub struct Block {
     /// The root hash of the final state trie.
     pub state_root: String,
     /// The root hash of the receipts trie.
-    pub receipts_root: String,
+    #[serde(deserialize_with = "deserialize_b256", serialize_with = "serialize_b256")]
+    pub receipts_root: B256,
     /// The timestamp when the block was mined, in Unix time.
     #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub timestamp: u64,
@@ -437,67 +400,4 @@ where
     S: Serializer,
 {
     serializer.serialize_str(&format!("0x{:x}", num))
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-    use alloy::{hex::FromHex, primitives::B256};
-
-    fn create_test_slot() -> Slot {
-        // Add sequencing chain block
-        let sequencing_block = PartialBlock {
-            hash: B256::from_hex(
-                "0x1234567890123456789012345678901234567890123456789012345678901234",
-            )
-            .unwrap(),
-            number: 100,
-            parent_hash: B256::ZERO,
-            timestamp: 1000,
-            logs: vec![PartialLogWithTxdata {
-                address: Address::from_hex("0x1234567890123456789012345678901234567890").unwrap(),
-                topics: vec![B256::from_hex(
-                    "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
-                )
-                .unwrap()],
-                data: Bytes::from_hex("0xdead").unwrap(),
-                tx_calldata: Bytes::from_hex("0xbeef").unwrap(),
-            }],
-        };
-
-        let mut slot = Slot::new(sequencing_block);
-
-        // Add settlement chain block
-        slot.push_settlement_block(PartialBlock {
-            hash: B256::from_hex(
-                "0x5678901234567890123456789012345678901234567890123456789012345678",
-            )
-            .unwrap(),
-            number: 200,
-            parent_hash: B256::from_hex(
-                "0x1111111111111111111111111111111111111111111111111111111111111111",
-            )
-            .unwrap(),
-            timestamp: 1100,
-            logs: vec![],
-        });
-
-        slot
-    }
-
-    #[test]
-    fn test_bincode_serialization() {
-        let slot = create_test_slot();
-        let encoded = bincode::serialize(&slot).unwrap();
-        let decoded: Slot = bincode::deserialize(&encoded).unwrap();
-        assert_eq!(decoded, slot);
-    }
-
-    #[test]
-    fn test_json_serialization() {
-        let slot = create_test_slot();
-        let json = serde_json::to_string(&slot).unwrap();
-        let decoded: Slot = serde_json::from_str(&json).unwrap();
-        assert_eq!(decoded, slot);
-    }
 }
