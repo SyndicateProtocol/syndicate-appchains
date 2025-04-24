@@ -17,10 +17,13 @@ alloy = { workspace = true, features = [
   "rpc-types-anvil",
   "sol-types",
 ] }
+block-builder = { workspace = true }
+common = { workspace = true }
 contract-bindings = { workspace = true }
 ctor = { workspace = true }
 eyre = { workspace = true }
 mchain = { workspace = true }
+prometheus-client = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
 shared = { workspace = true }
