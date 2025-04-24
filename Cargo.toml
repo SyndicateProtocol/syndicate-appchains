@@ -15,6 +15,8 @@ members = [
   "shared/contract-bindings",
   "shared/test-utils",
   "tc-sequencer",
+  "tc-sequencer/crates/batcher",
+  "tc-sequencer/crates/tc-client",
   "test-framework",
 ]
 
@@ -38,6 +40,7 @@ assert_matches       = "1.5.0"
 async-trait          = { version = "0.1" }
 axum                 = "0.8.1"
 base64               = "0.22.1"
+batcher              = { path = "tc-sequencer/crates/batcher" }
 bincode              = "1.3"
 block-builder        = { path = "metabased-translator/crates/block-builder" }
 brotli               = "7.0.0"
@@ -60,6 +63,7 @@ humantime            = "2.1.0"
 hyper                = { version = "1.5.2" }
 ingestor             = { path = "metabased-translator/crates/ingestor" }
 jsonrpsee            = { version = "0.24.7" }
+maestro              = { path = "maestro" }
 mchain               = { path = "mchain" }
 metabased-translator = { path = "metabased-translator/bin/metabased-translator" }
 metrics              = { path = "metabased-translator/crates/metrics" }
@@ -76,6 +80,8 @@ shared               = { path = "shared" }
 slotter              = { path = "metabased-translator/crates/slotter" }
 strum                = "0.27.1"
 strum_macros         = "0.27.1"
+tc-client            = { path = "tc-sequencer/crates/tc-client" }
+tc-sequencer         = { path = "tc-sequencer" }
 test-utils           = { path = "shared/test-utils" }
 thiserror            = { version = "2.0.11" }
 tokio                = { version = "1.43" }

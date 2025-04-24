@@ -164,7 +164,7 @@ impl RollupAdapter for ArbitrumAdapter {
         let (seq_num, seq_hash, set_num, set_hash, block_number) =
             provider.provider.get_source_chains_processed_blocks(block).await?;
 
-        if seq_num == 0 {
+        if seq_num == 0 || set_num == 0 {
             return Ok(None);
         }
 

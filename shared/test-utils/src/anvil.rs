@@ -42,7 +42,7 @@ pub async fn start_anvil_with_args(
     chain_id: u64,
     args: &[&str],
 ) -> Result<(u16, AnvilInstance, FilledProvider)> {
-    let port = PortManager::instance().next_port();
+    let port = PortManager::instance().next_port().await;
     let mut cmd =
         vec!["--base-fee", "0", "--gas-limit", "30000000", "--timestamp", "0", "--no-mining"];
     cmd.extend_from_slice(args);

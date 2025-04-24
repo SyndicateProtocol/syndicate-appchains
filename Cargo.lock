@@ -1128,6 +1128,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89e25b6adfb930f02d1981565a6e5d9c547ac15a96606256d3b59040e5cd4ca3"
 
 [[package]]
+name = "batcher"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "byte-unit",
+ "clap",
+ "eyre",
+ "humantime",
+ "maestro",
+ "mockall",
+ "redis",
+ "shared",
+ "tc-client",
+ "test-utils",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "bimap"
 version = "0.6.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1740,24 +1760,6 @@ dependencies = [
  "once_cell",
  "parking_lot_core",
 ]
-
-[[package]]
-name = "deadpool"
-version = "0.10.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fb84100978c1c7b37f09ed3ce3e5f843af02c2a2c431bae5b19230dad2c1b490"
-dependencies = [
- "async-trait",
- "deadpool-runtime",
- "num_cpus",
- "tokio",
-]
-
-[[package]]
-name = "deadpool-runtime"
-version = "0.1.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "092966b41edc516079bdf31ec78a2e0588d1d0c08f78b91d8307215928642b2b"
 
 [[package]]
 name = "der"
@@ -3216,15 +3218,14 @@ dependencies = [
  "http-body",
  "humantime",
  "jsonrpsee",
+ "rand 0.9.0",
  "redis",
  "serde_json",
  "shared",
  "test-utils",
- "thiserror 2.0.12",
  "tokio",
  "tower 0.4.13",
  "tracing",
- "wiremock",
 ]
 
 [[package]]
@@ -3297,10 +3298,8 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "axum",
- "bytes",
  "clap",
  "eyre",
- "flate2",
  "hex",
  "humantime",
  "jsonrpsee",
@@ -3308,6 +3307,7 @@ dependencies = [
  "reqwest",
  "serde_json",
  "shared",
+ "test-utils",
  "thiserror 2.0.12",
  "tokio",
  "tower 0.4.13",
@@ -3328,7 +3328,6 @@ dependencies = [
  "eyre",
  "ingestor",
  "metrics",
- "mockall",
  "shared",
  "slotter",
  "temp-env",
@@ -4682,6 +4681,8 @@ dependencies = [
  "alloy",
  "axum",
  "byte-unit",
+ "bytes",
+ "flate2",
  "jsonrpsee",
  "prometheus-client",
  "serde",
@@ -4926,7 +4927,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 
 [[package]]
-name = "tc-sequencer"
+name = "tc-client"
 version = "0.1.0"
 dependencies = [
  "alloy",
@@ -4938,9 +4939,27 @@ dependencies = [
  "mockito",
  "reqwest",
  "serde",
- "serde_json",
  "shared",
  "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "tc-sequencer"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "batcher",
+ "clap",
+ "eyre",
+ "jsonrpsee",
+ "mockito",
+ "reqwest",
+ "serde_json",
+ "shared",
+ "tc-client",
  "tokio",
  "tower 0.4.13",
  "tracing",
@@ -4999,6 +5018,7 @@ dependencies = [
  "alloy",
  "eyre",
  "mchain",
+ "redis",
  "tokio",
  "tracing",
 ]
@@ -5944,30 +5964,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e97b544156e9bebe1a0ffbc03484fc1ffe3100cbce3ffb17eac35f7cdd7ab36"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "wiremock"
-version = "0.6.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "101681b74cd87b5899e87bcf5a64e83334dd313fcd3053ea72e6dba18928e301"
-dependencies = [
- "assert-json-diff",
- "async-trait",
- "base64",
- "deadpool",
- "futures",
- "http",
- "http-body-util",
- "hyper",
- "hyper-util",
- "log",
- "once_cell",
- "regex",
- "serde",
- "serde_json",
- "tokio",
- "url",
 ]
 
 [[package]]
