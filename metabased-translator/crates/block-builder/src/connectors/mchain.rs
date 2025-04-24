@@ -84,39 +84,35 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         sequencing_client: &Arc<dyn RPCClient>,
         settlement_client: &Arc<dyn RPCClient>,
     ) -> Result<Option<KnownState>> {
-        if let Some(slot) = self.provider.slot().await {
-            info!("checking latest slot: {:?}", slot);
-            let mut seq_block =
-                BlockRef { number: slot.seq_block_number, hash: slot.seq_block_hash, timestamp: 0 };
-            if validate_block_add_timestamp(sequencing_client, &mut seq_block).await {
-                let mut set_block = BlockRef {
-                    number: slot.set_block_number,
-                    hash: slot.set_block_hash,
-                    timestamp: 0,
-                };
-                if validate_block_add_timestamp(settlement_client, &mut set_block).await {
-                    let (state, mut mchain_block_number) = self
-                        .provider
-                        .get_source_chains_processed_blocks(BlockNumberOrTag::Latest)
-                        .await?;
-                    if state != slot {
-                        // block number is 0 if the slot is empty & a corresponding mchain block
-                        // does not exist
-                        mchain_block_number = 0;
+        let slot = self.provider.slot().await;
+        info!("checking latest slot: {:?}", slot);
+        let mut seq_block =
+            BlockRef { number: slot.seq_block_number, hash: slot.seq_block_hash, timestamp: 0 };
+        if validate_block_add_timestamp(sequencing_client, &mut seq_block).await {
+            let mut set_block =
+                BlockRef { number: slot.set_block_number, hash: slot.set_block_hash, timestamp: 0 };
+            if validate_block_add_timestamp(settlement_client, &mut set_block).await {
+                let (state, mut mchain_block_number) = self
+                    .provider
+                    .get_source_chains_processed_blocks(BlockNumberOrTag::Latest)
+                    .await?;
+                if state != slot {
+                    // block number is 0 if the slot is empty & a corresponding mchain block
+                    // does not exist
+                    mchain_block_number = 0;
 
-                        // just in case - make sure the slot comes after the latest mchain block
-                        assert!(
-                            state.seq_block_number < seq_block.number &&
-                                state.set_block_number <= set_block.number
-                        );
-                    }
-                    info!("latest slot is OK - no need to reorg");
-                    return Ok(Some(KnownState {
-                        mchain_block_number,
-                        sequencing_block: seq_block,
-                        settlement_block: set_block,
-                    }));
+                    // just in case - make sure the slot comes after the latest mchain block
+                    assert!(
+                        state.seq_block_number < seq_block.number &&
+                            state.set_block_number <= set_block.number
+                    );
                 }
+                info!("latest slot is OK - no need to reorg");
+                return Ok(Some(KnownState {
+                    mchain_block_number,
+                    sequencing_block: seq_block,
+                    settlement_block: set_block,
+                }));
             }
         }
         let mchain_block_before = self.provider.get_block_number().await;

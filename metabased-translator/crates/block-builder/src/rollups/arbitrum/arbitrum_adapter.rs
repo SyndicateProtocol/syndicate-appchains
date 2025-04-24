@@ -252,6 +252,7 @@ impl RollupAdapter for ArbitrumAdapter {
             provider.provider.get_source_chains_processed_blocks(block).await?;
 
         if slot.seq_block_number == 0 {
+            assert_eq!(slot, Default::default());
             return Ok(None);
         }
 

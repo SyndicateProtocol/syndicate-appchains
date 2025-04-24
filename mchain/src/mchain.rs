@@ -116,7 +116,7 @@ impl MProvider {
         #[allow(clippy::unwrap_used)]
         self.0.raw_request("mchain_rollupOwner".into(), ()).await.unwrap()
     }
-    pub async fn slot(&self) -> Option<Slot> {
+    pub async fn slot(&self) -> Slot {
         #[allow(clippy::unwrap_used)]
         self.0.raw_request("mchain_slot".into(), ()).await.unwrap()
     }
@@ -248,10 +248,10 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
         )
         .unwrap();
     module
-        .register_method(
-            "mchain_slot",
-            move |_, (db, _, _), _| -> Result<Option<Slot>, ErrorObjectOwned> { Ok(db.get_slot()) },
-        )
+        .register_method("mchain_slot", move |_, (db, _, _), _| -> Result<Slot, ErrorObjectOwned> {
+            #[allow(clippy::unwrap_used)]
+            Ok(db.get_slot().unwrap())
+        })
         .unwrap();
     module
         .register_method(
