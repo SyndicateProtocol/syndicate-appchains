@@ -3,6 +3,7 @@ use crate::{
     shutdown_channels::{ShutdownChannels, ShutdownRx, ShutdownTx},
     types::RuntimeError,
 };
+use alloy::eips::BlockNumberOrTag;
 use block_builder::{connectors::mchain::MetaChainProvider, rollups::shared::RollupAdapter};
 use common::{
     eth_client::{EthClient, RPCClient},
@@ -234,6 +235,33 @@ pub async fn clients(
         .await
         .map_err(RuntimeError::RPCClient)?,
     );
+
+    // sanity check the RPC state, prevent a fault RPC from causing a rollback/force re-sync
+    {
+        let sequencing_head = sequencing_client
+            .get_block_by_number(BlockNumberOrTag::Latest)
+            .await
+            .map_err(RuntimeError::RPCClient)?;
+        if sequencing_head.number < config.sequencing.sequencing_start_block.unwrap() {
+            return Err(RuntimeError::Other(eyre::eyre!(
+                "Sequencing chain is behind start block: {} < {}",
+                sequencing_head.number,
+                config.sequencing.sequencing_start_block.unwrap()
+            )));
+        }
+        let settlement_head = settlement_client
+            .get_block_by_number(BlockNumberOrTag::Latest)
+            .await
+            .map_err(RuntimeError::RPCClient)?;
+        if settlement_head.number < config.settlement.settlement_start_block.unwrap() {
+            return Err(RuntimeError::Other(eyre::eyre!(
+                "Settlement chain is behind start block: {} < {}",
+                settlement_head.number,
+                config.settlement.settlement_start_block.unwrap()
+            )));
+        }
+    }
+
     Ok((sequencing_client, settlement_client))
 }
 
