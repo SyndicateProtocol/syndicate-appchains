@@ -7,6 +7,8 @@ use rocksdb::{DBWithThreadMode, ThreadMode};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
+const VERSION: u64 = 1;
+
 #[allow(missing_docs)]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 pub struct DelayedMessage {
@@ -105,6 +107,8 @@ pub enum DBKey {
     MessageAcc(u64),
     /// The last ingested slot
     CurrentSlot,
+    /// DB schema version
+    Version,
 }
 
 impl fmt::Display for DBKey {
@@ -114,6 +118,7 @@ impl fmt::Display for DBKey {
             Self::CurrentBlockNumber => write!(f, "n"),
             Self::MessageAcc(num) => write!(f, "m{num}"),
             Self::CurrentSlot => write!(f, "s"),
+            Self::Version => write!(f, "v"),
         }
     }
 }
@@ -133,6 +138,7 @@ pub trait ArbitrumDB {
     fn put_slot(&self, value: &Slot);
     /// Create a new block that a contains a batch
     fn add_batch(&self, block: MBlock) -> Result<u64, ErrorObjectOwned>;
+    fn check_version(&self);
 }
 
 impl<T: KVDB> ArbitrumDB for T {
@@ -182,6 +188,23 @@ impl<T: KVDB> ArbitrumDB for T {
     fn put_slot(&self, value: &Slot) {
         #[allow(clippy::unwrap_used)]
         self.put(DBKey::CurrentSlot.to_string(), bincode::serialize(value).unwrap())
+    }
+    #[allow(clippy::unwrap_used)]
+    fn check_version(&self) {
+        match self.get(DBKey::Version.to_string()) {
+            Some(version) => {
+                assert_eq!(bincode::deserialize::<u64>(&version).unwrap(), VERSION);
+            }
+            None => {
+                assert_eq!(
+                    self.get(DBKey::CurrentBlockNumber.to_string()),
+                    None,
+                    "version mismatch: found 0 expected {}",
+                    VERSION
+                );
+                self.put(DBKey::Version.to_string(), bincode::serialize(&VERSION).unwrap());
+            }
+        }
     }
     fn add_batch(&self, mblock: MBlock) -> Result<u64, ErrorObjectOwned> {
         let block_number = self.get_block_number() + 1;

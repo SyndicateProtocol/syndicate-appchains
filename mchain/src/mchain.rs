@@ -133,6 +133,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     db: T,
     metrics: MchainMetrics,
 ) -> RpcModule<(T, MchainMetrics, Mutex<(u64, VecDeque<u64>)>)> {
+    db.check_version();
     let init_msg = DelayedMessage {
         kind: 11, // L1MessageType::Initialize
         sender: Address::ZERO,
@@ -585,7 +586,7 @@ mod tests {
             base_fee_l1: Default::default(),
         };
         let (mchain, db, _handle) = setup().await?;
-        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 1); // init msg, block number, batch (1)
+        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 2); // init msg, block number, batch (1)
         assert_eq!(mchain.get_block_number().await, 1);
         mchain
             .add_batch(&MBlock {
@@ -593,7 +594,7 @@ mod tests {
                 ..Default::default()
             })
             .await?;
-        assert_eq!(db.0.read().unwrap().keys().len(), 4 + 1); // block (2)
+        assert_eq!(db.0.read().unwrap().keys().len(), 4 + 2); // block (2)
         assert_eq!(mchain.get_block_number().await, 2);
         mchain
             .add_batch(&MBlock {
@@ -602,7 +603,7 @@ mod tests {
                 ..Default::default()
             })
             .await?; // block + messages (3)
-        assert_eq!(db.0.read().unwrap().keys().len(), 6 + 1);
+        assert_eq!(db.0.read().unwrap().keys().len(), 6 + 2);
         assert_eq!(mchain.get_block_number().await, 3);
         mchain
             .add_batch(&MBlock {
@@ -611,17 +612,17 @@ mod tests {
                 ..Default::default()
             })
             .await?; // block + 2 messagess (4)
-        assert_eq!(db.0.read().unwrap().keys().len(), 9 + 1);
+        assert_eq!(db.0.read().unwrap().keys().len(), 9 + 2);
         assert_eq!(mchain.get_block_number().await, 4);
         mchain.rollback_to_block(2).await?; // rm 2 blocks + 3 messages
-        assert_eq!(db.0.read().unwrap().keys().len(), 4 + 1);
+        assert_eq!(db.0.read().unwrap().keys().len(), 4 + 2);
         assert_eq!(mchain.get_block_number().await, 2);
         mchain.rollback_to_block(1).await?; // rm block
-        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 1);
+        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 2);
         assert_eq!(mchain.get_block_number().await, 1);
         assert!(mchain.rollback_to_block(0).await.is_err());
         assert!(mchain.rollback_to_block(2).await.is_err());
-        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 1);
+        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 2);
         assert_eq!(mchain.get_block_number().await, 1);
         Ok(())
     }

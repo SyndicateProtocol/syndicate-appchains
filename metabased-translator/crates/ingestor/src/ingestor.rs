@@ -21,6 +21,7 @@ use thiserror::Error;
 use tokio::{
     sync::{mpsc::Sender, oneshot},
     task::JoinSet,
+    time::MissedTickBehavior,
 };
 use tracing::{debug, error, info, trace, warn};
 
@@ -113,6 +114,8 @@ pub async fn run<PartialBlock: Send + Clone + GetBlockRef + 'static>(
     info!(%chain, "Starting polling");
 
     let mut interval = tokio::time::interval(polling_interval);
+    interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+
     let mut current_block_number = start_block;
 
     loop {
@@ -141,8 +144,6 @@ pub async fn run<PartialBlock: Send + Clone + GetBlockRef + 'static>(
                     info!(%chain, "Ingestor stopped");
                     return Ok(())
                 }
-                // Skip missed ticks
-                interval.reset();
             }
         }
     }

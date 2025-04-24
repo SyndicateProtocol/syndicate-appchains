@@ -103,7 +103,6 @@ pub async fn run(
         info!("Sent slot {}", mblock.slot.seq_block_number);
         metrics.record_blocks_per_slot(blocks_per_slot);
         metrics.record_last_slot_created(mblock.slot.seq_block_number);
-        // metrics.record_transactions_per_slot(seq_block.tx_count + mblock.messages.len() as u64);
     }
 }
 
