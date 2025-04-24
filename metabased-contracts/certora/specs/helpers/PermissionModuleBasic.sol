@@ -1,15 +1,15 @@
 pragma solidity >= 0.8.0;
 
-import {ProposerPermissionModule} from "src/interfaces/ProposerPermissionModule.sol";
+import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 
-contract ProposerPermissionModuleBasic is ProposerPermissionModule {
+contract PermissionModuleBasic is IPermissionModule {
     mapping(address => bool) allowed;
 
     constructor() {
         allowed[msg.sender] = true;
     }
 
-    function isAllowed(address proposer) external view override returns (bool) {
+    function isAllowed(address proposer, address, bytes calldata) external view override returns (bool) {
         return allowed[proposer];
     }
 
