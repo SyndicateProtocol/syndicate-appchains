@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {ProposerPermissionModule} from "../interfaces/ProposerPermissionModule.sol";
+import {IPermissionModule} from "../interfaces/IPermissionModule.sol";
 
 /// @title NotInitializedModule
 /// @notice A module that returns false for all addresses
-contract NotInitializedModule is ProposerPermissionModule {
+contract NotInitializedModule is IPermissionModule {
     /// @notice Returns false for all addresses
-    function isAllowed(address) external pure override returns (bool) {
+    function isAllowed(address, address, bytes calldata) external pure override returns (bool) {
         return false;
     }
 }

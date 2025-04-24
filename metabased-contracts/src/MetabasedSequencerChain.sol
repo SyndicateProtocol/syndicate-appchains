@@ -5,7 +5,7 @@ import {SequencingModuleChecker} from "./SequencingModuleChecker.sol";
 
 /// @title MetabasedSequencerChain
 /// @notice The core contract for sequencing transactions using a modular architecture
-/// to determine who is allowed to sequence.
+/// to determine the address that is allowed to sequence and whether the calldata is allowed.
 contract MetabasedSequencerChain is SequencingModuleChecker {
     /// @notice The ID of the L3 chain that this contract is sequencing transactions for.
     uint256 public immutable l3ChainId;
@@ -15,7 +15,6 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
 
     /// @notice Constructs the MetabasedSequencerChain contract.
     /// @param _l3ChainId The ID of the L3 chain that this contract is sequencing transactions for.
-    // [Olympix Warning: no parameter validation in constructor] Admin and masterModule validation handled by SequencingModuleChecker
     constructor(uint256 _l3ChainId) SequencingModuleChecker() {
         // chain id zero has no replay protection : https://eips.ethereum.org/EIPS/eip-3788
         require(_l3ChainId != 0, "L3 chain ID cannot be 0");
@@ -24,34 +23,26 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
 
     /// @notice Processes a single compressed transaction.
     /// @param data The compressed transaction data.
-    function processTransactionRaw(bytes calldata data)
-        external
-        onlyWhenAllowed(msg.sender)
-        revertForUnallowedCalldata(data)
-    {
+    function processTransactionRaw(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
         emit TransactionProcessed(msg.sender, data);
     }
 
     /// @notice process transactions
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
     /// @param data The transaction data
-    function processTransaction(bytes calldata data)
-        external
-        onlyWhenAllowed(msg.sender)
-        revertForUnallowedCalldata(data)
-    {
+    function processTransaction(bytes calldata data) external onlyWhenAllowed(msg.sender, tx.origin, data) {
         emit TransactionProcessed(msg.sender, prependZeroByte(data));
     }
 
     /// @notice Processes multiple transactions in bulk.
     /// @dev It prepends a zero byte to the transaction data to signal uncompressed data
     /// @param data An array of transaction data.
-    function processBulkTransactions(bytes[] calldata data) external onlyWhenAllowed(msg.sender) {
+    function processBulkTransactions(bytes[] calldata data) external {
         uint256 dataCount = data.length;
 
         // Process all transactions
         for (uint256 i = 0; i < dataCount; i++) {
-            _revertForUnallowedCalldata(data[i]);
+            isAllowed(msg.sender, tx.origin, data[i]);
 
             emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
         }
@@ -61,7 +52,7 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
     /// @dev This helps op-translator identify uncompressed data
     /// @param _data The original transaction data
     /// @return bytes The transaction data
-    function prependZeroByte(bytes calldata _data) private pure returns (bytes memory) {
+    function prependZeroByte(bytes calldata _data) internal pure returns (bytes memory) {
         return abi.encodePacked(bytes1(0x00), _data);
     }
 }

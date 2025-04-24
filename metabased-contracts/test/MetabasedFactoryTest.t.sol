@@ -44,7 +44,7 @@ contract MetabasedFactoryTest is Test {
         assertEq(sequencerChain.l3ChainId(), l3ChainId);
 
         // Verify permission module setup
-        assertTrue(address(sequencerChain.proposerRequirementModule()) == permissionModuleAddress);
+        assertTrue(address(sequencerChain.permissionRequirementModule()) == permissionModuleAddress);
         assertTrue(permissionModule.owner() == admin);
     }
 
@@ -72,7 +72,7 @@ contract MetabasedFactoryTest is Test {
         assertEq(sequencerChain.l3ChainId(), l3ChainId);
 
         // Verify permission module setup
-        assertTrue(address(sequencerChain.proposerRequirementModule()) == permissionModuleAddress);
+        assertTrue(address(sequencerChain.permissionRequirementModule()) == permissionModuleAddress);
         assertTrue(permissionModule.owner() == admin);
     }
 
@@ -152,7 +152,7 @@ contract MetabasedFactoryTest is Test {
         assertTrue(metafillerStorage.hasRole(metafillerStorage.MANAGER_ROLE(), manager));
 
         // Verify permission module setup
-        assertTrue(address(sequencerChain.proposerRequirementModule()) == address(permissionModuleAddress));
+        assertTrue(address(sequencerChain.permissionRequirementModule()) == address(permissionModuleAddress));
         assertTrue(permissionModule.owner() == admin);
     }
 
@@ -213,7 +213,7 @@ contract MetabasedFactoryTest is Test {
         assertTrue(metafillerStorage.hasRole(metafillerStorage.MANAGER_ROLE(), manager));
 
         // Verify permission module setup
-        assertTrue(address(sequencerChain.proposerRequirementModule()) == address(permissionModuleAddress));
+        assertTrue(address(sequencerChain.permissionRequirementModule()) == address(permissionModuleAddress));
         assertTrue(permissionModule.owner() == admin);
     }
 
