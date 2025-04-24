@@ -3,9 +3,12 @@ pragma solidity 0.8.25;
 
 import {MetabasedSequencerChain} from "../MetabasedSequencerChain.sol";
 
-/// @title MetabasedSequencerChainWithDecayingPriority
-/// @notice Extends MetabasedSequencerChain to allow processing of transactions with priority
-/// that decays over time by a fixed rate of 10 units per second
+/**
+ * @title MetabasedSequencerChainWithDecayingPriority
+ * @notice This is an example on how to extend the MetabasedSequencerChain.
+ * It is not necessarily a feature implemented in Metabased Sequencer.
+ * It only serves as example and does not purport that this will be added in the future.
+ */
 contract MetabasedSequencerChainWithDecayingPriority is MetabasedSequencerChain {
     /// @notice The constant rate at which priority decays (10 units per second)
     uint256 public constant PRIORITY_DECAY_RATE = 10;
@@ -59,6 +62,7 @@ contract MetabasedSequencerChainWithDecayingPriority is MetabasedSequencerChain 
     }
 
     /// @notice Calculate the effective priority after decay based on time elapsed
+    /// @dev This is just a read function for calculation. It is not used anywhere on purpose.
     /// @param originalPriority The original priority of the transaction
     /// @param submittedTimestamp The timestamp when the transaction was submitted
     /// @param currentTimestamp The current timestamp to calculate the decay against
