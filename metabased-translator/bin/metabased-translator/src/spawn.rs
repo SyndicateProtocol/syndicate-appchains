@@ -216,6 +216,31 @@ impl ComponentHandles {
     }
 }
 
+async fn ensure_rpc_is_synced(
+    client: Arc<dyn RPCClient>,
+    start_block: Option<u64>,
+    chain_name: &str,
+) -> Result<(), RuntimeError> {
+    let head = client
+        .get_block_by_number(BlockNumberOrTag::Latest)
+        .await
+        .map_err(RuntimeError::RPCClient)?;
+
+    let start = start_block.ok_or_else(|| {
+        RuntimeError::Other(eyre::eyre!("{chain_name} start block not configured"))
+    })?;
+
+    if head.number < start {
+        return Err(RuntimeError::Other(eyre::eyre!(
+            "{chain_name} chain is behind start block: {} < {}",
+            head.number,
+            start
+        )));
+    }
+
+    Ok(())
+}
+
 pub async fn clients(
     config: &MetabasedConfig,
 ) -> Result<(Arc<dyn RPCClient>, Arc<dyn RPCClient>), RuntimeError> {
@@ -238,28 +263,19 @@ pub async fn clients(
 
     // sanity check the RPC state, prevent a fault RPC from causing a rollback/force re-sync
     {
-        let sequencing_head = sequencing_client
-            .get_block_by_number(BlockNumberOrTag::Latest)
-            .await
-            .map_err(RuntimeError::RPCClient)?;
-        if sequencing_head.number < config.sequencing.sequencing_start_block.unwrap() {
-            return Err(RuntimeError::Other(eyre::eyre!(
-                "Sequencing chain is behind start block: {} < {}",
-                sequencing_head.number,
-                config.sequencing.sequencing_start_block.unwrap()
-            )));
-        }
-        let settlement_head = settlement_client
-            .get_block_by_number(BlockNumberOrTag::Latest)
-            .await
-            .map_err(RuntimeError::RPCClient)?;
-        if settlement_head.number < config.settlement.settlement_start_block.unwrap() {
-            return Err(RuntimeError::Other(eyre::eyre!(
-                "Settlement chain is behind start block: {} < {}",
-                settlement_head.number,
-                config.settlement.settlement_start_block.unwrap()
-            )));
-        }
+        ensure_rpc_is_synced(
+            sequencing_client.clone(),
+            config.sequencing.sequencing_start_block,
+            "Sequencing",
+        )
+        .await?;
+
+        ensure_rpc_is_synced(
+            settlement_client.clone(),
+            config.settlement.settlement_start_block,
+            "Settlement",
+        )
+        .await?;
     }
 
     Ok((sequencing_client, settlement_client))
