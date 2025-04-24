@@ -543,7 +543,7 @@ mod tests {
         let db = Arc::new(TestDB::new());
         let mchain =
             start_mchain(10, Address::ZERO, 60, db.clone(), MchainMetrics::default()).await;
-        let port = PortManager::instance().next_port();
+        let port = PortManager::instance().next_port().await;
         let handle = Server::builder().build(format!("0.0.0.0:{}", port)).await?.start(mchain);
         let provider = MProvider::new(format!("http://localhost:{}", port).parse()?);
         Ok((provider, db, handle))

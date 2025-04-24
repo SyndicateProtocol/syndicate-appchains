@@ -1,8 +1,5 @@
 //! The `server` module sets up and runs the base server for the sequencer
-use crate::{
-    config::Config,
-    tc_client::{send_raw_transaction_handler, TCClient},
-};
+use crate::config::TCSequencerConfig;
 use eyre::Result;
 use jsonrpsee::{
     server::{middleware::http::ProxyGetRequestLayer, Server, ServerHandle},
@@ -11,11 +8,15 @@ use jsonrpsee::{
 };
 use serde_json::Value as JsonValue;
 use std::net::SocketAddr;
+use tc_client::tc_client::{send_raw_transaction_handler, TCClient};
 use tower::ServiceBuilder;
 use tracing::info;
 
 /// Runs the base server for the sequencer
-pub async fn run_server(config: &Config) -> Result<(SocketAddr, ServerHandle)> {
+pub async fn run_server(
+    config: &TCSequencerConfig,
+    tc_client: TCClient,
+) -> Result<(SocketAddr, ServerHandle)> {
     // Middleware to proxy "/health" GET requests to "health" RPC method
     let http_middleware =
         ServiceBuilder::new().layer(ProxyGetRequestLayer::new("/health", "health")?);
@@ -25,8 +26,7 @@ pub async fn run_server(config: &Config) -> Result<(SocketAddr, ServerHandle)> {
         .build(format!("0.0.0.0:{}", config.port))
         .await?;
 
-    let service = TCClient::new(config)?;
-    let mut module = RpcModule::new(service);
+    let mut module = RpcModule::new(tc_client);
 
     // Register RPC methods
     module.register_async_method("eth_sendRawTransaction", send_raw_transaction_handler)?;
@@ -47,13 +47,13 @@ pub async fn run_server(config: &Config) -> Result<(SocketAddr, ServerHandle)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::TCEndpoint;
     use alloy::primitives::Address;
     use jsonrpsee::{core::client::ClientT, http_client::HttpClient};
     use mockito::{self, Matcher};
     use reqwest::{Client, StatusCode};
     use serde_json::Value as JsonValue;
-    use std::{collections::HashMap, str::FromStr};
+    use std::str::FromStr;
+    use tc_client::config::{TCConfig, TCEndpoint};
     use url::Url;
 
     #[tokio::test]
@@ -69,18 +69,20 @@ mod tests {
             .await;
 
         let url = Url::from_str(server.url().as_str()).unwrap();
-        let sequencing_addresses = HashMap::from([(
-            4,
-            Address::from_str("0x0000000000000000000000000000000000000001").unwrap(),
-        )]);
-        let config = Config {
-            tc_endpoint: TCEndpoint::Raw(url),
-            sequencing_addresses,
-            ..Default::default()
+
+        let config = TCSequencerConfig {
+            batcher: Default::default(),
+            tc: TCConfig {
+                tc_endpoint: TCEndpoint::Raw(url),
+                sequencing_address: Address::ZERO,
+                ..Default::default()
+            },
+            port: 8080,
         };
 
         // Start server
-        let (_addr, _handle) = run_server(&config).await.unwrap();
+        let (_addr, _handle) =
+            run_server(&config, TCClient::new(&config.tc).unwrap()).await.unwrap();
 
         // Check health endpoint
         let health_response = Client::new()

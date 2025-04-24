@@ -6,6 +6,7 @@ use alloy::{
     providers::{Provider, ProviderBuilder, RootProvider},
     transports::http::Client,
 };
+use core::time;
 use eyre::Result;
 use mchain::mchain::{rollup_config, MProvider};
 use std::{
@@ -116,7 +117,7 @@ pub async fn start_component(
             .send()
             .await
             .is_ok_and(|x| x.status().is_success()),
-        Duration::from_secs(120)
+        Duration::from_secs(5*60)  // give it time to download the image if necessary
     );
     Ok(docker)
 }
@@ -127,8 +128,8 @@ pub async fn start_mchain(
     finality_delay: u64,
 ) -> Result<(String, Docker, MProvider)> {
     let temp = test_path("mchain");
-    let port = PortManager::instance().next_port();
-    let metric_port = PortManager::instance().next_port();
+    let port = PortManager::instance().next_port().await;
+    let metric_port = PortManager::instance().next_port().await;
     let docker = start_component(
         "mchain",
         metric_port,
@@ -160,7 +161,7 @@ pub async fn launch_nitro_node(
     sequencer_port: Option<u16>,
 ) -> Result<(Docker, RootProvider, String)> {
     let tag = env::var("NITRO_TAG").unwrap_or("v3.4.0-d896e9c-slim".to_string());
-    let port = PortManager::instance().next_port();
+    let port = PortManager::instance().next_port().await;
 
     let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
 
@@ -195,6 +196,28 @@ pub async fn launch_nitro_node(
 
     let rollup = ProviderBuilder::default().on_http(url.parse()?);
     // give it two minutes to launch (in case it needs to download the image)
-    wait_until!(rollup.get_chain_id().await.is_ok(), Duration::from_secs(120));
+    wait_until!(rollup.get_chain_id().await.is_ok(), Duration::from_secs(5 * 60)); // give it time to download the image if necessary
     Ok((nitro, rollup, url))
+}
+
+pub async fn start_redis() -> Result<(Docker, String)> {
+    let port = PortManager::instance().next_port().await;
+    let redis = Docker::new(
+        Command::new("docker")
+            .arg("run")
+            .arg("--init")
+            .arg("--rm")
+            .arg("-p")
+            .arg(format!("{port}:6379"))
+            .arg("redis:latest"),
+    )?;
+
+    let redis_url = format!("redis://127.0.0.1:{port}/");
+
+    let client = redis::Client::open(redis_url.as_str()).unwrap();
+    wait_until!(
+        client.get_multiplexed_async_connection().await.is_ok(),
+        time::Duration::from_secs(5 * 60) // give it time to download the image if necessary
+    );
+    Ok((redis, redis_url))
 }
