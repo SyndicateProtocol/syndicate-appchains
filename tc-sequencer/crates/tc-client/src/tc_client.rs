@@ -26,7 +26,7 @@ const DEFAULT_SEQUENCING_CHAIN_ID: u64 = 5113;
 const DEFAULT_FUNCTION_SIGNATURE: &str = "processTransaction(address chainAddress, bytes data)";
 /// The function signature for the batch function
 pub const BATCH_FUNCTION_SIGNATURE: &str =
-    "processTransactionRaw(address chainAddress, bytes[] data)";
+    "processTransactionRaw(address chainAddress, bytes data)";
 const TC_CHAIN_ADDRESS_KEY: &str = "chainAddress";
 const TC_DATA_KEY: &str = "data";
 
