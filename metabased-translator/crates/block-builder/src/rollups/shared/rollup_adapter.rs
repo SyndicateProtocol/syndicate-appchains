@@ -3,10 +3,10 @@
 //! This module provides the core [`RollupAdapter`] trait that defines how
 //! different rollup implementations can construct and process their blocks.
 
-use crate::{connectors::mchain::MetaChainProvider, rollups::shared::SequencingTransactionParser};
-use alloy::{eips::BlockNumberOrTag, primitives::Bytes};
+use crate::rollups::shared::SequencingTransactionParser;
+use alloy::primitives::Bytes;
 use async_trait::async_trait;
-use common::types::{KnownState, PartialBlock, SeqBlock, SetBlock};
+use common::types::{PartialBlock, SequencingBlock, SettlementBlock};
 use eyre::Result;
 use mchain::db::DelayedMessage;
 use std::{
@@ -46,13 +46,6 @@ pub trait RollupAdapter: Debug + Send + Sync + Unpin + Clone + 'static {
 
     /// Extract delayed messages from a settlement block
     fn process_delayed_messages(&self, block: &PartialBlock) -> Result<Vec<DelayedMessage>>;
-
-    /// Gets the source chain's processed blocks from the rollup
-    async fn get_processed_blocks(
-        &self,
-        provider: &MetaChainProvider<Self>,
-        block: BlockNumberOrTag,
-    ) -> Result<Option<KnownState>>;
 }
 
 /// A trait for building blocks from the sequencing and settlement chains.
@@ -62,10 +55,10 @@ pub trait BlockBuilder<T>: Send {
     fn build_block(&self, block: &PartialBlock) -> Result<T>;
 }
 
-impl<T: RollupAdapter> BlockBuilder<SeqBlock> for T {
-    fn build_block(&self, block: &PartialBlock) -> Result<SeqBlock> {
+impl<T: RollupAdapter> BlockBuilder<SequencingBlock> for T {
+    fn build_block(&self, block: &PartialBlock) -> Result<SequencingBlock> {
         let (tx_count, batch) = self.build_batch(block)?;
-        Ok(SeqBlock {
+        Ok(SequencingBlock {
             block_ref: block.block_ref.clone(),
             parent_hash: block.parent_hash,
             tx_count,
@@ -74,9 +67,9 @@ impl<T: RollupAdapter> BlockBuilder<SeqBlock> for T {
     }
 }
 
-impl<T: RollupAdapter> BlockBuilder<SetBlock> for T {
-    fn build_block(&self, block: &PartialBlock) -> Result<SetBlock> {
-        Ok(SetBlock {
+impl<T: RollupAdapter> BlockBuilder<SettlementBlock> for T {
+    fn build_block(&self, block: &PartialBlock) -> Result<SettlementBlock> {
+        Ok(SettlementBlock {
             block_ref: block.block_ref.clone(),
             parent_hash: block.parent_hash,
             messages: self.process_delayed_messages(block)?,

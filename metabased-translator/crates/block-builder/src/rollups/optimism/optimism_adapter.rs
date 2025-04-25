@@ -6,7 +6,6 @@
 
 use crate::{
     config::BlockBuilderConfig,
-    connectors::mchain::MetaChainProvider,
     rollups::{
         optimism::{
             batch::{new_batcher_tx, Batch},
@@ -16,12 +15,11 @@ use crate::{
     },
 };
 use alloy::{
-    eips::BlockNumberOrTag,
     primitives::{Address, Bytes, B256},
     rpc::types::TransactionRequest,
 };
 use async_trait::async_trait;
-use common::types::{KnownState, PartialBlock};
+use common::types::PartialBlock;
 use eyre::Result;
 use mchain::db::DelayedMessage;
 use std::str::FromStr;
@@ -41,14 +39,6 @@ impl RollupAdapter for OptimismAdapter {
     }
 
     fn transaction_parser(&self) -> &SequencingTransactionParser {
-        panic!("Not implemented")
-    }
-
-    async fn get_processed_blocks(
-        &self,
-        _provider: &MetaChainProvider<Self>,
-        _block: BlockNumberOrTag,
-    ) -> Result<Option<KnownState>> {
         panic!("Not implemented")
     }
 }

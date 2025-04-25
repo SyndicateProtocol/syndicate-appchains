@@ -136,7 +136,7 @@ pub async fn start_mchain(
         vec![
             "--chain-id".to_string(),
             chain_id.to_string(),
-            "--chain-owner".to_string(),
+            "--chain-owner-address".to_string(),
             chain_owner.to_string(),
             "--port".to_string(),
             port.to_string(),

@@ -28,8 +28,8 @@ struct Config {
     #[arg(long, env = "CHAIN_ID")]
     chain_id: u64,
     // TODO(SEQ-840): read the chain owner from the chain config contract instead
-    #[arg(long, env = "CHAIN_OWNER")]
-    chain_owner: Address,
+    #[arg(long, env = "CHAIN_OWNER_ADDRESS")]
+    chain_owner_address: Address,
 }
 
 #[tokio::main]
@@ -43,7 +43,8 @@ async fn main() -> eyre::Result<()> {
     let mut metrics_state = MetricsState::default();
     let metrics = MchainMetrics::new(&mut metrics_state.registry);
     tokio::spawn(start_metrics(metrics_state, cfg.metrics_port));
-    let module = start_mchain(cfg.chain_id, cfg.chain_owner, cfg.finality_delay, db, metrics).await;
+    let module =
+        start_mchain(cfg.chain_id, cfg.chain_owner_address, cfg.finality_delay, db, metrics).await;
     let handle = Server::builder()
         .set_rpc_middleware(RpcServiceBuilder::new().rpc_logger(1024))
         .build(format!("0.0.0.0:{}", cfg.port))

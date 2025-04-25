@@ -84,106 +84,69 @@ impl<R: RollupAdapter> MetaChainProvider<R> {
         sequencing_client: &Arc<dyn RPCClient>,
         settlement_client: &Arc<dyn RPCClient>,
     ) -> Result<Option<KnownState>> {
-        let slot = self.provider.slot().await;
-        info!("checking latest slot: {:?}", slot);
-        let mut seq_block =
-            BlockRef { number: slot.seq_block_number, hash: slot.seq_block_hash, timestamp: 0 };
-        if validate_block_add_timestamp(sequencing_client, &mut seq_block).await {
-            let mut set_block =
-                BlockRef { number: slot.set_block_number, hash: slot.set_block_hash, timestamp: 0 };
-            if validate_block_add_timestamp(settlement_client, &mut set_block).await {
-                let (state, mut mchain_block_number) = self
-                    .provider
-                    .get_source_chains_processed_blocks(BlockNumberOrTag::Latest)
-                    .await?;
-                if state != slot {
-                    // block number is 0 if the slot is empty & a corresponding mchain block
-                    // does not exist
-                    mchain_block_number = 0;
-
-                    // just in case - make sure the slot comes after the latest mchain block
-                    assert!(
-                        state.seq_block_number < seq_block.number &&
-                            state.set_block_number <= set_block.number
-                    );
-                }
-                info!("latest slot is OK - no need to reorg");
-                return Ok(Some(KnownState {
-                    mchain_block_number,
-                    sequencing_block: seq_block,
-                    settlement_block: set_block,
-                }));
-            }
+        let (safe_state, mchain_block_number) =
+            self.get_safe_state(sequencing_client, settlement_client).await;
+        if let Some(mchain_block_number) = mchain_block_number {
+            let mchain_block_before = self.provider.get_block_number().await;
+            self.provider.rollback_to_block(mchain_block_number).await.map_err(|e| {
+                BlockBuilderError::ResumeFromBlock(format!("Unable to reorg to block: {}", e))
+            })?;
+            let mchain_block_after = self.provider.get_block_number().await;
+            info!(
+                "reconciliation done: mchain_block_before: {}, safe_state: {:?}, mchain_block_after: {}",
+                mchain_block_before, safe_state, mchain_block_after
+            );
         }
-        let mchain_block_before = self.provider.get_block_number().await;
-
-        let safe_state = self.get_safe_state(sequencing_client, settlement_client).await;
-        self.rollback_to_safe_state(&safe_state).await?;
-
-        let mchain_block_after = self.provider.get_block_number().await;
-        info!(
-            "reconciliation done: mchain_block_before: {}, safe_state: {:?}, mchain_block_after: {}",
-            mchain_block_before, safe_state, mchain_block_after
-        );
         Ok(safe_state)
     }
 
-    /// Validates and rolls back to a known block number if necessary
-    async fn rollback_to_safe_state(
-        &self,
-        known_safe_state: &Option<KnownState>,
-    ) -> Result<(), BlockBuilderError> {
-        let known_block_number = match known_safe_state {
-            Some(known_state) => known_state.mchain_block_number,
-            None => {
-                info!("No known block number to resume from, starting from genesis");
-                return Ok(());
-            }
-        };
-
-        let current_block_number = self.provider.get_block_number().await;
-
-        if known_block_number > current_block_number {
-            return Err(BlockBuilderError::KnownBlockNumberGreaterThanCurrentBlockNumber(
-                known_block_number,
-                current_block_number,
-            ));
-        }
-
-        // rollback to block if necessary
-        if known_block_number < current_block_number {
-            self.provider.rollback_to_block(known_block_number).await.map_err(|e| {
-                BlockBuilderError::ResumeFromBlock(format!("Unable to reorg to block: {}", e))
-            })?;
-        }
-        Ok(())
-    }
-
     /// `get_safe_state` obtains the processed blocks from the rollup contract and validates them
-    /// against the source chain clients
+    /// against the source chain clients.
+    /// The safe mchain block number is returned if the chain requires a reorg.
     pub async fn get_safe_state(
         &self,
         sequencing_client: &Arc<dyn RPCClient>,
         settlement_client: &Arc<dyn RPCClient>,
-    ) -> Option<KnownState> {
+    ) -> (Option<KnownState>, Option<u64>) {
         info!("getting safe state");
-        let mut current_block = BlockNumberOrTag::Latest;
+        let mut current_block = BlockNumberOrTag::Pending;
         loop {
             #[allow(clippy::unwrap_used)]
-            let mut state =
-                self.rollup_adapter.get_processed_blocks(self, current_block).await.unwrap()?;
-            info!("checking state {:?}", state);
+            let (slot, mchain_block_number) =
+                self.provider.get_source_chains_processed_blocks(current_block).await.unwrap();
+            assert_ne!(mchain_block_number, 0, "cannot reorg genesis block");
+
+            let not_pending = current_block != BlockNumberOrTag::Pending;
+
+            if slot.seq_block_number == 0 {
+                assert_eq!(slot, Default::default());
+                assert_eq!(mchain_block_number, if not_pending { 1 } else { 2 });
+                return (None, not_pending.then_some(mchain_block_number))
+            }
+
+            info!("checking slot {:?}", slot);
+            let mut state = KnownState {
+                sequencing_block: BlockRef {
+                    number: slot.seq_block_number,
+                    timestamp: 0,
+                    hash: slot.seq_block_hash,
+                },
+                settlement_block: BlockRef {
+                    number: slot.set_block_number,
+                    timestamp: 0,
+                    hash: slot.set_block_hash,
+                },
+            };
             let seq_valid =
                 validate_block_add_timestamp(sequencing_client, &mut state.sequencing_block).await;
             let set_valid =
                 validate_block_add_timestamp(settlement_client, &mut state.settlement_block).await;
             info!("seq valid: {}, set valid: {}", seq_valid, set_valid);
             if seq_valid && set_valid {
-                info!("found safe state {:?}", state);
-                return Some(state)
+                info!("found safe state {:?} current block {:?}", state, current_block);
+                return (Some(state), not_pending.then_some(mchain_block_number))
             }
-            assert_ne!(state.mchain_block_number, 0, "cannot reorg genesis block");
-            current_block = BlockNumberOrTag::Number(state.mchain_block_number - 1);
+            current_block = BlockNumberOrTag::Number(mchain_block_number - 1);
         }
     }
 

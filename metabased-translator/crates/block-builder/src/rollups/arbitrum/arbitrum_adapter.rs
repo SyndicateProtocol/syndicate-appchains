@@ -6,19 +6,17 @@
 
 use crate::{
     config::BlockBuilderConfig,
-    connectors::mchain::MetaChainProvider,
     rollups::{
         arbitrum::batch::{Batch, BatchMessage, L1IncomingMessage, L1IncomingMessageHeader},
         shared::{RollupAdapter, SequencingTransactionParser},
     },
 };
 use alloy::{
-    eips::BlockNumberOrTag,
     primitives::{Address, Bytes, FixedBytes, U256},
     sol_types::{SolCall, SolEvent},
 };
 use async_trait::async_trait;
-use common::types::{BlockRef, KnownState, PartialBlock, PartialLogWithTxdata, EMPTY_BATCH};
+use common::types::{PartialBlock, PartialLogWithTxdata, EMPTY_BATCH};
 use contract_bindings::arbitrum::{
     ibridge::IBridge::MessageDelivered,
     idelayedmessageprovider::IDelayedMessageProvider::{
@@ -135,6 +133,7 @@ impl RollupAdapter for ArbitrumAdapter {
         }
 
         info!(
+            slot = %block.block_ref.number,
             "Processing sequencer transactions: {:?}",
             mb_transactions
                 .iter()
@@ -240,35 +239,6 @@ impl RollupAdapter for ArbitrumAdapter {
         // TODO(SEQ-851): compute & log delayed message tx hashes
 
         Ok(delayed_msg_txns)
-    }
-
-    // NOTE: timestamp of the blockRefs will be 0
-    async fn get_processed_blocks(
-        &self,
-        provider: &MetaChainProvider<Self>,
-        block: BlockNumberOrTag,
-    ) -> Result<Option<KnownState>> {
-        let (slot, block_number) =
-            provider.provider.get_source_chains_processed_blocks(block).await?;
-
-        if slot.seq_block_number == 0 {
-            assert_eq!(slot, Default::default());
-            return Ok(None);
-        }
-
-        Ok(Some(KnownState {
-            mchain_block_number: block_number,
-            sequencing_block: BlockRef {
-                number: slot.seq_block_number,
-                timestamp: 0,
-                hash: slot.seq_block_hash,
-            },
-            settlement_block: BlockRef {
-                number: slot.set_block_number,
-                timestamp: 0,
-                hash: slot.set_block_hash,
-            },
-        }))
     }
 }
 

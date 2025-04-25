@@ -1,5 +1,5 @@
 use crate::{
-    db::{to_err, ArbitrumDB as _, DelayedMessage, MBlock, Slot, KVDB},
+    db::{to_err, ArbitrumDB as _, DelayedMessage, MBlock, Slot, State, KVDB},
     metrics::MchainMetrics,
 };
 use alloy::{
@@ -86,6 +86,7 @@ pub fn rollup_config(chain_id: u64, chain_owner: Address) -> String {
 #[derive(Debug, Clone)]
 pub struct MProvider(RootProvider);
 
+#[allow(clippy::unwrap_used)]
 impl MProvider {
     pub fn new(url: alloy::transports::http::reqwest::Url) -> Self {
         Self(ProviderBuilder::default().on_http(url))
@@ -100,7 +101,7 @@ impl MProvider {
             .header
             .number
     }
-    pub async fn add_batch(&self, batch: &MBlock) -> eyre::Result<u64> {
+    pub async fn add_batch(&self, batch: &MBlock) -> eyre::Result<Option<u64>> {
         Ok(self.0.raw_request("mchain_addBatch".into(), batch).await?)
     }
     pub async fn get_source_chains_processed_blocks(
@@ -113,15 +114,7 @@ impl MProvider {
         Ok(self.0.raw_request("mchain_rollbackToBlock".into(), block_number).await?)
     }
     pub async fn rollup_owner(&self) -> Address {
-        #[allow(clippy::unwrap_used)]
         self.0.raw_request("mchain_rollupOwner".into(), ()).await.unwrap()
-    }
-    pub async fn slot(&self) -> Slot {
-        #[allow(clippy::unwrap_used)]
-        self.0.raw_request("mchain_slot".into(), ()).await.unwrap()
-    }
-    pub async fn update_slot(&self, slot: &Slot) -> eyre::Result<()> {
-        Ok(self.0.raw_request("mchain_updateSlot".into(), slot).await?)
     }
 }
 
@@ -149,11 +142,10 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     };
     let mut pending_ts: VecDeque<u64> = Default::default();
     let mut finalized_block = 1u64;
-    if db.get_block_number() == 0 {
+    if db.get_state().batch_count == 0 {
         // 000b00800203 corresponds to a batch containing a single delayed message
         db.add_batch(MBlock {
-            messages: vec![init_msg],
-            batch: Bytes::from_static(&alloy::hex!("000b00800203")),
+            payload: Some((Bytes::from_static(&alloy::hex!("000b00800203")), vec![init_msg])),
             ..Default::default()
         })
         .unwrap();
@@ -164,7 +156,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
             assert_eq!(db_init, &init_msg);
         }
         // search for the finalized head. store unfinalized timestamps in a queue.
-        finalized_block = db.get_block_number();
+        finalized_block = db.get_state().batch_count;
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         while finalized_block > 1 {
             let block_ts = db.get_block(finalized_block).unwrap().timestamp;
@@ -175,7 +167,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
             pending_ts.push_front(block_ts);
         }
     }
-    assert_eq!(finalized_block + pending_ts.len() as u64, db.get_block_number());
+    assert_eq!(finalized_block + pending_ts.len() as u64, db.get_state().batch_count);
     let mut module = RpcModule::new((db, metrics, Mutex::new((finalized_block, pending_ts))));
 
     // -------------------------------------------------
@@ -184,16 +176,19 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     module
         .register_method(
             "mchain_addBatch",
-            move |p, (db, metrics, mutex), _| -> Result<u64, ErrorObjectOwned> {
+            move |p, (db, metrics, mutex), _| -> Result<Option<u64>, ErrorObjectOwned> {
                 let batch: MBlock = p.parse()?;
                 let timestamp = batch.timestamp;
+                let seq_block_number = batch.slot.seq_block_number;
                 let block = db.add_batch(batch)?;
-                metrics.record_last_block(block, timestamp);
-                let mut data = mutex.lock().unwrap();
-                data.1.push_back(timestamp);
-                assert_eq!(data.0 + data.1.len() as u64, block);
-                drop(data);
-                Ok(block)
+                metrics.record_sequencing_block(seq_block_number, timestamp);
+                Ok(block.inspect(|&block| {
+                    metrics.record_last_block(block, timestamp);
+                    let mut data = mutex.lock().unwrap();
+                    data.1.push_back(timestamp);
+                    assert_eq!(data.0 + data.1.len() as u64, block);
+                    drop(data);
+                }))
             },
         )
         .unwrap();
@@ -201,41 +196,53 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
         .register_method(
             "mchain_rollbackToBlock",
             move |p, (db, metrics, mutex), _| -> Result<(), ErrorObjectOwned> {
-                let block: u64 = p.parse()?;
-                let latest = db.get_block_number();
-                if block == latest {
-                    return Ok(());
-                }
-                if block > latest {
+                let block_number: u64 = p.parse()?;
+                let state = db.get_state();
+                if block_number > state.batch_count {
                     return Err(err("cannot set head past the last block"));
                 }
-                if block == 0 {
+                if block_number == 0 {
                     return Err(err("cannot set head before the first block"));
                 }
-                // remove stale ts data & delete blocks, messages
-                db.put_block_number(block);
-                let start_block = db.get_block(block).unwrap();
-                metrics.record_reorg(block, latest, start_block.timestamp);
-                db.put_slot(&start_block.slot);
-                let end_block = db.get_block(latest).unwrap();
-                for i in block..latest {
+                let block = db.get_block(block_number).unwrap();
+                if block_number == state.batch_count {
+                    // reset the pending batch count.
+                    // do not record or log the reorg since it has no user impact.
+                    db.put_state(&State { timestamp: block.timestamp, slot: block.slot, ..state });
+                    return Ok(());
+                }
+                let block_message_count = block.after_message_count();
+                // first reset the state - it is okay if the other deletions fail, incomplete
+                // data is ignored.
+                db.put_state(&State {
+                    batch_count: block_number,
+                    batch_acc: block.after_batch_acc,
+                    message_count: block.after_message_count(),
+                    message_acc: block.after_message_acc(),
+                    timestamp: block.timestamp,
+                    slot: block.slot,
+                });
+                // next delete blocks, messages to free up space.
+                metrics.record_reorg(block_number, state.batch_count, block.timestamp);
+                for i in block_number..state.batch_count {
                     db.delete_block(i + 1);
                 }
-                for i in start_block.after_message_count()..end_block.after_message_count() {
+                for i in block_message_count..state.message_count {
                     db.delete_message_acc(i);
                 }
+                // finally update stale finality data.
                 let mut data = mutex.lock().unwrap();
-                if block < data.0 {
-                    metrics.record_finalized_block(block, start_block.timestamp);
-                    data.0 = block;
+                if block_number < data.0 {
+                    metrics.record_finalized_block(block_number, block.timestamp);
+                    data.0 = block_number;
                     data.1.clear();
                 } else {
-                    let removed = (latest - block) as usize;
+                    let removed = (state.batch_count - block_number) as usize;
                     let data_len = data.1.len();
                     assert!(data_len >= removed);
                     data.1.truncate(data_len - removed);
                 }
-                assert_eq!(data.0 + data.1.len() as u64, block);
+                assert_eq!(data.0 + data.1.len() as u64, block_number);
                 drop(data);
                 Ok(())
             },
@@ -248,41 +255,15 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
         )
         .unwrap();
     module
-        .register_method("mchain_slot", move |_, (db, _, _), _| -> Result<Slot, ErrorObjectOwned> {
-            #[allow(clippy::unwrap_used)]
-            Ok(db.get_slot().unwrap())
-        })
-        .unwrap();
-    module
-        .register_method(
-            "mchain_updateSlot",
-            move |p, (db, _, _), _| -> Result<(), ErrorObjectOwned> {
-                let slot: Slot = p.parse()?;
-                if let Some(prev) = db.get_slot() {
-                    if slot.seq_block_number <= prev.seq_block_number ||
-                        slot.set_block_number < prev.set_block_number
-                    {
-                        return Err(to_err(format!(
-                            "slot block numbers too low: seq {} <= {} or set {} < {}",
-                            slot.seq_block_number,
-                            prev.seq_block_number,
-                            slot.set_block_number,
-                            prev.set_block_number
-                        )))
-                    }
-                }
-                db.put_slot(&slot);
-                Ok(())
-            },
-        )
-        .unwrap();
-    module
         .register_method(
             "mchain_getSourceChainsProcessedBlocks",
             move |p, (db, _, _), _| -> Result<(Slot, u64), ErrorObjectOwned> {
                 let tag: BlockNumberOrTag = p.parse()?;
                 let block_num = match tag {
-                    BlockNumberOrTag::Latest => db.get_block_number(),
+                    BlockNumberOrTag::Pending => {
+                        let state = db.get_state();
+                        return Ok((state.slot, state.batch_count + 1))
+                    }
                     BlockNumberOrTag::Number(i) => i,
                     _ => return Err(to_err(format!("unexpected block tag: {}", tag))),
                 };
@@ -429,7 +410,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
                   -> Result<alloy::rpc::types::Block, ErrorObjectOwned> {
                 let (tag, _): (BlockNumberOrTag, bool) = p.parse()?;
                 let number = match tag {
-                    BlockNumberOrTag::Latest => db.get_block_number(),
+                    BlockNumberOrTag::Latest => db.get_state().batch_count,
                     BlockNumberOrTag::Finalized => {
                         let mut data = mutex.lock().unwrap();
                         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
@@ -472,12 +453,10 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
                 // TODO(SEQ-767): make sure the max data size property is set properly
                 IInbox::maxDataSizeCall::SELECTOR => Ok(117964.abi_encode().into()),
                 IBridge::delayedMessageCountCall::SELECTOR => {
-                    Ok((db.get_block(db.get_block_number())?.after_message_count())
-                        .abi_encode()
-                        .into())
+                    Ok(db.get_state().message_count.abi_encode().into())
                 }
                 ISequencerInbox::batchCountCall::SELECTOR => {
-                    Ok((db.get_block_number()).abi_encode().into())
+                    Ok(db.get_state().batch_count.abi_encode().into())
                 }
                 IBridge::delayedInboxAccsCall::SELECTOR => {
                     let data = IBridge::delayedInboxAccsCall::abi_decode(input.as_ref(), false)
@@ -586,43 +565,44 @@ mod tests {
             base_fee_l1: Default::default(),
         };
         let (mchain, db, _handle) = setup().await?;
-        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 2); // init msg, block number, batch (1)
+        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 1); // init msg, block number, batch (1)
         assert_eq!(mchain.get_block_number().await, 1);
         mchain
             .add_batch(&MBlock {
                 slot: Slot { seq_block_number: 1, ..Default::default() },
+                payload: Some(Default::default()),
                 ..Default::default()
             })
             .await?;
-        assert_eq!(db.0.read().unwrap().keys().len(), 4 + 2); // block (2)
+        assert_eq!(db.0.read().unwrap().keys().len(), 4 + 1); // block (2)
         assert_eq!(mchain.get_block_number().await, 2);
         mchain
             .add_batch(&MBlock {
-                messages: vec![empty.clone()],
+                payload: Some((Default::default(), vec![empty.clone()])),
                 slot: Slot { seq_block_number: 2, ..Default::default() },
-                ..Default::default()
+                timestamp: 0,
             })
             .await?; // block + messages (3)
-        assert_eq!(db.0.read().unwrap().keys().len(), 6 + 2);
+        assert_eq!(db.0.read().unwrap().keys().len(), 6 + 1);
         assert_eq!(mchain.get_block_number().await, 3);
         mchain
             .add_batch(&MBlock {
-                messages: vec![empty; 2],
+                payload: Some((Default::default(), vec![empty; 2])),
                 slot: Slot { seq_block_number: 3, ..Default::default() },
-                ..Default::default()
+                timestamp: 0,
             })
             .await?; // block + 2 messagess (4)
-        assert_eq!(db.0.read().unwrap().keys().len(), 9 + 2);
+        assert_eq!(db.0.read().unwrap().keys().len(), 9 + 1);
         assert_eq!(mchain.get_block_number().await, 4);
         mchain.rollback_to_block(2).await?; // rm 2 blocks + 3 messages
-        assert_eq!(db.0.read().unwrap().keys().len(), 4 + 2);
+        assert_eq!(db.0.read().unwrap().keys().len(), 4 + 1);
         assert_eq!(mchain.get_block_number().await, 2);
         mchain.rollback_to_block(1).await?; // rm block
-        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 2);
+        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 1);
         assert_eq!(mchain.get_block_number().await, 1);
         assert!(mchain.rollback_to_block(0).await.is_err());
         assert!(mchain.rollback_to_block(2).await.is_err());
-        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 2);
+        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 1);
         assert_eq!(mchain.get_block_number().await, 1);
         Ok(())
     }
@@ -635,6 +615,7 @@ mod tests {
         mchain
             .add_batch(&MBlock {
                 slot: Slot { seq_block_number: 1, ..Default::default() },
+                payload: Some(Default::default()),
                 ..Default::default()
             })
             .await?;
@@ -642,14 +623,14 @@ mod tests {
             .add_batch(&MBlock {
                 timestamp: 1,
                 slot: Slot { seq_block_number: 2, ..Default::default() },
-                ..Default::default()
+                payload: Some(Default::default()),
             })
             .await?;
         mchain
             .add_batch(&MBlock {
                 timestamp: 1,
                 slot: Slot { seq_block_number: 3, ..Default::default() },
-                ..Default::default()
+                payload: Some(Default::default()),
             })
             .await?;
         assert_eq!(mchain.get_block_number().await, 4);
@@ -670,7 +651,7 @@ mod tests {
             .add_batch(&MBlock {
                 timestamp: 1,
                 slot: Slot { seq_block_number: 3, ..Default::default() },
-                ..Default::default()
+                payload: Some(Default::default()),
             })
             .await?;
         assert_eq!(mchain.get_block_number().await, 4);
@@ -679,7 +660,7 @@ mod tests {
             .add_batch(&MBlock {
                 timestamp: 2,
                 slot: Slot { seq_block_number: 4, ..Default::default() },
-                ..Default::default()
+                payload: Some(Default::default()),
             })
             .await?;
         assert_eq!(mchain.get_block_number().await, 5);
@@ -692,7 +673,7 @@ mod tests {
             .add_batch(&MBlock {
                 timestamp: 100,
                 slot: Slot { seq_block_number: 4, ..Default::default() },
-                ..Default::default()
+                payload: Some(Default::default()),
             })
             .await?;
         assert_eq!(mchain.get_block_number().await, 5);

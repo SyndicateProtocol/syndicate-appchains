@@ -1,7 +1,7 @@
 //! Slotter module for metabased-translator
 use crate::metrics::SlotterMetrics;
 use alloy::primitives::{FixedBytes, B256};
-use common::types::{BlockRef, Chain, KnownState, SeqBlock, SetBlock};
+use common::types::{BlockRef, Chain, KnownState, SequencingBlock, SettlementBlock};
 use mchain::{
     db::{MBlock, Slot},
     mchain::MProvider,
@@ -16,8 +16,8 @@ use tracing::{error, info, trace};
 pub async fn run(
     settlement_delay: u64,
     known_state: Option<KnownState>,
-    mut sequencing_rx: Receiver<SeqBlock>,
-    mut settlement_rx: Receiver<SetBlock>,
+    mut sequencing_rx: Receiver<SequencingBlock>,
+    mut settlement_rx: Receiver<SettlementBlock>,
     provider: &MProvider,
     metrics: SlotterMetrics,
 ) -> Result<(), SlotterError> {
@@ -62,15 +62,16 @@ pub async fn run(
                 set_block_hash: FixedBytes::ZERO,
                 set_block_number: 0,
             },
-            batch: seq_block.batch,
-            messages: Default::default(),
+            payload: None,
         };
+
+        let mut messages = vec![];
 
         trace!("Waiting for settlement blocks");
         let mut blocks_per_slot: u64 = 1;
         while set_block.block_ref.timestamp + settlement_delay <= seq_block.block_ref.timestamp {
             blocks_per_slot += 1;
-            mblock.messages.append(&mut set_block.messages);
+            messages.append(&mut set_block.messages);
             set_block = settlement_rx.recv().await.expect("settlement channel closed");
             validate_block(
                 &mut latest_settlement_block,
@@ -81,26 +82,26 @@ pub async fn run(
             )?;
         }
 
+        if seq_block.tx_count > 0 || !messages.is_empty() {
+            mblock.payload = Some((seq_block.batch, messages));
+        }
         mblock.slot.set_block_hash = set_block.block_ref.hash;
         mblock.slot.set_block_number = set_block.block_ref.number;
 
-        if seq_block.tx_count == 0 && mblock.messages.is_empty() {
-            trace!("Skipping empty slot {:?}", mblock.slot);
-            provider
-                .update_slot(&mblock.slot)
-                .await
-                .map_err(|e| SlotterError::SlotProcessorError(e.to_string()))?;
-            metrics.record_last_slot_created(mblock.slot.seq_block_number);
-            continue;
-        }
-
         trace!("Processing slot {:?}", mblock.slot);
-        info!("Sending slot {} with timestamp {}", mblock.slot.seq_block_number, mblock.timestamp);
+        let time = std::time::Instant::now();
         provider
             .add_batch(&mblock)
             .await
             .map_err(|e| SlotterError::SlotProcessorError(e.to_string()))?;
-        info!("Sent slot {}", mblock.slot.seq_block_number);
+        if mblock.payload.is_some() {
+            info!(
+                "Sent slot {} with timestamp {} in {:?}",
+                mblock.slot.seq_block_number,
+                mblock.timestamp,
+                time.elapsed()
+            );
+        }
         metrics.record_blocks_per_slot(blocks_per_slot);
         metrics.record_last_slot_created(mblock.slot.seq_block_number);
     }
@@ -186,7 +187,7 @@ mod tests {
     use crate::{
         metrics::SlotterMetrics,
         slotter::{
-            validate_block, SetBlock,
+            validate_block, SettlementBlock,
             SlotterError::{BlockNumberSkipped, EarlierTimestamp, ReorgDetected},
         },
     };
@@ -206,7 +207,7 @@ mod tests {
         let (_seq_tx, seq_rx) = mpsc::channel(1);
         let (set_tx, set_rx) = mpsc::channel(1);
         let latest: BlockRef = Default::default();
-        let set_block = SetBlock {
+        let set_block = SettlementBlock {
             block_ref: BlockRef { hash: U256::from(1).into(), ..Default::default() },
             ..Default::default()
         };
@@ -214,7 +215,6 @@ mod tests {
         let result = run(
             0,
             Some(KnownState {
-                mchain_block_number: 0,
                 sequencing_block: Default::default(),
                 settlement_block: latest.clone(),
             }),

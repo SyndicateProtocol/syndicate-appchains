@@ -18,7 +18,7 @@ pub const EMPTY_BATCH: Bytes = Bytes::from_static(&alloy::hex!("003b"));
 
 #[allow(missing_docs)]
 #[derive(Debug, Default, Clone)]
-pub struct SeqBlock {
+pub struct SequencingBlock {
     pub block_ref: BlockRef,
     pub parent_hash: FixedBytes<32>,
     pub batch: Bytes,
@@ -27,7 +27,7 @@ pub struct SeqBlock {
 
 #[allow(missing_docs)]
 #[derive(Debug, Default, Clone)]
-pub struct SetBlock {
+pub struct SettlementBlock {
     pub block_ref: BlockRef,
     pub parent_hash: FixedBytes<32>,
     pub messages: Vec<DelayedMessage>,
@@ -95,13 +95,13 @@ pub trait GetBlockRef {
     fn block_ref(&self) -> &BlockRef;
 }
 
-impl GetBlockRef for SeqBlock {
+impl GetBlockRef for SequencingBlock {
     fn block_ref(&self) -> &BlockRef {
         &self.block_ref
     }
 }
 
-impl GetBlockRef for SetBlock {
+impl GetBlockRef for SettlementBlock {
     fn block_ref(&self) -> &BlockRef {
         &self.block_ref
     }
@@ -122,8 +122,6 @@ impl Display for BlockRef {
 /// A known state of the translator
 #[derive(Debug)]
 pub struct KnownState {
-    /// mchain block number for this state
-    pub mchain_block_number: u64,
     /// The latest block from the sequencing chain that has been processed
     pub sequencing_block: BlockRef,
     /// The latest block from the settlement chain that has been processed

@@ -529,7 +529,7 @@ mod tests {
     use eyre::Result;
     use mockall::{mock, predicate::*};
     use shared::metrics::MetricsState;
-    use tokio::sync::mpsc::channel;
+    use tokio::{sync::mpsc::channel, task::JoinHandle};
 
     #[ctor::ctor]
     fn init() {
@@ -571,6 +571,32 @@ mod tests {
         fn build_block(&self, block: &PartialBlock) -> Result<PartialBlock> {
             Ok(block.clone())
         }
+    }
+
+    async fn start_ingestor(
+        chain: Chain,
+        config: ChainIngestorConfig,
+        client: Arc<dyn RPCClient>,
+    ) -> (JoinHandle<()>, oneshot::Sender<()>, tokio::sync::mpsc::Receiver<PartialBlock>) {
+        let (sender, receiver) = channel(10);
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let polling_handle = tokio::spawn(async move {
+            let result = run(
+                chain,
+                &config,
+                client,
+                sender,
+                Arc::new(BlockBuilderMock {}),
+                IngestorMetrics::new(&mut MetricsState::default().registry),
+                shutdown_rx,
+            )
+            .await;
+            assert!(result.is_ok(), "Polling task failed: {:?}", result);
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert!(!polling_handle.is_finished());
+        (polling_handle, shutdown_tx, receiver)
     }
 
     #[tokio::test]
@@ -656,32 +682,15 @@ mod tests {
             ..Default::default()
         };
 
-        let (sender, _) = channel(10);
         let mut mock_client = MockRPCClientMock::new();
         mock_client
             .expect_get_block_by_number()
             .returning(move |_| Ok(get_dummy_block(start_block)));
         mock_client.expect_get_block_receipts().returning(move |_| Ok(vec![]));
         let client: Arc<dyn RPCClient> = Arc::new(mock_client);
-        let mut metrics_state = MetricsState::default();
-        let metrics = IngestorMetrics::new(&mut metrics_state.registry);
 
-        let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let polling_handle = tokio::spawn(async move {
-            let result = run(
-                Chain::Sequencing,
-                &config,
-                client,
-                sender,
-                Arc::new(BlockBuilderMock {}),
-                metrics,
-                shutdown_rx,
-            )
-            .await;
-            assert!(result.is_ok(), "Polling task failed: {:?}", result);
-        });
-
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        let (polling_handle, shutdown_tx, _receiver) =
+            start_ingestor(Chain::Sequencing, config, client).await;
 
         let _ = shutdown_tx.send(());
         polling_handle.await?;
@@ -703,10 +712,6 @@ mod tests {
             ..Default::default()
         };
         let chain_head = start_block + syncing_batch_size;
-
-        let (sender, mut receiver) = channel(10);
-        let mut metrics_state = MetricsState::default();
-        let metrics = IngestorMetrics::new(&mut metrics_state.registry);
 
         let mut mock_client = MockRPCClientMock::new();
 
@@ -730,22 +735,8 @@ mod tests {
 
         let client: Arc<dyn RPCClient> = Arc::new(mock_client);
 
-        let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let polling_handle = tokio::spawn(async move {
-            let result = run(
-                Chain::Sequencing,
-                &config,
-                client,
-                sender,
-                Arc::new(BlockBuilderMock {}),
-                metrics,
-                shutdown_rx,
-            )
-            .await;
-            assert!(result.is_ok(), "Polling task failed: {:?}", result);
-        });
-
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        let (polling_handle, shutdown_tx, mut receiver) =
+            start_ingestor(Chain::Sequencing, config, client).await;
 
         let mut received_blocks = Vec::new();
         while let Ok(block) = receiver.try_recv() {

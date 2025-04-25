@@ -286,15 +286,11 @@ impl Components {
             let state_file =
                 std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config").join(file);
 
-            (set_port, set_anvil, set_provider) = start_anvil_with_args(
-                31337,
-                #[allow(clippy::unwrap_used)]
-                &["--load-state", state_file.to_str().unwrap()],
-            )
-            .await?;
+            (set_port, set_anvil, set_provider) =
+                start_anvil_with_args(31337, &["--load-state", state_file.to_str().unwrap()])
+                    .await?;
 
             // Sync the tips of the sequencing and settlement chains
-            #[allow(clippy::unwrap_used)]
             let block = set_provider.get_block_by_number(BlockNumberOrTag::Latest).await?.unwrap();
             seq_provider
                 .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
@@ -451,7 +447,6 @@ impl Components {
         // Launch sequencer
         Ok((
             Self {
-                #[allow(clippy::unwrap_used)]
                 _timer: TestTimer(SystemTime::now(), start_time.elapsed().unwrap()),
 
                 sequencing_provider: seq_provider,

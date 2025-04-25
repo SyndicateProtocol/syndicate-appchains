@@ -140,12 +140,12 @@ impl TCClient {
         debug!("Processing transaction: {}", hex::encode(&raw_tx));
         let original_tx = validate_transaction(&raw_tx)?;
         let original_tx_hash = *original_tx.tx_hash();
-        info!("Submitting transaction - tx hash: 0x{}", hex::encode(original_tx_hash));
+        let original_tx_hash_str = hex::encode(original_tx_hash);
+        info!("Submitting transaction - tx hash: 0x{}", original_tx_hash_str);
         let transaction_id = self.send_transaction(raw_tx, function_signature).await?;
         info!(
             "Transaction submitted successfully - tx hash: 0x{}, TC transaction ID: {}",
-            hex::encode(original_tx_hash),
-            transaction_id
+            original_tx_hash_str, transaction_id
         );
 
         Ok(original_tx_hash)
