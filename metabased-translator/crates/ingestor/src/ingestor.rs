@@ -37,6 +37,9 @@ struct BatchContext<'a> {
 
 #[derive(Debug, Error)]
 enum IngestorError {
+    #[error("Chain head before start block: head={head}, start={start_block}")]
+    ChainHeadBeforeStartBlock { head: u64, start_block: u64 },
+
     #[error("Block number mismatch: current={current}, got={received}")]
     BlockNumberMismatch { current: u64, received: u64 },
 
@@ -93,6 +96,15 @@ pub async fn run(
     )
     .await?
     .number;
+
+    if initial_chain_head < config.start_block {
+        return Err(IngestorError::ChainHeadBeforeStartBlock {
+            head: initial_chain_head,
+            start_block: config.start_block,
+        }
+        .into());
+    }
+
     let batch_size = config.syncing_batch_size;
     let polling_interval = config.polling_interval;
     let start_block = config.start_block;
