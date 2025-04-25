@@ -144,7 +144,7 @@ impl Batcher {
 
     async fn send_batch_to_sequencer(&self, data: Bytes) -> Result<()> {
         debug!(%self.chain_id, "Sending batch to sequencer");
-        self.tc_client.process_transaction(data, BATCH_FUNCTION_SIGNATURE.to_string()).await?;
+        self.tc_client.send_transaction(data, BATCH_FUNCTION_SIGNATURE.to_string()).await?;
         Ok(())
     }
 }
@@ -172,7 +172,6 @@ mod tests {
             redis_url: "dummy".to_string(),
             chain_id: 1,
             polling_interval: Duration::from_millis(10),
-            sequencer_client_url: "dummy".to_string(),
         }
     }
 
