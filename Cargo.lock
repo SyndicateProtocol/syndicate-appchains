@@ -4999,10 +4999,13 @@ name = "test-framework"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "block-builder",
+ "common",
  "contract-bindings",
  "ctor",
  "eyre",
  "mchain",
+ "prometheus-client",
  "reqwest",
  "serde",
  "shared",
