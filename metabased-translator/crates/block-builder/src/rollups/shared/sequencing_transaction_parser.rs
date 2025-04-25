@@ -12,6 +12,7 @@ use common::{
     types::PartialLogWithTxdata,
 };
 use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain::TransactionProcessed;
+use shared::zlib_compression::decompress_transactions;
 use thiserror::Error;
 
 /// Represents errors that can occur during sequencing transaction parsing.
@@ -40,6 +41,10 @@ pub enum SequencingParserError {
     /// No data was provided for decoding.
     #[error("No data provided for decoding")]
     NoDataProvided,
+
+    /// An error occurred while decompressing the transaction.
+    #[error("Failed to decompress transaction: {0:?}")]
+    DecompressionError(String),
 }
 
 /// The parser for meta-based transactions
@@ -71,16 +76,21 @@ impl SequencingTransactionParser {
         }
 
         let compression_byte = &data[0];
-        let compressed_data = &data[1..];
+        let compressed_data = Bytes::copy_from_slice(&data[1..]);
         let compression_type = get_compression_type(*compression_byte);
 
         let mut transactions = Vec::new();
         match compression_type {
             CompressionType::None => {
-                transactions.push(Bytes::copy_from_slice(compressed_data));
+                transactions.push(compressed_data);
             }
             CompressionType::Unknown => {
                 return Err(SequencingParserError::UnknownCompressionType(*compression_byte));
+            }
+            CompressionType::Zlib => {
+                let mut decompressed_data = decompress_transactions(&compressed_data)
+                    .map_err(|e| SequencingParserError::DecompressionError(e.to_string()))?;
+                transactions.append(&mut decompressed_data);
             }
         }
         Ok(transactions)
