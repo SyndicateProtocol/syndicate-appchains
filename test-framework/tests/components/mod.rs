@@ -11,8 +11,9 @@ use alloy::{
 use contract_bindings::{
     arbitrum::rollup::Rollup,
     metabased::{
-        alwaysallowedmodule::AlwaysAllowedModule, arbconfigmanager::ArbConfigManager,
-        metabasedsequencerchain::MetabasedSequencerChain,
+        alwaysallowedmodule::AlwaysAllowedModule,
+        arbconfigmanager::ArbConfigManager,
+        metabasedsequencerchain::MetabasedSequencerChain::{self, MetabasedSequencerChainInstance},
     },
 };
 use eyre::Result;
@@ -60,9 +61,12 @@ pub(crate) struct Components {
 
     /// Sequencing
     pub sequencing_provider: FilledProvider,
+    pub sequencing_rpc_url: String,
+    pub sequencing_contract: MetabasedSequencerChainInstance<(), FilledProvider>,
 
     /// Settlement
     pub settlement_provider: FilledProvider,
+    pub settlement_rpc_url: String,
     pub chain_id: u64,
     pub bridge_address: Address,
     pub inbox_address: Address,
@@ -72,6 +76,7 @@ pub(crate) struct Components {
 
     /// Mchain
     pub mchain_provider: MProvider,
+    pub mchain_rpc_url: String,
 
     pub poster_url: String,
 }
@@ -455,13 +460,18 @@ impl Components {
                 _timer: TestTimer(SystemTime::now(), start_time.elapsed().unwrap()),
 
                 sequencing_provider: seq_provider,
+                sequencing_rpc_url: sequencing_rpc_url.clone(),
+                sequencing_contract,
 
                 settlement_provider: set_provider,
+                settlement_rpc_url: settlement_rpc_url.clone(),
                 appchain_provider,
                 chain_id: options.appchain_chain_id,
                 bridge_address: arbitrum_bridge_address,
                 inbox_address: arbitrum_inbox_address,
+
                 mchain_provider,
+                mchain_rpc_url: mchain_rpc_url.clone(),
                 poster_url,
             },
             ComponentHandles {
