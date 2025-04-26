@@ -6,10 +6,12 @@ use bytes::BytesMut;
 use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
 use std::io::{Error, ErrorKind, Read, Write};
 
-// Valid Zlib CM bits
-const ZLIB_CM8: u8 = 0x08;
-const ZLIB_CM15: u8 = 0x0F;
-const CM_BITS_MASK: u8 = 0x0F;
+/// Valid Zlib CM bits
+pub const ZLIB_CM8: u8 = 0x08;
+/// Valid Zlib CM bits
+pub const ZLIB_CM15: u8 = 0x0F;
+/// Mask for CM bits
+pub const CM_BITS_MASK: u8 = 0x0F;
 
 /// Compresses a single Ethereum transaction using zlib compression
 /// Ensures the CM bits are set to 8 (default for zlib)

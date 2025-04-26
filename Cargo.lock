@@ -1550,6 +1550,7 @@ dependencies = [
  "eyre",
  "serde",
  "serde_json",
+ "shared",
  "strum_macros",
  "thiserror 2.0.12",
  "tokio",
