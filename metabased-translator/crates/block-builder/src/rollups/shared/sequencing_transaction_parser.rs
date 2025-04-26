@@ -14,6 +14,7 @@ use common::{
 use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain::TransactionProcessed;
 use shared::zlib_compression::decompress_transactions;
 use thiserror::Error;
+use tracing::error;
 
 /// Represents errors that can occur during sequencing transaction parsing.
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -108,8 +109,10 @@ impl SequencingTransactionParser {
             .map_err(|_e| SequencingParserError::DynSolEventCreation)?;
 
         // Decode the transactions
-        let transactions = self.decode_event_data(decoded_event.data)?;
-        Ok(transactions)
+        self.decode_event_data(decoded_event.data).map_err(|e| {
+            error!("Error decoding event data: {:?}", e);
+            e
+        })
     }
 }
 
