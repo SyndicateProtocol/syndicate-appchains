@@ -1,6 +1,11 @@
 //! The JSON-RPC server module for the Maestro service.
 
-use crate::{config::Config, layers::HeadersLayer, redis::producer::StreamProducer};
+use crate::{
+    config::{Config, RpcProvider},
+    errors::Error,
+    layers::HeadersLayer,
+    redis::producer::StreamProducer,
+};
 use alloy::{
     consensus::Transaction,
     primitives::{Bytes, ChainId},
@@ -25,7 +30,7 @@ use shared::{
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use tokio::sync::Mutex;
 use tower::ServiceBuilder;
-use tracing::info;
+use tracing::{info, warn};
 
 /// Request header for `eth_sendRawTransaction` calls that holds the intended `chain_id`
 pub const HEADER_CHAIN_ID: &str = "x-synd-chain-id";
@@ -47,7 +52,7 @@ pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
 
     let client = redis::Client::open(config.redis_url.as_str())?;
     let redis_conn = client.get_multiplexed_async_connection().await?;
-    let service = MaestroService::new(redis_conn, config);
+    let service = MaestroService::new(redis_conn, config).await?;
     info!("Connected to Redis successfully!");
 
     let mut module = RpcModule::new(service);
@@ -68,25 +73,29 @@ pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
     Ok((addr, handle))
 }
 
-/// The `v0` handler for the `eth_sendRawTransaction` JSON-RPC method. This forwards transactions
-/// to Arbitrum Nitro instances
+/// The handler for the `eth_sendRawTransaction` JSON-RPC method. This forwards transactions
+/// to Redis
 pub async fn send_raw_transaction_handler(
     params: Params<'static>,
     service: Arc<MaestroService>,
     extensions: Extensions,
 ) -> RpcResult<String> {
-    // TODO spam plane
-
-    // TODO control plane
-
-    // TODO return real hash
-
     let raw_tx = parse_send_raw_transaction_params(params)?;
     let tx = validate_transaction(&raw_tx)?;
     let chain_id = validate_chain_id(get_request_chain_id(extensions), tx.chain_id())?;
 
+    //TODO(SEQ-862)
+    // - check Redis for nonce
+    // if absent,
+    // - get nonce from RPC
+    // - store in Redis
+    // then,
+    // - validate txn nonce vs retrived nonce
+
     service.enqueue_raw_transaction(raw_tx, chain_id).await?;
     Ok(format!("0x{}", alloy::hex::encode(tx.hash())))
+
+    //TODO(SEQ-863): new thread checking for WAITING-GAP txns on nonce+1
 }
 
 fn get_request_chain_id(extensions: Extensions) -> Option<ChainId> {
@@ -116,13 +125,19 @@ fn validate_chain_id(
 pub struct MaestroService {
     redis_conn: MultiplexedConnection,
     producers: Mutex<HashMap<ChainId, Arc<StreamProducer>>>,
+    #[allow(dead_code)] // TODO(SEQ-862): remove this
+    rpc_providers: HashMap<ChainId, RpcProvider>,
     config: Config,
 }
 
 impl MaestroService {
     /// Create a new instance of the Maestro service
-    fn new(redis_conn: MultiplexedConnection, config: Config) -> Self {
-        Self { redis_conn, producers: Mutex::new(HashMap::new()), config }
+    async fn new(redis_conn: MultiplexedConnection, config: Config) -> Result<Self, Error> {
+        let rpc_providers = config.validate().await?;
+        if rpc_providers.is_empty() {
+            warn!("No RPC providers configured. This is probably undesirable");
+        }
+        Ok(Self { redis_conn, producers: Mutex::new(HashMap::new()), rpc_providers, config })
     }
 
     async fn get_or_create_producer(&self, chain_id: ChainId) -> Arc<StreamProducer> {
