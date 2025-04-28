@@ -68,8 +68,15 @@ impl Debug for BlockBuilderConfig {
 
 impl Default for BlockBuilderConfig {
     fn default() -> Self {
-        let zero = Address::ZERO.to_string();
-        Self::parse_from(["", "-s", &zero, "-b", &zero, "-i", &zero, "--mchain-rpc-url", ""])
+        Self {
+            mchain_rpc_url: String::new(),
+            sequencing_contract_address: Some(Address::ZERO),
+            target_rollup_type: TargetRollupType::ARBITRUM,
+            arbitrum_bridge_address: Some(Address::ZERO),
+            arbitrum_inbox_address: Some(Address::ZERO),
+            arbitrum_ignore_delayed_messages: Some(false),
+            allowed_settlement_addresses: Default::default(),
+        }
     }
 }
 

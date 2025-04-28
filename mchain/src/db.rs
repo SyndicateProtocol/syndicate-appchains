@@ -90,16 +90,9 @@ impl Block {
     }
 }
 
-/// key-value db trait
-pub trait KVDB {
-    fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes>;
-    fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V);
-    fn delete<K: AsRef<[u8]>>(&self, key: K);
-}
-
 /// rocksdb implements the key-value trait
 #[allow(clippy::unwrap_used)]
-impl<T: ThreadMode> KVDB for DBWithThreadMode<T> {
+impl<T: ThreadMode> ArbitrumDB for DBWithThreadMode<T> {
     fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes> {
         self.get(key).unwrap().map(|x| x.into())
     }
@@ -136,23 +129,11 @@ impl fmt::Display for DBKey {
 }
 
 /// generic db trait for reading and writing block data
-pub trait ArbitrumDB {
-    fn get_block(&self, key: u64) -> Result<Block, ErrorObjectOwned>;
-    fn put_block(&self, key: u64, value: &Block);
-    fn delete_block(&self, key: u64);
-    fn get_state(&self) -> State;
-    fn put_state(&self, value: &State);
-    fn get_message_acc(&self, key: u64) -> Result<FixedBytes<32>, ErrorObjectOwned>;
-    fn put_message_acc(&self, key: u64, value: &FixedBytes<32>);
-    fn delete_message_acc(&self, key: u64);
-    /// Create a new block that a contains a batch. If payload is empty,
-    /// a batch is not created and the block number is not returned.
-    fn add_batch(&self, block: MBlock) -> Result<Option<u64>, ErrorObjectOwned>;
-    fn check_version(&self);
-}
-
 #[allow(clippy::unwrap_used)]
-impl<T: KVDB> ArbitrumDB for T {
+pub trait ArbitrumDB {
+    fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes>;
+    fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V);
+    fn delete<K: AsRef<[u8]>>(&self, key: K);
     fn get_block(&self, key: u64) -> Result<Block, ErrorObjectOwned> {
         let state = self.get_state();
         if key <= state.batch_count { self.get(DBKey::Block(key).to_string()) } else { None }
@@ -204,20 +185,25 @@ impl<T: KVDB> ArbitrumDB for T {
     // returns the block number if a new block is added
     fn add_batch(&self, mblock: MBlock) -> Result<Option<u64>, ErrorObjectOwned> {
         let state = self.get_state();
+        if state.batch_count == 0 && mblock.payload.is_none() {
+            return Err(to_err("invalid first batch: must contain a payload"))
+        }
         if state.batch_count > 0 &&
             (mblock.timestamp < state.timestamp ||
+                (state.slot.seq_block_number > 0 &&
+                    mblock.slot.seq_block_number != state.slot.seq_block_number + 1) ||
                 mblock.slot.seq_block_number <= state.slot.seq_block_number ||
                 mblock.slot.set_block_number < state.slot.set_block_number)
         {
             return Err(to_err(format!(
-                "invalid batch: timestamp {} < {} or seq block {} <= {} or set block {} < {}",
+                "invalid batch: timestamp {} < {} or seq block {} != {} or set block {} < {}",
                 mblock.timestamp,
                 state.timestamp,
                 mblock.slot.seq_block_number,
-                state.slot.seq_block_number,
+                state.slot.seq_block_number + 1,
                 mblock.slot.set_block_number,
                 state.slot.set_block_number
-            )));
+            )))
         }
         // if the payload is empty, update the state with pending slot / timestamp info and return
         let (batch, messages) = match mblock.payload {
@@ -283,20 +269,23 @@ pub(crate) fn to_err<T: ToString>(err: T) -> ErrorObjectOwned {
 // fully in-memory kv db for testing
 #[cfg(test)]
 pub(crate) mod tests {
-    use super::KVDB;
-    use crate::db::{ArbitrumDB as _, MBlock, Slot};
+    use super::ArbitrumDB;
+    use crate::db::{MBlock, Slot};
     use alloy::primitives::Bytes;
     use std::{collections::HashMap, sync::RwLock};
 
     #[allow(clippy::redundant_pub_crate)]
-    pub(crate) struct TestDB(pub RwLock<HashMap<Bytes, Bytes>>);
+    #[derive(Debug)]
+    pub(crate) struct TestDB(pub(crate) RwLock<HashMap<Bytes, Bytes>>);
+
     impl TestDB {
         pub(crate) fn new() -> Self {
             Self(RwLock::new(HashMap::new()))
         }
     }
+
     #[allow(clippy::unwrap_used)]
-    impl KVDB for TestDB {
+    impl ArbitrumDB for TestDB {
         fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes> {
             self.0.read().unwrap().get(key.as_ref()).cloned()
         }
@@ -314,49 +303,67 @@ pub(crate) mod tests {
     #[test]
     fn invalid_batch() -> eyre::Result<()> {
         let db = TestDB::new();
-        db.add_batch(MBlock { payload: Some(Default::default()), ..Default::default() })?;
 
-        // not incrementing the seq block number fails
-        assert!(db
-            .add_batch(MBlock {
-                timestamp: 1,
-                payload: Some(Default::default()),
-                ..Default::default()
-            })
-            .is_err());
+        // first batch must contain a payload
+        assert!(db.add_batch(MBlock { payload: None, ..Default::default() }).is_err());
 
-        // not incrementing timestamp is okay
-        db.add_batch(MBlock {
-            slot: Slot { seq_block_number: 1, ..Default::default() },
-            payload: Some(Default::default()),
-            ..Default::default()
-        })?;
+        for payload in [None, Some(Default::default())] {
+            let db = TestDB::new();
+            db.add_batch(MBlock { payload: Some(Default::default()), ..Default::default() })?;
 
-        // incrementing both timestamp and seq block number is okay
-        db.add_batch(MBlock {
-            timestamp: 1,
-            slot: Slot { seq_block_number: 2, ..Default::default() },
-            payload: Some(Default::default()),
-        })?;
+            // not incrementing the seq block number fails
+            assert!(db
+                .add_batch(MBlock { timestamp: 1, payload: payload.clone(), ..Default::default() })
+                .is_err());
 
-        // decrementing timestamp fails
-        assert!(db
-            .add_batch(MBlock {
-                slot: Slot { seq_block_number: 3, ..Default::default() },
-                payload: Some(Default::default()),
-                ..Default::default()
-            })
-            .is_err());
-
-        // decrementing seq block number fails
-        assert!(db
-            .add_batch(MBlock {
-                timestamp: 2,
+            // initially the seq block number can be set arbitarily high
+            db.add_batch(MBlock {
                 slot: Slot { seq_block_number: 2, ..Default::default() },
-                payload: Some(Default::default()),
-            })
-            .is_err());
+                payload: payload.clone(),
+                ..Default::default()
+            })?;
 
+            // it can no longer be incremented by more than 1 thereafter
+            assert!(db
+                .add_batch(MBlock {
+                    slot: Slot { seq_block_number: 4, ..Default::default() },
+                    payload: payload.clone(),
+                    ..Default::default()
+                })
+                .is_err());
+
+            // not incrementing timestamp is okay
+            db.add_batch(MBlock {
+                slot: Slot { seq_block_number: 3, ..Default::default() },
+                payload: payload.clone(),
+                ..Default::default()
+            })?;
+
+            // incrementing both timestamp and seq block number is okay
+            db.add_batch(MBlock {
+                timestamp: 1,
+                slot: Slot { seq_block_number: 4, ..Default::default() },
+                payload: payload.clone(),
+            })?;
+
+            // decrementing timestamp fails
+            assert!(db
+                .add_batch(MBlock {
+                    slot: Slot { seq_block_number: 5, ..Default::default() },
+                    payload: payload.clone(),
+                    ..Default::default()
+                })
+                .is_err());
+
+            // decrementing seq block number fails, even if ts is incremented
+            assert!(db
+                .add_batch(MBlock {
+                    timestamp: 2,
+                    slot: Slot { seq_block_number: 3, ..Default::default() },
+                    payload,
+                })
+                .is_err());
+        }
         Ok(())
     }
 }

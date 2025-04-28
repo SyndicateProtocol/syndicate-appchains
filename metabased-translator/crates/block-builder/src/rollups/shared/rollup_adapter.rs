@@ -9,15 +9,12 @@ use async_trait::async_trait;
 use common::types::{PartialBlock, SequencingBlock, SettlementBlock};
 use eyre::Result;
 use mchain::db::DelayedMessage;
-use std::{
-    fmt::Debug,
-    marker::{Send, Sync},
-};
+use std::marker::{Send, Sync};
 
 /// Trait for rollup-specific block builders that construct batches from sequencer transactions
 /// and delayed messages from settlement ones.
 #[async_trait]
-pub trait RollupAdapter: Debug + Send + Sync + Unpin + Clone + 'static {
+pub trait RollupAdapter: Send + Sync {
     /// Parses a sequencing chain block into a batch.
     ///
     /// Uses the associated transaction parser to extract transactions

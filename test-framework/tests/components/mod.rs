@@ -11,12 +11,13 @@ use alloy::{
 use contract_bindings::{
     arbitrum::rollup::Rollup,
     metabased::{
-        alwaysallowedmodule::AlwaysAllowedModule, arbconfigmanager::ArbConfigManager,
-        metabasedsequencerchain::MetabasedSequencerChain,
+        alwaysallowedmodule::AlwaysAllowedModule,
+        arbconfigmanager::ArbConfigManager,
+        metabasedsequencerchain::MetabasedSequencerChain::{self, MetabasedSequencerChainInstance},
     },
 };
 use eyre::Result;
-use mchain::mchain::{rollup_config, MProvider};
+use mchain::{client::MProvider, server::rollup_config};
 use std::{
     env,
     future::Future,
@@ -60,9 +61,12 @@ pub(crate) struct Components {
 
     /// Sequencing
     pub sequencing_provider: FilledProvider,
+    pub sequencing_rpc_url: String,
+    pub sequencing_contract: MetabasedSequencerChainInstance<(), FilledProvider>,
 
     /// Settlement
     pub settlement_provider: FilledProvider,
+    pub settlement_rpc_url: String,
     pub chain_id: u64,
     pub bridge_address: Address,
     pub inbox_address: Address,
@@ -450,12 +454,16 @@ impl Components {
                 _timer: TestTimer(SystemTime::now(), start_time.elapsed().unwrap()),
 
                 sequencing_provider: seq_provider,
+                sequencing_rpc_url: sequencing_rpc_url.clone(),
+                sequencing_contract,
 
                 settlement_provider: set_provider,
+                settlement_rpc_url: settlement_rpc_url.clone(),
                 appchain_provider,
                 chain_id: options.appchain_chain_id,
                 bridge_address: arbitrum_bridge_address,
                 inbox_address: arbitrum_inbox_address,
+
                 mchain_provider,
                 poster_url,
             },

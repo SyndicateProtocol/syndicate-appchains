@@ -3,7 +3,7 @@
 use alloy::primitives::Address;
 use clap::Parser;
 use jsonrpsee::server::{RpcServiceBuilder, Server};
-use mchain::{mchain::start_mchain, metrics::MchainMetrics};
+use mchain::{metrics::MchainMetrics, server::start_mchain};
 use rocksdb::DB;
 use shared::{
     logger::set_global_default_subscriber,

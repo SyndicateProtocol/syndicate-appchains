@@ -7,11 +7,12 @@ use alloy::{
     rpc::types::BlockNumberOrTag,
 };
 use block_builder::rollups::shared::rollup_adapter::BlockBuilder;
-use common::{
-    eth_client::RPCClient,
-    types::{Block, BlockRef, Chain, GetBlockRef, PartialLogWithTxdata, Receipt},
-};
+use common::types::{Chain, GetBlockRef, PartialLogWithTxdata};
 use eyre::Error;
+use shared::{
+    eth_client::{RPCClient, RPCClientError},
+    types::{Block, BlockRef, Receipt},
+};
 use std::{
     cmp::{max, min},
     sync::Arc,
@@ -42,6 +43,9 @@ struct BatchContext<'a, PartialBlock, T: BlockBuilder<PartialBlock>> {
 
 #[derive(Debug, Error)]
 enum IngestorError {
+    #[error("Chain head before start block: head={head}, start={start_block}")]
+    ChainHeadBeforeStartBlock { head: u64, start_block: u64 },
+
     #[error("Block number mismatch: current={current}, got={received}")]
     BlockNumberMismatch { current: u64, received: u64 },
 
@@ -107,6 +111,15 @@ pub async fn run<PartialBlock: Send + Clone + GetBlockRef + 'static>(
     )
     .await?
     .number;
+
+    if initial_chain_head < config.start_block {
+        return Err(IngestorError::ChainHeadBeforeStartBlock {
+            head: initial_chain_head,
+            start_block: config.start_block,
+        }
+        .into());
+    }
+
     let batch_size = config.syncing_batch_size;
     let polling_interval = config.polling_interval;
     let start_block = config.start_block;
@@ -434,8 +447,8 @@ async fn fetch_with_retry<T: Send, F, Fut, P>(
 ) -> Result<T, IngestorError>
 where
     F: Fn() -> Fut + Send,
-    Fut: std::future::Future<Output = Result<T, common::eth_client::RPCClientError>> + Send,
-    P: Fn(&common::eth_client::RPCClientError) -> bool + Send,
+    Fut: std::future::Future<Output = Result<T, RPCClientError>> + Send,
+    P: Fn(&RPCClientError) -> bool + Send,
 {
     let mut retry_count = 0;
     let mut backoff = backoff_initial_interval;
@@ -487,7 +500,7 @@ async fn fetch_block_with_retry(
         backoff_initial_interval,
         backoff_scaling_factor,
         max_backoff,
-        |err| matches!(err, common::eth_client::RPCClientError::BlockNotFound(_)),
+        |err| matches!(err, RPCClientError::BlockNotFound(_)),
         chain,
     )
     .await
@@ -510,7 +523,7 @@ async fn fetch_receipts_with_retry(
         backoff_initial_interval,
         backoff_scaling_factor,
         max_backoff,
-        |err| matches!(err, common::eth_client::RPCClientError::BlockReceiptsNotFound(_)),
+        |err| matches!(err, RPCClientError::BlockReceiptsNotFound(_)),
         chain,
     )
     .await
@@ -522,10 +535,7 @@ mod tests {
     use crate::metrics::IngestorMetrics;
     use alloy::rpc::types::BlockNumberOrTag;
     use async_trait::async_trait;
-    use common::{
-        eth_client::RPCClientError,
-        types::{Block, PartialBlock},
-    };
+    use common::types::PartialBlock;
     use eyre::Result;
     use mockall::{mock, predicate::*};
     use shared::metrics::MetricsState;

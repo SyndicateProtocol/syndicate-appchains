@@ -1,11 +1,10 @@
 use crate::{
-    db::{to_err, ArbitrumDB as _, DelayedMessage, MBlock, Slot, State, KVDB},
+    db::{to_err, ArbitrumDB, DelayedMessage, MBlock, Slot, State},
     metrics::MchainMetrics,
 };
 use alloy::{
     eips::BlockNumberOrTag,
     primitives::{address, keccak256, Address, Bytes, FixedBytes, U256},
-    providers::{Provider as _, ProviderBuilder, RootProvider},
     rpc::types::{FilterBlockOption, TransactionRequest},
     sol_types::{SolCall, SolEvent as _, SolValue as _},
 };
@@ -83,43 +82,8 @@ pub fn rollup_config(chain_id: u64, chain_owner: Address) -> String {
     cfg
 }
 
-#[derive(Debug, Clone)]
-pub struct MProvider(RootProvider);
-
 #[allow(clippy::unwrap_used)]
-impl MProvider {
-    pub fn new(url: alloy::transports::http::reqwest::Url) -> Self {
-        Self(ProviderBuilder::default().on_http(url))
-    }
-    pub async fn get_block_number(&self) -> u64 {
-        #[allow(clippy::expect_used)]
-        self.0
-            .get_block_by_number(BlockNumberOrTag::Latest)
-            .await
-            .expect("get_block_number failed")
-            .expect("latest block not found")
-            .header
-            .number
-    }
-    pub async fn add_batch(&self, batch: &MBlock) -> eyre::Result<Option<u64>> {
-        Ok(self.0.raw_request("mchain_addBatch".into(), batch).await?)
-    }
-    pub async fn get_source_chains_processed_blocks(
-        &self,
-        tag: BlockNumberOrTag,
-    ) -> eyre::Result<(Slot, u64)> {
-        Ok(self.0.raw_request("mchain_getSourceChainsProcessedBlocks".into(), tag).await?)
-    }
-    pub async fn rollback_to_block(&self, block_number: u64) -> eyre::Result<()> {
-        Ok(self.0.raw_request("mchain_rollbackToBlock".into(), block_number).await?)
-    }
-    pub async fn rollup_owner(&self) -> Address {
-        self.0.raw_request("mchain_rollupOwner".into(), ()).await.unwrap()
-    }
-}
-
-#[allow(clippy::unwrap_used)]
-pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
+pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     chain_id: u64,
     rollup_owner: Address,
     finality_delay: u64,
@@ -259,16 +223,17 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
             "mchain_getSourceChainsProcessedBlocks",
             move |p, (db, _, _), _| -> Result<(Slot, u64), ErrorObjectOwned> {
                 let tag: BlockNumberOrTag = p.parse()?;
-                let block_num = match tag {
+                match tag {
                     BlockNumberOrTag::Pending => {
                         let state = db.get_state();
-                        return Ok((state.slot, state.batch_count + 1))
+                        Ok((state.slot, state.batch_count + 1))
                     }
-                    BlockNumberOrTag::Number(i) => i,
-                    _ => return Err(to_err(format!("unexpected block tag: {}", tag))),
-                };
-                let block = db.get_block(block_num)?;
-                Ok((block.slot, block_num))
+                    BlockNumberOrTag::Number(block_num) => {
+                        let block = db.get_block(block_num)?;
+                        Ok((block.slot, block_num))
+                    }
+                    _ => Err(to_err(format!("unexpected block tag: {}", tag))),
+                }
             },
         )
         .unwrap();
@@ -479,33 +444,12 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::start_mchain;
-    use crate::{
-        db::{tests::TestDB, DelayedMessage, MBlock, Slot, KVDB},
-        mchain::MProvider,
-        metrics::MchainMetrics,
-    };
-    use alloy::{
-        eips::BlockNumberOrTag,
-        primitives::{Address, Bytes},
-        providers::Provider as _,
-    };
-    use jsonrpsee::server::{Server, ServerHandle};
-    use std::{
-        sync::{Arc, RwLock},
-        time::UNIX_EPOCH,
-    };
-    use test_utils::port_manager::PortManager;
+#[allow(clippy::redundant_pub_crate)]
+pub(crate) mod tests {
+    use std::{sync::RwLock, time::UNIX_EPOCH};
 
-    #[ctor::ctor]
-    fn init() {
-        shared::logger::set_global_default_subscriber();
-    }
-
-    #[allow(clippy::redundant_pub_crate)]
     pub(crate) struct SystemTime(RwLock<u64>);
-    static TIME: SystemTime = SystemTime(RwLock::new(0));
+    pub(crate) static TIME: SystemTime = SystemTime(RwLock::new(0));
     impl SystemTime {
         pub(crate) fn now() -> &'static Self {
             &TIME
@@ -517,176 +461,8 @@ mod tests {
         pub(crate) fn as_secs(&self) -> u64 {
             *self.0.read().unwrap()
         }
-        fn set(&self, secs: u64) {
+        pub(crate) fn set(&self, secs: u64) {
             *self.0.write().unwrap() = secs;
         }
-    }
-
-    impl KVDB for Arc<TestDB> {
-        fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes> {
-            self.as_ref().get(key)
-        }
-        fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V) {
-            self.as_ref().put(key, value)
-        }
-        fn delete<K: AsRef<[u8]>>(&self, key: K) {
-            self.as_ref().delete(key)
-        }
-    }
-
-    impl MProvider {
-        async fn get_finalized_block(&self) -> u64 {
-            self.0
-                .get_block_by_number(BlockNumberOrTag::Finalized)
-                .await
-                .expect("get_finalized_block failed")
-                .expect("finalized block not found")
-                .header
-                .number
-        }
-    }
-
-    async fn setup() -> eyre::Result<(MProvider, Arc<TestDB>, ServerHandle)> {
-        let db = Arc::new(TestDB::new());
-        let mchain =
-            start_mchain(10, Address::ZERO, 60, db.clone(), MchainMetrics::default()).await;
-        let port = PortManager::instance().next_port().await;
-        let handle = Server::builder().build(format!("0.0.0.0:{}", port)).await?.start(mchain);
-        let provider = MProvider::new(format!("http://localhost:{}", port).parse()?);
-        Ok((provider, db, handle))
-    }
-
-    #[tokio::test]
-    async fn rollback_to_block() -> eyre::Result<()> {
-        let empty = DelayedMessage {
-            kind: 0,
-            sender: Address::ZERO,
-            data: Default::default(),
-            base_fee_l1: Default::default(),
-        };
-        let (mchain, db, _handle) = setup().await?;
-        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 1); // init msg, block number, batch (1)
-        assert_eq!(mchain.get_block_number().await, 1);
-        mchain
-            .add_batch(&MBlock {
-                slot: Slot { seq_block_number: 1, ..Default::default() },
-                payload: Some(Default::default()),
-                ..Default::default()
-            })
-            .await?;
-        assert_eq!(db.0.read().unwrap().keys().len(), 4 + 1); // block (2)
-        assert_eq!(mchain.get_block_number().await, 2);
-        mchain
-            .add_batch(&MBlock {
-                payload: Some((Default::default(), vec![empty.clone()])),
-                slot: Slot { seq_block_number: 2, ..Default::default() },
-                timestamp: 0,
-            })
-            .await?; // block + messages (3)
-        assert_eq!(db.0.read().unwrap().keys().len(), 6 + 1);
-        assert_eq!(mchain.get_block_number().await, 3);
-        mchain
-            .add_batch(&MBlock {
-                payload: Some((Default::default(), vec![empty; 2])),
-                slot: Slot { seq_block_number: 3, ..Default::default() },
-                timestamp: 0,
-            })
-            .await?; // block + 2 messagess (4)
-        assert_eq!(db.0.read().unwrap().keys().len(), 9 + 1);
-        assert_eq!(mchain.get_block_number().await, 4);
-        mchain.rollback_to_block(2).await?; // rm 2 blocks + 3 messages
-        assert_eq!(db.0.read().unwrap().keys().len(), 4 + 1);
-        assert_eq!(mchain.get_block_number().await, 2);
-        mchain.rollback_to_block(1).await?; // rm block
-        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 1);
-        assert_eq!(mchain.get_block_number().await, 1);
-        assert!(mchain.rollback_to_block(0).await.is_err());
-        assert!(mchain.rollback_to_block(2).await.is_err());
-        assert_eq!(db.0.read().unwrap().keys().len(), 3 + 1);
-        assert_eq!(mchain.get_block_number().await, 1);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn finality() -> eyre::Result<()> {
-        let (mchain, _, _handle) = setup().await?;
-        assert_eq!(mchain.get_block_number().await, 1);
-        assert_eq!(mchain.get_finalized_block().await, 1);
-        mchain
-            .add_batch(&MBlock {
-                slot: Slot { seq_block_number: 1, ..Default::default() },
-                payload: Some(Default::default()),
-                ..Default::default()
-            })
-            .await?;
-        mchain
-            .add_batch(&MBlock {
-                timestamp: 1,
-                slot: Slot { seq_block_number: 2, ..Default::default() },
-                payload: Some(Default::default()),
-            })
-            .await?;
-        mchain
-            .add_batch(&MBlock {
-                timestamp: 1,
-                slot: Slot { seq_block_number: 3, ..Default::default() },
-                payload: Some(Default::default()),
-            })
-            .await?;
-        assert_eq!(mchain.get_block_number().await, 4);
-        assert_eq!(mchain.get_finalized_block().await, 1);
-        TIME.set(59);
-        assert_eq!(mchain.get_block_number().await, 4);
-        assert_eq!(mchain.get_finalized_block().await, 1);
-        TIME.set(60);
-        assert_eq!(mchain.get_block_number().await, 4);
-        assert_eq!(mchain.get_finalized_block().await, 2);
-        TIME.set(61);
-        assert_eq!(mchain.get_block_number().await, 4);
-        assert_eq!(mchain.get_finalized_block().await, 4);
-        mchain.rollback_to_block(3).await?;
-        assert_eq!(mchain.get_block_number().await, 3);
-        assert_eq!(mchain.get_finalized_block().await, 3);
-        mchain
-            .add_batch(&MBlock {
-                timestamp: 1,
-                slot: Slot { seq_block_number: 3, ..Default::default() },
-                payload: Some(Default::default()),
-            })
-            .await?;
-        assert_eq!(mchain.get_block_number().await, 4);
-        assert_eq!(mchain.get_finalized_block().await, 4);
-        mchain
-            .add_batch(&MBlock {
-                timestamp: 2,
-                slot: Slot { seq_block_number: 4, ..Default::default() },
-                payload: Some(Default::default()),
-            })
-            .await?;
-        assert_eq!(mchain.get_block_number().await, 5);
-        assert_eq!(mchain.get_finalized_block().await, 4);
-        mchain.rollback_to_block(4).await?;
-        TIME.set(62);
-        assert_eq!(mchain.get_block_number().await, 4);
-        assert_eq!(mchain.get_finalized_block().await, 4);
-        mchain
-            .add_batch(&MBlock {
-                timestamp: 100,
-                slot: Slot { seq_block_number: 4, ..Default::default() },
-                payload: Some(Default::default()),
-            })
-            .await?;
-        assert_eq!(mchain.get_block_number().await, 5);
-        assert_eq!(mchain.get_finalized_block().await, 4);
-        TIME.set(0);
-        assert_eq!(mchain.get_block_number().await, 5);
-        assert_eq!(mchain.get_finalized_block().await, 4);
-        mchain.rollback_to_block(2).await?;
-        assert_eq!(mchain.get_block_number().await, 2);
-        assert_eq!(mchain.get_finalized_block().await, 2);
-        TIME.set(1000);
-        assert_eq!(mchain.get_block_number().await, 2);
-        assert_eq!(mchain.get_finalized_block().await, 2);
-        Ok(())
     }
 }

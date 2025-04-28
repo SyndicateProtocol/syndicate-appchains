@@ -1,11 +1,12 @@
 //! Slotter module for metabased-translator
 use crate::metrics::SlotterMetrics;
 use alloy::primitives::{FixedBytes, B256};
-use common::types::{BlockRef, Chain, KnownState, SequencingBlock, SettlementBlock};
+use common::types::{Chain, SequencingBlock, SettlementBlock};
 use mchain::{
+    client::{KnownState, Provider},
     db::{MBlock, Slot},
-    mchain::MProvider,
 };
+use shared::types::BlockRef;
 use thiserror::Error;
 use tokio::sync::mpsc::Receiver;
 use tracing::{error, info, trace};
@@ -18,7 +19,7 @@ pub async fn run(
     known_state: Option<KnownState>,
     mut sequencing_rx: Receiver<SequencingBlock>,
     mut settlement_rx: Receiver<SettlementBlock>,
-    provider: &MProvider,
+    provider: &impl Provider,
     metrics: SlotterMetrics,
 ) -> Result<(), SlotterError> {
     let (mut latest_sequencing_block, mut latest_settlement_block) = match known_state {
@@ -191,15 +192,34 @@ mod tests {
             SlotterError::{BlockNumberSkipped, EarlierTimestamp, ReorgDetected},
         },
     };
-    use alloy::primitives::{FixedBytes, U256};
-    use common::types::{BlockRef, Chain, KnownState};
-    use mchain::mchain::MProvider;
+    use alloy::{
+        primitives::{FixedBytes, U256},
+        rpc::json_rpc::{RpcRecv, RpcSend},
+        transports::{RpcError, TransportErrorKind},
+    };
+    use async_trait::async_trait;
+    use common::types::Chain;
+    use mchain::client::{KnownState, Provider};
     use prometheus_client::registry::Registry;
+    use shared::types::BlockRef;
     use tokio::sync::mpsc;
 
     #[ctor::ctor]
     fn init() {
         shared::logger::set_global_default_subscriber();
+    }
+
+    struct PanicProvider {}
+
+    #[async_trait]
+    impl Provider for PanicProvider {
+        async fn raw_request<Params: RpcSend, T: RpcRecv + Clone>(
+            &self,
+            _method: &'static str,
+            _params: Params,
+        ) -> Result<T, RpcError<TransportErrorKind>> {
+            panic!("unexpected call to raw_request");
+        }
     }
 
     #[tokio::test]
@@ -220,7 +240,7 @@ mod tests {
             }),
             seq_rx,
             set_rx,
-            &MProvider::new("http://localhost:80".parse()?),
+            &PanicProvider {},
             SlotterMetrics::new(&mut Registry::default()),
         )
         .await;

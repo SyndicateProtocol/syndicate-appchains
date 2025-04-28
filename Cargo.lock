@@ -69,6 +69,7 @@ dependencies = [
  "alloy-core",
  "alloy-eips",
  "alloy-genesis",
+ "alloy-json-rpc",
  "alloy-network",
  "alloy-node-bindings",
  "alloy-provider",
@@ -1544,15 +1545,10 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "async-trait",
  "mchain",
  "serde",
- "serde_json",
+ "shared",
  "strum_macros",
- "thiserror 2.0.12",
- "tokio",
- "tracing",
- "url",
 ]
 
 [[package]]
@@ -3257,10 +3253,12 @@ dependencies = [
  "prometheus-client",
  "rocksdb",
  "serde",
+ "serde_json",
  "shared",
  "test-utils",
  "tokio",
  "tracing",
+ "url",
 ]
 
 [[package]]
@@ -3327,6 +3325,7 @@ dependencies = [
  "contract-bindings",
  "eyre",
  "ingestor",
+ "mchain",
  "metrics",
  "shared",
  "slotter",
@@ -5001,10 +5000,12 @@ name = "test-framework"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "block-builder",
  "contract-bindings",
  "ctor",
  "eyre",
  "mchain",
+ "prometheus-client",
  "reqwest",
  "serde",
  "shared",
