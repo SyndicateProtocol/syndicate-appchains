@@ -2,6 +2,7 @@
 //! centralized, high-performance transaction submission service.
 
 pub mod config;
+pub mod errors;
 pub mod layers;
 pub mod redis;
 pub mod server;
