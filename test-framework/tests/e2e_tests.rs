@@ -8,18 +8,14 @@ use alloy::{
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, Block, TransactionRequest},
 };
-use block_builder::{
-    config::BlockBuilderConfig, connectors::mchain::MetaChainProvider,
-    metrics::BlockBuilderMetrics, rollups::arbitrum::arbitrum_adapter::ArbitrumAdapter,
-};
-use common::eth_client::{EthClient, RPCClient};
 use contract_bindings::arbitrum::{
     arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox, irollupcore::IRollupCore,
     nodeinterface::NodeInterface, rollup::Rollup,
 };
 use eyre::Result;
-use prometheus_client::registry::Registry;
+use mchain::client::Provider as _;
 use serde::{Deserialize, Serialize};
+use shared::eth_client::{EthClient, RPCClient};
 use std::{sync::Arc, time::Duration};
 use test_utils::wait_until;
 
@@ -553,6 +549,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
     Components::run(
         &ConfigurationOptions { pre_loaded: None, ..Default::default() },
         |components| async move {
+            let set_offset = components.settlement_provider.get_block_number().await?;
             // mchain is on genesis (block 1)
             assert_eq!(components.mchain_provider.get_block_number().await, 1);
 
@@ -576,26 +573,23 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
                 components.mchain_provider.get_block_number().await == 2,
                 Duration::from_secs(10)
             );
-            let (seq_num, _seq_hash, set_num, _set_hash, block_number) = components
+            let (slot, block_number) = components
                 .mchain_provider
-                .get_source_chains_processed_blocks(BlockNumberOrTag::Latest)
+                .get_source_chains_processed_blocks(BlockNumberOrTag::Pending)
                 .await?;
-            assert_eq!(seq_num, 2);
-            assert_eq!(set_num, 0);
+            assert_eq!(slot.seq_block_number, 2);
+            assert_eq!(slot.set_block_number, 1 + set_offset);
+            assert_eq!(block_number, 3);
+
+            let (slot, block_number) = components
+                .mchain_provider
+                .get_source_chains_processed_blocks(BlockNumberOrTag::Number(block_number - 1))
+                .await?;
+            assert_eq!(slot.seq_block_number, 2);
+            assert_eq!(slot.set_block_number, 1 + set_offset);
             assert_eq!(block_number, 2);
 
-            // assert that restarting and rolling back here will make mchain go back to block 1
-
-            let mchain_internal_provider = MetaChainProvider::start(
-                &BlockBuilderConfig {
-                    mchain_rpc_url: components.mchain_rpc_url.clone(),
-                    ..Default::default()
-                },
-                BlockBuilderMetrics::new(&mut Registry::default()),
-                ArbitrumAdapter::new(&BlockBuilderConfig::default()),
-            )
-            .await?;
-
+            // assert that restarting and rolling back here will not make mchain go back to block 1
             let seq_mchain_client: Arc<dyn RPCClient> = Arc::new(
                 EthClient::new(&components.sequencing_rpc_url, Duration::from_secs(10)).await?,
             );
@@ -603,12 +597,29 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
                 EthClient::new(&components.settlement_rpc_url, Duration::from_secs(10)).await?,
             );
 
-            mchain_internal_provider
+            components
+                .mchain_provider
                 .reconcile_mchain_with_source_chains(&seq_mchain_client, &settlement_client)
                 .await?;
 
-            // mchain should be rolled back to genesis (block 1)
-            assert_eq!(components.mchain_provider.get_block_number().await, 1);
+            // mchain should be on the same block since no reorgs occurred
+            assert_eq!(components.mchain_provider.get_block_number().await, 2);
+
+            let (slot, block_number) = components
+                .mchain_provider
+                .get_source_chains_processed_blocks(BlockNumberOrTag::Pending)
+                .await?;
+            assert_eq!(slot.seq_block_number, 2);
+            assert_eq!(slot.set_block_number, 1 + set_offset);
+            assert_eq!(block_number, 3);
+
+            let (slot, block_number) = components
+                .mchain_provider
+                .get_source_chains_processed_blocks(BlockNumberOrTag::Number(block_number - 1))
+                .await?;
+            assert_eq!(slot.seq_block_number, 2);
+            assert_eq!(slot.set_block_number, 1 + set_offset);
+            assert_eq!(block_number, 2);
             Ok(())
         },
     )

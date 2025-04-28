@@ -10,16 +10,10 @@ version.workspace      = true
 
 [dependencies]
 alloy        = { workspace = true, features = ["provider-engine-api"] }
-async-trait  = { workspace = true }
-bincode      = { workspace = true }
-eyre         = { workspace = true }
+mchain       = { workspace = true }
 serde        = { workspace = true, features = ["derive", "rc"] }
-serde_json   = { workspace = true }
+shared       = { workspace = true }
 strum_macros = { workspace = true }
-thiserror    = { workspace = true }
-tokio        = { workspace = true }
-tracing      = { workspace = true, features = ["attributes"] }
-url          = { workspace = true }
 
 [lints]
 workspace = true

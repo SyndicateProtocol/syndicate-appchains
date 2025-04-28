@@ -8,7 +8,7 @@ use alloy::{
 };
 use core::time;
 use eyre::Result;
-use mchain::mchain::{rollup_config, MProvider};
+use mchain::{client::MProvider, server::rollup_config};
 use std::{
     env,
     future::Future,
@@ -136,7 +136,7 @@ pub async fn start_mchain(
         vec![
             "--chain-id".to_string(),
             chain_id.to_string(),
-            "--chain-owner".to_string(),
+            "--chain-owner-address".to_string(),
             chain_owner.to_string(),
             "--port".to_string(),
             port.to_string(),
@@ -149,7 +149,7 @@ pub async fn start_mchain(
     )
     .await?;
     let url = format!("http://localhost:{port}");
-    let mchain = MProvider::new(url.parse()?);
+    let mchain = MProvider::new(&url)?;
     Ok((url, docker, mchain))
 }
 
@@ -165,7 +165,7 @@ pub async fn launch_nitro_node(
 
     let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
 
-    let nitro = Docker::new(
+    let mut nitro = Docker::new(
         Command::new("docker")
             .arg("run")
             .arg("--init")
@@ -195,14 +195,19 @@ pub async fn launch_nitro_node(
     let url = format!("http://localhost:{}", port);
 
     let rollup = ProviderBuilder::default().on_http(url.parse()?);
-    // give it two minutes to launch (in case it needs to download the image)
-    wait_until!(rollup.get_chain_id().await.is_ok(), Duration::from_secs(5 * 60)); // give it time to download the image if necessary
+    wait_until!(
+        if let Some(status) = nitro.try_wait()? {
+            panic!("nitro node exited with {}", status);
+        };
+        rollup.get_chain_id().await.is_ok(),
+        Duration::from_secs(5*60)  // give it time to download the image if necessary
+    );
     Ok((nitro, rollup, url))
 }
 
 pub async fn start_redis() -> Result<(Docker, String)> {
     let port = PortManager::instance().next_port().await;
-    let redis = Docker::new(
+    let mut redis = Docker::new(
         Command::new("docker")
             .arg("run")
             .arg("--init")
@@ -216,6 +221,9 @@ pub async fn start_redis() -> Result<(Docker, String)> {
 
     let client = redis::Client::open(redis_url.as_str()).unwrap();
     wait_until!(
+        if let Some(status) = redis.try_wait()? {
+            panic!("redis exited with {}", status);
+        };
         client.get_multiplexed_async_connection().await.is_ok(),
         time::Duration::from_secs(5 * 60) // give it time to download the image if necessary
     );

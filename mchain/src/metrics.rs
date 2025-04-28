@@ -19,6 +19,7 @@ pub struct ReorgMetrics {
 /// Structure holding metrics related to the `Poster`.
 #[derive(Debug, Default, Clone)]
 pub struct MchainMetrics {
+    pub sequencing_block: BlockMetrics,
     pub last_block: BlockMetrics,
     pub finalized_block: BlockMetrics,
     pub last_reorg: ReorgMetrics,
@@ -32,29 +33,45 @@ impl MchainMetrics {
     pub fn new(registry: &mut Registry) -> Self {
         let metrics = Self::default();
         registry.register(
+            "sequencing_block_number",
+            "Tracks the latest sequencing chain block number",
+            metrics.sequencing_block.number.clone(),
+        );
+        registry.register(
+            "sequencing_block_timestamp",
+            "Tracks the latest sequencing chain block timestamp",
+            metrics.sequencing_block.timestamp.clone(),
+        );
+        registry.register(
+            "sequencing_block_delay",
+            "Tracks the latest sequencing chain block delay",
+            metrics.sequencing_block.delay.clone(),
+        );
+
+        registry.register(
             "last_block_number",
-            "Tracks the latest block number",
+            "Tracks the latest mchain block number",
             metrics.last_block.number.clone(),
         );
         registry.register(
             "last_block_timestamp",
-            "Tracks the latest block timestamp",
+            "Tracks the latest mchain block timestamp",
             metrics.last_block.timestamp.clone(),
         );
         registry.register(
             "last_block_delay",
-            "Tracks the latest block delay",
+            "Tracks the latest mchain block delay",
             metrics.last_block.delay.clone(),
         );
 
         registry.register(
             "finalized_block_number",
-            "Tracks the finalized block number",
+            "Tracks the finalized mchain block number",
             metrics.finalized_block.number.clone(),
         );
         registry.register(
             "finalized_block_timestamp",
-            "Tracks the finalized block timestamp",
+            "Tracks the finalized mchain block timestamp",
             metrics.finalized_block.timestamp.clone(),
         );
         registry.register(
@@ -96,6 +113,10 @@ impl MchainMetrics {
         );
 
         metrics
+    }
+
+    pub fn record_sequencing_block(&self, number: u64, timestamp: u64) {
+        Self::record_block(&self.sequencing_block, number, timestamp);
     }
 
     pub fn record_last_block(&self, number: u64, timestamp: u64) {

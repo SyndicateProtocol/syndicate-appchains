@@ -1,5 +1,4 @@
 //! The `metrics` module  handles metrics recording for the metabased translator
-use block_builder::metrics::BlockBuilderMetrics;
 use ingestor::metrics::IngestorMetrics;
 use prometheus_client::registry::Registry;
 use slotter::metrics::SlotterMetrics;
@@ -13,8 +12,6 @@ pub struct TranslatorMetrics {
     pub ingestor_settlement: IngestorMetrics,
     /// Metrics for the slotter
     pub slotter: SlotterMetrics,
-    /// Metrics for the block builder
-    pub block_builder: BlockBuilderMetrics,
 }
 
 impl TranslatorMetrics {
@@ -24,8 +21,7 @@ impl TranslatorMetrics {
         let ingestor_sequencing = IngestorMetrics::new(registry);
         let ingestor_settlement = IngestorMetrics::new(registry);
         let slotter = SlotterMetrics::new(registry);
-        let block_builder = BlockBuilderMetrics::new(registry);
-        Self { ingestor_sequencing, ingestor_settlement, slotter, block_builder }
+        Self { ingestor_sequencing, ingestor_settlement, slotter }
     }
 }
 
