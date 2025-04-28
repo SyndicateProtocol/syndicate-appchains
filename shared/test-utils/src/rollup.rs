@@ -1,7 +1,7 @@
 //! Rollup utils for the integration tests
 
 use alloy::primitives::Address;
-use mchain::mchain::{MCHAIN_ID, ROLLUP};
+use mchain::server::{MCHAIN_ID, ROLLUP};
 
 /// Get the nitro json configuration data for the rollup
 pub fn rollup_info(rollup_config: &str, chain_name: &str) -> String {

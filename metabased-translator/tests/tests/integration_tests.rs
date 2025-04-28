@@ -11,7 +11,10 @@ use alloy::{
 use block_builder::rollups::arbitrum::{self, arbitrum_adapter::L1MessageType};
 use contract_bindings::arbitrum::{arbgasinfo::ArbGasInfo, arbownerpublic::ArbOwnerPublic};
 use eyre::{Ok, Result};
-use mchain::db::{DelayedMessage, MBlock};
+use mchain::{
+    client::Provider as _,
+    db::{DelayedMessage, MBlock, Slot},
+};
 use std::{str::FromStr as _, time::Duration};
 use test_utils::{
     docker::{launch_nitro_node, start_mchain},
@@ -76,19 +79,23 @@ async fn no_l1_fees_test() -> Result<()> {
     let qty = parse_ether("1")?;
     let msg = DelayedMessage { base_fee_l1: qty, ..deposit_eth(TEST_ADDR, TEST_ADDR, qty) };
     mchain
-        .add_batch(MBlock {
-            messages: vec![msg.clone()],
-            batch: arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
+        .add_batch(&MBlock {
+            payload: Some((
+                arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
+                vec![msg.clone()],
+            )),
             timestamp: 100,
-            ..Default::default()
+            slot: Slot { seq_block_number: 1, ..Default::default() },
         })
         .await?;
     mchain
-        .add_batch(MBlock {
-            messages: vec![msg],
-            batch: arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
+        .add_batch(&MBlock {
+            payload: Some((
+                arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
+                vec![msg],
+            )),
             timestamp: 200,
-            ..Default::default()
+            slot: Slot { seq_block_number: 2, ..Default::default() },
         })
         .await?;
     wait_until!(rollup.get_block_number().await? == 2, Duration::from_secs(2));
@@ -110,10 +117,13 @@ async fn test_nitro_batch() -> Result<()> {
 
     // deposit 1 eth
     mchain
-        .add_batch(MBlock {
-            messages: vec![deposit_eth(Address::ZERO, addr, parse_ether("1")?)],
-            batch: arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
-            ..Default::default()
+        .add_batch(&MBlock {
+            payload: Some((
+                arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
+                vec![deposit_eth(Address::ZERO, addr, parse_ether("1")?)],
+            )),
+            timestamp: 0,
+            slot: Slot { seq_block_number: 1, ..Default::default() },
         })
         .await?;
 
@@ -140,7 +150,13 @@ async fn test_nitro_batch() -> Result<()> {
     let batch = arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::L2(
         arbitrum::batch::L1IncomingMessage { header: Default::default(), l2_msg: vec![tx.into()] },
     )]);
-    mchain.add_batch(MBlock { batch: batch.encode()?, ..Default::default() }).await?;
+    mchain
+        .add_batch(&MBlock {
+            payload: Some((batch.encode()?, Default::default())),
+            slot: Slot { seq_block_number: 2, ..Default::default() },
+            ..Default::default()
+        })
+        .await?;
 
     // Wait for batch processing to complete and block 2 to be derived
     wait_until!(rollup.get_block_number().await? == 2, Duration::from_millis(500));
@@ -165,10 +181,13 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
 
     // deposit 1 eth
     mchain
-        .add_batch(MBlock {
-            messages: vec![deposit_eth(Address::ZERO, addr, parse_ether("1")?)],
-            batch: arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
-            ..Default::default()
+        .add_batch(&MBlock {
+            payload: Some((
+                arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
+                vec![deposit_eth(Address::ZERO, addr, parse_ether("1")?)],
+            )),
+            timestamp: 0,
+            slot: Slot { seq_block_number: 1, ..Default::default() },
         })
         .await?;
 
@@ -212,7 +231,13 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
             l2_msg: vec![tx.clone().into(), tx.into(), tx2.into()],
         },
     )]);
-    mchain.add_batch(MBlock { batch: batch.encode()?, ..Default::default() }).await?;
+    mchain
+        .add_batch(&MBlock {
+            payload: Some((batch.encode()?, Default::default())),
+            slot: Slot { seq_block_number: 2, ..Default::default() },
+            timestamp: 0,
+        })
+        .await?;
 
     // Wait for the batch to be processed and for block 2 to be derived
     wait_until!(rollup.get_block_number().await? == 2, Duration::from_millis(500));
@@ -235,18 +260,21 @@ async fn test_nitro_end_of_block_tx() -> Result<()> {
         launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
 
     mchain
-        .add_batch(MBlock {
-            messages: vec![
-                DelayedMessage {
-                    kind: L1MessageType::EndOfBlock as u8,
-                    sender: Address::ZERO,
-                    data: Default::default(),
-                    base_fee_l1: Default::default(),
-                };
-                3
-            ],
-            batch: arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
-            ..Default::default()
+        .add_batch(&MBlock {
+            payload: Some((
+                arbitrum::batch::Batch(vec![arbitrum::batch::BatchMessage::Delayed]).encode()?,
+                vec![
+                    DelayedMessage {
+                        kind: L1MessageType::EndOfBlock as u8,
+                        sender: Address::ZERO,
+                        data: Default::default(),
+                        base_fee_l1: Default::default(),
+                    };
+                    3
+                ],
+            )),
+            timestamp: 0,
+            slot: Slot { seq_block_number: 1, ..Default::default() },
         })
         .await?;
 
@@ -263,10 +291,10 @@ async fn test_nitro_delayed_message_after_batch() -> Result<()> {
     let qty = parse_ether("1")?;
     let msg = deposit_eth(Address::ZERO, get_signer().address(), qty);
     mchain
-        .add_batch(MBlock {
-            messages: vec![msg.clone()],
-            batch: arbitrum::batch::Batch(vec![]).encode()?,
-            ..Default::default()
+        .add_batch(&MBlock {
+            payload: Some((arbitrum::batch::Batch(vec![]).encode()?, vec![msg.clone()])),
+            timestamp: 0,
+            slot: Slot { seq_block_number: 1, ..Default::default() },
         })
         .await?;
 
@@ -289,7 +317,11 @@ async fn test_nitro_delayed_message_after_batch() -> Result<()> {
 
     let msg: DelayedMessage = deposit_eth(Address::ZERO, TEST_ADDR, U256::from(1));
     mchain
-        .add_batch(MBlock { messages: vec![msg], batch: batch.encode()?, ..Default::default() })
+        .add_batch(&MBlock {
+            payload: Some((batch.encode()?, vec![msg])),
+            timestamp: 0,
+            slot: Slot { seq_block_number: 2, ..Default::default() },
+        })
         .await?;
 
     wait_until!(rollup.get_block_number().await? == 3, Duration::from_secs(1));
