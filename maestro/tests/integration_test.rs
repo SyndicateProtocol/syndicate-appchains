@@ -17,16 +17,32 @@ mod tests {
         docker::{start_redis, Docker},
         transaction::{get_eip1559_transaction_hex, get_legacy_transaction_hex},
     };
+    use wiremock::{
+        matchers::{body_partial_json, method},
+        Mock, MockServer, ResponseTemplate,
+    };
+
+    fn dummy_chain_urls(mock_url: String) -> HashMap<String, String> {
+        let mut chain_rpc_urls = HashMap::new();
+        // Add URLs for the chain IDs used in tests
+        chain_rpc_urls.insert("4".to_string(), mock_url.clone());
+        chain_rpc_urls.insert("5".to_string(), mock_url);
+        chain_rpc_urls
+    }
 
     // Initialize the server for this test function
-    async fn setup_server() -> (SocketAddr, ServerHandle, String, Docker) {
+    async fn setup_server() -> (SocketAddr, ServerHandle, String, Docker, MockServer) {
+        let mock_rpc_server = MockServer::start().await;
+        set_mock_responses(&mock_rpc_server).await;
+
         let (redis, redis_url) = start_redis().await.unwrap();
         // Create config with mock server URL
         let config = Config {
             port: 0,
             redis_url,
+            chain_rpc_urls: dummy_chain_urls(mock_rpc_server.uri()),
             validation_timeout: Duration::from_secs(1),
-            skip_validation: false,
+            skip_validation: true,
             prune_interval: Duration::from_secs(60 * 60 * 24),
             prune_max_age: Duration::from_secs(60 * 60 * 24),
         };
@@ -46,14 +62,29 @@ mod tests {
             Duration::from_secs(5)
         );
 
-        (addr, handle, base_url, redis)
+        (addr, handle, base_url, redis, mock_rpc_server)
+    }
+
+    async fn set_mock_responses(mock_rpc_server: &MockServer) {
+        // Set up mock response for eth_getTrasactionCount (wallet nonce check)
+        Mock::given(method("POST"))
+            .and(body_partial_json(json!({
+                "method": "eth_getTransactionCount"
+            })))
+            .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "result": "0x1"  // Realistic nonce result format
+            })))
+            .mount(mock_rpc_server)
+            .await;
     }
 
     async fn with_test_server<Fut>(test_fn: impl FnOnce(Client, String) -> Fut + Send) -> Result<()>
     where
         Fut: Future<Output = Result<()>> + Send,
     {
-        let (_addr, handle, base_url, _redis) = setup_server().await;
+        let (_addr, handle, base_url, _redis, _mock_rpc_server) = setup_server().await;
         let client = Client::new();
 
         test_fn(client, base_url).await?;
