@@ -111,7 +111,7 @@ impl RelayerService {
 
     async fn process_transaction(&self, raw_tx: Bytes) -> Result<TxHash, RpcError> {
         debug!("Processing transaction: {}", hex::encode(&raw_tx));
-        let original_tx = validate_transaction(&raw_tx)?;
+        let (original_tx, _signer) = validate_transaction(&raw_tx)?;
 
         debug!("Submitting validated transaction to chain");
         let data = processTransactionCall { encodedTxn: raw_tx };
