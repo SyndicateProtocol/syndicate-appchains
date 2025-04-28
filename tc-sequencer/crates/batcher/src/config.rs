@@ -24,7 +24,7 @@ pub struct BatcherConfig {
     pub max_batch_size: Byte,
 
     /// Polling interval for the batcher in milliseconds
-    #[arg( long, env = "BATCHER_POLLING_INTERVAL", default_value = "500ms", value_parser = humantime::parse_duration )]
+    #[arg( long, env = "BATCHER_POLLING_INTERVAL", default_value = "100ms", value_parser = humantime::parse_duration )]
     pub polling_interval: Duration,
 }
 

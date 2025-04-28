@@ -85,13 +85,13 @@ impl SequencingTransactionParser {
             CompressionType::None => {
                 transactions.push(compressed_data);
             }
-            CompressionType::Unknown => {
-                return Err(SequencingParserError::UnknownCompressionType(*compression_byte));
-            }
             CompressionType::Zlib => {
                 let mut decompressed_data = decompress_transactions(&data)
                     .map_err(|e| SequencingParserError::DecompressionError(e.to_string()))?;
                 transactions.append(&mut decompressed_data);
+            }
+            CompressionType::Unknown => {
+                return Err(SequencingParserError::UnknownCompressionType(*compression_byte));
             }
         }
         Ok(transactions)
