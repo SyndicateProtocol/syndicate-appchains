@@ -33,6 +33,7 @@ mod tests {
     #[test]
     fn test_get_compression_type() {
         assert_eq!(get_compression_type(NO_COMPRESSION), CompressionType::None);
-        assert_eq!(get_compression_type(0xFF), CompressionType::Unknown);
+        assert_eq!(get_compression_type(0xFF), CompressionType::Zlib);
+        assert_eq!(get_compression_type(0x0E), CompressionType::Unknown);
     }
 }
