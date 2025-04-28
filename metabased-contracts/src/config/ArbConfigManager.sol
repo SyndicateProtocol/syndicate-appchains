@@ -36,7 +36,9 @@ contract ArbConfigManager is Ownable {
 
     /**
      * @dev Create a new ArbChainConfig contract for a specific chainId
+     * @param owner The address of the contract owner
      * @param chainId The chain ID
+     * @param sequencingChainId The ID of the sequencing chain
      * @param arbitrumBridgeAddress Address of the Arbitrum bridge
      * @param arbitrumInboxAddress Address of the Arbitrum inbox
      * @param arbitrumIgnoreDelayedMessages Whether to ignore delayed messages
@@ -46,10 +48,13 @@ contract ArbConfigManager is Ownable {
      * @param sequencingStartBlock Starting block for sequencing
      * @param rollupOwner Initial rollup owner
      * @param sequencingChainRpcUrl Default RPC URL for the sequencing chain
+     * @param appchainBlockExplorerUrl URL for the appchain block explorer
      * @return address The address of the deployed ArbChainConfig contract
      */
     function createArbChainConfig(
+        address owner,
         uint256 chainId,
+        uint256 sequencingChainId,
         address arbitrumBridgeAddress,
         address arbitrumInboxAddress,
         bool arbitrumIgnoreDelayedMessages,
@@ -58,7 +63,8 @@ contract ArbConfigManager is Ownable {
         address sequencingContractAddress,
         uint256 sequencingStartBlock,
         address rollupOwner,
-        string memory sequencingChainRpcUrl
+        string memory sequencingChainRpcUrl,
+        string memory appchainBlockExplorerUrl
     ) external onlyOwner returns (address) {
         require(chainId != 0, "Chain ID cannot be zero");
         require(deployedConfigs[chainId] == address(0), "Config already exists for this chain ID");
@@ -75,7 +81,9 @@ contract ArbConfigManager is Ownable {
 
         // Initialize the proxy contract
         ArbChainConfig(proxyAddress).initialize(
+            owner,
             chainId,
+            sequencingChainId,
             arbitrumBridgeAddress,
             arbitrumInboxAddress,
             arbitrumIgnoreDelayedMessages,
@@ -84,7 +92,8 @@ contract ArbConfigManager is Ownable {
             sequencingContractAddress,
             sequencingStartBlock,
             rollupOwner,
-            sequencingChainRpcUrl
+            sequencingChainRpcUrl,
+            appchainBlockExplorerUrl
         );
 
         emit ArbChainConfigCreated(chainId, proxyAddress);

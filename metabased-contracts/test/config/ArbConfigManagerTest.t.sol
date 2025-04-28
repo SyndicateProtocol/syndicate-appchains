@@ -14,6 +14,7 @@ contract ArbConfigManagerTest is Test {
     address public rollupOwner = address(2);
 
     uint256 public constant CHAIN_ID = 123456;
+    uint256 public constant SEQUENCING_CHAIN_ID = 654321;
     address public constant ARBITRUM_BRIDGE_ADDRESS = address(0x1234);
     address public constant ARBITRUM_INBOX_ADDRESS = address(0x5678);
     bool public constant ARBITRUM_IGNORE_DELAYED_MESSAGES = false;
@@ -22,6 +23,7 @@ contract ArbConfigManagerTest is Test {
     address public constant SEQUENCING_CONTRACT_ADDRESS = address(0x9ABC);
     uint256 public constant SEQUENCING_START_BLOCK = 200;
     string public constant DEFAULT_RPC_URL = "https://example.com/rpc";
+    string public constant APPCHAIN_BLOCK_EXPLORER_URL = "https://example.com/explorer";
 
     function setUp() public {
         vm.startPrank(owner);
@@ -53,7 +55,9 @@ contract ArbConfigManagerTest is Test {
 
         // Deploy the config without expecting event
         address deployedAddress = configManager.createArbChainConfig(
+            owner,
             CHAIN_ID,
+            SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -62,7 +66,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             rollupOwner,
-            DEFAULT_RPC_URL
+            DEFAULT_RPC_URL,
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         // Verify the deployed address is stored correctly
@@ -80,7 +85,9 @@ contract ArbConfigManagerTest is Test {
         ArbChainConfig chainConfig = ArbChainConfig(deployedAddress);
 
         // Verify the values
+        assertEq(chainConfig.owner(), owner);
         assertEq(chainConfig.CHAIN_ID(), CHAIN_ID);
+        assertEq(chainConfig.SEQUENCING_CHAIN_ID(), SEQUENCING_CHAIN_ID);
         assertEq(chainConfig.ARBITRUM_BRIDGE_ADDRESS(), ARBITRUM_BRIDGE_ADDRESS);
         assertEq(chainConfig.ARBITRUM_INBOX_ADDRESS(), ARBITRUM_INBOX_ADDRESS);
         assertEq(chainConfig.ARBITRUM_IGNORE_DELAYED_MESSAGES(), ARBITRUM_IGNORE_DELAYED_MESSAGES);
@@ -90,6 +97,7 @@ contract ArbConfigManagerTest is Test {
         assertEq(chainConfig.SEQUENCING_START_BLOCK(), SEQUENCING_START_BLOCK);
         assertEq(chainConfig.ROLLUP_OWNER(), rollupOwner);
         assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), DEFAULT_RPC_URL);
+        assertEq(chainConfig.APPCHAIN_BLOCK_EXPLORER_URL(), APPCHAIN_BLOCK_EXPLORER_URL);
 
         vm.stopPrank();
     }
@@ -99,7 +107,9 @@ contract ArbConfigManagerTest is Test {
 
         // Deploy the first config
         configManager.createArbChainConfig(
+            owner,
             CHAIN_ID,
+            SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -108,13 +118,16 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             rollupOwner,
-            DEFAULT_RPC_URL
+            DEFAULT_RPC_URL,
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         // Attempt to deploy a duplicate config
         vm.expectRevert("Config already exists for this chain ID");
         configManager.createArbChainConfig(
+            owner,
             CHAIN_ID,
+            SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -123,7 +136,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             rollupOwner,
-            DEFAULT_RPC_URL
+            DEFAULT_RPC_URL,
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         vm.stopPrank();
@@ -134,7 +148,9 @@ contract ArbConfigManagerTest is Test {
 
         vm.expectRevert("Chain ID cannot be zero");
         configManager.createArbChainConfig(
+            owner,
             0, // Zero chain ID
+            SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -143,7 +159,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             rollupOwner,
-            DEFAULT_RPC_URL
+            DEFAULT_RPC_URL,
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         vm.stopPrank();
@@ -154,7 +171,9 @@ contract ArbConfigManagerTest is Test {
 
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(999)));
         configManager.createArbChainConfig(
+            address(999), // Non-owner address
             CHAIN_ID,
+            SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -163,7 +182,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             rollupOwner,
-            DEFAULT_RPC_URL
+            DEFAULT_RPC_URL,
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
     }
 
@@ -171,7 +191,9 @@ contract ArbConfigManagerTest is Test {
         // Deploy the config first
         vm.prank(owner);
         address deployedAddress = configManager.createArbChainConfig(
+            owner,
             CHAIN_ID,
+            SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -180,7 +202,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             rollupOwner,
-            DEFAULT_RPC_URL
+            DEFAULT_RPC_URL,
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         // Get the stored address
@@ -197,7 +220,9 @@ contract ArbConfigManagerTest is Test {
         // Deploy the config first
         vm.prank(owner);
         address deployedAddress = configManager.createArbChainConfig(
+            owner,
             CHAIN_ID,
+            SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -206,7 +231,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             rollupOwner,
-            DEFAULT_RPC_URL
+            DEFAULT_RPC_URL,
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         // Now that it's deployed, the getArbChainConfigAddress should return the deployed address
@@ -214,7 +240,7 @@ contract ArbConfigManagerTest is Test {
 
         // Verify the rollup owner is set correctly
         assertEq(chainConfig.ROLLUP_OWNER(), rollupOwner);
-        assertEq(chainConfig.owner(), rollupOwner);
+        assertEq(chainConfig.owner(), owner);
     }
 
     function testGetArbChainConfigAddressRevertOnZeroChainId() public {
@@ -227,7 +253,9 @@ contract ArbConfigManagerTest is Test {
 
         // Deploy a config first
         address deployedAddress = configManager.createArbChainConfig(
+            owner,
             CHAIN_ID,
+            SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -236,7 +264,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             rollupOwner,
-            DEFAULT_RPC_URL
+            DEFAULT_RPC_URL,
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         // Get the current implementation
@@ -309,7 +338,9 @@ contract ArbConfigManagerTest is Test {
 
         // Deploy the config
         address deployedAddress = configManager.createArbChainConfig(
+            owner,
             CHAIN_ID,
+            SEQUENCING_CHAIN_ID,
             ARBITRUM_BRIDGE_ADDRESS,
             ARBITRUM_INBOX_ADDRESS,
             ARBITRUM_IGNORE_DELAYED_MESSAGES,
@@ -318,7 +349,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
             rollupOwner,
-            DEFAULT_RPC_URL
+            DEFAULT_RPC_URL,
+            APPCHAIN_BLOCK_EXPLORER_URL
         );
 
         // Verify the addresses match
