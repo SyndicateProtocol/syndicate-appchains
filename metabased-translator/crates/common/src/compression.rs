@@ -1,6 +1,6 @@
 //! Compression utils
 
-use shared::zlib_compression::{CM_BITS_MASK, ZLIB_CM15, ZLIB_CM8};
+use shared::zlib_compression::is_valid_zlib_cm_bits;
 
 /// Defines the compression types supported by the metabased translator
 #[derive(Debug, PartialEq, Eq)]
@@ -19,7 +19,7 @@ pub const NO_COMPRESSION: u8 = 0x0;
 pub const fn get_compression_type(version_byte: u8) -> CompressionType {
     if version_byte == NO_COMPRESSION {
         CompressionType::None
-    } else if version_byte & CM_BITS_MASK == ZLIB_CM8 || version_byte & CM_BITS_MASK == ZLIB_CM15 {
+    } else if is_valid_zlib_cm_bits(version_byte) {
         CompressionType::Zlib
     } else {
         CompressionType::Unknown

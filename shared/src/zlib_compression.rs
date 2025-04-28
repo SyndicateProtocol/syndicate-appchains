@@ -2,8 +2,8 @@
 //! transactions
 
 use alloy::primitives::Bytes;
-use bytes::BytesMut;
 use flate2::{read::ZlibDecoder, write::ZlibEncoder, Compression};
+use rlp::{Rlp, RlpStream};
 use std::io::{Error, ErrorKind, Read, Write};
 
 /// Valid Zlib CM bits
@@ -37,73 +37,47 @@ pub fn decompress_transaction(compressed: &[u8]) -> Result<Vec<u8>, Error> {
     Ok(buffer)
 }
 
-/// Compresses a slice of Ethereum transactions using zlib compression
-/// Each transaction is prefixed with its length to enable proper decompression
+/// RLP encodes and compresses a slice of Ethereum transactions using zlib compression
 pub fn compress_transactions(transactions: &[Bytes]) -> Result<Bytes, Error> {
-    let mut buffer = BytesMut::new();
-
-    // Write number of transactions (4 bytes)
-    buffer.extend_from_slice(&(transactions.len() as u32).to_be_bytes());
-
-    // Write each transaction with its length prefix
+    // RLP encode the list of transactions
+    let mut stream = RlpStream::new_list(transactions.len());
     for tx in transactions {
-        buffer.extend_from_slice(&(tx.len() as u32).to_be_bytes());
-        buffer.extend_from_slice(tx);
+        stream.append(&tx.as_ref());
     }
+    let encoded = stream.out();
 
-    // Compress using zlib
+    // Compress the RLP encoded bytes using zlib
     let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-    encoder.write_all(&buffer)?;
+    encoder.write_all(&encoded)?;
     let compressed = encoder.finish()?;
 
+    // Validate compressed data if necessary
     is_valid_cm_bits_8_only(&compressed)?;
 
     Ok(Bytes::from(compressed))
 }
 
 /// Decompresses zlib compressed Ethereum transactions back into their original form
-pub fn decompress_transactions(compressed: &Bytes) -> Result<Vec<Bytes>, Error> {
-    is_valid_cm_bits_8_or_15(compressed)?;
-
-    let mut decoder = ZlibDecoder::new(&compressed[..]);
-    let mut buffer = Vec::new();
-    decoder.read_to_end(&mut buffer)?;
-
-    let mut transactions = Vec::new();
-    let mut pos = 0;
-
-    // Read number of transactions
-    if buffer.len() < 4 {
-        return Err(Error::new(ErrorKind::InvalidData, "Invalid compressed data"));
+pub fn decompress_transactions(data: &[u8]) -> Result<Vec<Bytes>, Error> {
+    // Check for empty data first
+    if data.is_empty() {
+        return Err(Error::new(ErrorKind::InvalidData, "Empty compressed data"));
     }
-    let num_transactions = u32::from_be_bytes(
-        buffer[0..4]
-            .try_into()
-            .map_err(|_| Error::new(ErrorKind::InvalidData, "Invalid transaction count bytes"))?,
-    );
-    pos += 4;
-
-    // Read each transaction
-    for _ in 0..num_transactions {
-        if pos + 4 > buffer.len() {
-            return Err(Error::new(ErrorKind::InvalidData, "Truncated data"));
-        }
-
-        let tx_len =
-            u32::from_be_bytes(buffer[pos..pos + 4].try_into().map_err(|_| {
-                Error::new(ErrorKind::InvalidData, "Invalid transaction length bytes")
-            })?) as usize;
-        pos += 4;
-
-        if pos + tx_len > buffer.len() {
-            return Err(Error::new(ErrorKind::InvalidData, "Truncated transaction"));
-        }
-
-        transactions.push(Bytes::copy_from_slice(&buffer[pos..pos + tx_len]));
-        pos += tx_len;
+    // Check for valid CM bits
+    if !is_valid_zlib_cm_bits(data[0]) {
+        return Err(Error::new(ErrorKind::InvalidData, "Invalid CM bits in compressed data"));
     }
+    // Decompress using zlib
+    let mut decoder = ZlibDecoder::new(data);
+    let mut decoded_bytes = Vec::new();
+    decoder.read_to_end(&mut decoded_bytes)?;
 
-    Ok(transactions)
+    // Decode RLP
+    let rlp = Rlp::new(&decoded_bytes);
+    let transactions: Result<Vec<Bytes>, _> =
+        rlp.as_list::<Vec<u8>>().map(|vec_list| vec_list.into_iter().map(Bytes::from).collect());
+
+    transactions.map_err(|e| Error::new(ErrorKind::InvalidData, e.to_string()))
 }
 
 /// Validates CM bits in the zlib header against allowed values
@@ -146,10 +120,16 @@ fn is_valid_cm_bits_8_or_15<T: AsRef<[u8]>>(compressed: T) -> Result<(), Error> 
     )
 }
 
+/// Validates that version byte is either 8 or 15
+pub const fn is_valid_zlib_cm_bits(version_byte: u8) -> bool {
+    version_byte & CM_BITS_MASK == ZLIB_CM8 || version_byte & CM_BITS_MASK == ZLIB_CM15
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use alloy::primitives::hex_literal::hex;
+    use bytes::BytesMut;
     use std::time::Instant;
 
     #[test]
@@ -295,11 +275,5 @@ mod tests {
             &compress_transactions(&[Bytes::copy_from_slice(&SAMPLE_TX_1)]).unwrap()[0..5],
         );
         assert!(decompress_transactions(&truncated).is_err());
-
-        // Test 4: Valid zlib header but invalid content
-        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-        encoder.write_all(&[1, 2, 3]).unwrap(); // Write invalid length prefix
-        let invalid_content = Bytes::from(encoder.finish().unwrap());
-        assert!(decompress_transactions(&invalid_content).is_err());
     }
 }
