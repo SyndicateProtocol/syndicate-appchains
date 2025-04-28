@@ -1,6 +1,9 @@
 [profile.default]
-src = "src"
-out = "out"
 libs = ["lib"]
+out  = "out"
+src  = "src"
+
+[rpc_endpoints]
+irl = "https://rpc.testnet.irl.syndicate.io"
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options

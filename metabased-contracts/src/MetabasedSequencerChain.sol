@@ -61,7 +61,7 @@ contract MetabasedSequencerChain is SequencingModuleChecker {
     /// @dev This helps op-translator identify uncompressed data
     /// @param _data The original transaction data
     /// @return bytes The transaction data
-    function prependZeroByte(bytes calldata _data) private pure returns (bytes memory) {
+    function prependZeroByte(bytes calldata _data) internal pure returns (bytes memory) {
         return abi.encodePacked(bytes1(0x00), _data);
     }
 }

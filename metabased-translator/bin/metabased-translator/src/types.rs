@@ -1,5 +1,5 @@
-use common::eth_client::RPCClientError;
 use eyre::Report;
+use shared::eth_client::RPCClientError;
 use thiserror::Error;
 use tracing::error;
 
