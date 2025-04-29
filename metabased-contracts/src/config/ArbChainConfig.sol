@@ -1,19 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @title ArbChainConfig
  * @dev Configuration contract for settlement chain parameters
  */
-contract ArbChainConfig is Initializable, Ownable {
+contract ArbChainConfig is Initializable {
     // Events
     event RollupOwnerUpdated(address indexed newRollupOwner);
     event DefaultSequencingChainRpcUrlUpdated(string newRpcUrl);
     event AllowedSettlementAddressesUpdated(address[] newAllowedSettlementAddresses);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
+    address public owner;
     address public ARBITRUM_BRIDGE_ADDRESS;
     address public ARBITRUM_INBOX_ADDRESS;
     address public SEQUENCING_CONTRACT_ADDRESS;
@@ -34,11 +35,13 @@ contract ArbChainConfig is Initializable, Ownable {
      * This is only used when deploying the implementation contract
      * It will not be called when deploying proxies
      */
-    constructor() Ownable(msg.sender) {}
+    constructor() {
+        _disableInitializers();
+    }
 
     /**
      * @dev Initializer function - replaces constructor for proxy pattern
-     * @param owner The address of the contract owner
+     * @param _owner The address of the contract owner
      * @param chainId The chain ID
      * @param sequencingChainId The ID of the sequencing chain
      * @param arbitrumBridgeAddress Address of the Arbitrum bridge
@@ -54,7 +57,7 @@ contract ArbChainConfig is Initializable, Ownable {
      * @param allowedSettlementAddresses Array of addresses allowed for settlement
      */
     function initialize(
-        address owner,
+        address _owner,
         uint256 chainId,
         uint256 sequencingChainId,
         address arbitrumBridgeAddress,
@@ -70,7 +73,7 @@ contract ArbChainConfig is Initializable, Ownable {
         address[] memory allowedSettlementAddresses
     ) public initializer {
         // Set the configuration parameters
-        require(owner != address(0), "Owner cannot be zero address");
+        require(_owner != address(0), "Owner cannot be zero address");
         require(chainId != 0, "Chain ID cannot be zero");
         require(sequencingChainId != 0, "Sequencing chain ID cannot be zero");
         require(arbitrumBridgeAddress != address(0), "Arbitrum bridge address cannot be zero");
@@ -94,7 +97,15 @@ contract ArbChainConfig is Initializable, Ownable {
         ALLOWED_SETTLEMENT_ADDRESSES = allowedSettlementAddresses;
 
         // Initialize the Ownable contract
-        _transferOwnership(owner);
+        _transferOwnership(_owner);
+    }
+
+    /**
+     * @dev Modifier to check if the caller is the owner
+     */
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Caller is not the owner");
+        _;
     }
 
     /**
@@ -123,5 +134,25 @@ contract ArbChainConfig is Initializable, Ownable {
     function updateAllowedSettlementAddresses(address[] calldata newAllowedSettlementAddresses) external onlyOwner {
         ALLOWED_SETTLEMENT_ADDRESSES = newAllowedSettlementAddresses;
         emit AllowedSettlementAddressesUpdated(newAllowedSettlementAddresses);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "New owner cannot be zero address");
+
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = owner;
+        owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
     }
 }
