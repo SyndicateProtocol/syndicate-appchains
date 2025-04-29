@@ -1101,8 +1101,10 @@ function createArbChainConfig(address owner, uint256 chainId, uint256 sequencing
         pub sequencingChainRpcUrl: alloy::sol_types::private::String,
         #[allow(missing_docs)]
         pub appchainBlockExplorerUrl: alloy::sol_types::private::String,
+        #[allow(missing_docs)]
+        pub allowedSettlementAddresses: alloy::sol_types::private::Array<alloy::sol_types::private::Address>,
     }
-    ///Container type for the return parameters of the [`createArbChainConfig(address,uint256,uint256,address,address,bool,uint256,uint256,address,uint256,address,string,string)`](createArbChainConfigCall) function.
+    ///Container type for the return parameters of the [`createArbChainConfig(address,uint256,uint256,address,address,bool,uint256,uint256,address,uint256,address,string,string,address[])`](createArbChainConfigCall) function.
     #[allow(non_camel_case_types, non_snake_case, clippy::pub_underscore_fields)]
     #[derive(Clone)]
     pub struct createArbChainConfigReturn {
@@ -1314,6 +1316,9 @@ function createArbChainConfig(address owner, uint256 chainId, uint256 sequencing
                     <alloy::sol_types::sol_data::String as alloy_sol_types::SolType>::tokenize(
                         &self.appchainBlockExplorerUrl,
                     ),
+                    <alloy::sol_types::sol_data::Array<
+                        alloy::sol_types::sol_data::Address,
+                    > as alloy_sol_types::SolType>::tokenize(&self.allowedSettlementAddresses),
                 )
             }
             #[inline]
@@ -2905,6 +2910,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
             rollupOwner: alloy::sol_types::private::Address,
             sequencingChainRpcUrl: alloy::sol_types::private::String,
             appchainBlockExplorerUrl: alloy::sol_types::private::String,
+            allowedSettlementAddresses: alloy::sol_types::private::Array<alloy::sol_types::private::Address>,
         ) -> alloy_contract::SolCallBuilder<T, &P, createArbChainConfigCall, N> {
             self.call_builder(
                 &createArbChainConfigCall {
@@ -2921,6 +2927,7 @@ the bytecode concatenated with the constructor's ABI-encoded arguments.*/
                     rollupOwner,
                     sequencingChainRpcUrl,
                     appchainBlockExplorerUrl,
+                    allowedSettlementAddresses,
                 },
             )
         }
