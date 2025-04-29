@@ -73,6 +73,7 @@ pub(crate) struct TestComponents {
     pub mchain_provider: MProvider,
 
     pub poster_url: String,
+    #[allow(dead_code)]
     pub appchain_block_explorer_url: String,
 }
 
