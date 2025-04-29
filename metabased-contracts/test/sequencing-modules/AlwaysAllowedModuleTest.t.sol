@@ -13,6 +13,8 @@ contract AlwaysAllowedModuleTest is Test {
 
     function testIsAllowedReturnsAlwaysTrue() public view {
         address operator = address(0x1);
-        assertTrue(alwaysAllowedModule.isAllowed(operator));
+        bytes memory emptyData = new bytes(0);
+
+        assertTrue(alwaysAllowedModule.isAllowed(operator, address(0), emptyData));
     }
 }

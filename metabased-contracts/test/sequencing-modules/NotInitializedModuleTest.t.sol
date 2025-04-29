@@ -13,6 +13,8 @@ contract NotInitializedModuleTest is Test {
 
     function testIsAllowedReturnsFalse() public view {
         address operator = address(0x1);
-        assertFalse(notInitializedModule.isAllowed(operator));
+        bytes memory emptyData = new bytes(0);
+
+        assertFalse(notInitializedModule.isAllowed(operator, address(0), emptyData));
     }
 }

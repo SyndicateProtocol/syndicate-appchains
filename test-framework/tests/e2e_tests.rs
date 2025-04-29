@@ -1,6 +1,5 @@
 //! e2e tests for the metabased stack
-
-use crate::components::{Components, ConfigurationOptions, ContractVersion};
+use crate::components::{ConfigurationOptions, ContractVersion};
 use alloy::{
     eips::{BlockNumberOrTag, Encodable2718},
     network::TransactionBuilder,
@@ -8,6 +7,7 @@ use alloy::{
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, Block, TransactionRequest},
 };
+use components::TestComponents;
 use contract_bindings::arbitrum::{
     arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox, irollupcore::IRollupCore,
     nodeinterface::NodeInterface, rollup::Rollup,
@@ -36,7 +36,7 @@ fn init() {
 #[tokio::test]
 async fn e2e_send_transaction() -> Result<()> {
     let config = ConfigurationOptions { settlement_delay: 60, ..Default::default() };
-    Components::run(&config, |components| async move {
+    TestComponents::run(&config, |components| async move {
         // Setup the settlement rollup contract
         let set_rollup = Rollup::new(components.inbox_address, &components.settlement_provider);
         let wallet_address = components.settlement_provider.default_signer_address();
@@ -144,7 +144,7 @@ async fn e2e_send_transaction() -> Result<()> {
 #[tokio::test]
 async fn e2e_deposit() -> Result<()> {
     // Sequencer fees go to the zero address
-    Components::run(
+    TestComponents::run(
         &ConfigurationOptions { pre_loaded: Some(ContractVersion::V300), ..Default::default() },
         |components| async move {
             let wallet_address = components.settlement_provider.default_signer_address();
@@ -306,7 +306,7 @@ async fn e2e_fast_withdrawal_213() -> Result<()> {
 }
 
 async fn e2e_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
-    Components::run(
+    TestComponents::run(
         &ConfigurationOptions { pre_loaded: Some(version), ..Default::default() },
         |components| async move {
             let block: Block = components
@@ -428,7 +428,7 @@ async fn e2e_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
 
 #[tokio::test]
 async fn e2e_settlement_reorg() -> Result<()> {
-    Components::run(
+    TestComponents::run(
         &ConfigurationOptions { pre_loaded: Some(ContractVersion::V300), ..Default::default() },
         |components| async move {
             // NOTE: at this point the mchain is on block 1 (initial mchain block) - we can't reorg
@@ -546,7 +546,7 @@ async fn e2e_settlement_reorg() -> Result<()> {
 
 #[tokio::test]
 async fn e2e_reboot_without_settlement_processed() -> Result<()> {
-    Components::run(
+    TestComponents::run(
         &ConfigurationOptions { pre_loaded: None, ..Default::default() },
         |components| async move {
             let set_offset = components.settlement_provider.get_block_number().await?;
