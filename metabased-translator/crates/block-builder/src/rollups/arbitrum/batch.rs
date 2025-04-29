@@ -3,7 +3,6 @@
 //! This module provides functionality for encoding batches of transactions
 //! that can be submitted by the batcher.
 
-use crate::block_builder::BlockBuilderError;
 use alloy::{primitives::Bytes, rlp};
 use base64::prelude::*;
 use eyre::Result;
@@ -148,10 +147,10 @@ impl Batch {
     }
 }
 
-fn l2_msg_to_bytes(msg: &Vec<Bytes>) -> Result<Bytes, BlockBuilderError> {
+fn l2_msg_to_bytes(msg: &Vec<Bytes>) -> Result<Bytes> {
     let mut data = Vec::new();
     if msg.is_empty() {
-        return Err(BlockBuilderError::EmptyL2Message());
+        return Err(eyre::eyre!("Cannot serialize empty l2 msg"));
     }
     if msg.len() > 1 {
         data.push(L2MessageKind::Batch as u8);
@@ -178,6 +177,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+    use common::types::EMPTY_BATCH;
 
     #[test]
     fn test_json_encoding() -> Result<(), serde_json::Error> {
@@ -196,6 +196,13 @@ mod tests {
             serde_json::to_string(&batch)?,
             r#"[null,{"header":{"blockNumber":0,"timestamp":0},"l2Msg":"BA=="},{"header":{"blockNumber":0,"timestamp":0},"l2Msg":"AwAAAAAAAAABBAAAAAAAAAABBA=="}]"#
         );
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn test_empty_batch() -> Result<()> {
+        let batch = Batch(vec![]);
+        assert_eq!(batch.encode()?, EMPTY_BATCH);
         Ok(())
     }
 

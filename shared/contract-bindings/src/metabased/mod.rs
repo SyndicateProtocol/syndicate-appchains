@@ -12,6 +12,7 @@ pub mod r#allowlistsequencingmodule;
 pub mod r#alwaysallowedmodule;
 pub mod r#arbchainconfig;
 pub mod r#arbconfigmanager;
+pub mod r#arbconfigmanagerfactory;
 pub mod r#atomicsequencer;
 pub mod r#atomicsequencerimplementation;
 pub mod r#mockisallowed;

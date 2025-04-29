@@ -1,11 +1,10 @@
 use crate::{
-    db::{to_err, ArbitrumDB as _, DelayedMessage, MBlock, KVDB},
+    db::{to_err, ArbitrumDB, DelayedMessage, MBlock, Slot, State},
     metrics::MchainMetrics,
 };
 use alloy::{
     eips::BlockNumberOrTag,
     primitives::{address, keccak256, Address, Bytes, FixedBytes, U256},
-    providers::{Provider as _, ProviderBuilder, RootProvider},
     rpc::types::{FilterBlockOption, TransactionRequest},
     sol_types::{SolCall, SolEvent as _, SolValue as _},
 };
@@ -83,48 +82,15 @@ pub fn rollup_config(chain_id: u64, chain_owner: Address) -> String {
     cfg
 }
 
-#[derive(Debug, Clone)]
-pub struct MProvider(RootProvider);
-
-impl MProvider {
-    pub fn new(url: alloy::transports::http::reqwest::Url) -> Self {
-        Self(ProviderBuilder::default().on_http(url))
-    }
-    pub async fn get_block_number(&self) -> u64 {
-        #[allow(clippy::expect_used)]
-        self.0
-            .get_block_by_number(BlockNumberOrTag::Latest)
-            .await
-            .expect("get_block_number failed")
-            .expect("latest block not found")
-            .header
-            .number
-    }
-    pub async fn add_batch(&self, batch: MBlock) -> eyre::Result<u64> {
-        Ok(self.0.raw_request("mchain_addBatch".into(), (batch,)).await?)
-    }
-    pub async fn get_source_chains_processed_blocks(
-        &self,
-        tag: BlockNumberOrTag,
-    ) -> eyre::Result<(u64, FixedBytes<32>, u64, FixedBytes<32>, u64)> {
-        Ok(self.0.raw_request("mchain_getSourceChainsProcessedBlocks".into(), tag).await?)
-    }
-    pub async fn rollback_to_block(&self, block_number: u64) -> eyre::Result<()> {
-        Ok(self.0.raw_request("mchain_rollbackToBlock".into(), (block_number,)).await?)
-    }
-    pub async fn rollup_owner(&self) -> eyre::Result<Address> {
-        Ok(self.0.raw_request("mchain_rollupOwner".into(), ()).await?)
-    }
-}
-
 #[allow(clippy::unwrap_used)]
-pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
+pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     chain_id: u64,
     rollup_owner: Address,
     finality_delay: u64,
     db: T,
     metrics: MchainMetrics,
 ) -> RpcModule<(T, MchainMetrics, Mutex<(u64, VecDeque<u64>)>)> {
+    db.check_version();
     let init_msg = DelayedMessage {
         kind: 11, // L1MessageType::Initialize
         sender: Address::ZERO,
@@ -140,16 +106,11 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     };
     let mut pending_ts: VecDeque<u64> = Default::default();
     let mut finalized_block = 1u64;
-    if db.get_block_number() == 0 {
+    if db.get_state().batch_count == 0 {
         // 000b00800203 corresponds to a batch containing a single delayed message
         db.add_batch(MBlock {
-            timestamp: 0,
-            messages: vec![init_msg],
-            batch: alloy::hex!("000b00800203").into(),
-            seq_block_hash: FixedBytes::ZERO,
-            seq_block_number: 0,
-            set_block_hash: FixedBytes::ZERO,
-            set_block_number: 0,
+            payload: Some((Bytes::from_static(&alloy::hex!("000b00800203")), vec![init_msg])),
+            ..Default::default()
         })
         .unwrap();
     } else {
@@ -159,7 +120,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
             assert_eq!(db_init, &init_msg);
         }
         // search for the finalized head. store unfinalized timestamps in a queue.
-        finalized_block = db.get_block_number();
+        finalized_block = db.get_state().batch_count;
         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
         while finalized_block > 1 {
             let block_ts = db.get_block(finalized_block).unwrap().timestamp;
@@ -170,7 +131,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
             pending_ts.push_front(block_ts);
         }
     }
-    assert_eq!(finalized_block + pending_ts.len() as u64, db.get_block_number());
+    assert_eq!(finalized_block + pending_ts.len() as u64, db.get_state().batch_count);
     let mut module = RpcModule::new((db, metrics, Mutex::new((finalized_block, pending_ts))));
 
     // -------------------------------------------------
@@ -179,16 +140,19 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     module
         .register_method(
             "mchain_addBatch",
-            move |p, (db, metrics, mutex), _| -> Result<u64, ErrorObjectOwned> {
-                let (batch,): (MBlock,) = p.parse()?;
+            move |p, (db, metrics, mutex), _| -> Result<Option<u64>, ErrorObjectOwned> {
+                let batch: MBlock = p.parse()?;
                 let timestamp = batch.timestamp;
+                let seq_block_number = batch.slot.seq_block_number;
                 let block = db.add_batch(batch)?;
-                metrics.record_last_block(block, timestamp);
-                let mut data = mutex.lock().unwrap();
-                data.1.push_back(timestamp);
-                assert_eq!(data.0 + data.1.len() as u64, block);
-                drop(data);
-                Ok(block)
+                metrics.record_sequencing_block(seq_block_number, timestamp);
+                Ok(block.inspect(|&block| {
+                    metrics.record_last_block(block, timestamp);
+                    let mut data = mutex.lock().unwrap();
+                    data.1.push_back(timestamp);
+                    assert_eq!(data.0 + data.1.len() as u64, block);
+                    drop(data);
+                }))
             },
         )
         .unwrap();
@@ -196,40 +160,53 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
         .register_method(
             "mchain_rollbackToBlock",
             move |p, (db, metrics, mutex), _| -> Result<(), ErrorObjectOwned> {
-                let (block,): (u64,) = p.parse()?;
-                let latest = db.get_block_number();
-                if block == latest {
-                    return Ok(());
-                }
-                if block > latest {
+                let block_number: u64 = p.parse()?;
+                let state = db.get_state();
+                if block_number > state.batch_count {
                     return Err(err("cannot set head past the last block"));
                 }
-                if block == 0 {
+                if block_number == 0 {
                     return Err(err("cannot set head before the first block"));
                 }
-                // remove stale ts data & delete blocks, messages
-                db.put_block_number(block);
-                let start_block = db.get_block(block)?;
-                metrics.record_reorg(block, latest, start_block.timestamp);
-                let end_block = db.get_block(latest)?;
-                for i in block..latest {
+                let block = db.get_block(block_number).unwrap();
+                if block_number == state.batch_count {
+                    // reset the pending batch count.
+                    // do not record or log the reorg since it has no user impact.
+                    db.put_state(&State { timestamp: block.timestamp, slot: block.slot, ..state });
+                    return Ok(());
+                }
+                let block_message_count = block.after_message_count();
+                // first reset the state - it is okay if the other deletions fail, incomplete
+                // data is ignored.
+                db.put_state(&State {
+                    batch_count: block_number,
+                    batch_acc: block.after_batch_acc,
+                    message_count: block.after_message_count(),
+                    message_acc: block.after_message_acc(),
+                    timestamp: block.timestamp,
+                    slot: block.slot,
+                });
+                // next delete blocks, messages to free up space.
+                metrics.record_reorg(block_number, state.batch_count, block.timestamp);
+                for i in block_number..state.batch_count {
                     db.delete_block(i + 1);
                 }
-                for i in start_block.after_message_count()..end_block.after_message_count() {
+                for i in block_message_count..state.message_count {
                     db.delete_message_acc(i);
                 }
+                // finally update stale finality data.
                 let mut data = mutex.lock().unwrap();
-                if block < data.0 {
-                    metrics.record_finalized_block(block, start_block.timestamp);
-                    data.0 = block;
+                if block_number < data.0 {
+                    metrics.record_finalized_block(block_number, block.timestamp);
+                    data.0 = block_number;
                     data.1.clear();
                 } else {
-                    let removed = (latest - block) as usize;
+                    let removed = (state.batch_count - block_number) as usize;
                     let data_len = data.1.len();
                     assert!(data_len >= removed);
                     data.1.truncate(data_len - removed);
                 }
-                assert_eq!(data.0 + data.1.len() as u64, block);
+                assert_eq!(data.0 + data.1.len() as u64, block_number);
                 drop(data);
                 Ok(())
             },
@@ -238,31 +215,28 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
     module
         .register_method(
             "mchain_rollupOwner",
-            move |_p, (_db, _, _), _| -> Result<Address, ErrorObjectOwned> { Ok(rollup_owner) },
+            move |_, _, _| -> Result<Address, ErrorObjectOwned> { Ok(rollup_owner) },
         )
         .unwrap();
-    module.register_method(
-        "mchain_getSourceChainsProcessedBlocks",
-        move |p,
-              (db, _, _),
-              _|
-              -> Result<(u64, FixedBytes<32>, u64, FixedBytes<32>, u64), ErrorObjectOwned> {
-            let tag: BlockNumberOrTag = p.parse()?;
-            let block_num = match tag {
-                BlockNumberOrTag::Latest => db.get_block_number(),
-                BlockNumberOrTag::Number(i) => i,
-                _ => return Err(to_err(format!("unexpected block tag: {}", tag))),
-            };
-            let block = db.get_block(block_num)?;
-            Ok((
-                block.seq_block_number,
-                block.seq_block_hash,
-                block.set_block_number,
-                block.set_block_hash,
-                block_num,
-            ))
-        },
-    ).unwrap();
+    module
+        .register_method(
+            "mchain_getSourceChainsProcessedBlocks",
+            move |p, (db, _, _), _| -> Result<(Slot, u64), ErrorObjectOwned> {
+                let tag: BlockNumberOrTag = p.parse()?;
+                match tag {
+                    BlockNumberOrTag::Pending => {
+                        let state = db.get_state();
+                        Ok((state.slot, state.batch_count + 1))
+                    }
+                    BlockNumberOrTag::Number(block_num) => {
+                        let block = db.get_block(block_num)?;
+                        Ok((block.slot, block_num))
+                    }
+                    _ => Err(to_err(format!("unexpected block tag: {}", tag))),
+                }
+            },
+        )
+        .unwrap();
 
     // -------------------------------------------------
     // eth methods
@@ -401,7 +375,7 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
                   -> Result<alloy::rpc::types::Block, ErrorObjectOwned> {
                 let (tag, _): (BlockNumberOrTag, bool) = p.parse()?;
                 let number = match tag {
-                    BlockNumberOrTag::Latest => db.get_block_number(),
+                    BlockNumberOrTag::Latest => db.get_state().batch_count,
                     BlockNumberOrTag::Finalized => {
                         let mut data = mutex.lock().unwrap();
                         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
@@ -444,12 +418,10 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
                 // TODO(SEQ-767): make sure the max data size property is set properly
                 IInbox::maxDataSizeCall::SELECTOR => Ok(117964.abi_encode().into()),
                 IBridge::delayedMessageCountCall::SELECTOR => {
-                    Ok((db.get_block(db.get_block_number())?.after_message_count())
-                        .abi_encode()
-                        .into())
+                    Ok(db.get_state().message_count.abi_encode().into())
                 }
                 ISequencerInbox::batchCountCall::SELECTOR => {
-                    Ok((db.get_block_number()).abi_encode().into())
+                    Ok(db.get_state().batch_count.abi_encode().into())
                 }
                 IBridge::delayedInboxAccsCall::SELECTOR => {
                     let data = IBridge::delayedInboxAccsCall::abi_decode(input.as_ref(), false)
@@ -472,33 +444,12 @@ pub async fn start_mchain<T: KVDB + Send + Sync + 'static>(
 }
 
 #[cfg(test)]
-mod tests {
-    use super::start_mchain;
-    use crate::{
-        db::{tests::TestDB, DelayedMessage, MBlock, KVDB},
-        mchain::MProvider,
-        metrics::MchainMetrics,
-    };
-    use alloy::{
-        eips::BlockNumberOrTag,
-        primitives::{Address, Bytes},
-        providers::Provider as _,
-    };
-    use jsonrpsee::server::{Server, ServerHandle};
-    use std::{
-        sync::{Arc, RwLock},
-        time::UNIX_EPOCH,
-    };
-    use test_utils::port_manager::PortManager;
+#[allow(clippy::redundant_pub_crate)]
+pub(crate) mod tests {
+    use std::{sync::RwLock, time::UNIX_EPOCH};
 
-    #[ctor::ctor]
-    fn init() {
-        shared::logger::set_global_default_subscriber();
-    }
-
-    #[allow(clippy::redundant_pub_crate)]
     pub(crate) struct SystemTime(RwLock<u64>);
-    static TIME: SystemTime = SystemTime(RwLock::new(0));
+    pub(crate) static TIME: SystemTime = SystemTime(RwLock::new(0));
     impl SystemTime {
         pub(crate) fn now() -> &'static Self {
             &TIME
@@ -510,122 +461,8 @@ mod tests {
         pub(crate) fn as_secs(&self) -> u64 {
             *self.0.read().unwrap()
         }
-        fn set(&self, secs: u64) {
+        pub(crate) fn set(&self, secs: u64) {
             *self.0.write().unwrap() = secs;
         }
-    }
-
-    impl KVDB for Arc<TestDB> {
-        fn get<K: AsRef<[u8]>>(&self, key: K) -> Option<Bytes> {
-            self.as_ref().get(key)
-        }
-        fn put<K: AsRef<[u8]>, V: AsRef<[u8]>>(&self, key: K, value: V) {
-            self.as_ref().put(key, value)
-        }
-        fn delete<K: AsRef<[u8]>>(&self, key: K) {
-            self.as_ref().delete(key)
-        }
-    }
-
-    impl MProvider {
-        async fn get_finalized_block(&self) -> u64 {
-            self.0
-                .get_block_by_number(BlockNumberOrTag::Finalized)
-                .await
-                .expect("get_finalized_block failed")
-                .expect("finalized block not found")
-                .header
-                .number
-        }
-    }
-
-    async fn setup() -> eyre::Result<(MProvider, Arc<TestDB>, ServerHandle)> {
-        let db = Arc::new(TestDB::new());
-        let mchain =
-            start_mchain(10, Address::ZERO, 60, db.clone(), MchainMetrics::default()).await;
-        let port = PortManager::instance().next_port().await;
-        let handle = Server::builder().build(format!("0.0.0.0:{}", port)).await?.start(mchain);
-        let provider = MProvider::new(format!("http://localhost:{}", port).parse()?);
-        Ok((provider, db, handle))
-    }
-
-    #[tokio::test]
-    async fn rollback_to_block() -> eyre::Result<()> {
-        let empty = DelayedMessage {
-            kind: 0,
-            sender: Address::ZERO,
-            data: Default::default(),
-            base_fee_l1: Default::default(),
-        };
-        let (mchain, db, _handle) = setup().await?;
-        assert_eq!(db.0.read().unwrap().keys().len(), 3); // init msg, block number, batch (1)
-        assert_eq!(mchain.get_block_number().await, 1);
-        mchain.add_batch(MBlock::default()).await?;
-        assert_eq!(db.0.read().unwrap().keys().len(), 4); // block (2)
-        assert_eq!(mchain.get_block_number().await, 2);
-        mchain.add_batch(MBlock { messages: vec![empty.clone()], ..Default::default() }).await?; // block + messages (3)
-        assert_eq!(db.0.read().unwrap().keys().len(), 6);
-        assert_eq!(mchain.get_block_number().await, 3);
-        mchain.add_batch(MBlock { messages: vec![empty; 2], ..Default::default() }).await?; // block + 2 messagess (4)
-        assert_eq!(db.0.read().unwrap().keys().len(), 9);
-        assert_eq!(mchain.get_block_number().await, 4);
-        mchain.rollback_to_block(2).await?; // rm 2 blocks + 3 messages
-        assert_eq!(db.0.read().unwrap().keys().len(), 4);
-        assert_eq!(mchain.get_block_number().await, 2);
-        mchain.rollback_to_block(1).await?; // rm block
-        assert_eq!(db.0.read().unwrap().keys().len(), 3);
-        assert_eq!(mchain.get_block_number().await, 1);
-        assert!(mchain.rollback_to_block(0).await.is_err());
-        assert!(mchain.rollback_to_block(2).await.is_err());
-        assert_eq!(db.0.read().unwrap().keys().len(), 3);
-        assert_eq!(mchain.get_block_number().await, 1);
-        Ok(())
-    }
-
-    #[tokio::test]
-    async fn finality() -> eyre::Result<()> {
-        let (mchain, _, _handle) = setup().await?;
-        assert_eq!(mchain.get_block_number().await, 1);
-        assert_eq!(mchain.get_finalized_block().await, 1);
-        mchain.add_batch(MBlock::default()).await?;
-        mchain.add_batch(MBlock { timestamp: 1, ..Default::default() }).await?;
-        mchain.add_batch(MBlock { timestamp: 1, ..Default::default() }).await?;
-        assert_eq!(mchain.get_block_number().await, 4);
-        assert_eq!(mchain.get_finalized_block().await, 1);
-        TIME.set(59);
-        assert_eq!(mchain.get_block_number().await, 4);
-        assert_eq!(mchain.get_finalized_block().await, 1);
-        TIME.set(60);
-        assert_eq!(mchain.get_block_number().await, 4);
-        assert_eq!(mchain.get_finalized_block().await, 2);
-        TIME.set(61);
-        assert_eq!(mchain.get_block_number().await, 4);
-        assert_eq!(mchain.get_finalized_block().await, 4);
-        mchain.rollback_to_block(3).await?;
-        assert_eq!(mchain.get_block_number().await, 3);
-        assert_eq!(mchain.get_finalized_block().await, 3);
-        mchain.add_batch(MBlock { timestamp: 1, ..Default::default() }).await?;
-        assert_eq!(mchain.get_block_number().await, 4);
-        assert_eq!(mchain.get_finalized_block().await, 4);
-        mchain.add_batch(MBlock { timestamp: 2, ..Default::default() }).await?;
-        assert_eq!(mchain.get_block_number().await, 5);
-        assert_eq!(mchain.get_finalized_block().await, 4);
-        mchain.rollback_to_block(4).await?;
-        TIME.set(62);
-        assert_eq!(mchain.get_block_number().await, 4);
-        assert_eq!(mchain.get_finalized_block().await, 4);
-        mchain.add_batch(MBlock { timestamp: 100, ..Default::default() }).await?;
-        assert_eq!(mchain.get_block_number().await, 5);
-        assert_eq!(mchain.get_finalized_block().await, 4);
-        TIME.set(0);
-        assert_eq!(mchain.get_block_number().await, 5);
-        assert_eq!(mchain.get_finalized_block().await, 4);
-        mchain.rollback_to_block(2).await?;
-        assert_eq!(mchain.get_block_number().await, 2);
-        assert_eq!(mchain.get_finalized_block().await, 2);
-        TIME.set(1000);
-        assert_eq!(mchain.get_block_number().await, 2);
-        assert_eq!(mchain.get_finalized_block().await, 2);
-        Ok(())
     }
 }

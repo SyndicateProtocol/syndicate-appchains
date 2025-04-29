@@ -2,12 +2,17 @@
 //! consumer using a channel
 
 use crate::{config::ChainIngestorConfig, metrics::IngestorMetrics};
-use alloy::{primitives::Address, rpc::types::BlockNumberOrTag};
-use common::{
-    eth_client::RPCClient,
-    types::{Block, Chain, PartialBlock, PartialLogWithTxdata, Receipt},
+use alloy::{
+    primitives::{fixed_bytes, B256},
+    rpc::types::BlockNumberOrTag,
 };
+use block_builder::rollups::shared::rollup_adapter::BlockBuilder;
+use common::types::{Chain, GetBlockRef, PartialLogWithTxdata};
 use eyre::Error;
+use shared::{
+    eth_client::{RPCClient, RPCClientError},
+    types::{Block, BlockRef, Receipt},
+};
 use std::{
     cmp::{max, min},
     sync::Arc,
@@ -17,10 +22,11 @@ use thiserror::Error;
 use tokio::{
     sync::{mpsc::Sender, oneshot},
     task::JoinSet,
+    time::MissedTickBehavior,
 };
 use tracing::{debug, error, info, trace, warn};
 
-struct BatchContext<'a> {
+struct BatchContext<'a, PartialBlock, T: BlockBuilder<PartialBlock>> {
     client: &'a Arc<dyn RPCClient>,
     sender: &'a Sender<PartialBlock>,
     metrics: &'a IngestorMetrics,
@@ -28,11 +34,11 @@ struct BatchContext<'a> {
     initial_chain_head: u64,
     syncing_batch_size: u64,
     chain: Chain,
-    addresses: &'a Vec<Address>,
     shutdown_rx: &'a mut oneshot::Receiver<()>,
     backoff_initial_interval: Duration,
     backoff_scaling_factor: u64,
     max_backoff: Duration,
+    block_builder: &'a Arc<T>,
 }
 
 #[derive(Debug, Error)]
@@ -48,6 +54,15 @@ enum IngestorError {
 
     #[error("Failed to send block and receipts")]
     SendError,
+
+    #[error("Block receipt mismatch: block={block}, receipt={receipt}")]
+    BlockReceiptMismatch { block: B256, receipt: B256 },
+
+    #[error("Unexpected block receipt root: {0}")]
+    ReceiptRootMismatch(B256),
+
+    #[error("Failed to build block: {0}")]
+    BlockBuilderError(Error),
 }
 
 /// Starts a new ingestor task.
@@ -77,12 +92,12 @@ enum IngestorError {
 ///
 /// # Returns
 /// A `Result` indicating the success or failure of the ingestor execution.
-pub async fn run(
+pub async fn run<PartialBlock: Send + Clone + GetBlockRef + 'static>(
     chain: Chain,
     config: &ChainIngestorConfig,
-    addresses: Vec<Address>,
     client: Arc<dyn RPCClient>,
     sender: Sender<PartialBlock>,
+    block_builder: Arc<impl BlockBuilder<PartialBlock> + Sync + 'static>,
     metrics: IngestorMetrics,
     mut shutdown_rx: oneshot::Receiver<()>,
 ) -> Result<(), Error> {
@@ -112,6 +127,8 @@ pub async fn run(
     info!(%chain, "Starting polling");
 
     let mut interval = tokio::time::interval(polling_interval);
+    interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+
     let mut current_block_number = start_block;
 
     loop {
@@ -122,8 +139,6 @@ pub async fn run(
                 return Ok(());
             }
             _ = interval.tick() => {
-               // Skip missed ticks
-                interval.reset();
                 let should_terminate = fetch_and_push_batch(BatchContext {
                     client: &client,
                     sender: &sender,
@@ -132,11 +147,11 @@ pub async fn run(
                     initial_chain_head,
                     syncing_batch_size: batch_size,
                     chain,
-                    addresses:&addresses,
                     shutdown_rx: &mut shutdown_rx,
                     backoff_initial_interval: config.backoff_initial_interval,
                     backoff_scaling_factor: config.backoff_scaling_factor,
                     max_backoff: config.max_backoff,
+                    block_builder: &block_builder,
                 }).await;
                 if should_terminate {
                     info!(%chain, "Ingestor stopped");
@@ -147,26 +162,26 @@ pub async fn run(
     }
 }
 
-async fn push_block_and_receipts(
+async fn push_block_and_receipts<PartialBlock: GetBlockRef + Send>(
     sender: &Sender<PartialBlock>,
     metrics: &IngestorMetrics,
     current_block_number: &mut u64,
     block_and_receipts: PartialBlock,
     chain: Chain,
 ) -> Result<(), IngestorError> {
-    if block_and_receipts.number != *current_block_number {
+    if block_and_receipts.block_ref().number != *current_block_number {
         error!(
             %chain,
             current_block = %current_block_number,
-            received_block = %block_and_receipts.number,
+            received_block = %block_and_receipts.block_ref().number,
             "Block number mismatch"
         );
         return Err(IngestorError::BlockNumberMismatch {
             current: *current_block_number,
-            received: block_and_receipts.number,
+            received: block_and_receipts.block_ref().number,
         });
     }
-    trace!(%chain, block_number = %block_and_receipts.number, "Attempting to send block");
+    trace!(%chain, block_number = %block_and_receipts.block_ref().number, "Attempting to send block");
     sender.send(block_and_receipts).await.map_err(|e| {
         error!(%chain, error = %e, "Failed during sender.send().await");
         IngestorError::SendError
@@ -177,7 +192,9 @@ async fn push_block_and_receipts(
     Ok(())
 }
 
-async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
+async fn fetch_and_push_batch<PartialBlock: Send + Clone + GetBlockRef + 'static>(
+    ctx: BatchContext<'_, PartialBlock, impl BlockBuilder<PartialBlock> + Sync + 'static>,
+) -> bool {
     let start_block_num = *ctx.current_block_number;
     let upper_bound = min(
         max(ctx.initial_chain_head, start_block_num) + 1,
@@ -197,11 +214,11 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
     for &block_number in &block_numbers {
         trace!(%ctx.chain, block_number, "Spawning fetch task");
         let client = ctx.client.clone();
-        let addresses = ctx.addresses.clone();
         let backoff_initial_interval = ctx.backoff_initial_interval;
         let backoff_scaling_factor = ctx.backoff_scaling_factor;
         let max_backoff = ctx.max_backoff;
         let chain = ctx.chain;
+        let block_builder = ctx.block_builder.clone();
 
         // TODO(SEQ-801): benchmark this against the old code that uses a jsonrpc batch request
         // instead of parallel ones and see which one is faster.
@@ -226,15 +243,33 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
                 max_backoff,
             )
             .await?;
-            // Filter receipts that include logs for any of the addresses in ctx.addresses
-            let filtered_logs: Vec<PartialLogWithTxdata> = receipts
+
+            // basic sanity check to make sure the block is the same
+            // TODO(SEQ-848): it is better to compute & verify the receipt root instead
+            if let Some(receipt) = receipts.first() {
+                if receipt.block_hash != block.hash {
+                    return Err(IngestorError::BlockReceiptMismatch {
+                        block: block.hash,
+                        receipt: receipt.block_hash,
+                    });
+                }
+            } else {
+                // empty receipts root hash
+                if block.receipts_root !=
+                    fixed_bytes!(
+                        "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
+                    )
+                {
+                    return Err(IngestorError::ReceiptRootMismatch(block.receipts_root));
+                }
+            }
+
+            let logs: Vec<PartialLogWithTxdata> = receipts
                 .into_iter()
                 .flat_map(|receipt| {
-                    // Keep the relevant logs and related tx calldata
                     let logs: Vec<PartialLogWithTxdata> = receipt
                         .logs
                         .into_iter()
-                        .filter(|log| addresses.contains(&log.address))
                         .map(|log| PartialLogWithTxdata {
                             address: log.address,
                             topics: log.topics,
@@ -248,16 +283,22 @@ async fn fetch_and_push_batch(ctx: BatchContext<'_>) -> bool {
                 })
                 .collect();
 
-            // Return the block and receipts
-            Ok((
-                block_number,
-                PartialBlock {
+            let partial_block = common::types::PartialBlock {
+                block_ref: BlockRef {
                     number: block.number,
                     hash: block.hash,
                     timestamp: block.timestamp,
-                    parent_hash: block.parent_hash,
-                    logs: filtered_logs,
                 },
+                parent_hash: block.parent_hash,
+                logs,
+            };
+
+            // Return the block and receipts
+            Ok((
+                block_number,
+                block_builder
+                    .build_block(&partial_block)
+                    .map_err(IngestorError::BlockBuilderError)?,
             ))
         });
     }
@@ -406,8 +447,8 @@ async fn fetch_with_retry<T: Send, F, Fut, P>(
 ) -> Result<T, IngestorError>
 where
     F: Fn() -> Fut + Send,
-    Fut: std::future::Future<Output = Result<T, common::eth_client::RPCClientError>> + Send,
-    P: Fn(&common::eth_client::RPCClientError) -> bool + Send,
+    Fut: std::future::Future<Output = Result<T, RPCClientError>> + Send,
+    P: Fn(&RPCClientError) -> bool + Send,
 {
     let mut retry_count = 0;
     let mut backoff = backoff_initial_interval;
@@ -459,7 +500,7 @@ async fn fetch_block_with_retry(
         backoff_initial_interval,
         backoff_scaling_factor,
         max_backoff,
-        |err| matches!(err, common::eth_client::RPCClientError::BlockNotFound(_)),
+        |err| matches!(err, RPCClientError::BlockNotFound(_)),
         chain,
     )
     .await
@@ -482,7 +523,7 @@ async fn fetch_receipts_with_retry(
         backoff_initial_interval,
         backoff_scaling_factor,
         max_backoff,
-        |err| matches!(err, common::eth_client::RPCClientError::BlockReceiptsNotFound(_)),
+        |err| matches!(err, RPCClientError::BlockReceiptsNotFound(_)),
         chain,
     )
     .await
@@ -491,34 +532,33 @@ async fn fetch_receipts_with_retry(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{config::ChainIngestorConfig, metrics::IngestorMetrics};
-    use alloy::{primitives::B256, rpc::types::BlockNumberOrTag};
+    use crate::metrics::IngestorMetrics;
+    use alloy::rpc::types::BlockNumberOrTag;
     use async_trait::async_trait;
-    use common::{
-        eth_client::RPCClientError,
-        types::{Block, PartialBlock},
-    };
+    use common::types::PartialBlock;
     use eyre::Result;
     use mockall::{mock, predicate::*};
     use shared::metrics::MetricsState;
-    use std::str::FromStr;
-    use tokio::sync::mpsc::channel;
+    use tokio::{sync::mpsc::channel, task::JoinHandle};
+
+    #[ctor::ctor]
+    fn init() {
+        shared::logger::set_global_default_subscriber();
+    }
 
     fn get_dummy_block(number: u64) -> Block {
         Block {
-            hash: B256::from_str(
-                "1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-            )
-            .unwrap(),
+            hash: fixed_bytes!("1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"),
             number,
-            parent_hash: B256::from_str(
-                "0234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
-            )
-            .unwrap(),
+            parent_hash: fixed_bytes!(
+                "0234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
+            ),
             logs_bloom: "0xLog".to_string(),
             transactions_root: "0xTra".to_string(),
             state_root: "0xSta".to_string(),
-            receipts_root: "0xRec".to_string(),
+            receipts_root: fixed_bytes!(
+                "0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421"
+            ),
             timestamp: 1000000000,
             transactions: vec![],
         }
@@ -535,6 +575,40 @@ mod tests {
         }
     }
 
+    struct BlockBuilderMock {}
+
+    impl BlockBuilder<PartialBlock> for BlockBuilderMock {
+        fn build_block(&self, block: &PartialBlock) -> Result<PartialBlock> {
+            Ok(block.clone())
+        }
+    }
+
+    async fn start_ingestor(
+        chain: Chain,
+        config: ChainIngestorConfig,
+        client: Arc<dyn RPCClient>,
+    ) -> (JoinHandle<()>, oneshot::Sender<()>, tokio::sync::mpsc::Receiver<PartialBlock>) {
+        let (sender, receiver) = channel(10);
+        let (shutdown_tx, shutdown_rx) = oneshot::channel();
+        let polling_handle = tokio::spawn(async move {
+            let result = run(
+                chain,
+                &config,
+                client,
+                sender,
+                Arc::new(BlockBuilderMock {}),
+                IngestorMetrics::new(&mut MetricsState::default().registry),
+                shutdown_rx,
+            )
+            .await;
+            assert!(result.is_ok(), "Polling task failed: {:?}", result);
+        });
+
+        tokio::time::sleep(Duration::from_millis(100)).await;
+        assert!(!polling_handle.is_finished());
+        (polling_handle, shutdown_tx, receiver)
+    }
+
     #[tokio::test]
     async fn test_push_block_and_receipts() -> Result<(), Error> {
         let start_block = 19486923;
@@ -545,9 +619,11 @@ mod tests {
 
         let block = get_dummy_block(start_block);
         let block = PartialBlock {
-            number: block.number,
-            hash: block.hash,
-            timestamp: block.timestamp,
+            block_ref: BlockRef {
+                number: block.number,
+                hash: block.hash,
+                timestamp: block.timestamp,
+            },
             parent_hash: block.parent_hash,
             logs: vec![],
         };
@@ -563,7 +639,7 @@ mod tests {
         .expect("Failed to poll block");
 
         if let Some(block) = receiver.recv().await {
-            assert_eq!(block.number, start_block);
+            assert_eq!(block.block_ref.number, start_block);
         } else {
             panic!("No block received");
         }
@@ -581,9 +657,11 @@ mod tests {
 
         let block = get_dummy_block(wrong_block);
         let block = PartialBlock {
-            number: block.number,
-            hash: block.hash,
-            timestamp: block.timestamp,
+            block_ref: BlockRef {
+                number: block.number,
+                hash: block.hash,
+                timestamp: block.timestamp,
+            },
             parent_hash: block.parent_hash,
             logs: vec![],
         };
@@ -614,24 +692,15 @@ mod tests {
             ..Default::default()
         };
 
-        let (sender, _) = channel(10);
         let mut mock_client = MockRPCClientMock::new();
         mock_client
             .expect_get_block_by_number()
             .returning(move |_| Ok(get_dummy_block(start_block)));
         mock_client.expect_get_block_receipts().returning(move |_| Ok(vec![]));
         let client: Arc<dyn RPCClient> = Arc::new(mock_client);
-        let mut metrics_state = MetricsState::default();
-        let metrics = IngestorMetrics::new(&mut metrics_state.registry);
 
-        let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let polling_handle = tokio::spawn(async move {
-            let result =
-                run(Chain::Sequencing, &config, vec![], client, sender, metrics, shutdown_rx).await;
-            assert!(result.is_ok(), "Polling task failed: {:?}", result);
-        });
-
-        tokio::time::sleep(Duration::from_millis(50)).await;
+        let (polling_handle, shutdown_tx, _receiver) =
+            start_ingestor(Chain::Sequencing, config, client).await;
 
         let _ = shutdown_tx.send(());
         polling_handle.await?;
@@ -653,10 +722,6 @@ mod tests {
             ..Default::default()
         };
         let chain_head = start_block + syncing_batch_size;
-
-        let (sender, mut receiver) = channel(10);
-        let mut metrics_state = MetricsState::default();
-        let metrics = IngestorMetrics::new(&mut metrics_state.registry);
 
         let mut mock_client = MockRPCClientMock::new();
 
@@ -680,18 +745,12 @@ mod tests {
 
         let client: Arc<dyn RPCClient> = Arc::new(mock_client);
 
-        let (shutdown_tx, shutdown_rx) = oneshot::channel();
-        let polling_handle = tokio::spawn(async move {
-            let result =
-                run(Chain::Sequencing, &config, vec![], client, sender, metrics, shutdown_rx).await;
-            assert!(result.is_ok(), "Polling task failed: {:?}", result);
-        });
-
-        tokio::time::sleep(Duration::from_millis(100)).await;
+        let (polling_handle, shutdown_tx, mut receiver) =
+            start_ingestor(Chain::Sequencing, config, client).await;
 
         let mut received_blocks = Vec::new();
         while let Ok(block) = receiver.try_recv() {
-            received_blocks.push(block.number);
+            received_blocks.push(block.block_ref.number);
         }
 
         assert_eq!(received_blocks.len(), syncing_batch_size as usize);

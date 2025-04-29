@@ -1,9 +1,4 @@
-use block_builder::{
-    config::TargetRollupType::{ARBITRUM, OPTIMISM},
-    rollups::{
-        arbitrum::arbitrum_adapter::ArbitrumAdapter, optimism::optimism_adapter::OptimismAdapter,
-    },
-};
+use block_builder::config::TargetRollupType::{ARBITRUM, OPTIMISM};
 use eyre::Result;
 use metabased_translator::{
     config::MetabasedConfig, config_manager::with_onchain_config, spawn::run,
@@ -49,10 +44,10 @@ async fn main() -> Result<()> {
     // Run the async process
     match config.block_builder.target_rollup_type {
         OPTIMISM => {
-            run(&config, OptimismAdapter::new(&config.block_builder)).await?;
+            panic!("Optimism is unsupported currently")
         }
         ARBITRUM => {
-            run(&config, ArbitrumAdapter::new(&config.block_builder)).await?;
+            run(&config).await?;
         }
     }
 

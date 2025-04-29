@@ -3,48 +3,35 @@
 
 use crate::zlib_compression::is_valid_cm_bits_8_only;
 use alloy::primitives::Bytes;
-use bytes::BytesMut;
 use flate2::{write::ZlibEncoder, Compression};
+use rlp::RlpStream;
 use std::io::{Error, Write};
 
 /// A streaming compressor that incrementally compresses transactions using zlib
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct AdditiveCompressor {
-    buffer: BytesMut,
-    num_transactions: u32,
-    encoder: ZlibEncoder<Vec<u8>>,
-}
-
-impl Default for AdditiveCompressor {
-    fn default() -> Self {
-        Self::new()
-    }
+    transactions: Vec<Bytes>,
 }
 
 impl AdditiveCompressor {
     /// Creates a new `AdditiveCompressor`
-    pub fn new() -> Self {
-        let mut buffer = BytesMut::new();
-        buffer.extend_from_slice(&0u32.to_be_bytes());
-
-        Self {
-            buffer,
-            num_transactions: 0,
-            encoder: ZlibEncoder::new(Vec::new(), Compression::default()),
-        }
+    pub const fn new() -> Self {
+        Self { transactions: Vec::new() }
     }
 
-    /// Clones the internal buffer, appends the txn, compresses, and returns compressed Vec
+    /// Clones the compressor and compresses a transaction
     pub fn clone_and_compress_with_txn(&self, txn: &Bytes) -> Result<Vec<u8>, Error> {
-        let mut buffer = self.buffer.clone();
-        let tx_count = self.num_transactions + 1;
+        let mut txns = self.transactions.clone();
+        txns.push(txn.clone());
 
-        buffer.extend_from_slice(&(txn.len() as u32).to_be_bytes());
-        buffer.extend_from_slice(txn);
-        buffer[0..4].copy_from_slice(&tx_count.to_be_bytes());
+        let mut stream = RlpStream::new_list(txns.len());
+        for t in &txns {
+            stream.append(&t.as_ref());
+        }
+        let encoded = stream.out();
 
         let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
-        encoder.write_all(&buffer)?;
+        encoder.write_all(&encoded)?;
         let compressed = encoder.finish()?;
 
         is_valid_cm_bits_8_only(&compressed)?;
@@ -52,25 +39,27 @@ impl AdditiveCompressor {
         Ok(compressed)
     }
 
-    /// Caller provides already compressed buffer (for optimized flow)
+    /// Pushes a transaction and its precompressed data into the compressor
     pub fn push_with_precompressed(
         &mut self,
         txn: &Bytes,
         _compressed: Vec<u8>,
     ) -> Result<(), Error> {
-        // Only mutate state — compression result was already validated
-        self.buffer.extend_from_slice(&(txn.len() as u32).to_be_bytes());
-        self.buffer.extend_from_slice(txn);
-        self.num_transactions += 1;
-        self.buffer[0..4].copy_from_slice(&self.num_transactions.to_be_bytes());
+        self.transactions.push(txn.clone());
         Ok(())
     }
-    /// Finalizes the stream and returns the full compressed batch
-    pub fn finish(mut self) -> Result<Bytes, Error> {
-        self.buffer[0..4].copy_from_slice(&(self.num_transactions).to_be_bytes());
 
-        self.encoder.write_all(&self.buffer)?;
-        let compressed = self.encoder.finish()?;
+    /// Finishes the compression process and returns the compressed data
+    pub fn finish(self) -> Result<Bytes, Error> {
+        let mut stream = RlpStream::new_list(self.transactions.len());
+        for t in &self.transactions {
+            stream.append(&t.as_ref());
+        }
+        let encoded = stream.out();
+
+        let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+        encoder.write_all(&encoded)?;
+        let compressed = encoder.finish()?;
 
         is_valid_cm_bits_8_only(&compressed)?;
 
@@ -79,27 +68,25 @@ impl AdditiveCompressor {
 
     /// Resets the compressor to its initial state
     pub fn reset(&mut self) {
-        self.buffer = BytesMut::new();
-        self.num_transactions = 0;
-        self.encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+        self.transactions.clear();
     }
 
-    /// Returns the number of transactions in the buffer
-    pub const fn num_transactions(&self) -> u32 {
-        self.num_transactions
+    /// Returns the number of transactions in the compressor
+    pub fn num_transactions(&self) -> usize {
+        self.transactions.len()
     }
 
-    /// Returns true if the buffer is empty
-    pub const fn is_empty(&self) -> bool {
-        self.num_transactions == 0
+    /// Returns true if the compressor is empty
+    pub fn is_empty(&self) -> bool {
+        self.transactions.is_empty()
     }
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use alloy::primitives::Bytes;
     use flate2::read::ZlibDecoder;
+    use rlp::Rlp;
     use std::io::Read;
 
     fn sample_txn(data: &[u8]) -> Bytes {
@@ -120,6 +107,16 @@ mod tests {
 
         let compressed = compressor.clone_and_compress_with_txn(&txn).unwrap();
         assert!(!compressed.is_empty());
+
+        // Decompress and decode
+        let mut decoder = ZlibDecoder::new(&compressed[..]);
+        let mut decompressed = Vec::new();
+        decoder.read_to_end(&mut decompressed).unwrap();
+
+        let rlp = Rlp::new(&decompressed);
+        let decoded_txns: Vec<Vec<u8>> = rlp.as_list().unwrap();
+        assert_eq!(decoded_txns.len(), 1);
+        assert_eq!(decoded_txns[0], txn.to_vec());
     }
 
     #[test]
@@ -161,6 +158,17 @@ mod tests {
 
         let compressed = compressor.finish().unwrap();
         assert!(!compressed.is_empty());
+
+        // Decompress and check the RLP list
+        let mut decoder = ZlibDecoder::new(&compressed[..]);
+        let mut decompressed = Vec::new();
+        decoder.read_to_end(&mut decompressed).unwrap();
+
+        let rlp = Rlp::new(&decompressed);
+        let decoded_txns: Vec<Vec<u8>> = rlp.as_list().unwrap();
+        assert_eq!(decoded_txns.len(), 2);
+        assert_eq!(decoded_txns[0], txn1.to_vec());
+        assert_eq!(decoded_txns[1], txn2.to_vec());
     }
 
     #[test]
@@ -195,21 +203,12 @@ mod tests {
         decoder.read_to_end(&mut decompressed).unwrap();
 
         // Decode the transactions from the decompressed buffer
-        let mut cursor = 4; // skip the first 4 bytes (transaction count)
-        let mut decoded_txns = Vec::new();
-        while cursor < decompressed.len() {
-            let len_bytes: [u8; 4] = decompressed[cursor..cursor + 4].try_into().unwrap();
-            let txn_len = u32::from_be_bytes(len_bytes) as usize;
-            cursor += 4;
-
-            let txn = decompressed[cursor..cursor + txn_len].to_vec();
-            decoded_txns.push(Bytes::from(txn));
-            cursor += txn_len;
-        }
+        let rlp = Rlp::new(&decompressed);
+        let decoded_txns: Vec<Vec<u8>> = rlp.as_list().unwrap();
 
         assert_eq!(decoded_txns.len(), txns.len());
         for (original, decoded) in txns.iter().zip(decoded_txns.iter()) {
-            assert_eq!(original, decoded, "Decoded transaction does not match original");
+            assert_eq!(original.as_ref(), decoded, "Decoded transaction does not match original");
         }
     }
 }

@@ -3,7 +3,7 @@
 use alloy::primitives::Address;
 use clap::Parser;
 use jsonrpsee::server::{RpcServiceBuilder, Server};
-use mchain::{mchain::start_mchain, metrics::MchainMetrics};
+use mchain::{metrics::MchainMetrics, server::start_mchain};
 use rocksdb::DB;
 use shared::{
     logger::set_global_default_subscriber,
@@ -27,8 +27,9 @@ struct Config {
     metrics_port: u16,
     #[arg(long, env = "CHAIN_ID")]
     chain_id: u64,
-    #[arg(long, env = "CHAIN_OWNER", default_value = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")]
-    chain_owner: Address,
+    // TODO(SEQ-840): read the chain owner from the chain config contract instead
+    #[arg(long, env = "CHAIN_OWNER_ADDRESS")]
+    chain_owner_address: Address,
 }
 
 #[tokio::main]
@@ -42,7 +43,8 @@ async fn main() -> eyre::Result<()> {
     let mut metrics_state = MetricsState::default();
     let metrics = MchainMetrics::new(&mut metrics_state.registry);
     tokio::spawn(start_metrics(metrics_state, cfg.metrics_port));
-    let module = start_mchain(cfg.chain_id, cfg.chain_owner, cfg.finality_delay, db, metrics).await;
+    let module =
+        start_mchain(cfg.chain_id, cfg.chain_owner_address, cfg.finality_delay, db, metrics).await;
     let handle = Server::builder()
         .set_rpc_middleware(RpcServiceBuilder::new().rpc_logger(1024))
         .build(format!("0.0.0.0:{}", cfg.port))

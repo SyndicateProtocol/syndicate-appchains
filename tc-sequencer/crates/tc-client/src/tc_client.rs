@@ -26,7 +26,7 @@ const DEFAULT_SEQUENCING_CHAIN_ID: u64 = 5113;
 const DEFAULT_FUNCTION_SIGNATURE: &str = "processTransaction(address chainAddress, bytes data)";
 /// The function signature for the batch function
 pub const BATCH_FUNCTION_SIGNATURE: &str =
-    "processTransactionRaw(address chainAddress, bytes[] data)";
+    "processTransactionRaw(address chainAddress, bytes data)";
 const TC_CHAIN_ADDRESS_KEY: &str = "chainAddress";
 const TC_DATA_KEY: &str = "data";
 
@@ -92,16 +92,18 @@ impl TCClient {
             client,
         })
     }
-    async fn send_transaction(
+
+    /// Send a transaction to the TC
+    pub async fn send_transaction(
         &self,
-        raw_tx: Bytes,
+        data: Bytes,
         function_signature: String,
     ) -> Result<String, RpcError> {
         let request = SendTransactionRequest::new(
             self.tc_project_id.clone(),
             self.wallet_pool_address,
             self.sequencing_address,
-            raw_tx,
+            data,
             function_signature,
         );
 
@@ -137,16 +139,15 @@ impl TCClient {
         raw_tx: Bytes,
         function_signature: String,
     ) -> Result<TxHash, RpcError> {
-        info!("Processing transaction: {}", hex::encode(&raw_tx));
+        debug!("Processing transaction: {}", hex::encode(&raw_tx));
         let original_tx = validate_transaction(&raw_tx)?;
         let original_tx_hash = *original_tx.tx_hash();
-        let raw_tx_clone = raw_tx.clone();
+        let original_tx_hash_str = hex::encode(original_tx_hash);
+        info!("Submitting transaction - tx hash: 0x{}", original_tx_hash_str);
         let transaction_id = self.send_transaction(raw_tx, function_signature).await?;
-        debug!(
-            "Transaction submitted successfully - Original raw tx: 0x{}, Original tx hash: 0x{}, TC transaction ID: {}",
-            hex::encode(&raw_tx_clone),
-            hex::encode(original_tx_hash),
-            transaction_id
+        info!(
+            "Transaction submitted successfully - tx hash: 0x{}, TC transaction ID: {}",
+            original_tx_hash_str, transaction_id
         );
 
         Ok(original_tx_hash)

@@ -20,7 +20,6 @@ eyre              = { workspace = true }
 flate2            = { workspace = true }
 hex               = { workspace = true }
 mchain            = { workspace = true }
-prometheus-client = { workspace = true }
 serde             = { workspace = true }
 serde_json        = { workspace = true }
 shared            = { workspace = true }

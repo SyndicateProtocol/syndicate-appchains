@@ -17,7 +17,7 @@ use contract_bindings::{
     },
 };
 use eyre::Result;
-use mchain::mchain::{rollup_config, MProvider};
+use mchain::{client::MProvider, server::rollup_config};
 use std::{
     env,
     future::Future,
@@ -76,7 +76,6 @@ pub(crate) struct Components {
 
     /// Mchain
     pub mchain_provider: MProvider,
-    pub mchain_rpc_url: String,
 
     pub poster_url: String,
 }
@@ -296,15 +295,11 @@ impl Components {
             let state_file =
                 std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("config").join(file);
 
-            (set_port, set_anvil, set_provider) = start_anvil_with_args(
-                31337,
-                #[allow(clippy::unwrap_used)]
-                &["--load-state", state_file.to_str().unwrap()],
-            )
-            .await?;
+            (set_port, set_anvil, set_provider) =
+                start_anvil_with_args(31337, &["--load-state", state_file.to_str().unwrap()])
+                    .await?;
 
             // Sync the tips of the sequencing and settlement chains
-            #[allow(clippy::unwrap_used)]
             let block = set_provider.get_block_by_number(BlockNumberOrTag::Latest).await?.unwrap();
             seq_provider
                 .evm_mine(Some(MineOptions::Timestamp(Some(block.header.timestamp))))
@@ -465,7 +460,6 @@ impl Components {
         // Launch sequencer
         Ok((
             Self {
-                #[allow(clippy::unwrap_used)]
                 _timer: TestTimer(SystemTime::now(), start_time.elapsed().unwrap()),
 
                 sequencing_provider: seq_provider,
@@ -481,7 +475,6 @@ impl Components {
                 inbox_address: arbitrum_inbox_address,
 
                 mchain_provider,
-                mchain_rpc_url: mchain_rpc_url.clone(),
                 poster_url,
             },
             ComponentHandles {

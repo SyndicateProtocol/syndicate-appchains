@@ -6,11 +6,10 @@
 use alloy::primitives::Address;
 use block_builder::config::BlockBuilderConfig;
 use clap::Parser;
-use common::eth_client::RPCClientError;
 use eyre::Result;
 use ingestor::config::{SequencingChainConfig, SettlementChainConfig};
 use metrics::config::MetricsConfig;
-use shared::parse::parse_address;
+use shared::{eth_client::RPCClientError, parse::parse_address};
 use std::fmt::Debug;
 use thiserror::Error;
 use tracing::error;

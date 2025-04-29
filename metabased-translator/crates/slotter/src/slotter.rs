@@ -1,7 +1,12 @@
 //! Slotter module for metabased-translator
 use crate::metrics::SlotterMetrics;
-use alloy::primitives::B256;
-use common::types::{BlockRef, Chain, KnownState, PartialBlock, Slot, SlotProcessor};
+use alloy::primitives::{FixedBytes, B256};
+use common::types::{Chain, SequencingBlock, SettlementBlock};
+use mchain::{
+    client::{KnownState, Provider},
+    db::{MBlock, Slot},
+};
+use shared::types::BlockRef;
 use thiserror::Error;
 use tokio::sync::mpsc::Receiver;
 use tracing::{error, info, trace};
@@ -12,9 +17,9 @@ use tracing::{error, info, trace};
 pub async fn run(
     settlement_delay: u64,
     known_state: Option<KnownState>,
-    mut sequencing_rx: Receiver<PartialBlock>,
-    mut settlement_rx: Receiver<PartialBlock>,
-    slot_processor: impl SlotProcessor,
+    mut sequencing_rx: Receiver<SequencingBlock>,
+    mut settlement_rx: Receiver<SettlementBlock>,
+    provider: &impl Provider,
     metrics: SlotterMetrics,
 ) -> Result<(), SlotterError> {
     let (mut latest_sequencing_block, mut latest_settlement_block) = match known_state {
@@ -25,68 +30,108 @@ pub async fn run(
     };
 
     info!("Starting Slotter");
-    let mut set_block = get_next_block(
-        &mut latest_settlement_block,
-        settlement_rx.recv().await.expect("settlement channel closed"),
-        Chain::Settlement,
-        &metrics,
-    )?;
+
+    trace!("Waiting for settlement block");
+    let mut set_block = settlement_rx.recv().await.expect("settlement channel closed");
+    if let Some(latest) = latest_settlement_block {
+        if set_block.block_ref.hash != latest.hash {
+            return Err(SlotterError::ReorgDetected {
+                chain: Chain::Settlement,
+                current_block: latest,
+                received_block: set_block.block_ref,
+                received_parent_hash: set_block.parent_hash,
+            });
+        }
+    }
+    latest_settlement_block = Some(set_block.block_ref.clone());
 
     loop {
         trace!("Waiting for sequencing block");
-        let mut slot = Slot {
-            sequencing: get_next_block(
-                &mut latest_sequencing_block,
-                sequencing_rx.recv().await.expect("sequencing channel closed"),
-                Chain::Sequencing,
-                &metrics,
-            )?,
-            settlement: Default::default(),
+        let seq_block = sequencing_rx.recv().await.expect("sequencing channel closed");
+        validate_block(
+            &mut latest_sequencing_block,
+            &seq_block.block_ref,
+            seq_block.parent_hash,
+            Chain::Sequencing,
+            &metrics,
+        )?;
+        let mut mblock = MBlock {
+            timestamp: seq_block.block_ref.timestamp,
+            slot: Slot {
+                seq_block_number: seq_block.block_ref.number,
+                seq_block_hash: seq_block.block_ref.hash,
+                set_block_hash: FixedBytes::ZERO,
+                set_block_number: 0,
+            },
+            payload: None,
         };
 
+        let mut messages = vec![];
+
         trace!("Waiting for settlement blocks");
-        while set_block.timestamp + settlement_delay <= slot.sequencing.timestamp {
-            slot.settlement.push(set_block);
-            set_block = get_next_block(
+        let mut blocks_per_slot: u64 = 1;
+        while set_block.block_ref.timestamp + settlement_delay <= seq_block.block_ref.timestamp {
+            blocks_per_slot += 1;
+            messages.append(&mut set_block.messages);
+            set_block = settlement_rx.recv().await.expect("settlement channel closed");
+            validate_block(
                 &mut latest_settlement_block,
-                settlement_rx.recv().await.expect("settlement channel closed"),
+                &set_block.block_ref,
+                set_block.parent_hash,
                 Chain::Settlement,
                 &metrics,
             )?;
         }
 
-        trace!("Processing slot");
-        metrics.record_blocks_per_slot(slot.settlement.len() as u64 + 1);
-        metrics.record_last_slot_created(slot.sequencing.number);
-        slot_processor
-            .process_slot(&slot)
+        if seq_block.tx_count > 0 || !messages.is_empty() {
+            mblock.payload = Some((seq_block.batch, messages));
+        }
+        mblock.slot.set_block_hash = set_block.block_ref.hash;
+        mblock.slot.set_block_number = set_block.block_ref.number;
+
+        trace!("Processing slot {:?}", mblock.slot);
+        let time = std::time::Instant::now();
+        provider
+            .add_batch(&mblock)
             .await
             .map_err(|e| SlotterError::SlotProcessorError(e.to_string()))?;
+        if mblock.payload.is_some() {
+            info!(
+                "Sent slot {} with timestamp {} in {:?}",
+                mblock.slot.seq_block_number,
+                mblock.timestamp,
+                time.elapsed()
+            );
+        }
+        metrics.record_blocks_per_slot(blocks_per_slot);
+        metrics.record_last_slot_created(mblock.slot.seq_block_number);
     }
 }
 
+// TODO(SEQ-847): move this reorg checking logic to the ingestors instead.
 #[allow(clippy::result_large_err)]
-fn get_next_block(
+fn validate_block(
     latest: &mut Option<BlockRef>,
-    block: PartialBlock,
+    block: &BlockRef,
+    parent_hash: FixedBytes<32>,
     chain: Chain,
     metrics: &SlotterMetrics,
-) -> Result<PartialBlock, SlotterError> {
+) -> Result<(), SlotterError> {
     if let Some(latest) = latest {
         if block.number > latest.number + 1 {
             return Err(SlotterError::BlockNumberSkipped {
                 chain,
                 current_block: latest.clone(),
-                received_block: BlockRef::new(&block),
+                received_block: block.clone(),
             });
         }
 
-        if !block.parent_hash.eq(&latest.hash) {
+        if !parent_hash.eq(&latest.hash) {
             return Err(SlotterError::ReorgDetected {
                 chain,
                 current_block: latest.clone(),
-                received_block: BlockRef::new(&block),
-                received_parent_hash: block.parent_hash,
+                received_block: block.clone(),
+                received_parent_hash: parent_hash,
             });
         }
 
@@ -99,7 +144,7 @@ fn get_next_block(
         }
     }
 
-    *latest = Some(BlockRef::new(&block));
+    *latest = Some(block.clone());
 
     trace!(
         chain = ?chain,
@@ -111,7 +156,7 @@ fn get_next_block(
 
     metrics.record_last_processed_block(block.number, chain);
     metrics.update_chain_timestamp_lag(block.timestamp, chain);
-    Ok(block)
+    Ok(())
 }
 
 #[allow(missing_docs)] // self-documenting
@@ -139,69 +184,128 @@ pub enum SlotterError {
 
 #[cfg(test)]
 mod tests {
+    use super::run;
     use crate::{
         metrics::SlotterMetrics,
         slotter::{
-            get_next_block,
+            validate_block, SettlementBlock,
             SlotterError::{BlockNumberSkipped, EarlierTimestamp, ReorgDetected},
         },
     };
-    use alloy::primitives::{FixedBytes, U256};
-    use common::types::{BlockRef, Chain, PartialBlock};
+    use alloy::{
+        primitives::{FixedBytes, U256},
+        rpc::json_rpc::{RpcRecv, RpcSend},
+        transports::{RpcError, TransportErrorKind},
+    };
+    use async_trait::async_trait;
+    use common::types::Chain;
+    use mchain::client::{KnownState, Provider};
     use prometheus_client::registry::Registry;
+    use shared::types::BlockRef;
+    use tokio::sync::mpsc;
 
     #[ctor::ctor]
     fn init() {
         shared::logger::set_global_default_subscriber();
     }
 
+    struct PanicProvider {}
+
+    #[async_trait]
+    impl Provider for PanicProvider {
+        async fn raw_request<Params: RpcSend, T: RpcRecv + Clone>(
+            &self,
+            _method: &'static str,
+            _params: Params,
+        ) -> Result<T, RpcError<TransportErrorKind>> {
+            panic!("unexpected call to raw_request");
+        }
+    }
+
+    #[tokio::test]
+    async fn known_state_reorg() -> eyre::Result<()> {
+        let (_seq_tx, seq_rx) = mpsc::channel(1);
+        let (set_tx, set_rx) = mpsc::channel(1);
+        let latest: BlockRef = Default::default();
+        let set_block = SettlementBlock {
+            block_ref: BlockRef { hash: U256::from(1).into(), ..Default::default() },
+            ..Default::default()
+        };
+        set_tx.send(set_block.clone()).await?;
+        let result = run(
+            0,
+            Some(KnownState {
+                sequencing_block: Default::default(),
+                settlement_block: latest.clone(),
+            }),
+            seq_rx,
+            set_rx,
+            &PanicProvider {},
+            SlotterMetrics::new(&mut Registry::default()),
+        )
+        .await;
+        assert_eq!(
+            result,
+            Err(ReorgDetected {
+                chain: Chain::Settlement,
+                current_block: latest,
+                received_block: set_block.block_ref,
+                received_parent_hash: set_block.parent_hash,
+            })
+        );
+        Ok(())
+    }
+
     #[test]
     fn valid_block() {
         for chain in [Chain::Sequencing, Chain::Settlement] {
-            let mut latest = Some(BlockRef { number: 0, timestamp: 0, hash: FixedBytes::ZERO });
-            let block = PartialBlock { number: 1, ..Default::default() };
+            let mut latest = Some(Default::default());
+            let block = BlockRef { number: 1, ..Default::default() };
             assert_eq!(
-                get_next_block(
+                validate_block(
                     &mut latest,
-                    block.clone(),
+                    &block,
+                    FixedBytes::ZERO,
                     chain,
                     &SlotterMetrics::new(&mut Registry::default())
                 ),
-                Ok(block.clone())
+                Ok(())
             );
-            assert_eq!(latest, Some(BlockRef::new(&block)));
+            assert_eq!(latest, Some(block));
             let mut latest = None;
-            let block = PartialBlock { number: 10, ..Default::default() };
+            let block = BlockRef { number: 10, ..Default::default() };
             assert_eq!(
-                get_next_block(
+                validate_block(
                     &mut latest,
-                    block.clone(),
+                    &block,
+                    FixedBytes::ZERO,
                     chain,
                     &SlotterMetrics::new(&mut Registry::default())
                 ),
-                Ok(block.clone())
+                Ok(())
             );
-            assert_eq!(latest, Some(BlockRef::new(&block)));
+            assert_eq!(latest, Some(block));
         }
     }
 
     #[test]
     fn block_number_skipped() {
         for chain in [Chain::Sequencing, Chain::Settlement] {
-            let mut latest = Some(BlockRef { number: 0, timestamp: 0, hash: FixedBytes::ZERO });
+            let mut latest = Some(Default::default());
             let latest_copy = latest.clone();
-            let block = PartialBlock { number: 2, ..Default::default() };
+            let block = BlockRef { number: 2, ..Default::default() };
             assert_eq!(
-                get_next_block(
+                validate_block(
                     &mut latest,
-                    block.clone(),
+                    &block,
+                    FixedBytes::ZERO,
                     chain,
                     &SlotterMetrics::new(&mut Registry::default())
                 ),
                 Err(BlockNumberSkipped {
                     chain,
                     current_block: latest_copy.clone().unwrap(),
-                    received_block: BlockRef::new(&block)
+                    received_block: block
                 })
             );
             assert_eq!(latest, latest_copy);
@@ -211,22 +315,23 @@ mod tests {
     #[test]
     fn reorg_detected() {
         for chain in [Chain::Sequencing, Chain::Settlement] {
-            let mut latest = Some(BlockRef { number: 0, timestamp: 0, hash: FixedBytes::ZERO });
+            let mut latest = Some(Default::default());
             let latest_copy = latest.clone();
-            let block =
-                PartialBlock { number: 1, parent_hash: U256::from(1).into(), ..Default::default() };
+            let block = BlockRef { number: 1, ..Default::default() };
+            let parent_hash = U256::from(1).into();
             assert_eq!(
-                get_next_block(
+                validate_block(
                     &mut latest,
-                    block.clone(),
+                    &block,
+                    parent_hash,
                     chain,
                     &SlotterMetrics::new(&mut Registry::default())
                 ),
                 Err(ReorgDetected {
                     chain,
                     current_block: latest_copy.clone().unwrap(),
-                    received_block: BlockRef::new(&block),
-                    received_parent_hash: block.parent_hash,
+                    received_block: block,
+                    received_parent_hash: parent_hash,
                 })
             );
             assert_eq!(latest, latest_copy);
@@ -236,13 +341,14 @@ mod tests {
     #[test]
     fn earlier_timestamp() {
         for chain in [Chain::Sequencing, Chain::Settlement] {
-            let mut latest = Some(BlockRef { number: 0, timestamp: 1, hash: FixedBytes::ZERO });
+            let mut latest = Some(BlockRef { timestamp: 1, ..Default::default() });
             let latest_copy = latest.clone();
-            let block = PartialBlock { number: 1, ..Default::default() };
+            let block = BlockRef { number: 1, ..Default::default() };
             assert_eq!(
-                get_next_block(
+                validate_block(
                     &mut latest,
-                    block.clone(),
+                    &block,
+                    FixedBytes::ZERO,
                     chain,
                     &SlotterMetrics::new(&mut Registry::default())
                 ),
