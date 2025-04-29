@@ -31,6 +31,42 @@ When making changes to the ArbChainConfig contract, follow these steps:
    - Verify that the proxy is now pointing to the new implementation.
    - Run integration tests to ensure the system works correctly with the new implementation.
 
+## Upgrading via the Beacon Proxy
+
+The ArbChainConfig contract uses a beacon proxy pattern for upgrades, which allows for multiple proxy instances to be upgraded simultaneously by updating a single beacon contract. Here's how to perform an upgrade using the beacon proxy:
+
+1. **Deploy the New Implementation Contract**:
+   ```solidity
+   // Deploy the new implementation
+   ArbChainConfig newImplementation = new ArbChainConfig();
+   ```
+
+2. **Update the Beacon Contract via the ConfigManager**:
+   ```solidity
+   // Get the ConfigManager instance
+   ArbConfigManager configManager = ArbConfigManager(configManagerAddress);
+   
+   // Call the upgradeArbChainConfigImplementation function
+   // This function updates the beacon to point to the new implementation
+   configManager.upgradeArbChainConfigImplementation(newImplementation.address);
+   ```
+
+3. **Verify the Upgrade**:
+   ```solidity
+   // Get the current implementation address from the ConfigManager
+   address currentImplementation = configManager.getArbChainConfigImplementation();
+   
+   // Verify it matches the new implementation
+   require(currentImplementation == address(newImplementation), "Upgrade failed");
+   ```
+
+4. **Important Considerations**:
+   - Only the owner of the ConfigManager can perform upgrades
+   - All proxy instances pointing to the beacon will be upgraded simultaneously
+   - Ensure the new implementation maintains the same storage layout
+   - Test the upgrade process in a test environment before deploying to production
+   - Consider using a timelock mechanism for critical upgrades to provide transparency
+
 ## Storage Layout Considerations
 
 When upgrading the ArbChainConfig contract, it's crucial to maintain the same storage layout to ensure data compatibility. This means:
