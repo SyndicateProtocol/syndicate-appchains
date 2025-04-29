@@ -1,6 +1,6 @@
 [package]
 edition.workspace = true
-name              = "tc-sequencer"
+name              = "batch-sequencer"
 version.workspace = true
 
 [dependencies]

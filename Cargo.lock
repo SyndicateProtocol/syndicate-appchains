@@ -1129,6 +1129,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "89e25b6adfb930f02d1981565a6e5d9c547ac15a96606256d3b59040e5cd4ca3"
 
 [[package]]
+name = "batch-sequencer"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "batcher",
+ "eyre",
+ "mockito",
+ "shared",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "batcher"
 version = "0.1.0"
 dependencies = [
@@ -4958,20 +4972,6 @@ name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
-
-[[package]]
-name = "tc-sequencer"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "batcher",
- "eyre",
- "mockito",
- "shared",
- "tokio",
- "tracing",
- "url",
-]
 
 [[package]]
 name = "temp-env"

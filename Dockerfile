@@ -68,12 +68,12 @@ ENTRYPOINT ["/usr/local/bin/maestro"]
 EXPOSE 8545 8546
 LABEL service=maestro
 
-FROM runtime-base AS tc-sequencer
+FROM runtime-base AS batch-sequencer
 ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/tc-sequencer /usr/local/bin/tc-sequencer
-ENTRYPOINT ["/usr/local/bin/tc-sequencer"]
+COPY --from=build /app/target/${BUILD_PROFILE}/batch-sequencer /usr/local/bin/batch-sequencer
+ENTRYPOINT ["/usr/local/bin/batch-sequencer"]
 EXPOSE 8545 8546
-LABEL service=tc-sequencer
+LABEL service=batch-sequencer
 
 FROM runtime-base AS mchain
 ARG BUILD_PROFILE
