@@ -16,7 +16,6 @@ members = [
   "shared/test-utils",
   "tc-sequencer",
   "tc-sequencer/crates/batcher",
-  "tc-sequencer/crates/tc-client",
   "test-framework",
 ]
 
@@ -81,7 +80,6 @@ shared               = { path = "shared" }
 slotter              = { path = "metabased-translator/crates/slotter" }
 strum                = "0.27.1"
 strum_macros         = "0.27.1"
-tc-client            = { path = "tc-sequencer/crates/tc-client" }
 tc-sequencer         = { path = "tc-sequencer" }
 test-utils           = { path = "shared/test-utils" }
 thiserror            = { version = "2.0.11" }

@@ -3,11 +3,9 @@
 //!
 //! It provides a JSON-RPC interface for submitting transactions and checking service health.
 
-use batcher::batcher::run_batcher;
+use batcher::{batcher::run_batcher, config::BatcherConfig};
 use eyre::Result;
 use shared::logger::set_global_default_subscriber;
-use tc_client::tc_client::TCClient;
-use tc_sequencer::{config::TCSequencerConfig, server::run_server};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 
@@ -18,18 +16,11 @@ async fn main() -> Result<()> {
     set_global_default_subscriber()?;
 
     // Parse config
-    let config = TCSequencerConfig::initialize();
-    info!("TCSequencerConfig: {:?}", config);
-
-    // Start tc-client
-    let tc_client = TCClient::new(&config.tc)?;
+    let config = BatcherConfig::initialize();
+    info!("BatcherConfig: {:?}", config);
 
     // Start batcher
-    let batcher_handle = run_batcher(&config.batcher, tc_client.clone()).await?;
-
-    // Start server
-    let (addr, handle) = run_server(&config, tc_client).await?;
-    info!("Server started at {}", addr);
+    let batcher_handle = run_batcher(&config).await?;
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
@@ -42,9 +33,6 @@ async fn main() -> Result<()> {
         }
         _ = sigterm.recv() => {
             info!("Received SIGTERM, initiating shutdown...");
-        }
-        _ = handle.stopped() => {
-            info!("Server stopped, initiating shutdown...");
         }
         _ = batcher_handle => {
             info!("Batcher stopped, initiating shutdown...");

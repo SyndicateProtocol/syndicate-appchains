@@ -1,16 +1,24 @@
 //! The Batcher service for the sequencer.
 
 use crate::config::BatcherConfig;
-use alloy::primitives::Bytes;
+use alloy::{
+    network::EthereumWallet,
+    primitives::{Address, Bytes},
+    providers::ProviderBuilder,
+    signers::local::PrivateKeySigner,
+};
 use byte_unit::Byte;
+use contract_bindings::metabased::walletpoolwrappermodule::WalletPoolWrapperModule::{
+    self, WalletPoolWrapperModuleInstance,
+};
 use eyre::{eyre, Result};
 use maestro::redis::consumer::StreamConsumer;
 use redis::Client as RedisClient;
-use shared::additive_compression::AdditiveCompressor;
-use std::{mem::take, time::Duration};
-use tc_client::tc_client::{TCClient, BATCH_FUNCTION_SIGNATURE};
+use shared::{additive_compression::AdditiveCompressor, types::FilledProvider};
+use std::{mem::take, str::FromStr, time::Duration};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info};
+
 /// Batcher service
 #[derive(Debug)]
 struct Batcher {
@@ -18,14 +26,20 @@ struct Batcher {
     max_batch_size: Byte,
     /// The Redis consumer for the batcher
     redis_consumer: StreamConsumer,
-    /// The sequencer client for the batcher
-    tc_client: TCClient,
     /// The compressor for the batcher
     compressor: AdditiveCompressor,
     /// The polling interval for the batcher
     polling_interval: Duration,
     /// The chain ID for the batcher
     chain_id: u64,
+    /// Failed txns
+    failed_txns: Vec<Bytes>,
+    /// Track if submission is in-flight
+    submission_in_flight: bool,
+    /// Wallet pool
+    wallet_pool: WalletPoolWrapperModuleInstance<(), FilledProvider>,
+    /// The sequencing address
+    sequencing_contract_address: Address,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -38,10 +52,13 @@ enum BatchError {
 
     #[error(transparent)]
     Other(#[from] eyre::Report),
+
+    #[error("Failed to send batch: {0}")]
+    SendBatchFailed(String),
 }
 
 /// Run the batcher service. Starts the server and listens for batch requests.
-pub async fn run_batcher(config: &BatcherConfig, tc_client: TCClient) -> Result<JoinHandle<()>> {
+pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
     let client = RedisClient::open(config.redis_url.as_str())
         .map_err(|e| eyre!("Failed to open Redis client: {}", e))?;
     let conn = client
@@ -49,7 +66,16 @@ pub async fn run_batcher(config: &BatcherConfig, tc_client: TCClient) -> Result<
         .await
         .map_err(|e| eyre!("Failed to get Redis connection: {}", e))?;
     let redis_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
-    let mut batcher = Batcher::new(config, tc_client, redis_consumer);
+
+    let signer = PrivateKeySigner::from_str(&config.private_key)
+        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
+    let sequencer_provider = ProviderBuilder::new()
+        .wallet(EthereumWallet::from(signer))
+        .on_http(config.sequencing_rpc_url.clone());
+
+    let wallet_pool = WalletPoolWrapperModule::new(config.wallet_pool_address, sequencer_provider);
+
+    let mut batcher = Batcher::new(config, redis_consumer, wallet_pool);
     let polling_interval = config.polling_interval;
 
     let handle = tokio::spawn({
@@ -69,14 +95,21 @@ pub async fn run_batcher(config: &BatcherConfig, tc_client: TCClient) -> Result<
 }
 
 impl Batcher {
-    fn new(config: &BatcherConfig, tc_client: TCClient, redis_consumer: StreamConsumer) -> Self {
+    fn new(
+        config: &BatcherConfig,
+        redis_consumer: StreamConsumer,
+        wallet_pool: WalletPoolWrapperModuleInstance<(), FilledProvider>,
+    ) -> Self {
         Self {
             max_batch_size: config.max_batch_size,
             redis_consumer,
-            tc_client,
             compressor: AdditiveCompressor::default(),
             polling_interval: config.polling_interval,
             chain_id: config.chain_id,
+            failed_txns: Vec::new(),
+            submission_in_flight: false,
+            wallet_pool,
+            sequencing_contract_address: config.sequencing_contract_address,
         }
     }
     async fn read_transactions(&mut self) -> Result<()> {
@@ -110,6 +143,18 @@ impl Batcher {
     }
 
     async fn read_and_batch_transactions(&mut self) -> Result<(), BatchError> {
+        if self.submission_in_flight {
+            debug!(%self.chain_id, "Submission in flight, skipping read.");
+            return Ok(());
+        }
+        self.submission_in_flight = true;
+
+        // Push failed txns to the compressor
+        for txn in take(&mut self.failed_txns) {
+            let compressed = self.compressor.clone_and_compress_with_txn(&txn)?;
+            self.compressor.push_with_precompressed(&txn, compressed)?;
+        }
+
         self.read_transactions().await?;
 
         if self.compressor.is_empty() {
@@ -117,23 +162,33 @@ impl Batcher {
             return Ok(());
         }
 
-        self.send_compressed_batch().await
+        if let Err(e) = self.send_compressed_batch().await {
+            error!(%self.chain_id, "Failed to send compressed batch: {:?}", e);
+            self.failed_txns = self.compressor.drain_transactions(); // Save failed txns for next round
+            self.submission_in_flight = false;
+            return Err(e);
+        }
+
+        self.submission_in_flight = false;
+        Ok(())
     }
 
     async fn send_compressed_batch(&mut self) -> Result<(), BatchError> {
         let num_transactions = self.compressor.num_transactions();
         let compressed = take(&mut self.compressor).finish()?;
-        self.compressor.reset(); // Reset for next round
 
         let compressed_len = compressed.len();
         let max_size = self.max_batch_size.as_u64() as usize;
 
         if compressed_len >= max_size {
-            error!("Compressed batch size ({}) exceeds limit ({})", compressed_len, max_size);
+            error!(%self.chain_id, "Compressed batch size ({}) exceeds limit ({})", compressed_len, max_size);
             return Err(BatchError::BatchTooLarge(compressed_len, max_size));
         }
 
-        self.send_batch_to_sequencer(compressed.clone()).await?;
+        self.send_batch(compressed.clone()).await?;
+
+        self.compressor.reset(); // Reset for next round
+
         debug!(
             %self.chain_id, "Batch sent: {} txs, compressed size: {} bytes",
             num_transactions,
@@ -142,9 +197,18 @@ impl Batcher {
         Ok(())
     }
 
-    async fn send_batch_to_sequencer(&self, data: Bytes) -> Result<()> {
-        debug!(%self.chain_id, "Sending batch to sequencer");
-        self.tc_client.send_transaction(data, BATCH_FUNCTION_SIGNATURE.to_string()).await?;
+    async fn send_batch(&self, data: Bytes) -> Result<(), BatchError> {
+        debug!(%self.chain_id, "Sending batch to wallet pool");
+        let result = self
+            .wallet_pool
+            .processTransactionRaw(self.sequencing_contract_address, data)
+            .send()
+            .await;
+
+        if let Err(e) = result {
+            return Err(BatchError::SendBatchFailed(e.to_string()));
+        }
+
         Ok(())
     }
 }
@@ -152,19 +216,9 @@ impl Batcher {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use alloy::primitives::{Address, Bytes};
     use maestro::redis::producer::StreamProducer;
-    use tc_client::config::{TCConfig, TCEndpoint};
     use test_utils::docker::start_redis;
-    use tokio::time::Duration;
-
-    const TC_CONFIG: TCConfig = TCConfig {
-        tc_endpoint: TCEndpoint::Staging,
-        tc_project_id: String::new(),
-        tc_api_key: String::new(),
-        wallet_pool_address: Address::ZERO,
-        sequencing_address: Address::ZERO,
-    };
+    use url::Url;
 
     fn test_config() -> BatcherConfig {
         BatcherConfig {
@@ -172,6 +226,10 @@ mod tests {
             redis_url: "dummy".to_string(),
             chain_id: 1,
             polling_interval: Duration::from_millis(10),
+            private_key: "dummy".to_string(),
+            wallet_pool_address: Address::ZERO,
+            sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),
+            sequencing_contract_address: Address::ZERO,
         }
     }
 
@@ -196,9 +254,15 @@ mod tests {
         // Send transaction
         let test_data1 = b"test transaction data 1".to_vec();
         producer.enqueue_transaction(test_data1.clone()).await.unwrap();
-
-        let tc_client = TCClient::new(&TC_CONFIG).unwrap();
-        let mut batcher = Batcher::new(&config, tc_client, redis_consumer);
+        let signer = PrivateKeySigner::from_str(&config.private_key).unwrap_or_else(|err| {
+            panic!("Failed to parse default private key for signer: {}", err)
+        });
+        let sequencer_provider = ProviderBuilder::new()
+            .wallet(EthereumWallet::from(signer))
+            .on_http(config.sequencing_rpc_url.clone());
+        let wallet_pool =
+            WalletPoolWrapperModule::new(config.wallet_pool_address, sequencer_provider);
+        let mut batcher = Batcher::new(&config, redis_consumer, wallet_pool);
 
         let result = batcher.read_transactions().await;
         assert!(result.is_ok());
@@ -221,8 +285,17 @@ mod tests {
             .await
             .unwrap();
         let redis_consumer = StreamConsumer::new(conn, 1, "0-0".to_string());
-        let tc_client = TCClient::new(&TC_CONFIG).unwrap();
-        let mut batcher = Batcher::new(&config, tc_client, redis_consumer);
+
+        let signer = PrivateKeySigner::from_str(&config.private_key).unwrap_or_else(|err| {
+            panic!("Failed to parse default private key for signer: {}", err)
+        });
+        let sequencer_provider = ProviderBuilder::new()
+            .wallet(EthereumWallet::from(signer))
+            .on_http(config.sequencing_rpc_url.clone());
+        let wallet_pool =
+            WalletPoolWrapperModule::new(config.wallet_pool_address, sequencer_provider);
+
+        let mut batcher = Batcher::new(&config, redis_consumer, wallet_pool);
 
         // Insert dummy data
         batcher.compressor.clone_and_compress_with_txn(&Bytes::from(vec![2, 3, 4])).unwrap();

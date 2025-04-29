@@ -66,6 +66,11 @@ impl AdditiveCompressor {
         Ok(Bytes::from(compressed))
     }
 
+    /// Drains the transactions from the compressor
+    pub fn drain_transactions(&mut self) -> Vec<Bytes> {
+        std::mem::take(&mut self.transactions)
+    }
+
     /// Resets the compressor to its initial state
     pub fn reset(&mut self) {
         self.transactions.clear();
