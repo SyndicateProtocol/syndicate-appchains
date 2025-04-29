@@ -242,6 +242,7 @@ impl TestComponents {
             sequencing_contract_address: None,
             arbitrum_ignore_delayed_messages: None,
             sequencing_rpc_url: None,
+            appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
             sequencing_start_block: None,
             settlement_start_block: None,
             settlement_delay: None,
