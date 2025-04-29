@@ -5028,6 +5028,7 @@ dependencies = [
  "eyre",
  "mchain",
  "redis",
+ "shared",
  "tokio",
  "tracing",
 ]

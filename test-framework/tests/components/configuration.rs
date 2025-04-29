@@ -1,7 +1,9 @@
 use alloy::{primitives::Address, providers::WalletProvider};
 use contract_bindings::metabased::arbconfigmanager::ArbConfigManager;
 use eyre::Result;
-use test_utils::anvil::{mine_block, FilledProvider};
+use shared::types::FilledProvider;
+use test_utils::anvil::mine_block;
+
 /// nitro contract version on the settlement chain used for testing
 #[derive(Debug, Clone)]
 #[allow(clippy::redundant_pub_crate)]

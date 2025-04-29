@@ -24,9 +24,10 @@ use contract_bindings::{
 };
 use eyre::Result;
 use mchain::{client::MProvider, server::rollup_config};
+use shared::types::FilledProvider;
 use std::{env, future::Future, time::SystemTime};
 use test_utils::{
-    anvil::{mine_block, start_anvil, start_anvil_with_args, FilledProvider},
+    anvil::{mine_block, start_anvil, start_anvil_with_args},
     docker::{launch_nitro_node, start_component, start_mchain, Docker},
     port_manager::PortManager,
     preloaded_config::{
