@@ -52,7 +52,6 @@ pub mod r#messagehashutils;
 pub mod r#metabasedfactory;
 pub mod r#metabasedsequencerchain;
 pub mod r#metabasedsequencerchainwithdecayingpriority;
-pub mod r#mockcalldataallowed;
 pub mod r#metafillerstorage;
 pub mod r#mockerc20;
 pub mod r#mockerc721;
