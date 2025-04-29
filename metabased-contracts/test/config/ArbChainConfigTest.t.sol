@@ -22,8 +22,16 @@ contract ArbChainConfigTest is Test {
     uint256 public constant SEQUENCING_START_BLOCK = 200;
     string public constant DEFAULT_RPC_URL = "https://example.com/rpc";
     string public constant APPCHAIN_BLOCK_EXPLORER_URL = "https://example.com/explorer";
+    
+    // Define allowed settlement addresses for testing
+    address[] public ALLOWED_SETTLEMENT_ADDRESSES;
 
     function setUp() public {
+        // Initialize allowed settlement addresses
+        ALLOWED_SETTLEMENT_ADDRESSES = new address[](2);
+        ALLOWED_SETTLEMENT_ADDRESSES[0] = address(0xABCD);
+        ALLOWED_SETTLEMENT_ADDRESSES[1] = address(0xEF12);
+        
         vm.startPrank(owner);
         // Create a new ArbChainConfig and initialize it
         chainConfig = new ArbChainConfig();
@@ -40,7 +48,8 @@ contract ArbChainConfigTest is Test {
             SEQUENCING_START_BLOCK,
             rollupOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
         vm.stopPrank();
     }
@@ -61,6 +70,10 @@ contract ArbChainConfigTest is Test {
         assertEq(chainConfig.ROLLUP_OWNER(), rollupOwner);
         assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), DEFAULT_RPC_URL);
         assertEq(chainConfig.APPCHAIN_BLOCK_EXPLORER_URL(), APPCHAIN_BLOCK_EXPLORER_URL);
+        
+        // Verify allowed settlement addresses
+        assertEq(chainConfig.ALLOWED_SETTLEMENT_ADDRESSES(0), ALLOWED_SETTLEMENT_ADDRESSES[0]);
+        assertEq(chainConfig.ALLOWED_SETTLEMENT_ADDRESSES(1), ALLOWED_SETTLEMENT_ADDRESSES[1]);
     }
 
     function testConstructorRequirements() public {
@@ -83,7 +96,8 @@ contract ArbChainConfigTest is Test {
             SEQUENCING_START_BLOCK,
             rollupOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
 
         // Test Arbitrum bridge address requirement
@@ -102,7 +116,8 @@ contract ArbChainConfigTest is Test {
             SEQUENCING_START_BLOCK,
             rollupOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
 
         // Test Arbitrum inbox address requirement
@@ -121,7 +136,8 @@ contract ArbChainConfigTest is Test {
             SEQUENCING_START_BLOCK,
             rollupOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
 
         // Test sequencing contract address requirement
@@ -140,7 +156,8 @@ contract ArbChainConfigTest is Test {
             SEQUENCING_START_BLOCK,
             rollupOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
 
         // Test rollup owner requirement
@@ -159,7 +176,8 @@ contract ArbChainConfigTest is Test {
             SEQUENCING_START_BLOCK,
             address(0), // Zero address
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
 
         vm.stopPrank();
@@ -183,7 +201,8 @@ contract ArbChainConfigTest is Test {
             SEQUENCING_START_BLOCK,
             rollupOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
 
         vm.stopPrank();
@@ -245,6 +264,53 @@ contract ArbChainConfigTest is Test {
         chainConfig.updateDefaultSequencingChainRpcUrl("");
         assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), "");
 
+        vm.stopPrank();
+    }
+    
+    function testUpdateAllowedSettlementAddresses() public {
+        vm.startPrank(owner);
+        
+        // Create new addresses array
+        address[] memory newAddresses = new address[](3);
+        newAddresses[0] = address(0x1111);
+        newAddresses[1] = address(0x2222);
+        newAddresses[2] = address(0x3333);
+        
+        vm.expectEmit(true, false, false, true);
+        emit ArbChainConfig.AllowedSettlementAddressesUpdated(newAddresses);
+        
+        chainConfig.updateAllowedSettlementAddresses(newAddresses);
+        
+        // Verify the addresses were updated
+        assertEq(chainConfig.ALLOWED_SETTLEMENT_ADDRESSES(0), newAddresses[0]);
+        assertEq(chainConfig.ALLOWED_SETTLEMENT_ADDRESSES(1), newAddresses[1]);
+        assertEq(chainConfig.ALLOWED_SETTLEMENT_ADDRESSES(2), newAddresses[2]);
+        
+        vm.stopPrank();
+    }
+    
+    function testUpdateAllowedSettlementAddressesRevertOnNonOwner() public {
+        vm.prank(address(999)); // Non-owner address
+        
+        address[] memory newAddresses = new address[](1);
+        newAddresses[0] = address(0x1111);
+        
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, address(999)));
+        chainConfig.updateAllowedSettlementAddresses(newAddresses);
+    }
+    
+    function testEmptyAllowedSettlementAddresses() public {
+        vm.startPrank(owner);
+        
+        // Test with empty addresses array
+        address[] memory emptyAddresses = new address[](0);
+        
+        chainConfig.updateAllowedSettlementAddresses(emptyAddresses);
+        
+        // Verify the array is empty by trying to access index 0 and expecting a revert
+        vm.expectRevert();
+        chainConfig.ALLOWED_SETTLEMENT_ADDRESSES(0);
+        
         vm.stopPrank();
     }
 }

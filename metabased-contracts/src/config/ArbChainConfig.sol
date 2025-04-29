@@ -12,6 +12,7 @@ contract ArbChainConfig is Initializable, Ownable {
     // Events
     event RollupOwnerUpdated(address indexed newRollupOwner);
     event DefaultSequencingChainRpcUrlUpdated(string newRpcUrl);
+    event AllowedSettlementAddressesUpdated(address[] newAllowedSettlementAddresses);
 
     address public ARBITRUM_BRIDGE_ADDRESS;
     address public ARBITRUM_INBOX_ADDRESS;
@@ -26,6 +27,7 @@ contract ArbChainConfig is Initializable, Ownable {
     address public ROLLUP_OWNER;
     string public DEFAULT_SEQUENCING_CHAIN_RPC_URL;
     string public APPCHAIN_BLOCK_EXPLORER_URL;
+    address[] public ALLOWED_SETTLEMENT_ADDRESSES;
 
     /**
      * @dev Constructor for the implementation contract
@@ -49,6 +51,7 @@ contract ArbChainConfig is Initializable, Ownable {
      * @param rollupOwner Initial rollup owner
      * @param sequencingChainRpcUrl Default RPC URL for the sequencing chain
      * @param appchainBlockExplorerUrl URL for the appchain block explorer
+     * @param allowedSettlementAddresses Array of addresses allowed for settlement
      */
     function initialize(
         address owner,
@@ -63,7 +66,8 @@ contract ArbChainConfig is Initializable, Ownable {
         uint256 sequencingStartBlock,
         address rollupOwner,
         string memory sequencingChainRpcUrl,
-        string memory appchainBlockExplorerUrl
+        string memory appchainBlockExplorerUrl,
+        address[] memory allowedSettlementAddresses
     ) public initializer {
         // Set the configuration parameters
         require(owner != address(0), "Owner cannot be zero address");
@@ -87,6 +91,7 @@ contract ArbChainConfig is Initializable, Ownable {
         ROLLUP_OWNER = rollupOwner;
         DEFAULT_SEQUENCING_CHAIN_RPC_URL = sequencingChainRpcUrl;
         APPCHAIN_BLOCK_EXPLORER_URL = appchainBlockExplorerUrl;
+        ALLOWED_SETTLEMENT_ADDRESSES = allowedSettlementAddresses;
 
         // Initialize the Ownable contract
         _transferOwnership(owner);
@@ -109,5 +114,14 @@ contract ArbChainConfig is Initializable, Ownable {
     function updateDefaultSequencingChainRpcUrl(string calldata newRpcUrl) external onlyOwner {
         DEFAULT_SEQUENCING_CHAIN_RPC_URL = newRpcUrl;
         emit DefaultSequencingChainRpcUrlUpdated(newRpcUrl);
+    }
+
+    /**
+     * @dev Update ALLOWED_SETTLEMENT_ADDRESSES
+     * @param newAllowedSettlementAddresses The new array of addresses allowed for settlement
+     */
+    function updateAllowedSettlementAddresses(address[] calldata newAllowedSettlementAddresses) external onlyOwner {
+        ALLOWED_SETTLEMENT_ADDRESSES = newAllowedSettlementAddresses;
+        emit AllowedSettlementAddressesUpdated(newAllowedSettlementAddresses);
     }
 }

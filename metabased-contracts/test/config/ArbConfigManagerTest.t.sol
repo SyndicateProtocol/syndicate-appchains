@@ -24,8 +24,16 @@ contract ArbConfigManagerTest is Test {
     uint256 public constant SEQUENCING_START_BLOCK = 200;
     string public constant DEFAULT_RPC_URL = "https://example.com/rpc";
     string public constant APPCHAIN_BLOCK_EXPLORER_URL = "https://example.com/explorer";
+    
+    // Define allowed settlement addresses for testing
+    address[] public ALLOWED_SETTLEMENT_ADDRESSES;
 
     function setUp() public {
+        // Initialize allowed settlement addresses
+        ALLOWED_SETTLEMENT_ADDRESSES = new address[](2);
+        ALLOWED_SETTLEMENT_ADDRESSES[0] = address(0xABCD);
+        ALLOWED_SETTLEMENT_ADDRESSES[1] = address(0xEF12);
+        
         vm.startPrank(owner);
         configManager = new ArbConfigManager(owner);
         vm.stopPrank();
@@ -67,7 +75,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_START_BLOCK,
             rollupOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
 
         // Verify the deployed address is stored correctly
@@ -98,6 +107,10 @@ contract ArbConfigManagerTest is Test {
         assertEq(chainConfig.ROLLUP_OWNER(), rollupOwner);
         assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), DEFAULT_RPC_URL);
         assertEq(chainConfig.APPCHAIN_BLOCK_EXPLORER_URL(), APPCHAIN_BLOCK_EXPLORER_URL);
+        
+        // Verify allowed settlement addresses
+        assertEq(chainConfig.ALLOWED_SETTLEMENT_ADDRESSES(0), ALLOWED_SETTLEMENT_ADDRESSES[0]);
+        assertEq(chainConfig.ALLOWED_SETTLEMENT_ADDRESSES(1), ALLOWED_SETTLEMENT_ADDRESSES[1]);
 
         vm.stopPrank();
     }
@@ -119,7 +132,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_START_BLOCK,
             rollupOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
 
         // Attempt to deploy a duplicate config
@@ -137,7 +151,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_START_BLOCK,
             rollupOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
 
         vm.stopPrank();
@@ -160,7 +175,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_START_BLOCK,
             rollupOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
 
         vm.stopPrank();
@@ -183,7 +199,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_START_BLOCK,
             rollupOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
     }
 
@@ -203,7 +220,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_START_BLOCK,
             rollupOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
 
         // Get the stored address
@@ -232,7 +250,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_START_BLOCK,
             rollupOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
 
         // Now that it's deployed, the getArbChainConfigAddress should return the deployed address
@@ -265,7 +284,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_START_BLOCK,
             rollupOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
 
         // Get the current implementation
@@ -350,7 +370,8 @@ contract ArbConfigManagerTest is Test {
             SEQUENCING_START_BLOCK,
             rollupOwner,
             DEFAULT_RPC_URL,
-            APPCHAIN_BLOCK_EXPLORER_URL
+            APPCHAIN_BLOCK_EXPLORER_URL,
+            ALLOWED_SETTLEMENT_ADDRESSES
         );
 
         // Verify the addresses match
