@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 #[derive(Debug)]
 pub(super) struct MaestroConfig {
     pub port: u16,
@@ -6,6 +7,7 @@ pub(super) struct MaestroConfig {
 }
 
 impl MaestroConfig {
+    #[allow(dead_code)]
     pub(super) fn cli_args(&self) -> Vec<String> {
         vec![
             "--port".to_string(),

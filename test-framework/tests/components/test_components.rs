@@ -2,7 +2,6 @@
 
 use crate::components::{
     configuration::{setup_config_manager, ConfigurationOptions, ContractVersion},
-    maestro::MaestroConfig,
     poster::PosterConfig,
     sequencer::SequencerConfig,
     timer::TestTimer,
@@ -28,7 +27,7 @@ use mchain::{client::MProvider, server::rollup_config};
 use std::{env, future::Future, time::SystemTime};
 use test_utils::{
     anvil::{mine_block, start_anvil, start_anvil_with_args, FilledProvider},
-    docker::{launch_nitro_node, start_component, start_mchain, start_redis, Docker},
+    docker::{launch_nitro_node, start_component, start_mchain, Docker},
     port_manager::PortManager,
     preloaded_config::{
         PRELOAD_BRIDGE_ADDRESS_231, PRELOAD_BRIDGE_ADDRESS_300, PRELOAD_INBOX_ADDRESS_231,
@@ -46,8 +45,6 @@ struct ComponentHandles {
     translator: Docker,
     poster: Option<Docker>,
     sequencer: Docker,
-    _redis: Docker,
-    _maestro: Docker,
 }
 
 #[derive(Debug)]
@@ -202,24 +199,6 @@ impl TestComponents {
             start_mchain(options.appchain_chain_id, options.rollup_owner, options.finality_delay)
                 .await?;
 
-        // Launch components
-        info!("Starting Redis...");
-        let (redis, redis_url) = start_redis().await?;
-
-        info!("Starting Maestro...");
-        let maestro_config = MaestroConfig {
-            port: PortManager::instance().next_port().await,
-            redis_url,
-            chain_rpc_urls: vec![],
-        };
-        let maestro = start_component(
-            "maestro",
-            maestro_config.port,
-            maestro_config.cli_args(),
-            Default::default(),
-        )
-        .await?;
-
         info!("Starting sequencer...");
         let sequencer_config = SequencerConfig {
             sequencing_contract_address,
@@ -340,8 +319,6 @@ impl TestComponents {
                 translator,
                 poster,
                 sequencer,
-                _redis: redis,
-                _maestro: maestro,
             },
         ))
     }
