@@ -79,7 +79,6 @@ pub(crate) struct Components {
     pub mchain_rpc_url: String,
 
     pub poster_url: String,
-    pub appchain_block_explorer_url: String,
 }
 
 #[derive(Debug)]
