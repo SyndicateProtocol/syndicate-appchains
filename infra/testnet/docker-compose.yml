@@ -1,0 +1,64 @@
+services:
+  mchain:
+    image: us-central1-docker.pkg.dev/metabased-testnet/images/metabased-rollup/mchain:{{ image_tag }}
+    container_name: mchain  
+    environment:
+      - RUST_LOG=warn
+      - CHAIN_ID={{ chain_id }}
+      - CHAIN_OWNER={{ chain_owner }}
+    command: 
+      - "--port=8050"
+      - "--datadir=/app/datadir"
+    ports:
+      - "8050"
+    volumes:
+      - {{ translator_data_mount_point }}:/app/datadir
+    networks:
+      - metabased-network
+  translator:
+    image: us-central1-docker.pkg.dev/metabased-testnet/images/metabased-rollup/metabased-translator:{{ image_tag }}
+    container_name: translator
+    platform: linux/amd64
+    environment:
+      - RUST_LOG=warn
+      - APPCHAIN_CHAIN_ID={{ chain_id }}
+      - CONFIG_MANAGER_ADDRESS={{ config_manager_contract_address }}
+      - SEQUENCING_RPC_URL={{ sequencing_chain_rpc_url }}
+      - SETTLEMENT_RPC_URL={{ settlement_chain_rpc_url }}
+    command:
+      - "--mchain-rpc-url=http://mchain:8050"
+      - "--arbitrum-ignore-delayed-messages={% if chain_name == 'dream' %}true{% else %}false{% endif %}"
+    networks:
+      - metabased-network
+    depends_on:
+      - mchain
+  nitro:
+    image: offchainlabs/nitro-node:v3.4.0-d896e9c
+    container_name: nitro
+    init: true
+    restart: always
+    command:
+      - "--parent-chain.connection.url=http://mchain:8050"
+      - "--execution.parent-chain-reader.poll-interval=100ms"
+      - "--execution.parent-chain-reader.old-header-timeout=1000h"
+      - "--execution.tx-pre-checker.strictness=20"
+      - "--execution.caching.archive"
+      - "--node.dangerous.disable-blob-reader"
+      - "--node.inbox-reader.check-delay=100ms"
+      - "--node.staker.enable=false"
+      - "--ensure-rollup-deployment=false"
+      - "--chain.info-files=/config/chain_info.json"
+      - "--http.addr=0.0.0.0"
+      - "--http.port=8449"
+    ports:
+      - "8449"
+    volumes:
+      - {{ chain_config_file }}:/config/chain_info.json:ro
+      - {{ nitro_data_mount_point }}:/home/user/.arbitrum
+    depends_on:
+      - translator
+    networks:
+      - metabased-network
+networks:
+  metabased-network:
+    driver: bridge

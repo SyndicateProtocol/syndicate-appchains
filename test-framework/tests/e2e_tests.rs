@@ -13,8 +13,10 @@ use contract_bindings::arbitrum::{
     nodeinterface::NodeInterface, rollup::Rollup,
 };
 use eyre::Result;
+use mchain::client::Provider as _;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
+use shared::eth_client::{EthClient, RPCClient};
+use std::{sync::Arc, time::Duration};
 use test_utils::wait_until;
 
 mod components;
@@ -536,6 +538,88 @@ async fn e2e_settlement_reorg() -> Result<()> {
                 components.appchain_provider.get_balance(wallet_address).await?;
             assert_eq!(balance_after_reorg, parse_ether("1.01")?);
 
+            Ok(())
+        },
+    )
+    .await
+}
+
+#[tokio::test]
+async fn e2e_reboot_without_settlement_processed() -> Result<()> {
+    Components::run(
+        &ConfigurationOptions { pre_loaded: None, ..Default::default() },
+        |components| async move {
+            let set_offset = components.settlement_provider.get_block_number().await?;
+            // mchain is on genesis (block 1)
+            assert_eq!(components.mchain_provider.get_block_number().await, 1);
+
+            // sequence any tx
+            let tx = components
+                .sequencing_contract
+                .processTransaction(Bytes::from_static(b"my_tx_calldata"))
+                .send()
+                .await?;
+            components.mine_seq_block(10).await?;
+            let receipt = tx.get_receipt().await?;
+            assert!(receipt.status());
+            let logs = receipt.logs();
+            assert_eq!(logs.len(), 1);
+
+            // mine a set block to close the slot, but without any transactions
+            components.mine_set_block(100000).await?;
+
+            // mchain should be on block 2
+            wait_until!(
+                components.mchain_provider.get_block_number().await == 2,
+                Duration::from_secs(10)
+            );
+            let (slot, block_number) = components
+                .mchain_provider
+                .get_source_chains_processed_blocks(BlockNumberOrTag::Pending)
+                .await?;
+            assert_eq!(slot.seq_block_number, 2);
+            assert_eq!(slot.set_block_number, 1 + set_offset);
+            assert_eq!(block_number, 3);
+
+            let (slot, block_number) = components
+                .mchain_provider
+                .get_source_chains_processed_blocks(BlockNumberOrTag::Number(block_number - 1))
+                .await?;
+            assert_eq!(slot.seq_block_number, 2);
+            assert_eq!(slot.set_block_number, 1 + set_offset);
+            assert_eq!(block_number, 2);
+
+            // assert that restarting and rolling back here will not make mchain go back to block 1
+            let seq_mchain_client: Arc<dyn RPCClient> = Arc::new(
+                EthClient::new(&components.sequencing_rpc_url, Duration::from_secs(10)).await?,
+            );
+            let settlement_client: Arc<dyn RPCClient> = Arc::new(
+                EthClient::new(&components.settlement_rpc_url, Duration::from_secs(10)).await?,
+            );
+
+            components
+                .mchain_provider
+                .reconcile_mchain_with_source_chains(&seq_mchain_client, &settlement_client)
+                .await?;
+
+            // mchain should be on the same block since no reorgs occurred
+            assert_eq!(components.mchain_provider.get_block_number().await, 2);
+
+            let (slot, block_number) = components
+                .mchain_provider
+                .get_source_chains_processed_blocks(BlockNumberOrTag::Pending)
+                .await?;
+            assert_eq!(slot.seq_block_number, 2);
+            assert_eq!(slot.set_block_number, 1 + set_offset);
+            assert_eq!(block_number, 3);
+
+            let (slot, block_number) = components
+                .mchain_provider
+                .get_source_chains_processed_blocks(BlockNumberOrTag::Number(block_number - 1))
+                .await?;
+            assert_eq!(slot.seq_block_number, 2);
+            assert_eq!(slot.set_block_number, 1 + set_offset);
+            assert_eq!(block_number, 2);
             Ok(())
         },
     )

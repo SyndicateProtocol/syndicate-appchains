@@ -69,6 +69,7 @@ dependencies = [
  "alloy-core",
  "alloy-eips",
  "alloy-genesis",
+ "alloy-json-rpc",
  "alloy-network",
  "alloy-node-bindings",
  "alloy-provider",
@@ -1258,7 +1259,6 @@ dependencies = [
  "flate2",
  "hex",
  "mchain",
- "prometheus-client",
  "serde",
  "serde_json",
  "shared",
@@ -1545,16 +1545,10 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "async-trait",
- "bincode",
- "eyre",
+ "mchain",
  "serde",
- "serde_json",
+ "shared",
  "strum_macros",
- "thiserror 2.0.12",
- "tokio",
- "tracing",
- "url",
 ]
 
 [[package]]
@@ -1760,6 +1754,24 @@ dependencies = [
  "once_cell",
  "parking_lot_core",
 ]
+
+[[package]]
+name = "deadpool"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fb84100978c1c7b37f09ed3ce3e5f843af02c2a2c431bae5b19230dad2c1b490"
+dependencies = [
+ "async-trait",
+ "deadpool-runtime",
+ "num_cpus",
+ "tokio",
+]
+
+[[package]]
+name = "deadpool-runtime"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "092966b41edc516079bdf31ec78a2e0588d1d0c08f78b91d8307215928642b2b"
 
 [[package]]
 name = "der"
@@ -2759,8 +2771,10 @@ dependencies = [
  "alloy",
  "assert_matches",
  "async-trait",
+ "block-builder",
  "clap",
  "common",
+ "ctor",
  "eyre",
  "humantime",
  "mockall",
@@ -3223,9 +3237,11 @@ dependencies = [
  "serde_json",
  "shared",
  "test-utils",
+ "thiserror 2.0.12",
  "tokio",
  "tower 0.4.13",
  "tracing",
+ "wiremock",
 ]
 
 [[package]]
@@ -3257,10 +3273,12 @@ dependencies = [
  "prometheus-client",
  "rocksdb",
  "serde",
+ "serde_json",
  "shared",
  "test-utils",
  "tokio",
  "tracing",
+ "url",
 ]
 
 [[package]]
@@ -3327,6 +3345,7 @@ dependencies = [
  "contract-bindings",
  "eyre",
  "ingestor",
+ "mchain",
  "metrics",
  "shared",
  "slotter",
@@ -3342,7 +3361,6 @@ version = "0.1.0"
 dependencies = [
  "assert_matches",
  "axum",
- "block-builder",
  "clap",
  "common",
  "ingestor",
@@ -4189,6 +4207,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "rlp"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fa24e92bb2a83198bb76d661a71df9f7076b8c420b8696e4d3d97d50d94479e3"
+dependencies = [
+ "bytes",
+ "rustc-hex",
+]
+
+[[package]]
 name = "rocksdb"
 version = "0.23.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4224,7 +4252,7 @@ dependencies = [
  "proptest",
  "rand 0.8.5",
  "rand 0.9.0",
- "rlp",
+ "rlp 0.5.2",
  "ruint-macro",
  "serde",
  "valuable",
@@ -4685,6 +4713,7 @@ dependencies = [
  "flate2",
  "jsonrpsee",
  "prometheus-client",
+ "rlp 0.6.1",
  "serde",
  "serde_json",
  "thiserror 2.0.12",
@@ -4745,8 +4774,11 @@ name = "slotter"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "async-trait",
  "common",
  "ctor",
+ "eyre",
+ "mchain",
  "prometheus-client",
  "shared",
  "thiserror 2.0.12",
@@ -4999,10 +5031,12 @@ name = "test-framework"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "block-builder",
  "contract-bindings",
  "ctor",
  "eyre",
  "mchain",
+ "prometheus-client",
  "reqwest",
  "serde",
  "shared",
@@ -5964,6 +5998,30 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0e97b544156e9bebe1a0ffbc03484fc1ffe3100cbce3ffb17eac35f7cdd7ab36"
 dependencies = [
  "memchr",
+]
+
+[[package]]
+name = "wiremock"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "101681b74cd87b5899e87bcf5a64e83334dd313fcd3053ea72e6dba18928e301"
+dependencies = [
+ "assert-json-diff",
+ "async-trait",
+ "base64",
+ "deadpool",
+ "futures",
+ "http",
+ "http-body-util",
+ "hyper",
+ "hyper-util",
+ "log",
+ "once_cell",
+ "regex",
+ "serde",
+ "serde_json",
+ "tokio",
+ "url",
 ]
 
 [[package]]

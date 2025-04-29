@@ -3,15 +3,17 @@ use crate::{
     shutdown_channels::{ShutdownChannels, ShutdownRx, ShutdownTx},
     types::RuntimeError,
 };
-use block_builder::{connectors::mchain::MetaChainProvider, rollups::shared::RollupAdapter};
-use common::{
-    eth_client::{EthClient, RPCClient},
-    types::{Chain, KnownState, PartialBlock},
-};
+use alloy::eips::BlockNumberOrTag;
+use block_builder::rollups::arbitrum::arbitrum_adapter::ArbitrumAdapter;
+use common::types::Chain;
 use eyre::{Report, Result};
 use ingestor::config::ChainIngestorConfig;
+use mchain::client::{KnownState, MProvider, Provider};
 use metrics::metrics::TranslatorMetrics;
-use shared::metrics::{start_metrics, MetricsState};
+use shared::{
+    eth_client::{EthClient, RPCClient},
+    metrics::{start_metrics, MetricsState},
+};
 use slotter::slotter::SlotterError;
 use std::sync::Arc;
 use tokio::{sync::mpsc::channel, task::JoinHandle};
@@ -20,26 +22,17 @@ use tracing::{error, log::info, warn};
 /// Entry point for the async runtime
 /// This function holds the application lifecycle. It starts the translator components and sets up
 /// the shutdown handling.
-pub async fn run(
-    config: &MetabasedConfig,
-    rollup_adapter: impl RollupAdapter,
-) -> Result<(), RuntimeError> {
+pub async fn run(config: &MetabasedConfig) -> Result<(), RuntimeError> {
     info!("Initializing Metabased Translator components");
 
     let (sequencing_client, settlement_client) = clients(config).await?;
 
     let metrics = init_metrics(config).await;
 
-    let mchain = MetaChainProvider::start(
-        &config.block_builder,
-        metrics.block_builder.clone(),
-        rollup_adapter,
-    )
-    .await?;
-    mchain
-        .assert_rollup_owner(config.rollup_owner)
-        .await
-        .map_err(|e| RuntimeError::Initialization(e.to_string()))?;
+    let mchain = MProvider::new(&config.block_builder.mchain_rpc_url)
+        .map_err(|e| RuntimeError::InvalidConfig(format!("Invalid mchain rpc url: {}", e)))?;
+
+    assert_eq!(config.rollup_owner, Some(mchain.rollup_owner().await));
 
     loop {
         let safe_state = mchain
@@ -117,13 +110,11 @@ impl ComponentHandles {
         sequencing_client: Arc<dyn RPCClient>,
         settlement_client: Arc<dyn RPCClient>,
         metrics: TranslatorMetrics,
-        mchain: MetaChainProvider<impl RollupAdapter>,
+        mchain: impl Provider + 'static,
         shutdown_rx: ShutdownRx,
     ) -> Self {
-        let (sequencing_tx, sequencing_rx) =
-            channel::<PartialBlock>(config.sequencing.sequencing_buffer_size);
-        let (settlement_tx, settlement_rx) =
-            channel::<PartialBlock>(config.settlement.settlement_buffer_size);
+        let (sequencing_tx, sequencing_rx) = channel(config.sequencing.sequencing_buffer_size);
+        let (settlement_tx, settlement_rx) = channel(config.settlement.settlement_buffer_size);
 
         let mut sequencing_config: ChainIngestorConfig = config.sequencing.clone().into();
         let mut settlement_config: ChainIngestorConfig = config.settlement.clone().into();
@@ -131,19 +122,21 @@ impl ComponentHandles {
         // start the ingestors from the known safe state
         if let Some(state) = &known_state {
             sequencing_config.start_block = state.sequencing_block.number + 1;
-            settlement_config.start_block = state.settlement_block.number + 1;
+            // re-ingest the last known settlement block as it is not included in the latest mchain
+            // block
+            settlement_config.start_block = state.settlement_block.number;
         }
 
-        let sequencing_addresses = mchain.rollup_adapter.sequencing_addresses_to_monitor();
-        let settlement_addresses = mchain.rollup_adapter.settlement_addresses_to_monitor();
+        let arbitrum_adapter = Arc::new(ArbitrumAdapter::new(&config.block_builder));
 
+        let adapter = arbitrum_adapter.clone();
         let sequencing = tokio::spawn(async move {
             ingestor::run(
                 Chain::Sequencing,
                 &sequencing_config,
-                sequencing_addresses,
                 sequencing_client,
                 sequencing_tx,
+                adapter,
                 metrics.ingestor_sequencing,
                 shutdown_rx.sequencing,
             )
@@ -154,9 +147,9 @@ impl ComponentHandles {
             ingestor::run(
                 Chain::Settlement,
                 &settlement_config,
-                settlement_addresses,
                 settlement_client,
                 settlement_tx,
+                arbitrum_adapter,
                 metrics.ingestor_settlement,
                 shutdown_rx.settlement,
             )
@@ -170,7 +163,7 @@ impl ComponentHandles {
                 known_state,
                 sequencing_rx,
                 settlement_rx,
-                mchain,
+                &mchain,
                 metrics.slotter,
             )
             .await
@@ -215,6 +208,31 @@ impl ComponentHandles {
     }
 }
 
+async fn ensure_rpc_is_synced(
+    client: Arc<dyn RPCClient>,
+    start_block: Option<u64>,
+    chain_name: &str,
+) -> Result<(), RuntimeError> {
+    let head = client
+        .get_block_by_number(BlockNumberOrTag::Latest)
+        .await
+        .map_err(RuntimeError::RPCClient)?;
+
+    let start = start_block.ok_or_else(|| {
+        RuntimeError::Other(eyre::eyre!("{chain_name} start block not configured"))
+    })?;
+
+    if head.number < start {
+        return Err(RuntimeError::Other(eyre::eyre!(
+            "{chain_name} chain is behind start block: {} < {}",
+            head.number,
+            start
+        )));
+    }
+
+    Ok(())
+}
+
 pub async fn clients(
     config: &MetabasedConfig,
 ) -> Result<(Arc<dyn RPCClient>, Arc<dyn RPCClient>), RuntimeError> {
@@ -234,6 +252,24 @@ pub async fn clients(
         .await
         .map_err(RuntimeError::RPCClient)?,
     );
+
+    // sanity check the RPC state, prevent a fault RPC from causing a rollback/force re-sync
+    {
+        ensure_rpc_is_synced(
+            sequencing_client.clone(),
+            config.sequencing.sequencing_start_block,
+            "Sequencing",
+        )
+        .await?;
+
+        ensure_rpc_is_synced(
+            settlement_client.clone(),
+            config.settlement.settlement_start_block,
+            "Settlement",
+        )
+        .await?;
+    }
+
     Ok((sequencing_client, settlement_client))
 }
 

@@ -24,12 +24,8 @@ pub struct BatcherConfig {
     pub max_batch_size: Byte,
 
     /// Polling interval for the batcher in milliseconds
-    #[arg( long, env = "BATCHER_POLLING_INTERVAL", default_value = "500ms", value_parser = humantime::parse_duration )]
+    #[arg( long, env = "BATCHER_POLLING_INTERVAL", default_value = "100ms", value_parser = humantime::parse_duration )]
     pub polling_interval: Duration,
-
-    /// Sequencer client URL
-    #[arg(long, env = "SEQUENCER_CLIENT_URL", default_value = "http://localhost:8080")]
-    pub sequencer_client_url: String,
 }
 
 impl BatcherConfig {
@@ -46,7 +42,6 @@ impl Default for BatcherConfig {
             chain_id: 1,
             max_batch_size: Byte::from_u64(90 * 1024),
             polling_interval: Duration::from_millis(500),
-            sequencer_client_url: "http://localhost:8080".to_string(),
         }
     }
 }

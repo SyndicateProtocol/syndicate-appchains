@@ -8,7 +8,7 @@ use alloy::{
     },
     transports::{RpcError, TransportErrorKind},
 };
-use async_trait::async_trait;
+use jsonrpsee::core::async_trait;
 use std::{fmt::Debug, time::Duration};
 use thiserror::Error;
 use tokio::time::timeout;
@@ -40,7 +40,7 @@ pub enum RPCClientError {
 
 /// Trait defining methods for interacting with a blockchain
 #[async_trait]
-pub trait RPCClient: Send + Sync + Debug {
+pub trait RPCClient: Send + Sync {
     /// Retrieves a block by its number with a timeout.
     ///
     /// # Arguments

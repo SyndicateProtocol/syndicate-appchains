@@ -27,6 +27,14 @@ pub fn parse_address(value: &str) -> Result<Address, Error> {
     Address::from_str(value).map_err(|_| Error::EthereumAddress(value.to_string()))
 }
 
+/// Parse comma-separated addresses, e.g. "0x123,0x456"
+pub fn parse_addresses(value: &str) -> Result<Vec<Address>, Error> {
+    if value.trim().is_empty() {
+        return Ok(Default::default())
+    }
+    value.split(',').map(|x| parse_address(x.trim())).collect()
+}
+
 /// Parse a JSON string into a map
 pub fn parse_map<K, V>(s: &str) -> Result<HashMap<K, V>, Error>
 where

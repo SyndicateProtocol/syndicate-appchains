@@ -6,7 +6,6 @@
 
 use crate::{
     config::BlockBuilderConfig,
-    connectors::mchain::MetaChainProvider,
     rollups::{
         optimism::{
             batch::{new_batcher_tx, Batch},
@@ -16,15 +15,14 @@ use crate::{
     },
 };
 use alloy::{
-    eips::BlockNumberOrTag,
     primitives::{Address, Bytes, B256},
     rpc::types::TransactionRequest,
 };
 use async_trait::async_trait;
-use common::types::{KnownState, PartialBlock, Slot};
+use common::types::PartialBlock;
 use eyre::Result;
-use mchain::db::MBlock;
-use std::{str::FromStr, sync::Arc};
+use mchain::db::DelayedMessage;
+use std::str::FromStr;
 
 #[derive(Debug, Clone)]
 /// Builder for constructing Optimism blocks from transactions
@@ -32,40 +30,15 @@ pub struct OptimismAdapter {}
 
 #[async_trait]
 impl RollupAdapter for OptimismAdapter {
-    async fn build_block_from_slot(
-        &self,
-        _slot: &Slot,
-        _mchain_block_number: u64,
-    ) -> Result<Option<MBlock>, eyre::Error> {
+    fn build_batch(&self, _: &PartialBlock) -> Result<(u64, Bytes)> {
+        panic!("Not implemented")
+    }
+
+    fn process_delayed_messages(&self, _: &PartialBlock) -> Result<Vec<DelayedMessage>> {
         panic!("Not implemented")
     }
 
     fn transaction_parser(&self) -> &SequencingTransactionParser {
-        panic!("Not implemented")
-    }
-
-    async fn get_processed_blocks(
-        &self,
-        _provider: &MetaChainProvider<Self>,
-        _block: BlockNumberOrTag,
-    ) -> Result<Option<(KnownState, u64)>> {
-        panic!("Not implemented")
-    }
-
-    async fn get_last_sequencing_block_processed(
-        &self,
-        _provider: &MetaChainProvider<Self>,
-    ) -> u64 {
-        panic!("Not implemented")
-    }
-
-    /// Returns a list of addresses that are interesting to monitor on the sequencing chain
-    fn sequencing_addresses_to_monitor(&self) -> Vec<Address> {
-        panic!("Not implemented")
-    }
-
-    /// Returns a list of addresses that are interesting to monitor on the settlement chain
-    fn settlement_addresses_to_monitor(&self) -> Vec<Address> {
         panic!("Not implemented")
     }
 }
@@ -75,14 +48,6 @@ impl OptimismAdapter {
     /// Creates a new Optimism block builder
     pub const fn new(_config: &BlockBuilderConfig) -> Self {
         Self {}
-    }
-
-    async fn process_deposited_txns(
-        &self,
-        _txns: Vec<Arc<PartialBlock>>,
-    ) -> Result<Vec<TransactionRequest>> {
-        // TODO: Implement
-        Ok(vec![])
     }
 
     /// Builds a batch of transactions into an Optimism batch
