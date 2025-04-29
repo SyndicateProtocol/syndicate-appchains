@@ -62,6 +62,7 @@ pub(crate) struct Components {
     /// Sequencing
     pub sequencing_provider: FilledProvider,
     pub sequencing_rpc_url: String,
+    pub appchain_block_explorer_url: String,
     pub sequencing_contract: MetabasedSequencerChainInstance<(), FilledProvider>,
 
     /// Settlement
@@ -116,6 +117,7 @@ struct TranslatorConfig {
     appchain_chain_id: Option<u64>,
     mchain_rpc_url: String,
     sequencing_rpc_url: Option<String>,
+    appchain_block_explorer_url: Option<String>,
     settlement_rpc_url: String,
     metrics_port: u16,
     sequencing_start_block: Option<u64>,
@@ -136,6 +138,10 @@ impl TranslatorConfig {
 
         if let Some(url) = &self.sequencing_rpc_url {
             args.extend(vec!["--sequencing-rpc-url".to_string(), url.to_string()]);
+        }
+
+        if let Some(url) = &self.appchain_block_explorer_url {
+            args.extend(vec!["--appchain-block-explorer-url".to_string(), url.to_string()]);
         }
 
         if let Some(addr) = self.arbitrum_bridge_address {
@@ -347,6 +353,8 @@ impl Components {
         let sequencing_rpc_url = format!("http://localhost:{}", seq_port);
         let settlement_rpc_url = format!("http://localhost:{}", set_port);
 
+        let appchain_block_explorer_url = "http://example_explorer.com".to_string();
+
         // overwrite the rollup owner in case it's not set (cannot be empty in config manager)
         if options.rollup_owner == Address::ZERO {
             options.rollup_owner = address!("0x0000000000000000000000000000000000000064");
@@ -382,6 +390,7 @@ impl Components {
             arbitrum_bridge_address,
             arbitrum_inbox_address,
             &sequencing_rpc_url,
+            &appchain_block_explorer_url,
         )
         .await?;
 
@@ -390,6 +399,7 @@ impl Components {
         // translator will use the on-chain configuration
         let translator_config = TranslatorConfig {
             settlement_rpc_url: settlement_rpc_url.clone(),
+            appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
             config_manager_address: Some(config_manager_address),
             appchain_chain_id: Some(options.appchain_chain_id),
             mchain_rpc_url: mchain_rpc_url.clone(),
@@ -461,6 +471,7 @@ impl Components {
 
                 sequencing_provider: seq_provider,
                 sequencing_rpc_url: sequencing_rpc_url.clone(),
+                appchain_block_explorer_url,
                 sequencing_contract,
 
                 settlement_provider: set_provider,
@@ -563,6 +574,7 @@ async fn setup_config_manager(
     arbitrum_bridge_address: Address,
     arbitrum_inbox_address: Address,
     sequencing_rpc_url: &str,
+    appchain_block_explorer_url: &str,
 ) -> Result<Address> {
     // Deploy config manager
     let config_manager_owner = set_provider.default_signer_address();
@@ -574,9 +586,12 @@ async fn setup_config_manager(
 
     let options_clone = options.clone();
     let sequencing_rpc_url_clone = sequencing_rpc_url.to_string();
+    let appchain_block_explorer_url_clone = appchain_block_explorer_url.to_string();
 
     let create_chain_config_tx = config_manager
         .createArbChainConfig(
+            options_clone.rollup_owner,
+            options_clone.appchain_chain_id.try_into().unwrap(),
             options_clone.appchain_chain_id.try_into().unwrap(),
             arbitrum_bridge_address,
             arbitrum_inbox_address,
@@ -587,6 +602,7 @@ async fn setup_config_manager(
             options_clone.sequencing_start_block.try_into().unwrap(),
             options_clone.rollup_owner,
             sequencing_rpc_url_clone,
+            appchain_block_explorer_url_clone,
         )
         .send()
         .await?;
