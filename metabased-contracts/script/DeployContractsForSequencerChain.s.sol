@@ -61,7 +61,7 @@ contract DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule is Script {
         AlwaysAllowedModule alwaysAllowedModule = new AlwaysAllowedModule();
         console.log("Deployed AlwaysAllowedModule", address(alwaysAllowedModule));
 
-        permissionModule.addProposerCheck(address(alwaysAllowedModule), true);
+        permissionModule.addPermissionCheck(address(alwaysAllowedModule), true);
         console.log("Added alwaysAllowedModule to permission checks", address(alwaysAllowedModule));
 
         vm.stopBroadcast();

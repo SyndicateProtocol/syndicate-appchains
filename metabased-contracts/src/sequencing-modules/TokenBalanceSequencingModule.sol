@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {ProposerPermissionModule} from "../interfaces/ProposerPermissionModule.sol";
+import {IPermissionModule} from "../interfaces/IPermissionModule.sol";
 
 interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
@@ -14,7 +14,7 @@ interface IERC20 {
  */
 // [Olympix Warning: unfuzzed variables, missing events assertion] These test-related warnings are not security critical
 // as the contract uses standard unit tests and integration tests. Parameter validation is handled in constructor.
-contract TokenBalanceSequencingModule is ProposerPermissionModule {
+contract TokenBalanceSequencingModule is IPermissionModule {
     /// @notice The address of the ERC20 token contract.
     address public immutable tokenAddress;
     /// @notice The minimum token balance required to be allowed.
@@ -37,7 +37,7 @@ contract TokenBalanceSequencingModule is ProposerPermissionModule {
      * @notice Checks if the caller is allowed based on their token balance.
      * @return bool indicating if the caller is allowed.
      */
-    function isAllowed(address proposer) external view override returns (bool) {
+    function isAllowed(address proposer, address, bytes calldata) external view override returns (bool) {
         IERC20 token = IERC20(tokenAddress);
         return token.balanceOf(proposer) >= minimumBalance;
     }

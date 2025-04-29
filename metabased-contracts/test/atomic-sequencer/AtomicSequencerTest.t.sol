@@ -5,16 +5,16 @@ import {Test} from "forge-std/Test.sol";
 import {AtomicSequencer, AtomicSequencerImplementation} from "src/atomic-sequencer/AtomicSequencer.sol";
 import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
-import {ProposerPermissionModule} from "src/interfaces/ProposerPermissionModule.sol";
+import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 
-contract MockIsAllowed is ProposerPermissionModule {
+contract MockIsAllowed is IPermissionModule {
     bool allowed;
 
     constructor(bool _allowed) {
         allowed = _allowed;
     }
 
-    function isAllowed(address) external view override returns (bool) {
+    function isAllowed(address, address, bytes calldata) external view override returns (bool) {
         return allowed;
     }
 }
@@ -42,7 +42,7 @@ contract AtomicSequencerTest is Test {
         chainB = new MetabasedSequencerChain(l3ChainIdB);
         chainB.initialize(admin, address(permissionModule));
         atomicSequencer = new AtomicSequencer();
-        permissionModule.addProposerCheck(address(new MockIsAllowed(true)), false);
+        permissionModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
     }
 

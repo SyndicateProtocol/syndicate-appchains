@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {ProposerPermissionModule} from "../interfaces/ProposerPermissionModule.sol";
+import {IPermissionModule} from "../interfaces/IPermissionModule.sol";
 
 /// @title SealedBidAuctionSequencingModule
 /// @notice A sealed bid auction sequencing module contract where all bidders simultaneously submit sealed bids so that no bidder knows how much the other auction participants have bid.
-contract SealedBidAuctionSequencingModule is ProposerPermissionModule {
+contract SealedBidAuctionSequencingModule is IPermissionModule {
     struct Bid {
         bytes32 sealedBid;
         uint256 deposit;
@@ -175,7 +175,7 @@ contract SealedBidAuctionSequencingModule is ProposerPermissionModule {
      * @notice Checks if the caller is allowed to sequence.
      * @return Boolean indicating if the caller is the highest bidder.
      */
-    function isAllowed(address proposer) external view override returns (bool) {
+    function isAllowed(address proposer, address, bytes calldata) external view override returns (bool) {
         return proposer == highestBidder;
     }
 }

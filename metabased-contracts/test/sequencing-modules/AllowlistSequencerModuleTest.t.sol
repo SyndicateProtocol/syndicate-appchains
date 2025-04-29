@@ -54,12 +54,16 @@ contract AllowlistSequencingModuleTest is Test {
         allowlistSequencer.addToAllowlist(user1);
         vm.stopPrank();
 
+        bytes memory emptyData = new bytes(0);
+
         vm.prank(user1);
-        assertTrue(allowlistSequencer.isAllowed(user1));
+        assertTrue(allowlistSequencer.isAllowed(user1, address(0), emptyData));
     }
 
     function testIsNotAllowedForNonAllowedAddress() public {
-        assertFalse(allowlistSequencer.isAllowed(makeAddr("non-allowed")));
+        bytes memory emptyData = new bytes(0);
+
+        assertFalse(allowlistSequencer.isAllowed(makeAddr("non-allowed"), address(0), emptyData));
     }
 
     function testRevertsOnZeroAddressConstructor() public {
