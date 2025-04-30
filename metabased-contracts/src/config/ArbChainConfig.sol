@@ -16,7 +16,8 @@ contract ArbChainConfig is Initializable {
 
     address public owner;
     
-    // Immutable configuration parameters (cannot be changed after initialization)
+    // ======== IMMUTABLE CONFIGURATION PARAMETERS ========
+    // These parameters cannot be changed after initialization
     address public ARBITRUM_BRIDGE_ADDRESS;
     address public ARBITRUM_INBOX_ADDRESS;
     address public SEQUENCING_CONTRACT_ADDRESS;
@@ -28,7 +29,8 @@ contract ArbChainConfig is Initializable {
     uint256 public SEQUENCING_START_BLOCK;
     address[] public ALLOWED_SETTLEMENT_ADDRESSES;
 
-    // Mutable configuration parameters (can be updated by owner)
+    // ======== MUTABLE CONFIGURATION PARAMETERS ========
+    // These parameters can be updated by the contract owner
     address public ROLLUP_OWNER;
     string public DEFAULT_SEQUENCING_CHAIN_RPC_URL;
     string public APPCHAIN_BLOCK_EXPLORER_URL;
