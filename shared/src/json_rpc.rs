@@ -152,6 +152,9 @@ pub enum Rejection {
     /// Transaction fee is too high
     #[error("transaction fee too high")]
     FeeTooHigh,
+    /// Transaction nonce is too low
+    #[error("transaction nonce too low: expected {0}, got {1}")]
+    NonceTooLow(u64, u64),
 }
 
 /// Invalid parameter errors that can occur during request processing
@@ -160,9 +163,6 @@ pub enum InvalidParamsError {
     /// Signature validation failed
     #[error("bad signature")]
     BadSignature,
-    /// Transaction nonce is lower than current nonce
-    #[error("nonce too low")]
-    NonceTooLow,
     /// Invalid hex string format
     #[error("invalid hex")]
     InvalidHex,

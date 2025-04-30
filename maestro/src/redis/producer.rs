@@ -1,4 +1,3 @@
-//!
 //! This module provides the producer implementation for Redis streams used to queue
 //! and process transactions across different chains.
 
@@ -52,7 +51,7 @@ pub fn tx_stream_key(chain_id: u64) -> String {
 #[derive(Debug)]
 pub struct StreamProducer {
     conn: MultiplexedConnection,
-    stream_key: String,
+    pub(crate) stream_key: String,
     _prune_handle: JoinHandle<()>, // handle to keep the pruning task running
 }
 
