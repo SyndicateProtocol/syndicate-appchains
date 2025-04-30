@@ -30,7 +30,7 @@ contract SequencingModuleCheckerTest is Test {
         emit SequencingModuleChecker.RequirementModuleUpdated(newModule);
         manager.updateRequirementModule(newModule);
 
-        assertEq(address(manager.proposerRequirementModule()), newModule);
+        assertEq(address(manager.permissionRequirementModule()), newModule);
     }
 
     function testUpdateMasterModuleNonAdmin() public {
@@ -55,12 +55,18 @@ contract SequencingModuleCheckerTest is Test {
 
     function testNotInitialized() public {
         SequencingModuleChecker uninitializedManager = new SequencingModuleCheckerMock();
-        assertFalse(uninitializedManager.isAllowed(address(0)));
+
+        bytes memory emptyData = new bytes(0);
+
+        assertFalse(uninitializedManager.isAllowed(address(0), address(0), emptyData));
     }
 
     function testIsAllowedAfterInitialization() public {
         SequencingModuleChecker initializedManager = new SequencingModuleCheckerMock();
         initializedManager.initialize(admin, address(masterModule));
-        assertTrue(initializedManager.isAllowed(address(0)));
+
+        bytes memory emptyData = new bytes(0);
+
+        assertTrue(initializedManager.isAllowed(address(0), address(0), emptyData));
     }
 }

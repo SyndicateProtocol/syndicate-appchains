@@ -6,36 +6,18 @@ import {MetabasedSequencerChainWithDecayingPriority} from
     "src/extensions/MetabasedSequencerChainWithDecayingPriority.sol";
 import {RequireAllModule} from "src/requirement-modules/RequireAllModule.sol";
 import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
-import {ProposerPermissionModule} from "src/interfaces/ProposerPermissionModule.sol";
-import {CalldataPermissionModule} from "src/interfaces/CalldataPermissionModule.sol";
+import {IPermissionModule} from "src/interfaces/IPermissionModule.sol";
 
 // Mock contract to test IsAllowed behavior
-contract MockIsAllowed is ProposerPermissionModule {
+contract MockIsAllowed is IPermissionModule {
     bool private allowed;
 
     constructor(bool _allowed) {
         allowed = _allowed;
     }
 
-    function isAllowed(address) external view override returns (bool) {
+    function isAllowed(address, address, bytes calldata) external view override returns (bool) {
         return allowed;
-    }
-}
-
-// Mock contract to test CalldataAllowed behavior
-contract MockCalldataAllowed is CalldataPermissionModule {
-    bool private shouldAllowCalldata;
-
-    constructor(bool _allowed) {
-        shouldAllowCalldata = _allowed;
-    }
-
-    function setShouldAllowCalldata(bool _shouldAllow) external {
-        shouldAllowCalldata = _shouldAllow;
-    }
-
-    function isCalldataAllowed(bytes calldata) external view override returns (bool) {
-        return shouldAllowCalldata;
     }
 }
 
@@ -104,7 +86,7 @@ contract MetabasedSequencerChainWithDecayingPriorityTest is MetabasedSequencerCh
     function testProcessTransaction() public {
         // Set up permissions
         vm.startPrank(admin);
-        requireAllModule.addProposerCheck(address(new MockIsAllowed(true)), false);
+        requireAllModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         // Current block timestamp will be used in the emitted event
@@ -126,7 +108,7 @@ contract MetabasedSequencerChainWithDecayingPriorityTest is MetabasedSequencerCh
     function testProcessRawTransaction() public {
         // Set up permissions
         vm.startPrank(admin);
-        requireAllModule.addProposerCheck(address(new MockIsAllowed(true)), false);
+        requireAllModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         // Current block timestamp will be used in the emitted event
@@ -150,7 +132,7 @@ contract MetabasedSequencerChainWithDecayingPriorityTest is MetabasedSequencerCh
     function testProcessBulkTransactions() public {
         // Set up permissions
         vm.startPrank(admin);
-        requireAllModule.addProposerCheck(address(new MockIsAllowed(true)), false);
+        requireAllModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         // Current timestamp for event verification
@@ -171,7 +153,7 @@ contract MetabasedSequencerChainWithDecayingPriorityTest is MetabasedSequencerCh
     function testProcessBulkTransactionsRevertsWithMismatchedArrays() public {
         // Set up permissions
         vm.startPrank(admin);
-        requireAllModule.addProposerCheck(address(new MockIsAllowed(true)), false);
+        requireAllModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         // Create priority array with incorrect length
@@ -242,7 +224,7 @@ contract MetabasedSequencerChainWithDecayingPriorityTest is MetabasedSequencerCh
         address mockRequireAllAddr = address(new MockIsAllowed(false));
 
         vm.startPrank(admin);
-        requireAllModule.addProposerCheck(mockRequireAllAddr, false);
+        requireAllModule.addPermissionCheck(mockRequireAllAddr, false);
         vm.stopPrank();
 
         // Expect specific error from RequireAllModule
@@ -257,21 +239,21 @@ contract MetabasedSequencerChainWithDecayingPriorityTest is MetabasedSequencerCh
     function testProcessTransactionRequireAnyFailure() public {
         vm.startPrank(admin);
         chain.updateRequirementModule(address(requireAnyModule));
-        requireAnyModule.addProposerCheck(address(new MockIsAllowed(false)), false);
+        requireAnyModule.addPermissionCheck(address(new MockIsAllowed(false)), false);
         vm.stopPrank();
 
         // Expect specific RequireAny module error
-        vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.ProposerCheckFailed.selector, address(this)));
+        vm.expectRevert(abi.encodeWithSelector(RequireAnyModule.CheckFailed.selector, address(this)));
 
-        // This should revert with ProposerCheckFailed
+        // This should revert with CheckFailed
         chain.processTransactionRaw(testData2, 1);
     }
 
     function testRequireAnyModuleWithOnePassingCheck() public {
         vm.startPrank(admin);
         chain.updateRequirementModule(address(requireAnyModule));
-        requireAnyModule.addProposerCheck(address(new MockIsAllowed(false)), false);
-        requireAnyModule.addProposerCheck(address(new MockIsAllowed(true)), false);
+        requireAnyModule.addPermissionCheck(address(new MockIsAllowed(false)), false);
+        requireAnyModule.addPermissionCheck(address(new MockIsAllowed(true)), false);
         vm.stopPrank();
 
         // This should work as at least one check passes
@@ -292,13 +274,13 @@ contract MetabasedSequencerChainWithDecayingPriorityViewRequireAllTest is
         mockRequireAll2 = new MockIsAllowed(true);
 
         vm.startPrank(admin);
-        requireAllModule.addProposerCheck(address(mockRequireAll1), false);
-        requireAllModule.addProposerCheck(address(mockRequireAll2), false);
+        requireAllModule.addPermissionCheck(address(mockRequireAll1), false);
+        requireAllModule.addPermissionCheck(address(mockRequireAll2), false);
         vm.stopPrank();
     }
 
     function testGetAllRequirementsRequireAll() public view {
-        address[] memory allChecks = requireAllModule.getAllProposerChecks();
+        address[] memory allChecks = requireAllModule.getAllPermissionChecks();
         assertEq(allChecks.length, 2);
         assertEq(allChecks[0], address(mockRequireAll1));
         assertEq(allChecks[1], address(mockRequireAll2));
@@ -320,13 +302,13 @@ contract MetabasedSequencerChainWithDecayingPriorityViewRequireAnyTest is
         vm.startPrank(admin);
         chain.updateRequirementModule(address(requireAnyModule));
 
-        requireAnyModule.addProposerCheck(address(mockRequireAny1), false);
-        requireAnyModule.addProposerCheck(address(mockRequireAny2), false);
+        requireAnyModule.addPermissionCheck(address(mockRequireAny1), false);
+        requireAnyModule.addPermissionCheck(address(mockRequireAny2), false);
         vm.stopPrank();
     }
 
     function testGetAllRequirementsRequireAny() public view {
-        address[] memory allChecks = requireAnyModule.getAllProposerChecks();
+        address[] memory allChecks = requireAnyModule.getAllPermissionChecks();
         assertEq(allChecks.length, 2);
         assertEq(allChecks[0], address(mockRequireAny1));
         assertEq(allChecks[1], address(mockRequireAny2));
