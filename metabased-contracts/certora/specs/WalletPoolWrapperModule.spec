@@ -4,7 +4,7 @@ methods {
     // Inherited view functions from AllowlistSequencingModule
     function admin() external returns (address) envfree;
     function allowlist(address) external returns (bool) envfree;
-    function isAllowed(address) external returns (bool) envfree;
+    function isAllowed(address, address, bytes) external returns (bool) envfree;
 }
 
 /**
@@ -106,11 +106,11 @@ rule allowlistedCanProcessTransactions() {
 /**
  * Rule 6: isAllowed function matches allowlist state
  */
-rule isAllowedConsistency() {
+rule isAllowedConsistency(bytes data) {
     address user;
 
     bool inAllowlist = allowlist(user);
-    bool allowed = isAllowed(user);
+    bool allowed = isAllowed(user, user, data);
 
     assert inAllowlist == allowed;
 }

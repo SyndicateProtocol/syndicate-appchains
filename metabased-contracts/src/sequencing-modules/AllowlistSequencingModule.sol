@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import {ProposerPermissionModule} from "../interfaces/ProposerPermissionModule.sol";
+import {IPermissionModule} from "../interfaces/IPermissionModule.sol";
 
 /**
  * @title AllowlistSequencingModule
@@ -9,7 +9,7 @@ import {ProposerPermissionModule} from "../interfaces/ProposerPermissionModule.s
  */
 // [Olympix Warning: unfuzzed variables, missing events assertion] These test-related warnings are not security critical
 // as the contract uses standard unit tests and integration tests for event verification
-contract AllowlistSequencingModule is ProposerPermissionModule {
+contract AllowlistSequencingModule is IPermissionModule {
     /// @notice The address of the admin who can modify the allowlist.
     address public admin;
     /// @notice Mapping to store allowed addresses.
@@ -81,7 +81,7 @@ contract AllowlistSequencingModule is ProposerPermissionModule {
      * @notice Checks if the caller is allowed.
      * @return bool indicating if the caller is allowed.
      */
-    function isAllowed(address proposer) external view override returns (bool) {
+    function isAllowed(address proposer, address, bytes calldata) external view override returns (bool) {
         return allowlist[proposer];
     }
 }

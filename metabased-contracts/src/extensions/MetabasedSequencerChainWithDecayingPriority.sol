@@ -25,8 +25,7 @@ contract MetabasedSequencerChainWithDecayingPriority is MetabasedSequencerChain 
     /// @param priority The initial priority of the transaction.
     function processTransactionRaw(bytes calldata data, uint256 priority)
         external
-        onlyWhenAllowed(msg.sender)
-        revertForUnallowedCalldata(data)
+        onlyWhenAllowed(msg.sender, tx.origin, data)
     {
         emit TransactionProcessed(msg.sender, data, priority, block.timestamp);
     }
@@ -37,8 +36,7 @@ contract MetabasedSequencerChainWithDecayingPriority is MetabasedSequencerChain 
     /// @param priority The initial priority of the transaction
     function processTransaction(bytes calldata data, uint256 priority)
         external
-        onlyWhenAllowed(msg.sender)
-        revertForUnallowedCalldata(data)
+        onlyWhenAllowed(msg.sender, tx.origin, data)
     {
         emit TransactionProcessed(msg.sender, prependZeroByte(data), priority, block.timestamp);
     }
@@ -47,16 +45,14 @@ contract MetabasedSequencerChainWithDecayingPriority is MetabasedSequencerChain 
     /// @dev Prepends a zero byte to each transaction data to signal uncompressed data
     /// @param data An array of transaction data.
     /// @param priorities An array of priorities for the transactions.
-    function processBulkTransactions(bytes[] calldata data, uint256[] calldata priorities)
-        external
-        onlyWhenAllowed(msg.sender)
-    {
+    function processBulkTransactions(bytes[] calldata data, uint256[] calldata priorities) external {
         uint256 dataCount = data.length;
         require(dataCount == priorities.length, "Data and priority arrays must have the same length");
 
         // Process all transactions
         for (uint256 i = 0; i < dataCount; i++) {
-            _revertForUnallowedCalldata(data[i]);
+            isAllowed(msg.sender, tx.origin, data[i]);
+
             emit TransactionProcessed(msg.sender, prependZeroByte(data[i]), priorities[i], block.timestamp);
         }
     }
