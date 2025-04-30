@@ -76,73 +76,60 @@ contract MetabasedFactoryTest is Test {
         assertTrue(permissionModule.owner() == admin);
     }
 
-    // function testCreateAllContractsWithRequireAll() public {
-    //     vm.recordLogs();
+    function testCreateMetabasedSequencerChainWithRequireAll() public {
+        vm.recordLogs();
 
-    //     (address sequencerChainAddr, address metafillerStorageAddr, IRequirementModule permissionModuleAddr) =
-    //         factory.createAllContractsWithRequireAllModule(admin, manager, l3ChainId, bytes32(l3ChainId));
+        (address sequencerChainAddr, IRequirementModule permissionModuleAddr) =
+            factory.createMetabasedSequencerChainWithRequireAllModule(admin, l3ChainId, bytes32(l3ChainId));
 
-    //     Vm.Log[] memory entries = vm.getRecordedLogs();
-    //     bool found = false;
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        bool found = false;
 
-    //     for (uint256 i = 0; i < entries.length; i++) {
-    //         // The event signature for AllContractsCreated
-    //         if (entries[i].topics[0] == keccak256("AllContractsCreated(uint256,address,address,address)")) {
-    //             // Check indexed parameters (they are in topics)
-    //             assertEq(address(uint160(uint256(entries[i].topics[1]))), sequencerChainAddr);
-    //             assertEq(address(uint160(uint256(entries[i].topics[2]))), metafillerStorageAddr);
-    //             assertEq(address(uint160(uint256(entries[i].topics[3]))), address(permissionModuleAddr));
+        for (uint256 i = 0; i < entries.length; i++) {
+            // The event signature for AllContractsCreated
+            if (entries[i].topics[0] == keccak256("MetabasedSequencerChainCreated(uint256,address,address)")) {
+                // Check indexed parameters (they are in topics)
+                assertEq(uint256(entries[i].topics[1]), l3ChainId);
+                assertEq(address(uint160(uint256(entries[i].topics[2]))), sequencerChainAddr);
+                assertEq(address(uint160(uint256(entries[i].topics[3]))), address(permissionModuleAddr));
 
-    //             // Check non-indexed parameter (in data)
-    //             (uint256 emittedChainId) = abi.decode(entries[i].data, (uint256));
-    //             assertEq(emittedChainId, l3ChainId);
+                found = true;
+                break;
+            }
+        }
 
-    //             found = true;
-    //             break;
-    //         }
-    //     }
+        assertTrue(found, "MetabasedSequencerChainCreated event not found");
 
-    //     assertTrue(found, "AllContractsCreated event not found");
+        assertTrue(sequencerChainAddr != address(0));
+        assertTrue(address(permissionModuleAddr) != address(0));
 
-    //     assertTrue(sequencerChainAddr != address(0));
-    //     assertTrue(metafillerStorageAddr != address(0));
-    //     assertTrue(address(permissionModuleAddr) != address(0));
+        MetabasedSequencerChain sequencerChainContract = MetabasedSequencerChain(sequencerChainAddr);
+        assertEq(sequencerChainContract.l3ChainId(), l3ChainId);
 
-    //     MetabasedSequencerChain sequencerChainContract = MetabasedSequencerChain(sequencerChainAddr);
-    //     assertEq(sequencerChainContract.l3ChainId(), l3ChainId);
+        uint256 newL3ChainId = 10042002;
+        vm.expectEmit(true, false, false, false);
+        emit MetabasedFactory.MetabasedSequencerChainCreated(
+            newL3ChainId,
+            factory.computeSequencerChainAddress(bytes32(newL3ChainId), newL3ChainId),
+            address(permissionModuleAddr)
+        );
+        (address sequencerChainAddress, IRequirementModule permissionModuleAddress) =
+            factory.createMetabasedSequencerChainWithRequireAllModule(admin, newL3ChainId, bytes32(newL3ChainId));
 
-    //     uint256 newL3ChainId = 10042002;
-    //     vm.expectEmit(true, false, false, false);
-    //     emit MetabasedFactory.AllContractsCreated(
-    //         newL3ChainId,
-    //         factory.computeSequencerChainAddress(bytes32(newL3ChainId), newL3ChainId),
-    //         0xD76ffbd1eFF76C510C3a509fE22864688aC3A588,
-    //         0x7FdB3132Ff7D02d8B9e221c61cC895ce9a4bb773
-    //     );
-    //     (address sequencerChainAddress, address metafillerStorageAddress, IRequirementModule permissionModuleAddress) =
-    //         factory.createAllContractsWithRequireAllModule(admin, manager, newL3ChainId, bytes32(newL3ChainId));
+        assertTrue(sequencerChainAddress != address(0));
+        assertTrue(address(permissionModuleAddress) != address(0));
 
-    //     assertTrue(sequencerChainAddress != address(0));
-    //     assertTrue(metafillerStorageAddress != address(0));
-    //     assertTrue(address(permissionModuleAddress) != address(0));
+        MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);
+        RequireAllModule permissionModule = RequireAllModule(address(permissionModuleAddress));
 
-    //     MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);
-    //     MetafillerStorage metafillerStorage = MetafillerStorage(metafillerStorageAddress);
-    //     RequireAllModule permissionModule = RequireAllModule(address(permissionModuleAddress));
+        // Verify sequencer setup
+        assertTrue(address(sequencerChain) == sequencerChainAddress);
+        assertEq(sequencerChain.l3ChainId(), newL3ChainId);
 
-    //     // Verify sequencer setup
-    //     assertTrue(address(sequencerChain) == sequencerChainAddress);
-    //     assertEq(sequencerChain.l3ChainId(), newL3ChainId);
-
-    //     // Verify metafiller setup
-    //     assertTrue(address(metafillerStorage) == metafillerStorageAddress);
-    //     assertTrue(metafillerStorage.hasRole(metafillerStorage.DEFAULT_ADMIN_ROLE(), admin));
-    //     assertTrue(metafillerStorage.hasRole(metafillerStorage.MANAGER_ROLE(), manager));
-
-    //     // Verify permission module setup
-    //     assertTrue(address(sequencerChain.permissionRequirementModule()) == address(permissionModuleAddress));
-    //     assertTrue(permissionModule.owner() == admin);
-    // }
+        // Verify permission module setup
+        assertTrue(address(sequencerChain.permissionRequirementModule()) == address(permissionModuleAddress));
+        assertTrue(permissionModule.owner() == admin);
+    }
 
     // function testCreateAllContractsWithRequireAny() public {
     //     vm.recordLogs();
