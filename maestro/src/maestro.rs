@@ -117,6 +117,7 @@ impl MaestroService {
         signer: Address,
         chain_id: ChainId,
     ) -> Result<u64, MaestroRpcError> {
+        // TODO(SEQ-863): could this live elsewhere?
         let chain_wallet_nonce_key = wallet_nonce_key(chain_id, signer);
         let mut conn = self.redis_conn.clone();
 
@@ -165,6 +166,7 @@ impl MaestroService {
         chain_id: ChainId,
         signer: Address,
     ) -> Result<u64, MaestroRpcError> {
+        // TODO(SEQ-863): could this live elsewhere?
         let chain_wallet_nonce_key = wallet_nonce_key(chain_id, signer);
         let provider = self.rpc_providers.get(&chain_id).ok_or_else(|| {
             error!("No RPC provider for chain {}", chain_id);
