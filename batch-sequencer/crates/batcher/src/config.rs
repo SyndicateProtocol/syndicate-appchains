@@ -60,7 +60,7 @@ impl Default for BatcherConfig {
             chain_id: 1,
             max_batch_size: Byte::from_u64(90 * 1024),
             polling_interval: Duration::from_millis(500),
-            private_key: "0000000000000000000000000000000000000000000000000000000000000000"
+            private_key: "0x0000000000000000000000000000000000000000000000000000000000000000"
                 .to_string(),
             wallet_pool_address: Address::ZERO,
             sequencing_contract_address: Address::ZERO,

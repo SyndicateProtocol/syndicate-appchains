@@ -226,7 +226,8 @@ mod tests {
             redis_url: "dummy".to_string(),
             chain_id: 1,
             polling_interval: Duration::from_millis(10),
-            private_key: "dummy".to_string(),
+            private_key: "0xafdfd9c3d2095ef696594f6cedcae59e72dcd697e2a7521b1578140422a4f890"
+                .to_string(),
             wallet_pool_address: Address::ZERO,
             sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),
             sequencing_contract_address: Address::ZERO,
