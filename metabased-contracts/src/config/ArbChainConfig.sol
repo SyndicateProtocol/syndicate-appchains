@@ -11,10 +11,12 @@ contract ArbChainConfig is Initializable {
     // Events
     event RollupOwnerUpdated(address indexed newRollupOwner);
     event DefaultSequencingChainRpcUrlUpdated(string newRpcUrl);
-    event AllowedSettlementAddressesUpdated(address[] newAllowedSettlementAddresses);
+    event AppchainBlockExplorerUrlUpdated(string newUrl);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     address public owner;
+    
+    // Immutable configuration parameters (cannot be changed after initialization)
     address public ARBITRUM_BRIDGE_ADDRESS;
     address public ARBITRUM_INBOX_ADDRESS;
     address public SEQUENCING_CONTRACT_ADDRESS;
@@ -24,11 +26,12 @@ contract ArbChainConfig is Initializable {
     uint256 public SETTLEMENT_DELAY;
     uint256 public SETTLEMENT_START_BLOCK;
     uint256 public SEQUENCING_START_BLOCK;
+    address[] public ALLOWED_SETTLEMENT_ADDRESSES;
 
+    // Mutable configuration parameters (can be updated by owner)
     address public ROLLUP_OWNER;
     string public DEFAULT_SEQUENCING_CHAIN_RPC_URL;
     string public APPCHAIN_BLOCK_EXPLORER_URL;
-    address[] public ALLOWED_SETTLEMENT_ADDRESSES;
 
     /**
      * @dev Constructor for the implementation contract
@@ -81,6 +84,7 @@ contract ArbChainConfig is Initializable {
         require(sequencingContractAddress != address(0), "Sequencing contract address cannot be zero");
         require(rollupOwner != address(0), "Rollup owner cannot be zero address");
 
+        // Set immutable configuration parameters
         CHAIN_ID = chainId;
         SEQUENCING_CHAIN_ID = sequencingChainId;
         ARBITRUM_BRIDGE_ADDRESS = arbitrumBridgeAddress;
@@ -90,11 +94,12 @@ contract ArbChainConfig is Initializable {
         SETTLEMENT_START_BLOCK = settlementStartBlock;
         SEQUENCING_CONTRACT_ADDRESS = sequencingContractAddress;
         SEQUENCING_START_BLOCK = sequencingStartBlock;
+        ALLOWED_SETTLEMENT_ADDRESSES = allowedSettlementAddresses;
 
+        // Set mutable configuration parameters
         ROLLUP_OWNER = rollupOwner;
         DEFAULT_SEQUENCING_CHAIN_RPC_URL = sequencingChainRpcUrl;
         APPCHAIN_BLOCK_EXPLORER_URL = appchainBlockExplorerUrl;
-        ALLOWED_SETTLEMENT_ADDRESSES = allowedSettlementAddresses;
 
         // Initialize the Ownable contract
         _transferOwnership(_owner);
@@ -128,12 +133,12 @@ contract ArbChainConfig is Initializable {
     }
 
     /**
-     * @dev Update ALLOWED_SETTLEMENT_ADDRESSES
-     * @param newAllowedSettlementAddresses The new array of addresses allowed for settlement
+     * @dev Update APPCHAIN_BLOCK_EXPLORER_URL
+     * @param newUrl The new URL for the appchain block explorer
      */
-    function updateAllowedSettlementAddresses(address[] calldata newAllowedSettlementAddresses) external onlyOwner {
-        ALLOWED_SETTLEMENT_ADDRESSES = newAllowedSettlementAddresses;
-        emit AllowedSettlementAddressesUpdated(newAllowedSettlementAddresses);
+    function updateAppchainBlockExplorerUrl(string calldata newUrl) external onlyOwner {
+        APPCHAIN_BLOCK_EXPLORER_URL = newUrl;
+        emit AppchainBlockExplorerUrlUpdated(newUrl);
     }
 
     /**

@@ -388,46 +388,33 @@ contract ArbChainConfigUpdateTests is ArbChainConfigTestBase {
         vm.stopPrank();
     }
 
-    function testUpdateAllowedSettlementAddresses() public {
+    function testUpdateAppchainBlockExplorerUrl() public {
         vm.startPrank(owner);
 
-        // Create new addresses array
-        address[] memory newAddresses = new address[](3);
-        newAddresses[0] = address(0x1111);
-        newAddresses[1] = address(0x2222);
-        newAddresses[2] = address(0x3333);
+        string memory newUrl = "https://new-example.com/explorer";
 
         vm.expectEmit(true, false, false, true);
-        emit AllowedSettlementAddressesUpdated(newAddresses);
+        emit ArbChainConfig.AppchainBlockExplorerUrlUpdated(newUrl);
 
-        chainConfig.updateAllowedSettlementAddresses(newAddresses);
-
-        // Verify the addresses were updated
-        assertEq(chainConfig.ALLOWED_SETTLEMENT_ADDRESSES(0), newAddresses[0]);
-        assertEq(chainConfig.ALLOWED_SETTLEMENT_ADDRESSES(1), newAddresses[1]);
-        assertEq(chainConfig.ALLOWED_SETTLEMENT_ADDRESSES(2), newAddresses[2]);
+        chainConfig.updateAppchainBlockExplorerUrl(newUrl);
+        assertEq(chainConfig.APPCHAIN_BLOCK_EXPLORER_URL(), newUrl);
 
         vm.stopPrank();
     }
 
-    function testUpdateAllowedSettlementAddressesRevertOnNonOwner() public {
+    function testUpdateAppchainBlockExplorerUrlRevertOnNonOwner() public {
         vm.prank(address(999)); // Non-owner address
 
         vm.expectRevert("Caller is not the owner");
-        chainConfig.updateAllowedSettlementAddresses(new address[](1));
+        chainConfig.updateAppchainBlockExplorerUrl("https://new-example.com/explorer");
     }
 
-    function testEmptyAllowedSettlementAddresses() public {
+    function testEmptyAppchainBlockExplorerUrl() public {
         vm.startPrank(owner);
 
-        // Test with empty addresses array
-        address[] memory emptyAddresses = new address[](0);
-
-        chainConfig.updateAllowedSettlementAddresses(emptyAddresses);
-
-        // Verify the array is empty by trying to access index 0 and expecting a revert
-        vm.expectRevert();
-        chainConfig.ALLOWED_SETTLEMENT_ADDRESSES(0);
+        // Test with empty URL
+        chainConfig.updateAppchainBlockExplorerUrl("");
+        assertEq(chainConfig.APPCHAIN_BLOCK_EXPLORER_URL(), "");
 
         vm.stopPrank();
     }
