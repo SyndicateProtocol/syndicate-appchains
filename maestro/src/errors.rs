@@ -57,8 +57,8 @@ pub enum InternalError {
     RpcFailedToFetchWalletNonce(ChainId, Address),
 
     /// Failed to submit transaction
-    #[error("transaction submission failed")]
-    TransactionSubmissionFailed,
+    #[error("transaction submission failed for tx hash: {0}")]
+    TransactionSubmissionFailed(String),
 }
 
 impl From<MaestroRpcError> for ErrorObjectOwned {

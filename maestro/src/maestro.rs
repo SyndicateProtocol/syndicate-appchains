@@ -65,6 +65,7 @@ impl MaestroService {
     /// # Arguments
     /// * `raw_tx` - The raw transaction bytes to enqueue
     /// * `chain_id` - The chain identifier to send the transaction to
+    /// * `chain_id` - The hash of the raw transaction, for logging
     ///
     /// # Returns
     /// * `Ok(())` - If the transaction was successfully enqueued
@@ -79,14 +80,15 @@ impl MaestroService {
         &self,
         raw_tx: Bytes,
         chain_id: ChainId,
+        tx_hash: &String,
     ) -> Result<(), jsonrpsee::types::ErrorObjectOwned> {
         // Get or create producer while holding lock
         let producer = self.get_or_create_producer(chain_id).await;
 
         // Release lock before making async call
         producer.enqueue_transaction(raw_tx.into()).await.map_err(|e| {
-            error!(%chain_id, %e, "failed to enqueue transaction to Redis Stream");
-            Internal(TransactionSubmissionFailed)
+            error!(%chain_id, %tx_hash, %e, "failed to enqueue transaction to Redis Stream");
+            Internal(TransactionSubmissionFailed(tx_hash.to_string()))
         })?;
         Ok(())
     }
@@ -201,20 +203,18 @@ impl MaestroService {
     /// * `current_nonce` - The current nonce value
     ///
     /// # Returns
-    /// * `String` - The result of the Redis SET operation, or "-1" if it fails
+    /// * `Ok(String)` - The result of the Redis SET operation if successful
+    /// * `Err(Error)` - If the Redis operation fails
     pub async fn increment_wallet_nonce(
         &self,
         chain_id: ChainId,
         wallet_address: Address,
         current_nonce: u64,
-    ) -> String {
+    ) -> Result<String, Error> {
         let mut conn = self.redis_conn.clone();
-        conn.set_wallet_nonce(chain_id, wallet_address, current_nonce + 1).await.unwrap_or_else(
-            |e| {
-                warn!(%chain_id, %wallet_address, %e, "failed to set updated wallet nonce");
-                "-1".to_string()
-            },
-        )
+        conn.set_wallet_nonce(chain_id, wallet_address, current_nonce + 1)
+            .await
+            .map_err(Error::Redis)
     }
 }
 
@@ -343,7 +343,8 @@ mod tests {
         let raw_tx = Bytes::from(vec![1, 2, 3, 4, 5]);
 
         // Enqueue transaction
-        let result = service.enqueue_raw_transaction(raw_tx.clone(), chain_id).await;
+        let result =
+            service.enqueue_raw_transaction(raw_tx.clone(), chain_id, &String::new()).await;
 
         // Verify success
         assert!(result.is_ok(), "Enqueuing transaction should succeed");
@@ -517,7 +518,7 @@ mod tests {
         let result = service.increment_wallet_nonce(chain_id, wallet, initial_nonce).await;
 
         // Verify success (result should be "OK" from Redis)
-        assert_ne!(result, "-1", "Incrementing nonce should succeed");
+        assert!(result.is_ok(), "Incrementing nonce should succeed");
 
         // Verify nonce was updated
         let mut conn = service.redis_conn.clone();
@@ -578,8 +579,14 @@ mod tests {
         let nonce2_plus1 = 101u64;
 
         // Set nonces for both chains
-        service.increment_wallet_nonce(chain_id1, wallet, nonce1).await;
-        service.increment_wallet_nonce(chain_id2, wallet, nonce2).await;
+        service
+            .increment_wallet_nonce(chain_id1, wallet, nonce1)
+            .await
+            .expect("Incrementing nonce should succeed");
+        service
+            .increment_wallet_nonce(chain_id2, wallet, nonce2)
+            .await
+            .expect("Incrementing nonce should succeed");
 
         // Verify nonces are chain-specific
         let mut conn = service.redis_conn.clone();

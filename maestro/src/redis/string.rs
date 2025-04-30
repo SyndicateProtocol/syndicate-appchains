@@ -19,22 +19,10 @@ const WALLET_NONCE_TTL_SEC: u64 = 3;
 /// * `wallet_address` - The wallet address to create the key for
 ///
 /// # Returns
-/// A string in the format `maestro:chain:wallet:{chain_wallet_composite_key}`
+/// A string in the format `maestro:chain:wallet:{chain_id}_{wallet_address}`
 pub fn wallet_nonce_key(chain_id: ChainId, wallet_address: Address) -> String {
-    let chain_wallet_composite_key = chain_wallet_composite_key(chain_id, wallet_address);
+    let chain_wallet_composite_key = format!("{}_{}", chain_id, wallet_address);
     format!("{}:{}", WALLET_NONCE_KEY, chain_wallet_composite_key)
-}
-
-/// Generates a composite key for a chain id and wallet address.
-///
-/// # Arguments
-/// * `chain_id` - The chain identifier to create the key for
-/// * `wallet_address` - The wallet address to create the key for
-///
-/// # Returns
-/// A string in the format `chainID_walletAddress`
-pub fn chain_wallet_composite_key(chain_id: ChainId, wallet_address: Address) -> String {
-    format!("{}_{}", chain_id, wallet_address)
 }
 
 /// Extension trait for Redis connections to work with wallet nonces
@@ -55,13 +43,6 @@ pub trait WalletNonceExt {
     ) -> impl Future<Output = RedisResult<String>> + Send;
 }
 
-// Private helper trait for internal implementation
-trait WalletNonceInternalExt {
-    async fn get_wallet_nonce_from_key(&mut self, key: String) -> RedisResult<Option<String>>;
-
-    async fn set_wallet_nonce_with_key(&mut self, key: String, nonce: u64) -> RedisResult<String>;
-}
-
 /// Public trait which is non-async and instead returns a [`Future`]. This provides greater
 /// flexibility to trait users
 impl WalletNonceExt for MultiplexedConnection {
@@ -71,7 +52,7 @@ impl WalletNonceExt for MultiplexedConnection {
         wallet_address: Address,
     ) -> impl Future<Output = RedisResult<Option<String>>> + Send {
         let key = wallet_nonce_key(chain_id, wallet_address);
-        self.get_wallet_nonce_from_key(key)
+        self.get(key)
     }
 
     fn set_wallet_nonce(
@@ -81,18 +62,8 @@ impl WalletNonceExt for MultiplexedConnection {
         nonce: u64,
     ) -> impl Future<Output = RedisResult<String>> + Send {
         let key = wallet_nonce_key(chain_id, wallet_address);
-        self.set_wallet_nonce_with_key(key, nonce)
-    }
-}
-
-impl WalletNonceInternalExt for MultiplexedConnection {
-    async fn get_wallet_nonce_from_key(&mut self, key: String) -> RedisResult<Option<String>> {
-        self.get(&key).await
-    }
-
-    async fn set_wallet_nonce_with_key(&mut self, key: String, nonce: u64) -> RedisResult<String> {
         let opts = SetOptions::default().with_expiration(EX(WALLET_NONCE_TTL_SEC));
-        self.set_options(&key, nonce.to_string(), opts).await
+        self.set_options(key, nonce.to_string(), opts)
     }
 }
 
@@ -113,19 +84,6 @@ mod tests {
         assert_eq!(
             key,
             format!("{}:{}_0x4242424242424242424242424242424242424242", WALLET_NONCE_KEY, chain_id)
-        );
-    }
-
-    #[tokio::test]
-    async fn test_chain_wallet_composite_key_format() {
-        let chain_id = 1u64;
-        let wallet_address = Address::from_slice(&[0x42; 20]);
-
-        let composite_key = chain_wallet_composite_key(chain_id, wallet_address);
-
-        assert_eq!(
-            composite_key,
-            format!("{}_0x4242424242424242424242424242424242424242", chain_id)
         );
     }
 

@@ -89,10 +89,10 @@ pub async fn send_raw_transaction_handler(
     match tx_nonce.cmp(&internal_nonce) {
         std::cmp::Ordering::Equal => {
             // 1. enqueue the txn
-            service.enqueue_raw_transaction(raw_tx, chain_id).await?;
+            service.enqueue_raw_transaction(raw_tx, chain_id, &tx_hash).await?;
 
             // 2. update the cache with nonce + 1, and expiration
-            let _res = service.increment_wallet_nonce(chain_id, signer, internal_nonce);
+            let _res = service.increment_wallet_nonce(chain_id, signer, internal_nonce).await;
 
             // 3. TODO(SEQ-863): Check WAITING GAP hash for nonce +1 (separate thread)
             // 4. return Hash (done below)
