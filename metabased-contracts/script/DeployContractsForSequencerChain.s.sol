@@ -20,17 +20,15 @@ contract DeployMetabasedFactory is Script {
 
         // metafiller admin and manager
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
-        address manager = vm.envOr("MANAGER_ADDR", msg.sender);
 
         metabasedFactory = new MetabasedFactory();
         console.log("Deployed MetabasedFactory", address(metabasedFactory));
 
         // create new contracts
-        (address sequencerChain, address metafillerStorage, IRequirementModule permissionModule) =
-            metabasedFactory.createAllContractsWithRequireAllModule(admin, manager, l3ChainId, bytes32(l3ChainId));
+        (address sequencerChain, IRequirementModule permissionModule) =
+            metabasedFactory.createMetabasedSequencerChainWithRequireAllModule(admin, l3ChainId, bytes32(l3ChainId));
 
         console.log("Deployed MetabasedSequencerChain", sequencerChain);
-        console.log("Deployed MetafillerStorage", metafillerStorage);
         console.log("Deployed RequireAllModule", address(permissionModule));
 
         vm.stopBroadcast();
