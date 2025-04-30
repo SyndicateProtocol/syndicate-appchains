@@ -49,6 +49,7 @@ contract ArbConfigManager is Ownable {
      * @param rollupOwner Initial rollup owner
      * @param sequencingChainRpcUrl Default RPC URL for the sequencing chain
      * @param appchainBlockExplorerUrl URL for the appchain block explorer
+     * @param allowedSettlementAddresses Array of addresses allowed for settlement
      * @return address The address of the deployed ArbChainConfig contract
      */
     function createArbChainConfig(
@@ -64,7 +65,8 @@ contract ArbConfigManager is Ownable {
         uint256 sequencingStartBlock,
         address rollupOwner,
         string memory sequencingChainRpcUrl,
-        string memory appchainBlockExplorerUrl
+        string memory appchainBlockExplorerUrl,
+        address[] memory allowedSettlementAddresses
     ) external onlyOwner returns (address) {
         require(chainId != 0, "Chain ID cannot be zero");
         require(deployedConfigs[chainId] == address(0), "Config already exists for this chain ID");
@@ -93,7 +95,8 @@ contract ArbConfigManager is Ownable {
             sequencingStartBlock,
             rollupOwner,
             sequencingChainRpcUrl,
-            appchainBlockExplorerUrl
+            appchainBlockExplorerUrl,
+            allowedSettlementAddresses
         );
 
         emit ArbChainConfigCreated(chainId, proxyAddress);

@@ -1,18 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.25;
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
 /**
  * @title ArbChainConfig
  * @dev Configuration contract for settlement chain parameters
  */
-contract ArbChainConfig is Initializable, Ownable {
+contract ArbChainConfig is Initializable {
     // Events
     event RollupOwnerUpdated(address indexed newRollupOwner);
     event DefaultSequencingChainRpcUrlUpdated(string newRpcUrl);
+    event AppchainBlockExplorerUrlUpdated(string newUrl);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
+    address public owner;
+
+    // ======== IMMUTABLE CONFIGURATION PARAMETERS ========
+    // These parameters cannot be changed after initialization
     address public ARBITRUM_BRIDGE_ADDRESS;
     address public ARBITRUM_INBOX_ADDRESS;
     address public SEQUENCING_CONTRACT_ADDRESS;
@@ -22,7 +27,10 @@ contract ArbChainConfig is Initializable, Ownable {
     uint256 public SETTLEMENT_DELAY;
     uint256 public SETTLEMENT_START_BLOCK;
     uint256 public SEQUENCING_START_BLOCK;
+    address[] public ALLOWED_SETTLEMENT_ADDRESSES;
 
+    // ======== MUTABLE CONFIGURATION PARAMETERS ========
+    // These parameters can be updated by the contract owner
     address public ROLLUP_OWNER;
     string public DEFAULT_SEQUENCING_CHAIN_RPC_URL;
     string public APPCHAIN_BLOCK_EXPLORER_URL;
@@ -32,11 +40,13 @@ contract ArbChainConfig is Initializable, Ownable {
      * This is only used when deploying the implementation contract
      * It will not be called when deploying proxies
      */
-    constructor() Ownable(msg.sender) {}
+    constructor() {
+        _disableInitializers();
+    }
 
     /**
      * @dev Initializer function - replaces constructor for proxy pattern
-     * @param owner The address of the contract owner
+     * @param _owner The address of the contract owner
      * @param chainId The chain ID
      * @param sequencingChainId The ID of the sequencing chain
      * @param arbitrumBridgeAddress Address of the Arbitrum bridge
@@ -49,9 +59,10 @@ contract ArbChainConfig is Initializable, Ownable {
      * @param rollupOwner Initial rollup owner
      * @param sequencingChainRpcUrl Default RPC URL for the sequencing chain
      * @param appchainBlockExplorerUrl URL for the appchain block explorer
+     * @param allowedSettlementAddresses Array of addresses allowed for settlement
      */
     function initialize(
-        address owner,
+        address _owner,
         uint256 chainId,
         uint256 sequencingChainId,
         address arbitrumBridgeAddress,
@@ -63,10 +74,11 @@ contract ArbChainConfig is Initializable, Ownable {
         uint256 sequencingStartBlock,
         address rollupOwner,
         string memory sequencingChainRpcUrl,
-        string memory appchainBlockExplorerUrl
+        string memory appchainBlockExplorerUrl,
+        address[] memory allowedSettlementAddresses
     ) public initializer {
         // Set the configuration parameters
-        require(owner != address(0), "Owner cannot be zero address");
+        require(_owner != address(0), "Owner cannot be zero address");
         require(chainId != 0, "Chain ID cannot be zero");
         require(sequencingChainId != 0, "Sequencing chain ID cannot be zero");
         require(arbitrumBridgeAddress != address(0), "Arbitrum bridge address cannot be zero");
@@ -74,6 +86,7 @@ contract ArbChainConfig is Initializable, Ownable {
         require(sequencingContractAddress != address(0), "Sequencing contract address cannot be zero");
         require(rollupOwner != address(0), "Rollup owner cannot be zero address");
 
+        // Set immutable configuration parameters
         CHAIN_ID = chainId;
         SEQUENCING_CHAIN_ID = sequencingChainId;
         ARBITRUM_BRIDGE_ADDRESS = arbitrumBridgeAddress;
@@ -83,13 +96,23 @@ contract ArbChainConfig is Initializable, Ownable {
         SETTLEMENT_START_BLOCK = settlementStartBlock;
         SEQUENCING_CONTRACT_ADDRESS = sequencingContractAddress;
         SEQUENCING_START_BLOCK = sequencingStartBlock;
+        ALLOWED_SETTLEMENT_ADDRESSES = allowedSettlementAddresses;
 
+        // Set mutable configuration parameters
         ROLLUP_OWNER = rollupOwner;
         DEFAULT_SEQUENCING_CHAIN_RPC_URL = sequencingChainRpcUrl;
         APPCHAIN_BLOCK_EXPLORER_URL = appchainBlockExplorerUrl;
 
         // Initialize the Ownable contract
-        _transferOwnership(owner);
+        _transferOwnership(_owner);
+    }
+
+    /**
+     * @dev Modifier to check if the caller is the owner
+     */
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Caller is not the owner");
+        _;
     }
 
     /**
@@ -109,5 +132,34 @@ contract ArbChainConfig is Initializable, Ownable {
     function updateDefaultSequencingChainRpcUrl(string calldata newRpcUrl) external onlyOwner {
         DEFAULT_SEQUENCING_CHAIN_RPC_URL = newRpcUrl;
         emit DefaultSequencingChainRpcUrlUpdated(newRpcUrl);
+    }
+
+    /**
+     * @dev Update APPCHAIN_BLOCK_EXPLORER_URL
+     * @param newUrl The new URL for the appchain block explorer
+     */
+    function updateAppchainBlockExplorerUrl(string calldata newUrl) external onlyOwner {
+        APPCHAIN_BLOCK_EXPLORER_URL = newUrl;
+        emit AppchainBlockExplorerUrlUpdated(newUrl);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Can only be called by the current owner.
+     */
+    function transferOwnership(address newOwner) public virtual onlyOwner {
+        require(newOwner != address(0), "New owner cannot be zero address");
+
+        _transferOwnership(newOwner);
+    }
+
+    /**
+     * @dev Transfers ownership of the contract to a new account (`newOwner`).
+     * Internal function without access restriction.
+     */
+    function _transferOwnership(address newOwner) internal virtual {
+        address oldOwner = owner;
+        owner = newOwner;
+        emit OwnershipTransferred(oldOwner, newOwner);
     }
 }
