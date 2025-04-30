@@ -1,9 +1,17 @@
-# TC Sequencer
+# Batch Sequencer
 
-A metabased sequencer that uses TC behind a lightweight wrapper
+The Batch Sequencer is a service that reads transactions from Redis, bundles them into size-limited batches, and submits them directly to a sequencing contract on an EVM-compatible chain using Alloy.
 
 Sample cmd:
 
 ```
-cargo run -p batch-sequencer -- -i <project-id> -k <api-key> -a 1=0xabc,2=0xdef
+cargo run -p batch-sequencer -- \
+  --redis-url redis://127.0.0.1:6379 \
+  --chain-id 11155111 \
+  --max-batch-size 90KB \
+  --batcher-polling-interval 100ms \
+  --private-key <hex-private-key> \
+  --wallet-pool-address 0x1111... \
+  --sequencing-contract-address 0x2222... \
+  --sequencing-rpc-url http://localhost:8545
 ```
