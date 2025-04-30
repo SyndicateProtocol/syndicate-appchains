@@ -15,7 +15,7 @@ contract ArbChainConfig is Initializable {
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     address public owner;
-    
+
     // ======== IMMUTABLE CONFIGURATION PARAMETERS ========
     // These parameters cannot be changed after initialization
     address public ARBITRUM_BRIDGE_ADDRESS;
