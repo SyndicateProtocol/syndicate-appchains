@@ -76,6 +76,7 @@ pub(super) async fn setup_config_manager(
             options_clone.rollup_owner,
             sequencing_rpc_url_clone,
             appchain_block_explorer_url_clone,
+            vec![],
         )
         .send()
         .await?;
