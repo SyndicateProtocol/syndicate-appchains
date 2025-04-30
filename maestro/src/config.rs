@@ -110,7 +110,7 @@ impl Config {
         for (chain_id, url) in &self.chain_rpc_urls {
             debug!(%chain_id, %url, "Sending test JSON-RPC request");
 
-            let provider: RpcProvider = ProviderBuilder::new().connect(url).await?;
+            let provider = ProviderBuilder::new().connect(url).await?;
             let resp_chain_id = provider.get_chain_id().await?;
 
             if resp_chain_id.to_string() != *chain_id {

@@ -4,6 +4,6 @@
 pub mod config;
 pub mod errors;
 pub mod layers;
-pub mod maestro_service;
+pub mod maestro;
 pub mod redis;
 pub mod server;

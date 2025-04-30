@@ -21,7 +21,7 @@ use alloy::{
 use redis::aio::MultiplexedConnection;
 use std::{collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
-use tracing::{error, info, warn};
+use tracing::{error, trace, warn};
 
 /// The service for filtering and directing transactions
 #[derive(Debug)]
@@ -132,7 +132,7 @@ impl MaestroService {
             }
             // Cache miss or error - need to get from RPC
             _ => {
-                info!(%signer, %chain_id, %chain_wallet_nonce_key, "No cached nonce found, fetching from RPC");
+                trace!(%signer, %chain_id, %chain_wallet_nonce_key, "No cached nonce found, fetching from RPC");
                 self.get_nonce_from_rpc_and_update_cache(chain_id, signer).await?
             }
         };
@@ -193,13 +193,12 @@ impl MaestroService {
     /// Increments a wallet's nonce in the Redis cache
     ///
     /// This method updates the wallet's nonce in the Redis cache to the
-    /// specified value. Typically used after a transaction is submitted
-    /// to increment the nonce by 1.
+    /// specified value + 1. Typically used after a transaction is submitted.
     ///
     /// # Arguments
     /// * `chain_id` - The chain identifier for the wallet
     /// * `wallet_address` - The wallet address to update the nonce for
-    /// * `nonce_to_set` - The new nonce value to set
+    /// * `current_nonce` - The current nonce value
     ///
     /// # Returns
     /// * `String` - The result of the Redis SET operation, or "-1" if it fails
@@ -207,13 +206,15 @@ impl MaestroService {
         &self,
         chain_id: ChainId,
         wallet_address: Address,
-        nonce_to_set: u64,
+        current_nonce: u64,
     ) -> String {
         let mut conn = self.redis_conn.clone();
-        conn.set_wallet_nonce(chain_id, wallet_address, nonce_to_set).await.unwrap_or_else(|e| {
-            warn!(%chain_id, %wallet_address, %e, "failed to set updated wallet nonce");
-            "-1".to_string()
-        })
+        conn.set_wallet_nonce(chain_id, wallet_address, current_nonce + 1).await.unwrap_or_else(
+            |e| {
+                warn!(%chain_id, %wallet_address, %e, "failed to set updated wallet nonce");
+                "-1".to_string()
+            },
+        )
     }
 }
 
@@ -499,6 +500,7 @@ mod tests {
         let chain_id = 4u64;
         let wallet = Address::from_slice(&[0x42; 20]);
         let initial_nonce = 41u64;
+
         let incremented_nonce = 42u64;
 
         // Set initial nonce
@@ -512,7 +514,7 @@ mod tests {
         }
 
         // Increment nonce
-        let result = service.increment_wallet_nonce(chain_id, wallet, incremented_nonce).await;
+        let result = service.increment_wallet_nonce(chain_id, wallet, initial_nonce).await;
 
         // Verify success (result should be "OK" from Redis)
         assert_ne!(result, "-1", "Incrementing nonce should succeed");
@@ -571,7 +573,9 @@ mod tests {
         let chain_id2 = 5u64;
         let wallet = Address::from_slice(&[0x42; 20]);
         let nonce1 = 42u64;
+        let nonce1_plus1 = 43u64;
         let nonce2 = 100u64;
+        let nonce2_plus1 = 101u64;
 
         // Set nonces for both chains
         service.increment_wallet_nonce(chain_id1, wallet, nonce1).await;
@@ -582,8 +586,8 @@ mod tests {
         let get1 = conn.get_wallet_nonce(chain_id1, wallet).await.unwrap();
         let get2 = conn.get_wallet_nonce(chain_id2, wallet).await.unwrap();
 
-        assert_eq!(get1, Some(nonce1.to_string()), "Chain 1 nonce should be correct");
-        assert_eq!(get2, Some(nonce2.to_string()), "Chain 2 nonce should be correct");
+        assert_eq!(get1, Some(nonce1_plus1.to_string()), "Chain 1 nonce should be correct");
+        assert_eq!(get2, Some(nonce2_plus1.to_string()), "Chain 2 nonce should be correct");
     }
 
     #[tokio::test]

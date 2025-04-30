@@ -8,7 +8,7 @@ use std::future::Future;
 /// Format: `maestro:chain:wallet:{chain_wallet_composite_key}`
 const WALLET_NONCE_KEY: &str = "maestro:chain:wallet:nonce";
 
-/// Time-to-live (TTL) for Wallet Nonce keys
+/// Time-to-live (TTL) for Wallet Nonce keys, in seconds
 const WALLET_NONCE_TTL_SEC: u64 = 3;
 
 /// Generates a Redis String key for a specific chain and wallet address. Note that such a

@@ -191,7 +191,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_valid_transaction() -> Result<()> {
-        let tx_hex = get_legacy_transaction_hex(4, 690);
+        let tx_hex = get_legacy_transaction_hex(4, 1);
 
         with_test_server(None, None, |client, base_url| async move {
             // Test with valid transaction input
@@ -252,7 +252,7 @@ mod tests {
     async fn test_eip1559_transaction() -> Result<()> {
         with_test_server(None, None, |client, base_url| async move {
             // Test EIP-1559 transaction
-            let eip1559_tx = get_eip1559_transaction_hex(4, 123);
+            let eip1559_tx = get_eip1559_transaction_hex(4, 1);
 
             let response = client
                 .post(&base_url)
@@ -486,9 +486,16 @@ mod tests {
                 assert!(tx_response.status().is_success(), "Valid transaction request failed");
                 let tx_json: Value = tx_response.json().await?;
                 assert!(
-                    tx_json.get("result").is_some(),
-                    "Transaction response missing 'result' field: {}",
+                    tx_json.get("result").is_none(),
+                    "Transaction response should not succeed: {}",
                     tx_json
+                );
+                assert_eq!(
+                    tx_json.get("error"),
+                    Some(&json!({
+                        "code": -32603,
+                        "message": "internal error: transaction nonce too high - expected 2 got 690"
+                    }))
                 );
 
                 Ok(())

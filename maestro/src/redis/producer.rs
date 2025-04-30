@@ -1,4 +1,3 @@
-//!
 //! This module provides the producer implementation for Redis streams used to queue
 //! and process transactions across different chains.
 

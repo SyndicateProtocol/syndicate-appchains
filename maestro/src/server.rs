@@ -1,6 +1,6 @@
 //! The JSON-RPC server module for the Maestro service.
 
-use crate::{config::Config, layers::HeadersLayer, maestro_service::MaestroService};
+use crate::{config::Config, layers::HeadersLayer, maestro::MaestroService};
 use alloy::{consensus::Transaction, primitives::ChainId};
 use http::Extensions;
 use jsonrpsee::{
@@ -15,7 +15,7 @@ use shared::{
         parse_send_raw_transaction_params,
         InvalidInputError::ChainIdMismatched,
         Rejection::NonceTooLow,
-        RpcError::{self, InvalidInput, TransactionRejected},
+        RpcError::{self, Internal, InvalidInput, TransactionRejected},
     },
     tx_validation::validate_transaction,
 };
@@ -92,17 +92,25 @@ pub async fn send_raw_transaction_handler(
             service.enqueue_raw_transaction(raw_tx, chain_id).await?;
 
             // 2. update the cache with nonce + 1, and expiration
-            let _res = service.increment_wallet_nonce(chain_id, signer, internal_nonce + 1);
+            let _res = service.increment_wallet_nonce(chain_id, signer, internal_nonce);
 
             // 3. TODO(SEQ-863): Check WAITING GAP hash for nonce +1 (separate thread)
             // 4. return Hash (done below)
         }
         std::cmp::Ordering::Less => {
-            warn!(%tx_hash, %chain_id, "Failed to submit forwarded transaction");
-            return Err(TransactionRejected(NonceTooLow(internal_nonce, tx_nonce)).into())
+            let rejection = NonceTooLow(internal_nonce, tx_nonce);
+            warn!(%tx_hash, %chain_id, "Failed to submit forwarded transaction: {}", rejection);
+            return Err(TransactionRejected(rejection).into())
         }
         std::cmp::Ordering::Greater => {
-            // TODO(SEQ-863) put it on WAITING GAP
+            //TODO(SEQ-863) put it on WAITING GAP
+            // TEMP: error for now
+            let err_string = format!(
+                "transaction nonce too high - expected {} got {}",
+                internal_nonce, tx_nonce
+            );
+            warn!(%tx_hash, %chain_id, "Failed to submit forwarded transaction: {}", err_string);
+            return Err(Internal(err_string).into())
             // Return hash (done below)
         }
     }

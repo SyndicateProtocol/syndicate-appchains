@@ -56,7 +56,7 @@ pub enum InternalError {
     #[error("chain {0} failed to return wallet {1} nonce")]
     RpcFailedToFetchWalletNonce(ChainId, Address),
 
-    /// Failed ot submit transaction
+    /// Failed to submit transaction
     #[error("transaction submission failed")]
     TransactionSubmissionFailed,
 }
