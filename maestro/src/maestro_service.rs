@@ -210,14 +210,10 @@ impl MaestroService {
         nonce_to_set: u64,
     ) -> String {
         let mut conn = self.redis_conn.clone();
-        let res = conn
-            .set_wallet_nonce(chain_id, wallet_address, nonce_to_set)
-            .await
-            .unwrap_or_else(|e| {
-                warn!(%chain_id, %wallet_address, %e, "failed to set updated wallet nonce");
-                "-1".to_string()
-            });
-        res
+        conn.set_wallet_nonce(chain_id, wallet_address, nonce_to_set).await.unwrap_or_else(|e| {
+            warn!(%chain_id, %wallet_address, %e, "failed to set updated wallet nonce");
+            "-1".to_string()
+        })
     }
 }
 
