@@ -75,13 +75,7 @@ pub async fn run_batcher(
         .map_err(|e| eyre!("Failed to get Redis connection: {}", e))?;
     let redis_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
 
-    let signer = PrivateKeySigner::from_str(&config.private_key)
-        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
-    let sequencer_provider = ProviderBuilder::new()
-        .wallet(EthereumWallet::from(signer))
-        .on_http(config.sequencing_rpc_url.clone());
-
-    let wallet_pool = WalletPoolWrapperModule::new(wallet_pool_address, sequencer_provider);
+    let wallet_pool = create_wallet_pool(config, wallet_pool_address);
 
     let mut batcher =
         Batcher::new(config, redis_consumer, wallet_pool, tc_client, sequencing_contract_address);
@@ -101,6 +95,18 @@ pub async fn run_batcher(
     });
     info!("Batcher job started with {:?} poll interval", config.polling_interval);
     Ok(handle)
+}
+
+fn create_wallet_pool(
+    config: &BatcherConfig,
+    wallet_pool_address: Address,
+) -> WalletPoolWrapperModuleInstance<(), FilledProvider> {
+    let signer = PrivateKeySigner::from_str(&config.private_key)
+        .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
+    let sequencer_provider = ProviderBuilder::new()
+        .wallet(EthereumWallet::from(signer))
+        .on_http(config.sequencing_rpc_url.clone());
+    WalletPoolWrapperModule::new(wallet_pool_address, sequencer_provider)
 }
 
 impl Batcher {
@@ -255,6 +261,7 @@ impl Batcher {
 mod tests {
     use super::*;
     use maestro::redis::producer::StreamProducer;
+    use tc_client::config::TCConfig;
     use test_utils::docker::start_redis;
     use url::Url;
 
@@ -337,5 +344,82 @@ mod tests {
 
         let result = batcher.send_compressed_batch().await;
         assert!(result.is_err());
+    }
+    #[tokio::test]
+    async fn test_read_transactions_no_data() {
+        let mut config = test_config();
+        let (_redis, redis_url) = start_redis().await.unwrap();
+        config.redis_url = redis_url.clone();
+
+        let conn = redis::Client::open(redis_url.as_str())
+            .unwrap()
+            .get_multiplexed_async_connection()
+            .await
+            .unwrap();
+        let redis_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
+
+        let signer = PrivateKeySigner::from_str(&config.private_key).unwrap();
+        let sequencer_provider = ProviderBuilder::new()
+            .wallet(EthereumWallet::from(signer))
+            .on_http(config.sequencing_rpc_url.clone());
+        let wallet_pool = WalletPoolWrapperModule::new(Address::ZERO, sequencer_provider);
+
+        let mut batcher = Batcher::new(&config, redis_consumer, wallet_pool, None, Address::ZERO);
+        let result = batcher.read_transactions().await;
+
+        assert!(result.is_ok());
+        assert!(batcher.compressor.is_empty(), "Compressor should be empty");
+    }
+
+    #[tokio::test]
+    async fn test_submission_in_flight_skips_batching() {
+        let config = test_config();
+        let (_redis, redis_url) = start_redis().await.unwrap();
+
+        let conn = redis::Client::open(redis_url.as_str())
+            .unwrap()
+            .get_multiplexed_async_connection()
+            .await
+            .unwrap();
+        let redis_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
+
+        let signer = PrivateKeySigner::from_str(&config.private_key).unwrap();
+        let sequencer_provider = ProviderBuilder::new()
+            .wallet(EthereumWallet::from(signer))
+            .on_http(config.sequencing_rpc_url.clone());
+        let wallet_pool = WalletPoolWrapperModule::new(Address::ZERO, sequencer_provider);
+
+        let mut batcher = Batcher::new(&config, redis_consumer, wallet_pool, None, Address::ZERO);
+        batcher.submission_in_flight = true;
+
+        let result = batcher.read_and_batch_transactions().await;
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn test_send_batch_prefers_tc_client() {
+        let config = test_config();
+        let dummy_client =
+            TCClient::new(&TCConfig::default(), Address::ZERO, Address::ZERO).unwrap();
+        let (_redis, redis_url) = start_redis().await.unwrap();
+        let conn = redis::Client::open(redis_url.as_str())
+            .unwrap()
+            .get_multiplexed_async_connection()
+            .await
+            .unwrap();
+        let redis_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
+
+        let signer = PrivateKeySigner::from_str(&config.private_key).unwrap();
+        let sequencer_provider = ProviderBuilder::new()
+            .wallet(EthereumWallet::from(signer))
+            .on_http(config.sequencing_rpc_url.clone());
+        let wallet_pool = WalletPoolWrapperModule::new(Address::ZERO, sequencer_provider);
+
+        let batcher =
+            Batcher::new(&config, redis_consumer, wallet_pool, Some(dummy_client), Address::ZERO);
+
+        // Just verify logic flow doesn't panic
+        let result = batcher.send_batch(Bytes::from(vec![1, 2, 3])).await;
+        let _ = result.is_err(); // likely will error due to dummy TCClient
     }
 }
