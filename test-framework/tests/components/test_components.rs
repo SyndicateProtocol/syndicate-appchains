@@ -60,7 +60,7 @@ struct ComponentHandles {
 
 #[derive(Debug)]
 #[allow(clippy::redundant_pub_crate)]
-pub(crate) struct TestComponents {
+pub struct TestComponents {
     /// Timer for latency measurement
     /// Keep this on top - the top element gets destroyed first
     _timer: TestTimer,
@@ -93,7 +93,7 @@ pub(crate) struct TestComponents {
 
 impl TestComponents {
     #[allow(clippy::unwrap_used)]
-    pub(crate) async fn run<Fut: Future<Output = Result<()>> + Send>(
+    pub async fn run<Fut: Future<Output = Result<()>> + Send>(
         options: &ConfigurationOptions,
         test: impl FnOnce(Self) -> Fut + Send,
     ) -> Result<()> {
@@ -437,8 +437,10 @@ impl TestComponents {
         Ok(())
     }
 
+    /// Use this if you intend for the txn to succeed
+    /// Returns [`TxHash`]
     #[allow(clippy::unwrap_used)]
-    pub(crate) async fn send_maestro_tx(
+    pub async fn send_maestro_tx_successful(
         &self,
         tx: &EthereumTxEnvelope<TxEip4844Variant>,
     ) -> Result<TxHash> {
@@ -459,6 +461,7 @@ impl TestComponents {
             .await?;
         assert!(response.status().is_success(), "EIP-1559 transaction request failed");
         let json_resp: Value = response.json().await?;
+
         assert!(
             json_resp.get("result").is_some(),
             "Transaction response missing 'result' field: {}",
@@ -470,7 +473,33 @@ impl TestComponents {
         Ok(tx_hash)
     }
 
-    pub(crate) async fn mine_set_block(&self, delay: u64) -> Result<()> {
+    /// Use this instead of `send_maestro_tx_successful()` to inspect the JSON `error` field
+    #[allow(clippy::unwrap_used)]
+    pub async fn send_maestro_tx_should_be_unsuccessful(
+        &self,
+        tx: &EthereumTxEnvelope<TxEip4844Variant>,
+    ) -> Result<Value> {
+        let client = reqwest::Client::new();
+        let encoded_tx = tx.encoded_2718();
+        let tx_hex = hex::encode_prefixed(encoded_tx);
+        info!("tx_hex: {}", tx_hex);
+        let response = client
+            .post(self.maestro_url.clone())
+            .header(HEADER_CHAIN_ID, self.chain_id.to_string())
+            .json(&json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "eth_sendRawTransaction",
+                "params": [tx_hex]
+            }))
+            .send()
+            .await?;
+        assert!(response.status().is_success(), "EIP-1559 transaction request failed");
+        let json_resp: Value = response.json().await?;
+        Ok(json_resp)
+    }
+
+    pub async fn mine_set_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.settlement_provider, delay).await?;
         Ok(())
     }

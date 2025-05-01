@@ -14,9 +14,9 @@ pub(crate) enum ContractVersion {
 
 #[derive(Debug, Clone)]
 #[allow(clippy::redundant_pub_crate)]
-pub(crate) struct ConfigurationOptions {
-    pub(crate) pre_loaded: Option<ContractVersion>,
-    pub(crate) use_write_loop: bool,
+pub struct ConfigurationOptions {
+    pub pre_loaded: Option<ContractVersion>,
+    pub use_write_loop: bool,
     pub(crate) sequencing_start_block: u64,
     pub(crate) settlement_start_block: u64,
     pub(crate) settlement_delay: u64,
