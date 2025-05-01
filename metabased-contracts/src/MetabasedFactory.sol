@@ -4,8 +4,8 @@ pragma solidity 0.8.25;
 import {MetabasedSequencerChain} from "./MetabasedSequencerChain.sol";
 import {MetafillerStorage} from "./backfill/MetafillerStorage.sol";
 import {RequireAllModule} from "./requirement-modules/RequireAllModule.sol";
-import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
-import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
+import {RequireAnyModule} from "./requirement-modules/RequireAnyModule.sol";
+import {IRequirementModule} from "./interfaces/IRequirementModule.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 
 /// @title MetabasedFactory
@@ -18,25 +18,28 @@ contract MetabasedFactory {
         address indexed permissionModuleAddress
     );
 
-    /// @notice Emitted when a new MetafillerStorage is created
-    event MetafillerStorageCreated(uint256 indexed l3ChainId, address indexed metafillerStorageAddress);
-
-    /// @notice Emitted when all contracts are created at once
-    event AllContractsCreated(
-        uint256 l3ChainId,
-        address indexed sequencerChainAddress,
-        address indexed metafillerStorageAddress,
-        address indexed permissionModuleAddress
-    );
-
     error ZeroAddress();
     error ZeroValue();
 
-    modifier zeroValuesNotAllowed(uint256 l3ChainId, address firstAddrCheck, address secondAddrCheck) {
+    modifier zeroValuesChainAndTwoAddressesNotAllowed(
+        uint256 l3ChainId,
+        address firstAddrCheck,
+        address secondAddrCheck
+    ) {
         if (l3ChainId == 0) {
             revert ZeroValue();
         }
         if (firstAddrCheck == address(0) || secondAddrCheck == address(0)) {
+            revert ZeroAddress();
+        }
+        _;
+    }
+
+    modifier zeroValuesChainAndAddressNotAllowed(uint256 l3ChainId, address addrCheck) {
+        if (l3ChainId == 0) {
+            revert ZeroValue();
+        }
+        if (addrCheck == address(0)) {
             revert ZeroAddress();
         }
         _;
@@ -53,7 +56,11 @@ contract MetabasedFactory {
         address admin,
         IRequirementModule permissionModule,
         bytes32 salt
-    ) public zeroValuesNotAllowed(l3ChainId, admin, address(permissionModule)) returns (address sequencerChain) {
+    )
+        public
+        zeroValuesChainAndTwoAddressesNotAllowed(l3ChainId, admin, address(permissionModule))
+        returns (address sequencerChain)
+    {
         bytes memory bytecode = getBytecode(l3ChainId);
         address deployedAddress = Create2.deploy(0, salt, bytecode);
 
@@ -63,63 +70,42 @@ contract MetabasedFactory {
         return deployedAddress;
     }
 
-    /// @notice Creates a new MetafillerStorage contract
+    /// @notice Creates MetabasedSequencerChain with RequireAllModule
     /// @param admin The address that will be the default admin role
-    /// @param manager The address that will be the manager role
-    /// @param l3ChainId The L3 chain ID
-    /// @return The address of the newly created MetafillerStorage contract
-    function createMetafillerStorage(address admin, address manager, uint256 l3ChainId)
-        public
-        zeroValuesNotAllowed(l3ChainId, admin, manager)
-        returns (address)
-    {
-        MetafillerStorage newMetafillerStorage = new MetafillerStorage(admin, manager, l3ChainId);
-        emit MetafillerStorageCreated(l3ChainId, address(newMetafillerStorage));
-        return address(newMetafillerStorage);
-    }
-
-    /// @notice Creates all contracts: MetabasedSequencerChain, RequireAllModule, and MetafillerStorage
-    /// @param admin The address that will be the default admin role
-    /// @param manager The address that will be the manager role for MetafillerStorage
     /// @param l3ChainId The L3 chain ID
     /// @param salt The salt to use for the deployment
     /// @return sequencerChain The address of the newly created MetabasedSequencerChain
-    /// @return metafillerStorage The address of the newly created MetafillerStorage
     /// @return permissionModule The address of the newly created RequireAllModule
-    function createAllContractsWithRequireAllModule(address admin, address manager, uint256 l3ChainId, bytes32 salt)
+    function createMetabasedSequencerChainWithRequireAllModule(address admin, uint256 l3ChainId, bytes32 salt)
         public
-        zeroValuesNotAllowed(l3ChainId, admin, manager)
-        returns (address sequencerChain, address metafillerStorage, IRequirementModule permissionModule)
+        zeroValuesChainAndAddressNotAllowed(l3ChainId, admin)
+        returns (address sequencerChain, IRequirementModule permissionModule)
     {
         permissionModule = IRequirementModule(new RequireAllModule(admin));
         (sequencerChain) = createMetabasedSequencerChain(l3ChainId, admin, permissionModule, salt);
-        metafillerStorage = createMetafillerStorage(admin, manager, l3ChainId);
 
-        emit AllContractsCreated(l3ChainId, sequencerChain, metafillerStorage, address(permissionModule));
+        emit MetabasedSequencerChainCreated(l3ChainId, sequencerChain, address(permissionModule));
 
-        return (sequencerChain, metafillerStorage, permissionModule);
+        return (sequencerChain, permissionModule);
     }
 
-    /// @notice Creates all contracts: MetabasedSequencerChain, RequireAnyModule, and MetafillerStorage
+    /// @notice Creates MetabasedSequencerChain with RequireAnyModule
     /// @param admin The address that will be the default admin role
-    /// @param manager The address that will be the manager role for MetafillerStorage
     /// @param l3ChainId The L3 chain ID
     /// @param salt The salt to use for the deployment
     /// @return sequencerChain The address of the newly created MetabasedSequencerChain
-    /// @return metafillerStorage The address of the newly created MetafillerStorage
     /// @return permissionModule The address of the newly created RequireAnyModule
-    function createAllContractsWithRequireAnyModule(address admin, address manager, uint256 l3ChainId, bytes32 salt)
+    function createMetabasedSequencerChainWithRequireAnyModule(address admin, uint256 l3ChainId, bytes32 salt)
         public
-        zeroValuesNotAllowed(l3ChainId, admin, manager)
-        returns (address sequencerChain, address metafillerStorage, IRequirementModule permissionModule)
+        zeroValuesChainAndAddressNotAllowed(l3ChainId, admin)
+        returns (address sequencerChain, IRequirementModule permissionModule)
     {
         permissionModule = IRequirementModule(new RequireAnyModule(admin));
         (sequencerChain) = createMetabasedSequencerChain(l3ChainId, admin, permissionModule, salt);
-        metafillerStorage = createMetafillerStorage(admin, manager, l3ChainId);
 
-        emit AllContractsCreated(l3ChainId, sequencerChain, metafillerStorage, address(permissionModule));
+        emit MetabasedSequencerChainCreated(l3ChainId, sequencerChain, address(permissionModule));
 
-        return (sequencerChain, metafillerStorage, permissionModule);
+        return (sequencerChain, permissionModule);
     }
 
     /// @notice Computes the address of the MetabasedSequencerChain contract
