@@ -144,7 +144,7 @@ impl TCClient {
         function_signature: String,
     ) -> Result<TxHash, RpcError> {
         debug!("Processing transaction: {}", hex::encode(&raw_tx));
-        let original_tx = validate_transaction(&raw_tx)?;
+        let (original_tx, _signer) = validate_transaction(&raw_tx)?;
         let original_tx_hash = *original_tx.tx_hash();
         let original_tx_hash_str = hex::encode(original_tx_hash);
         info!("Submitting transaction - tx hash: 0x{}", original_tx_hash_str);

@@ -1,6 +1,10 @@
 //! The `errors` module contains the error types for Maestro.
 
-use alloy::transports::TransportError;
+use alloy::{
+    primitives::{Address, ChainId},
+    transports::TransportError,
+};
+use jsonrpsee::types::{ErrorCode, ErrorObjectOwned};
 use redis::RedisError;
 use thiserror::Error;
 use tracing::error;
@@ -30,4 +34,41 @@ pub enum ConfigError {
 
     #[error("failed to connect to chain RPC URL: {0}")]
     RpcUrlConnection(#[from] TransportError),
+}
+
+/// JSON-RPC specific error types
+#[derive(Debug, Error)]
+pub enum MaestroRpcError {
+    /// Internal Maestro error
+    #[error("internal error: {0}")]
+    Internal(InternalError),
+}
+
+/// Known internal Maestro errors
+/// NOTE: These are client-facing
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum InternalError {
+    /// No RPC provider for a transaction
+    #[error("chain {0} is unsupported")]
+    RpcMissing(ChainId),
+
+    /// Failed to fetch wallet nonce from RPC
+    #[error("chain {0} failed to return wallet {1} nonce")]
+    RpcFailedToFetchWalletNonce(ChainId, Address),
+
+    /// Failed to submit transaction
+    #[error("transaction submission failed for tx hash: {0}")]
+    TransactionSubmissionFailed(String),
+}
+
+impl From<MaestroRpcError> for ErrorObjectOwned {
+    fn from(error: MaestroRpcError) -> Self {
+        match error {
+            MaestroRpcError::Internal(e) => ErrorObjectOwned::owned(
+                ErrorCode::InternalError.code(),
+                format!("internal error: {}", e),
+                None::<()>,
+            ),
+        }
+    }
 }

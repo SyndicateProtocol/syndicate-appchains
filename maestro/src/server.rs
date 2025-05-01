@@ -1,15 +1,7 @@
 //! The JSON-RPC server module for the Maestro service.
 
-use crate::{
-    config::{Config, RpcProvider},
-    errors::Error,
-    layers::HeadersLayer,
-    redis::producer::StreamProducer,
-};
-use alloy::{
-    consensus::Transaction,
-    primitives::{Bytes, ChainId},
-};
+use crate::{config::Config, layers::HeadersLayer, maestro::MaestroService};
+use alloy::{consensus::Transaction, primitives::ChainId};
 use http::Extensions;
 use jsonrpsee::{
     core::RpcResult,
@@ -17,18 +9,17 @@ use jsonrpsee::{
     types::{ErrorCode, Params},
     RpcModule,
 };
-use redis::aio::MultiplexedConnection;
 use serde_json::Value as JsonValue;
 use shared::{
     json_rpc::{
         parse_send_raw_transaction_params,
         InvalidInputError::ChainIdMismatched,
-        RpcError::{self, InvalidInput},
+        Rejection::NonceTooLow,
+        RpcError::{self, Internal, InvalidInput, TransactionRejected},
     },
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
-use tokio::sync::Mutex;
 use tower::ServiceBuilder;
 use tracing::{info, warn};
 
@@ -81,8 +72,9 @@ pub async fn send_raw_transaction_handler(
     extensions: Extensions,
 ) -> RpcResult<String> {
     let raw_tx = parse_send_raw_transaction_params(params)?;
-    let tx = validate_transaction(&raw_tx)?;
+    let (tx, signer) = validate_transaction(&raw_tx)?;
     let chain_id = validate_chain_id(get_request_chain_id(extensions), tx.chain_id())?;
+    let tx_nonce = tx.nonce();
     let tx_hash = format!("0x{}", alloy::hex::encode(tx.hash()));
 
     info!(
@@ -91,18 +83,38 @@ pub async fn send_raw_transaction_handler(
         "Submitting validated transaction",
     );
 
-    //TODO(SEQ-862)
-    // - check Redis for nonce
-    // if absent,
-    // - get nonce from RPC
-    // - store in Redis
-    // then,
-    // - validate txn nonce vs retrived nonce
+    let internal_nonce = service.get_cached_or_rpc_nonce(signer, chain_id).await?;
 
-    service.enqueue_raw_transaction(raw_tx, chain_id).await?;
+    // Nonce checking logic
+    match tx_nonce.cmp(&internal_nonce) {
+        std::cmp::Ordering::Equal => {
+            // 1. enqueue the txn
+            service.enqueue_raw_transaction(raw_tx, chain_id, &tx_hash).await?;
 
+            // 2. update the cache with nonce + 1, and expiration
+            let _res = service.increment_wallet_nonce(chain_id, signer, internal_nonce).await;
+
+            // 3. TODO(SEQ-863): Check WAITING GAP hash for nonce +1 (separate thread)
+            // 4. return Hash (done below)
+        }
+        std::cmp::Ordering::Less => {
+            let rejection = NonceTooLow(internal_nonce, tx_nonce);
+            warn!(%tx_hash, %chain_id, "Failed to submit forwarded transaction: {}", rejection);
+            return Err(TransactionRejected(rejection).into())
+        }
+        std::cmp::Ordering::Greater => {
+            //TODO(SEQ-863) put it on WAITING GAP
+            // TEMP: error for now
+            let err_string = format!(
+                "transaction nonce too high - expected {} got {}",
+                internal_nonce, tx_nonce
+            );
+            warn!(%tx_hash, %chain_id, "Failed to submit forwarded transaction: {}", err_string);
+            return Err(Internal(err_string).into())
+            // Return hash (done below)
+        }
+    }
     info!(%tx_hash, %chain_id, "Submitted forwarded transaction");
-
     Ok(tx_hash)
 }
 
@@ -125,61 +137,6 @@ fn validate_chain_id(
             req_id.map_or("none".to_string(), |id| id.to_string()),
             txn_id.map_or("none".to_string(), |id| id.to_string()),
         ))),
-    }
-}
-
-/// The service for filtering and directing transactions
-#[derive(Debug)]
-pub struct MaestroService {
-    redis_conn: MultiplexedConnection,
-    producers: Mutex<HashMap<ChainId, Arc<StreamProducer>>>,
-    #[allow(dead_code)] // TODO(SEQ-862): remove this
-    rpc_providers: HashMap<ChainId, RpcProvider>,
-    config: Config,
-}
-
-impl MaestroService {
-    /// Create a new instance of the Maestro service
-    async fn new(redis_conn: MultiplexedConnection, config: Config) -> Result<Self, Error> {
-        let rpc_providers = config.validate().await?;
-        if rpc_providers.is_empty() {
-            warn!("No RPC providers configured. This is probably undesirable");
-        }
-        Ok(Self { redis_conn, producers: Mutex::new(HashMap::new()), rpc_providers, config })
-    }
-
-    async fn get_or_create_producer(&self, chain_id: ChainId) -> Arc<StreamProducer> {
-        let mut producers = self.producers.lock().await;
-        producers
-            .entry(chain_id)
-            .or_insert_with(|| {
-                Arc::new(StreamProducer::new(
-                    self.redis_conn.clone(),
-                    chain_id,
-                    self.config.prune_interval,
-                    self.config.prune_max_age,
-                ))
-            })
-            .clone()
-    }
-
-    async fn enqueue_raw_transaction(
-        &self,
-        raw_tx: Bytes,
-        chain_id: ChainId,
-    ) -> Result<(), jsonrpsee::types::ErrorObjectOwned> {
-        // Get or create producer while holding lock
-        let producer = self.get_or_create_producer(chain_id).await;
-
-        // Release lock before making async call
-        producer.enqueue_transaction(raw_tx.into()).await.map_err(|e| {
-            jsonrpsee::types::ErrorObjectOwned::owned(
-                ErrorCode::InternalError.code(),
-                format!("Failed to enqueue transaction: {}", e),
-                None::<()>,
-            )
-        })?;
-        Ok(())
     }
 }
 
