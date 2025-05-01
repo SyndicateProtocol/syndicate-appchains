@@ -1,6 +1,6 @@
 # Batch Sequencer
 
-The Batch Sequencer is a service that reads transactions from Redis, bundles them into size-limited batches, and submits them directly to a sequencing contract on an EVM-compatible chain using Alloy.
+The Batch Sequencer is a service that reads transactions from Redis, bundles them into size-limited batches, and submits them directly to a sequencing contract on an EVM-compatible chain using Alloy or to TC.
 
 Sample cmd:
 
