@@ -22,6 +22,11 @@ mod tests {
         Mock, MockServer, ResponseTemplate,
     };
 
+    #[ctor::ctor]
+    fn init() {
+        shared::logger::set_global_default_subscriber();
+    }
+
     // Initialize the server for this test function
     async fn setup_server(
         mock_rpc_server_4: Option<MockServer>,
@@ -487,16 +492,9 @@ mod tests {
                 assert!(tx_response.status().is_success(), "Valid transaction request failed");
                 let tx_json: Value = tx_response.json().await?;
                 assert!(
-                    tx_json.get("result").is_none(),
-                    "Transaction response should not succeed: {}",
+                    tx_json.get("result").is_some(),
+                    "Transaction response should succeed: {}",
                     tx_json
-                );
-                assert_eq!(
-                    tx_json.get("error"),
-                    Some(&json!({
-                        "code": -32603,
-                        "message": "internal error: transaction nonce too high - expected 2 got 690"
-                    }))
                 );
 
                 Ok(())

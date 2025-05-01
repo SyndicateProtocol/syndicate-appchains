@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
         _ = sigterm.recv() => {
             info!("Received SIGTERM, initiating shutdown...");
         }
-    };
+    }
 
     handle.stop()?;
     handle.stopped().await;

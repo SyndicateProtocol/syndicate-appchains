@@ -661,7 +661,7 @@ async fn e2e_maestro_batch_sequencer_translator() -> Result<()> {
                 .build(components.sequencing_provider.wallet())
                 .await?;
 
-            let tx_hash = components.send_maestro_tx(&tx).await?;
+            let tx_hash = components.send_maestro_tx_successful(&tx).await?;
 
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
