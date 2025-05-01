@@ -15,7 +15,6 @@ use alloy::{
     primitives::{Address, Bytes, FixedBytes, U256},
     sol_types::{SolCall, SolEvent},
 };
-use async_trait::async_trait;
 use common::types::{PartialBlock, PartialLogWithTxdata, EMPTY_BATCH};
 use contract_bindings::arbitrum::{
     ibridge::IBridge::MessageDelivered,
@@ -118,7 +117,6 @@ impl Default for ArbitrumAdapter {
     }
 }
 
-#[async_trait]
 impl RollupAdapter for ArbitrumAdapter {
     fn transaction_parser(&self) -> &SequencingTransactionParser {
         &self.transaction_parser
@@ -137,7 +135,7 @@ impl RollupAdapter for ArbitrumAdapter {
             "Processing sequencer transactions: {:?}",
             mb_transactions
                 .iter()
-                .filter_map(|b: &Bytes| validate_transaction(b).ok().map(|tx| *tx.hash()))
+                .filter_map(|b: &Bytes| validate_transaction(b).ok().map(|(tx, _signer)| *tx.hash()))
                 .collect::<Vec<_>>()
         );
 
