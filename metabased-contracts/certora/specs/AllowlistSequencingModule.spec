@@ -2,7 +2,7 @@ methods {
     // View functions
     function admin() external returns (address) envfree;
     function allowlist(address) external returns (bool) envfree;
-    function isAllowed(address) external returns (bool) envfree;
+    function isAllowed(address, address, bytes) external returns (bool) envfree;
 }
 
 /*
@@ -92,11 +92,11 @@ rule allowlistRemoveConsistency(address user) {
 /*
  * Rule 7: isAllowed matches allowlist state
  */
-rule isAllowedConsistency(address user) {
+rule isAllowedConsistency(address user, bytes data) {
     env e;
 
     bool inAllowlist = allowlist(user);
-    bool allowed = isAllowed(user);
+    bool allowed = isAllowed(user, user, data);
 
     assert inAllowlist == allowed,
         "isAllowed does not match allowlist state";

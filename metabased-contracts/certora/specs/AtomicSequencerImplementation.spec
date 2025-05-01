@@ -1,7 +1,7 @@
 using MetabasedSequencerChain as mchain;
 
 methods {
-    function mchain.isAllowed(address) external returns (bool) envfree;
+    function mchain.isAllowed(address, address, bytes) external returns (bool) envfree;
     function mchain.processTransaction(bytes) external;
     function mchain.processTransactionRaw(bytes) external;
     function mchain.processBulkTransactions(bytes[]) external;

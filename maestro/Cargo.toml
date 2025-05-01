@@ -40,7 +40,9 @@ tower        = { workspace = true }
 tracing      = { workspace = true }
 
 [dev-dependencies]
-wiremock = { workspace = true }
+rand       = { workspace = true }
+test-utils = { workspace = true }
+wiremock   = { workspace = true }
 
 [lints]
 workspace = true

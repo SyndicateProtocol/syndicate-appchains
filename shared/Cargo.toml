@@ -12,8 +12,11 @@ version.workspace      = true
 alloy              = { workspace = true, features = ["k256", "rlp"] }
 axum               = { workspace = true }
 byte-unit          = { workspace = true, features = ["default"] }
+bytes              = { workspace = true }
+flate2             = { workspace = true }
 jsonrpsee          = { workspace = true, features = ["jsonrpsee-types", "server"] }
 prometheus-client  = { workspace = true }
+rlp                = { workspace = true }
 serde              = { workspace = true, features = ["derive"] }
 serde_json         = { workspace = true }
 thiserror          = { workspace = true }
@@ -21,6 +24,7 @@ tokio              = { workspace = true }
 tracing            = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
 url                = { workspace = true }
+
 
 [lints]
 workspace = true

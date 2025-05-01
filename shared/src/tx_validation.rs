@@ -2,20 +2,20 @@
 //! transaction
 
 use crate::json_rpc::{
-    Error,
-    Error::{InvalidInput, TransactionRejected},
     InvalidInputError::{ChainIdMissing, TransactionTooLarge, UnableToRLPDecode},
     Rejection::FeeTooHigh,
+    RpcError,
+    RpcError::{InvalidInput, TransactionRejected},
 };
 use alloy::{
     consensus::{Transaction, TxEnvelope},
-    primitives::{Bytes, U256},
+    primitives::{Address, Bytes, U256},
     rlp::Decodable,
 };
 use byte_unit::Unit;
 use tracing::debug;
 
-fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, Error> {
+fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, RpcError> {
     let mut slice: &[u8] = raw_tx.as_ref();
     TxEnvelope::decode(&mut slice).map_err(|_| {
         let error = InvalidInput(UnableToRLPDecode);
@@ -24,7 +24,7 @@ fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, Error> {
     })
 }
 
-fn check_chain_id(tx: &TxEnvelope) -> Result<(), Error> {
+fn check_chain_id(tx: &TxEnvelope) -> Result<(), RpcError> {
     if tx.chain_id().is_none() {
         let error = InvalidInput(ChainIdMissing);
         debug!(
@@ -38,8 +38,8 @@ fn check_chain_id(tx: &TxEnvelope) -> Result<(), Error> {
     Ok(())
 }
 
-fn check_signature(tx: &TxEnvelope) -> Result<(), Error> {
-    tx.recover_signer().map_err(|e| {
+fn check_signature(tx: &TxEnvelope) -> Result<Address, RpcError> {
+    let signer = tx.recover_signer().map_err(|e| {
         debug!(
             error = ?e,
             tx_type = ?tx.tx_type(),
@@ -47,10 +47,10 @@ fn check_signature(tx: &TxEnvelope) -> Result<(), Error> {
         );
         e
     })?;
-    Ok(())
+    Ok(signer)
 }
 
-fn check_gas_price(tx: &TxEnvelope) -> Result<(), Error> {
+fn check_gas_price(tx: &TxEnvelope) -> Result<(), RpcError> {
     //TODO(SEQ-179): introduce optional global tx cap config. See op-geth's checkTxFee() +
     // RPCTxFeeCap for equivalent skip check if unset
     let tx_fee_cap_in_wei = U256::from(1_000_000_000_000_000_000u64); // 1e18wei = 1 ETH
@@ -65,7 +65,7 @@ fn check_gas_price(tx: &TxEnvelope) -> Result<(), Error> {
     Ok(())
 }
 
-fn check_tx_size(limit: byte_unit::Byte, raw_tx: &Bytes) -> Result<(), Error> {
+fn check_tx_size(limit: byte_unit::Byte, raw_tx: &Bytes) -> Result<(), RpcError> {
     let limit_size = limit.as_u128() as usize;
 
     let tx_size = raw_tx.len();
@@ -78,12 +78,12 @@ fn check_tx_size(limit: byte_unit::Byte, raw_tx: &Bytes) -> Result<(), Error> {
 }
 
 /// Validate a transaction
-pub fn validate_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, Error> {
+pub fn validate_transaction(raw_tx: &Bytes) -> Result<(TxEnvelope, Address), RpcError> {
     debug!(bytes_length = raw_tx.len(), "Starting transaction validation");
     // Check tx size
     let kb_128 = byte_unit::Byte::from_u128_with_unit(128, Unit::KB).ok_or_else(|| {
         // This should be impossible
-        Error::Internal("failed to create default tx size".to_string())
+        RpcError::Internal("failed to create default tx size".to_string())
     })?;
     check_tx_size(kb_128, raw_tx)?;
 
@@ -95,12 +95,12 @@ pub fn validate_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, Error> {
     check_chain_id(&tx)?;
 
     // Check signature
-    check_signature(&tx)?;
+    let signer = check_signature(&tx)?;
 
     // Check gas price
     check_gas_price(&tx)?;
 
-    Ok(tx)
+    Ok((tx, signer))
 }
 
 #[cfg(test)]
@@ -120,11 +120,12 @@ mod tests {
         let result = validate_transaction(&valid_tx);
         // The validation should pass since this is a valid RLP-encoded transaction
         assert!(result.is_ok());
-        let tx = result.unwrap();
+        let (tx, signer) = result.unwrap();
         assert_eq!(
             tx.tx_hash().to_string(),
             "0xc429e5f128387d224ba8bed6885e86525e14bfdc2eb24b5e9c3351a1176fd81f"
         );
+        assert_eq!(signer, tx.recover_signer().unwrap())
     }
     #[test]
     fn test_decode_transaction() {
@@ -171,6 +172,7 @@ mod tests {
         // Valid transaction with valid signature
         let valid_tx = wrap_txn_legacy(TxLegacy::default());
         assert!(check_signature(&valid_tx).is_ok());
+        assert!(!check_signature(&valid_tx).unwrap().is_empty());
 
         // Transaction with invalid signature should fail
         let invalid_tx = TxEnvelope::Legacy(Signed::new_unchecked(

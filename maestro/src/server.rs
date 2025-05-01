@@ -1,14 +1,7 @@
 //! The JSON-RPC server module for the Maestro service.
 
-use crate::{config::Config, constants::HEADER_CHAIN_ID, layers::HeadersLayer};
-use alloy::{
-    consensus::Transaction,
-    hex,
-    primitives::{Bytes, ChainId, TxHash},
-    providers::{Provider, ProviderBuilder},
-    rpc::client::RpcClient,
-    transports::http::{Client, Http},
-};
+use crate::{config::Config, layers::HeadersLayer, maestro::MaestroService};
+use alloy::{consensus::Transaction, primitives::ChainId};
 use http::Extensions;
 use jsonrpsee::{
     core::RpcResult,
@@ -19,37 +12,44 @@ use jsonrpsee::{
 use serde_json::Value as JsonValue;
 use shared::{
     json_rpc::{
-        parse_send_raw_transaction_params, Error,
-        Error::{Internal, InvalidInput},
-        InvalidInputError::{ChainIdMismatched, UnsupportedChainId},
+        parse_send_raw_transaction_params,
+        InvalidInputError::ChainIdMismatched,
+        Rejection::NonceTooLow,
+        RpcError::{self, Internal, InvalidInput, TransactionRejected},
     },
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use tower::ServiceBuilder;
-use tracing::{debug, error, info};
+use tracing::{info, warn};
+
+/// Request header for `eth_sendRawTransaction` calls that holds the intended `chain_id`
+pub const HEADER_CHAIN_ID: &str = "x-synd-chain-id";
 
 /// Runs the base server for the sequencer
 pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
     info!("Starting Maestro server:run");
 
-    let optional_headers = vec!["x-synd-chain-id".to_string()];
+    let optional_headers = vec![HEADER_CHAIN_ID.to_string()];
     let http_middleware = ServiceBuilder::new()
         .layer(HeadersLayer::new(optional_headers)?)
-        .layer(ProxyGetRequestLayer::new("/health", "health")?);
+        .layer(ProxyGetRequestLayer::new("/health", "health")?)
+        .layer(ProxyGetRequestLayer::new("/test_redis", "test_redis")?);
 
     let server = Server::builder()
         .set_http_middleware(http_middleware)
         .build(format!("0.0.0.0:{}", config.port))
         .await?;
 
-    let client = Client::builder().timeout(config.validation_timeout).build()?;
+    let client = redis::Client::open(config.redis_url.as_str())?;
+    let redis_conn = client.get_multiplexed_async_connection().await?;
+    let service = MaestroService::new(redis_conn, config).await?;
+    info!("Connected to Redis successfully!");
 
-    let service = MaestroService::new(config, client);
     let mut module = RpcModule::new(service);
 
     // Register RPC methods
-    module.register_async_method("eth_sendRawTransaction", send_raw_transaction_handler_v1)?;
+    module.register_async_method("eth_sendRawTransaction", send_raw_transaction_handler)?;
 
     // Register health method (this will be hit by the health check middleware)
     module.register_method("health", |_, _, _| {
@@ -64,33 +64,58 @@ pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
     Ok((addr, handle))
 }
 
-/// The `v0` handler for the `eth_sendRawTransaction` JSON-RPC method. This forwards transactions
-/// to Arbitrum Nitro instances
-pub async fn send_raw_transaction_handler_v1(
+/// The handler for the `eth_sendRawTransaction` JSON-RPC method. This forwards transactions
+/// to Redis
+pub async fn send_raw_transaction_handler(
     params: Params<'static>,
     service: Arc<MaestroService>,
     extensions: Extensions,
 ) -> RpcResult<String> {
-    // let start = Instant::now();
+    let raw_tx = parse_send_raw_transaction_params(params)?;
+    let (tx, signer) = validate_transaction(&raw_tx)?;
+    let chain_id = validate_chain_id(get_request_chain_id(extensions), tx.chain_id())?;
+    let tx_nonce = tx.nonce();
+    let tx_hash = format!("0x{}", alloy::hex::encode(tx.hash()));
 
-    let tx_data = parse_send_raw_transaction_params(params)?;
-    let request_chain_id = get_request_chain_id(extensions);
-    let tx_hash = service.process_raw_transaction_v1(tx_data, request_chain_id).await?;
+    info!(
+        %tx_hash,
+        %chain_id,
+        "Submitting validated transaction",
+    );
 
-    debug!(%tx_hash, "Successfully processed raw txn");
+    let internal_nonce = service.get_cached_or_rpc_nonce(signer, chain_id).await?;
 
-    Ok(format!("0x{}", hex::encode(tx_hash)))
+    // Nonce checking logic
+    match tx_nonce.cmp(&internal_nonce) {
+        std::cmp::Ordering::Equal => {
+            // 1. enqueue the txn
+            service.enqueue_raw_transaction(raw_tx, chain_id, &tx_hash).await?;
 
-    // TODO spam plane
+            // 2. update the cache with nonce + 1, and expiration
+            let _res = service.increment_wallet_nonce(chain_id, signer, internal_nonce).await;
 
-    // let duration = start.elapsed();
-    //
-    // result
-    //     .inspect(|_| service.metrics.record_rpc_call("eth_sendRawTransaction", duration, None))
-    //     .map_err(|e| {
-    //         service.metrics.record_rpc_call("eth_sendRawTransaction", duration, Some(&e));
-    //         e.to_json_rpc_error()
-    //     })
+            // 3. TODO(SEQ-863): Check WAITING GAP hash for nonce +1 (separate thread)
+            // 4. return Hash (done below)
+        }
+        std::cmp::Ordering::Less => {
+            let rejection = NonceTooLow(internal_nonce, tx_nonce);
+            warn!(%tx_hash, %chain_id, "Failed to submit forwarded transaction: {}", rejection);
+            return Err(TransactionRejected(rejection).into())
+        }
+        std::cmp::Ordering::Greater => {
+            //TODO(SEQ-863) put it on WAITING GAP
+            // TEMP: error for now
+            let err_string = format!(
+                "transaction nonce too high - expected {} got {}",
+                internal_nonce, tx_nonce
+            );
+            warn!(%tx_hash, %chain_id, "Failed to submit forwarded transaction: {}", err_string);
+            return Err(Internal(err_string).into())
+            // Return hash (done below)
+        }
+    }
+    info!(%tx_hash, %chain_id, "Submitted forwarded transaction");
+    Ok(tx_hash)
 }
 
 fn get_request_chain_id(extensions: Extensions) -> Option<ChainId> {
@@ -100,70 +125,18 @@ fn get_request_chain_id(extensions: Extensions) -> Option<ChainId> {
         .and_then(|chain_id| chain_id.parse::<ChainId>().ok())
 }
 
-/// The service for filtering and directing transactions
-#[derive(Debug)]
-pub struct MaestroService {
-    chain_rpc_urls: HashMap<String, String>,
-    client: Client,
-}
-
-impl MaestroService {
-    /// Create a new instance of the Maestro service
-    pub fn new(config: Config, client: Client) -> Self {
-        info!("Initialized MaestroService with RPC urls: {:?}", config.chain_rpc_urls);
-        Self { chain_rpc_urls: config.chain_rpc_urls, client }
-    }
-
-    async fn process_raw_transaction_v1(
-        &self,
-        raw_tx: Bytes,
-        request_chain_id: Option<ChainId>,
-    ) -> Result<TxHash, Error> {
-        let original_tx = validate_transaction(&raw_tx)?;
-        let txn_chain_id = Self::validate_chain_id(request_chain_id, original_tx.chain_id())?;
-        let tx_hash = original_tx.tx_hash().to_string();
-        debug!(
-            %tx_hash,
-            %txn_chain_id,
-            "Submitting validated transaction to RPC",
-        );
-
-        let rpc_url = self.chain_rpc_urls.get(&txn_chain_id.to_string()).ok_or_else(|| {
-            error!(%txn_chain_id, %tx_hash, "txn attempted to unsupported RPC");
-            InvalidInput(UnsupportedChainId(txn_chain_id))
-        })?;
-
-        let transport = Http::with_client(
-            self.client.clone(),
-            rpc_url.parse().map_err(|e| {
-                error!(%txn_chain_id, %tx_hash, %e, "Invalid RPC URL");
-                Internal("Invalid RPC URL".to_string())
-            })?,
-        );
-        let provider = ProviderBuilder::new().on_client(RpcClient::new(transport, false));
-
-        let tx = provider.send_raw_transaction(&raw_tx).await.map_err(|e| {
-            error!(%rpc_url, %tx_hash, %txn_chain_id, %e, "Failed to send raw transaction to RPC");
-            Internal("Failed to send raw transaction to RPC endpoint".to_string())
-        })?;
-        let tx_hash = tx.tx_hash();
-        debug!(%rpc_url, %tx_hash, %txn_chain_id, "Successfully forwarded transaction to RPC");
-        Ok(*tx_hash)
-    }
-
-    /// Returns `txn_chain_id` unwrapped if valid
-    fn validate_chain_id(
-        request_chain_id: Option<ChainId>,
-        txn_chain_id: Option<ChainId>,
-    ) -> Result<ChainId, Error> {
-        match (request_chain_id, txn_chain_id) {
-            (None, Some(txn_id)) => Ok(txn_id),
-            (Some(req_id), Some(txn_id)) if req_id == txn_id => Ok(txn_id),
-            (req_id, txn_id) => Err(InvalidInput(ChainIdMismatched(
-                req_id.map_or("none".to_string(), |id| id.to_string()),
-                txn_id.map_or("none".to_string(), |id| id.to_string()),
-            ))),
-        }
+/// Returns `txn_chain_id` unwrapped if valid
+fn validate_chain_id(
+    request_chain_id: Option<ChainId>,
+    txn_chain_id: Option<ChainId>,
+) -> Result<ChainId, RpcError> {
+    match (request_chain_id, txn_chain_id) {
+        (None, Some(txn_id)) => Ok(txn_id),
+        (Some(req_id), Some(txn_id)) if req_id == txn_id => Ok(txn_id),
+        (req_id, txn_id) => Err(InvalidInput(ChainIdMismatched(
+            req_id.map_or("none".to_string(), |id| id.to_string()),
+            txn_id.map_or("none".to_string(), |id| id.to_string()),
+        ))),
     }
 }
 
@@ -171,6 +144,7 @@ impl MaestroService {
 mod tests {
     use super::*;
     use http::Extensions;
+    use shared::json_rpc::InvalidInputError::ChainIdMismatched;
     use std::collections::HashMap;
 
     #[test]
@@ -222,5 +196,37 @@ mod tests {
         // Ensure the function returns None when Extensions is empty
         let result = get_request_chain_id(extensions);
         assert_eq!(result, None);
+    }
+
+    #[test]
+    fn test_validate_chain_id_no_request_id() {
+        let result = validate_chain_id(None, Some(12345u64));
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 12345u64);
+    }
+
+    #[test]
+    fn test_validate_chain_id_matching_ids() {
+        let result = validate_chain_id(Some(12345u64), Some(12345u64));
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), 12345u64);
+    }
+
+    #[test]
+    fn test_validate_chain_id_mismatched_ids() {
+        let result = validate_chain_id(Some(12345u64), Some(67890u64));
+        assert!(matches!(result, Err(InvalidInput(ChainIdMismatched(_, _)))));
+    }
+
+    #[test]
+    fn test_validate_chain_id_no_txn_id() {
+        let result = validate_chain_id(Some(12345u64), None);
+        assert!(matches!(result, Err(InvalidInput(ChainIdMismatched(_, _)))));
+    }
+
+    #[test]
+    fn test_validate_chain_id_both_none() {
+        let result = validate_chain_id(None, None);
+        assert!(matches!(result, Err(InvalidInput(ChainIdMismatched(_, _)))));
     }
 }

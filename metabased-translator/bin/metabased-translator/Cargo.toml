@@ -17,6 +17,7 @@ common            = { workspace = true }
 contract-bindings = { workspace = true }
 eyre              = { workspace = true }
 ingestor          = { workspace = true }
+mchain            = { workspace = true }
 metrics           = { workspace = true }
 shared            = { workspace = true }
 slotter           = { workspace = true }
@@ -26,7 +27,6 @@ tracing           = { workspace = true }
 
 [dev-dependencies]
 async-trait = { workspace = true }
-mockall     = { workspace = true }
 temp-env    = { workspace = true }
 
 
