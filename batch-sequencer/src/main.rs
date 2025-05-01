@@ -3,12 +3,14 @@
 //!
 //! It provides a JSON-RPC interface for submitting transactions and checking service health.
 
-use batcher::{batcher::run_batcher, config::BatcherConfig};
+use batch_sequencer::config::BatchSequencerConfig;
+use batcher::batcher::run_batcher;
 use eyre::Result;
 use shared::{
     logger::set_global_default_subscriber,
     metrics::{start_metrics, MetricsState},
 };
+use tc_client::tc_client::TCClient;
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 
@@ -19,11 +21,27 @@ async fn main() -> Result<()> {
     set_global_default_subscriber()?;
 
     // Parse config
-    let config = BatcherConfig::initialize();
-    info!("BatcherConfig: {:?}", config);
+    let config = BatchSequencerConfig::initialize();
+    info!("BatchSequencerConfig: {:?}", config);
+
+    let tc_client = config.use_tc.then(|| {
+        config.tc.as_ref().map_or_else(
+            || unreachable!("TCConfig must be Some when use_tc is true (asserted during initialization)"),
+            |tc_config| TCClient::new(
+                tc_config,
+                config.wallet_pool_address,
+                config.sequencing_address,
+            ),        )
+    }).transpose()?;
 
     // Start batcher
-    let batcher_handle = run_batcher(&config).await?;
+    let batcher_handle = run_batcher(
+        &config.batcher,
+        tc_client,
+        config.wallet_pool_address,
+        config.sequencing_address,
+    )
+    .await?;
 
     // Batcher metrics
     // TODO(SEQ-868): Batcher metrics

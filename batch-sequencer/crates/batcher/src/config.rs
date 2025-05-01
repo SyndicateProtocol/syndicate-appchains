@@ -1,9 +1,9 @@
 //! This module contains `config` for the `Batcher` service
 
-use alloy::primitives::{Address, ChainId};
+use alloy::primitives::ChainId;
 use byte_unit::Byte;
 use clap::Parser;
-use shared::parse::{parse_address, parse_url};
+use shared::parse::parse_url;
 use std::{fmt::Debug, time::Duration};
 use url::Url;
 
@@ -33,21 +33,9 @@ pub struct BatcherConfig {
     #[arg(short = 'k', long, env = "BATCHER_PRIVATE_KEY")]
     pub private_key: String,
 
-    /// Address of the wallet pool
-    #[arg(short = 'b', long, env = "WALLET_POOL_ADDRESS", value_parser = parse_address)]
-    pub wallet_pool_address: Address,
-
-    /// Address of the sequencing contract
-    #[arg(short = 's', long, env = "SEQUENCING_CONTRACT_ADDRESS", value_parser = parse_address)]
-    pub sequencing_contract_address: Address,
-
     /// URL of the sequencing chain RPC node
     #[arg(short = 'u', long, env = "SEQUENCING_RPC_URL", value_parser = parse_url)]
     pub sequencing_rpc_url: Url,
-
-    /// Metrics port to listen on
-    #[arg(short = 'm', long, env = "METRICS_PORT", default_value_t = 8082)]
-    pub metrics_port: u16,
 }
 
 impl BatcherConfig {
@@ -66,12 +54,9 @@ impl Default for BatcherConfig {
             polling_interval: Duration::from_millis(500),
             private_key: "0x0000000000000000000000000000000000000000000000000000000000000000"
                 .to_string(),
-            wallet_pool_address: Address::ZERO,
-            sequencing_contract_address: Address::ZERO,
             sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap_or_else(|_| {
                 panic!("Failed to parse default sequencing RPC URL");
             }),
-            metrics_port: 8082,
         }
     }
 }

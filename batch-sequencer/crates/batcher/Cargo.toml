@@ -18,11 +18,11 @@ humantime         = { workspace = true }
 maestro           = { workspace = true }
 redis             = { workspace = true, features = ["streams", "tokio-comp"] }
 shared            = { workspace = true }
+tc-client         = { workspace = true }
 thiserror         = { workspace = true }
 tokio             = { workspace = true }
 tracing           = { workspace = true }
 url               = { workspace = true }
-
 
 [dev-dependencies]
 mockall    = { workspace = true }

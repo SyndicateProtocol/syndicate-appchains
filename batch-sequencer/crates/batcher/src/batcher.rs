@@ -16,6 +16,7 @@ use maestro::redis::consumer::StreamConsumer;
 use redis::Client as RedisClient;
 use shared::{additive_compression::AdditiveCompressor, types::FilledProvider};
 use std::{mem::take, str::FromStr, time::Duration};
+use tc_client::tc_client::{TCClient, BATCH_FUNCTION_SIGNATURE};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info};
 
@@ -40,6 +41,8 @@ struct Batcher {
     wallet_pool: WalletPoolWrapperModuleInstance<(), FilledProvider>,
     /// The sequencing address
     sequencing_contract_address: Address,
+    /// The TC client
+    tc_client: Option<TCClient>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -58,7 +61,12 @@ enum BatchError {
 }
 
 /// Run the batcher service. Starts the server and listens for batch requests.
-pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
+pub async fn run_batcher(
+    config: &BatcherConfig,
+    tc_client: Option<TCClient>,
+    wallet_pool_address: Address,
+    sequencing_contract_address: Address,
+) -> Result<JoinHandle<()>> {
     let client = RedisClient::open(config.redis_url.as_str())
         .map_err(|e| eyre!("Failed to open Redis client: {}", e))?;
     let conn = client
@@ -73,9 +81,10 @@ pub async fn run_batcher(config: &BatcherConfig) -> Result<JoinHandle<()>> {
         .wallet(EthereumWallet::from(signer))
         .on_http(config.sequencing_rpc_url.clone());
 
-    let wallet_pool = WalletPoolWrapperModule::new(config.wallet_pool_address, sequencer_provider);
+    let wallet_pool = WalletPoolWrapperModule::new(wallet_pool_address, sequencer_provider);
 
-    let mut batcher = Batcher::new(config, redis_consumer, wallet_pool);
+    let mut batcher =
+        Batcher::new(config, redis_consumer, wallet_pool, tc_client, sequencing_contract_address);
     let polling_interval = config.polling_interval;
 
     let handle = tokio::spawn({
@@ -99,6 +108,8 @@ impl Batcher {
         config: &BatcherConfig,
         redis_consumer: StreamConsumer,
         wallet_pool: WalletPoolWrapperModuleInstance<(), FilledProvider>,
+        tc_client: Option<TCClient>,
+        sequencing_contract_address: Address,
     ) -> Self {
         Self {
             max_batch_size: config.max_batch_size,
@@ -109,7 +120,8 @@ impl Batcher {
             failed_txns: Vec::new(),
             submission_in_flight: false,
             wallet_pool,
-            sequencing_contract_address: config.sequencing_contract_address,
+            sequencing_contract_address,
+            tc_client,
         }
     }
     async fn read_transactions(&mut self) -> Result<()> {
@@ -200,7 +212,15 @@ impl Batcher {
     }
 
     async fn send_batch(&self, data: Bytes) -> Result<(), BatchError> {
-        debug!(%self.chain_id, "Sending batch to wallet pool");
+        if self.tc_client.is_some() {
+            self.send_batch_to_tc(data).await
+        } else {
+            self.send_batch_to_l2(data).await
+        }
+    }
+
+    async fn send_batch_to_l2(&self, data: Bytes) -> Result<(), BatchError> {
+        debug!(%self.chain_id, "Sending batch to L2");
         let result = self
             .wallet_pool
             .processTransactionRaw(self.sequencing_contract_address, data)
@@ -208,6 +228,20 @@ impl Batcher {
             .await;
 
         info!("Batch sent result: {:?}", result);
+
+        if let Err(e) = result {
+            return Err(BatchError::SendBatchFailed(e.to_string()));
+        }
+
+        Ok(())
+    }
+
+    async fn send_batch_to_tc(&self, data: Bytes) -> Result<(), BatchError> {
+        debug!(%self.chain_id, "Sending batch to TC");
+        let client = self.tc_client.as_ref().ok_or_else(|| {
+            BatchError::SendBatchFailed("tc_client is None, expected Some".to_string())
+        })?;
+        let result = client.send_transaction(data, BATCH_FUNCTION_SIGNATURE.to_string()).await;
 
         if let Err(e) = result {
             return Err(BatchError::SendBatchFailed(e.to_string()));
@@ -232,10 +266,7 @@ mod tests {
             polling_interval: Duration::from_millis(10),
             private_key: "0xafdfd9c3d2095ef696594f6cedcae59e72dcd697e2a7521b1578140422a4f890"
                 .to_string(),
-            wallet_pool_address: Address::ZERO,
             sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),
-            sequencing_contract_address: Address::ZERO,
-            metrics_port: 8082,
         }
     }
 
@@ -266,9 +297,8 @@ mod tests {
         let sequencer_provider = ProviderBuilder::new()
             .wallet(EthereumWallet::from(signer))
             .on_http(config.sequencing_rpc_url.clone());
-        let wallet_pool =
-            WalletPoolWrapperModule::new(config.wallet_pool_address, sequencer_provider);
-        let mut batcher = Batcher::new(&config, redis_consumer, wallet_pool);
+        let wallet_pool = WalletPoolWrapperModule::new(Address::ZERO, sequencer_provider);
+        let mut batcher = Batcher::new(&config, redis_consumer, wallet_pool, None, Address::ZERO);
 
         let result = batcher.read_transactions().await;
         assert!(result.is_ok());
@@ -298,10 +328,9 @@ mod tests {
         let sequencer_provider = ProviderBuilder::new()
             .wallet(EthereumWallet::from(signer))
             .on_http(config.sequencing_rpc_url.clone());
-        let wallet_pool =
-            WalletPoolWrapperModule::new(config.wallet_pool_address, sequencer_provider);
+        let wallet_pool = WalletPoolWrapperModule::new(Address::ZERO, sequencer_provider);
 
-        let mut batcher = Batcher::new(&config, redis_consumer, wallet_pool);
+        let mut batcher = Batcher::new(&config, redis_consumer, wallet_pool, None, Address::ZERO);
 
         // Insert dummy data
         batcher.compressor.clone_and_compress_with_txn(&Bytes::from(vec![2, 3, 4])).unwrap();

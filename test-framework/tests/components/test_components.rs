@@ -357,7 +357,7 @@ impl TestComponents {
                 redis_url: redis_url.clone(),
                 private_key: PRIVATE_KEY.to_string(),
                 wallet_pool_address,
-                sequencing_contract_address,
+                sequencing_address: sequencing_contract_address,
                 sequencing_rpc_url: sequencing_rpc_url.clone(),
                 metrics_port: PortManager::instance().next_port().await,
             };
