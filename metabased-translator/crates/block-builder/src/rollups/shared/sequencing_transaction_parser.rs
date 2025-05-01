@@ -14,7 +14,7 @@ use common::{
 use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain::TransactionProcessed;
 use shared::zlib_compression::decompress_transactions;
 use thiserror::Error;
-use tracing::{error, info};
+use tracing::error;
 
 /// Represents errors that can occur during sequencing transaction parsing.
 #[derive(Debug, Error, PartialEq, Eq)]
@@ -86,7 +86,6 @@ impl SequencingTransactionParser {
                 transactions.push(compressed_data);
             }
             CompressionType::Zlib => {
-                info!("Decompressing transactions ZLIB");
                 let mut decompressed_data = decompress_transactions(&data)
                     .map_err(|e| SequencingParserError::DecompressionError(e.to_string()))?;
                 transactions.append(&mut decompressed_data);
