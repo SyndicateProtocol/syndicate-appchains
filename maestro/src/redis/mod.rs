@@ -1,8 +1,9 @@
-//! Redis stream-based transaction queue implementation
-//!
-//! This module provides producers and consumers for Redis streams used to queue
-//! and process transactions across different chains.
+//! This module describes how Maestro uses Redis for caching
 
-pub mod consumer;
-pub mod producer;
-pub mod string;
+pub mod keys;
+pub mod models;
+pub mod streams;
+pub mod ttl;
+
+#[cfg(test)]
+pub mod test_utils;

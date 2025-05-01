@@ -13,7 +13,7 @@ use contract_bindings::metabased::walletpoolwrappermodule::WalletPoolWrapperModu
 };
 use derivative::Derivative;
 use eyre::{eyre, Result};
-use maestro::redis::consumer::StreamConsumer;
+use maestro::redis::streams::consumer::StreamConsumer;
 use redis::Client as RedisClient;
 use shared::types::FilledProvider;
 use std::{
@@ -140,7 +140,7 @@ pub async fn run_batcher(
             }
         }
     });
-    info!("Batcher job started with");
+    info!("Batcher job started");
     Ok(handle)
 }
 
@@ -268,7 +268,7 @@ impl Batcher {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use maestro::redis::producer::StreamProducer;
+    use maestro::redis::streams::producer::StreamProducer;
     use prometheus_client::registry::Registry;
     use test_utils::{docker::start_redis, wait_until};
     use url::Url;
