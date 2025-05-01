@@ -29,6 +29,7 @@ impl Default for ConfigurationOptions {
     fn default() -> Self {
         Self {
             pre_loaded: None,
+            // Spins up a write loop components
             use_write_loop: false,
             // skip the genesis block
             sequencing_start_block: 1,
