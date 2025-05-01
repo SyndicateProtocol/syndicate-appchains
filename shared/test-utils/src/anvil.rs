@@ -13,7 +13,7 @@ use shared::types::FilledProvider;
 use std::str::FromStr as _;
 
 // anvil account 1
-const PRIVATE_KEY: &str = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
+pub const PRIVATE_KEY: &str = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
 
 pub async fn start_anvil(chain_id: u64) -> Result<(u16, AnvilInstance, FilledProvider)> {
     start_anvil_with_args(chain_id, Default::default()).await

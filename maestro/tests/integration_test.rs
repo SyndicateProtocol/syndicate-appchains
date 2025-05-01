@@ -39,6 +39,7 @@ mod tests {
         // Create config with mock server URL
         let config = Config {
             port: 0,
+            metrics_port: 8081,
             redis_url,
             chain_rpc_urls: dummy_chain_urls(mock_rpc_server.uri()),
             validation_timeout: Duration::from_secs(1),

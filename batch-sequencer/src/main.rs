@@ -5,7 +5,10 @@
 
 use batcher::{batcher::run_batcher, config::BatcherConfig};
 use eyre::Result;
-use shared::logger::set_global_default_subscriber;
+use shared::{
+    logger::set_global_default_subscriber,
+    metrics::{start_metrics, MetricsState},
+};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 
@@ -21,6 +24,11 @@ async fn main() -> Result<()> {
 
     // Start batcher
     let batcher_handle = run_batcher(&config).await?;
+
+    // Batcher metrics
+    // TODO(SEQ-868): Batcher metrics
+    let metrics_state = MetricsState::default();
+    tokio::spawn(start_metrics(metrics_state, config.metrics_port));
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");

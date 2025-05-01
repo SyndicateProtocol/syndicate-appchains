@@ -159,6 +159,7 @@ impl Batcher {
 
         if self.compressor.is_empty() {
             debug!(%self.chain_id, "No transactions available to batch.");
+            self.submission_in_flight = false;
             return Ok(());
         }
 
@@ -175,6 +176,7 @@ impl Batcher {
 
     async fn send_compressed_batch(&mut self) -> Result<(), BatchError> {
         let num_transactions = self.compressor.num_transactions();
+        debug!(%self.chain_id, "Sending compressed batch with {} transactions", num_transactions);
         let compressed = take(&mut self.compressor).finish()?;
 
         let compressed_len = compressed.len();
@@ -205,6 +207,8 @@ impl Batcher {
             .send()
             .await;
 
+        info!("Batch sent result: {:?}", result);
+
         if let Err(e) = result {
             return Err(BatchError::SendBatchFailed(e.to_string()));
         }
@@ -231,6 +235,7 @@ mod tests {
             wallet_pool_address: Address::ZERO,
             sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),
             sequencing_contract_address: Address::ZERO,
+            metrics_port: 8082,
         }
     }
 

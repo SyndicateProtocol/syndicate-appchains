@@ -625,3 +625,57 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
     )
     .await
 }
+
+#[tokio::test]
+async fn e2e_maestro_batch_sequencer_translator() -> Result<()> {
+    TestComponents::run(
+        &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
+        |components| async move {
+            components.sequencing_provider.anvil_set_block_timestamp_interval(0).await?;
+            components.sequencing_provider.anvil_set_auto_mine(true).await?;
+            // Send a deposit to the appchain to make sure the from address has funds
+            let wallet_address = components.sequencing_provider.default_signer_address();
+            let value = parse_ether("0.01")?;
+            let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
+            _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
+            components.mine_set_block(0).await?;
+            components.mine_set_block(1).await?;
+
+            // Wait for deposit to be processed
+            wait_until!(
+                components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
+                Duration::from_secs(10)
+            );
+
+            let chain_id = components.chain_id;
+            let nonce = components.appchain_provider.get_transaction_count(wallet_address).await?;
+            let tx = TransactionRequest::default()
+                .from(wallet_address)
+                .with_to(TEST_ADDR)
+                .with_value(U256::from(0))
+                .with_nonce(nonce)
+                .with_gas_limit(100_000)
+                .with_chain_id(chain_id)
+                .with_max_fee_per_gas(100000000)
+                .with_max_priority_fee_per_gas(0)
+                .build(components.sequencing_provider.wallet())
+                .await?;
+
+            let tx_hash = components.send_maestro_tx(&tx).await?;
+
+            wait_until!(
+                components.appchain_provider.get_transaction_count(wallet_address).await? ==
+                    nonce + 1,
+                Duration::from_secs(10)
+            );
+
+            // Verify that the transaction was processed
+            let receipt = components.appchain_provider.get_transaction_receipt(tx_hash).await?;
+            assert!(receipt.is_some());
+            assert!(receipt.clone().unwrap().status());
+            assert_eq!(receipt.unwrap().from, wallet_address);
+            Ok(())
+        },
+    )
+    .await
+}

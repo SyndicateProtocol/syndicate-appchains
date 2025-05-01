@@ -21,6 +21,10 @@ pub struct Config {
     #[arg(short = 'p', long, env = "PORT", default_value_t = 8080)]
     pub port: i32,
 
+    /// Metrics port to listen on
+    #[arg(short = 'm', long, env = "METRICS_PORT", default_value_t = 8081)]
+    pub metrics_port: u16,
+
     /// Redis address to listen on
     /// Example: "redis://0.0.0.0:6379"
     #[arg(short = 'r', long, env = "REDIS_URL")]
@@ -131,6 +135,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             port: 8080,
+            metrics_port: 8081,
             redis_url: String::new(),
             chain_rpc_urls: HashMap::new(),
             validation_timeout: Duration::from_secs(5),

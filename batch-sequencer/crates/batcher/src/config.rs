@@ -42,8 +42,12 @@ pub struct BatcherConfig {
     pub sequencing_contract_address: Address,
 
     /// URL of the sequencing chain RPC node
-    #[arg(short = 's', long, env = "SEQUENCING_RPC_URL", value_parser = parse_url)]
+    #[arg(short = 'u', long, env = "SEQUENCING_RPC_URL", value_parser = parse_url)]
     pub sequencing_rpc_url: Url,
+
+    /// Metrics port to listen on
+    #[arg(short = 'm', long, env = "METRICS_PORT", default_value_t = 8082)]
+    pub metrics_port: u16,
 }
 
 impl BatcherConfig {
@@ -67,6 +71,7 @@ impl Default for BatcherConfig {
             sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap_or_else(|_| {
                 panic!("Failed to parse default sequencing RPC URL");
             }),
+            metrics_port: 8082,
         }
     }
 }
