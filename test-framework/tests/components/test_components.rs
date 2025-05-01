@@ -86,6 +86,8 @@ pub(crate) struct TestComponents {
     pub poster_url: String,
 
     pub maestro_url: String,
+
+    pub appchain_block_explorer_url: String,
 }
 
 impl TestComponents {
@@ -249,6 +251,7 @@ impl TestComponents {
         .await?;
 
         // Setup config manager and get chain config address
+        let appchain_block_explorer_url = "https://example.com/explorer".to_string();
         let config_manager_address = setup_config_manager(
             &set_provider,
             &options,
@@ -256,6 +259,7 @@ impl TestComponents {
             arbitrum_bridge_address,
             arbitrum_inbox_address,
             &sequencing_rpc_url,
+            &appchain_block_explorer_url,
         )
         .await?;
 
@@ -273,6 +277,7 @@ impl TestComponents {
             sequencing_contract_address: None,
             arbitrum_ignore_delayed_messages: None,
             sequencing_rpc_url: None,
+            appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
             sequencing_start_block: None,
             settlement_start_block: None,
             settlement_delay: None,
@@ -389,6 +394,7 @@ impl TestComponents {
                 mchain_provider,
                 poster_url,
                 maestro_url,
+                appchain_block_explorer_url,
             },
             ComponentHandles {
                 _seq_anvil: seq_anvil,

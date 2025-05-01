@@ -70,6 +70,9 @@ pub struct MetabasedConfig {
     /// The chain ID of the Appchain rollup (not the mchain)
     #[arg(long, env = "APPCHAIN_CHAIN_ID")]
     pub appchain_chain_id: Option<u64>,
+
+    #[arg(long, env = "APPCHAIN_BLOCK_EXPLORER_URL")]
+    pub appchain_block_explorer_url: Option<String>,
 }
 
 impl MetabasedConfig {
@@ -132,6 +135,7 @@ impl Default for MetabasedConfig {
             metrics: MetricsConfig::default(),
             config_manager_address: None,
             appchain_chain_id: None,
+            appchain_block_explorer_url: None,
         }
     }
 }
