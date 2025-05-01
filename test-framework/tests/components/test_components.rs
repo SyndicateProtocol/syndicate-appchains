@@ -87,6 +87,7 @@ pub(crate) struct TestComponents {
 
     pub maestro_url: String,
 
+    #[allow(dead_code)]
     pub appchain_block_explorer_url: String,
 }
 
