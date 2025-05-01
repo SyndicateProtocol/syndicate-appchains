@@ -11,6 +11,7 @@ pub(super) struct TranslatorConfig {
     pub(crate) appchain_chain_id: Option<u64>,
     pub(crate) mchain_rpc_url: String,
     pub(crate) sequencing_rpc_url: Option<String>,
+    pub(crate) appchain_block_explorer_url: Option<String>,
     pub(crate) settlement_rpc_url: String,
     pub(crate) metrics_port: u16,
     pub(crate) sequencing_start_block: Option<u64>,
@@ -31,6 +32,10 @@ impl TranslatorConfig {
 
         if let Some(url) = &self.sequencing_rpc_url {
             args.extend(vec!["--sequencing-rpc-url".to_string(), url.to_string()]);
+        }
+
+        if let Some(url) = &self.appchain_block_explorer_url {
+            args.extend(vec!["--appchain-block-explorer-url".to_string(), url.to_string()]);
         }
 
         if let Some(addr) = self.arbitrum_bridge_address {

@@ -47,6 +47,7 @@ pub(super) async fn setup_config_manager(
     arbitrum_bridge_address: Address,
     arbitrum_inbox_address: Address,
     sequencing_rpc_url: &str,
+    appchain_block_explorer_url: &str,
 ) -> Result<Address> {
     // Deploy config manager
     let config_manager_owner = set_provider.default_signer_address();
@@ -58,9 +59,12 @@ pub(super) async fn setup_config_manager(
 
     let options_clone = options.clone();
     let sequencing_rpc_url_clone = sequencing_rpc_url.to_string();
+    let appchain_block_explorer_url_clone = appchain_block_explorer_url.to_string();
 
     let create_chain_config_tx = config_manager
         .createArbChainConfig(
+            config_manager_owner,
+            options_clone.appchain_chain_id.try_into().unwrap(),
             options_clone.appchain_chain_id.try_into().unwrap(),
             arbitrum_bridge_address,
             arbitrum_inbox_address,
@@ -71,6 +75,8 @@ pub(super) async fn setup_config_manager(
             options_clone.sequencing_start_block.try_into().unwrap(),
             options_clone.rollup_owner,
             sequencing_rpc_url_clone,
+            appchain_block_explorer_url_clone,
+            vec![],
         )
         .send()
         .await?;
