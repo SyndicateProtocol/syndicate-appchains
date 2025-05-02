@@ -5,7 +5,7 @@ use alloy::{
     hex::{self},
     primitives::{Address, Bytes, TxHash},
 };
-use eyre::Result;
+use eyre::{eyre, Result};
 use jsonrpsee::{
     core::{RpcResult, Serialize},
     types::Params,
@@ -86,11 +86,24 @@ impl TCClient {
         wallet_pool_address: Address,
         sequencing_address: Address,
     ) -> Result<Self> {
+        let tc_url =
+            config.tc_endpoint.as_ref().ok_or_else(|| eyre!("TC endpoint is required"))?.get_url();
+
+        let tc_project_id = config
+            .tc_project_id
+            .as_ref()
+            .ok_or_else(|| eyre!("TC project ID is required"))?
+            .clone();
+
+        let tc_api_key =
+            config.tc_api_key.as_ref().ok_or_else(|| eyre!("TC API key is required"))?.clone();
+
         let client = Client::new();
+
         Ok(Self {
-            tc_url: config.tc_endpoint.get_url(),
-            tc_project_id: config.tc_project_id.clone(),
-            tc_api_key: config.tc_api_key.clone(),
+            tc_url,
+            tc_project_id,
+            tc_api_key,
             wallet_pool_address,
             sequencing_address,
             client,

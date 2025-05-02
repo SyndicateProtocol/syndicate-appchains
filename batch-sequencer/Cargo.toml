@@ -10,13 +10,15 @@ clap      = { workspace = true }
 eyre      = { workspace = true }
 shared    = { workspace = true }
 tc-client = { workspace = true }
+thiserror = { workspace = true }
 tokio     = { workspace = true, features = ["signal"] }
 tracing   = { workspace = true }
 
-[lints]
-workspace = true
 
 [dev-dependencies]
-alloy   = { workspace = true }
 mockito = { workspace = true }
 url     = { workspace = true }
+
+
+[lints]
+workspace = true

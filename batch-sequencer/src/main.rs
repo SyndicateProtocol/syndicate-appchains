@@ -24,6 +24,9 @@ async fn main() -> Result<()> {
     let config = BatchSequencerConfig::initialize();
     info!("BatchSequencerConfig: {:?}", config);
 
+    // Validate config
+    config.validate().await?;
+
     let tc_client = config.use_tc.then(|| {
         config.tc.as_ref().map_or_else(
             || unreachable!("TCConfig must be Some when use_tc is true (asserted during initialization)"),
@@ -33,9 +36,6 @@ async fn main() -> Result<()> {
                 config.sequencing_address,
             ),        )
     }).transpose()?;
-
-    // Validate batcher config
-    config.batcher.validate().await?;
 
     // Start batcher
     let batcher_handle = run_batcher(

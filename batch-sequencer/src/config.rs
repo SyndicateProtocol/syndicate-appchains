@@ -1,11 +1,29 @@
 //! The `config` module handles configuration parsing for the tc sequencer.
 
 use alloy::primitives::Address;
-use batcher::config::BatcherConfig;
+use batcher::config::{BatcherConfig, ConfigError as BatcherConfigError};
 use clap::Parser;
 use shared::parse::parse_address;
 use std::fmt::Debug;
-use tc_client::config::TCConfig;
+use tc_client::config::{ConfigError as TCConfigError, TCConfig};
+use thiserror::Error;
+
+/// Error types relating to Config
+#[allow(missing_docs)]
+#[derive(Debug, Error)]
+pub enum ConfigError {
+    /// `TCConfig` not provided when `use_tc` is true
+    #[error("TCConfig not provided when use_tc is true")]
+    TCConfigNotProvided,
+
+    /// `TCConfig` error
+    #[error("TCConfig error: {0}")]
+    TC(#[from] TCConfigError),
+
+    /// `BatcherConfig` error
+    #[error("BatcherConfig error: {0}")]
+    Batcher(#[from] BatcherConfigError),
+}
 
 /// Common config stuct for the TC Sequencer.
 #[derive(Parser, Debug, Clone)]
@@ -26,6 +44,7 @@ pub struct BatchSequencerConfig {
     /// Use TC
     #[arg(short = 't', long, env = "USE_TC", default_value_t = false)]
     pub use_tc: bool,
+
     #[command(flatten)]
     /// The tc client config
     pub tc: Option<TCConfig>,
@@ -38,9 +57,19 @@ pub struct BatchSequencerConfig {
 impl BatchSequencerConfig {
     /// Initialize the config from the CLI arguments and environment variables.
     pub fn initialize() -> Self {
-        let config = <Self as Parser>::parse();
-        assert!(!config.use_tc || config.tc.is_some(), "TCConfig is required when use_tc is true");
-        config
+        <Self as Parser>::parse()
+    }
+
+    /// Validate the config
+    pub async fn validate(&self) -> Result<(), ConfigError> {
+        self.batcher.validate().await?;
+        if self.use_tc {
+            match &self.tc {
+                Some(tc) => tc.validate()?,
+                None => return Err(ConfigError::TCConfigNotProvided),
+            }
+        }
+        Ok(())
     }
 }
 
