@@ -264,7 +264,7 @@ impl Batcher {
 mod tests {
     use super::*;
     use maestro::redis::producer::StreamProducer;
-    use tc_client::config::TCConfig;
+    use tc_client::config::{TCConfig, TCEndpoint};
     use test_utils::docker::start_redis;
     use url::Url;
 
@@ -404,8 +404,16 @@ mod tests {
     #[tokio::test]
     async fn test_send_batch_prefers_tc_client() {
         let config = test_config();
-        let dummy_client =
-            TCClient::new(&TCConfig::default(), Address::ZERO, Address::ZERO).unwrap();
+        let dummy_client = TCClient::new(
+            &TCConfig {
+                tc_endpoint: Some(TCEndpoint::Staging),
+                tc_project_id: Some("test".to_string()),
+                tc_api_key: Some("test".to_string()),
+            },
+            Address::ZERO,
+            Address::ZERO,
+        )
+        .unwrap();
         let (_redis, redis_url) = start_redis().await.unwrap();
         let conn = redis::Client::open(redis_url.as_str())
             .unwrap()
