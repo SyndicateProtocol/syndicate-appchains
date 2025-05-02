@@ -5,7 +5,7 @@ The Batch Sequencer is a Rust-based service responsible for reading transactions
 ### Sample cmd:
 
 ```
-cargo run -p batch-sequencer -- \
+cargo run -p synd-batch-sequencer -- \
   --redis-url redis://127.0.0.1:6379 \
   --chain-id 11155111 \
   --max-batch-size 90KB \

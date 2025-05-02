@@ -3,13 +3,13 @@
 //!
 //! It provides a JSON-RPC interface for submitting transactions and checking service health.
 
-use batch_sequencer::config::BatchSequencerConfig;
 use batcher::batcher::run_batcher;
 use eyre::Result;
 use shared::{
     logger::set_global_default_subscriber,
     metrics::{start_metrics, MetricsState},
 };
+use synd_batch_sequencer::config::BatchSequencerConfig;
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 

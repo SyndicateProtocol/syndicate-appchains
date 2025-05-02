@@ -8,7 +8,7 @@ targets=(
     "metabased-sequencer:metabased-sequencer:latest"
     "metabased-poster:metabased-poster:latest"
     "maestro:maestro:latest"
-    "batch-sequencer:batch-sequencer:latest"
+    "synd-batch-sequencer:synd-batch-sequencer:latest"
     "mchain:mchain:latest"
     "metabased-translator-debug:metabased-translator:debug"
 )

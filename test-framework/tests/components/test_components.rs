@@ -110,7 +110,7 @@ impl TestComponents {
             e = async {poster.unwrap().wait().await}, if poster.is_some() => panic!("poster died: {:#?}", e),
             e = handles.sequencer.wait() => panic!("sequencer died: {:#?}", e),
             e = async {maestro.unwrap().wait().await}, if maestro.is_some() => panic!("maestro died: {:#?}", e),
-            e = async {batch_sequencer.unwrap().wait().await}, if batch_sequencer.is_some() => panic!("batch-sequencer died: {:#?}", e),
+            e = async {batch_sequencer.unwrap().wait().await}, if batch_sequencer.is_some() => panic!("synd-batch-sequencer died: {:#?}", e),
             e = async {redis.unwrap().wait().await}, if redis.is_some() => panic!("redis died: {:#?}", e),
             r = test(components) => r
         }
@@ -368,7 +368,7 @@ impl TestComponents {
                 metrics_port: PortManager::instance().next_port().await,
             };
             let batch_sequencer_instance = start_component(
-                "batch-sequencer",
+                "synd-batch-sequencer",
                 batch_sequencer_config.metrics_port,
                 batch_sequencer_config.cli_args(),
                 Default::default(),
