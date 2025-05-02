@@ -67,23 +67,16 @@ impl BatcherConfig {
 
     /// Validates the configuration
     pub async fn validate(&self) -> Result<(), ConfigError> {
-        let resp_chain_id = ping_sequencing_rpc_url(&self.sequencing_rpc_url).await?;
-        if resp_chain_id != self.chain_id {
-            return Err(ConfigError::InvalidChainId(
-                self.sequencing_rpc_url.to_string(),
-                self.chain_id.to_string(),
-                resp_chain_id.to_string(),
-            ));
-        }
+        ping_sequencing_rpc_url(&self.sequencing_rpc_url).await?;
         Ok(())
     }
 }
 
-async fn ping_sequencing_rpc_url(url: &Url) -> Result<u64, ConfigError> {
+async fn ping_sequencing_rpc_url(url: &Url) -> Result<(), ConfigError> {
     let provider =
         ProviderBuilder::new().connect(url.as_str()).await.map_err(ConfigError::ConnectionError)?;
-    let resp_chain_id = provider.get_chain_id().await?;
-    Ok(resp_chain_id)
+    provider.get_chain_id().await?;
+    Ok(())
 }
 
 impl Default for BatcherConfig {
