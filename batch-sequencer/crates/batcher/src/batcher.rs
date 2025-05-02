@@ -34,10 +34,10 @@ struct Batcher {
     redis_consumer: StreamConsumer,
     /// The compressor for the batcher
     compressor: AdditiveCompressor,
-    /// The polling interval for the batcher
-    polling_interval: Duration,
     /// The chain ID for the batcher
     chain_id: u64,
+    /// The timeout for the batcher
+    timeout: Duration,
     /// Submission Semaphore
     submission_semaphore: Arc<Semaphore>,
     /// Wallet pool
@@ -82,7 +82,6 @@ pub async fn run_batcher(
 
     let mut batcher =
         Batcher::new(config, redis_consumer, wallet_pool, tc_client, sequencing_contract_address);
-    let polling_interval = config.polling_interval;
 
     let handle = tokio::spawn({
         async move {
@@ -91,13 +90,10 @@ pub async fn run_batcher(
                 if let Err(e) = batcher.read_and_batch_transactions().await {
                     error!("Batcher error: {:?}", e);
                 }
-                // In theory this could be removed, but we want to wait a reasonable amount of time
-                // to batch as many transactions as possible.
-                tokio::time::sleep(polling_interval).await;
             }
         }
     });
-    info!("Batcher job started with {:?} poll interval", config.polling_interval);
+    info!("Batcher job started with");
     Ok(handle)
 }
 
@@ -125,8 +121,8 @@ impl Batcher {
             max_batch_size: config.max_batch_size,
             redis_consumer,
             compressor: AdditiveCompressor::default(),
-            polling_interval: config.polling_interval,
             chain_id: config.chain_id,
+            timeout: config.timeout,
             submission_semaphore: Arc::new(Semaphore::new(1)), //Only one submission at a time
             wallet_pool,
             sequencing_contract_address,
@@ -134,9 +130,17 @@ impl Batcher {
         }
     }
     async fn read_transactions(&mut self) -> Result<()> {
+        let start = Instant::now();
         loop {
+            if start.elapsed() >= self.timeout {
+                debug!(%self.chain_id, "Read timeout reached. Stopping transaction read.");
+                break;
+            }
+
             // TODO (SEQ-842): Configurable max msg count
-            let transactions = self.redis_consumer.recv(1, self.polling_interval).await?;
+            // NOTE: If msg count is >1 we need to handle edge cases where not all transactions fit
+            // in the batch
+            let transactions = self.redis_consumer.recv(1, Duration::from_millis(100)).await?;
 
             if transactions.is_empty() {
                 debug!("No transactions available to batch.");
@@ -269,7 +273,7 @@ mod tests {
             max_batch_size: Byte::from_u64(1024),
             redis_url: "dummy".to_string(),
             chain_id: 1,
-            polling_interval: Duration::from_millis(10),
+            timeout: Duration::from_millis(200),
             private_key: "0xafdfd9c3d2095ef696594f6cedcae59e72dcd697e2a7521b1578140422a4f890"
                 .to_string(),
             sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap(),

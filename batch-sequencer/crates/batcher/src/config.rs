@@ -41,9 +41,9 @@ pub struct BatcherConfig {
     #[arg(long, env = "MAX_BATCH_SIZE", default_value = "90KB")] // 90 kilobytes
     pub max_batch_size: Byte,
 
-    /// Polling interval for the batcher in milliseconds
-    #[arg( long, env = "BATCHER_POLLING_INTERVAL", default_value = "100ms", value_parser = humantime::parse_duration )]
-    pub polling_interval: Duration,
+    /// Timeout for the batcher in milliseconds
+    #[arg( long, env = "BATCHER_TIMEOUT", default_value = "200ms", value_parser = humantime::parse_duration )]
+    pub timeout: Duration,
 
     /// Batcher private key
     ///
@@ -92,7 +92,7 @@ impl Default for BatcherConfig {
             redis_url: "redis://127.0.0.1:6379".to_string(),
             chain_id: 1,
             max_batch_size: Byte::from_u64(90 * 1024),
-            polling_interval: Duration::from_millis(500),
+            timeout: Duration::from_millis(200),
             private_key: "0x0000000000000000000000000000000000000000000000000000000000000000"
                 .to_string(),
             sequencing_rpc_url: Url::parse("http://localhost:8545").unwrap_or_else(|_| {
