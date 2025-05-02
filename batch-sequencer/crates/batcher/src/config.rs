@@ -1,11 +1,27 @@
 //! This module contains `config` for the `Batcher` service
 
-use alloy::primitives::ChainId;
+use alloy::{
+    primitives::ChainId,
+    providers::{Provider, ProviderBuilder},
+    transports::TransportError,
+};
 use byte_unit::Byte;
 use clap::Parser;
 use shared::parse::parse_url;
 use std::{fmt::Debug, time::Duration};
+use thiserror::Error;
 use url::Url;
+
+/// Error types relating to Config
+#[allow(missing_docs)]
+#[derive(Debug, Error)]
+pub enum ConfigError {
+    #[error("failed to connect to chain RPC URL: {0} expected chain ID: {1} got {2}")]
+    InvalidChainId(String, String, String),
+
+    #[error("failed to connect to chain RPC URL: {0}")]
+    ConnectionError(#[from] TransportError),
+}
 
 /// Configuration for Batcher
 #[allow(clippy::doc_markdown)]
@@ -30,6 +46,11 @@ pub struct BatcherConfig {
     pub polling_interval: Duration,
 
     /// Batcher private key
+    ///
+    /// This is the private key for the wallet responsible for signing transaction
+    /// batches submitted by the Batcher service. The corresponding wallet must be
+    /// funded with sufficient native tokens (e.g., ETH) to cover gas costs when
+    /// submitting transactions on the sequencing chain.
     #[arg(short = 'k', long, env = "BATCHER_PRIVATE_KEY")]
     pub private_key: String,
 
@@ -43,6 +64,26 @@ impl BatcherConfig {
     pub fn initialize() -> Self {
         Self::parse()
     }
+
+    /// Validates the configuration
+    pub async fn validate(&self) -> Result<(), ConfigError> {
+        let resp_chain_id = ping_sequencing_rpc_url(&self.sequencing_rpc_url).await?;
+        if resp_chain_id != self.chain_id {
+            return Err(ConfigError::InvalidChainId(
+                self.sequencing_rpc_url.to_string(),
+                self.chain_id.to_string(),
+                resp_chain_id.to_string(),
+            ));
+        }
+        Ok(())
+    }
+}
+
+async fn ping_sequencing_rpc_url(url: &Url) -> Result<u64, ConfigError> {
+    let provider =
+        ProviderBuilder::new().connect(url.as_str()).await.map_err(ConfigError::ConnectionError)?;
+    let resp_chain_id = provider.get_chain_id().await?;
+    Ok(resp_chain_id)
 }
 
 impl Default for BatcherConfig {

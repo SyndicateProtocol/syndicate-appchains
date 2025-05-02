@@ -34,6 +34,9 @@ async fn main() -> Result<()> {
             ),        )
     }).transpose()?;
 
+    // Validate batcher config
+    config.batcher.validate().await?;
+
     // Start batcher
     let batcher_handle = run_batcher(
         &config.batcher,
