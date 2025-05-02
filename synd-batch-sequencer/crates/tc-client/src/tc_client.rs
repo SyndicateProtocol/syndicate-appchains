@@ -208,20 +208,34 @@ pub async fn send_raw_transaction_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::TCConfig;
+    use crate::config::{TCConfig, TCEndpoint};
     use alloy::primitives::Bytes;
     use std::str::FromStr;
 
     fn setup_test_service() -> TCClient {
-        let config = TCConfig::default();
-        TCClient::new(&config, Address::ZERO, Address::ZERO).unwrap()
+        TCClient::new(
+            &TCConfig {
+                tc_endpoint: Some(TCEndpoint::Staging),
+                tc_project_id: Some("test".to_string()),
+                tc_api_key: Some("test".to_string()),
+            },
+            Address::ZERO,
+            Address::ZERO,
+        )
+        .unwrap()
     }
 
     #[test]
     fn test_new_service_creation() {
-        let config = TCConfig::default();
-
-        let result = TCClient::new(&config, Address::ZERO, Address::ZERO);
+        let result = TCClient::new(
+            &TCConfig {
+                tc_endpoint: Some(TCEndpoint::Staging),
+                tc_project_id: Some("test".to_string()),
+                tc_api_key: Some("test".to_string()),
+            },
+            Address::ZERO,
+            Address::ZERO,
+        );
         assert!(result.is_ok());
     }
 
