@@ -9,7 +9,6 @@ cargo run -p synd-batch-sequencer -- \
   --redis-url redis://127.0.0.1:6379 \
   --chain-id 11155111 \
   --max-batch-size 90KB \
-  --batcher-polling-interval 100ms \
   --private-key <hex-private-key> \
   --wallet-pool-address 0x1111... \
   --sequencing-contract-address 0x2222... \
