@@ -93,7 +93,7 @@ jobs:
       - name: Build and push services
         run: |
           if [ -z "${{ inputs.service }}" ]; then
-            SERVICES=("metabased-sequencer" "metabased-translator" "metabased-poster" "maestro" "mchain" "tc-sequencer")
+            SERVICES=("metabased-sequencer" "metabased-translator" "metabased-poster" "maestro" "mchain" "synd-batch-sequencer")
           else
             SERVICES=("${{ inputs.service }}")
           fi

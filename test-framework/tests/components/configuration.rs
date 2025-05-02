@@ -1,8 +1,10 @@
 use alloy::{primitives::Address, providers::WalletProvider};
 use contract_bindings::metabased::arbconfigmanager::ArbConfigManager;
 use eyre::Result;
-use test_utils::anvil::{mine_block, FilledProvider};
-/// nitro contract version on the settlement chain used for testing
+use shared::types::FilledProvider;
+use test_utils::anvil::mine_block;
+
+/// Arbitrum Nitro contract version on the settlement chain used for testing
 #[derive(Debug, Clone)]
 #[allow(clippy::redundant_pub_crate)]
 pub(crate) enum ContractVersion {
@@ -14,6 +16,7 @@ pub(crate) enum ContractVersion {
 #[allow(clippy::redundant_pub_crate)]
 pub(crate) struct ConfigurationOptions {
     pub(crate) pre_loaded: Option<ContractVersion>,
+    pub(crate) use_write_loop: bool,
     pub(crate) sequencing_start_block: u64,
     pub(crate) settlement_start_block: u64,
     pub(crate) settlement_delay: u64,
@@ -26,6 +29,8 @@ impl Default for ConfigurationOptions {
     fn default() -> Self {
         Self {
             pre_loaded: None,
+            // Spins up write loop components
+            use_write_loop: false,
             // skip the genesis block
             sequencing_start_block: 1,
             // skip the genesis block and the 2 blocks used to deploy the config manager

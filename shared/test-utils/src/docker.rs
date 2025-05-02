@@ -112,6 +112,7 @@ pub async fn start_component(
         if let Some(status) = docker.try_wait()? {
             panic!("{} exited with {}", executable_name, status);
         };
+        // TODO(SEQ-869): Use the health endpoint instead
         client
             .get(format!("http://localhost:{metrics_port}/metrics"))
             .send()
@@ -163,7 +164,7 @@ pub async fn launch_nitro_node(
     let tag = env::var("NITRO_TAG").unwrap_or("v3.4.0-d896e9c-slim".to_string());
     let port = PortManager::instance().next_port().await;
 
-    let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
+    let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "debug".to_string());
 
     let mut nitro = Docker::new(
         Command::new("docker")

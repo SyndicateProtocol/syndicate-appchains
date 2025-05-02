@@ -2,11 +2,18 @@
 
 use alloy::{
     hex,
+    network::EthereumWallet,
     primitives::{Address, Bytes, B256},
+    providers::{
+        fillers::{
+            BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
+            WalletFiller,
+        },
+        Identity, RootProvider,
+    },
 };
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{Display, Formatter};
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
 /// **`Block`**: Represents an Ethereum block, including details like its hash, number, timestamp,
@@ -295,3 +302,15 @@ where
 {
     serializer.serialize_str(&format!("0x{:x}", num))
 }
+
+/// A filled provider
+pub type FilledProvider = FillProvider<
+    JoinFill<
+        JoinFill<
+            Identity,
+            JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+        >,
+        WalletFiller<EthereumWallet>,
+    >,
+    RootProvider,
+>;

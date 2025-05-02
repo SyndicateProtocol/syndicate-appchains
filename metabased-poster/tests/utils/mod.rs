@@ -10,7 +10,7 @@ use alloy::{
     },
 };
 use eyre::Result;
-use metabased_poster::poster::FilledProvider;
+use shared::types::FilledProvider;
 use std::str::FromStr;
 
 pub(crate) const DEFAULT_PRIVATE_KEY_SIGNER: &str =

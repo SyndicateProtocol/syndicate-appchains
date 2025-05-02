@@ -5,9 +5,11 @@
 
 use batcher::batcher::run_batcher;
 use eyre::Result;
-use shared::logger::set_global_default_subscriber;
-use tc_client::tc_client::TCClient;
-use tc_sequencer::{config::TCSequencerConfig, server::run_server};
+use shared::{
+    logger::set_global_default_subscriber,
+    metrics::{start_metrics, MetricsState},
+};
+use synd_batch_sequencer::config::BatchSequencerConfig;
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 
@@ -18,18 +20,25 @@ async fn main() -> Result<()> {
     set_global_default_subscriber()?;
 
     // Parse config
-    let config = TCSequencerConfig::initialize();
-    info!("TCSequencerConfig: {:?}", config);
+    let config = BatchSequencerConfig::initialize();
+    info!("BatchSequencerConfig: {:?}", config);
 
-    // Start tc-client
-    let tc_client = TCClient::new(&config.tc)?;
+    // Validate config and create TC client if needed
+    let tc_client = config.validate().await?;
 
     // Start batcher
-    let batcher_handle = run_batcher(&config.batcher, tc_client.clone()).await?;
+    let batcher_handle = run_batcher(
+        &config.batcher,
+        tc_client,
+        config.wallet_pool_address,
+        config.sequencing_address,
+    )
+    .await?;
 
-    // Start server
-    let (addr, handle) = run_server(&config, tc_client).await?;
-    info!("Server started at {}", addr);
+    // Batcher metrics
+    // TODO(SEQ-868): Batcher metrics
+    let metrics_state = MetricsState::default();
+    tokio::spawn(start_metrics(metrics_state, config.metrics_port));
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
@@ -42,9 +51,6 @@ async fn main() -> Result<()> {
         }
         _ = sigterm.recv() => {
             info!("Received SIGTERM, initiating shutdown...");
-        }
-        _ = handle.stopped() => {
-            info!("Server stopped, initiating shutdown...");
         }
         _ = batcher_handle => {
             info!("Batcher stopped, initiating shutdown...");

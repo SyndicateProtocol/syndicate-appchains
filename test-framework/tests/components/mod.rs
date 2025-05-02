@@ -1,5 +1,6 @@
 //! Components for the integration tests
 
+mod batch_sequencer;
 mod configuration;
 mod maestro;
 mod poster;

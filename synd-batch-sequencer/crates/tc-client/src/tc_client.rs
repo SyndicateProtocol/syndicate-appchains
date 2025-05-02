@@ -18,6 +18,7 @@ use shared::{
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, sync::Arc};
+use thiserror::Error;
 use tracing::{debug, error, info};
 use url::Url;
 
@@ -30,6 +31,14 @@ pub const BATCH_FUNCTION_SIGNATURE: &str =
 const TC_CHAIN_ADDRESS_KEY: &str = "chainAddress";
 const TC_DATA_KEY: &str = "data";
 
+/// Error types relating to `TCClient`
+#[allow(missing_docs)]
+#[derive(Debug, Error)]
+pub enum TCClientError {
+    /// `TCConfig` field not provided
+    #[error("TCConfig field not provided {0}")]
+    TCConfigFieldNotProvided(String),
+}
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SendTransactionRequest {
@@ -81,14 +90,43 @@ pub struct TCClient {
 
 impl TCClient {
     /// Create a new `TCClient` instance.
-    pub fn new(config: &TCConfig) -> Result<Self> {
+    pub fn new(
+        config: &TCConfig,
+        wallet_pool_address: Address,
+        sequencing_address: Address,
+    ) -> Result<Self, TCClientError> {
+        let tc_url = config
+            .tc_endpoint
+            .as_ref()
+            .ok_or_else(|| {
+                TCClientError::TCConfigFieldNotProvided("TC endpoint is required".to_string())
+            })?
+            .get_url();
+
+        let tc_project_id = config
+            .tc_project_id
+            .as_ref()
+            .ok_or_else(|| {
+                TCClientError::TCConfigFieldNotProvided("TC project ID is required".to_string())
+            })?
+            .clone();
+
+        let tc_api_key = config
+            .tc_api_key
+            .as_ref()
+            .ok_or_else(|| {
+                TCClientError::TCConfigFieldNotProvided("TC API key is required".to_string())
+            })?
+            .clone();
+
         let client = Client::new();
+
         Ok(Self {
-            tc_url: config.tc_endpoint.get_url(),
-            tc_project_id: config.tc_project_id.clone(),
-            tc_api_key: config.tc_api_key.clone(),
-            wallet_pool_address: config.wallet_pool_address,
-            sequencing_address: config.sequencing_address,
+            tc_url,
+            tc_project_id,
+            tc_api_key,
+            wallet_pool_address,
+            sequencing_address,
             client,
         })
     }
@@ -170,20 +208,34 @@ pub async fn send_raw_transaction_handler(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::config::TCConfig;
+    use crate::config::{TCConfig, TCEndpoint};
     use alloy::primitives::Bytes;
     use std::str::FromStr;
 
     fn setup_test_service() -> TCClient {
-        let config = TCConfig::default();
-        TCClient::new(&config).unwrap()
+        TCClient::new(
+            &TCConfig {
+                tc_endpoint: Some(TCEndpoint::Staging),
+                tc_project_id: Some("test".to_string()),
+                tc_api_key: Some("test".to_string()),
+            },
+            Address::ZERO,
+            Address::ZERO,
+        )
+        .unwrap()
     }
 
     #[test]
     fn test_new_service_creation() {
-        let config = TCConfig::default();
-
-        let result = TCClient::new(&config);
+        let result = TCClient::new(
+            &TCConfig {
+                tc_endpoint: Some(TCEndpoint::Staging),
+                tc_project_id: Some("test".to_string()),
+                tc_api_key: Some("test".to_string()),
+            },
+            Address::ZERO,
+            Address::ZERO,
+        );
         assert!(result.is_ok());
     }
 
