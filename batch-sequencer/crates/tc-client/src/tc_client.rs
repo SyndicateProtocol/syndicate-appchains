@@ -5,7 +5,7 @@ use alloy::{
     hex::{self},
     primitives::{Address, Bytes, TxHash},
 };
-use eyre::{eyre, Result};
+use eyre::Result;
 use jsonrpsee::{
     core::{RpcResult, Serialize},
     types::Params,
@@ -18,6 +18,7 @@ use shared::{
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, sync::Arc};
+use thiserror::Error;
 use tracing::{debug, error, info};
 use url::Url;
 
@@ -30,6 +31,14 @@ pub const BATCH_FUNCTION_SIGNATURE: &str =
 const TC_CHAIN_ADDRESS_KEY: &str = "chainAddress";
 const TC_DATA_KEY: &str = "data";
 
+/// Error types relating to `TCClient`
+#[allow(missing_docs)]
+#[derive(Debug, Error)]
+pub enum TCClientError {
+    /// `TCConfig` field not provided
+    #[error("TCConfig field not provided {0}")]
+    TCConfigFieldNotProvided(String),
+}
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct SendTransactionRequest {
@@ -85,18 +94,30 @@ impl TCClient {
         config: &TCConfig,
         wallet_pool_address: Address,
         sequencing_address: Address,
-    ) -> Result<Self> {
-        let tc_url =
-            config.tc_endpoint.as_ref().ok_or_else(|| eyre!("TC endpoint is required"))?.get_url();
+    ) -> Result<Self, TCClientError> {
+        let tc_url = config
+            .tc_endpoint
+            .as_ref()
+            .ok_or_else(|| {
+                TCClientError::TCConfigFieldNotProvided("TC endpoint is required".to_string())
+            })?
+            .get_url();
 
         let tc_project_id = config
             .tc_project_id
             .as_ref()
-            .ok_or_else(|| eyre!("TC project ID is required"))?
+            .ok_or_else(|| {
+                TCClientError::TCConfigFieldNotProvided("TC project ID is required".to_string())
+            })?
             .clone();
 
-        let tc_api_key =
-            config.tc_api_key.as_ref().ok_or_else(|| eyre!("TC API key is required"))?.clone();
+        let tc_api_key = config
+            .tc_api_key
+            .as_ref()
+            .ok_or_else(|| {
+                TCClientError::TCConfigFieldNotProvided("TC API key is required".to_string())
+            })?
+            .clone();
 
         let client = Client::new();
 

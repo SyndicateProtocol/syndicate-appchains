@@ -1,11 +1,14 @@
-//! The `config` module handles configuration parsing for the tc sequencer.
+//! The `config` module handles configuration parsing for the batch sequencer.
 
 use alloy::primitives::Address;
 use batcher::config::{BatcherConfig, ConfigError as BatcherConfigError};
 use clap::Parser;
 use shared::parse::parse_address;
 use std::fmt::Debug;
-use tc_client::config::{ConfigError as TCConfigError, TCConfig};
+use tc_client::{
+    config::{ConfigError as TCConfigError, TCConfig},
+    tc_client::{TCClient, TCClientError},
+};
 use thiserror::Error;
 
 /// Error types relating to Config
@@ -19,6 +22,10 @@ pub enum ConfigError {
     /// `TCConfig` error
     #[error("TCConfig error: {0}")]
     TC(#[from] TCConfigError),
+
+    /// `TCClient` initialization error
+    #[error("TCClient initialization error: {0}")]
+    TCClientInit(#[from] TCClientError),
 
     /// `BatcherConfig` error
     #[error("BatcherConfig error: {0}")]
@@ -61,15 +68,20 @@ impl BatchSequencerConfig {
     }
 
     /// Validate the config
-    pub async fn validate(&self) -> Result<(), ConfigError> {
+    pub async fn validate(&self) -> Result<Option<TCClient>, ConfigError> {
         self.batcher.validate().await?;
         if self.use_tc {
             match &self.tc {
-                Some(tc) => tc.validate()?,
+                Some(tc) => {
+                    tc.validate()?;
+                    let tc_client =
+                        TCClient::new(tc, self.wallet_pool_address, self.sequencing_address)?;
+                    return Ok(Some(tc_client));
+                }
                 None => return Err(ConfigError::TCConfigNotProvided),
             }
         }
-        Ok(())
+        Ok(None)
     }
 }
 

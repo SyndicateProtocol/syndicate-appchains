@@ -10,7 +10,6 @@ use shared::{
     logger::set_global_default_subscriber,
     metrics::{start_metrics, MetricsState},
 };
-use tc_client::tc_client::TCClient;
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 
@@ -24,18 +23,8 @@ async fn main() -> Result<()> {
     let config = BatchSequencerConfig::initialize();
     info!("BatchSequencerConfig: {:?}", config);
 
-    // Validate config
-    config.validate().await?;
-
-    let tc_client = config.use_tc.then(|| {
-        config.tc.as_ref().map_or_else(
-            || unreachable!("TCConfig must be Some when use_tc is true (asserted during initialization)"),
-            |tc_config| TCClient::new(
-                tc_config,
-                config.wallet_pool_address,
-                config.sequencing_address,
-            ),        )
-    }).transpose()?;
+    // Validate config and create TC client if needed
+    let tc_client = config.validate().await?;
 
     // Start batcher
     let batcher_handle = run_batcher(
