@@ -98,6 +98,11 @@ jobs:
             SERVICES=("${{ inputs.service }}")
           fi
 
+          TAG="${{ inputs.tag }}"
+          if [ -z "$TAG" ]; then
+            TAG="latest"
+          fi
+
           for service in "${SERVICES[@]}"; do
             echo "Building $service..."
             docker buildx build \
