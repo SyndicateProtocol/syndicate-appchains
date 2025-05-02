@@ -4,7 +4,7 @@ use eyre::Result;
 use shared::types::FilledProvider;
 use test_utils::anvil::mine_block;
 
-/// nitro contract version on the settlement chain used for testing
+/// Arbitrum Nitro contract version on the settlement chain used for testing
 #[derive(Debug, Clone)]
 #[allow(clippy::redundant_pub_crate)]
 pub(crate) enum ContractVersion {
@@ -29,7 +29,7 @@ impl Default for ConfigurationOptions {
     fn default() -> Self {
         Self {
             pre_loaded: None,
-            // Spins up a write loop components
+            // Spins up write loop components
             use_write_loop: false,
             // skip the genesis block
             sequencing_start_block: 1,

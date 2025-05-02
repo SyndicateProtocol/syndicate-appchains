@@ -15,9 +15,14 @@ use eyre::{eyre, Result};
 use maestro::redis::consumer::StreamConsumer;
 use redis::Client as RedisClient;
 use shared::{additive_compression::AdditiveCompressor, types::FilledProvider};
-use std::{mem::take, str::FromStr, time::Duration};
+use std::{
+    mem::take,
+    str::FromStr,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 use tc_client::tc_client::{TCClient, BATCH_FUNCTION_SIGNATURE};
-use tokio::task::JoinHandle;
+use tokio::{sync::Semaphore, task::JoinHandle};
 use tracing::{debug, error, info};
 
 /// Batcher service
@@ -33,10 +38,8 @@ struct Batcher {
     polling_interval: Duration,
     /// The chain ID for the batcher
     chain_id: u64,
-    /// Failed txns
-    failed_txns: Vec<Bytes>,
-    /// Track if submission is in-flight
-    submission_in_flight: bool,
+    /// Submission Semaphore
+    submission_semaphore: Arc<Semaphore>,
     /// Wallet pool
     wallet_pool: WalletPoolWrapperModuleInstance<(), FilledProvider>,
     /// The sequencing address
@@ -67,12 +70,12 @@ pub async fn run_batcher(
     wallet_pool_address: Address,
     sequencing_contract_address: Address,
 ) -> Result<JoinHandle<()>> {
-    let client = RedisClient::open(config.redis_url.as_str())
-        .map_err(|e| eyre!("Failed to open Redis client: {}", e))?;
-    let conn = client
-        .get_multiplexed_async_connection()
-        .await
-        .map_err(|e| eyre!("Failed to get Redis connection: {}", e))?;
+    let client = RedisClient::open(config.redis_url.as_str()).map_err(|e| {
+        eyre!("Failed to open Redis client: {}. Redis URL: {}", e, config.redis_url)
+    })?;
+    let conn = client.get_multiplexed_async_connection().await.map_err(|e| {
+        eyre!("Failed to get Redis connection: {}. Redis URL: {}", e, config.redis_url)
+    })?;
     let redis_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
 
     let wallet_pool = create_wallet_pool(config, wallet_pool_address);
@@ -84,6 +87,7 @@ pub async fn run_batcher(
     let handle = tokio::spawn({
         async move {
             loop {
+                debug!("Batcher reading and batching transactions at time {:?}", Instant::now());
                 if let Err(e) = batcher.read_and_batch_transactions().await {
                     error!("Batcher error: {:?}", e);
                 }
@@ -123,8 +127,7 @@ impl Batcher {
             compressor: AdditiveCompressor::default(),
             polling_interval: config.polling_interval,
             chain_id: config.chain_id,
-            failed_txns: Vec::new(),
-            submission_in_flight: false,
+            submission_semaphore: Arc::new(Semaphore::new(1)), //Only one submission at a time
             wallet_pool,
             sequencing_contract_address,
             tc_client,
@@ -161,34 +164,32 @@ impl Batcher {
     }
 
     async fn read_and_batch_transactions(&mut self) -> Result<(), BatchError> {
-        if self.submission_in_flight {
-            debug!(%self.chain_id, "Submission in flight, skipping read.");
-            return Ok(());
-        }
-        self.submission_in_flight = true;
+        // Ensure only one submission runs at a time by holding the semaphore permit
+        let semaphore = Arc::clone(&self.submission_semaphore);
+        let _permit = match semaphore.try_acquire() {
+            Ok(permit) => permit,
+            Err(_) => {
+                debug!(%self.chain_id, "Submission in flight, skipping read.");
+                return Ok(());
+            }
+        };
 
-        // Push failed txns to the compressor
-        for txn in take(&mut self.failed_txns) {
-            let compressed = self.compressor.clone_and_compress_with_txn(&txn)?;
-            self.compressor.push_with_precompressed(&txn, compressed)?;
-        }
+        // _permit is held until the end of the function
 
         self.read_transactions().await?;
 
         if self.compressor.is_empty() {
             debug!(%self.chain_id, "No transactions available to batch.");
-            self.submission_in_flight = false;
             return Ok(());
         }
 
         if let Err(e) = self.send_compressed_batch().await {
+            // Don't reset the compressor here, because we want to retry the same batch
             error!(%self.chain_id, "Failed to send compressed batch: {:?}", e);
-            self.failed_txns = self.compressor.drain_transactions(); // Save failed txns for next round
-            self.submission_in_flight = false;
             return Err(e);
         }
 
-        self.submission_in_flight = false;
+        self.compressor.reset(); // Reset for next round
         Ok(())
     }
 
@@ -206,8 +207,6 @@ impl Batcher {
         }
 
         self.send_batch(compressed.clone()).await?;
-
-        self.compressor.reset(); // Reset for next round
 
         debug!(
             %self.chain_id, "Batch sent: {} txs, compressed size: {} bytes",
@@ -298,9 +297,8 @@ mod tests {
         // Send transaction
         let test_data1 = b"test transaction data 1".to_vec();
         producer.enqueue_transaction(test_data1.clone()).await.unwrap();
-        let signer = PrivateKeySigner::from_str(&config.private_key).unwrap_or_else(|err| {
-            panic!("Failed to parse default private key for signer: {}", err)
-        });
+        let signer = PrivateKeySigner::from_str(&config.private_key)
+            .unwrap_or_else(|err| panic!("Failed to parse private key for batcher: {}", err));
         let sequencer_provider = ProviderBuilder::new()
             .wallet(EthereumWallet::from(signer))
             .on_http(config.sequencing_rpc_url.clone());
@@ -390,12 +388,15 @@ mod tests {
         let wallet_pool = WalletPoolWrapperModule::new(Address::ZERO, sequencer_provider);
 
         let mut batcher = Batcher::new(&config, redis_consumer, wallet_pool, None, Address::ZERO);
-        batcher.submission_in_flight = true;
 
+        // Clone the semaphore to avoid borrowing through `batcher`
+        let semaphore = Arc::clone(&batcher.submission_semaphore);
+        let _guard = semaphore.try_acquire().expect("should acquire permit");
+
+        // Now `batcher` can be mutably borrowed safely
         let result = batcher.read_and_batch_transactions().await;
-        assert!(result.is_ok());
+        assert!(result.is_ok(), "Expected batching to skip and return Ok");
     }
-
     #[tokio::test]
     async fn test_send_batch_prefers_tc_client() {
         let config = test_config();
