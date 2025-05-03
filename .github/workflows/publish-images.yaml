@@ -109,8 +109,8 @@ jobs:
               --platform linux/amd64 \
               --push=${{ !inputs.dry_run }} \
               --target "$service" \
-              --tag "${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/$service:${{ inputs.tag }}" \
-              --tag "${{ env.GOOGLE_REGISTRY }}/${{ env.PROJECT_ID }}/images/${{ env.REPO_NAME }}/$service:${{ inputs.tag }}" \
+              --tag "${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/$service:$TAG" \
+              --tag "${{ env.GOOGLE_REGISTRY }}/${{ env.PROJECT_ID }}/images/${{ env.REPO_NAME }}/$service:$TAG" \
               --cache-from type=gha \
               --cache-to type=gha,mode=max \
               .
