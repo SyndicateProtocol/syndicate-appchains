@@ -4,8 +4,21 @@ use alloy::{
     hex,
     primitives::{Address, Bytes, B256},
 };
+use jsonrpsee::core::async_trait;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{Display, Formatter};
+
+#[allow(missing_docs)]
+pub trait GetBlockRef {
+    fn block_ref(&self) -> &BlockRef;
+}
+
+/// A trait for building blocks from the sequencing and settlement chains.
+#[async_trait]
+pub trait BlockBuilder<T>: Send {
+    /// Process a single slot
+    fn build_block(&self, block: &PartialBlock) -> eyre::Result<T>;
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
 #[serde(rename_all = "camelCase")]
@@ -154,8 +167,38 @@ pub struct Log {
     pub transaction_hash: B256,
 }
 
+#[allow(missing_docs)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
+pub struct PartialLog {
+    pub address: Address,
+    pub topics: Vec<B256>,
+    pub data: Bytes,
+}
+
+#[allow(missing_docs)]
+impl PartialLog {
+    pub fn new(log: alloy::rpc::types::Log) -> Self {
+        Self { address: log.address(), topics: log.topics().into(), data: log.data().data.clone() }
+    }
+}
+
+/// PartialBlock contains block transactions, event logs, and metadata
+#[allow(missing_docs)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
+pub struct PartialBlock {
+    pub block_ref: BlockRef,
+    pub parent_hash: B256,
+    pub logs: Vec<PartialLog>,
+}
+
+impl GetBlockRef for PartialBlock {
+    fn block_ref(&self) -> &BlockRef {
+        &self.block_ref
+    }
+}
+
 /// A reference to a block containing just its number and timestamp.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
 pub struct BlockRef {
     /// The block number.
     pub number: u64,

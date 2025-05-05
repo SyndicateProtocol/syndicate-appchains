@@ -3,12 +3,15 @@
 //! This module provides the core [`RollupAdapter`] trait that defines how
 //! different rollup implementations can construct and process their blocks.
 
-use crate::rollups::shared::SequencingTransactionParser;
+use crate::rollups::{
+    arbitrum::arbitrum_adapter::ArbitrumAdapter, shared::SequencingTransactionParser,
+};
 use alloy::primitives::Bytes;
 use async_trait::async_trait;
-use common::types::{PartialBlock, SequencingBlock, SettlementBlock};
+use common::types::{SequencingBlock, SettlementBlock};
 use eyre::Result;
 use mchain::db::DelayedMessage;
+use shared::types::{BlockBuilder, PartialBlock};
 use std::marker::{Send, Sync};
 
 /// Trait for rollup-specific block builders that construct batches from sequencer transactions
@@ -45,14 +48,8 @@ pub trait RollupAdapter: Send + Sync {
     fn process_delayed_messages(&self, block: &PartialBlock) -> Result<Vec<DelayedMessage>>;
 }
 
-/// A trait for building blocks from the sequencing and settlement chains.
-#[async_trait]
-pub trait BlockBuilder<T>: Send {
-    /// Process a single slot
-    fn build_block(&self, block: &PartialBlock) -> Result<T>;
-}
-
-impl<T: RollupAdapter> BlockBuilder<SequencingBlock> for T {
+// TODO: should impl for RollupAdapter instead
+impl BlockBuilder<SequencingBlock> for ArbitrumAdapter {
     fn build_block(&self, block: &PartialBlock) -> Result<SequencingBlock> {
         let (tx_count, batch) = self.build_batch(block)?;
         Ok(SequencingBlock {
@@ -64,7 +61,7 @@ impl<T: RollupAdapter> BlockBuilder<SequencingBlock> for T {
     }
 }
 
-impl<T: RollupAdapter> BlockBuilder<SettlementBlock> for T {
+impl BlockBuilder<SettlementBlock> for ArbitrumAdapter {
     fn build_block(&self, block: &PartialBlock) -> Result<SettlementBlock> {
         Ok(SettlementBlock {
             block_ref: block.block_ref.clone(),

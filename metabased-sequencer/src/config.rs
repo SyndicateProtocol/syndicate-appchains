@@ -4,22 +4,7 @@ use alloy::primitives::{Address, B256};
 use clap::Parser;
 use shared::parse::{parse_address, parse_url};
 use std::{fmt::Debug, time::Duration};
-use thiserror::Error;
 use url::Url;
-
-/// Error type for configuration errors
-#[derive(Error, Debug)]
-pub enum ConfigError {
-    /// Invalid URL
-    #[error("Invalid URL: {0}")]
-    InvalidURL(String),
-    /// Invalid URL: no host
-    #[error("Invalid URL: no host")]
-    InvalidURLHost,
-    /// Invalid URL scheme
-    #[error("Invalid URL scheme: {0}. Only http and https are supported")]
-    InvalidURLScheme(String),
-}
 
 /// Configuration for the metabased sequencer
 #[derive(Parser, Debug, Clone)]

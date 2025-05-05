@@ -83,7 +83,7 @@ pub fn rollup_config(chain_id: u64, chain_owner: Address) -> String {
 }
 
 #[allow(clippy::unwrap_used)]
-pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
+pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     chain_id: u64,
     rollup_owner: Address,
     finality_delay: u64,
@@ -141,7 +141,7 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
         .register_method(
             "mchain_addBatch",
             move |p, (db, metrics, mutex), _| -> Result<Option<u64>, ErrorObjectOwned> {
-                let batch: MBlock = p.parse()?;
+                let (batch,): (MBlock,) = p.parse()?;
                 let timestamp = batch.timestamp;
                 let seq_block_number = batch.slot.seq_block_number;
                 let block = db.add_batch(batch)?;
@@ -160,7 +160,7 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
         .register_method(
             "mchain_rollbackToBlock",
             move |p, (db, metrics, mutex), _| -> Result<(), ErrorObjectOwned> {
-                let block_number: u64 = p.parse()?;
+                let (block_number,): (u64,) = p.parse()?;
                 let state = db.get_state();
                 if block_number > state.batch_count {
                     return Err(err("cannot set head past the last block"));
@@ -222,7 +222,7 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
         .register_method(
             "mchain_getSourceChainsProcessedBlocks",
             move |p, (db, _, _), _| -> Result<(Slot, u64), ErrorObjectOwned> {
-                let tag: BlockNumberOrTag = p.parse()?;
+                let (tag,): (BlockNumberOrTag,) = p.parse()?;
                 match tag {
                     BlockNumberOrTag::Pending => {
                         let state = db.get_state();

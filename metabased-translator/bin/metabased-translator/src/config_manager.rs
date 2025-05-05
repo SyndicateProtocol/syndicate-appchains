@@ -4,6 +4,7 @@ use alloy::{
     providers::{Provider, ProviderBuilder},
     rpc::client::ClientBuilder,
 };
+use chain_ingestor::client::{IngestorProvider, Provider as _};
 use contract_bindings::metabased::{arbchainconfig, arbconfigmanager::ArbConfigManager};
 use eyre::Result;
 use tracing::{error, info, warn};
@@ -24,8 +25,17 @@ pub async fn with_onchain_config(config: &MetabasedConfig) -> MetabasedConfig {
         }
     };
 
+    let ingestor_provider = IngestorProvider::new(
+        &config.settlement.settlement_rpc_url,
+        config.settlement.settlement_rpc_timeout,
+    )
+    .await;
+
     let provider = ProviderBuilder::new().on_client(
-        ClientBuilder::default().connect(&config.settlement.settlement_rpc_url).await.unwrap(),
+        ClientBuilder::default()
+            .connect(ingestor_provider.get_url().await.unwrap().as_ref())
+            .await
+            .unwrap(),
     );
 
     let onchain = match get_config(address, U256::from(chain_id), provider).await {

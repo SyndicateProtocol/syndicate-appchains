@@ -26,7 +26,8 @@ pub(crate) async fn start_anvil(
 
     let provider = ProviderBuilder::new()
         .wallet(EthereumWallet::from(get_default_private_key_signer()))
-        .on_http(anvil.endpoint_url());
+        .connect(&anvil.ws_endpoint())
+        .await?;
     Ok((anvil, provider))
 }
 

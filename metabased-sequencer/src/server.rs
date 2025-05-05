@@ -29,7 +29,7 @@ pub async fn run_server(
         .build(format!("0.0.0.0:{}", config.port))
         .await?;
 
-    let service = RelayerService::new(config, relayer_metrics)?;
+    let service = RelayerService::new(config, relayer_metrics).await?;
 
     let mut module = RpcModule::new(service);
 
@@ -71,7 +71,7 @@ mod tests {
             Anvil::new().port(8181_u16).chain_id(12345678).block_time(1).try_spawn().unwrap();
 
         // Setup provider
-        let provider = ProviderBuilder::new().on_http(anvil.endpoint_url());
+        let provider = ProviderBuilder::new().connect(&anvil.ws_endpoint()).await.unwrap();
 
         let private_key =
             B256::from_str("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")

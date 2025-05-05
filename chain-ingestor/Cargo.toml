@@ -3,13 +3,13 @@ edition.workspace      = true
 exclude.workspace      = true
 homepage.workspace     = true
 license.workspace      = true
-name                   = "mchain"
+name                   = "chain-ingestor"
 repository.workspace   = true
 rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy             = { workspace = true }
+alloy             = { workspace = true, features = ["provider-ws"] }
 bincode           = { workspace = true }
 clap              = { workspace = true, features = ["derive", "env"] }
 contract-bindings = { workspace = true }
@@ -23,8 +23,9 @@ shared            = { workspace = true }
 tokio             = { workspace = true, features = ["signal"] }
 tracing           = { workspace = true }
 url               = { workspace = true }
-chain-ingestor    = { workspace = true }
 futures-util = { workspace = true }
+humantime = {workspace = true}
+fs2 = "0.4.3"
 
 [dev-dependencies]
 ctor       = { workspace = true }

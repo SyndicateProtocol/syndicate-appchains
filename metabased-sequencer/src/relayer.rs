@@ -86,7 +86,7 @@ pub struct RelayerService {
 
 impl RelayerService {
     /// Create a new `RelayerService` instance.
-    pub fn new(config: &Config, relayer_metrics: RelayerMetrics) -> Result<Self> {
+    pub async fn new(config: &Config, relayer_metrics: RelayerMetrics) -> Result<Self> {
         let signer = PrivateKeySigner::from_bytes(&config.private_key)?;
         let wallet_address = signer.address();
         let wallet = EthereumWallet::from(signer);
@@ -97,7 +97,8 @@ impl RelayerService {
             .filler(WalletFiller::new(wallet))
             .filler(GasFiller)
             .filler(ChainIdFiller::new(None))
-            .on_http(config.chain_rpc_url.clone());
+            .connect(config.chain_rpc_url.as_str())
+            .await?;
 
         Ok(Self {
             contract_address: config.chain_contract_address,
@@ -201,7 +202,7 @@ mod tests {
     use std::str::FromStr;
     use url::Url;
 
-    fn setup_test_service() -> RelayerService {
+    async fn setup_test_service() -> RelayerService {
         let config = Config {
             chain_contract_address: Address::from([0x42; 20]),
             chain_rpc_url: Url::parse("http://localhost:8545").unwrap(),
@@ -213,11 +214,11 @@ mod tests {
         };
         let mut metrics = MetricsState::default();
         let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
-        RelayerService::new(&config, relayer_metrics).unwrap()
+        RelayerService::new(&config, relayer_metrics).await.unwrap()
     }
 
-    #[test]
-    fn test_new_service_creation() {
+    #[tokio::test]
+    async fn test_new_service_creation() {
         let config = Config {
             chain_contract_address: Address::from([0x42; 20]),
             chain_rpc_url: Url::parse("http://localhost:8545").unwrap(),
@@ -230,15 +231,15 @@ mod tests {
         let mut metrics = MetricsState::default();
         let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
 
-        let result = RelayerService::new(&config, relayer_metrics);
+        let result = RelayerService::new(&config, relayer_metrics).await;
         assert!(result.is_ok());
 
         let service = result.unwrap();
         assert_eq!(service.contract_address, config.chain_contract_address);
     }
 
-    #[test]
-    fn test_new_service_with_invalid_private_key() {
+    #[tokio::test]
+    async fn test_new_service_with_invalid_private_key() {
         let config = Config {
             chain_contract_address: Address::from([0x42; 20]),
             chain_rpc_url: Url::parse("http://localhost:8545").unwrap(),
@@ -251,12 +252,12 @@ mod tests {
         let mut metrics = MetricsState::default();
         let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
 
-        let result = RelayerService::new(&config, relayer_metrics);
+        let result = RelayerService::new(&config, relayer_metrics).await;
         assert!(result.is_err());
     }
     #[tokio::test]
     async fn test_send_raw_transaction_handler_invalid_params() {
-        let service = Arc::new(setup_test_service());
+        let service = Arc::new(setup_test_service().await);
         let invalid_params = Params::new(Some("[\"invalid_hex\"]"));
 
         let result =
@@ -266,7 +267,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_send_raw_transaction_handler_valid_params() {
-        let service = Arc::new(setup_test_service());
+        let service = Arc::new(setup_test_service().await);
         // Valid raw transaction hex
         let valid_tx = "[\"0xf86d8202b28477359400825208944592d8f8d7b001e72cb26a73e4fa1806a51ac79d880de0b6b3a7640000802ca05924bde7ef10aa88db9c66dd4f5fb16b46dff2319b9968be983118b57bb50562a001b24b31010004f13d9a26b320845257a6cfc2bf819a3d55e3fc86263c5f0772\"]";
         let params = Params::new(Some(valid_tx));
@@ -279,7 +280,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_process_transaction() {
-        let service = setup_test_service();
+        let service = setup_test_service().await;
         let test_tx = Bytes::from_str("0xf86d8202b28477359400825208944592d8f8d7b001e72cb26a73e4fa1806a51ac79d880de0b6b3a7640000802ca05924bde7ef10aa88db9c66dd4f5fb16b46dff2319b9968be983118b57bb50562a001b24b31010004f13d9a26b320845257a6cfc2bf819a3d55e3fc86263c5f0772").unwrap();
 
         let result = service.process_transaction(test_tx).await;

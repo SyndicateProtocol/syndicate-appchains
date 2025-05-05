@@ -19,9 +19,9 @@ use alloy::{
     rpc::types::TransactionRequest,
 };
 use async_trait::async_trait;
-use common::types::PartialBlock;
 use eyre::Result;
 use mchain::db::DelayedMessage;
+use shared::types::PartialBlock;
 use std::str::FromStr;
 
 #[derive(Debug, Clone)]

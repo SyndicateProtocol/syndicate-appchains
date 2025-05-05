@@ -50,12 +50,14 @@ struct Poster {
 
 /// Starts the poster loop
 pub async fn run(config: Config, metrics: PosterMetrics) -> Result<()> {
-    let appchain_provider = ProviderBuilder::default().on_http(config.appchain_rpc_url.clone());
+    let appchain_provider =
+        ProviderBuilder::default().connect(config.appchain_rpc_url.as_str()).await?;
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
     let settlement_provider = ProviderBuilder::new()
         .wallet(EthereumWallet::from(signer))
-        .on_http(config.settlement_rpc_url.clone());
+        .connect(config.settlement_rpc_url.as_str())
+        .await?;
 
     let assertion_poster =
         AssertionPoster::new(config.assertion_poster_contract_address, settlement_provider);

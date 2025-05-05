@@ -1,5 +1,4 @@
 use eyre::Report;
-use shared::eth_client::RPCClientError;
 use thiserror::Error;
 use tracing::error;
 
@@ -28,9 +27,6 @@ pub enum RuntimeError {
 
     #[error(transparent)]
     TranslatorConfig(#[from] crate::config::ConfigError),
-
-    #[error(transparent)]
-    RPCClient(#[from] RPCClientError),
 
     #[error(transparent)]
     Other(#[from] Report),

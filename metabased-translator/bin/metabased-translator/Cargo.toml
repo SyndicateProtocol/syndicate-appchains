@@ -24,6 +24,7 @@ slotter           = { workspace = true }
 thiserror         = { workspace = true }
 tokio             = { workspace = true, features = ["signal"] }
 tracing           = { workspace = true }
+chain-ingestor = { workspace = true }
 
 [dev-dependencies]
 async-trait = { workspace = true }

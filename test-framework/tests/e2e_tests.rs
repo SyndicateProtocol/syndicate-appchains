@@ -7,6 +7,7 @@ use alloy::{
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, Block, TransactionRequest},
 };
+use chain_ingestor::client::IngestorProvider;
 use components::TestComponents;
 use contract_bindings::arbitrum::{
     arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox, irollupcore::IRollupCore,
@@ -15,8 +16,7 @@ use contract_bindings::arbitrum::{
 use eyre::Result;
 use mchain::client::Provider as _;
 use serde::{Deserialize, Serialize};
-use shared::eth_client::{EthClient, RPCClient};
-use std::{sync::Arc, time::Duration};
+use std::time::Duration;
 use test_utils::wait_until;
 
 mod components;
@@ -110,12 +110,12 @@ async fn e2e_send_transaction() -> Result<()> {
 
         // Wait for blocks to be processed
         wait_until!(
-            components.mchain_provider.get_block_number().await >= 3,
+            components.mchain_provider.get_block_number().await >= 4,
             Duration::from_secs(10)
         );
 
         // check mchain block
-        assert_eq!(components.mchain_provider.get_block_number().await, 3);
+        assert_eq!(components.mchain_provider.get_block_number().await, 4);
 
         // check rollup block
         wait_until!(
@@ -138,14 +138,23 @@ async fn e2e_send_transaction() -> Result<()> {
     .await
 }
 
+#[tokio::test]
+async fn e2e_deposit_300() -> Result<()> {
+    e2e_deposit_base(ContractVersion::V300).await
+}
+
+#[tokio::test]
+async fn e2e_deposit_213() -> Result<()> {
+    e2e_deposit_base(ContractVersion::V213).await
+}
+
 /// This test sends different types of delayed messages
 /// via the inbox contract and ensures that all of them
 /// are sequenced via the metabased translator and show up on the rollup.
-#[tokio::test]
-async fn e2e_deposit() -> Result<()> {
+async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
     // Sequencer fees go to the zero address
     TestComponents::run(
-        &ConfigurationOptions { pre_loaded: Some(ContractVersion::V300), ..Default::default() },
+        &ConfigurationOptions { pre_loaded: Some(version), ..Default::default() },
         |components| async move {
             let wallet_address = components.settlement_provider.default_signer_address();
 
@@ -175,7 +184,7 @@ async fn e2e_deposit() -> Result<()> {
             let mut tx = vec![L2_MESSAGE_KIND_SIGNED_TX];
             tx.append(&mut inner_tx);
             _ = inbox.sendL2Message(tx.into()).send().await?;
-            // Message From Origin
+            // Message From Origin - should be ignored by the translator
             inner_tx = vec![];
             TransactionRequest::default()
                 .with_to(Address::ZERO)
@@ -286,7 +295,7 @@ async fn e2e_deposit() -> Result<()> {
 
             assert_eq!(
                 components.appchain_provider.get_balance(wallet_address).await?,
-                parse_ether("4.6000316")?
+                parse_ether("4.7000337")?
             );
 
             Ok(())
@@ -590,12 +599,10 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             assert_eq!(block_number, 2);
 
             // assert that restarting and rolling back here will not make mchain go back to block 1
-            let seq_mchain_client: Arc<dyn RPCClient> = Arc::new(
-                EthClient::new(&components.sequencing_rpc_url, Duration::from_secs(10)).await?,
-            );
-            let settlement_client: Arc<dyn RPCClient> = Arc::new(
-                EthClient::new(&components.settlement_rpc_url, Duration::from_secs(10)).await?,
-            );
+            let seq_mchain_client =
+                IngestorProvider::new(&components.sequencing_rpc_url, Duration::from_secs(1)).await;
+            let settlement_client =
+                IngestorProvider::new(&components.settlement_rpc_url, Duration::from_secs(1)).await;
 
             components
                 .mchain_provider

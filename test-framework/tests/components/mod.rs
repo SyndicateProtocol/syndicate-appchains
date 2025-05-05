@@ -1,5 +1,6 @@
 //! Components for the integration tests
 
+mod chain_ingestor;
 mod configuration;
 mod maestro;
 mod poster;

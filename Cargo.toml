@@ -1,5 +1,6 @@
 [workspace]
 members = [
+  "chain-ingestor",
   "maestro",
   "mchain",
   "metabased-poster",
@@ -46,6 +47,7 @@ block-builder        = { path = "metabased-translator/crates/block-builder" }
 brotli               = "7.0.0"
 byte-unit            = "5.1.6"
 bytes                = "1.9.0"
+chain-ingestor       = { path = "chain-ingestor" }
 clap                 = { version = "4.5.26" }
 common               = { path = "metabased-translator/crates/common" }
 contract-bindings    = { path = "shared/contract-bindings" }

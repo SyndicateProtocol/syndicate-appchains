@@ -29,6 +29,7 @@ shared = { workspace = true }
 test-utils = { workspace = true }
 tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
 tracing = { workspace = true }
+chain-ingestor = { workspace = true }
 
 [features]
 env-tests = []

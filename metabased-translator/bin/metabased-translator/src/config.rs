@@ -9,21 +9,13 @@ use clap::Parser;
 use eyre::Result;
 use ingestor::config::{SequencingChainConfig, SettlementChainConfig};
 use metrics::config::MetricsConfig;
-use shared::{eth_client::RPCClientError, parse::parse_address};
+use shared::parse::parse_address;
 use std::fmt::Debug;
 use thiserror::Error;
 use tracing::error;
 
 #[derive(Error, Debug)]
 pub enum ConfigError {
-    #[error(
-        "Settlement chain start timestamp ({0}) is greater than sequencing chain timestamp ({1})"
-    )]
-    SettlementStartBlockTooLate(u64, u64),
-
-    #[error("Failed to fetch block data: {0}")]
-    RPCClient(#[from] RPCClientError),
-
     #[error("Block builder configuration error: {0}")]
     BlockBuilder(#[from] block_builder::config::ConfigError),
 
@@ -138,38 +130,7 @@ impl Default for MetabasedConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    const ZERO: &str = "0x0000000000000000000000000000000000000000";
-    const REQUIRED_ENV_VARS: &[(&str, Option<&str>)] = &[
-        ("SEQUENCING_RPC_URL", Some("")),
-        ("SETTLEMENT_RPC_URL", Some("")),
-        ("SEQUENCING_START_BLOCK", Some("1")),
-        ("SETTLEMENT_START_BLOCK", Some("1")),
-        ("SEQUENCING_CONTRACT_ADDRESS", Some(ZERO)),
-        ("ARBITRUM_BRIDGE_ADDRESS", Some(ZERO)),
-        ("ARBITRUM_INBOX_ADDRESS", Some(ZERO)),
-        ("MCHAIN_RPC_URL", Some("")),
-    ];
-
-    #[test]
-    fn test_clap_parse() {
-        let config = temp_env::with_vars(
-            [
-                REQUIRED_ENV_VARS,
-                &[("SEQUENCING_BUFFER_SIZE", Some("200")), ("SETTLEMENT_BUFFER_SIZE", Some("200"))],
-            ]
-            .concat(),
-            || MetabasedConfig::try_parse_from(["test", "--sequencing-buffer-size", "300"]),
-        )
-        .unwrap();
-        // default value
-        assert_eq!(config.settlement.settlement_syncing_batch_size, 50);
-        // default value + env var override
-        assert_eq!(config.settlement.settlement_buffer_size, 200);
-        // defeault value + env var + cli override
-        assert_eq!(config.sequencing.sequencing_buffer_size, 300);
-    }
+    use super::MetabasedConfig;
 
     #[test]
     fn test_generate_command() {

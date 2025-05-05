@@ -7,12 +7,9 @@ use alloy::{
     primitives::{keccak256, Address, Bytes, LogData},
     sol_types::SolEvent,
 };
-use common::{
-    compression::{get_compression_type, CompressionType},
-    types::PartialLogWithTxdata,
-};
+use common::compression::{get_compression_type, CompressionType};
 use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain::TransactionProcessed;
-use shared::zlib_compression::decompress_transactions;
+use shared::{types::PartialLog, zlib_compression::decompress_transactions};
 use thiserror::Error;
 use tracing::error;
 
@@ -62,7 +59,7 @@ impl SequencingTransactionParser {
     }
 
     /// Checks if a log is a `TransactionProcessed` event
-    pub fn is_log_transaction_processed(&self, eth_log: PartialLogWithTxdata) -> bool {
+    pub fn is_log_transaction_processed(&self, eth_log: PartialLog) -> bool {
         eth_log.address == self.sequencing_contract_address &&
             eth_log
                 .topics
@@ -99,7 +96,7 @@ impl SequencingTransactionParser {
     /// Decodes the event data into a vector of transactions
     pub fn get_event_transactions(
         &self,
-        eth_log: &PartialLogWithTxdata,
+        eth_log: &PartialLog,
     ) -> Result<Vec<Bytes>, SequencingParserError> {
         if !self.is_log_transaction_processed(eth_log.clone()) {
             return Err(SequencingParserError::InvalidLogEvent);
@@ -126,7 +123,7 @@ mod tests {
     );
     const DUMMY_TXN_VALUE: &[u8] = &hex!("02");
 
-    fn generate_valid_test_log(contract_address: Address) -> PartialLogWithTxdata {
+    fn generate_valid_test_log(contract_address: Address) -> PartialLog {
         let topics = vec![
             keccak256("TransactionProcessed(address,bytes)".as_bytes()),
             B256::from_slice(
@@ -135,7 +132,7 @@ mod tests {
             ),
         ];
 
-        PartialLogWithTxdata {
+        PartialLog {
             address: contract_address,
             data: Bytes::from(DUMMY_ENCODED_DATA),
             topics,
