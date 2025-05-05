@@ -20,10 +20,11 @@ contract TransactionSizeLimitIntegrationTest is Test {
     address public admin = address(0x1);
     uint256 public constant L3_CHAIN_ID = 1234;
 
-    // We'll test with these increments to find the approximate limits
-    // Can increase MAX_TEST_SIZE_KB if needed
-    uint256 public constant MAX_TEST_SIZE_KB = 100;
+    // Size increment for testing
     uint256 public constant INCREMENT_KB = 5;
+
+    // Safety limit to prevent infinite loops (1MB)
+    uint256 public constant EMERGENCY_STOP_KB = 1024;
 
     function setUp() public {
         // This test will be run against a forked chain (Exo)
@@ -60,8 +61,10 @@ contract TransactionSizeLimitIntegrationTest is Test {
         vm.startPrank(admin);
 
         uint256 lastSuccessful = 0;
+        bool limitFound = false;
 
-        for (uint256 kb = INCREMENT_KB; kb <= MAX_TEST_SIZE_KB; kb += INCREMENT_KB) {
+        // Start with small increments and continue until a failure is encountered
+        for (uint256 kb = INCREMENT_KB; !limitFound && kb <= EMERGENCY_STOP_KB; kb += INCREMENT_KB) {
             uint256 sizeInBytes = kb * 1024;
             bytes memory data = generatePayload(sizeInBytes);
 
@@ -70,14 +73,19 @@ contract TransactionSizeLimitIntegrationTest is Test {
                 lastSuccessful = kb;
             } catch Error(string memory reason) {
                 console2.log("Failed with reason:", reason);
-                break;
+                limitFound = true;
             } catch {
                 console2.log("Failed to process transaction at size (KB):", kb);
-                break;
+                limitFound = true;
             }
         }
 
+        if (!limitFound) {
+            console2.log("WARNING: Hit emergency stop without finding a limit!");
+        }
+
         console2.log("Maximum processTransaction size (KB):", lastSuccessful);
+        console2.log("Maximum processTransaction size (bytes):", lastSuccessful * 1024);
         vm.stopPrank();
     }
 
@@ -85,8 +93,10 @@ contract TransactionSizeLimitIntegrationTest is Test {
         vm.startPrank(admin);
 
         uint256 lastSuccessful = 0;
+        bool limitFound = false;
 
-        for (uint256 kb = INCREMENT_KB; kb <= MAX_TEST_SIZE_KB; kb += INCREMENT_KB) {
+        // Continue testing sizes until a failure is encountered
+        for (uint256 kb = INCREMENT_KB; !limitFound && kb <= EMERGENCY_STOP_KB; kb += INCREMENT_KB) {
             uint256 sizeInBytes = kb * 1024;
             bytes memory data = generatePayload(sizeInBytes);
 
@@ -95,14 +105,19 @@ contract TransactionSizeLimitIntegrationTest is Test {
                 lastSuccessful = kb;
             } catch Error(string memory reason) {
                 console2.log("Failed with reason:", reason);
-                break;
+                limitFound = true;
             } catch {
                 console2.log("Failed to process raw transaction at size (KB):", kb);
-                break;
+                limitFound = true;
             }
         }
 
+        if (!limitFound) {
+            console2.log("WARNING: Hit emergency stop without finding a limit!");
+        }
+
         console2.log("Maximum processTransactionRaw size (KB):", lastSuccessful);
+        console2.log("Maximum processTransactionRaw size (bytes):", lastSuccessful * 1024);
         vm.stopPrank();
     }
 
@@ -141,6 +156,22 @@ contract TransactionSizeLimitIntegrationTest is Test {
             } catch {
                 console2.log("Cannot measure gas: processTransactionRaw failed at", kb, "KB");
             }
+
+            // Calculate gas difference
+            try sequencerChain.processTransaction(data) {
+                uint256 gas1 = gasleft();
+                sequencerChain.processTransaction(data);
+                gas1 = gas1 - gasleft();
+
+                uint256 gas2 = gasleft();
+                sequencerChain.processTransactionRaw(data);
+                gas2 = gas2 - gasleft();
+
+                console2.log("Gas difference at", kb, "KB:", gas1 > gas2 ? gas1 - gas2 : gas2 - gas1);
+                console2.log("Percent overhead:", ((gas1 * 100) / gas2) - 100, "%");
+            } catch {
+                // Skip if any of the calls fail
+            }
         }
 
         vm.stopPrank();
@@ -151,8 +182,10 @@ contract TransactionSizeLimitIntegrationTest is Test {
 
         uint256 numTxs = 5;
         uint256 lastSuccessful = 0;
+        bool limitFound = false;
 
-        for (uint256 kb = 1; kb <= MAX_TEST_SIZE_KB / numTxs; kb += 1) {
+        // Continue testing sizes until we find the limit
+        for (uint256 kb = 1; !limitFound && kb <= EMERGENCY_STOP_KB / numTxs; kb += 1) {
             uint256 sizeInBytes = kb * 1024;
             bytes[] memory txs = new bytes[](numTxs);
 
@@ -162,63 +195,66 @@ contract TransactionSizeLimitIntegrationTest is Test {
             }
 
             try sequencerChain.processBulkTransactions(txs) {
-                console2.log("Successfully processed bulk of", numTxs);
-                console2.log("transactions each with size (KB):", kb);
+                console2.log("Successfully processed bulk transactions:", numTxs);
+                console2.log("Each transaction size (KB):", kb);
                 console2.log("Total size (KB):", kb * numTxs);
                 lastSuccessful = kb;
             } catch {
-                console2.log("Failed to process bulk of", numTxs);
-                console2.log("transactions at size (KB):", kb);
-                break;
+                console2.log("Failed to process bulk transactions:", numTxs);
+                console2.log("At transaction size (KB):", kb);
+                limitFound = true;
             }
+        }
+
+        if (!limitFound) {
+            console2.log("WARNING: Hit emergency stop without finding a limit!");
         }
 
         console2.log("Maximum size per transaction in bulk (KB):", lastSuccessful);
+        console2.log("Maximum size per transaction in bulk (bytes):", lastSuccessful * 1024);
         console2.log("Maximum total bulk size (KB):", lastSuccessful * numTxs);
+        console2.log("Maximum total bulk size (bytes):", lastSuccessful * numTxs * 1024);
 
         vm.stopPrank();
     }
 
-    // Helper function to find max size for processTransaction
-    function findMaxProcessSize() internal returns (uint256) {
+    // Test with varying numbers of transactions in bulk
+    function testBulkTransactionCounts() public {
         vm.startPrank(admin);
 
-        uint256 lastSuccessful = 0;
+        // Fixed size of 10KB per transaction
+        uint256 fixedSizeKB = 10;
+        uint256 sizeInBytes = fixedSizeKB * 1024;
 
-        for (uint256 kb = INCREMENT_KB; kb <= MAX_TEST_SIZE_KB; kb += INCREMENT_KB) {
-            uint256 sizeInBytes = kb * 1024;
-            bytes memory data = generatePayload(sizeInBytes);
+        // Test from 1 to 20 transactions
+        uint256 maxTxCount = 0;
+        bool limitFound = false;
 
-            try sequencerChain.processTransaction(data) {
-                lastSuccessful = kb;
+        for (uint256 count = 1; !limitFound && count <= 50; count++) {
+            bytes[] memory txs = new bytes[](count);
+
+            // Generate transactions of fixed size
+            for (uint256 i = 0; i < count; i++) {
+                txs[i] = generatePayload(sizeInBytes);
+            }
+
+            try sequencerChain.processBulkTransactions(txs) {
+                console2.log("Successfully processed transactions:", count);
+                console2.log("Transaction size (KB):", fixedSizeKB);
+                console2.log("Total size (KB):", count * fixedSizeKB);
+                maxTxCount = count;
             } catch {
-                break;
+                console2.log("Failed to process transactions:", count);
+                console2.log("Transaction size (KB):", fixedSizeKB);
+                limitFound = true;
             }
         }
 
-        vm.stopPrank();
-        return lastSuccessful;
-    }
-
-    // Helper function to find max size for processTransactionRaw
-    function findMaxProcessRawSize() internal returns (uint256) {
-        vm.startPrank(admin);
-
-        uint256 lastSuccessful = 0;
-
-        for (uint256 kb = INCREMENT_KB; kb <= MAX_TEST_SIZE_KB; kb += INCREMENT_KB) {
-            uint256 sizeInBytes = kb * 1024;
-            bytes memory data = generatePayload(sizeInBytes);
-
-            try sequencerChain.processTransactionRaw(data) {
-                lastSuccessful = kb;
-            } catch {
-                break;
-            }
-        }
+        console2.log("Maximum transaction count in bulk:", maxTxCount);
+        console2.log("Maximum total bulk size (KB):", maxTxCount * fixedSizeKB);
+        console2.log("Maximum total bulk size (bytes):", maxTxCount * fixedSizeKB * 1024);
 
         vm.stopPrank();
-        return lastSuccessful;
     }
 
     // Generate payload efficiently
