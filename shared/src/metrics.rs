@@ -3,7 +3,7 @@ use axum::{
     body::Body,
     extract::State,
     http::{header::CONTENT_TYPE, StatusCode},
-    response::Response,
+    response::{IntoResponse, Json, Response},
     routing::get,
     Router,
 };
@@ -20,7 +20,10 @@ pub struct MetricsState {
 /// Starts a metrics server on the specified port, serving Prometheus-compatible metrics.
 pub async fn start_metrics(metrics_state: MetricsState, port: u16) -> tokio::task::JoinHandle<()> {
     let state = Arc::new(RwLock::new(metrics_state));
-    let router = Router::new().route("/metrics", get(metrics_handler)).with_state(state);
+    let router = Router::new()
+        .route("/metrics", get(metrics_handler))
+        .route("/health", get(health_handler))
+        .with_state(state);
 
     let listener = match tokio::net::TcpListener::bind(format!("0.0.0.0:{}", port)).await {
         Ok(listener) => listener,
@@ -54,4 +57,8 @@ async fn metrics_handler(
         .header(CONTENT_TYPE, "text/plain; version=1.0.0; charset=utf-8")
         .body(Body::from(buffer))
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
+}
+
+async fn health_handler() -> impl IntoResponse {
+    Json(serde_json::json!({ "health": true }))
 }

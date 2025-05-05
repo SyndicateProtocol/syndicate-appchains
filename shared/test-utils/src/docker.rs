@@ -69,7 +69,7 @@ impl Drop for Docker {
 
 pub async fn start_component(
     executable_name: &str,
-    metrics_port: u16,
+    health_port: u16,
     args: Vec<String>,
     cargs: Vec<String>,
 ) -> Result<Docker> {
@@ -112,9 +112,8 @@ pub async fn start_component(
         if let Some(status) = docker.try_wait()? {
             panic!("{} exited with {}", executable_name, status);
         };
-        // TODO(SEQ-869): Use the health endpoint instead
         client
-            .get(format!("http://localhost:{metrics_port}/metrics"))
+            .get(format!("http://localhost:{health_port}/health"))
             .send()
             .await
             .is_ok_and(|x| x.status().is_success()),
