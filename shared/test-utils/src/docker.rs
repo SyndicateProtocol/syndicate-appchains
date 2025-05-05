@@ -107,23 +107,23 @@ pub async fn start_component(
             )
         }?;
 
+    health_check(executable_name, health_port, &mut docker).await;
+    Ok(docker)
+}
+
+pub async fn health_check(executable_name: &str, health_port: u16, docker: &mut Docker) {
     let client = Client::new();
     wait_until!(
         if let Some(status) = docker.try_wait()? {
             panic!("{} exited with {}", executable_name, status);
         };
-        health_check(&client, health_port).await,
+        client
+            .get(format!("http://localhost:{health_port}/health"))
+            .send()
+            .await
+            .is_ok_and(|x| x.status().is_success()),
         Duration::from_secs(5*60)  // give it time to download the image if necessary
     );
-    Ok(docker)
-}
-
-pub async fn health_check(client: &Client, health_port: u16) -> bool {
-    client
-        .get(format!("http://localhost:{health_port}/health"))
-        .send()
-        .await
-        .is_ok_and(|x| x.status().is_success())
 }
 
 pub async fn start_mchain(
@@ -134,8 +134,9 @@ pub async fn start_mchain(
     let temp = test_path("mchain");
     let port = PortManager::instance().next_port().await;
     let metric_port = PortManager::instance().next_port().await;
-    let docker = start_component(
-        "mchain",
+    let executable_name = "mchain";
+    let mut docker = start_component(
+        executable_name,
         metric_port,
         vec![
             "--chain-id".to_string(),
@@ -154,12 +155,7 @@ pub async fn start_mchain(
     .await?;
     let url = format!("http://localhost:{port}");
     let mchain = MProvider::new(&url)?;
-    let client = Client::new();
-    wait_until!(
-        ();
-        health_check(&client, port).await,
-        Duration::from_secs(5*60)  // give it time to download the image if necessary
-    );
+    health_check(executable_name, port, &mut docker).await;
     Ok((url, docker, mchain))
 }
 
