@@ -32,7 +32,7 @@ pub async fn run(config: &MetabasedConfig) -> Result<(), RuntimeError> {
     let mchain = MProvider::new(&config.block_builder.mchain_rpc_url)
         .map_err(|e| RuntimeError::InvalidConfig(format!("Invalid mchain rpc url: {}", e)))?;
 
-    assert_eq!(config.rollup_owner, Some(mchain.rollup_owner().await));
+    assert_eq!(config.appchain_owner, Some(mchain.rollup_owner().await));
 
     loop {
         let safe_state = mchain
