@@ -45,8 +45,11 @@ async fn main() -> eyre::Result<()> {
     tokio::spawn(start_metrics(metrics_state, cfg.metrics_port));
     let module =
         start_mchain(cfg.chain_id, cfg.chain_owner_address, cfg.finality_delay, db, metrics).await;
+    let http_middleware = RpcServiceBuilder::new()
+        .rpc_logger(1024)
+        .layer(ProxyGetRequestLayer::new("/health", "health")?);
     let handle = Server::builder()
-        .set_rpc_middleware(RpcServiceBuilder::new().rpc_logger(1024))
+        .set_rpc_middleware(http_middleware)
         .build(format!("0.0.0.0:{}", cfg.port))
         .await?
         .start(module);

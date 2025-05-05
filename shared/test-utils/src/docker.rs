@@ -112,14 +112,18 @@ pub async fn start_component(
         if let Some(status) = docker.try_wait()? {
             panic!("{} exited with {}", executable_name, status);
         };
-        client
-            .get(format!("http://localhost:{health_port}/health"))
-            .send()
-            .await
-            .is_ok_and(|x| x.status().is_success()),
+        health_check(&client, health_port).await,
         Duration::from_secs(5*60)  // give it time to download the image if necessary
     );
     Ok(docker)
+}
+
+pub async fn health_check(client: &Client, health_port: u16) -> bool {
+    client
+        .get(format!("http://localhost:{health_port}/health"))
+        .send()
+        .await
+        .is_ok_and(|x| x.status().is_success())
 }
 
 pub async fn start_mchain(
