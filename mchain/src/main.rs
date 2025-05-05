@@ -2,7 +2,7 @@
 
 use alloy::primitives::Address;
 use clap::Parser;
-use jsonrpsee::server::{RpcServiceBuilder, Server};
+use jsonrpsee::server::{middleware::http::ProxyGetRequestLayer, RpcServiceBuilder, Server};
 use mchain::{metrics::MchainMetrics, server::start_mchain};
 use rocksdb::DB;
 use shared::{
@@ -10,6 +10,7 @@ use shared::{
     metrics::{start_metrics, MetricsState},
 };
 use tokio::signal::unix::{signal, SignalKind};
+use tower::ServiceBuilder;
 
 /// CLI args for the mchain executable
 #[derive(Parser, Debug, Clone)]
@@ -45,11 +46,12 @@ async fn main() -> eyre::Result<()> {
     tokio::spawn(start_metrics(metrics_state, cfg.metrics_port));
     let module =
         start_mchain(cfg.chain_id, cfg.chain_owner_address, cfg.finality_delay, db, metrics).await;
-    let http_middleware = RpcServiceBuilder::new()
-        .rpc_logger(1024)
-        .layer(ProxyGetRequestLayer::new("/health", "health")?);
+    let http_middleware =
+        ServiceBuilder::new().layer(ProxyGetRequestLayer::new("/health", "health")?);
+    let rpc_middleware = RpcServiceBuilder::new().rpc_logger(1024);
     let handle = Server::builder()
-        .set_rpc_middleware(http_middleware)
+        .set_http_middleware(http_middleware)
+        .set_rpc_middleware(rpc_middleware)
         .build(format!("0.0.0.0:{}", cfg.port))
         .await?
         .start(module);

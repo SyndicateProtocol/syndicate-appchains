@@ -154,6 +154,12 @@ pub async fn start_mchain(
     .await?;
     let url = format!("http://localhost:{port}");
     let mchain = MProvider::new(&url)?;
+    let client = Client::new();
+    wait_until!(
+        ();
+        health_check(&client, port).await,
+        Duration::from_secs(5*60)  // give it time to download the image if necessary
+    );
     Ok((url, docker, mchain))
 }
 
