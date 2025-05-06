@@ -82,6 +82,13 @@ ENTRYPOINT ["/usr/local/bin/mchain"]
 EXPOSE 8545 8546
 LABEL service=mchain
 
+FROM runtime-base AS chain-ingestor
+ARG BUILD_PROFILE
+COPY --from=build /app/target/${BUILD_PROFILE}/chain-ingestor /usr/local/bin/chain-ingestor
+ENTRYPOINT ["/usr/local/bin/chain-ingestor"]
+EXPOSE 8545 8546
+LABEL service=chain-ingestor
+
 # --------- Debugging image for translator ---------
 FROM ubuntu:22.04 AS metabased-translator-debug
 ARG BUILD_PROFILE

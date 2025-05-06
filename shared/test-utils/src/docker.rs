@@ -174,8 +174,8 @@ pub async fn launch_nitro_node(
             .arg(format!("offchainlabs/nitro-node:{tag}"))
             .arg(format!("--parent-chain.connection.url={mchain_url}"))
             .arg("--node.dangerous.disable-blob-reader")
-            // TODO: remove this polling interval once the ws feed is working properly.
-            .arg("--node.inbox-reader.check-delay=50ms")
+            .arg("--node.inbox-reader.check-delay=100ms")
+            .arg("--node.parent-chain-reader.poll-interval=100ms")
             .arg("--node.staker.enable=false")
             .arg("--ensure-rollup-deployment=false")
             .arg(format!(

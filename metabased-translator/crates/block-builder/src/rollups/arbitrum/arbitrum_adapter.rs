@@ -12,7 +12,7 @@ use crate::{
     },
 };
 use alloy::{
-    primitives::{Address, Bytes, FixedBytes, U256},
+    primitives::{Address, Bytes, FixedBytes, Log, U256},
     sol_types::SolEvent,
 };
 use common::types::EMPTY_BATCH;
@@ -24,10 +24,7 @@ use contract_bindings::arbitrum::{
 };
 use eyre::Result;
 use mchain::db::DelayedMessage;
-use shared::{
-    tx_validation::validate_transaction,
-    types::{PartialBlock, PartialLog},
-};
+use shared::{tx_validation::validate_transaction, types::PartialBlock};
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 use tracing::{debug, error, info, trace};
@@ -157,17 +154,17 @@ impl RollupAdapter for ArbitrumAdapter {
         let mut message_data: HashMap<U256, Option<Bytes>> = HashMap::new();
         // Process all bridge logs in all receipts
         let delayed_messages = block.logs.iter().filter(|log| {
-            log.address == self.bridge_address && log.topics[0] == MSG_DELIVERED_EVENT_HASH
+            log.address == self.bridge_address && log.topics()[0] == MSG_DELIVERED_EVENT_HASH
         });
 
         // Process all inbox logs in all receipts
         block.logs.iter().filter(|log| log.address == self.inbox_address).for_each(|log| {
-            match log.topics[0] {
+            match log.topics()[0] {
                 INBOX_MSG_DELIVERED_EVENT_HASH => {
-                    let message_num = U256::from_be_slice(log.topics[1].as_slice());
+                    let message_num = U256::from_be_slice(log.topics()[1].as_slice());
 
                     // Decode the event using the contract bindings
-                    match InboxMessageDelivered::abi_decode_data(&log.data, true) {
+                    match InboxMessageDelivered::abi_decode_data(&log.data.data, true) {
                         Ok(decoded) => {
                             message_data.insert(message_num, Some(decoded.0));
                         }
@@ -185,7 +182,7 @@ impl RollupAdapter for ArbitrumAdapter {
 
                 INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH => {
                     error!("ignoring unsupporting inbox message delivered from origin");
-                    let message_num = U256::from_be_slice(log.topics[1].as_slice());
+                    let message_num = U256::from_be_slice(log.topics()[1].as_slice());
                     message_data.insert(message_num, None);
                 }
                 _ => {}
@@ -264,10 +261,10 @@ impl ArbitrumAdapter {
 
     fn delayed_message_to_mchain_txn(
         &self,
-        log: &PartialLog,
+        log: &Log,
         message_data: &HashMap<U256, Option<Bytes>>,
     ) -> Result<DelayedMessage, ArbitrumBlockBuilderError> {
-        let msg = MessageDelivered::decode_raw_log(&log.topics, &log.data, true)
+        let msg = MessageDelivered::decode_raw_log(log.topics(), &log.data.data, true)
             .map_err(|e| ArbitrumBlockBuilderError::DecodingError("MessageDelivered", e.into()))?;
 
         let kind = L1MessageType::from_u8_panic(msg.kind);
@@ -421,16 +418,15 @@ mod tests {
         };
 
         // Create the log
-        let log = PartialLog {
-            address: builder.bridge_address,
-            topics: vec![
+        let log = Log::new_unchecked(
+            builder.bridge_address,
+            vec![
                 MSG_DELIVERED_EVENT_HASH,
                 FixedBytes::from(message_index.to_be_bytes::<32>()),
                 FixedBytes::from([1u8; 32]),
             ],
-            data: msg_delivered.encode_data().into(),
-            ..Default::default()
-        };
+            msg_delivered.encode_data().into(),
+        );
 
         // Call the function
         let result = builder.delayed_message_to_mchain_txn(&log, &message_map);
@@ -467,16 +463,15 @@ mod tests {
             timestamp: 0u64,
         };
 
-        let log = PartialLog {
-            address: builder.bridge_address,
-            topics: vec![
+        let log = Log::new_unchecked(
+            builder.bridge_address,
+            vec![
                 MSG_DELIVERED_EVENT_HASH,
                 FixedBytes::from(message_index.to_be_bytes::<32>()),
                 FixedBytes::from([1u8; 32]),
             ],
-            data: msg_delivered.encode_data().into(),
-            ..Default::default()
-        };
+            msg_delivered.encode_data().into(),
+        );
 
         // Empty message data map
         let message_map = HashMap::new();
@@ -493,12 +488,11 @@ mod tests {
         let message_map = HashMap::new();
 
         // Create log with invalid event data
-        let log = PartialLog {
-            address: builder.bridge_address,
-            topics: vec![MSG_DELIVERED_EVENT_HASH],
-            data: Bytes::from(vec![1, 2, 3]), // Invalid data that can't be decoded
-            ..Default::default()
-        };
+        let log = Log::new_unchecked(
+            builder.bridge_address,
+            vec![MSG_DELIVERED_EVENT_HASH],
+            Bytes::from(vec![1, 2, 3]), // Invalid data that can't be decoded
+        );
 
         // Call should fail with DecodingError
         let result = builder.delayed_message_to_mchain_txn(&log, &message_map);
@@ -532,16 +526,15 @@ mod tests {
         };
 
         // Create the log
-        let log = PartialLog {
-            address: builder.bridge_address,
-            topics: vec![
+        let log = Log::new_unchecked(
+            builder.bridge_address,
+            vec![
                 MSG_DELIVERED_EVENT_HASH,
                 FixedBytes::from(message_index.to_be_bytes::<32>()),
                 FixedBytes::from([1u8; 32]),
             ],
-            data: msg_delivered.encode_data().into(),
-            ..Default::default()
-        };
+            msg_delivered.encode_data().into(),
+        );
 
         // Call the function
         let result = builder.delayed_message_to_mchain_txn(&log, &message_map);
@@ -575,16 +568,15 @@ mod tests {
         };
 
         // Create the log
-        let log = PartialLog {
-            address: builder.bridge_address,
-            topics: vec![
+        let log = Log::new_unchecked(
+            builder.bridge_address,
+            vec![
                 MSG_DELIVERED_EVENT_HASH,
                 FixedBytes::from(message_index.to_be_bytes::<32>()),
                 FixedBytes::from([1u8; 32]),
             ],
-            data: msg_delivered.encode_data().into(),
-            ..Default::default()
-        };
+            msg_delivered.encode_data().into(),
+        );
 
         let result = builder.delayed_message_to_mchain_txn(&log, &message_map);
         assert!(result.is_ok());

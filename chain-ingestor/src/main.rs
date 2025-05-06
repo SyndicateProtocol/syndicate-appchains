@@ -9,7 +9,8 @@ use shared::{
     metrics::{start_metrics, MetricsState},
 };
 use std::time::Duration;
-use tracing::error;
+use tokio::signal::unix::{signal, SignalKind};
+use tracing::{error, info};
 
 /// CLI args for the chain ingestor executable
 #[derive(Parser, Debug, Clone)]
@@ -23,9 +24,9 @@ struct Config {
     db_file: String,
     #[arg(long, env = "START_BLOCK")]
     start_block: u64,
-    #[arg(long, env = "BUFFER_SIZE", default_value_t = 1000)]
-    buffer_size: u64,
-    #[arg(long, env = "PARALLEL_SYNC_REQUESTS", default_value_t = 100)]
+    #[arg(long, env = "CHANNEL_SIZE", default_value_t = 1024)]
+    channel_size: usize,
+    #[arg(long, env = "PARALLEL_SYNC_REQUESTS", default_value_t = 190)]
     parallel_sync_requests: u64,
     #[arg(long, env = "PORT", default_value_t = 8545)]
     port: u16,
@@ -38,12 +39,11 @@ struct Config {
         value_parser = parse_duration
     )]
     request_timeout: Duration,
-    #[arg(long, env = "GET_LOGS_TIMEOUT", default_value = "300s", value_parser = parse_duration)]
-    get_logs_timeout: Duration,
 }
 
 async fn new_provider(cfg: &Config) -> EthClient {
-    EthClient::new(&cfg.rpc_url, cfg.request_timeout, cfg.get_logs_timeout).await
+    EthClient::new(&cfg.rpc_url, cfg.request_timeout, Duration::from_secs(300), cfg.channel_size)
+        .await
 }
 
 #[tokio::main]
@@ -53,26 +53,46 @@ async fn main() {
 
     let cfg = Config::parse();
     let mut provider = new_provider(&cfg).await;
+    let mut metrics_state = MetricsState::default();
+    let metrics = ChainIngestorMetrics::new(&mut metrics_state.registry);
     let (module, ctx) = server::start(
         provider.clone(),
         &cfg.rpc_url,
         &cfg.db_file,
         cfg.start_block,
         cfg.parallel_sync_requests,
+        &metrics,
     )
     .await
     .unwrap();
+
+    info!("starting chain-ingestor server on {}", cfg.port);
     let _handle = Server::builder()
         .ws_only()
         .build(format!("0.0.0.0:{}", cfg.port))
         .await
         .unwrap()
         .start(module);
-    let mut metrics_state = MetricsState::default();
-    let metrics = ChainIngestorMetrics::new(&mut metrics_state.registry);
+
+    #[allow(clippy::expect_used)]
+    let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
+    #[allow(clippy::expect_used)]
+    let mut sigterm = signal(SignalKind::terminate()).expect("Failed to register SIGTERM handler");
+    tokio::spawn(async move {
+        tokio::select! {
+            _ = sigint.recv() => {
+                info!("Received SIGINT (Ctrl+C), initiating shutdown...");
+            }
+            _ = sigterm.recv() => {
+                info!("Received SIGTERM, initiating shutdown...");
+            }
+        };
+        std::process::exit(0);
+    });
+
     tokio::spawn(start_metrics(metrics_state, cfg.metrics_port));
     loop {
-        if let Err(err) = ingestor::run(&ctx, &provider, cfg.buffer_size, &metrics).await {
+        if let Err(err) = ingestor::run(&ctx, &provider, &metrics).await {
             error!("ingestor failed: {}", err);
             // manually recreate the ws connection just in case.
             // the old connection still exists & will keep retrying endlessly.

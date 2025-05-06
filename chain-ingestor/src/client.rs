@@ -1,7 +1,12 @@
 //! Client
 
-use alloy::primitives::Address;
-use eyre::{eyre, OptionExt};
+use crate::{db::ITEM_SIZE, eth_client::EthClient};
+use alloy::{
+    eips::BlockNumberOrTag,
+    primitives::{Address, Bytes, B256},
+    rpc::types::Filter,
+};
+use eyre::{eyre, OptionExt as _};
 use futures_util::{
     stream::{Peekable, ReadyChunks},
     FutureExt, Stream, StreamExt as _,
@@ -17,8 +22,13 @@ use jsonrpsee::{
 };
 use serde::de::DeserializeOwned;
 use shared::types::{BlockBuilder, BlockRef, GetBlockRef, PartialBlock};
-use std::{collections::VecDeque, pin::Pin, sync::Arc, time::Duration};
-use tracing::error;
+use std::{
+    collections::{HashSet, VecDeque},
+    pin::Pin,
+    sync::Arc,
+    time::Duration,
+};
+use tracing::{error, info};
 
 /// handles reorgs & builds blocks
 #[derive(Debug)]
@@ -31,6 +41,7 @@ pub struct BlockStream<
     buffer: VecDeque<Block>,
     block_builder: Arc<B>,
     index: u64,
+    init_data: Option<(String, Vec<Address>)>,
 }
 
 #[async_trait]
@@ -40,6 +51,116 @@ pub trait BlockStreamT<Block> {
     async fn recv_blocks(&mut self, timestamp: u64) -> eyre::Result<Vec<Block>>;
 }
 
+async fn build_partial_blocks(
+    start_block: u64,
+    data: &Bytes,
+    ws_url: &str,
+    addrs: Vec<Address>,
+) -> eyre::Result<Vec<PartialBlock>> {
+    assert!(data.len() as u64 % ITEM_SIZE == 0 && data.len() > 0);
+    let count = data.len() as u64 / ITEM_SIZE - 1;
+    let mut blocks = Vec::default();
+    if count == 0 {
+        return Ok(blocks);
+    }
+    let mut parent_hash = B256::from_slice(data[4..ITEM_SIZE as usize].into());
+    for i in start_block..start_block + count {
+        let offset = ((i + 1 - start_block) * ITEM_SIZE) as usize;
+        let hash = B256::from_slice(data[offset + 4..offset + ITEM_SIZE as usize].into());
+        blocks.push(PartialBlock {
+            block_ref: BlockRef {
+                number: i,
+                timestamp: u32::from_be_bytes(data[offset..offset + 4].try_into().unwrap()) as u64,
+                hash,
+            },
+            parent_hash,
+            logs: Default::default(),
+        });
+        parent_hash = hash;
+    }
+    let client =
+        EthClient::new(ws_url, Duration::from_secs(10), Duration::from_secs(300), 1024).await;
+
+    let end_block = start_block + count - 1;
+
+    let mut safe_block = client.get_block_header(BlockNumberOrTag::Safe).await.number;
+    if safe_block < start_block {
+        safe_block = start_block - 1;
+    }
+
+    info!("fetching partial logs from {} to {}", start_block, end_block);
+    let mut logs = client
+        .get_logs(&Filter::new().address(addrs.clone()).from_block(start_block).to_block(end_block))
+        .await?;
+
+    if let Some(log) = logs.last() {
+        let block_number = log.block_number.unwrap();
+        if log.block_hash.unwrap() != blocks[(block_number - start_block) as usize].block_ref.hash {
+            return Err(eyre!(
+                "reorg detected: block {}, {} != {}",
+                log.block_number.unwrap(),
+                log.block_hash.unwrap(),
+                blocks[(block_number - start_block) as usize].block_ref.hash
+            ));
+        }
+        if block_number > safe_block {
+            safe_block = block_number;
+        }
+    }
+
+    if safe_block < end_block {
+        // fetch all logs for unsafe blocks -> makes it more likely that a log is included which
+        // contains block hash info with it.
+        info!("fetching full logs from {} to {}", safe_block + 1, end_block);
+        let mut unsafe_logs =
+            client.get_logs(&Filter::new().from_block(safe_block + 1).to_block(end_block)).await?;
+
+        if let Some(log) = unsafe_logs.last() {
+            safe_block = log.block_number.unwrap();
+            if log.block_hash.unwrap() != blocks[(safe_block - start_block) as usize].block_ref.hash
+            {
+                return Err(eyre!(
+                    "reorg detected: block {}, {} != {}",
+                    safe_block,
+                    log.block_hash.unwrap(),
+                    blocks[(safe_block - start_block) as usize].block_ref.hash
+                ));
+            }
+            let mut addr_set = HashSet::new();
+            for addr in &addrs {
+                addr_set.insert(addr);
+            }
+            unsafe_logs.retain(|x| addr_set.contains(&x.address()));
+            logs.append(&mut unsafe_logs);
+        }
+
+        // for blocks without any logs, refetch by block hash
+        // to make sure the block hash matches
+        for i in safe_block + 1..end_block + 1 {
+            info!("fetching logs for block {} of {}", i, end_block);
+            let mut block_logs = client
+                .get_logs(
+                    &Filter::new()
+                        .address(addrs.clone())
+                        .at_block_hash(blocks[(i - start_block) as usize].block_ref.hash),
+                )
+                .await?;
+            logs.append(&mut block_logs);
+        }
+    }
+
+    for log in logs {
+        assert_eq!(log.removed, false);
+        assert_eq!(
+            log.block_hash,
+            Some(blocks[(log.block_number.unwrap() - start_block) as usize].block_ref.hash)
+        );
+        blocks[(log.block_number.unwrap() - start_block) as usize].logs.push(log.into_inner());
+    }
+
+    Ok(blocks)
+}
+
 #[allow(missing_docs)]
 impl<
         S: Stream<Item = Result<PartialBlock, serde_json::Error>> + 'static,
@@ -47,18 +168,37 @@ impl<
         B: BlockBuilder<Block>,
     > BlockStream<S, Block, B>
 {
-    fn new(stream: S, block_builder: Arc<B>, start_block: u64) -> Self {
+    fn new(
+        stream: S,
+        block_builder: Arc<B>,
+        start_block: u64,
+        init_data: (String, Vec<Address>),
+    ) -> Self {
         Self {
             stream: Box::pin(stream.ready_chunks(1024).peekable()),
             block_builder,
             buffer: Default::default(),
             index: start_block,
+            init_data: Some(init_data),
         }
     }
     async fn recv(&mut self, timestamp: Option<u64>) -> eyre::Result<Vec<Block>> {
         let mut blocks = vec![];
-        if self.stream.as_mut().peek().now_or_never().is_some() {
+        let init_data = self.init_data.take();
+        if init_data.is_some() || self.stream.as_mut().peek().now_or_never().is_some() {
             blocks = self.stream.next().await.ok_or_eyre("stream closed")?;
+            if let Some((ws_url, addrs)) = init_data {
+                blocks.rotate_left(1);
+                let init = blocks.pop().unwrap()?;
+                let mut partials: Vec<_> =
+                    build_partial_blocks(self.index, &init.logs[0].data.data, &ws_url, addrs)
+                        .await?
+                        .into_iter()
+                        .map(Ok)
+                        .collect();
+                partials.append(&mut blocks);
+                blocks = partials;
+            }
         }
         loop {
             for partial_block in blocks {
@@ -171,15 +311,17 @@ pub trait Provider: Sync {
         >,
         ClientError,
     > {
+        let ws_url = self.get_url().await?;
         Ok(BlockStream::new(
             self.subscribe::<_, PartialBlock>(
                 "subscribe_blocks",
-                (start_block, addresses),
+                (start_block, addresses.clone()),
                 "unsubscribe_blocks",
             )
             .await?,
             block_builder,
             start_block,
+            (ws_url, addresses),
         ))
     }
 }
@@ -194,7 +336,11 @@ impl IngestorProvider {
         loop {
             match tokio::time::timeout(
                 timeout,
-                WsClientBuilder::new().request_timeout(timeout).build(url),
+                WsClientBuilder::new()
+                    .max_response_size(u32::MAX)
+                    .max_buffer_capacity_per_subscription(1024)
+                    .request_timeout(timeout)
+                    .build(url),
             )
             .await
             {

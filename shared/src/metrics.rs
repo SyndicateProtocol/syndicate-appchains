@@ -9,6 +9,7 @@ use axum::{
 };
 use prometheus_client::{encoding::text::encode, registry::Registry};
 use std::sync::Arc;
+use tracing::info;
 /// Structure holding the global metrics state, including the Prometheus registry.
 #[derive(Debug, Default)]
 pub struct MetricsState {
@@ -18,6 +19,7 @@ pub struct MetricsState {
 
 /// Starts a metrics server on the specified port, serving Prometheus-compatible metrics.
 pub async fn start_metrics(metrics_state: MetricsState, port: u16) -> tokio::task::JoinHandle<()> {
+    info!("starting metrics on port {}", port);
     let state = Arc::new(metrics_state);
     let router = Router::new().route("/metrics", get(metrics_handler)).with_state(state);
 

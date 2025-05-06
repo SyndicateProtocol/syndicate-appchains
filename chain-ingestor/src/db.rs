@@ -1,12 +1,17 @@
 //! Db
-use alloy::primitives::B256;
+use crate::metrics::ChainIngestorMetrics;
+use alloy::{
+    primitives::{Bytes, B256},
+    rpc::types::Header,
+};
 use fs2::FileExt as _;
+use shared::types::BlockRef;
 use std::{
     fs::{File, OpenOptions},
     io::Write,
     os::unix::fs::{FileExt, MetadataExt as _},
 };
-use tracing::{debug, info, trace, warn};
+use tracing::{debug, info, warn};
 
 #[derive(Debug)]
 #[allow(missing_docs)]
@@ -16,12 +21,11 @@ pub struct DB {
     pub count: u64,
 }
 
-// 4 bytes for the block timestamp + 32 bytes for the block hash
-//
-// The first item is the header - this contains the version byte followed by the
-// start block number (u64) followed by the chain id (u64).
-// The remaining 19 bytes are empty and reserved for custom metadata.
-const ITEM_SIZE: u64 = 36;
+/// 4 bytes for the block timestamp + 32 bytes for the block hash
+/// The first item is the header - this contains the version byte followed by the
+/// start block number (u64) followed by the chain id (u64).
+/// The remaining 19 bytes are empty and reserved for custom metadata.
+pub const ITEM_SIZE: u64 = 36;
 
 #[allow(missing_docs)]
 impl DB {
@@ -57,30 +61,69 @@ impl DB {
         let count = size / ITEM_SIZE - 1;
         Ok(DB { file, start_block: db_start_block, count })
     }
-    pub fn add_block(&mut self, ts: u32, hash: B256) {
+
+    pub fn get_block(&self, block: u64) -> BlockRef {
+        assert!(self.in_range(block));
+        let mut data = [0; ITEM_SIZE as usize];
+        self.file.read_exact_at(&mut data, (block - self.start_block + 1) * ITEM_SIZE).unwrap();
+        BlockRef {
+            number: block,
+            timestamp: u32::from_be_bytes(data[..4].try_into().unwrap()) as u64,
+            hash: B256::from_slice(data[4..].into()),
+        }
+    }
+
+    pub fn get_block_bytes(&self, from: u64) -> Bytes {
+        assert!(self.in_range(from));
+        let mut data = Vec::new();
+        data.resize(((self.next_block() - from) * ITEM_SIZE) as usize, 0);
+        self.file.read_exact_at(&mut data, (from - self.start_block + 1) * ITEM_SIZE).unwrap();
+        data.into()
+    }
+
+    fn add_block(&mut self, ts: u32, hash: B256) {
         debug!("adding block {}: ts={}, hash={}", self.next_block(), ts, hash);
         self.file.write_all(&[ts.to_be_bytes().as_slice(), hash.as_slice()].concat()).unwrap();
         self.count += 1;
     }
-    pub fn get_block(&self, block: u64) -> Option<(u32, B256)> {
-        trace!("getting block {}", block);
-        if block < self.start_block || block >= self.next_block() {
-            return None
-        }
-        let mut data = [0; ITEM_SIZE as usize];
-        self.file.read_exact_at(&mut data, (block - self.start_block + 1) * ITEM_SIZE).unwrap();
-        Some((
-            u32::from_be_bytes(data[..4].try_into().unwrap()),
-            B256::from_slice(data[4..].try_into().unwrap()),
-        ))
-    }
-    pub fn reorg_block(&mut self, next: u64) {
+
+    fn reorg_block(&mut self, next: u64) {
         warn!("reorging next block from {} to {}", self.next_block(), next);
-        assert!(next >= self.start_block && next < self.next_block());
+        assert!(self.in_range(next));
         self.count = next - self.start_block;
         self.file.set_len((self.count + 1) * ITEM_SIZE).unwrap();
     }
+
+    /// returns true if a reorg occurred and false otherwise
+    pub fn update_block(&mut self, header: &Header, metrics: &ChainIngestorMetrics) -> bool {
+        let next_block = self.next_block();
+        if header.number == next_block {
+            if self.count > 0 {
+                let prev = self.get_block(header.number - 1);
+                if header.parent_hash != prev.hash {
+                    self.reorg_block(prev.number);
+                    metrics.record_reorg(next_block - prev.number);
+                    return true;
+                }
+            }
+            self.add_block(header.timestamp as u32, header.hash);
+            metrics.record_block(header.number, header.timestamp);
+        } else {
+            let block = self.get_block(header.number);
+            if block.hash != header.hash {
+                self.reorg_block(header.number);
+                metrics.record_reorg(next_block - header.number);
+                return true;
+            }
+        }
+        false
+    }
+
     pub fn next_block(&self) -> u64 {
         self.start_block + self.count
+    }
+
+    pub fn in_range(&self, block: u64) -> bool {
+        return block >= self.start_block && block < self.next_block();
     }
 }

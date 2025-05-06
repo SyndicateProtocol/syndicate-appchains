@@ -4,12 +4,12 @@
 //! sequencing transactions are captured and parsed.
 
 use alloy::{
-    primitives::{keccak256, Address, Bytes, LogData},
+    primitives::{keccak256, Address, Bytes, Log},
     sol_types::SolEvent,
 };
 use common::compression::{get_compression_type, CompressionType};
 use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain::TransactionProcessed;
-use shared::{types::PartialLog, zlib_compression::decompress_transactions};
+use shared::zlib_compression::decompress_transactions;
 use thiserror::Error;
 use tracing::error;
 
@@ -59,10 +59,10 @@ impl SequencingTransactionParser {
     }
 
     /// Checks if a log is a `TransactionProcessed` event
-    pub fn is_log_transaction_processed(&self, eth_log: PartialLog) -> bool {
+    pub fn is_log_transaction_processed(&self, eth_log: &Log) -> bool {
         eth_log.address == self.sequencing_contract_address &&
             eth_log
-                .topics
+                .topics()
                 .first()
                 .is_some_and(|t| *t == keccak256(TransactionProcessed::SIGNATURE.as_bytes()))
     }
@@ -96,13 +96,12 @@ impl SequencingTransactionParser {
     /// Decodes the event data into a vector of transactions
     pub fn get_event_transactions(
         &self,
-        eth_log: &PartialLog,
+        eth_log: &Log,
     ) -> Result<Vec<Bytes>, SequencingParserError> {
-        if !self.is_log_transaction_processed(eth_log.clone()) {
+        if !self.is_log_transaction_processed(eth_log) {
             return Err(SequencingParserError::InvalidLogEvent);
         }
-        let log_data = LogData::new_unchecked(eth_log.topics.clone(), eth_log.data.clone());
-        let decoded_event = TransactionProcessed::decode_log_data(&log_data, true)
+        let decoded_event = TransactionProcessed::decode_log_data(&eth_log.data, true)
             .map_err(|_e| SequencingParserError::DynSolEventCreation)?;
 
         // Decode the transactions
@@ -123,7 +122,7 @@ mod tests {
     );
     const DUMMY_TXN_VALUE: &[u8] = &hex!("02");
 
-    fn generate_valid_test_log(contract_address: Address) -> PartialLog {
+    fn generate_valid_test_log(contract_address: Address) -> Log {
         let topics = vec![
             keccak256("TransactionProcessed(address,bytes)".as_bytes()),
             B256::from_slice(
@@ -132,12 +131,7 @@ mod tests {
             ),
         ];
 
-        PartialLog {
-            address: contract_address,
-            data: Bytes::from(DUMMY_ENCODED_DATA),
-            topics,
-            ..Default::default()
-        }
+        Log::new_unchecked(contract_address, topics, Bytes::from(DUMMY_ENCODED_DATA))
     }
 
     #[tokio::test]
@@ -158,13 +152,13 @@ mod tests {
 
         let log = generate_valid_test_log(contract_address);
 
-        assert!(parser.is_log_transaction_processed(log));
+        assert!(parser.is_log_transaction_processed(&log));
 
         let unrelated_contract_address: Address =
             "0x110000000000000000000000000000000000abcd".parse().unwrap();
         let unrelated_log = generate_valid_test_log(unrelated_contract_address);
 
-        assert!(!parser.is_log_transaction_processed(unrelated_log));
+        assert!(!parser.is_log_transaction_processed(&unrelated_log));
     }
 
     #[tokio::test]

@@ -2,7 +2,7 @@
 
 use alloy::primitives::Address;
 use clap::Parser;
-use jsonrpsee::server::{RpcServiceBuilder, Server};
+use jsonrpsee::server::{RandomStringIdProvider, RpcServiceBuilder, Server};
 use mchain::{metrics::MchainMetrics, server::start_mchain};
 use rocksdb::DB;
 use shared::{
@@ -10,6 +10,7 @@ use shared::{
     metrics::{start_metrics, MetricsState},
 };
 use tokio::signal::unix::{signal, SignalKind};
+use tracing::info;
 
 /// CLI args for the mchain executable
 #[derive(Parser, Debug, Clone)]
@@ -33,19 +34,21 @@ struct Config {
 }
 
 #[tokio::main]
-#[allow(clippy::redundant_pub_crate)]
 async fn main() -> eyre::Result<()> {
     // Initialize logging
-    set_global_default_subscriber()?;
+    set_global_default_subscriber().unwrap();
 
     let cfg = Config::parse();
+    info!("loading rockdb db {}", cfg.datadir);
     let db = DB::open_default(cfg.datadir)?;
     let mut metrics_state = MetricsState::default();
     let metrics = MchainMetrics::new(&mut metrics_state.registry);
+    info!("starting mchain server on port {}", cfg.port);
     let module =
         start_mchain(cfg.chain_id, cfg.chain_owner_address, cfg.finality_delay, db, metrics);
     let handle = Server::builder()
         .ws_only()
+        .set_id_provider(RandomStringIdProvider::new(64))
         .set_rpc_middleware(RpcServiceBuilder::new().rpc_logger(1024))
         .build(format!("0.0.0.0:{}", cfg.port))
         .await?

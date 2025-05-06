@@ -1,10 +1,12 @@
 //! Server
-use crate::{db::DB, eth_client::EthClient, ingestor::subscribe};
-use alloy::{eips::BlockNumberOrTag, primitives::Address, rpc::types::Filter};
-use jsonrpsee::{types::ErrorObjectOwned, RpcModule, SubscriptionSink};
-use shared::types::{BlockRef, PartialBlock, PartialLog};
+use crate::{db::DB, eth_client::EthClient, ingestor::subscribe, metrics::ChainIngestorMetrics};
+use alloy::{eips::BlockNumberOrTag, primitives::Address};
+use jsonrpsee::{
+    types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned},
+    RpcModule, SubscriptionSink,
+};
 use std::{
-    collections::VecDeque,
+    collections::{HashSet, VecDeque},
     sync::{Arc, Mutex},
 };
 use tokio::task::JoinHandle;
@@ -15,8 +17,7 @@ use tracing::{error, info};
 pub struct Context {
     pub provider: EthClient,
     pub db: DB,
-    pub buffer: VecDeque<PartialBlock>,
-    pub subs: Vec<SubscriptionSink>,
+    pub subs: Vec<(SubscriptionSink, HashSet<Address>)>,
 }
 
 struct BlockIngestor<'a> {
@@ -51,6 +52,7 @@ pub async fn start(
     db_name: &str,
     start_block: u64,
     parallel_sync_requests: u64,
+    metrics: &ChainIngestorMetrics,
 ) -> eyre::Result<(RpcModule<Mutex<Context>>, Arc<Mutex<Context>>)> {
     let mut db = DB::open(db_name, start_block, provider.get_chain_id().await)?;
 
@@ -58,96 +60,43 @@ pub async fn start(
     info!("checking for reorgs");
     while db.count > 0 {
         let block_num = db.next_block() - 1;
-        let hash = provider.get_block_header(BlockNumberOrTag::Number(block_num)).await.hash;
-        if hash != db.get_block(block_num).unwrap().1 {
-            db.reorg_block(block_num);
-        } else {
+        let header = provider.get_block_header(BlockNumberOrTag::Number(block_num)).await;
+        if !db.update_block(&header, metrics) {
             break;
         }
     }
 
     // sync to latest. crash if a reorg is detected (extremely unlikely)
     // repeat twice in case the first sync is slow and the latest block ends up being very outdated
+    let start_sync = db.next_block();
     for _ in 0..2 {
-        info!("syncing to latest block");
         let latest = provider.get_block_header(BlockNumberOrTag::Latest).await.number;
+        info!("syncing from {} to latest block {}", db.next_block(), latest);
         let mut ingestor =
             BlockIngestor::new(db.next_block(), latest, parallel_sync_requests, &provider);
-        let mut parent = (db.count > 0).then(|| db.get_block(db.next_block() - 1).unwrap().1);
-        loop {
-            if let Some(block) = ingestor.next().await {
-                if let Some(parent_hash) = parent {
-                    assert_eq!(block.parent_hash, parent_hash);
-                }
-                parent = Some(block.hash);
-                db.add_block(block.timestamp as u32, block.hash);
-                if block.number % 1000 == 0 {
-                    info!(
-                        "synced to block {} of {} ({} %)",
-                        block.number,
-                        latest,
-                        block.number as f32 * 100.0 / latest as f32
-                    )
-                }
-            } else {
+        while let Some(block) = ingestor.next().await {
+            if db.update_block(&block, metrics) {
+                error!("reorged during initial sync on block {:?}", block);
                 break;
             }
-        }
-    }
-
-    let mut buffer: VecDeque<PartialBlock> = Default::default();
-    let safe_block = provider.get_block_header(BlockNumberOrTag::Safe).await.number;
-
-    let end_block = db.next_block();
-    let mut start_block = db.start_block;
-    if end_block > start_block && end_block > safe_block {
-        if safe_block > start_block {
-            start_block = safe_block;
-        }
-        info!("populating buffer with {} blocks", end_block - start_block);
-
-        let logs = provider
-            .get_logs(&Filter::new().from_block(start_block).to_block(end_block - 1))
-            .await?;
-
-        let mut after_log_block = start_block;
-        if let Some(log) = logs.last() {
-            after_log_block = log.block_number.unwrap() + 1;
-            assert_eq!(log.block_hash.unwrap(), db.get_block(after_log_block - 1).unwrap().1);
-        }
-        for i in after_log_block..end_block {
-            let block_hash = db.get_block(i).unwrap().1;
-            let receipts = provider.get_block_receipts(i).await;
-            for receipt in receipts {
-                assert_eq!(receipt.block_number, i);
-                assert_eq!(receipt.block_hash, block_hash);
-                assert_eq!(receipt.logs.len(), 0);
+            if block.number % 10000 == 0 {
+                info!(
+                    "synced to block {} of {} ({} %)",
+                    block.number,
+                    latest,
+                    (block.number - start_sync) as f32 * 100.0 / (latest + 1 - start_sync) as f32
+                )
             }
         }
-
-        let block = provider.get_block_header(BlockNumberOrTag::Number(start_block)).await;
-        assert_eq!(block.hash, db.get_block(start_block).unwrap().1);
-        let mut parent_hash = block.parent_hash;
-        for i in start_block..end_block {
-            let block = db.get_block(i).unwrap();
-            buffer.push_back(PartialBlock {
-                block_ref: BlockRef { number: i, timestamp: block.0 as u64, hash: block.1 },
-                parent_hash,
-                logs: Default::default(),
-            });
-            parent_hash = block.1;
-        }
-
-        for log in logs {
-            buffer[(log.block_number.unwrap() - start_block) as usize]
-                .logs
-                .push(PartialLog::new(log));
-        }
     }
+    info!("synced to latest block");
 
-    let ctx = Arc::new(Mutex::new(Context { db, buffer, subs: Default::default(), provider }));
-
+    let ctx = Arc::new(Mutex::new(Context { db, subs: Default::default(), provider }));
     Ok((create_module(ctx.clone(), rpc_url.to_string()), ctx))
+}
+
+fn err(message: &'static str) -> ErrorObjectOwned {
+    ErrorObjectOwned::borrowed(INTERNAL_ERROR_CODE, message, None)
 }
 
 fn create_module(ctx: Arc<Mutex<Context>>, rpc_url: String) -> RpcModule<Mutex<Context>> {
@@ -164,22 +113,10 @@ fn create_module(ctx: Arc<Mutex<Context>>, rpc_url: String) -> RpcModule<Mutex<C
         .register_method("block", |p, ctx, _| {
             let (block_number,): (u64,) = p.parse()?;
             let data = ctx.lock().unwrap();
-            if let Some(start) = data.buffer.front() {
-                let start_block = start.block_ref.number;
-                if block_number >= start_block &&
-                    block_number < data.buffer.back().unwrap().block_ref.number
-                {
-                    let block =
-                        data.buffer[(block_number - start_block) as usize].block_ref.clone();
-                    assert_eq!(block.number, block_number);
-                    return Ok::<_, ErrorObjectOwned>(Some(block))
-                }
-            }
-            Ok(data.db.get_block(block_number).map(|(ts, hash)| BlockRef {
-                number: block_number,
-                timestamp: ts as u64,
-                hash,
-            }))
+            data.db
+                .in_range(block_number)
+                .then(|| data.db.get_block(block_number))
+                .ok_or_else(|| err("block out of range"))
         })
         .unwrap();
 
@@ -190,9 +127,11 @@ fn create_module(ctx: Arc<Mutex<Context>>, rpc_url: String) -> RpcModule<Mutex<C
             "unsubscribe_blocks",
             move |p, pending, ctx, _| async move {
                 let (start_block, addresses): (u64, Vec<Address>) = p.parse()?;
-                subscribe(pending.accept().await?, ctx.as_ref(), start_block, addresses)
-                    .await
-                    .inspect_err(|e| error!("ws connection error: {:?}", e))
+                let sink = pending.accept().await?;
+                subscribe(sink.clone(), ctx.as_ref(), start_block, addresses)
+                    .inspect_err(|e| error!("ws connection error: {:?}", e))?;
+                sink.closed().await;
+                Ok(())
             },
         )
         .unwrap();

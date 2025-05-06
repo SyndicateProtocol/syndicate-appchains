@@ -4,13 +4,13 @@ use alloy::{
     eips::BlockNumberOrTag,
     providers::{Provider as _, ProviderBuilder, RootProvider, WsConnect},
     pubsub::Subscription,
-    rpc::types::{Filter, Header, Log},
-    transports::{RpcError, TransportErrorKind},
+    rpc::types::{Filter, FilterBlockOption, Header},
+    transports::{ws::WebSocketConfig, RpcError, TransportErrorKind},
 };
 use shared::types::Receipt;
 use std::time::Duration;
 use tokio::time::timeout;
-use tracing::error;
+use tracing::{error, warn};
 
 /// A client for interacting with an Ethereum-like blockchain.
 ///
@@ -35,17 +35,27 @@ fn handle_rpc_error(name: &str, err: &RpcError<TransportErrorKind>) {
 
 impl EthClient {
     /// Creates a new `EthClient` instance. Infinitely retries until it is able to connect.
-    pub async fn new(rpc_url: &str, timeout: Duration, log_timeout: Duration) -> Self {
+    pub async fn new(
+        rpc_url: &str,
+        timeout: Duration,
+        log_timeout: Duration,
+        channel_size: usize,
+    ) -> Self {
         loop {
             match tokio::time::timeout(
                 timeout,
-                ProviderBuilder::default().on_ws(WsConnect::new(rpc_url)),
+                ProviderBuilder::default().on_ws(WsConnect::new(rpc_url).with_config(
+                    WebSocketConfig::default().max_message_size(None).max_frame_size(None),
+                )),
             )
             .await
             {
                 Err(_) => error!("timed out connecting to websocket"),
                 Ok(Err(err)) => handle_rpc_error("failed to connect to websocket", &err),
-                Ok(Ok(client)) => return Self { client, timeout, log_timeout },
+                Ok(Ok(client)) => {
+                    client.client().expect_pubsub_frontend().set_channel_size(channel_size);
+                    return Self { client, timeout, log_timeout }
+                }
             }
         }
     }
@@ -90,24 +100,6 @@ impl EthClient {
         }
     }
 
-    /// Get logs over the websocket connection with a timeout. Does not retry if the request fails.
-    pub async fn get_logs(
-        &self,
-        filter: &Filter,
-    ) -> Result<Vec<Log>, RpcError<TransportErrorKind>> {
-        match timeout(self.log_timeout, self.client.get_logs(filter)).await {
-            Err(_) => {
-                error!("eth_getLogs request timed out");
-                Err(TransportErrorKind::Custom("request timed out".into()).into())
-            }
-            Ok(Ok(x)) => Ok(x),
-            Ok(Err(err)) => {
-                handle_rpc_error("failed to get logs", &err);
-                Err(err)
-            }
-        }
-    }
-
     /// Subscribe to blocks over the websocket connection with a timeout. Infinitely retries until
     /// the request succeeds.
     pub async fn subscribe_blocks(&self) -> Subscription<Header> {
@@ -120,13 +112,62 @@ impl EthClient {
         }
     }
 
-    /// Get the chain id
+    /// Get the chain id. Infinitely retries until the request succeeds.
     pub async fn get_chain_id(&self) -> u64 {
         loop {
             match timeout(self.timeout, self.client.get_chain_id()).await {
                 Err(_) => error!("eth_chainId request timed out"),
                 Ok(Err(err)) => handle_rpc_error("failed to get chain id", &err),
                 Ok(Ok(chain_id)) => return chain_id,
+            }
+        }
+    }
+
+    /// Get logs, binary search version.
+    pub async fn get_logs(
+        &self,
+        filter: &Filter,
+    ) -> Result<Vec<alloy::rpc::types::Log>, RpcError<TransportErrorKind>> {
+        match timeout(self.log_timeout, self.client.get_logs(filter)).await {
+            Err(_) => {
+                error!("eth_getLogs request timed out: {:?}", filter);
+                Err(TransportErrorKind::Custom("request timed out".into()).into())
+            }
+            Ok(Ok(x)) => Ok(x),
+            Ok(Err(RpcError::ErrorResp(err))) => {
+                if let FilterBlockOption::Range {
+                    from_block: Some(BlockNumberOrTag::Number(from_block)),
+                    to_block: Some(BlockNumberOrTag::Number(to_block)),
+                } = filter.block_option
+                {
+                    if to_block - from_block > 0 {
+                        warn!(
+                            "retrying eth_getLogs with range ({} to {}) split in half: {}",
+                            from_block, to_block, err
+                        );
+                        let mid = (from_block + to_block) / 2;
+                        return Ok([
+                            Box::pin(
+                                self.get_logs(&filter.clone().from_block(from_block).to_block(mid)),
+                            )
+                            .await?,
+                            Box::pin(
+                                self.get_logs(
+                                    &filter.clone().from_block(mid + 1).to_block(to_block),
+                                ),
+                            )
+                            .await?,
+                        ]
+                        .concat())
+                    }
+                }
+
+                error!("failed to get logs ({:?}): {}", filter, err);
+                Err(RpcError::ErrorResp(err))
+            }
+            Ok(Err(err)) => {
+                handle_rpc_error("failed to get logs", &err);
+                Err(err)
             }
         }
     }

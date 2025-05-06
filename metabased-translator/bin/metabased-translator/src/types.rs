@@ -16,7 +16,7 @@ pub enum RuntimeError {
     #[error("Task unrecoverable error: {0}")]
     TaskFailedUnrecoverable(String),
 
-    #[error("Invalid config")]
+    #[error("Invalid config: {0}")]
     InvalidConfig(String),
 
     #[error(transparent)]
