@@ -127,29 +127,48 @@ pub async fn health_check(executable_name: &str, health_port: u16, docker: &mut 
 }
 
 pub async fn start_mchain(
-    chain_id: u64,
-    chain_owner: Address,
+    appchain_chain_id: u64,
+    appchain_owner: Option<Address>,
+    config_manager_address: Option<Address>,
+    settlement_rpc_url: Option<&str>,
     finality_delay: u64,
 ) -> Result<(String, Docker, MProvider)> {
     let temp = test_path("mchain");
     let port = PortManager::instance().next_port().await;
     let metric_port = PortManager::instance().next_port().await;
-    let executable_name = "mchain";
-    let mut docker = start_component(
-        executable_name,
+
+    let mut args = vec![
+        "--appchain-chain-id".to_string(),
+        appchain_chain_id.to_string(),
+        "--port".to_string(),
+        port.to_string(),
+        "--metrics-port".to_string(),
+        metric_port.to_string(),
+        "--finality-delay".to_string(),
+        finality_delay.to_string(),
+    ];
+
+    match (appchain_owner, config_manager_address, settlement_rpc_url) {
+        (Some(owner), None, None) => {
+            args.extend(vec!["--appchain-owner".to_string(), owner.to_string()]);
+        }
+        (None, Some(config_manager_address), Some(settlement_rpc_url)) => {
+            args.extend(vec![
+                "--config-manager-address".to_string(),
+                config_manager_address.to_string(),
+                "--settlement-rpc-url".to_string(),
+                settlement_rpc_url.to_string(),
+            ]);
+        }
+        _ => {
+            return Err(eyre::eyre!("Invalid arguments"));
+        }
+    }
+
+    let docker = start_component(
+        "mchain",
         metric_port,
-        vec![
-            "--chain-id".to_string(),
-            chain_id.to_string(),
-            "--chain-owner-address".to_string(),
-            chain_owner.to_string(),
-            "--port".to_string(),
-            port.to_string(),
-            "--metrics-port".to_string(),
-            metric_port.to_string(),
-            "--finality-delay".to_string(),
-            finality_delay.to_string(),
-        ],
+        args,
         vec!["--datadir".to_string(), temp.to_string()],
     )
     .await?;

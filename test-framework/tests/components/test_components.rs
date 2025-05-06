@@ -230,11 +230,29 @@ impl TestComponents {
             options.rollup_owner = address!("0x0000000000000000000000000000000000000064");
         }
 
+        // Setup config manager and get chain config address
+        let appchain_block_explorer_url = "https://example.com/explorer".to_string();
+        let config_manager_address = setup_config_manager(
+            &set_provider,
+            &options,
+            sequencing_contract_address,
+            arbitrum_bridge_address,
+            arbitrum_inbox_address,
+            &sequencing_rpc_url,
+            &appchain_block_explorer_url,
+        )
+        .await?;
+
         info!("Starting components...");
         info!("Starting mchain...");
-        let (mchain_rpc_url, mchain, mchain_provider) =
-            start_mchain(options.appchain_chain_id, options.rollup_owner, options.finality_delay)
-                .await?;
+        let (mchain_rpc_url, mchain, mchain_provider) = start_mchain(
+            options.appchain_chain_id,
+            None,
+            Some(config_manager_address),
+            Some(&settlement_rpc_url),
+            options.finality_delay,
+        )
+        .await?;
 
         info!("Starting sequencer...");
         let sequencer_config = SequencerConfig {
@@ -249,19 +267,6 @@ impl TestComponents {
             sequencer_config.sequencer_port,
             sequencer_config.cli_args(),
             Default::default(),
-        )
-        .await?;
-
-        // Setup config manager and get chain config address
-        let appchain_block_explorer_url = "https://example.com/explorer".to_string();
-        let config_manager_address = setup_config_manager(
-            &set_provider,
-            &options,
-            sequencing_contract_address,
-            arbitrum_bridge_address,
-            arbitrum_inbox_address,
-            &sequencing_rpc_url,
-            &appchain_block_explorer_url,
         )
         .await?;
 

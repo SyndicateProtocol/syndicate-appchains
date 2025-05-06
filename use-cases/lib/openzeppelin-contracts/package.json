@@ -52,7 +52,7 @@
   "homepage": "https://openzeppelin.com/contracts/",
   "devDependencies": {
     "@changesets/changelog-github": "^0.5.0",
-    "@changesets/cli": "^2.26.0",
+    "@changesets/cli": "^2.29.2",
     "@changesets/pre": "^2.0.0",
     "@changesets/read": "^0.6.0",
     "@eslint/compat": "^1.2.1",
@@ -86,9 +86,9 @@
     "solhint": "^5.0.0",
     "solhint-plugin-openzeppelin": "file:scripts/solhint-custom",
     "solidity-ast": "^0.4.50",
-    "solidity-coverage": "^0.8.5",
+    "solidity-coverage": "^0.8.15",
     "solidity-docgen": "^0.6.0-beta.29",
-    "undici": "^7.0.0",
+    "undici": "^7.8.0",
     "yargs": "^17.0.0"
   },
   "lint-staged": {
