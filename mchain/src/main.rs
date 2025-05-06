@@ -33,8 +33,6 @@ struct Config {
     metrics_port: u16,
     #[arg(long, env = "APPCHAIN_CHAIN_ID")]
     appchain_chain_id: u64,
-    #[arg(long, env = "RPC_LOGGER")]
-    rpc_logger: Option<u64>,
     #[arg(long, env = "APPCHAIN_OWNER")]
     appchain_owner: Option<Address>,
     #[arg(long, env = "SETTLEMENT_RPC_URL")]
@@ -106,11 +104,7 @@ async fn main() -> eyre::Result<()> {
 
     let http_middleware =
         ServiceBuilder::new().layer(ProxyGetRequestLayer::new("/health", "health")?);
-    let rpc_middleware = if let Some(max_log_len) = cfg.rpc_logger {
-        RpcServiceBuilder::new().rpc_logger(max_log_len)
-    } else {
-        RpcServiceBuilder::new()
-    };
+    let rpc_middleware = RpcServiceBuilder::new().rpc_logger(1024);
     let handle = Server::builder()
         .set_http_middleware(http_middleware)
         .set_rpc_middleware(rpc_middleware)
