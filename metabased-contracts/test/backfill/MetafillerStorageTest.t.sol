@@ -8,39 +8,39 @@ contract MetafillerStorageTest is Test {
     address public manager;
     address public notManager;
     address public admin;
-    MetafillerStorage public l3Storage;
+    MetafillerStorage public appchainStorage;
 
     function setUp() public {
         manager = address(0x1);
         notManager = address(0x2);
         admin = address(0x3);
-        uint256 l3ChainId = 10042001;
-        l3Storage = new MetafillerStorage(admin, manager, l3ChainId);
+        uint256 appChainId = 10042001;
+        appchainStorage = new MetafillerStorage(admin, manager, appChainId);
     }
 
     function testOnlyManagerCanSave() public {
         vm.expectRevert();
         vm.prank(admin);
-        l3Storage.save(1, 0xd41f86be45e841b1791bf9ff78aa9c388d9c81384d8a063d480c71c7f8865502, "0x");
+        appchainStorage.save(1, 0xd41f86be45e841b1791bf9ff78aa9c388d9c81384d8a063d480c71c7f8865502, "0x");
     }
 
     function testOnlyManagerCanSetIndexFromBlock() public {
         vm.expectRevert();
         vm.prank(admin);
-        l3Storage.setIndexFromBlock(1);
+        appchainStorage.setIndexFromBlock(1);
     }
 
     function testManagerCanSetIndexFromBlock() public {
         vm.prank(manager);
-        l3Storage.setIndexFromBlock(1);
-        assertEq(l3Storage.indexFromBlock(), 1);
+        appchainStorage.setIndexFromBlock(1);
+        assertEq(appchainStorage.indexFromBlock(), 1);
     }
 
     // [Olympix Warning: tx.origin usage] Test removed as tx.origin check was removed for security
     // The MANAGER_ROLE provides sufficient authorization control
     function testOnlyOriginatorCanSave() public {
         vm.prank(manager);
-        l3Storage.save(1, 0x505f3a50f83559ab090dbd840556254a7248404f2dedb53b4f12b26748a8ec08, "0x");
+        appchainStorage.save(1, 0x505f3a50f83559ab090dbd840556254a7248404f2dedb53b4f12b26748a8ec08, "0x");
     }
 
     function testOnlyManagerCanSaveForMany() public {
@@ -55,7 +55,7 @@ contract MetafillerStorageTest is Test {
 
         vm.prank(admin);
         vm.expectRevert();
-        l3Storage.saveForMany(epochNumbers, epochHashes, batches);
+        appchainStorage.saveForMany(epochNumbers, epochHashes, batches);
     }
 
     function testSaveForManyRevertsIfArraysAreDifferentLengths() public {
@@ -71,7 +71,7 @@ contract MetafillerStorageTest is Test {
 
         vm.expectRevert();
         vm.prank(manager);
-        l3Storage.saveForMany(epochNumbers, epochHashes, batches);
+        appchainStorage.saveForMany(epochNumbers, epochHashes, batches);
     }
 
     function testSave() public {
@@ -86,7 +86,7 @@ contract MetafillerStorageTest is Test {
 
         // Call the save function
         vm.prank(manager, manager);
-        l3Storage.save(epochNumber, epochHash, batch);
+        appchainStorage.save(epochNumber, epochHash, batch);
     }
 
     function testSaveForMany() public {
@@ -112,13 +112,13 @@ contract MetafillerStorageTest is Test {
 
         // Call the saveForMany function
         vm.prank(manager, manager);
-        l3Storage.saveForMany(epochNumbers, epochHashes, batches);
+        appchainStorage.saveForMany(epochNumbers, epochHashes, batches);
     }
 
     function testGasEmptyEmit() public {
         uint256 gasStart = gasleft();
         vm.prank(manager, manager);
-        l3Storage.save(1, 0x351e92084d6040b02259b6f0aa89141a23f7c796909f7d81731e228a84529f92, "");
+        appchainStorage.save(1, 0x351e92084d6040b02259b6f0aa89141a23f7c796909f7d81731e228a84529f92, "");
         uint256 gasUsed = gasStart - gasleft();
         console.log("Gas used for empty emit:", gasUsed);
     }
@@ -139,9 +139,9 @@ contract MetafillerStorageTest is Test {
     }
 
     function testConstructorSetsCorrectValues() public view {
-        assertTrue(l3Storage.hasRole(l3Storage.DEFAULT_ADMIN_ROLE(), admin), "Admin role not set correctly");
-        assertTrue(l3Storage.hasRole(l3Storage.MANAGER_ROLE(), manager), "Manager role not set correctly");
-        assertEq(l3Storage.l3ChainId(), 10042001, "Chain ID not set correctly");
+        assertTrue(appchainStorage.hasRole(appchainStorage.DEFAULT_ADMIN_ROLE(), admin), "Admin role not set correctly");
+        assertTrue(appchainStorage.hasRole(appchainStorage.MANAGER_ROLE(), manager), "Manager role not set correctly");
+        assertEq(appchainStorage.appChainId(), 10042001, "Chain ID not set correctly");
     }
 
     function testGasForIncreasingBatchSizes() public {
@@ -159,7 +159,7 @@ contract MetafillerStorageTest is Test {
 
             uint256 gasStart = gasleft();
             vm.prank(manager);
-            try l3Storage.save(epochNumber, epochHash, batch) {
+            try appchainStorage.save(epochNumber, epochHash, batch) {
                 uint256 gasUsed = gasStart - gasleft();
                 console.log("Batch size:", batchSize, "Gas used:", gasUsed);
 

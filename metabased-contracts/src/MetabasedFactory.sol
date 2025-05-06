@@ -2,7 +2,6 @@
 pragma solidity 0.8.25;
 
 import {MetabasedSequencerChain} from "./MetabasedSequencerChain.sol";
-import {MetafillerStorage} from "./backfill/MetafillerStorage.sol";
 import {RequireAllModule} from "./requirement-modules/RequireAllModule.sol";
 import {RequireAnyModule} from "./requirement-modules/RequireAnyModule.sol";
 import {IRequirementModule} from "./interfaces/IRequirementModule.sol";
@@ -13,7 +12,7 @@ import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
 contract MetabasedFactory {
     /// @notice Emitted when a new MetabasedSequencerChain is created
     event MetabasedSequencerChainCreated(
-        uint256 indexed l3ChainId,
+        uint256 indexed appChainId,
         address indexed metabasedSequencerChainAddress,
         address indexed permissionModuleAddress
     );
@@ -22,11 +21,11 @@ contract MetabasedFactory {
     error ZeroValue();
 
     modifier zeroValuesChainAndTwoAddressesNotAllowed(
-        uint256 l3ChainId,
+        uint256 appChainId,
         address firstAddrCheck,
         address secondAddrCheck
     ) {
-        if (l3ChainId == 0) {
+        if (appChainId == 0) {
             revert ZeroValue();
         }
         if (firstAddrCheck == address(0) || secondAddrCheck == address(0)) {
@@ -35,8 +34,8 @@ contract MetabasedFactory {
         _;
     }
 
-    modifier zeroValuesChainAndAddressNotAllowed(uint256 l3ChainId, address addrCheck) {
-        if (l3ChainId == 0) {
+    modifier zeroValuesChainAndAddressNotAllowed(uint256 appChainId, address addrCheck) {
+        if (appChainId == 0) {
             revert ZeroValue();
         }
         if (addrCheck == address(0)) {
@@ -46,64 +45,64 @@ contract MetabasedFactory {
     }
 
     /// @notice Creates a new MetabasedSequencerChain contract with a permission module
-    /// @param l3ChainId the l3 chain the contract refers to
+    /// @param appChainId the app chain the contract refers to
     /// @param admin The address that will be the admin
     /// @param permissionModule The address of the permission module
-    /// @param salt The salt to use for the deployment, this should be the l3ChainId if it has not been previously used
+    /// @param salt The salt to use for the deployment, this should be the appChainId if it has not been previously used
     /// @return sequencerChain The address of the newly created MetabasedSequencerChain
     function createMetabasedSequencerChain(
-        uint256 l3ChainId,
+        uint256 appChainId,
         address admin,
         IRequirementModule permissionModule,
         bytes32 salt
     )
         public
-        zeroValuesChainAndTwoAddressesNotAllowed(l3ChainId, admin, address(permissionModule))
+        zeroValuesChainAndTwoAddressesNotAllowed(appChainId, admin, address(permissionModule))
         returns (address sequencerChain)
     {
-        bytes memory bytecode = getBytecode(l3ChainId);
+        bytes memory bytecode = getBytecode(appChainId);
         address deployedAddress = Create2.deploy(0, salt, bytecode);
 
         MetabasedSequencerChain newSequencerChain = MetabasedSequencerChain(deployedAddress);
         newSequencerChain.initialize(admin, address(permissionModule));
-        emit MetabasedSequencerChainCreated(l3ChainId, deployedAddress, address(permissionModule));
+        emit MetabasedSequencerChainCreated(appChainId, deployedAddress, address(permissionModule));
         return deployedAddress;
     }
 
     /// @notice Creates MetabasedSequencerChain with RequireAllModule
     /// @param admin The address that will be the default admin role
-    /// @param l3ChainId The L3 chain ID
+    /// @param appChainId The L3 chain ID
     /// @param salt The salt to use for the deployment
     /// @return sequencerChain The address of the newly created MetabasedSequencerChain
     /// @return permissionModule The address of the newly created RequireAllModule
-    function createMetabasedSequencerChainWithRequireAllModule(address admin, uint256 l3ChainId, bytes32 salt)
+    function createMetabasedSequencerChainWithRequireAllModule(address admin, uint256 appChainId, bytes32 salt)
         public
-        zeroValuesChainAndAddressNotAllowed(l3ChainId, admin)
+        zeroValuesChainAndAddressNotAllowed(appChainId, admin)
         returns (address sequencerChain, IRequirementModule permissionModule)
     {
         permissionModule = IRequirementModule(new RequireAllModule(admin));
-        (sequencerChain) = createMetabasedSequencerChain(l3ChainId, admin, permissionModule, salt);
+        (sequencerChain) = createMetabasedSequencerChain(appChainId, admin, permissionModule, salt);
 
-        emit MetabasedSequencerChainCreated(l3ChainId, sequencerChain, address(permissionModule));
+        emit MetabasedSequencerChainCreated(appChainId, sequencerChain, address(permissionModule));
 
         return (sequencerChain, permissionModule);
     }
 
     /// @notice Creates MetabasedSequencerChain with RequireAnyModule
     /// @param admin The address that will be the default admin role
-    /// @param l3ChainId The L3 chain ID
+    /// @param appChainId The L3 chain ID
     /// @param salt The salt to use for the deployment
     /// @return sequencerChain The address of the newly created MetabasedSequencerChain
     /// @return permissionModule The address of the newly created RequireAnyModule
-    function createMetabasedSequencerChainWithRequireAnyModule(address admin, uint256 l3ChainId, bytes32 salt)
+    function createMetabasedSequencerChainWithRequireAnyModule(address admin, uint256 appChainId, bytes32 salt)
         public
-        zeroValuesChainAndAddressNotAllowed(l3ChainId, admin)
+        zeroValuesChainAndAddressNotAllowed(appChainId, admin)
         returns (address sequencerChain, IRequirementModule permissionModule)
     {
         permissionModule = IRequirementModule(new RequireAnyModule(admin));
-        (sequencerChain) = createMetabasedSequencerChain(l3ChainId, admin, permissionModule, salt);
+        (sequencerChain) = createMetabasedSequencerChain(appChainId, admin, permissionModule, salt);
 
-        emit MetabasedSequencerChainCreated(l3ChainId, sequencerChain, address(permissionModule));
+        emit MetabasedSequencerChainCreated(appChainId, sequencerChain, address(permissionModule));
 
         return (sequencerChain, permissionModule);
     }

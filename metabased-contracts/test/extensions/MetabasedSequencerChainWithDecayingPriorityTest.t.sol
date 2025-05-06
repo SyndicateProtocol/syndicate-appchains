@@ -30,12 +30,12 @@ contract MetabasedSequencerChainWithDecayingPriorityTestSetUp is Test {
 
     function setUp() public virtual {
         admin = address(0x1);
-        uint256 l3ChainId = 1234;
+        uint256 appChainId = 1234;
 
         vm.startPrank(admin);
         requireAllModule = new RequireAllModule(admin);
         requireAnyModule = new RequireAnyModule(admin);
-        chain = new MetabasedSequencerChainWithDecayingPriority(l3ChainId);
+        chain = new MetabasedSequencerChainWithDecayingPriority(appChainId);
         chain.initialize(admin, address(requireAllModule));
         vm.stopPrank();
     }
@@ -71,7 +71,7 @@ contract MetabasedSequencerChainWithDecayingPriorityTest is MetabasedSequencerCh
 
     function testConstructorSetsCorrectValues() public view {
         // Verify the constructor sets the correct values
-        assertEq(chain.l3ChainId(), 1234);
+        assertEq(chain.appChainId(), 1234);
         assertEq(chain.PRIORITY_DECAY_RATE(), 10);
     }
 

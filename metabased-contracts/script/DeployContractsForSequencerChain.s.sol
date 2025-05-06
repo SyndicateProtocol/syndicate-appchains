@@ -11,12 +11,12 @@ import {IRequirementModule} from "src/interfaces/IRequirementModule.sol";
 
 contract DeployMetabasedFactory is Script {
     MetabasedFactory public metabasedFactory;
-    uint256 public l3ChainId;
+    uint256 public appChainId;
 
     function run() public {
         vm.startBroadcast();
 
-        l3ChainId = 0; // TODO: Set the L3 chain ID
+        appChainId = 0; // TODO: Set the L3 chain ID
 
         // metafiller admin and manager
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
@@ -26,7 +26,7 @@ contract DeployMetabasedFactory is Script {
 
         // create new contracts
         (address sequencerChain, IRequirementModule permissionModule) =
-            metabasedFactory.createMetabasedSequencerChainWithRequireAllModule(admin, l3ChainId, bytes32(l3ChainId));
+            metabasedFactory.createMetabasedSequencerChainWithRequireAllModule(admin, appChainId, bytes32(appChainId));
 
         console.log("Deployed MetabasedSequencerChain", sequencerChain);
         console.log("Deployed RequireAllModule", address(permissionModule));
@@ -38,12 +38,12 @@ contract DeployMetabasedFactory is Script {
 contract DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule is Script {
     MetabasedSequencerChain public sequencerChain;
     RequireAllModule public permissionModule;
-    uint256 public l3ChainId;
+    uint256 public appChainId;
 
     function run() public {
         vm.startBroadcast();
 
-        l3ChainId = 0; // TODO: Set the L3 chain ID
+        appChainId = 0; // TODO: Set the L3 chain ID
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
 
         // Deploy permission module first
@@ -51,7 +51,7 @@ contract DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule is Script {
         console.log("Deployed RequireAllModule", address(permissionModule));
 
         // Deploy sequencer with permission module
-        sequencerChain = new MetabasedSequencerChain(l3ChainId);
+        sequencerChain = new MetabasedSequencerChain(appChainId);
         sequencerChain.initialize(admin, address(permissionModule));
         console.log("Deployed MetabasedSequencerChain", address(sequencerChain));
 
