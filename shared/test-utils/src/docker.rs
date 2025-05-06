@@ -155,7 +155,6 @@ pub async fn start_mchain(
     .await?;
     let url = format!("http://localhost:{port}");
     let mchain = MProvider::new(&url)?;
-    health_check(executable_name, port, &mut docker).await;
     Ok((url, docker, mchain))
 }
 
