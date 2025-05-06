@@ -12,7 +12,7 @@ to determine who is allowed to sequence.
 
 ### appChainId
 
-The ID of the L3 chain that this contract is sequencing transactions for.
+The ID of the App chain that this contract is sequencing transactions for.
 
 ```solidity
 uint256 public immutable appChainId;
@@ -30,9 +30,9 @@ constructor(uint256 _appChainId) SequencingModuleChecker();
 
 **Parameters**
 
-| Name          | Type      | Description                                                               |
-| ------------- | --------- | ------------------------------------------------------------------------- |
-| `_appChainId` | `uint256` | The ID of the L3 chain that this contract is sequencing transactions for. |
+| Name          | Type      | Description                                                                |
+| ------------- | --------- | -------------------------------------------------------------------------- |
+| `_appChainId` | `uint256` | The ID of the App chain that this contract is sequencing transactions for. |
 
 ### processTransactionRaw
 

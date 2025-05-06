@@ -4,7 +4,7 @@ pragma solidity 0.8.25;
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /// @title MetafillerStorage
-/// @notice This contract is used to emit events containing L3 chain block and transaction data
+/// @notice This contract is used to emit events containing App chain block and transaction data
 /// @dev This contract uses AccessControl for managing permissions
 contract MetafillerStorage is AccessControl {
     uint256 public immutable appChainId;
@@ -25,12 +25,12 @@ contract MetafillerStorage is AccessControl {
     /// @notice Constructor that sets up the default admin and manager roles
     /// @param admin The address that will be the default admin role
     /// @param manager The address that will be the manager role
-    /// @param appChainId_ The L3 chain ID
+    /// @param appChainId_ The App chain ID
     constructor(address admin, address manager, uint256 appChainId_) {
         require(admin != address(0), "Admin address cannot be 0");
         require(manager != address(0), "Manager address cannot be 0");
         // chain id zero has no replay protection : https://eips.ethereum.org/EIPS/eip-3788
-        require(appChainId_ != 0, "L3 chain ID cannot be 0");
+        require(appChainId_ != 0, "App chain ID cannot be 0");
 
         _grantRole(DEFAULT_ADMIN_ROLE, admin);
         _grantRole(MANAGER_ROLE, manager);

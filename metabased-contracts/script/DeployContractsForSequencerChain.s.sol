@@ -16,7 +16,7 @@ contract DeployMetabasedFactory is Script {
     function run() public {
         vm.startBroadcast();
 
-        appChainId = 0; // TODO: Set the L3 chain ID
+        appChainId = 0; // TODO: Set the App chain ID
 
         // metafiller admin and manager
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
@@ -25,7 +25,7 @@ contract DeployMetabasedFactory is Script {
         console.log("Deployed MetabasedFactory", address(metabasedFactory));
 
         // create new contracts
-        (address sequencerChain, IRequirementModule permissionModule) =
+        (address sequencerChain, IRequirementModule permissionModule,) =
             metabasedFactory.createMetabasedSequencerChainWithRequireAllModule(admin, appChainId, bytes32(appChainId));
 
         console.log("Deployed MetabasedSequencerChain", sequencerChain);
@@ -43,7 +43,7 @@ contract DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule is Script {
     function run() public {
         vm.startBroadcast();
 
-        appChainId = 0; // TODO: Set the L3 chain ID
+        appChainId = 0; // TODO: Set the App chain ID
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
 
         // Deploy permission module first

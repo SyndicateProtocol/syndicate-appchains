@@ -29,7 +29,7 @@ function createMetabasedSequencerChain(
 
 | Name               | Type                 | Description                                                                                          |
 | ------------------ | -------------------- | ---------------------------------------------------------------------------------------------------- |
-| `appChainId`       | `uint256`            | the app chain the contract refers to                                                                  |
+| `appChainId`       | `uint256`            | the app chain the contract refers to                                                                 |
 | `admin`            | `address`            | The address that will be the admin                                                                   |
 | `permissionModule` | `IRequirementModule` | The address of the permission module                                                                 |
 | `salt`             | `bytes32`            | The salt to use for the deployment, this should be the appChainId if it has not been previously used |
@@ -57,7 +57,7 @@ function createMetafillerStorage(address admin, address manager, uint256 appChai
 | ------------ | --------- | ----------------------------------------------- |
 | `admin`      | `address` | The address that will be the default admin role |
 | `manager`    | `address` | The address that will be the manager role       |
-| `appChainId` | `uint256` | The L3 chain ID                                 |
+| `appChainId` | `uint256` | The App chain ID                                |
 
 **Returns**
 
@@ -82,7 +82,7 @@ function createAllContractsWithRequireAllModule(address admin, address manager, 
 | ------------ | --------- | --------------------------------------------------------------- |
 | `admin`      | `address` | The address that will be the default admin role                 |
 | `manager`    | `address` | The address that will be the manager role for MetafillerStorage |
-| `appChainId` | `uint256` | The L3 chain ID                                                 |
+| `appChainId` | `uint256` | The App chain ID                                                |
 | `salt`       | `bytes32` | The salt to use for the deployment                              |
 
 **Returns**
@@ -110,7 +110,7 @@ function createAllContractsWithRequireAnyModule(address admin, address manager, 
 | ------------ | --------- | --------------------------------------------------------------- |
 | `admin`      | `address` | The address that will be the default admin role                 |
 | `manager`    | `address` | The address that will be the manager role for MetafillerStorage |
-| `appChainId` | `uint256` | The L3 chain ID                                                 |
+| `appChainId` | `uint256` | The App chain ID                                                |
 | `salt`       | `bytes32` | The salt to use for the deployment                              |
 
 **Returns**
@@ -134,7 +134,7 @@ function computeSequencerChainAddress(bytes32 salt, uint256 chainId) public view
 | Name      | Type      | Description                        |
 | --------- | --------- | ---------------------------------- |
 | `salt`    | `bytes32` | The salt to use for the deployment |
-| `chainId` | `uint256` | The ID of the L3 chain             |
+| `chainId` | `uint256` | The ID of the App chain            |
 
 **Returns**
 
@@ -152,9 +152,9 @@ function getBytecode(uint256 chainId) public pure returns (bytes memory);
 
 **Parameters**
 
-| Name      | Type      | Description            |
-| --------- | --------- | ---------------------- |
-| `chainId` | `uint256` | The ID of the L3 chain |
+| Name      | Type      | Description             |
+| --------- | --------- | ----------------------- |
+| `chainId` | `uint256` | The ID of the App chain |
 
 **Returns**
 

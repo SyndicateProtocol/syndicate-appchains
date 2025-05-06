@@ -77,7 +77,7 @@ contract MetabasedSequencerChainWithDecayingPriorityTest is MetabasedSequencerCh
 
     function testConstructorRevertsWithZeroChainId() public {
         // Verify that constructor reverts with chain ID 0
-        vm.expectRevert("L3 chain ID cannot be 0");
+        vm.expectRevert("App chain ID cannot be 0");
         new MetabasedSequencerChainWithDecayingPriority(0);
     }
 
