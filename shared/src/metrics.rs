@@ -1,9 +1,10 @@
 //! Shared `metrics` module
+use crate::health::health_handler;
 use axum::{
     body::Body,
     extract::State,
     http::{header::CONTENT_TYPE, StatusCode},
-    response::{IntoResponse, Json, Response},
+    response::Response,
     routing::get,
     Router,
 };
@@ -57,8 +58,4 @@ async fn metrics_handler(
         .header(CONTENT_TYPE, "text/plain; version=1.0.0; charset=utf-8")
         .body(Body::from(buffer))
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)
-}
-
-async fn health_handler() -> impl IntoResponse {
-    Json(serde_json::json!({ "health": true }))
 }
