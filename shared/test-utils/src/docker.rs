@@ -69,7 +69,7 @@ impl Drop for Docker {
 
 pub async fn start_component(
     executable_name: &str,
-    health_port: u16,
+    api_port: u16,
     args: Vec<String>,
     cargs: Vec<String>,
 ) -> Result<Docker> {
@@ -107,18 +107,18 @@ pub async fn start_component(
             )
         }?;
 
-    health_check(executable_name, health_port, &mut docker).await;
+    health_check(executable_name, api_port, &mut docker).await;
     Ok(docker)
 }
 
-pub async fn health_check(executable_name: &str, health_port: u16, docker: &mut Docker) {
+pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut Docker) {
     let client = Client::new();
     wait_until!(
         if let Some(status) = docker.try_wait()? {
             panic!("{} exited with {}", executable_name, status);
         };
         client
-            .get(format!("http://localhost:{health_port}/health"))
+            .get(format!("http://localhost:{api_port}/health"))
             .send()
             .await
             .is_ok_and(|x| x.status().is_success()),
