@@ -56,8 +56,12 @@ pub struct MetabasedConfig {
     pub settlement_delay: Option<u64>,
 
     /// The address of the rollup owner on the settlement chain
-    #[arg(long, env = "ROLLUP_OWNER")]
-    pub rollup_owner: Option<Address>,
+    #[arg(long, env = "APPCHAIN_OWNER")]
+    pub appchain_owner: Option<Address>,
+
+    /// The chain ID of the Appchain rollup (not the mchain)
+    #[arg(long, env = "APPCHAIN_CHAIN_ID")]
+    pub appchain_chain_id: u64,
 
     /// The address of the ConfigManager contract on the settlement chain
     #[arg(
@@ -66,10 +70,6 @@ pub struct MetabasedConfig {
         value_parser = parse_address
     )]
     pub config_manager_address: Option<Address>,
-
-    /// The chain ID of the Appchain rollup (not the mchain)
-    #[arg(long, env = "APPCHAIN_CHAIN_ID")]
-    pub appchain_chain_id: Option<u64>,
 
     #[arg(long, env = "APPCHAIN_BLOCK_EXPLORER_URL")]
     pub appchain_block_explorer_url: Option<String>,
@@ -129,12 +129,12 @@ impl Default for MetabasedConfig {
         Self {
             block_builder: BlockBuilderConfig::default(),
             settlement_delay: Some(60),
-            rollup_owner: None,
+            appchain_owner: None,
             sequencing: SequencingChainConfig::default(),
             settlement: SettlementChainConfig::default(),
             metrics: MetricsConfig::default(),
             config_manager_address: None,
-            appchain_chain_id: None,
+            appchain_chain_id: 0,
             appchain_block_explorer_url: None,
         }
     }
@@ -154,6 +154,7 @@ mod tests {
         ("ARBITRUM_BRIDGE_ADDRESS", Some(ZERO)),
         ("ARBITRUM_INBOX_ADDRESS", Some(ZERO)),
         ("MCHAIN_RPC_URL", Some("")),
+        ("APPCHAIN_CHAIN_ID", Some("1")),
     ];
 
     #[test]
