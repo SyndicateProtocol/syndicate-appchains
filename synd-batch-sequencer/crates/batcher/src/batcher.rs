@@ -7,7 +7,6 @@ use alloy::{
     providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
 };
-use byte_unit::Byte;
 use contract_bindings::metabased::walletpoolwrappermodule::WalletPoolWrapperModule::{
     self, WalletPoolWrapperModuleInstance,
 };
@@ -30,7 +29,7 @@ use tracing::{debug, error, info};
 #[derivative(Debug)]
 struct Batcher {
     /// The max batch size for the batcher
-    max_batch_size: Byte,
+    max_batch_size: byte_unit::Byte,
     /// The Redis consumer for the batcher
     redis_consumer: StreamConsumer,
     /// The batch sender
@@ -280,7 +279,7 @@ mod tests {
 
     fn test_config() -> BatcherConfig {
         BatcherConfig {
-            max_batch_size: Byte::from_u64(1024),
+            max_batch_size: byte_unit::Byte::from_u64(1024),
             redis_url: "dummy".to_string(),
             chain_id: 1,
             timeout: Duration::from_millis(200),
@@ -319,7 +318,7 @@ mod tests {
     #[tokio::test]
     async fn test_send_compressed_batch_returns_error_if_too_large() {
         let config = BatcherConfig {
-            max_batch_size: Byte::from_u64(1), // force failure
+            max_batch_size: byte_unit::Byte::from_u64(1), // force failure
             ..test_config()
         };
         let (_redis, redis_url) = start_redis().await.unwrap();
