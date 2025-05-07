@@ -19,11 +19,10 @@ use shared::{batch_compression::compress_batch, types::FilledProvider};
 use std::{
     collections::VecDeque,
     str::FromStr,
-    sync::Arc,
     time::{Duration, Instant},
 };
 use tc_client::tc_client::{TCClient, BATCH_FUNCTION_SIGNATURE};
-use tokio::{sync::Semaphore, task::JoinHandle};
+use tokio::task::JoinHandle;
 use tracing::{debug, error, info};
 
 /// Batcher service
@@ -41,8 +40,6 @@ struct Batcher {
     chain_id: u64,
     /// The timeout for the batcher
     timeout: Duration,
-    /// Submission Semaphore
-    submission_semaphore: Arc<Semaphore>,
     /// Metrics
     metrics: BatcherMetrics,
     /// Outstanding transactions that didn't fit in the last batch
@@ -172,7 +169,6 @@ impl Batcher {
             batch_sender,
             chain_id: config.chain_id,
             timeout: config.timeout,
-            submission_semaphore: Arc::new(Semaphore::new(1)), //Only one submission at a time
             metrics,
             outstanding_txs: Vec::new(),
         }
@@ -232,17 +228,6 @@ impl Batcher {
 
     async fn read_and_batch_transactions(&mut self) -> Result<(), BatchError> {
         let start = Instant::now();
-        // Ensure only one submission runs at a time by holding the semaphore permit
-        let semaphore = Arc::clone(&self.submission_semaphore);
-        let _permit = match semaphore.try_acquire() {
-            Ok(permit) => permit,
-            Err(_) => {
-                debug!(%self.chain_id, "Submission in flight, skipping read.");
-                return Ok(());
-            }
-        };
-
-        // _permit is held until the end of the function
 
         let bytes = self.read_and_compress_transactions().await?;
 
@@ -376,30 +361,6 @@ mod tests {
 
         assert!(result.is_ok());
         assert!(result.unwrap().is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_submission_in_flight_skips_batching() {
-        let config = test_config();
-        let (_redis, redis_url) = start_redis().await.unwrap();
-
-        let conn = redis::Client::open(redis_url.as_str())
-            .unwrap()
-            .get_multiplexed_async_connection()
-            .await
-            .unwrap();
-        let redis_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
-
-        let mut registry = Registry::default();
-        let metrics = BatcherMetrics::new(&mut registry);
-
-        let mut batcher = Batcher::new(&config, redis_consumer, create_noop_sender(), metrics);
-
-        let semaphore = Arc::clone(&batcher.submission_semaphore);
-        let _guard = semaphore.try_acquire().expect("should acquire permit");
-
-        let result = batcher.read_and_batch_transactions().await;
-        assert!(result.is_ok(), "Expected batching to skip and return Ok");
     }
 
     #[tokio::test]
