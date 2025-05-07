@@ -175,13 +175,9 @@ impl Batcher {
 
     async fn read_and_compress_transactions(&mut self) -> Result<Vec<u8>> {
         let start = Instant::now();
-        let mut txs = std::mem::take(&mut self.outstanding_txs);
+        let mut txs = vec![];
         let mut compressed = Vec::<u8>::new();
         let mut uncompressed_size = 0;
-        if !txs.is_empty() {
-            uncompressed_size = txs.iter().map(|tx| tx.len()).sum();
-            compressed = compress_batch(&txs, &Bytes::new())?;
-        }
 
         'outer: loop {
             if start.elapsed() >= self.timeout {
@@ -194,18 +190,20 @@ impl Batcher {
             // in the batch
             let incoming_txs = self.redis_consumer.recv(1, Duration::from_millis(100)).await?;
 
-            // Convert all incoming transactions to Bytes first
-            let mut incoming_txs: VecDeque<Bytes> =
-                incoming_txs.into_iter().map(|(tx, _)| Bytes::from(tx)).collect();
+            // Combine outstanding transactions with incoming transactions
+            let mut pending_txs: VecDeque<Bytes> = std::mem::take(&mut self.outstanding_txs)
+                .into_iter()
+                .chain(incoming_txs.into_iter().map(|(tx, _)| Bytes::from(tx)))
+                .collect();
 
             // Process transactions until one doesn't fit
-            while let Some(tx_bytes) = incoming_txs.front() {
+            while let Some(tx_bytes) = pending_txs.front() {
                 let compressed_next = compress_batch(&txs, tx_bytes)?;
 
                 if compressed_next.len() as u64 > self.max_batch_size.as_u64() {
                     // Stop consuming
                     // Save all remaining transactions
-                    self.outstanding_txs = incoming_txs.into();
+                    self.outstanding_txs = pending_txs.into();
                     break 'outer;
                 }
                 uncompressed_size += tx_bytes.len();
@@ -215,7 +213,7 @@ impl Batcher {
                     compressed_next.len()
                 );
                 compressed = compressed_next;
-                if let Some(tx) = incoming_txs.pop_front() {
+                if let Some(tx) = pending_txs.pop_front() {
                     txs.push(tx);
                 }
             }
