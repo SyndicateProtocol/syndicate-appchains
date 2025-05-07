@@ -1,10 +1,10 @@
 //! The `additive_compression` module provides functionality for incrementally compressing
 //! transactions using zlib.
 
-use crate::zlib_compression::is_valid_cm_bits_8_only;
 use alloy::primitives::Bytes;
 use flate2::{write::ZlibEncoder, Compression};
 use rlp::RlpStream;
+use shared::zlib_compression::is_valid_cm_bits_8_only;
 use std::io::{Error, Write};
 
 /// Compresses a list of transactions along with a new transaction using zlib compression.

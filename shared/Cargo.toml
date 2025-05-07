@@ -9,7 +9,7 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy              = { workspace = true, features = ["k256", "rlp"] }
+alloy              = { workspace = true }
 axum               = { workspace = true }
 byte-unit          = { workspace = true, features = ["default"] }
 bytes              = { workspace = true }

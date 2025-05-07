@@ -1,6 +1,6 @@
 //! The Batcher service for the sequencer.
 
-use crate::{config::BatcherConfig, metrics::BatcherMetrics};
+use crate::{batch_compression::compress_batch, config::BatcherConfig, metrics::BatcherMetrics};
 use alloy::{
     network::EthereumWallet,
     primitives::{Address, Bytes},
@@ -14,7 +14,7 @@ use derivative::Derivative;
 use eyre::{eyre, Result};
 use maestro::redis::consumer::StreamConsumer;
 use redis::Client as RedisClient;
-use shared::{batch_compression::compress_batch, types::FilledProvider};
+use shared::types::FilledProvider;
 use std::{
     collections::VecDeque,
     str::FromStr,
