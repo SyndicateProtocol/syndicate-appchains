@@ -6,11 +6,12 @@ import {RequireAllModule} from "./requirement-modules/RequireAllModule.sol";
 import {RequireAnyModule} from "./requirement-modules/RequireAnyModule.sol";
 import {IRequirementModule} from "./interfaces/IRequirementModule.sol";
 import {Create2} from "@openzeppelin/contracts/utils/Create2.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 /// @title MetabasedFactory
 /// @notice Factory contract for creating MetabasedSequencerChain and related contracts
 /// with namespace management and auto-incrementing chain IDs
-contract MetabasedFactory {
+contract MetabasedFactory is AccessControl {
     /// @notice Emitted when a new MetabasedSequencerChain is created
     event MetabasedSequencerChainCreated(
         uint256 indexed appChainId,
@@ -18,21 +19,39 @@ contract MetabasedFactory {
         address indexed permissionModuleAddress
     );
 
+    /// @notice Emitted when namespace configuration is updated
+    event NamespaceConfigUpdated(
+        uint256 oldNamespacePrefix,
+        uint256 oldNamespaceMultiplier,
+        uint256 newNamespacePrefix,
+        uint256 newNamespaceMultiplier
+    );
+
+    // Roles
+    bytes32 public constant MANAGER_ROLE = keccak256("MANAGER_ROLE");
+
     // Errors
     error ZeroAddress();
     error ZeroValue();
     error ReservedNamespace();
     error ChainIdAlreadyExists();
 
-    // Constants
-    uint256 public constant NAMESPACE_PREFIX = 510;
-    uint256 public constant NAMESPACE_MULTIPLIER = 1000;
+    // Namespace configuration - now mutable
+    uint256 private _namespacePrefix;
+    uint256 private _namespaceMultiplier;
 
     // State variables
     uint256 private _nextAutoChainId;
     mapping(uint256 => bool) private _usedChainIds;
 
-    constructor() {
+    constructor(address admin) {
+        // Set up initial roles
+        _grantRole(DEFAULT_ADMIN_ROLE, admin);
+        _grantRole(MANAGER_ROLE, admin);
+
+        // Set initial namespace configuration
+        _namespacePrefix = 510;
+        _namespaceMultiplier = 1000;
         _nextAutoChainId = 1; // Start auto-incrementing from 1
     }
 
@@ -63,8 +82,8 @@ contract MetabasedFactory {
     modifier validateChainId(uint256 appChainId, bool isManuallySpecified) {
         // If manually specified, ensure it's not in our reserved namespace
         if (isManuallySpecified) {
-            // Check if the chainId is in the 510 namespace
-            if (appChainId / NAMESPACE_MULTIPLIER == NAMESPACE_PREFIX) {
+            // Check if the chainId is in the reserved namespace
+            if (appChainId / namespaceMultiplier() == namespacePrefix()) {
                 revert ReservedNamespace();
             }
         }
@@ -176,10 +195,10 @@ contract MetabasedFactory {
         return abi.encodePacked(type(MetabasedSequencerChain).creationCode, abi.encode(chainId));
     }
 
-    /// @notice Get the next available auto-generated chain ID in the 510 namespace
+    /// @notice Get the next available auto-generated chain ID in the namespace
     /// @return The next available chain ID
     function _getNextChainId() internal view returns (uint256) {
-        return NAMESPACE_PREFIX * NAMESPACE_MULTIPLIER + _nextAutoChainId;
+        return _namespacePrefix * _namespaceMultiplier + _nextAutoChainId;
     }
 
     /// @notice Get the current next auto-incremented chain ID
@@ -190,8 +209,38 @@ contract MetabasedFactory {
 
     /// @notice Check if a chain ID has already been used
     /// @param chainId The chain ID to check
-    /// @return True if the chain ID has been used, false otherwise
+    /// @return 1 if the chain ID has been used, 0 otherwise
     function isChainIdUsed(uint256 chainId) external view returns (uint256) {
         return _usedChainIds[chainId] ? 1 : 0;
+    }
+
+    // Namespace configuration getters
+
+    /// @notice Get the current namespace prefix
+    /// @return The current namespace prefix
+    function namespacePrefix() public view returns (uint256) {
+        return _namespacePrefix;
+    }
+
+    /// @notice Get the current namespace multiplier
+    /// @return The current namespace multiplier
+    function namespaceMultiplier() public view returns (uint256) {
+        return _namespaceMultiplier;
+    }
+
+    /// @notice Update the namespace configuration (manager only)
+    /// @param newPrefix The new namespace prefix
+    /// @param newMultiplier The new namespace multiplier
+    function updateNamespaceConfig(uint256 newPrefix, uint256 newMultiplier) external onlyRole(MANAGER_ROLE) {
+        // Store old values for the event
+        uint256 oldPrefix = _namespacePrefix;
+        uint256 oldMultiplier = _namespaceMultiplier;
+
+        // Update values
+        _namespacePrefix = newPrefix;
+        _namespaceMultiplier = newMultiplier;
+
+        // Emit event
+        emit NamespaceConfigUpdated(oldPrefix, oldMultiplier, newPrefix, newMultiplier);
     }
 }

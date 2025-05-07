@@ -18,8 +18,8 @@ contract MetabasedFactoryTest is Test {
     function setUp() public {
         admin = address(0x1);
         manager = address(0x2);
-        factory = new MetabasedFactory();
-        namespaceId = factory.NAMESPACE_PREFIX() * factory.NAMESPACE_MULTIPLIER();
+        factory = new MetabasedFactory(admin);
+        namespaceId = 510 * 1000;
     }
 
     function testCreateSequencerChainWithRequireAll() public {
@@ -294,7 +294,7 @@ contract MetabasedFactoryTest is Test {
 
     // New tests for the 510 namespace functionality
     function testReservedNamespaceRejection() public {
-        uint256 reservedId = factory.NAMESPACE_PREFIX() * factory.NAMESPACE_MULTIPLIER() + 5;
+        uint256 reservedId = namespaceId + 5;
         RequireAllModule permissionModule = new RequireAllModule(admin);
         bytes32 salt = keccak256(abi.encodePacked("reserved-namespace-test"));
 

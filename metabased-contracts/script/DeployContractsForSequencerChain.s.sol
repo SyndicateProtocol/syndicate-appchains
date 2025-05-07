@@ -21,7 +21,7 @@ contract DeployMetabasedFactory is Script {
         // metafiller admin and manager
         address admin = vm.envOr("ADMIN_ADDR", msg.sender);
 
-        metabasedFactory = new MetabasedFactory();
+        metabasedFactory = new MetabasedFactory(admin);
         console.log("Deployed MetabasedFactory", address(metabasedFactory));
 
         // create new contracts
