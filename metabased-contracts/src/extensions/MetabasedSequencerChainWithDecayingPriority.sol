@@ -17,8 +17,8 @@ contract MetabasedSequencerChainWithDecayingPriority is MetabasedSequencerChain 
     event TransactionProcessed(address indexed sender, bytes data, uint256 originalPriority, uint256 timestamp);
 
     /// @notice Constructs the MetabasedSequencerChainWithDecayingPriority contract.
-    /// @param _l3ChainId The ID of the L3 chain that this contract is sequencing transactions for.
-    constructor(uint256 _l3ChainId) MetabasedSequencerChain(_l3ChainId) {}
+    /// @param _appChainId The ID of the App chain that this contract is sequencing transactions for.
+    constructor(uint256 _appChainId) MetabasedSequencerChain(_appChainId) {}
 
     /// @notice Processes a single compressed transaction with priority.
     /// @param data The compressed transaction data.
