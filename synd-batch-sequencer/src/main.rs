@@ -3,7 +3,7 @@
 //!
 //! It provides a JSON-RPC interface for submitting transactions and checking service health.
 
-use batcher::batcher::run_batcher;
+use batcher::{batcher::run_batcher, metrics::BatcherMetrics};
 use eyre::Result;
 use shared::{
     logger::set_global_default_subscriber,
@@ -26,12 +26,17 @@ async fn main() -> Result<()> {
     // Validate config and create TC client if needed
     let tc_client = config.validate().await?;
 
+    let mut metrics_state = MetricsState::default();
+    let metrics = BatcherMetrics::new(&mut metrics_state.registry);
+    tokio::spawn(start_metrics(metrics_state, config.metrics_port));
+
     // Start batcher
     let batcher_handle = run_batcher(
         &config.batcher,
         tc_client,
         config.wallet_pool_address,
         config.sequencing_address,
+        metrics,
     )
     .await?;
 

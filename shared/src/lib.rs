@@ -1,7 +1,7 @@
 //! The `shared` library contains functions and code that are reused by the `metabased-rollup`
 //! stack.
 
-pub mod additive_compression;
+pub mod batch_compression;
 pub mod eth_client;
 pub mod json_rpc;
 pub mod logger;

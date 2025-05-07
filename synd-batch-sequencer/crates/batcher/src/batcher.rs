@@ -15,7 +15,7 @@ use derivative::Derivative;
 use eyre::{eyre, Result};
 use maestro::redis::consumer::StreamConsumer;
 use redis::Client as RedisClient;
-use shared::types::FilledProvider;
+use shared::{batch_compression::compress_batch, types::FilledProvider};
 use std::{
     collections::VecDeque,
     str::FromStr,
@@ -185,7 +185,7 @@ impl Batcher {
         let mut uncompressed_size = 0;
         if !txs.is_empty() {
             uncompressed_size = txs.iter().map(|tx| tx.len()).sum();
-            compressed = shared::additive_compression::compress(&txs, &Bytes::new())?;
+            compressed = compress_batch(&txs, &Bytes::new())?;
         }
 
         'outer: loop {
@@ -205,7 +205,7 @@ impl Batcher {
 
             // Process transactions until one doesn't fit
             while let Some(tx_bytes) = incoming_txs.front() {
-                let compressed_next = shared::additive_compression::compress(&txs, tx_bytes)?;
+                let compressed_next = compress_batch(&txs, tx_bytes)?;
 
                 if compressed_next.len() as u64 > self.max_batch_size.as_u64() {
                     // Stop consuming
@@ -258,9 +258,7 @@ impl Batcher {
             return Err(e);
         }
         self.metrics.record_submission_latency(submission_start.elapsed());
-
         self.metrics.record_processing_time(start.elapsed());
-        self.metrics.record_batch_timestamp();
 
         Ok(())
     }
