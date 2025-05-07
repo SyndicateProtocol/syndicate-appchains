@@ -1,7 +1,14 @@
 //! The metachain is used for rollup block derivation.
 
-use alloy::primitives::Address;
+use alloy::{
+    primitives::{Address, U256},
+    providers::ProviderBuilder,
+    rpc::client::ClientBuilder,
+};
 use clap::Parser;
+use contract_bindings::metabased::{
+    arbchainconfig::ArbChainConfig, arbconfigmanager::ArbConfigManager,
+};
 use jsonrpsee::server::{RandomStringIdProvider, RpcServiceBuilder, Server};
 use mchain::{metrics::MchainMetrics, server::start_mchain};
 use rocksdb::DB;
@@ -26,11 +33,41 @@ struct Config {
     port: u64,
     #[arg(long, env = "METRICS_PORT", default_value_t = 8546)]
     metrics_port: u16,
-    #[arg(long, env = "CHAIN_ID")]
-    chain_id: u64,
-    // TODO(SEQ-840): read the chain owner from the chain config contract instead
-    #[arg(long, env = "CHAIN_OWNER_ADDRESS")]
-    chain_owner_address: Address,
+    #[arg(long, env = "APPCHAIN_CHAIN_ID")]
+    appchain_chain_id: u64,
+    #[arg(long, env = "APPCHAIN_OWNER")]
+    appchain_owner: Option<Address>,
+    #[arg(long, env = "SETTLEMENT_RPC_URL")]
+    settlement_rpc_url: Option<String>,
+    #[arg(long, env = "CONFIG_MANAGER_ADDRESS")]
+    config_manager_address: Option<Address>,
+}
+
+async fn get_rollup_owner(
+    config_manager_address: Option<Address>,
+    appchain_chain_id: u64,
+    settlement_rpc_url: &str,
+) -> eyre::Result<Address> {
+    let address = config_manager_address.map_or_else(
+        || {
+            panic!("No config_manager_address provided, cannot fetch on-chain config");
+        },
+        |addr| addr,
+    );
+
+    #[allow(clippy::unwrap_used)]
+    let provider = ProviderBuilder::new()
+        .on_client(ClientBuilder::default().connect(settlement_rpc_url).await.unwrap());
+
+    let config_manager_contract = ArbConfigManager::new(address, provider.clone());
+    let config_address = config_manager_contract
+        .getArbChainConfigAddress(U256::from(appchain_chain_id))
+        .call()
+        .await?;
+    let arb_chain_config_contract = ArbChainConfig::new(config_address._0, provider);
+
+    let rollup_owner = arb_chain_config_contract.ROLLUP_OWNER().call().await?;
+    Ok(rollup_owner._0)
 }
 
 #[tokio::main]
@@ -43,9 +80,28 @@ async fn main() -> eyre::Result<()> {
     let db = DB::open_default(cfg.datadir)?;
     let mut metrics_state = MetricsState::default();
     let metrics = MchainMetrics::new(&mut metrics_state.registry);
+
+    let initial_appchain_owner = match cfg.appchain_owner {
+        Some(owner) => owner,
+        None => {
+            let settlement_rpc_url = cfg.settlement_rpc_url.as_deref().ok_or_else(|| {
+                eyre::eyre!("SETTLEMENT_RPC_URL must be provided when APPCHAIN_OWNER is not set")
+            })?;
+
+            get_rollup_owner(cfg.config_manager_address, cfg.appchain_chain_id, settlement_rpc_url)
+                .await?
+        }
+    };
+
     info!("starting mchain server on port {}", cfg.port);
-    let module =
-        start_mchain(cfg.chain_id, cfg.chain_owner_address, cfg.finality_delay, db, metrics);
+    let module = start_mchain(
+        cfg.appchain_chain_id,
+        initial_appchain_owner,
+        cfg.finality_delay,
+        db,
+        metrics,
+    );
+
     let handle = Server::builder()
         .ws_only()
         .set_id_provider(RandomStringIdProvider::new(64))

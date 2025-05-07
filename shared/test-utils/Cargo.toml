@@ -19,5 +19,6 @@ alloy = { workspace = true, features = [
 eyre = { workspace = true }
 mchain = { workspace = true }
 redis = { workspace = true, features = ["tokio-comp"] }
+shared = { workspace = true }
 tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
 tracing = { workspace = true }

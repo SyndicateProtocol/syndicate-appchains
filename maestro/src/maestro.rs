@@ -263,6 +263,7 @@ mod tests {
             skip_validation: false,
             prune_interval: Duration::from_secs(1),
             prune_max_age: Duration::from_secs(1),
+            metrics_port: 8090,
         };
 
         // Create service

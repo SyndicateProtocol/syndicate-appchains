@@ -1166,17 +1166,23 @@ dependencies = [
  "alloy",
  "byte-unit",
  "clap",
+ "contract-bindings",
+ "derivative",
  "eyre",
+ "flate2",
  "humantime",
  "maestro",
  "mockall",
+ "prometheus-client",
  "redis",
+ "rlp 0.6.1",
  "shared",
  "tc-client",
  "test-utils",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
+ "url",
 ]
 
 [[package]]
@@ -5017,6 +5023,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "synd-batch-sequencer"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "batcher",
+ "clap",
+ "eyre",
+ "mockito",
+ "shared",
+ "tc-client",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
 name = "synstructure"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5075,26 +5098,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tc-sequencer"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "batcher",
- "clap",
- "eyre",
- "jsonrpsee",
- "mockito",
- "reqwest",
- "serde_json",
- "shared",
- "tc-client",
- "tokio",
- "tower 0.4.13",
- "tracing",
- "url",
-]
-
-[[package]]
 name = "temp-env"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5132,10 +5135,13 @@ dependencies = [
  "contract-bindings",
  "ctor",
  "eyre",
+ "jsonrpsee",
+ "maestro",
  "mchain",
  "prometheus-client",
  "reqwest",
  "serde",
+ "serde_json",
  "shared",
  "test-utils",
  "tokio",
@@ -5150,6 +5156,7 @@ dependencies = [
  "eyre",
  "mchain",
  "redis",
+ "shared",
  "tokio",
  "tracing",
 ]

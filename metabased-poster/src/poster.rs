@@ -4,13 +4,7 @@
 use crate::{config::Config, metrics::PosterMetrics, types::NitroBlock};
 use alloy::{
     network::EthereumWallet,
-    providers::{
-        fillers::{
-            BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
-            WalletFiller,
-        },
-        Identity, Provider as _, ProviderBuilder, RootProvider, WalletProvider as _,
-    },
+    providers::{Provider as _, ProviderBuilder, RootProvider, WalletProvider as _},
     signers::local::PrivateKeySigner,
 };
 use axum::{
@@ -24,21 +18,10 @@ use contract_bindings::arbitrum::assertionposter::AssertionPoster::{
     self, AssertionPosterInstance,
 };
 use eyre::{eyre, Result};
+use shared::types::FilledProvider;
 use std::{str::FromStr, sync::Arc, time::Duration};
 use tokio::{net::TcpListener, task::JoinHandle};
 use tracing::{error, info};
-
-#[allow(missing_docs)]
-pub type FilledProvider = FillProvider<
-    JoinFill<
-        JoinFill<
-            Identity,
-            JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
-        >,
-        WalletFiller<EthereumWallet>,
-    >,
-    RootProvider,
->;
 
 #[derive(Debug)]
 struct Poster {

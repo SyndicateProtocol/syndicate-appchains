@@ -3,36 +3,17 @@
 use crate::port_manager::PortManager;
 use alloy::{
     eips::BlockNumberOrTag,
-    network::EthereumWallet,
     node_bindings::{Anvil, AnvilInstance},
-    providers::{
-        ext::AnvilApi as _,
-        fillers::{
-            BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
-            WalletFiller,
-        },
-        Identity, Provider, ProviderBuilder, RootProvider,
-    },
+    providers::{ext::AnvilApi as _, Provider, ProviderBuilder},
     rpc::types::{anvil::MineOptions, Block},
     signers::local::PrivateKeySigner,
 };
 use eyre::{eyre, Result};
+use shared::types::FilledProvider;
 use std::str::FromStr as _;
 
-#[allow(missing_docs)]
-pub type FilledProvider = FillProvider<
-    JoinFill<
-        JoinFill<
-            Identity,
-            JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
-        >,
-        WalletFiller<EthereumWallet>,
-    >,
-    RootProvider,
->;
-
 // anvil account 1
-const PRIVATE_KEY: &str = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
+pub const PRIVATE_KEY: &str = "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d";
 
 pub async fn start_anvil(chain_id: u64) -> Result<(u16, AnvilInstance, FilledProvider)> {
     start_anvil_with_args(chain_id, Default::default()).await

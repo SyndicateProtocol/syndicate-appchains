@@ -1,8 +1,10 @@
 //! Components for the integration tests
 
 use crate::components::{
+    batch_sequencer::BatchSequencerConfig,
     chain_ingestor::ChainIngestorConfig,
     configuration::{setup_config_manager, ConfigurationOptions, ContractVersion},
+    maestro::MaestroConfig,
     poster::PosterConfig,
     sequencer::SequencerConfig,
     timer::TestTimer,
@@ -12,7 +14,7 @@ use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     eips::{BlockNumberOrTag, Encodable2718},
     node_bindings::AnvilInstance,
-    primitives::{address, Address, U256},
+    primitives::{address, hex, Address, TxHash, U256},
     providers::{ext::AnvilApi as _, Provider, RootProvider, WalletProvider},
     rpc::types::anvil::MineOptions,
 };
@@ -21,14 +23,18 @@ use contract_bindings::{
     metabased::{
         alwaysallowedmodule::AlwaysAllowedModule,
         metabasedsequencerchain::MetabasedSequencerChain::{self, MetabasedSequencerChainInstance},
+        walletpoolwrappermodule::WalletPoolWrapperModule,
     },
 };
 use eyre::Result;
+use maestro::server::HEADER_CHAIN_ID;
 use mchain::{client::MProvider, server::rollup_config};
-use std::{env, future::Future, time::SystemTime};
+use serde_json::{json, Value};
+use shared::types::FilledProvider;
+use std::{env, future::Future, str::FromStr, time::SystemTime};
 use test_utils::{
-    anvil::{mine_block, start_anvil, start_anvil_with_args, FilledProvider},
-    docker::{launch_nitro_node, start_component, start_mchain, Docker},
+    anvil::{mine_block, start_anvil, start_anvil_with_args, PRIVATE_KEY},
+    docker::{launch_nitro_node, start_component, start_mchain, start_redis, Docker},
     port_manager::PortManager,
     preloaded_config::{
         PRELOAD_BRIDGE_ADDRESS_231, PRELOAD_BRIDGE_ADDRESS_300, PRELOAD_INBOX_ADDRESS_231,
@@ -49,6 +55,11 @@ struct ComponentHandles {
     sequencer: Docker,
     sequencing_chain_ingestor: Docker,
     settlement_chain_ingestor: Docker,
+
+    // Write loop
+    batch_sequencer: Option<Docker>,
+    redis: Option<Docker>,
+    maestro: Option<Docker>,
 }
 
 #[derive(Debug)]
@@ -77,6 +88,11 @@ pub(crate) struct TestComponents {
     pub mchain_provider: MProvider,
 
     pub poster_url: String,
+
+    pub maestro_url: String,
+
+    #[allow(dead_code)]
+    pub appchain_block_explorer_url: String,
 }
 
 impl TestComponents {
@@ -87,6 +103,9 @@ impl TestComponents {
     ) -> Result<()> {
         let (components, mut handles) = Self::new(options).await?;
         let poster = handles.poster.take();
+        let maestro = handles.maestro.take();
+        let batch_sequencer = handles.batch_sequencer.take();
+        let redis = handles.redis.take();
         tokio::select! {
             biased;
             e = handles.sequencing_chain_ingestor.wait() => panic!("sequencing ingestor died: {:#?}", e),
@@ -96,6 +115,9 @@ impl TestComponents {
             e = handles.translator.wait() => panic!("translator died: {:#?}", e),
             e = async {poster.unwrap().wait().await}, if poster.is_some() => panic!("poster died: {:#?}", e),
             e = handles.sequencer.wait() => panic!("sequencer died: {:#?}", e),
+            e = async {maestro.unwrap().wait().await}, if maestro.is_some() => panic!("maestro died: {:#?}", e),
+            e = async {batch_sequencer.unwrap().wait().await}, if batch_sequencer.is_some() => panic!("synd-batch-sequencer died: {:#?}", e),
+            e = async {redis.unwrap().wait().await}, if redis.is_some() => panic!("redis died: {:#?}", e),
             r = test(components) => r
         }
     }
@@ -118,6 +140,11 @@ impl TestComponents {
         _ = AlwaysAllowedModule::deploy_builder(&seq_provider).send().await?;
         let always_allowed_module_address = seq_provider.default_signer_address().create(1);
 
+        // Deploy wallet pool
+        let admin = seq_provider.default_signer_address();
+        _ = WalletPoolWrapperModule::deploy_builder(&seq_provider, admin).send().await?;
+        let wallet_pool_address = seq_provider.default_signer_address().create(2);
+
         // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
         let sequencing_contract =
@@ -126,6 +153,13 @@ impl TestComponents {
             .initialize(seq_provider.default_signer_address(), always_allowed_module_address)
             .send()
             .await?;
+
+        // Set up allowlist
+        let provider_clone = seq_provider.clone();
+        let wallet_pool_contract =
+            WalletPoolWrapperModule::new(wallet_pool_address, provider_clone);
+        _ = wallet_pool_contract.addToAllowlist(admin).send().await?;
+
         mine_block(&seq_provider, 0).await?;
 
         // Launch mock settlement chain
@@ -194,16 +228,37 @@ impl TestComponents {
         let sequencing_anvil_url = format!("ws://localhost:{}", seq_port);
         let settlement_anvil_url = format!("ws://localhost:{}", set_port);
 
+        info!("sequencing_rpc_url: {}", sequencing_anvil_url);
+        info!("settlement_rpc_url: {}", settlement_anvil_url);
+
         // overwrite the rollup owner in case it's not set (cannot be empty in config manager)
         if options.rollup_owner == Address::ZERO {
             options.rollup_owner = address!("0x0000000000000000000000000000000000000064");
         }
 
+        // Setup config manager and get chain config address
+        let appchain_block_explorer_url = "https://example.com/explorer".to_string();
+        let config_manager_address = setup_config_manager(
+            &set_provider,
+            &options,
+            sequencing_contract_address,
+            arbitrum_bridge_address,
+            arbitrum_inbox_address,
+            &sequencing_anvil_url,
+            &appchain_block_explorer_url,
+        )
+        .await?;
+
         info!("Starting components...");
         info!("Starting mchain...");
-        let (mchain_rpc_url, mchain, mchain_provider) =
-            start_mchain(options.appchain_chain_id, options.rollup_owner, options.finality_delay)
-                .await?;
+        let (mchain_rpc_url, mchain, mchain_provider) = start_mchain(
+            options.appchain_chain_id,
+            None,
+            Some(config_manager_address),
+            Some(&settlement_anvil_url),
+            options.finality_delay,
+        )
+        .await?;
 
         info!("Starting sequencer...");
         let sequencer_config = SequencerConfig {
@@ -228,6 +283,7 @@ impl TestComponents {
             arbitrum_bridge_address,
             arbitrum_inbox_address,
             &sequencing_anvil_url,
+            &appchain_block_explorer_url,
         )
         .await?;
 
@@ -281,6 +337,7 @@ impl TestComponents {
             sequencing_contract_address: None,
             arbitrum_ignore_delayed_messages: None,
             sequencing_rpc_url: Some(sequencing_rpc_url.clone()),
+            appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
             sequencing_start_block: None,
             settlement_start_block: None,
             settlement_delay: None,
@@ -303,6 +360,7 @@ impl TestComponents {
             Some(sequencer_config.sequencer_port),
         )
         .await?;
+        info!("Nitro URL: {}", nitro_url);
 
         let (poster, poster_url) = if options.pre_loaded.is_some() {
             info!("Starting poster...");
@@ -317,7 +375,7 @@ impl TestComponents {
                 settlement_rpc_url: settlement_anvil_url.clone(),
                 metrics_port: PortManager::instance().next_port().await,
                 port: PortManager::instance().next_port().await,
-                appchain_rpc_url: nitro_url,
+                appchain_rpc_url: nitro_url.clone(),
             };
             (
                 Some(
@@ -334,6 +392,49 @@ impl TestComponents {
         } else {
             (None, Default::default())
         };
+
+        let (mut redis, mut maestro, mut batch_sequencer) = (None, None, None);
+        let mut maestro_url = Default::default();
+        if options.use_write_loop {
+            info!("Starting Write Loop components...");
+            info!("Starting redis...");
+            let (redis_instance, redis_url) = start_redis().await?;
+            redis = Some(redis_instance);
+            info!("Starting maestro...");
+            let maestro_config = MaestroConfig {
+                port: PortManager::instance().next_port().await,
+                redis_url: redis_url.clone(),
+                chain_rpc_urls: format!("{{\"{}\":\"{}\"}}", options.appchain_chain_id, nitro_url),
+                metrics_port: PortManager::instance().next_port().await,
+            };
+            let maestro_instance = start_component(
+                "maestro",
+                maestro_config.metrics_port,
+                maestro_config.cli_args(),
+                Default::default(),
+            )
+            .await?;
+            maestro = Some(maestro_instance);
+            maestro_url = format!("http://localhost:{}", maestro_config.port);
+            info!("Starting batch sequencer...");
+            let batch_sequencer_config = BatchSequencerConfig {
+                chain_id: options.appchain_chain_id,
+                redis_url: redis_url.clone(),
+                private_key: PRIVATE_KEY.to_string(),
+                wallet_pool_address,
+                sequencing_address: sequencing_contract_address,
+                sequencing_rpc_url: sequencing_anvil_url,
+                metrics_port: PortManager::instance().next_port().await,
+            };
+            let batch_sequencer_instance = start_component(
+                "synd-batch-sequencer",
+                batch_sequencer_config.metrics_port,
+                batch_sequencer_config.cli_args(),
+                Default::default(),
+            )
+            .await?;
+            batch_sequencer = Some(batch_sequencer_instance);
+        }
 
         Ok((
             Self {
@@ -352,6 +453,8 @@ impl TestComponents {
 
                 mchain_provider,
                 poster_url,
+                maestro_url,
+                appchain_block_explorer_url,
             },
             ComponentHandles {
                 _seq_anvil: seq_anvil,
@@ -363,6 +466,9 @@ impl TestComponents {
                 translator,
                 poster,
                 sequencer,
+                batch_sequencer,
+                redis,
+                maestro,
             },
         ))
     }
@@ -383,6 +489,39 @@ impl TestComponents {
         self.sequencing_provider.anvil_set_auto_mine(false).await?;
         self.sequencing_provider.anvil_remove_block_timestamp_interval().await?;
         Ok(())
+    }
+
+    #[allow(clippy::unwrap_used)]
+    pub(crate) async fn send_maestro_tx(
+        &self,
+        tx: &EthereumTxEnvelope<TxEip4844Variant>,
+    ) -> Result<TxHash> {
+        let client = reqwest::Client::new();
+        let encoded_tx = tx.encoded_2718();
+        let tx_hex = hex::encode_prefixed(encoded_tx);
+        info!("tx_hex: {}", tx_hex);
+        let response = client
+            .post(self.maestro_url.clone())
+            .header(HEADER_CHAIN_ID, self.chain_id.to_string())
+            .json(&json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "eth_sendRawTransaction",
+                "params": [tx_hex]
+            }))
+            .send()
+            .await?;
+        assert!(response.status().is_success(), "EIP-1559 transaction request failed");
+        let json_resp: Value = response.json().await?;
+        assert!(
+            json_resp.get("result").is_some(),
+            "Transaction response missing 'result' field: {}",
+            json_resp
+        );
+        let result = json_resp.get("result").unwrap().as_str().unwrap();
+        let tx_hash = TxHash::from_str(result).unwrap();
+
+        Ok(tx_hash)
     }
 
     pub(crate) async fn mine_set_block(&self, delay: u64) -> Result<()> {

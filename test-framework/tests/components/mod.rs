@@ -1,5 +1,6 @@
 //! Components for the integration tests
 
+mod batch_sequencer;
 mod chain_ingestor;
 mod configuration;
 mod maestro;

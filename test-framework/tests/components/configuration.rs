@@ -1,8 +1,10 @@
 use alloy::{primitives::Address, providers::WalletProvider};
 use contract_bindings::metabased::arbconfigmanager::ArbConfigManager;
 use eyre::Result;
-use test_utils::anvil::{mine_block, FilledProvider};
-/// nitro contract version on the settlement chain used for testing
+use shared::types::FilledProvider;
+use test_utils::anvil::mine_block;
+
+/// Arbitrum Nitro contract version on the settlement chain used for testing
 #[derive(Debug, Clone)]
 #[allow(clippy::redundant_pub_crate)]
 pub(crate) enum ContractVersion {
@@ -14,6 +16,7 @@ pub(crate) enum ContractVersion {
 #[allow(clippy::redundant_pub_crate)]
 pub(crate) struct ConfigurationOptions {
     pub(crate) pre_loaded: Option<ContractVersion>,
+    pub(crate) use_write_loop: bool,
     pub(crate) sequencing_start_block: u64,
     pub(crate) settlement_start_block: u64,
     pub(crate) settlement_delay: u64,
@@ -26,6 +29,8 @@ impl Default for ConfigurationOptions {
     fn default() -> Self {
         Self {
             pre_loaded: None,
+            // Spins up write loop components
+            use_write_loop: false,
             // skip the genesis block
             sequencing_start_block: 1,
             // skip the genesis block and the 2 blocks used to deploy the config manager
@@ -47,6 +52,7 @@ pub(super) async fn setup_config_manager(
     arbitrum_bridge_address: Address,
     arbitrum_inbox_address: Address,
     sequencing_rpc_url: &str,
+    appchain_block_explorer_url: &str,
 ) -> Result<Address> {
     // Deploy config manager
     let config_manager_owner = set_provider.default_signer_address();
@@ -58,9 +64,12 @@ pub(super) async fn setup_config_manager(
 
     let options_clone = options.clone();
     let sequencing_rpc_url_clone = sequencing_rpc_url.to_string();
+    let appchain_block_explorer_url_clone = appchain_block_explorer_url.to_string();
 
     let create_chain_config_tx = config_manager
         .createArbChainConfig(
+            config_manager_owner,
+            options_clone.appchain_chain_id.try_into().unwrap(),
             options_clone.appchain_chain_id.try_into().unwrap(),
             arbitrum_bridge_address,
             arbitrum_inbox_address,
@@ -71,6 +80,8 @@ pub(super) async fn setup_config_manager(
             options_clone.sequencing_start_block.try_into().unwrap(),
             options_clone.rollup_owner,
             sequencing_rpc_url_clone,
+            appchain_block_explorer_url_clone,
+            vec![],
         )
         .send()
         .await?;

@@ -1,176 +1,380 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity 0.8.25;
 
-import "forge-std/Test.sol";
-import {MetafillerStorage} from "../../src/backfill/MetafillerStorage.sol";
+import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
+import {MetabasedFactory} from "src/MetabasedFactory.sol";
+import {MetabasedSequencerChain} from "src/MetabasedSequencerChain.sol";
+import {RequireAllModule, IRequirementModule} from "src/requirement-modules/RequireAllModule.sol";
+import {RequireAnyModule} from "src/requirement-modules/RequireAnyModule.sol";
 
-contract MetafillerStorageTest is Test {
-    address public manager;
-    address public notManager;
+contract MetabasedFactoryTest is Test {
+    MetabasedFactory public factory;
     address public admin;
-    MetafillerStorage public l3Storage;
+    address public manager;
+    uint256 public appChainId = 10042001;
+    uint256 public namespaceId;
 
     function setUp() public {
-        manager = address(0x1);
-        notManager = address(0x2);
-        admin = address(0x3);
-        uint256 l3ChainId = 10042001;
-        l3Storage = new MetafillerStorage(admin, manager, l3ChainId);
+        admin = address(0x1);
+        manager = address(0x2);
+        factory = new MetabasedFactory(admin);
+        namespaceId = 510 * 1000;
     }
 
-    function testOnlyManagerCanSave() public {
-        vm.expectRevert();
-        vm.prank(admin);
-        l3Storage.save(1, 0xd41f86be45e841b1791bf9ff78aa9c388d9c81384d8a063d480c71c7f8865502, "0x");
+    function testCreateSequencerChainWithRequireAll() public {
+        RequireAllModule permissionModule = new RequireAllModule(admin);
+        address permissionModuleAddress = address(permissionModule);
+
+        vm.expectEmit(true, false, false, true);
+        emit MetabasedFactory.MetabasedSequencerChainCreated(
+            appChainId,
+            address(0), // Only check appChainId and permissionModuleAddress
+            permissionModuleAddress
+        );
+
+        // Use keccak256 to generate a valid bytes32 value
+        bytes32 salt = keccak256(abi.encodePacked("salt-for-appchain-", appChainId));
+        (address sequencerChainAddress, uint256 actualChainId) =
+            factory.createMetabasedSequencerChain(appChainId, admin, permissionModule, salt);
+
+        assertTrue(sequencerChainAddress != address(0));
+        assertTrue(permissionModuleAddress != address(0));
+        assertEq(actualChainId, appChainId);
+
+        MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);
+
+        // Verify sequencer setup
+        assertTrue(address(sequencerChain) == sequencerChainAddress);
+        assertEq(sequencerChain.appChainId(), appChainId);
+
+        // Verify permission module setup
+        assertTrue(address(sequencerChain.permissionRequirementModule()) == permissionModuleAddress);
+        assertTrue(permissionModule.owner() == admin);
     }
 
-    function testOnlyManagerCanSetIndexFromBlock() public {
-        vm.expectRevert();
-        vm.prank(admin);
-        l3Storage.setIndexFromBlock(1);
+    function testCreateSequencerChainWithRequireAny() public {
+        RequireAnyModule permissionModule = new RequireAnyModule(admin);
+        address permissionModuleAddress = address(permissionModule);
+
+        vm.expectEmit(true, false, false, true);
+        emit MetabasedFactory.MetabasedSequencerChainCreated(
+            appChainId,
+            address(0), // Only check appChainId and permissionModuleAddress
+            permissionModuleAddress
+        );
+
+        bytes32 salt = keccak256(abi.encodePacked("salt-for-any-module-", appChainId));
+        (address sequencerChainAddress, uint256 actualChainId) =
+            factory.createMetabasedSequencerChain(appChainId, admin, IRequirementModule(permissionModule), salt);
+
+        assertTrue(sequencerChainAddress != address(0));
+        assertTrue(permissionModuleAddress != address(0));
+        assertEq(actualChainId, appChainId);
+
+        MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);
+
+        // Verify sequencer setup
+        assertTrue(address(sequencerChain) == sequencerChainAddress);
+        assertEq(sequencerChain.appChainId(), appChainId);
+
+        // Verify permission module setup
+        assertTrue(address(sequencerChain.permissionRequirementModule()) == permissionModuleAddress);
+        assertTrue(permissionModule.owner() == admin);
     }
 
-    function testManagerCanSetIndexFromBlock() public {
-        vm.prank(manager);
-        l3Storage.setIndexFromBlock(1);
-        assertEq(l3Storage.indexFromBlock(), 1);
-    }
+    function testCreateMetabasedSequencerChainWithRequireAll() public {
+        vm.recordLogs();
 
-    // [Olympix Warning: tx.origin usage] Test removed as tx.origin check was removed for security
-    // The MANAGER_ROLE provides sufficient authorization control
-    function testOnlyOriginatorCanSave() public {
-        vm.prank(manager);
-        l3Storage.save(1, 0x505f3a50f83559ab090dbd840556254a7248404f2dedb53b4f12b26748a8ec08, "0x");
-    }
+        bytes32 salt = keccak256(abi.encodePacked("create-with-all-test-", appChainId));
+        (address sequencerChainAddr, IRequirementModule permissionModuleAddr, uint256 actualChainId) =
+            factory.createMetabasedSequencerChainWithRequireAllModule(admin, appChainId, salt);
 
-    function testOnlyManagerCanSaveForMany() public {
-        uint256[] memory epochNumbers = new uint256[](1);
-        epochNumbers[0] = 1;
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        bool found = false;
 
-        bytes32[] memory epochHashes = new bytes32[](1);
-        epochHashes[0] = 0xa553abb51becdfb0f56299b43b199076253e7a6b299d88b770a08b2b45bcb78a;
+        for (uint256 i = 0; i < entries.length; i++) {
+            // The event signature for AllContractsCreated
+            if (entries[i].topics[0] == keccak256("MetabasedSequencerChainCreated(uint256,address,address)")) {
+                // Check indexed parameters (they are in topics)
+                assertEq(uint256(entries[i].topics[1]), appChainId);
+                assertEq(address(uint160(uint256(entries[i].topics[2]))), sequencerChainAddr);
+                assertEq(address(uint160(uint256(entries[i].topics[3]))), address(permissionModuleAddr));
 
-        bytes[] memory batches = new bytes[](1);
-        batches[0] = "0x1234";
-
-        vm.prank(admin);
-        vm.expectRevert();
-        l3Storage.saveForMany(epochNumbers, epochHashes, batches);
-    }
-
-    function testSaveForManyRevertsIfArraysAreDifferentLengths() public {
-        uint256[] memory epochNumbers = new uint256[](1);
-        epochNumbers[0] = 1;
-
-        bytes32[] memory epochHashes = new bytes32[](2);
-        epochHashes[0] = 0x5f58575220c0ad82ee415ad72077049f0711c7445391a2f7a9161e410737424e;
-        epochHashes[1] = 0x1a564d3dc4db83ade078717e74cb891a6a97cdc2d88c41716e1aa6b8bec5249e;
-
-        bytes[] memory batches = new bytes[](1);
-        batches[0] = "0x1234";
-
-        vm.expectRevert();
-        vm.prank(manager);
-        l3Storage.saveForMany(epochNumbers, epochHashes, batches);
-    }
-
-    function testSave() public {
-        // Prepare test data
-        uint256 epochNumber = 1;
-        bytes32 epochHash = 0xd41f86be45e841b1791bf9ff78aa9c388d9c81384d8a063d480c71c7f8865502;
-        bytes memory batch = "0x";
-
-        // Listen for the Batch event
-        vm.expectEmit(true, true, false, true);
-        emit MetafillerStorage.EpochRangeProcessed(epochNumber, epochNumber);
-
-        // Call the save function
-        vm.prank(manager, manager);
-        l3Storage.save(epochNumber, epochHash, batch);
-    }
-
-    function testSaveForMany() public {
-        // Prepare test data
-        uint256[] memory epochNumbers = new uint256[](3);
-        epochNumbers[0] = 1;
-        epochNumbers[1] = 2;
-        epochNumbers[2] = 3;
-
-        bytes32[] memory epochHashes = new bytes32[](3);
-        epochHashes[0] = 0xec736dd1efe6c910b85d52fb1aeeb1c0ac1d4ef3414f8de8f6aedc5ef314968d;
-        epochHashes[1] = 0xb15b609a3039fac3f0541c405d2cd49be88079ef7f175c50306ab6b0f8a4de07;
-        epochHashes[2] = 0x3305fd2cd42b1da8fc3e8b89bd35330674d764c8cd0a653a8eabeb4619c3c99d;
-
-        bytes[] memory batches = new bytes[](3);
-        batches[0] = "0x1234";
-        batches[1] = "0x5678";
-        batches[2] = "0x9abc";
-
-        // Expect three Batch events to be emitted
-        vm.expectEmit(true, true, true, true);
-        emit MetafillerStorage.EpochRangeProcessed(epochNumbers[0], epochNumbers[2]);
-
-        // Call the saveForMany function
-        vm.prank(manager, manager);
-        l3Storage.saveForMany(epochNumbers, epochHashes, batches);
-    }
-
-    function testGasEmptyEmit() public {
-        uint256 gasStart = gasleft();
-        vm.prank(manager, manager);
-        l3Storage.save(1, 0x351e92084d6040b02259b6f0aa89141a23f7c796909f7d81731e228a84529f92, "");
-        uint256 gasUsed = gasStart - gasleft();
-        console.log("Gas used for empty emit:", gasUsed);
-    }
-
-    function testRevertsOnZeroAdmin() public {
-        vm.expectRevert("Admin address cannot be 0");
-        new MetafillerStorage(address(0), manager, 10042001);
-    }
-
-    function testRevertsOnZeroManager() public {
-        vm.expectRevert("Manager address cannot be 0");
-        new MetafillerStorage(admin, address(0), 10042001);
-    }
-
-    function testRevertsOnZeroChainId() public {
-        vm.expectRevert("L3 chain ID cannot be 0");
-        new MetafillerStorage(admin, manager, 0);
-    }
-
-    function testConstructorSetsCorrectValues() public view {
-        assertTrue(l3Storage.hasRole(l3Storage.DEFAULT_ADMIN_ROLE(), admin), "Admin role not set correctly");
-        assertTrue(l3Storage.hasRole(l3Storage.MANAGER_ROLE(), manager), "Manager role not set correctly");
-        assertEq(l3Storage.l3ChainId(), 10042001, "Chain ID not set correctly");
-    }
-
-    function testGasForIncreasingBatchSizes() public {
-        uint256 MAX_GAS_LIMIT = 30_000_000; // Approximate block gas limit
-        uint256 BATCH_SIZE_INCREMENT = 100_000; // Increment batch size by 100_000 bytes each iteration
-        uint256 MAX_ITERATIONS = 100;
-
-        uint256 epochNumber = 1;
-        bytes32 epochHash = 0x505f3a50f83559ab090dbd840556254a7248404f2dedb53b4f12b26748a8ec08;
-        bytes memory batch;
-
-        for (uint256 i = 1; i <= MAX_ITERATIONS; i++) {
-            uint256 batchSize = i * BATCH_SIZE_INCREMENT;
-            batch = new bytes(batchSize);
-
-            uint256 gasStart = gasleft();
-            vm.prank(manager);
-            try l3Storage.save(epochNumber, epochHash, batch) {
-                uint256 gasUsed = gasStart - gasleft();
-                console.log("Batch size:", batchSize, "Gas used:", gasUsed);
-
-                if (gasUsed > MAX_GAS_LIMIT) {
-                    console.log("Gas limit reached. Max batch size:", (i - 1) * BATCH_SIZE_INCREMENT);
-                    break;
-                }
-            } catch {
-                console.log("Transaction reverted. Max batch size:", (i - 1) * BATCH_SIZE_INCREMENT);
+                found = true;
                 break;
             }
         }
+
+        assertTrue(found, "MetabasedSequencerChainCreated event not found");
+
+        assertTrue(sequencerChainAddr != address(0));
+        assertTrue(address(permissionModuleAddr) != address(0));
+        assertEq(actualChainId, appChainId);
+
+        MetabasedSequencerChain sequencerChainContract = MetabasedSequencerChain(sequencerChainAddr);
+        assertEq(sequencerChainContract.appChainId(), appChainId);
+
+        uint256 newAppChainId = 10042002;
+        bytes32 newSalt = keccak256(abi.encodePacked("new-salt-", newAppChainId));
+
+        vm.expectEmit(true, false, false, false);
+        emit MetabasedFactory.MetabasedSequencerChainCreated(
+            newAppChainId, factory.computeSequencerChainAddress(newSalt, newAppChainId), address(permissionModuleAddr)
+        );
+        (address sequencerChainAddress, IRequirementModule permissionModuleAddress, uint256 newActualChainId) =
+            factory.createMetabasedSequencerChainWithRequireAllModule(admin, newAppChainId, newSalt);
+
+        assertTrue(sequencerChainAddress != address(0));
+        assertTrue(address(permissionModuleAddress) != address(0));
+        assertEq(newActualChainId, newAppChainId);
+
+        MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);
+        RequireAllModule permissionModule = RequireAllModule(address(permissionModuleAddress));
+
+        // Verify sequencer setup
+        assertTrue(address(sequencerChain) == sequencerChainAddress);
+        assertEq(sequencerChain.appChainId(), newAppChainId);
+
+        // Verify permission module setup
+        assertTrue(address(sequencerChain.permissionRequirementModule()) == address(permissionModuleAddress));
+        assertTrue(permissionModule.owner() == admin);
+    }
+
+    function testCreateMetabasedSequencerChainWithRequireAny() public {
+        vm.recordLogs();
+
+        bytes32 salt = keccak256(abi.encodePacked("create-with-any-test-", appChainId));
+        (address sequencerChainAddr, IRequirementModule permissionModuleAddr, uint256 actualChainId) =
+            factory.createMetabasedSequencerChainWithRequireAnyModule(admin, appChainId, salt);
+
+        Vm.Log[] memory entries = vm.getRecordedLogs();
+        bool found = false;
+
+        for (uint256 i = 0; i < entries.length; i++) {
+            // The event signature for AllContractsCreated
+            if (entries[i].topics[0] == keccak256("MetabasedSequencerChainCreated(uint256,address,address)")) {
+                // Check indexed parameters (they are in topics)
+                assertEq(uint256(entries[i].topics[1]), appChainId);
+                assertEq(address(uint160(uint256(entries[i].topics[2]))), sequencerChainAddr);
+                assertEq(address(uint160(uint256(entries[i].topics[3]))), address(permissionModuleAddr));
+
+                found = true;
+                break;
+            }
+        }
+
+        assertTrue(found, "MetabasedSequencerChainCreated event not found");
+
+        assertTrue(sequencerChainAddr != address(0));
+        assertTrue(address(permissionModuleAddr) != address(0));
+        assertEq(actualChainId, appChainId);
+
+        MetabasedSequencerChain sequencerChainContract = MetabasedSequencerChain(sequencerChainAddr);
+
+        assertEq(sequencerChainContract.appChainId(), appChainId);
+        uint256 newAppChainId = 10042002;
+        bytes32 newSalt = keccak256(abi.encodePacked("new-any-salt-", newAppChainId));
+
+        (address sequencerChainAddress, IRequirementModule permissionModuleAddress, uint256 newActualChainId) =
+            factory.createMetabasedSequencerChainWithRequireAnyModule(admin, newAppChainId, newSalt);
+
+        assertTrue(sequencerChainAddress != address(0));
+        assertTrue(address(permissionModuleAddress) != address(0));
+        assertEq(newActualChainId, newAppChainId);
+
+        MetabasedSequencerChain sequencerChain = MetabasedSequencerChain(sequencerChainAddress);
+        RequireAnyModule permissionModule = RequireAnyModule(address(permissionModuleAddress));
+
+        // Verify sequencer setup
+        assertTrue(address(sequencerChain) == sequencerChainAddress);
+        assertEq(sequencerChain.appChainId(), newAppChainId);
+
+        // Verify permission module setup
+        assertTrue(address(sequencerChain.permissionRequirementModule()) == address(permissionModuleAddress));
+        assertTrue(permissionModule.owner() == admin);
+    }
+
+    function testCorrectAppChainIdAssignment() public {
+        RequireAllModule permissionModule = new RequireAllModule(admin);
+        RequireAnyModule permissionModule2 = new RequireAnyModule(admin);
+        uint256 differentChainId = 10042002;
+
+        bytes32 salt1 = keccak256(abi.encodePacked("salt-chain1-", appChainId));
+        bytes32 salt2 = keccak256(abi.encodePacked("salt-chain2-", differentChainId));
+
+        (address sequencerChain1, uint256 actualChainId1) = factory.createMetabasedSequencerChain(
+            appChainId, admin, IRequirementModule(address(permissionModule)), salt1
+        );
+        (address sequencerChain2, uint256 actualChainId2) = factory.createMetabasedSequencerChain(
+            differentChainId, admin, IRequirementModule(address(permissionModule2)), salt2
+        );
+
+        assertEq(MetabasedSequencerChain(sequencerChain1).appChainId(), appChainId);
+        assertEq(MetabasedSequencerChain(sequencerChain2).appChainId(), differentChainId);
+        assertEq(actualChainId1, appChainId);
+        assertEq(actualChainId2, differentChainId);
+    }
+
+    function testRevertsOnZeroAdmin() public {
+        RequireAllModule permissionModule = new RequireAllModule(admin);
+        bytes32 salt = keccak256(abi.encodePacked("test-zero-admin"));
+
+        vm.expectRevert(MetabasedFactory.ZeroAddress.selector);
+        factory.createMetabasedSequencerChain(
+            appChainId, address(0), IRequirementModule(address(permissionModule)), salt
+        );
+
+        RequireAnyModule permissionModule2 = new RequireAnyModule(admin);
+        vm.expectRevert(MetabasedFactory.ZeroAddress.selector);
+        factory.createMetabasedSequencerChain(
+            appChainId, address(0), IRequirementModule(address(permissionModule2)), salt
+        );
+
+        vm.expectRevert(MetabasedFactory.ZeroAddress.selector);
+        factory.createMetabasedSequencerChainWithRequireAllModule(address(0), appChainId, salt);
+
+        vm.expectRevert(MetabasedFactory.ZeroAddress.selector);
+        factory.createMetabasedSequencerChainWithRequireAnyModule(address(0), appChainId, salt);
+    }
+
+    function testRevertsOnZeroManager() public {
+        bytes32 salt = keccak256(abi.encodePacked("test-zero-manager"));
+
+        vm.expectRevert(MetabasedFactory.ZeroAddress.selector);
+        factory.createMetabasedSequencerChainWithRequireAllModule(address(0), appChainId, salt);
+
+        vm.expectRevert(MetabasedFactory.ZeroAddress.selector);
+        factory.createMetabasedSequencerChainWithRequireAnyModule(address(0), appChainId, salt);
+    }
+
+    // The zero chain ID test is modified since we now allow zero to trigger auto-increment
+    function testAutoIncrementOnZeroChainId() public {
+        RequireAllModule permissionModule = new RequireAllModule(admin);
+        uint256 expectedChainId = namespaceId + 1;
+
+        bytes32 salt = keccak256(abi.encodePacked("test-auto-increment"));
+        (address sequencerChainAddress, uint256 actualChainId) =
+            factory.createMetabasedSequencerChain(0, admin, IRequirementModule(address(permissionModule)), salt);
+
+        assertTrue(sequencerChainAddress != address(0));
+        assertEq(actualChainId, expectedChainId);
+        assertEq(MetabasedSequencerChain(sequencerChainAddress).appChainId(), expectedChainId);
+
+        // Verify next chain ID incremented
+        assertEq(factory.getNextAutoChainId(), namespaceId + 2);
+    }
+
+    function testCreateSequencerChainAddressIsDeterministic() public {
+        RequireAllModule permissionModule = new RequireAllModule(admin);
+        bytes32 salt = keccak256(abi.encodePacked("deterministic-test-", appChainId));
+
+        (address sequencerChainAddress,) = factory.createMetabasedSequencerChain(
+            appChainId, admin, IRequirementModule(address(permissionModule)), salt
+        );
+        assertEq(sequencerChainAddress, factory.computeSequencerChainAddress(salt, appChainId));
+    }
+
+    function testCreateSequencerChainAddressIsDeterministicWithDifferentSaltThanChainId() public {
+        RequireAllModule permissionModule = new RequireAllModule(admin);
+        bytes32 salt = keccak256(abi.encodePacked("diff-salt-test-", appChainId + 10));
+
+        (address sequencerChainAddress,) = factory.createMetabasedSequencerChain(
+            appChainId, admin, IRequirementModule(address(permissionModule)), salt
+        );
+        assertEq(sequencerChainAddress, factory.computeSequencerChainAddress(salt, appChainId));
+    }
+
+    function testGetBytecode() public view {
+        bytes memory bytecode = factory.getBytecode(appChainId);
+        bytes memory expectedBytecode =
+            abi.encodePacked(type(MetabasedSequencerChain).creationCode, abi.encode(appChainId));
+        assertEq(bytecode, expectedBytecode);
+    }
+
+    // New tests for the 510 namespace functionality
+    function testReservedNamespaceRejection() public {
+        uint256 reservedId = namespaceId + 5;
+        RequireAllModule permissionModule = new RequireAllModule(admin);
+        bytes32 salt = keccak256(abi.encodePacked("reserved-namespace-test"));
+
+        vm.expectRevert(MetabasedFactory.ReservedNamespace.selector);
+        factory.createMetabasedSequencerChain(reservedId, admin, IRequirementModule(address(permissionModule)), salt);
+    }
+
+    function testAutoIncrementChainIds() public {
+        // First auto-incremented chain ID
+        bytes32 salt1 = keccak256(abi.encodePacked("auto-increment-1"));
+        (address chain1,, uint256 id1) = factory.createMetabasedSequencerChainWithRequireAllModule(admin, 0, salt1);
+
+        assertEq(id1, namespaceId + 1);
+
+        // Second auto-incremented chain ID
+        bytes32 salt2 = keccak256(abi.encodePacked("auto-increment-2"));
+        (address chain2,, uint256 id2) = factory.createMetabasedSequencerChainWithRequireAllModule(admin, 0, salt2);
+
+        assertEq(id2, namespaceId + 2);
+
+        // Third with RequireAny
+        bytes32 salt3 = keccak256(abi.encodePacked("auto-increment-3"));
+        (address chain3,, uint256 id3) = factory.createMetabasedSequencerChainWithRequireAnyModule(admin, 0, salt3);
+
+        assertEq(id3, namespaceId + 3);
+
+        // Verify all chains have correct IDs
+        assertEq(MetabasedSequencerChain(chain1).appChainId(), namespaceId + 1);
+        assertEq(MetabasedSequencerChain(chain2).appChainId(), namespaceId + 2);
+        assertEq(MetabasedSequencerChain(chain3).appChainId(), namespaceId + 3);
+    }
+
+    function testMixedAutoAndManualChainIds() public {
+        // Auto chain ID
+        bytes32 salt1 = keccak256(abi.encodePacked("mixed-auto-1"));
+        (,, uint256 id1) = factory.createMetabasedSequencerChainWithRequireAllModule(admin, 0, salt1);
+
+        assertEq(id1, namespaceId + 1);
+
+        // Manual chain ID
+        uint256 manualId = 42000;
+        bytes32 salt2 = keccak256(abi.encodePacked("mixed-manual-", manualId));
+        (,, uint256 id2) = factory.createMetabasedSequencerChainWithRequireAllModule(admin, manualId, salt2);
+
+        assertEq(id2, manualId);
+
+        // Back to auto chain ID
+        bytes32 salt3 = keccak256(abi.encodePacked("mixed-auto-2"));
+        (,, uint256 id3) = factory.createMetabasedSequencerChainWithRequireAnyModule(admin, 0, salt3);
+
+        // Should be namespaceId + 2 since we only used one auto ID so far
+        assertEq(id3, namespaceId + 2);
+    }
+
+    function testChainIdAlreadyExists() public {
+        // Create first chain
+        bytes32 salt1 = keccak256(abi.encodePacked("duplicate-test-1"));
+        factory.createMetabasedSequencerChainWithRequireAllModule(admin, appChainId, salt1);
+
+        // Try to create another with same chain ID
+        bytes32 salt2 = keccak256(abi.encodePacked("duplicate-test-2"));
+        vm.expectRevert(MetabasedFactory.ChainIdAlreadyExists.selector);
+        factory.createMetabasedSequencerChainWithRequireAllModule(admin, appChainId, salt2);
+    }
+
+    function testIsChainIdUsed() public {
+        // Initially no chain IDs used
+        assertEq(factory.isChainIdUsed(appChainId), 0);
+
+        // Create chain
+        bytes32 salt1 = keccak256(abi.encodePacked("chain-used-test-1"));
+        factory.createMetabasedSequencerChainWithRequireAllModule(admin, appChainId, salt1);
+
+        // Now chain ID should be marked as used
+        assertEq(factory.isChainIdUsed(appChainId), 1);
+
+        // Auto-incremented ID should also be marked as used
+        bytes32 salt2 = keccak256(abi.encodePacked("chain-used-test-2"));
+        (,, uint256 id2) = factory.createMetabasedSequencerChainWithRequireAllModule(admin, 0, salt2);
+
+        assertEq(factory.isChainIdUsed(id2), 1);
     }
 }

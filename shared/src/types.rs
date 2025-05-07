@@ -2,7 +2,15 @@
 
 use alloy::{
     hex,
+    network::EthereumWallet,
     primitives::{Address, Log, B256},
+    providers::{
+        fillers::{
+            BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
+            WalletFiller,
+        },
+        Identity, RootProvider,
+    },
 };
 use jsonrpsee::core::async_trait;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
@@ -177,3 +185,15 @@ where
 {
     serializer.serialize_str(&format!("0x{:x}", num))
 }
+
+/// A filled provider
+pub type FilledProvider = FillProvider<
+    JoinFill<
+        JoinFill<
+            Identity,
+            JoinFill<GasFiller, JoinFill<BlobGasFiller, JoinFill<NonceFiller, ChainIdFiller>>>,
+        >,
+        WalletFiller<EthereumWallet>,
+    >,
+    RootProvider,
+>;

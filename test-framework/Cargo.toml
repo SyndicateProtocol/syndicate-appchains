@@ -21,10 +21,13 @@ block-builder = { workspace = true }
 contract-bindings = { workspace = true }
 ctor = { workspace = true }
 eyre = { workspace = true }
+jsonrpsee = { workspace = true }
+maestro = { workspace = true }
 mchain = { workspace = true }
 prometheus-client = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 shared = { workspace = true }
 test-utils = { workspace = true }
 tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }

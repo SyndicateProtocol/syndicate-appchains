@@ -17,13 +17,6 @@ pub async fn with_onchain_config(config: &MetabasedConfig) -> MetabasedConfig {
             return config.clone();
         }
     };
-    let chain_id = match config.appchain_chain_id {
-        Some(chain_id) => chain_id,
-        None => {
-            warn!("No appchain_chain_id provided, skipping on-chain config fetch");
-            return config.clone();
-        }
-    };
 
     let ingestor_provider = IngestorProvider::new(
         &config.settlement.settlement_rpc_url,
@@ -38,7 +31,7 @@ pub async fn with_onchain_config(config: &MetabasedConfig) -> MetabasedConfig {
             .unwrap(),
     );
 
-    let onchain = match get_config(address, U256::from(chain_id), provider).await {
+    let onchain = match get_config(address, U256::from(config.appchain_chain_id), provider).await {
         Ok(c) => c,
         Err(error) => {
             error!(%error, "error obtaining on-chain config");
@@ -114,9 +107,9 @@ pub async fn with_onchain_config(config: &MetabasedConfig) -> MetabasedConfig {
         config.sequencing.sequencing_rpc_url = Some(onchain.default_sequencing_chain_rpc_url)
     }
 
-    if config.rollup_owner.is_none() {
+    if config.appchain_owner.is_none() {
         info!("Using the rollup_owner from on-chain config: {:?}", onchain.rollup_owner);
-        config.rollup_owner = Some(onchain.rollup_owner);
+        config.appchain_owner = Some(onchain.rollup_owner);
     }
 
     config

@@ -2,7 +2,10 @@
 
 use eyre::Result;
 use maestro::config::Config;
-use shared::logger::set_global_default_subscriber;
+use shared::{
+    logger::set_global_default_subscriber,
+    metrics::{start_metrics, MetricsState},
+};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 
@@ -15,7 +18,10 @@ async fn main() -> Result<()> {
     let config = Config::initialize();
     info!("Config: {:?}", config);
 
-    // TODO metrics, if necessary
+    // Maestro metrics
+    // TODO(SEQ-449): Expose Prometheus metrics endpoint for Maestro
+    let metrics_state = MetricsState::default();
+    tokio::spawn(start_metrics(metrics_state, config.metrics_port));
 
     let (addr, handle) = maestro::server::run(config).await?;
     info!(
