@@ -40,11 +40,6 @@ async fn main() -> Result<()> {
     )
     .await?;
 
-    // Batcher metrics
-    // TODO(SEQ-868): Batcher metrics
-    let metrics_state = MetricsState::default();
-    tokio::spawn(start_metrics(metrics_state, config.metrics_port));
-
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
     #[allow(clippy::expect_used)]
