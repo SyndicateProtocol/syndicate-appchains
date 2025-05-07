@@ -11,7 +11,7 @@ fn init() {
 }
 
 async fn run_mchain(signal: &str) -> Result<()> {
-    let (_, mut mchain, _) = start_mchain(13331370, Address::ZERO, 0).await?;
+    let (_, mut mchain, _) = start_mchain(13331370, Some(Address::ZERO), None, None, 0).await?;
     let pid = mchain.id().ok_or_else(|| eyre::eyre!("Failed to get process ID"))?;
     Command::new("kill").arg(signal).arg(pid.to_string()).status()?;
     let status = mchain.wait().await?;

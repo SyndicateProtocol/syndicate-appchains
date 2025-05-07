@@ -56,7 +56,8 @@ async fn arb_owner_test() -> Result<()> {
 
     // Start the meta node
     let rollup_owner = address!("0x0000000000000000000000000000000000000001");
-    let (mchain_url, _mchain, _) = start_mchain(APPCHAIN_CHAIN_ID, rollup_owner, 0).await?;
+    let (mchain_url, _mchain, _) =
+        start_mchain(APPCHAIN_CHAIN_ID, Some(rollup_owner), None, None, 0).await?;
     let (_nitro, rollup, _) =
         launch_nitro_node(APPCHAIN_CHAIN_ID, rollup_owner, &mchain_url, None).await?;
     let arb_owner_public = ArbOwnerPublic::new(ARB_OWNER_CONTRACT_ADDRESS, &rollup);
@@ -68,7 +69,8 @@ async fn arb_owner_test() -> Result<()> {
 async fn no_l1_fees_test() -> Result<()> {
     const ARB_GAS_INFO_CONTRACT_ADDRESS: Address =
         address!("0x000000000000000000000000000000000000006c");
-    let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, Address::ZERO, 0).await?;
+    let (mchain_url, _mchain, mchain) =
+        start_mchain(APPCHAIN_CHAIN_ID, Some(Address::ZERO), None, None, 0).await?;
     let (_nitro, rollup, _) =
         launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
     let arb_gas_info = ArbGasInfo::new(ARB_GAS_INFO_CONTRACT_ADDRESS, &rollup);
@@ -108,7 +110,8 @@ async fn no_l1_fees_test() -> Result<()> {
 /// via the block builder code and posted to the dummy rollup contract.
 #[tokio::test]
 async fn test_nitro_batch() -> Result<()> {
-    let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, Address::ZERO, 0).await?;
+    let (mchain_url, _mchain, mchain) =
+        start_mchain(APPCHAIN_CHAIN_ID, Some(Address::ZERO), None, None, 0).await?;
 
     let (_nitro, rollup, _) =
         launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
@@ -174,7 +177,8 @@ async fn test_nitro_batch() -> Result<()> {
 /// Regression test
 #[tokio::test]
 async fn test_nitro_batch_two_tx() -> Result<()> {
-    let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, Address::ZERO, 0).await?;
+    let (mchain_url, _mchain, mchain) =
+        start_mchain(APPCHAIN_CHAIN_ID, Some(Address::ZERO), None, None, 0).await?;
     let (_nitro, rollup, _) =
         launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
     let addr = get_signer().address();
@@ -255,7 +259,8 @@ async fn test_nitro_batch_two_tx() -> Result<()> {
 
 #[tokio::test]
 async fn test_nitro_end_of_block_tx() -> Result<()> {
-    let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, Address::ZERO, 0).await?;
+    let (mchain_url, _mchain, mchain) =
+        start_mchain(APPCHAIN_CHAIN_ID, Some(Address::ZERO), None, None, 0).await?;
     let (_nitro, rollup, _) =
         launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
 
@@ -284,7 +289,8 @@ async fn test_nitro_end_of_block_tx() -> Result<()> {
 
 #[tokio::test]
 async fn test_nitro_delayed_message_after_batch() -> Result<()> {
-    let (mchain_url, _mchain, mchain) = start_mchain(APPCHAIN_CHAIN_ID, Address::ZERO, 0).await?;
+    let (mchain_url, _mchain, mchain) =
+        start_mchain(APPCHAIN_CHAIN_ID, Some(Address::ZERO), None, None, 0).await?;
     let (_nitro, rollup, _) =
         launch_nitro_node(APPCHAIN_CHAIN_ID, Address::ZERO, &mchain_url, None).await?;
 
