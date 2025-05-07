@@ -87,6 +87,7 @@ impl BatcherMetrics {
 
     pub fn record_batch_transactions(&self, count: usize) {
         self.batch_transactions_count.set(count as i64);
+        self.increment_total_txs_processed(count);
     }
 
     pub fn record_batch_size(&self, size: usize) {

@@ -7,6 +7,22 @@ use flate2::{write::ZlibEncoder, Compression};
 use rlp::RlpStream;
 use std::io::{Error, Write};
 
+pub fn compress(txs: &[Bytes], tx: &Bytes) -> Result<Vec<u8>, Error> {
+    let mut stream = RlpStream::new_list(txs.len());
+    for t in txs {
+        stream.append(&t.as_ref());
+    }
+    stream.append(&tx.as_ref());
+
+    let mut encoder = ZlibEncoder::new(Vec::new(), Compression::default());
+    encoder.write_all(&stream.out())?;
+    let compressed = encoder.finish()?;
+
+    is_valid_cm_bits_8_only(&compressed)?;
+
+    Ok(compressed)
+}
+
 /// A streaming compressor that incrementally compresses transactions using zlib
 #[derive(Debug, Default)]
 pub struct AdditiveCompressor {

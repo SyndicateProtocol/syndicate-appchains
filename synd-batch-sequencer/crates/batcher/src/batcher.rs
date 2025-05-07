@@ -13,16 +13,14 @@ use contract_bindings::metabased::walletpoolwrappermodule::WalletPoolWrapperModu
 };
 use derivative::Derivative;
 use eyre::{eyre, Result};
-use maestro::redis::{consumer::StreamConsumer, producer::StreamProducer};
-use prometheus_client::registry::Registry;
+use maestro::redis::consumer::StreamConsumer;
 use redis::Client as RedisClient;
-use shared::{additive_compression::AdditiveCompressor, types::FilledProvider};
+use shared::types::FilledProvider;
 use std::{
-    mem::take,
-    pin::pin,
+    collections::VecDeque,
     str::FromStr,
     sync::Arc,
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant},
 };
 use tc_client::tc_client::{TCClient, BATCH_FUNCTION_SIGNATURE};
 use tokio::{sync::Semaphore, task::JoinHandle};
@@ -39,8 +37,6 @@ struct Batcher {
     /// The batch sender
     #[derivative(Debug = "ignore")]
     batch_sender: BatchSender,
-    /// The compressor for the batcher
-    compressor: AdditiveCompressor,
     /// The chain ID for the batcher
     chain_id: u64,
     /// The timeout for the batcher
@@ -49,6 +45,8 @@ struct Batcher {
     submission_semaphore: Arc<Semaphore>,
     /// Metrics
     metrics: BatcherMetrics,
+    /// Outstanding transactions that didn't fit in the last batch
+    outstanding_txs: Vec<Bytes>,
 }
 type BatchSender = Box<
     dyn Fn(
@@ -172,17 +170,25 @@ impl Batcher {
             max_batch_size: config.max_batch_size,
             redis_consumer,
             batch_sender,
-            compressor: AdditiveCompressor::default(),
             chain_id: config.chain_id,
             timeout: config.timeout,
             submission_semaphore: Arc::new(Semaphore::new(1)), //Only one submission at a time
             metrics,
+            outstanding_txs: Vec::new(),
         }
     }
-    /// reads transactions from redis and returns a compressed batch
-    async fn read_transactions(&mut self) -> Result<()> {
+
+    async fn read_and_compress_transactions(&mut self) -> Result<Vec<u8>> {
         let start = Instant::now();
-        loop {
+        let mut txs = std::mem::take(&mut self.outstanding_txs);
+        let mut compressed = Vec::<u8>::new();
+        let mut uncompressed_size = 0;
+        if !txs.is_empty() {
+            uncompressed_size = txs.iter().map(|tx| tx.len()).sum();
+            compressed = shared::additive_compression::compress(&txs, &Bytes::new())?;
+        }
+
+        'outer: loop {
             if start.elapsed() >= self.timeout {
                 debug!(%self.chain_id, "Read timeout reached. Stopping transaction read.");
                 break;
@@ -191,38 +197,37 @@ impl Batcher {
             // TODO (SEQ-842): Configurable max msg count
             // NOTE: If msg count is >1 we need to handle edge cases where not all transactions fit
             // in the batch
-            let transactions = self.redis_consumer.recv(1, Duration::from_millis(100)).await?;
+            let incoming_txs = self.redis_consumer.recv(1, Duration::from_millis(100)).await?;
 
-            if transactions.is_empty() {
-                debug!("No transactions available to batch.");
-                break;
-            }
-            // let original_size = 0;
-            // let compressed = Bytes::new();
+            // Convert all incoming transactions to Bytes first
+            let mut incoming_txs: VecDeque<Bytes> =
+                incoming_txs.into_iter().map(|(tx, _)| Bytes::from(tx)).collect();
 
-            for (txn_bytes, _) in transactions {
-                let txn = Bytes::from(txn_bytes);
+            // Process transactions until one doesn't fit
+            while let Some(tx_bytes) = incoming_txs.front() {
+                let compressed_next = shared::additive_compression::compress(&txs, tx_bytes)?;
 
-                let compressed = self.compressor.clone_and_compress_with_txn(&txn)?;
-
-                if compressed.len() as u64 > self.max_batch_size.as_u64() {
-                    // Stop consuming and let the caller finalize the batch
-                    // let num_txs = self.compressor.num_transactions();
-                    // self.metrics.record_batch_transactions(num_txs);
-                    // self.metrics.record_compression_ratio(original_size, compressed.len());
-                    return Ok(());
+                if compressed_next.len() as u64 > self.max_batch_size.as_u64() {
+                    // Stop consuming
+                    // Save all remaining transactions
+                    self.outstanding_txs = incoming_txs.into();
+                    break 'outer;
                 }
-                // original_size += txn.len();
-
+                uncompressed_size += tx_bytes.len();
                 debug!(
                     %self.chain_id, "Adding transaction to batch: {:?} - compressed size: {}",
-                    txn,
-                    compressed.len()
+                    tx_bytes,
+                    compressed_next.len()
                 );
-                self.compressor.push_with_precompressed(&txn, compressed)?;
+                compressed = compressed_next;
+                if let Some(tx) = incoming_txs.pop_front() {
+                    txs.push(tx);
+                }
             }
         }
-        Ok(())
+        self.metrics.record_batch_transactions(txs.len());
+        self.metrics.record_compression_ratio(uncompressed_size, compressed.len());
+        Ok(compressed)
     }
 
     async fn read_and_batch_transactions(&mut self) -> Result<(), BatchError> {
@@ -239,15 +244,15 @@ impl Batcher {
 
         // _permit is held until the end of the function
 
-        self.read_transactions().await?;
+        let bytes = self.read_and_compress_transactions().await?;
 
-        if self.compressor.is_empty() {
+        if bytes.is_empty() {
             debug!(%self.chain_id, "No transactions available to batch.");
             return Ok(());
         }
 
         let submission_start = Instant::now();
-        if let Err(e) = self.send_compressed_batch().await {
+        if let Err(e) = self.send_compressed_batch(bytes).await {
             // Don't reset the compressor here, because we want to retry the same batch
             error!(%self.chain_id, "Failed to send compressed batch: {:?}", e);
             return Err(e);
@@ -257,31 +262,23 @@ impl Batcher {
         self.metrics.record_processing_time(start.elapsed());
         self.metrics.record_batch_timestamp();
 
-        self.compressor.reset(); // Reset for next round
         Ok(())
     }
 
-    async fn send_compressed_batch(&mut self) -> Result<(), BatchError> {
-        let num_transactions = self.compressor.num_transactions();
-        debug!(%self.chain_id, "Sending compressed batch with {} transactions", num_transactions);
-        let compressed = take(&mut self.compressor).finish()?;
-
-        let compressed_len = compressed.len();
+    async fn send_compressed_batch(&self, bytes: Vec<u8>) -> Result<(), BatchError> {
         let max_size = self.max_batch_size.as_u64() as usize;
 
-        if compressed_len >= max_size {
-            error!(%self.chain_id, "Compressed batch size ({}) exceeds limit ({})", compressed_len, max_size);
-            return Err(BatchError::BatchTooLarge(compressed_len, max_size));
+        if bytes.len() >= max_size {
+            error!(%self.chain_id, "Compressed batch size ({}) exceeds limit ({})", bytes.len(), max_size);
+            return Err(BatchError::BatchTooLarge(bytes.len(), max_size));
         }
 
-        (self.batch_sender)(compressed.clone()).await?;
-
         debug!(
-            %self.chain_id, "Batch sent: {} txs, compressed size: {} bytes",
-            num_transactions,
-            compressed_len
+            %self.chain_id, "Batch sent - compressed size: {} bytes",
+            bytes.len()
         );
-        self.metrics.increment_total_txs_processed(num_transactions);
+        (self.batch_sender)(Bytes::from(bytes)).await?;
+
         Ok(())
     }
 }
@@ -290,7 +287,7 @@ impl Batcher {
 mod tests {
     use super::*;
     use maestro::redis::producer::StreamProducer;
-    use tc_client::config::TCEndpoint;
+    use prometheus_client::registry::Registry;
     use test_utils::{docker::start_redis, wait_until};
     use url::Url;
 
@@ -311,7 +308,7 @@ mod tests {
     }
 
     #[tokio::test(flavor = "multi_thread")]
-    async fn test_read_transactions_adds_to_compressor() {
+    async fn test_read_transactions() {
         let mut config = test_config();
         let (_redis, redis_url) = start_redis().await.unwrap();
         config.redis_url = redis_url.clone();
@@ -332,9 +329,8 @@ mod tests {
         let metrics = BatcherMetrics::new(&mut registry);
         let mut batcher = Batcher::new(&config, redis_consumer, create_noop_sender(), metrics);
 
-        let result = batcher.read_transactions().await;
+        let result = batcher.read_and_compress_transactions().await;
         assert!(result.is_ok());
-        assert!(!batcher.compressor.is_empty(), "Compressor should not be empty after read");
     }
 
     #[tokio::test]
@@ -355,11 +351,9 @@ mod tests {
         let mut registry = Registry::default();
         let metrics = BatcherMetrics::new(&mut registry);
 
-        let mut batcher = Batcher::new(&config, redis_consumer, create_noop_sender(), metrics);
+        let batcher = Batcher::new(&config, redis_consumer, create_noop_sender(), metrics);
 
-        batcher.compressor.clone_and_compress_with_txn(&Bytes::from(vec![2, 3, 4])).unwrap();
-
-        let result = batcher.send_compressed_batch().await;
+        let result = batcher.send_compressed_batch(vec![2, 3, 4]).await;
         assert!(result.is_err());
     }
 
@@ -380,10 +374,10 @@ mod tests {
         let metrics = BatcherMetrics::new(&mut registry);
 
         let mut batcher = Batcher::new(&config, redis_consumer, create_noop_sender(), metrics);
-        let result = batcher.read_transactions().await;
+        let result = batcher.read_and_compress_transactions().await;
 
         assert!(result.is_ok());
-        assert!(batcher.compressor.is_empty(), "Compressor should be empty");
+        assert!(result.unwrap().is_empty());
     }
 
     #[tokio::test]
@@ -436,7 +430,7 @@ mod tests {
         while test_data.len() < 50 * 1024 {
             test_data.extend_from_slice(base_data);
         }
-        test_data.truncate(50 * 1024); // Ensure exact 50KiB
+        test_data.truncate(50 * 1024); // Ensure exact 50KB
         for _ in 0..100 {
             producer.enqueue_transaction(test_data.clone()).await.unwrap();
         }
@@ -453,10 +447,6 @@ mod tests {
                 batcher.read_and_batch_transactions().await.unwrap();
             }
         });
-
-        // TODO remove
-        tokio::time::sleep(Duration::from_secs(10)).await;
-        println!("Total txs processed: {}", metrics_clone.total_txs_processed.get());
 
         wait_until!(metrics_clone.total_txs_processed.get() == 100, Duration::from_secs(10));
     }
