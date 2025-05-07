@@ -267,7 +267,6 @@ impl Batcher {
 mod tests {
     use super::*;
     use maestro::redis::streams::producer::StreamProducer;
-    use test_utils::docker::start_redis;
     use prometheus_client::registry::Registry;
     use test_utils::{docker::start_redis, wait_until};
     use url::Url;
