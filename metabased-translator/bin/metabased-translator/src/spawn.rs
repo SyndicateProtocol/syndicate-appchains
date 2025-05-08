@@ -1,8 +1,13 @@
-use crate::{config::MetabasedConfig, types::RuntimeError};
+use crate::{
+    config::{ChainIngestorConfig, MetabasedConfig},
+    types::RuntimeError,
+};
 use block_builder::rollups::arbitrum::arbitrum_adapter::ArbitrumAdapter;
-use chain_ingestor::client::{IngestorProvider, Provider as IProvider};
+use chain_ingestor::{
+    client::{IngestorProvider, Provider as IProvider},
+    eth_client::EthClient,
+};
 use eyre::Result;
-use ingestor::config::ChainIngestorConfig;
 use mchain::client::{MProvider, Provider};
 use metrics::metrics::TranslatorMetrics;
 use shared::metrics::{start_metrics, MetricsState};
@@ -39,15 +44,12 @@ async fn start_slotter(config: &MetabasedConfig, metrics: &TranslatorMetrics) ->
 
     let sequencing_client = IngestorProvider::new(
         config.sequencing.sequencing_rpc_url.as_ref().unwrap(),
-        config.sequencing.sequencing_rpc_timeout,
+        config.rpc_timeout,
     )
     .await;
 
-    let settlement_client = IngestorProvider::new(
-        &config.settlement.settlement_rpc_url,
-        config.settlement.settlement_rpc_timeout,
-    )
-    .await;
+    let settlement_client =
+        IngestorProvider::new(&config.settlement.settlement_rpc_url, config.rpc_timeout).await;
 
     let safe_state =
         mchain.reconcile_mchain_with_source_chains(&sequencing_client, &settlement_client).await?;
@@ -66,15 +68,36 @@ async fn start_slotter(config: &MetabasedConfig, metrics: &TranslatorMetrics) ->
     let arbitrum_adapter = Arc::new(ArbitrumAdapter::new(&config.block_builder));
 
     let adapter = arbitrum_adapter.clone();
+
+    let seq_client = EthClient::new(
+        &sequencing_client.get_url().await?,
+        config.rpc_timeout,
+        config.get_logs_timeout,
+        1024,
+    )
+    .await;
     let sequencing = sequencing_client
-        .get_blocks(sequencing_config.start_block, adapter.sequencer_addresses(), adapter)
+        .get_blocks(
+            sequencing_config.start_block,
+            adapter.sequencer_addresses(),
+            adapter,
+            seq_client,
+        )
         .await?;
 
+    let set_client = EthClient::new(
+        &settlement_client.get_url().await?,
+        config.rpc_timeout,
+        config.get_logs_timeout,
+        1024,
+    )
+    .await;
     let settlement = settlement_client
         .get_blocks(
             settlement_config.start_block,
             arbitrum_adapter.settlement_addresses(),
             arbitrum_adapter,
+            set_client,
         )
         .await?;
 

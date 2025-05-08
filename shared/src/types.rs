@@ -12,7 +12,7 @@ use alloy::{
         Identity, RootProvider,
     },
 };
-use jsonrpsee::core::async_trait;
+use async_trait::async_trait;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
 use std::fmt::{Display, Formatter};
 
@@ -75,7 +75,7 @@ pub struct Receipt {
     pub gas_used: u64,
 }
 
-/// PartialBlock contains block transactions, event logs, and metadata
+/// `PartialBlock` contains block transactions, event logs, and metadata
 #[allow(missing_docs)]
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, Default)]
 pub struct PartialBlock {

@@ -1,4 +1,4 @@
-//! Db
+//! The chain-ingestor db uses an append-only file to persist fixed-size items to disk.
 use crate::metrics::ChainIngestorMetrics;
 use alloy::{
     primitives::{Bytes, B256},
@@ -22,14 +22,15 @@ pub struct DB {
 }
 
 /// 4 bytes for the block timestamp + 32 bytes for the block hash
-/// The first item is the header - this contains the version byte followed by the
-/// start block number (u64) followed by the chain id (u64).
-/// The remaining 19 bytes are empty and reserved for custom metadata.
+// The first item is the header - this contains the version byte followed by the start block number
+// (u64) followed by the chain id (u64). The remaining 19 bytes are empty and reserved for custom
+// metadata.
 pub const ITEM_SIZE: u64 = 36;
 
 #[allow(missing_docs)]
+#[allow(clippy::unwrap_used)]
 impl DB {
-    pub fn open(file_name: &str, start_block: u64, chain_id: u64) -> std::io::Result<DB> {
+    pub fn open(file_name: &str, start_block: u64, chain_id: u64) -> std::io::Result<Self> {
         let mut file = OpenOptions::new().read(true).append(true).create(true).open(file_name)?;
         file.lock_exclusive()?;
         let metadata = file.metadata()?;
@@ -46,9 +47,7 @@ impl DB {
             file.set_len(metadata_size - (metadata_size % ITEM_SIZE))?;
         }
         let size = file.metadata()?.size();
-        if size < ITEM_SIZE || size % ITEM_SIZE != 0 {
-            panic!("unexpected file size found: {}", size);
-        }
+        assert!(size >= ITEM_SIZE && size % ITEM_SIZE == 0, "unexpected file size found: {}", size);
         let mut version = [0];
         file.read_exact_at(&mut version, 0)?;
         assert_eq!(version, [1]);
@@ -59,7 +58,7 @@ impl DB {
         file.read_exact_at(&mut buf, 9)?;
         assert_eq!(chain_id, u64::from_be_bytes(buf));
         let count = size / ITEM_SIZE - 1;
-        Ok(DB { file, start_block: db_start_block, count })
+        Ok(Self { file, start_block: db_start_block, count })
     }
 
     pub fn get_block(&self, block: u64) -> BlockRef {
@@ -75,8 +74,7 @@ impl DB {
 
     pub fn get_block_bytes(&self, from: u64) -> Bytes {
         assert!(self.in_range(from));
-        let mut data = Vec::new();
-        data.resize(((self.next_block() - from) * ITEM_SIZE) as usize, 0);
+        let mut data = vec![0; ((self.next_block() - from) * ITEM_SIZE) as usize];
         self.file.read_exact_at(&mut data, (from - self.start_block + 1) * ITEM_SIZE).unwrap();
         data.into()
     }
@@ -119,11 +117,11 @@ impl DB {
         false
     }
 
-    pub fn next_block(&self) -> u64 {
+    pub const fn next_block(&self) -> u64 {
         self.start_block + self.count
     }
 
-    pub fn in_range(&self, block: u64) -> bool {
-        return block >= self.start_block && block < self.next_block();
+    pub const fn in_range(&self, block: u64) -> bool {
+        block >= self.start_block && block < self.next_block()
     }
 }

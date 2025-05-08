@@ -8,7 +8,6 @@ members = [
   "metabased-translator/bin/metabased-translator",
   "metabased-translator/crates/block-builder",
   "metabased-translator/crates/common",
-  "metabased-translator/crates/ingestor",
   "metabased-translator/crates/metrics",
   "metabased-translator/crates/slotter",
   "metabased-translator/tests",
@@ -63,7 +62,6 @@ http-body            = "1.0.1"
 http-body-util       = "0.1"
 humantime            = "2.1.0"
 hyper                = { version = "1.5.2" }
-ingestor             = { path = "metabased-translator/crates/ingestor" }
 jsonrpsee            = { version = "0.24.7" }
 maestro              = { path = "maestro" }
 mchain               = { path = "mchain" }

@@ -1,10 +1,16 @@
-//! Server
-use crate::{db::DB, eth_client::EthClient, ingestor::subscribe, metrics::ChainIngestorMetrics};
-use alloy::{eips::BlockNumberOrTag, primitives::Address};
-use jsonrpsee::{
-    types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned},
-    RpcModule, SubscriptionSink,
+//! The server crate is used to create a `RpcModule` that handles websocket jsonrpc requests.
+use crate::{db::DB, eth_client::EthClient, metrics::ChainIngestorMetrics};
+use alloy::{
+    eips::BlockNumberOrTag,
+    primitives::{Address, Log},
 };
+use eyre::eyre;
+use jsonrpsee::{
+    core::StringError,
+    types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned},
+    RpcModule, SubscriptionMessage, SubscriptionSink,
+};
+use shared::types::PartialBlock;
 use std::{
     collections::{HashSet, VecDeque},
     sync::{Arc, Mutex},
@@ -40,6 +46,8 @@ impl<'a> BlockIngestor<'a> {
                 provider.get_block_header(BlockNumberOrTag::Number(block)).await
             }));
         }
+        // panic if the thread panics
+        #[allow(clippy::unwrap_used)]
         Some(self.handles.pop_front()?.await.unwrap())
     }
 }
@@ -66,14 +74,14 @@ pub async fn start(
         }
     }
 
-    // sync to latest. crash if a reorg is detected (extremely unlikely)
+    // sync to latest, stopping early if a reorg is detected.
     // repeat twice in case the first sync is slow and the latest block ends up being very outdated
-    let start_sync = db.next_block();
     for _ in 0..2 {
         let latest = provider.get_block_header(BlockNumberOrTag::Latest).await.number;
-        info!("syncing from {} to latest block {}", db.next_block(), latest);
+        let start_sync = db.next_block();
+        info!("syncing from {} to latest block {}", start_sync, latest);
         let mut ingestor =
-            BlockIngestor::new(db.next_block(), latest, parallel_sync_requests, &provider);
+            BlockIngestor::new(start_sync, latest, parallel_sync_requests, &provider);
         while let Some(block) = ingestor.next().await {
             if db.update_block(&block, metrics) {
                 error!("reorged during initial sync on block {:?}", block);
@@ -99,6 +107,50 @@ fn err(message: &'static str) -> ErrorObjectOwned {
     ErrorObjectOwned::borrowed(INTERNAL_ERROR_CODE, message, None)
 }
 
+#[allow(clippy::unwrap_used)]
+fn handle_subscription(
+    mut sink: SubscriptionSink,
+    ctx: &Mutex<Context>,
+    start_block: u64,
+    addresses: Vec<Address>,
+) -> Result<(), StringError> {
+    let mut lock = ctx.lock().unwrap();
+    if start_block <= lock.db.start_block {
+        return Err(eyre!(
+            "start block {} not after chain ingestor start block {}",
+            start_block,
+            lock.db.start_block
+        )
+        .into());
+    }
+    let next_block = lock.db.next_block();
+    if start_block > next_block {
+        return Err(eyre!("start block {} after next db block {}", start_block, next_block).into());
+    }
+    let mut addrs = HashSet::new();
+    for addr in addresses {
+        addrs.insert(addr);
+    }
+
+    //  a bit hacky - send initial block data as log data
+    sink.try_send(
+        SubscriptionMessage::from_json(&PartialBlock {
+            logs: vec![Log::new_unchecked(
+                Default::default(),
+                Default::default(),
+                lock.db.get_block_bytes(start_block - 1),
+            )],
+            ..Default::default()
+        })
+        .unwrap(),
+    )?;
+
+    lock.subs.push((sink, addrs));
+    drop(lock);
+    Ok(())
+}
+
+#[allow(clippy::unwrap_used)]
 fn create_module(ctx: Arc<Mutex<Context>>, rpc_url: String) -> RpcModule<Mutex<Context>> {
     let mut module = RpcModule::from_arc(ctx);
 
@@ -128,9 +180,10 @@ fn create_module(ctx: Arc<Mutex<Context>>, rpc_url: String) -> RpcModule<Mutex<C
             move |p, pending, ctx, _| async move {
                 let (start_block, addresses): (u64, Vec<Address>) = p.parse()?;
                 let sink = pending.accept().await?;
-                subscribe(sink.clone(), ctx.as_ref(), start_block, addresses)
+                handle_subscription(sink.clone(), ctx.as_ref(), start_block, addresses)
                     .inspect_err(|e| error!("ws connection error: {:?}", e))?;
                 sink.closed().await;
+                drop(sink);
                 Ok(())
             },
         )

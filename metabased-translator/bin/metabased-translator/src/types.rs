@@ -1,3 +1,4 @@
+use crate::config::IngestorConfigError;
 use eyre::Report;
 use thiserror::Error;
 use tracing::error;
@@ -23,7 +24,7 @@ pub enum RuntimeError {
     BlockBuilderConfig(#[from] block_builder::config::ConfigError),
 
     #[error(transparent)]
-    IngestorConfig(#[from] ingestor::config::ConfigError),
+    IngestorConfig(#[from] IngestorConfigError),
 
     #[error(transparent)]
     TranslatorConfig(#[from] crate::config::ConfigError),

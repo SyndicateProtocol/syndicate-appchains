@@ -17,8 +17,8 @@ use tracing::{error, info, trace};
 pub async fn run(
     settlement_delay: u64,
     known_state: Option<KnownState>,
-    mut sequencing: impl BlockStreamT<SequencingBlock>,
-    mut settlement: impl BlockStreamT<SettlementBlock>,
+    mut sequencing: impl BlockStreamT<SequencingBlock> + Send,
+    mut settlement: impl BlockStreamT<SettlementBlock> + Send,
     provider: &impl Provider,
     metrics: &SlotterMetrics,
 ) -> Result<(), SlotterError> {
@@ -60,7 +60,7 @@ pub async fn run(
             &seq_block.block_ref,
             seq_block.parent_hash,
             Chain::Sequencing,
-            &metrics,
+            metrics,
         )?;
         let mut mblock = MBlock {
             timestamp: seq_block.block_ref.timestamp,
@@ -90,7 +90,7 @@ pub async fn run(
                     &block.block_ref,
                     block.parent_hash,
                     Chain::Settlement,
-                    &metrics,
+                    metrics,
                 )?;
                 set_block = block;
             }

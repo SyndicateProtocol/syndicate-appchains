@@ -254,7 +254,6 @@ impl From<Infallible> for RpcError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use jsonrpsee::tokio;
 
     #[tokio::test]
     async fn test_send_raw_transaction_handler_invalid_params() {

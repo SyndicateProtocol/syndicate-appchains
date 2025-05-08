@@ -11,10 +11,12 @@ version.workspace      = true
 [dependencies]
 alloy             = { workspace = true }
 bincode           = { workspace = true }
+chain-ingestor    = { workspace = true }
 clap              = { workspace = true, features = ["derive", "env"] }
 contract-bindings = { workspace = true }
 eyre              = { workspace = true }
-jsonrpsee         = { workspace = true, features = ["ws-client", "server"] }
+futures-util      = { workspace = true }
+jsonrpsee         = { workspace = true, features = ["server", "ws-client"] }
 prometheus-client = { workspace = true }
 rocksdb           = { workspace = true }
 serde             = { workspace = true }
@@ -22,9 +24,6 @@ serde_json        = { workspace = true }
 shared            = { workspace = true }
 tokio             = { workspace = true, features = ["signal"] }
 tracing           = { workspace = true }
-url               = { workspace = true }
-chain-ingestor    = { workspace = true }
-futures-util = { workspace = true }
 
 [dev-dependencies]
 ctor       = { workspace = true }

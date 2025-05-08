@@ -1489,9 +1489,7 @@ name = "chain-ingestor"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "bincode",
  "clap",
- "contract-bindings",
  "ctor",
  "eyre",
  "fs2",
@@ -1499,14 +1497,12 @@ dependencies = [
  "humantime",
  "jsonrpsee",
  "prometheus-client",
- "rocksdb",
  "serde",
  "serde_json",
  "shared",
  "test-utils",
  "tokio",
  "tracing",
- "url",
 ]
 
 [[package]]
@@ -1608,7 +1604,6 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "mchain",
- "serde",
  "shared",
  "strum_macros",
 ]
@@ -2843,27 +2838,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ingestor"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "assert_matches",
- "async-trait",
- "block-builder",
- "clap",
- "common",
- "ctor",
- "eyre",
- "humantime",
- "mockall",
- "prometheus-client",
- "shared",
- "thiserror 2.0.12",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "interprocess"
 version = "2.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3358,7 +3332,6 @@ dependencies = [
  "test-utils",
  "tokio",
  "tracing",
- "url",
 ]
 
 [[package]]
@@ -3384,7 +3357,6 @@ dependencies = [
  "serde",
  "shared",
  "test-utils",
- "thiserror 2.0.12",
  "tokio",
  "tracing",
  "url",
@@ -3406,7 +3378,6 @@ dependencies = [
  "serde_json",
  "shared",
  "test-utils",
- "thiserror 2.0.12",
  "tokio",
  "tower 0.4.13",
  "tracing",
@@ -3425,7 +3396,7 @@ dependencies = [
  "common",
  "contract-bindings",
  "eyre",
- "ingestor",
+ "humantime",
  "mchain",
  "metrics",
  "shared",
@@ -3443,8 +3414,6 @@ dependencies = [
  "assert_matches",
  "axum",
  "clap",
- "common",
- "ingestor",
  "prometheus-client",
  "reqwest",
  "shared",
@@ -4804,6 +4773,7 @@ name = "shared"
 version = "0.1.0"
 dependencies = [
  "alloy",
+ "async-trait",
  "axum",
  "byte-unit",
  "bytes",
@@ -4873,15 +4843,12 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "async-trait",
- "block-builder",
  "chain-ingestor",
  "common",
  "ctor",
  "eyre",
- "futures-util",
  "mchain",
  "prometheus-client",
- "serde_json",
  "shared",
  "thiserror 2.0.12",
  "tokio",

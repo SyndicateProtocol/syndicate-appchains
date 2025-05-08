@@ -1,7 +1,6 @@
 //! chain ingestor crates
 pub mod client;
 pub mod db;
-//pub mod ingestor;
 pub mod eth_client;
 pub mod ingestor;
 pub mod metrics;

@@ -18,11 +18,8 @@ pub async fn with_onchain_config(config: &MetabasedConfig) -> MetabasedConfig {
         }
     };
 
-    let ingestor_provider = IngestorProvider::new(
-        &config.settlement.settlement_rpc_url,
-        config.settlement.settlement_rpc_timeout,
-    )
-    .await;
+    let ingestor_provider =
+        IngestorProvider::new(&config.settlement.settlement_rpc_url, config.rpc_timeout).await;
 
     let provider = ProviderBuilder::new().on_client(
         ClientBuilder::default()

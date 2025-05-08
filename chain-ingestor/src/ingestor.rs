@@ -1,19 +1,15 @@
-//! Ingestor logic
+//! The ingestor crate contains a function used to ingest new blocks from the chain. A websocket
+//! connection is used instead of polling. Logs are fetched via a call to `eth_getBlockReceipts`.
 
 use crate::{eth_client::EthClient, metrics::ChainIngestorMetrics, server::Context};
-use alloy::{
-    consensus::constants::EMPTY_RECEIPTS,
-    eips::BlockNumberOrTag,
-    primitives::{Address, Log},
-};
-use eyre::eyre;
-use jsonrpsee::{core::StringError, SubscriptionMessage, SubscriptionSink};
+use alloy::{consensus::constants::EMPTY_RECEIPTS, eips::BlockNumberOrTag};
+use jsonrpsee::SubscriptionMessage;
 use shared::types::{BlockRef, PartialBlock};
-use std::{collections::HashSet, sync::Mutex};
+use std::{cmp::Ordering, sync::Mutex};
 use tracing::{error, warn};
 
-/// run the main block fetching loop. get blocks via a websocket subscription instead of polling.
-/// only poll for logs.
+#[allow(missing_docs)]
+#[allow(clippy::unwrap_used)]
 pub async fn run(
     ctx: &Mutex<Context>,
     provider: &EthClient,
@@ -30,15 +26,17 @@ pub async fn run(
         assert!(block.number > start_block);
 
         // if we're missing blocks, get the missing blocks first
-        if block.number > next_block {
-            buffer = Some(block);
-            block = provider.get_block_header(BlockNumberOrTag::Number(next_block)).await;
-        } else if block.number < next_block {
-            let mut lock = ctx.lock().unwrap();
-            if !lock.db.update_block(&block, &metrics) {
+        match block.number.cmp(&next_block) {
+            Ordering::Less => {
+                ctx.lock().unwrap().db.update_block(&block, metrics);
                 continue;
             }
-        }
+            Ordering::Greater => {
+                buffer = Some(block);
+                block = provider.get_block_header(BlockNumberOrTag::Number(next_block)).await;
+            }
+            Ordering::Equal => {}
+        };
 
         // fetch receipts
         let mut receipts = provider.get_block_receipts(block.number).await;
@@ -53,10 +51,9 @@ pub async fn run(
             receipts = provider.get_block_receipts(block.number).await;
         }
 
-        let mut lock = ctx.lock().unwrap();
-        assert_eq!(block.number, lock.db.next_block());
+        assert_eq!(block.number, ctx.lock().unwrap().db.next_block());
 
-        if lock.db.update_block(&block, &metrics) {
+        if ctx.lock().unwrap().db.update_block(&block, metrics) {
             if buffer.is_none() {
                 buffer = Some(block);
             }
@@ -71,10 +68,18 @@ pub async fn run(
                 hash: block.hash,
             },
             parent_hash: block.parent_hash,
-            logs: receipts.into_iter().flat_map(|x| x.logs.into_iter().map(|x| x.into())).collect(),
+            logs: receipts
+                .into_iter()
+                .enumerate()
+                .flat_map(|(i, x)| {
+                    assert_eq!(x.block_hash, block.hash);
+                    assert_eq!(x.transaction_index, i as u64);
+                    x.logs
+                })
+                .collect(),
         };
 
-        lock.subs.retain_mut(|(sink, addrs)| {
+        ctx.lock().unwrap().subs.retain_mut(|(sink, addrs)| {
             !sink.is_closed() &&
                 sink.try_send(
                     SubscriptionMessage::from_json(&PartialBlock {
@@ -93,46 +98,4 @@ pub async fn run(
                 .is_ok()
         });
     }
-}
-
-/// process a new subscription
-pub fn subscribe(
-    mut sink: SubscriptionSink,
-    ctx: &Mutex<Context>,
-    start_block: u64,
-    addresses: Vec<Address>,
-) -> Result<(), StringError> {
-    let mut lock = ctx.lock().unwrap();
-    if start_block <= lock.db.start_block {
-        return Err(eyre!(
-            "start block {} not after chain ingestor start block {}",
-            start_block,
-            lock.db.start_block
-        )
-        .into());
-    }
-    let next_block = lock.db.next_block();
-    if start_block > next_block {
-        return Err(eyre!("start block {} after next db block {}", start_block, next_block).into());
-    }
-    let mut addrs = HashSet::new();
-    for addr in addresses {
-        addrs.insert(addr);
-    }
-
-    //  a bit hacky - send initial block data as log data
-    sink.try_send(
-        SubscriptionMessage::from_json(&PartialBlock {
-            logs: vec![Log::new_unchecked(
-                Default::default(),
-                Default::default(),
-                lock.db.get_block_bytes(start_block - 1),
-            )],
-            ..Default::default()
-        })
-        .unwrap(),
-    )?;
-
-    lock.subs.push((sink, addrs));
-    Ok(())
 }

@@ -1,4 +1,4 @@
-//! The chain-ingestor servers blocks from a chain to all rollups that use the chain.
+//! The chain-ingestor serves blocks from a chain to all appchains that use the chain.
 
 use chain_ingestor::{eth_client::EthClient, ingestor, metrics::ChainIngestorMetrics, server};
 use clap::{command, Parser};
@@ -47,6 +47,8 @@ async fn new_provider(cfg: &Config) -> EthClient {
 }
 
 #[tokio::main]
+#[allow(clippy::redundant_pub_crate)]
+#[allow(clippy::unwrap_used)]
 async fn main() {
     // Initialize logging
     set_global_default_subscriber().unwrap();

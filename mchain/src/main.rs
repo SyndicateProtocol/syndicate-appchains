@@ -71,8 +71,10 @@ async fn get_rollup_owner(
 }
 
 #[tokio::main]
+#[allow(clippy::redundant_pub_crate)]
 async fn main() -> eyre::Result<()> {
     // Initialize logging
+    #[allow(clippy::unwrap_used)]
     set_global_default_subscriber().unwrap();
 
     let cfg = Config::parse();

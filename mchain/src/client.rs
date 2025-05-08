@@ -141,8 +141,9 @@ async fn validate_block_add_timestamp(
     expected_block: &mut BlockRef,
 ) -> bool {
     #[allow(clippy::expect_used)]
+    #[allow(clippy::unwrap_used)]
     let block =
-        client.get_block(expected_block.number).await.unwrap().expect("could not find block");
+        client.get_block(expected_block.number).await.unwrap().expect("could not find block ");
     assert_eq!(block.number, expected_block.number);
     expected_block.timestamp = block.timestamp;
     block.hash == expected_block.hash

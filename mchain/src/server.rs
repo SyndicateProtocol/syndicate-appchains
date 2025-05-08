@@ -91,6 +91,7 @@ pub fn rollup_config(chain_id: u64, chain_owner: Address) -> String {
 }
 
 #[allow(clippy::unwrap_used)]
+#[allow(clippy::type_complexity)]
 pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     chain_id: u64,
     rollup_owner: Address,
@@ -282,6 +283,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                 let sink = pending.accept().await.map_err(to_err)?;
                 ctx.2.lock().unwrap().2.push(sink.clone());
                 sink.closed().await;
+                drop(sink);
                 Ok(())
             },
         )

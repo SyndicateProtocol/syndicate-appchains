@@ -1,4 +1,5 @@
-//! Eth client
+//! The eth client is used by both the chain-ingestor server and client crates for interacting with
+//! the ethereum chain.
 
 use alloy::{
     eips::BlockNumberOrTag,
@@ -27,9 +28,7 @@ pub struct EthClient {
 fn handle_rpc_error(name: &str, err: &RpcError<TransportErrorKind>) {
     error!("{}: {}", name, err);
     if let RpcError::Transport(err) = err {
-        if !err.recoverable() {
-            panic!("{}: {}: {}", name, "fatal transport error", err);
-        }
+        assert!(err.recoverable(), "{}: {}: {}", name, "fatal transport error", err);
     }
 }
 

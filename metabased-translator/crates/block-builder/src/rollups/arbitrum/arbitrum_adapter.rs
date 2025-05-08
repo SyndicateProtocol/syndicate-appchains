@@ -277,15 +277,17 @@ impl ArbitrumAdapter {
             .get(&msg.messageIndex)
             .ok_or_else(|| ArbitrumBlockBuilderError::MissingInboxMessageData(msg.messageIndex))?;
 
-        match data {
-            None => Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind)),
-            Some(data) => Ok(DelayedMessage {
-                kind: msg.kind,
-                sender: msg.sender,
-                data: data.clone(),
-                base_fee_l1: msg.baseFeeL1,
-            }),
-        }
+        data.as_ref().map_or_else(
+            || Err(ArbitrumBlockBuilderError::DelayedMessageIgnored(kind)),
+            |data| {
+                Ok(DelayedMessage {
+                    kind: msg.kind,
+                    sender: msg.sender,
+                    data: data.clone(),
+                    base_fee_l1: msg.baseFeeL1,
+                })
+            },
+        )
     }
 
     /// Builds a batch of transactions into an Arbitrum batch

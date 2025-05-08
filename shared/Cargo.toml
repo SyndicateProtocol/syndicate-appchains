@@ -9,10 +9,12 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy              = { workspace = true, features = ["rlp"] }
+alloy              = { workspace = true, features = ["k256", "rlp"] }
+async-trait        = { workspace = true }
 axum               = { workspace = true }
 byte-unit          = { workspace = true, features = ["default"] }
 bytes              = { workspace = true }
+eyre               = { workspace = true }
 flate2             = { workspace = true }
 jsonrpsee          = { workspace = true, features = ["jsonrpsee-types"] }
 prometheus-client  = { workspace = true }
@@ -24,7 +26,6 @@ tokio              = { workspace = true }
 tracing            = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter", "json"] }
 url                = { workspace = true }
-eyre = {workspace = true }
 
 
 [lints]
