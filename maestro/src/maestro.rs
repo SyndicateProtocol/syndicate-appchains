@@ -22,12 +22,13 @@ use alloy::{
     primitives::{Address, Bytes, ChainId},
     providers::Provider,
 };
-use redis::aio::MultiplexedConnection;
+use futures_util::future::err;
+use redis::{aio::MultiplexedConnection, AsyncCommands};
 use shared::{
     json_rpc::{Rejection::NonceTooLow, RpcError::TransactionRejected},
     tx_validation::decode_transaction,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{cmp::Ordering, collections::HashMap, sync::Arc};
 use tokio::sync::Mutex;
 use tracing::{error, trace, warn};
 
@@ -111,21 +112,30 @@ impl MaestroService {
         // Handle nonce comparison
         match tx_nonce.cmp(&expected_nonce) {
             std::cmp::Ordering::Equal => {
-                // 1. enqueue the txn
+                // 1. update the cache with nonce + 1. Quit if this fails
+                let new_nonce = self.increment_wallet_nonce(chain_id, wallet, tx_nonce).await.
+                    map_err(|e| {
+                        let rejection = NonceTooLow(tx_nonce+1 , tx_nonce);
+                        trace!(%e, %chain_id, %wallet, %expected_nonce, %tx_nonce, "failed to increment wallet nonce");
+                        JsonRpcError(TransactionRejected(rejection))
+                    }
+                    )?;
+
+                // 2. enqueue the txn
                 self.enqueue_raw_transaction(raw_tx, chain_id, tx_hash).await?;
 
-                // 2. update the cache with nonce + 1
-                let new_nonce =
-                    self.increment_wallet_nonce(chain_id, wallet, tx_nonce).await.
-                        unwrap_or_else(|e| {
-                            // Return a default if cache call somehow fails, continue processing
-                            error!(%e, %chain_id, %wallet, %expected_nonce, "failed to increment wallet nonce");
-                            expected_nonce + 1
-                        }
-                        );
+                // // 2. update the cache with nonce + 1
+                // let new_nonce =
+                //     self.increment_wallet_nonce(chain_id, wallet, tx_nonce).await.
+                //         unwrap_or_else(|e| {
+                //             // Return a default if cache call somehow fails, continue processing
+                //             error!(%e, %chain_id, %wallet, %expected_nonce, "failed to increment
+                // wallet nonce");             expected_nonce + 1
+                //         }
+                //         );
 
-                let service_clone = self.clone();
                 // 3. check cache for waiting txns (background task)
+                let service_clone = self.clone();
                 let _handle = tokio::spawn(async move {
                     service_clone
                         .check_for_and_enqueue_waiting_transactions(chain_id, wallet, new_nonce)
@@ -281,6 +291,7 @@ impl MaestroService {
         Ok(rpc_nonce)
     }
 
+    // TODO update docs
     /// Increments a wallet's nonce in the Redis cache
     ///
     /// This method updates the wallet's nonce in the Redis cache to the
@@ -302,9 +313,70 @@ impl MaestroService {
     ) -> Result<u64, Error> {
         let mut conn = self.redis_conn.clone();
         let new_nonce = current_nonce + 1;
-        let _ =
-            conn.set_wallet_nonce(chain_id, wallet_address, new_nonce).await.map_err(Error::Redis);
-        Ok(new_nonce)
+
+        let cached_nonce = conn.get_wallet_nonce(chain_id, wallet_address).await?;
+        if let Some(cached_nonce) = cached_nonce {
+            let cached_nonce_parsed = cached_nonce.parse::<u64>().map_err(|_e| {
+                error!(%new_nonce, %cached_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from Redis cache");
+                //TODO clear cache here?
+                WaitingTransaction(FailedToEnqueue)
+            })?;
+            // if existing nonce is not the same as our current nonce, we are not first request
+            if cached_nonce_parsed.cmp(&current_nonce) != Ordering::Equal {
+                error!(%new_nonce, %cached_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from Redis cache");
+                //TODO clear cache here?
+                return Err(WaitingTransaction(FailedToEnqueue))
+            }
+        }
+
+        // actual increment
+        let old_nonce = conn
+            .set_wallet_nonce(chain_id, wallet_address, new_nonce)
+            .await
+            .map_err(Error::Redis)?;
+
+        match old_nonce {
+            None => {
+                // No value previously set in cache. Happy path.
+                println!("X_X_X_X: no nonce case, {}", new_nonce);
+                Ok(new_nonce)
+            }
+            Some(old_nonce) => {
+                let old_nonce_parsed = old_nonce.parse::<u64>().
+                    map_err(|_e| {
+                        error!(%new_nonce, %old_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from Redis cache");
+                        //TODO clear cache here?
+                        WaitingTransaction(FailedToEnqueue)
+                    })?;
+                match new_nonce.cmp(&old_nonce_parsed) {
+                    Ordering::Greater => {
+                        if new_nonce.cmp(&(old_nonce_parsed + 1)) == Ordering::Equal {
+                            // Happy path. New nonce is 1 greater than old nonce.
+                            println!(
+                                "X_X_X_X: happy path, new {} old {}",
+                                new_nonce, old_nonce_parsed
+                            );
+                            Ok(new_nonce)
+                        } else {
+                            error!(%new_nonce, %chain_id, %wallet_address, "New nonce is not equal to old nonce + 1");
+                            // TODO clear cache here?
+                            Err(WaitingTransaction(FailedToEnqueue))
+                        }
+                    }
+                    Ordering::Equal => {
+                        // Contention case. Increment did not succeed. This request was likely not
+                        // the first one for this nonce
+                        trace!(%new_nonce, %chain_id, %wallet_address, "New nonce is equal to old nonce");
+                        Err(WaitingTransaction(FailedToEnqueue))
+                    }
+                    Ordering::Less => {
+                        // TODO clear cache here?
+                        error!(%new_nonce, %chain_id, %wallet_address, "New nonce is less than old nonce");
+                        Err(WaitingTransaction(FailedToEnqueue))
+                    }
+                }
+            }
+        }
     }
 
     /// Checks for and processes waiting transaction in the cache
