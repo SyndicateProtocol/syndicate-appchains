@@ -21,7 +21,7 @@ pub trait WalletNonceExt {
         chain_id: ChainId,
         wallet_address: Address,
         nonce: u64,
-    ) -> impl Future<Output = RedisResult<String>> + Send;
+    ) -> impl Future<Output = RedisResult<Option<String>>> + Send;
 }
 
 /// Public trait which is non-async and instead returns a [`Future`]. This provides greater
@@ -36,15 +36,16 @@ impl WalletNonceExt for MultiplexedConnection {
         self.get(key)
     }
 
+    /// Returns previous nonce value before update
     fn set_wallet_nonce(
         &mut self,
         chain_id: ChainId,
         wallet_address: Address,
         nonce: u64,
-    ) -> impl Future<Output = RedisResult<String>> + Send {
+    ) -> impl Future<Output = RedisResult<Option<String>>> + Send {
         let key = wallet_nonce_key(chain_id, wallet_address);
-        let opts = SetOptions::default().with_expiration(EX(WALLET_NONCE_TTL_SEC));
-        self.set_options(key, nonce.to_string(), opts)
+        let opts = SetOptions::default().with_expiration(EX(WALLET_NONCE_TTL_SEC)).get(true);
+        Box::pin(self.set_options(key, nonce.to_string(), opts))
     }
 }
 
@@ -93,6 +94,7 @@ mod tests {
         // Test set_wallet_nonce
         let set_result = conn.set_wallet_nonce(chain_id, wallet_address, nonce).await;
         assert!(set_result.is_ok(), "Failed to set wallet nonce: {:?}", set_result.err());
+        assert!(set_result.unwrap().is_none(), "no value there previously");
 
         // Test get_wallet_nonce
         let get_result = conn.get_wallet_nonce(chain_id, wallet_address).await.unwrap();
@@ -151,7 +153,14 @@ mod tests {
         assert_eq!(initial_get, Some(initial_nonce.to_string()), "Initial nonce not set correctly");
 
         // Update nonce
-        conn.set_wallet_nonce(chain_id, wallet_address, updated_nonce).await.unwrap();
+        let result =
+            conn.set_wallet_nonce(chain_id, wallet_address, updated_nonce).await.unwrap().unwrap();
+        assert_eq!(result, initial_nonce.to_string(), "old nonce was in cache");
+        assert_eq!(
+            result.parse::<u64>().unwrap(),
+            updated_nonce - 1,
+            "nonce should be incremented by 1"
+        );
 
         // Verify updated nonce
         let updated_get = conn.get_wallet_nonce(chain_id, wallet_address).await.unwrap();

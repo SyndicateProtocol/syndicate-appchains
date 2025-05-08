@@ -256,7 +256,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
 
             // TODO this needs to be 1 not 5
             // We expect only one transaction to succeed (the first one that gets processed)
-            assert_eq!(success_count, 5, "Only one transaction should succeed");
+            assert_eq!(success_count, 1, "Only one transaction should succeed");
 
             // Wait for the transaction to be processed
             wait_until!(
