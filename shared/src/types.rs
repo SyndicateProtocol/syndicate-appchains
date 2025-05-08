@@ -3,7 +3,7 @@
 use alloy::{
     hex,
     network::EthereumWallet,
-    primitives::{Address, Bloom, Log, B256},
+    primitives::{Address, Bloom, B256},
     providers::{
         fillers::{
             BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
