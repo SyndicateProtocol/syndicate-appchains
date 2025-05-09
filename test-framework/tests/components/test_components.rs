@@ -502,7 +502,7 @@ impl TestComponents {
         Ok(())
     }
 
-    pub(crate) async fn mine_both(&self, delay: u64) -> Result<()> {
+    pub async fn mine_both(&self, delay: u64) -> Result<()> {
         self.mine_seq_block(delay).await?;
         self.mine_set_block(delay).await?;
         Ok(())
