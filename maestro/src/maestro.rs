@@ -39,7 +39,8 @@ pub struct MaestroService {
     redis_conn: MultiplexedConnection,
     // chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
     chain_wallets2: DashMap<ChainWalletNonceKey, Arc<Mutex<()>>>,
-    producers: Mutex<HashMap<ChainId, Arc<StreamProducer>>>, // TODO dashmap here?
+    producers: Mutex<HashMap<ChainId, Arc<StreamProducer>>>, /* TODO remove mutex and init this
+                                                              * in `new()` */
     rpc_providers: HashMap<ChainId, RpcProvider>,
     config: Config,
 }
