@@ -1,6 +1,6 @@
 //! Client code is run in the syndicate translator instead of the chain-ingestor application
 
-use crate::{db::ITEM_SIZE, eth_client::EthClient};
+use crate::{db::ITEM_SIZE, eth_client::EthClient, server::Message};
 use alloy::{
     eips::BlockNumberOrTag,
     primitives::{Address, Bytes, B256},
@@ -145,9 +145,8 @@ async fn build_partial_blocks(
 }
 
 #[derive(Debug)]
-#[allow(missing_docs)]
-pub struct BlockStream<
-    S: Stream<Item = Result<PartialBlock, serde_json::Error>>,
+struct BlockStream<
+    S: Stream<Item = Result<Message, serde_json::Error>>,
     Block: GetBlockRef,
     B: BlockBuilder<Block> + Sync,
 > {
@@ -160,7 +159,7 @@ pub struct BlockStream<
 
 #[allow(missing_docs)]
 impl<
-        S: Stream<Item = Result<PartialBlock, serde_json::Error>> + Send + 'static,
+        S: Stream<Item = Result<Message, serde_json::Error>> + Send + 'static,
         Block: GetBlockRef + Send,
         B: BlockBuilder<Block> + Sync,
     > BlockStream<S, Block, B>
@@ -179,32 +178,45 @@ impl<
             init_data: Some(init_data),
         }
     }
+}
+
+/// BlockStream is a stream of blocks that automatically updates stale/reorged blocks in the queue.
+#[async_trait]
+pub trait BlockStreamT<Block> {
+    /// recv fetches the next block once a block with timestamp greater than or equal to the
+    /// provided one has arrived.
+    async fn recv(&mut self, timestamp: u64) -> eyre::Result<Block>;
+}
+
+#[async_trait]
+impl<
+        S: Stream<Item = Result<Message, serde_json::Error>> + 'static + Send,
+        Block: GetBlockRef + Send,
+        B: BlockBuilder<Block> + Sync,
+    > BlockStreamT<Block> for BlockStream<S, Block, B>
+{
     #[allow(clippy::unwrap_used)]
-    async fn recv(&mut self, timestamp: Option<u64>) -> eyre::Result<Vec<Block>> {
+    async fn recv(&mut self, timestamp: u64) -> eyre::Result<Block> {
         let mut blocks = vec![];
         let init_data = self.init_data.take();
         if init_data.is_some() || self.stream.as_mut().peek().now_or_never().is_some() {
             blocks = self.stream.next().await.ok_or_eyre("stream closed")?;
             if let Some((client, addrs)) = init_data {
                 blocks.rotate_left(1);
-                let init = blocks.pop().unwrap()?;
-                let mut partials: Vec<_> = build_partial_blocks(
-                    self.indexed_block_number,
-                    &init.logs[0].data.data,
-                    &client,
-                    addrs,
-                )
-                .await?
-                .into_iter()
-                .map(Ok)
-                .collect();
+                let init = blocks.pop().unwrap()?.init();
+                let mut partials: Vec<_> =
+                    build_partial_blocks(self.indexed_block_number, &init, &client, addrs)
+                        .await?
+                        .into_iter()
+                        .map(|x| Ok(Message::Block(x)))
+                        .collect();
                 partials.append(&mut blocks);
                 blocks = partials;
             }
         }
         loop {
             for partial_block in blocks {
-                let block = self.block_builder.build_block(&partial_block?)?;
+                let block = self.block_builder.build_block(&partial_block?.block())?;
                 let block_number = block.block_ref().number;
                 assert!(
                     block_number <= self.indexed_block_number,
@@ -225,7 +237,6 @@ impl<
                             *existing_block = block;
                         }
                         None => {
-                            // return an error if the stale block has already left the queue
                             return Err(eyre!(
                                 "cannot reorg block {} - block already slotted",
                                 block.block_ref()
@@ -234,57 +245,26 @@ impl<
                     }
                 }
             }
-            match timestamp {
-                Some(timestamp) => {
-                    if let Some(block) = self.buffer.front() {
-                        if block.block_ref().timestamp > timestamp {
-                            let mut blocks = Vec::default();
-                            loop {
-                                let block = self.buffer.pop_back().unwrap();
-                                let last_block_timestamp = block.block_ref().timestamp;
-                                blocks.push(block);
-                                if last_block_timestamp > timestamp {
-                                    return Ok(blocks)
-                                }
-                            }
-                        }
-                    }
-                }
-                None => {
-                    if let Some(block) = self.buffer.pop_back() {
-                        return Ok(vec![block]);
-                    }
-                }
+            if self.buffer.front().map_or(false, |x| x.block_ref().timestamp >= timestamp) {
+                return Ok(self.buffer.pop_back().unwrap());
             }
             blocks = self.stream.next().await.ok_or_eyre("stream closed")?
         }
     }
 }
 
-/// BlockStream is a stream of blocks that automatically updates stale/reorged blocks in the queue.
-#[async_trait]
-pub trait BlockStreamT<Block> {
-    /// recv_block fetches the next block.
-    async fn recv_block(&mut self) -> eyre::Result<Block>;
-    /// recv_blocks fetches blocks up to a timestamp.
-    /// This allows for better reorg detection instead of fetching blocks one at a time.
-    async fn recv_blocks(&mut self, timestamp: u64) -> eyre::Result<Vec<Block>>;
-}
-
-#[async_trait]
-impl<
-        S: Stream<Item = Result<PartialBlock, serde_json::Error>> + 'static + Send,
-        Block: GetBlockRef + Send,
-        B: BlockBuilder<Block> + Sync,
-    > BlockStreamT<Block> for BlockStream<S, Block, B>
-{
-    async fn recv_block(&mut self) -> eyre::Result<Block> {
-        #[allow(clippy::unwrap_used)]
-        self.recv(None).await.map(|mut x| x.pop().unwrap())
+impl Message {
+    fn init(self) -> Bytes {
+        match self {
+            Self::Init(x) => x,
+            x => panic!("expected init message, found {:?}", x),
+        }
     }
-
-    async fn recv_blocks(&mut self, timestamp: u64) -> eyre::Result<Vec<Block>> {
-        self.recv(Some(timestamp)).await
+    fn block(self) -> PartialBlock {
+        match self {
+            Self::Block(x) => x,
+            x => panic!("expected block message, found {:?}", x),
+        }
     }
 }
 
@@ -328,7 +308,7 @@ pub trait Provider: Sync {
         client: EthClient,
     ) -> Result<impl BlockStreamT<Block>, ClientError> {
         Ok(BlockStream::new(
-            self.subscribe::<_, PartialBlock>(
+            self.subscribe::<_, Message>(
                 "subscribe_blocks",
                 (start_block, addresses.clone()),
                 "unsubscribe_blocks",

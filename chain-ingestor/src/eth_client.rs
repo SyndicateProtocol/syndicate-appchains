@@ -134,35 +134,34 @@ impl EthClient {
             }
             Ok(Ok(x)) => Ok(x),
             Ok(Err(RpcError::ErrorResp(err))) => {
-                if let FilterBlockOption::Range {
-                    from_block: Some(BlockNumberOrTag::Number(from_block)),
-                    to_block: Some(BlockNumberOrTag::Number(to_block)),
-                } = filter.block_option
-                {
-                    if to_block - from_block > 0 {
-                        warn!(
-                            "retrying eth_getLogs with range ({} to {}) split in half: {}",
-                            from_block, to_block, err
-                        );
-                        let mid = (from_block + to_block) / 2;
-                        return Ok([
-                            Box::pin(
-                                self.get_logs(&filter.clone().from_block(from_block).to_block(mid)),
-                            )
-                            .await?,
-                            Box::pin(
-                                self.get_logs(
-                                    &filter.clone().from_block(mid + 1).to_block(to_block),
-                                ),
-                            )
-                            .await?,
-                        ]
-                        .concat())
-                    }
+                // Only attempt binary search if we have a valid block range
+                let (from_block, to_block) = match filter.block_option {
+                    FilterBlockOption::Range {
+                        from_block: Some(BlockNumberOrTag::Number(from)),
+                        to_block: Some(BlockNumberOrTag::Number(to)),
+                    } => (from, to),
+                    _ => (0, 0),
+                };
+
+                // If range is too small, return error
+                if to_block <= from_block {
+                    error!("failed to get logs ({:?}): {}", filter, err);
+                    return Err(RpcError::ErrorResp(err));
                 }
 
-                error!("failed to get logs ({:?}): {}", filter, err);
-                Err(RpcError::ErrorResp(err))
+                // Split range in half and recursively fetch logs
+                warn!(
+                    "splitting eth_getLogs range ({} to {}) due to error: {}",
+                    from_block, to_block, err
+                );
+                let mid = (from_block + to_block) / 2;
+                let lower_range =
+                    Box::pin(self.get_logs(&filter.clone().from_block(from_block).to_block(mid)))
+                        .await?;
+                let upper_range =
+                    Box::pin(self.get_logs(&filter.clone().from_block(mid + 1).to_block(to_block)))
+                        .await?;
+                Ok([lower_range, upper_range].concat())
             }
             Ok(Err(err)) => {
                 handle_rpc_error("failed to get logs", &err);

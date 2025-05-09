@@ -1,7 +1,11 @@
 //! The ingestor crate contains a function used to ingest new blocks from the chain. A websocket
 //! connection is used instead of polling. Logs are fetched via a call to `eth_getBlockReceipts`.
 
-use crate::{eth_client::EthClient, metrics::ChainIngestorMetrics, server::Context};
+use crate::{
+    eth_client::EthClient,
+    metrics::ChainIngestorMetrics,
+    server::{Context, Message},
+};
 use alloy::{consensus::constants::EMPTY_RECEIPTS, eips::BlockNumberOrTag};
 use jsonrpsee::SubscriptionMessage;
 use shared::types::{BlockRef, PartialBlock};
@@ -82,7 +86,7 @@ pub async fn run(
         ctx.lock().unwrap().subs.retain_mut(|(sink, addrs)| {
             !sink.is_closed() &&
                 sink.try_send(
-                    SubscriptionMessage::from_json(&PartialBlock {
+                    SubscriptionMessage::from_json(&Message::Block(PartialBlock {
                         logs: partial_block
                             .logs
                             .clone()
@@ -91,7 +95,7 @@ pub async fn run(
                             .collect(),
                         block_ref: partial_block.block_ref.clone(),
                         parent_hash: partial_block.parent_hash,
-                    })
+                    }))
                     .unwrap(),
                 )
                 .inspect_err(|err| error!("try_send failed: {}", err))

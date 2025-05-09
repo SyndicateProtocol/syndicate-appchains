@@ -90,15 +90,21 @@ pub fn rollup_config(chain_id: u64, chain_owner: Address) -> String {
     cfg
 }
 
+#[derive(Debug)]
+pub struct Context {
+    finalized_block: u64,
+    pending_ts: VecDeque<u64>,
+    subs: Vec<SubscriptionSink>,
+}
+
 #[allow(clippy::unwrap_used)]
-#[allow(clippy::type_complexity)]
 pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     chain_id: u64,
     rollup_owner: Address,
     finality_delay: u64,
     db: T,
     metrics: MchainMetrics,
-) -> RpcModule<(T, MchainMetrics, Mutex<(u64, VecDeque<u64>, Vec<SubscriptionSink>)>)> {
+) -> RpcModule<(T, MchainMetrics, Mutex<Context>)> {
     db.check_version();
     let init_msg = DelayedMessage {
         kind: 11, // L1MessageType::Initialize
@@ -144,7 +150,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     let mut module = RpcModule::new((
         db,
         metrics,
-        Mutex::new((finalized_block, pending_ts, Vec::<SubscriptionSink>::default())),
+        Mutex::new(Context { finalized_block, pending_ts, subs: Default::default() }),
     ));
 
     // -------------------------------------------------
@@ -162,9 +168,9 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                 Ok(block.inspect(|&block| {
                     metrics.record_last_block(block, timestamp);
                     let mut data = mutex.lock().unwrap();
-                    data.1.push_back(timestamp);
-                    assert_eq!(data.0 + data.1.len() as u64, block);
-                    data.2.retain_mut(|sink| {
+                    data.pending_ts.push_back(timestamp);
+                    assert_eq!(data.finalized_block + data.pending_ts.len() as u64, block);
+                    data.subs.retain_mut(|sink| {
                         !sink.is_closed() &&
                             sink.try_send(
                                 SubscriptionMessage::from_json(&create_header(block)).unwrap(),
@@ -217,18 +223,18 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                 }
                 // finally update stale finality data.
                 let mut data = mutex.lock().unwrap();
-                if block_number < data.0 {
+                if block_number < data.finalized_block {
                     metrics.record_finalized_block(block_number, block.timestamp);
-                    data.0 = block_number;
-                    data.1.clear();
+                    data.finalized_block = block_number;
+                    data.pending_ts.clear();
                 } else {
                     let removed = (state.batch_count - block_number) as usize;
-                    let data_len = data.1.len();
+                    let data_len = data.pending_ts.len();
                     assert!(data_len >= removed);
-                    data.1.truncate(data_len - removed);
+                    data.pending_ts.truncate(data_len - removed);
                 }
-                assert_eq!(data.0 + data.1.len() as u64, block_number);
-                data.2.retain_mut(|sink| {
+                assert_eq!(data.finalized_block + data.pending_ts.len() as u64, block_number);
+                data.subs.retain_mut(|sink| {
                     !sink.is_closed() &&
                         sink.try_send(
                             SubscriptionMessage::from_json(&create_header(block_number)).unwrap(),
@@ -281,7 +287,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                     return Err(format!("unknown subscription event: {}", param).into());
                 }
                 let sink = pending.accept().await.map_err(to_err)?;
-                ctx.2.lock().unwrap().2.push(sink.clone());
+                ctx.2.lock().unwrap().subs.push(sink.clone());
                 sink.closed().await;
                 drop(sink);
                 Ok(())
@@ -424,19 +430,19 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                         let mut data = mutex.lock().unwrap();
                         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
                         let mut ts = 0u64;
-                        while let Some(block_ts) = data.1.front() {
+                        while let Some(block_ts) = data.pending_ts.front() {
                             if block_ts + finality_delay > now {
                                 break;
                             }
                             ts = *block_ts;
-                            data.0 += 1;
-                            data.1.pop_front();
+                            data.finalized_block += 1;
+                            data.pending_ts.pop_front();
                         }
                         if ts > 0 {
-                            metrics.record_finalized_block(data.0, ts);
+                            metrics.record_finalized_block(data.finalized_block, ts);
                         }
 
-                        data.0
+                        data.finalized_block
                     }
                     _ => return Err(format!("invalid tag: {}", tag)).map_err(to_err),
                 };

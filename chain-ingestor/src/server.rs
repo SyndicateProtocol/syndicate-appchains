@@ -2,14 +2,13 @@
 use crate::{db::DB, eth_client::EthClient, metrics::ChainIngestorMetrics};
 use alloy::{
     eips::BlockNumberOrTag,
-    primitives::{Address, Log},
+    primitives::{Address, Bytes},
 };
 use eyre::eyre;
 use jsonrpsee::{
-    core::StringError,
-    types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned},
-    RpcModule, SubscriptionMessage, SubscriptionSink,
+    core::StringError, types::ErrorObjectOwned, RpcModule, SubscriptionMessage, SubscriptionSink,
 };
+use serde::{Deserialize, Serialize};
 use shared::types::PartialBlock;
 use std::{
     collections::{HashSet, VecDeque},
@@ -21,9 +20,15 @@ use tracing::{error, info};
 #[derive(Debug)]
 #[allow(missing_docs)]
 pub struct Context {
-    pub provider: EthClient,
     pub db: DB,
     pub subs: Vec<(SubscriptionSink, HashSet<Address>)>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[allow(missing_docs)]
+pub enum Message {
+    Init(Bytes),
+    Block(PartialBlock),
 }
 
 struct BlockIngestor<'a> {
@@ -55,7 +60,7 @@ impl<'a> BlockIngestor<'a> {
 #[allow(clippy::unwrap_used)]
 #[allow(missing_docs)]
 pub async fn start(
-    provider: EthClient,
+    provider: &EthClient,
     rpc_url: &str,
     db_name: &str,
     start_block: u64,
@@ -80,8 +85,7 @@ pub async fn start(
         let latest = provider.get_block_header(BlockNumberOrTag::Latest).await.number;
         let start_sync = db.next_block();
         info!("syncing from {} to latest block {}", start_sync, latest);
-        let mut ingestor =
-            BlockIngestor::new(start_sync, latest, parallel_sync_requests, &provider);
+        let mut ingestor = BlockIngestor::new(start_sync, latest, parallel_sync_requests, provider);
         while let Some(block) = ingestor.next().await {
             if db.update_block(&block, metrics) {
                 error!("reorged during initial sync on block {:?}", block);
@@ -99,12 +103,8 @@ pub async fn start(
     }
     info!("synced to latest block");
 
-    let ctx = Arc::new(Mutex::new(Context { db, subs: Default::default(), provider }));
+    let ctx = Arc::new(Mutex::new(Context { db, subs: Default::default() }));
     Ok((create_module(ctx.clone(), rpc_url.to_string()), ctx))
-}
-
-fn err(message: &'static str) -> ErrorObjectOwned {
-    ErrorObjectOwned::borrowed(INTERNAL_ERROR_CODE, message, None)
 }
 
 #[allow(clippy::unwrap_used)]
@@ -132,17 +132,9 @@ fn handle_subscription(
         addrs.insert(addr);
     }
 
-    //  a bit hacky - send initial block data as log data
     sink.try_send(
-        SubscriptionMessage::from_json(&PartialBlock {
-            logs: vec![Log::new_unchecked(
-                Default::default(),
-                Default::default(),
-                lock.db.get_block_bytes(start_block - 1),
-            )],
-            ..Default::default()
-        })
-        .unwrap(),
+        SubscriptionMessage::from_json(&Message::Init(lock.db.get_block_bytes(start_block - 1)))
+            .unwrap(),
     )?;
 
     lock.subs.push((sink, addrs));
@@ -165,10 +157,9 @@ fn create_module(ctx: Arc<Mutex<Context>>, rpc_url: String) -> RpcModule<Mutex<C
         .register_method("block", |p, ctx, _| {
             let (block_number,): (u64,) = p.parse()?;
             let data = ctx.lock().unwrap();
-            data.db
-                .in_range(block_number)
-                .then(|| data.db.get_block(block_number))
-                .ok_or_else(|| err("block out of range"))
+            Ok::<_, ErrorObjectOwned>(
+                data.db.in_range(block_number).then(|| data.db.get_block(block_number)),
+            )
         })
         .unwrap();
 

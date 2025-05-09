@@ -62,8 +62,7 @@ pub struct Receipt {
     #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub status: u64,
     /// The transaction type, if available.
-    #[serde(rename = "type")]
-    pub receipt_type: String,
+    pub r#type: String,
     /// Transaction index in block
     #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub transaction_index: u64,

@@ -58,7 +58,7 @@ async fn main() {
     let mut metrics_state = MetricsState::default();
     let metrics = ChainIngestorMetrics::new(&mut metrics_state.registry);
     let (module, ctx) = server::start(
-        provider.clone(),
+        &provider,
         &cfg.rpc_url,
         &cfg.db_file,
         cfg.start_block,
@@ -97,9 +97,7 @@ async fn main() {
         if let Err(err) = ingestor::run(&ctx, &provider, &metrics).await {
             error!("ingestor failed: {}", err);
             // manually recreate the ws connection just in case.
-            // the old connection still exists & will keep retrying endlessly.
             provider = new_provider(&cfg).await;
-            ctx.lock().unwrap().provider = provider.clone();
         }
     }
 }

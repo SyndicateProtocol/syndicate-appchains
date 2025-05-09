@@ -140,10 +140,11 @@ async fn validate_block_add_timestamp(
     client: &impl chain_ingestor::client::Provider,
     expected_block: &mut BlockRef,
 ) -> bool {
-    #[allow(clippy::expect_used)]
     #[allow(clippy::unwrap_used)]
-    let block =
-        client.get_block(expected_block.number).await.unwrap().expect("could not find block ");
+    let block = match client.get_block(expected_block.number).await.unwrap() {
+        Some(block) => block,
+        None => return false,
+    };
     assert_eq!(block.number, expected_block.number);
     expected_block.timestamp = block.timestamp;
     block.hash == expected_block.hash

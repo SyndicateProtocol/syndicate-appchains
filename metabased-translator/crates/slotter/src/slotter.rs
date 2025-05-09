@@ -33,7 +33,7 @@ pub async fn run(
 
     trace!("Waiting for settlement block");
     let mut set_block = settlement
-        .recv_block()
+        .recv(0)
         .await
         .map_err(|e| SlotterError::IngestorError(Chain::Settlement, e.to_string()))?;
 
@@ -52,7 +52,7 @@ pub async fn run(
     loop {
         trace!("Waiting for sequencing block");
         let seq_block = sequencing
-            .recv_block()
+            .recv(0)
             .await
             .map_err(|e| SlotterError::IngestorError(Chain::Sequencing, e.to_string()))?;
         validate_block(
@@ -76,24 +76,23 @@ pub async fn run(
         let mut messages = vec![];
 
         let mut blocks_per_slot: u64 = 1;
-        if set_block.block_ref.timestamp + settlement_delay <= seq_block.block_ref.timestamp {
-            trace!("Waiting for settlement blocks");
-            let set_blocks = settlement
-                .recv_blocks(seq_block.block_ref.timestamp - settlement_delay)
+        let slot_end_ts = (seq_block.block_ref.timestamp >= settlement_delay)
+            .then_some(seq_block.block_ref.timestamp - settlement_delay + 1)
+            .unwrap_or_default();
+        while set_block.block_ref.timestamp < slot_end_ts {
+            blocks_per_slot += 1;
+            messages.append(&mut set_block.messages);
+            set_block = settlement
+                .recv(slot_end_ts)
                 .await
                 .map_err(|e| SlotterError::IngestorError(Chain::Settlement, e.to_string()))?;
-            for block in set_blocks {
-                messages.append(&mut set_block.messages);
-                blocks_per_slot += 1;
-                validate_block(
-                    &mut latest_settlement_block,
-                    &block.block_ref,
-                    block.parent_hash,
-                    Chain::Settlement,
-                    metrics,
-                )?;
-                set_block = block;
-            }
+            validate_block(
+                &mut latest_settlement_block,
+                &set_block.block_ref,
+                set_block.parent_hash,
+                Chain::Settlement,
+                metrics,
+            )?;
         }
 
         if seq_block.tx_count > 0 || !messages.is_empty() {
@@ -240,11 +239,9 @@ mod tests {
 
     #[async_trait]
     impl<Block: Send> BlockStreamT<Block> for MockBlockStream<Block> {
-        async fn recv_block(&mut self) -> eyre::Result<Block> {
+        async fn recv(&mut self, timestamp: u64) -> eyre::Result<Block> {
+            assert_eq!(timestamp, 0);
             Ok(self.0.pop().unwrap())
-        }
-        async fn recv_blocks(&mut self, _timestamp: u64) -> eyre::Result<Vec<Block>> {
-            panic!("not implemented")
         }
     }
 
