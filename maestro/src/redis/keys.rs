@@ -26,6 +26,7 @@ pub mod wallet_nonce {
     }
 }
 
+/// Key produced by `chain_wallet_nonce_key()` above
 pub type ChainWalletNonceKey = String;
 
 /// Redis keys to retrieve Waiting Transaction values
