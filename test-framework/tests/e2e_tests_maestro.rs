@@ -168,9 +168,25 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 Duration::from_secs(10)
             );
 
+            // TODO ask Eric how to make a 2nd wallet to perf test locking
+            // // Create a second wallet
+            // let second_wallet = PrivateKeySigner::random();
+            // let second_wallet_address = second_wallet.address();
+            //
+            // // Fund the second wallet with a deposit
+            // let _ = inbox.depositEth(wallet_address, second_wallet_address, value).send().await?;
+            // components.mine_set_block(2).await?;
+            // components.mine_set_block(3).await?;
+            //
+            // // Wait for deposit to be processed for the second wallet
+            // wait_until!(
+            //     components.appchain_provider.get_balance(second_wallet_address).await? >
+            // U256::from(0),     Duration::from_secs(10)
+            // );
+
             let chain_id = components.chain_id;
             let nonce = components.appchain_provider.get_transaction_count(wallet_address).await?;
-            let tx0 = TransactionRequest::default()
+            let tx1 = TransactionRequest::default()
                 .from(wallet_address)
                 .with_to(TEST_ADDR)
                 .with_value(U256::from(0))
@@ -182,10 +198,23 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 .build(components.sequencing_provider.wallet())
                 .await?;
 
-            // Create 5 duplicate transactions (same nonce)
+            // let tx2 = TransactionRequest::default()
+            //     .from(second_wallet_address)
+            //     .with_to(TEST_ADDR)
+            //     .with_value(U256::from(0))
+            //     .with_nonce(nonce)
+            //     .with_gas_limit(100_000)
+            //     .with_chain_id(chain_id)
+            //     .with_max_fee_per_gas(100000000)
+            //     .with_max_priority_fee_per_gas(0)
+            //     .build(components.sequencing_provider.wallet())
+            //     .await?;
+
+            // Create 5x2 duplicate transactions (same nonce)
             let mut duplicate_txs = Vec::new();
             for _ in 0..5 {
-                duplicate_txs.push(tx0.clone());
+                duplicate_txs.push(tx1.clone());
+                // duplicate_txs.push(tx2.clone());
             }
 
             // Use Arc to share components across tasks
@@ -256,7 +285,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
 
             // TODO this needs to be 1 not 5
             // We expect only one transaction to succeed (the first one that gets processed)
-            assert_eq!(success_count, 1, "Only one transaction should succeed");
+            assert_eq!(success_count, 1, "Only two transactions should succeed");
 
             // Wait for the transaction to be processed
             wait_until!(
@@ -269,6 +298,11 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
             let current_nonce =
                 components_arc.appchain_provider.get_transaction_count(wallet_address).await?;
             assert_eq!(current_nonce, nonce + 1, "Only one transaction should have been processed");
+
+            // let current_nonce_second_wallet =
+            //     components_arc.appchain_provider.get_transaction_count(second_wallet_address).
+            // await?; assert_eq!(current_nonce_second_wallet, nonce + 1, "Only one
+            // transaction should have been processed");
 
             Ok(())
         },

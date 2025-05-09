@@ -82,10 +82,11 @@ pub async fn send_raw_transaction_handler(
         "Submitting validated transaction",
     );
 
+    // TODO update
     // let expected_nonce = service.get_cached_or_rpc_nonce(signer, chain_id).await?;
 
     service
-        .handle_transaction_and_manage_nonces(raw_tx, signer, chain_id, tx_nonce, &tx_hash, 99999)
+        .handle_transaction_and_manage_nonces(raw_tx, signer, chain_id, tx_nonce, &tx_hash)
         .await?;
 
     info!(%tx_hash, %chain_id, "Submitted forwarded transaction");

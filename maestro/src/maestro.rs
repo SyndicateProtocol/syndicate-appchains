@@ -18,43 +18,35 @@ use crate::{
     },
 };
 use alloy::{
+    consensus::Transaction,
     hex,
     primitives::{Address, Bytes, ChainId},
     providers::Provider,
 };
-use clap::builder::Str;
 use dashmap::DashMap;
-use futures_util::future::err;
-use redis::{aio::MultiplexedConnection, AsyncCommands};
+use redis::aio::MultiplexedConnection;
 use shared::{
     json_rpc::{Rejection::NonceTooLow, RpcError::TransactionRejected},
     tx_validation::decode_transaction,
 };
-use std::{
-    cmp::Ordering,
-    collections::HashMap,
-    sync::Arc,
-    time::{Duration, Instant},
-};
-use tokio::{
-    sync::{Mutex, MutexGuard},
-    time::timeout,
-};
-use tracing::{error, info, trace, warn};
+use std::{cmp::Ordering, collections::HashMap, sync::Arc};
+use tokio::sync::Mutex;
+use tracing::{debug, error, trace, warn};
 
 /// The service for filtering and directing transactions
 #[derive(Debug)]
 pub struct MaestroService {
     redis_conn: MultiplexedConnection,
-    chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
+    // chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
+    chain_wallets2: DashMap<ChainWalletNonceKey, Arc<Mutex<()>>>,
     producers: Mutex<HashMap<ChainId, Arc<StreamProducer>>>, // TODO dashmap here?
     rpc_providers: HashMap<ChainId, RpcProvider>,
     config: Config,
 }
 
-// TODO check times
+// TODO check stale locks
 // pub async fn clean_stale_locks(service: Arc<MaestroService>) {
-//     const STALE_LOCK_THRESHOLD: Duration = Duration::from_secs(1);
+//     const STALE_LO*CK_THRESHOLD: Duration = Duration::from_secs(1);
 //
 //     loop {
 //         tokio::time::sleep(Duration::from_secs(1)).await;
@@ -85,7 +77,8 @@ impl MaestroService {
         }
         Ok(Self {
             redis_conn,
-            chain_wallets: Mutex::new(HashMap::new()),
+            // chain_wallets: Mutex::new(HashMap::new()),
+            chain_wallets2: DashMap::new(),
             producers: Mutex::new(HashMap::new()),
             rpc_providers,
             config,
@@ -116,11 +109,18 @@ impl MaestroService {
     //     }
     // }
 
-    async fn get_chain_wallet_lock(&self, chain_id: ChainId, wallet: Address) -> Arc<Mutex<()>> {
+    // TODO delete me
+    // async fn get_chain_wallet_lock(&self, chain_id: ChainId, wallet: Address) -> Arc<Mutex<()>> {
+    //     let key = chain_wallet_nonce_key(chain_id, wallet);
+    //     // TODO update this to a read lock for perf
+    //     let mut locks = self.chain_wallets.lock().await;
+    //     locks.entry(key).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
+    // }
+
+    async fn get_chain_wallet_lock2(&self, chain_id: ChainId, wallet: Address) -> Arc<Mutex<()>> {
         let key = chain_wallet_nonce_key(chain_id, wallet);
-        // TODO update this to a read lock for perf
-        let mut locks = self.chain_wallets.lock().await;
-        locks.entry(key).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
+        let entry = self.chain_wallets2.entry(key).or_insert_with(|| Arc::new(Mutex::new(())));
+        entry.value().clone()
     }
 
     async fn get_or_create_producer(&self, chain_id: ChainId) -> Arc<StreamProducer> {
@@ -180,11 +180,11 @@ impl MaestroService {
         chain_id: ChainId,
         tx_nonce: u64,
         tx_hash: &String,
-        expected_nonce: u64,
     ) -> Result<(), MaestroRpcError> {
         // Handle nonce comparison
         // Get wallet-specific lock
-        let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet).await;
+        // let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet).await;
+        let chain_wallet_lock = self.get_chain_wallet_lock2(chain_id, wallet).await;
         let _guard = chain_wallet_lock.lock().await;
 
         // getting this after acquiring lock should eliminate concurrency?
@@ -192,27 +192,17 @@ impl MaestroService {
 
         match tx_nonce.cmp(&expected_nonce) {
             Ordering::Equal => {
-                // 1. update the cache with nonce + 1. Quit if this fails
-                let new_nonce = self.increment_wallet_nonce(chain_id, wallet, tx_nonce).await.
+                // 1. enqueue the txn
+                self.enqueue_raw_transaction(raw_tx, chain_id, tx_hash).await?;
+
+                // 2. update the cache with nonce + 1. Quit if this fails
+                let new_nonce = self.increment_wallet_nonce(chain_id, wallet, tx_nonce, tx_nonce+1).await.
                     map_err(|e| {
                         let rejection = NonceTooLow(tx_nonce+1 , tx_nonce);
                         trace!(%e, %chain_id, %wallet, %expected_nonce, %tx_nonce, "failed to increment wallet nonce");
                         JsonRpcError(TransactionRejected(rejection))
                     }
                     )?;
-
-                // 2. enqueue the txn
-                self.enqueue_raw_transaction(raw_tx, chain_id, tx_hash).await?;
-
-                // // 2. update the cache with nonce + 1
-                // let new_nonce =
-                //     self.increment_wallet_nonce(chain_id, wallet, tx_nonce).await.
-                //         unwrap_or_else(|e| {
-                //             // Return a default if cache call somehow fails, continue processing
-                //             error!(%e, %chain_id, %wallet, %expected_nonce, "failed to increment
-                // wallet nonce");             expected_nonce + 1
-                //         }
-                //         );
 
                 // 3. check cache for waiting txns (background task)
                 let service_clone = self.clone();
@@ -390,20 +380,19 @@ impl MaestroService {
         chain_id: ChainId,
         wallet_address: Address,
         current_nonce: u64,
+        desired_nonce: u64,
     ) -> Result<u64, Error> {
         let mut conn = self.redis_conn.clone();
-        let new_nonce = current_nonce + 1;
 
         let cached_nonce = conn.get_wallet_nonce(chain_id, wallet_address).await?;
         if let Some(cached_nonce) = cached_nonce {
             let cached_nonce_parsed = cached_nonce.parse::<u64>().map_err(|_e| {
-                error!(%new_nonce, %cached_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from Redis cache");
+                error!(%desired_nonce, %cached_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from Redis cache");
                 //TODO clear cache here?
                 WaitingTransaction(FailedToEnqueue)
             })?;
-            // if existing nonce is not the same as our current nonce, we are not first request
             if cached_nonce_parsed.cmp(&current_nonce) != Ordering::Equal {
-                error!(%new_nonce, %cached_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from Redis cache");
+                error!(%desired_nonce, %cached_nonce_parsed, %current_nonce, %chain_id, %wallet_address, "unexpected cached nonce. likely a concurrency bug");
                 //TODO clear cache here?
                 return Err(WaitingTransaction(FailedToEnqueue))
             }
@@ -411,54 +400,40 @@ impl MaestroService {
 
         // actual increment
         let old_nonce = conn
-            .set_wallet_nonce(chain_id, wallet_address, new_nonce)
+            .set_wallet_nonce(chain_id, wallet_address, desired_nonce)
             .await
             .map_err(Error::Redis)?;
 
         match old_nonce {
             None => {
                 // No value previously set in cache. Happy path.
-                println!("X_X_X_X: no nonce case, {}", new_nonce);
-                Ok(new_nonce)
+                println!("X_X_X_X: no nonce case, {}", desired_nonce); // TODO delete me
+                Ok(desired_nonce)
             }
             Some(old_nonce) => {
                 let old_nonce_parsed = old_nonce.parse::<u64>().
                     map_err(|_e| {
-                        error!(%new_nonce, %old_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from Redis cache");
+                        error!(%desired_nonce, %old_nonce, %chain_id, %wallet_address, "failed to parse nonce as u64 from Redis cache");
                         //TODO clear cache here?
                         WaitingTransaction(FailedToEnqueue)
                     })?;
-                match new_nonce.cmp(&old_nonce_parsed) {
-                    Ordering::Greater => {
-                        if new_nonce.cmp(&(old_nonce_parsed + 1)) == Ordering::Equal {
-                            // Happy path. New nonce is 1 greater than old nonce.
-                            println!(
-                                "X_X_X_X: happy path, new {} old {}",
-                                new_nonce, old_nonce_parsed
-                            );
-                            Ok(new_nonce)
-                        } else {
-                            error!(%new_nonce, %chain_id, %wallet_address, "New nonce is not equal to old nonce + 1");
-                            // TODO clear cache here?
-                            Err(WaitingTransaction(FailedToEnqueue))
-                        }
-                    }
-                    Ordering::Equal => {
-                        // Contention case. Increment did not succeed. This request was likely not
-                        // the first one for this nonce
-                        trace!(%new_nonce, %chain_id, %wallet_address, "New nonce is equal to old nonce");
-                        Err(WaitingTransaction(FailedToEnqueue))
-                    }
-                    Ordering::Less => {
-                        // TODO clear cache here?
-                        error!(%new_nonce, %chain_id, %wallet_address, "New nonce is less than old nonce");
-                        Err(WaitingTransaction(FailedToEnqueue))
-                    }
+
+                if desired_nonce.cmp(&old_nonce_parsed) != Ordering::Greater {
+                    error!(%desired_nonce, %old_nonce_parsed, %current_nonce, %chain_id, %wallet_address, "new nonce not greater than cached. likely a concurrency bug");
+                    //TODO clear cache here?
+                    // return Err(WaitingTransaction(FailedToEnqueue)) // TODO delete this? Maybe
+                    // let execution proceed
                 }
+                println!(
+                    "X_X_X_X: expected increment case, desired {} cached {}",
+                    desired_nonce, old_nonce_parsed
+                ); // TODO delete me
+                Ok(desired_nonce)
             }
         }
     }
 
+    // TODO docs
     /// Checks for and processes waiting transaction in the cache
     ///
     /// This function checks for transactions with
@@ -478,57 +453,62 @@ impl MaestroService {
         &self,
         chain_id: ChainId,
         wallet_address: Address,
-        nonce_to_check: u64,
+        starting_nonce: u64,
     ) -> Result<(), Error> {
-        // Get wallet-specific lock
-        let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet_address).await;
+        // Tokio lock is acquired in order, so lock acquisition will occur "next" for a wallet after
+        // parent txn function
+        let chain_wallet_lock = self.get_chain_wallet_lock2(chain_id, wallet_address).await;
         let _guard = chain_wallet_lock.lock().await;
 
-        let mut nonce_to_check = nonce_to_check;
-        loop {
-            let cache_content =
-                self.check_cache_for_transaction(chain_id, wallet_address, nonce_to_check).await?;
-            match cache_content {
-                None => {
-                    // No more transactions to process, exit
-                    return Ok(());
-                }
-                Some(raw_tx) => {
-                    let tx = decode_transaction(&raw_tx).map_err(|e| {
-                        error!(%e, %chain_id, %wallet_address, %nonce_to_check, "Failed to decode raw transaction from cache");
-                        WaitingTransaction(FailedToDecode)
-                    })?;
+        let waiting_txns = self
+            .get_contiguous_waiting_transactions_from_cache(
+                chain_id,
+                wallet_address,
+                starting_nonce,
+            )
+            .await?;
 
-                    let tx_hash = format!("0x{}", hex::encode(tx.hash()));
-
-                    if let Err(e) = self.enqueue_raw_transaction(raw_tx, chain_id, &tx_hash).await {
-                        error!(%e, %chain_id, %wallet_address, %nonce_to_check, %tx_hash, "Failed to enqueue transaction");
-                        return Err(WaitingTransaction(FailedToEnqueue))
-                    }
-
-                    let new_nonce = self
-                        .increment_wallet_nonce(chain_id, wallet_address, nonce_to_check)
-                        .await?;
-
-                    if let Err(e) = self
-                        .remove_gap_transaction_from_cache(
-                            chain_id,
-                            wallet_address,
-                            nonce_to_check,
-                            &tx_hash,
-                        )
-                        .await
-                    {
-                        error!(%e, %chain_id, %wallet_address, %nonce_to_check, %tx_hash, "Failed to remove gap transaction from cache");
-                        // Not returning error here as the transaction was processed
-                    }
-
-                    nonce_to_check = new_nonce;
-                }
-            }
+        // Early return
+        if waiting_txns.is_empty() {
+            return Ok(())
         }
+
+        let mut current_waiting_txn_nonce = 0u64;
+        // Decode txn, enqueue, and remove from cache
+        for waiting_txn in waiting_txns {
+            let tx = decode_transaction(&waiting_txn).map_err(|e| {
+                error!(%e, %chain_id, %wallet_address, "Failed to decode raw transaction from cache");
+                WaitingTransaction(FailedToDecode)
+            })?;
+            current_waiting_txn_nonce = tx.nonce();
+            let tx_hash = format!("0x{}", hex::encode(tx.hash()));
+
+            if let Err(e) = self.enqueue_raw_transaction(waiting_txn, chain_id, &tx_hash).await {
+                error!(%e, %chain_id, %wallet_address, %tx_hash, "Failed to enqueue transaction");
+                return Err(WaitingTransaction(FailedToEnqueue))
+            }
+
+            self.remove_waiting_transaction_from_cache(chain_id, wallet_address, current_waiting_txn_nonce, &tx_hash).await.map_err(|e|{
+                error!(%e, %chain_id, %wallet_address, %tx_hash, nonce=%current_waiting_txn_nonce, "Failed to remove waiting transaction from cache");
+                WaitingTransaction(FailedToEnqueue)
+            })?;
+        }
+
+        // TODO unit test if `starting_nonce` and `desired_nonce` is correct below
+        let new_nonce = self
+            .increment_wallet_nonce(
+                chain_id,
+                wallet_address,
+                starting_nonce,
+                current_waiting_txn_nonce + 1,
+            )
+            .await?;
+        debug!(%chain_id, %wallet_address, prev_nonce=%starting_nonce, updated_nonce=%new_nonce, "background waiting txn process updated nonce");
+
+        Ok(())
     }
 
+    // TODO update doc that it returns multiple
     /// Checks if a transaction exists in the cache for the given wallet address and nonce
     ///
     /// This method attempts to retrieve a transaction from the waiting gap cache
@@ -556,24 +536,51 @@ impl MaestroService {
     ///
     /// This method will log detailed error information when hex decoding fails, including the
     /// actual hex string that failed to decode.
-    pub async fn check_cache_for_transaction(
+    pub async fn get_contiguous_waiting_transactions_from_cache(
         &self,
         chain_id: ChainId,
         wallet_address: Address,
-        nonce: u64,
-    ) -> Result<Option<Bytes>, Error> {
+        starting_nonce: u64,
+    ) -> Result<Vec<Bytes>, Error> {
         let mut conn = self.redis_conn.clone();
-        conn.get_waiting_txn(chain_id, wallet_address, nonce).await.map_err(Error::Redis)?
-            .map_or_else(
-                || Ok(None),
-                |tx_hex| match hex::decode(&tx_hex) {
-                    Ok(bytes) => Ok(Some(Bytes::from(bytes))),
-                    Err(e) => {
-                        error!(%e, %chain_id, %wallet_address, %nonce, %tx_hex, "Failed to decode hex transaction from cache");
-                        Err(WaitingTransaction(FailedToDecode))
-                    }
+        let mut txns: Vec<Bytes> = Vec::new();
+        let mut current_nonce = starting_nonce; // TODO unit test this off by one logic
+        loop {
+            match conn
+                .get_waiting_txn(chain_id, wallet_address, current_nonce)
+                .await
+                .map_err(Error::Redis)?
+            {
+                None => {
+                    //
+                    break
                 }
-            )
+                Some(tx_hex) => match hex::decode(&tx_hex) {
+                    Ok(tx_bytes) => {
+                        txns.push(Bytes::from(tx_bytes));
+                        current_nonce += 1
+                    }
+                    Err(e) => {
+                        error!(%e, %chain_id, %wallet_address, %starting_nonce, %tx_hex, "Failed to decode hex transaction from cache");
+                        return Err(WaitingTransaction(FailedToDecode))
+                    }
+                },
+            }
+        }
+        // TODO starting_nonce + len(txns) must be == current_nonce-1
+        Ok(txns)
+        // let result = option
+        //     .map_or_else(
+        //         || Ok(None),
+        //         |tx_hex| match hex::decode(&tx_hex) {
+        //             Ok(bytes) => Ok(Some(Bytes::from(bytes))),
+        //             Err(e) => {
+        //                 error!(%e, %chain_id, %wallet_address, %starting_nonce, %tx_hex, "Failed
+        // to decode hex transaction from cache");
+        // Err(WaitingTransaction(FailedToDecode))             }
+        //         }
+        //     );
+        // result
     }
 
     /// Stores a waiting transaction in the cache
@@ -626,7 +633,7 @@ impl MaestroService {
     ///
     /// # Errors
     /// Returns an error if the Redis operation fails
-    pub async fn remove_gap_transaction_from_cache(
+    pub async fn remove_waiting_transaction_from_cache(
         &self,
         chain_id: ChainId,
         wallet_address: Address,
@@ -957,7 +964,9 @@ mod tests {
         }
 
         // Increment nonce
-        let result = service.increment_wallet_nonce(chain_id, wallet, initial_nonce).await;
+        let result = service
+            .increment_wallet_nonce(chain_id, wallet, initial_nonce, initial_nonce + 1)
+            .await;
 
         // Verify success (result should be "OK" from Redis)
         assert!(result.is_ok(), "Incrementing nonce should succeed");
@@ -1023,11 +1032,11 @@ mod tests {
 
         // Set nonces for both chains
         service
-            .increment_wallet_nonce(chain_id1, wallet, nonce1)
+            .increment_wallet_nonce(chain_id1, wallet, nonce1, nonce1_plus1)
             .await
             .expect("Incrementing nonce should succeed");
         service
-            .increment_wallet_nonce(chain_id2, wallet, nonce2)
+            .increment_wallet_nonce(chain_id2, wallet, nonce2, nonce2_plus1)
             .await
             .expect("Incrementing nonce should succeed");
 
@@ -1097,14 +1106,19 @@ mod tests {
         conn.set_waiting_txn(chain_id, wallet, nonce, raw_tx.clone()).await.unwrap();
 
         // Check the transaction exists in cache
-        let cached_tx = service.check_cache_for_transaction(chain_id, wallet, nonce).await.unwrap();
-        assert!(cached_tx.is_some(), "Transaction should be found in cache");
-        assert_eq!(cached_tx.unwrap(), raw_tx, "Retrieved transaction should match the stored one");
+        let cached_tx = service
+            .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, nonce)
+            .await
+            .unwrap();
+        assert!(cached_tx.get(0).is_some(), "Transaction should be found in cache");
+        assert_eq!(cached_tx[0], raw_tx, "Retrieved transaction should match the stored one");
 
         // Check a non-existent transaction returns None
-        let non_existent =
-            service.check_cache_for_transaction(chain_id, wallet, nonce + 1).await.unwrap();
-        assert!(non_existent.is_none(), "Non-existent transaction should return None");
+        let non_existent = service
+            .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, nonce + 1)
+            .await
+            .unwrap();
+        assert!(non_existent.is_empty(), "Non-existent transaction should return None");
     }
 
     #[tokio::test]
@@ -1154,13 +1168,18 @@ mod tests {
 
         // Verify transaction exists before removal
         assert!(
-            service.check_cache_for_transaction(chain_id, wallet, nonce).await.unwrap().is_some(),
+            service
+                .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, nonce)
+                .await
+                .unwrap()
+                .get(0)
+                .is_some(),
             "Transaction should exist before removal"
         );
 
         // Remove transaction
         let result =
-            service.remove_gap_transaction_from_cache(chain_id, wallet, nonce, tx_hash).await;
+            service.remove_waiting_transaction_from_cache(chain_id, wallet, nonce, tx_hash).await;
 
         // Verify success
         assert!(result.is_ok(), "Removing transaction from cache should succeed");
@@ -1168,13 +1187,18 @@ mod tests {
 
         // Verify transaction is gone
         assert!(
-            service.check_cache_for_transaction(chain_id, wallet, nonce).await.unwrap().is_none(),
+            service
+                .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, nonce)
+                .await
+                .unwrap()
+                .is_empty(),
             "Transaction should be removed from cache"
         );
 
         // Test removing non-existent key
-        let non_existent_result =
-            service.remove_gap_transaction_from_cache(chain_id, wallet, nonce + 1, tx_hash).await;
+        let non_existent_result = service
+            .remove_waiting_transaction_from_cache(chain_id, wallet, nonce + 1, tx_hash)
+            .await;
 
         assert!(non_existent_result.is_ok(), "Removing non-existent key should not fail");
         assert_eq!(non_existent_result.unwrap(), 0, "Should return 0 for non-existent key");
@@ -1213,9 +1237,9 @@ mod tests {
         let mut raw_tx0 = vec![];
         let mut raw_tx1 = vec![];
         let mut raw_tx2 = vec![];
-        build_test_txn(&mut raw_tx0, 0).await;
-        build_test_txn(&mut raw_tx1, 1).await;
-        build_test_txn(&mut raw_tx2, 2).await;
+        build_test_txn(&mut raw_tx0, current_nonce).await;
+        build_test_txn(&mut raw_tx1, current_nonce + 1).await;
+        build_test_txn(&mut raw_tx2, current_nonce + 2).await;
 
         // Add two sequential transactions to the waiting gap
         service
@@ -1250,7 +1274,10 @@ mod tests {
 
         //Submit txn and increment nonce
         service.enqueue_raw_transaction(Bytes::from(raw_tx0), chain_id, "raw_tx0").await.unwrap();
-        service.increment_wallet_nonce(chain_id, wallet, current_nonce).await.unwrap();
+        service
+            .increment_wallet_nonce(chain_id, wallet, current_nonce, current_nonce + 1)
+            .await
+            .unwrap();
 
         // Process waiting transactions
         let result = service
@@ -1281,19 +1308,19 @@ mod tests {
         // Verify transactions are no longer in waiting gap
         assert!(
             service
-                .check_cache_for_transaction(chain_id, wallet, current_nonce + 1)
+                .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, current_nonce + 1)
                 .await
                 .unwrap()
-                .is_none(),
+                .is_empty(),
             "First transaction should be removed from waiting gap"
         );
 
         assert!(
             service
-                .check_cache_for_transaction(chain_id, wallet, current_nonce + 2)
+                .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, current_nonce + 2)
                 .await
                 .unwrap()
-                .is_none(),
+                .is_empty(),
             "Second transaction should be removed from waiting gap"
         );
 
@@ -1330,8 +1357,8 @@ mod tests {
         // Create test transactions
         let mut raw_tx1 = vec![];
         let mut raw_tx3 = vec![];
-        build_test_txn(&mut raw_tx1, 0).await;
-        build_test_txn(&mut raw_tx3, 2).await;
+        build_test_txn(&mut raw_tx1, current_nonce).await;
+        build_test_txn(&mut raw_tx3, current_nonce + 2).await;
 
         // Add transactions with nonce gap
         service
@@ -1387,20 +1414,20 @@ mod tests {
         // First transaction should be removed
         assert!(
             service
-                .check_cache_for_transaction(chain_id, wallet, current_nonce)
+                .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, current_nonce)
                 .await
                 .unwrap()
-                .is_none(),
+                .is_empty(),
             "First transaction should be removed from waiting gap"
         );
 
         // Gap transaction should still be there
         assert!(
-            service
-                .check_cache_for_transaction(chain_id, wallet, current_nonce + 2)
+            !service
+                .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, current_nonce + 2)
                 .await
                 .unwrap()
-                .is_some(),
+                .is_empty(),
             "Gap transaction should still be in waiting gap"
         );
 
@@ -1444,11 +1471,11 @@ mod tests {
 
         // Invalid transaction should still be in cache
         assert!(
-            service
-                .check_cache_for_transaction(chain_id, wallet, current_nonce)
+            !service
+                .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, current_nonce)
                 .await
                 .unwrap()
-                .is_some(),
+                .is_empty(),
             "Invalid transaction should remain in waiting gap after error"
         );
     }
@@ -1479,7 +1506,7 @@ mod tests {
 
         // Submit transaction with equal nonce
         let result = service_arc
-            .handle_transaction_and_manage_nonces(raw_tx, wallet, chain_id, nonce, &tx_hash, nonce)
+            .handle_transaction_and_manage_nonces(raw_tx, wallet, chain_id, nonce, &tx_hash)
             .await;
 
         // Verify success
@@ -1526,14 +1553,7 @@ mod tests {
 
         // Submit transaction with lower nonce
         let result = service_arc
-            .handle_transaction_and_manage_nonces(
-                raw_tx,
-                wallet,
-                chain_id,
-                lower_nonce,
-                &tx_hash,
-                current_nonce,
-            )
+            .handle_transaction_and_manage_nonces(raw_tx, wallet, chain_id, lower_nonce, &tx_hash)
             .await;
 
         // Verify transaction was rejected due to lower nonce
@@ -1586,7 +1606,6 @@ mod tests {
                 chain_id,
                 higher_nonce,
                 &tx_hash,
-                current_nonce,
             )
             .await;
 
@@ -1602,11 +1621,13 @@ mod tests {
         );
 
         // Verify transaction was stored in waiting gap
-        let cached_tx =
-            service_arc.check_cache_for_transaction(chain_id, wallet, higher_nonce).await.unwrap();
+        let cached_tx = service_arc
+            .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, higher_nonce)
+            .await
+            .unwrap();
 
-        assert!(cached_tx.is_some(), "Transaction should be stored in waiting gap");
-        assert_eq!(cached_tx.unwrap(), raw_tx, "Cached transaction should match the original");
+        assert!(cached_tx.get(0).is_some(), "Transaction should be stored in waiting gap");
+        assert_eq!(cached_tx[0], raw_tx, "Cached transaction should match the original");
     }
 
     #[tokio::test]
@@ -1624,9 +1645,9 @@ mod tests {
         let mut raw_tx0 = vec![];
         let mut raw_tx1 = vec![];
         let mut raw_tx2 = vec![];
-        build_test_txn(&mut raw_tx0, 0).await;
-        build_test_txn(&mut raw_tx1, 1).await;
-        build_test_txn(&mut raw_tx2, 2).await;
+        build_test_txn(&mut raw_tx0, current_nonce).await;
+        build_test_txn(&mut raw_tx1, current_nonce + 1).await;
+        build_test_txn(&mut raw_tx2, current_nonce + 2).await;
 
         // Setup: Store future transactions in waiting gap
         service_arc
@@ -1671,7 +1692,6 @@ mod tests {
                 chain_id,
                 current_nonce,
                 &tx_hash,
-                current_nonce,
             )
             .await;
 
@@ -1699,28 +1719,28 @@ mod tests {
         // Verify all transactions are removed from waiting gap
         assert!(
             service_arc
-                .check_cache_for_transaction(chain_id, wallet, current_nonce)
+                .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, current_nonce)
                 .await
                 .unwrap()
-                .is_none(),
+                .is_empty(),
             "Transaction 0 should be removed from waiting gap"
         );
 
         assert!(
             service_arc
-                .check_cache_for_transaction(chain_id, wallet, current_nonce + 1)
+                .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, current_nonce + 1)
                 .await
                 .unwrap()
-                .is_none(),
+                .is_empty(),
             "Transaction 1 should be removed from waiting gap"
         );
 
         assert!(
             service_arc
-                .check_cache_for_transaction(chain_id, wallet, current_nonce + 2)
+                .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, current_nonce + 2)
                 .await
                 .unwrap()
-                .is_none(),
+                .is_empty(),
             "Transaction 2 should be removed from waiting gap"
         );
 
@@ -1778,7 +1798,6 @@ mod tests {
                 chain_id,
                 current_nonce,
                 &tx_hash,
-                current_nonce,
             )
             .await;
 
@@ -1805,11 +1824,11 @@ mod tests {
 
         // Verify the gapped transaction is still in the waiting gap
         assert!(
-            service_arc
-                .check_cache_for_transaction(chain_id, wallet, current_nonce + 2)
+            !service_arc
+                .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, current_nonce + 2)
                 .await
                 .unwrap()
-                .is_some(),
+                .is_empty(),
             "Transaction with gap should still be in waiting gap"
         );
     }
