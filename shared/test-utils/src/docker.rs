@@ -235,7 +235,7 @@ pub async fn start_redis() -> Result<(Docker, String)> {
             .arg("-p")
             .arg(format!("{port}:6379"))
             .arg("redis:latest")
-            .arg("--loglevel verbose"),
+            .arg("--loglevel debug"),
     )?;
 
     let redis_url = format!("redis://127.0.0.1:{port}/");

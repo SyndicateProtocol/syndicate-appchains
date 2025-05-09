@@ -148,7 +148,7 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
 // Duplicate txn spam is rejected, dispatched concurrently
 #[tokio::test]
 async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
-    // Ok(());
+    // Ok(())
     TestComponents::run(
         &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
         |components| async move {
