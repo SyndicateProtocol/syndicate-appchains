@@ -327,5 +327,8 @@ mod tests {
 
         // Redis returns 0 when no keys were deleted
         assert_eq!(del_result, 0, "Should return 0 when deleting non-existent key");
+
+        let get_result = conn.get_waiting_txn(chain_id, signer, nonce).await.unwrap();
+        assert!(get_result.is_none(), "Should return none after deleting non-existent key");
     }
 }
