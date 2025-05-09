@@ -5,10 +5,12 @@ use alloy::{
     primitives::{address, utils::parse_ether, Address, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::TransactionRequest,
+    signers::local::PrivateKeySigner,
 };
 use contract_bindings::arbitrum::rollup::Rollup;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use test_utils::wait_until;
+use tracing::info;
 
 mod components;
 
@@ -156,11 +158,11 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
             components.sequencing_provider.anvil_set_auto_mine(true).await?;
             // Send a deposit to the appchain to make sure the from address has funds
             let wallet_address = components.sequencing_provider.default_signer_address();
-            let value = parse_ether("0.01")?;
+            let value = parse_ether("0.1")?;
             let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
             let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
-            components.mine_set_block(0).await?;
-            components.mine_set_block(1).await?;
+            components.mine_both(0).await?;
+            components.mine_both(1).await?; // Close slot
 
             // Wait for deposit to be processed
             wait_until!(
@@ -168,21 +170,19 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 Duration::from_secs(10)
             );
 
-            // TODO ask Eric how to make a 2nd wallet to perf test locking
-            // // Create a second wallet
-            // let second_wallet = PrivateKeySigner::random();
-            // let second_wallet_address = second_wallet.address();
-            //
-            // // Fund the second wallet with a deposit
-            // let _ = inbox.depositEth(wallet_address, second_wallet_address, value).send().await?;
-            // components.mine_set_block(2).await?;
-            // components.mine_set_block(3).await?;
-            //
-            // // Wait for deposit to be processed for the second wallet
-            // wait_until!(
-            //     components.appchain_provider.get_balance(second_wallet_address).await? >
-            // U256::from(0),     Duration::from_secs(10)
-            // );
+            // Create a second wallet
+            let second_wallet = PrivateKeySigner::random();
+            let second_wallet_address = second_wallet.address();
+            let _ = inbox.depositEth(wallet_address, second_wallet_address, value).send().await?;
+            components.mine_both(0).await?; // Closes second slot
+            components.mine_both(1).await?; // Closes third slot
+
+            // Wait for deposit to be processed for the second wallet
+            wait_until!(
+                components.appchain_provider.get_balance(second_wallet_address).await? >
+                    U256::from(0),
+                Duration::from_secs(10)
+            );
 
             let chain_id = components.chain_id;
             let nonce = components.appchain_provider.get_transaction_count(wallet_address).await?;
