@@ -1,9 +1,9 @@
 //! e2e tests for the metabased stack
 use crate::components::{ConfigurationOptions, TestComponents};
 use alloy::{
-    network::TransactionBuilder,
+    network::{EthereumWallet, TransactionBuilder},
     primitives::{address, utils::parse_ether, Address, U256},
-    providers::{ext::AnvilApi, Provider, WalletProvider},
+    providers::{ext::AnvilApi, fillers::WalletFiller, Provider, ProviderBuilder, WalletProvider},
     rpc::types::TransactionRequest,
     signers::local::PrivateKeySigner,
 };
@@ -198,23 +198,31 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 .build(components.sequencing_provider.wallet())
                 .await?;
 
-            // let tx2 = TransactionRequest::default()
-            //     .from(second_wallet_address)
-            //     .with_to(TEST_ADDR)
-            //     .with_value(U256::from(0))
-            //     .with_nonce(nonce)
-            //     .with_gas_limit(100_000)
-            //     .with_chain_id(chain_id)
-            //     .with_max_fee_per_gas(100000000)
-            //     .with_max_priority_fee_per_gas(0)
-            //     .build(components.sequencing_provider.wallet())
-            //     .await?;
+            // How to get from second walletAddress to &EthereumWallet?
+            // let wallet2 =
+            // let provider = components.sequencing_provider.clone();
+            // let provider =
+            // ProviderBuilder::new().on_http(components.sequencing_rpc_url.parse().unwrap());
+            // let wallet2 = WalletProvider::new(provider, second_wallet);
+            let wallet2 = &EthereumWallet::from(second_wallet);
+
+            let tx2 = TransactionRequest::default()
+                .from(second_wallet_address)
+                .with_to(TEST_ADDR)
+                .with_value(U256::from(0))
+                .with_nonce(nonce)
+                .with_gas_limit(100_000)
+                .with_chain_id(chain_id)
+                .with_max_fee_per_gas(100000000)
+                .with_max_priority_fee_per_gas(0)
+                .build(wallet2)
+                .await?;
 
             // Create 5x2 duplicate transactions (same nonce)
             let mut duplicate_txs = Vec::new();
             for _ in 0..5 {
                 duplicate_txs.push(tx1.clone());
-                // duplicate_txs.push(tx2.clone());
+                duplicate_txs.push(tx2.clone());
             }
 
             // Use Arc to share components across tasks
@@ -283,9 +291,9 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
             // Check results - we expect one success and rest failures
             let success_count = results.iter().filter(|(status, _)| *status == "success").count();
 
-            // TODO this needs to be 1 not 5
+            // TODO this needs to be 2 not 10
             // We expect only one transaction to succeed (the first one that gets processed)
-            assert_eq!(success_count, 1, "Only two transactions should succeed");
+            assert_eq!(success_count, 2, "Only two transactions should succeed");
 
             // Wait for the transaction to be processed
             wait_until!(
@@ -299,10 +307,16 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 components_arc.appchain_provider.get_transaction_count(wallet_address).await?;
             assert_eq!(current_nonce, nonce + 1, "Only one transaction should have been processed");
 
-            // let current_nonce_second_wallet =
-            //     components_arc.appchain_provider.get_transaction_count(second_wallet_address).
-            // await?; assert_eq!(current_nonce_second_wallet, nonce + 1, "Only one
-            // transaction should have been processed");
+            let current_nonce_second_wallet = components_arc
+                .appchain_provider
+                .get_transaction_count(second_wallet_address)
+                .await?;
+            assert_eq!(
+                current_nonce_second_wallet,
+                nonce + 1,
+                "Only one
+            transaction should have been processed"
+            );
 
             Ok(())
         },
