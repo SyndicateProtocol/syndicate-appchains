@@ -1,4 +1,4 @@
-//! Verifies a batch of blocks and creates a new mchain block
+//! Verifies a batch of blocks and creates a new mchain block.
 
 use crate::types::{ChainVerificationInput, TypedReceipt};
 use alloy::{
@@ -14,7 +14,7 @@ use eyre::{eyre, Result};
 use mchain::db::{DelayedMessage, MBlock, Slot};
 use shared::types::{BlockRef, PartialBlock, Receipt};
 
-/// Verifies a batch of blocks and creates a new mchain block
+/// Verifies a batch of blocks and creates a new mchain block.
 pub fn verify_and_create_batch(
     sequencing_chain_input: ChainVerificationInput,
     settlement_chain_input: ChainVerificationInput,
