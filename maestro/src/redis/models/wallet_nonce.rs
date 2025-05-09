@@ -1,7 +1,9 @@
 //! This module describes the required functionality for Maestro to interact with wallet nonce
 //! values in the Redis cache.
 
-use crate::redis::{keys::wallet_nonce::wallet_nonce_key, ttl::wallet_nonce::WALLET_NONCE_TTL_SEC};
+use crate::redis::{
+    keys::wallet_nonce::chain_wallet_nonce_key, ttl::wallet_nonce::WALLET_NONCE_TTL_SEC,
+};
 use alloy::primitives::{Address, ChainId};
 use redis::{aio::MultiplexedConnection, AsyncCommands, RedisResult, SetExpiry::EX, SetOptions};
 use std::future::Future;
@@ -32,7 +34,7 @@ impl WalletNonceExt for MultiplexedConnection {
         chain_id: ChainId,
         wallet_address: Address,
     ) -> impl Future<Output = RedisResult<Option<String>>> + Send {
-        let key = wallet_nonce_key(chain_id, wallet_address);
+        let key = chain_wallet_nonce_key(chain_id, wallet_address);
         self.get(key)
     }
 
@@ -43,7 +45,7 @@ impl WalletNonceExt for MultiplexedConnection {
         wallet_address: Address,
         nonce: u64,
     ) -> impl Future<Output = RedisResult<Option<String>>> + Send {
-        let key = wallet_nonce_key(chain_id, wallet_address);
+        let key = chain_wallet_nonce_key(chain_id, wallet_address);
         let opts = SetOptions::default().with_expiration(EX(WALLET_NONCE_TTL_SEC)).get(true);
         Box::pin(self.set_options(key, nonce.to_string(), opts))
     }
@@ -72,7 +74,7 @@ mod tests {
         let chain_id = 1u64;
         let wallet_address = Address::from_slice(&[0x42; 20]);
 
-        let key = wallet_nonce_key(chain_id, wallet_address);
+        let key = chain_wallet_nonce_key(chain_id, wallet_address);
 
         assert_eq!(
             key,

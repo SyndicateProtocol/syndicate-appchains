@@ -24,6 +24,7 @@ alloy = { workspace = true, features = [
 axum         = { workspace = true }
 bytes        = { workspace = true }
 clap         = { workspace = true, features = ["derive", "env"] }
+dashmap      = "6.1.0"
 eyre         = { workspace = true }
 futures-util = { workspace = true }
 http         = { workspace = true }

@@ -12,7 +12,7 @@ use crate::{
         WaitingTransactionError::{FailedToDecode, FailedToEnqueue},
     },
     redis::{
-        keys::wallet_nonce::wallet_nonce_key,
+        keys::{wallet_nonce::chain_wallet_nonce_key, ChainWalletNonceKey},
         models::{waiting_transaction::WaitingGapTxnExt, wallet_nonce::WalletNonceExt},
         streams::producer::StreamProducer,
     },
@@ -22,24 +22,59 @@ use alloy::{
     primitives::{Address, Bytes, ChainId},
     providers::Provider,
 };
+use clap::builder::Str;
+use dashmap::DashMap;
 use futures_util::future::err;
 use redis::{aio::MultiplexedConnection, AsyncCommands};
 use shared::{
     json_rpc::{Rejection::NonceTooLow, RpcError::TransactionRejected},
     tx_validation::decode_transaction,
 };
-use std::{cmp::Ordering, collections::HashMap, sync::Arc};
-use tokio::sync::Mutex;
-use tracing::{error, trace, warn};
+use std::{
+    cmp::Ordering,
+    collections::HashMap,
+    sync::Arc,
+    time::{Duration, Instant},
+};
+use tokio::{
+    sync::{Mutex, MutexGuard},
+    time::timeout,
+};
+use tracing::{error, info, trace, warn};
 
 /// The service for filtering and directing transactions
 #[derive(Debug)]
 pub struct MaestroService {
     redis_conn: MultiplexedConnection,
-    producers: Mutex<HashMap<ChainId, Arc<StreamProducer>>>,
+    chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
+    producers: Mutex<HashMap<ChainId, Arc<StreamProducer>>>, // TODO dashmap here?
     rpc_providers: HashMap<ChainId, RpcProvider>,
     config: Config,
 }
+
+// TODO check times
+// pub async fn clean_stale_locks(service: Arc<MaestroService>) {
+//     const STALE_LOCK_THRESHOLD: Duration = Duration::from_secs(1);
+//
+//     loop {
+//         tokio::time::sleep(Duration::from_secs(1)).await;
+//
+//         let now = std::time::Instant::now();
+//         let mut stale_count = 0;
+//
+//         service.chain_wallets.retain(|_, (_, last_updated)| {
+//             let retain = now.duration_since(*last_updated) < STALE_LOCK_THRESHOLD;
+//             if !retain {
+//                 stale_count += 1;
+//             }
+//             retain
+//         });
+//
+//         if stale_count > 0 {
+//             warn!("Cleaned {} stale locks", stale_count);
+//         }
+//     }
+// }
 
 impl MaestroService {
     /// Create a new instance of the Maestro service
@@ -48,7 +83,44 @@ impl MaestroService {
         if rpc_providers.is_empty() {
             warn!("No RPC providers configured. This is probably undesirable");
         }
-        Ok(Self { redis_conn, producers: Mutex::new(HashMap::new()), rpc_providers, config })
+        Ok(Self {
+            redis_conn,
+            chain_wallets: Mutex::new(HashMap::new()),
+            producers: Mutex::new(HashMap::new()),
+            rpc_providers,
+            config,
+        })
+    }
+
+    // TODO revisit timings
+    // pub async fn clean_stale_locks(self: Arc<Self>) {
+    //     const STALE_LOCK_THRESHOLD: Duration = Duration::from_secs(1);
+    //
+    //     loop {
+    //         tokio::time::sleep(Duration::from_secs(1)).await;
+    //
+    //         let now = std::time::Instant::now();
+    //         let mut stale_count = 0;
+    //
+    //         self.chain_wallets.retain(|_, (_, last_updated)| {
+    //             let retain = now.duration_since(*last_updated) < STALE_LOCK_THRESHOLD;
+    //             if !retain {
+    //                 stale_count += 1;
+    //             }
+    //             retain
+    //         });
+    //
+    //         if stale_count > 0 {
+    //             warn!("Cleaned {} stale locks", stale_count);
+    //         }
+    //     }
+    // }
+
+    async fn get_chain_wallet_lock(&self, chain_id: ChainId, wallet: Address) -> Arc<Mutex<()>> {
+        let key = chain_wallet_nonce_key(chain_id, wallet);
+        // TODO update this to a read lock for perf
+        let mut locks = self.chain_wallets.lock().await;
+        locks.entry(key).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
     }
 
     async fn get_or_create_producer(&self, chain_id: ChainId) -> Arc<StreamProducer> {
@@ -66,6 +138,7 @@ impl MaestroService {
             .clone()
     }
 
+    // TODO update docs
     /// Processes a transaction based on its nonce compared to the wallet's expected nonce
     ///
     /// This method handles the transaction dispatch logic based on nonce comparison:
@@ -110,8 +183,15 @@ impl MaestroService {
         expected_nonce: u64,
     ) -> Result<(), MaestroRpcError> {
         // Handle nonce comparison
+        // Get wallet-specific lock
+        let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet).await;
+        let _guard = chain_wallet_lock.lock().await;
+
+        // getting this after acquiring lock should eliminate concurrency?
+        let expected_nonce = self.get_cached_or_rpc_nonce(wallet, chain_id).await?;
+
         match tx_nonce.cmp(&expected_nonce) {
-            std::cmp::Ordering::Equal => {
+            Ordering::Equal => {
                 // 1. update the cache with nonce + 1. Quit if this fails
                 let new_nonce = self.increment_wallet_nonce(chain_id, wallet, tx_nonce).await.
                     map_err(|e| {
@@ -142,12 +222,12 @@ impl MaestroService {
                         .await
                 });
             }
-            std::cmp::Ordering::Less => {
+            Ordering::Less => {
                 let rejection = NonceTooLow(expected_nonce, tx_nonce);
                 warn!(%tx_hash, %chain_id, "Failed to submit forwarded transaction: {}", rejection);
                 return Err(JsonRpcError(TransactionRejected(rejection)))
             }
-            std::cmp::Ordering::Greater => {
+            Ordering::Greater => {
                 self.cache_waiting_transaction(chain_id, wallet, tx_nonce, raw_tx, tx_hash).await?;
             }
         }
@@ -215,7 +295,7 @@ impl MaestroService {
         chain_id: ChainId,
     ) -> Result<u64, MaestroRpcError> {
         // TODO(SEQ-885): remove this once tracing makes the below logs redundant
-        let chain_wallet_nonce_key = wallet_nonce_key(chain_id, signer);
+        let chain_wallet_nonce_key = chain_wallet_nonce_key(chain_id, signer);
         let mut conn = self.redis_conn.clone();
 
         let nonce = match conn.get_wallet_nonce(chain_id, signer).await {
@@ -264,7 +344,7 @@ impl MaestroService {
         signer: Address,
     ) -> Result<u64, MaestroRpcError> {
         // TODO(SEQ-885): remove this once tracing makes the below log redundant
-        let chain_wallet_nonce_key = wallet_nonce_key(chain_id, signer);
+        let chain_wallet_nonce_key = chain_wallet_nonce_key(chain_id, signer);
         let provider = self.rpc_providers.get(&chain_id).ok_or_else(|| {
             error!("No RPC provider for chain {}", chain_id);
             Internal(RpcMissing(chain_id))
@@ -400,6 +480,10 @@ impl MaestroService {
         wallet_address: Address,
         nonce_to_check: u64,
     ) -> Result<(), Error> {
+        // Get wallet-specific lock
+        let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet_address).await;
+        let _guard = chain_wallet_lock.lock().await;
+
         let mut nonce_to_check = nonce_to_check;
         loop {
             let cache_content =
@@ -971,7 +1055,7 @@ mod tests {
         // Set up invalid nonce in cache
         {
             // Directly set invalid nonce string
-            let key = wallet_nonce_key(chain_id, wallet);
+            let key = chain_wallet_nonce_key(chain_id, wallet);
             let mut conn = service.redis_conn.clone();
             let _: String = conn.set(&key, invalid_nonce_str).await.unwrap();
         }
