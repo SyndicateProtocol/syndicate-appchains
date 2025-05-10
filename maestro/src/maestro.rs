@@ -23,7 +23,6 @@ use alloy::{
     primitives::{Address, Bytes, ChainId},
     providers::Provider,
 };
-use dashmap::DashMap;
 use redis::aio::MultiplexedConnection;
 use shared::{
     json_rpc::{Rejection::NonceTooLow, RpcError::TransactionRejected},
@@ -37,8 +36,7 @@ use tracing::{debug, error, trace, warn};
 #[derive(Debug)]
 pub struct MaestroService {
     redis_conn: MultiplexedConnection,
-    // chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
-    chain_wallets2: DashMap<ChainWalletNonceKey, Arc<Mutex<()>>>,
+    chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
     producers: Mutex<HashMap<ChainId, Arc<StreamProducer>>>, /* TODO remove mutex and init this
                                                               * in `new()` */
     rpc_providers: HashMap<ChainId, RpcProvider>,
@@ -78,8 +76,8 @@ impl MaestroService {
         }
         Ok(Self {
             redis_conn,
-            // chain_wallets: Mutex::new(HashMap::new()),
-            chain_wallets2: DashMap::new(),
+            chain_wallets: Mutex::new(HashMap::new()),
+            // chain_wallets2: DashMap::new(),
             producers: Mutex::new(HashMap::new()),
             rpc_providers,
             config,
@@ -110,18 +108,10 @@ impl MaestroService {
     //     }
     // }
 
-    // TODO delete me
-    // async fn get_chain_wallet_lock(&self, chain_id: ChainId, wallet: Address) -> Arc<Mutex<()>> {
-    //     let key = chain_wallet_nonce_key(chain_id, wallet);
-    //     // TODO update this to a read lock for perf
-    //     let mut locks = self.chain_wallets.lock().await;
-    //     locks.entry(key).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
-    // }
-
-    async fn get_chain_wallet_lock2(&self, chain_id: ChainId, wallet: Address) -> Arc<Mutex<()>> {
+    async fn get_chain_wallet_lock(&self, chain_id: ChainId, wallet: Address) -> Arc<Mutex<()>> {
         let key = chain_wallet_nonce_key(chain_id, wallet);
-        let entry = self.chain_wallets2.entry(key).or_insert_with(|| Arc::new(Mutex::new(())));
-        entry.value().clone()
+        let mut locks = self.chain_wallets.lock().await;
+        locks.entry(key).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
     }
 
     async fn get_or_create_producer(&self, chain_id: ChainId) -> Arc<StreamProducer> {
@@ -184,8 +174,8 @@ impl MaestroService {
     ) -> Result<(), MaestroRpcError> {
         // Handle nonce comparison
         // Get wallet-specific lock
-        // let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet).await;
-        let chain_wallet_lock = self.get_chain_wallet_lock2(chain_id, wallet).await;
+        let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet).await;
+        // let chain_wallet_lock = self.get_chain_wallet_lock2(chain_id, wallet).await;
         let _guard = chain_wallet_lock.lock().await;
 
         // getting this after acquiring lock should eliminate concurrency?
@@ -458,7 +448,8 @@ impl MaestroService {
     ) -> Result<(), Error> {
         // Tokio lock is acquired in order, so lock acquisition will occur "next" for a wallet after
         // parent txn function
-        let chain_wallet_lock = self.get_chain_wallet_lock2(chain_id, wallet_address).await;
+        let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet_address).await;
+        // let chain_wallet_lock = self.get_chain_wallet_lock2(chain_id, wallet_address).await;
         let _guard = chain_wallet_lock.lock().await;
 
         let waiting_txns = self
@@ -589,6 +580,9 @@ impl MaestroService {
     /// When a transaction is received with a nonce higher than expected,
     /// this method stores it in the cache until the preceding
     /// transactions arrive.
+    ///
+    /// Note: Transactions are cached solely based on which one was seen most recently, so a more
+    /// recent transaction for the same chain, wallet, and nonce can overwrite an old one.
     ///
     /// # Arguments
     /// * `chain_id` - The chain identifier

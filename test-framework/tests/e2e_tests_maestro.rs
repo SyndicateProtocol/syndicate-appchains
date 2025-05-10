@@ -336,7 +336,6 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
 // 100-150 simultaneous txns
 #[tokio::test]
 async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
-    // Ok(())
     TestComponents::run(
         &ConfigurationOptions { pre_loaded: None, use_write_loop: true, ..Default::default() },
         |components| async move {
