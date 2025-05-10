@@ -5,7 +5,8 @@ mod configuration;
 mod maestro;
 mod poster;
 mod sequencer;
-mod test_components;
+#[allow(clippy::redundant_pub_crate)]
+pub(crate) mod test_components;
 mod timer;
 mod translator;
 

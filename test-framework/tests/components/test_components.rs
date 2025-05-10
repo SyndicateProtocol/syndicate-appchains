@@ -60,7 +60,7 @@ struct ComponentHandles {
 
 #[derive(Debug)]
 #[allow(clippy::redundant_pub_crate)]
-pub struct TestComponents {
+pub(crate) struct TestComponents {
     /// Timer for latency measurement
     /// Keep this on top - the top element gets destroyed first
     _timer: TestTimer,
@@ -93,7 +93,7 @@ pub struct TestComponents {
 
 impl TestComponents {
     #[allow(clippy::unwrap_used)]
-    pub async fn run<Fut: Future<Output = Result<()>> + Send>(
+    pub(crate) async fn run<Fut: Future<Output = Result<()>> + Send>(
         options: &ConfigurationOptions,
         test: impl FnOnce(Self) -> Fut + Send,
     ) -> Result<()> {
@@ -440,7 +440,7 @@ impl TestComponents {
     /// Use this if you intend for the txn to succeed
     /// Returns [`TxHash`]
     #[allow(clippy::unwrap_used)]
-    pub async fn send_maestro_tx_successful(
+    pub(crate) async fn send_maestro_tx_successful(
         &self,
         tx: &EthereumTxEnvelope<TxEip4844Variant>,
     ) -> Result<TxHash> {
@@ -475,7 +475,7 @@ impl TestComponents {
 
     /// Use this instead of `send_maestro_tx_successful()` to inspect the JSON `error` field
     #[allow(clippy::unwrap_used)]
-    pub async fn send_maestro_tx_could_be_unsuccessful(
+    pub(crate) async fn send_maestro_tx_could_be_unsuccessful(
         &self,
         tx: &EthereumTxEnvelope<TxEip4844Variant>,
     ) -> Result<Value> {
@@ -499,12 +499,12 @@ impl TestComponents {
         Ok(json_resp)
     }
 
-    pub async fn mine_set_block(&self, delay: u64) -> Result<()> {
+    pub(crate) async fn mine_set_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.settlement_provider, delay).await?;
         Ok(())
     }
 
-    pub async fn mine_both(&self, delay: u64) -> Result<()> {
+    pub(crate) async fn mine_both(&self, delay: u64) -> Result<()> {
         self.mine_seq_block(delay).await?;
         self.mine_set_block(delay).await?;
         Ok(())

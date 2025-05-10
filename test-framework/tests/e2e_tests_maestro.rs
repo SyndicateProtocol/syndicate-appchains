@@ -1,6 +1,6 @@
 //! e2e tests for the metabased stack
+mod components;
 
-use crate::components::{ConfigurationOptions, TestComponents};
 use alloy::{
     consensus::TxEnvelope,
     network::{Ethereum, EthereumWallet, TransactionBuilder, TransactionBuilderError},
@@ -12,13 +12,12 @@ use alloy::{
         local::{LocalSigner, PrivateKeySigner},
     },
 };
+use components::{ConfigurationOptions, TestComponents};
 use contract_bindings::arbitrum::rollup::{Rollup, Rollup::RollupInstance};
 use serde_json::json;
 use shared::types::FilledProvider;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use test_utils::wait_until;
-
-mod components;
 
 // an arbitrary eoa address used for testing
 const TEST_ADDR: Address = address!("0xEF741D37485126A379Bfa32b6b260d85a0F00380");

@@ -1,5 +1,7 @@
 //! e2e tests for the metabased stack
-use crate::components::{ConfigurationOptions, ContractVersion};
+
+mod components;
+use crate::components::{ConfigurationOptions, ContractVersion, TestComponents};
 use alloy::{
     eips::{BlockNumberOrTag, Encodable2718},
     network::TransactionBuilder,
@@ -7,7 +9,7 @@ use alloy::{
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, Block, TransactionRequest},
 };
-use components::TestComponents;
+// use components::TestComponents;
 use contract_bindings::arbitrum::{
     arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox, irollupcore::IRollupCore,
     nodeinterface::NodeInterface, rollup::Rollup,
@@ -18,8 +20,6 @@ use serde::{Deserialize, Serialize};
 use shared::eth_client::{EthClient, RPCClient};
 use std::{sync::Arc, time::Duration};
 use test_utils::wait_until;
-
-mod components;
 
 const ARB_SYS_PRECOMPILE_ADDRESS: Address = address!("0x0000000000000000000000000000000000000064");
 const NODE_INTERFACE_PRECOMPILE_ADDRESS: Address =
