@@ -42,11 +42,10 @@ pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
 
     let client = redis::Client::open(config.redis_url.as_str())?;
     let redis_conn = client.get_multiplexed_async_connection().await?;
-    let service = Arc::new(MaestroService::new(redis_conn, config).await?);
+    let service = MaestroService::new(redis_conn, config).await?;
     info!("Connected to Redis successfully!");
 
-    let mut module = RpcModule::from_arc(service.clone());
-    // tokio::spawn(async move { service.clean_stale_locks().await });
+    let mut module = RpcModule::new(service);
 
     // Register RPC methods
     module.register_async_method("eth_sendRawTransaction", send_raw_transaction_handler)?;
@@ -81,9 +80,6 @@ pub async fn send_raw_transaction_handler(
         %chain_id,
         "Submitting validated transaction",
     );
-
-    // TODO update
-    // let expected_nonce = service.get_cached_or_rpc_nonce(signer, chain_id).await?;
 
     service
         .handle_transaction_and_manage_nonces(raw_tx, signer, chain_id, tx_nonce, &tx_hash)

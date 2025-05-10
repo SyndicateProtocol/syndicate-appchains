@@ -37,8 +37,7 @@ use tracing::{debug, error, trace, warn};
 pub struct MaestroService {
     redis_conn: MultiplexedConnection,
     chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
-    producers: Mutex<HashMap<ChainId, Arc<StreamProducer>>>, /* TODO remove mutex and init this
-                                                              * in `new()` */
+    producers: HashMap<ChainId, Arc<StreamProducer>>,
     rpc_providers: HashMap<ChainId, RpcProvider>,
     config: Config,
 }
@@ -74,16 +73,36 @@ impl MaestroService {
         if rpc_providers.is_empty() {
             warn!("No RPC providers configured. This is probably undesirable");
         }
+        let producers = Self::create_redis_producers(&redis_conn, &config, &rpc_providers);
+
         Ok(Self {
             redis_conn,
             chain_wallets: Mutex::new(HashMap::new()),
-            // chain_wallets2: DashMap::new(),
-            producers: Mutex::new(HashMap::new()),
+            producers,
             rpc_providers,
             config,
         })
     }
 
+    fn create_redis_producers(
+        redis_conn: &MultiplexedConnection,
+        config: &Config,
+        rpc_providers: &HashMap<ChainId, RpcProvider>,
+    ) -> HashMap<ChainId, Arc<StreamProducer>> {
+        let mut producers = HashMap::new();
+        for chain_id in rpc_providers.keys() {
+            producers.insert(
+                *chain_id,
+                Arc::new(StreamProducer::new(
+                    redis_conn.clone(),
+                    *chain_id,
+                    config.prune_interval,
+                    config.prune_max_age,
+                )),
+            );
+        }
+        producers
+    }
     // TODO revisit timings
     // pub async fn clean_stale_locks(self: Arc<Self>) {
     //     const STALE_LOCK_THRESHOLD: Duration = Duration::from_secs(1);
@@ -112,21 +131,6 @@ impl MaestroService {
         let key = chain_wallet_nonce_key(chain_id, wallet);
         let mut locks = self.chain_wallets.lock().await;
         locks.entry(key).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
-    }
-
-    async fn get_or_create_producer(&self, chain_id: ChainId) -> Arc<StreamProducer> {
-        let mut producers = self.producers.lock().await;
-        producers
-            .entry(chain_id)
-            .or_insert_with(|| {
-                Arc::new(StreamProducer::new(
-                    self.redis_conn.clone(),
-                    chain_id,
-                    self.config.prune_interval,
-                    self.config.prune_max_age,
-                ))
-            })
-            .clone()
     }
 
     // TODO update docs
@@ -175,7 +179,6 @@ impl MaestroService {
         // Handle nonce comparison
         // Get wallet-specific lock
         let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet).await;
-        // let chain_wallet_lock = self.get_chain_wallet_lock2(chain_id, wallet).await;
         let _guard = chain_wallet_lock.lock().await;
 
         // getting this after acquiring lock should eliminate concurrency?
@@ -241,7 +244,10 @@ impl MaestroService {
         tx_hash: &str,
     ) -> Result<(), MaestroRpcError> {
         // Get or create producer while holding lock
-        let producer = self.get_or_create_producer(chain_id).await;
+        let producer = self.producers.get(&chain_id).ok_or({
+            error!(%chain_id, %tx_hash, "Non existent stream producer for chain id");
+            Internal(RpcMissing(chain_id))
+        })?;
 
         // Release lock before making async call
         producer.enqueue_transaction(raw_tx.into()).await.map_err(|e| {
@@ -449,7 +455,6 @@ impl MaestroService {
         // Tokio lock is acquired in order, so lock acquisition will occur "next" for a wallet after
         // parent txn function
         let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet_address).await;
-        // let chain_wallet_lock = self.get_chain_wallet_lock2(chain_id, wallet_address).await;
         let _guard = chain_wallet_lock.lock().await;
 
         let waiting_txns = self
@@ -460,14 +465,23 @@ impl MaestroService {
             )
             .await?;
 
+        let mut current_waiting_txn_nonce = 0u64;
+
         // Early return
-        if waiting_txns.is_empty() {
-            return Ok(())
+        match waiting_txns.first() {
+            None => return Ok(()),
+            Some(waiting_txn) => {
+                let tx = decode_transaction(waiting_txn).map_err(|e| {
+                    error!(%e, %chain_id, %wallet_address, "Failed to decode raw transaction from cache");
+                    WaitingTransaction(FailedToDecode)
+                })?;
+                current_waiting_txn_nonce = tx.nonce();
+            }
         }
 
-        let mut current_waiting_txn_nonce = 0u64;
         // Decode txn, enqueue, and remove from cache
         for waiting_txn in waiting_txns {
+            // TODO unnecessary decode here
             let tx = decode_transaction(&waiting_txn).map_err(|e| {
                 error!(%e, %chain_id, %wallet_address, "Failed to decode raw transaction from cache");
                 WaitingTransaction(FailedToDecode)
@@ -480,13 +494,13 @@ impl MaestroService {
                 return Err(WaitingTransaction(FailedToEnqueue))
             }
 
+            // TODO delete array of keys
             self.remove_waiting_transaction_from_cache(chain_id, wallet_address, current_waiting_txn_nonce, &tx_hash).await.map_err(|e|{
                 error!(%e, %chain_id, %wallet_address, %tx_hash, nonce=%current_waiting_txn_nonce, "Failed to remove waiting transaction from cache");
                 WaitingTransaction(FailedToEnqueue)
             })?;
         }
 
-        // TODO unit test if `starting_nonce` and `desired_nonce` is correct below
         let new_nonce = self
             .increment_wallet_nonce(
                 chain_id,
@@ -750,7 +764,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_get_or_create_producer() {
+    async fn test_get_producer() {
         // Create test service
         let (service, _, _, _) = create_test_service().await;
 
@@ -758,24 +772,24 @@ mod tests {
         let chain_id = 4u64;
 
         // Get producer for first time
-        let producer1 = service.get_or_create_producer(chain_id).await;
+        let producer1 = service.producers.get(&chain_id).unwrap();
 
         // Verify stream key is correct
         assert_eq!(producer1.stream_key, format!("maestro:transactions:{}", chain_id));
 
         // Get producer again
-        let producer2 = service.get_or_create_producer(chain_id).await;
+        let producer2 = service.producers.get(&chain_id).unwrap();
 
         // Verify it's the same producer (by comparing Arc pointers)
-        assert!(Arc::ptr_eq(&producer1, &producer2), "Should reuse existing producer");
+        assert!(Arc::ptr_eq(producer1, producer2), "Should reuse existing producer");
 
         // Try with a different chain ID
         let different_chain_id = 5u64;
-        let producer3 = service.get_or_create_producer(different_chain_id).await;
+        let producer3 = service.producers.get(&different_chain_id).unwrap();
 
         // Verify it's a different producer
         assert!(
-            !Arc::ptr_eq(&producer1, &producer3),
+            !Arc::ptr_eq(producer1, producer3),
             "Should create a new producer for different chain"
         );
 
@@ -1105,7 +1119,7 @@ mod tests {
             .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, nonce)
             .await
             .unwrap();
-        assert!(cached_tx.get(0).is_some(), "Transaction should be found in cache");
+        assert!(!cached_tx.is_empty(), "Transaction should be found in cache");
         assert_eq!(cached_tx[0], raw_tx, "Retrieved transaction should match the stored one");
 
         // Check a non-existent transaction returns None
@@ -1163,12 +1177,11 @@ mod tests {
 
         // Verify transaction exists before removal
         assert!(
-            service
+            !service
                 .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, nonce)
                 .await
                 .unwrap()
-                .get(0)
-                .is_some(),
+                .is_empty(),
             "Transaction should exist before removal"
         );
 
@@ -1621,7 +1634,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert!(cached_tx.get(0).is_some(), "Transaction should be stored in waiting gap");
+        assert!(!cached_tx.is_empty(), "Transaction should be stored in waiting gap");
         assert_eq!(cached_tx[0], raw_tx, "Cached transaction should match the original");
     }
 

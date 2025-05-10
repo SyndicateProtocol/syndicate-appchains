@@ -333,7 +333,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
 }
 
 // Test that distinct wallet txns are processed in parallel. Anecdotal upper limit is between
-// 100-150 simultaneous txns
+// 100-150 simultaneous txns on Daniil's machine
 #[tokio::test]
 async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
     TestComponents::run(
@@ -405,7 +405,7 @@ async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
 
             let test_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
 
-            for (index, tx) in duplicate_txs.into_iter().enumerate() {
+            for tx in duplicate_txs {
                 let components_clone = components_arc.clone();
 
                 // Spawn a new task to send the transaction
