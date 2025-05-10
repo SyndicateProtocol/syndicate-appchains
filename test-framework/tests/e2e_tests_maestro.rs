@@ -1,13 +1,20 @@
 //! e2e tests for the metabased stack
+
 use crate::components::{ConfigurationOptions, TestComponents};
 use alloy::{
-    network::{EthereumWallet, TransactionBuilder},
+    consensus::TxEnvelope,
+    network::{Ethereum, EthereumWallet, TransactionBuilder, TransactionBuilderError},
     primitives::{address, utils::parse_ether, Address, U256},
     providers::{ext::AnvilApi, fillers::WalletFiller, Provider, ProviderBuilder, WalletProvider},
     rpc::types::TransactionRequest,
-    signers::local::PrivateKeySigner,
+    signers::{
+        k256::ecdsa::SigningKey,
+        local::{LocalSigner, PrivateKeySigner},
+    },
 };
-use contract_bindings::arbitrum::rollup::Rollup;
+use contract_bindings::arbitrum::rollup::{Rollup, Rollup::RollupInstance};
+use maestro::errors::Error;
+use shared::types::FilledProvider;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use test_utils::wait_until;
 use tracing::info;
@@ -170,60 +177,44 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 Duration::from_secs(10)
             );
 
-            // Create a second wallet
-            let second_wallet = PrivateKeySigner::random();
-            let second_wallet_address = second_wallet.address();
-            let _ = inbox.depositEth(wallet_address, second_wallet_address, value).send().await?;
-            components.mine_both(0).await?; // Closes second slot
-            components.mine_both(1).await?; // Closes third slot
-
-            // Wait for deposit to be processed for the second wallet
-            wait_until!(
-                components.appchain_provider.get_balance(second_wallet_address).await? >
-                    U256::from(0),
-                Duration::from_secs(10)
-            );
-
             let chain_id = components.chain_id;
             let nonce = components.appchain_provider.get_transaction_count(wallet_address).await?;
-            let tx1 = TransactionRequest::default()
-                .from(wallet_address)
-                .with_to(TEST_ADDR)
-                .with_value(U256::from(0))
-                .with_nonce(nonce)
-                .with_gas_limit(100_000)
-                .with_chain_id(chain_id)
-                .with_max_fee_per_gas(100000000)
-                .with_max_priority_fee_per_gas(0)
-                .build(components.sequencing_provider.wallet())
-                .await?;
+            let tx1 = create_txn(
+                chain_id,
+                nonce,
+                wallet_address,
+                components.sequencing_provider.wallet(),
+            )
+            .await?;
 
-            // How to get from second walletAddress to &EthereumWallet?
-            // let wallet2 =
-            // let provider = components.sequencing_provider.clone();
-            // let provider =
-            // ProviderBuilder::new().on_http(components.sequencing_rpc_url.parse().unwrap());
-            // let wallet2 = WalletProvider::new(provider, second_wallet);
-            let wallet2 = &EthereumWallet::from(second_wallet);
+            let mut funded_addresses = Vec::new();
+            let mut unique_wallet_txns = Vec::new();
+            funded_addresses.push(wallet_address);
+            unique_wallet_txns.push(tx1.clone());
 
-            let tx2 = TransactionRequest::default()
-                .from(second_wallet_address)
-                .with_to(TEST_ADDR)
-                .with_value(U256::from(0))
-                .with_nonce(nonce)
-                .with_gas_limit(100_000)
-                .with_chain_id(chain_id)
-                .with_max_fee_per_gas(100000000)
-                .with_max_priority_fee_per_gas(0)
-                .build(wallet2)
-                .await?;
+            for _ in 1..10 {
+                let (funded_wallet_signer, funded_wallet_address) =
+                    create_and_fund_wallet(&components, wallet_address, value, &inbox).await?;
+                funded_addresses.push(funded_wallet_address);
 
-            // Create 5x2 duplicate transactions (same nonce)
+                let funded_wallet = EthereumWallet::from(funded_wallet_signer);
+
+                let tx = create_txn(chain_id, nonce, funded_wallet_address, &funded_wallet).await?;
+                unique_wallet_txns.push(tx);
+            }
+
+            // IMP!: After all wallet funding, mine a set block with higher timestamp to indicate
+            // sequencing slot is closed
+            components.mine_set_block(1).await?;
+
+            // Create 5x10 duplicate transactions (same nonce)
             let mut duplicate_txs = Vec::new();
             for _ in 0..5 {
-                duplicate_txs.push(tx1.clone());
-                duplicate_txs.push(tx2.clone());
+                for tx in &unique_wallet_txns {
+                    duplicate_txs.push(tx.clone());
+                }
             }
+            let size_duplicate_txns = duplicate_txs.len();
 
             // Use Arc to share components across tasks
             use std::sync::Arc;
@@ -232,10 +223,10 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
             // Spawn tasks to send all transactions concurrently
             let mut handles = Vec::new();
 
-            let test_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
+            let test_start = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
 
             for (index, tx) in duplicate_txs.into_iter().enumerate() {
-                let components_clone = Arc::clone(&components_arc);
+                let components_clone = components_arc.clone();
 
                 // Spawn a new task to send the transaction
                 let handle = tokio::spawn(async move {
@@ -244,8 +235,8 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                     println!(
                         "TX {}: Starting submission at {} ms ({}ms from test start)",
                         index,
-                        start_time.as_nanos(),
-                        start_time.as_nanos() - test_start
+                        start_time.as_millis(),
+                        start_time.as_millis() - test_start.as_millis()
                     );
 
                     // THEN
@@ -255,12 +246,12 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                     // Get time after receiving the response
                     let end_time = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
 
-                    let elapsed = end_time.as_nanos() - start_time.as_nanos();
+                    let elapsed = end_time.as_millis() - start_time.as_millis();
 
                     println!(
                         "TX {}: Completed at {} ms (took {} ms). Success: {}",
                         index,
-                        end_time.as_nanos(),
+                        end_time.as_millis(),
                         elapsed,
                         json_resp.get("result").is_some()
                     );
@@ -288,40 +279,98 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 }
             }
 
+            let test_end = SystemTime::now().duration_since(UNIX_EPOCH).unwrap();
+            let test_duration = test_end - test_start;
+            println!(
+                "Q_Q_Q: Full test for {} wallets {} txns completed at {} us (took {} us)",
+                funded_addresses.len(),
+                size_duplicate_txns,
+                test_end.as_micros(),
+                test_duration.as_micros(),
+            );
+            println!(
+                "Q_Q_Q: Full test for {} wallets {} txns completed at {} ms (took {} ms)",
+                funded_addresses.len(),
+                size_duplicate_txns,
+                test_end.as_millis(),
+                test_duration.as_millis(),
+            );
+
             // Check results - we expect one success and rest failures
             let success_count = results.iter().filter(|(status, _)| *status == "success").count();
 
-            // TODO this needs to be 2 not 10
-            // We expect only one transaction to succeed (the first one that gets processed)
-            assert_eq!(success_count, 2, "Only two transactions should succeed");
+            // We expect only one transaction per wallet to succeed (the first one that gets
+            // processed)
+            assert_eq!(
+                success_count,
+                10,
+                "Only {} transactions should succeed not {}",
+                funded_addresses.len(),
+                size_duplicate_txns
+            );
 
             // Wait for the transaction to be processed
             wait_until!(
                 components_arc.appchain_provider.get_transaction_count(wallet_address).await? ==
                     nonce + 1,
-                Duration::from_secs(10)
+                Duration::from_secs(3)
             );
 
-            // Verify that only one transaction was processed
-            let current_nonce =
-                components_arc.appchain_provider.get_transaction_count(wallet_address).await?;
-            assert_eq!(current_nonce, nonce + 1, "Only one transaction should have been processed");
-
-            let current_nonce_second_wallet = components_arc
-                .appchain_provider
-                .get_transaction_count(second_wallet_address)
-                .await?;
-            assert_eq!(
-                current_nonce_second_wallet,
-                nonce + 1,
-                "Only one
-            transaction should have been processed"
-            );
-
+            // Verify that only one transaction per wallet was processed
+            for address in funded_addresses {
+                let current_nonce =
+                    components_arc.appchain_provider.get_transaction_count(address).await?;
+                assert_eq!(
+                    current_nonce,
+                    nonce + 1,
+                    "Only one transaction should have been processed for address {}",
+                    address
+                );
+            }
             Ok(())
         },
     )
     .await
+}
+
+async fn create_txn(
+    chain_id: u64,
+    nonce: u64,
+    funded_wallet_address: Address,
+    funded_wallet: &EthereumWallet,
+) -> Result<TxEnvelope, TransactionBuilderError<Ethereum>> {
+    let result = TransactionRequest::default()
+        .from(funded_wallet_address)
+        .with_to(TEST_ADDR)
+        .with_value(U256::from(0))
+        .with_nonce(nonce)
+        .with_gas_limit(100_000)
+        .with_chain_id(chain_id)
+        .with_max_fee_per_gas(100000000)
+        .with_max_priority_fee_per_gas(0)
+        .build(&funded_wallet)
+        .await;
+    result
+}
+
+async fn create_and_fund_wallet(
+    components: &TestComponents,
+    funding_wallet_address: Address,
+    value: U256,
+    inbox: &RollupInstance<(), &FilledProvider>,
+) -> Result<(LocalSigner<SigningKey>, Address), eyre::Error> {
+    let wallet_signer = PrivateKeySigner::random();
+    let wallet_address = wallet_signer.address();
+    let _ = inbox.depositEth(funding_wallet_address, wallet_address, value).send().await?;
+    components.mine_both(0).await?; // Closes second slot
+    components.mine_both(1).await?; // Closes third slot
+
+    // Wait for deposit to be processed for the second wallet
+    wait_until!(
+        components.appchain_provider.get_balance(wallet_address).await? > U256::from(0),
+        Duration::from_secs(10)
+    );
+    Ok((wallet_signer, wallet_address))
 }
 
 // Txn with higher nonce is accepted but doesn't make it onchain
