@@ -1,7 +1,6 @@
 //! e2e tests for the metabased stack
 
-mod components;
-use crate::components::{ConfigurationOptions, ContractVersion, TestComponents};
+// mod components;
 use alloy::{
     eips::{BlockNumberOrTag, Encodable2718},
     network::TransactionBuilder,
@@ -19,6 +18,10 @@ use mchain::client::Provider as _;
 use serde::{Deserialize, Serialize};
 use shared::eth_client::{EthClient, RPCClient};
 use std::{sync::Arc, time::Duration};
+use test_framework::components::{
+    configuration::{ConfigurationOptions, ContractVersion},
+    test_components::TestComponents,
+};
 use test_utils::wait_until;
 
 const ARB_SYS_PRECOMPILE_ADDRESS: Address = address!("0x0000000000000000000000000000000000000064");
@@ -37,7 +40,7 @@ fn init() {
 async fn e2e_send_transaction() -> Result<()> {
     let config = ConfigurationOptions { settlement_delay: 60, ..Default::default() };
     TestComponents::run(&config, |components| async move {
-        // Setup the settlement rollup contract
+        // Set up the settlement rollup contract
         let set_rollup = Rollup::new(components.inbox_address, &components.settlement_provider);
         let wallet_address = components.settlement_provider.default_signer_address();
 

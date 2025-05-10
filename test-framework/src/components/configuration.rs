@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 use alloy::{primitives::Address, providers::WalletProvider};
 use contract_bindings::metabased::arbconfigmanager::ArbConfigManager;
 use eyre::Result;
@@ -7,22 +9,22 @@ use test_utils::anvil::mine_block;
 /// Arbitrum Nitro contract version on the settlement chain used for testing
 #[derive(Debug, Clone)]
 #[allow(clippy::redundant_pub_crate)]
-pub(crate) enum ContractVersion {
+pub enum ContractVersion {
     V213,
     V300,
 }
 
 #[derive(Debug, Clone)]
 #[allow(clippy::redundant_pub_crate)]
-pub(crate) struct ConfigurationOptions {
+pub struct ConfigurationOptions {
     pub pre_loaded: Option<ContractVersion>,
     pub use_write_loop: bool,
-    pub(crate) sequencing_start_block: u64,
-    pub(crate) settlement_start_block: u64,
-    pub(crate) settlement_delay: u64,
-    pub(crate) rollup_owner: Address,
-    pub(crate) appchain_chain_id: u64,
-    pub(crate) finality_delay: u64,
+    pub sequencing_start_block: u64,
+    pub settlement_start_block: u64,
+    pub settlement_delay: u64,
+    pub rollup_owner: Address,
+    pub appchain_chain_id: u64,
+    pub finality_delay: u64,
 }
 
 impl Default for ConfigurationOptions {

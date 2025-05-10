@@ -5037,14 +5037,11 @@ name = "test-framework"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "block-builder",
  "contract-bindings",
  "ctor",
  "eyre",
- "jsonrpsee",
  "maestro",
  "mchain",
- "prometheus-client",
  "reqwest",
  "serde",
  "serde_json",

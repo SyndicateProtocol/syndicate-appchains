@@ -1,4 +1,5 @@
 //! Components for the integration tests
+#![allow(missing_docs)]
 
 use crate::components::{
     batch_sequencer::BatchSequencerConfig,
@@ -60,7 +61,7 @@ struct ComponentHandles {
 
 #[derive(Debug)]
 #[allow(clippy::redundant_pub_crate)]
-pub(crate) struct TestComponents {
+pub struct TestComponents {
     /// Timer for latency measurement
     /// Keep this on top - the top element gets destroyed first
     _timer: TestTimer,
@@ -93,7 +94,7 @@ pub(crate) struct TestComponents {
 
 impl TestComponents {
     #[allow(clippy::unwrap_used)]
-    pub(crate) async fn run<Fut: Future<Output = Result<()>> + Send>(
+    pub async fn run<Fut: Future<Output = Result<()>> + Send>(
         options: &ConfigurationOptions,
         test: impl FnOnce(Self) -> Fut + Send,
     ) -> Result<()> {
@@ -419,12 +420,12 @@ impl TestComponents {
         ))
     }
 
-    pub(crate) async fn mine_seq_block(&self, delay: u64) -> Result<()> {
+    pub async fn mine_seq_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.sequencing_provider, delay).await?;
         Ok(())
     }
 
-    pub(crate) async fn send_tx_and_mine_block(
+    pub async fn send_tx_and_mine_block(
         &self,
         tx: &EthereumTxEnvelope<TxEip4844Variant>,
         delay: u64,
@@ -440,7 +441,7 @@ impl TestComponents {
     /// Use this if you intend for the txn to succeed
     /// Returns [`TxHash`]
     #[allow(clippy::unwrap_used)]
-    pub(crate) async fn send_maestro_tx_successful(
+    pub async fn send_maestro_tx_successful(
         &self,
         tx: &EthereumTxEnvelope<TxEip4844Variant>,
     ) -> Result<TxHash> {
@@ -475,7 +476,7 @@ impl TestComponents {
 
     /// Use this instead of `send_maestro_tx_successful()` to inspect the JSON `error` field
     #[allow(clippy::unwrap_used)]
-    pub(crate) async fn send_maestro_tx_could_be_unsuccessful(
+    pub async fn send_maestro_tx_could_be_unsuccessful(
         &self,
         tx: &EthereumTxEnvelope<TxEip4844Variant>,
     ) -> Result<Value> {
@@ -499,12 +500,12 @@ impl TestComponents {
         Ok(json_resp)
     }
 
-    pub(crate) async fn mine_set_block(&self, delay: u64) -> Result<()> {
+    pub async fn mine_set_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.settlement_provider, delay).await?;
         Ok(())
     }
 
-    pub(crate) async fn mine_both(&self, delay: u64) -> Result<()> {
+    pub async fn mine_both(&self, delay: u64) -> Result<()> {
         self.mine_seq_block(delay).await?;
         self.mine_set_block(delay).await?;
         Ok(())

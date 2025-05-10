@@ -1,5 +1,5 @@
 //! e2e tests for the metabased stack
-mod components;
+// mod components;
 
 use alloy::{
     consensus::TxEnvelope,
@@ -12,11 +12,13 @@ use alloy::{
         local::{LocalSigner, PrivateKeySigner},
     },
 };
-use components::{ConfigurationOptions, TestComponents};
 use contract_bindings::arbitrum::rollup::{Rollup, Rollup::RollupInstance};
 use serde_json::json;
 use shared::types::FilledProvider;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use test_framework::components::{
+    configuration::ConfigurationOptions, test_components::TestComponents,
+};
 use test_utils::wait_until;
 
 // an arbitrary eoa address used for testing
