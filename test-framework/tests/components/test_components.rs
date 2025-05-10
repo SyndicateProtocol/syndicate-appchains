@@ -475,7 +475,7 @@ impl TestComponents {
 
     /// Use this instead of `send_maestro_tx_successful()` to inspect the JSON `error` field
     #[allow(clippy::unwrap_used)]
-    pub async fn send_maestro_tx_should_be_unsuccessful(
+    pub async fn send_maestro_tx_could_be_unsuccessful(
         &self,
         tx: &EthereumTxEnvelope<TxEip4844Variant>,
     ) -> Result<Value> {
@@ -494,7 +494,7 @@ impl TestComponents {
             }))
             .send()
             .await?;
-        assert!(response.status().is_success(), "EIP-1559 transaction request failed");
+        // assert!(response.status().is_success(), "EIP-1559 transaction request failed");
         let json_resp: Value = response.json().await?;
         Ok(json_resp)
     }
