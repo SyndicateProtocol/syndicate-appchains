@@ -12,7 +12,7 @@ use mchain::{metrics::MchainMetrics, server::start_mchain};
 use rocksdb::DB;
 use shared::{
     logger::set_global_default_subscriber,
-    metrics::{start_metrics, MetricsState},
+    service_start_utils::{start_metrics_and_health, MetricsState},
 };
 use tokio::signal::unix::{signal, SignalKind};
 use tower::ServiceBuilder;
@@ -79,7 +79,7 @@ async fn main() -> eyre::Result<()> {
     let db = DB::open_default(cfg.datadir)?;
     let mut metrics_state = MetricsState::default();
     let metrics = MchainMetrics::new(&mut metrics_state.registry);
-    tokio::spawn(start_metrics(metrics_state, cfg.metrics_port));
+    tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port));
 
     let initial_appchain_owner = match cfg.appchain_owner {
         Some(owner) => owner,

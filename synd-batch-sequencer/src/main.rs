@@ -7,7 +7,7 @@ use batcher::batcher::run_batcher;
 use eyre::Result;
 use shared::{
     logger::set_global_default_subscriber,
-    metrics::{start_metrics, MetricsState},
+    service_start_utils::{start_metrics_and_health, MetricsState},
 };
 use synd_batch_sequencer::config::BatchSequencerConfig;
 use tokio::signal::unix::{signal, SignalKind};
@@ -38,7 +38,7 @@ async fn main() -> Result<()> {
     // Batcher metrics
     // TODO(SEQ-868): Batcher metrics
     let metrics_state = MetricsState::default();
-    tokio::spawn(start_metrics(metrics_state, config.metrics_port));
+    tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port));
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");

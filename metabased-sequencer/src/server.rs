@@ -60,7 +60,7 @@ mod tests {
     use jsonrpsee::{core::client::ClientT, http_client::HttpClient};
     use reqwest::{Client, StatusCode};
     use serde_json::Value as JsonValue;
-    use shared::metrics::MetricsState;
+    use shared::service_start_utils::MetricsState;
     use std::{str::FromStr, time::Duration};
     use url::Url;
 

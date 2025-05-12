@@ -4,7 +4,7 @@ use eyre::Result;
 use maestro::config::Config;
 use shared::{
     logger::set_global_default_subscriber,
-    metrics::{start_metrics, MetricsState},
+    service_start_utils::{start_metrics_and_health, MetricsState},
 };
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
@@ -21,7 +21,7 @@ async fn main() -> Result<()> {
     // Maestro metrics
     // TODO(SEQ-449): Expose Prometheus metrics endpoint for Maestro
     let metrics_state = MetricsState::default();
-    tokio::spawn(start_metrics(metrics_state, config.metrics_port));
+    tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port));
 
     let (addr, handle) = maestro::server::run(config).await?;
     info!(

@@ -538,7 +538,7 @@ mod tests {
     use common::types::PartialBlock;
     use eyre::Result;
     use mockall::{mock, predicate::*};
-    use shared::metrics::MetricsState;
+    use shared::service_start_utils::MetricsState;
     use tokio::{sync::mpsc::channel, task::JoinHandle};
 
     #[ctor::ctor]

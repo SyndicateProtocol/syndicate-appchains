@@ -197,7 +197,7 @@ mod tests {
     use crate::config::Config;
     use alloy::primitives::{Bytes, B256};
     use jsonrpsee::types::Params;
-    use shared::metrics::MetricsState;
+    use shared::service_start_utils::MetricsState;
     use std::str::FromStr;
     use url::Url;
 

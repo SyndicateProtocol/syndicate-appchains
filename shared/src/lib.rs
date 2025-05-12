@@ -3,11 +3,10 @@
 
 pub mod additive_compression;
 pub mod eth_client;
-pub mod health;
 pub mod json_rpc;
 pub mod logger;
-pub mod metrics;
 pub mod parse;
+pub mod service_start_utils;
 pub mod tx_validation;
 pub mod types;
 pub mod zlib_compression;
