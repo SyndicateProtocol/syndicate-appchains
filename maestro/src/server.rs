@@ -55,6 +55,8 @@ pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
         Ok::<JsonValue, ErrorCode>(serde_json::json!({"health": true}))
     })?;
 
+    // TODO (SEQ-908): Background job to unstick `waiting txn` cache
+
     info!("Registered RPC methods: {:#?}", module.method_names().collect::<Vec<_>>());
 
     let addr = server.local_addr()?;

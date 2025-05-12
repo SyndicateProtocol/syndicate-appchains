@@ -36,35 +36,12 @@ use tracing::{debug, error, trace, warn};
 #[derive(Debug)]
 pub struct MaestroService {
     redis_conn: MultiplexedConnection,
+    // TODO (SEQ-914): Implement distributed lock not local
     chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
     producers: HashMap<ChainId, Arc<StreamProducer>>,
     rpc_providers: HashMap<ChainId, RpcProvider>,
     _config: Config,
 }
-
-// TODO check stale locks
-// pub async fn clean_stale_locks(service: Arc<MaestroService>) {
-//     const STALE_LO*CK_THRESHOLD: Duration = Duration::from_secs(1);
-//
-//     loop {
-//         tokio::time::sleep(Duration::from_secs(1)).await;
-//
-//         let now = std::time::Instant::now();
-//         let mut stale_count = 0;
-//
-//         service.chain_wallets.retain(|_, (_, last_updated)| {
-//             let retain = now.duration_since(*last_updated) < STALE_LOCK_THRESHOLD;
-//             if !retain {
-//                 stale_count += 1;
-//             }
-//             retain
-//         });
-//
-//         if stale_count > 0 {
-//             warn!("Cleaned {} stale locks", stale_count);
-//         }
-//     }
-// }
 
 impl MaestroService {
     /// Create a new instance of the Maestro service
@@ -103,30 +80,6 @@ impl MaestroService {
         }
         producers
     }
-    // TODO revisit timings
-    // pub async fn clean_stale_locks(self: Arc<Self>) {
-    //     const STALE_LOCK_THRESHOLD: Duration = Duration::from_secs(1);
-    //
-    //     loop {
-    //         tokio::time::sleep(Duration::from_secs(1)).await;
-    //
-    //         let now = std::time::Instant::now();
-    //         let mut stale_count = 0;
-    //
-    //         self.chain_wallets.retain(|_, (_, last_updated)| {
-    //             let retain = now.duration_since(*last_updated) < STALE_LOCK_THRESHOLD;
-    //             if !retain {
-    //                 stale_count += 1;
-    //             }
-    //             retain
-    //         });
-    //
-    //         if stale_count > 0 {
-    //             warn!("Cleaned {} stale locks", stale_count);
-    //         }
-    //     }
-    // }
-
     async fn get_chain_wallet_lock(&self, chain_id: ChainId, wallet: Address) -> Arc<Mutex<()>> {
         let key = chain_wallet_nonce_key(chain_id, wallet);
         let mut locks = self.chain_wallets.lock().await;
