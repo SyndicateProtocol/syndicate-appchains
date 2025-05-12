@@ -8,11 +8,11 @@ name: Certora
 on:
   push:
     branches: [main]
-  # Only run on PRs that touch metabased-contracts .sol and .spec files to avoid unnecessary CI runs
+  # Only run on PRs that touch syndicate-contracts .sol and .spec files to avoid unnecessary CI runs
   pull_request:
     paths:
-      - "metabased-contracts/src/**/*.sol"
-      - "metabased-contracts/certora/specs/**/*.spec"
+      - "syndicate-contracts/src/**/*.sol"
+      - "syndicate-contracts/certora/specs/**/*.spec"
       - "shared/arb-contracts/src/**/*.sol"
       - "shared/arb-contracts/certora/specs/**/*.spec"
 
@@ -29,16 +29,16 @@ jobs:
   # installation of certora-cli ################################################
   ##############################################################################
   certora:
-    name: Metabased Certora Prover Run
+    name: Syndicate Certora Prover Run
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: metabased-contracts
+        working-directory: syndicate-contracts
     strategy:
       matrix:
         rule:
           [
-            "MetabasedSequencerChain",
+            "SyndicateSequencerChain",
             "AllowlistSequencingModule",
             "AtomicSequencer",
             "AtomicSequencerImplementation",
@@ -96,7 +96,7 @@ jobs:
           ls ~/.solc-select/artifacts/
           which solc
 
-      - name: Verify metabased-contracts Certora rules
+      - name: Verify syndicate-contracts Certora rules
         env:
           CERTORAKEY: ${{ secrets.CERTORAKEY }}
         run: certoraRun certora/conf/${{ matrix.rule }}.conf --wait_for_results=all

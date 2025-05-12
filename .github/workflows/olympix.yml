@@ -5,8 +5,8 @@ on:
     branches: [main]
   pull_request:
     paths:
-      - "metabased-contracts/src/**/*.sol"
-      - "metabased-contracts/certora/specs/**/*.spec"
+      - "syndicate-contracts/src/**/*.sol"
+      - "syndicate-contracts/certora/specs/**/*.spec"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref || github.run_id }}

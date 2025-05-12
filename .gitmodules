@@ -1,8 +1,8 @@
-[submodule "metabased-contracts/lib/forge-std"]
-	path = metabased-contracts/lib/forge-std
+[submodule "syndicate-contracts/lib/forge-std"]
+	path = syndicate-contracts/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
-[submodule "metabased-contracts/lib/openzeppelin-contracts"]
-	path = metabased-contracts/lib/openzeppelin-contracts
+[submodule "syndicate-contracts/lib/openzeppelin-contracts"]
+	path = syndicate-contracts/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
 [submodule "shared/arb-contracts/lib/forge-std"]
 	path = shared/arb-contracts/lib/forge-std
