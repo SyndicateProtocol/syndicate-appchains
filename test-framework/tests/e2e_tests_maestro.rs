@@ -1,8 +1,7 @@
 //! e2e tests for the metabased stack
-mod components;
-
 use alloy::{
     consensus::TxEnvelope,
+    eips::Encodable2718,
     network::{Ethereum, EthereumWallet, TransactionBuilder, TransactionBuilderError},
     primitives::{address, utils::parse_ether, Address, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
@@ -12,11 +11,13 @@ use alloy::{
         local::{LocalSigner, PrivateKeySigner},
     },
 };
-use components::{ConfigurationOptions, TestComponents};
 use contract_bindings::arbitrum::rollup::{Rollup, Rollup::RollupInstance};
 use serde_json::json;
 use shared::types::FilledProvider;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use test_framework::components::{
+    configuration::ConfigurationOptions, test_components::TestComponents,
+};
 use test_utils::wait_until;
 
 // an arbitrary eoa address used for testing
@@ -50,7 +51,7 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
                 Duration::from_secs(10)
             );
 
-            let chain_id = components.chain_id;
+            let chain_id = components.appchain_provider.get_chain_id().await?;
             let nonce = components.appchain_provider.get_transaction_count(wallet_address).await?;
             let tx = TransactionRequest::default()
                 .from(wallet_address)
@@ -64,7 +65,7 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
                 .build(components.sequencing_provider.wallet())
                 .await?;
 
-            let tx_hash = components.send_maestro_tx_successful(&tx).await?;
+            let tx_hash = components.send_maestro_tx_successful(&tx.encoded_2718()).await?;
 
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
@@ -105,7 +106,7 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
                 Duration::from_secs(10)
             );
 
-            let chain_id = components.chain_id;
+            let chain_id = components.appchain_provider.get_chain_id().await?;
             let nonce = components.appchain_provider.get_transaction_count(wallet_address).await?;
             let tx = TransactionRequest::default()
                 .from(wallet_address)
@@ -121,7 +122,7 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
 
             let tx2 = tx.clone();
 
-            let tx_hash = components.send_maestro_tx_successful(&tx).await?;
+            let tx_hash = components.send_maestro_tx_successful(&tx.encoded_2718()).await?;
 
             // TODO - Commented because this errors
             // let tx_hash2 = components.send_maestro_tx(&tx2).await;
@@ -175,7 +176,7 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 Duration::from_secs(10)
             );
 
-            let chain_id = components.chain_id;
+            let chain_id = components.appchain_provider.get_chain_id().await?;
             let nonce = components.appchain_provider.get_transaction_count(wallet_address).await?;
             let tx1 = create_txn(
                 chain_id,
@@ -354,7 +355,7 @@ async fn e2e_maestro_concurrency() -> Result<(), eyre::Error> {
                 Duration::from_secs(10)
             );
 
-            let chain_id = components.chain_id;
+            let chain_id = components.appchain_provider.get_chain_id().await?;
             let nonce = components.appchain_provider.get_transaction_count(wallet_address).await?;
             let tx1 = create_txn(
                 chain_id,
@@ -562,7 +563,7 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
                 Duration::from_secs(10)
             );
 
-            let chain_id = components.chain_id;
+            let chain_id = components.appchain_provider.get_chain_id().await?;
             let nonce = components.appchain_provider.get_transaction_count(wallet_address).await?;
             let tx0 = TransactionRequest::default()
                 .from(wallet_address)
@@ -588,9 +589,9 @@ async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
                 .build(components.sequencing_provider.wallet())
                 .await?;
 
-            let tx_hash0 = components.send_maestro_tx_successful(&tx0).await?;
+            let tx_hash0 = components.send_maestro_tx_successful(&tx0.encoded_2718()).await?;
 
-            let tx_hash2 = components.send_maestro_tx_successful(&tx2).await?;
+            let tx_hash2 = components.send_maestro_tx_successful(&tx2.encoded_2718()).await?;
 
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
@@ -636,7 +637,7 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
                 Duration::from_secs(10)
             );
 
-            let chain_id = components.chain_id;
+            let chain_id = components.appchain_provider.get_chain_id().await?;
             let nonce = components.appchain_provider.get_transaction_count(wallet_address).await?;
             let tx0 = TransactionRequest::default()
                 .from(wallet_address)
@@ -675,8 +676,8 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
                 .await?;
 
             // Send higher nonce txns first. These won't fail
-            let tx_hash1 = components.send_maestro_tx_successful(&tx1).await?;
-            let tx_hash2 = components.send_maestro_tx_successful(&tx2).await?;
+            let tx_hash1 = components.send_maestro_tx_successful(&tx1.encoded_2718()).await?;
+            let tx_hash2 = components.send_maestro_tx_successful(&tx2.encoded_2718()).await?;
 
             // Assert that nonce didn't increase
             tokio::time::sleep(Duration::from_millis(500)).await;
@@ -686,7 +687,7 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
             );
 
             // Send txn to "unstick" cache
-            let tx_hash0 = components.send_maestro_tx_successful(&tx0).await?;
+            let tx_hash0 = components.send_maestro_tx_successful(&tx0.encoded_2718()).await?;
 
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
