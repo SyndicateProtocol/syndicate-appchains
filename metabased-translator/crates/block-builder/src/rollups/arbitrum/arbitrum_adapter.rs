@@ -207,7 +207,7 @@ impl ArbitrumAdapter {
                 }
 
                 INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH => {
-                    error!("ignoring unsupporting inbox message delivered from origin");
+                    error!("ignoring unsupported inbox message delivered from origin");
                     let message_num = U256::from_be_slice(log.topics()[1].as_slice());
                     message_data.insert(message_num, None);
                 }
