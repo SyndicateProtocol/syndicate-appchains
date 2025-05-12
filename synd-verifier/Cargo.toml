@@ -1,0 +1,20 @@
+[package]
+edition.workspace      = true
+exclude.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "synd-verifier"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[dependencies]
+alloy         = { workspace = true, features = ["full"] }
+block-builder = { workspace = true }
+eyre          = { workspace = true }
+mchain        = { workspace = true }
+shared        = { workspace = true }
+tokio         = { workspace = true }
+
+[lints]
+workspace = true

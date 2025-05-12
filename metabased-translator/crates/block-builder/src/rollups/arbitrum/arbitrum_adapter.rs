@@ -148,7 +148,7 @@ impl ArbitrumAdapter {
     }
 
     /// Builds a batch from a sequencing block
-    fn build_batch(&self, block: &PartialBlock) -> Result<(u64, Bytes)> {
+    pub fn build_batch(&self, block: &PartialBlock) -> Result<(u64, Bytes)> {
         let mb_transactions = self.parse_block_to_mbtxs(block);
 
         if mb_transactions.is_empty() {
@@ -175,7 +175,7 @@ impl ArbitrumAdapter {
     }
 
     /// Processes settlement chain receipts into delayed messages
-    fn process_delayed_messages(&self, block: &PartialBlock) -> Result<Vec<DelayedMessage>> {
+    pub fn process_delayed_messages(&self, block: &PartialBlock) -> Result<Vec<DelayedMessage>> {
         // Create a local map to store message data
         let mut message_data: HashMap<U256, Option<Bytes>> = HashMap::new();
         // Process all bridge logs in all receipts
