@@ -109,6 +109,14 @@ pub async fn with_onchain_config(config: &MetabasedConfig) -> MetabasedConfig {
         config.appchain_owner = Some(onchain.rollup_owner);
     }
 
+    if config.block_builder.allowed_settlement_addresses.is_empty() {
+        info!(
+            "Using the allowed_settlement_addresses from on-chain config: {:?}",
+            onchain.allowed_settlement_addresses
+        );
+        config.block_builder.allowed_settlement_addresses = onchain.allowed_settlement_addresses;
+    }
+
     config
 }
 
@@ -133,6 +141,8 @@ async fn get_config<T: Provider + Clone>(
     let default_sequencing_chain_rpc_url_call =
         arb_chain_config_contract.DEFAULT_SEQUENCING_CHAIN_RPC_URL();
     let rollup_owner_call = arb_chain_config_contract.ROLLUP_OWNER();
+    let allowed_settlement_addresses_call =
+        arb_chain_config_contract.getAllowedSettlementAddresses();
 
     let (
         arbitrum_bridge_address,
@@ -144,6 +154,7 @@ async fn get_config<T: Provider + Clone>(
         sequencing_contract_address,
         default_sequencing_chain_rpc_url,
         rollup_owner,
+        allowed_settlement_addresses,
     ) = tokio::try_join!(
         arbitrum_bridge_address_call.call(),
         arbitrum_inbox_address_call.call(),
@@ -154,6 +165,7 @@ async fn get_config<T: Provider + Clone>(
         sequencing_contract_address_call.call(),
         default_sequencing_chain_rpc_url_call.call(),
         rollup_owner_call.call(),
+        allowed_settlement_addresses_call.call(),
     )?;
 
     Ok(ChainConfig {
@@ -166,6 +178,7 @@ async fn get_config<T: Provider + Clone>(
         sequencing_contract_address: sequencing_contract_address._0,
         default_sequencing_chain_rpc_url: default_sequencing_chain_rpc_url._0,
         rollup_owner: rollup_owner._0,
+        allowed_settlement_addresses: allowed_settlement_addresses._0,
     })
 }
 
@@ -181,4 +194,5 @@ struct ChainConfig {
     sequencing_contract_address: Address,
     default_sequencing_chain_rpc_url: String,
     rollup_owner: Address,
+    allowed_settlement_addresses: Vec<Address>,
 }
