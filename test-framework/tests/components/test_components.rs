@@ -19,9 +19,9 @@ use alloy::{
 };
 use contract_bindings::{
     arbitrum::rollup::Rollup,
-    metabased::{
+    syndicate::{
         alwaysallowedmodule::AlwaysAllowedModule,
-        metabasedsequencerchain::MetabasedSequencerChain::{self, MetabasedSequencerChainInstance},
+        syndicatesequencerchain::SyndicateSequencerChain::{self, SyndicateSequencerChainInstance},
         walletpoolwrappermodule::WalletPoolWrapperModule,
     },
 };

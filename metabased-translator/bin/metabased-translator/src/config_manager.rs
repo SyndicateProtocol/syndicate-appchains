@@ -4,7 +4,7 @@ use alloy::{
     providers::{Provider, ProviderBuilder},
     rpc::client::ClientBuilder,
 };
-use contract_bindings::metabased::{arbchainconfig, arbconfigmanager::ArbConfigManager};
+use contract_bindings::syndicate::{arbchainconfig, arbconfigmanager::ArbConfigManager};
 use eyre::Result;
 use tracing::{error, info, warn};
 

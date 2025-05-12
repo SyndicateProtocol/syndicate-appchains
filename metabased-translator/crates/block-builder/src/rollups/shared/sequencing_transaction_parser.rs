@@ -11,7 +11,7 @@ use common::{
     compression::{get_compression_type, CompressionType},
     types::PartialLogWithTxdata,
 };
-use contract_bindings::metabased::metabasedsequencerchain::MetabasedSequencerChain::TransactionProcessed;
+use contract_bindings::syndicate::syndicatesequencerchain::SyndicateSequencerChain::TransactionProcessed;
 use shared::zlib_compression::decompress_transactions;
 use thiserror::Error;
 use tracing::error;

@@ -7,7 +7,7 @@ use alloy::{
     providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
 };
-use contract_bindings::metabased::walletpoolwrappermodule::WalletPoolWrapperModule::{
+use contract_bindings::syndicate::walletpoolwrappermodule::WalletPoolWrapperModule::{
     self, WalletPoolWrapperModuleInstance,
 };
 use derivative::Derivative;

@@ -6,7 +6,7 @@ use alloy::{
     rpc::client::ClientBuilder,
 };
 use clap::Parser;
-use contract_bindings::metabased::{arbchainconfig, arbconfigmanager::ArbConfigManager};
+use contract_bindings::syndicate::{arbchainconfig, arbconfigmanager::ArbConfigManager};
 use jsonrpsee::server::{middleware::http::ProxyGetRequestLayer, RpcServiceBuilder, Server};
 use mchain::{metrics::MchainMetrics, server::start_mchain};
 use rocksdb::DB;
