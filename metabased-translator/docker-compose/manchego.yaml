@@ -7,9 +7,9 @@ services:
     volumes:
       - ./datadir:/datadir
     environment:
-      - CHAIN_ID=510000
+      - APPCHAIN_CHAIN_ID=510000
       - DATADIR=/datadir
-      - CHAIN_OWNER_ADDRESS=0x0000000000000000000000000000000000000000
+      - APPCHAIN_OWNER=0x0000000000000000000000000000000000000000
  
   seq-ingestor:
     build:
@@ -68,7 +68,8 @@ services:
     image: offchainlabs/nitro-node:v3.4.0-d896e9c-slim
     command: "--parent-chain.connection.url=ws://mchain:8545 --http.port=8545 --http.addr=0.0.0.0 --node.dangerous.disable-blob-reader --execution.forwarding-target=null --node.inbox-reader.check-delay=100ms --node.staker.enable=false --ensure-rollup-deployment=false --chain.info-files=/cfg/manchego.json"
     depends_on:
-      - healthcheck
+      healthcheck:
+        condition: service_healthy
     volumes:
       - .:/cfg:ro
     ports:
