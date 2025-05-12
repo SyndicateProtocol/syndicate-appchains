@@ -6,6 +6,8 @@ use alloy::{
     primitives::{address, utils::parse_ether, Address, Bytes, B256, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
     rpc::types::{anvil::MineOptions, Block, TransactionRequest},
+    signers::local::PrivateKeySigner,
+    sol,
 };
 use components::TestComponents;
 use contract_bindings::arbitrum::{
@@ -16,8 +18,8 @@ use eyre::Result;
 use mchain::client::Provider as _;
 use serde::{Deserialize, Serialize};
 use shared::eth_client::{EthClient, RPCClient};
-use std::{sync::Arc, time::Duration};
-use test_utils::wait_until;
+use std::{str::FromStr as _, sync::Arc, time::Duration};
+use test_utils::{anvil::PRIVATE_KEY, wait_until};
 
 mod components;
 
@@ -76,7 +78,7 @@ async fn e2e_send_transaction() -> Result<()> {
             .with_value(U256::from(1))
             .with_nonce(0)
             .with_gas_limit(100_000)
-            .with_chain_id(components.chain_id)
+            .with_chain_id(components.appchain_chain_id)
             .with_max_fee_per_gas(100000000)
             .with_max_priority_fee_per_gas(0)
             .build(components.sequencing_provider.wallet())
@@ -166,7 +168,7 @@ async fn e2e_deposit() -> Result<()> {
                 .with_value(parse_ether("0.1")?)
                 .with_nonce(0)
                 .with_gas_limit(gas_limit)
-                .with_chain_id(components.chain_id)
+                .with_chain_id(components.appchain_chain_id)
                 .with_max_fee_per_gas(max_fee_per_gas)
                 .with_max_priority_fee_per_gas(0)
                 .build(components.settlement_provider.wallet())
@@ -182,7 +184,7 @@ async fn e2e_deposit() -> Result<()> {
                 .with_value(parse_ether("0.1")?)
                 .with_nonce(1)
                 .with_gas_limit(gas_limit)
-                .with_chain_id(components.chain_id)
+                .with_chain_id(components.appchain_chain_id)
                 .with_max_fee_per_gas(max_fee_per_gas)
                 .with_max_priority_fee_per_gas(0)
                 .build(components.settlement_provider.wallet())
@@ -346,7 +348,7 @@ async fn e2e_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
                 .value(withdrawal_value)
                 .nonce(0)
                 .gas(gas_limit)
-                .chain_id(components.chain_id)
+                .chain_id(components.appchain_chain_id)
                 .max_fee_per_gas(max_fee_per_gas)
                 .max_priority_fee_per_gas(0)
                 .into_transaction_request()
@@ -544,6 +546,113 @@ async fn e2e_settlement_reorg() -> Result<()> {
     .await
 }
 
+// simple storage contract for testing
+sol! {
+    #[sol(rpc, bytecode = "6080604052348015600e575f80fd5b5060405161020f38038061020f8339818101604052810190602e9190606b565b805f81905550506091565b5f80fd5b5f819050919050565b604d81603d565b81146056575f80fd5b50565b5f815190506065816046565b92915050565b5f60208284031215607d57607c6039565b5b5f6088848285016059565b91505092915050565b6101718061009e5f395ff3fe608060405234801561000f575f80fd5b506004361061003f575f3560e01c80633fa4f2451461004357806360fe47b1146100615780636d4ce63c1461007d575b5f80fd5b61004b61009b565b60405161005891906100c9565b60405180910390f35b61007b60048036038101906100769190610110565b6100a0565b005b6100856100a9565b60405161009291906100c9565b60405180910390f35b5f5481565b805f8190555050565b5f8054905090565b5f819050919050565b6100c3816100b1565b82525050565b5f6020820190506100dc5f8301846100ba565b92915050565b5f80fd5b6100ef816100b1565b81146100f9575f80fd5b50565b5f8135905061010a816100e6565b92915050565b5f60208284031215610125576101246100e2565b5b5f610132848285016100fc565b9150509291505056fea26469706673582212203294a1485ad6035630092feab3c12235dae68a8920350d2678d9097f36cce44364736f6c634300081a0033")]
+    contract Storage {
+        uint256 public value;
+
+        constructor(uint256 _value) {
+            value = _value;
+        }
+
+        function set(uint256 _value) public {
+            value = _value;
+        }
+
+        function get() public view returns (uint256) {
+            return value;
+        }
+    }
+}
+
+#[tokio::test]
+async fn e2e_sequencing_reorg() -> Result<()> {
+    TestComponents::run(
+        &ConfigurationOptions { pre_loaded: Some(ContractVersion::V300), ..Default::default() },
+        |components| async move {
+            // deposit some funds to the appchain
+
+            let signer = PrivateKeySigner::from_str(PRIVATE_KEY).unwrap();
+            let wallet_address = components.settlement_provider.default_signer_address();
+            let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
+
+            // create a deposit1 (that won't be rolled back) that will fit on mchain's block 3
+            _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
+
+            components.mine_set_block(0).await?;
+            components.mine_both(1).await?;
+            components.mine_set_block(1000).await?; // mine a set block far in the future so that sequencing blocks get slotted immediately
+
+            wait_until!(
+                components.mchain_provider.get_block_number().await == 2,
+                Duration::from_secs(10)
+            );
+            wait_until!(
+                components.appchain_provider.get_balance(wallet_address).await? ==
+                    parse_ether("10")?,
+                Duration::from_secs(10)
+            );
+
+            // deploy a storate contract on the appchain
+            let initial_value = U256::from(42);
+            let deploy_storage_tx =
+                Storage::deploy_builder(&components.appchain_provider, initial_value)
+                    .nonce(0)
+                    .chain_id(components.appchain_chain_id)
+                    .gas(100_000_000)
+                    .max_fee_per_gas(100_000_000)
+                    .max_priority_fee_per_gas(0)
+                    .build_raw_transaction(signer.clone())
+                    .await?;
+
+            let receipt = components.sequence_tx(&deploy_storage_tx, 1, true).await?.unwrap();
+            assert!(receipt.status());
+
+            let storage_address = receipt.contract_address.unwrap();
+            let storage = Storage::new(storage_address, &components.appchain_provider);
+
+            let current_value = storage.get().call().await?._0;
+            assert_eq!(current_value, initial_value);
+
+            // update the stored value (this will be reorged later)
+            let update_storage_tx = storage
+                .set(U256::from(43))
+                .nonce(1)
+                .chain_id(components.appchain_chain_id)
+                .gas(100_000_000)
+                .max_fee_per_gas(100_000_000)
+                .max_priority_fee_per_gas(0)
+                .build_raw_transaction(signer.clone())
+                .await?;
+
+            let receipt = components.sequence_tx(&update_storage_tx, 1, true).await?.unwrap();
+            assert!(receipt.status());
+
+            let current_value = storage.get().call().await?._0;
+            assert_eq!(current_value, U256::from(43));
+
+            // reorg the sequencing chain by 1 block
+            components.sequencing_provider.anvil_rollback(Some(1)).await?;
+
+            // build the sequencing chain to a height above the reorg (so it is detected)
+            components.sequence_tx(b"potato", 10, false).await?;
+            components.sequence_tx(b"potato", 10, false).await?;
+
+            // state is correctly rolled back
+            wait_until!(storage.get().call().await?._0 == U256::from(42), Duration::from_secs(10));
+
+            assert_eq!(
+                components.appchain_provider.get_transaction_count(wallet_address).await?,
+                1
+            );
+
+            Ok(())
+        },
+    )
+    .await
+}
+
 #[tokio::test]
 async fn e2e_reboot_without_settlement_processed() -> Result<()> {
     TestComponents::run(
@@ -554,16 +663,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             assert_eq!(components.mchain_provider.get_block_number().await, 1);
 
             // sequence any tx
-            let tx = components
-                .sequencing_contract
-                .processTransaction(Bytes::from_static(b"my_tx_calldata"))
-                .send()
-                .await?;
-            components.mine_seq_block(10).await?;
-            let receipt = tx.get_receipt().await?;
-            assert!(receipt.status());
-            let logs = receipt.logs();
-            assert_eq!(logs.len(), 1);
+            components.sequence_tx(b"my_tx_calldata", 10, false).await?;
 
             // mine a set block to close the slot, but without any transactions
             components.mine_set_block(100000).await?;
@@ -647,7 +747,7 @@ async fn e2e_maestro_batch_sequencer_translator() -> Result<()> {
                 Duration::from_secs(10)
             );
 
-            let chain_id = components.chain_id;
+            let chain_id = components.appchain_chain_id;
             let nonce = components.appchain_provider.get_transaction_count(wallet_address).await?;
             let tx = TransactionRequest::default()
                 .from(wallet_address)
@@ -661,7 +761,7 @@ async fn e2e_maestro_batch_sequencer_translator() -> Result<()> {
                 .build(components.sequencing_provider.wallet())
                 .await?;
 
-            let tx_hash = components.send_maestro_tx(&tx).await?;
+            let tx_hash = components.send_maestro_tx(&tx.encoded_2718()).await?;
 
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
