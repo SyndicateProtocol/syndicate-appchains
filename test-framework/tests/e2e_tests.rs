@@ -1,5 +1,4 @@
 //! e2e tests for the metabased stack
-use crate::components::{ConfigurationOptions, ContractVersion};
 use alloy::{
     eips::{BlockNumberOrTag, Encodable2718},
     network::TransactionBuilder,
@@ -9,7 +8,6 @@ use alloy::{
     signers::local::PrivateKeySigner,
     sol,
 };
-use components::TestComponents;
 use contract_bindings::arbitrum::{
     arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox, irollupcore::IRollupCore,
     nodeinterface::NodeInterface, rollup::Rollup,
@@ -19,9 +17,11 @@ use mchain::client::Provider as _;
 use serde::{Deserialize, Serialize};
 use shared::eth_client::{EthClient, RPCClient};
 use std::{str::FromStr as _, sync::Arc, time::Duration};
+use test_framework::components::{
+    configuration::{ConfigurationOptions, ContractVersion},
+    test_components::TestComponents,
+};
 use test_utils::{anvil::PRIVATE_KEY, wait_until};
-
-mod components;
 
 const ARB_SYS_PRECOMPILE_ADDRESS: Address = address!("0x0000000000000000000000000000000000000064");
 const NODE_INTERFACE_PRECOMPILE_ADDRESS: Address =
@@ -39,7 +39,7 @@ fn init() {
 async fn e2e_send_transaction() -> Result<()> {
     let config = ConfigurationOptions { settlement_delay: 60, ..Default::default() };
     TestComponents::run(&config, |components| async move {
-        // Setup the settlement rollup contract
+        // Set up the settlement rollup contract
         let set_rollup = Rollup::new(components.inbox_address, &components.settlement_provider);
         let wallet_address = components.settlement_provider.default_signer_address();
 
@@ -761,7 +761,7 @@ async fn e2e_maestro_batch_sequencer_translator() -> Result<()> {
                 .build(components.sequencing_provider.wallet())
                 .await?;
 
-            let tx_hash = components.send_maestro_tx(&tx.encoded_2718()).await?;
+            let tx_hash = components.send_maestro_tx_successful(&tx.encoded_2718()).await?;
 
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==

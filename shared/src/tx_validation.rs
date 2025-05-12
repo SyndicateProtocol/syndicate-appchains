@@ -15,7 +15,8 @@ use alloy::{
 use byte_unit::Unit;
 use tracing::debug;
 
-fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, RpcError> {
+/// Convert a raw transaction from [`&Bytes`] to [`TxEnvelope`]
+pub fn decode_transaction(raw_tx: &Bytes) -> Result<TxEnvelope, RpcError> {
     let mut slice: &[u8] = raw_tx.as_ref();
     TxEnvelope::decode(&mut slice).map_err(|_| {
         let error = InvalidInput(UnableToRLPDecode);
