@@ -12,7 +12,7 @@ use mchain::client::{KnownState, MProvider, Provider};
 use metrics::metrics::TranslatorMetrics;
 use shared::{
     eth_client::{EthClient, RPCClient},
-    metrics::{start_metrics, MetricsState},
+    service_start_utils::{start_metrics_and_health, MetricsState},
 };
 use slotter::slotter::SlotterError;
 use std::sync::Arc;
@@ -27,7 +27,7 @@ pub async fn run(config: &MetabasedConfig) -> Result<(), RuntimeError> {
 
     let (sequencing_client, settlement_client) = clients(config).await?;
 
-    let metrics = init_metrics(config).await;
+    let metrics = init_metrics_and_health(config).await;
 
     let mchain = MProvider::new(&config.block_builder.mchain_rpc_url)
         .map_err(|e| RuntimeError::InvalidConfig(format!("Invalid mchain rpc url: {}", e)))?;
@@ -273,9 +273,9 @@ pub async fn clients(
     Ok((sequencing_client, settlement_client))
 }
 
-pub async fn init_metrics(config: &MetabasedConfig) -> TranslatorMetrics {
+pub async fn init_metrics_and_health(config: &MetabasedConfig) -> TranslatorMetrics {
     let mut metrics_state = MetricsState::default();
     let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
-    start_metrics(metrics_state, config.metrics.metrics_port).await;
+    start_metrics_and_health(metrics_state, config.metrics.metrics_port).await;
     metrics
 }

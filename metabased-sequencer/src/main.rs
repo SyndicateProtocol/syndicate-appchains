@@ -7,7 +7,7 @@ use eyre::Result;
 use metabased_sequencer::{config::Config, metrics::RelayerMetrics, server::run_server};
 use shared::{
     logger::set_global_default_subscriber,
-    metrics::{start_metrics, MetricsState},
+    service_start_utils::{start_metrics_and_health, MetricsState},
 };
 use tracing::info;
 
@@ -21,10 +21,10 @@ async fn main() -> Result<()> {
     let config = Config::initialize();
     info!("Config: {:?}", config);
 
-    // Initialize metrics
+    // Initialize metrics and health server
     let mut metrics = MetricsState::default();
     let relayer_metrics = RelayerMetrics::new(&mut metrics.registry);
-    let metrics_handler = start_metrics(metrics, config.metrics_port).await;
+    let metrics_handler = start_metrics_and_health(metrics, config.metrics_port).await;
 
     // Start server
     let (addr, handle) = run_server(&config, relayer_metrics).await?;
