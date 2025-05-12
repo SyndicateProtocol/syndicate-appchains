@@ -32,7 +32,7 @@ mod tests {
     use common::types::Chain;
     use ingestor::metrics::MethodLabel;
     use reqwest::Client;
-    use shared::metrics::{start_metrics, MetricsState};
+    use shared::service_start_utils::{start_metrics_and_health, MetricsState};
     use std::time::Duration;
     use tokio::time::sleep;
 
@@ -75,7 +75,7 @@ mod tests {
         let metrics_state = MetricsState::default();
         let port = 9001;
 
-        let handle = start_metrics(metrics_state, port).await;
+        let handle = start_metrics_and_health(metrics_state, port).await;
 
         sleep(Duration::from_secs(1)).await;
         let client = Client::new();

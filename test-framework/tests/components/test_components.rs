@@ -263,7 +263,8 @@ impl TestComponents {
         };
         let sequencer = start_component(
             "metabased-sequencer",
-            sequencer_config.metrics_port,
+            // `/health` is proxied to RPC method
+            sequencer_config.sequencer_port,
             sequencer_config.cli_args(),
             Default::default(),
         )
@@ -355,7 +356,8 @@ impl TestComponents {
             };
             let maestro_instance = start_component(
                 "maestro",
-                maestro_config.metrics_port,
+                // `/health` is proxied to RPC method
+                maestro_config.port,
                 maestro_config.cli_args(),
                 Default::default(),
             )
