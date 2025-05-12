@@ -49,7 +49,7 @@ forge coverage
 ### Running Specs
 
 ```bash
-certoraRun certora/conf/MetabasedSequencerChain.conf
+certoraRun certora/conf/SyndicateSequencerChain.conf
 ```
 
 ### Troubleshooting

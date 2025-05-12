@@ -1,5 +1,5 @@
 # BidStructuredLinkedList
-[Git Source](https://github.com/SyndicateProtocol/metabased-rollup/blob/cced719ff6d4998b665e130eebebe54b39f5cf15/src/LinkedList/BidStructuredLinkedList.sol)
+[Git Source](https://github.com/SyndicateProtocol/metabased-rollup/blob/eb4946a298148d1c686f65f1f0883c9daf2b87fe/src/LinkedList/BidStructuredLinkedList.sol)
 
 **Author:**
 Vittorio Minacori (https://github.com/vittominacori)
