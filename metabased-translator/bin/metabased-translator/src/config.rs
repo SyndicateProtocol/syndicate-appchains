@@ -115,8 +115,8 @@ pub struct SettlementChainConfig {
 impl From<SequencingChainConfig> for ChainIngestorConfig {
     fn from(config: SequencingChainConfig) -> Self {
         Self {
-            rpc_url: config.sequencing_rpc_url.unwrap_or_default(), // TODO come back to this
-            start_block: config.sequencing_start_block.unwrap_or(0), // TODO come back to this
+            rpc_url: config.sequencing_rpc_url.unwrap_or_default(),
+            start_block: config.sequencing_start_block.unwrap_or(0),
         }
     }
 }
@@ -125,7 +125,7 @@ impl From<SettlementChainConfig> for ChainIngestorConfig {
     fn from(config: SettlementChainConfig) -> Self {
         Self {
             rpc_url: config.settlement_rpc_url,
-            start_block: config.settlement_start_block.unwrap_or(0), // TODO come back to this
+            start_block: config.settlement_start_block.unwrap_or(0),
         }
     }
 }

@@ -2,6 +2,7 @@
 //! connection is used instead of polling. Logs are fetched via a call to `eth_getBlockReceipts`.
 
 use crate::{
+    db::BlockUpdateResult,
     eth_client::EthClient,
     metrics::ChainIngestorMetrics,
     server::{Context, Message},
@@ -20,27 +21,31 @@ pub async fn run(
     metrics: &ChainIngestorMetrics,
 ) -> eyre::Result<()> {
     let mut sub = provider.subscribe_blocks().await;
-    let start_block = ctx.lock().unwrap().db.start_block;
-
-    let mut buffer = None;
+    let mut block_count = ctx.lock().unwrap().db.next_block();
 
     loop {
-        let mut block = buffer.take().unwrap_or(sub.recv().await?);
         let next_block = ctx.lock().unwrap().db.next_block();
-        assert!(block.number > start_block);
 
-        // if we're missing blocks, get the missing blocks first
-        match block.number.cmp(&next_block) {
-            Ordering::Less => {
-                ctx.lock().unwrap().db.update_block(&block, metrics);
-                continue;
+        // fetch next block
+        let mut block = match next_block.cmp(&block_count) {
+            Ordering::Less => provider.get_block_header(BlockNumberOrTag::Number(next_block)).await,
+            Ordering::Equal => {
+                let block = sub.recv().await?;
+                if block.number >= block_count {
+                    block_count = block.number + 1;
+                }
+                if block.number > next_block {
+                    continue;
+                }
+                block
             }
-            Ordering::Greater => {
-                buffer = Some(block);
-                block = provider.get_block_header(BlockNumberOrTag::Number(next_block)).await;
-            }
-            Ordering::Equal => {}
+            Ordering::Greater => panic!("next block greater than block count"),
         };
+
+        // if the block is not added, continue
+        if ctx.lock().unwrap().db.update_block(&block, metrics) != BlockUpdateResult::Added {
+            continue;
+        }
 
         // fetch receipts
         let mut receipts = provider.get_block_receipts(block.number).await;
@@ -55,13 +60,9 @@ pub async fn run(
             receipts = provider.get_block_receipts(block.number).await;
         }
 
-        assert_eq!(block.number, ctx.lock().unwrap().db.next_block());
-
-        if ctx.lock().unwrap().db.update_block(&block, metrics) {
-            if buffer.is_none() {
-                buffer = Some(block);
-            }
-            continue
+        // if the block reorgs the db to an earlier block number, continue
+        if ctx.lock().unwrap().db.update_block(&block, metrics) == BlockUpdateResult::Reorged {
+            continue;
         }
 
         // send block to subscribers

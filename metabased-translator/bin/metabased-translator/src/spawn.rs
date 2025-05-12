@@ -77,7 +77,6 @@ async fn start_slotter(config: &MetabasedConfig, metrics: &TranslatorMetrics) ->
     )
     .await;
 
-    println!("GETTING SEQ BLOCKS FROM {} onwards", sequencing_config.start_block);
     let sequencing = sequencing_client
         .get_blocks(
             sequencing_config.start_block,

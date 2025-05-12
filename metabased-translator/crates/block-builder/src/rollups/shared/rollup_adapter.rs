@@ -3,15 +3,10 @@
 //! This module provides the core [`RollupAdapter`] trait that defines how
 //! different rollup implementations can construct and process their blocks.
 
-use crate::rollups::{
-    arbitrum::arbitrum_adapter::ArbitrumAdapter, shared::SequencingTransactionParser,
-};
+use crate::rollups::shared::SequencingTransactionParser;
 use alloy::primitives::Bytes;
 use async_trait::async_trait;
-use common::types::{SequencingBlock, SettlementBlock};
-use eyre::Result;
-use mchain::db::DelayedMessage;
-use shared::types::{BlockBuilder, PartialBlock};
+use shared::types::PartialBlock;
 use std::marker::{Send, Sync};
 
 /// Trait for rollup-specific block builders that construct batches from sequencer transactions
@@ -39,34 +34,4 @@ pub trait RollupAdapter: Send + Sync {
 
     /// Provides access to the transaction parser used by the block builder.
     fn transaction_parser(&self) -> &SequencingTransactionParser;
-
-    /// Builds a batch from a sequencing block
-    /// Returns (number of transactions, batch data)
-    fn build_batch(&self, block: &PartialBlock) -> Result<(u64, Bytes)>;
-
-    /// Extract delayed messages from a settlement block
-    fn process_delayed_messages(&self, block: &PartialBlock) -> Result<Vec<DelayedMessage>>;
-}
-
-// TODO: should impl for RollupAdapter instead
-impl BlockBuilder<SequencingBlock> for ArbitrumAdapter {
-    fn build_block(&self, block: &PartialBlock) -> Result<SequencingBlock> {
-        let (tx_count, batch) = self.build_batch(block)?;
-        Ok(SequencingBlock {
-            block_ref: block.block_ref.clone(),
-            parent_hash: block.parent_hash,
-            tx_count,
-            batch,
-        })
-    }
-}
-
-impl BlockBuilder<SettlementBlock> for ArbitrumAdapter {
-    fn build_block(&self, block: &PartialBlock) -> Result<SettlementBlock> {
-        Ok(SettlementBlock {
-            block_ref: block.block_ref.clone(),
-            parent_hash: block.parent_hash,
-            messages: self.process_delayed_messages(block)?,
-        })
-    }
 }

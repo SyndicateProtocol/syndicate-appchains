@@ -77,7 +77,7 @@ pub async fn run(
 
         let mut blocks_per_slot: u64 = 1;
         let slot_end_ts = (seq_block.block_ref.timestamp >= settlement_delay)
-            .then_some(seq_block.block_ref.timestamp - settlement_delay + 1)
+            .then(|| seq_block.block_ref.timestamp - settlement_delay + 1)
             .unwrap_or_default();
         while set_block.block_ref.timestamp < slot_end_ts {
             blocks_per_slot += 1;

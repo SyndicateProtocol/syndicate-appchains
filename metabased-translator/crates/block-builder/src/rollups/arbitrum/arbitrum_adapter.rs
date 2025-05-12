@@ -15,7 +15,7 @@ use alloy::{
     primitives::{Address, Bytes, FixedBytes, Log, U256},
     sol_types::SolEvent,
 };
-use common::types::EMPTY_BATCH;
+use common::types::{SequencingBlock, SettlementBlock, EMPTY_BATCH};
 use contract_bindings::arbitrum::{
     ibridge::IBridge::MessageDelivered,
     idelayedmessageprovider::IDelayedMessageProvider::{
@@ -24,7 +24,10 @@ use contract_bindings::arbitrum::{
 };
 use eyre::Result;
 use mchain::db::DelayedMessage;
-use shared::{tx_validation::validate_transaction, types::PartialBlock};
+use shared::{
+    tx_validation::validate_transaction,
+    types::{BlockBuilder, PartialBlock},
+};
 use std::collections::{HashMap, HashSet};
 use thiserror::Error;
 use tracing::{debug, error, info, trace};
@@ -119,6 +122,29 @@ impl Default for ArbitrumAdapter {
 impl RollupAdapter for ArbitrumAdapter {
     fn transaction_parser(&self) -> &SequencingTransactionParser {
         &self.transaction_parser
+    }
+}
+
+impl ArbitrumAdapter {
+    /// Creates a new Arbitrum block builder.
+    ///
+    /// # Arguments
+    /// - `config`: The configuration for the block builder.
+    #[allow(clippy::unwrap_used)] //it's okay to unwrap here because we know the config is valid
+    pub fn new(config: &BlockBuilderConfig) -> Self {
+        let mut allowed_settlement_addresses = HashSet::new();
+        for addr in &config.allowed_settlement_addresses {
+            allowed_settlement_addresses.insert(*addr);
+        }
+        Self {
+            transaction_parser: SequencingTransactionParser::new(
+                config.sequencing_contract_address.unwrap(),
+            ),
+            bridge_address: config.arbitrum_bridge_address.unwrap(),
+            inbox_address: config.arbitrum_inbox_address.unwrap(),
+            ignore_delayed_messages: config.arbitrum_ignore_delayed_messages.unwrap(),
+            allowed_settlement_addresses,
+        }
     }
 
     /// Builds a batch from a sequencing block
@@ -223,29 +249,6 @@ impl RollupAdapter for ArbitrumAdapter {
 
         Ok(delayed_msg_txns)
     }
-}
-
-impl ArbitrumAdapter {
-    /// Creates a new Arbitrum block builder.
-    ///
-    /// # Arguments
-    /// - `config`: The configuration for the block builder.
-    #[allow(clippy::unwrap_used)] //it's okay to unwrap here because we know the config is valid
-    pub fn new(config: &BlockBuilderConfig) -> Self {
-        let mut allowed_settlement_addresses = HashSet::new();
-        for addr in &config.allowed_settlement_addresses {
-            allowed_settlement_addresses.insert(*addr);
-        }
-        Self {
-            transaction_parser: SequencingTransactionParser::new(
-                config.sequencing_contract_address.unwrap(),
-            ),
-            bridge_address: config.arbitrum_bridge_address.unwrap(),
-            inbox_address: config.arbitrum_inbox_address.unwrap(),
-            ignore_delayed_messages: config.arbitrum_ignore_delayed_messages.unwrap(),
-            allowed_settlement_addresses,
-        }
-    }
 
     /// Sequencer log addresses used for building batches
     pub fn sequencer_addresses(&self) -> Vec<Address> {
@@ -338,6 +341,28 @@ impl ArbitrumAdapter {
         }
 
         false
+    }
+}
+
+impl BlockBuilder<SequencingBlock> for ArbitrumAdapter {
+    fn build_block(&self, block: &PartialBlock) -> Result<SequencingBlock> {
+        let (tx_count, batch) = self.build_batch(block)?;
+        Ok(SequencingBlock {
+            block_ref: block.block_ref.clone(),
+            parent_hash: block.parent_hash,
+            tx_count,
+            batch,
+        })
+    }
+}
+
+impl BlockBuilder<SettlementBlock> for ArbitrumAdapter {
+    fn build_block(&self, block: &PartialBlock) -> Result<SettlementBlock> {
+        Ok(SettlementBlock {
+            block_ref: block.block_ref.clone(),
+            parent_hash: block.parent_hash,
+            messages: self.process_delayed_messages(block)?,
+        })
     }
 }
 

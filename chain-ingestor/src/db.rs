@@ -27,6 +27,17 @@ pub struct DB {
 // metadata.
 pub const ITEM_SIZE: u64 = 36;
 
+/// The effect of an `update_block()` call on the database
+#[derive(Debug, PartialEq, Eq)]
+pub enum BlockUpdateResult {
+    /// The block is added to the db, with or without a reorg
+    Added,
+    /// The db is reorged to the parent of the parent of the block
+    Reorged,
+    /// The db is not updated as the block hash matches the one in the db
+    Verified,
+}
+
 #[allow(missing_docs)]
 #[allow(clippy::unwrap_used)]
 impl DB {
@@ -92,29 +103,33 @@ impl DB {
         self.file.set_len((self.count + 1) * ITEM_SIZE).unwrap();
     }
 
-    /// returns true if a reorg occurred and false otherwise
-    pub fn update_block(&mut self, header: &Header, metrics: &ChainIngestorMetrics) -> bool {
+    pub fn update_block(
+        &mut self,
+        header: &Header,
+        metrics: &ChainIngestorMetrics,
+    ) -> BlockUpdateResult {
         let next_block = self.next_block();
-        if header.number == next_block {
-            if self.count > 0 {
-                let prev = self.get_block(header.number - 1);
-                if header.parent_hash != prev.hash {
-                    self.reorg_block(prev.number);
-                    metrics.record_reorg(next_block - prev.number);
-                    return true;
-                }
-            }
-            self.add_block(header.timestamp as u32, header.hash);
-            metrics.record_block(header.number, header.timestamp);
-        } else {
+        if header.number < next_block {
             let block = self.get_block(header.number);
-            if block.hash != header.hash {
-                self.reorg_block(header.number);
-                metrics.record_reorg(next_block - header.number);
-                return true;
+            if block.hash == header.hash {
+                return BlockUpdateResult::Verified;
+            }
+            self.reorg_block(header.number);
+            metrics.record_reorg(next_block - header.number);
+        }
+        let next_block = self.next_block();
+        assert_eq!(header.number, next_block);
+        if self.count > 0 {
+            let prev = self.get_block(header.number - 1);
+            if header.parent_hash != prev.hash {
+                self.reorg_block(prev.number);
+                metrics.record_reorg(1);
+                return BlockUpdateResult::Reorged;
             }
         }
-        false
+        self.add_block(header.timestamp as u32, header.hash);
+        metrics.record_block(header.number, header.timestamp);
+        BlockUpdateResult::Added
     }
 
     pub const fn next_block(&self) -> u64 {

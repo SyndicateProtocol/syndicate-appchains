@@ -1,5 +1,9 @@
 //! The server crate is used to create a `RpcModule` that handles websocket jsonrpc requests.
-use crate::{db::DB, eth_client::EthClient, metrics::ChainIngestorMetrics};
+use crate::{
+    db::{BlockUpdateResult, DB},
+    eth_client::EthClient,
+    metrics::ChainIngestorMetrics,
+};
 use alloy::{
     eips::BlockNumberOrTag,
     primitives::{Address, Bytes},
@@ -74,7 +78,7 @@ pub async fn start(
     while db.count > 0 {
         let block_num = db.next_block() - 1;
         let header = provider.get_block_header(BlockNumberOrTag::Number(block_num)).await;
-        if !db.update_block(&header, metrics) {
+        if db.update_block(&header, metrics) != BlockUpdateResult::Reorged {
             break;
         }
     }
@@ -87,17 +91,23 @@ pub async fn start(
         info!("syncing from {} to latest block {}", start_sync, latest);
         let mut ingestor = BlockIngestor::new(start_sync, latest, parallel_sync_requests, provider);
         while let Some(block) = ingestor.next().await {
-            if db.update_block(&block, metrics) {
-                error!("reorged during initial sync on block {:?}", block);
-                break;
-            }
-            if block.number % 10000 == 0 {
-                info!(
-                    "synced to block {} of {} ({} %)",
-                    block.number,
-                    latest,
-                    (block.number - start_sync) as f32 * 100.0 / (latest + 1 - start_sync) as f32
-                )
+            match db.update_block(&block, metrics) {
+                BlockUpdateResult::Reorged => {
+                    error!("reorged during initial sync on block {:?}", block);
+                    break;
+                }
+                BlockUpdateResult::Added => {
+                    if block.number % 10000 == 0 {
+                        info!(
+                            "synced to block {} of {} ({} %)",
+                            block.number,
+                            latest,
+                            (block.number - start_sync) as f32 * 100.0 /
+                                (latest + 1 - start_sync) as f32
+                        )
+                    }
+                }
+                BlockUpdateResult::Verified => panic!("unexpected update_block result: verified"),
             }
         }
     }
