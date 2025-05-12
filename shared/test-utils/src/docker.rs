@@ -69,7 +69,7 @@ impl Drop for Docker {
 
 pub async fn start_component(
     executable_name: &str,
-    metrics_port: u16,
+    api_port: u16,
     args: Vec<String>,
     cargs: Vec<String>,
 ) -> Result<Docker> {
@@ -107,20 +107,23 @@ pub async fn start_component(
             )
         }?;
 
+    health_check(executable_name, api_port, &mut docker).await;
+    Ok(docker)
+}
+
+pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut Docker) {
     let client = Client::new();
     wait_until!(
         if let Some(status) = docker.try_wait()? {
             panic!("{} exited with {}", executable_name, status);
         };
-        // TODO(SEQ-869): Use the health endpoint instead
         client
-            .get(format!("http://localhost:{metrics_port}/metrics"))
+            .get(format!("http://localhost:{api_port}/health"))
             .send()
             .await
             .is_ok_and(|x| x.status().is_success()),
         Duration::from_secs(5*60)  // give it time to download the image if necessary
     );
-    Ok(docker)
 }
 
 pub async fn start_mchain(

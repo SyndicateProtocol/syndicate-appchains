@@ -7,14 +7,15 @@ use alloy::{
 };
 use clap::Parser;
 use contract_bindings::metabased::{arbchainconfig, arbconfigmanager::ArbConfigManager};
-use jsonrpsee::server::{RpcServiceBuilder, Server};
+use jsonrpsee::server::{middleware::http::ProxyGetRequestLayer, RpcServiceBuilder, Server};
 use mchain::{metrics::MchainMetrics, server::start_mchain};
 use rocksdb::DB;
 use shared::{
     logger::set_global_default_subscriber,
-    metrics::{start_metrics, MetricsState},
+    service_start_utils::{start_metrics_and_health, MetricsState},
 };
 use tokio::signal::unix::{signal, SignalKind};
+use tower::ServiceBuilder;
 
 /// CLI args for the mchain executable
 #[derive(Parser, Debug, Clone)]
@@ -78,7 +79,7 @@ async fn main() -> eyre::Result<()> {
     let db = DB::open_default(cfg.datadir)?;
     let mut metrics_state = MetricsState::default();
     let metrics = MchainMetrics::new(&mut metrics_state.registry);
-    tokio::spawn(start_metrics(metrics_state, cfg.metrics_port));
+    tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port));
 
     let initial_appchain_owner = match cfg.appchain_owner {
         Some(owner) => owner,
@@ -100,8 +101,13 @@ async fn main() -> eyre::Result<()> {
         metrics,
     )
     .await;
+
+    let http_middleware =
+        ServiceBuilder::new().layer(ProxyGetRequestLayer::new("/health", "health")?);
+    let rpc_middleware = RpcServiceBuilder::new().rpc_logger(1024);
     let handle = Server::builder()
-        .set_rpc_middleware(RpcServiceBuilder::new().rpc_logger(1024))
+        .set_http_middleware(http_middleware)
+        .set_rpc_middleware(rpc_middleware)
         .build(format!("0.0.0.0:{}", cfg.port))
         .await?
         .start(module);

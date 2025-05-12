@@ -7,7 +7,7 @@ use batcher::{batcher::run_batcher, metrics::BatcherMetrics};
 use eyre::Result;
 use shared::{
     logger::set_global_default_subscriber,
-    metrics::{start_metrics, MetricsState},
+    service_start_utils::{start_metrics_and_health, MetricsState},
 };
 use synd_batch_sequencer::config::BatchSequencerConfig;
 use tokio::signal::unix::{signal, SignalKind};
@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
 
     let mut metrics_state = MetricsState::default();
     let metrics = BatcherMetrics::new(&mut metrics_state.registry);
-    tokio::spawn(start_metrics(metrics_state, config.metrics_port));
+    tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port));
 
     // Start batcher
     let batcher_handle = run_batcher(
