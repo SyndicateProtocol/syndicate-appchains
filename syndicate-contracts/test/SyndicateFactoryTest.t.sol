@@ -341,21 +341,20 @@ contract SyndicateFactoryTest is Test {
     function testMixedAutoAndManualChainIds() public {
         // Auto chain ID
         bytes32 salt1 = keccak256(abi.encodePacked("salt-for-mixed-1"));
-        (address chain1,, uint256 id1) = factory.createSyndicateSequencerChainWithRequireAllModule(admin, 0, salt1);
+        (,, uint256 id1) = factory.createSyndicateSequencerChainWithRequireAllModule(admin, 0, salt1);
 
         assertEq(id1, namespaceId + 1);
 
         // Manual chain ID
         uint256 manualId = 42000;
         bytes32 salt2 = keccak256(abi.encodePacked("salt-for-mixed-2"));
-        (address chain2,, uint256 id2) =
-            factory.createSyndicateSequencerChainWithRequireAllModule(admin, manualId, salt2);
+        (,, uint256 id2) = factory.createSyndicateSequencerChainWithRequireAllModule(admin, manualId, salt2);
 
         assertEq(id2, manualId);
 
         // Back to auto chain ID
         bytes32 salt3 = keccak256(abi.encodePacked("salt-for-mixed-3"));
-        (address chain3,, uint256 id3) = factory.createSyndicateSequencerChainWithRequireAnyModule(admin, 0, salt3);
+        (,, uint256 id3) = factory.createSyndicateSequencerChainWithRequireAnyModule(admin, 0, salt3);
 
         // Should be namespaceId + 2 since we only used one auto ID so far
         assertEq(id3, namespaceId + 2);
@@ -392,7 +391,7 @@ contract SyndicateFactoryTest is Test {
 
     // New tests for AccessControl functionality
 
-    function testRoleSetup() public {
+    function testRoleSetup() public view {
         // Admin should have the default admin role
         assertTrue(factory.hasRole(DEFAULT_ADMIN_ROLE, admin));
 
@@ -407,7 +406,7 @@ contract SyndicateFactoryTest is Test {
         assertFalse(factory.hasRole(MANAGER_ROLE, nonManager));
     }
 
-    function testNamespaceConfigGetters() public {
+    function testNamespaceConfigGetters() public view {
         // Initial values
         assertEq(factory.namespacePrefix(), 510);
         assertEq(factory.namespaceMultiplier(), 1000);
