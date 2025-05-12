@@ -13,7 +13,6 @@ alloy         = { workspace = true, features = ["full"] }
 block-builder = { workspace = true }
 eyre          = { workspace = true }
 mchain        = { workspace = true }
-rlp           = { workspace = true }
 shared        = { workspace = true }
 tokio         = { workspace = true }
 

@@ -3,7 +3,7 @@
 use alloy::{
     hex,
     network::EthereumWallet,
-    primitives::{Address, Bloom, B256},
+    primitives::{Address, Bloom, Log, B256},
     providers::{
         fillers::{
             BlobGasFiller, ChainIdFiller, FillProvider, GasFiller, JoinFill, NonceFiller,
@@ -133,15 +133,6 @@ where
     } else {
         Ok(None)
     }
-}
-
-fn deserialize_hex_to_u8<'de, D>(deserializer: D) -> Result<u8, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let hex_str: String = Deserialize::deserialize(deserializer)?;
-    u8::from_str_radix(hex_str.trim_start_matches("0x"), 16)
-        .map_err(|err| de::Error::custom(format!("Failed to parse hex to u64: {}", err)))
 }
 
 fn deserialize_hex_to_u64<'de, D>(deserializer: D) -> Result<u64, D::Error>
