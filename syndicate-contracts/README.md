@@ -121,7 +121,7 @@ $ make deploy-based-sequencerchain-frame
 
 | Contract Name           | Address                                                                                                                                     |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| SyndicateFactory        | [0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe](https://syndicate-exo.explorer.alchemy.com/address/0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe) |
+| SyndicateFactory        | TODO: deploy new `SyndicateFactory` [0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe](https://syndicate-exo.explorer.alchemy.com/address/0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe) |
 | WalletPoolWrapperModule | [0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8](https://syndicate-exo.explorer.alchemy.com/address/0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8) |
 
 ### Base Sepolia
