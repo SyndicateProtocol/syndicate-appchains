@@ -446,7 +446,7 @@ impl TestComponents {
     /// Use this if you intend for the txn to succeed
     /// Returns [`TxHash`]
     #[allow(clippy::unwrap_used)]
-    pub(crate) async fn send_maestro_tx_successful(&self, raw_tx: &[u8]) -> Result<TxHash> {
+    pub async fn send_maestro_tx_successful(&self, raw_tx: &[u8]) -> Result<TxHash> {
         let client = reqwest::Client::new();
         let tx_hex = hex::encode_prefixed(raw_tx);
         info!("tx_hex: {}", tx_hex);
@@ -487,7 +487,7 @@ impl TestComponents {
         info!("tx_hex: {}", tx_hex);
         let response = client
             .post(self.maestro_url.clone())
-            .header(HEADER_CHAIN_ID, self.chain_id.to_string())
+            .header(HEADER_CHAIN_ID, self.appchain_chain_id.to_string())
             .json(&json!({
                 "jsonrpc": "2.0",
                 "id": 1,
@@ -515,7 +515,7 @@ impl TestComponents {
     /// sequences a valid appchain raw transaction and mines the sequencing block
     /// returns the appchain's transaction receipt
     #[allow(clippy::unwrap_used)]
-    pub(crate) async fn sequence_tx(
+    pub async fn sequence_tx(
         &self,
         tx: &[u8],
         seq_delay: u64,

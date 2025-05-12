@@ -2,6 +2,7 @@
 // mod components;
 
 use alloy::{
+    eips::Encodable2718,
     network::TransactionBuilder,
     primitives::{address, utils::parse_ether, Address, U256},
     providers::{ext::AnvilApi, Provider, WalletProvider},
@@ -45,7 +46,7 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
                 Duration::from_secs(10)
             );
 
-            let chain_id = components.chain_id;
+            let chain_id = components.appchain_provider.get_chain_id().await?;
             let nonce = components.appchain_provider.get_transaction_count(wallet_address).await?;
             let tx = TransactionRequest::default()
                 .from(wallet_address)
@@ -59,7 +60,7 @@ async fn e2e_maestro_happy_path() -> Result<(), eyre::Error> {
                 .build(components.sequencing_provider.wallet())
                 .await?;
 
-            let tx_hash = components.send_maestro_tx_successful(&tx).await?;
+            let tx_hash = components.send_maestro_tx_successful(&tx.encoded_2718()).await?;
 
             wait_until!(
                 components.appchain_provider.get_transaction_count(wallet_address).await? ==
