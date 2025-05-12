@@ -105,6 +105,10 @@ temp-env     = "0.3.6"
 test-case    = { version = "3" }
 
 
+[patch.crates-io]
+jsonrpsee = { git = 'https://github.com/SyndicateProtocol/jsonrpsee.git' }
+
+
 [workspace.lints.rust]
 missing_debug_implementations = "warn"
 missing_docs                  = "warn"

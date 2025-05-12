@@ -317,6 +317,9 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                         return Err(err("block hash and batch index mismatch"));
                     }
                     let block = db.get_block(ind + 1)?;
+                    if block.batch.is_empty() {
+                        return Err(err("batch is empty - SequencerBatchData event does not exist"))
+                    }
                     return Ok(vec![create_log(
                         ind + 1,
                         ISequencerInbox::SequencerBatchData {
@@ -377,7 +380,11 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                                     minBlockNumber: 0,
                                     maxBlockNumber: u64::MAX,
                                 },
-                                dataLocation: 1,
+                                dataLocation: if block.batch.is_empty() {
+                                    2 // NoData
+                                } else {
+                                    1 // SeparateBatchEvent
+                                },
                             }
                             .encode_log_data(),
                         ));
