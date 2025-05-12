@@ -84,20 +84,20 @@ pub fn error_to_metric_category(error: Option<&RpcError>) -> &'static str {
 mod tests {
     use axum::http::StatusCode;
     use reqwest::Client;
-    use shared::metrics::{start_metrics, MetricsState};
+    use shared::service_start_utils::{start_metrics_and_health, MetricsState};
     use std::time::Duration;
     use tokio::time::sleep;
 
     #[tokio::test]
-    async fn test_start_metrics() {
+    async fn test_start_health() {
         let metrics_state = MetricsState::default();
         let port = test_utils::port_manager::PortManager::instance().next_port().await;
 
-        let handle = start_metrics(metrics_state, port).await;
+        let handle = start_metrics_and_health(metrics_state, port).await;
 
         sleep(Duration::from_secs(1)).await;
         let client = Client::new();
-        let response = client.get(format!("http://localhost:{}/metrics", port)).send().await;
+        let response = client.get(format!("http://localhost:{}/health", port)).send().await;
 
         assert!(response.is_ok());
         let status = response.unwrap().status();

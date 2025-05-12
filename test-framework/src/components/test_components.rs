@@ -1,4 +1,5 @@
 //! Components for the integration tests
+#![allow(missing_docs)]
 
 use crate::components::{
     batch_sequencer::BatchSequencerConfig,
@@ -14,9 +15,9 @@ use alloy::{
     consensus::{EthereumTxEnvelope, TxEip4844Variant},
     eips::{BlockNumberOrTag, Encodable2718},
     node_bindings::AnvilInstance,
-    primitives::{address, hex, Address, TxHash, U256},
+    primitives::{address, hex, keccak256, Address, Bytes, TxHash, U256},
     providers::{ext::AnvilApi as _, Provider, RootProvider, WalletProvider},
-    rpc::types::anvil::MineOptions,
+    rpc::types::{anvil::MineOptions, TransactionReceipt},
 };
 use contract_bindings::{
     arbitrum::rollup::Rollup,
@@ -31,7 +32,12 @@ use maestro::server::HEADER_CHAIN_ID;
 use mchain::{client::MProvider, server::rollup_config};
 use serde_json::{json, Value};
 use shared::types::FilledProvider;
-use std::{env, future::Future, str::FromStr, time::SystemTime};
+use std::{
+    env,
+    future::Future,
+    str::FromStr,
+    time::{Duration, SystemTime},
+};
 use test_utils::{
     anvil::{mine_block, start_anvil, start_anvil_with_args, PRIVATE_KEY},
     docker::{launch_nitro_node, start_component, start_mchain, start_redis, Docker},
@@ -41,6 +47,7 @@ use test_utils::{
         PRELOAD_INBOX_ADDRESS_300, PRELOAD_POSTER_ADDRESS_231, PRELOAD_POSTER_ADDRESS_300,
     },
     utils::test_path,
+    wait_until,
 };
 use tracing::info;
 
@@ -64,7 +71,7 @@ struct ComponentHandles {
 
 #[derive(Debug)]
 #[allow(clippy::redundant_pub_crate)]
-pub(crate) struct TestComponents {
+pub struct TestComponents {
     /// Timer for latency measurement
     /// Keep this on top - the top element gets destroyed first
     _timer: TestTimer,
@@ -77,16 +84,15 @@ pub(crate) struct TestComponents {
     /// Settlement
     pub settlement_provider: FilledProvider,
     pub settlement_rpc_url: String,
-    pub chain_id: u64,
     pub bridge_address: Address,
     pub inbox_address: Address,
 
     /// Appchain
     pub appchain_provider: RootProvider,
+    pub appchain_chain_id: u64,
 
     /// Mchain
     pub mchain_provider: MProvider,
-
     pub poster_url: String,
 
     pub maestro_url: String,
@@ -97,7 +103,7 @@ pub(crate) struct TestComponents {
 
 impl TestComponents {
     #[allow(clippy::unwrap_used)]
-    pub(crate) async fn run<Fut: Future<Output = Result<()>> + Send>(
+    pub async fn run<Fut: Future<Output = Result<()>> + Send>(
         options: &ConfigurationOptions,
         test: impl FnOnce(Self) -> Fut + Send,
     ) -> Result<()> {
@@ -269,7 +275,8 @@ impl TestComponents {
         };
         let sequencer = start_component(
             "metabased-sequencer",
-            sequencer_config.metrics_port,
+            // `/health` is proxied to RPC method
+            sequencer_config.sequencer_port,
             sequencer_config.cli_args(),
             Default::default(),
         )
@@ -409,7 +416,8 @@ impl TestComponents {
             };
             let maestro_instance = start_component(
                 "maestro",
-                maestro_config.metrics_port,
+                // `/health` is proxied to RPC method
+                maestro_config.port,
                 maestro_config.cli_args(),
                 Default::default(),
             )
@@ -447,7 +455,7 @@ impl TestComponents {
                 settlement_provider: set_provider,
                 settlement_rpc_url,
                 appchain_provider,
-                chain_id: options.appchain_chain_id,
+                appchain_chain_id: options.appchain_chain_id,
                 bridge_address: arbitrum_bridge_address,
                 inbox_address: arbitrum_inbox_address,
 
@@ -473,12 +481,12 @@ impl TestComponents {
         ))
     }
 
-    pub(crate) async fn mine_seq_block(&self, delay: u64) -> Result<()> {
+    pub async fn mine_seq_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.sequencing_provider, delay).await?;
         Ok(())
     }
 
-    pub(crate) async fn send_tx_and_mine_block(
+    pub async fn send_tx_and_mine_block(
         &self,
         tx: &EthereumTxEnvelope<TxEip4844Variant>,
         delay: u64,
@@ -491,18 +499,16 @@ impl TestComponents {
         Ok(())
     }
 
+    /// Use this if you intend for the txn to succeed
+    /// Returns [`TxHash`]
     #[allow(clippy::unwrap_used)]
-    pub(crate) async fn send_maestro_tx(
-        &self,
-        tx: &EthereumTxEnvelope<TxEip4844Variant>,
-    ) -> Result<TxHash> {
+    pub async fn send_maestro_tx_successful(&self, raw_tx: &[u8]) -> Result<TxHash> {
         let client = reqwest::Client::new();
-        let encoded_tx = tx.encoded_2718();
-        let tx_hex = hex::encode_prefixed(encoded_tx);
+        let tx_hex = hex::encode_prefixed(raw_tx);
         info!("tx_hex: {}", tx_hex);
         let response = client
             .post(self.maestro_url.clone())
-            .header(HEADER_CHAIN_ID, self.chain_id.to_string())
+            .header(HEADER_CHAIN_ID, self.appchain_chain_id.to_string())
             .json(&json!({
                 "jsonrpc": "2.0",
                 "id": 1,
@@ -513,6 +519,7 @@ impl TestComponents {
             .await?;
         assert!(response.status().is_success(), "EIP-1559 transaction request failed");
         let json_resp: Value = response.json().await?;
+
         assert!(
             json_resp.get("result").is_some(),
             "Transaction response missing 'result' field: {}",
@@ -524,14 +531,71 @@ impl TestComponents {
         Ok(tx_hash)
     }
 
-    pub(crate) async fn mine_set_block(&self, delay: u64) -> Result<()> {
+    /// Use this instead of `send_maestro_tx_successful()` to inspect the JSON `error` field
+    #[allow(clippy::unwrap_used)]
+    pub async fn send_maestro_tx_could_be_unsuccessful(
+        &self,
+        tx: &EthereumTxEnvelope<TxEip4844Variant>,
+    ) -> Result<Value> {
+        let client = reqwest::Client::new();
+        let encoded_tx = tx.encoded_2718();
+        let tx_hex = hex::encode_prefixed(encoded_tx);
+        info!("tx_hex: {}", tx_hex);
+        let response = client
+            .post(self.maestro_url.clone())
+            .header(HEADER_CHAIN_ID, self.appchain_chain_id.to_string())
+            .json(&json!({
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "eth_sendRawTransaction",
+                "params": [tx_hex]
+            }))
+            .send()
+            .await?;
+        // assert!(response.status().is_success(), "EIP-1559 transaction request failed");
+        let json_resp: Value = response.json().await?;
+        Ok(json_resp)
+    }
+
+    pub async fn mine_set_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.settlement_provider, delay).await?;
         Ok(())
     }
 
-    pub(crate) async fn mine_both(&self, delay: u64) -> Result<()> {
+    pub async fn mine_both(&self, delay: u64) -> Result<()> {
         self.mine_seq_block(delay).await?;
         self.mine_set_block(delay).await?;
         Ok(())
+    }
+
+    /// sequences a valid appchain raw transaction and mines the sequencing block
+    /// returns the appchain's transaction receipt
+    #[allow(clippy::unwrap_used)]
+    pub async fn sequence_tx(
+        &self,
+        tx: &[u8],
+        seq_delay: u64,
+        wait_for_appchain_receipt: bool,
+    ) -> Result<Option<TransactionReceipt>> {
+        let tx_hash = keccak256(tx);
+        let tx_bytes = Bytes::from(tx.to_vec());
+        let seq_tx = self.sequencing_contract.processTransaction(tx_bytes).send().await?;
+        self.mine_seq_block(seq_delay).await?;
+        let seq_receipt =
+            self.sequencing_provider.get_transaction_receipt(*seq_tx.tx_hash()).await?.unwrap();
+        assert!(seq_receipt.status(), "Sequence transaction failed");
+
+        match wait_for_appchain_receipt {
+            true => {
+                let mut receipt = None;
+                wait_until!(
+                receipt = self.appchain_provider.get_transaction_receipt(tx_hash).await?;
+                receipt.is_some(),
+                        Duration::from_secs(10)
+                    );
+                Ok(receipt)
+            }
+            false => Ok(None),
+        }
     }
 }

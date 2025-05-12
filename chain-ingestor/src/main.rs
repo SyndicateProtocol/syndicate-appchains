@@ -6,7 +6,7 @@ use humantime::parse_duration;
 use jsonrpsee::server::Server;
 use shared::{
     logger::set_global_default_subscriber,
-    metrics::{start_metrics, MetricsState},
+    service_start_utils::{start_metrics_and_health, MetricsState},
 };
 use std::time::Duration;
 use tokio::{
@@ -95,7 +95,7 @@ async fn main() {
         std::process::exit(0);
     });
 
-    tokio::spawn(start_metrics(metrics_state, cfg.metrics_port));
+    tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port));
     loop {
         if let Err(err) = ingestor::run(&ctx, &provider, &metrics).await {
             error!("ingestor failed: {}", err);

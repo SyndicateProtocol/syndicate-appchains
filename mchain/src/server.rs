@@ -426,7 +426,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                 let (tag, _): (BlockNumberOrTag, bool) = p.parse()?;
                 let number = match tag {
                     BlockNumberOrTag::Latest => db.get_state().batch_count,
-                    BlockNumberOrTag::Finalized => {
+                    BlockNumberOrTag::Safe | BlockNumberOrTag::Finalized => {
                         let mut data = mutex.lock().unwrap();
                         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
                         let mut ts = 0u64;
