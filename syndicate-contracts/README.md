@@ -121,7 +121,7 @@ $ make deploy-based-sequencerchain-frame
 
 | Contract Name           | Address                                                                                                                                     |
 | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| MetabasedFactory        | [0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe](https://syndicate-exo.explorer.alchemy.com/address/0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe) |
+| SyndicateFactory        | [0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe](https://syndicate-exo.explorer.alchemy.com/address/0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe) |
 | WalletPoolWrapperModule | [0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8](https://syndicate-exo.explorer.alchemy.com/address/0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8) |
 
 ### Base Sepolia
@@ -129,15 +129,6 @@ $ make deploy-based-sequencerchain-frame
 | Contract Name           | Address                                                                                                                       |
 | ----------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | ArbConfigManager        | [0xCaf9F341401cD3e72Fc49081E498Ef0F86055b67](https://sepolia.etherscan.io/address/0xCaf9F341401cD3e72Fc49081E498Ef0F86055b67) |
-
-### Metabased Testnet (Private Devnet)
-
-| Contract Name                             | Address                                                                                                                                     |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| MetabasedFactory                          | [0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba](https://syndicate-exo.explorer.alchemy.com/address/0x9a0Ef1333681b357047282144dc06D7DAA1f76Ba) |
-| MetabasedSequencerChain (With dummy data) | [0x5b6bB750222ADeE5B6031702a08D239f97F3b063](https://syndicate-exo.explorer.alchemy.com/address/0x5b6bB750222ADeE5B6031702a08D239f97F3b063) |
-| AlwaysAllowedModule                       | [0x471584f0B8e35faEB2a618BD58A62316D8882d63](https://syndicate-exo.explorer.alchemy.com/address/0x471584f0B8e35faEB2a618BD58A62316D8882d63) |
-| MetafillerStorage                         | [0xC329B96c47271426B237bA85dF5504375C5cCB28](https://syndicate-exo.explorer.alchemy.com/address/0xC329B96c47271426B237bA85dF5504375C5cCB28) |
 
 ### ETH Holesky
 
