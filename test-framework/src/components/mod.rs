@@ -9,8 +9,3 @@ pub mod sequencer;
 pub mod test_components;
 pub mod timer;
 pub mod translator;
-
-// #[allow(clippy::redundant_pub_crate)]
-// pub(crate) use configuration::{ConfigurationOptions, ContractVersion};
-// #[allow(clippy::redundant_pub_crate)]
-// pub(crate) use test_components::TestComponents;
