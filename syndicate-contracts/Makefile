@@ -40,3 +40,5 @@ verify-agent-application :; forge verify-contract --rpc-url exo --verifier block
 test-tx-limit :; forge test --match-contract SyndicateSequencerChainIntegrationTest -vv > test/integration/syndicate-tx-limit-data/optimism_test_output_$(date +%Y%m%d_%H%M%S).log 2>&1
 
 test-events-limit :; forge test --match-contract SyndicateSequencerChainEventLimitTest -vv > test/integration/syndicate-events-limit-data/base_sepolia_test_output_$(date +%Y%m%d_%H%M%S).md 2>&1
+
+gen-docs-pre-audit :; forge doc --build --out docs-pre-audit
