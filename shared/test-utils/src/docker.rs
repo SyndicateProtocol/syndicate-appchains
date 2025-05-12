@@ -6,7 +6,6 @@ use alloy::{
     providers::{Provider, ProviderBuilder, RootProvider},
     transports::http::Client,
 };
-use core::time;
 use eyre::Result;
 use mchain::{client::MProvider, server::rollup_config};
 use std::{
@@ -238,7 +237,8 @@ pub async fn start_redis() -> Result<(Docker, String)> {
             .arg("--rm")
             .arg("-p")
             .arg(format!("{port}:6379"))
-            .arg("redis:latest"),
+            .arg("redis:latest")
+            .arg("--loglevel debug"),
     )?;
 
     let redis_url = format!("redis://127.0.0.1:{port}/");
@@ -249,7 +249,7 @@ pub async fn start_redis() -> Result<(Docker, String)> {
             panic!("redis exited with {}", status);
         };
         client.get_multiplexed_async_connection().await.is_ok(),
-        time::Duration::from_secs(5 * 60) // give it time to download the image if necessary
+        Duration::from_secs(5 * 60) // give it time to download the image if necessary
     );
     Ok((redis, redis_url))
 }
