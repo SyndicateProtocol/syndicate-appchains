@@ -184,7 +184,7 @@ pub async fn launch_nitro_node(
     mchain_url: &str,
     sequencer_port: Option<u16>,
 ) -> Result<(Docker, RootProvider, String)> {
-    let tag = env::var("NITRO_TAG").unwrap_or("v3.4.0-d896e9c-slim".to_string());
+    let tag = env::var("NITRO_TAG").unwrap_or("v3.6.2-5b41a2d-slim".to_string());
     let port = PortManager::instance().next_port().await;
 
     let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "debug".to_string());
@@ -192,7 +192,6 @@ pub async fn launch_nitro_node(
     let mut nitro = Docker::new(
         Command::new("docker")
             .arg("run")
-            .arg("--init")
             .arg("--rm")
             .arg("--net=host")
             .arg(format!("offchainlabs/nitro-node:{tag}"))
