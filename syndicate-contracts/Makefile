@@ -14,9 +14,9 @@ deploy-syndicate-sequencerchain-plus-setup-with-always-allow-module :; forge scr
 # run AddBatchTransactionsToSyndicateSequencerChainContract script on Syndicate Exo
 add-batch-transactions-to-syndicate-sequencerchain :; forge script script/AddBatchTransactionsToSyndicateSequencerChainContract.s.sol:AddBatchTransactionsToSyndicateSequencerChainContract --rpc-url exo --private-key ${ETH_PRIVATE_KEY} --broadcast -vv
 
-## deploy Metafiller related contracts to Syndicate Exo
-deploy-metafiller-storage :; forge create --rpc-url exo --private-key ${ETH_PRIVATE_KEY} src/backfill/MetafillerStorage.sol:MetafillerStorage --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR} ${APP_CHAIN_ID} --legacy
-allowlist-metafiller-storage-addresses :; forge script script/AllowlistMetafillerStorageAddresses.s.sol:AllowlistMetafillerStorageAddresses --rpc-url exo --private-key ${ETH_PRIVATE_KEY} --legacy --skip-simulation --broadcast -vvv
+## deploy storage related contracts to Syndicate Exo
+deploy-syndicate-storage :; forge create --rpc-url exo --private-key ${ETH_PRIVATE_KEY} src/backfill/SyndicateStorage.sol:SyndicateStorage --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR} ${APP_CHAIN_ID} --legacy
+allowlist-syndicate-storage-addresses :; forge script script/AllowlistSyndicateStorageAddresses.s.sol:AllowlistSyndicateStorageAddresses --rpc-url exo --private-key ${ETH_PRIVATE_KEY} --legacy --skip-simulation --broadcast -vvv
 
 # deploy SyndicateToken to Holesky
 deploy-syndicate-token :; forge create --rpc-url ${ETH_HOLESKY_RPC_URL} --private-key ${ETH_PRIVATE_KEY} src/token/SyndicateToken.sol:SyndicateToken --broadcast --etherscan-api-key ${ETHERSCAN_API_KEY} --verify -vv --constructor-args ${ADMIN_ADDR} ${MANAGER_ADDR}
