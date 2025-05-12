@@ -507,7 +507,7 @@ async fn create_txn(
     funded_wallet_address: Address,
     funded_wallet: &EthereumWallet,
 ) -> Result<TxEnvelope, TransactionBuilderError<Ethereum>> {
-    let result = TransactionRequest::default()
+    TransactionRequest::default()
         .from(funded_wallet_address)
         .with_to(TEST_ADDR)
         .with_value(U256::from(0))
@@ -517,8 +517,7 @@ async fn create_txn(
         .with_max_fee_per_gas(100000000)
         .with_max_priority_fee_per_gas(0)
         .build(&funded_wallet)
-        .await;
-    result
+        .await
 }
 
 async fn create_and_fund_wallet(
