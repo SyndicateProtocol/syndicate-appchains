@@ -85,7 +85,7 @@ pub fn rollup_config(chain_id: u64, chain_owner: Address) -> String {
 #[derive(Debug, Clone)]
 pub struct FinalityState {
     finalized_block: u64,
-    pending_ts: VecDeque<u64>,
+    pending_txs: VecDeque<u64>,
 }
 
 #[allow(clippy::unwrap_used)]
@@ -110,7 +110,7 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
             .into(),
         base_fee_l1: U256::ZERO,
     };
-    let mut pending_ts: VecDeque<u64> = Default::default();
+    let mut pending_txs: VecDeque<u64> = Default::default();
     let mut finalized_block = 1u64;
     if db.get_state().batch_count == 0 {
         // 000b00800203 corresponds to a batch containing a single delayed message
@@ -134,12 +134,12 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                 break;
             }
             finalized_block -= 1;
-            pending_ts.push_front(block_ts);
+            pending_txs.push_front(block_ts);
         }
     }
-    assert_eq!(finalized_block + pending_ts.len() as u64, db.get_state().batch_count);
+    assert_eq!(finalized_block + pending_txs.len() as u64, db.get_state().batch_count);
     let mut module =
-        RpcModule::new((db, metrics, Mutex::new(FinalityState { finalized_block, pending_ts })));
+        RpcModule::new((db, metrics, Mutex::new(FinalityState { finalized_block, pending_txs })));
 
     // -------------------------------------------------
     // mchain methods
@@ -156,8 +156,8 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                 Ok(block.inspect(|&block| {
                     metrics.record_last_block(block, timestamp);
                     let mut finality = mutex.lock().unwrap();
-                    finality.pending_ts.push_back(timestamp);
-                    assert_eq!(finality.finalized_block + finality.pending_ts.len() as u64, block);
+                    finality.pending_txs.push_back(timestamp);
+                    assert_eq!(finality.finalized_block + finality.pending_txs.len() as u64, block);
                     drop(finality);
                 }))
             },
@@ -206,15 +206,15 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                 if block_number < finality.finalized_block {
                     metrics.record_finalized_block(block_number, block.timestamp);
                     finality.finalized_block = block_number;
-                    finality.pending_ts.clear();
+                    finality.pending_txs.clear();
                 } else {
                     let removed = (state.batch_count - block_number) as usize;
-                    let data_len = finality.pending_ts.len();
+                    let data_len = finality.pending_txs.len();
                     assert!(data_len >= removed);
-                    finality.pending_ts.truncate(data_len - removed);
+                    finality.pending_txs.truncate(data_len - removed);
                 }
                 assert_eq!(
-                    finality.finalized_block + finality.pending_ts.len() as u64,
+                    finality.finalized_block + finality.pending_txs.len() as u64,
                     block_number
                 );
                 drop(finality);
@@ -390,13 +390,13 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                         let mut finality = mutex.lock().unwrap();
                         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
                         let mut ts = 0u64;
-                        while let Some(block_ts) = finality.pending_ts.front() {
+                        while let Some(block_ts) = finality.pending_txs.front() {
                             if block_ts + finality_delay > now {
                                 break;
                             }
                             ts = *block_ts;
                             finality.finalized_block += 1;
-                            finality.pending_ts.pop_front();
+                            finality.pending_txs.pop_front();
                         }
                         if ts > 0 {
                             metrics.record_finalized_block(finality.finalized_block, ts);

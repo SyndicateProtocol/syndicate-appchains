@@ -192,6 +192,7 @@ pub async fn launch_nitro_node(
     let mut nitro = Docker::new(
         Command::new("docker")
             .arg("run")
+            .arg("--init")
             .arg("--rm")
             .arg("--net=host")
             .arg(format!("offchainlabs/nitro-node:{tag}"))

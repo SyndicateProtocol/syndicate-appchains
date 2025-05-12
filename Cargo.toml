@@ -196,4 +196,3 @@ use_self                          = "warn"
 useless_let_if_seq                = "warn"
 while_float                       = "warn"
 zero_sized_map_values             = "warn"
-# future_not_send                   = "warn" # buggy
