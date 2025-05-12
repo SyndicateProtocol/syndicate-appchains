@@ -242,9 +242,8 @@ pub trait ArbitrumDB {
             *acc = before_inbox_acc;
             self.put_message_acc(block.before_message_count + i as u64, &before_inbox_acc);
         }
-        let data_hash = keccak256(
-            (0u64, u64::MAX, 0u64, u64::MAX, block.after_message_count()).abi_encode_packed(),
-        );
+        let data_hash =
+            keccak256((block.batch.clone(), block.after_message_count()).abi_encode_packed());
         block.after_batch_acc = keccak256(
             (block.before_batch_acc, data_hash, block.after_message_acc()).abi_encode_packed(),
         );
