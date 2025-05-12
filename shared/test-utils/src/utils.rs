@@ -2,10 +2,9 @@
 
 #![allow(clippy::unwrap_used)] // These functions are used in tests only
 
+use alloy::primitives::keccak256;
 use std::{
-    fs,
-    hash::{DefaultHasher, Hash, Hasher},
-    panic, thread,
+    fs, panic, thread,
     time::{SystemTime, UNIX_EPOCH},
 };
 
@@ -24,12 +23,12 @@ pub fn test_path(prefix: &str) -> String {
     let timestamp = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
     let thread_id = thread::current().id();
 
-    let mut hasher = DefaultHasher::new();
-    format!("{}:{}:{:?}", location, timestamp, thread_id).hash(&mut hasher);
-    let hash = hasher.finish();
+    let input = format!("{}:{}:{:?}", location, timestamp, thread_id);
+    let hash = keccak256(input.as_bytes());
+    let hash_hex = alloy::hex::encode(hash);
 
     let dir =
-        std::env::temp_dir().join(format!("{}_{:x}", prefix, hash)).to_str().unwrap().to_string();
+        std::env::temp_dir().join(format!("{}_{}", prefix, hash_hex)).to_str().unwrap().to_string();
     fs::create_dir_all(&dir).unwrap();
     dir
 }

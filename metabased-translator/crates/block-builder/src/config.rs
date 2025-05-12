@@ -39,7 +39,6 @@ pub struct BlockBuilderConfig {
 
     /// Flag used to allow delayed messages from privileged contracts
     /// even when the ignore delayed messages flag is enabled.
-    /// TODO(SEQ-846): Add this variable to the chain config contract.
     #[arg(long, env = "ALLOWED_SETTLEMENT_ADDRESSES", value_parser = parse_addresses)]
     pub allowed_settlement_addresses: Vec<Address>,
 }

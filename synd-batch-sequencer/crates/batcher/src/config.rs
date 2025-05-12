@@ -5,7 +5,6 @@ use alloy::{
     providers::{Provider, ProviderBuilder},
     transports::TransportError,
 };
-use byte_unit::Byte;
 use clap::Parser;
 use shared::parse::parse_url;
 use std::{fmt::Debug, time::Duration};
@@ -39,7 +38,7 @@ pub struct BatcherConfig {
 
     /// Max batch size in bytes
     #[arg(long, env = "MAX_BATCH_SIZE", default_value = "90KB")] // 90 kilobytes
-    pub max_batch_size: Byte,
+    pub max_batch_size: byte_unit::Byte,
 
     /// Timeout for the batcher in milliseconds
     #[arg( long, env = "BATCHER_TIMEOUT", default_value = "200ms", value_parser = humantime::parse_duration )]
@@ -84,7 +83,7 @@ impl Default for BatcherConfig {
         Self {
             redis_url: "redis://127.0.0.1:6379".to_string(),
             chain_id: 1,
-            max_batch_size: Byte::from_u64(90 * 1024),
+            max_batch_size: byte_unit::Byte::from_u64(90 * 1024),
             timeout: Duration::from_millis(200),
             private_key: "0x0000000000000000000000000000000000000000000000000000000000000000"
                 .to_string(),

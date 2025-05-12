@@ -154,6 +154,14 @@ contract ArbChainConfig is Initializable {
     }
 
     /**
+     * @dev Get the allowed settlement addresses
+     * @return The allowed settlement addresses
+     */
+    function getAllowedSettlementAddresses() public view returns (address[] memory) {
+        return ALLOWED_SETTLEMENT_ADDRESSES;
+    }
+
+    /**
      * @dev Transfers ownership of the contract to a new account (`newOwner`).
      * Internal function without access restriction.
      */

@@ -27,12 +27,12 @@ contract MetabasedSequencerChainTestSetUp is Test {
 
     function setUp() public virtual {
         admin = address(0x1);
-        uint256 l3ChainId = 10042001;
+        uint256 appChainId = 10042001;
 
         vm.startPrank(admin);
         permissionModule = new RequireAllModule(admin);
         permissionModuleAny = new RequireAnyModule(admin);
-        chain = new MetabasedSequencerChain(l3ChainId);
+        chain = new MetabasedSequencerChain(appChainId);
         chain.initialize(admin, address(permissionModule));
         vm.stopPrank();
     }
