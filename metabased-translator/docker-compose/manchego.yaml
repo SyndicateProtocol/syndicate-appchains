@@ -31,6 +31,7 @@ services:
     volumes:
       - ./chains:/datadir
     environment:
+      - RUST_LOG=debug
       - DB_FILE=/datadir/84532.db
       - START_BLOCK=20000000
       - RPC_URL=wss://base-sepolia.g.alchemy.com/v2/nYkJi2K0LszDqj8jzWY-rMJmK9ugf0oF
@@ -49,6 +50,9 @@ services:
       target: metabased-translator
       dockerfile: Dockerfile
     environment:
+      - RUST_LOG=debug
+      - APPCHAIN_CHAIN_ID=510000
+      - APPCHAIN_OWNER=0x0000000000000000000000000000000000000000
       - SEQUENCING_CONTRACT_ADDRESS=0x180972BF154c9Aea86c43149D83B7Ea078c33f48
       - ARBITRUM_BRIDGE_ADDRESS=0x13Cb6F51e976287708D0ce926998ab717064b6C5
       - ARBITRUM_INBOX_ADDRESS=0x141F33Fa64F669C71626beE5bFb1C3c5fB6fFbbD
@@ -59,7 +63,6 @@ services:
       - MCHAIN_RPC_URL=ws://mchain:8545
       - ARBITRUM_IGNORE_DELAYED_MESSAGES=false
       - SETTLEMENT_DELAY=60
-      - ROLLUP_OWNER=0x0000000000000000000000000000000000000000
     depends_on:
       healthcheck:
         condition: service_healthy

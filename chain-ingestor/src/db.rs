@@ -65,7 +65,12 @@ impl DB {
         let mut buf = [0; 8];
         file.read_exact_at(&mut buf, 1)?;
         let db_start_block = u64::from_be_bytes(buf);
-        assert!(db_start_block <= start_block);
+        assert!(
+            db_start_block <= start_block,
+            "configured db start block {} greater than actual db start block {}",
+            db_start_block,
+            start_block
+        );
         file.read_exact_at(&mut buf, 9)?;
         assert_eq!(chain_id, u64::from_be_bytes(buf));
         let count = size / ITEM_SIZE - 1;

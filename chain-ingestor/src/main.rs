@@ -9,7 +9,10 @@ use shared::{
     metrics::{start_metrics, MetricsState},
 };
 use std::time::Duration;
-use tokio::signal::unix::{signal, SignalKind};
+use tokio::{
+    signal::unix::{signal, SignalKind},
+    time::sleep,
+};
 use tracing::{error, info};
 
 /// CLI args for the chain ingestor executable
@@ -96,6 +99,7 @@ async fn main() {
     loop {
         if let Err(err) = ingestor::run(&ctx, &provider, &metrics).await {
             error!("ingestor failed: {}", err);
+            sleep(Duration::from_secs(1)).await;
             // manually recreate the ws connection just in case.
             provider = new_provider(&cfg).await;
         }
