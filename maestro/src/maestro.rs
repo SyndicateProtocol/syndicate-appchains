@@ -45,7 +45,7 @@ pub struct MaestroService {
     chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
     producers: HashMap<ChainId, Arc<StreamProducer>>,
     rpc_providers: HashMap<ChainId, RpcProvider>,
-    _config: Config,
+    config: Config,
 }
 
 impl MaestroService {
@@ -65,7 +65,7 @@ impl MaestroService {
             chain_wallets: Mutex::new(HashMap::new()),
             producers,
             rpc_providers,
-            _config: config,
+            config,
         })
     }
 
@@ -302,7 +302,8 @@ impl MaestroService {
 
         // Update cache
         let mut conn = self.redis_conn.clone();
-        match conn.set_wallet_nonce(chain_id, signer, rpc_nonce).await {
+        match conn.set_wallet_nonce(chain_id, signer, rpc_nonce, self.config.wallet_nonce_ttl).await
+        {
             Ok(_) => {}
             Err(e) => {
                 error!(%chain_wallet_nonce_key, %chain_id, %rpc_nonce, %e, "unable to cache nonce");
@@ -351,7 +352,7 @@ impl MaestroService {
 
         // actual increment
         let old_nonce = conn
-            .set_wallet_nonce(chain_id, wallet_address, desired_nonce)
+            .set_wallet_nonce(chain_id, wallet_address, desired_nonce, self.config.wallet_nonce_ttl)
             .await
             .map_err(MaestroError::Redis)?;
 
@@ -564,7 +565,7 @@ impl MaestroService {
     ) -> Result<String, MaestroRpcError> {
         let tx_hash = keccak256(raw_tx.as_ref());
         let mut conn = self.redis_conn.clone();
-        conn.set_waiting_txn(chain_id, wallet_address, nonce, raw_tx)
+        conn.set_waiting_txn(chain_id, wallet_address, nonce, raw_tx, self.config.waiting_txn_ttl)
             .await
             .map_err(|_| InternalError(TransactionSubmissionFailed(tx_hash.to_string())))
     }
@@ -671,6 +672,8 @@ mod tests {
             prune_interval: Duration::from_secs(1),
             prune_max_age: Duration::from_secs(1),
             metrics_port: 8090,
+            waiting_txn_ttl: Duration::from_secs(20), // shorter than default
+            wallet_nonce_ttl: Duration::from_secs(3),
         };
 
         // Create service
@@ -760,7 +763,7 @@ mod tests {
 
         // Verify transaction was actually stored
         // Connect to Redis directly to check
-        let client = redis::Client::open(service._config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service.config.redis_url.as_str()).unwrap();
         let mut conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Check stream exists and has entries
@@ -792,7 +795,9 @@ mod tests {
 
         // Pre-populate Redis with nonce
         let mut conn = service.redis_conn.clone();
-        conn.set_wallet_nonce(chain_id, wallet, expected_nonce).await.unwrap();
+        conn.set_wallet_nonce(chain_id, wallet, expected_nonce, service.config.wallet_nonce_ttl)
+            .await
+            .unwrap();
 
         // Get nonce
         let nonce_result = service.get_cached_or_rpc_nonce(wallet, chain_id).await;
@@ -911,7 +916,9 @@ mod tests {
         // Set initial nonce
         {
             let mut conn = service.redis_conn.clone();
-            conn.set_wallet_nonce(chain_id, wallet, initial_nonce).await.unwrap();
+            conn.set_wallet_nonce(chain_id, wallet, initial_nonce, service.config.wallet_nonce_ttl)
+                .await
+                .unwrap();
 
             // Verify initial nonce
             let nonce = conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
@@ -949,7 +956,9 @@ mod tests {
         // Set nonce
         {
             let mut conn = service.redis_conn.clone();
-            conn.set_wallet_nonce(chain_id, wallet, nonce).await.unwrap();
+            conn.set_wallet_nonce(chain_id, wallet, nonce, service.config.wallet_nonce_ttl)
+                .await
+                .unwrap();
 
             // Verify nonce is initially set
             let initial_nonce = conn.get_wallet_nonce(chain_id, wallet).await.unwrap();
@@ -960,7 +969,7 @@ mod tests {
         sleep(Duration::from_secs(3 + 1)).await;
 
         // Create a fresh connection after the sleep
-        let client = redis::Client::open(service._config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service.config.redis_url.as_str()).unwrap();
         let mut fresh_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Verify nonce has expired using the fresh connection
@@ -1058,7 +1067,15 @@ mod tests {
 
         // Set up test transaction in Redis
         let mut conn = service.redis_conn.clone();
-        conn.set_waiting_txn(chain_id, wallet, nonce, raw_tx.clone()).await.unwrap();
+        conn.set_waiting_txn(
+            chain_id,
+            wallet,
+            nonce,
+            raw_tx.clone(),
+            service.config.waiting_txn_ttl,
+        )
+        .await
+        .unwrap();
 
         // Check the transaction exists in cache
         let cached_tx = service
@@ -1118,7 +1135,15 @@ mod tests {
 
         // Set up test transaction in Redis
         let mut conn = service.redis_conn.clone();
-        conn.set_waiting_txn(chain_id, wallet_address, nonce, raw_tx.clone()).await.unwrap();
+        conn.set_waiting_txn(
+            chain_id,
+            wallet_address,
+            nonce,
+            raw_tx.clone(),
+            service.config.waiting_txn_ttl,
+        )
+        .await
+        .unwrap();
 
         // Verify transaction exists before removal
         assert!(
@@ -1216,7 +1241,7 @@ mod tests {
 
         // Set up Redis stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
-        let client = redis::Client::open(service._config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service.config.redis_url.as_str()).unwrap();
         let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Get initial count of stream entries
@@ -1323,11 +1348,14 @@ mod tests {
 
         // Set up Redis stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
-        let client = redis::Client::open(service._config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service.config.redis_url.as_str()).unwrap();
         let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set cache nonce to be the first one
-        redis_conn.set_wallet_nonce(chain_id, wallet, current_nonce).await.unwrap();
+        redis_conn
+            .set_wallet_nonce(chain_id, wallet, current_nonce, service.config.wallet_nonce_ttl)
+            .await
+            .unwrap();
 
         // Get initial count of stream entries
         let initial_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();
@@ -1438,11 +1466,14 @@ mod tests {
 
         // Set up Redis stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
-        let client = redis::Client::open(service_arc._config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
         let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set the initial nonce value
-        redis_conn.set_wallet_nonce(chain_id, wallet, nonce).await.unwrap();
+        redis_conn
+            .set_wallet_nonce(chain_id, wallet, nonce, service_arc.config.wallet_nonce_ttl)
+            .await
+            .unwrap();
 
         // Get initial count of stream entries
         let initial_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();
@@ -1486,11 +1517,14 @@ mod tests {
         let raw_tx = Bytes::from(vec![0x01, 0x02, 0x03, 0x04]);
 
         // Set up Redis
-        let client = redis::Client::open(service_arc._config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
         let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set the initial nonce value
-        redis_conn.set_wallet_nonce(chain_id, wallet, current_nonce).await.unwrap();
+        redis_conn
+            .set_wallet_nonce(chain_id, wallet, current_nonce, service_arc.config.wallet_nonce_ttl)
+            .await
+            .unwrap();
 
         // Submit transaction with lower nonce
         let result = service_arc
@@ -1532,11 +1566,14 @@ mod tests {
         let raw_tx = Bytes::from(vec![0x01, 0x02, 0x03, 0x04]);
 
         // Set up Redis
-        let client = redis::Client::open(service_arc._config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
         let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set the initial nonce value
-        redis_conn.set_wallet_nonce(chain_id, wallet, current_nonce).await.unwrap();
+        redis_conn
+            .set_wallet_nonce(chain_id, wallet, current_nonce, service_arc.config.wallet_nonce_ttl)
+            .await
+            .unwrap();
 
         // Submit transaction with higher nonce
         let result = service_arc
@@ -1608,11 +1645,14 @@ mod tests {
 
         // Set up Redis stream for checking enqueued transactions
         let stream_key = tx_stream_key(chain_id);
-        let client = redis::Client::open(service_arc._config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
         let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set the initial nonce value
-        redis_conn.set_wallet_nonce(chain_id, wallet, current_nonce).await.unwrap();
+        redis_conn
+            .set_wallet_nonce(chain_id, wallet, current_nonce, service_arc.config.wallet_nonce_ttl)
+            .await
+            .unwrap();
 
         // Get initial count of stream entries
         let initial_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();
@@ -1711,11 +1751,14 @@ mod tests {
 
         // Set up Redis stream
         let stream_key = tx_stream_key(chain_id);
-        let client = redis::Client::open(service_arc._config.redis_url.as_str()).unwrap();
+        let client = redis::Client::open(service_arc.config.redis_url.as_str()).unwrap();
         let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
 
         // Set the initial nonce value
-        redis_conn.set_wallet_nonce(chain_id, wallet, current_nonce).await.unwrap();
+        redis_conn
+            .set_wallet_nonce(chain_id, wallet, current_nonce, service_arc.config.wallet_nonce_ttl)
+            .await
+            .unwrap();
 
         // Get initial count of stream entries
         let initial_len: u64 = redis_conn.xlen(&stream_key).await.unwrap();

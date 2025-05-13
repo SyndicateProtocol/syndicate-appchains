@@ -1,15 +1,13 @@
 //! This module describes the required functionality for Maestro to interact with waiting gap
 //! transactions in the Redis cache.
 
-use crate::redis::{
-    keys::waiting_txn::waiting_gap_txns_key, ttl::waiting_txn::WAITING_TXN_TTL_SEC,
-};
+use crate::redis::keys::waiting_txn::waiting_gap_txns_key;
 use alloy::{
     hex,
     primitives::{Address, Bytes, ChainId},
 };
 use redis::{aio::MultiplexedConnection, AsyncCommands, RedisResult, SetExpiry::EX, SetOptions};
-use std::future::Future;
+use std::{future::Future, time::Duration};
 
 /// Extension trait for Redis connections to work with waiting transactions
 pub trait WaitingGapTxnExt {
@@ -28,6 +26,7 @@ pub trait WaitingGapTxnExt {
         signer: Address,
         nonce: u64,
         raw_txn: Bytes,
+        ttl: Duration,
     ) -> impl Future<Output = RedisResult<String>> + Send;
 
     /// Delete a waiting transaction by key from the Redis cache
@@ -55,10 +54,11 @@ impl WaitingGapTxnExt for MultiplexedConnection {
         signer: Address,
         nonce: u64,
         raw_txn: Bytes,
+        ttl: Duration,
     ) -> impl Future<Output = RedisResult<String>> + Send {
         let encoded_txn = hex::encode(raw_txn);
         let key = waiting_gap_txns_key(chain_id, signer, nonce);
-        let opts = SetOptions::default().with_expiration(EX(WAITING_TXN_TTL_SEC));
+        let opts = SetOptions::default().with_expiration(EX(ttl.as_secs()));
         self.set_options(key, encoded_txn, opts)
     }
 
@@ -98,6 +98,8 @@ mod tests {
     fn init() {
         shared::logger::set_global_default_subscriber();
     }
+
+    const TTL: Duration = Duration::from_secs(15 * 60);
 
     #[tokio::test]
     async fn test_waiting_gap_txns_key_format() {
@@ -143,7 +145,7 @@ mod tests {
         let raw_txn = Bytes::from(vec![0x01, 0x02, 0x03, 0x04]);
 
         // Test set_waiting_txn
-        let set_result = conn.set_waiting_txn(chain_id, signer, nonce, raw_txn.clone()).await;
+        let set_result = conn.set_waiting_txn(chain_id, signer, nonce, raw_txn.clone(), TTL).await;
         assert!(set_result.is_ok(), "Failed to set waiting txn: {:?}", set_result.err());
 
         // Test get_waiting_txn
@@ -163,7 +165,7 @@ mod tests {
 
         // Set the transaction
         let set_result =
-            conn.set_waiting_txn(chain_id, wallet_address, nonce, raw_txn.clone()).await;
+            conn.set_waiting_txn(chain_id, wallet_address, nonce, raw_txn.clone(), TTL).await;
         assert!(set_result.is_ok(), "Failed to set waiting txn: {:?}", set_result.err());
 
         // Verify it exists
@@ -193,10 +195,12 @@ mod tests {
 
         // Set the transaction
         let set_result =
-            conn.set_waiting_txn(chain_id, wallet_address, nonce, raw_txn.clone()).await;
+            conn.set_waiting_txn(chain_id, wallet_address, nonce, raw_txn.clone(), TTL).await;
         assert!(set_result.is_ok(), "Failed to set waiting txn: {:?}", set_result.err());
-        let _ = conn.set_waiting_txn(chain_id, wallet_address, nonce + 1, raw_txn.clone()).await;
-        let _ = conn.set_waiting_txn(chain_id, wallet_address, nonce + 2, raw_txn.clone()).await;
+        let _ =
+            conn.set_waiting_txn(chain_id, wallet_address, nonce + 1, raw_txn.clone(), TTL).await;
+        let _ =
+            conn.set_waiting_txn(chain_id, wallet_address, nonce + 2, raw_txn.clone(), TTL).await;
 
         // Verify it exists
         let get_result = conn.get_waiting_txn(chain_id, wallet_address, nonce).await.unwrap();
@@ -223,17 +227,17 @@ mod tests {
     }
 
     async fn test_waiting_txn_expiration(mut conn: MultiplexedConnection) {
-        // For testing TTL, we'll use a much shorter TTL than the 15 minutes in production
-        // This is done by temporarily modifying the constant via a test-only helper function
-        // or if not possible, we can validate the key's TTL directly via Redis commands
+        // For testing TTL, we'll use a much shorter TTL than the default
 
         let chain_id = 6u64;
         let signer = Address::from_slice(&[0x36; 20]);
         let nonce = 10u64;
         let raw_txn = Bytes::from(vec![0x0A, 0x0B, 0x0C, 0x0D]);
 
+        let shorter_ttl = Duration::from_secs(2);
+
         // Set the transaction
-        conn.set_waiting_txn(chain_id, signer, nonce, raw_txn.clone()).await.unwrap();
+        conn.set_waiting_txn(chain_id, signer, nonce, raw_txn.clone(), shorter_ttl).await.unwrap();
 
         // Verify it exists
         let get_result = conn.get_waiting_txn(chain_id, signer, nonce).await.unwrap();
@@ -252,7 +256,7 @@ mod tests {
         assert!(ttl.is_some(), "Key should have a TTL");
         assert!(ttl.unwrap() > 0, "TTL should be positive");
         assert!(
-            ttl.unwrap() <= WAITING_TXN_TTL_SEC as i64,
+            ttl.unwrap() <= shorter_ttl.as_secs() as i64,
             "TTL should be at most the defined constant"
         );
     }
@@ -267,8 +271,8 @@ mod tests {
         let raw_txn2 = Bytes::from(vec![0x44, 0x55, 0x66]);
 
         // Set transactions for different signers
-        conn.set_waiting_txn(chain_id, signer1, nonce1, raw_txn1.clone()).await.unwrap();
-        conn.set_waiting_txn(chain_id, signer2, nonce2, raw_txn2.clone()).await.unwrap();
+        conn.set_waiting_txn(chain_id, signer1, nonce1, raw_txn1.clone(), TTL).await.unwrap();
+        conn.set_waiting_txn(chain_id, signer2, nonce2, raw_txn2.clone(), TTL).await.unwrap();
 
         // Verify each transaction is stored independently
         let get1 = conn.get_waiting_txn(chain_id, signer1, nonce1).await.unwrap();
@@ -302,8 +306,8 @@ mod tests {
         let raw_txn2 = Bytes::from(vec![0xB1, 0xB2, 0xB3]);
 
         // Set transactions with different nonces
-        conn.set_waiting_txn(chain_id, signer, nonce1, raw_txn1.clone()).await.unwrap();
-        conn.set_waiting_txn(chain_id, signer, nonce2, raw_txn2.clone()).await.unwrap();
+        conn.set_waiting_txn(chain_id, signer, nonce1, raw_txn1.clone(), TTL).await.unwrap();
+        conn.set_waiting_txn(chain_id, signer, nonce2, raw_txn2.clone(), TTL).await.unwrap();
 
         // Verify different nonces are stored independently
         let get1 = conn.get_waiting_txn(chain_id, signer, nonce1).await.unwrap();
@@ -321,7 +325,7 @@ mod tests {
         let raw_txn2 = Bytes::from(vec![0xD1, 0xD2, 0xD3]);
 
         // Set initial transaction
-        conn.set_waiting_txn(chain_id, signer, nonce, raw_txn1.clone()).await.unwrap();
+        conn.set_waiting_txn(chain_id, signer, nonce, raw_txn1.clone(), TTL).await.unwrap();
 
         // Verify initial transaction
         let initial_get = conn.get_waiting_txn(chain_id, signer, nonce).await.unwrap();
@@ -332,7 +336,7 @@ mod tests {
         );
 
         // Overwrite with new transaction
-        conn.set_waiting_txn(chain_id, signer, nonce, raw_txn2.clone()).await.unwrap();
+        conn.set_waiting_txn(chain_id, signer, nonce, raw_txn2.clone(), TTL).await.unwrap();
 
         // Verify updated transaction
         let updated_get = conn.get_waiting_txn(chain_id, signer, nonce).await.unwrap();
@@ -352,8 +356,8 @@ mod tests {
         let raw_txn2 = Bytes::from(vec![0xF1, 0xF2, 0xF3]);
 
         // Set transactions for same signer/nonce on different chains
-        conn.set_waiting_txn(chain_id1, signer, nonce, raw_txn1.clone()).await.unwrap();
-        conn.set_waiting_txn(chain_id2, signer, nonce, raw_txn2.clone()).await.unwrap();
+        conn.set_waiting_txn(chain_id1, signer, nonce, raw_txn1.clone(), TTL).await.unwrap();
+        conn.set_waiting_txn(chain_id2, signer, nonce, raw_txn2.clone(), TTL).await.unwrap();
 
         // Verify each chain has independent storage
         let get1 = conn.get_waiting_txn(chain_id1, signer, nonce).await.unwrap();

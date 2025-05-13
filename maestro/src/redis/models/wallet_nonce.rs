@@ -1,12 +1,10 @@
 //! This module describes the required functionality for Maestro to interact with wallet nonce
 //! values in the Redis cache.
 
-use crate::redis::{
-    keys::wallet_nonce::chain_wallet_nonce_key, ttl::wallet_nonce::WALLET_NONCE_TTL_SEC,
-};
+use crate::redis::keys::wallet_nonce::chain_wallet_nonce_key;
 use alloy::primitives::{Address, ChainId};
 use redis::{aio::MultiplexedConnection, AsyncCommands, RedisResult, SetExpiry::EX, SetOptions};
-use std::future::Future;
+use std::{future::Future, time::Duration};
 
 /// Extension trait for Redis connections to work with wallet nonces
 pub trait WalletNonceExt {
@@ -23,6 +21,7 @@ pub trait WalletNonceExt {
         chain_id: ChainId,
         wallet_address: Address,
         nonce: u64,
+        ttl: Duration,
     ) -> impl Future<Output = RedisResult<Option<String>>> + Send;
 }
 
@@ -44,9 +43,10 @@ impl WalletNonceExt for MultiplexedConnection {
         chain_id: ChainId,
         wallet_address: Address,
         nonce: u64,
+        ttl: Duration,
     ) -> impl Future<Output = RedisResult<Option<String>>> + Send {
         let key = chain_wallet_nonce_key(chain_id, wallet_address);
-        let opts = SetOptions::default().with_expiration(EX(WALLET_NONCE_TTL_SEC)).get(true);
+        let opts = SetOptions::default().with_expiration(EX(ttl.as_secs())).get(true);
         Box::pin(self.set_options(key, nonce.to_string(), opts))
     }
 }
@@ -56,7 +56,7 @@ mod tests {
     use super::*;
     use crate::redis::{
         keys::wallet_nonce::WALLET_NONCE_KEY_PREFIX, models::wallet_nonce::WalletNonceExt,
-        test_utils::init_redis_and_get_connection,
+        test_utils::init_redis_and_get_connection, ttl::wallet_nonce::WALLET_NONCE_TTL,
     };
     use alloy::primitives::Address;
     use ctor::ctor;
@@ -66,6 +66,8 @@ mod tests {
     fn init() {
         shared::logger::set_global_default_subscriber();
     }
+
+    const TTL: Duration = Duration::from_secs(3);
 
     #[tokio::test]
     async fn test_wallet_nonce_key_format() {
@@ -109,7 +111,7 @@ mod tests {
         let nonce = 42u64;
 
         // Test set_wallet_nonce
-        let set_result = conn.set_wallet_nonce(chain_id, wallet_address, nonce).await;
+        let set_result = conn.set_wallet_nonce(chain_id, wallet_address, nonce, TTL).await;
         assert!(set_result.is_ok(), "Failed to set wallet nonce: {:?}", set_result.err());
         assert!(set_result.unwrap().is_none(), "no value there previously");
 
@@ -122,9 +124,10 @@ mod tests {
         let chain_id = 5u64;
         let wallet_address = Address::from_slice(&[0x24; 20]);
         let nonce = 123u64;
+        let default_ttl = humantime::parse_duration(WALLET_NONCE_TTL).unwrap();
 
         // Set the nonce
-        let set_result = conn.set_wallet_nonce(chain_id, wallet_address, nonce).await;
+        let set_result = conn.set_wallet_nonce(chain_id, wallet_address, nonce, default_ttl).await;
         assert!(set_result.is_ok(), "Failed to set wallet nonce: {:?}", set_result.err());
 
         // Verify it exists
@@ -136,7 +139,7 @@ mod tests {
         );
 
         // Wait for TTL to expire (add a small buffer)
-        sleep(Duration::from_secs(WALLET_NONCE_TTL_SEC + 1)).await;
+        sleep(Duration::from_secs(default_ttl.as_secs() + 1)).await;
 
         // Verify it has expired
         let expired_result = conn.get_wallet_nonce(chain_id, wallet_address).await.unwrap();
@@ -150,15 +153,18 @@ mod tests {
         let updated_nonce = 11u64;
 
         // Set initial nonce
-        conn.set_wallet_nonce(chain_id, wallet_address, initial_nonce).await.unwrap();
+        conn.set_wallet_nonce(chain_id, wallet_address, initial_nonce, TTL).await.unwrap();
 
         // Verify initial nonce
         let initial_get = conn.get_wallet_nonce(chain_id, wallet_address).await.unwrap();
         assert_eq!(initial_get, Some(initial_nonce.to_string()), "Initial nonce not set correctly");
 
         // Update nonce
-        let result =
-            conn.set_wallet_nonce(chain_id, wallet_address, updated_nonce).await.unwrap().unwrap();
+        let result = conn
+            .set_wallet_nonce(chain_id, wallet_address, updated_nonce, TTL)
+            .await
+            .unwrap()
+            .unwrap();
         assert_eq!(result, initial_nonce.to_string(), "old nonce was in cache");
         assert_eq!(
             result.parse::<u64>().unwrap(),
@@ -188,8 +194,8 @@ mod tests {
         let nonce2 = 300u64;
 
         // Set nonces for different wallets
-        conn.set_wallet_nonce(chain_id, wallet_address1, nonce1).await.unwrap();
-        conn.set_wallet_nonce(chain_id, wallet_address2, nonce2).await.unwrap();
+        conn.set_wallet_nonce(chain_id, wallet_address1, nonce1, TTL).await.unwrap();
+        conn.set_wallet_nonce(chain_id, wallet_address2, nonce2, TTL).await.unwrap();
 
         // Verify each wallet has its own independent nonce
         let get1 = conn.get_wallet_nonce(chain_id, wallet_address1).await.unwrap();
@@ -207,8 +213,8 @@ mod tests {
         let nonce2 = 500u64;
 
         // Set nonces for same wallet on different chains
-        conn.set_wallet_nonce(chain_id1, wallet_address, nonce1).await.unwrap();
-        conn.set_wallet_nonce(chain_id2, wallet_address, nonce2).await.unwrap();
+        conn.set_wallet_nonce(chain_id1, wallet_address, nonce1, TTL).await.unwrap();
+        conn.set_wallet_nonce(chain_id2, wallet_address, nonce2, TTL).await.unwrap();
 
         // Verify each chain has its own independent nonce for the same wallet
         let get1 = conn.get_wallet_nonce(chain_id1, wallet_address).await.unwrap();
@@ -227,7 +233,7 @@ mod tests {
             let nonce = i;
 
             // Set nonce
-            conn.set_wallet_nonce(chain_id, wallet_address, nonce).await.unwrap();
+            conn.set_wallet_nonce(chain_id, wallet_address, nonce, TTL).await.unwrap();
 
             // Get nonce
             let get_result = conn.get_wallet_nonce(chain_id, wallet_address).await.unwrap();
@@ -252,7 +258,7 @@ mod tests {
                 let nonce = (i + 1) * 100;
 
                 // Set and get nonce
-                conn.set_wallet_nonce(chain_id, wallet_address, nonce).await.unwrap();
+                conn.set_wallet_nonce(chain_id, wallet_address, nonce, TTL).await.unwrap();
                 let result = conn.get_wallet_nonce(chain_id, wallet_address).await.unwrap();
 
                 (wallet_address, nonce, result)
