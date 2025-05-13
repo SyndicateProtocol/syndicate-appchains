@@ -7,8 +7,8 @@ use alloy::{
     primitives::{keccak256, Address, Bytes, Log},
     sol_types::SolEvent,
 };
-use contract_bindings::syndicate::syndicatesequencerchain::SyndicateSequencerChain::TransactionProcessed;
 use common::compression::{get_compression_type, CompressionType};
+use contract_bindings::syndicate::syndicatesequencerchain::SyndicateSequencerChain::TransactionProcessed;
 use shared::zlib_compression::decompress_transactions;
 use thiserror::Error;
 use tracing::error;

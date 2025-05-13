@@ -7,7 +7,9 @@ use alloy::{
 };
 use clap::Parser;
 use contract_bindings::syndicate::{arbchainconfig, arbconfigmanager::ArbConfigManager};
-use jsonrpsee::server::{RandomStringIdProvider, middleware::http::ProxyGetRequestLayer, RpcServiceBuilder, Server};
+use jsonrpsee::server::{
+    middleware::http::ProxyGetRequestLayer, RandomStringIdProvider, RpcServiceBuilder, Server,
+};
 use mchain::{metrics::MchainMetrics, server::start_mchain};
 use rocksdb::DB;
 use shared::{
