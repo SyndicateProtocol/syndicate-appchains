@@ -125,8 +125,6 @@ async fn e2e_maestro_duplicate_rejected() -> Result<(), eyre::Error> {
 
             let tx_hash = components.send_maestro_tx_successful(&tx.encoded_2718()).await?;
 
-            // TODO - Commented because this errors
-            // let tx_hash2 = components.send_maestro_tx(&tx2).await;
             let tx_hash2 = components.send_maestro_tx_could_be_unsuccessful(&tx2).await?;
 
             // 2nd txn fails
