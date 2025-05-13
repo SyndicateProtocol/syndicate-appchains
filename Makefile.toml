@@ -20,13 +20,6 @@ devnet = "devnet"
 testnet = "testnet"
 mainnet = "mainnet"
 
-# TODO(SEQ-559) fix this task
-[tasks.metabased-sequencer]
-cwd = "./metabased-sequencer/"
-command = "cargo"
-toolchain = "nightly"
-args = ["run", "-p", "metabased-sequencer", "--", "--profile", "${PROFILE}"]
-
 [tasks.print-sample-command]
 cwd = "."
 command = "cargo"

@@ -4,7 +4,6 @@ members = [
   "maestro",
   "mchain",
   "metabased-poster",
-  "metabased-sequencer",
   "metabased-translator/bin/metabased-translator",
   "metabased-translator/crates/block-builder",
   "metabased-translator/crates/common",

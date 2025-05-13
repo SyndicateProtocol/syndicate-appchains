@@ -3354,28 +3354,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "metabased-sequencer"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "axum",
- "clap",
- "eyre",
- "hex",
- "humantime",
- "jsonrpsee",
- "prometheus-client",
- "reqwest",
- "serde_json",
- "shared",
- "test-utils",
- "tokio",
- "tower 0.4.13",
- "tracing",
- "url",
-]
-
-[[package]]
 name = "metabased-translator"
 version = "0.1.0"
 dependencies = [
