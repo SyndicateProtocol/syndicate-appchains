@@ -9,7 +9,7 @@ use axum::{
 };
 use prometheus_client::{encoding::text::encode, registry::Registry};
 use std::sync::Arc;
-use tokio::sync::RwLock;
+use tracing::info;
 /// Structure holding the global metrics state, including the Prometheus registry.
 #[derive(Debug, Default)]
 pub struct MetricsState {
@@ -23,7 +23,8 @@ pub async fn start_metrics_and_health(
     metrics_state: MetricsState,
     port: u16,
 ) -> tokio::task::JoinHandle<()> {
-    let state = Arc::new(RwLock::new(metrics_state));
+    info!("starting metrics on port {}", port);
+    let state = Arc::new(metrics_state);
     let router = Router::new()
         .route("/metrics", get(metrics_handler))
         .route("/health", get(health_handler))
@@ -47,10 +48,9 @@ pub async fn start_metrics_and_health(
 
 /// Handler for the `/metrics` endpoint, encoding and returning the Prometheus metrics.
 async fn metrics_handler(
-    State(state): State<Arc<RwLock<MetricsState>>>,
+    State(state): State<Arc<MetricsState>>,
 ) -> Result<Response<Body>, StatusCode> {
     let buffer = {
-        let state = state.read().await;
         let mut buffer = String::new();
         encode(&mut buffer, &state.registry).map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
         buffer

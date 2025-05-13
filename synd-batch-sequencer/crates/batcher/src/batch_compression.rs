@@ -28,11 +28,11 @@ use std::io::{Error, Write};
 ///
 /// ```
 /// use alloy::primitives::Bytes;
-/// use shared::additive_compression::compress;
+/// use batcher::batch_compression::compress_batch;
 ///
 /// let existing_txs = [Bytes::from(vec![1, 2, 3])];
 /// let new_tx = Bytes::from(vec![4, 5, 6]);
-/// let compressed = compress(&existing_txs, &new_tx).unwrap();
+/// let compressed = compress_batch(&existing_txs, &new_tx).unwrap();
 /// ```
 pub fn compress_batch(txs: &[Bytes], tx: &Bytes) -> Result<Vec<u8>, Error> {
     let mut stream = RlpStream::new_list(txs.len() + 1);

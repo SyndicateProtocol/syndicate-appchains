@@ -48,13 +48,6 @@ ENTRYPOINT ["/usr/local/bin/metabased-translator"]
 EXPOSE 8545 8546
 LABEL service=metabased-translator
 
-FROM runtime-base AS metabased-sequencer
-ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/metabased-sequencer /usr/local/bin/metabased-sequencer
-ENTRYPOINT ["/usr/local/bin/metabased-sequencer"]
-EXPOSE 8545 8546
-LABEL service=metabased-sequencer
-
 FROM runtime-base AS metabased-poster
 ARG BUILD_PROFILE
 COPY --from=build /app/target/${BUILD_PROFILE}/metabased-poster /usr/local/bin/metabased-poster
@@ -81,6 +74,13 @@ COPY --from=build /app/target/${BUILD_PROFILE}/mchain /usr/local/bin/mchain
 ENTRYPOINT ["/usr/local/bin/mchain"]
 EXPOSE 8545 8546
 LABEL service=mchain
+
+FROM runtime-base AS chain-ingestor
+ARG BUILD_PROFILE
+COPY --from=build /app/target/${BUILD_PROFILE}/chain-ingestor /usr/local/bin/chain-ingestor
+ENTRYPOINT ["/usr/local/bin/chain-ingestor"]
+EXPOSE 8545 8546
+LABEL service=chain-ingestor
 
 # --------- Debugging image for translator ---------
 FROM ubuntu:22.04 AS metabased-translator-debug

@@ -74,13 +74,6 @@ impl TranslatorConfig {
             args.extend(vec!["--appchain-chain-id".to_string(), chain_id.to_string()]);
         }
 
-        args.extend(vec![
-            "--sequencing-polling-interval".to_string(),
-            "50ms".to_string(),
-            "--settlement-polling-interval".to_string(),
-            "50ms".to_string(),
-        ]);
-
         args
     }
 }

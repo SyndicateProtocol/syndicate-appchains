@@ -3,22 +3,20 @@ edition.workspace      = true
 exclude.workspace      = true
 homepage.workspace     = true
 license.workspace      = true
-name                   = "mchain"
+name                   = "chain-ingestor"
 repository.workspace   = true
 rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy             = { workspace = true }
-bincode           = { workspace = true }
-chain-ingestor    = { workspace = true }
+alloy             = { workspace = true, features = ["provider-ws"] }
 clap              = { workspace = true, features = ["derive", "env"] }
-contract-bindings = { workspace = true }
 eyre              = { workspace = true }
+fs2               = { workspace = true }
 futures-util      = { workspace = true }
+humantime         = { workspace = true }
 jsonrpsee         = { workspace = true, features = ["server", "ws-client"] }
 prometheus-client = { workspace = true }
-rocksdb           = { workspace = true }
 serde             = { workspace = true }
 serde_json        = { workspace = true }
 shared            = { workspace = true }

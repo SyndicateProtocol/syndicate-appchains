@@ -7,7 +7,7 @@ use alloy::{
 };
 use clap::Parser;
 use contract_bindings::syndicate::{arbchainconfig, arbconfigmanager::ArbConfigManager};
-use jsonrpsee::server::{middleware::http::ProxyGetRequestLayer, RpcServiceBuilder, Server};
+use jsonrpsee::server::{RandomStringIdProvider, middleware::http::ProxyGetRequestLayer, RpcServiceBuilder, Server};
 use mchain::{metrics::MchainMetrics, server::start_mchain};
 use rocksdb::DB;
 use shared::{
@@ -15,7 +15,7 @@ use shared::{
     service_start_utils::{start_metrics_and_health, MetricsState},
 };
 use tokio::signal::unix::{signal, SignalKind};
-use tower::ServiceBuilder;
+use tracing::info;
 
 /// CLI args for the mchain executable
 #[derive(Parser, Debug, Clone)]
@@ -62,8 +62,7 @@ async fn get_rollup_owner(
         .getArbChainConfigAddress(U256::from(appchain_chain_id))
         .call()
         .await?;
-    let arb_chain_config_contract =
-        arbchainconfig::ArbChainConfig::new(config_address._0, provider);
+    let arb_chain_config_contract = ArbChainConfig::new(config_address._0, provider);
 
     let rollup_owner = arb_chain_config_contract.ROLLUP_OWNER().call().await?;
     Ok(rollup_owner._0)
@@ -73,13 +72,14 @@ async fn get_rollup_owner(
 #[allow(clippy::redundant_pub_crate)]
 async fn main() -> eyre::Result<()> {
     // Initialize logging
-    set_global_default_subscriber()?;
+    #[allow(clippy::unwrap_used)]
+    set_global_default_subscriber().unwrap();
 
     let cfg = Config::parse();
+    info!("loading rockdb db {}", cfg.datadir);
     let db = DB::open_default(cfg.datadir)?;
     let mut metrics_state = MetricsState::default();
     let metrics = MchainMetrics::new(&mut metrics_state.registry);
-    tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port));
 
     let initial_appchain_owner = match cfg.appchain_owner {
         Some(owner) => owner,
@@ -93,24 +93,23 @@ async fn main() -> eyre::Result<()> {
         }
     };
 
+    info!("starting mchain server on port {}", cfg.port);
     let module = start_mchain(
         cfg.appchain_chain_id,
         initial_appchain_owner,
         cfg.finality_delay,
         db,
         metrics,
-    )
-    .await;
+    );
 
-    let http_middleware =
-        ServiceBuilder::new().layer(ProxyGetRequestLayer::new("/health", "health")?);
-    let rpc_middleware = RpcServiceBuilder::new().rpc_logger(1024);
     let handle = Server::builder()
-        .set_http_middleware(http_middleware)
-        .set_rpc_middleware(rpc_middleware)
+        .ws_only()
+        .set_id_provider(RandomStringIdProvider::new(64))
+        .set_rpc_middleware(RpcServiceBuilder::new().rpc_logger(1024))
         .build(format!("0.0.0.0:{}", cfg.port))
         .await?
         .start(module);
+    tokio::spawn(start_metrics_and_health(metrics_state, cfg.metrics_port));
 
     #[allow(clippy::expect_used)]
     let mut sigint = signal(SignalKind::interrupt()).expect("Failed to register SIGINT handler");
@@ -126,7 +125,7 @@ async fn main() -> eyre::Result<()> {
         }
     };
 
-    handle.stop()?;
+    _ = handle.stop();
     handle.stopped().await;
     Ok(())
 }

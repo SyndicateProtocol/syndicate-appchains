@@ -19,9 +19,7 @@ use alloy::{
     rpc::types::TransactionRequest,
 };
 use async_trait::async_trait;
-use common::types::PartialBlock;
 use eyre::Result;
-use mchain::db::DelayedMessage;
 use std::str::FromStr;
 
 #[derive(Debug, Clone)]
@@ -30,14 +28,6 @@ pub struct OptimismAdapter {}
 
 #[async_trait]
 impl RollupAdapter for OptimismAdapter {
-    fn build_batch(&self, _: &PartialBlock) -> Result<(u64, Bytes)> {
-        panic!("Not implemented")
-    }
-
-    fn process_delayed_messages(&self, _: &PartialBlock) -> Result<Vec<DelayedMessage>> {
-        panic!("Not implemented")
-    }
-
     fn transaction_parser(&self) -> &SequencingTransactionParser {
         panic!("Not implemented")
     }

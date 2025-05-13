@@ -1,13 +1,12 @@
 [workspace]
 members = [
+  "chain-ingestor",
   "maestro",
   "mchain",
   "metabased-poster",
-  "metabased-sequencer",
   "metabased-translator/bin/metabased-translator",
   "metabased-translator/crates/block-builder",
   "metabased-translator/crates/common",
-  "metabased-translator/crates/ingestor",
   "metabased-translator/crates/metrics",
   "metabased-translator/crates/slotter",
   "metabased-translator/tests",
@@ -46,6 +45,7 @@ block-builder        = { path = "metabased-translator/crates/block-builder" }
 brotli               = "7.0.0"
 byte-unit            = "5.1.6"
 bytes                = "1.9.0"
+chain-ingestor       = { path = "chain-ingestor" }
 clap                 = { version = "4.5.26" }
 common               = { path = "metabased-translator/crates/common" }
 contract-bindings    = { path = "shared/contract-bindings" }
@@ -54,6 +54,7 @@ derive_more          = { version = "1.0.0", features = ["display"] }
 eyre                 = { version = "0.6.12" }
 figment              = { version = "0.10.19" }
 flate2               = { version = "1.0.35" }
+fs2                  = { version = "0.4.3" }
 futures-util         = "0.3.31"
 hex                  = "0.4.3"
 http                 = "1.2.0"
@@ -61,7 +62,6 @@ http-body            = "1.0.1"
 http-body-util       = "0.1"
 humantime            = "2.1.0"
 hyper                = { version = "1.5.2" }
-ingestor             = { path = "metabased-translator/crates/ingestor" }
 jsonrpsee            = { version = "0.24.7" }
 maestro              = { path = "maestro" }
 mchain               = { path = "mchain" }
@@ -102,6 +102,10 @@ mockito      = { version = "1.7.0" }
 serial_test  = { version = "3.2.0" }
 temp-env     = "0.3.6"
 test-case    = { version = "3" }
+
+
+[patch.crates-io]
+jsonrpsee = { git = 'https://github.com/SyndicateProtocol/jsonrpsee.git' }
 
 
 [workspace.lints.rust]

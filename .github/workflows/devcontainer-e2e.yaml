@@ -18,6 +18,8 @@ permissions:
 
 jobs:
   metabased-sequencer-test:
+    ## **NOTE**: Disabling instead of removing for now while the test is required
+    if: ${{ false }}
     name: Metabased Sequencer Test
     runs-on: ubuntu-latest
 

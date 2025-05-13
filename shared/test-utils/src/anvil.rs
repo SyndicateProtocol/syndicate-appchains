@@ -33,7 +33,8 @@ pub async fn start_anvil_with_args(
         .wallet(PrivateKeySigner::from_str(PRIVATE_KEY).unwrap_or_else(|err| {
             panic!("Failed to parse default private key for signer: {}", err)
         }))
-        .on_http(anvil.endpoint_url());
+        .connect(&anvil.ws_endpoint())
+        .await?;
     Ok((port, anvil, provider))
 }
 

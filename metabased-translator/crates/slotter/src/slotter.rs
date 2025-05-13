@@ -1,6 +1,7 @@
 //! Slotter module for metabased-translator
 use crate::metrics::SlotterMetrics;
 use alloy::primitives::{FixedBytes, B256};
+use chain_ingestor::client::BlockStreamT;
 use common::types::{Chain, SequencingBlock, SettlementBlock};
 use mchain::{
     client::{KnownState, Provider},
@@ -8,7 +9,6 @@ use mchain::{
 };
 use shared::types::BlockRef;
 use thiserror::Error;
-use tokio::sync::mpsc::Receiver;
 use tracing::{error, info, trace};
 
 /// Ingests blocks from the sequencing and settlement chains, slots them into slots, and sends the
@@ -17,10 +17,10 @@ use tracing::{error, info, trace};
 pub async fn run(
     settlement_delay: u64,
     known_state: Option<KnownState>,
-    mut sequencing_rx: Receiver<SequencingBlock>,
-    mut settlement_rx: Receiver<SettlementBlock>,
+    mut sequencing: impl BlockStreamT<SequencingBlock> + Send,
+    mut settlement: impl BlockStreamT<SettlementBlock> + Send,
     provider: &impl Provider,
-    metrics: SlotterMetrics,
+    metrics: &SlotterMetrics,
 ) -> Result<(), SlotterError> {
     let (mut latest_sequencing_block, mut latest_settlement_block) = match known_state {
         Some(known_state) => {
@@ -32,7 +32,11 @@ pub async fn run(
     info!("Starting Slotter");
 
     trace!("Waiting for settlement block");
-    let mut set_block = settlement_rx.recv().await.expect("settlement channel closed");
+    let mut set_block = settlement
+        .recv(0)
+        .await
+        .map_err(|e| SlotterError::IngestorError(Chain::Settlement, e.to_string()))?;
+
     if let Some(latest) = latest_settlement_block {
         if set_block.block_ref.hash != latest.hash {
             return Err(SlotterError::ReorgDetected {
@@ -47,13 +51,16 @@ pub async fn run(
 
     loop {
         trace!("Waiting for sequencing block");
-        let seq_block = sequencing_rx.recv().await.expect("sequencing channel closed");
+        let seq_block = sequencing
+            .recv(0)
+            .await
+            .map_err(|e| SlotterError::IngestorError(Chain::Sequencing, e.to_string()))?;
         validate_block(
             &mut latest_sequencing_block,
             &seq_block.block_ref,
             seq_block.parent_hash,
             Chain::Sequencing,
-            &metrics,
+            metrics,
         )?;
         let mut mblock = MBlock {
             timestamp: seq_block.block_ref.timestamp,
@@ -68,18 +75,23 @@ pub async fn run(
 
         let mut messages = vec![];
 
-        trace!("Waiting for settlement blocks");
         let mut blocks_per_slot: u64 = 1;
-        while set_block.block_ref.timestamp + settlement_delay <= seq_block.block_ref.timestamp {
+        let slot_end_ts = (seq_block.block_ref.timestamp >= settlement_delay)
+            .then(|| seq_block.block_ref.timestamp - settlement_delay + 1)
+            .unwrap_or_default();
+        while set_block.block_ref.timestamp < slot_end_ts {
             blocks_per_slot += 1;
             messages.append(&mut set_block.messages);
-            set_block = settlement_rx.recv().await.expect("settlement channel closed");
+            set_block = settlement
+                .recv(slot_end_ts)
+                .await
+                .map_err(|e| SlotterError::IngestorError(Chain::Settlement, e.to_string()))?;
             validate_block(
                 &mut latest_settlement_block,
                 &set_block.block_ref,
                 set_block.parent_hash,
                 Chain::Settlement,
-                &metrics,
+                metrics,
             )?;
         }
 
@@ -95,10 +107,12 @@ pub async fn run(
             .add_batch(&mblock)
             .await
             .map_err(|e| SlotterError::SlotProcessorError(e.to_string()))?;
-        if mblock.payload.is_some() {
+        if let Some(payload) = mblock.payload {
             info!(
-                "Sent slot {} with timestamp {} in {:?}",
+                "Sent slot {} ({} seq, {} set) with timestamp {} in {:?}",
                 mblock.slot.seq_block_number,
+                seq_block.tx_count,
+                payload.1.len(),
                 mblock.timestamp,
                 time.elapsed()
             );
@@ -180,68 +194,75 @@ pub enum SlotterError {
 
     #[error("Slot processor error: {0}")]
     SlotProcessorError(String),
+
+    #[error("{0} chain ingestor error: {1}")]
+    IngestorError(Chain, String),
 }
 
 #[cfg(test)]
 mod tests {
-    use super::run;
     use crate::{
         metrics::SlotterMetrics,
         slotter::{
-            validate_block, SettlementBlock,
+            run, validate_block,
             SlotterError::{BlockNumberSkipped, EarlierTimestamp, ReorgDetected},
         },
     };
-    use alloy::{
-        primitives::{FixedBytes, U256},
-        rpc::json_rpc::{RpcRecv, RpcSend},
-        transports::{RpcError, TransportErrorKind},
-    };
+    use alloy::primitives::{FixedBytes, U256};
     use async_trait::async_trait;
-    use common::types::Chain;
-    use mchain::client::{KnownState, Provider};
+    use chain_ingestor::client::BlockStreamT;
+    use common::types::{Chain, SettlementBlock};
+    use mchain::client::{ClientError, DeserializeOwned, KnownState, Provider, ToRpcParams};
     use prometheus_client::registry::Registry;
     use shared::types::BlockRef;
-    use tokio::sync::mpsc;
 
     #[ctor::ctor]
     fn init() {
         shared::logger::set_global_default_subscriber();
     }
 
+    #[allow(dead_code)]
     struct PanicProvider {}
 
     #[async_trait]
     impl Provider for PanicProvider {
-        async fn raw_request<Params: RpcSend, T: RpcRecv + Clone>(
+        async fn request<Params: ToRpcParams + Send, T: DeserializeOwned>(
             &self,
             _method: &'static str,
             _params: Params,
-        ) -> Result<T, RpcError<TransportErrorKind>> {
+        ) -> Result<T, ClientError> {
             panic!("unexpected call to raw_request");
+        }
+    }
+
+    struct MockBlockStream<Block>(pub Vec<Block>);
+
+    #[async_trait]
+    impl<Block: Send> BlockStreamT<Block> for MockBlockStream<Block> {
+        async fn recv(&mut self, timestamp: u64) -> eyre::Result<Block> {
+            assert_eq!(timestamp, 0);
+            Ok(self.0.pop().unwrap())
         }
     }
 
     #[tokio::test]
     async fn known_state_reorg() -> eyre::Result<()> {
-        let (_seq_tx, seq_rx) = mpsc::channel(1);
-        let (set_tx, set_rx) = mpsc::channel(1);
         let latest: BlockRef = Default::default();
         let set_block = SettlementBlock {
             block_ref: BlockRef { hash: U256::from(1).into(), ..Default::default() },
             ..Default::default()
         };
-        set_tx.send(set_block.clone()).await?;
+        let set_stream = MockBlockStream(vec![set_block.clone()]);
         let result = run(
             0,
             Some(KnownState {
                 sequencing_block: Default::default(),
                 settlement_block: latest.clone(),
             }),
-            seq_rx,
-            set_rx,
+            MockBlockStream(Default::default()),
+            set_stream,
             &PanicProvider {},
-            SlotterMetrics::new(&mut Registry::default()),
+            &SlotterMetrics::new(&mut Registry::default()),
         )
         .await;
         assert_eq!(

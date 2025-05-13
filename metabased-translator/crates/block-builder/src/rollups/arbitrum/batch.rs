@@ -177,7 +177,6 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use common::types::EMPTY_BATCH;
 
     #[test]
     fn test_json_encoding() -> Result<(), serde_json::Error> {
@@ -201,8 +200,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_empty_batch() -> Result<()> {
-        let batch = Batch(vec![]);
-        assert_eq!(batch.encode()?, EMPTY_BATCH);
+        assert_eq!(Batch(vec![]).encode()?, Bytes::from_static(&alloy::hex!("003b")));
         Ok(())
     }
 
