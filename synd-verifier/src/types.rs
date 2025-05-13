@@ -1,4 +1,4 @@
-//! Types for the verifier
+//! Types for the synd-verifier
 
 use alloy::{
     consensus::{Eip2718EncodableReceipt, Receipt as AlloyReceipt, RlpEncodableReceipt},

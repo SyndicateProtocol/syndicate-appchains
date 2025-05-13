@@ -1,4 +1,5 @@
-//! Verifies a batch of blocks and creates a new mchain block.
+//! The `synd-verifier` crate is responsible for verifying a batch of blocks and creating a new
+//! mchain block
 
 use crate::types::{ChainVerificationInput, TypedReceipt};
 use alloy::{
