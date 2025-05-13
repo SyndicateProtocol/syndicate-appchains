@@ -10,7 +10,7 @@ use chain_ingestor::{
 use eyre::Result;
 use mchain::client::{MProvider, Provider};
 use metrics::metrics::TranslatorMetrics;
-use shared::metrics::{start_metrics, MetricsState};
+use shared::service_start_utils::{start_metrics_and_health, MetricsState};
 use std::sync::Arc;
 use tracing::{error, log::info};
 
@@ -18,7 +18,9 @@ use tracing::{error, log::info};
 pub async fn run(config: &MetabasedConfig) -> Result<(), RuntimeError> {
     info!("Initializing Metabased Translator components");
 
-    let metrics = init_metrics(config).await;
+    let mut metrics_state = MetricsState::default();
+    let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
+    start_metrics_and_health(metrics_state, config.metrics.metrics_port).await;
 
     loop {
         info!("Starting Metabased Translator");
@@ -27,13 +29,6 @@ pub async fn run(config: &MetabasedConfig) -> Result<(), RuntimeError> {
             Err(e) => error!("restarting the translator components: {e}"),
         };
     }
-}
-
-pub async fn init_metrics(config: &MetabasedConfig) -> TranslatorMetrics {
-    let mut metrics_state = MetricsState::default();
-    let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
-    start_metrics(metrics_state, config.metrics.metrics_port).await;
-    metrics
 }
 
 async fn start_slotter(config: &MetabasedConfig, metrics: &TranslatorMetrics) -> Result<()> {

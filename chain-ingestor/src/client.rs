@@ -30,6 +30,8 @@ use std::{
 };
 use tracing::{error, info};
 
+// Uses the eth client to fetch log data for blocks in a range & combines them with raw (timestamp,
+// block hash) data from the db to build partial blocks
 #[allow(clippy::unwrap_used)]
 async fn build_partial_blocks(
     start_block: u64,
@@ -135,7 +137,7 @@ async fn build_partial_blocks(
         let log_block = log.block_number.unwrap();
         assert_eq!(log.block_hash, Some(blocks[(log_block - start_block) as usize].block_ref.hash));
         let log_index = log.log_index.unwrap();
-        assert!(log_block > block || (log_block == block && log_index > index));
+        assert!(log_block > block || (log_block == block && log_index > index), "out of order log found from rpc provider: previous (block, index) = ({block} {index}), current = ({log_block}, {log_index})");
         block = log_block;
         index = log_index;
         blocks[(log.block_number.unwrap() - start_block) as usize].logs.push(log.into_inner());

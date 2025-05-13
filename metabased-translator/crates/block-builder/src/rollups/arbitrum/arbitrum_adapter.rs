@@ -15,7 +15,7 @@ use alloy::{
     primitives::{Address, Bytes, FixedBytes, Log, U256},
     sol_types::SolEvent,
 };
-use common::types::{SequencingBlock, SettlementBlock, EMPTY_BATCH};
+use common::types::{SequencingBlock, SettlementBlock};
 use contract_bindings::arbitrum::{
     ibridge::IBridge::MessageDelivered,
     idelayedmessageprovider::IDelayedMessageProvider::{
@@ -152,7 +152,7 @@ impl ArbitrumAdapter {
         let mb_transactions = self.parse_block_to_mbtxs(block);
 
         if mb_transactions.is_empty() {
-            return Ok((0, EMPTY_BATCH))
+            return Ok((0, Default::default()))
         }
 
         info!(
@@ -207,7 +207,7 @@ impl ArbitrumAdapter {
                 }
 
                 INBOX_MSG_DELIVERED_FROM_ORIGIN_EVENT_HASH => {
-                    error!("ignoring unsupporting inbox message delivered from origin");
+                    error!("ignoring unsupported inbox message delivered from origin");
                     let message_num = U256::from_be_slice(log.topics()[1].as_slice());
                     message_data.insert(message_num, None);
                 }

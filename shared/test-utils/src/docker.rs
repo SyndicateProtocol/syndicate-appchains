@@ -6,7 +6,6 @@ use alloy::{
     providers::{Provider, ProviderBuilder, RootProvider},
     transports::http::Client,
 };
-use core::time;
 use eyre::Result;
 use mchain::{client::MProvider, server::rollup_config};
 use std::{
@@ -69,7 +68,7 @@ impl Drop for Docker {
 
 pub async fn start_component(
     executable_name: &str,
-    metrics_port: u16,
+    api_port: u16,
     args: Vec<String>,
     cargs: Vec<String>,
 ) -> Result<Docker> {
@@ -107,20 +106,23 @@ pub async fn start_component(
             )
         }?;
 
+    health_check(executable_name, api_port, &mut docker).await;
+    Ok(docker)
+}
+
+pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut Docker) {
     let client = Client::new();
     wait_until!(
         if let Some(status) = docker.try_wait()? {
             panic!("{} exited with {}", executable_name, status);
         };
-        // TODO(SEQ-869): Use the health endpoint instead
         client
-            .get(format!("http://localhost:{metrics_port}/metrics"))
+            .get(format!("http://localhost:{api_port}/health"))
             .send()
             .await
             .is_ok_and(|x| x.status().is_success()),
         Duration::from_secs(5*60)  // give it time to download the image if necessary
     );
-    Ok(docker)
 }
 
 pub async fn start_mchain(
@@ -181,7 +183,7 @@ pub async fn launch_nitro_node(
     mchain_url: &str,
     sequencer_port: Option<u16>,
 ) -> Result<(Docker, RootProvider, String)> {
-    let tag = env::var("NITRO_TAG").unwrap_or("v3.4.0-d896e9c-slim".to_string());
+    let tag = env::var("NITRO_TAG").unwrap_or("v3.6.2-5b41a2d-slim".to_string());
     let port = PortManager::instance().next_port().await;
 
     let log_level = env::var("NITRO_LOG_LEVEL").unwrap_or_else(|_| "debug".to_string());
@@ -236,7 +238,8 @@ pub async fn start_redis() -> Result<(Docker, String)> {
             .arg("--rm")
             .arg("-p")
             .arg(format!("{port}:6379"))
-            .arg("redis:latest"),
+            .arg("redis:latest")
+            .arg("--loglevel debug"),
     )?;
 
     let redis_url = format!("redis://127.0.0.1:{port}/");
@@ -247,7 +250,7 @@ pub async fn start_redis() -> Result<(Docker, String)> {
             panic!("redis exited with {}", status);
         };
         client.get_multiplexed_async_connection().await.is_ok(),
-        time::Duration::from_secs(5 * 60) // give it time to download the image if necessary
+        Duration::from_secs(5 * 60) // give it time to download the image if necessary
     );
     Ok((redis, redis_url))
 }

@@ -6,9 +6,6 @@ use shared::types::{BlockRef, GetBlockRef};
 use strum_macros::Display;
 
 #[allow(missing_docs)]
-pub const EMPTY_BATCH: Bytes = Bytes::from_static(&alloy::hex!("003b"));
-
-#[allow(missing_docs)]
 #[derive(Debug, Default, Clone)]
 pub struct SequencingBlock {
     pub block_ref: BlockRef,
