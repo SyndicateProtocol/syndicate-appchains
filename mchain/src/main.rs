@@ -6,11 +6,10 @@ use alloy::{
     rpc::client::ClientBuilder,
 };
 use clap::Parser;
-use contract_bindings::syndicate::{arbchainconfig::ArbChainConfig, arbconfigmanager::ArbConfigManager};
-
-use jsonrpsee::server::{
-    RandomStringIdProvider, RpcServiceBuilder, Server,
+use contract_bindings::syndicate::{
+    arbchainconfig::ArbChainConfig, arbconfigmanager::ArbConfigManager,
 };
+use jsonrpsee::server::{RandomStringIdProvider, RpcServiceBuilder, Server};
 use mchain::{metrics::MchainMetrics, server::start_mchain};
 use rocksdb::DB;
 use shared::{
