@@ -22,6 +22,11 @@ mod tests {
         Mock, MockServer, ResponseTemplate,
     };
 
+    #[ctor::ctor]
+    fn init() {
+        shared::logger::set_global_default_subscriber();
+    }
+
     // Initialize the server for this test function
     async fn setup_server(
         mock_rpc_server_4: Option<MockServer>,
@@ -61,6 +66,8 @@ mod tests {
             skip_validation: false,
             prune_interval: Duration::from_secs(60 * 60 * 24),
             prune_max_age: Duration::from_secs(60 * 60 * 24),
+            waiting_txn_ttl: Duration::from_secs(20), // shorter than default
+            wallet_nonce_ttl: Duration::from_secs(3),
         };
 
         // Start the actual Maestro server with our mocked config
@@ -487,16 +494,9 @@ mod tests {
                 assert!(tx_response.status().is_success(), "Valid transaction request failed");
                 let tx_json: Value = tx_response.json().await?;
                 assert!(
-                    tx_json.get("result").is_none(),
-                    "Transaction response should not succeed: {}",
+                    tx_json.get("result").is_some(),
+                    "Transaction response should succeed: {}",
                     tx_json
-                );
-                assert_eq!(
-                    tx_json.get("error"),
-                    Some(&json!({
-                        "code": -32603,
-                        "message": "internal error: transaction nonce too high - expected 2 got 690"
-                    }))
                 );
 
                 Ok(())

@@ -44,12 +44,13 @@ async fn e2e_send_transaction() -> Result<()> {
         let wallet_address = components.settlement_provider.default_signer_address();
 
         // Send a deposit
-        _ = set_rollup.depositEth(wallet_address, wallet_address, parse_ether("1")?).send().await?;
+        let _ =
+            set_rollup.depositEth(wallet_address, wallet_address, parse_ether("1")?).send().await?;
         components.mine_seq_block(config.settlement_delay).await?;
         components.mine_set_block(0).await?;
         // mine 1 set block to close the opened slot that contains the other deposit
         let test_addr: Address = "0xA9ec1Ed7008fDfdE38978Dfef4cF2754A969E5FA".parse()?;
-        _ = set_rollup.depositEth(wallet_address, test_addr, parse_ether("1")?).send().await?;
+        let _ = set_rollup.depositEth(wallet_address, test_addr, parse_ether("1")?).send().await?;
         components.mine_set_block(1).await?;
 
         // Wait for the deposit to arrive
@@ -168,7 +169,7 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
             // Send a deposit (unaliased address) delayed message
             // Deposit is from the arbos address and does not increment the nonce
             let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
-            _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
+            let _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
 
             const L2_MESSAGE_KIND_SIGNED_TX: u8 = 4;
             let gas_limit: u64 = 100_000;
@@ -190,7 +191,7 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
                 .encode_2718(&mut inner_tx);
             let mut tx = vec![L2_MESSAGE_KIND_SIGNED_TX];
             tx.append(&mut inner_tx);
-            _ = inbox.sendL2Message(tx.into()).send().await?;
+            let _ = inbox.sendL2Message(tx.into()).send().await?;
             // Message From Origin - should be ignored by the translator
             inner_tx = vec![];
             TransactionRequest::default()
@@ -206,11 +207,11 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
                 .encode_2718(&mut inner_tx);
             tx = vec![L2_MESSAGE_KIND_SIGNED_TX];
             tx.append(&mut inner_tx);
-            _ = inbox.sendL2MessageFromOrigin(tx.into()).send().await?;
+            let _ = inbox.sendL2MessageFromOrigin(tx.into()).send().await?;
 
             // Send retryable tickets that are automatically redeemed (aliased address)
             // Safe Retryable Ticket
-            _ = inbox
+            let _ = inbox
                 .createRetryableTicket(
                     wallet_address,
                     U256::ZERO,
@@ -225,7 +226,7 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
                 .send()
                 .await?;
             // Unsafe Retryable Ticket
-            _ = inbox
+            let _ = inbox
                 .unsafeCreateRetryableTicket(
                     wallet_address,
                     U256::ZERO,
@@ -242,7 +243,7 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
 
             // Send 2 l2 unsigned messages (aliased address)
             // Unsigned Transaction
-            _ = inbox
+            let _ = inbox
                 .sendUnsignedTransaction(
                     U256::from(gas_limit),
                     U256::from(max_fee_per_gas),
@@ -254,7 +255,7 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
                 .send()
                 .await?;
             // Contract Transaction
-            _ = inbox
+            let _ = inbox
                 .sendContractTransaction(
                     U256::from(gas_limit),
                     U256::from(max_fee_per_gas),
@@ -267,7 +268,7 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
 
             // Send 2 l2 funded by l1 messages (aliased address)
             // Funded Unsigned Transaction
-            _ = inbox
+            let _ = inbox
                 .sendL1FundedUnsignedTransaction(
                     U256::from(gas_limit),
                     U256::from(max_fee_per_gas),
@@ -279,7 +280,7 @@ async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
                 .send()
                 .await?;
             // Funded Contract Transaction
-            _ = inbox
+            let _ = inbox
                 .sendL1FundedContractTransaction(
                     U256::from(gas_limit),
                     U256::from(max_fee_per_gas),
@@ -337,7 +338,7 @@ async fn e2e_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
             let wallet_address = components.settlement_provider.default_signer_address();
             let value = parse_ether("1")?;
             let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
-            _ = inbox.depositEth().value(value).send().await?;
+            let _ = inbox.depositEth().value(value).send().await?;
             components.mine_set_block(0).await?;
             components.mine_set_block(1).await?;
 
@@ -469,7 +470,7 @@ async fn e2e_settlement_reorg() -> Result<()> {
             let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
 
             // create a deposit1 (that won't be rolled back) that will fit on mchain's block 3
-            _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
+            let _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
 
             components.mine_both(100).await?;
             components.mine_both(1).await?; // extra blocks to close the slot
@@ -485,7 +486,7 @@ async fn e2e_settlement_reorg() -> Result<()> {
             let mchain_block_before_deposit = components.mchain_provider.get_block_number().await;
             assert_eq!(mchain_block_before_deposit, 3);
 
-            _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
+            let _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
 
             // make this deposit2 fit into a slot that will be reorged
             components.mine_both(200).await?; // will be reorged leaving this slot opened
@@ -538,7 +539,7 @@ async fn e2e_settlement_reorg() -> Result<()> {
             // the rollup should have reorged to a pre-deposit block
 
             // create new slots
-            _ = inbox.depositEth().value(parse_ether("0.01")?).send().await?;
+            let _ = inbox.depositEth().value(parse_ether("0.01")?).send().await?;
             components.mine_both(500).await?;
             components.mine_both(500).await?; // build mchain to an height above what the rollup has seen before the reorg
 
@@ -597,7 +598,7 @@ async fn e2e_sequencing_reorg() -> Result<()> {
             let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
 
             // create a deposit1 (that won't be rolled back) that will fit on mchain's block 3
-            _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
+            let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
 
             components.mine_set_block(0).await?;
             components.mine_both(1).await?;
@@ -754,7 +755,7 @@ async fn e2e_maestro_batch_sequencer_translator() -> Result<()> {
             let wallet_address = components.sequencing_provider.default_signer_address();
             let value = parse_ether("0.01")?;
             let inbox = Rollup::new(components.inbox_address, &components.settlement_provider);
-            _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
+            let _ = inbox.depositEth(wallet_address, wallet_address, value).send().await?;
             components.mine_set_block(0).await?;
             components.mine_set_block(1).await?;
 

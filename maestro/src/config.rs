@@ -1,6 +1,10 @@
 //! This module contains `config` for the `maestro` service
 
-use crate::{config::ConfigError::RpcUrlInvalidAddress, errors::ConfigError};
+use crate::{
+    config::ConfigError::RpcUrlInvalidAddress,
+    errors::ConfigError,
+    redis::ttl::{waiting_txn::WAITING_TXN_TTL, wallet_nonce::WALLET_NONCE_TTL},
+};
 use alloy::{
     primitives::ChainId,
     providers::{
@@ -59,6 +63,16 @@ pub struct Config {
     #[arg(long, env = "PRUNE_MAX_AGE", default_value = "24h",
     value_parser = humantime::parse_duration)]
     pub prune_max_age: Duration,
+
+    /// Time-to-live (TTL) of waiting transaction Redis key values
+    #[arg(long, env = "WAITING_TXN_TTL", default_value = WAITING_TXN_TTL,
+    value_parser = humantime::parse_duration)]
+    pub waiting_txn_ttl: Duration,
+
+    /// Time-to-live (TTL) of wallet nonce Redis key values
+    #[arg(long, env = "WALLET_NONCE_TTL", default_value = WALLET_NONCE_TTL,
+    value_parser = humantime::parse_duration)]
+    pub wallet_nonce_ttl: Duration,
 }
 
 /// Parse the chain ID to URL mappings from the JSON string
@@ -142,6 +156,8 @@ impl Default for Config {
             skip_validation: false,
             prune_interval: Duration::from_secs(60 * 60 * 24),
             prune_max_age: Duration::from_secs(60 * 60 * 24),
+            waiting_txn_ttl: Default::default(),
+            wallet_nonce_ttl: Default::default(),
         }
     }
 }
