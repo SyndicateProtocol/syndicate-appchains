@@ -32,13 +32,7 @@ pub fn verify_and_create_batch(
     validate_receipts(&settlement_chain_input)?;
 
     // Generate mchain block
-    generate_mblock(
-        sequencing_chain_input.blocks,
-        settlement_chain_input.blocks,
-        sequencing_chain_input.receipts,
-        settlement_chain_input.receipts,
-        settlement_delay,
-    )
+    generate_mblock(sequencing_chain_input, settlement_chain_input, settlement_delay)
 }
 
 // --------------------------------------------
@@ -122,8 +116,11 @@ fn validate_block_hash(block: &Block) -> Result<()> {
     Ok(())
 }
 
+// --------------------------------------------
+// MBlock Generation
+// --------------------------------------------
+
 fn convert_block_to_partial_block(block: &Block, receipts: &[Receipt]) -> PartialBlock {
-    // TODO - Question: do we need to filter logs here?
     let filtered_logs: Vec<Log> =
         receipts.iter().flat_map(|receipt| receipt.logs.clone()).collect();
     PartialBlock {
@@ -138,56 +135,55 @@ fn convert_block_to_partial_block(block: &Block, receipts: &[Receipt]) -> Partia
 }
 
 fn generate_mblock(
-    seq_blocks: Vec<Block>,
-    set_blocks: Vec<Block>,
-    seq_receipts: Vec<Vec<Receipt>>,
-    set_receipts: Vec<Vec<Receipt>>,
+    sequencing_chain_input: ChainVerificationInput,
+    settlement_chain_input: ChainVerificationInput,
     settlement_delay: u64,
 ) -> Result<MBlock> {
-    let (first_seq_block, last_seq_block) = match (seq_blocks.first(), seq_blocks.last()) {
-        (Some(first), Some(last)) => (first, last),
-        _ => return Err(eyre!("No sequence blocks provided")),
-    };
+    let (first_seq_block, last_seq_block) =
+        match (sequencing_chain_input.blocks.first(), sequencing_chain_input.blocks.last()) {
+            (Some(first), Some(last)) => (first, last),
+            _ => return Err(eyre!("No sequence blocks provided")),
+        };
 
-    let (first_set_block, last_set_block) = match (set_blocks.first(), set_blocks.last()) {
-        (Some(first), Some(last)) => (first, last),
-        _ => return Err(eyre!("No settlement blocks provided")),
-    };
+    let (first_set_block, last_set_block) =
+        match (settlement_chain_input.blocks.first(), settlement_chain_input.blocks.last()) {
+            (Some(first), Some(last)) => (first, last),
+            _ => return Err(eyre!("No settlement blocks provided")),
+        };
 
-    let last_seq_receipts = match seq_receipts.last() {
+    let last_seq_receipts = match sequencing_chain_input.receipts.last() {
         Some(receipts) => receipts,
         None => return Err(eyre!("No sequence receipts provided")),
     };
 
+    // TODO - Use config values to initialize the  adapter
     let arbitrum_adapter = ArbitrumAdapter::default();
 
     let mut mblock = MBlock { timestamp: last_seq_block.header.timestamp, ..Default::default() };
     let mut payload: (Bytes, Vec<DelayedMessage>) = (Bytes::new(), Vec::new());
 
-    println!(
-        "Last set block: {} , Last last seq: {} || First set + delay: {} , first seq: {}",
-        last_set_block.header.timestamp + settlement_delay,
-        last_seq_block.header.timestamp,
-        first_set_block.header.timestamp + settlement_delay,
-        first_seq_block.header.timestamp
-    );
-
     // We want to make sure we have settlement blocks that are before and after the slot window
-    // (sequencing start - sequencing end) to make sure we have a full slot
+    // (sequencing start - sequencing end) to make sure we have a full slot and are not missing any
+    // blocks
     if !(first_set_block.header.timestamp + settlement_delay <= first_seq_block.header.timestamp &&
         last_set_block.header.timestamp + settlement_delay > last_seq_block.header.timestamp)
     {
         return Err(eyre!("Missing settlement blocks"));
     }
     let mut i = 1;
-    while set_blocks[i].header.timestamp + settlement_delay <= first_seq_block.header.timestamp {
+    while settlement_chain_input.blocks[i].header.timestamp + settlement_delay <=
+        first_seq_block.header.timestamp
+    {
         // Skip settlement blocks that are before the first sequencing block
         i += 1
     }
 
-    while set_blocks[i].header.timestamp + settlement_delay <= mblock.timestamp {
+    while settlement_chain_input.blocks[i].header.timestamp + settlement_delay <= mblock.timestamp {
         // Include settlement blocks that belong to current slot
-        let partial_block = convert_block_to_partial_block(&set_blocks[i], &set_receipts[i]);
+        let partial_block = convert_block_to_partial_block(
+            &settlement_chain_input.blocks[i],
+            &settlement_chain_input.receipts[i],
+        );
         let mut delayed_messages = arbitrum_adapter.process_delayed_messages(&partial_block)?;
         payload.1.append(&mut delayed_messages);
         i += 1;
@@ -203,8 +199,8 @@ fn generate_mblock(
     let slot = Slot {
         seq_block_number: last_seq_block.header.number,
         seq_block_hash: last_seq_block.header.hash,
-        set_block_hash: set_blocks[i].header.hash,
-        set_block_number: set_blocks[i].header.number,
+        set_block_hash: settlement_chain_input.blocks[i].header.hash,
+        set_block_number: settlement_chain_input.blocks[i].header.number,
     };
 
     mblock.slot = slot;
