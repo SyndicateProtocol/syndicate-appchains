@@ -7,207 +7,211 @@ use alloy::{
         proofs::calculate_receipt_root, Eip658Value, Header, Receipt as AlloyReceipt,
         ReceiptWithBloom,
     },
-    primitives::{Bytes, FixedBytes, Log},
+    primitives::{Bytes, FixedBytes},
     rpc::types::Block,
 };
 use block_builder::rollups::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use eyre::{eyre, Result};
 use mchain::db::{DelayedMessage, MBlock, Slot};
-use shared::types::{BlockRef, PartialBlock, Receipt};
+use shared::types::convert_block_to_partial_block;
 
-/// Verifies a batch of blocks and creates a new mchain block.
-pub fn verify_and_create_batch(
-    sequencing_chain_input: ChainVerificationInput,
-    settlement_chain_input: ChainVerificationInput,
-    sequencing_expected_hash: FixedBytes<32>,
-    settlement_expected_hash: FixedBytes<32>,
-    settlement_delay: u64,
-) -> Result<MBlock> {
-    // Validate blocks
-    validate_blocks(&sequencing_chain_input.blocks, sequencing_expected_hash)?;
-    validate_blocks(&settlement_chain_input.blocks, settlement_expected_hash)?;
-
-    // Validate receipts
-    validate_receipts(&sequencing_chain_input)?;
-    validate_receipts(&settlement_chain_input)?;
-
-    // Generate mchain block
-    generate_mblock(sequencing_chain_input, settlement_chain_input, settlement_delay)
+/// The `Verifier` struct is responsible for verifying a batch of blocks and creating a new mchain
+/// block.
+#[derive(Default, Debug, Clone)]
+pub struct Verifier {
+    /// The adapter for the sequencing chain
+    arbitrum_adapter: ArbitrumAdapter,
 }
 
-// --------------------------------------------
-// Validation Functions
-// --------------------------------------------
-
-fn validate_receipts(input: &ChainVerificationInput) -> Result<()> {
-    for (i, block_receipts) in input.receipts.iter().enumerate() {
-        let alloy_receipts: Vec<ReceiptWithBloom<TypedReceipt>> = block_receipts
-            .iter()
-            .map(|r| {
-                let typed = TypedReceipt {
-                    ty: r.r#type,
-                    receipt: AlloyReceipt {
-                        status: Eip658Value::Eip658(r.status == 1),
-                        cumulative_gas_used: r.cumulative_gas_used,
-                        logs: r.logs.clone(),
-                    },
-                };
-
-                ReceiptWithBloom { receipt: typed, logs_bloom: r.logs_bloom }
-            })
-            .collect();
-
-        let receipts_root = calculate_receipt_root(&alloy_receipts);
-
-        if receipts_root != input.blocks[i].header.receipts_root {
-            return Err(eyre!(
-                "Receipts root mismatch: expected {}, got {}",
-                input.blocks[i].header.receipts_root,
-                receipts_root
-            ));
-        }
+impl Verifier {
+    /// Create a new `Verifier`
+    pub fn new() -> Self {
+        // TODO - Use config values to initialize the adapter
+        Self { arbitrum_adapter: ArbitrumAdapter::default() }
     }
 
-    Ok(())
-}
+    /// Verifies blocks and receipts and creates a new mchain block
+    pub fn verify_and_create_batch(
+        &self,
+        sequencing_chain_input: ChainVerificationInput,
+        settlement_chain_input: ChainVerificationInput,
+        sequencing_expected_hash: FixedBytes<32>,
+        settlement_expected_hash: FixedBytes<32>,
+        settlement_delay: u64,
+    ) -> Result<MBlock> {
+        // Validate blocks
+        self.validate_blocks(&sequencing_chain_input.blocks, sequencing_expected_hash)?;
+        self.validate_blocks(&settlement_chain_input.blocks, settlement_expected_hash)?;
 
-fn validate_blocks(blocks: &[Block], expected_hash: FixedBytes<32>) -> Result<()> {
-    let Some(last_block) = blocks.last() else {
-        return Err(eyre!("No blocks provided"));
-    };
+        // Validate receipts
+        self.validate_receipts(&sequencing_chain_input)?;
+        self.validate_receipts(&settlement_chain_input)?;
 
-    if last_block.header.hash != expected_hash {
-        return Err(eyre!(
-            "Final block hash mismatch: expected {}, got {}",
-            expected_hash,
-            last_block.header.hash
-        ));
+        // Generate mchain block
+        self.generate_mblock(sequencing_chain_input, settlement_chain_input, settlement_delay)
     }
 
-    for (i, block) in blocks.iter().enumerate() {
-        if i > 0 {
-            let prev_hash = blocks[i - 1].header.hash;
-            if block.header.parent_hash != prev_hash {
+    // --------------------------------------------
+    // Validation Functions
+    // --------------------------------------------
+    fn validate_receipts(&self, input: &ChainVerificationInput) -> Result<()> {
+        for (i, block_receipts) in input.receipts.iter().enumerate() {
+            let alloy_receipts: Vec<ReceiptWithBloom<TypedReceipt>> = block_receipts
+                .iter()
+                .map(|r| {
+                    let typed = TypedReceipt {
+                        ty: r.r#type,
+                        receipt: AlloyReceipt {
+                            status: Eip658Value::Eip658(r.status == 1),
+                            cumulative_gas_used: r.cumulative_gas_used,
+                            logs: r.logs.clone(),
+                        },
+                    };
+
+                    ReceiptWithBloom { receipt: typed, logs_bloom: r.logs_bloom }
+                })
+                .collect();
+
+            let receipts_root = calculate_receipt_root(&alloy_receipts);
+
+            if receipts_root != input.blocks[i].header.receipts_root {
                 return Err(eyre!(
-                    "Invalid parent hash at block {}: expected {}, got {}",
-                    block.header.number,
-                    prev_hash,
-                    block.header.parent_hash
+                    "Receipts root mismatch: expected {}, got {}",
+                    input.blocks[i].header.receipts_root,
+                    receipts_root
                 ));
             }
         }
-        validate_block_hash(block)?;
+
+        Ok(())
     }
-    Ok(())
-}
 
-fn validate_block_hash(block: &Block) -> Result<()> {
-    let header: Header = block.header.clone().into();
-    let computed_hash = header.hash_slow();
-
-    if computed_hash != block.header.hash {
-        return Err(eyre!(
-            "Block {} has invalid hash. Expected {}, got {}",
-            header.number,
-            computed_hash,
-            block.header.hash
-        ));
-    }
-    Ok(())
-}
-
-// --------------------------------------------
-// MBlock Generation
-// --------------------------------------------
-
-fn convert_block_to_partial_block(block: &Block, receipts: &[Receipt]) -> PartialBlock {
-    let filtered_logs: Vec<Log> =
-        receipts.iter().flat_map(|receipt| receipt.logs.clone()).collect();
-    PartialBlock {
-        block_ref: BlockRef {
-            number: block.header.number,
-            hash: block.header.hash,
-            timestamp: block.header.timestamp,
-        },
-        parent_hash: block.header.parent_hash,
-        logs: filtered_logs,
-    }
-}
-
-fn generate_mblock(
-    sequencing_chain_input: ChainVerificationInput,
-    settlement_chain_input: ChainVerificationInput,
-    settlement_delay: u64,
-) -> Result<MBlock> {
-    let (first_seq_block, last_seq_block) =
-        match (sequencing_chain_input.blocks.first(), sequencing_chain_input.blocks.last()) {
-            (Some(first), Some(last)) => (first, last),
-            _ => return Err(eyre!("No sequence blocks provided")),
+    fn validate_blocks(&self, blocks: &[Block], expected_hash: FixedBytes<32>) -> Result<()> {
+        let Some(last_block) = blocks.last() else {
+            return Err(eyre!("No blocks provided"));
         };
 
-    let (first_set_block, last_set_block) =
-        match (settlement_chain_input.blocks.first(), settlement_chain_input.blocks.last()) {
-            (Some(first), Some(last)) => (first, last),
-            _ => return Err(eyre!("No settlement blocks provided")),
+        if last_block.header.hash != expected_hash {
+            return Err(eyre!(
+                "Final block hash mismatch: expected {}, got {}",
+                expected_hash,
+                last_block.header.hash
+            ));
+        }
+
+        for (i, block) in blocks.iter().enumerate() {
+            if i > 0 {
+                let prev_hash = blocks[i - 1].header.hash;
+                if block.header.parent_hash != prev_hash {
+                    return Err(eyre!(
+                        "Invalid parent hash at block {}: expected {}, got {}",
+                        block.header.number,
+                        prev_hash,
+                        block.header.parent_hash
+                    ));
+                }
+            }
+            self.validate_block_hash(block)?;
+        }
+        Ok(())
+    }
+
+    fn validate_block_hash(&self, block: &Block) -> Result<()> {
+        let header: Header = block.header.clone().into();
+        let computed_hash = header.hash_slow();
+
+        if computed_hash != block.header.hash {
+            return Err(eyre!(
+                "Block {} has invalid hash. Expected {}, got {}",
+                header.number,
+                computed_hash,
+                block.header.hash
+            ));
+        }
+        Ok(())
+    }
+
+    // --------------------------------------------
+    // MBlock Generation
+    // --------------------------------------------
+
+    fn generate_mblock(
+        &self,
+        sequencing_chain_input: ChainVerificationInput,
+        settlement_chain_input: ChainVerificationInput,
+        settlement_delay: u64,
+    ) -> Result<MBlock> {
+        let (first_seq_block, last_seq_block) =
+            match (sequencing_chain_input.blocks.first(), sequencing_chain_input.blocks.last()) {
+                (Some(first), Some(last)) => (first, last),
+                _ => return Err(eyre!("No sequence blocks provided")),
+            };
+
+        let (first_set_block, last_set_block) =
+            match (settlement_chain_input.blocks.first(), settlement_chain_input.blocks.last()) {
+                (Some(first), Some(last)) => (first, last),
+                _ => return Err(eyre!("No settlement blocks provided")),
+            };
+
+        let last_seq_receipts = match sequencing_chain_input.receipts.last() {
+            Some(receipts) => receipts,
+            None => return Err(eyre!("No sequence receipts provided")),
         };
 
-    let last_seq_receipts = match sequencing_chain_input.receipts.last() {
-        Some(receipts) => receipts,
-        None => return Err(eyre!("No sequence receipts provided")),
-    };
+        let mut mblock =
+            MBlock { timestamp: last_seq_block.header.timestamp, ..Default::default() };
+        let mut payload: (Bytes, Vec<DelayedMessage>) = (Bytes::new(), Vec::new());
 
-    // TODO - Use config values to initialize the  adapter
-    let arbitrum_adapter = ArbitrumAdapter::default();
+        // We want to make sure we have settlement blocks that are before and after the slot window
+        // (sequencing start - sequencing end) to make sure we have a full slot and are not missing
+        // any blocks
+        if !(first_set_block.header.timestamp + settlement_delay <=
+            first_seq_block.header.timestamp &&
+            last_set_block.header.timestamp + settlement_delay > last_seq_block.header.timestamp)
+        {
+            return Err(eyre!("Missing settlement blocks"));
+        }
+        let mut i = 1;
+        while settlement_chain_input.blocks[i].header.timestamp + settlement_delay <=
+            first_seq_block.header.timestamp
+        {
+            // Skip settlement blocks that are before the first sequencing block
+            i += 1
+        }
 
-    let mut mblock = MBlock { timestamp: last_seq_block.header.timestamp, ..Default::default() };
-    let mut payload: (Bytes, Vec<DelayedMessage>) = (Bytes::new(), Vec::new());
+        while settlement_chain_input.blocks[i].header.timestamp + settlement_delay <=
+            mblock.timestamp
+        {
+            // Include settlement blocks that belong to current slot
+            let partial_block = convert_block_to_partial_block(
+                &settlement_chain_input.blocks[i],
+                &settlement_chain_input.receipts[i],
+            );
+            let mut delayed_messages =
+                self.arbitrum_adapter.process_delayed_messages(&partial_block)?;
+            payload.1.append(&mut delayed_messages);
+            i += 1;
+        }
 
-    // We want to make sure we have settlement blocks that are before and after the slot window
-    // (sequencing start - sequencing end) to make sure we have a full slot and are not missing any
-    // blocks
-    if !(first_set_block.header.timestamp + settlement_delay <= first_seq_block.header.timestamp &&
-        last_set_block.header.timestamp + settlement_delay > last_seq_block.header.timestamp)
-    {
-        return Err(eyre!("Missing settlement blocks"));
+        let seq_partial_block = convert_block_to_partial_block(last_seq_block, last_seq_receipts);
+        let (tx_count, batch) = self.arbitrum_adapter.build_batch(&seq_partial_block)?;
+        if tx_count > 0 || !payload.1.is_empty() {
+            payload.0 = batch;
+            mblock.payload = Some(payload);
+        }
+
+        let slot = Slot {
+            seq_block_number: last_seq_block.header.number,
+            seq_block_hash: last_seq_block.header.hash,
+            set_block_hash: settlement_chain_input.blocks[i].header.hash,
+            set_block_number: settlement_chain_input.blocks[i].header.number,
+        };
+
+        mblock.slot = slot;
+
+        Ok(mblock)
     }
-    let mut i = 1;
-    while settlement_chain_input.blocks[i].header.timestamp + settlement_delay <=
-        first_seq_block.header.timestamp
-    {
-        // Skip settlement blocks that are before the first sequencing block
-        i += 1
-    }
-
-    while settlement_chain_input.blocks[i].header.timestamp + settlement_delay <= mblock.timestamp {
-        // Include settlement blocks that belong to current slot
-        let partial_block = convert_block_to_partial_block(
-            &settlement_chain_input.blocks[i],
-            &settlement_chain_input.receipts[i],
-        );
-        let mut delayed_messages = arbitrum_adapter.process_delayed_messages(&partial_block)?;
-        payload.1.append(&mut delayed_messages);
-        i += 1;
-    }
-
-    let seq_partial_block = convert_block_to_partial_block(last_seq_block, last_seq_receipts);
-    let (tx_count, batch) = arbitrum_adapter.build_batch(&seq_partial_block)?;
-    if tx_count > 0 || !payload.1.is_empty() {
-        payload.0 = batch;
-        mblock.payload = Some(payload);
-    }
-
-    let slot = Slot {
-        seq_block_number: last_seq_block.header.number,
-        seq_block_hash: last_seq_block.header.hash,
-        set_block_hash: settlement_chain_input.blocks[i].header.hash,
-        set_block_number: settlement_chain_input.blocks[i].header.number,
-    };
-
-    mblock.slot = slot;
-
-    Ok(mblock)
 }
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -215,6 +219,7 @@ mod tests {
         primitives::{address, b256, Bloom, U256},
         rpc::types::{Block, BlockTransactions},
     };
+    use shared::types::Receipt;
 
     fn mock_op_input() -> ChainVerificationInput {
         ChainVerificationInput {
@@ -636,25 +641,28 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_receipts_arbitrum() {
+        let verifier = Verifier::new();
         let input = mock_arbitrum_input();
-        validate_receipts(&input).unwrap();
+        verifier.validate_receipts(&input).unwrap();
     }
 
     #[tokio::test]
     async fn test_validate_receipts_optimism() {
+        let verifier = Verifier::new();
         let input = mock_op_input();
-        validate_receipts(&input).unwrap();
+        verifier.validate_receipts(&input).unwrap();
     }
 
     #[tokio::test]
     async fn test_validate_receipts_ethereum() {
+        let verifier = Verifier::new();
         let input = mock_ethereum_input();
-        println!("ETH input {:?}", input);
-        validate_receipts(&input).unwrap();
+        verifier.validate_receipts(&input).unwrap();
     }
 
     #[tokio::test]
     async fn test_verify_and_create_batch_success() {
+        let verifier = Verifier::new();
         let seq_input = mock_arbitrum_input();
 
         let set_input = mock_ethereum_input();
@@ -663,8 +671,9 @@ mod tests {
         let set_hash = set_input.blocks.last().unwrap().header.hash;
 
         // Settlement delay is 104,603,916 seconds so that it gets included in the slot
-        let mblock =
-            verify_and_create_batch(seq_input, set_input, seq_hash, set_hash, 104_602_917).unwrap();
+        let mblock = verifier
+            .verify_and_create_batch(seq_input, set_input, seq_hash, set_hash, 104_602_917)
+            .unwrap();
 
         assert!(mblock.slot.seq_block_hash != FixedBytes::default());
         assert!(mblock.slot.set_block_hash != FixedBytes::default());
@@ -683,7 +692,9 @@ mod tests {
         let set_hash = set_input.blocks.last().unwrap().header.hash;
 
         // Settlement delay is 104,603,916 seconds so that it gets the first sequencing block
-        let result = verify_and_create_batch(seq_input, set_input, seq_hash, set_hash, 104_602_917);
+        let verifier = Verifier::new();
+        let result =
+            verifier.verify_and_create_batch(seq_input, set_input, seq_hash, set_hash, 104_602_917);
 
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Missing settlement blocks"));
@@ -697,7 +708,8 @@ mod tests {
 
         // Provide incorrect hash
         let bad_hash = FixedBytes::repeat_byte(0xaa);
-        let result = verify_and_create_batch(
+        let verifier = Verifier::new();
+        let result = verifier.verify_and_create_batch(
             seq_input.clone(),
             set_input,
             bad_hash,
@@ -718,7 +730,8 @@ mod tests {
         let seq_hash = seq_input.blocks.last().unwrap().header.hash;
         let set_hash = set_input.blocks.last().unwrap().header.hash;
 
-        let result = verify_and_create_batch(seq_input, set_input, seq_hash, set_hash, 0);
+        let verifier = Verifier::new();
+        let result = verifier.verify_and_create_batch(seq_input, set_input, seq_hash, set_hash, 0);
 
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Missing settlement blocks"));

@@ -11,6 +11,7 @@ use alloy::{
         },
         Identity, RootProvider,
     },
+    rpc::types::Block,
 };
 use async_trait::async_trait;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
@@ -85,6 +86,21 @@ pub struct PartialBlock {
     pub block_ref: BlockRef,
     pub parent_hash: B256,
     pub logs: Vec<Log>,
+}
+
+/// Convert a block and its receipts to a `PartialBlock`
+pub fn convert_block_to_partial_block(block: &Block, receipts: &[Receipt]) -> PartialBlock {
+    let filtered_logs: Vec<Log> =
+        receipts.iter().flat_map(|receipt| receipt.logs.clone()).collect();
+    PartialBlock {
+        block_ref: BlockRef {
+            number: block.header.number,
+            hash: block.header.hash,
+            timestamp: block.header.timestamp,
+        },
+        parent_hash: block.header.parent_hash,
+        logs: filtered_logs,
+    }
 }
 
 impl GetBlockRef for PartialBlock {
