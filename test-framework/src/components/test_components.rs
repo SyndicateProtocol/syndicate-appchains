@@ -369,7 +369,7 @@ impl TestComponents {
             (
                 Some(
                     start_component(
-                        "metabased-poster",
+                        "synd-poster",
                         poster_config.metrics_port,
                         poster_config.cli_args(),
                         Default::default(),

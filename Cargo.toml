@@ -1,7 +1,6 @@
 [workspace]
 members = [
   "maestro",
-  "metabased-poster",
   "metabased-translator/bin/metabased-translator",
   "metabased-translator/crates/block-builder",
   "metabased-translator/crates/common",
@@ -16,6 +15,7 @@ members = [
   "synd-batch-sequencer/crates/tc-client",
   "synd-chain-ingestor",
   "synd-mchain",
+  "synd-poster",
   "test-framework",
 ]
 

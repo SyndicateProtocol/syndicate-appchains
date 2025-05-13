@@ -1,6 +1,6 @@
 [package]
 edition.workspace = true
-name              = "metabased-poster"
+name              = "synd-poster"
 version.workspace = true
 
 [dependencies]

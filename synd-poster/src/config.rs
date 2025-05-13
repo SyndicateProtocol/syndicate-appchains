@@ -1,4 +1,4 @@
-//! The `config` module handles configuration parsing for the metabased poster.
+//! The `config` module handles configuration parsing for the Syndicate poster.
 
 use alloy::primitives::Address;
 use clap::Parser;
@@ -6,7 +6,7 @@ use shared::parse::{parse_address, parse_url};
 use std::{fmt::Debug, time::Duration};
 use url::Url;
 
-/// Configuration for the metabased sequencer
+/// Configuration for the Syndicate Poster
 #[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None)]
 pub struct Config {

@@ -52,7 +52,7 @@ GitHub Codespaces are compatible with VS Code and JetBrains, but not Cursor. You
 Use the included Dockerfile at repo root to build a Docker image. You should then be able to run the image and pass in the same flags
 that you would pass to the Rust binary executable.
 
-Note that this a multi-target Dockerfile, so specify `metabased-translator`, `metabased-poster`, etc as the target.
+Note that this a multi-target Dockerfile, so specify `synd-translator`, `synd-poster`, etc as the target.
 
 ```
 docker build --target metabased-translator -f Dockerfile . --tag metabased-translator

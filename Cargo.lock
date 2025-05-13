@@ -3290,28 +3290,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
-name = "metabased-poster"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "axum",
- "clap",
- "contract-bindings",
- "ctor",
- "eyre",
- "humantime",
- "jsonrpsee",
- "prometheus-client",
- "reqwest",
- "serde",
- "shared",
- "test-utils",
- "tokio",
- "tracing",
- "url",
-]
-
-[[package]]
 name = "metabased-translator"
 version = "0.1.0"
 dependencies = [
@@ -4975,6 +4953,28 @@ dependencies = [
  "test-utils",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "synd-poster"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "axum",
+ "clap",
+ "contract-bindings",
+ "ctor",
+ "eyre",
+ "humantime",
+ "jsonrpsee",
+ "prometheus-client",
+ "reqwest",
+ "serde",
+ "shared",
+ "test-utils",
+ "tokio",
+ "tracing",
+ "url",
 ]
 
 [[package]]

@@ -1,4 +1,4 @@
-//! The `metabased-poster` is responsible for extracting the appchain root state and submitting
+//! The `synd-poster` is responsible for extracting the appchain root state and submitting
 //! assertions to the settlement chain.
 
 pub mod config;

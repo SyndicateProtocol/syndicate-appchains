@@ -48,11 +48,11 @@ ENTRYPOINT ["/usr/local/bin/metabased-translator"]
 EXPOSE 8545 8546
 LABEL service=metabased-translator
 
-FROM runtime-base AS metabased-poster
+FROM runtime-base AS synd-poster
 ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/metabased-poster /usr/local/bin/metabased-poster
-ENTRYPOINT ["/usr/local/bin/metabased-poster"]
-LABEL service=metabased-poster
+COPY --from=build /app/target/${BUILD_PROFILE}/synd-poster /usr/local/bin/synd-poster
+ENTRYPOINT ["/usr/local/bin/synd-poster"]
+LABEL service=synd-poster
 
 FROM runtime-base AS maestro
 ARG BUILD_PROFILE
