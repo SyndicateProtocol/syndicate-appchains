@@ -94,20 +94,20 @@ impl std::fmt::Display for L1MessageType {
 #[derive(Debug, Clone)]
 /// Builder for constructing Arbitrum blocks from transactions
 pub struct ArbitrumAdapter {
-    // Transaction parser for sequencing chain
-    transaction_parser: SequencingTransactionParser,
+    /// Transaction parser for sequencing chain
+    pub transaction_parser: SequencingTransactionParser,
 
-    // Settlement chain address
-    bridge_address: Address,
+    /// Settlement chain address
+    pub bridge_address: Address,
 
-    // Settlement chain address
-    inbox_address: Address,
+    /// Settlement chain address
+    pub inbox_address: Address,
 
-    // Flag used to ignore Delayed messages (except Deposits)
-    ignore_delayed_messages: bool,
+    /// Flag used to ignore Delayed messages (except Deposits)
+    pub ignore_delayed_messages: bool,
 
-    // Whitelisted sender addresses for delayed messages
-    allowed_settlement_addresses: HashSet<Address>,
+    /// Whitelisted sender addresses for delayed messages
+    pub allowed_settlement_addresses: HashSet<Address>,
 }
 
 impl Default for ArbitrumAdapter {

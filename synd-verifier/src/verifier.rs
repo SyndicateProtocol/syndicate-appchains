@@ -1,16 +1,22 @@
 //! The `synd-verifier` crate is responsible for verifying a batch of blocks and creating a new
 //! mchain block
 
-use crate::types::{ChainVerificationInput, TypedReceipt};
+use crate::{
+    config::VerifierConfig,
+    types::{ChainVerificationInput, TypedReceipt},
+};
 use alloy::{
     consensus::{
         proofs::calculate_receipt_root, Eip658Value, Header, Receipt as AlloyReceipt,
         ReceiptWithBloom,
     },
-    primitives::{Bytes, FixedBytes},
+    primitives::{map::HashSet, Bytes, FixedBytes},
     rpc::types::Block,
 };
-use block_builder::rollups::arbitrum::arbitrum_adapter::ArbitrumAdapter;
+use block_builder::rollups::{
+    arbitrum::arbitrum_adapter::ArbitrumAdapter,
+    shared::sequencing_transaction_parser::SequencingTransactionParser,
+};
 use eyre::{eyre, Result};
 use mchain::db::{DelayedMessage, MBlock, Slot};
 use shared::types::convert_block_to_partial_block;
@@ -25,9 +31,18 @@ pub struct Verifier {
 
 impl Verifier {
     /// Create a new `Verifier`
-    pub fn new() -> Self {
-        // TODO - Use config values to initialize the adapter
-        Self { arbitrum_adapter: ArbitrumAdapter::default() }
+    pub fn new(config: &VerifierConfig) -> Self {
+        Self {
+            arbitrum_adapter: ArbitrumAdapter {
+                transaction_parser: SequencingTransactionParser::new(
+                    config.sequencing_contract_address,
+                ),
+                bridge_address: config.arbitrum_bridge_address,
+                inbox_address: config.arbitrum_inbox_address,
+                ignore_delayed_messages: false,
+                allowed_settlement_addresses: HashSet::new(),
+            },
+        }
     }
 
     /// Verifies blocks and receipts and creates a new mchain block
@@ -641,28 +656,28 @@ mod tests {
 
     #[tokio::test]
     async fn test_validate_receipts_arbitrum() {
-        let verifier = Verifier::new();
+        let verifier = Verifier::new(&VerifierConfig::default());
         let input = mock_arbitrum_input();
         verifier.validate_receipts(&input).unwrap();
     }
 
     #[tokio::test]
     async fn test_validate_receipts_optimism() {
-        let verifier = Verifier::new();
+        let verifier = Verifier::new(&VerifierConfig::default());
         let input = mock_op_input();
         verifier.validate_receipts(&input).unwrap();
     }
 
     #[tokio::test]
     async fn test_validate_receipts_ethereum() {
-        let verifier = Verifier::new();
+        let verifier = Verifier::new(&VerifierConfig::default());
         let input = mock_ethereum_input();
         verifier.validate_receipts(&input).unwrap();
     }
 
     #[tokio::test]
     async fn test_verify_and_create_batch_success() {
-        let verifier = Verifier::new();
+        let verifier = Verifier::new(&VerifierConfig::default());
         let seq_input = mock_arbitrum_input();
 
         let set_input = mock_ethereum_input();
@@ -692,7 +707,7 @@ mod tests {
         let set_hash = set_input.blocks.last().unwrap().header.hash;
 
         // Settlement delay is 104,603,916 seconds so that it gets the first sequencing block
-        let verifier = Verifier::new();
+        let verifier = Verifier::new(&VerifierConfig::default());
         let result =
             verifier.verify_and_create_batch(seq_input, set_input, seq_hash, set_hash, 104_602_917);
 
@@ -708,7 +723,7 @@ mod tests {
 
         // Provide incorrect hash
         let bad_hash = FixedBytes::repeat_byte(0xaa);
-        let verifier = Verifier::new();
+        let verifier = Verifier::new(&VerifierConfig::default());
         let result = verifier.verify_and_create_batch(
             seq_input.clone(),
             set_input,
@@ -730,7 +745,7 @@ mod tests {
         let seq_hash = seq_input.blocks.last().unwrap().header.hash;
         let set_hash = set_input.blocks.last().unwrap().header.hash;
 
-        let verifier = Verifier::new();
+        let verifier = Verifier::new(&VerifierConfig::default());
         let result = verifier.verify_and_create_batch(seq_input, set_input, seq_hash, set_hash, 0);
 
         assert!(result.is_err());
