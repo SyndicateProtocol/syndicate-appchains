@@ -62,6 +62,7 @@ pub struct Receipt {
     #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
     pub status: u64,
     /// The transaction type, if available.
+    #[serde(deserialize_with = "deserialize_hex_to_u8", serialize_with = "serialize_hex_u8")]
     pub r#type: u8,
     /// Transaction index in block
     #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
@@ -144,6 +145,15 @@ where
         .map_err(|err| de::Error::custom(format!("Failed to parse hex to u64: {}", err)))
 }
 
+fn deserialize_hex_to_u8<'de, D>(deserializer: D) -> Result<u8, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let hex_str: String = Deserialize::deserialize(deserializer)?;
+    u8::from_str_radix(hex_str.trim_start_matches("0x"), 16)
+        .map_err(|err| de::Error::custom(format!("Failed to parse hex to u8: {}", err)))
+}
+
 fn deserialize_b256<'de, D>(deserializer: D) -> Result<B256, D::Error>
 where
     D: Deserializer<'de>,
@@ -188,6 +198,12 @@ where
     serializer.serialize_str(&format!("0x{:x}", num))
 }
 
+fn serialize_hex_u8<S>(num: &u8, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&format!("0x{:x}", num))
+}
 /// A filled provider
 pub type FilledProvider = FillProvider<
     JoinFill<
