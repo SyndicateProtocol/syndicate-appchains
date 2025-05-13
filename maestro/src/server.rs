@@ -14,14 +14,13 @@ use shared::{
     json_rpc::{
         parse_send_raw_transaction_params,
         InvalidInputError::ChainIdMismatched,
-        Rejection::NonceTooLow,
-        RpcError::{self, Internal, InvalidInput, TransactionRejected},
+        RpcError::{self, InvalidInput},
     },
     tx_validation::validate_transaction,
 };
 use std::{collections::HashMap, net::SocketAddr, sync::Arc};
 use tower::ServiceBuilder;
-use tracing::{info, warn};
+use tracing::info;
 
 /// Request header for `eth_sendRawTransaction` calls that holds the intended `chain_id`
 pub const HEADER_CHAIN_ID: &str = "x-synd-chain-id";
@@ -56,6 +55,8 @@ pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
         Ok::<JsonValue, ErrorCode>(serde_json::json!({"health": true}))
     })?;
 
+    // TODO (SEQ-908): Background job to unstick `waiting txn` cache
+
     info!("Registered RPC methods: {:#?}", module.method_names().collect::<Vec<_>>());
 
     let addr = server.local_addr()?;
@@ -64,8 +65,7 @@ pub async fn run(config: Config) -> eyre::Result<(SocketAddr, ServerHandle)> {
     Ok((addr, handle))
 }
 
-/// The handler for the `eth_sendRawTransaction` JSON-RPC method. This forwards transactions
-/// to Redis
+/// The handler for the `eth_sendRawTransaction` JSON-RPC method
 pub async fn send_raw_transaction_handler(
     params: Params<'static>,
     service: Arc<MaestroService>,
@@ -83,37 +83,8 @@ pub async fn send_raw_transaction_handler(
         "Submitting validated transaction",
     );
 
-    let internal_nonce = service.get_cached_or_rpc_nonce(signer, chain_id).await?;
+    service.handle_transaction_and_manage_nonces(raw_tx, signer, chain_id, tx_nonce).await?;
 
-    // Nonce checking logic
-    match tx_nonce.cmp(&internal_nonce) {
-        std::cmp::Ordering::Equal => {
-            // 1. enqueue the txn
-            service.enqueue_raw_transaction(raw_tx, chain_id, &tx_hash).await?;
-
-            // 2. update the cache with nonce + 1, and expiration
-            let _res = service.increment_wallet_nonce(chain_id, signer, internal_nonce).await;
-
-            // 3. TODO(SEQ-863): Check WAITING GAP hash for nonce +1 (separate thread)
-            // 4. return Hash (done below)
-        }
-        std::cmp::Ordering::Less => {
-            let rejection = NonceTooLow(internal_nonce, tx_nonce);
-            warn!(%tx_hash, %chain_id, "Failed to submit forwarded transaction: {}", rejection);
-            return Err(TransactionRejected(rejection).into())
-        }
-        std::cmp::Ordering::Greater => {
-            //TODO(SEQ-863) put it on WAITING GAP
-            // TEMP: error for now
-            let err_string = format!(
-                "transaction nonce too high - expected {} got {}",
-                internal_nonce, tx_nonce
-            );
-            warn!(%tx_hash, %chain_id, "Failed to submit forwarded transaction: {}", err_string);
-            return Err(Internal(err_string).into())
-            // Return hash (done below)
-        }
-    }
     info!(%tx_hash, %chain_id, "Submitted forwarded transaction");
     Ok(tx_hash)
 }
