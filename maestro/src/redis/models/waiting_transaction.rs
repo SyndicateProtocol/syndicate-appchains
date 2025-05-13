@@ -89,7 +89,7 @@ mod tests {
     use super::*;
     use crate::redis::{
         keys::waiting_txn::WAITING_GAP_KEY_PREFIX, models::waiting_transaction::WaitingGapTxnExt,
-        test_utils::get_redis_connection,
+        test_utils::init_redis_and_get_connection,
     };
     use alloy::primitives::Address;
     use ctor::ctor;
@@ -116,10 +116,27 @@ mod tests {
         );
     }
 
+    // Avoid having to spin up unique Redis containers this way
     #[tokio::test]
-    async fn test_set_get_waiting_txn() {
-        let mut conn = get_redis_connection().await;
+    async fn test_cache() -> Result<(), eyre::Error> {
+        let (conn, _, redis) = init_redis_and_get_connection().await;
 
+        test_set_get_waiting_txn(conn.clone()).await;
+        test_del_waiting_txn_key(conn.clone()).await;
+        test_multiple_waiting_txns_independence(conn.clone()).await;
+        test_same_signer_different_nonces(conn.clone()).await;
+        test_overwrite_existing_waiting_txn(conn.clone()).await;
+        test_different_chains_independence(conn.clone()).await;
+        test_delete_nonexistent_key(conn.clone()).await;
+        test_waiting_txn_expiration(conn.clone()).await;
+        test_del_multiple_waiting_txn_key(conn.clone()).await;
+
+        drop(redis);
+
+        Ok(())
+    }
+
+    async fn test_set_get_waiting_txn(mut conn: MultiplexedConnection) {
         let chain_id = 4u64;
         let signer = Address::from_slice(&[0x42; 20]);
         let nonce = 42u64;
@@ -138,10 +155,7 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn test_del_waiting_txn_key() {
-        let mut conn = get_redis_connection().await;
-
+    async fn test_del_waiting_txn_key(mut conn: MultiplexedConnection) {
         let chain_id = 5u64;
         let wallet_address = Address::from_slice(&[0x24; 20]);
         let nonce = 123u64;
@@ -171,10 +185,7 @@ mod tests {
         assert_eq!(get_after_del, None, "Transaction should be deleted");
     }
 
-    #[tokio::test]
-    async fn test_del_multiple_waiting_txn_key() {
-        let mut conn = get_redis_connection().await;
-
+    async fn test_del_multiple_waiting_txn_key(mut conn: MultiplexedConnection) {
         let chain_id = 5u64;
         let wallet_address = Address::from_slice(&[0x24; 20]);
         let nonce = 123u64;
@@ -211,10 +222,7 @@ mod tests {
         assert_eq!(get_after_del, None, "Transaction should be deleted");
     }
 
-    #[tokio::test]
-    async fn test_waiting_txn_expiration() {
-        let mut conn = get_redis_connection().await;
-
+    async fn test_waiting_txn_expiration(mut conn: MultiplexedConnection) {
         // For testing TTL, we'll use a much shorter TTL than the 15 minutes in production
         // This is done by temporarily modifying the constant via a test-only helper function
         // or if not possible, we can validate the key's TTL directly via Redis commands
@@ -249,10 +257,7 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn test_multiple_waiting_txns_independence() {
-        let mut conn = get_redis_connection().await;
-
+    async fn test_multiple_waiting_txns_independence(mut conn: MultiplexedConnection) {
         let chain_id = 7u64;
         let signer1 = Address::from_slice(&[0x5A; 20]);
         let signer2 = Address::from_slice(&[0x5B; 20]);
@@ -288,10 +293,7 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn test_same_signer_different_nonces() {
-        let mut conn = get_redis_connection().await;
-
+    async fn test_same_signer_different_nonces(mut conn: MultiplexedConnection) {
         let chain_id = 8u64;
         let signer = Address::from_slice(&[0x6C; 20]);
         let nonce1 = 100u64;
@@ -311,10 +313,7 @@ mod tests {
         assert_eq!(get2, Some(hex::encode(raw_txn2.clone())), "Transaction for nonce2 incorrect");
     }
 
-    #[tokio::test]
-    async fn test_overwrite_existing_waiting_txn() {
-        let mut conn = get_redis_connection().await;
-
+    async fn test_overwrite_existing_waiting_txn(mut conn: MultiplexedConnection) {
         let chain_id = 9u64;
         let signer = Address::from_slice(&[0x7D; 20]);
         let nonce = 42u64;
@@ -344,10 +343,7 @@ mod tests {
         );
     }
 
-    #[tokio::test]
-    async fn test_different_chains_independence() {
-        let mut conn = get_redis_connection().await;
-
+    async fn test_different_chains_independence(mut conn: MultiplexedConnection) {
         let chain_id1 = 10u64;
         let chain_id2 = 11u64;
         let signer = Address::from_slice(&[0x8E; 20]);
@@ -367,10 +363,7 @@ mod tests {
         assert_eq!(get2, Some(hex::encode(raw_txn2.clone())), "Transaction on chain 2 incorrect");
     }
 
-    #[tokio::test]
-    async fn test_delete_nonexistent_key() {
-        let mut conn = get_redis_connection().await;
-
+    async fn test_delete_nonexistent_key(mut conn: MultiplexedConnection) {
         let chain_id = 12u64;
         let wallet_address = Address::from_slice(&[0x9F; 20]);
         let nonce = 999u64;

@@ -55,13 +55,11 @@ impl WalletNonceExt for MultiplexedConnection {
 mod tests {
     use super::*;
     use crate::redis::{
-        keys::wallet_nonce::WALLET_NONCE_KEY_PREFIX,
-        models::wallet_nonce::WalletNonceExt,
-        test_utils::{get_redis_connection, initialize_redis},
+        keys::wallet_nonce::WALLET_NONCE_KEY_PREFIX, models::wallet_nonce::WalletNonceExt,
+        test_utils::init_redis_and_get_connection,
     };
     use alloy::primitives::Address;
     use ctor::ctor;
-    use test_utils::docker::start_redis;
     use tokio::time::{sleep, Duration};
 
     #[ctor]
@@ -85,10 +83,27 @@ mod tests {
         );
     }
 
+    // Avoid having to spin up unique Redis containers this way
     #[tokio::test]
-    async fn test_set_get_wallet_nonce() {
-        let mut conn = get_redis_connection().await;
+    async fn test_cache() -> Result<(), eyre::Error> {
+        let (conn, redis_url, redis) = init_redis_and_get_connection().await;
+        println!("redis url is {}", redis_url);
 
+        test_set_get_wallet_nonce(conn.clone()).await;
+        test_nonce_expiration(conn.clone()).await;
+        test_update_existing_nonce(conn.clone()).await;
+        test_non_existent_nonce(conn.clone()).await;
+        test_multiple_wallets_independence(conn.clone()).await;
+        test_multiple_chains_independence(conn.clone()).await;
+        test_high_load_scenario(conn.clone()).await;
+        test_parallel_operations(redis_url.clone()).await;
+
+        drop(redis);
+
+        Ok(())
+    }
+
+    async fn test_set_get_wallet_nonce(mut conn: MultiplexedConnection) {
         let chain_id = 4u64;
         let wallet_address = Address::from_slice(&[0x42; 20]);
         let nonce = 42u64;
@@ -103,14 +118,7 @@ mod tests {
         assert_eq!(get_result, Some(nonce.to_string()), "Retrieved nonce doesn't match set nonce");
     }
 
-    #[tokio::test]
-    async fn test_nonce_expiration() {
-        // Setup Redis connection
-        let (redis, redis_url) = start_redis().await.unwrap();
-
-        let client = redis::Client::open(redis_url.as_str()).unwrap();
-        let mut conn = client.get_multiplexed_async_connection().await.unwrap();
-
+    async fn test_nonce_expiration(mut conn: MultiplexedConnection) {
         let chain_id = 5u64;
         let wallet_address = Address::from_slice(&[0x24; 20]);
         let nonce = 123u64;
@@ -133,15 +141,9 @@ mod tests {
         // Verify it has expired
         let expired_result = conn.get_wallet_nonce(chain_id, wallet_address).await.unwrap();
         assert_eq!(expired_result, None, "Nonce should have expired after TTL");
-
-        // Keep Redis in scope or else connection is dropped
-        drop(redis)
     }
 
-    #[tokio::test]
-    async fn test_update_existing_nonce() {
-        let mut conn = get_redis_connection().await;
-
+    async fn test_update_existing_nonce(mut conn: MultiplexedConnection) {
         let chain_id = 6u64;
         let wallet_address = Address::from_slice(&[0x36; 20]);
         let initial_nonce = 10u64;
@@ -169,10 +171,7 @@ mod tests {
         assert_eq!(updated_get, Some(updated_nonce.to_string()), "Nonce not updated correctly");
     }
 
-    #[tokio::test]
-    async fn test_non_existent_nonce() {
-        let mut conn = get_redis_connection().await;
-
+    async fn test_non_existent_nonce(mut conn: MultiplexedConnection) {
         let chain_id = 7u64;
         let wallet_address = Address::from_slice(&[0x48; 20]);
 
@@ -181,10 +180,7 @@ mod tests {
         assert_eq!(get_result, None, "Non-existent nonce should return None");
     }
 
-    #[tokio::test]
-    async fn test_multiple_wallets_independence() {
-        let mut conn = get_redis_connection().await;
-
+    async fn test_multiple_wallets_independence(mut conn: MultiplexedConnection) {
         let chain_id = 8u64;
         let wallet_address1 = Address::from_slice(&[0x5A; 20]);
         let wallet_address2 = Address::from_slice(&[0x5B; 20]);
@@ -203,10 +199,7 @@ mod tests {
         assert_eq!(get2, Some(nonce2.to_string()), "Wallet 2 nonce incorrect");
     }
 
-    #[tokio::test]
-    async fn test_multiple_chains_independence() {
-        let mut conn = get_redis_connection().await;
-
+    async fn test_multiple_chains_independence(mut conn: MultiplexedConnection) {
         let chain_id1 = 9u64;
         let chain_id2 = 10u64;
         let wallet_address = Address::from_slice(&[0x6C; 20]);
@@ -225,14 +218,7 @@ mod tests {
         assert_eq!(get2, Some(nonce2.to_string()), "Chain 2 nonce incorrect");
     }
 
-    #[tokio::test]
-    async fn test_high_load_scenario() {
-        // Setup Redis connection
-        let (_redis, redis_url) = start_redis().await.unwrap();
-
-        let client = redis::Client::open(redis_url.as_str()).unwrap();
-        let mut conn = client.get_multiplexed_async_connection().await.unwrap();
-
+    async fn test_high_load_scenario(mut conn: MultiplexedConnection) {
         let chain_id = 11u64;
         let wallet_address = Address::from_slice(&[0x7D; 20]);
 
@@ -249,9 +235,7 @@ mod tests {
         }
     }
 
-    #[tokio::test]
-    async fn test_parallel_operations() {
-        let redis_url = initialize_redis().await;
+    async fn test_parallel_operations(redis_url: String) {
         // Create multiple connections for parallel operations
         let mut handles = vec![];
 
