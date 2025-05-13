@@ -9,7 +9,7 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy         = { workspace = true, features = ["full"] }
+alloy         = { workspace = true }
 block-builder = { workspace = true }
 eyre          = { workspace = true }
 mchain        = { workspace = true }
