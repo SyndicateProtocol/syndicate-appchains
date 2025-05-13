@@ -8,7 +8,7 @@ use alloy::{
     signers::local::PrivateKeySigner,
     transports::TransportError,
 };
-use contract_bindings::syndicate::walletpoolwrappermodule::WalletPoolWrapperModule::{
+use contract_bindings::synd::walletpoolwrappermodule::WalletPoolWrapperModule::{
     self, WalletPoolWrapperModuleInstance,
 };
 use derivative::Derivative;

@@ -54,7 +54,7 @@ arb_orbit_l2_private_key := "0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c2213888
 repository_root := justfile_directory()
 
 # Define root directory of the syndicate contracts project
-contracts_root := repository_root + "/syndicate-contracts"
+contracts_root := repository_root + "/synd-contracts"
 
 # Define root directory of the metabased sequencer project
 sequencer_root := repository_root + "/metabased-sequencer"

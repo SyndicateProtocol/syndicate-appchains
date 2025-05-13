@@ -1,8 +1,8 @@
 # Chain Config Contract Upgrade Path
 
 This document outlines the upgrade path for the ArbChainConfig contract, which is a critical component that stores configuration parameters for the 
-<!-- @NOTE: Do we want to use "Syndicate protocol" here? -->
-Syndicate protocol.
+
+Syndicate Stack
 
 ## Overview
 

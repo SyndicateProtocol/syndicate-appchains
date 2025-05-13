@@ -37,13 +37,13 @@ repos:
         args: ["--check"]
         language: system
         types: [solidity]
-      - id: forge-test-syndicate-contracts
+      - id: forge-test-synd-contracts
         name: forge test syndicate contracts
         entry: forge test
-        args: ["--root", "syndicate-contracts"]
+        args: ["--root", "synd-contracts"]
         language: system
         types: [solidity]
-        files: ^(syndicate-contracts)/
+        files: ^(synd-contracts)/
         pass_filenames: false
       - id: forge-test-shared-contracts
         name: forge test syndicate translator contracts

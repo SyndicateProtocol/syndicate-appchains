@@ -5,7 +5,7 @@ use alloy::{
     rpc::client::ClientBuilder,
 };
 use chain_ingestor::client::{IngestorProvider, Provider as _};
-use contract_bindings::syndicate::{arbchainconfig, arbconfigmanager::ArbConfigManager};
+use contract_bindings::synd::{arbchainconfig, arbconfigmanager::ArbConfigManager};
 use eyre::Result;
 use tracing::{error, info, warn};
 

@@ -20,7 +20,7 @@ use alloy::{
 };
 use contract_bindings::{
     arbitrum::rollup::Rollup,
-    syndicate::{
+    synd::{
         alwaysallowedmodule::AlwaysAllowedModule,
         syndicatesequencerchain::SyndicateSequencerChain::{self, SyndicateSequencerChainInstance},
         walletpoolwrappermodule::WalletPoolWrapperModule,

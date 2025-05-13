@@ -1,7 +1,7 @@
 #![allow(missing_docs)]
 
 use alloy::{primitives::Address, providers::WalletProvider};
-use contract_bindings::syndicate::arbconfigmanager::ArbConfigManager;
+use contract_bindings::synd::arbconfigmanager::ArbConfigManager;
 use eyre::Result;
 use shared::types::FilledProvider;
 use test_utils::anvil::mine_block;
