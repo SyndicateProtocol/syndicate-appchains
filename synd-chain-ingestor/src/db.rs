@@ -1,4 +1,4 @@
-//! The chain-ingestor db uses an append-only file to persist fixed-size items to disk.
+//! The synd-chain-ingestor db uses an append-only file to persist fixed-size items to disk.
 use crate::metrics::ChainIngestorMetrics;
 use alloy::{
     primitives::{Bytes, B256},

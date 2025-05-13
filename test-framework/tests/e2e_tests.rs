@@ -8,7 +8,6 @@ use alloy::{
     signers::local::PrivateKeySigner,
     sol,
 };
-use chain_ingestor::client::IngestorProvider;
 use contract_bindings::arbitrum::{
     arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox, irollupcore::IRollupCore,
     nodeinterface::NodeInterface, rollup::Rollup,
@@ -17,6 +16,7 @@ use eyre::Result;
 use mchain::client::Provider as _;
 use serde::{Deserialize, Serialize};
 use std::{str::FromStr as _, time::Duration};
+use synd_chain_ingestor::client::IngestorProvider;
 use test_framework::components::{
     configuration::{ConfigurationOptions, ContractVersion},
     test_components::TestComponents,

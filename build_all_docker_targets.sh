@@ -10,7 +10,7 @@ targets=(
     "synd-batch-sequencer:synd-batch-sequencer:latest"
     "mchain:mchain:latest"
     "metabased-translator-debug:metabased-translator:debug"
-    "chain-ingestor:chain-ingestor:latest"
+    "synd-chain-ingestor:synd-chain-ingestor:latest"
 )
 
 # Get build profile from argument or default to release

@@ -7,6 +7,7 @@ use alloy::{
 use chain_ingestor::client::{IngestorProvider, Provider as _};
 use contract_bindings::synd::{arbchainconfig, arbconfigmanager::ArbConfigManager};
 use eyre::Result;
+use synd_chain_ingestor::client::{IngestorProvider, Provider as _};
 use tracing::{error, info, warn};
 
 pub async fn with_onchain_config(config: &MetabasedConfig) -> MetabasedConfig {

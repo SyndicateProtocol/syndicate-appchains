@@ -10,21 +10,21 @@ name = "metabased-translator"
 path = "src/main.rs"
 
 [dependencies]
-alloy             = { workspace = true }
-block-builder     = { workspace = true }
-chain-ingestor    = { workspace = true }
-clap              = { workspace = true }
-common            = { workspace = true }
-contract-bindings = { workspace = true }
-eyre              = { workspace = true }
-humantime         = { workspace = true }
-mchain            = { workspace = true }
-metrics           = { workspace = true }
-shared            = { workspace = true }
-slotter           = { workspace = true }
-thiserror         = { workspace = true }
-tokio             = { workspace = true, features = ["signal"] }
-tracing           = { workspace = true }
+alloy               = { workspace = true }
+block-builder       = { workspace = true }
+clap                = { workspace = true }
+common              = { workspace = true }
+contract-bindings   = { workspace = true }
+eyre                = { workspace = true }
+humantime           = { workspace = true }
+mchain              = { workspace = true }
+metrics             = { workspace = true }
+shared              = { workspace = true }
+slotter             = { workspace = true }
+synd-chain-ingestor = { workspace = true }
+thiserror           = { workspace = true }
+tokio               = { workspace = true, features = ["signal"] }
+tracing             = { workspace = true }
 
 [dev-dependencies]
 async-trait = { workspace = true }

@@ -1,5 +1,5 @@
-//! The eth client is used by both the chain-ingestor server and client crates for interacting with
-//! the ethereum chain.
+//! The eth client is used by both the synd-chain-ingestor server and client crates for interacting
+//! with the ethereum chain.
 
 use alloy::{
     eips::BlockNumberOrTag,

@@ -1,4 +1,4 @@
-//! Client code is run in the syndicate translator instead of the chain-ingestor application
+//! Client code is run in the syndicate translator instead of the synd-chain-ingestor application
 
 use crate::{db::ITEM_SIZE, eth_client::EthClient, server::Message};
 use alloy::{

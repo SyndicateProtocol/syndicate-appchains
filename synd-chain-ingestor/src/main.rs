@@ -1,6 +1,5 @@
-//! The chain-ingestor serves blocks from a chain to all appchains that use the chain.
+//! The synd-chain-ingestor serves blocks from a chain to all appchains that use the chain.
 
-use chain_ingestor::{eth_client::EthClient, ingestor, metrics::ChainIngestorMetrics, server};
 use clap::{command, Parser};
 use humantime::parse_duration;
 use jsonrpsee::server::Server;
@@ -9,6 +8,7 @@ use shared::{
     service_start_utils::{start_metrics_and_health, MetricsState},
 };
 use std::time::Duration;
+use synd_chain_ingestor::{eth_client::EthClient, ingestor, metrics::ChainIngestorMetrics, server};
 use tokio::{
     signal::unix::{signal, SignalKind},
     time::sleep,
@@ -71,7 +71,7 @@ async fn main() {
     .await
     .unwrap();
 
-    info!("starting chain-ingestor server on {}", cfg.port);
+    info!("starting synd-chain-ingestor server on {}", cfg.port);
     let _handle = Server::builder()
         .ws_only()
         .build(format!("0.0.0.0:{}", cfg.port))

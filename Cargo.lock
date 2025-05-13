@@ -1485,27 +1485,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
-name = "chain-ingestor"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "clap",
- "ctor",
- "eyre",
- "fs2",
- "futures-util",
- "humantime",
- "jsonrpsee",
- "prometheus-client",
- "serde",
- "serde_json",
- "shared",
- "test-utils",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "chrono"
 version = "0.4.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3310,7 +3289,6 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "bincode",
- "chain-ingestor",
  "clap",
  "contract-bindings",
  "ctor",
@@ -3322,6 +3300,7 @@ dependencies = [
  "serde",
  "serde_json",
  "shared",
+ "synd-chain-ingestor",
  "test-utils",
  "tokio",
  "tracing",
@@ -3362,7 +3341,6 @@ dependencies = [
  "alloy",
  "async-trait",
  "block-builder",
- "chain-ingestor",
  "clap",
  "common",
  "contract-bindings",
@@ -3372,6 +3350,7 @@ dependencies = [
  "metrics",
  "shared",
  "slotter",
+ "synd-chain-ingestor",
  "temp-env",
  "thiserror 2.0.12",
  "tokio",
@@ -4814,13 +4793,13 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "async-trait",
- "chain-ingestor",
  "common",
  "ctor",
  "eyre",
  "mchain",
  "prometheus-client",
  "shared",
+ "synd-chain-ingestor",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
@@ -4978,6 +4957,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "synd-chain-ingestor"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "clap",
+ "ctor",
+ "eyre",
+ "fs2",
+ "futures-util",
+ "humantime",
+ "jsonrpsee",
+ "prometheus-client",
+ "serde",
+ "serde_json",
+ "shared",
+ "test-utils",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "synstructure"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5068,7 +5068,6 @@ name = "test-framework"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "chain-ingestor",
  "contract-bindings",
  "ctor",
  "eyre",
@@ -5079,6 +5078,7 @@ dependencies = [
  "serde",
  "serde_json",
  "shared",
+ "synd-chain-ingestor",
  "test-utils",
  "tokio",
  "tracing",

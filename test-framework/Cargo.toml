@@ -32,7 +32,7 @@ tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
 tracing = { workspace = true }
 
 [dev-dependencies]
-chain-ingestor = { workspace = true }
+synd-chain-ingestor = { workspace = true }
 
 [features]
 env-tests = []

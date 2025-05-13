@@ -1,6 +1,5 @@
 [workspace]
 members = [
-  "chain-ingestor",
   "maestro",
   "mchain",
   "metabased-poster",
@@ -16,6 +15,7 @@ members = [
   "synd-batch-sequencer",
   "synd-batch-sequencer/crates/batcher",
   "synd-batch-sequencer/crates/tc-client",
+  "synd-chain-ingestor",
   "test-framework",
 ]
 
@@ -45,7 +45,6 @@ block-builder        = { path = "metabased-translator/crates/block-builder" }
 brotli               = "7.0.0"
 byte-unit            = "5.1.6"
 bytes                = "1.9.0"
-chain-ingestor       = { path = "chain-ingestor" }
 clap                 = { version = "4.5.26" }
 common               = { path = "metabased-translator/crates/common" }
 contract-bindings    = { path = "shared/contract-bindings" }
@@ -81,6 +80,7 @@ shared               = { path = "shared" }
 slotter              = { path = "metabased-translator/crates/slotter" }
 strum                = "0.27.1"
 strum_macros         = "0.27.1"
+synd-chain-ingestor  = { path = "synd-chain-ingestor" }
 tc-client            = { path = "synd-batch-sequencer/crates/tc-client" }
 test-utils           = { path = "shared/test-utils" }
 thiserror            = { version = "2.0.11" }

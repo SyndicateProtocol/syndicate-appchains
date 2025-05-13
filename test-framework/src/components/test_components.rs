@@ -286,7 +286,7 @@ impl TestComponents {
             metrics_port: PortManager::instance().next_port().await,
         };
         let sequencing_chain_ingestor = start_component(
-            "chain-ingestor",
+            "synd-chain-ingestor",
             seq_chain_ingestor_cfg.metrics_port,
             seq_chain_ingestor_cfg.cli_args(),
             Default::default(),
@@ -302,7 +302,7 @@ impl TestComponents {
         };
 
         let settlement_chain_ingestor = start_component(
-            "chain-ingestor",
+            "synd-chain-ingestor",
             set_chain_ingestor_cfg.metrics_port,
             set_chain_ingestor_cfg.cli_args(),
             Default::default(),

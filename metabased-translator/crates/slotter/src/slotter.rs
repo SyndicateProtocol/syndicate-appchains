@@ -1,13 +1,13 @@
 //! Slotter module for metabased-translator
 use crate::metrics::SlotterMetrics;
 use alloy::primitives::{FixedBytes, B256};
-use chain_ingestor::client::BlockStreamT;
 use common::types::{Chain, SequencingBlock, SettlementBlock};
 use mchain::{
     client::{KnownState, Provider},
     db::{MBlock, Slot},
 };
 use shared::types::BlockRef;
+use synd_chain_ingestor::client::BlockStreamT;
 use thiserror::Error;
 use tracing::{error, info, trace};
 
@@ -210,11 +210,11 @@ mod tests {
     };
     use alloy::primitives::{FixedBytes, U256};
     use async_trait::async_trait;
-    use chain_ingestor::client::BlockStreamT;
     use common::types::{Chain, SettlementBlock};
     use mchain::client::{ClientError, DeserializeOwned, KnownState, Provider, ToRpcParams};
     use prometheus_client::registry::Registry;
     use shared::types::BlockRef;
+    use synd_chain_ingestor::client::BlockStreamT;
 
     #[ctor::ctor]
     fn init() {
