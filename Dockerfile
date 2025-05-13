@@ -48,13 +48,6 @@ ENTRYPOINT ["/usr/local/bin/metabased-translator"]
 EXPOSE 8545 8546
 LABEL service=metabased-translator
 
-FROM runtime-base AS metabased-sequencer
-ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/metabased-sequencer /usr/local/bin/metabased-sequencer
-ENTRYPOINT ["/usr/local/bin/metabased-sequencer"]
-EXPOSE 8545 8546
-LABEL service=metabased-sequencer
-
 FROM runtime-base AS metabased-poster
 ARG BUILD_PROFILE
 COPY --from=build /app/target/${BUILD_PROFILE}/metabased-poster /usr/local/bin/metabased-poster

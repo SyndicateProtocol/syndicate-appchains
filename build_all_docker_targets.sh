@@ -5,12 +5,12 @@ set -e # Exit immediately if a command exits with a non-zero status.
 # Format: "stage_name:image_tag"
 targets=(
     "metabased-translator:metabased-translator:latest"
-    "metabased-sequencer:metabased-sequencer:latest"
     "metabased-poster:metabased-poster:latest"
     "maestro:maestro:latest"
     "synd-batch-sequencer:synd-batch-sequencer:latest"
     "mchain:mchain:latest"
     "metabased-translator-debug:metabased-translator:debug"
+    "chain-ingestor:chain-ingestor:latest"
 )
 
 # Get build profile from argument or default to release

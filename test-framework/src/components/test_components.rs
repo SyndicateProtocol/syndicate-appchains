@@ -7,7 +7,6 @@ use crate::components::{
     configuration::{setup_config_manager, ConfigurationOptions, ContractVersion},
     maestro::MaestroConfig,
     poster::PosterConfig,
-    sequencer::SequencerConfig,
     timer::TestTimer,
     translator::TranslatorConfig,
 };
@@ -59,7 +58,6 @@ struct ComponentHandles {
     nitro_docker: Docker,
     translator: Docker,
     poster: Option<Docker>,
-    sequencer: Docker,
     sequencing_chain_ingestor: Docker,
     settlement_chain_ingestor: Docker,
 
@@ -120,7 +118,6 @@ impl TestComponents {
             e = handles.nitro_docker.wait() => panic!("nitro died: {:#?}", e),
             e = handles.translator.wait() => panic!("translator died: {:#?}", e),
             e = async {poster.unwrap().wait().await}, if poster.is_some() => panic!("poster died: {:#?}", e),
-            e = handles.sequencer.wait() => panic!("sequencer died: {:#?}", e),
             e = async {maestro.unwrap().wait().await}, if maestro.is_some() => panic!("maestro died: {:#?}", e),
             e = async {batch_sequencer.unwrap().wait().await}, if batch_sequencer.is_some() => panic!("synd-batch-sequencer died: {:#?}", e),
             e = async {redis.unwrap().wait().await}, if redis.is_some() => panic!("redis died: {:#?}", e),
@@ -266,22 +263,6 @@ impl TestComponents {
         )
         .await?;
 
-        info!("Starting sequencer...");
-        let sequencer_config = SequencerConfig {
-            sequencing_contract_address,
-            sequencing_rpc_url: sequencing_anvil_url.clone(),
-            sequencer_port: PortManager::instance().next_port().await,
-            metrics_port: PortManager::instance().next_port().await,
-        };
-        let sequencer = start_component(
-            "metabased-sequencer",
-            // `/health` is proxied to RPC method
-            sequencer_config.sequencer_port,
-            sequencer_config.cli_args(),
-            Default::default(),
-        )
-        .await?;
-
         // Setup config manager and get chain config address
         let config_manager_address = setup_config_manager(
             &set_provider,
@@ -364,7 +345,7 @@ impl TestComponents {
             options.appchain_chain_id,
             options.rollup_owner,
             &mchain_rpc_url,
-            Some(sequencer_config.sequencer_port),
+            None,
         )
         .await?;
         info!("Nitro URL: {}", nitro_url);
@@ -473,7 +454,6 @@ impl TestComponents {
                 nitro_docker,
                 translator,
                 poster,
-                sequencer,
                 batch_sequencer,
                 redis,
                 maestro,
@@ -483,19 +463,6 @@ impl TestComponents {
 
     pub async fn mine_seq_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.sequencing_provider, delay).await?;
-        Ok(())
-    }
-
-    pub async fn send_tx_and_mine_block(
-        &self,
-        tx: &EthereumTxEnvelope<TxEip4844Variant>,
-        delay: u64,
-    ) -> Result<()> {
-        self.sequencing_provider.anvil_set_block_timestamp_interval(delay).await?;
-        self.sequencing_provider.anvil_set_auto_mine(true).await?;
-        _ = self.appchain_provider.send_raw_transaction(&tx.encoded_2718()).await?;
-        self.sequencing_provider.anvil_set_auto_mine(false).await?;
-        self.sequencing_provider.anvil_remove_block_timestamp_interval().await?;
         Ok(())
     }
 

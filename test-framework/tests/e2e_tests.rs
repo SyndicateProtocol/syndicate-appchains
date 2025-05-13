@@ -83,7 +83,12 @@ async fn e2e_send_transaction() -> Result<()> {
             .with_max_priority_fee_per_gas(0)
             .build(components.sequencing_provider.wallet())
             .await?;
-        components.send_tx_and_mine_block(&tx, 0).await?;
+        _ = components
+            .sequencing_contract
+            .processTransaction(tx.encoded_2718().into())
+            .send()
+            .await?;
+        components.mine_seq_block(0).await?;
 
         // Wait for the tx to arrive
         wait_until!(
@@ -363,7 +368,12 @@ async fn e2e_fast_withdrawal_base(version: ContractVersion) -> Result<()> {
                 .into_transaction_request()
                 .build(withdrawal_wallet)
                 .await?;
-            components.send_tx_and_mine_block(&tx, 0).await?;
+            _ = components
+                .sequencing_contract
+                .processTransaction(tx.encoded_2718().into())
+                .send()
+                .await?;
+            components.mine_seq_block(0).await?;
 
             // Wait for the withdrawal transaction to be processed
             wait_until!(
