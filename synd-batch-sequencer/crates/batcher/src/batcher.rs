@@ -6,6 +6,7 @@ use alloy::{
     primitives::{Address, Bytes},
     providers::ProviderBuilder,
     signers::local::PrivateKeySigner,
+    transports::TransportError,
 };
 use contract_bindings::metabased::walletpoolwrappermodule::WalletPoolWrapperModule::{
     self, WalletPoolWrapperModuleInstance,
@@ -119,7 +120,7 @@ pub async fn run_batcher(
     })?;
     let redis_consumer = StreamConsumer::new(conn, config.chain_id, "0-0".to_string());
 
-    let wallet_pool = create_wallet_pool(config, wallet_pool_address);
+    let wallet_pool = create_wallet_pool(config, wallet_pool_address).await?;
     let chain_id = config.chain_id;
 
     let batch_sender: BatchSender = tc_client.map_or_else(
@@ -143,16 +144,17 @@ pub async fn run_batcher(
     Ok(handle)
 }
 
-fn create_wallet_pool(
+async fn create_wallet_pool(
     config: &BatcherConfig,
     wallet_pool_address: Address,
-) -> WalletPoolWrapperModuleInstance<(), FilledProvider> {
+) -> Result<WalletPoolWrapperModuleInstance<(), FilledProvider>, TransportError> {
     let signer = PrivateKeySigner::from_str(&config.private_key)
         .unwrap_or_else(|err| panic!("Failed to parse default private key for signer: {}", err));
     let sequencer_provider = ProviderBuilder::new()
         .wallet(EthereumWallet::from(signer))
-        .on_http(config.sequencing_rpc_url.clone());
-    WalletPoolWrapperModule::new(wallet_pool_address, sequencer_provider)
+        .connect(config.sequencing_rpc_url.as_str())
+        .await?;
+    Ok(WalletPoolWrapperModule::new(wallet_pool_address, sequencer_provider))
 }
 
 impl Batcher {

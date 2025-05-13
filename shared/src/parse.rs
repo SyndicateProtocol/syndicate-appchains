@@ -15,7 +15,7 @@ pub fn parse_url(value: &str) -> Result<Url, Error> {
                 return Err(Error::URL(URLErrorType::InvalidHost));
             }
             match url.scheme() {
-                "http" | "https" => Ok(url),
+                "http" | "https" | "ws" | "wss" => Ok(url),
                 _ => Err(Error::URL(URLErrorType::InvalidScheme(url.scheme().to_string()))),
             }
         },
@@ -64,7 +64,7 @@ pub enum URLErrorType {
     InvalidURL(String),
     #[error("No host")]
     InvalidHost,
-    #[error("Invalid scheme: {0}. Only http and https are supported")]
+    #[error("Invalid scheme: {0}. Only http, https, ws, wss are supported")]
     InvalidScheme(String),
 }
 

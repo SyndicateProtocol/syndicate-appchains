@@ -12,8 +12,6 @@ version.workspace      = true
 [dependencies]
 axum              = { workspace = true }
 clap              = { workspace = true }
-common            = { workspace = true }
-ingestor          = { workspace = true }
 prometheus-client = { workspace = true }
 reqwest           = { workspace = true }
 shared            = { workspace = true }

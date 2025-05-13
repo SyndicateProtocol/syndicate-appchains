@@ -1,14 +1,12 @@
 use crate::db::{MBlock, Slot};
-use alloy::{
-    eips::BlockNumberOrTag,
-    primitives::Address,
-    providers::RootProvider,
-    rpc::json_rpc::{RpcRecv, RpcSend},
-    transports::{RpcError, TransportErrorKind},
+use alloy::{eips::BlockNumberOrTag, primitives::Address};
+pub use jsonrpsee::core::{traits::ToRpcParams, ClientError};
+use jsonrpsee::{
+    core::{async_trait, client::ClientT as _},
+    ws_client::{WsClient, WsClientBuilder},
 };
-use jsonrpsee::core::async_trait;
-use shared::{eth_client::RPCClient, types::BlockRef};
-use std::sync::Arc;
+pub use serde::de::DeserializeOwned;
+use shared::types::BlockRef;
 use tracing::info;
 
 /// Known state of the mchain
@@ -23,33 +21,31 @@ pub struct KnownState {
 #[async_trait]
 #[allow(clippy::unwrap_used)]
 pub trait Provider: Send + Sync {
-    async fn raw_request<Params: RpcSend, T: RpcRecv + Clone>(
+    async fn request<Params: ToRpcParams + Send, T: DeserializeOwned + Clone>(
         &self,
         method: &'static str,
         params: Params,
-    ) -> Result<T, RpcError<TransportErrorKind>>;
+    ) -> Result<T, ClientError>;
 
     async fn get_block_number(&self) -> u64 {
-        let block: alloy::rpc::types::Block = self
-            .raw_request("eth_getBlockByNumber", (BlockNumberOrTag::Latest, false))
-            .await
-            .unwrap();
+        let block: alloy::rpc::types::Block =
+            self.request("eth_getBlockByNumber", (BlockNumberOrTag::Latest, false)).await.unwrap();
         block.header.number
     }
     async fn add_batch(&self, batch: &MBlock) -> eyre::Result<Option<u64>> {
-        Ok(self.raw_request("mchain_addBatch", batch).await?)
+        Ok(self.request("mchain_addBatch", [batch]).await?)
     }
     async fn get_source_chains_processed_blocks(
         &self,
         tag: BlockNumberOrTag,
     ) -> eyre::Result<(Slot, u64)> {
-        Ok(self.raw_request("mchain_getSourceChainsProcessedBlocks", tag).await?)
+        Ok(self.request("mchain_getSourceChainsProcessedBlocks", [tag]).await?)
     }
     async fn rollback_to_block(&self, block_number: u64) -> eyre::Result<()> {
-        Ok(self.raw_request("mchain_rollbackToBlock", block_number).await?)
+        Ok(self.request("mchain_rollbackToBlock", [block_number]).await?)
     }
     async fn rollup_owner(&self) -> Address {
-        self.raw_request("mchain_rollupOwner", ()).await.unwrap()
+        self.request("mchain_rollupOwner", [()]).await.unwrap()
     }
 
     /// Reconciles the [`MetaChain`] state with the source chains (sequencing and settlement)
@@ -72,8 +68,8 @@ pub trait Provider: Send + Sync {
     /// * `Err` - An error occurred during reconciliation
     async fn reconcile_mchain_with_source_chains(
         &self,
-        sequencing_client: &Arc<dyn RPCClient>,
-        settlement_client: &Arc<dyn RPCClient>,
+        sequencing_client: &impl chain_ingestor::client::Provider,
+        settlement_client: &impl chain_ingestor::client::Provider,
     ) -> eyre::Result<Option<KnownState>> {
         let (safe_state, mchain_block_number) =
             self.get_safe_state(sequencing_client, settlement_client).await;
@@ -94,8 +90,8 @@ pub trait Provider: Send + Sync {
     /// The safe mchain block number is returned if the chain requires a reorg.
     async fn get_safe_state(
         &self,
-        sequencing_client: &Arc<dyn RPCClient>,
-        settlement_client: &Arc<dyn RPCClient>,
+        sequencing_client: &impl chain_ingestor::client::Provider,
+        settlement_client: &impl chain_ingestor::client::Provider,
     ) -> (Option<KnownState>, Option<u64>) {
         info!("getting safe state");
         let mut current_block = BlockNumberOrTag::Pending;
@@ -141,36 +137,36 @@ pub trait Provider: Send + Sync {
 }
 
 async fn validate_block_add_timestamp(
-    client: &Arc<dyn RPCClient>,
+    client: &impl chain_ingestor::client::Provider,
     expected_block: &mut BlockRef,
 ) -> bool {
-    #[allow(clippy::expect_used)]
-    let block = client
-        .get_block_by_number(BlockNumberOrTag::Number(expected_block.number))
-        .await
-        .expect("could not find block");
+    #[allow(clippy::unwrap_used)]
+    let block = match client.get_block(expected_block.number).await.unwrap() {
+        Some(block) => block,
+        None => return false,
+    };
     assert_eq!(block.number, expected_block.number);
     expected_block.timestamp = block.timestamp;
     block.hash == expected_block.hash
 }
 
-#[derive(Debug, Clone)]
-pub struct MProvider(RootProvider);
+#[derive(Debug)]
+pub struct MProvider(WsClient);
 
 impl MProvider {
-    pub fn new(url: &str) -> Result<Self, url::ParseError> {
-        Ok(Self(RootProvider::new_http(url.parse()?)))
+    pub async fn new(url: &str) -> eyre::Result<Self> {
+        Ok(Self(WsClientBuilder::new().build(url).await?))
     }
 }
 
 #[async_trait]
 impl Provider for MProvider {
-    async fn raw_request<Params: RpcSend, T: RpcRecv>(
+    async fn request<Params: ToRpcParams + Send, T: DeserializeOwned>(
         &self,
         method: &'static str,
         params: Params,
-    ) -> Result<T, RpcError<TransportErrorKind>> {
-        alloy::providers::Provider::raw_request(&self.0, method.into(), params).await
+    ) -> Result<T, ClientError> {
+        self.0.request(method, params).await
     }
 }
 
@@ -187,15 +183,15 @@ mod tests {
         eips::BlockNumberOrTag,
         hex,
         primitives::{Address, Bytes, B256, U256},
-        rpc::json_rpc::{self, RpcRecv, RpcSend},
-        transports::{RpcError, TransportErrorKind},
     };
-    use jsonrpsee::{core::async_trait, RpcModule};
-    use shared::{
-        eth_client::{RPCClient, RPCClientError},
-        types::{Block, BlockRef, Receipt},
+    use futures_util::{task, Stream};
+    use jsonrpsee::{
+        core::{async_trait, traits::ToRpcParams, ClientError},
+        MethodsError, RpcModule,
     };
-    use std::{collections::HashMap, sync::Arc};
+    use serde::de::DeserializeOwned;
+    use shared::types::BlockRef;
+    use std::{collections::HashMap, marker::PhantomData, pin::Pin, sync::Arc, task::Poll};
 
     #[ctor::ctor]
     fn init() {
@@ -204,26 +200,16 @@ mod tests {
 
     #[async_trait]
     impl<X: Send + Sync> Provider for RpcModule<X> {
-        async fn raw_request<Params: RpcSend, T: RpcRecv + Clone>(
+        async fn request<Params: ToRpcParams + Send, T: DeserializeOwned + Clone>(
             &self,
             method: &'static str,
             params: Params,
-        ) -> Result<T, RpcError<TransportErrorKind>> {
-            let payload = json_rpc::Request::new(method, json_rpc::Id::None, params)
-                .serialize()
-                .map_err(RpcError::SerError)?
-                .take_request();
-            let (rp, _) = self
-                .raw_json_request(payload.get(), 1)
-                .await
-                .map_err(|e| RpcError::DeserError { err: e, text: payload.get().to_string() })?;
-            match serde_json::from_str::<json_rpc::Response<T>>(&rp)
-                .map_err(|e| RpcError::DeserError { err: e, text: rp })?
-                .payload
-            {
-                json_rpc::ResponsePayload::Success(x) => Ok(x),
-                json_rpc::ResponsePayload::Failure(x) => Err(RpcError::ErrorResp(x)),
-            }
+        ) -> Result<T, ClientError> {
+            self.call(method, params).await.map_err(|e| match e {
+                MethodsError::Parse(e) => ClientError::ParseError(e),
+                MethodsError::JsonRpc(e) => ClientError::Call(e),
+                MethodsError::InvalidSubscriptionId(_) => ClientError::InvalidSubscriptionId,
+            })
         }
     }
 
@@ -241,8 +227,7 @@ mod tests {
 
     async fn setup() -> eyre::Result<(impl Provider, Arc<TestDB>)> {
         let db = Arc::new(TestDB::new());
-        let mchain =
-            start_mchain(10, Address::ZERO, 60, db.clone(), MchainMetrics::default()).await;
+        let mchain = start_mchain(10, Address::ZERO, 60, db.clone(), MchainMetrics::default());
         Ok((mchain, db))
     }
 
@@ -254,7 +239,7 @@ mod tests {
     impl<T: Provider> TestProvider for T {
         async fn get_finalized_block(&self) -> u64 {
             let block: alloy::rpc::types::Block = self
-                .raw_request("eth_getBlockByNumber", (BlockNumberOrTag::Finalized, false))
+                .request("eth_getBlockByNumber", (BlockNumberOrTag::Finalized, false))
                 .await
                 .unwrap();
             block.header.number
@@ -264,25 +249,42 @@ mod tests {
     #[derive(Debug, Clone)]
     struct MockRPCClient(HashMap<u64, (B256, u64)>);
 
+    struct PanicStream<Notif> {
+        phantom: PhantomData<Notif>,
+    }
+
+    impl<Notif> Stream for PanicStream<Notif> {
+        type Item = Result<Notif, serde_json::Error>;
+        fn poll_next(self: Pin<&mut Self>, _: &mut task::Context<'_>) -> Poll<Option<Self::Item>> {
+            panic!("unimplemented");
+        }
+    }
+
     #[async_trait]
-    impl RPCClient for MockRPCClient {
-        async fn get_block_by_number(
+    impl chain_ingestor::client::Provider for MockRPCClient {
+        async fn request<Params: ToRpcParams + Send, T: DeserializeOwned + Clone>(
             &self,
-            tag: BlockNumberOrTag,
-        ) -> Result<Block, RPCClientError> {
-            let number = match tag {
-                BlockNumberOrTag::Number(x) => x,
-                e => panic!("invalid tag: {}", e),
-            };
-            let block = self.0.get(&number).unwrap();
-            Ok(Block { hash: block.0, timestamp: block.1, number, ..Default::default() })
+            _: &'static str,
+            _: Params,
+        ) -> Result<T, ClientError> {
+            panic!("unimplemented");
         }
 
-        async fn get_block_receipts(
+        async fn subscribe<
+            Params: ToRpcParams + Send,
+            Notif: DeserializeOwned + Send + Unpin + 'static,
+        >(
             &self,
-            _block_number_hex: &str,
-        ) -> Result<Vec<Receipt>, RPCClientError> {
-            panic!("Not implemented");
+            _: &'static str,
+            _: Params,
+            _: &'static str,
+        ) -> Result<PanicStream<Notif>, ClientError> {
+            panic!("unimplemented");
+        }
+
+        async fn get_block(&self, number: u64) -> Result<Option<BlockRef>, ClientError> {
+            let block = self.0.get(&number).unwrap();
+            Ok(Some(BlockRef { hash: block.0, timestamp: block.1, number }))
         }
     }
 
@@ -306,10 +308,10 @@ mod tests {
             .await?;
         let mut seq_blocks = HashMap::new();
         seq_blocks.insert(1, (U256::from(2).into(), 5));
-        let seq_client: Arc<dyn RPCClient> = Arc::new(MockRPCClient(seq_blocks));
+        let seq_client = MockRPCClient(seq_blocks);
         let mut set_blocks = HashMap::new();
         set_blocks.insert(3, (U256::from(4).into(), 6));
-        let set_client: Arc<dyn RPCClient> = Arc::new(MockRPCClient(set_blocks));
+        let set_client = MockRPCClient(set_blocks);
         let state = Some(KnownState {
             sequencing_block: BlockRef { number: 1, hash: U256::from(2).into(), timestamp: 5 },
             settlement_block: BlockRef { number: 3, hash: U256::from(4).into(), timestamp: 6 },
@@ -353,11 +355,11 @@ mod tests {
         let mut seq_blocks = HashMap::new();
         seq_blocks.insert(1, (U256::from(2).into(), 5));
         seq_blocks.insert(2, (U256::from(20).into(), 50));
-        let seq_client: Arc<dyn RPCClient> = Arc::new(MockRPCClient(seq_blocks));
+        let seq_client = MockRPCClient(seq_blocks);
         let mut set_blocks = HashMap::new();
         set_blocks.insert(3, (U256::from(4).into(), 6));
         set_blocks.insert(30, (U256::from(400).into(), 60));
-        let set_client: Arc<dyn RPCClient> = Arc::new(MockRPCClient(set_blocks));
+        let set_client = MockRPCClient(set_blocks);
         // check safe state
         assert_eq!(mchain.get_safe_state(&seq_client, &set_client).await, (state.clone(), Some(2)));
         assert_eq!(
@@ -388,10 +390,10 @@ mod tests {
 
         let mut seq_blocks = HashMap::new();
         seq_blocks.insert(1, (U256::from(20).into(), 5));
-        let seq_client: Arc<dyn RPCClient> = Arc::new(MockRPCClient(seq_blocks));
+        let seq_client = MockRPCClient(seq_blocks);
         let mut set_blocks = HashMap::new();
         set_blocks.insert(3, (U256::from(4).into(), 6));
-        let set_client: Arc<dyn RPCClient> = Arc::new(MockRPCClient(set_blocks));
+        let set_client = MockRPCClient(set_blocks);
 
         // check safe state
         assert_eq!(mchain.get_safe_state(&seq_client, &set_client).await, (None, Some(1)));
@@ -436,7 +438,7 @@ mod tests {
 
         let mut blocks = HashMap::new();
         blocks.insert(1, (expected_hash, expected_timestamp));
-        let client: Arc<dyn RPCClient> = Arc::new(MockRPCClient(blocks));
+        let client = MockRPCClient(blocks);
 
         assert!(validate_block_add_timestamp(&client, &mut test_block).await);
         assert_eq!(test_block.timestamp, expected_timestamp);
@@ -452,7 +454,7 @@ mod tests {
                 expected_timestamp,
             ),
         );
-        let client_mismatch: Arc<dyn RPCClient> = Arc::new(MockRPCClient(blocks));
+        let client_mismatch = MockRPCClient(blocks);
 
         let mut test_block = BlockRef { hash: expected_hash, number: 1, timestamp: 0 };
 

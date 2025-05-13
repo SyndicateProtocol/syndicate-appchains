@@ -6,32 +6,158 @@
 use alloy::primitives::Address;
 use block_builder::config::BlockBuilderConfig;
 use clap::Parser;
+use common::types::Chain;
 use eyre::Result;
-use ingestor::config::{SequencingChainConfig, SettlementChainConfig};
 use metrics::config::MetricsConfig;
-use shared::{eth_client::RPCClientError, parse::parse_address};
-use std::fmt::Debug;
+use shared::parse::parse_address;
+use std::{fmt::Debug, time::Duration};
 use thiserror::Error;
-use tracing::error;
+use tracing::{debug, error};
+
+/// Configuration for a generic chain ingestor
+#[allow(missing_docs)]
+#[derive(Debug, Clone)]
+pub struct ChainIngestorConfig {
+    pub rpc_url: String,
+    pub start_block: u64,
+}
+
+#[allow(missing_docs)]
+#[derive(Debug, Error)]
+pub enum IngestorConfigError {
+    #[error("Empty rpc url")]
+    EmptyRpcUrl(),
+    #[error("Invalid start block: {0}")]
+    InvalidStartBlock(String),
+}
+
+impl Default for ChainIngestorConfig {
+    fn default() -> Self {
+        Self { rpc_url: "http://localhost:8545".to_string(), start_block: 1 }
+    }
+}
+
+impl ChainIngestorConfig {
+    /// Creates a new [`ChainIngestorConfig`] instance
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(rpc_url: String, start_block: u64) -> Result<Self, IngestorConfigError> {
+        let config = Self { rpc_url, start_block };
+        debug!("Created chain ingestor config: {:?}", config);
+        Ok(config)
+    }
+
+    /// Validates the configuration
+    pub fn validate(&self, chain: Chain) -> Result<(), IngestorConfigError> {
+        if chain == Chain::Settlement && self.rpc_url.is_empty() {
+            // only the settlement rpc url is mandatory
+            return Err(IngestorConfigError::EmptyRpcUrl());
+        }
+
+        Ok(())
+    }
+
+    /// Validates the config and ensures all mandatory fields have values (including optional fields
+    /// that might have been defined by the `ConfigManager` contract)
+    pub fn validate_strict(&self) -> Result<(), IngestorConfigError> {
+        if self.rpc_url.is_empty() {
+            return Err(IngestorConfigError::EmptyRpcUrl());
+        }
+
+        if self.start_block == 0 {
+            return Err(IngestorConfigError::InvalidStartBlock(
+                "Start block must be greater than 0".to_string(),
+            ));
+        }
+
+        Ok(())
+    }
+}
 
 #[derive(Error, Debug)]
 pub enum ConfigError {
-    #[error(
-        "Settlement chain start timestamp ({0}) is greater than sequencing chain timestamp ({1})"
-    )]
-    SettlementStartBlockTooLate(u64, u64),
-
-    #[error("Failed to fetch block data: {0}")]
-    RPCClient(#[from] RPCClientError),
-
     #[error("Block builder configuration error: {0}")]
     BlockBuilder(#[from] block_builder::config::ConfigError),
 
     #[error("Ingestor chain configuration error: {0}")]
-    Ingestor(#[from] ingestor::config::ConfigError),
+    Ingestor(#[from] IngestorConfigError),
 
     #[error("Metrics configuration error: {0}")]
     Metrics(#[from] metrics::config::ConfigError),
+}
+
+// Due to `clap` not supporting prefixes, we need to redefine the SequencingChainConfig and
+// SettlementChainConfig here
+
+/// Configuration for the sequencing chain
+#[derive(Parser, Debug, Clone, Default)]
+pub struct SequencingChainConfig {
+    /// The RPC URL of the sequencing chain ingestor
+    #[arg(long = "sequencing-rpc-url", env = "SEQUENCING_RPC_URL")]
+    pub sequencing_rpc_url: Option<String>,
+
+    /// The block number to start polling from on the sequencing chain
+    #[arg(long = "sequencing-start-block", env = "SEQUENCING_START_BLOCK")]
+    pub sequencing_start_block: Option<u64>,
+}
+
+/// Configuration for the settlement chain
+#[derive(Parser, Debug, Clone, Default)]
+pub struct SettlementChainConfig {
+    /// The RPC URL of the settlement chain ingestor
+    #[arg(long = "settlement-rpc-url", env = "SETTLEMENT_RPC_URL")]
+    pub settlement_rpc_url: String,
+
+    /// The block number to start polling from on the settlement chain
+    #[arg(long = "settlement-start-block", env = "SETTLEMENT_START_BLOCK")]
+    pub settlement_start_block: Option<u64>,
+}
+
+impl From<SequencingChainConfig> for ChainIngestorConfig {
+    fn from(config: SequencingChainConfig) -> Self {
+        Self {
+            rpc_url: config.sequencing_rpc_url.unwrap_or_default(),
+            start_block: config.sequencing_start_block.unwrap_or(0),
+        }
+    }
+}
+
+impl From<SettlementChainConfig> for ChainIngestorConfig {
+    fn from(config: SettlementChainConfig) -> Self {
+        Self {
+            rpc_url: config.settlement_rpc_url,
+            start_block: config.settlement_start_block.unwrap_or(0),
+        }
+    }
+}
+
+impl SequencingChainConfig {
+    #[allow(missing_docs)]
+    pub fn validate(&self) -> Result<(), IngestorConfigError> {
+        let generic_config: ChainIngestorConfig = self.clone().into();
+        generic_config.validate(Chain::Sequencing)
+    }
+
+    /// Validates the config and ensures all mandatory fields have values (including optional fields
+    /// that might have been defined by the `ConfigManager` contract)
+    pub fn validate_strict(&self) -> Result<(), IngestorConfigError> {
+        let generic_config: ChainIngestorConfig = self.clone().into();
+        generic_config.validate_strict()
+    }
+}
+
+impl SettlementChainConfig {
+    #[allow(missing_docs)]
+    pub fn validate(&self) -> Result<(), IngestorConfigError> {
+        let generic_config: ChainIngestorConfig = self.clone().into();
+        generic_config.validate(Chain::Settlement)
+    }
+
+    /// Validates the config and ensures all mandatory fields have values (including optional fields
+    /// that might have been defined by the `ConfigManager` contract)
+    pub fn validate_strict(&self) -> Result<(), IngestorConfigError> {
+        let generic_config: ChainIngestorConfig = self.clone().into();
+        generic_config.validate_strict()
+    }
 }
 
 /// Common config stuct for the Metabased Translator. This contains all possible config options
@@ -73,6 +199,12 @@ pub struct MetabasedConfig {
 
     #[arg(long, env = "APPCHAIN_BLOCK_EXPLORER_URL")]
     pub appchain_block_explorer_url: Option<String>,
+
+    #[arg(long, env = "RPC_TIMEOUT", value_parser=humantime::parse_duration, default_value="10s")]
+    pub rpc_timeout: Duration,
+
+    #[arg(long, env = "GET_LOGS_TIMEOUT", value_parser=humantime::parse_duration, default_value="60s")]
+    pub get_logs_timeout: Duration,
 }
 
 impl MetabasedConfig {
@@ -136,48 +268,26 @@ impl Default for MetabasedConfig {
             config_manager_address: None,
             appchain_chain_id: 0,
             appchain_block_explorer_url: None,
+            get_logs_timeout: Duration::from_secs(60),
+            rpc_timeout: Duration::from_secs(10),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    const ZERO: &str = "0x0000000000000000000000000000000000000000";
-    const REQUIRED_ENV_VARS: &[(&str, Option<&str>)] = &[
-        ("SEQUENCING_RPC_URL", Some("")),
-        ("SETTLEMENT_RPC_URL", Some("")),
-        ("SEQUENCING_START_BLOCK", Some("1")),
-        ("SETTLEMENT_START_BLOCK", Some("1")),
-        ("SEQUENCING_CONTRACT_ADDRESS", Some(ZERO)),
-        ("ARBITRUM_BRIDGE_ADDRESS", Some(ZERO)),
-        ("ARBITRUM_INBOX_ADDRESS", Some(ZERO)),
-        ("MCHAIN_RPC_URL", Some("")),
-        ("APPCHAIN_CHAIN_ID", Some("1")),
-    ];
-
-    #[test]
-    fn test_clap_parse() {
-        let config = temp_env::with_vars(
-            [
-                REQUIRED_ENV_VARS,
-                &[("SEQUENCING_BUFFER_SIZE", Some("200")), ("SETTLEMENT_BUFFER_SIZE", Some("200"))],
-            ]
-            .concat(),
-            || MetabasedConfig::try_parse_from(["test", "--sequencing-buffer-size", "300"]),
-        )
-        .unwrap();
-        // default value
-        assert_eq!(config.settlement.settlement_syncing_batch_size, 50);
-        // default value + env var override
-        assert_eq!(config.settlement.settlement_buffer_size, 200);
-        // defeault value + env var + cli override
-        assert_eq!(config.sequencing.sequencing_buffer_size, 300);
-    }
+    use super::{ChainIngestorConfig, MetabasedConfig};
+    use common::types::Chain;
 
     #[test]
     fn test_generate_command() {
         MetabasedConfig::generate_sample_command();
+    }
+
+    #[test]
+    fn test_chain_ingestor_config_validation() {
+        // Valid config
+        let config = ChainIngestorConfig::new("http://localhost:8545".to_string(), 100).unwrap();
+        assert!(config.validate(Chain::Settlement).is_ok());
     }
 }

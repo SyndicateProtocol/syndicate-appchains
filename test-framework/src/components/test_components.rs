@@ -3,10 +3,10 @@
 
 use crate::components::{
     batch_sequencer::BatchSequencerConfig,
+    chain_ingestor::ChainIngestorConfig,
     configuration::{setup_config_manager, ConfigurationOptions, ContractVersion},
     maestro::MaestroConfig,
     poster::PosterConfig,
-    sequencer::SequencerConfig,
     timer::TestTimer,
     translator::TranslatorConfig,
 };
@@ -45,6 +45,7 @@ use test_utils::{
         PRELOAD_BRIDGE_ADDRESS_231, PRELOAD_BRIDGE_ADDRESS_300, PRELOAD_INBOX_ADDRESS_231,
         PRELOAD_INBOX_ADDRESS_300, PRELOAD_POSTER_ADDRESS_231, PRELOAD_POSTER_ADDRESS_300,
     },
+    utils::test_path,
     wait_until,
 };
 use tracing::info;
@@ -57,7 +58,8 @@ struct ComponentHandles {
     nitro_docker: Docker,
     translator: Docker,
     poster: Option<Docker>,
-    sequencer: Docker,
+    sequencing_chain_ingestor: Docker,
+    settlement_chain_ingestor: Docker,
 
     // Write loop
     batch_sequencer: Option<Docker>,
@@ -110,11 +112,12 @@ impl TestComponents {
         let redis = handles.redis.take();
         tokio::select! {
             biased;
+            e = handles.sequencing_chain_ingestor.wait() => panic!("sequencing ingestor died: {:#?}", e),
+            e = handles.settlement_chain_ingestor.wait() => panic!("settlement ingestor died: {:#?}", e),
             e = handles.mchain.wait() => panic!("mchain died: {:#?}", e),
             e = handles.nitro_docker.wait() => panic!("nitro died: {:#?}", e),
             e = handles.translator.wait() => panic!("translator died: {:#?}", e),
             e = async {poster.unwrap().wait().await}, if poster.is_some() => panic!("poster died: {:#?}", e),
-            e = handles.sequencer.wait() => panic!("sequencer died: {:#?}", e),
             e = async {maestro.unwrap().wait().await}, if maestro.is_some() => panic!("maestro died: {:#?}", e),
             e = async {batch_sequencer.unwrap().wait().await}, if batch_sequencer.is_some() => panic!("synd-batch-sequencer died: {:#?}", e),
             e = async {redis.unwrap().wait().await}, if redis.is_some() => panic!("redis died: {:#?}", e),
@@ -225,11 +228,11 @@ impl TestComponents {
             )
             .unwrap();
 
-        let sequencing_rpc_url = format!("http://localhost:{}", seq_port);
-        let settlement_rpc_url = format!("http://localhost:{}", set_port);
+        let sequencing_anvil_url = format!("ws://localhost:{}", seq_port);
+        let settlement_anvil_url = format!("ws://localhost:{}", set_port);
 
-        info!("sequencing_rpc_url: {}", sequencing_rpc_url);
-        info!("settlement_rpc_url: {}", settlement_rpc_url);
+        info!("sequencing_rpc_url: {}", sequencing_anvil_url);
+        info!("settlement_rpc_url: {}", settlement_anvil_url);
 
         // overwrite the rollup owner in case it's not set (cannot be empty in config manager)
         if options.rollup_owner == Address::ZERO {
@@ -244,7 +247,7 @@ impl TestComponents {
             sequencing_contract_address,
             arbitrum_bridge_address,
             arbitrum_inbox_address,
-            &sequencing_rpc_url,
+            &sequencing_anvil_url,
             &appchain_block_explorer_url,
         )
         .await?;
@@ -255,26 +258,58 @@ impl TestComponents {
             options.appchain_chain_id,
             None,
             Some(config_manager_address),
-            Some(&settlement_rpc_url),
+            Some(&settlement_anvil_url),
             options.finality_delay,
         )
         .await?;
 
-        info!("Starting sequencer...");
-        let sequencer_config = SequencerConfig {
+        // Setup config manager and get chain config address
+        let config_manager_address = setup_config_manager(
+            &set_provider,
+            &options,
             sequencing_contract_address,
-            sequencing_rpc_url: sequencing_rpc_url.clone(),
-            sequencer_port: PortManager::instance().next_port().await,
+            arbitrum_bridge_address,
+            arbitrum_inbox_address,
+            &sequencing_anvil_url,
+            &appchain_block_explorer_url,
+        )
+        .await?;
+
+        info!("Starting chain ingestors...");
+        let temp = test_path("chain_ingestor");
+        let seq_chain_ingestor_cfg = ChainIngestorConfig {
+            rpc_url: sequencing_anvil_url.clone(),
+            db_file: temp.clone() + "/sequencing_chain.db",
+            start_block: 0,
+            port: PortManager::instance().next_port().await,
             metrics_port: PortManager::instance().next_port().await,
         };
-        let sequencer = start_component(
-            "metabased-sequencer",
-            // `/health` is proxied to RPC method
-            sequencer_config.sequencer_port,
-            sequencer_config.cli_args(),
+        let sequencing_chain_ingestor = start_component(
+            "chain-ingestor",
+            seq_chain_ingestor_cfg.metrics_port,
+            seq_chain_ingestor_cfg.cli_args(),
             Default::default(),
         )
         .await?;
+
+        let set_chain_ingestor_cfg = ChainIngestorConfig {
+            rpc_url: settlement_anvil_url.clone(),
+            db_file: temp + "/settlement_chain.db",
+            start_block: 0,
+            port: PortManager::instance().next_port().await,
+            metrics_port: PortManager::instance().next_port().await,
+        };
+
+        let settlement_chain_ingestor = start_component(
+            "chain-ingestor",
+            set_chain_ingestor_cfg.metrics_port,
+            set_chain_ingestor_cfg.cli_args(),
+            Default::default(),
+        )
+        .await?;
+
+        let sequencing_rpc_url = format!("ws://localhost:{}", seq_chain_ingestor_cfg.port);
+        let settlement_rpc_url = format!("ws://localhost:{}", set_chain_ingestor_cfg.port);
 
         info!("Starting translator...");
         // only set the settlement rpc URL, config_manager address and appchain_chain_id - the
@@ -289,7 +324,7 @@ impl TestComponents {
             arbitrum_inbox_address: None,
             sequencing_contract_address: None,
             arbitrum_ignore_delayed_messages: None,
-            sequencing_rpc_url: None,
+            sequencing_rpc_url: Some(sequencing_rpc_url.clone()),
             appchain_block_explorer_url: Some(appchain_block_explorer_url.clone()),
             sequencing_start_block: None,
             settlement_start_block: None,
@@ -310,7 +345,7 @@ impl TestComponents {
             options.appchain_chain_id,
             options.rollup_owner,
             &mchain_rpc_url,
-            Some(sequencer_config.sequencer_port),
+            None,
         )
         .await?;
         info!("Nitro URL: {}", nitro_url);
@@ -325,7 +360,7 @@ impl TestComponents {
                         ContractVersion::V213 => PRELOAD_POSTER_ADDRESS_231,
                     },
                 ),
-                settlement_rpc_url: settlement_rpc_url.clone(),
+                settlement_rpc_url: settlement_anvil_url.clone(),
                 metrics_port: PortManager::instance().next_port().await,
                 port: PortManager::instance().next_port().await,
                 appchain_rpc_url: nitro_url.clone(),
@@ -377,7 +412,7 @@ impl TestComponents {
                 private_key: PRIVATE_KEY.to_string(),
                 wallet_pool_address,
                 sequencing_address: sequencing_contract_address,
-                sequencing_rpc_url: sequencing_rpc_url.clone(),
+                sequencing_rpc_url: sequencing_anvil_url,
                 metrics_port: PortManager::instance().next_port().await,
             };
             let batch_sequencer_instance = start_component(
@@ -395,11 +430,11 @@ impl TestComponents {
                 _timer: TestTimer(SystemTime::now(), start_time.elapsed().unwrap()),
 
                 sequencing_provider: seq_provider,
-                sequencing_rpc_url: sequencing_rpc_url.clone(),
+                sequencing_rpc_url,
                 sequencing_contract,
 
                 settlement_provider: set_provider,
-                settlement_rpc_url: settlement_rpc_url.clone(),
+                settlement_rpc_url,
                 appchain_provider,
                 appchain_chain_id: options.appchain_chain_id,
                 bridge_address: arbitrum_bridge_address,
@@ -413,11 +448,12 @@ impl TestComponents {
             ComponentHandles {
                 _seq_anvil: seq_anvil,
                 _set_anvil: set_anvil,
+                sequencing_chain_ingestor,
+                settlement_chain_ingestor,
                 mchain,
                 nitro_docker,
                 translator,
                 poster,
-                sequencer,
                 batch_sequencer,
                 redis,
                 maestro,
@@ -427,19 +463,6 @@ impl TestComponents {
 
     pub async fn mine_seq_block(&self, delay: u64) -> Result<()> {
         mine_block(&self.sequencing_provider, delay).await?;
-        Ok(())
-    }
-
-    pub async fn send_tx_and_mine_block(
-        &self,
-        tx: &EthereumTxEnvelope<TxEip4844Variant>,
-        delay: u64,
-    ) -> Result<()> {
-        self.sequencing_provider.anvil_set_block_timestamp_interval(delay).await?;
-        self.sequencing_provider.anvil_set_auto_mine(true).await?;
-        _ = self.appchain_provider.send_raw_transaction(&tx.encoded_2718()).await?;
-        self.sequencing_provider.anvil_set_auto_mine(false).await?;
-        self.sequencing_provider.anvil_remove_block_timestamp_interval().await?;
         Ok(())
     }
 

@@ -12,11 +12,12 @@ path = "src/main.rs"
 [dependencies]
 alloy             = { workspace = true }
 block-builder     = { workspace = true }
+chain-ingestor    = { workspace = true }
 clap              = { workspace = true }
 common            = { workspace = true }
 contract-bindings = { workspace = true }
 eyre              = { workspace = true }
-ingestor          = { workspace = true }
+humantime         = { workspace = true }
 mchain            = { workspace = true }
 metrics           = { workspace = true }
 shared            = { workspace = true }

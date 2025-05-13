@@ -15,7 +15,7 @@ use contract_bindings::arbitrum::{
 };
 use jsonrpsee::{
     types::{error::INTERNAL_ERROR_CODE, ErrorObjectOwned},
-    RpcModule,
+    RpcModule, SubscriptionMessage, SubscriptionSink,
 };
 #[cfg(not(test))]
 use std::time::SystemTime;
@@ -40,6 +40,14 @@ fn create_log(block_num: u64, data: alloy::primitives::LogData) -> alloy::rpc::t
         transaction_hash: Some(FixedBytes::ZERO),
         block_number: Some(block_num),
         block_hash: Some(U256::from(block_num).into()),
+        ..Default::default()
+    }
+}
+
+fn create_header(block_num: u64) -> alloy::rpc::types::Header {
+    alloy::rpc::types::Header {
+        inner: alloy::consensus::Header { number: block_num, ..Default::default() },
+        hash: U256::from(block_num).into(),
         ..Default::default()
     }
 }
@@ -82,20 +90,21 @@ pub fn rollup_config(chain_id: u64, chain_owner: Address) -> String {
     cfg
 }
 
-#[derive(Debug, Clone)]
-pub struct FinalityState {
+#[derive(Debug)]
+pub struct Context {
     finalized_block: u64,
-    pending_txs: VecDeque<u64>,
+    pending_ts: VecDeque<u64>,
+    subs: Vec<SubscriptionSink>,
 }
 
 #[allow(clippy::unwrap_used)]
-pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
+pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     chain_id: u64,
     rollup_owner: Address,
     finality_delay: u64,
     db: T,
     metrics: MchainMetrics,
-) -> RpcModule<(T, MchainMetrics, Mutex<FinalityState>)> {
+) -> RpcModule<(T, MchainMetrics, Mutex<Context>)> {
     db.check_version();
     let init_msg = DelayedMessage {
         kind: 11, // L1MessageType::Initialize
@@ -110,7 +119,7 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
             .into(),
         base_fee_l1: U256::ZERO,
     };
-    let mut pending_txs: VecDeque<u64> = Default::default();
+    let mut pending_ts: VecDeque<u64> = Default::default();
     let mut finalized_block = 1u64;
     if db.get_state().batch_count == 0 {
         // 000b00800203 corresponds to a batch containing a single delayed message
@@ -134,12 +143,15 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                 break;
             }
             finalized_block -= 1;
-            pending_txs.push_front(block_ts);
+            pending_ts.push_front(block_ts);
         }
     }
-    assert_eq!(finalized_block + pending_txs.len() as u64, db.get_state().batch_count);
-    let mut module =
-        RpcModule::new((db, metrics, Mutex::new(FinalityState { finalized_block, pending_txs })));
+    assert_eq!(finalized_block + pending_ts.len() as u64, db.get_state().batch_count);
+    let mut module = RpcModule::new((
+        db,
+        metrics,
+        Mutex::new(Context { finalized_block, pending_ts, subs: Default::default() }),
+    ));
 
     // -------------------------------------------------
     // mchain methods
@@ -148,17 +160,25 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
         .register_method(
             "mchain_addBatch",
             move |p, (db, metrics, mutex), _| -> Result<Option<u64>, ErrorObjectOwned> {
-                let batch: MBlock = p.parse()?;
+                let (batch,): (MBlock,) = p.parse()?;
                 let timestamp = batch.timestamp;
                 let seq_block_number = batch.slot.seq_block_number;
                 let block = db.add_batch(batch)?;
                 metrics.record_sequencing_block(seq_block_number, timestamp);
                 Ok(block.inspect(|&block| {
                     metrics.record_last_block(block, timestamp);
-                    let mut finality = mutex.lock().unwrap();
-                    finality.pending_txs.push_back(timestamp);
-                    assert_eq!(finality.finalized_block + finality.pending_txs.len() as u64, block);
-                    drop(finality);
+                    let mut data = mutex.lock().unwrap();
+                    data.pending_ts.push_back(timestamp);
+                    assert_eq!(data.finalized_block + data.pending_ts.len() as u64, block);
+                    data.subs.retain_mut(|sink| {
+                        !sink.is_closed() &&
+                            sink.try_send(
+                                SubscriptionMessage::from_json(&create_header(block)).unwrap(),
+                            )
+                            .inspect_err(|err| error!("try_send failed: {}", err))
+                            .is_ok()
+                    });
+                    drop(data);
                 }))
             },
         )
@@ -167,7 +187,7 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
         .register_method(
             "mchain_rollbackToBlock",
             move |p, (db, metrics, mutex), _| -> Result<(), ErrorObjectOwned> {
-                let block_number: u64 = p.parse()?;
+                let (block_number,): (u64,) = p.parse()?;
                 let state = db.get_state();
                 if block_number > state.batch_count {
                     return Err(err("cannot set head past the last block"));
@@ -202,22 +222,27 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                     db.delete_message_acc(i);
                 }
                 // finally update stale finality data.
-                let mut finality = mutex.lock().unwrap();
-                if block_number < finality.finalized_block {
+                let mut data = mutex.lock().unwrap();
+                if block_number < data.finalized_block {
                     metrics.record_finalized_block(block_number, block.timestamp);
-                    finality.finalized_block = block_number;
-                    finality.pending_txs.clear();
+                    data.finalized_block = block_number;
+                    data.pending_ts.clear();
                 } else {
                     let removed = (state.batch_count - block_number) as usize;
-                    let data_len = finality.pending_txs.len();
+                    let data_len = data.pending_ts.len();
                     assert!(data_len >= removed);
-                    finality.pending_txs.truncate(data_len - removed);
+                    data.pending_ts.truncate(data_len - removed);
                 }
-                assert_eq!(
-                    finality.finalized_block + finality.pending_txs.len() as u64,
-                    block_number
-                );
-                drop(finality);
+                assert_eq!(data.finalized_block + data.pending_ts.len() as u64, block_number);
+                data.subs.retain_mut(|sink| {
+                    !sink.is_closed() &&
+                        sink.try_send(
+                            SubscriptionMessage::from_json(&create_header(block_number)).unwrap(),
+                        )
+                        .inspect_err(|err| error!("try_send failed: {}", err))
+                        .is_ok()
+                });
+                drop(data);
                 Ok(())
             },
         )
@@ -232,7 +257,7 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
         .register_method(
             "mchain_getSourceChainsProcessedBlocks",
             move |p, (db, _, _), _| -> Result<(Slot, u64), ErrorObjectOwned> {
-                let tag: BlockNumberOrTag = p.parse()?;
+                let (tag,): (BlockNumberOrTag,) = p.parse()?;
                 match tag {
                     BlockNumberOrTag::Pending => {
                         let state = db.get_state();
@@ -251,6 +276,25 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     // -------------------------------------------------
     // eth methods
     // -------------------------------------------------
+    module
+        .register_subscription(
+            "eth_subscribe",
+            "eth_subscription",
+            "eth_unsubscribe",
+            move |p, pending, ctx, _| async move {
+                let (param,): (&str,) = p.parse()?;
+                if param != "newHeads" {
+                    return Err(format!("unknown subscription event: {}", param).into());
+                }
+                let sink = pending.accept().await.map_err(to_err)?;
+                ctx.2.lock().unwrap().subs.push(sink.clone());
+                sink.closed().await;
+                drop(sink);
+                Ok(())
+            },
+        )
+        .unwrap();
+
     module.register_method("eth_chainId", move |_, _, _| format!("{:#x}", MCHAIN_ID)).unwrap();
     module.register_method("eth_getCode", move |_, _, _| "0x").unwrap();
     module
@@ -273,6 +317,9 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                         return Err(err("block hash and batch index mismatch"));
                     }
                     let block = db.get_block(ind + 1)?;
+                    if block.batch.is_empty() {
+                        return Err(err("batch is empty - SequencerBatchData event does not exist"))
+                    }
                     return Ok(vec![create_log(
                         ind + 1,
                         ISequencerInbox::SequencerBatchData {
@@ -333,7 +380,11 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                                     minBlockNumber: 0,
                                     maxBlockNumber: u64::MAX,
                                 },
-                                dataLocation: 1,
+                                dataLocation: if block.batch.is_empty() {
+                                    2 // NoData
+                                } else {
+                                    1 // SeparateBatchEvent
+                                },
                             }
                             .encode_log_data(),
                         ));
@@ -364,13 +415,9 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
             move |p, _, _| -> Result<alloy::rpc::types::Block, ErrorObjectOwned> {
                 let (hash, _): (FixedBytes<32>, bool) = p.parse()?;
                 Ok(alloy::rpc::types::Block {
-                    header: alloy::rpc::types::Header {
-                        inner: alloy::consensus::Header {
-                            number: u64::from_be_bytes(hash[24..32].try_into().map_err(to_err)?),
-                            ..Default::default()
-                        },
-                        ..Default::default()
-                    },
+                    header: create_header(u64::from_be_bytes(
+                        hash[24..32].try_into().map_err(to_err)?,
+                    )),
                     ..Default::default()
                 })
             },
@@ -387,33 +434,26 @@ pub async fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                 let number = match tag {
                     BlockNumberOrTag::Latest => db.get_state().batch_count,
                     BlockNumberOrTag::Safe | BlockNumberOrTag::Finalized => {
-                        let mut finality = mutex.lock().unwrap();
+                        let mut data = mutex.lock().unwrap();
                         let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
                         let mut ts = 0u64;
-                        while let Some(block_ts) = finality.pending_txs.front() {
+                        while let Some(block_ts) = data.pending_ts.front() {
                             if block_ts + finality_delay > now {
                                 break;
                             }
                             ts = *block_ts;
-                            finality.finalized_block += 1;
-                            finality.pending_txs.pop_front();
+                            data.finalized_block += 1;
+                            data.pending_ts.pop_front();
                         }
                         if ts > 0 {
-                            metrics.record_finalized_block(finality.finalized_block, ts);
+                            metrics.record_finalized_block(data.finalized_block, ts);
                         }
 
-                        finality.finalized_block
+                        data.finalized_block
                     }
                     _ => return Err(format!("invalid tag: {}", tag)).map_err(to_err),
                 };
-
-                Ok(alloy::rpc::types::Block {
-                    header: alloy::rpc::types::Header {
-                        inner: alloy::consensus::Header { number, ..Default::default() },
-                        ..Default::default()
-                    },
-                    ..Default::default()
-                })
+                Ok(alloy::rpc::types::Block { header: create_header(number), ..Default::default() })
             },
         )
         .unwrap();

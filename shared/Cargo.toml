@@ -9,12 +9,14 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy              = { workspace = true }
+alloy              = { workspace = true, features = ["k256", "rlp"] }
+async-trait        = { workspace = true }
 axum               = { workspace = true }
 byte-unit          = { workspace = true, features = ["default"] }
 bytes              = { workspace = true }
+eyre               = { workspace = true }
 flate2             = { workspace = true }
-jsonrpsee          = { workspace = true, features = ["jsonrpsee-types", "server"] }
+jsonrpsee          = { workspace = true, features = ["jsonrpsee-types"] }
 prometheus-client  = { workspace = true }
 rlp                = { workspace = true }
 serde              = { workspace = true, features = ["derive"] }

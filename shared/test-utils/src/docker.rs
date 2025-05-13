@@ -171,8 +171,8 @@ pub async fn start_mchain(
         vec!["--datadir".to_string(), temp.to_string()],
     )
     .await?;
-    let url = format!("http://localhost:{port}");
-    let mchain = MProvider::new(&url)?;
+    let url = format!("ws://localhost:{port}");
+    let mchain = MProvider::new(&url).await?;
     Ok((url, docker, mchain))
 }
 
@@ -197,7 +197,8 @@ pub async fn launch_nitro_node(
             .arg(format!("offchainlabs/nitro-node:{tag}"))
             .arg(format!("--parent-chain.connection.url={mchain_url}"))
             .arg("--node.dangerous.disable-blob-reader")
-            .arg("--node.inbox-reader.check-delay=50ms")
+            .arg("--node.inbox-reader.check-delay=100ms")
+            .arg("--node.parent-chain-reader.poll-interval=100ms")
             .arg("--node.staker.enable=false")
             .arg("--ensure-rollup-deployment=false")
             .arg(format!(
@@ -217,7 +218,7 @@ pub async fn launch_nitro_node(
 
     let url = format!("http://localhost:{}", port);
 
-    let rollup = ProviderBuilder::default().on_http(url.parse()?);
+    let rollup = ProviderBuilder::default().connect(&url).await?;
     wait_until!(
         if let Some(status) = nitro.try_wait()? {
             panic!("nitro node exited with {}", status);
