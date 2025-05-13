@@ -1,7 +1,7 @@
 services:
   mchain:
-    image: us-central1-docker.pkg.dev/metabased-testnet/images/metabased-rollup/mchain:{{ image_tag }}
-    container_name: mchain  
+    image: us-central1-docker.pkg.dev/metabased-testnet/images/metabased-rollup/synd-mchain:{{ image_tag }}
+    container_name: synd-mchain  
     environment:
       - RUST_LOG=warn
       - CHAIN_ID={{ chain_id }}

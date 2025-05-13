@@ -11,10 +11,10 @@ version.workspace      = true
 [dependencies]
 alloy               = { workspace = true }
 common              = { workspace = true }
-mchain              = { workspace = true }
 prometheus-client   = { workspace = true }
 shared              = { workspace = true }
 synd-chain-ingestor = { workspace = true }
+synd-mchain         = { workspace = true }
 thiserror           = { workspace = true }
 tokio               = { workspace = true, features = ["macros", "rt", "sync", "time"] }
 tracing             = { workspace = true }

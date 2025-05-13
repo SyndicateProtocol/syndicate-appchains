@@ -13,10 +13,10 @@ use contract_bindings::arbitrum::{
     nodeinterface::NodeInterface, rollup::Rollup,
 };
 use eyre::Result;
-use mchain::client::Provider as _;
 use serde::{Deserialize, Serialize};
 use std::{str::FromStr as _, time::Duration};
 use synd_chain_ingestor::client::IngestorProvider;
+use synd_mchain::client::Provider as _;
 use test_framework::components::{
     configuration::{ConfigurationOptions, ContractVersion},
     test_components::TestComponents,
@@ -453,13 +453,14 @@ async fn e2e_settlement_reorg() -> Result<()> {
     TestComponents::run(
         &ConfigurationOptions { pre_loaded: Some(ContractVersion::V300), ..Default::default() },
         |components| async move {
-            // NOTE: at this point the mchain is on block 1 (initial mchain block) - we can't reorg
-            // to genesis, so we need to create two slots on top of it before the reorg
-            // happens.
+            // NOTE: at this point the synd-mchain is on block 1 (initial mchain block) - we
+            // can't reorg to genesis, so we need to create two slots on top of it
+            // before the reorg happens.
 
-            components.mine_both(1).await?; //mine mchain block 2 (only works because there are delayed txs to proccess, otherwise
-                                            // the mchain block would be empty/skipped)
-                                            // Wait for mchain to reach block 2
+            components.mine_both(1).await?; //mine mchain block 2 (only works because there are delayed txs to process,
+                                            // otherwise the synd-mchain block would be
+                                            // empty/skipped) Wait for synd-mchain to
+                                            // reach block 2
 
             wait_until!(
                 components.mchain_provider.get_block_number().await == 2,
@@ -469,7 +470,7 @@ async fn e2e_settlement_reorg() -> Result<()> {
             let wallet_address = components.settlement_provider.default_signer_address();
             let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
 
-            // create a deposit1 (that won't be rolled back) that will fit on mchain's block 3
+            // create a deposit1 (that won't be rolled back) that will fit on synd-mchain's block 3
             let _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
 
             components.mine_both(100).await?;
@@ -541,7 +542,7 @@ async fn e2e_settlement_reorg() -> Result<()> {
             // create new slots
             let _ = inbox.depositEth().value(parse_ether("0.01")?).send().await?;
             components.mine_both(500).await?;
-            components.mine_both(500).await?; // build mchain to an height above what the rollup has seen before the reorg
+            components.mine_both(500).await?; // build synd-mchain to an height above what the rollup has seen before the reorg
 
             wait_until!(let rollup_head = components
                 .appchain_provider
@@ -597,7 +598,7 @@ async fn e2e_sequencing_reorg() -> Result<()> {
             let wallet_address = components.settlement_provider.default_signer_address();
             let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
 
-            // create a deposit1 (that won't be rolled back) that will fit on mchain's block 3
+            // create a deposit1 (that won't be rolled back) that will fit on synd-mchain's block 3
             let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
 
             components.mine_set_block(0).await?;
@@ -679,7 +680,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
         &ConfigurationOptions { pre_loaded: None, ..Default::default() },
         |components| async move {
             let set_offset = components.settlement_provider.get_block_number().await?;
-            // mchain is on genesis (block 1)
+            // synd-mchain is on genesis (block 1)
             assert_eq!(components.mchain_provider.get_block_number().await, 1);
 
             // sequence any tx
@@ -688,7 +689,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             // mine a set block to close the slot, but without any transactions
             components.mine_set_block(100000).await?;
 
-            // mchain should be on block 2
+            // synd-mchain should be on block 2
             wait_until!(
                 components.mchain_provider.get_block_number().await == 2,
                 Duration::from_secs(10)
@@ -709,7 +710,8 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             assert_eq!(slot.set_block_number, 1 + set_offset);
             assert_eq!(block_number, 2);
 
-            // assert that restarting and rolling back here will not make mchain go back to block 1
+            // assert that restarting and rolling back here will not make synd-mchain go back to
+            // block 1
             let seq_mchain_client =
                 IngestorProvider::new(&components.sequencing_rpc_url, Duration::from_secs(1)).await;
             let settlement_client =
@@ -720,7 +722,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
                 .reconcile_mchain_with_source_chains(&seq_mchain_client, &settlement_client)
                 .await?;
 
-            // mchain should be on the same block since no reorgs occurred
+            // synd-mchain should be on the same block since no reorgs occurred
             assert_eq!(components.mchain_provider.get_block_number().await, 2);
 
             let (slot, block_number) = components

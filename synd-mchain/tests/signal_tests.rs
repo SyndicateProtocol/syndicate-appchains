@@ -1,4 +1,4 @@
-//! Integration tests for the mchain handling termination signals
+//! Integration tests for the `synd-mchain` handling termination signals
 
 use alloy::primitives::Address;
 use eyre::Result;

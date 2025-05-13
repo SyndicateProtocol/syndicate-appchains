@@ -1295,10 +1295,10 @@ dependencies = [
  "eyre",
  "flate2",
  "hex",
- "mchain",
  "serde",
  "serde_json",
  "shared",
+ "synd-mchain",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
@@ -1582,9 +1582,9 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "mchain",
  "shared",
  "strum_macros",
+ "synd-mchain",
 ]
 
 [[package]]
@@ -1984,9 +1984,9 @@ dependencies = [
  "contract-bindings",
  "ctor",
  "eyre",
- "mchain",
  "shared",
  "strum",
+ "synd-mchain",
  "test-utils",
  "tokio",
 ]
@@ -3284,29 +3284,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
-name = "mchain"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "bincode",
- "clap",
- "contract-bindings",
- "ctor",
- "eyre",
- "futures-util",
- "jsonrpsee",
- "prometheus-client",
- "rocksdb",
- "serde",
- "serde_json",
- "shared",
- "synd-chain-ingestor",
- "test-utils",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "memchr"
 version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3346,11 +3323,11 @@ dependencies = [
  "contract-bindings",
  "eyre",
  "humantime",
- "mchain",
  "metrics",
  "shared",
  "slotter",
  "synd-chain-ingestor",
+ "synd-mchain",
  "temp-env",
  "thiserror 2.0.12",
  "tokio",
@@ -4796,10 +4773,10 @@ dependencies = [
  "common",
  "ctor",
  "eyre",
- "mchain",
  "prometheus-client",
  "shared",
  "synd-chain-ingestor",
+ "synd-mchain",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
@@ -4978,6 +4955,29 @@ dependencies = [
 ]
 
 [[package]]
+name = "synd-mchain"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "bincode",
+ "clap",
+ "contract-bindings",
+ "ctor",
+ "eyre",
+ "futures-util",
+ "jsonrpsee",
+ "prometheus-client",
+ "rocksdb",
+ "serde",
+ "serde_json",
+ "shared",
+ "synd-chain-ingestor",
+ "test-utils",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "synstructure"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5072,13 +5072,13 @@ dependencies = [
  "ctor",
  "eyre",
  "maestro",
- "mchain",
  "redis",
  "reqwest",
  "serde",
  "serde_json",
  "shared",
  "synd-chain-ingestor",
+ "synd-mchain",
  "test-utils",
  "tokio",
  "tracing",
@@ -5090,9 +5090,9 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "eyre",
- "mchain",
  "redis",
  "shared",
+ "synd-mchain",
  "tokio",
  "tracing",
 ]

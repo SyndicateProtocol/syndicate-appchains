@@ -9,7 +9,7 @@ pub use serde::de::DeserializeOwned;
 use shared::types::BlockRef;
 use tracing::info;
 
-/// Known state of the mchain
+/// Known state of the synd-mchain
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct KnownState {
     /// The latest block from the sequencing chain that has been processed
@@ -45,22 +45,22 @@ pub trait Provider: Send + Sync {
         Ok(self.request("mchain_rollbackToBlock", [block_number]).await?)
     }
     async fn rollup_owner(&self) -> Address {
+        // TODO(SEQ-X)
         self.request("mchain_rollupOwner", [()]).await.unwrap()
     }
 
-    /// Reconciles the [`MetaChain`] state with the source chains (sequencing and settlement)
+    /// Reconciles the [`MockChain`] state with the source chains (sequencing and settlement)
     ///
     /// This function is used during application startup and when handling reorgs to ensure
-    /// the [`MetaChain`]'s state is consistent with the source chains. It:
-    /// 1. Retrieves the latest valid state from the rollup contract that can be verified against
+    /// the [`MockChain`]'s state is consistent with the source chains. It:
+    /// 1. Retrieves the latest valid state from the appchain contract that can be verified against
     ///    both source chains
-    /// 2. Rolls back the [`MetaChain`] to this validated state if necessary
+    /// 2. Rolls back the [`MockChain`] to this validated state if necessary
     /// 3. Returns the established safe state for the translator to resume from
     ///
     /// # Arguments
     /// * `sequencing_client` - Client for the sequencing chain
     /// * `settlement_client` - Client for the settlement chain
-    /// * `rollup_adapter` - Adapter for interacting with the rollup contract
     ///
     /// # Returns
     /// * `Ok(Some(KnownState))` - The validated state if one was found
@@ -85,9 +85,9 @@ pub trait Provider: Send + Sync {
         Ok(safe_state)
     }
 
-    /// `get_safe_state` obtains the processed blocks from the rollup contract and validates them
+    /// `get_safe_state` obtains the processed blocks from the appchain contract and validates them
     /// against the source chain clients.
-    /// The safe mchain block number is returned if the chain requires a reorg.
+    /// The safe synd-mchain block number is returned if the chain requires a reorg.
     async fn get_safe_state(
         &self,
         sequencing_client: &impl synd_chain_ingestor::client::Provider,

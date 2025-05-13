@@ -50,28 +50,28 @@ impl MchainMetrics {
 
         registry.register(
             "last_block_number",
-            "Tracks the latest mchain block number",
+            "Tracks the latest synd-mchain block number",
             metrics.last_block.number.clone(),
         );
         registry.register(
             "last_block_timestamp",
-            "Tracks the latest mchain block timestamp",
+            "Tracks the latest synd-mchain block timestamp",
             metrics.last_block.timestamp.clone(),
         );
         registry.register(
             "last_block_delay",
-            "Tracks the latest mchain block delay",
+            "Tracks the latest synd-mchain block delay",
             metrics.last_block.delay.clone(),
         );
 
         registry.register(
             "finalized_block_number",
-            "Tracks the finalized mchain block number",
+            "Tracks the finalized synd-mchain block number",
             metrics.finalized_block.number.clone(),
         );
         registry.register(
             "finalized_block_timestamp",
-            "Tracks the finalized mchain block timestamp",
+            "Tracks the finalized synd-mchain block timestamp",
             metrics.finalized_block.timestamp.clone(),
         );
         registry.register(

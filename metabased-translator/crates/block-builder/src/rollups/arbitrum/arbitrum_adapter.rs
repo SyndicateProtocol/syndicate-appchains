@@ -23,12 +23,12 @@ use contract_bindings::arbitrum::{
     },
 };
 use eyre::Result;
-use mchain::db::DelayedMessage;
 use shared::{
     tx_validation::validate_transaction,
     types::{BlockBuilder, PartialBlock},
 };
 use std::collections::{HashMap, HashSet};
+use synd_mchain::db::DelayedMessage;
 use thiserror::Error;
 use tracing::{debug, error, info, trace};
 

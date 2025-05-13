@@ -10,9 +10,9 @@ version.workspace      = true
 
 [dependencies]
 alloy        = { workspace = true, features = ["provider-engine-api"] }
-mchain       = { workspace = true }
 shared       = { workspace = true }
 strum_macros = { workspace = true }
+synd-mchain  = { workspace = true }
 
 [lints]
 workspace = true

@@ -11,11 +11,11 @@ use alloy::{
 use block_builder::rollups::arbitrum::{self, arbitrum_adapter::L1MessageType};
 use contract_bindings::arbitrum::{arbgasinfo::ArbGasInfo, arbownerpublic::ArbOwnerPublic};
 use eyre::{Ok, Result};
-use mchain::{
+use std::{str::FromStr as _, time::Duration};
+use synd_mchain::{
     client::Provider as _,
     db::{DelayedMessage, MBlock, Slot},
 };
-use std::{str::FromStr as _, time::Duration};
 use test_utils::{
     docker::{launch_nitro_node, start_mchain},
     wait_until,

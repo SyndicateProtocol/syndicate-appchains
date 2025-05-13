@@ -185,7 +185,7 @@ pub struct MetabasedConfig {
     #[arg(long, env = "APPCHAIN_OWNER")]
     pub appchain_owner: Option<Address>,
 
-    /// The chain ID of the Appchain rollup (not the mchain)
+    /// The chain ID of the Appchain rollup (not the synd-mchain)
     #[arg(long, env = "APPCHAIN_CHAIN_ID")]
     pub appchain_chain_id: u64,
 

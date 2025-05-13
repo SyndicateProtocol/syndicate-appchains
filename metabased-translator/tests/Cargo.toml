@@ -22,9 +22,9 @@ alloy = { workspace = true, features = [
 block-builder = { workspace = true }
 contract-bindings = { workspace = true }
 eyre = { workspace = true }
-mchain = { workspace = true }
 shared = { workspace = true }
 strum = { workspace = true }
+synd-mchain = { workspace = true }
 test-utils = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }
 

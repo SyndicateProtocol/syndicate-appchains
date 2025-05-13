@@ -30,7 +30,7 @@ pub struct Slot {
     pub set_block_hash: FixedBytes<32>,
 }
 
-/// The current state of the mchain
+/// The current state of the synd-mchain
 // `batch_count` is the latest number of batches
 // `batch_acc` is the latest batch accumulator
 // `message_count` is the latest number of messages
@@ -57,7 +57,7 @@ pub struct MBlock {
 
 /// Block data stored in rocksdb
 /// Note that the block hash does not affect derived block hashes and therefore
-/// this implementation should be fully compatible with existing reth metachains.
+/// this implementation should be fully compatible with existing reth `MockChains`.
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Block {
     /// block epoch timestamp in seconds

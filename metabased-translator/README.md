@@ -7,9 +7,9 @@ It consists of a `common` crate and 3 component crates: `ingestor`, `slotter` an
 The mchain server must be available at the mchain rpc url prior to starting the translator -
 see the provided docker-compose.yaml file for more information.
 
-#### Metachain configuration
+#### Mockchain configuration
 
-The metachain has chain id 84532 and a genesis timestamp of 0.
+The mockchain has chain id 84532 and a genesis timestamp of 0.
 
 The rollup precompile is installed at 0x5FbDB2315678afecb367f032d93F642f64180aa3 with the following on-chain configuration:
 {

@@ -17,11 +17,11 @@ common              = { workspace = true }
 contract-bindings   = { workspace = true }
 eyre                = { workspace = true }
 humantime           = { workspace = true }
-mchain              = { workspace = true }
 metrics             = { workspace = true }
 shared              = { workspace = true }
 slotter             = { workspace = true }
 synd-chain-ingestor = { workspace = true }
+synd-mchain         = { workspace = true }
 thiserror           = { workspace = true }
 tokio               = { workspace = true, features = ["signal"] }
 tracing             = { workspace = true }

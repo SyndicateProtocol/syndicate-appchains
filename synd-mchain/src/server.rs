@@ -24,11 +24,11 @@ use std::{collections::VecDeque, sync::Mutex, time::UNIX_EPOCH};
 use tests::SystemTime;
 use tracing::error;
 
-/// The chain id of the metachain. This is the same for all rollups.
+/// The chain id of the mockchain. This is the same for all appchains.
 /// TODO(SEQ-652): this should be configurable
 pub const MCHAIN_ID: u64 = 84532;
 
-pub const ROLLUP: Address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
+pub const APPCHAIN: Address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3"); // TODO(SEQ-X)
 
 fn err(message: &'static str) -> ErrorObjectOwned {
     ErrorObjectOwned::borrowed(INTERNAL_ERROR_CODE, message, None)
@@ -36,7 +36,7 @@ fn err(message: &'static str) -> ErrorObjectOwned {
 
 fn create_log(block_num: u64, data: alloy::primitives::LogData) -> alloy::rpc::types::Log {
     alloy::rpc::types::Log {
-        inner: alloy::primitives::Log { address: ROLLUP, data },
+        inner: alloy::primitives::Log { address: APPCHAIN, data },
         transaction_hash: Some(FixedBytes::ZERO),
         block_number: Some(block_num),
         block_hash: Some(U256::from(block_num).into()),
@@ -52,8 +52,8 @@ fn create_header(block_num: u64) -> alloy::rpc::types::Header {
     }
 }
 
-/// Return the on-chain config for a rollup with a given chain id
-pub fn rollup_config(chain_id: u64, chain_owner: Address) -> String {
+/// Return the on-chain config for an appchain with a given chain id
+pub fn appchain_config(chain_id: u64, chain_owner: Address) -> String {
     let mut cfg = format!(
         r#"{{
             "chainId": {chain_id},
@@ -100,7 +100,7 @@ pub struct Context {
 #[allow(clippy::unwrap_used)]
 pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     chain_id: u64,
-    rollup_owner: Address,
+    appchain_owner: Address,
     finality_delay: u64,
     db: T,
     metrics: MchainMetrics,
@@ -113,7 +113,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
             U256::from(chain_id),
             [1u8],      // initMsgVersion
             U256::ZERO, // currentDataCost
-            rollup_config(chain_id, rollup_owner),
+            appchain_config(chain_id, appchain_owner),
         )
             .abi_encode_packed()
             .into(),
@@ -154,7 +154,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     ));
 
     // -------------------------------------------------
-    // mchain methods
+    // synd-mchain methods
     // -------------------------------------------------
     module
         .register_method(
@@ -249,8 +249,8 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
         .unwrap();
     module
         .register_method(
-            "mchain_rollupOwner",
-            move |_, _, _| -> Result<Address, ErrorObjectOwned> { Ok(rollup_owner) },
+            "mchain_rollupOwner", // TODO(SEQ-X)
+            move |_, _, _| -> Result<Address, ErrorObjectOwned> { Ok(appchain_owner) },
         )
         .unwrap();
     module
@@ -303,7 +303,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
             move |p, (db, _, _), _| -> Result<Vec<alloy::rpc::types::Log>, ErrorObjectOwned> {
                 let (f,): (alloy::rpc::types::Filter,) = p.parse()?;
                 // these are unique
-                if f.address != ROLLUP.into() {
+                if f.address != APPCHAIN.into() {
                     return Ok(Default::default());
                 }
                 if f.topics[0].matches(&ISequencerInbox::SequencerBatchData::SIGNATURE_HASH) {
@@ -350,7 +350,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                                 IBridge::MessageDelivered {
                                     messageIndex: U256::from(block.before_message_count + j as u64),
                                     beforeInboxAcc: before_acc,
-                                    inbox: ROLLUP,
+                                    inbox: APPCHAIN,
                                     kind: msg.kind,
                                     sender: msg.sender,
                                     messageDataHash: keccak256(&msg.data),
@@ -460,7 +460,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     module
         .register_method("eth_call", move |p, (db, _, _), _| -> Result<Bytes, ErrorObjectOwned> {
             let (input, _): (TransactionRequest, BlockNumberOrTag) = p.parse()?;
-            if input.to != Some(alloy::primitives::TxKind::Call(ROLLUP)) {
+            if input.to != Some(alloy::primitives::TxKind::Call(APPCHAIN)) {
                 return Ok(Default::default());
             }
             let input = input.input.input.ok_or_else(|| err("missing calldata"))?;

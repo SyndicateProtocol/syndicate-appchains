@@ -2,17 +2,17 @@
 use crate::metrics::SlotterMetrics;
 use alloy::primitives::{FixedBytes, B256};
 use common::types::{Chain, SequencingBlock, SettlementBlock};
-use mchain::{
+use shared::types::BlockRef;
+use synd_chain_ingestor::client::BlockStreamT;
+use synd_mchain::{
     client::{KnownState, Provider},
     db::{MBlock, Slot},
 };
-use shared::types::BlockRef;
-use synd_chain_ingestor::client::BlockStreamT;
 use thiserror::Error;
 use tracing::{error, info, trace};
 
 /// Ingests blocks from the sequencing and settlement chains, slots them into slots, and sends the
-/// slots to the slot processor to generate mchain blocks.
+/// slots to the slot processor to generate synd-mchain blocks.
 #[allow(clippy::expect_used)]
 pub async fn run(
     settlement_delay: u64,
@@ -211,10 +211,10 @@ mod tests {
     use alloy::primitives::{FixedBytes, U256};
     use async_trait::async_trait;
     use common::types::{Chain, SettlementBlock};
-    use mchain::client::{ClientError, DeserializeOwned, KnownState, Provider, ToRpcParams};
     use prometheus_client::registry::Registry;
     use shared::types::BlockRef;
     use synd_chain_ingestor::client::BlockStreamT;
+    use synd_mchain::client::{ClientError, DeserializeOwned, KnownState, Provider, ToRpcParams};
 
     #[ctor::ctor]
     fn init() {

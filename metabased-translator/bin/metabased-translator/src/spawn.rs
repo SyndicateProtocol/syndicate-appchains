@@ -4,7 +4,6 @@ use crate::{
 };
 use block_builder::rollups::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use eyre::Result;
-use mchain::client::{MProvider, Provider};
 use metrics::metrics::TranslatorMetrics;
 use shared::service_start_utils::{start_metrics_and_health, MetricsState};
 use std::sync::Arc;
@@ -12,6 +11,7 @@ use synd_chain_ingestor::{
     client::{IngestorProvider, Provider as IProvider},
     eth_client::EthClient,
 };
+use synd_mchain::client::{MProvider, Provider};
 use tracing::{error, log::info};
 
 /// Entry point for the async runtime
@@ -34,7 +34,7 @@ pub async fn run(config: &MetabasedConfig) -> Result<(), RuntimeError> {
 async fn start_slotter(config: &MetabasedConfig, metrics: &TranslatorMetrics) -> Result<()> {
     let mchain = MProvider::new(&config.block_builder.mchain_rpc_url)
         .await
-        .map_err(|e| RuntimeError::InvalidConfig(format!("Invalid mchain rpc url: {}", e)))?;
+        .map_err(|e| RuntimeError::InvalidConfig(format!("Invalid synd-mchain rpc url: {}", e)))?;
     assert_eq!(config.appchain_owner, Some(mchain.rollup_owner().await));
 
     let sequencing_client = IngestorProvider::new(
@@ -55,7 +55,7 @@ async fn start_slotter(config: &MetabasedConfig, metrics: &TranslatorMetrics) ->
     // start the ingestors from the known safe state
     if let Some(state) = &safe_state {
         sequencing_config.start_block = state.sequencing_block.number + 1;
-        // re-ingest the last known settlement block as it is not included in the latest mchain
+        // re-ingest the last known settlement block as it is not included in the latest synd-mchain
         // block
         settlement_config.start_block = state.settlement_block.number;
     }

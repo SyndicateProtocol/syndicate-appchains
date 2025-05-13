@@ -2,7 +2,7 @@ services:
   mchain:
     build:
       context: ../../
-      target: mchain
+      target: synd-mchain
       dockerfile: Dockerfile
     volumes:
       - ./datadir:/datadir
@@ -60,7 +60,7 @@ services:
       - SEQUENCING_START_BLOCK=5527
       - SETTLEMENT_RPC_URL=ws://set-ingestor:8545
       - SETTLEMENT_START_BLOCK=21853620
-      - MCHAIN_RPC_URL=ws://mchain:8545
+      - MCHAIN_RPC_URL=ws://synd-mchain:8545
       - ARBITRUM_IGNORE_DELAYED_MESSAGES=false
       - SETTLEMENT_DELAY=60
     depends_on:
@@ -69,7 +69,7 @@ services:
 
   nitro:
     image: offchainlabs/nitro-node:v3.4.0-d896e9c-slim
-    command: "--parent-chain.connection.url=ws://mchain:8545 --http.port=8545 --http.addr=0.0.0.0 --node.dangerous.disable-blob-reader --execution.forwarding-target=null --node.inbox-reader.check-delay=100ms --node.staker.enable=false --ensure-rollup-deployment=false --chain.info-files=/cfg/manchego.json"
+    command: "--parent-chain.connection.url=ws://synd-mchain:8545 --http.port=8545 --http.addr=0.0.0.0 --node.dangerous.disable-blob-reader --execution.forwarding-target=null --node.inbox-reader.check-delay=100ms --node.staker.enable=false --ensure-rollup-deployment=false --chain.info-files=/cfg/manchego.json"
     depends_on:
       healthcheck:
         condition: service_healthy

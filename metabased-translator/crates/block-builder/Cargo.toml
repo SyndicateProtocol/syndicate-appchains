@@ -19,10 +19,10 @@ contract-bindings = { workspace = true }
 eyre              = { workspace = true }
 flate2            = { workspace = true }
 hex               = { workspace = true }
-mchain            = { workspace = true }
 serde             = { workspace = true }
 serde_json        = { workspace = true }
 shared            = { workspace = true }
+synd-mchain       = { workspace = true }
 thiserror         = { workspace = true }
 tokio             = { workspace = true, features = ["process", "rt-multi-thread"] }
 tracing           = { workspace = true }

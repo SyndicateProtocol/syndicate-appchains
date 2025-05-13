@@ -1,7 +1,6 @@
 [workspace]
 members = [
   "maestro",
-  "mchain",
   "metabased-poster",
   "metabased-translator/bin/metabased-translator",
   "metabased-translator/crates/block-builder",
@@ -16,6 +15,7 @@ members = [
   "synd-batch-sequencer/crates/batcher",
   "synd-batch-sequencer/crates/tc-client",
   "synd-chain-ingestor",
+  "synd-mchain",
   "test-framework",
 ]
 
@@ -63,7 +63,6 @@ humantime            = "2.1.0"
 hyper                = { version = "1.5.2" }
 jsonrpsee            = { version = "0.24.7" }
 maestro              = { path = "maestro" }
-mchain               = { path = "mchain" }
 metabased-translator = { path = "metabased-translator/bin/metabased-translator" }
 metrics              = { path = "metabased-translator/crates/metrics" }
 pin-project-lite     = "0.2.16"
@@ -81,6 +80,7 @@ slotter              = { path = "metabased-translator/crates/slotter" }
 strum                = "0.27.1"
 strum_macros         = "0.27.1"
 synd-chain-ingestor  = { path = "synd-chain-ingestor" }
+synd-mchain          = { path = "synd-mchain" }
 tc-client            = { path = "synd-batch-sequencer/crates/tc-client" }
 test-utils           = { path = "shared/test-utils" }
 thiserror            = { version = "2.0.11" }

@@ -1,9 +1,9 @@
 //! Types module for metabased-translator
 
 use alloy::primitives::{Bytes, FixedBytes};
-use mchain::db::DelayedMessage;
 use shared::types::{BlockRef, GetBlockRef};
 use strum_macros::Display;
+use synd_mchain::db::DelayedMessage;
 
 #[allow(missing_docs)]
 #[derive(Debug, Default, Clone)]

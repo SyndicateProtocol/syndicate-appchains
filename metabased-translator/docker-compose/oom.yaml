@@ -2,7 +2,7 @@ services:
   mchain:
     build:
       context: ../../
-      target: mchain
+      target: synd-mchain
       dockerfile: Dockerfile
     command: "--chain-id 510000 --port 8050"
   translator:
@@ -20,4 +20,4 @@ services:
       - SETTLEMENT_START_BLOCK=22074164
       - MCHAIN_RPC_URL=http://mchain:8050
     depends_on:
-      - mchain
+      - synd-mchain

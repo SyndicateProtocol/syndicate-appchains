@@ -1,10 +1,10 @@
 //! Rollup utils for the integration tests
 
 use alloy::primitives::Address;
-use mchain::server::{MCHAIN_ID, ROLLUP};
+use synd_mchain::server::{APPCHAIN, MCHAIN_ID};
 
-/// Get the nitro json configuration data for the rollup
-pub fn rollup_info(rollup_config: &str, chain_name: &str) -> String {
+/// Get the nitro json configuration data for the appchain
+pub fn appchain_info(appchain_config: &str, chain_name: &str) -> String {
     let deployed_at: u64 = 1;
     let zero = Address::ZERO;
     format!(
@@ -18,11 +18,11 @@ pub fn rollup_info(rollup_config: &str, chain_name: &str) -> String {
               "secondary-feed-url": "",
               "das-index-url": "",
               "has-genesis-state": false,
-              "chain-config": {rollup_config},
+              "chain-config": {appchain_config},
               "rollup": {{
-                "bridge": "{ROLLUP}",
+                "bridge": "{APPCHAIN}",
                 "inbox": "{zero}",
-                "sequencer-inbox": "{ROLLUP}",
+                "sequencer-inbox": "{APPCHAIN}",
                 "deployed-at": {deployed_at},
                 "rollup": "{zero}",
                 "native-token": "{zero}",

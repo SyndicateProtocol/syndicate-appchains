@@ -1,4 +1,4 @@
-//! The metachain is used for rollup block derivation.
+//! The `MockChain` is used for appchain block derivation.
 
 use alloy::{
     primitives::{Address, U256},
@@ -8,16 +8,16 @@ use alloy::{
 use clap::Parser;
 use contract_bindings::synd::{arbchainconfig::ArbChainConfig, arbconfigmanager::ArbConfigManager};
 use jsonrpsee::server::{RandomStringIdProvider, RpcServiceBuilder, Server};
-use mchain::{metrics::MchainMetrics, server::start_mchain};
 use rocksdb::DB;
 use shared::{
     logger::set_global_default_subscriber,
     service_start_utils::{start_metrics_and_health, MetricsState},
 };
+use synd_mchain::{metrics::MchainMetrics, server::start_mchain};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 
-/// CLI args for the mchain executable
+/// CLI args for the `synd-mchain` executable
 #[derive(Parser, Debug, Clone)]
 #[command(version, about)]
 #[allow(missing_docs)]
@@ -41,7 +41,7 @@ struct Config {
     config_manager_address: Option<Address>,
 }
 
-async fn get_rollup_owner(
+async fn get_appchain_owner(
     config_manager_address: Option<Address>,
     appchain_chain_id: u64,
     settlement_rpc_url: &str,
@@ -64,8 +64,8 @@ async fn get_rollup_owner(
         .await?;
     let arb_chain_config_contract = ArbChainConfig::new(config_address._0, provider);
 
-    let rollup_owner = arb_chain_config_contract.INITIAL_APPCHAIN_OWNER().call().await?;
-    Ok(rollup_owner._0)
+    let appchain_owner = arb_chain_config_contract.INITIAL_APPCHAIN_OWNER().call().await?;
+    Ok(appchain_owner._0)
 }
 
 #[tokio::main]
@@ -88,12 +88,16 @@ async fn main() -> eyre::Result<()> {
                 eyre::eyre!("SETTLEMENT_RPC_URL must be provided when APPCHAIN_OWNER is not set")
             })?;
 
-            get_rollup_owner(cfg.config_manager_address, cfg.appchain_chain_id, settlement_rpc_url)
-                .await?
+            get_appchain_owner(
+                cfg.config_manager_address,
+                cfg.appchain_chain_id,
+                settlement_rpc_url,
+            )
+            .await?
         }
     };
 
-    info!("starting mchain server on port {}", cfg.port);
+    info!("starting synd-mchain server on port {}", cfg.port);
     let module = start_mchain(
         cfg.appchain_chain_id,
         initial_appchain_owner,

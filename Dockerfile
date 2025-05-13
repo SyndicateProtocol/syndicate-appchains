@@ -68,12 +68,12 @@ ENTRYPOINT ["/usr/local/bin/synd-batch-sequencer"]
 EXPOSE 8545 8546
 LABEL service=synd-batch-sequencer
 
-FROM runtime-base AS mchain
+FROM runtime-base AS synd-mchain
 ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/mchain /usr/local/bin/mchain
-ENTRYPOINT ["/usr/local/bin/mchain"]
+COPY --from=build /app/target/${BUILD_PROFILE}/synd-mchain /usr/local/bin/synd-mchain
+ENTRYPOINT ["/usr/local/bin/synd-mchain"]
 EXPOSE 8545 8546
-LABEL service=mchain
+LABEL service=synd-mchain
 
 FROM runtime-base AS synd-chain-ingestor
 ARG BUILD_PROFILE

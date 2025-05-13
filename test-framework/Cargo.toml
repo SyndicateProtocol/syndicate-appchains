@@ -21,12 +21,12 @@ contract-bindings = { workspace = true }
 ctor = { workspace = true }
 eyre = { workspace = true }
 maestro = { workspace = true }
-mchain = { workspace = true }
 redis = { workspace = true }
 reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 shared = { workspace = true }
+synd-mchain = { workspace = true }
 test-utils = { workspace = true }
 tokio = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
 tracing = { workspace = true }
