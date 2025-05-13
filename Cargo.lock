@@ -5074,6 +5074,7 @@ dependencies = [
  "eyre",
  "maestro",
  "mchain",
+ "redis",
  "reqwest",
  "serde",
  "serde_json",

@@ -13,7 +13,7 @@ use tracing::error;
 // Source: https://github.com/MetaMask/rpc-errors/blob/main/src/errors.ts
 /// Primary error type for the metabased sequencer, following JSON-RPC error code mapping
 #[derive(Debug, Error)]
-pub enum Error {
+pub enum MaestroError {
     /// Error relating to Redis
     #[error(transparent)]
     Redis(#[from] RedisError),
@@ -46,7 +46,7 @@ pub enum ConfigError {
 pub enum MaestroRpcError {
     /// Internal Maestro error
     #[error("internal error: {0}")]
-    Internal(InternalError),
+    InternalError(InternalErrorType),
 
     /// Standard shared JSON-RPC Errors
     #[error(transparent)]
@@ -56,7 +56,7 @@ pub enum MaestroRpcError {
 /// Known internal Maestro errors
 /// NOTE: These are client-facing
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
-pub enum InternalError {
+pub enum InternalErrorType {
     /// No RPC provider for a transaction
     #[error("chain {0} is unsupported")]
     RpcMissing(ChainId),
@@ -68,6 +68,10 @@ pub enum InternalError {
     /// Failed to submit transaction
     #[error("transaction submission failed for tx hash: {0}")]
     TransactionSubmissionFailed(String),
+
+    /// Catchall nonspecific error
+    #[error("other")]
+    Other,
 }
 
 /// Errors when handline waiting transactions
@@ -85,7 +89,7 @@ pub enum WaitingTransactionError {
 impl From<MaestroRpcError> for ErrorObjectOwned {
     fn from(error: MaestroRpcError) -> Self {
         match error {
-            MaestroRpcError::Internal(e) => ErrorObjectOwned::owned(
+            MaestroRpcError::InternalError(e) => ErrorObjectOwned::owned(
                 ErrorCode::InternalError.code(),
                 format!("internal error: {}", e),
                 None::<()>,

@@ -4,16 +4,21 @@
 use crate::{
     config::{Config, RpcProvider},
     errors::{
-        Error,
-        Error::WaitingTransaction,
-        InternalError::{RpcFailedToFetchWalletNonce, RpcMissing, TransactionSubmissionFailed},
+        InternalErrorType::{
+            Other, RpcFailedToFetchWalletNonce, RpcMissing, TransactionSubmissionFailed,
+        },
+        MaestroError,
+        MaestroError::WaitingTransaction,
         MaestroRpcError,
-        MaestroRpcError::{Internal, JsonRpcError},
+        MaestroRpcError::{InternalError, JsonRpcError},
         WaitingTransactionError::{FailedToDecode, FailedToEnqueue},
     },
     redis::{
-        keys::{wallet_nonce::chain_wallet_nonce_key, ChainWalletNonceKey},
-        models::{waiting_transaction::WaitingGapTxnExt, wallet_nonce::WalletNonceExt},
+        keys::wallet_nonce::{chain_wallet_nonce_key, ChainWalletNonceKey},
+        models::{
+            waiting_transaction::{WaitingGapTxnExt, WaitingTransactionId},
+            wallet_nonce::WalletNonceExt,
+        },
         streams::producer::StreamProducer,
     },
 };
@@ -45,7 +50,10 @@ pub struct MaestroService {
 
 impl MaestroService {
     /// Create a new instance of the Maestro service
-    pub async fn new(redis_conn: MultiplexedConnection, config: Config) -> Result<Self, Error> {
+    pub async fn new(
+        redis_conn: MultiplexedConnection,
+        config: Config,
+    ) -> Result<Self, MaestroError> {
         let rpc_providers = config.validate().await?;
         if rpc_providers.is_empty() {
             warn!("No RPC providers configured. This is probably undesirable");
@@ -199,13 +207,13 @@ impl MaestroService {
         // Get or create producer while holding lock
         let producer = self.producers.get(&chain_id).ok_or({
             error!(%chain_id, %tx_hash, "Non existent stream producer for chain id");
-            Internal(RpcMissing(chain_id))
+            InternalError(RpcMissing(chain_id))
         })?;
 
         // Release lock before making async call
         producer.enqueue_transaction(raw_tx.into()).await.map_err(|e| {
             error!(%chain_id, %tx_hash, %e, "failed to enqueue transaction to Redis Stream");
-            Internal(TransactionSubmissionFailed(tx_hash.to_string()))
+            InternalError(TransactionSubmissionFailed(tx_hash.to_string()))
         })?;
         Ok(())
     }
@@ -287,7 +295,7 @@ impl MaestroService {
         let chain_wallet_nonce_key = chain_wallet_nonce_key(chain_id, signer);
         let provider = self.rpc_providers.get(&chain_id).ok_or_else(|| {
             error!("No RPC provider for chain {}", chain_id);
-            Internal(RpcMissing(chain_id))
+            InternalError(RpcMissing(chain_id))
         })?;
 
         // Get nonce
@@ -295,7 +303,7 @@ impl MaestroService {
             Ok(nonce) => nonce,
             Err(e) => {
                 error!(%signer, %chain_id, %e, "unable to get nonce from RPC");
-                return Err(Internal(RpcFailedToFetchWalletNonce(chain_id, signer)))
+                return Err(InternalError(RpcFailedToFetchWalletNonce(chain_id, signer)))
             }
         };
 
@@ -331,7 +339,7 @@ impl MaestroService {
         wallet_address: Address,
         current_nonce: u64,
         desired_nonce: u64,
-    ) -> Result<u64, Error> {
+    ) -> Result<u64, MaestroError> {
         let mut conn = self.redis_conn.clone();
 
         let cached_nonce = conn.get_wallet_nonce(chain_id, wallet_address).await?;
@@ -352,7 +360,7 @@ impl MaestroService {
         let old_nonce = conn
             .set_wallet_nonce(chain_id, wallet_address, desired_nonce)
             .await
-            .map_err(Error::Redis)?;
+            .map_err(MaestroError::Redis)?;
 
         match old_nonce {
             None => {
@@ -404,7 +412,7 @@ impl MaestroService {
         chain_id: ChainId,
         wallet_address: Address,
         starting_nonce: u64,
-    ) -> Result<(), Error> {
+    ) -> Result<(), MaestroError> {
         // Tokio lock is acquired in order, so lock acquisition will occur "next" for a wallet after
         // parent txn function
         let chain_wallet_lock = self.get_chain_wallet_lock(chain_id, wallet_address).await;
@@ -432,6 +440,8 @@ impl MaestroService {
             }
         }
 
+        let mut waiting_txn_ids: Vec<WaitingTransactionId> = Vec::new();
+
         // Decode txn, enqueue, and remove from cache
         for waiting_txn in waiting_txns {
             // TODO unnecessary decode here
@@ -447,12 +457,16 @@ impl MaestroService {
                 return Err(WaitingTransaction(FailedToEnqueue))
             }
 
-            // TODO delete array of keys
-            self.remove_waiting_transaction_from_cache(chain_id, wallet_address, _current_waiting_txn_nonce, &tx_hash).await.map_err(|e|{
-                error!(%e, %chain_id, %wallet_address, %tx_hash, nonce=%_current_waiting_txn_nonce, "Failed to remove waiting transaction from cache");
-                WaitingTransaction(FailedToEnqueue)
-            })?;
+            waiting_txn_ids.push(WaitingTransactionId {
+                chain_id,
+                wallet_address,
+                nonce: _current_waiting_txn_nonce,
+            })
         }
+        self.remove_waiting_transactions_from_cache(&waiting_txn_ids).await.map_err(|e|{
+            error!(%e, %chain_id, %wallet_address, "Failed to remove waiting transactions from cache");
+            WaitingTransaction(FailedToEnqueue)
+        })?;
 
         let new_nonce = self
             .increment_wallet_nonce(
@@ -489,7 +503,7 @@ impl MaestroService {
     /// # Errors
     /// Returns an error if:
     /// * Redis connection fails or operation fails during transaction retrieval (wrapped as
-    ///   [`Error::Redis`])
+    ///   [`MaestroError::Redis`])
     /// * Hex decoding fails when converting the cached transaction string to bytes (wrapped as
     ///   [`Error::WaitingTransaction(FailedToDecode)`])
     ///
@@ -500,7 +514,7 @@ impl MaestroService {
         chain_id: ChainId,
         wallet_address: Address,
         starting_nonce: u64,
-    ) -> Result<Vec<Bytes>, Error> {
+    ) -> Result<Vec<Bytes>, MaestroError> {
         let mut conn = self.redis_conn.clone();
         let mut txns: Vec<Bytes> = Vec::new();
         let mut current_nonce = starting_nonce; // TODO unit test this off by one logic
@@ -508,7 +522,7 @@ impl MaestroService {
             match conn
                 .get_waiting_txn(chain_id, wallet_address, current_nonce)
                 .await
-                .map_err(Error::Redis)?
+                .map_err(MaestroError::Redis)?
             {
                 None => {
                     //
@@ -575,9 +589,10 @@ impl MaestroService {
         let mut conn = self.redis_conn.clone();
         conn.set_waiting_txn(chain_id, wallet_address, nonce, raw_tx)
             .await
-            .map_err(|_| Internal(TransactionSubmissionFailed(tx_hash.to_string())))
+            .map_err(|_| InternalError(TransactionSubmissionFailed(tx_hash.to_string())))
     }
 
+    // TODO docs
     /// Removes a waiting transaction from the cache
     ///
     /// This method is called when a waiting transaction is successfully processed
@@ -595,24 +610,27 @@ impl MaestroService {
     ///
     /// # Errors
     /// Returns an error if the Redis operation fails
-    pub async fn remove_waiting_transaction_from_cache(
+    pub async fn remove_waiting_transactions_from_cache(
         &self,
-        chain_id: ChainId,
-        wallet_address: Address,
-        nonce: u64,
-        tx_hash: &str,
+        waiting_txns: &[WaitingTransactionId],
     ) -> Result<u64, MaestroRpcError> {
-        let mut conn = self.redis_conn.clone();
-        let result = conn
-            .del_waiting_txn_key(chain_id, wallet_address, nonce)
-            .await
-            .map_err(|_| Internal(TransactionSubmissionFailed(tx_hash.to_string())))?;
+        if waiting_txns.is_empty() {
+            error!("No waiting txns to remove");
+            return Err(InternalError(Other))
+        }
 
-        // Log if more than one key was removed - likely a bug
-        if result > 1 {
+        let mut conn = self.redis_conn.clone();
+        let txn_ids = waiting_txns;
+        let result = conn.del_waiting_txn_keys(txn_ids).await.map_err(|_| InternalError(Other))?;
+
+        let chain_id = waiting_txns[0].chain_id;
+        let wallet_address = waiting_txns[0].wallet_address;
+
+        // Log if incorrect number of keys was removed - likely a bug
+        if result != (txn_ids.len() as u64) {
             error!(
-            %chain_id, %wallet_address, %nonce, %tx_hash, keys_removed=%result,
-            "Removed multiple keys when deleting 1 waiting transaction"
+            %chain_id, %wallet_address, num_txns_requested = %txn_ids.len(), num_txns_requested = %result,
+            "Removed different number of waiting transactions from cache than requested"
             );
         }
 
@@ -855,7 +873,7 @@ mod tests {
         // Verify error
         assert!(result.is_err(), "Should fail when provider is missing");
         match result {
-            Err(Internal(RpcMissing(c))) => {
+            Err(InternalError(RpcMissing(c))) => {
                 assert_eq!(c, chain_id, "Error should reference missing chain ID");
             }
             _ => panic!("Expected RpcMissing error"),
@@ -895,7 +913,7 @@ mod tests {
         // Verify error
         assert!(result.is_err(), "Should fail when RPC returns error");
         match result {
-            Err(Internal(RpcFailedToFetchWalletNonce(c, w))) => {
+            Err(InternalError(RpcFailedToFetchWalletNonce(c, w))) => {
                 assert_eq!(c, chain_id, "Error should reference correct chain ID");
                 assert_eq!(w, wallet, "Error should reference correct wallet");
             }
@@ -1054,7 +1072,7 @@ mod tests {
     #[tokio::test]
     async fn test_check_cache_for_transaction() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, redis) = create_test_service().await;
 
         // Test data
         let chain_id = 4u64;
@@ -1081,6 +1099,8 @@ mod tests {
             .await
             .unwrap();
         assert!(non_existent.is_empty(), "Non-existent transaction should return None");
+
+        drop(redis)
     }
 
     #[tokio::test]
@@ -1119,19 +1139,18 @@ mod tests {
 
         // Test data
         let chain_id = 4u64;
-        let wallet = Address::from_slice(&[0x42; 20]);
+        let wallet_address = Address::from_slice(&[0x42; 20]);
         let nonce = 42u64;
         let raw_tx = Bytes::from(vec![0x01, 0x02, 0x03, 0x04]);
-        let tx_hash = "test_hash";
 
         // Set up test transaction in Redis
         let mut conn = service.redis_conn.clone();
-        conn.set_waiting_txn(chain_id, wallet, nonce, raw_tx.clone()).await.unwrap();
+        conn.set_waiting_txn(chain_id, wallet_address, nonce, raw_tx.clone()).await.unwrap();
 
         // Verify transaction exists before removal
         assert!(
             !service
-                .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, nonce)
+                .get_contiguous_waiting_transactions_from_cache(chain_id, wallet_address, nonce)
                 .await
                 .unwrap()
                 .is_empty(),
@@ -1139,8 +1158,13 @@ mod tests {
         );
 
         // Remove transaction
-        let result =
-            service.remove_waiting_transaction_from_cache(chain_id, wallet, nonce, tx_hash).await;
+        let result = service
+            .remove_waiting_transactions_from_cache(&[WaitingTransactionId {
+                chain_id,
+                wallet_address,
+                nonce,
+            }])
+            .await;
 
         // Verify success
         assert!(result.is_ok(), "Removing transaction from cache should succeed");
@@ -1149,7 +1173,7 @@ mod tests {
         // Verify transaction is gone
         assert!(
             service
-                .get_contiguous_waiting_transactions_from_cache(chain_id, wallet, nonce)
+                .get_contiguous_waiting_transactions_from_cache(chain_id, wallet_address, nonce)
                 .await
                 .unwrap()
                 .is_empty(),
@@ -1158,7 +1182,11 @@ mod tests {
 
         // Test removing non-existent key
         let non_existent_result = service
-            .remove_waiting_transaction_from_cache(chain_id, wallet, nonce + 1, tx_hash)
+            .remove_waiting_transactions_from_cache(&[WaitingTransactionId {
+                chain_id,
+                wallet_address,
+                nonce: nonce + 1,
+            }])
             .await;
 
         assert!(non_existent_result.is_ok(), "Removing non-existent key should not fail");
@@ -1541,7 +1569,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_higher_nonce() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, redis) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
@@ -1589,6 +1617,8 @@ mod tests {
 
         assert!(!cached_tx.is_empty(), "Transaction should be stored in waiting gap");
         assert_eq!(cached_tx[0], raw_tx, "Cached transaction should match the original");
+
+        drop(redis)
     }
 
     #[tokio::test]
@@ -1712,7 +1742,7 @@ mod tests {
     #[tokio::test]
     async fn test_handle_transaction_and_manage_nonces_with_gaps() {
         // Create test service
-        let (service, _, _, _) = create_test_service().await;
+        let (service, _, _, redis) = create_test_service().await;
         let service_arc = Arc::new(service);
 
         // Test data
@@ -1792,5 +1822,8 @@ mod tests {
                 .is_empty(),
             "Transaction with gap should still be in waiting gap"
         );
+
+        // Manually drop redis to avoid dropped connection
+        drop(redis)
     }
 }

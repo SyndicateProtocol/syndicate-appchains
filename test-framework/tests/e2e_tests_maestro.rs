@@ -12,6 +12,7 @@ use alloy::{
     },
 };
 use contract_bindings::arbitrum::rollup::{Rollup, Rollup::RollupInstance};
+use maestro::redis::models::waiting_transaction::WaitingGapTxnExt;
 use serde_json::json;
 use shared::types::FilledProvider;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
@@ -540,7 +541,7 @@ async fn create_and_fund_wallet(
     Ok((wallet_signer, wallet_address))
 }
 
-// Txn with higher nonce is accepted but doesn't make it onchain
+// Txn with higher nonce is accepted but doesn't make it on chain
 #[tokio::test]
 async fn e2e_maestro_higher_nonce_accepted() -> Result<(), eyre::Error> {
     TestComponents::run(
@@ -685,6 +686,13 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
                 nonce
             );
 
+            // Assert waiting txns in cache
+            let client = redis::Client::open(components.redis_url.as_str()).unwrap();
+            let mut redis_conn = client.get_multiplexed_async_connection().await.unwrap();
+            let waiting_txn_2 =
+                redis_conn.get_waiting_txn(chain_id, wallet_address, nonce + 2).await?;
+            assert!(waiting_txn_2.is_some());
+
             // Send txn to "unstick" cache
             let tx_hash0 = components.send_maestro_tx_successful(&tx0.encoded_2718()).await?;
 
@@ -702,11 +710,16 @@ async fn e2e_maestro_waiting_txns_get_unstuck() -> Result<(), eyre::Error> {
             let receipt2 = components.appchain_provider.get_transaction_receipt(tx_hash2).await?;
             assert!(receipt2.is_some());
 
-            // Waiting txn still waiting
+            // Nonce was updated
             assert_eq!(
                 components.appchain_provider.get_transaction_count(wallet_address).await?,
                 nonce + 3
             );
+
+            // Waiting txns removed from cache
+            let waiting_txn_2 =
+                redis_conn.get_waiting_txn(chain_id, wallet_address, nonce + 2).await?;
+            assert!(waiting_txn_2.is_none());
 
             Ok(())
         },

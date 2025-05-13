@@ -31,11 +31,9 @@ pub trait WaitingGapTxnExt {
     ) -> impl Future<Output = RedisResult<String>> + Send;
 
     /// Delete a waiting transaction by key from the Redis cache
-    fn del_waiting_txn_key(
+    fn del_waiting_txn_keys(
         &mut self,
-        chain_id: ChainId,
-        signer: Address,
-        nonce: u64,
+        waiting_txns: &[WaitingTransactionId],
     ) -> impl Future<Output = RedisResult<u64>> + Send;
 }
 
@@ -44,10 +42,10 @@ impl WaitingGapTxnExt for MultiplexedConnection {
     fn get_waiting_txn(
         &mut self,
         chain_id: ChainId,
-        signer: Address,
+        wallet_address: Address,
         nonce: u64,
     ) -> impl Future<Output = RedisResult<Option<String>>> + Send {
-        let key = waiting_gap_txns_key(chain_id, signer, nonce);
+        let key = waiting_gap_txns_key(chain_id, wallet_address, nonce);
         self.get(key)
     }
 
@@ -64,15 +62,26 @@ impl WaitingGapTxnExt for MultiplexedConnection {
         self.set_options(key, encoded_txn, opts)
     }
 
-    fn del_waiting_txn_key(
+    fn del_waiting_txn_keys(
         &mut self,
-        chain_id: ChainId,
-        signer: Address,
-        nonce: u64,
+        waiting_txns: &[WaitingTransactionId],
     ) -> impl Future<Output = RedisResult<u64>> + Send {
-        let key = waiting_gap_txns_key(chain_id, signer, nonce);
-        self.del(key)
+        let mut keys = Vec::new();
+        for txn_id in waiting_txns {
+            let key = waiting_gap_txns_key(txn_id.chain_id, txn_id.wallet_address, txn_id.nonce);
+            keys.push(key);
+        }
+        self.del(keys)
     }
+}
+
+/// Identifiers for a transaction that, combined, make it unique in the cache
+#[derive(Debug)]
+#[allow(missing_docs)]
+pub struct WaitingTransactionId {
+    pub chain_id: ChainId,
+    pub wallet_address: Address,
+    pub nonce: u64,
 }
 
 #[cfg(test)]
@@ -134,16 +143,17 @@ mod tests {
         let mut conn = get_redis_connection().await;
 
         let chain_id = 5u64;
-        let signer = Address::from_slice(&[0x24; 20]);
+        let wallet_address = Address::from_slice(&[0x24; 20]);
         let nonce = 123u64;
         let raw_txn = Bytes::from(vec![0x05, 0x06, 0x07, 0x08]);
 
         // Set the transaction
-        let set_result = conn.set_waiting_txn(chain_id, signer, nonce, raw_txn.clone()).await;
+        let set_result =
+            conn.set_waiting_txn(chain_id, wallet_address, nonce, raw_txn.clone()).await;
         assert!(set_result.is_ok(), "Failed to set waiting txn: {:?}", set_result.err());
 
         // Verify it exists
-        let get_result = conn.get_waiting_txn(chain_id, signer, nonce).await.unwrap();
+        let get_result = conn.get_waiting_txn(chain_id, wallet_address, nonce).await.unwrap();
         assert_eq!(
             get_result,
             Some(hex::encode(raw_txn.clone())),
@@ -151,12 +161,53 @@ mod tests {
         );
 
         // Delete the transaction
-        let del_result = conn.del_waiting_txn_key(chain_id, signer, nonce).await;
+        let txn_ids = vec![WaitingTransactionId { chain_id, wallet_address, nonce }];
+        let del_result = conn.del_waiting_txn_keys(&txn_ids).await;
         assert!(del_result.is_ok(), "Failed to delete waiting txn: {:?}", del_result.err());
         assert_eq!(del_result.unwrap(), 1, "Should have deleted exactly one key");
 
         // Verify it's gone
-        let get_after_del = conn.get_waiting_txn(chain_id, signer, nonce).await.unwrap();
+        let get_after_del = conn.get_waiting_txn(chain_id, wallet_address, nonce).await.unwrap();
+        assert_eq!(get_after_del, None, "Transaction should be deleted");
+    }
+
+    #[tokio::test]
+    async fn test_del_multiple_waiting_txn_key() {
+        let mut conn = get_redis_connection().await;
+
+        let chain_id = 5u64;
+        let wallet_address = Address::from_slice(&[0x24; 20]);
+        let nonce = 123u64;
+        let raw_txn = Bytes::from(vec![0x05, 0x06, 0x07, 0x08]);
+
+        // Set the transaction
+        let set_result =
+            conn.set_waiting_txn(chain_id, wallet_address, nonce, raw_txn.clone()).await;
+        assert!(set_result.is_ok(), "Failed to set waiting txn: {:?}", set_result.err());
+        let _ = conn.set_waiting_txn(chain_id, wallet_address, nonce + 1, raw_txn.clone()).await;
+        let _ = conn.set_waiting_txn(chain_id, wallet_address, nonce + 2, raw_txn.clone()).await;
+
+        // Verify it exists
+        let get_result = conn.get_waiting_txn(chain_id, wallet_address, nonce).await.unwrap();
+        assert_eq!(
+            get_result,
+            Some(hex::encode(raw_txn.clone())),
+            "Transaction should exist after setting"
+        );
+
+        // Delete the transaction
+        let txn_ids = vec![
+            WaitingTransactionId { chain_id, wallet_address, nonce },
+            WaitingTransactionId { chain_id, wallet_address, nonce: nonce + 1 },
+            WaitingTransactionId { chain_id, wallet_address, nonce: nonce + 2 },
+        ];
+        let del_result = conn.del_waiting_txn_keys(&txn_ids).await;
+        assert!(del_result.is_ok(), "Failed to delete waiting txns: {:?}", del_result.err());
+        assert_eq!(del_result.unwrap(), 3, "Should have deleted exactly 3 keys");
+
+        // Verify it's gone
+        let get_after_del =
+            conn.get_waiting_txn(chain_id, wallet_address, nonce + 2).await.unwrap();
         assert_eq!(get_after_del, None, "Transaction should be deleted");
     }
 
@@ -222,7 +273,9 @@ mod tests {
         assert_eq!(get2, Some(hex::encode(raw_txn2.clone())), "Transaction 2 incorrect");
 
         // Delete one transaction and verify the other remains
-        conn.del_waiting_txn_key(chain_id, signer1, nonce1).await.unwrap();
+        let txn_ids =
+            vec![WaitingTransactionId { chain_id, wallet_address: signer1, nonce: nonce1 }];
+        conn.del_waiting_txn_keys(&txn_ids).await.unwrap();
 
         let get1_after_del = conn.get_waiting_txn(chain_id, signer1, nonce1).await.unwrap();
         let get2_after_del = conn.get_waiting_txn(chain_id, signer2, nonce2).await.unwrap();
@@ -319,16 +372,17 @@ mod tests {
         let mut conn = get_redis_connection().await;
 
         let chain_id = 12u64;
-        let signer = Address::from_slice(&[0x9F; 20]);
+        let wallet_address = Address::from_slice(&[0x9F; 20]);
         let nonce = 999u64;
 
         // Delete a key that doesn't exist
-        let del_result = conn.del_waiting_txn_key(chain_id, signer, nonce).await.unwrap();
+        let txn_ids = vec![WaitingTransactionId { chain_id, wallet_address, nonce }];
+        let del_result = conn.del_waiting_txn_keys(&txn_ids).await.unwrap();
 
         // Redis returns 0 when no keys were deleted
         assert_eq!(del_result, 0, "Should return 0 when deleting non-existent key");
 
-        let get_result = conn.get_waiting_txn(chain_id, signer, nonce).await.unwrap();
+        let get_result = conn.get_waiting_txn(chain_id, wallet_address, nonce).await.unwrap();
         assert!(get_result.is_none(), "Should return none after deleting non-existent key");
     }
 }

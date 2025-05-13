@@ -2,7 +2,6 @@
 
 /// Redis key to retrieve Wallet Nonce values
 pub mod wallet_nonce {
-    use crate::redis::keys::ChainWalletNonceKey;
     use alloy::primitives::{Address, ChainId};
 
     /// Unique prefix of Wallet Nonce key for Redis String retrieval
@@ -24,10 +23,10 @@ pub mod wallet_nonce {
         let chain_wallet_composite_key = format!("{}_{}", chain_id, wallet_address);
         format!("{}:{}", WALLET_NONCE_KEY_PREFIX, chain_wallet_composite_key)
     }
-}
 
-/// Key produced by `chain_wallet_nonce_key()` above
-pub type ChainWalletNonceKey = String;
+    /// Key produced by `chain_wallet_nonce_key()` above
+    pub type ChainWalletNonceKey = String;
+}
 
 /// Redis keys to retrieve Waiting Transaction values
 pub mod waiting_txn {
