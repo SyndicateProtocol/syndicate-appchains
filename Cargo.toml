@@ -99,6 +99,7 @@ criterion    = { version = "0.5" }
 ctor         = "0.4.1"
 mockall      = "0.13.1"
 mockito      = { version = "1.7.0" }
+once_cell    = { version = "1.21.3" }
 serial_test  = { version = "3.2.0" }
 temp-env     = "0.3.6"
 test-case    = { version = "3" }

@@ -2,7 +2,7 @@
 //! This module provides the consumer implementation for Redis streams used to queue
 //! and process transactions across different chains.
 
-use super::producer::tx_stream_key;
+use crate::redis::streams::producer::tx_stream_key;
 use alloy::primitives::ChainId;
 use redis::{
     aio::MultiplexedConnection,
@@ -126,7 +126,7 @@ impl StreamConsumer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::redis::producer::StreamProducer;
+    use crate::redis::streams::producer::StreamProducer;
     use std::time::Duration;
     use test_utils::docker::start_redis;
 

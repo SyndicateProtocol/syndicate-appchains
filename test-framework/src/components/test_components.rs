@@ -94,6 +94,7 @@ pub struct TestComponents {
     pub poster_url: String,
 
     pub maestro_url: String,
+    pub redis_url: String,
 
     #[allow(dead_code)]
     pub appchain_block_explorer_url: String,
@@ -382,11 +383,13 @@ impl TestComponents {
         };
 
         let (mut redis, mut maestro, mut batch_sequencer) = (None, None, None);
+        let mut redis_url_init = String::new();
         let mut maestro_url = Default::default();
         if options.use_write_loop {
             info!("Starting Write Loop components...");
             info!("Starting redis...");
             let (redis_instance, redis_url) = start_redis().await?;
+            redis_url_init = redis_url.clone();
             redis = Some(redis_instance);
             info!("Starting maestro...");
             let maestro_config = MaestroConfig {
@@ -443,6 +446,7 @@ impl TestComponents {
                 mchain_provider,
                 poster_url,
                 maestro_url,
+                redis_url: redis_url_init,
                 appchain_block_explorer_url,
             },
             ComponentHandles {

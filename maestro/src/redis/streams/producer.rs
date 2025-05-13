@@ -33,7 +33,7 @@ pub fn tx_stream_key(chain_id: u64) -> String {
 ///
 /// # Examples
 /// ```rust
-/// use maestro::redis::producer::StreamProducer;
+/// use maestro::redis::streams::producer::StreamProducer;
 /// use redis::aio::MultiplexedConnection;
 /// use std::time::Duration;
 ///
