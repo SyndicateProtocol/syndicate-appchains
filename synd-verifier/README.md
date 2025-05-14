@@ -12,6 +12,6 @@ In the TEE withdrawal flow:
 
 - It verifies block correctness, receipt integrity, and timestamp alignment.
 
-- It produces an MBlock—the trusted result used to on the `synd-lock-verifier` component.
+- It produces an MBlock—the trusted result used to on the `synd-block-verifier` component.
 
 This ensures that all onchain and offchain state transitions are cryptographically verified and consistent with the rollup’s canonical rules.
