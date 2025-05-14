@@ -61,6 +61,7 @@ pub struct Receipt {
     /// The logs bloom filter for the transaction.
     pub logs_bloom: Bloom,
     /// The transaction's execution status.
+    #[serde(deserialize_with = "deserialize_status", serialize_with = "serialize_status")]
     pub status: Eip658Value,
     /// The transaction type, if available.
     #[serde(deserialize_with = "deserialize_hex_to_u8", serialize_with = "serialize_hex_u8")]
@@ -219,6 +220,37 @@ where
     S: Serializer,
 {
     serializer.serialize_str(&format!("0x{:x}", num))
+}
+
+fn deserialize_status<'de, D>(deserializer: D) -> Result<Eip658Value, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let hex_str: String = Deserialize::deserialize(deserializer)?;
+    match hex_str.as_str() {
+        "0x1" => Ok(Eip658Value::Eip658(true)),
+        "0x0" => Ok(Eip658Value::Eip658(false)),
+        _ => {
+            // Try to decode to B256
+            let decoded = hex::decode(hex_str.trim_start_matches("0x"))
+                .map_err(|err| de::Error::custom(format!("Invalid hex for PostState: {}", err)))?;
+            let arr: [u8; 32] =
+                decoded.try_into().map_err(|_| de::Error::custom("PostState must be 32 bytes"))?;
+            Ok(Eip658Value::PostState(B256::from(arr)))
+        }
+    }
+}
+
+fn serialize_status<S>(status: &Eip658Value, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let hex = match status {
+        Eip658Value::Eip658(true) => "0x1".to_string(),
+        Eip658Value::Eip658(false) => "0x0".to_string(),
+        Eip658Value::PostState(val) => format!("0x{}", hex::encode(val.as_slice())),
+    };
+    serializer.serialize_str(&hex)
 }
 /// A filled provider
 pub type FilledProvider = FillProvider<
