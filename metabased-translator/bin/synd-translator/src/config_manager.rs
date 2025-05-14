@@ -1,4 +1,4 @@
-use crate::config::MetabasedConfig;
+use crate::config::TranslatorConfig;
 use alloy::{
     primitives::{Address, U256},
     providers::{Provider, ProviderBuilder},
@@ -9,7 +9,7 @@ use eyre::Result;
 use synd_chain_ingestor::client::{IngestorProvider, Provider as _};
 use tracing::{error, info, warn};
 
-pub async fn with_onchain_config(config: &MetabasedConfig) -> MetabasedConfig {
+pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig {
     let address = match config.config_manager_address {
         Some(addr) => addr,
         None => {

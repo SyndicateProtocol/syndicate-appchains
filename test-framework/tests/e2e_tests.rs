@@ -1,4 +1,4 @@
-//! e2e tests for the metabased stack
+//! e2e tests for the `synd-appchains` stack
 use alloy::{
     eips::{BlockNumberOrTag, Encodable2718},
     network::TransactionBuilder,
@@ -158,7 +158,7 @@ async fn e2e_deposit_213() -> Result<()> {
 
 /// This test sends different types of delayed messages
 /// via the inbox contract and ensures that all of them
-/// are sequenced via the metabased translator and show up on the rollup.
+/// are sequenced via the `synd-translator` and show up on the appchain.
 async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
     // Sequencer fees go to the zero address
     TestComponents::run(

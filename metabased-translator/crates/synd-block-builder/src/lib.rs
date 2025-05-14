@@ -1,5 +1,5 @@
-//! `Synd-block-builder` crate handles block construction, rollup translation, and connection to the
-//! mock chain
+//! `Synd-block-builder` crate handles block construction, appchain block translation, and
+//! connection to the `mockchain`
 
+pub mod appchains;
 pub mod config;
-pub mod rollups;

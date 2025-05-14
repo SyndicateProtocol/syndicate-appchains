@@ -1,12 +1,12 @@
 [package]
 edition.workspace      = true
 license.workspace      = true
-name                   = "metabased-translator"
+name                   = "synd-translator"
 rust-version.workspace = true
 version.workspace      = true
 
 [[bin]]
-name = "metabased-translator"
+name = "synd-translator"
 path = "src/main.rs"
 
 [dependencies]

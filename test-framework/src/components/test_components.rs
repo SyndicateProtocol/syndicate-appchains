@@ -333,7 +333,7 @@ impl TestComponents {
         };
 
         let translator = start_component(
-            "metabased-translator",
+            "synd-translator",
             translator_config.metrics_port,
             translator_config.cli_args(),
             Default::default(),

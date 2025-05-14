@@ -47,7 +47,7 @@ services:
   translator:
     build:
       context: ../../
-      target: metabased-translator
+      target: synd-translator
       dockerfile: Dockerfile
     environment:
 #     - RUST_LOG=debug

@@ -14,7 +14,7 @@ services:
   translator:
     build:
       context: ../../
-      target: metabased-translator-debug
+      target: synd-translator-debug
       dockerfile: Dockerfile
     environment:
       - RUST_LOG=debug
@@ -31,7 +31,7 @@ services:
       - ./heaptrack_output:/heaptrack_output
     # Run the translator through heaptrack
     entrypoint: []
-    command: sh -c "mkdir -p /heaptrack_output && heaptrack -o /heaptrack_output/translator /usr/local/bin/metabased-translator"
+    command: sh -c "mkdir -p /heaptrack_output && heaptrack -o /heaptrack_output/translator /usr/local/bin/synd-translator"
     depends_on:
       - mchain
       - seq

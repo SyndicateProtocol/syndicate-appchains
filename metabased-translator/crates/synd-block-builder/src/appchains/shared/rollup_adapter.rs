@@ -3,7 +3,7 @@
 //! This module provides the core [`RollupAdapter`] trait that defines how
 //! different rollup implementations can construct and process their blocks.
 
-use crate::rollups::shared::SequencingTransactionParser;
+use crate::appchains::shared::SequencingTransactionParser;
 use alloy::primitives::Bytes;
 use async_trait::async_trait;
 use shared::types::PartialBlock;

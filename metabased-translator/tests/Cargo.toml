@@ -1,5 +1,5 @@
 [package]
-description            = "e2e tests for metabased-translator."
+description            = "e2e tests for synd-translator."
 edition.workspace      = true
 homepage.workspace     = true
 license.workspace      = true

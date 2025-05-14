@@ -1,4 +1,4 @@
-//! Integration tests for the metabased stack
+//! Integration tests for the Syndicate appchains stack
 use alloy::{
     eips::{eip2718::Encodable2718, BlockNumberOrTag},
     network::{EthereumWallet, TransactionBuilder},
@@ -11,7 +11,7 @@ use alloy::{
 use contract_bindings::arbitrum::{arbgasinfo::ArbGasInfo, arbownerpublic::ArbOwnerPublic};
 use eyre::{Ok, Result};
 use std::{str::FromStr as _, time::Duration};
-use synd_block_builder::rollups::arbitrum::{self, arbitrum_adapter::L1MessageType};
+use synd_block_builder::appchains::arbitrum::{self, arbitrum_adapter::L1MessageType};
 use synd_mchain::{
     client::Provider as _,
     db::{DelayedMessage, MBlock, Slot},
@@ -54,7 +54,7 @@ async fn arb_owner_test() -> Result<()> {
     const ARB_OWNER_CONTRACT_ADDRESS: Address =
         address!("0x000000000000000000000000000000000000006b");
 
-    // Start the meta node
+    // Start the appchains node
     let rollup_owner = address!("0x0000000000000000000000000000000000000001");
     let (mchain_url, _mchain, _) =
         start_mchain(APPCHAIN_CHAIN_ID, Some(rollup_owner), None, None, 0).await?;
@@ -77,7 +77,7 @@ async fn no_l1_fees_test() -> Result<()> {
     assert_eq!(arb_gas_info.getL1BaseFeeEstimate().call().await?._0, U256::ZERO);
     // Make sure adding delayed messages with a non-zero base fee does not increase the l1 fee.
     // The l1 fee should only be updated when BatchPostingReport messages are sent, which we
-    // explicitly block in the metabased translator.
+    // explicitly block in the `synd-translator`.
     let qty = parse_ether("1")?;
     let msg = DelayedMessage { base_fee_l1: qty, ..deposit_eth(TEST_ADDR, TEST_ADDR, qty) };
     mchain

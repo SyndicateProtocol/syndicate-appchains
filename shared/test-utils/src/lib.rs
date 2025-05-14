@@ -1,4 +1,4 @@
-//! The `test-utils` library contains test functions that are reused by the `metabased-rollup`
+//! The `test-utils` library contains test functions that are reused by the `synd-appchains
 //! stack.
 pub mod anvil;
 pub mod docker;

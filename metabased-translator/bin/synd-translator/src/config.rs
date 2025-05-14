@@ -1,6 +1,6 @@
-//! Common configuration for the Metabased Translator.
+//! Common configuration for the `synd-translator`
 //!
-//! This module contains all possible configuration options for the Metabased Translator. Different
+//! This module contains all possible configuration options for the `synd-translator`. Different
 //! crates each inherit a subset of these options to configure themselves
 
 use alloy::primitives::Address;
@@ -160,11 +160,11 @@ impl SettlementChainConfig {
     }
 }
 
-/// Common config stuct for the Metabased Translator. This contains all possible config options
+/// Common config stuct for the `synd-translator`. This contains all possible config options
 /// which other crates can use
 #[derive(Parser, Debug, Clone)]
 #[command(version, about)]
-pub struct MetabasedConfig {
+pub struct TranslatorConfig {
     #[command(flatten)]
     pub block_builder: BlockBuilderConfig,
 
@@ -181,11 +181,11 @@ pub struct MetabasedConfig {
     #[arg(long, env = "SETTLEMENT_DELAY")]
     pub settlement_delay: Option<u64>,
 
-    /// The address of the rollup owner on the settlement chain
+    /// The address of the appchain owner on the settlement chain
     #[arg(long, env = "APPCHAIN_OWNER")]
     pub appchain_owner: Option<Address>,
 
-    /// The chain ID of the Appchain rollup (not the synd-mchain)
+    /// The chain ID of the Appchain (not the `synd-mchain`)
     #[arg(long, env = "APPCHAIN_CHAIN_ID")]
     pub appchain_chain_id: u64,
 
@@ -207,13 +207,13 @@ pub struct MetabasedConfig {
     pub get_logs_timeout: Duration,
 }
 
-impl MetabasedConfig {
+impl TranslatorConfig {
     /// Initializes the configuration by parsing CLI arguments and environment variables.
     pub fn initialize() -> Self {
         <Self as Parser>::parse()
     }
 
-    /// Validate MetabasedConfig
+    /// Validate [`TranslatorConfig`]
     pub fn validate(&self) -> Result<(), ConfigError> {
         self.block_builder.validate().map_err(ConfigError::BlockBuilder)?;
         self.sequencing.validate().map_err(ConfigError::Ingestor)?;
@@ -233,7 +233,7 @@ impl MetabasedConfig {
     }
 
     pub fn generate_sample_command() {
-        let mut cmd = String::from("cargo run --bin metabased-translator -- \\\n");
+        let mut cmd = String::from("cargo run --bin synd-translator -- \\\n");
 
         // Recursively get all fields from flattened configs
         fn add_fields<T: Parser + 'static>(cmd: &mut String) {
@@ -256,7 +256,7 @@ impl MetabasedConfig {
     }
 }
 
-impl Default for MetabasedConfig {
+impl Default for TranslatorConfig {
     fn default() -> Self {
         Self {
             block_builder: BlockBuilderConfig::default(),
@@ -276,12 +276,12 @@ impl Default for MetabasedConfig {
 
 #[cfg(test)]
 mod tests {
-    use super::{ChainIngestorConfig, MetabasedConfig};
+    use super::{ChainIngestorConfig, TranslatorConfig};
     use common::types::Chain;
 
     #[test]
     fn test_generate_command() {
-        MetabasedConfig::generate_sample_command();
+        TranslatorConfig::generate_sample_command();
     }
 
     #[test]

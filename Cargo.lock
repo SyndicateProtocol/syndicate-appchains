@@ -3238,29 +3238,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
 
 [[package]]
-name = "metabased-translator"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "async-trait",
- "clap",
- "common",
- "contract-bindings",
- "eyre",
- "humantime",
- "metrics",
- "shared",
- "synd-block-builder",
- "synd-chain-ingestor",
- "synd-mchain",
- "synd-slotter",
- "temp-env",
- "thiserror 2.0.12",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "metrics"
 version = "0.1.0"
 dependencies = [
@@ -4972,6 +4949,29 @@ dependencies = [
  "shared",
  "synd-chain-ingestor",
  "synd-mchain",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "synd-translator"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "async-trait",
+ "clap",
+ "common",
+ "contract-bindings",
+ "eyre",
+ "humantime",
+ "metrics",
+ "shared",
+ "synd-block-builder",
+ "synd-chain-ingestor",
+ "synd-mchain",
+ "synd-slotter",
+ "temp-env",
  "thiserror 2.0.12",
  "tokio",
  "tracing",

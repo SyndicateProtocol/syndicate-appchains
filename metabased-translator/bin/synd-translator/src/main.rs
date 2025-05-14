@@ -1,9 +1,7 @@
 use eyre::Result;
-use metabased_translator::{
-    config::MetabasedConfig, config_manager::with_onchain_config, spawn::run,
-};
 use shared::logger::set_global_default_subscriber;
-use synd_block_builder::config::TargetRollupType::{ARBITRUM, OPTIMISM};
+use synd_block_builder::config::TargetAppchainType::{ARBITRUM, OPTIMISM};
+use synd_translator::{config::TranslatorConfig, config_manager::with_onchain_config, spawn::run};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::{error, info};
 
@@ -12,11 +10,11 @@ async fn main() -> Result<()> {
     // Initialize logging
     set_global_default_subscriber()?;
 
-    let base_config = MetabasedConfig::initialize();
+    let base_config = TranslatorConfig::initialize();
 
     info!("Base configuration {:?}", base_config);
     if let Err(e) = base_config.validate() {
-        error!("Failed to initialize MetabasedConfig: {}", e);
+        error!("Failed to initialize TranslatorConfig: {}", e);
         std::process::exit(1);
     };
 
@@ -42,9 +40,9 @@ async fn main() -> Result<()> {
     config.validate_strict()?;
 
     // Run the async process
-    match config.block_builder.target_rollup_type {
+    match config.block_builder.target_appchain_type {
         OPTIMISM => {
-            panic!("Optimism is unsupported currently")
+            panic!("Optimism is currently unsupported")
         }
         ARBITRUM => {
             run(&config).await?;

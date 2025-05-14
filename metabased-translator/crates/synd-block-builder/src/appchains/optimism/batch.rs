@@ -2,7 +2,7 @@
 //!
 //! This module provides functionality for encoding batches of transactions into frames
 //! that can be submitted by the batcher.
-use crate::rollups::optimism::frame::Frame;
+use crate::appchains::optimism::frame::Frame;
 use alloy::{
     primitives::{Address, Bytes, B256},
     rlp::{Buf, Decodable, Encodable, Error as RlpError},

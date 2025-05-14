@@ -5,14 +5,14 @@
 //! across different rollup implementations
 
 use crate::{
-    config::BlockBuilderConfig,
-    rollups::{
+    appchains::{
         optimism::{
             batch::{new_batcher_tx, Batch},
             frame::to_data,
         },
         shared::{RollupAdapter, SequencingTransactionParser},
     },
+    config::BlockBuilderConfig,
 };
 use alloy::{
     primitives::{Address, Bytes, B256},

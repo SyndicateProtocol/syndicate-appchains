@@ -39,14 +39,14 @@ RUN apt-get update && \
 FROM gcr.io/distroless/cc AS runtime-base
 
 # Runtime images
-FROM runtime-base AS metabased-translator
+FROM runtime-base AS synd-translator
 ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/metabased-translator /usr/local/bin/metabased-translator
+COPY --from=build /app/target/${BUILD_PROFILE}/synd-translator /usr/local/bin/synd-translator
 COPY --from=foundry /root/.foundry /root/.foundry
 ENV PATH="/root/.foundry/bin:${PATH}"
-ENTRYPOINT ["/usr/local/bin/metabased-translator"]
+ENTRYPOINT ["/usr/local/bin/synd-translator"]
 EXPOSE 8545 8546
-LABEL service=metabased-translator
+LABEL service=synd-translator
 
 FROM runtime-base AS synd-poster
 ARG BUILD_PROFILE
@@ -54,12 +54,12 @@ COPY --from=build /app/target/${BUILD_PROFILE}/synd-poster /usr/local/bin/synd-p
 ENTRYPOINT ["/usr/local/bin/synd-poster"]
 LABEL service=synd-poster
 
-FROM runtime-base AS maestro
+FROM runtime-base AS synd-maestro
 ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/maestro /usr/local/bin/maestro
-ENTRYPOINT ["/usr/local/bin/maestro"]
+COPY --from=build /app/target/${BUILD_PROFILE}/synd-maestro /usr/local/bin/synd-maestro
+ENTRYPOINT ["/usr/local/bin/synd-maestro"]
 EXPOSE 8545 8546
-LABEL service=maestro
+LABEL service=synd-maestro
 
 FROM runtime-base AS synd-batch-sequencer
 ARG BUILD_PROFILE
@@ -83,12 +83,12 @@ EXPOSE 8545 8546
 LABEL service=synd-chain-ingestor
 
 # --------- Debugging image for translator ---------
-FROM ubuntu:22.04 AS metabased-translator-debug
+FROM ubuntu:22.04 AS synd-translator-debug
 ARG BUILD_PROFILE
 RUN apt-get update && apt-get install -y heaptrack libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
-COPY --from=build /app/target/${BUILD_PROFILE}/metabased-translator /usr/local/bin/metabased-translator
+COPY --from=build /app/target/${BUILD_PROFILE}/synd-translator /usr/local/bin/synd-translator
 COPY --from=foundry /root/.foundry /root/.foundry
 ENV PATH="/root/.foundry/bin:${PATH}"
-ENTRYPOINT ["/usr/local/bin/metabased-translator"]
+ENTRYPOINT ["/usr/local/bin/synd-translator"]
 EXPOSE 8545 8546
-LABEL service=metabased-translator
+LABEL service=synd-translator

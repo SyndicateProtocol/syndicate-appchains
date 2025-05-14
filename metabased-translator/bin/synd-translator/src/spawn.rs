@@ -1,12 +1,12 @@
 use crate::{
-    config::{ChainIngestorConfig, MetabasedConfig},
+    config::{ChainIngestorConfig, TranslatorConfig},
     types::RuntimeError,
 };
 use eyre::Result;
 use metrics::metrics::TranslatorMetrics;
 use shared::service_start_utils::{start_metrics_and_health, MetricsState};
 use std::sync::Arc;
-use synd_block_builder::rollups::arbitrum::arbitrum_adapter::ArbitrumAdapter;
+use synd_block_builder::appchains::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use synd_chain_ingestor::{
     client::{IngestorProvider, Provider as IProvider},
     eth_client::EthClient,
@@ -15,15 +15,15 @@ use synd_mchain::client::{MProvider, Provider};
 use tracing::{error, log::info};
 
 /// Entry point for the async runtime
-pub async fn run(config: &MetabasedConfig) -> Result<(), RuntimeError> {
-    info!("Initializing Metabased Translator components");
+pub async fn run(config: &TranslatorConfig) -> Result<(), RuntimeError> {
+    info!("Initializing Syndicate Translator components");
 
     let mut metrics_state = MetricsState::default();
     let metrics = TranslatorMetrics::new(&mut metrics_state.registry);
     start_metrics_and_health(metrics_state, config.metrics.metrics_port).await;
 
     loop {
-        info!("Starting Metabased Translator");
+        info!("Starting Syndicate Translator");
         match start_slotter(config, &metrics).await {
             Ok(()) => std::process::exit(0),
             Err(e) => error!("restarting the translator components: {e}"),
@@ -31,7 +31,7 @@ pub async fn run(config: &MetabasedConfig) -> Result<(), RuntimeError> {
     }
 }
 
-async fn start_slotter(config: &MetabasedConfig, metrics: &TranslatorMetrics) -> Result<()> {
+async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -> Result<()> {
     let mchain = MProvider::new(&config.block_builder.mchain_rpc_url)
         .await
         .map_err(|e| RuntimeError::InvalidConfig(format!("Invalid synd-mchain rpc url: {}", e)))?;

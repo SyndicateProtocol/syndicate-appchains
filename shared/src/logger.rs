@@ -4,7 +4,7 @@ use crate::logger::Error::DefaultLoggerInit;
 use thiserror::Error;
 use tracing_subscriber::EnvFilter;
 
-/// Constructs the default subscriber for the `metabased` stack and
+/// Constructs the default subscriber for the `syndicate-appchains` stack and
 /// "Enables" the default subscriber as the global default for a Rust program
 ///
 /// **IMPORTANT**: This function is intended to be called by binaries or other

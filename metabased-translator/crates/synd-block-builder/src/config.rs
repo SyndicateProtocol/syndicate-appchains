@@ -17,9 +17,9 @@ pub struct BlockBuilderConfig {
         value_parser = parse_address)]
     pub sequencing_contract_address: Option<Address>,
 
-    /// Target rollup type for the [`synd-block-builder`]
-    #[arg(long, env = "TARGET_ROLLUP_TYPE", default_value = "arbitrum")]
-    pub target_rollup_type: TargetRollupType,
+    /// Target appchain type for the [`synd-block-builder`]
+    #[arg(long, env = "TARGET_APPCHAIN_TYPE", default_value = "arbitrum")]
+    pub target_appchain_type: TargetAppchainType,
 
     // TODO(SEQ-555): make bridge and inbox addresses specific to arbitrum
     /// Bridge address on the settlement chain
@@ -43,10 +43,10 @@ pub struct BlockBuilderConfig {
     pub allowed_settlement_addresses: Vec<Address>,
 }
 
-/// Possible target rollup types for the `synd-block-builder`
+/// Possible target appchain types for the `synd-block-builder`
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Parser, ValueEnum)]
-pub enum TargetRollupType {
+pub enum TargetAppchainType {
     OPTIMISM,
     ARBITRUM,
 }
@@ -56,7 +56,7 @@ impl Debug for BlockBuilderConfig {
         f.debug_struct("BlockBuilderConfig")
             .field("mchain_rpc_url", &self.mchain_rpc_url)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
-            .field("target_rollup_type", &self.target_rollup_type)
+            .field("target_rollup_type", &self.target_appchain_type)
             .field("arbitrum_bridge_address", &self.arbitrum_bridge_address)
             .field("arbitrum_inbox_address", &self.arbitrum_inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
@@ -70,7 +70,7 @@ impl Default for BlockBuilderConfig {
         Self {
             mchain_rpc_url: String::new(),
             sequencing_contract_address: Some(Address::ZERO),
-            target_rollup_type: TargetRollupType::ARBITRUM,
+            target_appchain_type: TargetAppchainType::ARBITRUM,
             arbitrum_bridge_address: Some(Address::ZERO),
             arbitrum_inbox_address: Some(Address::ZERO),
             arbitrum_ignore_delayed_messages: Some(false),
@@ -82,11 +82,11 @@ impl Default for BlockBuilderConfig {
 impl BlockBuilderConfig {
     /// Validates the config values and complains about impossible ones
     pub fn validate(&self) -> Result<(), ConfigError> {
-        match self.target_rollup_type {
+        match self.target_appchain_type {
             // Validate Arbitrum specific configuration
-            TargetRollupType::ARBITRUM => {}
+            TargetAppchainType::ARBITRUM => {}
             // Validate Optimism specific configuration
-            TargetRollupType::OPTIMISM => {
+            TargetAppchainType::OPTIMISM => {
                 return Err(ConfigError::UnsupportedRollupType(
                     "Optimism is not supported yet".to_string(),
                 ));

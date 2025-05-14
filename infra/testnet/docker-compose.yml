@@ -16,7 +16,7 @@ services:
     networks:
       - metabased-network
   translator:
-    image: us-central1-docker.pkg.dev/metabased-testnet/images/metabased-rollup/metabased-translator:{{ image_tag }}
+    image: us-central1-docker.pkg.dev/metabased-testnet/images/metabased-rollup/synd-translator:{{ image_tag }}
     container_name: translator
     platform: linux/amd64
     environment:

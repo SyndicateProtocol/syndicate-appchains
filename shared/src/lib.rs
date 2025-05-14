@@ -1,4 +1,4 @@
-//! The `shared` library contains functions and code that are reused by the `metabased-rollup`
+//! The `shared` library contains functions and code that are reused by the `syndicate-appchain`
 //! stack.
 
 pub mod json_rpc;

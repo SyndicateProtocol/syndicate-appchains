@@ -4,12 +4,12 @@ set -e # Exit immediately if a command exits with a non-zero status.
 # Define targets and their desired image tags
 # Format: "stage_name:image_tag"
 targets=(
-    "metabased-translator:metabased-translator:latest"
+    "synd-translator:synd-translator:latest"
     "synd-poster:synd-poster:latest"
-    "maestro:maestro:latest"
+    "synd-maestro:synd-maestro:latest"
     "synd-batch-sequencer:synd-batch-sequencer:latest"
-    "mchain:mchain:latest"
-    "metabased-translator-debug:metabased-translator:debug"
+    "synd-mchain:synd-mchain:latest"
+    "synd-translator-debug:synd-translator:debug"
     "synd-chain-ingestor:synd-chain-ingestor:latest"
 )
 

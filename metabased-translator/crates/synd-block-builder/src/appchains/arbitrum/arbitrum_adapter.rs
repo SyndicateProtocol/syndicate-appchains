@@ -5,11 +5,11 @@
 //! construction across different rollup implementations
 
 use crate::{
-    config::BlockBuilderConfig,
-    rollups::{
+    appchains::{
         arbitrum::batch::{Batch, BatchMessage, L1IncomingMessage, L1IncomingMessageHeader},
         shared::{RollupAdapter, SequencingTransactionParser},
     },
+    config::BlockBuilderConfig,
 };
 use alloy::{
     primitives::{Address, Bytes, FixedBytes, Log, U256},
