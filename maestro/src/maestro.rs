@@ -169,6 +169,7 @@ impl MaestroService {
                 return Err(JsonRpcError(TransactionRejected(rejection)))
             }
             Ordering::Greater => {
+                debug!(%tx_hash, %chain_id, "Caching waiting transaction");
                 self.cache_waiting_transaction(chain_id, wallet, tx_nonce, raw_tx).await?;
             }
         }
@@ -199,7 +200,7 @@ impl MaestroService {
         chain_id: ChainId,
     ) -> Result<(), MaestroRpcError> {
         let tx_hash = keccak256(raw_tx.as_ref());
-        let producer = self.producers.get(&chain_id).ok_or({
+        let producer = self.producers.get(&chain_id).ok_or_else(|| {
             error!(%chain_id, %tx_hash, "Non existent stream producer for chain id");
             InternalError(RpcMissing(chain_id))
         })?;
