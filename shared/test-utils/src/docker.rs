@@ -218,15 +218,15 @@ pub async fn launch_nitro_node(
 
     let url = format!("http://localhost:{}", port);
 
-    let rollup = ProviderBuilder::default().connect(&url).await?;
+    let appchain = ProviderBuilder::default().connect(&url).await?;
     wait_until!(
         if let Some(status) = nitro.try_wait()? {
             panic!("nitro node exited with {}", status);
         };
-        rollup.get_chain_id().await.is_ok(),
+        appchain.get_chain_id().await.is_ok(),
         Duration::from_secs(5*60)  // give it time to download the image if necessary
     );
-    Ok((nitro, rollup, url))
+    Ok((nitro, appchain, url))
 }
 
 pub async fn start_redis() -> Result<(Docker, String)> {
