@@ -7,8 +7,7 @@ use crate::{
 };
 use alloy::{
     consensus::{
-        proofs::calculate_receipt_root, Eip658Value, Header, Receipt as AlloyReceipt,
-        ReceiptWithBloom,
+        proofs::calculate_receipt_root, Header, Receipt as AlloyReceipt, ReceiptWithBloom,
     },
     primitives::{Bytes, FixedBytes},
     rpc::types::Block,
@@ -82,7 +81,7 @@ impl Verifier {
                     let typed = TypedReceipt {
                         ty: r.r#type,
                         receipt: AlloyReceipt {
-                            status: Eip658Value::Eip658(r.status == 1),
+                            status: r.status,
                             cumulative_gas_used: r.cumulative_gas_used,
                             logs: r.logs.clone(),
                         },
@@ -236,6 +235,7 @@ impl Verifier {
 mod tests {
     use super::*;
     use alloy::{
+        consensus::Eip658Value,
         primitives::{address, b256, Bloom, U256},
         rpc::types::{Block, BlockTransactions},
     };
@@ -297,7 +297,7 @@ mod tests {
                 contract_address: None,
                 logs: vec![],
                 logs_bloom: Bloom::ZERO,
-                status: 1,
+                status: Eip658Value::Eip658(true),
                 r#type: 126,
                 transaction_index: 0,
                 transaction_hash: b256!(
@@ -415,7 +415,7 @@ mod tests {
                         contract_address: None,
                         logs: vec![],
                         logs_bloom: Bloom::ZERO,
-                        status: 1,
+                        status: Eip658Value::Eip658(true),
                         r#type: 106,
                         transaction_index: 0,
                         transaction_hash: b256!(
@@ -434,7 +434,7 @@ mod tests {
                         contract_address: None,
                         logs: vec![],
                         logs_bloom: Bloom::ZERO,
-                        status: 1,
+                        status: Eip658Value::Eip658(true),
                         r#type: 2,
                         transaction_index: 1,
                         transaction_hash: b256!(
@@ -455,7 +455,7 @@ mod tests {
                         contract_address: None,
                         logs: vec![],
                         logs_bloom: Bloom::ZERO,
-                        status: 1,
+                        status: Eip658Value::Eip658(true),
                         r#type: 106, // 0x6a
                         transaction_index: 0,
                         transaction_hash: b256!(
@@ -474,7 +474,7 @@ mod tests {
                         contract_address: None,
                         logs: vec![],
                         logs_bloom: Bloom::ZERO,
-                        status: 1,
+                        status: Eip658Value::Eip658(true),
                         r#type: 2,
                         transaction_index: 1,
                         transaction_hash: b256!(

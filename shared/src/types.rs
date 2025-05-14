@@ -1,6 +1,7 @@
 //! The `types` module contains shared types used by multiple applications
 
 use alloy::{
+    consensus::Eip658Value,
     hex,
     network::EthereumWallet,
     primitives::{Address, Bloom, Log, B256},
@@ -60,8 +61,7 @@ pub struct Receipt {
     /// The logs bloom filter for the transaction.
     pub logs_bloom: Bloom,
     /// The transaction's execution status.
-    #[serde(deserialize_with = "deserialize_hex_to_u64", serialize_with = "serialize_hex_u64")]
-    pub status: u64,
+    pub status: Eip658Value,
     /// The transaction type, if available.
     #[serde(deserialize_with = "deserialize_hex_to_u8", serialize_with = "serialize_hex_u8")]
     pub r#type: u8,
