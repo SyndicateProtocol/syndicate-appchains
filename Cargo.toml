@@ -1,11 +1,5 @@
 [workspace]
 members = [
-  "metabased-translator/bin/synd-translator",
-  "metabased-translator/crates/common",
-  "metabased-translator/crates/metrics",
-  "metabased-translator/crates/synd-block-builder",
-  "metabased-translator/crates/synd-slotter",
-  "metabased-translator/tests",
   "shared",
   "shared/contract-bindings",
   "shared/test-utils",
@@ -16,6 +10,12 @@ members = [
   "synd-maestro",
   "synd-mchain",
   "synd-poster",
+  "synd-translator/bin/synd-translator",
+  "synd-translator/crates/common",
+  "synd-translator/crates/metrics",
+  "synd-translator/crates/synd-block-builder",
+  "synd-translator/crates/synd-slotter",
+  "synd-translator/tests",
   "test-framework",
 ]
 
@@ -45,7 +45,7 @@ brotli              = "7.0.0"
 byte-unit           = "5.1.6"
 bytes               = "1.9.0"
 clap                = { version = "4.5.26" }
-common              = { path = "metabased-translator/crates/common" }
+common              = { path = "synd-translator/crates/common" }
 contract-bindings   = { path = "shared/contract-bindings" }
 derivative          = "2.2"
 derive_more         = { version = "1.0.0", features = ["display"] }
@@ -61,7 +61,7 @@ http-body-util      = "0.1"
 humantime           = "2.1.0"
 hyper               = { version = "1.5.2" }
 jsonrpsee           = { version = "0.24.7" }
-metrics             = { path = "metabased-translator/crates/metrics" }
+metrics             = { path = "synd-translator/crates/metrics" }
 pin-project-lite    = "0.2.16"
 prometheus-client   = { version = "0.23.1" }
 rand                = { version = "0.9.0" }
@@ -75,17 +75,17 @@ serde_json          = "1.0.135"
 shared              = { path = "shared" }
 strum               = "0.27.1"
 strum_macros        = "0.27.1"
-synd-block-builder  = { path = "metabased-translator/crates/synd-block-builder" }
+synd-block-builder  = { path = "synd-translator/crates/synd-block-builder" }
 synd-chain-ingestor = { path = "synd-chain-ingestor" }
 synd-maestro        = { path = "synd-maestro" }
 synd-mchain         = { path = "synd-mchain" }
-synd-slotter        = { path = "metabased-translator/crates/synd-slotter" }
-synd-translator     = { path = "metabased-translator/bin/synd-translator" }
+synd-slotter        = { path = "synd-translator/crates/synd-slotter" }
+synd-translator     = { path = "synd-translator/bin/synd-translator" }
 tc-client           = { path = "synd-batch-sequencer/crates/tc-client" }
 test-utils          = { path = "shared/test-utils" }
 thiserror           = { version = "2.0.11" }
 tokio               = { version = "1.43" }
-tower               = { version = "0.4.0" }                                       # can't be updated until a new version of jsonrpsee is released
+tower               = { version = "0.4.0" }                                  # can't be updated until a new version of jsonrpsee is released
 tower-layer         = { version = "0.3.3" }
 tower-service       = { version = "0.3.3" }
 tracing             = "0.1.41"

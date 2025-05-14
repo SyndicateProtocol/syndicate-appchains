@@ -1,4 +1,4 @@
-//! e2e tests for the metabased stack
+//! e2e tests for the `synd-appchains` stack
 use alloy::{
     consensus::TxEnvelope,
     eips::Encodable2718,
