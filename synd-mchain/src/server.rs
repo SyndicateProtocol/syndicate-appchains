@@ -28,7 +28,7 @@ use tracing::error;
 /// TODO(SEQ-652): this should be configurable
 pub const MCHAIN_ID: u64 = 84532;
 
-pub const APPCHAIN: Address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3"); // TODO(SEQ-X)
+pub const APPCHAIN: Address = address!("0x5FbDB2315678afecb367f032d93F642f64180aa3");
 
 fn err(message: &'static str) -> ErrorObjectOwned {
     ErrorObjectOwned::borrowed(INTERNAL_ERROR_CODE, message, None)
@@ -249,7 +249,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
         .unwrap();
     module
         .register_method(
-            "mchain_rollupOwner", // TODO(SEQ-X)
+            "mchain_appchainOwner",
             move |_, _, _| -> Result<Address, ErrorObjectOwned> { Ok(appchain_owner) },
         )
         .unwrap();

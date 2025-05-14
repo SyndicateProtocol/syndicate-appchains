@@ -44,9 +44,8 @@ pub trait Provider: Send + Sync {
     async fn rollback_to_block(&self, block_number: u64) -> eyre::Result<()> {
         Ok(self.request("mchain_rollbackToBlock", [block_number]).await?)
     }
-    async fn rollup_owner(&self) -> Address {
-        // TODO(SEQ-X)
-        self.request("mchain_rollupOwner", [()]).await.unwrap()
+    async fn appchain_owner(&self) -> Address {
+        self.request("mchain_appchainOwner", [()]).await.unwrap()
     }
 
     /// Reconciles the [`MockChain`] state with the source chains (sequencing and settlement)

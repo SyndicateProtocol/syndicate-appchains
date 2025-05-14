@@ -35,7 +35,7 @@ async fn start_slotter(config: &TranslatorConfig, metrics: &TranslatorMetrics) -
     let mchain = MProvider::new(&config.block_builder.mchain_rpc_url)
         .await
         .map_err(|e| RuntimeError::InvalidConfig(format!("Invalid synd-mchain rpc url: {}", e)))?;
-    assert_eq!(config.appchain_owner, Some(mchain.rollup_owner().await));
+    assert_eq!(config.appchain_owner, Some(mchain.appchain_owner().await));
 
     let sequencing_client = IngestorProvider::new(
         config.sequencing.sequencing_rpc_url.as_ref().unwrap(),
