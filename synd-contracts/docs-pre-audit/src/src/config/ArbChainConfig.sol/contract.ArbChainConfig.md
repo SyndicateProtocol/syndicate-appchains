@@ -1,5 +1,5 @@
 # ArbChainConfig
-[Git Source](https://github.com/SyndicateProtocol/metabased-rollup/blob/63941b4c3f2f1cd214f76245ed2d624869358aba/src/config/ArbChainConfig.sol)
+[Git Source](https://github.com/SyndicateProtocol/metabased-rollup/blob/df30b030435a593e97b9e072bc9adc687b8fa1c4/src/config/ArbChainConfig.sol)
 
 **Inherits:**
 Initializable
@@ -12,6 +12,13 @@ Initializable
 
 ```solidity
 address public owner;
+```
+
+
+### INITIAL_APPCHAIN_OWNER
+
+```solidity
+address public INITIAL_APPCHAIN_OWNER;
 ```
 
 
@@ -85,13 +92,6 @@ address[] public ALLOWED_SETTLEMENT_ADDRESSES;
 ```
 
 
-### ROLLUP_OWNER
-
-```solidity
-address public ROLLUP_OWNER;
-```
-
-
 ### DEFAULT_SEQUENCING_CHAIN_RPC_URL
 
 ```solidity
@@ -135,7 +135,7 @@ function initialize(
     uint256 settlementStartBlock,
     address sequencingContractAddress,
     uint256 sequencingStartBlock,
-    address rollupOwner,
+    address initialAppchainOwner,
     string memory sequencingChainRpcUrl,
     string memory appchainBlockExplorerUrl,
     address[] memory allowedSettlementAddresses
@@ -155,7 +155,7 @@ function initialize(
 |`settlementStartBlock`|`uint256`|Starting block for settlement|
 |`sequencingContractAddress`|`address`|Address of the sequencing contract|
 |`sequencingStartBlock`|`uint256`|Starting block for sequencing|
-|`rollupOwner`|`address`|Initial rollup owner|
+|`initialAppchainOwner`|`address`|Initial appchain owner|
 |`sequencingChainRpcUrl`|`string`|Default RPC URL for the sequencing chain|
 |`appchainBlockExplorerUrl`|`string`|URL for the appchain block explorer|
 |`allowedSettlementAddresses`|`address[]`|Array of addresses allowed for settlement|
@@ -169,21 +169,6 @@ function initialize(
 ```solidity
 modifier onlyOwner();
 ```
-
-### updateRollupOwner
-
-*Update the ROLLUP_OWNER*
-
-
-```solidity
-function updateRollupOwner(address newRollupOwner) external onlyOwner;
-```
-**Parameters**
-
-|Name|Type|Description|
-|----|----|-----------|
-|`newRollupOwner`|`address`|The new address for ROLLUP_OWNER|
-
 
 ### updateDefaultSequencingChainRpcUrl
 
@@ -251,12 +236,6 @@ function _transferOwnership(address newOwner) internal virtual;
 ```
 
 ## Events
-### RollupOwnerUpdated
-
-```solidity
-event RollupOwnerUpdated(address indexed newRollupOwner);
-```
-
 ### DefaultSequencingChainRpcUrlUpdated
 
 ```solidity
