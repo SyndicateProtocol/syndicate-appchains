@@ -7,9 +7,7 @@ use crate::{
     types::{ChainVerificationInput, TypedReceipt},
 };
 use alloy::{
-    consensus::{
-        proofs::calculate_receipt_root, Header, Receipt as AlloyReceipt, ReceiptWithBloom,
-    },
+    consensus::{proofs::calculate_receipt_root, Header, Receipt as AlloyReceipt},
     primitives::{Bytes, FixedBytes},
     rpc::types::Block,
 };
@@ -81,19 +79,15 @@ impl Verifier {
     // --------------------------------------------
     fn validate_receipts(&self, input: &ChainVerificationInput) -> Result<(), VerifierError> {
         for (i, block_receipts) in input.receipts.iter().enumerate() {
-            let alloy_receipts: Vec<ReceiptWithBloom<TypedReceipt>> = block_receipts
+            let alloy_receipts: Vec<TypedReceipt> = block_receipts
                 .iter()
-                .map(|r| {
-                    let typed = TypedReceipt {
-                        ty: r.r#type,
-                        receipt: AlloyReceipt {
-                            status: r.status,
-                            cumulative_gas_used: r.cumulative_gas_used,
-                            logs: r.logs.clone(),
-                        },
-                    };
-
-                    ReceiptWithBloom { receipt: typed, logs_bloom: r.logs_bloom }
+                .map(|r| TypedReceipt {
+                    ty: r.r#type,
+                    receipt: AlloyReceipt {
+                        status: r.status,
+                        cumulative_gas_used: r.cumulative_gas_used,
+                        logs: r.logs.clone(),
+                    },
                 })
                 .collect();
 
