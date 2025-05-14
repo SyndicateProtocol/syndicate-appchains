@@ -59,6 +59,11 @@ impl Verifier {
         settlement_expected_hash: FixedBytes<32>,
         settlement_delay: u64,
     ) -> Result<MBlock, VerifierError> {
+        // Validate we always have 2 sequencing blocks
+        if sequencing_chain_input.blocks.len() != 2 {
+            return Err(VerifierError::NoEnoughSequenceBlocksProvided);
+        }
+
         // Validate blocks
         self.validate_blocks(&sequencing_chain_input.blocks, sequencing_expected_hash)?;
         self.validate_blocks(&settlement_chain_input.blocks, settlement_expected_hash)?;
@@ -165,13 +170,13 @@ impl Verifier {
         let (first_seq_block, last_seq_block) =
             match (sequencing_chain_input.blocks.first(), sequencing_chain_input.blocks.last()) {
                 (Some(first), Some(last)) => (first, last),
-                _ => return Err(VerifierError::NoSequenceBlocksProvided),
+                _ => return Err(VerifierError::NoEnoughSequenceBlocksProvided),
             };
 
         let (first_set_block, last_set_block) =
             match (settlement_chain_input.blocks.first(), settlement_chain_input.blocks.last()) {
                 (Some(first), Some(last)) => (first, last),
-                _ => return Err(VerifierError::NoSettlementBlocksProvided),
+                _ => return Err(VerifierError::NoEnoughSettlementBlocksProvided),
             };
 
         let last_seq_receipts = match sequencing_chain_input.receipts.last() {
