@@ -9,7 +9,7 @@ steps:
       - "deploy"
       - "metabased-sequencer-internal"  # Cloud Run service name
       - "--image"
-      - "us-central1-docker.pkg.dev/metabased-testnet/images/metabased-rollup/metabased-sequencer:latest"
+      - "us-central1-docker.pkg.dev/metabased-testnet/images/syndicate-appchains/synd-batch-sequencer:latest"
       - "--region"
       - "europe-west6"
       - "--service-account"

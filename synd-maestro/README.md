@@ -21,6 +21,6 @@ To use,
 
 or other methods [here](https://nexte.st/docs/installation/).
 
-2. From `/metabased-rollup` root, run 
+2. From `/syndicate-appchains` root, run 
 
 `cargo nextest run -p synd-maestro`

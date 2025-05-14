@@ -1,6 +1,6 @@
 services:
   mchain:
-    image: us-central1-docker.pkg.dev/metabased-testnet/images/metabased-rollup/synd-mchain:{{ image_tag }}
+    image: us-central1-docker.pkg.dev/metabased-testnet/images/syndicate-appchains/synd-mchain:{{ image_tag }}
     container_name: synd-mchain  
     environment:
       - RUST_LOG=warn
@@ -16,7 +16,7 @@ services:
     networks:
       - metabased-network
   translator:
-    image: us-central1-docker.pkg.dev/metabased-testnet/images/metabased-rollup/synd-translator:{{ image_tag }}
+    image: us-central1-docker.pkg.dev/metabased-testnet/images/syndicate-appchains/synd-translator:{{ image_tag }}
     container_name: translator
     platform: linux/amd64
     environment:
