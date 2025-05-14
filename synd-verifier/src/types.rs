@@ -18,30 +18,25 @@ pub struct TypedReceipt {
 }
 
 impl RlpEncodableReceipt for TypedReceipt {
-    fn rlp_encoded_length_with_bloom(&self, _bloom: &Bloom) -> usize {
-        // This method is unused for TypedReceipt. Required by the trait.
-        0
+    fn rlp_encoded_length_with_bloom(&self, bloom: &Bloom) -> usize {
+        self.receipt.rlp_encoded_length_with_bloom(bloom)
     }
 
     fn rlp_encode_with_bloom(&self, bloom: &Bloom, out: &mut dyn alloy::rlp::BufMut) {
-        if self.ty != 0 {
-            out.put_u8(self.ty);
-        }
         self.receipt.rlp_encode_with_bloom(bloom, out);
     }
 }
 
 impl Eip2718EncodableReceipt for TypedReceipt {
-    fn eip2718_encoded_length_with_bloom(&self, _bloom: &Bloom) -> usize {
-        // This method is unused for TypedReceipt. Required by the trait.
-        0
+    fn eip2718_encoded_length_with_bloom(&self, _bloom: Bloom) -> usize {
+        if self.ty != 0 { 1 } else { 0 } + self.rlp_encoded_length_with_bloom(bloom)
     }
 
     fn eip2718_encode_with_bloom(&self, bloom: &Bloom, out: &mut dyn alloy::rlp::BufMut) {
         if self.ty != 0 {
             out.put_u8(self.ty);
         }
-        self.receipt.rlp_encode_with_bloom(bloom, out);
+        self.rlp_encode_with_bloom(bloom, out);
     }
 }
 
