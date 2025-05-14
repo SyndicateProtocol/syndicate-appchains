@@ -29,7 +29,7 @@ impl RlpEncodableReceipt for TypedReceipt {
 
 impl Eip2718EncodableReceipt for TypedReceipt {
     fn eip2718_encoded_length_with_bloom(&self, bloom: Bloom) -> usize {
-        if self.ty != 0 { 1 } else { 0 } + self.rlp_encoded_length_with_bloom(bloom)
+        (if self.ty != 0 { 1 } else { 0 }) + self.rlp_encoded_length_with_bloom(bloom)
     }
 
     fn eip2718_encode_with_bloom(&self, bloom: &Bloom, out: &mut dyn alloy::rlp::BufMut) {
