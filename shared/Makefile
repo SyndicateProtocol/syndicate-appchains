@@ -1,4 +1,4 @@
-create-contract-bindings: create-metabased-contract-bindings create-arbitrum-contract-bindings
+create-contract-bindings: create-synd-contract-bindings create-arbitrum-contract-bindings
 .PHONY: create-contract-bindings
 
 create-arbitrum-contract-bindings:
@@ -11,13 +11,13 @@ create-arbitrum-contract-bindings:
 .PHONY: create-arbitrum-contract-bindings
 
 
-create-metabased-contract-bindings:
+create-synd-contract-bindings:
 	git submodule update --init --recursive
 	git submodule status --recursive
-	rm -rf ../metabased-contracts/out contract-bindings/src/metabased/*
-	cd ../metabased-contracts  && forge bind --alloy --force -C ./sequencing-modules
-	cp -r ../metabased-contracts/out/bindings/src/* contract-bindings/src/metabased
-	mv contract-bindings/src/metabased/lib.rs contract-bindings/src/metabased/mod.rs
-.PHONY: create-metabased-contracts-bindings
+	rm -rf ../synd-contracts/out contract-bindings/src/synd/*
+	cd ../synd-contracts  && forge bind --alloy --force -C ./sequencing-modules
+	cp -r ../synd-contracts/out/bindings/src/* contract-bindings/src/synd
+	mv contract-bindings/src/synd/lib.rs contract-bindings/src/synd/mod.rs
+.PHONY: create-synd-contract-bindings
 
 

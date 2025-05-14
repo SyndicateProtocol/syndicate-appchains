@@ -6,9 +6,7 @@ use alloy::{
     rpc::client::ClientBuilder,
 };
 use clap::Parser;
-use contract_bindings::metabased::{
-    arbchainconfig::ArbChainConfig, arbconfigmanager::ArbConfigManager,
-};
+use contract_bindings::synd::{arbchainconfig::ArbChainConfig, arbconfigmanager::ArbConfigManager};
 use jsonrpsee::server::{RandomStringIdProvider, RpcServiceBuilder, Server};
 use mchain::{metrics::MchainMetrics, server::start_mchain};
 use rocksdb::DB;
@@ -66,7 +64,7 @@ async fn get_rollup_owner(
         .await?;
     let arb_chain_config_contract = ArbChainConfig::new(config_address._0, provider);
 
-    let rollup_owner = arb_chain_config_contract.ROLLUP_OWNER().call().await?;
+    let rollup_owner = arb_chain_config_contract.INITIAL_APPCHAIN_OWNER().call().await?;
     Ok(rollup_owner._0)
 }
 

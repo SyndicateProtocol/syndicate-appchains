@@ -5,7 +5,7 @@ use alloy::{
     rpc::client::ClientBuilder,
 };
 use chain_ingestor::client::{IngestorProvider, Provider as _};
-use contract_bindings::metabased::{arbchainconfig, arbconfigmanager::ArbConfigManager};
+use contract_bindings::synd::{arbchainconfig, arbconfigmanager::ArbConfigManager};
 use eyre::Result;
 use tracing::{error, info, warn};
 
@@ -140,7 +140,7 @@ async fn get_config<T: Provider + Clone>(
     let sequencing_contract_address_call = arb_chain_config_contract.SEQUENCING_CONTRACT_ADDRESS();
     let default_sequencing_chain_rpc_url_call =
         arb_chain_config_contract.DEFAULT_SEQUENCING_CHAIN_RPC_URL();
-    let rollup_owner_call = arb_chain_config_contract.ROLLUP_OWNER();
+    let rollup_owner_call = arb_chain_config_contract.INITIAL_APPCHAIN_OWNER();
     let allowed_settlement_addresses_call =
         arb_chain_config_contract.getAllowedSettlementAddresses();
 
