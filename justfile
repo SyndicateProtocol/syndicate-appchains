@@ -53,8 +53,8 @@ arb_orbit_l2_private_key := "0xb6b15c8cb491557369f3c7d2c287b053eb229daa9c2213888
 # Define root directory of the git repository
 repository_root := justfile_directory()
 
-# Define root directory of the metabased contracts project
-contracts_root := repository_root + "/metabased-contracts"
+# Define root directory of the syndicate contracts project
+contracts_root := repository_root + "/synd-contracts"
 
 # Define root directory of the metabased sequencer project
 sequencer_root := repository_root + "/metabased-sequencer"
@@ -182,24 +182,24 @@ arb-teardown:
 
     @just _log-end "arb-teardown"
 
-# Deploy MetabasedSequencerChain smart contract to Optimism devnet
+# Deploy SyndicateSequencerChain smart contract to Optimism devnet
 # TODO: Requires running RPC. Will handle soon
 op-deploy-chain:
     @just _log-start "op-deploy-chain"
 
     cat {{ contracts_root }}/script/DeployContractsForSequencerChain.s.sol | sed -E 's/(l3ChainId = )0;/\1{{ l3_chain_id }};/' > {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
-    [ -f {{ op_contract_deploy_file }} ] || forge script --root {{ contracts_root }} {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url {{ op_devnet_l2_rpc_url }} --private-key {{ op_devnet_private_key }} --broadcast -vvvv
+    [ -f {{ op_contract_deploy_file }} ] || forge script --root {{ contracts_root }} {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol:DeploySyndicateSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url {{ op_devnet_l2_rpc_url }} --private-key {{ op_devnet_private_key }} --broadcast -vvvv
     # TODO: Execute clean even if deploy fails. Also merge this in with op-clean-chain
     rm {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
 
     @just _log-end "op-deploy-chain"
 
-# Deploy MetabasedSequencerChain smart contract to Arbitrum Orbit devnet
+# Deploy SyndicateSequencerChain smart contract to Arbitrum Orbit devnet
 arb-deploy-chain: arb-up
     @just _log-start "arb-deploy-chain"
 
     cat {{ contracts_root }}/script/DeployContractsForSequencerChain.s.sol | sed -E 's/(l3ChainId = )0;/\1{{ l3_chain_id }};/' > {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
-    [ -f {{ arb_contract_deploy_file }} ] || forge script --root {{ contracts_root }} {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol:DeployMetabasedSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url {{ arb_orbit_l2_rpc_url }} --private-key {{ arb_orbit_l2_private_key }} --broadcast --skip-simulation -vvvv
+    [ -f {{ arb_contract_deploy_file }} ] || forge script --root {{ contracts_root }} {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol:DeploySyndicateSequencerChainPlusSetupWithAlwaysAllowModule --rpc-url {{ arb_orbit_l2_rpc_url }} --private-key {{ arb_orbit_l2_private_key }} --broadcast --skip-simulation -vvvv
     # TODO: Execute clean even if deploy fails. Also merge this in with arb-clean-chain
     rm {{ contracts_root }}/script/DeployContractsForSequencerChain_.s.sol
 
@@ -262,7 +262,7 @@ op-update-chain-address: op-deploy-chain create-envrc
     @just _log-start "op-update-chain-address"
 
     cat {{ envrc_file }} | grep -v SEQUENCING_CONTRACT_ADDRESS= > {{ envrc_file }}.tmp
-    echo SEQUENCING_CONTRACT_ADDRESS=0x$(cat {{ op_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ envrc_file }}.tmp
+    echo SEQUENCING_CONTRACT_ADDRESS=0x$(cat {{ op_contract_deploy_file }} | grep SyndicateSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ envrc_file }}.tmp
     mv {{ envrc_file }}.tmp {{ envrc_file }}
 
     @just _log-end "op-update-chain-address"
@@ -338,7 +338,7 @@ arb-update-chain-address: arb-deploy-chain create-envrc
     @just _log-start "arb-update-chain-address"
 
     cat {{ envrc_file }} | grep -v SEQUENCING_CONTRACT_ADDRESS= > {{ envrc_file }}.tmp
-    echo export SEQUENCING_CONTRACT_ADDRESS=0x$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ envrc_file }}.tmp
+    echo export SEQUENCING_CONTRACT_ADDRESS=0x$(cat {{ arb_contract_deploy_file }} | grep SyndicateSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq) >> {{ envrc_file }}.tmp
     mv {{ envrc_file }}.tmp {{ envrc_file }}
 
     @just _log-end "arb-update-chain-address"
@@ -351,7 +351,7 @@ update-chain-address: arb-deploy-chain create-envrc
     # Safer scripting for Just: https://just.systems/man/en/safer-bash-shebang-recipes.html
     set -euxo pipefail
     # Get the contract address from arb deployment file
-    contract_address=$(cat {{ arb_contract_deploy_file }} | grep MetabasedSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq)
+    contract_address=$(cat {{ arb_contract_deploy_file }} | grep SyndicateSequencerChain -A1 | grep contractAddress | sed 's/[^x]*0x//' | cut -c 1-40 | uniq)
     # Remove old address and create temp file
     cat {{ envrc_file }} | grep -v SEQUENCING_CONTRACT_ADDRESS= > {{ envrc_file }}.tmp
     # Add new address

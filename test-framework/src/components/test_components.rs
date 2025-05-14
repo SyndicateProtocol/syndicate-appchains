@@ -20,9 +20,9 @@ use alloy::{
 };
 use contract_bindings::{
     arbitrum::rollup::Rollup,
-    metabased::{
+    synd::{
         alwaysallowedmodule::AlwaysAllowedModule,
-        metabasedsequencerchain::MetabasedSequencerChain::{self, MetabasedSequencerChainInstance},
+        syndicatesequencerchain::SyndicateSequencerChain::{self, SyndicateSequencerChainInstance},
         walletpoolwrappermodule::WalletPoolWrapperModule,
     },
 };
@@ -77,7 +77,7 @@ pub struct TestComponents {
     /// Sequencing
     pub sequencing_provider: FilledProvider,
     pub sequencing_rpc_url: String,
-    pub sequencing_contract: MetabasedSequencerChainInstance<(), FilledProvider>,
+    pub sequencing_contract: SyndicateSequencerChainInstance<(), FilledProvider>,
 
     /// Settlement
     pub settlement_provider: FilledProvider,
@@ -134,7 +134,7 @@ impl TestComponents {
         // Launch mock sequencing chain and deploy contracts
         info!("Starting sequencing chain...");
         let (seq_port, seq_anvil, seq_provider) = start_anvil(15).await?;
-        _ = MetabasedSequencerChain::deploy_builder(
+        _ = SyndicateSequencerChain::deploy_builder(
             &seq_provider,
             U256::from(options.appchain_chain_id),
         )
@@ -152,7 +152,7 @@ impl TestComponents {
         // Setup the sequencing contract
         let provider_clone = seq_provider.clone();
         let sequencing_contract =
-            MetabasedSequencerChain::new(sequencing_contract_address, provider_clone);
+            SyndicateSequencerChain::new(sequencing_contract_address, provider_clone);
         _ = sequencing_contract
             .initialize(seq_provider.default_signer_address(), always_allowed_module_address)
             .send()

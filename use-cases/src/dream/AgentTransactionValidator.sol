@@ -3,10 +3,10 @@ pragma solidity 0.8.25;
 
 import {RLPTxDecoder} from "./RLP/RLPTxDecoder.sol";
 
-/// @title IMetabasedSequencerChain
-/// @notice Interface for the MetabasedSequencerChain contract
+/// @title ISyndicateSequencerChain
+/// @notice Interface for the SyndicateSequencerChain contract
 
-interface IMetabasedSequencerChain {
+interface ISyndicateSequencerChain {
     /// @notice Process a transaction
     /// @param data The transaction data to process
     function processTransaction(bytes calldata data) external;
@@ -43,14 +43,14 @@ contract AgentTransactionValidator {
     /// @notice The AgentApplication contract for checking permissions
     IAgentApplication public immutable agentApplication;
 
-    /// @notice The MetabasedSequencerChain contract for forwarding valid transactions
-    IMetabasedSequencerChain public immutable sequencerChain;
+    /// @notice The SyndicateSequencerChain contract for forwarding valid transactions
+    ISyndicateSequencerChain public immutable sequencerChain;
 
     error Unauthorized();
 
     constructor(address _agentApplication, address _sequencerChain) {
         agentApplication = IAgentApplication(_agentApplication);
-        sequencerChain = IMetabasedSequencerChain(_sequencerChain);
+        sequencerChain = ISyndicateSequencerChain(_sequencerChain);
     }
 
     /// @notice Process a transaction after validating the 'from' address

@@ -37,16 +37,16 @@ repos:
         args: ["--check"]
         language: system
         types: [solidity]
-      - id: forge-test-metabased-contracts
-        name: forge test metabased contracts
+      - id: forge-test-synd-contracts
+        name: forge test syndicate contracts
         entry: forge test
-        args: ["--root", "metabased-contracts"]
+        args: ["--root", "synd-contracts"]
         language: system
         types: [solidity]
-        files: ^(metabased-contracts)/
+        files: ^(synd-contracts)/
         pass_filenames: false
       - id: forge-test-shared-contracts
-        name: forge test metabased translator contracts
+        name: forge test syndicate translator contracts
         entry: forge test
         args: ["--root", "shared/arb-contracts"]
         language: system
