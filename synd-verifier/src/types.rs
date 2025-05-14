@@ -1,9 +1,8 @@
 //! Types for the synd-verifier
 
 use alloy::{
-    consensus::{Eip2718EncodableReceipt, Receipt as AlloyReceipt, RlpEncodableReceipt},
-    eips::Typed2718,
-    primitives::Bloom,
+    consensus::{Receipt as AlloyReceipt, RlpEncodableReceipt, TxReceipt},
+    eips::{Encodable2718, Typed2718},
     rpc::types::Block,
 };
 use shared::types::Receipt;
@@ -17,32 +16,23 @@ pub struct TypedReceipt {
     pub receipt: AlloyReceipt,
 }
 
-impl RlpEncodableReceipt for TypedReceipt {
-    fn rlp_encoded_length_with_bloom(&self, bloom: &Bloom) -> usize {
-        self.receipt.rlp_encoded_length_with_bloom(bloom)
-    }
-
-    fn rlp_encode_with_bloom(&self, bloom: &Bloom, out: &mut dyn alloy::rlp::BufMut) {
-        self.receipt.rlp_encode_with_bloom(bloom, out);
-    }
-}
-
-impl Eip2718EncodableReceipt for TypedReceipt {
-    fn eip2718_encoded_length_with_bloom(&self, bloom: Bloom) -> usize {
-        (if self.ty != 0 { 1 } else { 0 }) + self.rlp_encoded_length_with_bloom(bloom)
-    }
-
-    fn eip2718_encode_with_bloom(&self, bloom: &Bloom, out: &mut dyn alloy::rlp::BufMut) {
-        if self.ty != 0 {
-            out.put_u8(self.ty);
-        }
-        self.rlp_encode_with_bloom(bloom, out);
-    }
-}
-
 impl Typed2718 for TypedReceipt {
     fn ty(&self) -> u8 {
         self.ty
+    }
+}
+
+impl Encodable2718 for TypedReceipt {
+    fn encode_2718_len(&self) -> usize {
+        (if self.ty != 0 { 1 } else { 0 }) +
+            self.receipt.rlp_encoded_length_with_bloom(&self.receipt.bloom())
+    }
+
+    fn encode_2718(&self, out: &mut dyn alloy::rlp::BufMut) {
+        if self.ty != 0 {
+            out.put_u8(self.ty);
+        }
+        self.receipt.rlp_encode_with_bloom(&self.receipt.bloom(), out)
     }
 }
 
