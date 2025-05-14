@@ -4,7 +4,6 @@ use alloy::{
     providers::{Provider, ProviderBuilder},
     rpc::client::ClientBuilder,
 };
-use chain_ingestor::client::{IngestorProvider, Provider as _};
 use contract_bindings::synd::{arbchainconfig, arbconfigmanager::ArbConfigManager};
 use eyre::Result;
 use synd_chain_ingestor::client::{IngestorProvider, Provider as _};
