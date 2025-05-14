@@ -1,4 +1,4 @@
-//! Rollup utils for the integration tests
+//! Appchain utils for the integration tests
 
 use alloy::primitives::Address;
 use synd_mchain::server::{APPCHAIN, MCHAIN_ID};

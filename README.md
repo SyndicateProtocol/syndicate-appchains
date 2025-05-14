@@ -20,7 +20,7 @@ If these aliases don't work immediately, try:
 
 1. Open a new terminal in the Dev Container
 2. Run `source ~/.bashrc` (or `source ~/.zshrc` if using zsh)
-3. If still not working, run `just --justfile /workspaces/metabased-rollup/.devcontainer/justfile create-aliases` followed by `source ~/.bashrc`
+3. Alternatively, run `just --justfile /workspaces/metabased-rollup/.devcontainer/justfile create-aliases` followed by `source ~/.bashrc`
 
 ### Sharing git ssh credentials with the Dev Container
 

@@ -1,6 +1,6 @@
 //! Docker components for the integration tests
 
-use crate::{port_manager::PortManager, rollup::appchain_info, utils::test_path, wait_until};
+use crate::{appchain::appchain_info, port_manager::PortManager, utils::test_path, wait_until};
 use alloy::{
     primitives::Address,
     providers::{Provider, ProviderBuilder, RootProvider},

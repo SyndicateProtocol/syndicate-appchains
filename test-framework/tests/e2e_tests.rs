@@ -39,18 +39,21 @@ fn init() {
 async fn e2e_send_transaction() -> Result<()> {
     let config = ConfigurationOptions { settlement_delay: 60, ..Default::default() };
     TestComponents::run(&config, |components| async move {
-        // Set up the settlement rollup contract
-        let set_rollup = Rollup::new(components.inbox_address, &components.settlement_provider);
+        // Set up the settlement appchain contract
+        let set_appchain = Rollup::new(components.inbox_address, &components.settlement_provider);
         let wallet_address = components.settlement_provider.default_signer_address();
 
         // Send a deposit
-        let _ =
-            set_rollup.depositEth(wallet_address, wallet_address, parse_ether("1")?).send().await?;
+        let _ = set_appchain
+            .depositEth(wallet_address, wallet_address, parse_ether("1")?)
+            .send()
+            .await?;
         components.mine_seq_block(config.settlement_delay).await?;
         components.mine_set_block(0).await?;
         // mine 1 set block to close the opened slot that contains the other deposit
         let test_addr: Address = "0xA9ec1Ed7008fDfdE38978Dfef4cF2754A969E5FA".parse()?;
-        let _ = set_rollup.depositEth(wallet_address, test_addr, parse_ether("1")?).send().await?;
+        let _ =
+            set_appchain.depositEth(wallet_address, test_addr, parse_ether("1")?).send().await?;
         components.mine_set_block(1).await?;
 
         // Wait for the deposit to arrive
@@ -59,15 +62,15 @@ async fn e2e_send_transaction() -> Result<()> {
             Duration::from_secs(1)
         );
 
-        // check the first rollup block
-        let rollup_block: Block = components
+        // check the first appchain block
+        let appchain_block: Block = components
             .appchain_provider
             .get_block_by_number(BlockNumberOrTag::Number(1))
             .await?
             .unwrap();
-        assert_eq!(rollup_block.header.timestamp, config.settlement_delay);
+        assert_eq!(appchain_block.header.timestamp, config.settlement_delay);
         // the first transaction is the startBlock transaction
-        assert_eq!(rollup_block.transactions.len(), 2);
+        assert_eq!(appchain_block.transactions.len(), 2);
         assert_eq!(
             components.appchain_provider.get_balance(wallet_address).await?,
             parse_ether("1")?
@@ -97,17 +100,17 @@ async fn e2e_send_transaction() -> Result<()> {
             Duration::from_secs(1)
         );
 
-        // check the second rollup block
-        let rollup_block: Block = components
+        // check the second appchain block
+        let appchain_block: Block = components
             .appchain_provider
             .get_block_by_number(BlockNumberOrTag::Number(2))
             .await?
             .unwrap();
-        assert_eq!(rollup_block.header.timestamp, config.settlement_delay);
+        assert_eq!(appchain_block.header.timestamp, config.settlement_delay);
         // the first transaction is the startBlock transaction
-        assert_eq!(rollup_block.transactions.len(), 2);
+        assert_eq!(appchain_block.transactions.len(), 2);
         // tx hash should match
-        let hashes: Vec<_> = rollup_block.transactions.hashes().collect();
+        let hashes: Vec<_> = appchain_block.transactions.hashes().collect();
         assert_eq!(hashes[1], *tx.tx_hash());
 
         // sequence an empty slot
@@ -125,19 +128,19 @@ async fn e2e_send_transaction() -> Result<()> {
         // check mchain block
         assert_eq!(components.mchain_provider.get_block_number().await, 4);
 
-        // check rollup block
+        // check appchain block
         wait_until!(
             components.appchain_provider.get_block_number().await? == 3,
             Duration::from_secs(10)
         );
-        let rollup_block: Block = components
+        let appchain_block: Block = components
             .appchain_provider
             .get_block_by_number(BlockNumberOrTag::Number(3))
             .await?
             .unwrap();
-        assert_eq!(rollup_block.header.timestamp, config.settlement_delay + 1);
+        assert_eq!(appchain_block.header.timestamp, config.settlement_delay + 1);
         // the first transaction is the startBlock transaction
-        assert_eq!(rollup_block.transactions.len(), 2);
+        assert_eq!(appchain_block.transactions.len(), 2);
         // balance should match
         assert_eq!(components.appchain_provider.get_balance(test_addr).await?, parse_ether("1")?);
 
@@ -501,8 +504,8 @@ async fn e2e_settlement_reorg() -> Result<()> {
             );
             assert_eq!(components.mchain_provider.get_block_number().await, 4);
 
-            // the rollup head has not been updated yet
-            let rollup_head_before_reorg = components
+            // the appchain head has not been updated yet
+            let appchain_head_before_reorg = components
                 .appchain_provider
                 .get_block_by_number(BlockNumberOrTag::Latest)
                 .await?
@@ -537,20 +540,20 @@ async fn e2e_settlement_reorg() -> Result<()> {
                 Duration::from_secs(10)
             );
 
-            // the rollup should have reorged to a pre-deposit block
+            // the appchain should have reorged to a pre-deposit block
 
             // create new slots
             let _ = inbox.depositEth().value(parse_ether("0.01")?).send().await?;
             components.mine_both(500).await?;
-            components.mine_both(500).await?; // build synd-mchain to an height above what the rollup has seen before the reorg
+            components.mine_both(500).await?; // build `synd-mchain` to a height above what the appchain has seen before the reorg
 
-            wait_until!(let rollup_head = components
+            wait_until!(let appchain_head = components
                 .appchain_provider
                 .get_block_by_number(BlockNumberOrTag::Latest)
                 .await?
                 .unwrap();
-                rollup_head.header.number == rollup_head_before_reorg.header.number &&
-                rollup_head.header.hash != rollup_head_before_reorg.header.hash,
+                appchain_head.header.number == appchain_head_before_reorg.header.number &&
+                appchain_head.header.hash != appchain_head_before_reorg.header.hash,
                 Duration::from_secs(10)
             );
 

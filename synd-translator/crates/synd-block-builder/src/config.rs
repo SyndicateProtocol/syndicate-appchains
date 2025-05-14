@@ -56,7 +56,7 @@ impl Debug for BlockBuilderConfig {
         f.debug_struct("BlockBuilderConfig")
             .field("mchain_rpc_url", &self.mchain_rpc_url)
             .field("sequencing_contract_address", &self.sequencing_contract_address)
-            .field("target_rollup_type", &self.target_appchain_type)
+            .field("target_appchain_type", &self.target_appchain_type)
             .field("arbitrum_bridge_address", &self.arbitrum_bridge_address)
             .field("arbitrum_inbox_address", &self.arbitrum_inbox_address)
             .field("signer_key", &"<private>") // Skip showing private key
@@ -87,7 +87,7 @@ impl BlockBuilderConfig {
             TargetAppchainType::ARBITRUM => {}
             // Validate Optimism specific configuration
             TargetAppchainType::OPTIMISM => {
-                return Err(ConfigError::UnsupportedRollupType(
+                return Err(ConfigError::UnsupportedAppchainType(
                     "Optimism is not supported yet".to_string(),
                 ));
             }
@@ -120,8 +120,8 @@ impl BlockBuilderConfig {
 /// Possible errors that can occur when initializing the block builder configuration
 #[derive(Debug, Error)]
 pub enum ConfigError {
-    #[error("Unsupported rollup type: {0}")]
-    UnsupportedRollupType(String),
+    #[error("Unsupported appchain type: {0}")]
+    UnsupportedAppchainType(String),
 
     #[error("Sequencing contract address is missing")]
     SequencingContractAddressMissing,
