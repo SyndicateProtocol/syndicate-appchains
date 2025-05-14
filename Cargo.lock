@@ -1171,12 +1171,12 @@ dependencies = [
  "eyre",
  "flate2",
  "humantime",
- "maestro",
  "mockall",
  "prometheus-client",
  "redis",
  "rlp 0.6.1",
  "shared",
+ "synd-maestro",
  "tc-client",
  "test-utils",
  "thiserror 2.0.12",
@@ -3241,34 +3241,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "maestro"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "axum",
- "bytes",
- "clap",
- "ctor",
- "eyre",
- "futures-util",
- "http",
- "http-body",
- "humantime",
- "jsonrpsee",
- "once_cell",
- "rand 0.9.0",
- "redis",
- "serde_json",
- "shared",
- "test-utils",
- "thiserror 2.0.12",
- "tokio",
- "tower 0.4.13",
- "tracing",
- "wiremock",
-]
-
-[[package]]
 name = "matchers"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4933,6 +4905,34 @@ dependencies = [
 ]
 
 [[package]]
+name = "synd-maestro"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "axum",
+ "bytes",
+ "clap",
+ "ctor",
+ "eyre",
+ "futures-util",
+ "http",
+ "http-body",
+ "humantime",
+ "jsonrpsee",
+ "once_cell",
+ "rand 0.9.0",
+ "redis",
+ "serde_json",
+ "shared",
+ "test-utils",
+ "thiserror 2.0.12",
+ "tokio",
+ "tower 0.4.13",
+ "tracing",
+ "wiremock",
+]
+
+[[package]]
 name = "synd-mchain"
 version = "0.1.0"
 dependencies = [
@@ -5071,13 +5071,13 @@ dependencies = [
  "contract-bindings",
  "ctor",
  "eyre",
- "maestro",
  "redis",
  "reqwest",
  "serde",
  "serde_json",
  "shared",
  "synd-chain-ingestor",
+ "synd-maestro",
  "synd-mchain",
  "test-utils",
  "tokio",

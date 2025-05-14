@@ -20,7 +20,7 @@ use std::time::Duration;
 /// # Example
 /// ```no_compile
 /// use redis::aio::MultiplexedConnection;
-/// use maestro::redis::consumer::StreamConsumer;
+/// use synd-maestro::redis::consumer::StreamConsumer;
 ///
 /// let conn: MultiplexedConnection = // ... get Redis connection
 /// let chain_id = 1;

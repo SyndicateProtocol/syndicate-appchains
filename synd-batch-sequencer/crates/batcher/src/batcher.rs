@@ -13,7 +13,6 @@ use contract_bindings::synd::walletpoolwrappermodule::WalletPoolWrapperModule::{
 };
 use derivative::Derivative;
 use eyre::{eyre, Result};
-use maestro::redis::streams::consumer::StreamConsumer;
 use redis::Client as RedisClient;
 use shared::types::FilledProvider;
 use std::{
@@ -21,6 +20,7 @@ use std::{
     str::FromStr,
     time::{Duration, Instant},
 };
+use synd_maestro::redis::streams::consumer::StreamConsumer;
 use tc_client::tc_client::{TCClient, BATCH_FUNCTION_SIGNATURE};
 use tokio::task::JoinHandle;
 use tracing::{debug, error, info};
@@ -268,8 +268,8 @@ impl Batcher {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use maestro::redis::streams::producer::StreamProducer;
     use prometheus_client::registry::Registry;
+    use synd_maestro::redis::streams::producer::StreamProducer;
     use test_utils::{docker::start_redis, wait_until};
     use url::Url;
 

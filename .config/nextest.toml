@@ -3,15 +3,15 @@
 # Group for server tests that need to bind to the same port
 maestro-server = { max-threads = 1 }  # Run server tests one at a time
 
-# Create a dedicated profile for maestro tests
-[profile.maestro]
+# Create a dedicated profile for synd-maestro tests
+[profile.synd-maestro]
 fail-fast = false             # Don't stop on first failure
 retries = 2
 test-threads = 4              # Limit overall concurrency if needed
 slow-timeout = { period = "60s", terminate-after = 2 } # Handle slow tests gracefully
 
-# Apply the test group to all integration tests in the maestro package
-[[profile.maestro.overrides]]
-# Apply to integration tests in the maestro package
-filter = 'package(maestro) & binary(integration_test)'
+# Apply the test group to all integration tests in the synd-maestro package
+[[profile.synd-maestro.overrides]]
+# Apply to integration tests in the synd-maestro package
+filter = 'package(synd-maestro) & binary(integration_test)'
 test-group = 'maestro-server'

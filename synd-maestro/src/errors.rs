@@ -11,7 +11,7 @@ use thiserror::Error;
 use tracing::error;
 
 // Source: https://github.com/MetaMask/rpc-errors/blob/main/src/errors.ts
-/// Primary error type for the metabased sequencer, following JSON-RPC error code mapping
+/// Primary error type for the Maestro service, following JSON-RPC error code mapping
 #[derive(Debug, Error)]
 pub enum MaestroError {
     /// Error relating to Redis

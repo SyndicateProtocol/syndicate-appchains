@@ -1,11 +1,11 @@
 //! Maestro is a service that filters and coordinates transaction requests to sequencers
 
 use eyre::Result;
-use maestro::config::Config;
 use shared::{
     logger::set_global_default_subscriber,
     service_start_utils::{start_metrics_and_health, MetricsState},
 };
+use synd_maestro::config::Config;
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::info;
 
@@ -23,7 +23,7 @@ async fn main() -> Result<()> {
     let metrics_state = MetricsState::default();
     tokio::spawn(start_metrics_and_health(metrics_state, config.metrics_port));
 
-    let (addr, handle) = maestro::server::run(config).await?;
+    let (addr, handle) = synd_maestro::server::run(config).await?;
     info!(
         %addr,
         "Maestro server running"

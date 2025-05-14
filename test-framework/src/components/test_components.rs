@@ -27,7 +27,6 @@ use contract_bindings::{
     },
 };
 use eyre::Result;
-use maestro::server::HEADER_CHAIN_ID;
 use serde_json::{json, Value};
 use shared::types::FilledProvider;
 use std::{
@@ -36,6 +35,7 @@ use std::{
     str::FromStr,
     time::{Duration, SystemTime},
 };
+use synd_maestro::server::HEADER_CHAIN_ID;
 use synd_mchain::{client::MProvider, server::appchain_config};
 use test_utils::{
     anvil::{mine_block, start_anvil, start_anvil_with_args, PRIVATE_KEY},
@@ -119,7 +119,7 @@ impl TestComponents {
             e = handles.nitro_docker.wait() => panic!("nitro died: {:#?}", e),
             e = handles.translator.wait() => panic!("translator died: {:#?}", e),
             e = async {poster.unwrap().wait().await}, if poster.is_some() => panic!("poster died: {:#?}", e),
-            e = async {maestro.unwrap().wait().await}, if maestro.is_some() => panic!("maestro died: {:#?}", e),
+            e = async {maestro.unwrap().wait().await}, if maestro.is_some() => panic!("synd-maestro died: {:#?}", e),
             e = async {batch_sequencer.unwrap().wait().await}, if batch_sequencer.is_some() => panic!("synd-batch-sequencer died: {:#?}", e),
             e = async {redis.unwrap().wait().await}, if redis.is_some() => panic!("redis died: {:#?}", e),
             r = test(components) => r
@@ -399,7 +399,7 @@ impl TestComponents {
                 metrics_port: PortManager::instance().next_port().await,
             };
             let maestro_instance = start_component(
-                "maestro",
+                "synd-maestro",
                 // `/health` is proxied to RPC method
                 maestro_config.port,
                 maestro_config.cli_args(),

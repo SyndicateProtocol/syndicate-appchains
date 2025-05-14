@@ -11,7 +11,7 @@ use tokio::{task::JoinHandle, time::MissedTickBehavior};
 use tracing::debug;
 
 /// Base key for Redis transaction streams
-/// Format: `maestro:transactions:{chain_id}`
+/// Format: `synd-maestro:transactions:{chain_id}`
 const TX_STREAM_KEY: &str = "maestro:transactions";
 
 /// Generates a Redis stream key for a specific chain
@@ -20,7 +20,7 @@ const TX_STREAM_KEY: &str = "maestro:transactions";
 /// * `chain_id` - The chain identifier to create the stream key for
 ///
 /// # Returns
-/// A string in the format `maestro:transactions:{chain_id}`
+/// A string in the format `synd-maestro:transactions:{chain_id}`
 pub fn tx_stream_key(chain_id: u64) -> String {
     format!("{}:{}", TX_STREAM_KEY, chain_id)
 }
@@ -33,9 +33,9 @@ pub fn tx_stream_key(chain_id: u64) -> String {
 ///
 /// # Examples
 /// ```rust
-/// use maestro::redis::streams::producer::StreamProducer;
 /// use redis::aio::MultiplexedConnection;
 /// use std::time::Duration;
+/// use synd_maestro::redis::streams::producer::StreamProducer;
 ///
 /// async fn example(redis_conn: MultiplexedConnection) {
 ///     let mut producer = StreamProducer::new(

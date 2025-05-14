@@ -1,4 +1,4 @@
-//! This module contains `config` for the `maestro` service
+//! This module contains `config` for the `synd-maestro` service
 
 use crate::{
     config::ConfigError::RpcUrlInvalidAddress,

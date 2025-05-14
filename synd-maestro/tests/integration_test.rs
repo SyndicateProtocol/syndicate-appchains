@@ -1,18 +1,18 @@
-//! This crate is for testing the `Maestro` server with maximum realism
+//! This crate is for testing the `synd-maestro` service with maximum realism
 
 use alloy::transports::http::{reqwest::Response, Client};
 use eyre::Result;
 use jsonrpsee::server::ServerHandle;
-use maestro::server;
 use serde_json::{json, Value};
 use std::{future::Future, net::SocketAddr, time::Duration};
+use synd_maestro::server;
 use test_utils::wait_until;
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use maestro::{config::Config, server::HEADER_CHAIN_ID};
     use std::collections::HashMap;
+    use synd_maestro::{config::Config, server::HEADER_CHAIN_ID};
     use test_utils::{
         docker::{start_redis, Docker},
         transaction::{get_eip1559_transaction_hex, get_legacy_transaction_hex},
