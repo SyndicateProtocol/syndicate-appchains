@@ -11,7 +11,6 @@ path = "src/main.rs"
 
 [dependencies]
 alloy               = { workspace = true }
-block-builder       = { workspace = true }
 clap                = { workspace = true }
 common              = { workspace = true }
 contract-bindings   = { workspace = true }
@@ -19,9 +18,10 @@ eyre                = { workspace = true }
 humantime           = { workspace = true }
 metrics             = { workspace = true }
 shared              = { workspace = true }
-slotter             = { workspace = true }
+synd-block-builder  = { workspace = true }
 synd-chain-ingestor = { workspace = true }
 synd-mchain         = { workspace = true }
+synd-slotter        = { workspace = true }
 thiserror           = { workspace = true }
 tokio               = { workspace = true, features = ["signal"] }
 tracing             = { workspace = true }

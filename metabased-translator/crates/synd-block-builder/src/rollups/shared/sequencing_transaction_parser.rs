@@ -45,7 +45,7 @@ pub enum SequencingParserError {
     DecompressionError(String),
 }
 
-/// The parser for meta-based transactions
+/// The parser for appchain transactions
 #[derive(Debug, Clone)]
 pub struct SequencingTransactionParser {
     /// The address of the sequencing contract

@@ -4,13 +4,13 @@
 //! crates each inherit a subset of these options to configure themselves
 
 use alloy::primitives::Address;
-use block_builder::config::BlockBuilderConfig;
 use clap::Parser;
 use common::types::Chain;
 use eyre::Result;
 use metrics::config::MetricsConfig;
 use shared::parse::parse_address;
 use std::{fmt::Debug, time::Duration};
+use synd_block_builder::config::BlockBuilderConfig;
 use thiserror::Error;
 use tracing::{debug, error};
 
@@ -76,7 +76,7 @@ impl ChainIngestorConfig {
 #[derive(Error, Debug)]
 pub enum ConfigError {
     #[error("Block builder configuration error: {0}")]
-    BlockBuilder(#[from] block_builder::config::ConfigError),
+    BlockBuilder(#[from] synd_block_builder::config::ConfigError),
 
     #[error("Ingestor chain configuration error: {0}")]
     Ingestor(#[from] IngestorConfigError),

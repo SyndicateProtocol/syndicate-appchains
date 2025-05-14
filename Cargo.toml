@@ -1,10 +1,10 @@
 [workspace]
 members = [
   "metabased-translator/bin/metabased-translator",
-  "metabased-translator/crates/block-builder",
   "metabased-translator/crates/common",
   "metabased-translator/crates/metrics",
-  "metabased-translator/crates/slotter",
+  "metabased-translator/crates/synd-block-builder",
+  "metabased-translator/crates/synd-slotter",
   "metabased-translator/tests",
   "shared",
   "shared/contract-bindings",
@@ -41,7 +41,6 @@ axum                 = "0.8.1"
 base64               = "0.22.1"
 batcher              = { path = "synd-batch-sequencer/crates/batcher" }
 bincode              = "1.3"
-block-builder        = { path = "metabased-translator/crates/block-builder" }
 brotli               = "7.0.0"
 byte-unit            = "5.1.6"
 bytes                = "1.9.0"
@@ -75,17 +74,18 @@ serde                = "1.0.217"
 serde-hex            = "0.1.0"
 serde_json           = "1.0.135"
 shared               = { path = "shared" }
-slotter              = { path = "metabased-translator/crates/slotter" }
 strum                = "0.27.1"
 strum_macros         = "0.27.1"
+synd-block-builder   = { path = "metabased-translator/crates/synd-block-builder" }
 synd-chain-ingestor  = { path = "synd-chain-ingestor" }
 synd-maestro         = { path = "synd-maestro" }
 synd-mchain          = { path = "synd-mchain" }
+synd-slotter         = { path = "metabased-translator/crates/synd-slotter" }
 tc-client            = { path = "synd-batch-sequencer/crates/tc-client" }
 test-utils           = { path = "shared/test-utils" }
 thiserror            = { version = "2.0.11" }
 tokio                = { version = "1.43" }
-tower                = { version = "0.4.0" }                                      # can't be updated until a new version of jsonrpsee is released
+tower                = { version = "0.4.0" }                                       # can't be updated until a new version of jsonrpsee is released
 tower-layer          = { version = "0.3.3" }
 tower-service        = { version = "0.3.3" }
 tracing              = "0.1.41"

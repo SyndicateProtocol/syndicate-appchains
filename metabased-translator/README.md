@@ -2,7 +2,7 @@
 
 This is a service that ingests L2 transaction data, organizes the data into slots, builds blocks from the slots, and mines the blocks and makes them available to rollup frameworks.
 
-It consists of a `common` crate and 3 component crates: `ingestor`, `slotter` and `block-builder`
+It consists of a `common` crate and 3 component crates: `ingestor`, `synd-slotter` and `synd-block-builder`
 
 The mchain server must be available at the mchain rpc url prior to starting the translator -
 see the provided docker-compose.yaml file for more information.
@@ -89,4 +89,4 @@ Run
 ```
 cargo make print-sample-command
 ```
-to see the CLI options needed to run the binary executable, which utilizes the `ingestor`, `slotter`, `block-builder` and `metrics` crates
+to see the CLI options needed to run the binary executable, which utilizes the `ingestor`, `synd-slotter`, `synd-block-builder` and `metrics` crates

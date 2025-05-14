@@ -1,4 +1,4 @@
-//! Slotter module for metabased-translator
+//! Slotter module for `synd-translator`
 use crate::metrics::SlotterMetrics;
 use alloy::primitives::{FixedBytes, B256};
 use common::types::{Chain, SequencingBlock, SettlementBlock};
@@ -12,7 +12,7 @@ use thiserror::Error;
 use tracing::{error, info, trace};
 
 /// Ingests blocks from the sequencing and settlement chains, slots them into slots, and sends the
-/// slots to the slot processor to generate synd-mchain blocks.
+/// slots to the slot processor to generate `synd-mchain` blocks.
 #[allow(clippy::expect_used)]
 pub async fn run(
     settlement_delay: u64,

@@ -1,5 +1,5 @@
 [package]
-description            = "Common utilities for metabased-translator, including types."
+description            = "Common utilities for synd-translator, including types."
 edition.workspace      = true
 homepage.workspace     = true
 license.workspace      = true

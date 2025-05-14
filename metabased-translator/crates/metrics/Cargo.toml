@@ -1,5 +1,5 @@
 [package]
-description            = "Metrics for metabased-translator."
+description            = "Metrics for synd-translator."
 edition.workspace      = true
 homepage.workspace     = true
 license.workspace      = true
@@ -15,7 +15,7 @@ clap              = { workspace = true }
 prometheus-client = { workspace = true }
 reqwest           = { workspace = true }
 shared            = { workspace = true }
-slotter           = { workspace = true }
+synd-slotter      = { workspace = true }
 thiserror         = { workspace = true }
 tokio             = { workspace = true }
 tracing           = { workspace = true }

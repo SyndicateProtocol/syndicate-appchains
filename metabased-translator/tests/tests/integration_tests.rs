@@ -8,10 +8,10 @@ use alloy::{
     signers::local::PrivateKeySigner,
     sol_types::SolValue,
 };
-use block_builder::rollups::arbitrum::{self, arbitrum_adapter::L1MessageType};
 use contract_bindings::arbitrum::{arbgasinfo::ArbGasInfo, arbownerpublic::ArbOwnerPublic};
 use eyre::{Ok, Result};
 use std::{str::FromStr as _, time::Duration};
+use synd_block_builder::rollups::arbitrum::{self, arbitrum_adapter::L1MessageType};
 use synd_mchain::{
     client::Provider as _,
     db::{DelayedMessage, MBlock, Slot},

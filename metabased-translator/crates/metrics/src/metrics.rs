@@ -1,11 +1,11 @@
-//! The `metrics` module  handles metrics recording for the metabased translator
+//! The `metrics` module handles metrics recording for the `synd-translator`
 use prometheus_client::registry::Registry;
-use slotter::metrics::SlotterMetrics;
+use synd_slotter::metrics::SlotterMetrics;
 
 /// Structure holding all metrics related to the translator.
 #[derive(Debug, Clone)]
 pub struct TranslatorMetrics {
-    /// Metrics for the slotter
+    /// Metrics for the synd-slotter
     pub slotter: SlotterMetrics,
 }
 

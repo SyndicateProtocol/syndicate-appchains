@@ -1,4 +1,4 @@
-//! Configuration for the block builder service
+//! Configuration for the `synd-block-builder` service
 use alloy::primitives::Address;
 use clap::{Parser, ValueEnum};
 use shared::parse::{parse_address, parse_addresses};
@@ -17,7 +17,7 @@ pub struct BlockBuilderConfig {
         value_parser = parse_address)]
     pub sequencing_contract_address: Option<Address>,
 
-    /// Target rollup type for the [`block-builder`]
+    /// Target rollup type for the [`synd-block-builder`]
     #[arg(long, env = "TARGET_ROLLUP_TYPE", default_value = "arbitrum")]
     pub target_rollup_type: TargetRollupType,
 
@@ -43,7 +43,7 @@ pub struct BlockBuilderConfig {
     pub allowed_settlement_addresses: Vec<Address>,
 }
 
-/// Possible target rollup types for the [`block-builder`]
+/// Possible target rollup types for the `synd-block-builder`
 #[allow(missing_docs)]
 #[derive(Debug, Clone, Parser, ValueEnum)]
 pub enum TargetRollupType {

@@ -21,7 +21,7 @@ pub enum RuntimeError {
     InvalidConfig(String),
 
     #[error(transparent)]
-    BlockBuilderConfig(#[from] block_builder::config::ConfigError),
+    BlockBuilderConfig(#[from] synd_block_builder::config::ConfigError),
 
     #[error(transparent)]
     IngestorConfig(#[from] IngestorConfigError),

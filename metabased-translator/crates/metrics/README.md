@@ -27,7 +27,7 @@ The following metrics are implemented and exposed via the `/metrics` endpoint in
      - `chain`: Specifies whether the channel belongs to the Sequencing or Settlement chain.
    - **Metric Type**: Gauge
 
-#### Slotter
+#### `Synd-Slotter`
 
 1. **slotter_last_processed_block**: Tracks the last block number processed by the Slotter.
    - **Labels**:
@@ -54,7 +54,7 @@ The following metrics are implemented and exposed via the `/metrics` endpoint in
 
 #### Block Builder
 
-1. **block_builder_transactions_per_slot**: Tracks the number of built metabased transactions.
+1. **block_builder_transactions_per_slot**: Tracks the number of built appchain transactions.
    - **Metric Type**: Gauge
   
 2. **block_builder_last_processed_slot**: Tracks the last slot number processed by the BlockBuilder.

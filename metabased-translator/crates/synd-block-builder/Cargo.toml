@@ -1,9 +1,9 @@
 [package]
-description            = "Block builder for metabased-translator."
+description            = "Block builder for synd-translator."
 edition.workspace      = true
 homepage.workspace     = true
 license.workspace      = true
-name                   = "block-builder"
+name                   = "synd-block-builder"
 repository.workspace   = true
 rust-version.workspace = true
 version.workspace      = true

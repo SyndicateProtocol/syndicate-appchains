@@ -19,11 +19,11 @@ alloy = { workspace = true, features = [
   "rpc-types-anvil",
   "sol-types",
 ] }
-block-builder = { workspace = true }
 contract-bindings = { workspace = true }
 eyre = { workspace = true }
 shared = { workspace = true }
 strum = { workspace = true }
+synd-block-builder = { workspace = true }
 synd-mchain = { workspace = true }
 test-utils = { workspace = true }
 tokio = { workspace = true, features = ["fs"] }

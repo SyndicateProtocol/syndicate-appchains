@@ -1,4 +1,4 @@
-//! Types module for metabased-translator
+//! Types module for `synd-translator`
 
 use alloy::primitives::{Bytes, FixedBytes};
 use shared::types::{BlockRef, GetBlockRef};

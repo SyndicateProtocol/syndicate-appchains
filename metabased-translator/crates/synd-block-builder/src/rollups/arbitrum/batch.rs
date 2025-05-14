@@ -1,4 +1,4 @@
-//! Arbitrum rollup block-builder implementation
+//! Arbitrum rollup synd-block-builder implementation
 //!
 //! This module provides functionality for encoding batches of transactions
 //! that can be submitted by the batcher.

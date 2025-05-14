@@ -2,11 +2,11 @@ use crate::{
     config::{ChainIngestorConfig, MetabasedConfig},
     types::RuntimeError,
 };
-use block_builder::rollups::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use eyre::Result;
 use metrics::metrics::TranslatorMetrics;
 use shared::service_start_utils::{start_metrics_and_health, MetricsState};
 use std::sync::Arc;
+use synd_block_builder::rollups::arbitrum::arbitrum_adapter::ArbitrumAdapter;
 use synd_chain_ingestor::{
     client::{IngestorProvider, Provider as IProvider},
     eth_client::EthClient,
@@ -99,7 +99,7 @@ async fn start_slotter(config: &MetabasedConfig, metrics: &TranslatorMetrics) ->
 
     let settlement_delay = config.settlement_delay;
 
-    Ok(slotter::slotter::run(
+    Ok(synd_slotter::slotter::run(
         settlement_delay.unwrap(),
         safe_state,
         sequencing,

@@ -1281,30 +1281,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "block-builder"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "assert_matches",
- "async-trait",
- "base64",
- "brotli",
- "clap",
- "common",
- "contract-bindings",
- "eyre",
- "flate2",
- "hex",
- "serde",
- "serde_json",
- "shared",
- "synd-mchain",
- "thiserror 2.0.12",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "blst"
 version = "0.3.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1980,12 +1956,12 @@ name = "e2e-tests"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "block-builder",
  "contract-bindings",
  "ctor",
  "eyre",
  "shared",
  "strum",
+ "synd-block-builder",
  "synd-mchain",
  "test-utils",
  "tokio",
@@ -3267,7 +3243,6 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "async-trait",
- "block-builder",
  "clap",
  "common",
  "contract-bindings",
@@ -3275,9 +3250,10 @@ dependencies = [
  "humantime",
  "metrics",
  "shared",
- "slotter",
+ "synd-block-builder",
  "synd-chain-ingestor",
  "synd-mchain",
+ "synd-slotter",
  "temp-env",
  "thiserror 2.0.12",
  "tokio",
@@ -3294,7 +3270,7 @@ dependencies = [
  "prometheus-client",
  "reqwest",
  "shared",
- "slotter",
+ "synd-slotter",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
@@ -4715,24 +4691,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "slotter"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "async-trait",
- "common",
- "ctor",
- "eyre",
- "prometheus-client",
- "shared",
- "synd-chain-ingestor",
- "synd-mchain",
- "thiserror 2.0.12",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "smallvec"
 version = "1.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4884,6 +4842,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "synd-block-builder"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "assert_matches",
+ "async-trait",
+ "base64",
+ "brotli",
+ "clap",
+ "common",
+ "contract-bindings",
+ "eyre",
+ "flate2",
+ "hex",
+ "serde",
+ "serde_json",
+ "shared",
+ "synd-mchain",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "synd-chain-ingestor"
 version = "0.1.0"
 dependencies = [
@@ -4975,6 +4957,24 @@ dependencies = [
  "tokio",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "synd-slotter"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "async-trait",
+ "common",
+ "ctor",
+ "eyre",
+ "prometheus-client",
+ "shared",
+ "synd-chain-ingestor",
+ "synd-mchain",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]

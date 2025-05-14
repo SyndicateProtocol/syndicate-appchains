@@ -1,9 +1,9 @@
-use block_builder::config::TargetRollupType::{ARBITRUM, OPTIMISM};
 use eyre::Result;
 use metabased_translator::{
     config::MetabasedConfig, config_manager::with_onchain_config, spawn::run,
 };
 use shared::logger::set_global_default_subscriber;
+use synd_block_builder::config::TargetRollupType::{ARBITRUM, OPTIMISM};
 use tokio::signal::unix::{signal, SignalKind};
 use tracing::{error, info};
 

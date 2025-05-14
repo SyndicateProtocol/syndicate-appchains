@@ -2,7 +2,7 @@
 
 use shared::zlib_compression::is_valid_zlib_cm_bits;
 
-/// Defines the compression types supported by the metabased translator
+/// Defines the compression types supported by the `synd-translator`
 #[derive(Debug, PartialEq, Eq)]
 pub enum CompressionType {
     /// No compression
