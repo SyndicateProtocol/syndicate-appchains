@@ -1,5 +1,5 @@
 # ArbConfigManager
-[Git Source](https://github.com/SyndicateProtocol/metabased-rollup/blob/63941b4c3f2f1cd214f76245ed2d624869358aba/src/config/ArbConfigManager.sol)
+[Git Source](https://github.com/SyndicateProtocol/metabased-rollup/blob/df30b030435a593e97b9e072bc9adc687b8fa1c4/src/config/ArbConfigManager.sol)
 
 **Inherits:**
 Ownable
@@ -50,7 +50,7 @@ function createArbChainConfig(
     uint256 settlementStartBlock,
     address sequencingContractAddress,
     uint256 sequencingStartBlock,
-    address rollupOwner,
+    address initialAppchainOwner,
     string memory sequencingChainRpcUrl,
     string memory appchainBlockExplorerUrl,
     address[] memory allowedSettlementAddresses
@@ -70,7 +70,7 @@ function createArbChainConfig(
 |`settlementStartBlock`|`uint256`|Starting block for settlement|
 |`sequencingContractAddress`|`address`|Address of the sequencing contract|
 |`sequencingStartBlock`|`uint256`|Starting block for sequencing|
-|`rollupOwner`|`address`|Initial rollup owner|
+|`initialAppchainOwner`|`address`|Initial appchain owner|
 |`sequencingChainRpcUrl`|`string`|Default RPC URL for the sequencing chain|
 |`appchainBlockExplorerUrl`|`string`|URL for the appchain block explorer|
 |`allowedSettlementAddresses`|`address[]`|Array of addresses allowed for settlement|

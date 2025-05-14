@@ -46,7 +46,7 @@ contract ArbConfigManager is Ownable {
      * @param settlementStartBlock Starting block for settlement
      * @param sequencingContractAddress Address of the sequencing contract
      * @param sequencingStartBlock Starting block for sequencing
-     * @param rollupOwner Initial rollup owner
+     * @param initialAppchainOwner Initial appchain owner
      * @param sequencingChainRpcUrl Default RPC URL for the sequencing chain
      * @param appchainBlockExplorerUrl URL for the appchain block explorer
      * @param allowedSettlementAddresses Array of addresses allowed for settlement
@@ -63,7 +63,7 @@ contract ArbConfigManager is Ownable {
         uint256 settlementStartBlock,
         address sequencingContractAddress,
         uint256 sequencingStartBlock,
-        address rollupOwner,
+        address initialAppchainOwner,
         string memory sequencingChainRpcUrl,
         string memory appchainBlockExplorerUrl,
         address[] memory allowedSettlementAddresses
@@ -93,7 +93,7 @@ contract ArbConfigManager is Ownable {
             settlementStartBlock,
             sequencingContractAddress,
             sequencingStartBlock,
-            rollupOwner,
+            initialAppchainOwner,
             sequencingChainRpcUrl,
             appchainBlockExplorerUrl,
             allowedSettlementAddresses
