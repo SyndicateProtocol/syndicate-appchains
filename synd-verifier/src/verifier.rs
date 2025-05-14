@@ -10,7 +10,7 @@ use alloy::{
         proofs::calculate_receipt_root, Eip658Value, Header, Receipt as AlloyReceipt,
         ReceiptWithBloom,
     },
-    primitives::{map::HashSet, Bytes, FixedBytes},
+    primitives::{Bytes, FixedBytes},
     rpc::types::Block,
 };
 use block_builder::rollups::{
@@ -20,6 +20,7 @@ use block_builder::rollups::{
 use eyre::{eyre, Result};
 use mchain::db::{DelayedMessage, MBlock, Slot};
 use shared::types::convert_block_to_partial_block;
+use std::collections::HashSet;
 
 /// The `Verifier` struct is responsible for verifying a batch of blocks and creating a new mchain
 /// block.
@@ -39,8 +40,12 @@ impl Verifier {
                 ),
                 bridge_address: config.arbitrum_bridge_address,
                 inbox_address: config.arbitrum_inbox_address,
-                ignore_delayed_messages: false,
-                allowed_settlement_addresses: HashSet::new(),
+                ignore_delayed_messages: config.arbitrum_ignore_delayed_messages,
+                allowed_settlement_addresses: config
+                    .allowed_settlement_addresses
+                    .iter()
+                    .copied()
+                    .collect::<HashSet<_>>(),
             },
         }
     }

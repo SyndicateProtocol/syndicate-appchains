@@ -132,10 +132,6 @@ impl ArbitrumAdapter {
     /// - `config`: The configuration for the block builder.
     #[allow(clippy::unwrap_used)] //it's okay to unwrap here because we know the config is valid
     pub fn new(config: &BlockBuilderConfig) -> Self {
-        let mut allowed_settlement_addresses = HashSet::new();
-        for addr in &config.allowed_settlement_addresses {
-            allowed_settlement_addresses.insert(*addr);
-        }
         Self {
             transaction_parser: SequencingTransactionParser::new(
                 config.sequencing_contract_address.unwrap(),
@@ -143,7 +139,11 @@ impl ArbitrumAdapter {
             bridge_address: config.arbitrum_bridge_address.unwrap(),
             inbox_address: config.arbitrum_inbox_address.unwrap(),
             ignore_delayed_messages: config.arbitrum_ignore_delayed_messages.unwrap(),
-            allowed_settlement_addresses,
+            allowed_settlement_addresses: config
+                .allowed_settlement_addresses
+                .iter()
+                .copied()
+                .collect::<HashSet<_>>(),
         }
     }
 
