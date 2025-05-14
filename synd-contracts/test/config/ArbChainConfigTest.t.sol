@@ -7,8 +7,7 @@ import {ArbConfigManager} from "src/config/ArbConfigManager.sol";
 
 contract ArbChainConfigTestBase is Test {
     address public owner = address(1);
-    address public rollupOwner = address(2);
-    address public newRollupOwner = address(3);
+    address public appchainOwner = address(2);
 
     uint256 public constant CHAIN_ID = 123456;
     uint256 public constant SEQUENCING_CHAIN_ID = 654321;
@@ -27,7 +26,6 @@ contract ArbChainConfigTestBase is Test {
 
     // Events for testing
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-    event RollupOwnerUpdated(address indexed newRollupOwner);
     event DefaultSequencingChainRpcUrlUpdated(string newRpcUrl);
     event AllowedSettlementAddressesUpdated(address[] newAllowedSettlementAddresses);
     event ArbChainConfigCreated(uint256 indexed chainId, address configAddress);
@@ -60,7 +58,7 @@ contract ArbChainConfigTestBase is Test {
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
-            rollupOwner,
+            appchainOwner,
             DEFAULT_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL,
             ALLOWED_SETTLEMENT_ADDRESSES
@@ -93,7 +91,7 @@ contract BasicTests is ArbChainConfigTestBase {
     }
 
     function testInitialMutableValues() public view {
-        assertEq(chainConfig.ROLLUP_OWNER(), rollupOwner);
+        assertEq(chainConfig.INITIAL_APPCHAIN_OWNER(), appchainOwner);
         assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), DEFAULT_RPC_URL);
         assertEq(chainConfig.APPCHAIN_BLOCK_EXPLORER_URL(), APPCHAIN_BLOCK_EXPLORER_URL);
 
@@ -125,7 +123,7 @@ contract InvalidParameterTests is ArbChainConfigTestBase {
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
-            rollupOwner,
+            appchainOwner,
             DEFAULT_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL,
             ALLOWED_SETTLEMENT_ADDRESSES
@@ -153,7 +151,7 @@ contract InvalidParameterTests is ArbChainConfigTestBase {
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
-            rollupOwner,
+            appchainOwner,
             DEFAULT_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL,
             ALLOWED_SETTLEMENT_ADDRESSES
@@ -177,7 +175,7 @@ contract InvalidParameterTests is ArbChainConfigTestBase {
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
-            rollupOwner,
+            appchainOwner,
             DEFAULT_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL,
             ALLOWED_SETTLEMENT_ADDRESSES
@@ -201,7 +199,7 @@ contract InvalidParameterTests is ArbChainConfigTestBase {
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
-            rollupOwner,
+            appchainOwner,
             DEFAULT_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL,
             ALLOWED_SETTLEMENT_ADDRESSES
@@ -225,7 +223,7 @@ contract InvalidParameterTests is ArbChainConfigTestBase {
             SETTLEMENT_START_BLOCK,
             address(0), // Invalid address
             SEQUENCING_START_BLOCK,
-            rollupOwner,
+            appchainOwner,
             DEFAULT_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL,
             ALLOWED_SETTLEMENT_ADDRESSES
@@ -233,11 +231,11 @@ contract InvalidParameterTests is ArbChainConfigTestBase {
         vm.stopPrank();
     }
 
-    function testCreateWithZeroRollupOwner() public {
+    function testCreateWithZeroAppchainOwner() public {
         ArbConfigManager manager = _createArbConfigManager();
 
         vm.startPrank(owner);
-        vm.expectRevert("Rollup owner cannot be zero address");
+        vm.expectRevert("Initial appchain owner cannot be zero address");
         manager.createArbChainConfig(
             owner,
             CHAIN_ID,
@@ -273,7 +271,7 @@ contract InvalidParameterTests is ArbChainConfigTestBase {
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
-            rollupOwner,
+            appchainOwner,
             DEFAULT_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL,
             ALLOWED_SETTLEMENT_ADDRESSES
@@ -292,34 +290,6 @@ contract ArbChainConfigUpdateTests is ArbChainConfigTestBase {
         chainConfig = _deployArbChainConfig(configManager, CHAIN_ID);
     }
 
-    function testUpdateRollupOwner() public {
-        vm.startPrank(owner);
-
-        vm.expectEmit(true, false, false, true);
-        emit RollupOwnerUpdated(newRollupOwner);
-
-        chainConfig.updateRollupOwner(newRollupOwner);
-        assertEq(chainConfig.ROLLUP_OWNER(), newRollupOwner);
-
-        vm.stopPrank();
-    }
-
-    function testUpdateRollupOwnerRevertOnZeroAddress() public {
-        vm.startPrank(owner);
-
-        vm.expectRevert("New rollup owner cannot be zero address");
-        chainConfig.updateRollupOwner(address(0));
-
-        vm.stopPrank();
-    }
-
-    function testUpdateRollupOwnerRevertOnNonOwner() public {
-        vm.prank(address(999)); // Non-owner address
-
-        vm.expectRevert("Caller is not the owner");
-        chainConfig.updateRollupOwner(newRollupOwner);
-    }
-
     function testTransferOwnership() public {
         vm.startPrank(owner);
 
@@ -336,8 +306,11 @@ contract ArbChainConfigUpdateTests is ArbChainConfigTestBase {
 
         // New owner should be able to call onlyOwner functions
         vm.startPrank(newOwner);
-        chainConfig.updateRollupOwner(newRollupOwner);
-        assertEq(chainConfig.ROLLUP_OWNER(), newRollupOwner);
+        string memory newRpcUrl = "https://new-example.com/rpc";
+        vm.expectEmit(true, false, false, true);
+        emit DefaultSequencingChainRpcUrlUpdated(newRpcUrl);
+        chainConfig.updateDefaultSequencingChainRpcUrl(newRpcUrl);
+        assertEq(chainConfig.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), newRpcUrl);
         vm.stopPrank();
     }
 
@@ -452,19 +425,21 @@ contract ArbConfigManagerTests is ArbChainConfigTestBase {
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
-            rollupOwner,
+            appchainOwner,
             DEFAULT_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL,
             ALLOWED_SETTLEMENT_ADDRESSES
         );
         ArbChainConfig config2 = ArbChainConfig(config2Address);
 
+        string memory newRpcUrl1 = "https://new-example.com/rpc";
+        string memory newRpcUrl2 = "https://new-example2.com/rpc";
         // Verify functionality on both configs
-        config1.updateRollupOwner(newRollupOwner);
-        config2.updateRollupOwner(newRollupOwner);
+        config1.updateDefaultSequencingChainRpcUrl(newRpcUrl1);
+        config2.updateDefaultSequencingChainRpcUrl(newRpcUrl2);
 
-        assertEq(config1.ROLLUP_OWNER(), newRollupOwner);
-        assertEq(config2.ROLLUP_OWNER(), newRollupOwner);
+        assertEq(config1.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), newRpcUrl1);
+        assertEq(config2.DEFAULT_SEQUENCING_CHAIN_RPC_URL(), newRpcUrl2);
 
         vm.stopPrank();
     }
@@ -490,7 +465,7 @@ contract ArbConfigManagerTests is ArbChainConfigTestBase {
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
-            rollupOwner,
+            appchainOwner,
             DEFAULT_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL,
             ALLOWED_SETTLEMENT_ADDRESSES
@@ -535,7 +510,7 @@ contract ArbConfigManagerTests is ArbChainConfigTestBase {
             SETTLEMENT_START_BLOCK,
             SEQUENCING_CONTRACT_ADDRESS,
             SEQUENCING_START_BLOCK,
-            rollupOwner,
+            appchainOwner,
             DEFAULT_RPC_URL,
             APPCHAIN_BLOCK_EXPLORER_URL,
             ALLOWED_SETTLEMENT_ADDRESSES

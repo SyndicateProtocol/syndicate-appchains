@@ -9,7 +9,6 @@ import {Initializable} from "@openzeppelin/contracts/proxy/utils/Initializable.s
  */
 contract ArbChainConfig is Initializable {
     // Events
-    event RollupOwnerUpdated(address indexed newRollupOwner);
     event DefaultSequencingChainRpcUrlUpdated(string newRpcUrl);
     event AppchainBlockExplorerUrlUpdated(string newUrl);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -18,6 +17,7 @@ contract ArbChainConfig is Initializable {
 
     // ======== IMMUTABLE CONFIGURATION PARAMETERS ========
     // These parameters cannot be changed after initialization
+    address public INITIAL_APPCHAIN_OWNER;
     address public ARBITRUM_BRIDGE_ADDRESS;
     address public ARBITRUM_INBOX_ADDRESS;
     address public SEQUENCING_CONTRACT_ADDRESS;
@@ -31,7 +31,6 @@ contract ArbChainConfig is Initializable {
 
     // ======== MUTABLE CONFIGURATION PARAMETERS ========
     // These parameters can be updated by the contract owner
-    address public ROLLUP_OWNER;
     string public DEFAULT_SEQUENCING_CHAIN_RPC_URL;
     string public APPCHAIN_BLOCK_EXPLORER_URL;
 
@@ -56,7 +55,7 @@ contract ArbChainConfig is Initializable {
      * @param settlementStartBlock Starting block for settlement
      * @param sequencingContractAddress Address of the sequencing contract
      * @param sequencingStartBlock Starting block for sequencing
-     * @param rollupOwner Initial rollup owner
+     * @param initialAppchainOwner Initial appchain owner
      * @param sequencingChainRpcUrl Default RPC URL for the sequencing chain
      * @param appchainBlockExplorerUrl URL for the appchain block explorer
      * @param allowedSettlementAddresses Array of addresses allowed for settlement
@@ -72,7 +71,7 @@ contract ArbChainConfig is Initializable {
         uint256 settlementStartBlock,
         address sequencingContractAddress,
         uint256 sequencingStartBlock,
-        address rollupOwner,
+        address initialAppchainOwner,
         string memory sequencingChainRpcUrl,
         string memory appchainBlockExplorerUrl,
         address[] memory allowedSettlementAddresses
@@ -84,7 +83,7 @@ contract ArbChainConfig is Initializable {
         require(arbitrumBridgeAddress != address(0), "Arbitrum bridge address cannot be zero");
         require(arbitrumInboxAddress != address(0), "Arbitrum inbox address cannot be zero");
         require(sequencingContractAddress != address(0), "Sequencing contract address cannot be zero");
-        require(rollupOwner != address(0), "Rollup owner cannot be zero address");
+        require(initialAppchainOwner != address(0), "Initial appchain owner cannot be zero address");
 
         // Set immutable configuration parameters
         CHAIN_ID = chainId;
@@ -99,7 +98,7 @@ contract ArbChainConfig is Initializable {
         ALLOWED_SETTLEMENT_ADDRESSES = allowedSettlementAddresses;
 
         // Set mutable configuration parameters
-        ROLLUP_OWNER = rollupOwner;
+        INITIAL_APPCHAIN_OWNER = initialAppchainOwner;
         DEFAULT_SEQUENCING_CHAIN_RPC_URL = sequencingChainRpcUrl;
         APPCHAIN_BLOCK_EXPLORER_URL = appchainBlockExplorerUrl;
 
@@ -113,16 +112,6 @@ contract ArbChainConfig is Initializable {
     modifier onlyOwner() {
         require(msg.sender == owner, "Caller is not the owner");
         _;
-    }
-
-    /**
-     * @dev Update the ROLLUP_OWNER
-     * @param newRollupOwner The new address for ROLLUP_OWNER
-     */
-    function updateRollupOwner(address newRollupOwner) external onlyOwner {
-        require(newRollupOwner != address(0), "New rollup owner cannot be zero address");
-        ROLLUP_OWNER = newRollupOwner;
-        emit RollupOwnerUpdated(newRollupOwner);
     }
 
     /**
