@@ -15,6 +15,7 @@ clap          = { workspace = true }
 eyre          = { workspace = true }
 mchain        = { workspace = true }
 shared        = { workspace = true }
+thiserror     = { workspace = true }
 tokio         = { workspace = true }
 
 [lints]

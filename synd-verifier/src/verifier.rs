@@ -3,6 +3,7 @@
 
 use crate::{
     config::VerifierConfig,
+    errors::VerifierError,
     types::{ChainVerificationInput, TypedReceipt},
 };
 use alloy::{
@@ -16,7 +17,7 @@ use block_builder::rollups::{
     arbitrum::arbitrum_adapter::ArbitrumAdapter,
     shared::sequencing_transaction_parser::SequencingTransactionParser,
 };
-use eyre::{eyre, Result};
+use eyre::Result;
 use mchain::db::{DelayedMessage, MBlock, Slot};
 use shared::types::convert_block_to_partial_block;
 use std::collections::HashSet;
@@ -57,7 +58,7 @@ impl Verifier {
         sequencing_expected_hash: FixedBytes<32>,
         settlement_expected_hash: FixedBytes<32>,
         settlement_delay: u64,
-    ) -> Result<MBlock> {
+    ) -> Result<MBlock, VerifierError> {
         // Validate blocks
         self.validate_blocks(&sequencing_chain_input.blocks, sequencing_expected_hash)?;
         self.validate_blocks(&settlement_chain_input.blocks, settlement_expected_hash)?;
@@ -73,7 +74,7 @@ impl Verifier {
     // --------------------------------------------
     // Validation Functions
     // --------------------------------------------
-    fn validate_receipts(&self, input: &ChainVerificationInput) -> Result<()> {
+    fn validate_receipts(&self, input: &ChainVerificationInput) -> Result<(), VerifierError> {
         for (i, block_receipts) in input.receipts.iter().enumerate() {
             let alloy_receipts: Vec<ReceiptWithBloom<TypedReceipt>> = block_receipts
                 .iter()
@@ -94,40 +95,42 @@ impl Verifier {
             let receipts_root = calculate_receipt_root(&alloy_receipts);
 
             if receipts_root != input.blocks[i].header.receipts_root {
-                return Err(eyre!(
-                    "Receipts root mismatch: expected {}, got {}",
-                    input.blocks[i].header.receipts_root,
-                    receipts_root
-                ));
+                return Err(VerifierError::ReceiptsRootMismatch {
+                    index: i,
+                    expected: input.blocks[i].header.receipts_root,
+                    actual: receipts_root,
+                });
             }
         }
 
         Ok(())
     }
 
-    fn validate_blocks(&self, blocks: &[Block], expected_hash: FixedBytes<32>) -> Result<()> {
+    fn validate_blocks(
+        &self,
+        blocks: &[Block],
+        expected_hash: FixedBytes<32>,
+    ) -> Result<(), VerifierError> {
         let Some(last_block) = blocks.last() else {
-            return Err(eyre!("No blocks provided"));
+            return Err(VerifierError::NoBlocksProvided);
         };
 
         if last_block.header.hash != expected_hash {
-            return Err(eyre!(
-                "Final block hash mismatch: expected {}, got {}",
-                expected_hash,
-                last_block.header.hash
-            ));
+            return Err(VerifierError::FinalBlockHashMismatch {
+                expected: expected_hash,
+                actual: last_block.header.hash,
+            });
         }
 
         for (i, block) in blocks.iter().enumerate() {
             if i > 0 {
                 let prev_hash = blocks[i - 1].header.hash;
                 if block.header.parent_hash != prev_hash {
-                    return Err(eyre!(
-                        "Invalid parent hash at block {}: expected {}, got {}",
-                        block.header.number,
-                        prev_hash,
-                        block.header.parent_hash
-                    ));
+                    return Err(VerifierError::InvalidParentHash {
+                        block_number: block.header.number,
+                        expected: prev_hash,
+                        actual: block.header.parent_hash,
+                    });
                 }
             }
             self.validate_block_hash(block)?;
@@ -135,17 +138,16 @@ impl Verifier {
         Ok(())
     }
 
-    fn validate_block_hash(&self, block: &Block) -> Result<()> {
+    fn validate_block_hash(&self, block: &Block) -> Result<(), VerifierError> {
         let header: Header = block.header.clone().into();
         let computed_hash = header.hash_slow();
 
         if computed_hash != block.header.hash {
-            return Err(eyre!(
-                "Block {} has invalid hash. Expected {}, got {}",
-                header.number,
-                computed_hash,
-                block.header.hash
-            ));
+            return Err(VerifierError::InvalidBlockHash {
+                block_number: header.number,
+                expected: computed_hash,
+                actual: block.header.hash,
+            });
         }
         Ok(())
     }
@@ -159,22 +161,22 @@ impl Verifier {
         sequencing_chain_input: ChainVerificationInput,
         settlement_chain_input: ChainVerificationInput,
         settlement_delay: u64,
-    ) -> Result<MBlock> {
+    ) -> Result<MBlock, VerifierError> {
         let (first_seq_block, last_seq_block) =
             match (sequencing_chain_input.blocks.first(), sequencing_chain_input.blocks.last()) {
                 (Some(first), Some(last)) => (first, last),
-                _ => return Err(eyre!("No sequence blocks provided")),
+                _ => return Err(VerifierError::NoSequenceBlocksProvided),
             };
 
         let (first_set_block, last_set_block) =
             match (settlement_chain_input.blocks.first(), settlement_chain_input.blocks.last()) {
                 (Some(first), Some(last)) => (first, last),
-                _ => return Err(eyre!("No settlement blocks provided")),
+                _ => return Err(VerifierError::NoSettlementBlocksProvided),
             };
 
         let last_seq_receipts = match sequencing_chain_input.receipts.last() {
             Some(receipts) => receipts,
-            None => return Err(eyre!("No sequence receipts provided")),
+            None => return Err(VerifierError::NoSequenceReceiptsProvided),
         };
 
         let mut mblock =
@@ -188,7 +190,7 @@ impl Verifier {
             first_seq_block.header.timestamp &&
             last_set_block.header.timestamp + settlement_delay > last_seq_block.header.timestamp)
         {
-            return Err(eyre!("Missing settlement blocks"));
+            return Err(VerifierError::MissingSettlementBlocks);
         }
         let mut i = 1;
         while settlement_chain_input.blocks[i].header.timestamp + settlement_delay <=

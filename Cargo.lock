@@ -4987,6 +4987,7 @@ dependencies = [
  "eyre",
  "mchain",
  "shared",
+ "thiserror 2.0.12",
  "tokio",
 ]
 
