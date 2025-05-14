@@ -49,7 +49,7 @@ env:
   GITHUB_REGISTRY: ghcr.io
   GOOGLE_REGISTRY: us-central1-docker.pkg.dev
   PROJECT_ID: metabased-testnet
-  REPO_NAME: metabased-rollup
+  REPO_NAME: syndicate-appchains
   WORKLOAD_IDENTITY_PROVIDER: projects/112197761096/locations/global/workloadIdentityPools/cloud-run-github-pool/providers/id-001
 
 jobs:

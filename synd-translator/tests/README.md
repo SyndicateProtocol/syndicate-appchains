@@ -21,20 +21,7 @@ Located in `tests/signal_tests.rs`, these tests verify that the software handles
 
 `Integration` tests are executed by default when running `cargo test`.
 
-To run `Environment` tests, the following ENV vars must be set:
-
-```bash
-BOB_PRIVATE_KEY
-ALICE_PRIVATE_KEY
-SEQUENCER_PRIVATE_KEY
-SETTLEMENT_RPC_URL
-SEQUENCING_RPC_URL
-METABASED_RPC_URL
-TARGET_ROLLUP_TYPE
-SEQUENCING_CONTRACT_ADDRESS
-```
-
-Then, the tests can be run with:
+The tests can also be run standalone with:
 
 ```bash
 cargo test --package e2e-tests --test environment_tests --features env-tests
