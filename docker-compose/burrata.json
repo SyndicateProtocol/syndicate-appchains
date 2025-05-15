@@ -1,6 +1,6 @@
 [
   {
-    "chain-name": "manchego",
+    "chain-name": "burrata",
     "parent-chain-id": 84532,
     "parent-chain-is-arbitrum": false,
     "sequencer-url": "",
@@ -10,7 +10,7 @@
     "das-index-url": "",
     "has-genesis-state": false,
     "chain-config": {
-      "chainId": 510000,
+      "chainId": 510001,
       "homesteadBlock": 0,
       "daoForkBlock": null,
       "daoForkSupport": true,
@@ -34,7 +34,7 @@
         "AllowDebugPrecompiles": false,
         "DataAvailabilityCommittee": false,
         "InitialArbOSVersion": 32,
-        "InitialChainOwner": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+        "InitialChainOwner": "0x9a37E57d177c5Ff8817B55da36F2A2b3532CDE3F",
         "GenesisBlockNum": 0
       }
     },

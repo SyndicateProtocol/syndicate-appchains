@@ -70,4 +70,3 @@ broadcast/
 /broadcast/**/dry-run/
 docker-compose/heaptrack_output/
 docker-compose/chains/
-docker-compose/datadir/

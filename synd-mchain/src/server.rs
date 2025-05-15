@@ -328,7 +328,8 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                         Some(alloy::rpc::types::ValueOrArray::Value(i)) => i,
                         _ => return Err(err("missing topic1")),
                     };
-                    let ind = u64::from_be_bytes(index[24..32].try_into().map_err(to_err)?);
+                    let ind =
+                        u64::from_be_bytes(index[index.len() - 8..].try_into().map_err(to_err)?);
                     if f.block_option != FilterBlockOption::AtBlockHash(U256::from(ind + 1).into())
                     {
                         return Err(err("block hash and batch index mismatch"));
@@ -431,7 +432,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
             "eth_getBlockByHash",
             move |p, (db, _, _), _| -> Result<alloy::rpc::types::Block, ErrorObjectOwned> {
                 let (hash, _): (FixedBytes<32>, bool) = p.parse()?;
-                let number = u64::from_be_bytes(hash[24..32].try_into().map_err(to_err)?);
+                let number = u64::from_be_bytes(hash[hash.len() - 8..].try_into().map_err(to_err)?);
                 let block = db.get_block(number)?;
                 Ok(alloy::rpc::types::Block {
                     header: create_header(number, block.slot.seq_block_number, block.timestamp),

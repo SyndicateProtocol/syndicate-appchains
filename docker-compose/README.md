@@ -1,1 +1,7 @@
-manchego.yaml and burrata.yaml can be used for performance testing to measure memory usage when syncing and sync time.
+usage:
+
+docker compose --env-file burrata.env up
+docker compose --env-file manchego.env up
+docker compose --env-file cheddar.env up
+
+docker compose down -v
