@@ -7,29 +7,28 @@ use std::fmt::Debug;
 
 /// Configuration for the verifier
 #[derive(Parser, Clone, Debug)]
-#[allow(missing_docs)]
 pub struct VerifierConfig {
     /// Sequencing contract address on the sequencing chain
     #[arg(short = 's', long, env = "SEQUENCING_CONTRACT_ADDRESS",
-        value_parser = parse_address)]
+        value_parser = parse_address, default_value = "0x0000000000000000000000000000000000000000")]
     pub sequencing_contract_address: Address,
 
     /// Bridge address on the settlement chain
     #[arg(short = 'b', long, env = "ARBITRUM_BRIDGE_ADDRESS",
-       value_parser = parse_address)]
+       value_parser = parse_address, default_value = "0x0000000000000000000000000000000000000000")]
     pub arbitrum_bridge_address: Address,
 
     /// Inbox address on the settlement chain
     #[arg(short = 'i', long, env = "ARBITRUM_INBOX_ADDRESS",
-       value_parser = parse_address)]
+       value_parser = parse_address, default_value = "0x0000000000000000000000000000000000000000")]
     pub arbitrum_inbox_address: Address,
 
     /// Ignore delayed messages
-    #[arg(long, env = "ARBITRUM_IGNORE_DELAYED_MESSAGES")]
+    #[arg(long, env = "ARBITRUM_IGNORE_DELAYED_MESSAGES", default_value = "false")]
     pub arbitrum_ignore_delayed_messages: bool,
 
     /// Allowed settlement addresses
-    #[arg(long, env = "ALLOWED_SETTLEMENT_ADDRESSES", value_parser = parse_addresses)]
+    #[arg(long, env = "ALLOWED_SETTLEMENT_ADDRESSES", value_parser = parse_addresses, default_value = "[]")]
     pub allowed_settlement_addresses: Vec<Address>,
 }
 

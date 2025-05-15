@@ -21,14 +21,14 @@ pub enum VerifierError {
     #[error("No blocks provided")]
     NoBlocksProvided,
 
-    #[error("No enough sequence blocks provided")]
-    NoEnoughSequenceBlocksProvided,
+    #[error("Not enough sequencing blocks provided")]
+    NoEnoughSequencingBlocksProvided,
 
-    #[error("No enough settlement blocks provided")]
+    #[error("Not enough settlement blocks provided")]
     NoEnoughSettlementBlocksProvided,
 
-    #[error("No sequence receipts provided")]
-    NoSequenceReceiptsProvided,
+    #[error("No sequencing receipts provided")]
+    NoSequencingReceiptsProvided,
 
     #[error("Missing settlement blocks")]
     MissingSettlementBlocks,

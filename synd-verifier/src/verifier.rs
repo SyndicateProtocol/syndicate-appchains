@@ -1,5 +1,5 @@
 //! The `synd-verifier` crate is responsible for verifying a batch of blocks and creating a new
-//! mchain block
+//! `mchain` block
 
 use crate::{
     config::VerifierConfig,
@@ -59,7 +59,7 @@ impl Verifier {
     ) -> Result<MBlock, VerifierError> {
         // Validate we always have 2 sequencing blocks
         if sequencing_chain_input.blocks.len() != 2 {
-            return Err(VerifierError::NoEnoughSequenceBlocksProvided);
+            return Err(VerifierError::NoEnoughSequencingBlocksProvided);
         }
 
         // Validate blocks
@@ -164,7 +164,7 @@ impl Verifier {
         let (first_seq_block, last_seq_block) =
             match (sequencing_chain_input.blocks.first(), sequencing_chain_input.blocks.last()) {
                 (Some(first), Some(last)) => (first, last),
-                _ => return Err(VerifierError::NoEnoughSequenceBlocksProvided),
+                _ => return Err(VerifierError::NoEnoughSequencingBlocksProvided),
             };
 
         let (first_set_block, last_set_block) =
@@ -175,22 +175,23 @@ impl Verifier {
 
         let last_seq_receipts = match sequencing_chain_input.receipts.last() {
             Some(receipts) => receipts,
-            None => return Err(VerifierError::NoSequenceReceiptsProvided),
+            None => return Err(VerifierError::NoSequencingReceiptsProvided),
         };
 
         let mut mblock =
             MBlock { timestamp: last_seq_block.header.timestamp, ..Default::default() };
         let mut payload: (Bytes, Vec<DelayedMessage>) = (Bytes::new(), Vec::new());
 
-        // We want to make sure we have settlement blocks that are before and after the slot window
-        // (sequencing start - sequencing end) to make sure we have a full slot and are not missing
-        // any blocks
-        if !(first_set_block.header.timestamp + settlement_delay <=
-            first_seq_block.header.timestamp &&
-            last_set_block.header.timestamp + settlement_delay > last_seq_block.header.timestamp)
-        {
+        if !self.has_full_settlement_coverage(
+            first_set_block.header.timestamp,
+            last_set_block.header.timestamp,
+            first_seq_block.header.timestamp,
+            last_seq_block.header.timestamp,
+            settlement_delay,
+        ) {
             return Err(VerifierError::MissingSettlementBlocks);
         }
+
         let mut i = 1;
         while settlement_chain_input.blocks[i].header.timestamp + settlement_delay <=
             first_seq_block.header.timestamp
@@ -230,6 +231,22 @@ impl Verifier {
         mblock.slot = slot;
 
         Ok(mblock)
+    }
+
+    /// Returns true if the settlement blocks fully cover the sequencing slot window.
+    /// We want to make sure we have settlement blocks that are before and after the slot
+    /// window (sequencing start - sequencing end) to make sure we have a full slot and are not
+    /// missing any blocks
+    const fn has_full_settlement_coverage(
+        &self,
+        first_settlement_ts: u64,
+        last_settlement_ts: u64,
+        first_sequencing_ts: u64,
+        last_sequencing_ts: u64,
+        settlement_delay: u64,
+    ) -> bool {
+        (first_settlement_ts + settlement_delay <= first_sequencing_ts) &&
+            (last_settlement_ts + settlement_delay > last_sequencing_ts)
     }
 }
 #[cfg(test)]
@@ -756,5 +773,71 @@ mod tests {
 
         assert!(result.is_err());
         assert!(result.unwrap_err().to_string().contains("Missing settlement blocks"));
+    }
+
+    #[test]
+    fn test_has_full_settlement_coverage_passes() {
+        let verifier = Verifier::new(&VerifierConfig::default());
+        // Settlement blocks fully cover the sequencing window.
+        let settlement_delay = 10;
+        let first_settlement_ts = 90;
+        let last_settlement_ts = 200;
+        let first_sequencing_ts = 100;
+        let last_sequencing_ts = 190;
+
+        assert!(
+            verifier.has_full_settlement_coverage(
+                first_settlement_ts,
+                last_settlement_ts,
+                first_sequencing_ts,
+                last_sequencing_ts,
+                settlement_delay
+            ),
+            "Expected settlement coverage to be valid"
+        );
+    }
+
+    #[test]
+    fn test_missing_settlement_before_sequencing() {
+        let verifier = Verifier::new(&VerifierConfig::default());
+        // Settlement starts too late (after sequencing start)
+        let settlement_delay = 10;
+        let first_settlement_ts = 120;
+        let last_settlement_ts = 200;
+        let first_sequencing_ts = 120;
+        let last_sequencing_ts = 190;
+
+        assert!(
+            !verifier.has_full_settlement_coverage(
+                first_settlement_ts,
+                last_settlement_ts,
+                first_sequencing_ts,
+                last_sequencing_ts,
+                settlement_delay
+            ),
+            "Expected failure due to missing earlier settlement block"
+        );
+    }
+
+    #[test]
+    fn test_missing_settlement_after_sequencing() {
+        let verifier = Verifier::new(&VerifierConfig::default());
+        // Settlement ends too early (before sequencing end)
+        let settlement_delay = 10;
+        let first_settlement_ts = 80;
+        let last_settlement_ts = 170;
+        let first_sequencing_ts = 100;
+        let last_sequencing_ts = 190;
+
+        assert!(
+            !verifier.has_full_settlement_coverage(
+                first_settlement_ts,
+                last_settlement_ts,
+                first_sequencing_ts,
+                last_sequencing_ts,
+                settlement_delay
+            ),
+            "Expected failure due to missing later settlement block"
+        );
     }
 }
