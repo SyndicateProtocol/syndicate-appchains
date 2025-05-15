@@ -4,7 +4,7 @@
 use crate::{
     config::VerifierConfig,
     errors::VerifierError,
-    types::{ChainVerificationInput, Payload, TypedReceipt},
+    types::{ChainVerificationInput, TypedReceipt},
 };
 use alloy::{
     consensus::{proofs::calculate_receipt_root, Header, Receipt as AlloyReceipt},
@@ -12,7 +12,7 @@ use alloy::{
     rpc::types::Block,
 };
 use eyre::Result;
-use shared::types::convert_block_to_partial_block;
+use shared::types::{convert_block_to_partial_block, Receipt};
 use std::collections::HashSet;
 use synd_block_builder::appchains::{
     arbitrum::arbitrum_adapter::ArbitrumAdapter,
@@ -185,29 +185,23 @@ impl Verifier {
             settlement_chain_input,
             first_seq_block,
             last_seq_block,
+            last_seq_receipts,
             settlement_delay,
         )?;
 
-        let mut mblock =
-            MBlock { timestamp: last_seq_block.header.timestamp, slot, ..Default::default() };
-
-        let seq_partial_block = convert_block_to_partial_block(last_seq_block, last_seq_receipts);
-        let (tx_count, batch) = self.arbitrum_adapter.build_batch(&seq_partial_block)?;
-        if tx_count > 0 || !payload.delayed_messages.is_empty() {
-            mblock.payload = Some((batch, payload.delayed_messages));
-        }
-
-        Ok(mblock)
+        Ok(MBlock { timestamp: last_seq_block.header.timestamp, slot, payload })
     }
 
+    #[allow(clippy::type_complexity)]
     fn get_payload_and_slot(
         &self,
         settlement_chain_input: ChainVerificationInput,
         first_seq_block: &Block,
         last_seq_block: &Block,
+        last_seq_receipts: &[Receipt],
         settlement_delay: u64,
-    ) -> Result<(Payload, Slot), VerifierError> {
-        let mut payload: Payload = Payload { batch: Bytes::new(), delayed_messages: Vec::new() };
+    ) -> Result<(Option<(Bytes, Vec<DelayedMessage>)>, Slot), VerifierError> {
+        let mut payload: (Bytes, Vec<DelayedMessage>) = Default::default();
 
         let mut i = 1;
         while settlement_chain_input.blocks[i].header.timestamp + settlement_delay <=
@@ -227,7 +221,7 @@ impl Verifier {
             );
             let mut delayed_messages =
                 self.arbitrum_adapter.process_delayed_messages(&partial_block)?;
-            payload.delayed_messages.append(&mut delayed_messages);
+            payload.1.append(&mut delayed_messages);
             i += 1;
         }
 
@@ -238,7 +232,17 @@ impl Verifier {
             set_block_number: settlement_chain_input.blocks[i].header.number,
         };
 
-        Ok((payload, slot))
+        let seq_partial_block = convert_block_to_partial_block(last_seq_block, last_seq_receipts);
+        let (seq_tx_count, seq_batch) = self.arbitrum_adapter.build_batch(&seq_partial_block)?;
+        // If there are no sequencing transactions or settlement transactions (delayed messages)
+        // add batch to the payload
+        if seq_tx_count == 0 || payload.1.is_empty() {
+            return Ok((None, slot));
+        }
+
+        payload.0 = seq_batch;
+
+        Ok((Some(payload), slot))
     }
 
     // --------------------------------------------
