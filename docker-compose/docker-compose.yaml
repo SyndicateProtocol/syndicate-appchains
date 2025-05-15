@@ -1,7 +1,7 @@
 services:
   mchain:
     build:
-      context: ../../
+      context: ../
       target: synd-mchain
       dockerfile: Dockerfile
     environment:
@@ -9,7 +9,7 @@ services:
  
   seq-ingestor:
     build:
-      context: ../../
+      context: ../
       target: synd-chain-ingestor
       dockerfile: Dockerfile
     volumes:
@@ -21,7 +21,7 @@ services:
 
   set-ingestor:
     build:
-      context: ../../
+      context: ../
       target: synd-chain-ingestor
       dockerfile: Dockerfile
     volumes:
@@ -42,7 +42,7 @@ services:
 
   translator:
     build:
-      context: ../../
+      context: ../
       target: synd-translator
       dockerfile: Dockerfile
     environment:
