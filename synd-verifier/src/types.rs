@@ -3,9 +3,11 @@
 use alloy::{
     consensus::{Receipt as AlloyReceipt, RlpEncodableReceipt, TxReceipt},
     eips::{Encodable2718, Typed2718},
+    primitives::Bytes,
     rpc::types::Block,
 };
 use shared::types::Receipt;
+use synd_mchain::db::DelayedMessage;
 
 /// A typed receipt for RLP and EIP-2718 encoding.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -43,4 +45,13 @@ pub struct ChainVerificationInput {
     pub blocks: Vec<Block>,
     /// The receipts to verify
     pub receipts: Vec<Vec<Receipt>>,
+}
+
+/// The payload of a mchain block
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Payload {
+    /// The batch of transactions to be executed
+    pub batch: Bytes,
+    /// The delayed messages to be executed
+    pub delayed_messages: Vec<DelayedMessage>,
 }
