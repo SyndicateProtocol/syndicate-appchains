@@ -94,20 +94,20 @@ impl std::fmt::Display for L1MessageType {
 #[derive(Debug, Clone)]
 /// Builder for constructing Arbitrum blocks from transactions
 pub struct ArbitrumAdapter {
-    // Transaction parser for sequencing chain
-    transaction_parser: SequencingTransactionParser,
+    /// Transaction parser for sequencing chain
+    pub transaction_parser: SequencingTransactionParser,
 
-    // Settlement chain address
-    bridge_address: Address,
+    /// Settlement chain address
+    pub bridge_address: Address,
 
-    // Settlement chain address
-    inbox_address: Address,
+    /// Settlement chain address
+    pub inbox_address: Address,
 
-    // Flag used to ignore Delayed messages (except Deposits)
-    ignore_delayed_messages: bool,
+    /// Flag used to ignore Delayed messages (except Deposits)
+    pub ignore_delayed_messages: bool,
 
-    // Whitelisted sender addresses for delayed messages
-    allowed_settlement_addresses: HashSet<Address>,
+    /// Whitelisted sender addresses for delayed messages
+    pub allowed_settlement_addresses: HashSet<Address>,
 }
 
 impl Default for ArbitrumAdapter {
@@ -132,10 +132,6 @@ impl ArbitrumAdapter {
     /// - `config`: The configuration for the block builder.
     #[allow(clippy::unwrap_used)] //it's okay to unwrap here because we know the config is valid
     pub fn new(config: &BlockBuilderConfig) -> Self {
-        let mut allowed_settlement_addresses = HashSet::new();
-        for addr in &config.allowed_settlement_addresses {
-            allowed_settlement_addresses.insert(*addr);
-        }
         Self {
             transaction_parser: SequencingTransactionParser::new(
                 config.sequencing_contract_address.unwrap(),
@@ -143,12 +139,16 @@ impl ArbitrumAdapter {
             bridge_address: config.arbitrum_bridge_address.unwrap(),
             inbox_address: config.arbitrum_inbox_address.unwrap(),
             ignore_delayed_messages: config.arbitrum_ignore_delayed_messages.unwrap(),
-            allowed_settlement_addresses,
+            allowed_settlement_addresses: config
+                .allowed_settlement_addresses
+                .iter()
+                .copied()
+                .collect::<HashSet<_>>(),
         }
     }
 
     /// Builds a batch from a sequencing block
-    fn build_batch(&self, block: &PartialBlock) -> Result<(u64, Bytes)> {
+    pub fn build_batch(&self, block: &PartialBlock) -> Result<(u64, Bytes)> {
         let mb_transactions = self.parse_block_to_mbtxs(block);
 
         if mb_transactions.is_empty() {
@@ -175,7 +175,7 @@ impl ArbitrumAdapter {
     }
 
     /// Processes settlement chain receipts into delayed messages
-    fn process_delayed_messages(&self, block: &PartialBlock) -> Result<Vec<DelayedMessage>> {
+    pub fn process_delayed_messages(&self, block: &PartialBlock) -> Result<Vec<DelayedMessage>> {
         // Create a local map to store message data
         let mut message_data: HashMap<U256, Option<Bytes>> = HashMap::new();
         // Process all bridge logs in all receipts

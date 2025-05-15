@@ -4978,6 +4978,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "synd-verifier"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "clap",
+ "eyre",
+ "shared",
+ "synd-block-builder",
+ "synd-mchain",
+ "thiserror 2.0.12",
+ "tokio",
+]
+
+[[package]]
 name = "synstructure"
 version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

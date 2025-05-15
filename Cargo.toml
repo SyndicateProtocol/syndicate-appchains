@@ -16,6 +16,7 @@ members = [
   "synd-translator/crates/synd-block-builder",
   "synd-translator/crates/synd-slotter",
   "synd-translator/tests",
+  "synd-verifier",
   "test-framework",
 ]
 
