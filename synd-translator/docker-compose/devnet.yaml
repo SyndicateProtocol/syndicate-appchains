@@ -1,0 +1,48 @@
+services:
+  seq:
+    image: ghcr.io/paradigmxyz/reth:v1.3.4
+    command: "node --http --http.addr=0.0.0.0 --http.port=8040 --dev"
+  set:
+    image: ghcr.io/paradigmxyz/reth:v1.3.4
+    command: "node --http --http.addr=0.0.0.0 --http.port=8041 --dev"
+  mchain:
+    build:
+      context: ../../
+      target: synd-mchain
+      dockerfile: Dockerfile
+    command: "--chain-id 13331370 --port=8050"
+  translator:
+    build:
+      context: ../../
+      target: synd-translator-debug
+      dockerfile: Dockerfile
+    environment:
+      - RUST_LOG=debug
+      - MCHAIN_RPC_URL=http://mchain:8050
+      - SEQUENCING_CONTRACT_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
+      - ARBITRUM_BRIDGE_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
+      - ARBITRUM_INBOX_ADDRESS=0x5FbDB2315678afecb367f032d93F642f64180aa3
+      - SEQUENCING_RPC_URL=http://seq:8040
+      - SEQUENCING_START_BLOCK=0
+      - SETTLEMENT_RPC_URL=http://set:8041
+      - SETTLEMENT_START_BLOCK=0
+    volumes:
+      - ipc:/ipc
+      - ./heaptrack_output:/heaptrack_output
+    # Run the translator through heaptrack
+    entrypoint: []
+    command: sh -c "mkdir -p /heaptrack_output && heaptrack -o /heaptrack_output/translator /usr/local/bin/synd-translator"
+    depends_on:
+      - mchain
+      - seq
+      - set
+  nitro:
+    image: offchainlabs/nitro-node:v3.4.0-d896e9c-slim
+    command: "--parent-chain.connection.url=http://mchain:8050 --node.dangerous.disable-blob-reader --execution.forwarding-target=null --node.inbox-reader.check-delay=100ms --node.staker.enable=false --ensure-rollup-deployment=false --chain.info-files=/cfg/chain_info.json"
+    depends_on:
+      - translator
+    volumes:
+      - .:/cfg:ro
+volumes:
+  ipc:
+  heaptrack_output:

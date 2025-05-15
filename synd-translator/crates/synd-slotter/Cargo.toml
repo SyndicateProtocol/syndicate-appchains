@@ -1,0 +1,28 @@
+[package]
+description            = "This crate is responsible for receiving source chain blocks and organizing them into slots for the block-builder."
+edition.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "synd-slotter"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[dependencies]
+alloy               = { workspace = true }
+common              = { workspace = true }
+prometheus-client   = { workspace = true }
+shared              = { workspace = true }
+synd-chain-ingestor = { workspace = true }
+synd-mchain         = { workspace = true }
+thiserror           = { workspace = true }
+tokio               = { workspace = true, features = ["macros", "rt", "sync", "time"] }
+tracing             = { workspace = true }
+
+[dev-dependencies]
+async-trait = { workspace = true }
+ctor        = { workspace = true }
+eyre        = { workspace = true }
+
+[lints]
+workspace = true

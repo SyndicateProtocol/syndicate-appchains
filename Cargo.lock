@@ -1171,12 +1171,12 @@ dependencies = [
  "eyre",
  "flate2",
  "humantime",
- "maestro",
  "mockall",
  "prometheus-client",
  "redis",
  "rlp 0.6.1",
  "shared",
+ "synd-maestro",
  "tc-client",
  "test-utils",
  "thiserror 2.0.12",
@@ -1278,30 +1278,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3078c7629b62d3f0439517fa394996acacc5cbc91c5a20d8c658e77abd503a71"
 dependencies = [
  "generic-array",
-]
-
-[[package]]
-name = "block-builder"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "assert_matches",
- "async-trait",
- "base64",
- "brotli",
- "clap",
- "common",
- "contract-bindings",
- "eyre",
- "flate2",
- "hex",
- "mchain",
- "serde",
- "serde_json",
- "shared",
- "thiserror 2.0.12",
- "tokio",
- "tracing",
 ]
 
 [[package]]
@@ -1485,27 +1461,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
-name = "chain-ingestor"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "clap",
- "ctor",
- "eyre",
- "fs2",
- "futures-util",
- "humantime",
- "jsonrpsee",
- "prometheus-client",
- "serde",
- "serde_json",
- "shared",
- "test-utils",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "chrono"
 version = "0.4.40"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1603,9 +1558,9 @@ name = "common"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "mchain",
  "shared",
  "strum_macros",
+ "synd-mchain",
 ]
 
 [[package]]
@@ -2001,13 +1956,13 @@ name = "e2e-tests"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "block-builder",
  "contract-bindings",
  "ctor",
  "eyre",
- "mchain",
  "shared",
  "strum",
+ "synd-block-builder",
+ "synd-mchain",
  "test-utils",
  "tokio",
 ]
@@ -3262,34 +3217,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "maestro"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "axum",
- "bytes",
- "clap",
- "ctor",
- "eyre",
- "futures-util",
- "http",
- "http-body",
- "humantime",
- "jsonrpsee",
- "once_cell",
- "rand 0.9.0",
- "redis",
- "serde_json",
- "shared",
- "test-utils",
- "thiserror 2.0.12",
- "tokio",
- "tower 0.4.13",
- "tracing",
- "wiremock",
-]
-
-[[package]]
 name = "matchers"
 version = "0.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3305,78 +3232,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "47e1ffaa40ddd1f3ed91f717a33c8c0ee23fff369e3aa8772b9605cc1d22f4c3"
 
 [[package]]
-name = "mchain"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "bincode",
- "chain-ingestor",
- "clap",
- "contract-bindings",
- "ctor",
- "eyre",
- "futures-util",
- "jsonrpsee",
- "prometheus-client",
- "rocksdb",
- "serde",
- "serde_json",
- "shared",
- "test-utils",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "memchr"
 version = "2.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "78ca9ab1a0babb1e7d5695e3530886289c18cf2f87ec19a575a0abdce112e3a3"
-
-[[package]]
-name = "metabased-poster"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "axum",
- "clap",
- "contract-bindings",
- "ctor",
- "eyre",
- "humantime",
- "jsonrpsee",
- "prometheus-client",
- "reqwest",
- "serde",
- "shared",
- "test-utils",
- "tokio",
- "tracing",
- "url",
-]
-
-[[package]]
-name = "metabased-translator"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "async-trait",
- "block-builder",
- "chain-ingestor",
- "clap",
- "common",
- "contract-bindings",
- "eyre",
- "humantime",
- "mchain",
- "metrics",
- "shared",
- "slotter",
- "temp-env",
- "thiserror 2.0.12",
- "tokio",
- "tracing",
-]
 
 [[package]]
 name = "metrics"
@@ -3388,7 +3247,7 @@ dependencies = [
  "prometheus-client",
  "reqwest",
  "shared",
- "slotter",
+ "synd-slotter",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
@@ -4809,24 +4668,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "slotter"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "async-trait",
- "chain-ingestor",
- "common",
- "ctor",
- "eyre",
- "mchain",
- "prometheus-client",
- "shared",
- "thiserror 2.0.12",
- "tokio",
- "tracing",
-]
-
-[[package]]
 name = "smallvec"
 version = "1.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4978,15 +4819,174 @@ dependencies = [
 ]
 
 [[package]]
+name = "synd-block-builder"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "assert_matches",
+ "async-trait",
+ "base64",
+ "brotli",
+ "clap",
+ "common",
+ "contract-bindings",
+ "eyre",
+ "flate2",
+ "hex",
+ "serde",
+ "serde_json",
+ "shared",
+ "synd-mchain",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "synd-chain-ingestor"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "clap",
+ "ctor",
+ "eyre",
+ "fs2",
+ "futures-util",
+ "humantime",
+ "jsonrpsee",
+ "prometheus-client",
+ "serde",
+ "serde_json",
+ "shared",
+ "test-utils",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "synd-maestro"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "axum",
+ "bytes",
+ "clap",
+ "ctor",
+ "eyre",
+ "futures-util",
+ "http",
+ "http-body",
+ "humantime",
+ "jsonrpsee",
+ "once_cell",
+ "rand 0.9.0",
+ "redis",
+ "serde_json",
+ "shared",
+ "test-utils",
+ "thiserror 2.0.12",
+ "tokio",
+ "tower 0.4.13",
+ "tracing",
+ "wiremock",
+]
+
+[[package]]
+name = "synd-mchain"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "bincode",
+ "clap",
+ "contract-bindings",
+ "ctor",
+ "eyre",
+ "futures-util",
+ "jsonrpsee",
+ "prometheus-client",
+ "rocksdb",
+ "serde",
+ "serde_json",
+ "shared",
+ "synd-chain-ingestor",
+ "test-utils",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "synd-poster"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "axum",
+ "clap",
+ "contract-bindings",
+ "ctor",
+ "eyre",
+ "humantime",
+ "jsonrpsee",
+ "prometheus-client",
+ "reqwest",
+ "serde",
+ "shared",
+ "test-utils",
+ "tokio",
+ "tracing",
+ "url",
+]
+
+[[package]]
+name = "synd-slotter"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "async-trait",
+ "common",
+ "ctor",
+ "eyre",
+ "prometheus-client",
+ "shared",
+ "synd-chain-ingestor",
+ "synd-mchain",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
+name = "synd-translator"
+version = "0.1.0"
+dependencies = [
+ "alloy",
+ "async-trait",
+ "clap",
+ "common",
+ "contract-bindings",
+ "eyre",
+ "humantime",
+ "metrics",
+ "shared",
+ "synd-block-builder",
+ "synd-chain-ingestor",
+ "synd-mchain",
+ "synd-slotter",
+ "temp-env",
+ "thiserror 2.0.12",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "synd-verifier"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "block-builder",
  "clap",
  "eyre",
- "mchain",
  "shared",
+ "synd-block-builder",
+ "synd-mchain",
  "thiserror 2.0.12",
  "tokio",
 ]
@@ -5082,17 +5082,17 @@ name = "test-framework"
 version = "0.1.0"
 dependencies = [
  "alloy",
- "chain-ingestor",
  "contract-bindings",
  "ctor",
  "eyre",
- "maestro",
- "mchain",
  "redis",
  "reqwest",
  "serde",
  "serde_json",
  "shared",
+ "synd-chain-ingestor",
+ "synd-maestro",
+ "synd-mchain",
  "test-utils",
  "tokio",
  "tracing",
@@ -5104,9 +5104,9 @@ version = "0.1.0"
 dependencies = [
  "alloy",
  "eyre",
- "mchain",
  "redis",
  "shared",
+ "synd-mchain",
  "tokio",
  "tracing",
 ]

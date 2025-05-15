@@ -9,14 +9,14 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy         = { workspace = true }
-block-builder = { workspace = true }
-clap          = { workspace = true }
-eyre          = { workspace = true }
-mchain        = { workspace = true }
-shared        = { workspace = true }
-thiserror     = { workspace = true }
-tokio         = { workspace = true }
+alloy              = { workspace = true }
+clap               = { workspace = true }
+eyre               = { workspace = true }
+shared             = { workspace = true }
+synd-block-builder = { workspace = true }
+synd-mchain        = { workspace = true }
+thiserror          = { workspace = true }
+tokio              = { workspace = true }
 
 [lints]
 workspace = true

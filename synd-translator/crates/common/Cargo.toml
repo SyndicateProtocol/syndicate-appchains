@@ -1,0 +1,18 @@
+[package]
+description            = "Common utilities for synd-translator, including types."
+edition.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "common"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[dependencies]
+alloy        = { workspace = true, features = ["provider-engine-api"] }
+shared       = { workspace = true }
+strum_macros = { workspace = true }
+synd-mchain  = { workspace = true }
+
+[lints]
+workspace = true

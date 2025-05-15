@@ -1,19 +1,19 @@
 //! Docker components for the integration tests
 
-use crate::{port_manager::PortManager, rollup::rollup_info, utils::test_path, wait_until};
+use crate::{appchain::appchain_info, port_manager::PortManager, utils::test_path, wait_until};
 use alloy::{
     primitives::Address,
     providers::{Provider, ProviderBuilder, RootProvider},
     transports::http::Client,
 };
 use eyre::Result;
-use mchain::{client::MProvider, server::rollup_config};
 use std::{
     env,
     future::Future,
     process::{ExitStatus, Stdio},
     time::Duration,
 };
+use synd_mchain::{client::MProvider, server::appchain_config};
 use tokio::{
     io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
@@ -132,7 +132,7 @@ pub async fn start_mchain(
     settlement_rpc_url: Option<&str>,
     finality_delay: u64,
 ) -> Result<(String, Docker, MProvider)> {
-    let temp = test_path("mchain");
+    let temp = test_path("synd-mchain");
     let port = PortManager::instance().next_port().await;
     let metric_port = PortManager::instance().next_port().await;
 
@@ -165,7 +165,7 @@ pub async fn start_mchain(
     }
 
     let docker = start_component(
-        "mchain",
+        "synd-mchain",
         metric_port,
         args,
         vec!["--datadir".to_string(), temp.to_string()],
@@ -203,7 +203,7 @@ pub async fn launch_nitro_node(
             .arg("--ensure-rollup-deployment=false")
             .arg(format!(
                 "--chain.info-json={}",
-                rollup_info(&rollup_config(chain_id, chain_owner), "test")
+                appchain_info(&appchain_config(chain_id, chain_owner), "test")
             ))
             .arg("--http.addr=0.0.0.0")
             .arg("--http.api=net,web3,eth,debug,trace")
@@ -218,15 +218,15 @@ pub async fn launch_nitro_node(
 
     let url = format!("http://localhost:{}", port);
 
-    let rollup = ProviderBuilder::default().connect(&url).await?;
+    let appchain = ProviderBuilder::default().connect(&url).await?;
     wait_until!(
         if let Some(status) = nitro.try_wait()? {
             panic!("nitro node exited with {}", status);
         };
-        rollup.get_chain_id().await.is_ok(),
+        appchain.get_chain_id().await.is_ok(),
         Duration::from_secs(5*60)  // give it time to download the image if necessary
     );
-    Ok((nitro, rollup, url))
+    Ok((nitro, appchain, url))
 }
 
 pub async fn start_redis() -> Result<(Docker, String)> {

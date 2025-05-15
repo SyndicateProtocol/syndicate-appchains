@@ -27,8 +27,6 @@ use contract_bindings::{
     },
 };
 use eyre::Result;
-use maestro::server::HEADER_CHAIN_ID;
-use mchain::{client::MProvider, server::rollup_config};
 use serde_json::{json, Value};
 use shared::types::FilledProvider;
 use std::{
@@ -37,6 +35,8 @@ use std::{
     str::FromStr,
     time::{Duration, SystemTime},
 };
+use synd_maestro::server::HEADER_CHAIN_ID;
+use synd_mchain::{client::MProvider, server::appchain_config};
 use test_utils::{
     anvil::{mine_block, start_anvil, start_anvil_with_args, PRIVATE_KEY},
     docker::{launch_nitro_node, start_component, start_mchain, start_redis, Docker},
@@ -115,11 +115,11 @@ impl TestComponents {
             biased;
             e = handles.sequencing_chain_ingestor.wait() => panic!("sequencing ingestor died: {:#?}", e),
             e = handles.settlement_chain_ingestor.wait() => panic!("settlement ingestor died: {:#?}", e),
-            e = handles.mchain.wait() => panic!("mchain died: {:#?}", e),
+            e = handles.mchain.wait() => panic!("synd-mchain died: {:#?}", e),
             e = handles.nitro_docker.wait() => panic!("nitro died: {:#?}", e),
             e = handles.translator.wait() => panic!("translator died: {:#?}", e),
             e = async {poster.unwrap().wait().await}, if poster.is_some() => panic!("poster died: {:#?}", e),
-            e = async {maestro.unwrap().wait().await}, if maestro.is_some() => panic!("maestro died: {:#?}", e),
+            e = async {maestro.unwrap().wait().await}, if maestro.is_some() => panic!("synd-maestro died: {:#?}", e),
             e = async {batch_sequencer.unwrap().wait().await}, if batch_sequencer.is_some() => panic!("synd-batch-sequencer died: {:#?}", e),
             e = async {redis.unwrap().wait().await}, if redis.is_some() => panic!("redis died: {:#?}", e),
             r = test(components) => r
@@ -197,7 +197,7 @@ impl TestComponents {
             _ = Rollup::deploy_builder(
                 &set_provider,
                 U256::from(options.appchain_chain_id),
-                rollup_config(options.appchain_chain_id, options.rollup_owner),
+                appchain_config(options.appchain_chain_id, options.rollup_owner),
             )
             .nonce(0)
             .send()
@@ -254,7 +254,7 @@ impl TestComponents {
         .await?;
 
         info!("Starting components...");
-        info!("Starting mchain...");
+        info!("Starting synd-mchain...");
         let (mchain_rpc_url, mchain, mchain_provider) = start_mchain(
             options.appchain_chain_id,
             None,
@@ -286,7 +286,7 @@ impl TestComponents {
             metrics_port: PortManager::instance().next_port().await,
         };
         let sequencing_chain_ingestor = start_component(
-            "chain-ingestor",
+            "synd-chain-ingestor",
             seq_chain_ingestor_cfg.metrics_port,
             seq_chain_ingestor_cfg.cli_args(),
             Default::default(),
@@ -302,7 +302,7 @@ impl TestComponents {
         };
 
         let settlement_chain_ingestor = start_component(
-            "chain-ingestor",
+            "synd-chain-ingestor",
             set_chain_ingestor_cfg.metrics_port,
             set_chain_ingestor_cfg.cli_args(),
             Default::default(),
@@ -333,7 +333,7 @@ impl TestComponents {
         };
 
         let translator = start_component(
-            "metabased-translator",
+            "synd-translator",
             translator_config.metrics_port,
             translator_config.cli_args(),
             Default::default(),
@@ -369,7 +369,7 @@ impl TestComponents {
             (
                 Some(
                     start_component(
-                        "metabased-poster",
+                        "synd-poster",
                         poster_config.metrics_port,
                         poster_config.cli_args(),
                         Default::default(),
@@ -399,7 +399,7 @@ impl TestComponents {
                 metrics_port: PortManager::instance().next_port().await,
             };
             let maestro_instance = start_component(
-                "maestro",
+                "synd-maestro",
                 // `/health` is proxied to RPC method
                 maestro_config.port,
                 maestro_config.cli_args(),

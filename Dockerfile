@@ -39,27 +39,27 @@ RUN apt-get update && \
 FROM gcr.io/distroless/cc AS runtime-base
 
 # Runtime images
-FROM runtime-base AS metabased-translator
+FROM runtime-base AS synd-translator
 ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/metabased-translator /usr/local/bin/metabased-translator
+COPY --from=build /app/target/${BUILD_PROFILE}/synd-translator /usr/local/bin/synd-translator
 COPY --from=foundry /root/.foundry /root/.foundry
 ENV PATH="/root/.foundry/bin:${PATH}"
-ENTRYPOINT ["/usr/local/bin/metabased-translator"]
+ENTRYPOINT ["/usr/local/bin/synd-translator"]
 EXPOSE 8545 8546
-LABEL service=metabased-translator
+LABEL service=synd-translator
 
-FROM runtime-base AS metabased-poster
+FROM runtime-base AS synd-poster
 ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/metabased-poster /usr/local/bin/metabased-poster
-ENTRYPOINT ["/usr/local/bin/metabased-poster"]
-LABEL service=metabased-poster
+COPY --from=build /app/target/${BUILD_PROFILE}/synd-poster /usr/local/bin/synd-poster
+ENTRYPOINT ["/usr/local/bin/synd-poster"]
+LABEL service=synd-poster
 
-FROM runtime-base AS maestro
+FROM runtime-base AS synd-maestro
 ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/maestro /usr/local/bin/maestro
-ENTRYPOINT ["/usr/local/bin/maestro"]
+COPY --from=build /app/target/${BUILD_PROFILE}/synd-maestro /usr/local/bin/synd-maestro
+ENTRYPOINT ["/usr/local/bin/synd-maestro"]
 EXPOSE 8545 8546
-LABEL service=maestro
+LABEL service=synd-maestro
 
 FROM runtime-base AS synd-batch-sequencer
 ARG BUILD_PROFILE
@@ -68,27 +68,27 @@ ENTRYPOINT ["/usr/local/bin/synd-batch-sequencer"]
 EXPOSE 8545 8546
 LABEL service=synd-batch-sequencer
 
-FROM runtime-base AS mchain
+FROM runtime-base AS synd-mchain
 ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/mchain /usr/local/bin/mchain
-ENTRYPOINT ["/usr/local/bin/mchain"]
+COPY --from=build /app/target/${BUILD_PROFILE}/synd-mchain /usr/local/bin/synd-mchain
+ENTRYPOINT ["/usr/local/bin/synd-mchain"]
 EXPOSE 8545 8546
-LABEL service=mchain
+LABEL service=synd-mchain
 
-FROM runtime-base AS chain-ingestor
+FROM runtime-base AS synd-chain-ingestor
 ARG BUILD_PROFILE
-COPY --from=build /app/target/${BUILD_PROFILE}/chain-ingestor /usr/local/bin/chain-ingestor
-ENTRYPOINT ["/usr/local/bin/chain-ingestor"]
+COPY --from=build /app/target/${BUILD_PROFILE}/synd-chain-ingestor /usr/local/bin/synd-chain-ingestor
+ENTRYPOINT ["/usr/local/bin/synd-chain-ingestor"]
 EXPOSE 8545 8546
-LABEL service=chain-ingestor
+LABEL service=synd-chain-ingestor
 
 # --------- Debugging image for translator ---------
-FROM ubuntu:22.04 AS metabased-translator-debug
+FROM ubuntu:22.04 AS synd-translator-debug
 ARG BUILD_PROFILE
 RUN apt-get update && apt-get install -y heaptrack libssl3 ca-certificates && rm -rf /var/lib/apt/lists/*
-COPY --from=build /app/target/${BUILD_PROFILE}/metabased-translator /usr/local/bin/metabased-translator
+COPY --from=build /app/target/${BUILD_PROFILE}/synd-translator /usr/local/bin/synd-translator
 COPY --from=foundry /root/.foundry /root/.foundry
 ENV PATH="/root/.foundry/bin:${PATH}"
-ENTRYPOINT ["/usr/local/bin/metabased-translator"]
+ENTRYPOINT ["/usr/local/bin/synd-translator"]
 EXPOSE 8545 8546
-LABEL service=metabased-translator
+LABEL service=synd-translator

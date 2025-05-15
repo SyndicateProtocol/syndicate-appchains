@@ -14,7 +14,7 @@ use std::convert::Infallible;
 use thiserror::Error;
 
 // Source: https://github.com/MetaMask/rpc-errors/blob/main/src/errors.ts
-/// Primary error type for the metabased sequencer, following JSON-RPC error code mapping
+/// Primary error type for JSON-RPC-supporting components, following JSON-RPC error code mapping
 #[derive(Debug, Error)]
 pub enum RpcError {
     /// The JSON sent is not a valid Request object

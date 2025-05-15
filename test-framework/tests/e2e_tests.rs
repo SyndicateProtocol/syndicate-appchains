@@ -1,4 +1,4 @@
-//! e2e tests for the metabased stack
+//! e2e tests for the `synd-appchains` stack
 use alloy::{
     eips::{BlockNumberOrTag, Encodable2718},
     network::TransactionBuilder,
@@ -8,15 +8,15 @@ use alloy::{
     signers::local::PrivateKeySigner,
     sol,
 };
-use chain_ingestor::client::IngestorProvider;
 use contract_bindings::arbitrum::{
     arbsys::ArbSys, ibridge::IBridge, iinbox::IInbox, ioutbox::IOutbox, irollupcore::IRollupCore,
     nodeinterface::NodeInterface, rollup::Rollup,
 };
 use eyre::Result;
-use mchain::client::Provider as _;
 use serde::{Deserialize, Serialize};
 use std::{str::FromStr as _, time::Duration};
+use synd_chain_ingestor::client::IngestorProvider;
+use synd_mchain::client::Provider as _;
 use test_framework::components::{
     configuration::{ConfigurationOptions, ContractVersion},
     test_components::TestComponents,
@@ -39,18 +39,21 @@ fn init() {
 async fn e2e_send_transaction() -> Result<()> {
     let config = ConfigurationOptions { settlement_delay: 60, ..Default::default() };
     TestComponents::run(&config, |components| async move {
-        // Set up the settlement rollup contract
-        let set_rollup = Rollup::new(components.inbox_address, &components.settlement_provider);
+        // Set up the settlement appchain contract
+        let set_appchain = Rollup::new(components.inbox_address, &components.settlement_provider);
         let wallet_address = components.settlement_provider.default_signer_address();
 
         // Send a deposit
-        let _ =
-            set_rollup.depositEth(wallet_address, wallet_address, parse_ether("1")?).send().await?;
+        let _ = set_appchain
+            .depositEth(wallet_address, wallet_address, parse_ether("1")?)
+            .send()
+            .await?;
         components.mine_seq_block(config.settlement_delay).await?;
         components.mine_set_block(0).await?;
         // mine 1 set block to close the opened slot that contains the other deposit
         let test_addr: Address = "0xA9ec1Ed7008fDfdE38978Dfef4cF2754A969E5FA".parse()?;
-        let _ = set_rollup.depositEth(wallet_address, test_addr, parse_ether("1")?).send().await?;
+        let _ =
+            set_appchain.depositEth(wallet_address, test_addr, parse_ether("1")?).send().await?;
         components.mine_set_block(1).await?;
 
         // Wait for the deposit to arrive
@@ -59,15 +62,15 @@ async fn e2e_send_transaction() -> Result<()> {
             Duration::from_secs(1)
         );
 
-        // check the first rollup block
-        let rollup_block: Block = components
+        // check the first appchain block
+        let appchain_block: Block = components
             .appchain_provider
             .get_block_by_number(BlockNumberOrTag::Number(1))
             .await?
             .unwrap();
-        assert_eq!(rollup_block.header.timestamp, config.settlement_delay);
+        assert_eq!(appchain_block.header.timestamp, config.settlement_delay);
         // the first transaction is the startBlock transaction
-        assert_eq!(rollup_block.transactions.len(), 2);
+        assert_eq!(appchain_block.transactions.len(), 2);
         assert_eq!(
             components.appchain_provider.get_balance(wallet_address).await?,
             parse_ether("1")?
@@ -97,17 +100,17 @@ async fn e2e_send_transaction() -> Result<()> {
             Duration::from_secs(1)
         );
 
-        // check the second rollup block
-        let rollup_block: Block = components
+        // check the second appchain block
+        let appchain_block: Block = components
             .appchain_provider
             .get_block_by_number(BlockNumberOrTag::Number(2))
             .await?
             .unwrap();
-        assert_eq!(rollup_block.header.timestamp, config.settlement_delay);
+        assert_eq!(appchain_block.header.timestamp, config.settlement_delay);
         // the first transaction is the startBlock transaction
-        assert_eq!(rollup_block.transactions.len(), 2);
+        assert_eq!(appchain_block.transactions.len(), 2);
         // tx hash should match
-        let hashes: Vec<_> = rollup_block.transactions.hashes().collect();
+        let hashes: Vec<_> = appchain_block.transactions.hashes().collect();
         assert_eq!(hashes[1], *tx.tx_hash());
 
         // sequence an empty slot
@@ -125,19 +128,19 @@ async fn e2e_send_transaction() -> Result<()> {
         // check mchain block
         assert_eq!(components.mchain_provider.get_block_number().await, 4);
 
-        // check rollup block
+        // check appchain block
         wait_until!(
             components.appchain_provider.get_block_number().await? == 3,
             Duration::from_secs(10)
         );
-        let rollup_block: Block = components
+        let appchain_block: Block = components
             .appchain_provider
             .get_block_by_number(BlockNumberOrTag::Number(3))
             .await?
             .unwrap();
-        assert_eq!(rollup_block.header.timestamp, config.settlement_delay + 1);
+        assert_eq!(appchain_block.header.timestamp, config.settlement_delay + 1);
         // the first transaction is the startBlock transaction
-        assert_eq!(rollup_block.transactions.len(), 2);
+        assert_eq!(appchain_block.transactions.len(), 2);
         // balance should match
         assert_eq!(components.appchain_provider.get_balance(test_addr).await?, parse_ether("1")?);
 
@@ -158,7 +161,7 @@ async fn e2e_deposit_213() -> Result<()> {
 
 /// This test sends different types of delayed messages
 /// via the inbox contract and ensures that all of them
-/// are sequenced via the metabased translator and show up on the rollup.
+/// are sequenced via the `synd-translator` and show up on the appchain.
 async fn e2e_deposit_base(version: ContractVersion) -> Result<()> {
     // Sequencer fees go to the zero address
     TestComponents::run(
@@ -453,13 +456,14 @@ async fn e2e_settlement_reorg() -> Result<()> {
     TestComponents::run(
         &ConfigurationOptions { pre_loaded: Some(ContractVersion::V300), ..Default::default() },
         |components| async move {
-            // NOTE: at this point the mchain is on block 1 (initial mchain block) - we can't reorg
-            // to genesis, so we need to create two slots on top of it before the reorg
-            // happens.
+            // NOTE: at this point the synd-mchain is on block 1 (initial mchain block) - we
+            // can't reorg to genesis, so we need to create two slots on top of it
+            // before the reorg happens.
 
-            components.mine_both(1).await?; //mine mchain block 2 (only works because there are delayed txs to proccess, otherwise
-                                            // the mchain block would be empty/skipped)
-                                            // Wait for mchain to reach block 2
+            components.mine_both(1).await?; //mine mchain block 2 (only works because there are delayed txs to process,
+                                            // otherwise the synd-mchain block would be
+                                            // empty/skipped) Wait for synd-mchain to
+                                            // reach block 2
 
             wait_until!(
                 components.mchain_provider.get_block_number().await == 2,
@@ -469,7 +473,7 @@ async fn e2e_settlement_reorg() -> Result<()> {
             let wallet_address = components.settlement_provider.default_signer_address();
             let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
 
-            // create a deposit1 (that won't be rolled back) that will fit on mchain's block 3
+            // create a deposit1 (that won't be rolled back) that will fit on synd-mchain's block 3
             let _ = inbox.depositEth().value(parse_ether("1")?).send().await?;
 
             components.mine_both(100).await?;
@@ -500,8 +504,8 @@ async fn e2e_settlement_reorg() -> Result<()> {
             );
             assert_eq!(components.mchain_provider.get_block_number().await, 4);
 
-            // the rollup head has not been updated yet
-            let rollup_head_before_reorg = components
+            // the appchain head has not been updated yet
+            let appchain_head_before_reorg = components
                 .appchain_provider
                 .get_block_by_number(BlockNumberOrTag::Latest)
                 .await?
@@ -536,20 +540,20 @@ async fn e2e_settlement_reorg() -> Result<()> {
                 Duration::from_secs(10)
             );
 
-            // the rollup should have reorged to a pre-deposit block
+            // the appchain should have reorged to a pre-deposit block
 
             // create new slots
             let _ = inbox.depositEth().value(parse_ether("0.01")?).send().await?;
             components.mine_both(500).await?;
-            components.mine_both(500).await?; // build mchain to an height above what the rollup has seen before the reorg
+            components.mine_both(500).await?; // build `synd-mchain` to a height above what the appchain has seen before the reorg
 
-            wait_until!(let rollup_head = components
+            wait_until!(let appchain_head = components
                 .appchain_provider
                 .get_block_by_number(BlockNumberOrTag::Latest)
                 .await?
                 .unwrap();
-                rollup_head.header.number == rollup_head_before_reorg.header.number &&
-                rollup_head.header.hash != rollup_head_before_reorg.header.hash,
+                appchain_head.header.number == appchain_head_before_reorg.header.number &&
+                appchain_head.header.hash != appchain_head_before_reorg.header.hash,
                 Duration::from_secs(10)
             );
 
@@ -597,7 +601,7 @@ async fn e2e_sequencing_reorg() -> Result<()> {
             let wallet_address = components.settlement_provider.default_signer_address();
             let inbox = IInbox::new(components.inbox_address, &components.settlement_provider);
 
-            // create a deposit1 (that won't be rolled back) that will fit on mchain's block 3
+            // create a deposit1 (that won't be rolled back) that will fit on synd-mchain's block 3
             let _ = inbox.depositEth().value(parse_ether("10")?).send().await?;
 
             components.mine_set_block(0).await?;
@@ -679,7 +683,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
         &ConfigurationOptions { pre_loaded: None, ..Default::default() },
         |components| async move {
             let set_offset = components.settlement_provider.get_block_number().await?;
-            // mchain is on genesis (block 1)
+            // synd-mchain is on genesis (block 1)
             assert_eq!(components.mchain_provider.get_block_number().await, 1);
 
             // sequence any tx
@@ -688,7 +692,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             // mine a set block to close the slot, but without any transactions
             components.mine_set_block(100000).await?;
 
-            // mchain should be on block 2
+            // synd-mchain should be on block 2
             wait_until!(
                 components.mchain_provider.get_block_number().await == 2,
                 Duration::from_secs(10)
@@ -709,7 +713,8 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
             assert_eq!(slot.set_block_number, 1 + set_offset);
             assert_eq!(block_number, 2);
 
-            // assert that restarting and rolling back here will not make mchain go back to block 1
+            // assert that restarting and rolling back here will not make synd-mchain go back to
+            // block 1
             let seq_mchain_client =
                 IngestorProvider::new(&components.sequencing_rpc_url, Duration::from_secs(1)).await;
             let settlement_client =
@@ -720,7 +725,7 @@ async fn e2e_reboot_without_settlement_processed() -> Result<()> {
                 .reconcile_mchain_with_source_chains(&seq_mchain_client, &settlement_client)
                 .await?;
 
-            // mchain should be on the same block since no reorgs occurred
+            // synd-mchain should be on the same block since no reorgs occurred
             assert_eq!(components.mchain_provider.get_block_number().await, 2);
 
             let (slot, block_number) = components

@@ -11,14 +11,14 @@ use alloy::{
     primitives::{Bytes, FixedBytes},
     rpc::types::Block,
 };
-use block_builder::rollups::{
+use eyre::Result;
+use shared::types::convert_block_to_partial_block;
+use std::collections::HashSet;
+use synd_block_builder::appchains::{
     arbitrum::arbitrum_adapter::ArbitrumAdapter,
     shared::sequencing_transaction_parser::SequencingTransactionParser,
 };
-use eyre::Result;
-use mchain::db::{DelayedMessage, MBlock, Slot};
-use shared::types::convert_block_to_partial_block;
-use std::collections::HashSet;
+use synd_mchain::db::{DelayedMessage, MBlock, Slot};
 
 /// The `Verifier` struct is responsible for verifying a batch of blocks and creating a new mchain
 /// block.

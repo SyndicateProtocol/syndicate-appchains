@@ -1,7 +1,7 @@
 services:
   mchain:
-    image: us-central1-docker.pkg.dev/metabased-testnet/images/metabased-rollup/mchain:{{ image_tag }}
-    container_name: mchain  
+    image: us-central1-docker.pkg.dev/metabased-testnet/images/syndicate-appchains/synd-mchain:{{ image_tag }}
+    container_name: synd-mchain
     environment:
       - RUST_LOG=warn
       - CHAIN_ID={{ chain_id }}
@@ -14,9 +14,9 @@ services:
     volumes:
       - {{ translator_data_mount_point }}:/app/datadir
     networks:
-      - metabased-network
+      - appchain-network
   translator:
-    image: us-central1-docker.pkg.dev/metabased-testnet/images/metabased-rollup/metabased-translator:{{ image_tag }}
+    image: us-central1-docker.pkg.dev/metabased-testnet/images/syndicate-appchains/synd-translator:{{ image_tag }}
     container_name: translator
     platform: linux/amd64
     environment:
@@ -29,7 +29,7 @@ services:
       - "--mchain-rpc-url=http://mchain:8050"
       - "--arbitrum-ignore-delayed-messages={% if chain_name == 'dream' %}true{% else %}false{% endif %}"
     networks:
-      - metabased-network
+      - appchain-network
     depends_on:
       - mchain
   nitro:
@@ -58,7 +58,7 @@ services:
     depends_on:
       - translator
     networks:
-      - metabased-network
+      - appchain-network
 networks:
-  metabased-network:
+  appchain-network:
     driver: bridge
