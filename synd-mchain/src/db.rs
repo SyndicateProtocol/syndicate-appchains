@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::fmt;
 
 /// VERSION must be bumped whenever a breaking change is made
-const VERSION: u64 = 1;
+const VERSION: u64 = 2;
 
 /// Each delayed message is used to derive an appchain block
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -213,7 +213,6 @@ pub trait ArbitrumDB {
                 return Ok(None);
             }
         };
-        let block_number = state.batch_count + 1;
         let mut block = Block {
             timestamp: mblock.timestamp,
             batch,
@@ -230,7 +229,7 @@ pub trait ArbitrumDB {
                 (
                     [msg.kind],
                     msg.sender,
-                    block_number,
+                    block.slot.seq_block_number,
                     mblock.timestamp,
                     U256::from(block.before_message_count + i as u64),
                     msg.base_fee_l1,
@@ -256,6 +255,7 @@ pub trait ArbitrumDB {
         block.after_batch_acc = keccak256(
             (block.before_batch_acc, data_hash, block.after_message_acc()).abi_encode_packed(),
         );
+        let block_number = state.batch_count + 1;
         self.put_block(block_number, &block);
         // update the state last - incomplete blocks can be ignored / overwritten
         self.put_state(&State {

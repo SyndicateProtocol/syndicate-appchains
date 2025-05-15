@@ -44,16 +44,32 @@ fn create_log(block_num: u64, data: alloy::primitives::LogData) -> alloy::rpc::t
     }
 }
 
-fn create_header(block_num: u64) -> alloy::rpc::types::Header {
+fn create_header(block_num: u64, l1_block_num: u64, timestamp: u64) -> alloy::rpc::types::Header {
     alloy::rpc::types::Header {
-        inner: alloy::consensus::Header { number: block_num, ..Default::default() },
+        inner: alloy::consensus::Header {
+            number: block_num,
+            base_fee_per_gas: Some(1),
+            extra_data: FixedBytes::<32>::ZERO.into(),
+            #[allow(clippy::unwrap_used)]
+            mix_hash: U256::from(l1_block_num)
+                .checked_shl(64)
+                .unwrap()
+                .checked_add(U256::from(1))
+                .unwrap()
+                .checked_shl(64)
+                .unwrap()
+                .into(),
+            timestamp,
+            difficulty: U256::ONE,
+            ..Default::default()
+        },
         hash: U256::from(block_num).into(),
         ..Default::default()
     }
 }
 
 /// Return the on-chain config for an appchain with a given chain id
-pub fn appchain_config(chain_id: u64, chain_owner: Address) -> String {
+fn appchain_config(chain_id: u64) -> String {
     let mut cfg = format!(
         r#"{{
             "chainId": {chain_id},
@@ -77,10 +93,6 @@ pub fn appchain_config(chain_id: u64, chain_owner: Address) -> String {
             }},
             "arbitrum": {{
             "EnableArbOS": true,
-            "AllowDebugPrecompiles": false,
-            "DataAvailabilityCommittee": false,
-            "InitialArbOSVersion": 32,
-            "InitialChainOwner": "{chain_owner}",
             "GenesisBlockNum": 0
             }}
         }}"#
@@ -100,7 +112,6 @@ pub struct Context {
 #[allow(clippy::unwrap_used)]
 pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     chain_id: u64,
-    appchain_owner: Address,
     finality_delay: u64,
     db: T,
     metrics: MchainMetrics,
@@ -113,7 +124,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
             U256::from(chain_id),
             [1u8],      // initMsgVersion
             U256::ZERO, // currentDataCost
-            appchain_config(chain_id, appchain_owner),
+            appchain_config(chain_id),
         )
             .abi_encode_packed()
             .into(),
@@ -173,7 +184,12 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                     data.subs.retain_mut(|sink| {
                         !sink.is_closed() &&
                             sink.try_send(
-                                SubscriptionMessage::from_json(&create_header(block)).unwrap(),
+                                SubscriptionMessage::from_json(&create_header(
+                                    block,
+                                    seq_block_number,
+                                    timestamp,
+                                ))
+                                .unwrap(),
                             )
                             .inspect_err(|err| error!("try_send failed: {}", err))
                             .is_ok()
@@ -196,10 +212,12 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                     return Err(err("cannot set head before the first block"));
                 }
                 let block = db.get_block(block_number).unwrap();
+                let l1_block_number = block.slot.seq_block_number;
+                let timestamp = block.timestamp;
                 if block_number == state.batch_count {
                     // reset the pending batch count.
                     // do not record or log the reorg since it has no user impact.
-                    db.put_state(&State { timestamp: block.timestamp, slot: block.slot, ..state });
+                    db.put_state(&State { timestamp, slot: block.slot, ..state });
                     return Ok(());
                 }
                 let block_message_count = block.after_message_count();
@@ -210,11 +228,11 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                     batch_acc: block.after_batch_acc,
                     message_count: block.after_message_count(),
                     message_acc: block.after_message_acc(),
-                    timestamp: block.timestamp,
+                    timestamp,
                     slot: block.slot,
                 });
                 // next delete blocks, messages to free up space.
-                metrics.record_reorg(block_number, state.batch_count, block.timestamp);
+                metrics.record_reorg(block_number, state.batch_count, timestamp);
                 for i in block_number..state.batch_count {
                     db.delete_block(i + 1);
                 }
@@ -224,7 +242,7 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                 // finally update stale finality data.
                 let mut data = mutex.lock().unwrap();
                 if block_number < data.finalized_block {
-                    metrics.record_finalized_block(block_number, block.timestamp);
+                    metrics.record_finalized_block(block_number, timestamp);
                     data.finalized_block = block_number;
                     data.pending_ts.clear();
                 } else {
@@ -237,7 +255,12 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                 data.subs.retain_mut(|sink| {
                     !sink.is_closed() &&
                         sink.try_send(
-                            SubscriptionMessage::from_json(&create_header(block_number)).unwrap(),
+                            SubscriptionMessage::from_json(&create_header(
+                                block_number,
+                                l1_block_number,
+                                timestamp,
+                            ))
+                            .unwrap(),
                         )
                         .inspect_err(|err| error!("try_send failed: {}", err))
                         .is_ok()
@@ -245,12 +268,6 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                 drop(data);
                 Ok(())
             },
-        )
-        .unwrap();
-    module
-        .register_method(
-            "mchain_appchainOwner",
-            move |_, _, _| -> Result<Address, ErrorObjectOwned> { Ok(appchain_owner) },
         )
         .unwrap();
     module
@@ -412,12 +429,12 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
     module
         .register_method(
             "eth_getBlockByHash",
-            move |p, _, _| -> Result<alloy::rpc::types::Block, ErrorObjectOwned> {
+            move |p, (db, _, _), _| -> Result<alloy::rpc::types::Block, ErrorObjectOwned> {
                 let (hash, _): (FixedBytes<32>, bool) = p.parse()?;
+                let number = u64::from_be_bytes(hash[24..32].try_into().map_err(to_err)?);
+                let block = db.get_block(number)?;
                 Ok(alloy::rpc::types::Block {
-                    header: create_header(u64::from_be_bytes(
-                        hash[24..32].try_into().map_err(to_err)?,
-                    )),
+                    header: create_header(number, block.slot.seq_block_number, block.timestamp),
                     ..Default::default()
                 })
             },
@@ -453,7 +470,11 @@ pub fn start_mchain<T: ArbitrumDB + Send + Sync + 'static>(
                     }
                     _ => return Err(format!("invalid tag: {}", tag)).map_err(to_err),
                 };
-                Ok(alloy::rpc::types::Block { header: create_header(number), ..Default::default() })
+                let block = db.get_block(number).unwrap();
+                Ok(alloy::rpc::types::Block {
+                    header: create_header(number, block.slot.seq_block_number, block.timestamp),
+                    ..Default::default()
+                })
             },
         )
         .unwrap();

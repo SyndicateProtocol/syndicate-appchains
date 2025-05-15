@@ -104,11 +104,6 @@ pub async fn with_onchain_config(config: &TranslatorConfig) -> TranslatorConfig 
         config.sequencing.sequencing_rpc_url = Some(onchain.default_sequencing_chain_rpc_url)
     }
 
-    if config.appchain_owner.is_none() {
-        info!("Using the rollup_owner from on-chain config: {:?}", onchain.rollup_owner);
-        config.appchain_owner = Some(onchain.rollup_owner);
-    }
-
     if config.block_builder.allowed_settlement_addresses.is_empty() {
         info!(
             "Using the allowed_settlement_addresses from on-chain config: {:?}",
@@ -140,7 +135,6 @@ async fn get_config<T: Provider + Clone>(
     let sequencing_contract_address_call = arb_chain_config_contract.SEQUENCING_CONTRACT_ADDRESS();
     let default_sequencing_chain_rpc_url_call =
         arb_chain_config_contract.DEFAULT_SEQUENCING_CHAIN_RPC_URL();
-    let rollup_owner_call = arb_chain_config_contract.INITIAL_APPCHAIN_OWNER();
     let allowed_settlement_addresses_call =
         arb_chain_config_contract.getAllowedSettlementAddresses();
 
@@ -153,7 +147,6 @@ async fn get_config<T: Provider + Clone>(
         sequencing_start_block,
         sequencing_contract_address,
         default_sequencing_chain_rpc_url,
-        rollup_owner,
         allowed_settlement_addresses,
     ) = tokio::try_join!(
         arbitrum_bridge_address_call.call(),
@@ -164,7 +157,6 @@ async fn get_config<T: Provider + Clone>(
         sequencing_start_block_call.call(),
         sequencing_contract_address_call.call(),
         default_sequencing_chain_rpc_url_call.call(),
-        rollup_owner_call.call(),
         allowed_settlement_addresses_call.call(),
     )?;
 
@@ -177,7 +169,6 @@ async fn get_config<T: Provider + Clone>(
         sequencing_start_block: sequencing_start_block._0,
         sequencing_contract_address: sequencing_contract_address._0,
         default_sequencing_chain_rpc_url: default_sequencing_chain_rpc_url._0,
-        rollup_owner: rollup_owner._0,
         allowed_settlement_addresses: allowed_settlement_addresses._0,
     })
 }
@@ -193,6 +184,5 @@ struct ChainConfig {
     sequencing_start_block: U256,
     sequencing_contract_address: Address,
     default_sequencing_chain_rpc_url: String,
-    rollup_owner: Address,
     allowed_settlement_addresses: Vec<Address>,
 }

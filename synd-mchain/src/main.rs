@@ -1,12 +1,6 @@
 //! The `MockChain` is used for appchain block derivation.
 
-use alloy::{
-    primitives::{Address, U256},
-    providers::ProviderBuilder,
-    rpc::client::ClientBuilder,
-};
 use clap::Parser;
-use contract_bindings::synd::{arbchainconfig::ArbChainConfig, arbconfigmanager::ArbConfigManager};
 use jsonrpsee::server::{RandomStringIdProvider, RpcServiceBuilder, Server};
 use rocksdb::DB;
 use shared::{
@@ -33,39 +27,6 @@ struct Config {
     metrics_port: u16,
     #[arg(long, env = "APPCHAIN_CHAIN_ID")]
     appchain_chain_id: u64,
-    #[arg(long, env = "APPCHAIN_OWNER")]
-    appchain_owner: Option<Address>,
-    #[arg(long, env = "SETTLEMENT_RPC_URL")]
-    settlement_rpc_url: Option<String>,
-    #[arg(long, env = "CONFIG_MANAGER_ADDRESS")]
-    config_manager_address: Option<Address>,
-}
-
-async fn get_appchain_owner(
-    config_manager_address: Option<Address>,
-    appchain_chain_id: u64,
-    settlement_rpc_url: &str,
-) -> eyre::Result<Address> {
-    let address = config_manager_address.map_or_else(
-        || {
-            panic!("No config_manager_address provided, cannot fetch on-chain config");
-        },
-        |addr| addr,
-    );
-
-    #[allow(clippy::unwrap_used)]
-    let provider = ProviderBuilder::new()
-        .on_client(ClientBuilder::default().connect(settlement_rpc_url).await.unwrap());
-
-    let config_manager_contract = ArbConfigManager::new(address, provider.clone());
-    let config_address = config_manager_contract
-        .getArbChainConfigAddress(U256::from(appchain_chain_id))
-        .call()
-        .await?;
-    let arb_chain_config_contract = ArbChainConfig::new(config_address._0, provider);
-
-    let appchain_owner = arb_chain_config_contract.INITIAL_APPCHAIN_OWNER().call().await?;
-    Ok(appchain_owner._0)
 }
 
 #[tokio::main]
@@ -81,30 +42,8 @@ async fn main() -> eyre::Result<()> {
     let mut metrics_state = MetricsState::default();
     let metrics = MchainMetrics::new(&mut metrics_state.registry);
 
-    let initial_appchain_owner = match cfg.appchain_owner {
-        Some(owner) => owner,
-        None => {
-            let settlement_rpc_url = cfg.settlement_rpc_url.as_deref().ok_or_else(|| {
-                eyre::eyre!("SETTLEMENT_RPC_URL must be provided when APPCHAIN_OWNER is not set")
-            })?;
-
-            get_appchain_owner(
-                cfg.config_manager_address,
-                cfg.appchain_chain_id,
-                settlement_rpc_url,
-            )
-            .await?
-        }
-    };
-
     info!("starting synd-mchain server on port {}", cfg.port);
-    let module = start_mchain(
-        cfg.appchain_chain_id,
-        initial_appchain_owner,
-        cfg.finality_delay,
-        db,
-        metrics,
-    );
+    let module = start_mchain(cfg.appchain_chain_id, cfg.finality_delay, db, metrics);
 
     let handle = Server::builder()
         .ws_only()
