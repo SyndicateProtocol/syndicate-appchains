@@ -307,12 +307,14 @@ async fn e2e_maestro_spam_rejected() -> Result<(), eyre::Error> {
                 size_duplicate_txns
             );
 
-            // Wait for the transaction to be processed
-            wait_until!(
-                components_arc.appchain_provider.get_transaction_count(wallet_address).await? ==
-                    nonce + 1,
-                Duration::from_secs(3)
-            );
+            // Wait for the transactions to be processed
+            for address in &funded_addresses {
+                wait_until!(
+                    components_arc.appchain_provider.get_transaction_count(*address).await? ==
+                        nonce + 1,
+                    Duration::from_secs(3)
+                );
+            }
 
             // Verify that only one transaction per wallet was processed
             for address in funded_addresses {

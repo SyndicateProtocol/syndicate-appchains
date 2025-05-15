@@ -13,7 +13,7 @@ use std::{
     process::{ExitStatus, Stdio},
     time::Duration,
 };
-use synd_mchain::{client::MProvider, server::appchain_config};
+use synd_mchain::client::MProvider;
 use tokio::{
     io::{AsyncBufReadExt as _, BufReader},
     process::{Child, Command},
@@ -127,16 +127,13 @@ pub async fn health_check(executable_name: &str, api_port: u16, docker: &mut Doc
 
 pub async fn start_mchain(
     appchain_chain_id: u64,
-    appchain_owner: Option<Address>,
-    config_manager_address: Option<Address>,
-    settlement_rpc_url: Option<&str>,
     finality_delay: u64,
 ) -> Result<(String, Docker, MProvider)> {
     let temp = test_path("synd-mchain");
     let port = PortManager::instance().next_port().await;
     let metric_port = PortManager::instance().next_port().await;
 
-    let mut args = vec![
+    let args = vec![
         "--appchain-chain-id".to_string(),
         appchain_chain_id.to_string(),
         "--port".to_string(),
@@ -146,23 +143,6 @@ pub async fn start_mchain(
         "--finality-delay".to_string(),
         finality_delay.to_string(),
     ];
-
-    match (appchain_owner, config_manager_address, settlement_rpc_url) {
-        (Some(owner), None, None) => {
-            args.extend(vec!["--appchain-owner".to_string(), owner.to_string()]);
-        }
-        (None, Some(config_manager_address), Some(settlement_rpc_url)) => {
-            args.extend(vec![
-                "--config-manager-address".to_string(),
-                config_manager_address.to_string(),
-                "--settlement-rpc-url".to_string(),
-                settlement_rpc_url.to_string(),
-            ]);
-        }
-        _ => {
-            return Err(eyre::eyre!("Invalid arguments"));
-        }
-    }
 
     let docker = start_component(
         "synd-mchain",
@@ -174,6 +154,44 @@ pub async fn start_mchain(
     let url = format!("ws://localhost:{port}");
     let mchain = MProvider::new(&url).await?;
     Ok((url, docker, mchain))
+}
+
+/// Return the on-chain config for a rollup with a given chain id
+fn appchain_config(chain_id: u64, chain_owner: Address) -> String {
+    let mut cfg = format!(
+        r#"{{
+            "chainId": {chain_id},
+            "homesteadBlock": 0,
+            "daoForkBlock": null,
+            "daoForkSupport": true,
+            "eip150Block": 0,
+            "eip150Hash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "eip155Block": 0,
+            "eip158Block": 0,
+            "byzantiumBlock": 0,
+            "constantinopleBlock": 0,
+            "petersburgBlock": 0,
+            "istanbulBlock": 0,
+            "muirGlacierBlock": 0,
+            "berlinBlock": 0,
+            "londonBlock": 0,
+            "clique": {{
+            "period": 0,
+            "epoch": 0
+            }},
+            "arbitrum": {{
+            "EnableArbOS": true,
+            "AllowDebugPrecompiles": false,
+            "DataAvailabilityCommittee": false,
+            "InitialArbOSVersion": 32,
+            "InitialChainOwner": "{chain_owner}",
+            "GenesisBlockNum": 0
+            }}
+        }}"#
+    );
+    cfg.retain(|c| !c.is_whitespace());
+    cfg.shrink_to_fit();
+    cfg
 }
 
 /// Starts nitro instance

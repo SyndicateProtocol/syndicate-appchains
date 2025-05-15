@@ -1,6 +1,6 @@
 [
   {
-    "chain-name": "test",
+    "chain-name": "manchego",
     "parent-chain-id": 84532,
     "parent-chain-is-arbitrum": false,
     "sequencer-url": "",

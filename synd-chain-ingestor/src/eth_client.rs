@@ -11,7 +11,7 @@ use alloy::{
 use shared::types::Receipt;
 use std::time::Duration;
 use tokio::time::timeout;
-use tracing::{error, warn};
+use tracing::{error, info};
 
 /// A client for interacting with an Ethereum-like blockchain.
 ///
@@ -150,7 +150,7 @@ impl EthClient {
                 }
 
                 // Split range in half and recursively fetch logs
-                warn!(
+                info!(
                     "splitting eth_getLogs range ({} to {}) due to error: {}",
                     from_block, to_block, err
                 );

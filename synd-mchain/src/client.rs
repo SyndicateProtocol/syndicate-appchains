@@ -1,5 +1,5 @@
 use crate::db::{MBlock, Slot};
-use alloy::{eips::BlockNumberOrTag, primitives::Address};
+use alloy::eips::BlockNumberOrTag;
 pub use jsonrpsee::core::{traits::ToRpcParams, ClientError};
 use jsonrpsee::{
     core::{async_trait, client::ClientT as _},
@@ -43,9 +43,6 @@ pub trait Provider: Send + Sync {
     }
     async fn rollback_to_block(&self, block_number: u64) -> eyre::Result<()> {
         Ok(self.request("mchain_rollbackToBlock", [block_number]).await?)
-    }
-    async fn appchain_owner(&self) -> Address {
-        self.request("mchain_appchainOwner", [()]).await.unwrap()
     }
 
     /// Reconciles the [`MockChain`] state with the source chains (sequencing and settlement)
@@ -226,7 +223,7 @@ mod tests {
 
     async fn setup() -> eyre::Result<(impl Provider, Arc<TestDB>)> {
         let db = Arc::new(TestDB::new());
-        let mchain = start_mchain(10, Address::ZERO, 60, db.clone(), MchainMetrics::default());
+        let mchain = start_mchain(10, 60, db.clone(), MchainMetrics::default());
         Ok((mchain, db))
     }
 

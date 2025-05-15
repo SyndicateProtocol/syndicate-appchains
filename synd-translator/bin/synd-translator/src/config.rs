@@ -181,11 +181,7 @@ pub struct TranslatorConfig {
     #[arg(long, env = "SETTLEMENT_DELAY")]
     pub settlement_delay: Option<u64>,
 
-    /// The address of the appchain owner on the settlement chain
-    #[arg(long, env = "APPCHAIN_OWNER")]
-    pub appchain_owner: Option<Address>,
-
-    /// The chain ID of the Appchain (not the `synd-mchain`)
+    /// The chain ID of the Appchain rollup (not the mchain)
     #[arg(long, env = "APPCHAIN_CHAIN_ID")]
     pub appchain_chain_id: u64,
 
@@ -261,7 +257,6 @@ impl Default for TranslatorConfig {
         Self {
             block_builder: BlockBuilderConfig::default(),
             settlement_delay: Some(60),
-            appchain_owner: None,
             sequencing: SequencingChainConfig::default(),
             settlement: SettlementChainConfig::default(),
             metrics: MetricsConfig::default(),

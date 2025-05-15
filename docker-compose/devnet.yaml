@@ -38,7 +38,7 @@ services:
       - set
   nitro:
     image: offchainlabs/nitro-node:v3.4.0-d896e9c-slim
-    command: "--parent-chain.connection.url=http://mchain:8050 --node.dangerous.disable-blob-reader --execution.forwarding-target=null --node.inbox-reader.check-delay=100ms --node.staker.enable=false --ensure-rollup-deployment=false --chain.info-files=/cfg/chain_info.json"
+    command: "--parent-chain.connection.url=http://mchain:8050 --node.dangerous.disable-blob-reader --execution.forwarding-target=null --node.inbox-reader.check-delay=100ms --node.staker.enable=false --ensure-rollup-deployment=false --chain.info-files=/cfg/devnet.json"
     depends_on:
       - translator
     volumes:

@@ -1,0 +1,74 @@
+services:
+  mchain:
+    build:
+      context: ../../
+      target: synd-mchain
+      dockerfile: Dockerfile
+    environment:
+      APPCHAIN_CHAIN_ID: ${APPCHAIN_CHAIN_ID}
+ 
+  seq-ingestor:
+    build:
+      context: ../../
+      target: synd-chain-ingestor
+      dockerfile: Dockerfile
+    volumes:
+      - ./chains:/chains
+    environment:
+      - DB_FILE=/chains/5113.db
+      - START_BLOCK=0
+      - RPC_URL=wss://syndicate-exo.g.alchemy.com/v2/nYkJi2K0LszDqj8jzWY-rMJmK9ugf0oF
+
+  set-ingestor:
+    build:
+      context: ../../
+      target: synd-chain-ingestor
+      dockerfile: Dockerfile
+    volumes:
+      - ./chains:/chains
+    environment:
+#     - RUST_LOG=debug
+      - DB_FILE=/chains/84532.db
+      - START_BLOCK=20000000
+      - RPC_URL=wss://base-sepolia.g.alchemy.com/v2/nYkJi2K0LszDqj8jzWY-rMJmK9ugf0oF
+
+  healthcheck:
+    image: curlimages/curl:8.13.0
+    healthcheck:
+      test: curl -f http://mchain:8546/metrics && curl -f http://seq-ingestor:8546/metrics && curl -f http://set-ingestor:8546/metrics
+      start_period: 3600s
+    tty: true
+    entrypoint: /bin/sh
+
+  translator:
+    build:
+      context: ../../
+      target: synd-translator
+      dockerfile: Dockerfile
+    environment:
+#     RUST_LOG: "debug"
+      APPCHAIN_CHAIN_ID: ${APPCHAIN_CHAIN_ID}
+      SEQUENCING_CONTRACT_ADDRESS: ${SEQUENCING_CONTRACT_ADDRESS}
+      ARBITRUM_BRIDGE_ADDRESS: ${ARBITRUM_BRIDGE_ADDRESS}
+      ARBITRUM_INBOX_ADDRESS: ${ARBITRUM_INBOX_ADDRESS}
+      SEQUENCING_RPC_URL: "ws://seq-ingestor:8545"
+      SEQUENCING_START_BLOCK: ${SEQUENCING_START_BLOCK}
+      SETTLEMENT_RPC_URL: "ws://set-ingestor:8545"
+      SETTLEMENT_START_BLOCK: ${SETTLEMENT_START_BLOCK}
+      MCHAIN_RPC_URL: "ws://mchain:8545"
+      ARBITRUM_IGNORE_DELAYED_MESSAGES: "false"
+      SETTLEMENT_DELAY: "60"
+    depends_on:
+      healthcheck:
+        condition: service_healthy
+
+  nitro:
+    image: offchainlabs/nitro-node:v3.6.2-5b41a2d-slim
+    command: "--parent-chain.connection.url=ws://mchain:8545 --http.port=8545 --http.addr=0.0.0.0 --node.dangerous.disable-blob-reader --execution.forwarding-target=null --node.inbox-reader.check-delay=100ms --node.staker.enable=false --ensure-rollup-deployment=false --chain.info-files=/cfg/${CHAIN_INFO_FILE}"
+    depends_on:
+      healthcheck:
+        condition: service_healthy
+    volumes:
+      - .:/cfg:ro
+    ports:
+      - 8545:8545

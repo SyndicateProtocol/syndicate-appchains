@@ -68,4 +68,5 @@ broadcast/
 !/broadcast
 /broadcast/*/31337/
 /broadcast/**/dry-run/
-synd-translator/docker-compose/heaptrack_output/
+docker-compose/heaptrack_output/
+docker-compose/chains/

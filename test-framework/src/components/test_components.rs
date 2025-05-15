@@ -36,7 +36,7 @@ use std::{
     time::{Duration, SystemTime},
 };
 use synd_maestro::server::HEADER_CHAIN_ID;
-use synd_mchain::{client::MProvider, server::appchain_config};
+use synd_mchain::client::MProvider;
 use test_utils::{
     anvil::{mine_block, start_anvil, start_anvil_with_args, PRIVATE_KEY},
     docker::{launch_nitro_node, start_component, start_mchain, start_redis, Docker},
@@ -197,7 +197,7 @@ impl TestComponents {
             _ = Rollup::deploy_builder(
                 &set_provider,
                 U256::from(options.appchain_chain_id),
-                appchain_config(options.appchain_chain_id, options.rollup_owner),
+                "null".to_string(),
             )
             .nonce(0)
             .send()
@@ -240,31 +240,13 @@ impl TestComponents {
             options.rollup_owner = address!("0x0000000000000000000000000000000000000064");
         }
 
-        // Setup config manager and get chain config address
-        let appchain_block_explorer_url = "https://example.com/explorer".to_string();
-        let config_manager_address = setup_config_manager(
-            &set_provider,
-            &options,
-            sequencing_contract_address,
-            arbitrum_bridge_address,
-            arbitrum_inbox_address,
-            &sequencing_anvil_url,
-            &appchain_block_explorer_url,
-        )
-        .await?;
-
         info!("Starting components...");
         info!("Starting synd-mchain...");
-        let (mchain_rpc_url, mchain, mchain_provider) = start_mchain(
-            options.appchain_chain_id,
-            None,
-            Some(config_manager_address),
-            Some(&settlement_anvil_url),
-            options.finality_delay,
-        )
-        .await?;
+        let (mchain_rpc_url, mchain, mchain_provider) =
+            start_mchain(options.appchain_chain_id, options.finality_delay).await?;
 
         // Setup config manager and get chain config address
+        let appchain_block_explorer_url = "https://example.com/explorer".to_string();
         let config_manager_address = setup_config_manager(
             &set_provider,
             &options,
