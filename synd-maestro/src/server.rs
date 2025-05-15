@@ -74,6 +74,10 @@ pub async fn send_raw_transaction_handler(
     let raw_tx = parse_send_raw_transaction_params(params)?;
     let (tx, signer) = validate_transaction(&raw_tx)?;
     let chain_id = validate_chain_id(get_request_chain_id(extensions), tx.chain_id())?;
+
+    // fail fast if rpc provider for chain isn't configured
+    service.get_rpc_provider(&chain_id)?;
+
     let tx_nonce = tx.nonce();
     let tx_hash = format!("0x{}", alloy::hex::encode(tx.hash()));
 
