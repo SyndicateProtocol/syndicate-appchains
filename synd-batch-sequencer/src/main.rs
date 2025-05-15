@@ -1,5 +1,5 @@
 //! TC Sequencer is a service that processes and validates transactions
-//! before submitting them to TC for sending to the Metabased chain.
+//! before submitting them to TC for sending to the Appchain.
 //!
 //! It provides a JSON-RPC interface for submitting transactions and checking service health.
 
@@ -55,7 +55,7 @@ async fn main() -> Result<()> {
         _ = batcher_handle => {
             info!("Batcher stopped, initiating shutdown...");
         }
-    };
+    }
 
     Ok(())
 }

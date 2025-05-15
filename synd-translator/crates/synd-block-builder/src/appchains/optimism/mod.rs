@@ -1,0 +1,9 @@
+//! Optimism rollup synd-block-builder implementation
+//!
+//! This module provides functionality for encoding batches of transactions into frames
+//! that can be submitted by the batcher.
+
+pub mod batch;
+pub mod frame;
+
+pub mod optimism_adapter;

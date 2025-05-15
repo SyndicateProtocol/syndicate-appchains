@@ -154,6 +154,6 @@ jobs:
         with:
           tool: cargo-nextest
 
-      # Run maestro tests with nextest (using existing config)
+      # Run synd-maestro tests with nextest (using existing config)
       - name: Run Integration Tests with Nextest
         run: cargo nextest run --workspace

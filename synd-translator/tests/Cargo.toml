@@ -1,0 +1,38 @@
+[package]
+description            = "e2e tests for synd-translator."
+edition.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "e2e-tests"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[package.metadata.cargo-machete]
+# strum is used via a macro from strum_macros - machete does not detect it
+ignored = ["strum"]
+
+
+[dependencies]
+alloy = { workspace = true, features = [
+  "node-bindings",
+  "rpc-types-anvil",
+  "sol-types",
+] }
+contract-bindings = { workspace = true }
+eyre = { workspace = true }
+shared = { workspace = true }
+strum = { workspace = true }
+synd-block-builder = { workspace = true }
+synd-mchain = { workspace = true }
+test-utils = { workspace = true }
+tokio = { workspace = true, features = ["fs"] }
+
+[dev-dependencies]
+ctor = { workspace = true }
+
+[features]
+env-tests = []
+
+[lints]
+workspace = true

@@ -9,10 +9,10 @@ rust-version.workspace = true
 version.workspace      = true
 
 [dependencies]
-alloy   = { workspace = true, features = ["node-bindings", "rpc-types-anvil"] }
-eyre    = { workspace = true }
-mchain  = { workspace = true }
-redis   = { workspace = true, features = ["tokio-comp"] }
-shared  = { workspace = true }
-tokio   = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
-tracing = { workspace = true }
+alloy       = { workspace = true, features = ["node-bindings", "rpc-types-anvil"] }
+eyre        = { workspace = true }
+redis       = { workspace = true, features = ["tokio-comp"] }
+shared      = { workspace = true }
+synd-mchain = { workspace = true }
+tokio       = { workspace = true, features = ["fs", "process", "rt-multi-thread"] }
+tracing     = { workspace = true }

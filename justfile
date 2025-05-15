@@ -60,7 +60,7 @@ contracts_root := repository_root + "/synd-contracts"
 sequencer_root := repository_root + "/metabased-sequencer"
 
 # Define root directory of the integration tests
-e2e_tests_root := repository_root + "/metabased-translator/tests"
+e2e_tests_root := repository_root + "/synd-translator/tests"
 
 # Define root directory of the shared folder
 shared_root := repository_root + "/shared"

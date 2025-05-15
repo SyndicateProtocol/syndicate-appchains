@@ -17,11 +17,11 @@ derivative        = { workspace = true }
 eyre              = { workspace = true }
 flate2            = { workspace = true }
 humantime         = { workspace = true }
-maestro           = { workspace = true }
 prometheus-client = { workspace = true }
 redis             = { workspace = true, features = ["streams", "tokio-comp"] }
 rlp               = { workspace = true }
 shared            = { workspace = true }
+synd-maestro      = { workspace = true }
 tc-client         = { workspace = true }
 thiserror         = { workspace = true }
 tokio             = { workspace = true }

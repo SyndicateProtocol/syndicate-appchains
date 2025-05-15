@@ -1,0 +1,33 @@
+[package]
+edition.workspace      = true
+exclude.workspace      = true
+homepage.workspace     = true
+license.workspace      = true
+name                   = "synd-mchain"
+repository.workspace   = true
+rust-version.workspace = true
+version.workspace      = true
+
+[dependencies]
+alloy               = { workspace = true }
+bincode             = { workspace = true }
+clap                = { workspace = true, features = ["derive", "env"] }
+contract-bindings   = { workspace = true }
+eyre                = { workspace = true }
+futures-util        = { workspace = true }
+jsonrpsee           = { workspace = true, features = ["server", "ws-client"] }
+prometheus-client   = { workspace = true }
+rocksdb             = { workspace = true }
+serde               = { workspace = true }
+serde_json          = { workspace = true }
+shared              = { workspace = true }
+synd-chain-ingestor = { workspace = true }
+tokio               = { workspace = true, features = ["signal"] }
+tracing             = { workspace = true }
+
+[dev-dependencies]
+ctor       = { workspace = true }
+test-utils = { workspace = true }
+
+[lints]
+workspace = true
