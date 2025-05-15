@@ -5,6 +5,7 @@ use alloy::{
     eips::{Encodable2718, Typed2718},
     rpc::types::Block,
 };
+use serde::{Deserialize, Serialize};
 use shared::types::Receipt;
 
 /// A typed receipt for RLP and EIP-2718 encoding.
@@ -37,10 +38,11 @@ impl Encodable2718 for TypedReceipt {
 }
 
 /// Input for verifying a batch of blocks and creating a new mchain block
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ChainVerificationInput {
     /// The blocks to verify
     pub blocks: Vec<Block>,
+
     /// The receipts to verify
     pub receipts: Vec<Vec<Receipt>>,
 }
