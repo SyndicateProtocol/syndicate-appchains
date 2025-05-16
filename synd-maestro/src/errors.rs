@@ -1,12 +1,10 @@
 //! The `errors` module contains the error types for Maestro.
 
-use alloy::{
-    primitives::{Address, ChainId},
-    transports::TransportError,
-};
+use alloy::primitives::{Address, ChainId};
 use jsonrpsee::types::{ErrorCode, ErrorObjectOwned};
 use redis::RedisError;
 use shared::json_rpc::RpcError;
+use std::num::ParseIntError;
 use thiserror::Error;
 use tracing::error;
 
@@ -37,8 +35,8 @@ pub enum ConfigError {
     #[error("Invalid RPC address: {0}")]
     RpcUrlInvalidAddress(String),
 
-    #[error("failed to connect to chain RPC URL: {0}")]
-    RpcUrlConnection(#[from] TransportError),
+    #[error("failed to parse config: {0}")]
+    ParseConfig(#[from] ParseIntError),
 }
 
 /// JSON-RPC specific error types

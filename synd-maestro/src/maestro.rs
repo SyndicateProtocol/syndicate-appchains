@@ -44,7 +44,7 @@ pub struct MaestroService {
     // TODO (SEQ-914): Implement distributed lock not local
     chain_wallets: Mutex<HashMap<ChainWalletNonceKey, Arc<Mutex<()>>>>,
     producers: HashMap<ChainId, Arc<StreamProducer>>,
-    rpc_providers: HashMap<ChainId, RpcProvider>,
+    rpc_providers: HashMap<ChainId, Option<RpcProvider>>,
     config: Config,
 }
 
@@ -72,7 +72,7 @@ impl MaestroService {
     fn create_redis_producers(
         redis_conn: &MultiplexedConnection,
         config: &Config,
-        rpc_providers: &HashMap<ChainId, RpcProvider>,
+        rpc_providers: &HashMap<ChainId, Option<RpcProvider>>,
     ) -> HashMap<ChainId, Arc<StreamProducer>> {
         let mut producers = HashMap::new();
         for chain_id in rpc_providers.keys() {
@@ -92,6 +92,14 @@ impl MaestroService {
         let key = chain_wallet_nonce_key(chain_id, wallet);
         let mut locks = self.chain_wallets.lock().await;
         locks.entry(key).or_insert_with(|| Arc::new(Mutex::new(()))).clone()
+    }
+
+    /// Checks if a given `chain_id` has a corresponding [`RpcProvider`] configured
+    pub fn get_rpc_provider(&self, chain_id: &ChainId) -> Result<&RpcProvider, MaestroRpcError> {
+        match self.rpc_providers.get(chain_id) {
+            None | Some(None) => Err(InternalError(RpcMissing(*chain_id))),
+            Some(Some(provider)) => Ok(provider),
+        }
     }
 
     /// Processes a transaction based on its nonce compared to the wallet's expected nonce
@@ -287,10 +295,7 @@ impl MaestroService {
     ) -> Result<u64, MaestroRpcError> {
         // TODO(SEQ-885): remove this once tracing makes the below log redundant
         let chain_wallet_nonce_key = chain_wallet_nonce_key(chain_id, signer);
-        let provider = self.rpc_providers.get(&chain_id).ok_or_else(|| {
-            error!("No RPC provider for chain {}", chain_id);
-            InternalError(RpcMissing(chain_id))
-        })?;
+        let provider = self.get_rpc_provider(&chain_id)?;
 
         // Get nonce
         let rpc_nonce = match provider.get_transaction_count(signer).await {
