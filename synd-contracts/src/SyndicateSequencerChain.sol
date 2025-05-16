@@ -42,9 +42,9 @@ contract SyndicateSequencerChain is SequencingModuleChecker {
 
         // Process all transactions
         for (uint256 i = 0; i < dataCount; i++) {
-            isAllowed(msg.sender, tx.origin, data[i]);
-
-            emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
+            if (isAllowed(msg.sender, tx.origin, data[i])) {
+                emit TransactionProcessed(msg.sender, prependZeroByte(data[i]));
+            }
         }
     }
 
