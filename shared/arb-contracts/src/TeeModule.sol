@@ -38,9 +38,9 @@ function equals(PendingAssertion calldata a, PendingAssertion storage b) view re
 
 event TeeKeysRevoked();
 
-event TeeProgramHashAdded(bytes32 hash);
+event TeeProgramAdded(bytes32 hash);
 
-event TeeProgramHashRemoved(bytes32 hash);
+event TeeProgramRemoved(bytes32 hash);
 
 event TeeAppchainConfigHash(bytes32 hash);
 
@@ -59,9 +59,9 @@ contract TeeModule is Ownable {
     TeeTrustedInput public teeTrustedInput;
     PendingAssertion[] public pendingAssertions;
     uint256 public teeHackCount;
-    address[] public teeKeys;
+    bytes32[] public teePrograms;
+    mapping(bytes32 => address[]) public teeProgramKeys;
     mapping(address => bool) public isTeeKey;
-    mapping(bytes32 => bool) public isTeeProgramHash;
     uint256 public challengeWindowEnd;
     uint256 public challengeWindowDuration;
 
@@ -99,6 +99,7 @@ contract TeeModule is Ownable {
         bytes32 payload_hash =
             keccak256(abi.encodePacked(hash_input(teeTrustedInput), assertion.blockHash, assertion.sendRoot));
         require(isTeeKey[payload_hash.toEthSignedMessageHash().recover(signature)], "invalid tee signature");
+        require(assertion.blockHash != teeTrustedInput.appchainStartBlockHash, "appchain block hash unchanged");
         for (uint256 i = 0; i < pendingAssertions.length; i++) {
             require(!equals(assertion, pendingAssertions[i]), "assertion already exists");
         }
@@ -134,31 +135,48 @@ contract TeeModule is Ownable {
         revert("assertion not found");
     }
 
-    function addTeeKey(address publicKey, bytes calldata zkProof) external {
+    function addTeeKey(address publicKey, bytes32 programHash, bytes calldata zkProof) external {
         // todo: validate the zk proof
-        assert(zkProof.length == 1);
-        if (!isTeeKey[publicKey]) {
-            isTeeKey[publicKey] = true;
-            teeKeys.push(publicKey);
+        require(zkProof.length == 1, "todo: validate zk zkProof");
+        require(!isTeeKey[publicKey], "key already added");
+        if (teeProgramKeys[programHash].length == 0) {
+            bool found = false;
+            for (uint256 i = teePrograms.length; i > 0; i--) {
+                if (teePrograms[i - 1] == programHash) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                return;
+            }
         }
+        isTeeKey[publicKey] = true;
+        teeProgramKeys[programHash].push(publicKey);
     }
 
     function revokeAllTeeKeys() external onlyOwner {
-        for (uint256 i = 0; i < teeKeys.length; i++) {
-            isTeeKey[teeKeys[i]] = false;
+        for (uint256 i = 0; i < teePrograms.length; i++) {
+            removeTeeProgram(teePrograms[i]);
         }
-        delete teeKeys;
+        delete teePrograms;
         emit TeeKeysRevoked();
     }
 
-    function addTeeProgramHash(bytes32 hash) external onlyOwner {
-        isTeeProgramHash[hash] = true;
-        emit TeeProgramHashAdded(hash);
+    function addTeeProgram(bytes32 hash) external onlyOwner {
+        for (uint256 i = 0; i < teePrograms.length; i++) {
+            require(teePrograms[i] != hash, "tee program already exists");
+        }
+        teePrograms.push(hash);
+        emit TeeProgramAdded(hash);
     }
 
-    function removeTeeProgramHash(bytes32 hash) external onlyOwner {
-        isTeeProgramHash[hash] = false;
-        emit TeeProgramHashRemoved(hash);
+    function removeTeeProgram(bytes32 hash) public onlyOwner {
+        for (uint256 i = 0; i < teeProgramKeys[hash].length; i++) {
+            isTeeKey[teeProgramKeys[hash][i]] = false;
+        }
+        delete teeProgramKeys[hash];
+        emit TeeProgramRemoved(hash);
     }
 
     function setAppchainConfigHash(bytes32 hash) external onlyOwner {
