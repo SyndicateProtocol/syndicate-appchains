@@ -27,11 +27,6 @@ struct PendingAssertion {
     bytes32 sendRoot;
 }
 
-struct AssertionPayload {
-    bytes32 teeTrustedInputHash;
-    PendingAssertion assertion;
-}
-
 function hash_input(TeeTrustedInput storage a) view returns (bytes32) {
     return
         keccak256(abi.encodePacked(a.appchainConfigHash, a.setEndBlockHash, a.l1EndBlockHash, a.appchainStartBlockHash));
@@ -97,22 +92,20 @@ contract TeeModule is Ownable {
         challengeWindowEnd = block.timestamp + challengeWindowDuration;
     }
 
-    function submitAssertion(AssertionPayload calldata payload, bytes calldata signature, address rewardAddr)
+    function submitAssertion(PendingAssertion calldata assertion, bytes calldata signature, address rewardAddr)
         external
     {
         require(signature.length == 65, "invalid signature length");
-        require(payload.teeTrustedInputHash == hash_input(teeTrustedInput), "invalid tee input");
-        bytes32 payload_hash = keccak256(
-            abi.encodePacked(payload.teeTrustedInputHash, payload.assertion.blockHash, payload.assertion.sendRoot)
-        );
+        bytes32 payload_hash =
+            keccak256(abi.encodePacked(hash_input(teeTrustedInput), assertion.blockHash, assertion.sendRoot));
         require(isTeeKey[payload_hash.toEthSignedMessageHash().recover(signature)], "invalid tee signature");
         for (uint256 i = 0; i < pendingAssertions.length; i++) {
-            require(!equals(payload.assertion, pendingAssertions[i]), "assertion already exists");
+            require(!equals(assertion, pendingAssertions[i]), "assertion already exists");
         }
         if (pendingAssertions.length == 0) {
             challengeWindowEnd = block.timestamp + challengeWindowDuration;
         }
-        pendingAssertions.push(payload.assertion);
+        pendingAssertions.push(assertion);
         if (pendingAssertions.length == 2) {
             teeHackCount += 1;
             emit TeeHacked(teeHackCount);
