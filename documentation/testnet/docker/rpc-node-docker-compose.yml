@@ -1,0 +1,79 @@
+services:
+
+  mchain:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-mchain:{{ image_tag }}
+    container_name: mchain  
+    environment:
+      - RUST_LOG=warn
+      - APPCHAIN_CHAIN_ID={{ chain_id }}
+      - APPCHAIN_OWNER={{ owner_addr }}
+      - DATADIR=/datadir
+      - PORT=8050
+      - METRICS_PORT=8051
+    ports:
+      - "8050"
+      - "8051"
+    volumes:
+      - {{ translator_data_mount_point }}:/datadir
+    networks:
+      - appchains-network
+
+  translator:
+    image: ghcr.io/syndicateprotocol/syndicate-appchains/synd-translator:{{ image_tag }}
+    container_name: translator
+    platform: linux/amd64
+    environment:
+      - RUST_LOG=warn
+      - SETTLEMENT_RPC_URL={{ settlement_ingestor_ws }}
+      - SEQUENCING_RPC_URL={{ sequencing_ingestor_ws }}
+      - SEQUENCING_CONTRACT_ADDRESS={{ sequencing_contract }}
+      - ARBITRUM_BRIDGE_ADDRESS={{ bridge_addr }}
+      - ARBITRUM_INBOX_ADDRESS={{ inbox_addr }}
+      - SEQUENCING_START_BLOCK={{ sequencing_start_block }}
+      - SETTLEMENT_START_BLOCK={{ settlement_start_block }}
+      - MCHAIN_RPC_URL=ws://mchain:8050
+      - ARBITRUM_IGNORE_DELAYED_MESSAGES={% set ignore_delayed = 'true' if chain_name == 'dream' else 'false' %}{{ ignore_delayed }}
+      - SETTLEMENT_DELAY=60
+      - METRICS_PORT=9090
+    ports:
+      - "9090"
+    networks:
+      - appchains-network
+    depends_on:
+      - mchain
+
+  nitro:
+    image: offchainlabs/nitro-node:v3.6.2-5b41a2d
+    container_name: nitro
+    init: true
+    restart: always
+    command:
+      - "--parent-chain.connection.url=ws://mchain:8050" # mchain is the "parent chain"
+      - "--execution.parent-chain-reader.poll-interval=100ms"
+      - "--execution.tx-pre-checker.strictness=20" # optimistic validation
+      - "--node.dangerous.disable-blob-reader"
+      - "--execution.caching.archive"
+      - "--execution.parent-chain-reader.old-header-timeout=1000h"
+      - "--node.inbox-reader.check-delay=100ms"
+      - "--node.staker.enable=false"
+      - "--ensure-rollup-deployment=false"
+      - "--chain.info-files=/config/chain_info.json"
+      - "--http.addr=0.0.0.0"
+      - "--http.port=8449"
+      - "--metrics"
+      - "--metrics-server.addr=0.0.0.0"
+      - "--metrics-server.port=6070"
+    ports:
+      - "8449"
+      - "6070"
+    volumes:
+      - {{ chain_config_file }}:/config/chain_info.json:ro
+      - {{ nitro_data_mount_point }}:/home/user/.arbitrum
+    depends_on:
+      - translator
+    networks:
+      - appchains-network
+
+networks:
+  appchains-network:
+    driver: bridge

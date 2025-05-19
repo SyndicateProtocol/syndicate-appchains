@@ -47,10 +47,6 @@ on:
 
 env:
   GITHUB_REGISTRY: ghcr.io
-  GOOGLE_REGISTRY: us-central1-docker.pkg.dev
-  PROJECT_ID: metabased-testnet
-  REPO_NAME: syndicate-appchains
-  WORKLOAD_IDENTITY_PROVIDER: projects/112197761096/locations/global/workloadIdentityPools/cloud-run-github-pool/providers/id-001
 
 jobs:
   docker:
@@ -70,19 +66,6 @@ jobs:
           registry: ${{ env.GITHUB_REGISTRY }}
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Configure Google Cloud credentials
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ env.WORKLOAD_IDENTITY_PROVIDER }}
-          service_account: "cloud-run-service-account@metabased-testnet.iam.gserviceaccount.com"
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
-
-      - name: Configure docker auth for GAR
-        run: |
-          gcloud auth configure-docker ${{ env.GOOGLE_REGISTRY }} --quiet
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -110,7 +93,6 @@ jobs:
               --push=${{ !inputs.dry_run }} \
               --target "$service" \
               --tag "${{ env.GITHUB_REGISTRY }}/$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')/$service:$TAG" \
-              --tag "${{ env.GOOGLE_REGISTRY }}/${{ env.PROJECT_ID }}/images/${{ env.REPO_NAME }}/$service:$TAG" \
               --cache-from type=gha \
               --cache-to type=gha,mode=max \
               .
