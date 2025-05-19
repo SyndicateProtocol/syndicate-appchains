@@ -112,23 +112,23 @@ Look at Makefile for more details.
 Example:
 
 ```shell
-$ make deploy-based-sequencerchain-frame
+$ make deploy-syndicate-factory
 ```
 
 ### Deployed Contracts
 
 ### Syndicate Exo
 
-| Contract Name           | Address                                                                                                                                     |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| SyndicateFactory        | TODO: deploy new `SyndicateFactory` [0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe](https://syndicate-exo.explorer.alchemy.com/address/0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe) |
-| WalletPoolWrapperModule | [0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8](https://syndicate-exo.explorer.alchemy.com/address/0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8) |
+| Contract Name           | Address                                                                                                                                                        |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| SyndicateFactory        | `SyndicateFactory` [0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe](https://syndicate-exo.explorer.alchemy.com/address/0x60D834808d4C90a5A0D66fcFd44292FcAa4537fe) |
+| WalletPoolWrapperModule | [0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8](https://syndicate-exo.explorer.alchemy.com/address/0x9d9E8B09C1f7d9cC1Cdd4a843e695fD580a390E8)                    |
 
 ### Base Sepolia
 
-| Contract Name           | Address                                                                                                                       |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| ArbConfigManager        | [0xCaf9F341401cD3e72Fc49081E498Ef0F86055b67](https://sepolia.etherscan.io/address/0xCaf9F341401cD3e72Fc49081E498Ef0F86055b67) |
+| Contract Name    | Address                                                                                                                       |
+| ---------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| ArbConfigManager | [0xCaf9F341401cD3e72Fc49081E498Ef0F86055b67](https://sepolia.etherscan.io/address/0xCaf9F341401cD3e72Fc49081E498Ef0F86055b67) |
 
 ### ETH Holesky
 
