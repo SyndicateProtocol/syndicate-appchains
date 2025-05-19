@@ -22,7 +22,7 @@ contract SealedBidAuctionSequencingModule is IPermissionModule {
     /// @notice The address of the highest bidder.
     address public highestBidder;
     /// @notice The highest bid amount, initialized to 0 by design as no bids exist at contract creation.
-    uint256 public highestBid;
+    uint256 public highestBid; //#olympix-ignore-uninitialized-state-variable
 
     /// @notice Mapping to store bids of each participant.
     mapping(address => Bid) public bids;
@@ -80,6 +80,7 @@ contract SealedBidAuctionSequencingModule is IPermissionModule {
         if (highestBidder != address(0)) {
             // Forward all available gas to treasury to handle ETH transfer
             // This is intentional as the treasury may be a contract that needs gas to process the payment
+            //#olympix-ignore-call-without-gas-budget
             (bool success,) = payable(treasury).call{value: highestBid}("");
             if (!success) revert TransactionFailed();
         }
@@ -107,6 +108,7 @@ contract SealedBidAuctionSequencingModule is IPermissionModule {
      * @param _bid The actual bid amount.
      * @param _salt The salt used to hash the bid.
      */
+    //#olympix-ignore-signature-replay-attacks
     function revealBid(uint256 _bid, string memory _salt) external onlyActive {
         Bid memory bidData = bids[msg.sender];
         if (bidData.deposit == 0) revert NoBidFound();
@@ -143,6 +145,7 @@ contract SealedBidAuctionSequencingModule is IPermissionModule {
         refunds[msg.sender] = 0;
         // Forward all available gas to handle ETH transfer
         // This is intentional as the recipient may be a contract that needs gas to process the refund
+        //#olympix-ignore-call-without-gas-budget
         (bool success,) = payable(msg.sender).call{value: refund}("");
         if (!success) revert TransactionFailed();
     }

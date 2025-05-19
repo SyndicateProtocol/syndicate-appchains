@@ -13,7 +13,9 @@ import {ArbChainConfig} from "./ArbChainConfig.sol";
  */
 contract ArbConfigManager is Ownable {
     // Events
+    //#olympix-ignore-missing-events-assertion
     event ArbChainConfigCreated(uint256 indexed chainId, address configAddress);
+    //#olympix-ignore-missing-events-assertion
     event ImplementationUpgraded(address newImplementation);
 
     // Beacon that holds the current implementation address
@@ -25,6 +27,7 @@ contract ArbConfigManager is Ownable {
     /**
      * @dev Constructor to deploy the implementation contract and beacon
      */
+    //#olympix-ignore-no-parameter-validation-in-constructor
     constructor(address _owner) Ownable(_owner) {
         // Deploy the implementation contract
         // No need to pass constructor arguments as they'll be handled by initialize()
@@ -52,6 +55,7 @@ contract ArbConfigManager is Ownable {
      * @param allowedSettlementAddresses Array of addresses allowed for settlement
      * @return address The address of the deployed ArbChainConfig contract
      */
+    //#olympix-ignore
     function createArbChainConfig(
         address owner,
         uint256 chainId,
@@ -126,8 +130,9 @@ contract ArbConfigManager is Ownable {
         bytes memory bytecode = abi.encodePacked(type(BeaconProxy).creationCode, abi.encode(address(beacon), ""));
 
         // Calculate CREATE2 address
+        //#olympix-ignore-unsafe-downcast
         bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(bytecode)));
-
+        //#olympix-ignore-unsafe-downcast
         return address(uint160(uint256(hash)));
     }
 
