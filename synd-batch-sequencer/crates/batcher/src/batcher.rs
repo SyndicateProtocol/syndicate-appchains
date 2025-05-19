@@ -68,9 +68,6 @@ struct Batcher {
 
 #[derive(Debug, thiserror::Error)]
 enum BatchError {
-    #[error("Compressed batch too large: {0} bytes (limit: {1} bytes)")]
-    BatchTooLarge(usize, usize),
-
     #[error(transparent)]
     Io(#[from] std::io::Error),
 
