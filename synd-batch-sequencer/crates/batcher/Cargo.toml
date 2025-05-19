@@ -22,7 +22,6 @@ redis             = { workspace = true, features = ["streams", "tokio-comp"] }
 rlp               = { workspace = true }
 shared            = { workspace = true }
 synd-maestro      = { workspace = true }
-tc-client         = { workspace = true }
 thiserror         = { workspace = true }
 tokio             = { workspace = true }
 tracing           = { workspace = true }
@@ -30,6 +29,7 @@ url               = { workspace = true }
 
 [dev-dependencies]
 mockall    = { workspace = true }
+serde_json = { workspace = true }
 test-utils = { workspace = true }
 [lints]
 workspace = true

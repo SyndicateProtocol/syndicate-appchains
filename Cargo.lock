@@ -1175,9 +1175,9 @@ dependencies = [
  "prometheus-client",
  "redis",
  "rlp 0.6.1",
+ "serde_json",
  "shared",
  "synd-maestro",
- "tc-client",
  "test-utils",
  "thiserror 2.0.12",
  "tokio",
@@ -4811,7 +4811,6 @@ dependencies = [
  "eyre",
  "mockito",
  "shared",
- "tc-client",
  "thiserror 2.0.12",
  "tokio",
  "tracing",
@@ -5028,26 +5027,6 @@ name = "tap"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
-
-[[package]]
-name = "tc-client"
-version = "0.1.0"
-dependencies = [
- "alloy",
- "bytes",
- "clap",
- "eyre",
- "hex",
- "jsonrpsee",
- "mockito",
- "reqwest",
- "serde",
- "shared",
- "thiserror 2.0.12",
- "tokio",
- "tracing",
- "url",
-]
 
 [[package]]
 name = "temp-env"
